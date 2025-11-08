@@ -1,5 +1,4 @@
 import org.gradle.api.tasks.compile.JavaCompile
-import org.gradle.process.CommandLineArgumentProvider
 
 plugins {
     alias(libs.plugins.xdk.build.java)

@@ -7,6 +7,7 @@ import static org.gradle.api.logging.LogLevel.INFO;
 import static org.gradle.api.logging.LogLevel.LIFECYCLE;
 
 import static org.xtclang.plugin.XtcPluginConstants.XTC_RUNNER_CLASS_NAME;
+import static org.xtclang.plugin.XtcJavaToolsRuntime.ensureJavaToolsInClasspath;
 
 import java.io.File;
 
@@ -21,7 +22,6 @@ import org.gradle.api.Action;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.file.Directory;
-import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.logging.LogLevel;
 import org.gradle.api.provider.ListProperty;
@@ -44,7 +44,7 @@ import org.xtclang.plugin.XtcRunModule;
 import org.xtclang.plugin.XtcRuntimeExtension;
 import org.xtclang.plugin.internal.DefaultXtcRuntimeExtension;
 import org.xtclang.plugin.launchers.CommandLine;
-import org.xtclang.plugin.launchers.JavaClasspathLauncher;
+import org.xtclang.plugin.launchers.DetachedJavaClasspathLauncher;
 import org.xtclang.plugin.launchers.XtcLauncher;
 
 /**
@@ -80,7 +80,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     // Run tasks have side effects and should never be UP-TO-DATE or cached
     // This matches the behavior of Gradle's JavaExec task
     {
-        getOutputs().upToDateWhen(task -> false);
+        getOutputs().upToDateWhen(_ -> false);
     }
 
     /**
@@ -109,7 +109,6 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     @Override
     protected XtcLauncher<XtcRuntimeExtension, ? extends XtcLauncherTask<XtcRuntimeExtension>> createLauncher() {
         final boolean detach = getDetach().get();
-        final boolean fork = ext.getFork().get();
 
         // Use parent's createLauncher for normal mode
         if (!detach) {
@@ -117,16 +116,15 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         }
 
         // Detach mode: use JavaClasspathLauncher with detach=true
-        // JavaClasspathLauncher will automatically set fork=true when detach=true
-        org.xtclang.plugin.XtcJavaToolsRuntime.ensureJavaToolsInClasspath(
-            projectVersion, javaToolsConfig, xdkFileTree, getLogger());
+        // DetachedJavaClasspathLauncher automatically sets fork=true and detach=true
+        ensureJavaToolsInClasspath(projectVersion, javaToolsConfig, xdkFileTree, getLogger());
 
-        getLogger().lifecycle("[plugin] Using JavaClasspathLauncher with detach=true (background process, fork will be enabled)");
+        getLogger().lifecycle("[plugin] Using DetachedJavaClasspathLauncher (background process)");
 
-        return new JavaClasspathLauncher<>(
+        return new DetachedJavaClasspathLauncher<>(
             this, getLogger(),
             projectVersion, xdkFileTree, javaToolsConfig, toolchainExecutable,
-            projectDirectory.get().getAsFile(), fork, true);
+            projectDirectory.get().getAsFile());
     }
 
     // XTC modules needed to resolve module path (the contents of the XDK required to build and run this project)

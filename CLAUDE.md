@@ -2,17 +2,22 @@
 
 ## MOST IMPORTANT RULE: Gradle Task Execution
 
-### NEVER Run Multiple Tasks in One Command
+### NEVER Run Clean with Other Tasks
 
 **FORBIDDEN - The aggregator plugin will reject these:**
 ```bash
 ./gradlew clean build                     # ❌ WILL FAIL
-./gradlew build publishLocal              # ❌ WILL FAIL
+./gradlew clean publishLocal              # ❌ WILL FAIL
 ./gradlew clean build publishLocal        # ❌ WILL FAIL
-./gradlew build publishLocal -PallowMultipleTasks=true  # ❌ NEVER USE THIS FLAG UNLESS YOU KNOW THIS IS TESTED AND WORKS FOR THE JOBS INVOLVED
 ```
 
-**REQUIRED - Run each task individually:**
+**ALLOWED - Multiple tasks (excluding clean):**
+```bash
+./gradlew build publishLocal              # ✅ OK - most combinations work
+./gradlew test jar                        # ✅ OK
+```
+
+**REQUIRED - Clean must run alone:**
 ```bash
 ./gradlew clean
 ./gradlew build
@@ -20,37 +25,36 @@
 ```
 
 ### Why This Rule Exists
-The XVM project uses a custom aggregator plugin that enforces single-task execution to prevent:
+The XVM project uses a custom aggregator plugin that prevents running `clean` with other lifecycle tasks to avoid:
 - Race conditions in composite builds
-- Build conflicts between subprojects
-- Task ordering issues
-- Configuration cache problems
+- Build conflicts between subprojects when cleaning
+- Task ordering issues with clean
 
-The `-PallowMultipleTasks=true` override exists but is reserved for tested workflows and when you know what you are doing. You DO NOT know what you are doing.
+Most other task combinations work fine - the restriction only applies to `clean`.
 
 # Code Style Rules (UNBREAKABLE)
 1. ALWAYS add a newline at the end of every file
 2. NEVER use star imports (import foo.*) - always use explicit imports
 3. NEVER use fully qualified Java package names in the Java code. Always import, so that i.e `org.gradle.api.model.ObjectFactory` is just `ObjectFactory`
 
-### Safe Approach Options:
+### Task Execution Patterns:
 
-**Option 1: Target specific subprojects (SAFEST)**
-- `./gradlew javatools:jar` (single project task)
-- `./gradlew xdk:installDist` (single project task) 
-- `./gradlew javatools:clean` (single project task)
+**Single project tasks:**
+- `./gradlew javatools:jar`
+- `./gradlew xdk:installDist`
+- `./gradlew javatools:clean`
 
-**Option 2: Composite tasks (USE WITH CAUTION)**
-- `./gradlew build` - Usually works but may have interference
-- `./gradlew installDist` - Usually works but may have interference
-- **NEVER**: `./gradlew clean build` or `./gradlew clean <anything>`
+**Multiple lifecycle tasks (works for most tasks):**
+- `./gradlew build installDist` - ✅ Works
+- `./gradlew test jar` - ✅ Works
+- `./gradlew assemble publishLocal` - ✅ Works
 
-**Clean Workflow:**
+**Clean workflow (clean must run alone):**
 1. `./gradlew clean` (standalone, nothing else)
 2. Wait for completion
-3. Then run your desired tasks: `./gradlew build` or `./gradlew installDist`
+3. Then run your desired tasks: `./gradlew build` or `./gradlew build installDist`
 
-This prevents task interference and allows for reliable builds.
+**Remember:** Never combine `clean` with other lifecycle tasks.
 
 ## Gradle Best Practices
 

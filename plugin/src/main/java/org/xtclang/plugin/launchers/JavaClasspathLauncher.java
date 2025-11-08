@@ -1,6 +1,7 @@
 package org.xtclang.plugin.launchers;
 
 import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_NAME_JAR;
+import static org.xtclang.plugin.launchers.XtcExecResult.XtcExecResultBuilder;
 
 import org.gradle.api.GradleException;
 import org.gradle.api.file.FileCollection;
@@ -17,15 +18,11 @@ import org.xtclang.plugin.tasks.XtcLauncherTask;
 
 import org.xvm.tool.Compiler;
 import org.xvm.tool.Disassembler;
-import org.xvm.tool.Launcher;
 import org.xvm.tool.Launcher.LauncherException;
 import org.xvm.tool.Runner;
 
 import java.io.File;
 import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -56,7 +53,6 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
     private final Provider<@NotNull String> toolchainExecutable;
     private final File workingDirectory;
     private final boolean fork;
-    private final boolean detach;
 
     /**
      * Creates a new JavaClasspathLauncher.
@@ -69,7 +65,6 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
      * @param toolchainExecutable The Java toolchain executable path
      * @param workingDirectory The working directory for process execution
      * @param fork Whether to fork to a separate process
-     * @param detach Whether to run in detached mode (implies fork=true)
      */
     public JavaClasspathLauncher(
             final T task,
@@ -79,26 +74,41 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
             final Provider<@NotNull FileCollection> javaToolsConfig,
             final Provider<@NotNull String> toolchainExecutable,
             final File workingDirectory,
-            final boolean fork,
-            final boolean detach) {
+            final boolean fork) {
         super(task, logger);
         this.projectVersion = projectVersion;
         this.xdkFileTree = xdkFileTree;
         this.javaToolsConfig = javaToolsConfig;
         this.toolchainExecutable = toolchainExecutable;
         this.workingDirectory = workingDirectory;
-        this.detach = detach;
-        // If detach is true, fork must be true
-        this.fork = detach || fork;
+        this.fork = fork;
+    }
+
+    protected Provider<@NotNull String> getToolchainExecutable() {
+        return toolchainExecutable;
+    }
+
+    protected File getWorkingDirectory() {
+        return workingDirectory;
+    }
+
+    protected Provider<@NotNull String> getProjectVersion() {
+        return projectVersion;
+    }
+
+    protected Provider<@NotNull FileTree> getXdkFileTree() {
+        return xdkFileTree;
+    }
+
+    protected Provider<@NotNull FileCollection> getJavaToolsConfig() {
+        return javaToolsConfig;
     }
 
     @Override
     public ExecResult apply(final CommandLine cmd) {
-        logger.info("[plugin] Launching task with JavaClasspathLauncher: {}", this);
+        logger.info("[plugin] Launching task (project version: {}), with JavaClasspathLauncher: {}", projectVersion, this);
 
-        final var javaToolsJar = XtcJavaToolsRuntime.resolveJavaTools(
-                projectVersion, javaToolsConfig, xdkFileTree, logger);
-
+        final var javaToolsJar = XtcJavaToolsRuntime.resolveJavaTools(projectVersion, javaToolsConfig, xdkFileTree, logger);
         logger.info("[plugin] {} (launcher: {}); Using '{}' in classpath from: {}",
                 cmd.getIdentifier(), getClass().getSimpleName(), XDK_JAVATOOLS_NAME_JAR, javaToolsJar);
 
@@ -109,19 +119,29 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
         }
 
         // ALWAYS log the exact execution details
-        logger.lifecycle("[plugin] ===== EXACT EXECUTION DETAILS =====");
-        logger.lifecycle("[plugin] Fork mode: {}", fork);
-        logger.lifecycle("[plugin] Main class: {}", cmd.getMainClassName());
-        logger.lifecycle("[plugin] JVM args: {}", cmd.getJvmArgs());
-        logger.lifecycle("[plugin] Classpath: {}", javaToolsJar.getAbsolutePath());
-        logger.lifecycle("[plugin] Working directory: {}", workingDirectory.getAbsolutePath());
-        logger.lifecycle("[plugin] Program arguments ({} total):", cmd.toList().size());
+        final var argsBuilder = new StringBuilder();
         int idx = 0;
         for (final String arg : cmd.toList()) {
-            logger.lifecycle("[plugin]   [{}] = '{}'", idx++, arg);
+            argsBuilder.append(String.format("[plugin]   [%d] = '%s'%n", idx++, arg));
         }
-        logger.lifecycle("[plugin] ===== END EXECUTION DETAILS =====");
 
+        var infoLog = """
+                [plugin] ===== EXACT EXECUTION DETAILS =====
+                [plugin] Fork mode: %s
+                [plugin] Main class: %s
+                [plugin] JVM args: %s
+                [plugin] Classpath: %s
+                [plugin] Working directory: %s
+                [plugin] Program arguments (%d total):
+                %s[plugin] ===== END EXECUTION DETAILS =====""".formatted(
+                fork,
+                cmd.getMainClassName(),
+                cmd.getJvmArgs(),
+                javaToolsJar.getAbsolutePath(),
+                workingDirectory.getAbsolutePath(),
+                cmd.toList().size(),
+                argsBuilder.toString());
+        logger.info(infoLog);
         final var builder = resultBuilder(cmd);
 
         if (fork) {
@@ -163,18 +183,10 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
             return XtcJavaToolsRuntime.withJavaTools(javaToolsJar, logger, () -> {
                 // Convert command line to string array
                 final String[] args = absoluteCmd.toList().toArray(new String[0]);
-
                 try {
                     // Direct call - NO REFLECTION! The compileOnly dependency gives us the types,
                     // and withJavaTools() sets up the classloader so exceptions work correctly
                     final String mainClass = cmd.getMainClassName();
-
-                    // Assert we're calling a known javatools Launcher subclass
-                    assert mainClass.equals("org.xvm.tool.Compiler") ||
-                           mainClass.equals("org.xvm.tool.Runner") ||
-                           mainClass.equals("org.xvm.tool.Disassembler") :
-                           "Unknown main class: " + mainClass;
-
                     // Call the appropriate launcher - all extend Launcher and have the same launch() signature
                     switch (mainClass) {
                         case "org.xvm.tool.Compiler":
@@ -192,7 +204,7 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
 
                     // If we get here, the tool succeeded
                     builder.exitValue(0);
-                    logger.lifecycle("[plugin] {} completed successfully", mainClass);
+                    logger.info("[plugin] {} completed successfully", mainClass);
                     return createExecResult(builder);
 
                 } catch (final LauncherException e) {
@@ -223,7 +235,7 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
                         builder.failure(gradleException);
                         logger.error("[plugin] {} failed with exit code: {}", cmd.getMainClassName(), exitCode);
                     } else {
-                        logger.lifecycle("[plugin] {} completed with exit code: {}", cmd.getMainClassName(), exitCode);
+                        logger.info("[plugin] {} completed with exit code: {}", cmd.getMainClassName(), exitCode);
                     }
 
                     return createExecResult(builder);
@@ -273,7 +285,7 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
 
     /**
      * Converts all relative paths in the command line to absolute paths.
-     * This is necessary for in-thread execution because setting user.dir doesn't affect
+     * This is necessary for in-thread execution because setting "user.dir" doesn't affect
      * File resolution in an already-running JVM.
      */
     private CommandLine convertToAbsolutePaths(final CommandLine cmd) {
@@ -300,78 +312,80 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
     /**
      * Invokes the compiler in a forked process using ProcessBuilder.
      * This is the fallback path when forking is explicitly requested or required.
-     * If detach mode is enabled, the process will run in the background.
+     * This method handles the try-catch wrapper and delegates to executeForkedProcess.
      */
-    private ExecResult invokeForked(final CommandLine cmd, final File javaToolsJar, final XtcExecResult.XtcExecResultBuilder builder) {
-        logger.lifecycle("[plugin] Invoking {} in forked process{}", cmd.getIdentifier(), detach ? " (detached mode)" : "");
-
+    protected ExecResult invokeForked(final CommandLine cmd, final File javaToolsJar, final XtcExecResult.XtcExecResultBuilder builder) {
         try {
-            // Use configured Java toolchain executable
-            final String javaExecutable = toolchainExecutable.getOrNull();
-            if (javaExecutable == null) {
-                throw new GradleException("[plugin] No Java toolchain executable found - cannot fork process");
-            }
-            logger.info("[plugin] Using Java toolchain executable: {}", javaExecutable);
-
-            final List<String> command = new ArrayList<>();
-            command.add(javaExecutable);
-            command.addAll(cmd.getJvmArgs());
-            command.add("-cp");
-            command.add(javaToolsJar.getAbsolutePath());
-            command.add(cmd.getMainClassName());
-            command.addAll(cmd.toList());
-
-            final ProcessBuilder processBuilder = new ProcessBuilder(command);
-            processBuilder.directory(workingDirectory);
-
-            if (detach) {
-                // Detach mode: redirect output to log files and don't wait for completion
-                final String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
-                final String logFileName = cmd.getIdentifier().toLowerCase() + "_pid_" + timestamp + ".log";
-                final File logFile = new File(workingDirectory, logFileName);
-
-                processBuilder.redirectOutput(ProcessBuilder.Redirect.appendTo(logFile));
-                processBuilder.redirectError(ProcessBuilder.Redirect.appendTo(logFile));
-
-                logger.info("[plugin] Starting detached process: {}", String.join(" ", command));
-                final Process process = processBuilder.start();
-                final long pid = process.pid();
-
-                logger.lifecycle("""
-                    [plugin] Started {} with PID: {}
-                    [plugin] Stop with: kill {} (unless there is a graceful way to exit)
-                    [plugin] Logs: {}
-                    """.trim(), cmd.getIdentifier(), pid, pid, logFile.getAbsolutePath());
-
-                // Return success immediately without waiting
-                builder.exitValue(0);
-                return createExecResult(builder);
-            } else {
-                // Normal fork mode: inherit IO and wait for completion
-                processBuilder.inheritIO();
-                logger.info("[plugin] Starting forked process: {}", String.join(" ", command));
-                final Process process = processBuilder.start();
-                final int exitCode = process.waitFor();
-
-                builder.exitValue(exitCode);
-
-                if (exitCode != 0) {
-                    final Exception failure = new GradleException("Forked process exited with code: " + exitCode);
-                    builder.failure(failure);
-                    logger.error("[plugin] Forked process failed with exit code: {}", exitCode);
-                } else {
-                    logger.lifecycle("[plugin] Forked process completed successfully");
-                }
-
-                return createExecResult(builder);
-            }
-
+            return executeForkedProcess(cmd, javaToolsJar, builder);
         } catch (final IOException | InterruptedException e) {
             logger.error("[plugin] Forked invocation failed with exception", e);
             builder.exitValue(-1);
             builder.failure(e);
             return createExecResult(builder);
         }
+    }
+
+    /**
+     * Builds the command line for forked process execution.
+     * This is a helper method used by both normal and detached execution modes.
+     *
+     * @param cmd The command line to execute
+     * @param javaToolsJar The javatools JAR file
+     * @return The command list ready for ProcessBuilder
+     */
+    protected List<String> buildForkedCommand(final CommandLine cmd, final File javaToolsJar) {
+        final String javaExecutable = toolchainExecutable.getOrNull();
+        if (javaExecutable == null) {
+            throw new GradleException("[plugin] No Java toolchain executable found - cannot fork process");
+        }
+        logger.info("[plugin] Using Java toolchain executable: {}", javaExecutable);
+
+        final List<String> command = new ArrayList<>();
+        command.add(javaExecutable);
+        command.addAll(cmd.getJvmArgs());
+        command.add("-cp");
+        command.add(javaToolsJar.getAbsolutePath());
+        command.add(cmd.getMainClassName());
+        command.addAll(cmd.toList());
+
+        return command;
+    }
+
+    /**
+     * Executes the forked process. Subclasses can override this to customize the execution behavior.
+     * This method is called within a try-catch block by invokeForked().
+     *
+     * @param cmd The command line to execute
+     * @param javaToolsJar The javatools JAR file
+     * @param builder The result builder
+     * @return The execution result
+     * @throws IOException if the process cannot be started
+     * @throws InterruptedException if the process is interrupted while waiting
+     */
+    protected ExecResult executeForkedProcess(final CommandLine cmd, final File javaToolsJar, final XtcExecResultBuilder builder)
+            throws IOException, InterruptedException {
+        logger.lifecycle("[plugin] Invoking {} in forked process", cmd.getIdentifier());
+
+        final List<String> command = buildForkedCommand(cmd, javaToolsJar);
+
+        final ProcessBuilder processBuilder = new ProcessBuilder(command);
+        processBuilder.directory(workingDirectory);
+
+        // Normal fork mode: inherit IO and wait for completion
+        processBuilder.inheritIO();
+        logger.info("[plugin] Starting forked process: {}", String.join(" ", command));
+        final Process process = processBuilder.start();
+        final int exitCode = process.waitFor();
+        builder.exitValue(exitCode);
+
+        if (exitCode != 0) {
+            final Exception failure = new GradleException("Forked process exited with code: " + exitCode);
+            builder.failure(failure);
+            logger.error("[plugin] Forked process failed with exit code: {}", exitCode);
+        } else {
+            logger.lifecycle("[plugin] Forked process completed successfully");
+        }
+        return createExecResult(builder);
     }
 
 }

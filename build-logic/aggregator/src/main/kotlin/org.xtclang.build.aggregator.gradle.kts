@@ -57,11 +57,10 @@ private class XdkBuildAggregator(val project: Project) : Runnable {
                         val requestedTasks = gradle.startParameter.taskRequests.flatMap { it.args }
                             .filter { !it.startsWith("-") }
                         val otherLifecycleTasks = requestedTasks.filter { it != CLEAN_TASK_NAME && lifeCycleTasks.contains(it) }
-                        val allowMultipleTasks = (project.properties["allowMultipleTasks"]?.toString() ?: "false").toBoolean()
 
                         logger.info("[aggregator] Clean task in graph. Requested tasks: $requestedTasks")
 
-                        if (otherLifecycleTasks.isNotEmpty() && !allowMultipleTasks) {
+                        if (otherLifecycleTasks.isNotEmpty()) {
                             val msg = """
 
                                 ================================================================================
@@ -71,8 +70,6 @@ private class XdkBuildAggregator(val project: Project) : Runnable {
                                 Run tasks individually:
                                   ./gradlew clean
                                   ./gradlew build
-
-                                Or use -PallowMultipleTasks=true if you know this is tested and safe.
                                 ================================================================================
 
                             """.trimIndent()
