@@ -1,5 +1,6 @@
 package org.xtclang.plugin.launchers;
 
+import static org.xtclang.plugin.XtcJavaToolsRuntime.*;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_NAME_JAR;
 import static org.xtclang.plugin.launchers.XtcExecResult.XtcExecResultBuilder;
 
@@ -12,19 +13,16 @@ import org.gradle.process.ExecResult;
 
 import org.jetbrains.annotations.NotNull;
 
-import org.xtclang.plugin.XtcJavaToolsRuntime;
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.tasks.XtcLauncherTask;
 
-import org.xvm.tool.Compiler;
-import org.xvm.tool.Disassembler;
 import org.xvm.tool.Launcher.LauncherException;
-import org.xvm.tool.Runner;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * A launcher that directly invokes XTC tools using javatools classes on the classpath.
@@ -47,11 +45,12 @@ import java.util.List;
  * </ul>
  */
 public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>> extends XtcLauncher<E, T> {
-    private final Provider<@NotNull String> projectVersion;
-    private final Provider<@NotNull FileTree> xdkFileTree;
-    private final Provider<@NotNull FileCollection> javaToolsConfig;
-    private final Provider<@NotNull String> toolchainExecutable;
-    private final File workingDirectory;
+    protected final Provider<@NotNull String> projectVersion;
+    protected final Provider<@NotNull FileTree> xdkFileTree;
+    protected final Provider<@NotNull FileCollection> javaToolsConfig;
+    protected final Provider<@NotNull String> toolchainExecutable;
+    protected final File workingDirectory;
+    protected final Consumer<String[]> toolLauncher;
     private final boolean fork;
 
     /**
@@ -59,6 +58,7 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
      *
      * @param task The task being executed
      * @param logger Logger for diagnostic output
+     * @param toolLauncher Type-safe reference to the tool's launch method (e.g., Compiler::launch)
      * @param projectVersion The project version for artifact resolution
      * @param xdkFileTree The XDK file tree for resolving javatools
      * @param javaToolsConfig The javatools configuration
@@ -69,6 +69,7 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
     public JavaClasspathLauncher(
             final T task,
             final Logger logger,
+            final Consumer<String[]> toolLauncher,
             final Provider<@NotNull String> projectVersion,
             final Provider<@NotNull FileTree> xdkFileTree,
             final Provider<@NotNull FileCollection> javaToolsConfig,
@@ -76,6 +77,7 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
             final File workingDirectory,
             final boolean fork) {
         super(task, logger);
+        this.toolLauncher = toolLauncher;
         this.projectVersion = projectVersion;
         this.xdkFileTree = xdkFileTree;
         this.javaToolsConfig = javaToolsConfig;
@@ -84,31 +86,22 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
         this.fork = fork;
     }
 
-    protected Provider<@NotNull String> getToolchainExecutable() {
-        return toolchainExecutable;
-    }
-
-    protected File getWorkingDirectory() {
-        return workingDirectory;
-    }
-
-    protected Provider<@NotNull String> getProjectVersion() {
-        return projectVersion;
-    }
-
-    protected Provider<@NotNull FileTree> getXdkFileTree() {
-        return xdkFileTree;
-    }
-
-    protected Provider<@NotNull FileCollection> getJavaToolsConfig() {
-        return javaToolsConfig;
-    }
-
     @Override
     public ExecResult apply(final CommandLine cmd) {
         logger.info("[plugin] Launching task (project version: {}), with JavaClasspathLauncher: {}", projectVersion, this);
+        final var javaToolsJar = resolveJavaTools(projectVersion, javaToolsConfig, xdkFileTree, logger);
+        logLaunchInfo(cmd, javaToolsJar);
+        final var builder = resultBuilder(cmd);
+        return fork ? invokeForked(cmd, javaToolsJar, builder) : invokeDirectly(cmd, javaToolsJar, builder);
+    }
 
-        final var javaToolsJar = XtcJavaToolsRuntime.resolveJavaTools(projectVersion, javaToolsConfig, xdkFileTree, logger);
+    /**
+     * Logs detailed information about the launch command.
+     *
+     * @param cmd The command line to execute
+     * @param javaToolsJar The javatools JAR file being used
+     */
+    private void logLaunchInfo(final CommandLine cmd, final File javaToolsJar) {
         logger.info("[plugin] {} (launcher: {}); Using '{}' in classpath from: {}",
                 cmd.getIdentifier(), getClass().getSimpleName(), XDK_JAVATOOLS_NAME_JAR, javaToolsJar);
 
@@ -126,7 +119,6 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
         }
 
         var infoLog = """
-                [plugin] ===== EXACT EXECUTION DETAILS =====
                 [plugin] Fork mode: %s
                 [plugin] Main class: %s
                 [plugin] JVM args: %s
@@ -142,13 +134,6 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
                 cmd.toList().size(),
                 argsBuilder.toString());
         logger.info(infoLog);
-        final var builder = resultBuilder(cmd);
-
-        if (fork) {
-            return invokeForked(cmd, javaToolsJar, builder);
-        } else {
-            return invokeDirectly(cmd, javaToolsJar, builder);
-        }
     }
 
     /**
@@ -180,31 +165,15 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
 
             // Use the utility to execute with javatools on classpath
             // Inside withJavaTools(), the context classloader is set so we can call javatools DIRECTLY!
-            return XtcJavaToolsRuntime.withJavaTools(javaToolsJar, logger, () -> {
+            return withJavaTools(javaToolsJar, logger, () -> {
                 // Convert command line to string array
                 final String[] args = absoluteCmd.toList().toArray(new String[0]);
                 try {
-                    // Direct call - NO REFLECTION! The compileOnly dependency gives us the types,
-                    // and withJavaTools() sets up the classloader so exceptions work correctly
-                    final String mainClass = cmd.getMainClassName();
-                    // Call the appropriate launcher - all extend Launcher and have the same launch() signature
-                    switch (mainClass) {
-                        case "org.xvm.tool.Compiler":
-                            Compiler.launch(args);
-                            break;
-                        case "org.xvm.tool.Runner":
-                            Runner.launch(args);
-                            break;
-                        case "org.xvm.tool.Disassembler":
-                            Disassembler.launch(args);
-                            break;
-                        default:
-                            throw new GradleException("Unsupported tool: " + mainClass);
-                    }
+                    toolLauncher.accept(args);
 
                     // If we get here, the tool succeeded
                     builder.exitValue(0);
-                    logger.info("[plugin] {} completed successfully", mainClass);
+                    logger.info("[plugin] Tool execution completed successfully");
                     return createExecResult(builder);
 
                 } catch (final LauncherException e) {
@@ -230,12 +199,11 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
                         // creating the GradleException. This workaround exists solely due to configuration
                         // cache serialization constraints, not classloader issues.
                         final String errorMessage = buildErrorMessage(e);
-                        final GradleException gradleException = new GradleException(
-                                "XTC tool execution failed: " + errorMessage);
+                        final GradleException gradleException = new GradleException("XTC tool execution failed: " + errorMessage);
                         builder.failure(gradleException);
-                        logger.error("[plugin] {} failed with exit code: {}", cmd.getMainClassName(), exitCode);
+                        logger.error("[plugin] Tool execution failed with exit code: {}", exitCode);
                     } else {
-                        logger.info("[plugin] {} completed with exit code: {}", cmd.getMainClassName(), exitCode);
+                        logger.info("[plugin] Tool execution completed with exit code: {}", exitCode);
                     }
 
                     return createExecResult(builder);
@@ -339,7 +307,6 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
             throw new GradleException("[plugin] No Java toolchain executable found - cannot fork process");
         }
         logger.info("[plugin] Using Java toolchain executable: {}", javaExecutable);
-
         final List<String> command = new ArrayList<>();
         command.add(javaExecutable);
         command.addAll(cmd.getJvmArgs());
@@ -347,7 +314,6 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
         command.add(javaToolsJar.getAbsolutePath());
         command.add(cmd.getMainClassName());
         command.addAll(cmd.toList());
-
         return command;
     }
 
@@ -364,12 +330,10 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
      */
     protected ExecResult executeForkedProcess(final CommandLine cmd, final File javaToolsJar, final XtcExecResultBuilder builder)
             throws IOException, InterruptedException {
-        logger.lifecycle("[plugin] Invoking {} in forked process", cmd.getIdentifier());
+        logger.info("[plugin] Invoking {} in forked process", cmd.getIdentifier());
 
-        final List<String> command = buildForkedCommand(cmd, javaToolsJar);
-
-        final ProcessBuilder processBuilder = new ProcessBuilder(command);
-        processBuilder.directory(workingDirectory);
+        final var command = buildForkedCommand(cmd, javaToolsJar);
+        final var processBuilder = new ProcessBuilder(command).directory(workingDirectory);
 
         // Normal fork mode: inherit IO and wait for completion
         processBuilder.inheritIO();
@@ -383,9 +347,8 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
             builder.failure(failure);
             logger.error("[plugin] Forked process failed with exit code: {}", exitCode);
         } else {
-            logger.lifecycle("[plugin] Forked process completed successfully");
+            logger.info("[plugin] Forked process completed successfully");
         }
         return createExecResult(builder);
     }
-
 }

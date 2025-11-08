@@ -9,12 +9,15 @@ import static org.gradle.api.logging.LogLevel.LIFECYCLE;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_RUNNER_CLASS_NAME;
 import static org.xtclang.plugin.XtcJavaToolsRuntime.ensureJavaToolsInClasspath;
 
+import org.xvm.tool.Runner;
+
 import java.io.File;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 import javax.inject.Inject;
 
@@ -106,6 +109,12 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         return XTC_RUNNER_CLASS_NAME;
     }
 
+    @Internal
+    @Override
+    protected Consumer<String[]> getToolLauncher() {
+        return Runner::launch;
+    }
+
     @Override
     protected XtcLauncher<XtcRuntimeExtension, ? extends XtcLauncherTask<XtcRuntimeExtension>> createLauncher() {
         final boolean detach = getDetach().get();
@@ -123,6 +132,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
 
         return new DetachedJavaClasspathLauncher<>(
             this, getLogger(),
+            getToolLauncher(),
             projectVersion, xdkFileTree, javaToolsConfig, toolchainExecutable,
             projectDirectory.get().getAsFile());
     }

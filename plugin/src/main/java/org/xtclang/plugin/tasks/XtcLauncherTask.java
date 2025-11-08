@@ -20,15 +20,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
-
-import javax.inject.Inject;
 
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileCollection;
+import org.gradle.api.file.FileTree;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
@@ -40,7 +40,6 @@ import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SourceSet;
-import org.gradle.process.ExecOperations;
 import org.gradle.process.ExecResult;
 
 import org.jetbrains.annotations.NotNull;
@@ -71,7 +70,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     // Captured at configuration time for configuration cache compatibility
     protected final Provider<@NotNull Directory> projectDirectory;
     protected final Provider<@NotNull Directory> xdkContentsDir;
-    protected final Provider<org.gradle.api.file.@NotNull FileTree> xdkFileTree;
+    protected final Provider<@NotNull FileTree> xdkFileTree;
     protected final Map<String, Provider<@NotNull Directory>> sourceSetOutputDirs;
     protected final List<String> sourceSetNames;
     protected final Provider<@NotNull FileCollection> javaToolsConfig;
@@ -167,8 +166,8 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         GradlePhaseAssertions.validateConfigurationTimeCapture(this.sourceSetOutputDirs, "source set output directories");
     }
 
-    @Inject
-    public abstract ExecOperations getExecOperations();
+    //@Inject
+    //public abstract ExecOperations getExecOperations();
 
     @Override
     public void executeTask() {
@@ -190,15 +189,6 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getInputXtcJavaToolsConfig() {
-        return javaToolsConfig.get();
-    }
-
-    /**
-     * Returns the javatools classpath for use by launchers.
-     * This is used by the compiler daemon to load the XTC compiler.
-     */
-    @Internal
-    public FileCollection getJavaToolsClasspath() {
         return javaToolsConfig.get();
     }
 
@@ -300,6 +290,15 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @Internal
     public abstract String getJavaLauncherClassName();
 
+    /**
+     * Returns the tool launcher method reference for this task.
+     * Subclasses provide a type-safe reference to their specific tool's launch method.
+     *
+     * @return Method reference to the tool's launch method (e.g., Compiler::launch)
+     */
+    @Internal
+    protected abstract Consumer<String[]> getToolLauncher();
+
     protected <R extends ExecResult> R handleExecResult(final R result) {
         final int exitValue = result.getExitValue();
         if (exitValue != 0) {
@@ -340,6 +339,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         }
 
         return new JavaClasspathLauncher<>(this, logger,
+            getToolLauncher(),
             projectVersion, xdkFileTree, javaToolsConfig, toolchainExecutable,
             projectDirectory.get().getAsFile(), fork);
     }

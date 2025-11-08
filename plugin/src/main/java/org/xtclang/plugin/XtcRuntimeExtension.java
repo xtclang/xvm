@@ -65,7 +65,7 @@ public interface XtcRuntimeExtension extends XtcLauncherTaskExtension {
      *
      * @return property controlling detached execution
      */
-    Property<Boolean> getDetach();
+    Property<@NotNull Boolean> getDetach();
 
     /**
      * Whether to run multiple modules in parallel. When true and multiple modules are configured,
@@ -73,7 +73,7 @@ public interface XtcRuntimeExtension extends XtcLauncherTaskExtension {
      *
      * @return property controlling parallel execution
      */
-    Property<Boolean> getParallel();
+    Property<@NotNull Boolean> getParallel();
 
     /**
      * Does this extension declare any modules to be resolved and executed?

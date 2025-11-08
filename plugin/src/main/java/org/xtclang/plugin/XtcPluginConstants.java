@@ -55,9 +55,6 @@ public final class XtcPluginConstants {
     // Project property names
     public static final String PROPERTY_VERBOSE_LOGGING_OVERRIDE = "xtcPluginOverrideVerboseLogging";
 
-    // Default values
-    public static final int DEFAULT_DEBUG_PORT = 4711;
-
     public static final String UNSPECIFIED = Project.DEFAULT_VERSION;
 
     private XtcPluginConstants() {

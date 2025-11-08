@@ -1395,6 +1395,7 @@ public abstract class Launcher
         if (dir != null && !dir.exists()) {
             log(Severity.INFO, "Creating directory " + dir);
             // ignore any errors here; errors would end up being reported further down
+            //noinspection ResultOfMethodCallIgnored
             dir.mkdirs();
         }
 

@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * A launcher that runs XTC tools in detached mode using javatools classes on the classpath.
@@ -48,6 +49,7 @@ public class DetachedJavaClasspathLauncher<E extends XtcLauncherTaskExtension, T
      *
      * @param task The task being executed
      * @param logger Logger for diagnostic output
+     * @param toolLauncher Type-safe reference to the tool's launch method (e.g., Runner::launch)
      * @param projectVersion The project version for artifact resolution
      * @param xdkFileTree The XDK file tree for resolving javatools
      * @param javaToolsConfig The javatools configuration
@@ -57,13 +59,14 @@ public class DetachedJavaClasspathLauncher<E extends XtcLauncherTaskExtension, T
     public DetachedJavaClasspathLauncher(
             final T task,
             final Logger logger,
+            final Consumer<String[]> toolLauncher,
             final Provider<@NotNull String> projectVersion,
             final Provider<@NotNull FileTree> xdkFileTree,
             final Provider<@NotNull FileCollection> javaToolsConfig,
             final Provider<@NotNull String> toolchainExecutable,
             final File workingDirectory) {
         // Force fork=true for detached mode
-        super(task, logger, projectVersion, xdkFileTree, javaToolsConfig, toolchainExecutable, workingDirectory, true);
+        super(task, logger, toolLauncher, projectVersion, xdkFileTree, javaToolsConfig, toolchainExecutable, workingDirectory, true);
     }
 
     /**
@@ -79,12 +82,12 @@ public class DetachedJavaClasspathLauncher<E extends XtcLauncherTaskExtension, T
         final List<String> command = buildForkedCommand(cmd, javaToolsJar);
 
         final ProcessBuilder processBuilder = new ProcessBuilder(command);
-        processBuilder.directory(getWorkingDirectory());
+        processBuilder.directory(workingDirectory);
 
         // Detach mode: redirect output to log files and don't wait for completion
         final String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         final String logFileName = cmd.getIdentifier().toLowerCase() + "_pid_" + timestamp + ".log";
-        final File logFile = new File(getWorkingDirectory(), logFileName);
+        final File logFile = new File(workingDirectory, logFileName);
 
         processBuilder.redirectOutput(ProcessBuilder.Redirect.appendTo(logFile));
         processBuilder.redirectError(ProcessBuilder.Redirect.appendTo(logFile));

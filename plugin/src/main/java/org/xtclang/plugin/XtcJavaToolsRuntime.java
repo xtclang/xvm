@@ -92,12 +92,11 @@ public final class XtcJavaToolsRuntime {
             return;
         }
 
-        final File javaToolsJar = resolveJavaTools(projectVersion, javaToolsConfig, xdkFileTree, logger);
-        final ClassLoader currentClassLoader = XtcJavaToolsRuntime.class.getClassLoader();
+        final var javaToolsJar = resolveJavaTools(projectVersion, javaToolsConfig, xdkFileTree, logger);
+        final var currentClassLoader = XtcJavaToolsRuntime.class.getClassLoader();
 
         if (!(currentClassLoader instanceof URLClassLoader)) {
-            throw new GradleException("[plugin] Cannot load javatools: classloader is not URLClassLoader: " +
-                    currentClassLoader.getClass().getName());
+            throw new GradleException("[plugin] Cannot load javatools: classloader is not URLClassLoader: " + currentClassLoader.getClass().getName());
         }
 
         try {
@@ -105,10 +104,8 @@ public final class XtcJavaToolsRuntime {
             final java.lang.reflect.Method addUrlMethod = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
             addUrlMethod.setAccessible(true);
             addUrlMethod.invoke(currentClassLoader, javaToolsUrl);
-
             javaToolsLoadedIntoClasspath = true;
-            logger.lifecycle("[plugin] ******* Loaded javatools.jar into plugin classpath: {}", javaToolsJar.getAbsolutePath());
-            logger.info("[plugin] All javatools types now available throughout plugin");
+            logger.info("[plugin] ******* Loaded javatools.jar into plugin classpath: {}", javaToolsJar.getAbsolutePath());
 
         } catch (final Exception e) {
             throw new GradleException("[plugin] Failed to load javatools.jar into classpath: " + javaToolsJar.getAbsolutePath(), e);

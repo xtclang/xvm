@@ -6,6 +6,7 @@ import static org.xtclang.plugin.XtcPluginUtils.FileUtils.hasFileExtension;
 import java.io.File;
 
 import java.util.Set;
+import java.util.function.Consumer;
 
 import groovy.lang.Closure;
 
@@ -28,6 +29,8 @@ import org.jetbrains.annotations.NotNull;
 
 import org.xtclang.plugin.XtcCompilerExtension;
 import org.xtclang.plugin.XtcProjectDelegate;
+
+import org.xvm.tool.Compiler;
 
 public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension> implements PatternFilterable {
     private static final String XDK_TURTLE_SOURCE_FILENAME = "mack.x";
