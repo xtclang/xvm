@@ -7,11 +7,8 @@ import Lexer.Token;
 /**
  * An [ObjectInput] implementation for JSON de-serialization that reads from a [Reader], or from a
  * stream of JSON tokens, or from a JSON parser.
- *
- * @param schema  the JSON `Schema` to use
- * @param parser  the `Parser` to use to parse JSON documents
  */
-class ObjectInputStream(Schema schema, Parser parser)
+class ObjectInputStream
         implements ObjectInput {
     /**
      * Construct an ObjectInputStream from a [Reader].
@@ -33,6 +30,23 @@ class ObjectInputStream(Schema schema, Parser parser)
         construct ObjectInputStream(schema, new Parser(lexer.ensureMarkable()));
     }
 
+    /**
+     * Construct an ObjectInputStream from a [Parser].
+     *
+     * If the `Parser` is a `NestedParser` the `ObjectInputStream` will only
+     * read the tokens for the JSON Doc currently pointed to by the `Parser`.
+     *
+     * @param schema  the JSON `Schema` to use
+     * @param parser  the `Parser` to use to parse JSON documents
+     */
+    construct(Schema schema, Parser parser) {
+        this.schema = schema;
+        if (parser.is(Parser.NestedParser)) {
+            this.parser = new Parser(parser.skip(new Token[]).iterator().ensureMarkable());
+        } else {
+            this.parser = parser;
+        }
+    }
 
     // ----- properties ----------------------------------------------------------------------------
 
