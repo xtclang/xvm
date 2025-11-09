@@ -8,7 +8,6 @@ import org.xtclang.ecstasy.xEnum;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.javajit.Container;
 import org.xvm.javajit.Ctx;
 
 import org.xtclang.ecstasy.Exception;
@@ -16,7 +15,6 @@ import org.xtclang.ecstasy.Iterable;
 import org.xtclang.ecstasy.Range$Int64;
 import org.xtclang.ecstasy.xException;
 import org.xtclang.ecstasy.xObj;
-import org.xtclang.ecstasy.xType;
 import org.xtclang.ecstasy.reflect.Var;
 
 /**

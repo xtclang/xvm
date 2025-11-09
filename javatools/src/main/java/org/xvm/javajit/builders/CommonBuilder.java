@@ -190,9 +190,14 @@ public class CommonBuilder
                 classBuilder.withSuperclass(getSuperCD());
                 break;
 
-            case INTERFACE, MIXIN, ENUM:
+            case INTERFACE, ENUM:
                 flags |= ClassFile.ACC_INTERFACE | ClassFile.ACC_ABSTRACT;
                 break;
+
+            case ANNOTATION, MIXIN:
+                // annotations and mixins are incorporated (copied) into every class that
+                // annotates the annotation or incorporates the mixin
+                return;
 
             default:
                 // TODO: support for mixin, annotations, etc

@@ -15,6 +15,7 @@ import java.util.concurrent.locks.StampedLock;
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.ComponentResolver.ResolutionResult;
 import org.xvm.asm.ComponentResolver.ResolutionCollector;
 import org.xvm.asm.Constant;
@@ -820,8 +821,10 @@ public class ParameterizedTypeConstant
     public TypeConstant getCanonicalJitType() {
         assert isSingleUnderlyingClass(true);
 
-        ConstantPool   pool = getConstantPool();
-        ClassStructure clz  = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
+        ConstantPool    pool           = getConstantPool();
+        ClassStructure  clz            = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
+        var             listTypeParams = clz.getTypeParamsAsList();
+        var             listContribs   = clz.collectConditionalIncorporates(this);
 
         TypeConstant[] aconstOriginal  = m_atypeParams;
         TypeConstant[] aconstCanonical = aconstOriginal;
@@ -832,22 +835,48 @@ public class ParameterizedTypeConstant
             if (typeOriginal.isPrimitive()) {
                 fTrivial = false;
             } else {
-                TypeConstant typeConstraint = clz.getTypeParamsAsList().get(i).getValue();
+                var            entryParam     = listTypeParams.get(i);
+                StringConstant constName      = entryParam.getKey();
+                TypeConstant   typeConstraint = entryParam.getValue();
+
+                // drop the actual type down to the constraint
                 if (!typeConstraint.equals(typeOriginal)) {
                     if (!fDiff) {
                         aconstCanonical = aconstCanonical.clone();
                         fDiff    = true;
                     }
                     aconstCanonical[i] = typeConstraint;
+
+                    if (!typeConstraint.equals(pool.typeObject())) {
+                        fTrivial = false;
+                    }
                 }
-                if (!typeConstraint.equals(pool.typeObject())) {
-                    fTrivial = false;
+
+                if (listContribs == null) {
+                    continue;
+                }
+
+                // narrow the actual type up to the conditional contribution's constraint
+                for (Contribution contrib : listContribs) {
+                    TypeConstant typeContrib = contrib.getTypeParams().get(constName);
+
+                    if (!typeContrib.equals(typeConstraint)) {
+                        if (!fDiff) {
+                            aconstCanonical = aconstCanonical.clone();
+                            fDiff    = true;
+                        }
+                    aconstCanonical[i] = typeContrib;
+                    }
+
+                    if (!typeContrib.equals(pool.typeObject())) {
+                        fTrivial = false;
+                    }
                 }
             }
         }
 
         return fTrivial
-                ? m_constType
+                ? m_constType // TerminalTypeConstant
                 : fDiff
                     ? pool.ensureParameterizedTypeConstant(m_constType, aconstCanonical)
                     : this;
