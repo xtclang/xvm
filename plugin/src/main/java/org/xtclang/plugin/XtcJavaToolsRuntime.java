@@ -180,6 +180,7 @@ public final class XtcJavaToolsRuntime {
      *   <li>Sets it as the thread context classloader</li>
      *   <li>Executes the provided callable</li>
      *   <li>Restores the original classloader</li>
+     *   <li>Closes the URLClassLoader</li>
      *   <li>Returns the result</li>
      * </ol>
      *
@@ -203,35 +204,12 @@ public final class XtcJavaToolsRuntime {
             @NotNull final File javaToolsJar,
             @NotNull final Logger logger,
             @NotNull final Callable<T> callable) throws Exception {
-
-        return withJavaToolsClassLoader(javaToolsJar, logger, callable);
-    }
-
-    /**
-     * Helper method that creates a URLClassLoader with javatools.jar, sets it as thread context classloader,
-     * executes the callable, and restores the original classloader.
-     *
-     * @param javaToolsJar The javatools.jar file
-     * @param logger Logger for diagnostic output
-     * @param callable The code to execute with javatools on classpath
-     * @param <T> The return type
-     * @return The result from the callable
-     * @throws Exception if the callable throws an exception
-     */
-    private static <T> T withJavaToolsClassLoader(
-            @NotNull final File javaToolsJar,
-            @NotNull final Logger logger,
-            @NotNull final Callable<T> callable) throws Exception {
-
         final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
-
-        try {
-            final URLClassLoader javaToolsClassLoader = createAndSetJavaToolsClassLoader(javaToolsJar, logger);
+        final URLClassLoader javaToolsClassLoader = createAndSetJavaToolsClassLoader(javaToolsJar, logger);
+        try (javaToolsClassLoader) {
             logger.lifecycle("[plugin] ******* Added javatools.jar to runtime classpath: {}", javaToolsJar.getAbsolutePath());
             logger.info("[plugin] Set thread context classloader to javatools classloader");
-
             return callable.call();
-
         } finally {
             Thread.currentThread().setContextClassLoader(originalClassLoader);
             logger.info("[plugin] Restored original thread context classloader");
@@ -240,7 +218,7 @@ public final class XtcJavaToolsRuntime {
 
     /**
      * Creates a URLClassLoader with javatools.jar and sets it as the thread context classloader.
-     * This is the common implementation used by both ensureJavaToolsInClasspath and withJavaTools.
+     * This is the common helper used by both ensureJavaToolsInClasspath and withJavaTools.
      *
      * @param javaToolsJar The javatools.jar file
      * @param logger Logger for diagnostic output
@@ -253,15 +231,9 @@ public final class XtcJavaToolsRuntime {
 
         final URL javaToolsUrl = javaToolsJar.toURI().toURL();
         final ClassLoader parentClassLoader = Thread.currentThread().getContextClassLoader();
-
-        final URLClassLoader javaToolsClassLoader = new URLClassLoader(
-                new URL[]{javaToolsUrl},
-                parentClassLoader
-        );
-
+        final URLClassLoader javaToolsClassLoader = new URLClassLoader(new URL[]{javaToolsUrl}, parentClassLoader);
         Thread.currentThread().setContextClassLoader(javaToolsClassLoader);
         logger.debug("[plugin] Created URLClassLoader with javatools.jar: {}", javaToolsUrl);
-
         return javaToolsClassLoader;
     }
 
