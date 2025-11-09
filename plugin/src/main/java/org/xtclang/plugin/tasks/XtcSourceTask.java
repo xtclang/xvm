@@ -6,7 +6,6 @@ import static org.xtclang.plugin.XtcPluginUtils.FileUtils.hasFileExtension;
 import java.io.File;
 
 import java.util.Set;
-import java.util.function.Consumer;
 
 import groovy.lang.Closure;
 
@@ -30,8 +29,6 @@ import org.jetbrains.annotations.NotNull;
 import org.xtclang.plugin.XtcCompilerExtension;
 import org.xtclang.plugin.XtcProjectDelegate;
 
-import org.xvm.tool.Compiler;
-
 public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension> implements PatternFilterable {
     private static final String XDK_TURTLE_SOURCE_FILENAME = "mack.x";
 
@@ -41,6 +38,7 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
     @SuppressWarnings("this-escape")
     protected XtcSourceTask(final Project project) {
         super(project, XtcProjectDelegate.resolveXtcCompileExtension(project));
+        final var objects = getObjects();
         this.patternSet = objects.newInstance(PatternSet.class);
         this.sourceFiles = objects.fileCollection();
     }
@@ -80,7 +78,7 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
      * @param source The source.
      */
     public void setSource(final Object source) {
-        sourceFiles = objects.fileCollection().from(source);
+        sourceFiles = getObjects().fileCollection().from(source);
     }
 
     /**
@@ -186,6 +184,7 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
     protected boolean isTopLevelSource(final SourceSet sourceSet, final File file) {
         assert file.isFile();
         final var topLevelSourceDirs = new java.util.HashSet<>(sourceSet.getAllSource().getSrcDirs());
+        final var logger = getLogger();
         final var dir = file.getParentFile();
         assert dir != null && dir.isDirectory();
         final var isTopLevelSrc = topLevelSourceDirs.contains(dir);

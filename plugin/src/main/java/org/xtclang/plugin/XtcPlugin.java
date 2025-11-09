@@ -43,7 +43,7 @@ public class XtcPlugin implements Plugin<@NotNull Project> {
 
         @Override
         public void apply(final @NotNull Project project) {
-            new XtcProjectDelegate(project, xtcComponent).apply();
+            new XtcProjectDelegate(project, xtcComponent).apply(project);
         }
     }
 

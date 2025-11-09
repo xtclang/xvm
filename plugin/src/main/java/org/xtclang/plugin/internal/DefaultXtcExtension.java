@@ -1,20 +1,22 @@
 package org.xtclang.plugin.internal;
 
-import org.gradle.api.Project;
+import javax.inject.Inject;
+
+import org.gradle.api.provider.ProviderFactory;
 
 import org.xtclang.plugin.XtcExtension;
 
-// TODO: We may want to add things extensions like xtcLangGitHub() here.
 @SuppressWarnings("ClassCanBeRecord")
 public class DefaultXtcExtension implements XtcExtension {
-    private final Project project;
+    private final String projectName;
 
-    public DefaultXtcExtension(final Project project) {
-        this.project = project;
+    @Inject
+    public DefaultXtcExtension(final ProviderFactory providers) {
+        this.projectName = providers.gradleProperty("name").getOrElse("unknown");
     }
 
     @Override
     public String toString() {
-        return project.getName() + " XTC extension";
+        return projectName + " XTC extension";
     }
 }

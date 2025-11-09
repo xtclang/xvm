@@ -1,16 +1,13 @@
 package org.xtclang.plugin.launchers;
 
-import static org.xtclang.plugin.XtcJavaToolsRuntime.*;
+import static org.xtclang.plugin.XtcJavaToolsRuntime.resolveJavaTools;
+import static org.xtclang.plugin.XtcJavaToolsRuntime.withJavaTools;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_NAME_JAR;
 import static org.xtclang.plugin.XtcPluginUtils.expandTimestampPlaceholder;
-import static org.xtclang.plugin.launchers.XtcExecResult.XtcExecResultBuilder;
 
 import org.gradle.api.GradleException;
-import org.gradle.api.file.FileCollection;
-import org.gradle.api.file.FileTree;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.provider.Property;
-import org.gradle.api.provider.Provider;
 import org.gradle.process.ExecResult;
 
 import org.jetbrains.annotations.NotNull;
@@ -47,11 +44,7 @@ import java.util.function.Consumer;
  * </ul>
  */
 public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>> extends XtcLauncher<E, T> {
-    protected final Provider<@NotNull String> projectVersion;
-    protected final Provider<@NotNull FileTree> xdkFileTree;
-    protected final Provider<@NotNull FileCollection> javaToolsConfig;
-    protected final Provider<@NotNull String> toolchainExecutable;
-    protected final File workingDirectory;
+    protected final LauncherContext context;
     protected final Consumer<String[]> toolLauncher;
     private final boolean fork;
 
@@ -61,40 +54,27 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
      * @param task The task being executed
      * @param logger Logger for diagnostic output
      * @param toolLauncher Type-safe reference to the tool's launch method (e.g., Compiler::launch)
-     * @param projectVersion The project version for artifact resolution
-     * @param xdkFileTree The XDK file tree for resolving javatools
-     * @param javaToolsConfig The javatools configuration
-     * @param toolchainExecutable The Java toolchain executable path
-     * @param workingDirectory The working directory for process execution
+     * @param context Launcher execution context (project version, XDK, javatools, etc.)
      * @param fork Whether to fork to a separate process
      */
     public JavaClasspathLauncher(
             final T task,
             final Logger logger,
             final Consumer<String[]> toolLauncher,
-            final Provider<@NotNull String> projectVersion,
-            final Provider<@NotNull FileTree> xdkFileTree,
-            final Provider<@NotNull FileCollection> javaToolsConfig,
-            final Provider<@NotNull String> toolchainExecutable,
-            final File workingDirectory,
+            final LauncherContext context,
             final boolean fork) {
         super(task, logger);
         this.toolLauncher = toolLauncher;
-        this.projectVersion = projectVersion;
-        this.xdkFileTree = xdkFileTree;
-        this.javaToolsConfig = javaToolsConfig;
-        this.toolchainExecutable = toolchainExecutable;
-        this.workingDirectory = workingDirectory;
+        this.context = context;
         this.fork = fork;
     }
 
     @Override
     public ExecResult apply(final CommandLine cmd) {
-        logger.info("[plugin] Launching task (project version: {}), with JavaClasspathLauncher: {}", projectVersion, this);
-        final var javaToolsJar = resolveJavaTools(projectVersion, javaToolsConfig, xdkFileTree, logger);
+        logger.info("[plugin] Launching task (project version: {}), with JavaClasspathLauncher: {}", context.getProjectVersion(), this);
+        final var javaToolsJar = resolveJavaTools(context.getProjectVersion(), context.getJavaToolsConfig(), context.getXdkFileTree(), logger);
         logLaunchInfo(cmd, javaToolsJar);
-        final var builder = resultBuilder(cmd);
-        return fork ? invokeForked(cmd, javaToolsJar, builder) : invokeDirectly(cmd, javaToolsJar, builder);
+        return fork ? invokeForked(cmd, javaToolsJar) : invokeDirectly(cmd, javaToolsJar);
     }
 
     /**
@@ -132,7 +112,7 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
                 cmd.getMainClassName(),
                 cmd.getJvmArgs(),
                 javaToolsJar.getAbsolutePath(),
-                workingDirectory.getAbsolutePath(),
+                context.getWorkingDirectory().getAbsolutePath(),
                 cmd.toList().size(),
                 argsBuilder.toString());
         logger.info(infoLog);
@@ -157,7 +137,7 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
      *   <li>Third-party (xtc-app-template): javatools.jar from extracted distribution</li>
      * </ul>
      */
-    private ExecResult invokeDirectly(final CommandLine cmd, final File javaToolsJar, final XtcExecResult.XtcExecResultBuilder builder) {
+    private ExecResult invokeDirectly(final CommandLine cmd, final File javaToolsJar) {
         logger.lifecycle("[plugin] Invoking {} directly in current thread (no fork)", cmd.getIdentifier());
 
         try {
@@ -174,49 +154,32 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
                     toolLauncher.accept(args);
 
                     // If we get here, the tool succeeded
-                    builder.exitValue(0);
                     logger.info("[plugin] Tool execution completed successfully");
-                    return createExecResult(builder);
+                    return SimpleExecResult.success(0);
 
                 } catch (final LauncherException e) {
                     // Expected exit mechanism from launcher - this works because we're in the
                     // same classloader context thanks to withJavaTools()
                     final int exitCode = e.error ? 1 : 0;
-                    builder.exitValue(exitCode);
-
                     if (exitCode != 0) {
-                        // IMPORTANT: We would ideally wrap LauncherException (and its cause) directly in
-                        // GradleException to preserve the full exception chain. From a Java classloader
-                        // perspective, this is perfectly safe - ensureJavaToolsInClasspath() has loaded
-                        // javatools.jar into the plugin's classloader, so LauncherException is accessible
-                        // and there are no classloader conflicts.
-                        //
-                        // HOWEVER, Gradle's configuration cache cannot serialize arbitrary exception types,
-                        // even when they're from the same classloader. The configuration cache tries to
-                        // serialize the exception graph, and LauncherException (or its causes) may contain
-                        // references to non-serializable javatools types. This causes configuration cache
-                        // serialization to fail.
-                        //
-                        // Therefore, we must extract the exception information as pure strings before
-                        // creating the GradleException. This workaround exists solely due to configuration
-                        // cache serialization constraints, not classloader issues.
+                        // IMPORTANT: We must extract the exception information as pure strings before
+                        // creating the GradleException. Gradle's configuration cache cannot serialize
+                        // LauncherException (from javatools classloader) because it may contain
+                        // references to non-serializable javatools types.
                         final String errorMessage = buildErrorMessage(e);
                         final GradleException gradleException = new GradleException("XTC tool execution failed: " + errorMessage);
-                        builder.failure(gradleException);
                         logger.error("[plugin] Tool execution failed with exit code: {}", exitCode);
+                        return SimpleExecResult.failure(exitCode, gradleException);
                     } else {
                         logger.info("[plugin] Tool execution completed with exit code: {}", exitCode);
+                        return SimpleExecResult.success(exitCode);
                     }
-
-                    return createExecResult(builder);
                 }
             });
 
         } catch (final Exception e) {
             logger.error("[plugin] Direct invocation failed with exception", e);
-            builder.exitValue(-1);
-            builder.failure(e);
-            return createExecResult(builder);
+            return SimpleExecResult.failure(-1, e);
         }
     }
 
@@ -267,7 +230,7 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
                 final File file = new File(arg);
                 if (!file.isAbsolute()) {
                     // Convert relative path to absolute based on working directory
-                    final File absoluteFile = new File(workingDirectory, arg);
+                    final File absoluteFile = new File(context.getWorkingDirectory(), arg);
                     absoluteCmd.addRaw(absoluteFile.getAbsolutePath());
                     continue;
                 }
@@ -284,14 +247,12 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
      * This is the fallback path when forking is explicitly requested or required.
      * This method handles the try-catch wrapper and delegates to executeForkedProcess.
      */
-    protected ExecResult invokeForked(final CommandLine cmd, final File javaToolsJar, final XtcExecResult.XtcExecResultBuilder builder) {
+    protected ExecResult invokeForked(final CommandLine cmd, final File javaToolsJar) {
         try {
-            return executeForkedProcess(cmd, javaToolsJar, builder);
+            return executeForkedProcess(cmd, javaToolsJar);
         } catch (final IOException | InterruptedException e) {
             logger.error("[plugin] Forked invocation failed with exception", e);
-            builder.exitValue(-1);
-            builder.failure(e);
-            return createExecResult(builder);
+            return SimpleExecResult.failure(-1, e);
         }
     }
 
@@ -304,7 +265,7 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
      * @return The command list ready for ProcessBuilder
      */
     protected List<String> buildForkedCommand(final CommandLine cmd, final File javaToolsJar) {
-        final String javaExecutable = toolchainExecutable.getOrNull();
+        final String javaExecutable = context.getToolchainExecutable().getOrNull();
         if (javaExecutable == null) {
             throw new GradleException("[plugin] No Java toolchain executable found - cannot fork process");
         }
@@ -325,17 +286,16 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
      *
      * @param cmd The command line to execute
      * @param javaToolsJar The javatools JAR file
-     * @param builder The result builder
      * @return The execution result
      * @throws IOException if the process cannot be started
      * @throws InterruptedException if the process is interrupted while waiting
      */
-    protected ExecResult executeForkedProcess(final CommandLine cmd, final File javaToolsJar, final XtcExecResultBuilder builder)
+    protected ExecResult executeForkedProcess(final CommandLine cmd, final File javaToolsJar)
             throws IOException, InterruptedException {
         logger.info("[plugin] Invoking {} in forked process", cmd.getIdentifier());
 
         final var command = buildForkedCommand(cmd, javaToolsJar);
-        final var processBuilder = new ProcessBuilder(command).directory(workingDirectory);
+        final var processBuilder = new ProcessBuilder(command).directory(context.getWorkingDirectory());
 
         // Configure I/O redirection based on DSL settings
         configureIoRedirection(processBuilder, cmd);
@@ -343,16 +303,15 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
         logger.info("[plugin] Starting forked process: {}", String.join(" ", command));
         final Process process = processBuilder.start();
         final int exitCode = process.waitFor();
-        builder.exitValue(exitCode);
 
         if (exitCode != 0) {
             final Exception failure = new GradleException("Forked process exited with code: " + exitCode);
-            builder.failure(failure);
             logger.error("[plugin] Forked process failed with exit code: {}", exitCode);
+            return SimpleExecResult.failure(exitCode, failure);
         } else {
             logger.info("[plugin] Forked process completed successfully");
+            return SimpleExecResult.success(exitCode);
         }
-        return createExecResult(builder);
     }
 
     /**
@@ -384,7 +343,7 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
             final String path,
             final String streamName) {
         if (path != null) {
-            final File file = new File(workingDirectory, path);
+            final File file = new File(context.getWorkingDirectory(), path);
             redirectSetter.accept(ProcessBuilder.Redirect.appendTo(file));
             logger.lifecycle("[plugin] Redirecting {} to: {}", streamName, file.getAbsolutePath());
         } else {

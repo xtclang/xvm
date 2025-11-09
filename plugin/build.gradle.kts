@@ -53,10 +53,13 @@ repositories {
 }
 
 dependencies {
-    // Compile-only dependency on javatools for type information (not bundled in plugin)
-    // At runtime, the plugin resolves javatools.jar from XDK build or distribution
-    // This works now because javatools uses direct file references instead of configuration dependencies
+    // Compile against javatools for type information
     compileOnly(libs.javatools)
+
+    // AND make it available at runtime on the plugin's classpath (but not bundled in the JAR)
+    // This allows us to use LauncherException and other javatools types directly in the plugin code
+    // Gradle will add javatools.jar to the plugin's classloader at runtime
+    runtimeOnly(libs.javatools)
 
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.javatools)  // For reentrancy tests

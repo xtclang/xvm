@@ -8,16 +8,18 @@ import java.util.List;
 import javax.inject.Inject;
 
 import org.gradle.api.Action;
-import org.gradle.api.Project;
+import org.gradle.api.logging.Logger;
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
+import org.gradle.api.provider.ProviderFactory;
 
 import org.jetbrains.annotations.NotNull;
 
 import org.xtclang.plugin.XtcRunModule;
 import org.xtclang.plugin.XtcRuntimeExtension;
 
-public class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskExtension implements XtcRuntimeExtension {
+public abstract class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskExtension implements XtcRuntimeExtension {
     // TODO: Make it possible to add to the module path, both here and in the XTC compiler with explicit paths.
     //  well in the compiler, it just corresponds to the SourceSet and you can edit that already (except for
     //  maybe the XDK handling behind the scenes). Anyway I'll make it a common property for both environments.
@@ -53,31 +55,29 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskExtension 
     private final Property<@NotNull Boolean> parallel;
 
     @Inject
-    public DefaultXtcRuntimeExtension(final Project project) {
-        super(project);
+    @SuppressWarnings("this-escape")
+    public DefaultXtcRuntimeExtension() {
+        final ObjectFactory objects = getObjects();
         this.modules = objects.listProperty(XtcRunModule.class).value(emptyList());
         this.detach = objects.property(Boolean.class).convention(false);
         this.parallel = objects.property(Boolean.class).convention(false);
     }
 
     private XtcRunModule createModule(final String moduleName) {
-        // Use objects factory instead of Project - create instance then set module name
-        final var runModule = objects.newInstance(DefaultXtcRunModule.class);
+        final var runModule = getObjects().newInstance(DefaultXtcRunModule.class);
         runModule.getModuleName().set(moduleName);
         return runModule;
     }
 
     private XtcRunModule addModule(final XtcRunModule runModule) {
-        logger.info("[plugin] Adding module {}", runModule);
         modules.add(runModule);
         return runModule;
     }
 
     @Override
     public XtcRunModule module(final Action<@NotNull XtcRunModule> action) {
-        final var runModule = objects.newInstance(DefaultXtcRunModule.class);
+        final var runModule = getObjects().newInstance(DefaultXtcRunModule.class);
         action.execute(runModule);
-        logger.info("[plugin] Resolved xtcRunModule configuration: {}", runModule);
         return addModule(runModule);
     }
 
@@ -98,7 +98,7 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskExtension 
 
     @Override
     public void setModuleNames(final List<String> moduleNames) {
-        modules.get().clear();
+        modules.empty();
         moduleNames.forEach(this::moduleName);
     }
 
@@ -109,7 +109,7 @@ public class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskExtension 
 
     @Override
     public void setModules(final List<XtcRunModule> modules) {
-        this.modules.get().clear();
+        this.modules.empty();
         modules.forEach(this::addModule);
     }
 

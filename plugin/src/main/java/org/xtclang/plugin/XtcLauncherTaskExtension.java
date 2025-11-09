@@ -4,7 +4,6 @@ import java.io.File;
 
 import org.gradle.api.Named;
 import org.gradle.api.file.ConfigurableFileCollection;
-import org.gradle.api.file.Directory;
 import org.gradle.api.file.RegularFile;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
@@ -70,7 +69,7 @@ public interface XtcLauncherTaskExtension extends Named {
      * Useful with layout.buildDirectory.file("path").
      * @param fileProvider The file provider to redirect stdout to
      */
-    default void stdoutPath(final Provider<RegularFile> fileProvider) {
+    default void stdoutPath(final Provider<@NotNull RegularFile> fileProvider) {
         getStdoutPath().set(fileProvider.map(f -> f.getAsFile().getAbsolutePath()));
     }
 
@@ -113,7 +112,7 @@ public interface XtcLauncherTaskExtension extends Named {
      * Useful with layout.buildDirectory.file("path").
      * @param fileProvider The file provider to redirect stderr to
      */
-    default void stderrPath(final Provider<RegularFile> fileProvider) {
+    default void stderrPath(final Provider<@NotNull RegularFile> fileProvider) {
         getStderrPath().set(fileProvider.map(f -> f.getAsFile().getAbsolutePath()));
     }
 

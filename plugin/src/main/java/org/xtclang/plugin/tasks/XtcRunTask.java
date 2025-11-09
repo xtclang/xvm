@@ -6,8 +6,8 @@ import static org.gradle.api.logging.LogLevel.ERROR;
 import static org.gradle.api.logging.LogLevel.INFO;
 import static org.gradle.api.logging.LogLevel.LIFECYCLE;
 
-import static org.xtclang.plugin.XtcPluginConstants.XTC_RUNNER_CLASS_NAME;
 import static org.xtclang.plugin.XtcJavaToolsRuntime.ensureJavaToolsInClasspath;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_RUNNER_CLASS_NAME;
 
 import org.xvm.tool.Runner;
 
@@ -48,6 +48,7 @@ import org.xtclang.plugin.XtcRuntimeExtension;
 import org.xtclang.plugin.internal.DefaultXtcRuntimeExtension;
 import org.xtclang.plugin.launchers.CommandLine;
 import org.xtclang.plugin.launchers.DetachedJavaClasspathLauncher;
+import org.xtclang.plugin.launchers.LauncherContext;
 import org.xtclang.plugin.launchers.XtcLauncher;
 
 /**
@@ -99,7 +100,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         // TODO clean this up:
         super(project, XtcProjectDelegate.resolveXtcRuntimeExtension(project));
         this.executedModules = new LinkedHashMap<>();
-        this.taskLocalModules = objects.property(DefaultXtcRuntimeExtension.class).convention(objects.newInstance(DefaultXtcRuntimeExtension.class, project));
+        this.taskLocalModules = objects.property(DefaultXtcRuntimeExtension.class).convention(objects.newInstance(DefaultXtcRuntimeExtension.class));
     }
 
 
@@ -126,15 +127,20 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
 
         // Detach mode: use JavaClasspathLauncher with detach=true
         // DetachedJavaClasspathLauncher automatically sets fork=true and detach=true
-        ensureJavaToolsInClasspath(projectVersion, javaToolsConfig, xdkFileTree, getLogger());
 
+        // Ensure javatools.jar is loaded into the plugin's classloader
+        ensureJavaToolsInClasspath(projectVersion, javaToolsConfig, xdkFileTree, getLogger());
         getLogger().lifecycle("[plugin] Using DetachedJavaClasspathLauncher (background process)");
 
-        return new DetachedJavaClasspathLauncher<>(
-            this, getLogger(),
-            getToolLauncher(),
-            projectVersion, xdkFileTree, javaToolsConfig, toolchainExecutable,
-            projectDirectory.get().getAsFile());
+        final var context = new LauncherContext(
+            projectVersion,
+            xdkFileTree,
+            javaToolsConfig,
+            toolchainExecutable,
+            projectDirectory.get().getAsFile()
+        );
+
+        return new DetachedJavaClasspathLauncher<>(this, getLogger(), getToolLauncher(), context);
     }
 
     // XTC modules needed to resolve module path (the contents of the XDK required to build and run this project)
@@ -274,8 +280,6 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     }
 
     protected List<XtcRunModule> resolveModulesToRunFromModulePath(final List<File> resolvedModulePath) {
-        checkIsBeingExecuted();
-
         logger.info("[plugin] Resolving modules to run from module path: '{}'", resolvedModulePath);
         if (isEmpty()) {
             logger.warn("[plugin] Task extension '{}' and/or local task configuration do not declare any modules to run for '{}'. Skipping task.", ext.getName(), getName());
@@ -337,7 +341,6 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     }
 
     private void logFinishedRuns() {
-        checkIsBeingExecuted();
         final int count = executedModules.size();
         logger.info("[plugin] Task executed {} modules:", count);
         int i = 0;

@@ -2,15 +2,20 @@ package org.xtclang.plugin.internal;
 
 import javax.inject.Inject;
 
-import org.gradle.api.Project;
+import org.gradle.api.logging.Logger;
+import org.gradle.api.logging.Logging;
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
+import org.gradle.api.provider.Provider;
+import org.gradle.api.provider.ProviderFactory;
 
 import org.jetbrains.annotations.NotNull;
 
 import org.xtclang.plugin.ProjectDelegate;
 import org.xtclang.plugin.XtcCompilerExtension;
 
-public class DefaultXtcCompilerExtension extends DefaultXtcLauncherTaskExtension implements XtcCompilerExtension {
+public abstract class DefaultXtcCompilerExtension extends DefaultXtcLauncherTaskExtension implements XtcCompilerExtension {
+    private static final Logger logger = Logging.getLogger(DefaultXtcCompilerExtension.class);
     private static final String REBUILD_FLAG_DEFAULT_PROPERTY = "xtcDefaultRebuild";
 
     // Even though we have getters, these need to be protected for subclasses to be able to use them in the build DSL
@@ -24,25 +29,21 @@ public class DefaultXtcCompilerExtension extends DefaultXtcLauncherTaskExtension
     protected final Property<@NotNull Boolean> rebuild;
 
     @Inject
-    public DefaultXtcCompilerExtension(final Project project) {
-        super(project);
-
-        // Capture project property at configuration time to avoid Project references during execution
-        final var rebuildDefaultProperty = project.findProperty(REBUILD_FLAG_DEFAULT_PROPERTY);
-        final var rebuildDefaultValue = rebuildDefaultProperty == null || Boolean.parseBoolean(rebuildDefaultProperty.toString());
+    @SuppressWarnings("this-escape") // Calling @Inject abstract method in constructor is safe
+    public DefaultXtcCompilerExtension() {
+        final ObjectFactory objects = getObjects();
+        final ProviderFactory providers = getProviders();
+        final Provider<@NotNull String> rebuildDefaultProperty = providers.gradleProperty(REBUILD_FLAG_DEFAULT_PROPERTY);
+        final boolean rebuildDefaultValue = !rebuildDefaultProperty.isPresent() || Boolean.parseBoolean(rebuildDefaultProperty.get());
         if (!rebuildDefaultValue) {
             logger.info("[plugin] Project has global override for default value of rebuild flag: false");
         }
         this.rebuild = objects.property(Boolean.class).convention(rebuildDefaultValue);
-
         this.disableWarnings = objects.property(Boolean.class).convention(false);
         this.strict = objects.property(Boolean.class).convention(false);
         this.hasQualifiedOutputName = objects.property(Boolean.class).convention(false);
         this.hasVersionedOutputName = objects.property(Boolean.class).convention(false);
-
-        // Set default xtcVersion from plugin-build-info.properties
-        final var defaultXdkVersion = ProjectDelegate.readXdkVersion();
-        this.stamp = objects.property(String.class).convention(defaultXdkVersion);
+        this.stamp = objects.property(String.class).convention(ProjectDelegate.readXdkVersion());
     }
 
     @Override

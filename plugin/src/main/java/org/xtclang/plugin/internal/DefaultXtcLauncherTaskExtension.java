@@ -3,19 +3,19 @@ package org.xtclang.plugin.internal;
 import static org.xtclang.plugin.XtcPluginConstants.PLUGIN_BUILD_INFO_RESOURCE_PATH;
 import static org.xtclang.plugin.XtcPluginConstants.PROPERTY_LAUNCHER_FORK;
 
-import java.io.InputStream;
-import java.io.OutputStream;
-
 import java.util.Collections;
 import java.util.List;
 
-import org.gradle.api.Project;
+import javax.inject.Inject;
+
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.logging.Logger;
+import org.gradle.api.logging.Logging;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
+import org.gradle.api.provider.ProviderFactory;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -23,13 +23,16 @@ import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.XtcPluginUtils;
 
 public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTaskExtension {
+    private static final Logger logger = Logging.getLogger(DefaultXtcLauncherTaskExtension.class);
     private static final List<String> DEFAULT_JVM_ARGS = List.of("-ea");
 
-    // Project field removed to avoid configuration cache serialization issues
-    protected final ObjectFactory objects;
-    protected final Logger logger;
-    protected final List<String> defaultJvmArgs;
+    @Inject
+    protected abstract ObjectFactory getObjects();
 
+    @Inject
+    protected abstract ProviderFactory getProviders();
+
+    protected final List<String> defaultJvmArgs;
     protected final ConfigurableFileCollection modulePath;
     protected final Property<@NotNull Boolean> fork;
     protected final ListProperty<@NotNull String> jvmArgs;
@@ -38,25 +41,18 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     protected final Property<@NotNull String> stdoutPath;
     protected final Property<@NotNull String> stderrPath;
 
-    protected DefaultXtcLauncherTaskExtension(final Project project) {
-        this.objects = project.getObjects();
-        this.logger = project.getLogger();
-
-        // Initialize module path as an empty file collection
+    @Inject
+    @SuppressWarnings("this-escape")
+    protected DefaultXtcLauncherTaskExtension() {
+        final ObjectFactory objects = getObjects();
+        final ProviderFactory providers = getProviders();
         this.modulePath = objects.fileCollection();
-
-        // Use default JVM args from properties file generated at plugin build time
         this.defaultJvmArgs = loadDefaultJvmArgs();
         logger.info("[plugin] Loaded default JVM args: {}", defaultJvmArgs);
-
-        // Check for global fork property override: org.xtclang.plugin.launcher.fork
-        final Boolean forkPropertyValue = resolveForkProperty(project);
-        this.fork = objects.property(Boolean.class).convention(forkPropertyValue);
-
+        this.fork = objects.property(Boolean.class).convention(resolveForkProperty(providers));
         this.jvmArgs = objects.listProperty(String.class).convention(defaultJvmArgs);
         this.verbose = objects.property(Boolean.class).convention(false);
         this.showVersion = objects.property(Boolean.class).convention(false);
-
         this.stdoutPath = objects.property(String.class);
         this.stderrPath = objects.property(String.class);
     }
@@ -100,8 +96,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
 
     @Override
     public void jvmArg(final Provider<? extends @NotNull String> arg) {
-        // Use objects factory instead of Project to create provider
-        jvmArgs(objects.listProperty(String.class).value(arg.map(Collections::singletonList)));
+        jvmArgs(getObjects().listProperty(String.class).value(arg.map(Collections::singletonList)));
     }
 
     @Override
@@ -144,20 +139,12 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
      * - Via command line: -Porg.xtclang.plugin.launcher.fork=false
      * - Via system property: -Dorg.gradle.project.org.xtclang.plugin.launcher.fork=false
      *
-     * @param project The Gradle project
+     * @param providers The Gradle ProviderFactory for accessing properties
      * @return The fork value from property, or true (default) if not specified
      */
-    private static Boolean resolveForkProperty(final Project project) {
-        final Object propertyValue = project.findProperty(PROPERTY_LAUNCHER_FORK);
-
-        if (propertyValue != null) {
-            final boolean fork = Boolean.parseBoolean(propertyValue.toString());
-            //project.getLogger().lifecycle("[plugin] Global fork property override detected: {}={}", PROPERTY_LAUNCHER_FORK, fork);
-            return fork;
-        }
-
-        // Default: fork=true
-        return true;
+    private static boolean resolveForkProperty(final ProviderFactory providers) {
+        final Provider<@NotNull String> propertyValue = providers.gradleProperty(PROPERTY_LAUNCHER_FORK);
+        return !propertyValue.isPresent() || Boolean.parseBoolean(propertyValue.get());
     }
 
     private static List<String> loadDefaultJvmArgs() {
@@ -169,9 +156,5 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
             // Log warning and use fallback
             return DEFAULT_JVM_ARGS;
         }
-    }
-
-    public static boolean areJvmArgsModified(final List<String> jvmArgs) {
-        return !loadDefaultJvmArgs().equals(jvmArgs);
     }
 }
