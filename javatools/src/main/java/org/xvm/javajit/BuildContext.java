@@ -218,7 +218,7 @@ public class BuildContext {
     /**
      * Prepare the compilation.
      */
-    public void enterMethod(CodeBuilder code, int synthSlots) {
+    public void enterMethod(CodeBuilder code) {
         lineNumber = 1; // XVM ops are 0 based; Java is 1-based
         scope      = new Scope(this, code);
         code

@@ -1288,8 +1288,7 @@ public class CommonBuilder
         classBuilder.withMethod(jitName, md, flags,
             methodBuilder -> {
                 if (!prop.isAbstract()) {
-                    methodBuilder.withCode(code ->
-                        generateCode(className, md, bctx, code));
+                    methodBuilder.withCode(code -> generateCode(md, bctx, code));
                 }
             }
         );
@@ -1318,61 +1317,28 @@ public class CommonBuilder
         classBuilder.withMethod(jitName, md, flags,
             methodBuilder -> {
                 if (!method.isAbstract()) {
-                    methodBuilder.withCode(code ->
-                        generateCode(className, md, bctx, code));
+                    methodBuilder.withCode(code -> generateCode(md, bctx, code));
                 }
             }
         );
     }
 
-    protected void generateCode(String className, MethodTypeDesc md, BuildContext bctx,
-                                CodeBuilder code) {
+    protected void generateCode(MethodTypeDesc md, BuildContext bctx, CodeBuilder code) {
 
         String moduleName = thisId.getModuleConstant().getName();
         if (Arrays.stream(TEST_SET).anyMatch(name ->
-                    className.contains(name) || moduleName.contains(name))) {
+                    bctx.className.contains(name) || moduleName.contains(name))) {
             Op[] ops = bctx.methodStruct.getOps();
 
-            int synthSlots = preprocess(bctx, ops, code);
+            bctx.enterMethod(code);
 
-            bctx.enterMethod(code, synthSlots);
+            preprocess(bctx, code, ops);
+            process(bctx, code, ops);
 
-            for (int iPC = 0, c = ops.length; iPC < c; iPC++) {
-                try {
-                    while (true) {
-                        int skipTo = bctx.prepareOp(code, iPC);
-                        if (skipTo < 0) {
-                            break;
-                        }
-                        assert skipTo > iPC;
-                        iPC = skipTo;
-                    }
-                    ops[iPC].build(bctx, code);
-                } catch (Throwable e) {
-                    MethodStructure struct = bctx.methodStruct;
-                    StringBuilder sb = new StringBuilder();
-                    sb.append(className)
-                      .append('.')
-                      .append(struct.getIdentityConstant().getName())
-                      .append('(')
-                      .append(struct.getContainingClass().getSourceFileName());
-
-                    int nLine = struct.calculateLineNumber(iPC);
-                    if (nLine > 0) {
-                        sb.append(':').append(nLine);
-                    } else {
-                        sb.append(" iPC=")
-                          .append(iPC);
-                    }
-                    sb.append(')');
-                    throw new RuntimeException("Failed to generate code for " +
-                        "op=" + Op.toName(ops[iPC].getOpCode()) + "\n" + sb, e);
-                }
-            }
             bctx.exitMethod(code);
         } else {
-            if (SKIP_SET.add(className)) {
-                System.err.println("*** Skipping code gen for " + className);
+            if (SKIP_SET.add(bctx.className)) {
+                System.err.println("*** Skipping code gen for " + bctx.className);
             }
             defaultLoad(code, md.returnType());
             addReturn(code, md.returnType());
@@ -1404,7 +1370,7 @@ public class CommonBuilder
      *
      * we produce the bytecode that look like the following pseudo code:
      *
-     *  <pre><code>
+     * <pre><code>
      *     Throwable $rethrow  = null;
      *     boolean   $jump1    = false;
      *     boolean   $jump2    = false;
@@ -1438,10 +1404,8 @@ public class CommonBuilder
      *     if ($jump2) GOTO Loop.Exit
      *     if ($doReturn) return $r1
      * </code></pre>
-     *
-     * @return the max number of the synthetic Java slots that the code generation could use
      */
-    private int preprocess(BuildContext bctx, Op[] ops, CodeBuilder code) {
+    private void preprocess(BuildContext bctx, CodeBuilder code, Op[] ops) {
         Deque<Integer>       guardStack    = null;
         Deque<List<Integer>> jumpAddrStack = null;
         Deque<List<Integer>> jumpDestStack = null;
@@ -1450,7 +1414,6 @@ public class CommonBuilder
         List<Integer>  jumpsAddr  = null; // the addresses of Jump ops
         List<Integer>  jumpsDest  = null; // the addresses of jump destinations
         boolean        doReturn   = false;
-        int            synthSlots = 0;
         for (int iPC = 0, c = ops.length; iPC < c; iPC++) {
             switch (ops[iPC]) {
             case GuardAll _:
@@ -1466,8 +1429,6 @@ public class CommonBuilder
                 jumpsAddr = new ArrayList<>();
                 jumpsDest = new ArrayList<>();
                 guard     = iPC;
-
-                synthSlots++; // "$rethrow" allocation
                 break;
 
             case Jump jump:
@@ -1510,10 +1471,6 @@ public class CommonBuilder
                         ? -1
                         : guardStack.pop();
 
-                // we use a synthetic boolean per jump, a boolean for "$doReturn" and
-                // all the necessary slots for the return values
-                synthSlots += jumpsDest.size();
-
                 // only the very top GuardAll allocates the return values
                 guardAll.registerJumps(jumpsDest, doReturn && guard == -1);
 
@@ -1539,13 +1496,44 @@ public class CommonBuilder
                 break;
             }
         }
-        if (doReturn) {
-            JitMethodDesc jmd = bctx.jmd;
-            synthSlots += 2 + (jmd.isOptimized
-                        ? jmd.optimizedReturns.length * 2 // assume the worst case - two slots per
-                        : jmd.standardReturns.length);
+    }
+
+    /**
+     * Process the ops - build the corresponding bytecode.
+     */
+    private void process(BuildContext bctx, CodeBuilder code, Op[] ops) {
+        for (int iPC = 0, c = ops.length; iPC < c; iPC++) {
+            try {
+                while (true) {
+                    int skipTo = bctx.prepareOp(code, iPC);
+                    if (skipTo < 0) {
+                        break;
+                    }
+                    assert skipTo > iPC;
+                    iPC = skipTo;
+                }
+                ops[iPC].build(bctx, code);
+            } catch (Throwable e) {
+                MethodStructure struct = bctx.methodStruct;
+                StringBuilder sb = new StringBuilder();
+                sb.append(bctx.className)
+                    .append('.')
+                    .append(struct.getIdentityConstant().getName())
+                    .append('(')
+                    .append(struct.getContainingClass().getSourceFileName());
+
+                int nLine = struct.calculateLineNumber(iPC);
+                if (nLine > 0) {
+                    sb.append(':').append(nLine);
+                } else {
+                    sb.append(" iPC=")
+                        .append(iPC);
+                }
+                sb.append(')');
+                throw new RuntimeException("Failed to generate code for " +
+                    "op=" + Op.toName(ops[iPC].getOpCode()) + "\n" + sb, e);
+            }
         }
-        return synthSlots;
     }
 
     private final static String[] TEST_SET = new String[] {
