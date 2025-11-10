@@ -1,7 +1,6 @@
 package org.xtclang.plugin.launchers;
 
 import static org.xtclang.plugin.XtcJavaToolsRuntime.resolveJavaTools;
-import static org.xtclang.plugin.XtcJavaToolsRuntime.withJavaTools;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_NAME_JAR;
 import static org.xtclang.plugin.XtcPluginUtils.expandTimestampPlaceholder;
 
@@ -15,10 +14,13 @@ import org.jetbrains.annotations.NotNull;
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.tasks.XtcLauncherTask;
 
-import org.xvm.tool.Launcher.LauncherException;
-
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Method;
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -45,7 +47,6 @@ import java.util.function.Consumer;
  */
 public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends XtcLauncherTask<E>> extends XtcLauncher<E, T> {
     protected final LauncherContext context;
-    protected final Consumer<String[]> toolLauncher;
     private final boolean fork;
 
     /**
@@ -53,18 +54,15 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
      *
      * @param task The task being executed
      * @param logger Logger for diagnostic output
-     * @param toolLauncher Type-safe reference to the tool's launch method (e.g., Compiler::launch)
      * @param context Launcher execution context (project version, XDK, javatools, etc.)
      * @param fork Whether to fork to a separate process
      */
     public JavaClasspathLauncher(
             final T task,
             final Logger logger,
-            final Consumer<String[]> toolLauncher,
             final LauncherContext context,
             final boolean fork) {
         super(task, logger);
-        this.toolLauncher = toolLauncher;
         this.context = context;
         this.fork = fork;
     }
@@ -119,17 +117,13 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
     }
 
     /**
-     * Invokes the compiler directly in the current thread using javatools classes.
-     * This is the high-performance path that avoids process spawning.
+     * Invokes the compiler directly using the JavaToolsBridge pattern.
      *
-     * <p>The key insight: We have compile-time access to javatools types (via compileOnly),
-     * but at runtime those classes must be loaded from javatools.jar. This method:
-     * <ol>
-     *   <li>Creates a URLClassLoader with javatools.jar</li>
-     *   <li>Sets it as the thread context classloader</li>
-     *   <li>Invokes the compiler, which loads from that classloader</li>
-     *   <li>Restores the original classloader</li>
-     * </ol>
+     * <p>This method uses a custom classloader to load the JavaToolsBridge class with
+     * both the plugin JAR (containing the bridge class file) and javatools.jar (containing
+     * javatools types) on its classpath. This allows the bridge to directly reference
+     * javatools types (like LauncherException) without requiring them on the plugin's
+     * main classloader.
      *
      * <p>This works in both scenarios:
      * <ul>
@@ -141,42 +135,39 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
         logger.lifecycle("[plugin] Invoking {} directly in current thread (no fork)", cmd.getIdentifier());
 
         try {
-            // Convert relative paths to absolute paths for in-thread execution
-            // (Setting user.dir doesn't affect File resolution in an already-running JVM)
+            // Convert relative paths to absolute paths for in-thread execution mode, we cannot just reset
+            // user.dir if we are not forking launchers.
+            // TODO: We might remove direct invocation mode, but we want to fully investigate it for overhead first,
+            //  and it is also useful to make sure the XDK we need to use for language support is reentrant.
             final CommandLine absoluteCmd = convertToAbsolutePaths(cmd);
+            final String[] args = absoluteCmd.toList().toArray(new String[0]);
 
-            // Use the utility to execute with javatools on classpath
-            // Inside withJavaTools(), the context classloader is set so we can call javatools DIRECTLY!
-            return withJavaTools(javaToolsJar, logger, () -> {
-                // Convert command line to string array
-                final String[] args = absoluteCmd.toList().toArray(new String[0]);
-                try {
-                    toolLauncher.accept(args);
+            // Get the plugin JAR location (contains the bridge class file)
+            try (URLClassLoader bridgeClassLoader = getBridgeClassLoader(javaToolsJar)) {
+                // Load the bridge class via our custom classloader
+                // Get the execute method
+                // Determine launcher type from the tool launcher class name
+                // Invoke via the bridge - this is where LauncherException can be caught
+                final Class<?> bridgeClass = bridgeClassLoader.loadClass("org.xtclang.plugin.javatools.JavaToolsBridge");
+                final Object bridge = bridgeClass.getDeclaredConstructor().newInstance();
+                final Method executeMethod = bridgeClass.getMethod("execute", String.class, String[].class);
+                final String launcherType = cmd.getIdentifier().toLowerCase(); // "compiler" or "runner"
+                final Object result = executeMethod.invoke(bridge, launcherType, args);
 
-                    // If we get here, the tool succeeded
+                // Extract results from BridgeResult
+                final Class<?> resultClass = result.getClass();
+                final boolean success = (Boolean) resultClass.getField("success").get(result);
+                final int exitCode = (Integer) resultClass.getField("exitCode").get(result);
+                final String errorMessage = (String) resultClass.getField("errorMessage").get(result);
+
+                if (success) {
                     logger.info("[plugin] Tool execution completed successfully");
-                    return SimpleExecResult.success(0);
-
-                } catch (final LauncherException e) {
-                    // Expected exit mechanism from launcher - this works because we're in the
-                    // same classloader context thanks to withJavaTools()
-                    final int exitCode = e.error ? 1 : 0;
-                    if (exitCode != 0) {
-                        // IMPORTANT: We must extract the exception information as pure strings before
-                        // creating the GradleException. Gradle's configuration cache cannot serialize
-                        // LauncherException (from javatools classloader) because it may contain
-                        // references to non-serializable javatools types.
-                        final String errorMessage = buildErrorMessage(e);
-                        final GradleException gradleException = new GradleException("XTC tool execution failed: " + errorMessage);
-                        logger.error("[plugin] Tool execution failed with exit code: {}", exitCode);
-                        return SimpleExecResult.failure(exitCode, gradleException);
-                    } else {
-                        logger.info("[plugin] Tool execution completed with exit code: {}", exitCode);
-                        return SimpleExecResult.success(exitCode);
-                    }
+                    return SimpleExecResult.success(exitCode);
                 }
-            });
-
+                logger.error("[plugin] Tool execution failed with exit code: {}", exitCode);
+                final GradleException gradleException = new GradleException("XTC tool execution failed: " + errorMessage);
+                return SimpleExecResult.failure(exitCode, gradleException);
+            }
         } catch (final Exception e) {
             logger.error("[plugin] Direct invocation failed with exception", e);
             return SimpleExecResult.failure(-1, e);
@@ -184,36 +175,19 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
     }
 
     /**
-     * Extracts error message and cause chain from LauncherException.
-     * This is necessary because LauncherException is loaded from javatools classloader
-     * and cannot be serialized by Gradle's configuration cache. We extract all information
-     * as strings instead.
+     * Create a custom classloader with both plugin JAR and javatools JAR
+     * This allows the bridge class to load with javatools types available
+     * null parent = isolated
      *
-     * @param e the LauncherException from javatools classloader
-     * @return a string containing the full error message and cause chain
+     * @param javaToolsJar resolved path to "javatools.jar"
+     * @return An URLClassLoader that contains the plugin classes and the javatools classes for the jar.
+     *
+     * @throws URISyntaxException on resolution or syntax error
+     * @throws MalformedURLException on resolution or syntax error
      */
-    private String buildErrorMessage(final LauncherException e) {
-        final StringBuilder message = new StringBuilder();
-
-        // Start with the LauncherException message if present
-        if (e.getMessage() != null && !e.getMessage().isEmpty()) {
-            message.append(e.getMessage());
-        } else {
-            message.append("Execution failed");
-        }
-
-        // Walk the cause chain and append each cause's message
-        Throwable cause = e.getCause();
-        while (cause != null) {
-            message.append("\nCaused by: ");
-            message.append(cause.getClass().getSimpleName());
-            if (cause.getMessage() != null && !cause.getMessage().isEmpty()) {
-                message.append(": ").append(cause.getMessage());
-            }
-            cause = cause.getCause();
-        }
-
-        return message.toString();
+    private @NotNull URLClassLoader getBridgeClassLoader(File javaToolsJar) throws URISyntaxException, MalformedURLException {
+        final File pluginJar = new File(getClass().getProtectionDomain().getCodeSource().getLocation().toURI());
+        return new URLClassLoader(new URL[] { pluginJar.toURI().toURL(), javaToolsJar.toURI().toURL() }, null);
     }
 
     /**
@@ -308,10 +282,9 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
             final Exception failure = new GradleException("Forked process exited with code: " + exitCode);
             logger.error("[plugin] Forked process failed with exit code: {}", exitCode);
             return SimpleExecResult.failure(exitCode, failure);
-        } else {
-            logger.info("[plugin] Forked process completed successfully");
-            return SimpleExecResult.success(exitCode);
         }
+        logger.info("[plugin] Forked process completed successfully");
+        return SimpleExecResult.success(exitCode);
     }
 
     /**

@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.xvm.runtime.template._native.collections.arrays.xRTViewToBit;
 import org.xvm.tool.Compiler;
 import org.xvm.tool.Runner;
 
@@ -98,22 +99,20 @@ public class DirectLauncherReentrancyTest {
     }
 
     /**
-     * Test that Runner.launch() fails on second invocation in same JVM.
-     * This test is DISABLED because it documents the known reentrancy bug.
+     * Test that Runner.launch() CAN be called twice in same JVM with the cache-clearing hack.
+     * This test verifies that calling clearViewsCache() between runs allows reentrancy.
      *
      * <p><b>Expected Behavior:</b></p>
      * <ul>
      *   <li>First Runner.launch(): ✓ SUCCESS - prints "bytes=0x0102030000000000000A"</li>
-     *   <li>Second Runner.launch(): ✗ FAILURE - crashes at BitArray.toUInt8()</li>
+     *   <li>clearViewsCache(): Clear static VIEWS to force re-initialization</li>
+     *   <li>Second Runner.launch(): ✓ SUCCESS - now works with fresh cache</li>
      * </ul>
      *
-     * <p><b>Error:</b> "Unhandled exception: IllegalArgument: Assertion failed"</p>
-     *
-     * <p><b>Workaround:</b> Always use fork=true for run tasks (plugin default)</p>
+     * <p><b>Workaround:</b> Call xRTViewToBit.clearViewsCache() between Runner.launch() calls</p>
      */
-    @Disabled("Runner is NOT reentrant - this test documents the known bug")
     @Test
-    void testRunnerIsNotReentrant() throws Exception {
+    void testRunnerReentrancyWithCacheClearing() throws Exception {
         // First compile the module
         Compiler.launch(new String[]{
             "-o", compiledModule.toString(),
@@ -128,13 +127,15 @@ public class DirectLauncherReentrancyTest {
             });
         }, "First Runner invocation should succeed");
 
-        // Second run - THIS WILL FAIL
-        assertThrows(Exception.class, () -> {
+        // HACK: Clear the static VIEWS cache to allow reentrancy
+        xRTViewToBit.clearViewsCache();
+
+        // Second run - should now succeed with the cache cleared
+        assertDoesNotThrow(() -> {
             Runner.launch(new String[]{
                 "--no-recompile",
                 compiledModule.toString()
             });
-        }, "Second Runner invocation fails due to static VIEWS cache corruption. " +
-           "TypeConstant keys from ConstantPool #1 don't match TypeConstant instances from ConstantPool #2");
+        }, "Second Runner invocation should succeed after clearing VIEWS cache");
     }
 }

@@ -6,10 +6,7 @@ import static org.gradle.api.logging.LogLevel.ERROR;
 import static org.gradle.api.logging.LogLevel.INFO;
 import static org.gradle.api.logging.LogLevel.LIFECYCLE;
 
-import static org.xtclang.plugin.XtcJavaToolsRuntime.ensureJavaToolsInClasspath;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_RUNNER_CLASS_NAME;
-
-import org.xvm.tool.Runner;
 
 import java.io.File;
 
@@ -17,7 +14,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Consumer;
 
 import javax.inject.Inject;
 
@@ -110,12 +106,6 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         return XTC_RUNNER_CLASS_NAME;
     }
 
-    @Internal
-    @Override
-    protected Consumer<String[]> getToolLauncher() {
-        return Runner::launch;
-    }
-
     @Override
     protected XtcLauncher<XtcRuntimeExtension, ? extends XtcLauncherTask<XtcRuntimeExtension>> createLauncher() {
         final boolean detach = getDetach().get();
@@ -127,9 +117,6 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
 
         // Detach mode: use JavaClasspathLauncher with detach=true
         // DetachedJavaClasspathLauncher automatically sets fork=true and detach=true
-
-        // Ensure javatools.jar is loaded into the plugin's classloader
-        ensureJavaToolsInClasspath(projectVersion, javaToolsConfig, xdkFileTree, getLogger());
         getLogger().lifecycle("[plugin] Using DetachedJavaClasspathLauncher (background process)");
 
         final var context = new LauncherContext(
@@ -140,7 +127,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
             projectDirectory.get().getAsFile()
         );
 
-        return new DetachedJavaClasspathLauncher<>(this, getLogger(), getToolLauncher(), context);
+        return new DetachedJavaClasspathLauncher<>(this, getLogger(), context);
     }
 
     // XTC modules needed to resolve module path (the contents of the XDK required to build and run this project)

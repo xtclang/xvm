@@ -3,8 +3,6 @@ package org.xtclang.plugin.tasks;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILER_CLASS_NAME;
 import static org.xtclang.plugin.XtcPluginUtils.FileUtils.isValidXtcModuleSafe;
 
-import org.xvm.tool.Compiler;
-
 import java.io.File;
 
 import java.util.ArrayList;
@@ -118,12 +116,6 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     @Override
     public final String getJavaLauncherClassName() {
         return XTC_COMPILER_CLASS_NAME;
-    }
-
-    @Internal
-    @Override
-    protected Consumer<String[]> getToolLauncher() {
-        return Compiler::launch;
     }
 
     /**

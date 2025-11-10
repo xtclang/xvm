@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.function.Consumer;
 
 /**
  * A launcher that runs XTC tools in detached mode using javatools classes on the classpath.
@@ -43,16 +42,14 @@ public class DetachedJavaClasspathLauncher<E extends XtcLauncherTaskExtension, T
      *
      * @param task The task being executed
      * @param logger Logger for diagnostic output
-     * @param toolLauncher Type-safe reference to the tool's launch method (e.g., Runner::launch)
      * @param context Launcher execution context
      */
     public DetachedJavaClasspathLauncher(
             final T task,
             final Logger logger,
-            final Consumer<String[]> toolLauncher,
             final LauncherContext context) {
         // Force fork=true for detached mode
-        super(task, logger, toolLauncher, context, true);
+        super(task, logger, context, true);
     }
 
     /**

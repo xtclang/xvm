@@ -217,19 +217,35 @@ public final class XtcJavaToolsRuntime {
     }
 
     /**
-     * Creates a URLClassLoader with javatools.jar and sets it as the thread context classloader.
-     * This is the common helper used by both ensureJavaToolsInClasspath and withJavaTools.
+     * Creates a URLClassLoader with javatools.jar and injects it into the plugin's classloader.
+     * This uses reflection to add the javatools JAR to the plugin's classloader via addURL.
      *
      * @param javaToolsJar The javatools.jar file
      * @param logger Logger for diagnostic output
      * @return The created URLClassLoader
-     * @throws Exception if URL conversion fails
+     * @throws Exception if URL conversion or reflection fails
      */
     private static URLClassLoader createAndSetJavaToolsClassLoader(
             @NotNull final File javaToolsJar,
             @NotNull final Logger logger) throws Exception {
-
         final URL javaToolsUrl = javaToolsJar.toURI().toURL();
+
+        // Get the plugin's classloader (the one that loaded this class)
+        final ClassLoader pluginClassLoader = XtcJavaToolsRuntime.class.getClassLoader();
+
+        // Inject javatools into the plugin's classloader using reflection
+        if (pluginClassLoader instanceof java.net.URLClassLoader) {
+            try {
+                final java.lang.reflect.Method addURL = java.net.URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
+                addURL.setAccessible(true);
+                addURL.invoke(pluginClassLoader, javaToolsUrl);
+                logger.lifecycle("[plugin] Injected javatools.jar into plugin classloader: {}", javaToolsUrl);
+            } catch (final Exception e) {
+                logger.warn("[plugin] Failed to inject into plugin classloader, falling back to thread context classloader", e);
+            }
+        }
+
+        // Also set thread context classloader for compatibility
         final ClassLoader parentClassLoader = Thread.currentThread().getContextClassLoader();
         final URLClassLoader javaToolsClassLoader = new URLClassLoader(new URL[]{javaToolsUrl}, parentClassLoader);
         Thread.currentThread().setContextClassLoader(javaToolsClassLoader);
@@ -250,7 +266,6 @@ public final class XtcJavaToolsRuntime {
         if (!file.exists()) {
             throw new GradleException("[plugin] Resolved javatools.jar does not exist: " + file.getAbsolutePath());
         }
-
         try (var zip = new ZipFile(file)) {
             if (zip.getEntry(XDK_JAVATOOLS_NAME_MANIFEST) == null) {
                 throw new GradleException("[plugin] File is not a valid JAR: " + file.getAbsolutePath());

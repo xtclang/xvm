@@ -1,6 +1,5 @@
 package org.xtclang.plugin.tasks;
 
-import static org.xtclang.plugin.XtcJavaToolsRuntime.ensureJavaToolsInClasspath;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
 import static org.xtclang.plugin.XtcPluginUtils.argumentArrayToList;
 
@@ -10,7 +9,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import org.gradle.api.Project;
@@ -268,15 +266,6 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @Internal
     public abstract String getJavaLauncherClassName();
 
-    /**
-     * Returns the tool launcher method reference for this task.
-     * Subclasses provide a type-safe reference to their specific tool's launch method.
-     *
-     * @return Method reference to the tool's launch method (e.g., Compiler::launch)
-     */
-    @Internal
-    protected abstract Consumer<String[]> getToolLauncher();
-
     protected <R extends ExecResult> R handleExecResult(final R result) {
         final int exitValue = result.getExitValue();
         if (exitValue != 0) {
@@ -304,11 +293,6 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     protected XtcLauncher<E, ? extends XtcLauncherTask<E>> createLauncher() {
         final var logger = getLogger();
-
-        // Ensure javatools.jar is loaded into the plugin's classloader
-        // This makes LauncherException and other javatools types available throughout the plugin
-        ensureJavaToolsInClasspath(projectVersion, javaToolsConfig, xdkFileTree, logger);
-
         final boolean fork = ext.getFork().get();
         if (fork) {
             logger.lifecycle("[plugin] Using JavaClasspathLauncher with fork=true (separate process)");
@@ -324,7 +308,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
             projectDirectory.get().getAsFile()
         );
 
-        return new JavaClasspathLauncher<>(this, logger, getToolLauncher(), context, fork);
+        return new JavaClasspathLauncher<>(this, logger, context, fork);
     }
 
     protected List<File> resolveFullModulePath() {
