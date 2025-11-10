@@ -33,8 +33,8 @@ class ObjectInputStream
     /**
      * Construct an ObjectInputStream from a [Parser].
      *
-     * If the `Parser` is a `NestedParser` the `ObjectInputStream` will only
-     * read the tokens for the JSON Doc currently pointed to by the `Parser`.
+     * If the `Parser` is a `NestedParser` the `ObjectInputStream` will only read the tokens for
+     * the JSON Doc currently pointed to by the `Parser`.
      *
      * @param schema  the JSON `Schema` to use
      * @param parser  the `Parser` to use to parse JSON documents
