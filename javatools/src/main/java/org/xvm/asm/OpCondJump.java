@@ -479,6 +479,7 @@ public abstract class OpCondJump
                 return;
             } else {
                 RegisterInfo regTarget = bctx.loadArgument(code, m_nArg);
+                bctx.loadCtx(code);
                 code.invokevirtual(regTarget.cd(), "$xvmType", MD_xvmType); // target type
                 Builder.loadTypeConstant(code, bctx.typeSystem, typeTest);   // test type
             }

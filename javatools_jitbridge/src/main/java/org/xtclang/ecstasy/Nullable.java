@@ -4,7 +4,8 @@ import org.xtclang.ecstasy.reflect.Enumeration;
 
 import org.xtclang.ecstasy.text.String;
 
-import org.xvm.javajit.Container;
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.javajit.Ctx;
 
 /**
@@ -21,9 +22,8 @@ public class Nullable
 
     public static final Nullable Null = new Nullable();
 
-    @Override public xType $type() {
-        Container container = $owner();
-        return (xType) container.typeSystem.pool().typeNull().ensureXType(container);
+    @Override public TypeConstant $xvmType(Ctx ctx) {
+        return $xvm().ecstasyPool.typeNull();
     }
 
     public Enumeration enumeration$get(Ctx ctx) {

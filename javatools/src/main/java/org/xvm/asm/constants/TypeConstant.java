@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
@@ -6924,10 +6925,10 @@ public abstract class TypeConstant
      *
      * @return an xType object represented by this TypeConstant
      */
-    public Object ensureXType(org.xvm.javajit.Container container) {
+    public Object ensureXType(Supplier<Object> supplier) {
         Object type = m_xType;
         if (type == null) {
-            // TODO: type = m_xType = container.makeType(this);
+            type = m_xType = supplier.get();
         }
         return type;
     }

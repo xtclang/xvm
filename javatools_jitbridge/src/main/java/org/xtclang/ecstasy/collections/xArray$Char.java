@@ -55,7 +55,7 @@ public class xArray$Char
 
     // ----- xObj API ------------------------------------------------------------------------------
 
-    @Override public TypeConstant $xvmType() {
+    @Override public TypeConstant $xvmType(Ctx ctx) {
         ConstantPool pool = $owner().typeSystem.pool();
         TypeConstant type = pool.ensureArrayType(pool.typeChar());
         return $isImmut() ? type.freeze() : type;

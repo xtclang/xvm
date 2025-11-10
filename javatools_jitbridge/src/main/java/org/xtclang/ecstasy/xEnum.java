@@ -16,7 +16,7 @@ public abstract class xEnum extends xConst implements Object {
     }
 
     @Override
-    public TypeConstant $xvmType() {
+    public TypeConstant $xvmType(Ctx ctx) {
         throw new UnsupportedOperationException("Must be generated");
     }
 

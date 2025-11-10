@@ -670,6 +670,12 @@ public abstract class OpCallable extends Op {
             throw new RuntimeException("Unresolvable constructor \"" +
                 idCtor.getValueString() + "\" for " + typeTarget.getValueString());
         }
+
+        if (infoTarget.getFormat() == Component.Format.MIXIN) {
+            // TODO
+            return;
+        }
+
         String        sJitTarget = typeTarget.ensureJitClassName(ts);
         ClassDesc     cdTarget   = ClassDesc.of(sJitTarget);
         JitMethodDesc jmdCtor    = infoCtor.getJitDesc(ts, typeTarget);

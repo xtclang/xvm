@@ -22,7 +22,7 @@ import java.util.Map;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.Component.Contribution;
@@ -212,7 +212,7 @@ public class CommonBuilder
      * Assemble interfaces for the "Impl" shape.
      */
     protected void assembleImplInterfaces(ClassBuilder classBuilder) {
-        boolean isInterface = classStruct.getFormat() == Component.Format.INTERFACE;
+        boolean isInterface = classStruct.getFormat() == Format.INTERFACE;
         for (Contribution contrib : typeInfo.getContributionList()) {
             switch (contrib.getComposition()) {
                 case Implements:
@@ -264,7 +264,8 @@ public class CommonBuilder
             assembleStaticInitializer(className, classBuilder, constProps);
         }
 
-        switch (classStruct.getFormat()) {
+        Format format = classStruct.getFormat();
+        switch (format) {
         case CLASS, CONST, SERVICE, MODULE, ENUM, ENUMVALUE:
             assembleInitializer(className, classBuilder, initProps);
             break;
@@ -275,6 +276,14 @@ public class CommonBuilder
                 continue; // not our responsibility
             }
             assembleImplProperty(className, classBuilder, prop);
+        }
+
+        if (format != Format.INTERFACE && typeInfo.hasGenericTypes()) {
+            for (var entry : typeInfo.getTypeParams().entrySet()) {
+                if (entry.getKey() instanceof String name) {
+                    assembleGenericProperty(classBuilder, name);
+                }
+            }
         }
     }
 
@@ -639,6 +648,20 @@ public class CommonBuilder
         }
     }
 
+    /**
+     * Assemble the generic property accessors for the "Impl" shape.
+     */
+    private void assembleGenericProperty(ClassBuilder classBuilder, String name) {
+        classBuilder.withMethodBody(name + "$get", MethodTypeDesc.of(CD_xType, CD_Ctx),
+            ClassFile.ACC_PUBLIC, code ->
+                code.aload(0)                     // this
+                    .aload(code.parameterSlot(0)) // ctx
+                    .ldc(name)
+                    .invokevirtual(CD_xObj, "$type", MethodTypeDesc.of(CD_xType, CD_Ctx, CD_JavaString))
+                    .areturn()
+        );
+    }
+
     private void generateInjected(String className, ClassBuilder classBuilder, PropertyInfo prop) {
         assert !prop.isConstant();
 
@@ -736,7 +759,7 @@ public class CommonBuilder
             assembleImplMethod(className, classBuilder, method);
         }
 
-        if (typeInfo.getClassStructure().getFormat() != Component.Format.INTERFACE) {
+        if (typeInfo.getClassStructure().getFormat() != Format.INTERFACE) {
             assembleXvmType(className, classBuilder);
         }
     }
@@ -757,11 +780,7 @@ public class CommonBuilder
                 code.aload(0)
                     .getfield(ClassDesc.of(className), "$type", CD_TypeConstant);
             } else {
-                // this is almost identical to Builder.loadTypeConstant()
-                code.invokestatic(CD_Ctx, "get", MethodTypeDesc.of(CD_Ctx))
-                    .loadConstant(typeSystem.registerConstant(typeInfo.getType()))
-                    .invokevirtual(CD_Ctx, "getConstant", Ctx.MD_getConstant)
-                    .checkcast(CD_TypeConstant);
+                loadTypeConstant(code, typeSystem, typeInfo.getType());
             }
             code.areturn();
         });
@@ -1264,7 +1283,7 @@ public class CommonBuilder
             flags |= ClassFile.ACC_ABSTRACT;
         }
 
-        BuildContext bctx = new BuildContext(this, typeInfo, prop, isGetter);
+        BuildContext bctx = new BuildContext(this, className, typeInfo, prop, isGetter);
 
         classBuilder.withMethod(jitName, md, flags,
             methodBuilder -> {
@@ -1286,7 +1305,7 @@ public class CommonBuilder
             flags |= ClassFile.ACC_ABSTRACT;
         }
         if (method.isFunction() || method.isConstructor()) {
-            if (classStruct.getFormat() == Component.Format.INTERFACE) {
+            if (classStruct.getFormat() == Format.INTERFACE) {
                 // this must be a funky interface method; just ignore
                 return;
             }
@@ -1294,7 +1313,7 @@ public class CommonBuilder
             flags |= ClassFile.ACC_STATIC;
         }
 
-        BuildContext bctx = new BuildContext(this, typeInfo, method);
+        BuildContext bctx = new BuildContext(this, className, typeInfo, method);
 
         classBuilder.withMethod(jitName, md, flags,
             methodBuilder -> {

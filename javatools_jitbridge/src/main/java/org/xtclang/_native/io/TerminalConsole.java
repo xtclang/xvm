@@ -5,7 +5,6 @@ import org.xtclang.ecstasy.io.IOException;
 
 import org.xtclang.ecstasy.xObj;
 import org.xtclang.ecstasy.xService;
-import org.xtclang.ecstasy.xType;
 
 import org.xtclang.ecstasy.text.String;
 
@@ -26,7 +25,7 @@ public class TerminalConsole
     }
 
     @Override
-    public TypeConstant $xvmType() {
+    public TypeConstant $xvmType(Ctx ctx) {
         return $xvm().ecstasyPool.ensureEcstasyTypeConstant("io.Console");
     }
 

@@ -175,8 +175,8 @@ public class String
     }
 
     @Override
-    public TypeConstant $xvmType() {
-        return $ctx().container.typeSystem.pool().typeString();
+    public TypeConstant $xvmType(Ctx ctx) {
+        return $xvm().nativeTypeSystem.pool().typeString();
     }
 
     // ----- fields --------------------------------------------------------------------------------

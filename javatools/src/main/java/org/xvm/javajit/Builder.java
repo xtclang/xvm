@@ -317,12 +317,10 @@ public abstract class Builder {
      * Out: xType instance
      */
     public static void loadType(CodeBuilder code, TypeSystem ts, TypeConstant type) {
+        code.aload(code.parameterSlot(0)); // ctx
         loadTypeConstant(code, ts, type);
-        code.aload(code.parameterSlot(0)) // $ctx
-            .getfield(CD_Ctx, "container", CD_Container)
-            .invokevirtual(CD_TypeConstant, "ensureXType",
-                    MethodTypeDesc.of(CD_JavaObject, CD_Container))
-            .checkcast(CD_xType);
+        code.invokestatic(CD_xType, "$ensureType",
+                MethodTypeDesc.of(CD_xType, CD_Ctx, CD_TypeConstant));
     }
 
     /**
@@ -744,6 +742,6 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_UInt64_box  = MethodTypeDesc.of(CD_UInt64, CD_long);
     public static final MethodTypeDesc MD_Initializer = MethodTypeDesc.of(CD_void,   CD_Ctx);
     public static final MethodTypeDesc MD_StringOf    = MethodTypeDesc.of(CD_String, CD_Ctx, CD_JavaString);
-    public static final MethodTypeDesc MD_xvmType     = MethodTypeDesc.of(CD_TypeConstant);
+    public static final MethodTypeDesc MD_xvmType     = MethodTypeDesc.of(CD_TypeConstant, CD_Ctx);
     public static final MethodTypeDesc MD_TypeIsA     = MethodTypeDesc.of(CD_boolean, CD_TypeConstant);
 }

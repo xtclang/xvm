@@ -26,7 +26,7 @@ public class xArray$Object extends Array {
     // ----- xObj API ------------------------------------------------------------------------------
 
     @Override
-    public TypeConstant $xvmType() {
+    public TypeConstant $xvmType(Ctx ctx) {
         return $isImmut() ? $type.freeze() : $type;
     }
 

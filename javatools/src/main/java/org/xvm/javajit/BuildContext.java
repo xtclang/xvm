@@ -58,9 +58,10 @@ public class BuildContext {
     /**
      * Construct {@link BuildContext} for a method.
      */
-    public BuildContext(Builder builder, TypeInfo typeInfo, MethodInfo methodInfo) {
+    public BuildContext(Builder builder, String className, TypeInfo typeInfo, MethodInfo methodInfo) {
         this.builder       = builder;
         this.typeSystem    = builder.typeSystem;
+        this.className     = className;
         this.typeInfo      = typeInfo;
         this.callChain     = methodInfo.getChain();
         this.methodStruct  = callChain[0].getMethodStructure();
@@ -73,10 +74,11 @@ public class BuildContext {
     /**
      * Construct {@link BuildContext} for a property accessor.
      */
-    public BuildContext(Builder builder, TypeInfo typeInfo, PropertyInfo propInfo,
+    public BuildContext(Builder builder, String className, TypeInfo typeInfo, PropertyInfo propInfo,
                         boolean isGetter) {
         this.builder       = builder;
         this.typeSystem    = builder.typeSystem;
+        this.className     = className;
         this.typeInfo      = typeInfo;
         this.callChain     = isGetter
                 ? propInfo.ensureOptimizedGetChain(typeInfo, null)
@@ -92,6 +94,7 @@ public class BuildContext {
 
     public final Builder         builder;
     public final TypeSystem      typeSystem;
+    public final String          className;
     public final TypeInfo        typeInfo;
     public final MethodBody[]    callChain;
     public final MethodStructure methodStruct;
@@ -1016,6 +1019,14 @@ public class BuildContext {
 
     public record SingleSlot(int slot, TypeConstant type, ClassDesc cd, String name)
             implements RegisterInfo {
+
+        public SingleSlot(int slot, TypeConstant type, ClassDesc cd, String name) {
+            this.slot = slot;
+            this.type = type.getCanonicalJitType();
+            this.cd   = cd;
+            this.name = name;
+        }
+
         @Override
         public boolean isSingle() {
             return true;
@@ -1025,6 +1036,17 @@ public class BuildContext {
     public record DoubleSlot(int slot, int extSlot, JitFlavor flavor,
                              TypeConstant type, ClassDesc cd, String name)
             implements RegisterInfo {
+
+        public DoubleSlot(int slot, int extSlot, JitFlavor flavor,
+                             TypeConstant type, ClassDesc cd, String name) {
+            this.slot    = slot;
+            this.extSlot = extSlot;
+            this.flavor  = flavor;
+            this.type    = type.getCanonicalJitType();
+            this.cd      = cd;
+            this.name    = name;
+        }
+
         @Override
         public boolean isSingle() {
             return false;

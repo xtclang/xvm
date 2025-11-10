@@ -6,7 +6,7 @@ import org.xtclang.ecstasy.text.String;
 
 import org.xvm.asm.ConstantPool;
 
-import org.xvm.javajit.Container;
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.javajit.Ctx;
 
 /**
@@ -28,10 +28,9 @@ public class Boolean
     public static Boolean False = new Boolean(false, 0, String.of(null, "False"));
     public static Boolean True  = new Boolean(true, 1, String.of(null, "True"));
 
-    @Override public xType $type() {
-        Container    container = $owner();
-        ConstantPool pool      = container.typeSystem.pool();
-        return (xType) ($value ? pool.typeTrue() : pool.typeFalse()).ensureXType(container);
+    @Override public TypeConstant $xvmType(Ctx ctx) {
+        ConstantPool pool = $xvm().ecstasyPool;
+        return $value ? pool.typeTrue() : pool.typeFalse();
     }
 
     public Enumeration enumeration$get(Ctx ctx) {

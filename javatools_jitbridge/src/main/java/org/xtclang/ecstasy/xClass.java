@@ -18,7 +18,7 @@ public abstract class xClass
 
     public final TypeConstant $type;
 
-    @Override public xType $type() {
+    @Override public xType $type(Ctx ctx) {
         return null; // TODO
     }
 }

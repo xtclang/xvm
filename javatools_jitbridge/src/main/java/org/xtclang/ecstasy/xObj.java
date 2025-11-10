@@ -1,6 +1,7 @@
 package org.xtclang.ecstasy;
 
 import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.javajit.Container;
 import org.xvm.javajit.Ctx;
 import org.xvm.javajit.Xvm;
@@ -58,12 +59,23 @@ public abstract class xObj implements Object {
     /**
      * Auto-generated for all classes.
      */
-    public TypeConstant $xvmType() {
-        return $type().$type;
+    public TypeConstant $xvmType(Ctx ctx) {
+        return $type(ctx).$type;
     }
 
-    public xType $type() {
-        return (xType) $xvmType().ensureXType($owner());
+    /**
+     * Auto-generated for classes that represent generic types.
+     */
+    public xType $type(Ctx ctx) {
+        return xType.$ensureType(ctx, $xvmType(ctx));
+    }
+
+    /**
+     * Helper method to resolve generic types.
+     */
+    public xType $type(Ctx ctx, String name) {
+        TypeConstant type = $xvmType(ctx).resolveGenericType(name);
+        return xType.$ensureType(ctx, type);
     }
 
     public abstract boolean $isImmut();
@@ -77,8 +89,8 @@ public abstract class xObj implements Object {
     /**
      * This should be overridden by duck-type wrappers.
      */
-    public boolean $isA(xType t) {
-        return $type().$type.isA(t.$type);
+    public boolean $isA(Ctx ctx, xType t) {
+        return $type(ctx).$type.isA(t.$type);
     }
 
     /**
@@ -103,9 +115,9 @@ public abstract class xObj implements Object {
         throw new IllegalStateException();
     }
 
-    public static boolean $isA(java.lang.Object ref, xType t) {
+    public static boolean $isA(Ctx ctx, java.lang.Object ref, xType t) {
         if (ref instanceof xObj xRef) {
-            return xRef.$isA(t);
+            return xRef.$isA(ctx, t);
         }
 
         // handle all of the intrinsic types
@@ -129,9 +141,9 @@ public abstract class xObj implements Object {
         return true;
     }
 
-    public static xType $type(java.lang.Object ref) {
+    public static xType $type(Ctx ctx, java.lang.Object ref) {
         if (ref instanceof xObj xRef) {
-            return xRef.$type();
+            return xRef.$type(ctx);
         }
 
         // handle all of the intrinsic types
