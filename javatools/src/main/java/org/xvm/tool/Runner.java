@@ -52,15 +52,25 @@ public class Runner
      */
     public static void main(String[] asArg) {
         try {
-            launch(asArg);
+            // use System.exit() to communicate the result of execution back to the caller
+            System.exit(launch(asArg));
         } catch (LauncherException e) {
             System.exit(e.error ? 1 : 0);
         }
     }
 
-    public static void launch(String[] asArg) throws LauncherException {
-        new Runner(asArg).run();
-}
+    /**
+     * Helper method for external launchers.
+
+     * @param asArg  command line arguments
+     *
+     * @return the result of the {@link #process()} call
+     *
+     * @throws LauncherException if an unrecoverable exception occurs
+     */
+    public static int launch(String[] asArg) throws LauncherException {
+        return new Runner(asArg).run();
+    }
 
     /**
      * Runner constructor.
@@ -82,7 +92,7 @@ public class Runner
     }
 
     @Override
-    protected void process() {
+    protected int process() {
         // repository setup
         Options          options = options();
         ModuleRepository repo    = configureLibraryRepo(options.getModulePath());
@@ -98,7 +108,7 @@ public class Runner
             if (!fShowVer) {
                 displayHelp();
             }
-            return;
+            return 1;
         }
 
         String          filePath   = fileSpec.getPath();
@@ -322,12 +332,14 @@ public class Runner
 
                 connector.invoke0(method, asArg);
 
-                System.exit(connector.join());
+                return connector.join();
             }
         } catch (InterruptedException ignore) {
+            return 1;
         } catch (Throwable e) {
             e.printStackTrace();
             log(Severity.FATAL, e.toString());
+            return 1;
         }
     }
 

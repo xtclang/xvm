@@ -55,17 +55,35 @@ import static org.xvm.util.Handy.toPathString;
  * </li></ul>
  */
 public abstract class Launcher
-        implements ErrorListener, Runnable {
+        implements ErrorListener {
     /**
      * Entry point from the OS.
      *
      * @param asArg  command line arguments
      */
     public static void main(String[] asArg) {
+        try {
+            // use System.exit() to communicate the result of execution back to the caller
+            System.exit(launch(asArg));
+        } catch (LauncherException e) {
+            System.exit(e.error ? 1 : 0);
+        }
+    }
+
+    /**
+     * Helper method for external launchers.
+
+     * @param asArg  command line arguments
+     *
+     * @return the result of the corresponding tool "launch" call
+     *
+     * @throws LauncherException if an unrecoverable exception occurs
+     */
+    public static int launch(String[] asArg) throws LauncherException {
         int argc = asArg.length;
         if (argc < 1) {
             System.err.println("Command name is missing");
-            return;
+            return 1;
         }
 
         String cmd = asArg[0];
@@ -84,20 +102,17 @@ public abstract class Launcher
 
         switch (cmd) {
         case "xtc":
-            Ecstasy.main(argv);
-            break;
+            return Ecstasy.launch(argv);
 
         case "xcc":
-            Compiler.main(argv);
-            break;
+            return Compiler.launch(argv);
 
         case "xec":
-            Runner.main(argv);
-            break;
+            return Runner.launch(argv);
 
         default:
             System.err.println("Command name \"" + cmd + "\" is not supported");
-            break;
+            return 1;
         }
     }
 
@@ -111,9 +126,10 @@ public abstract class Launcher
 
     /**
      * Execute the Launcher tool.
+     *
+     * @return the result of the {@link #process} call.
      */
-    @Override
-    public void run() {
+    public int run() {
         Options opts = options();
 
         boolean fHelp = opts.parse(m_asArgs);
@@ -127,7 +143,6 @@ public abstract class Launcher
             log(Severity.INFO, "Java assertions are " + (fAssertsEnabled ? "enabled" : "disabled"));
         }
 
-
         checkErrors(fHelp);
 
         if (opts.verbose()) {
@@ -139,14 +154,20 @@ public abstract class Launcher
         opts.validate();
         checkErrors();
 
-        process();
+        int result = process();
 
         if (opts.verbose()) {
             out();
         }
+        return result;
     }
 
-    protected abstract void process();
+    /**
+     * The tool processing entry point.
+     *
+     * @return the execution status; most commonly 0-success; 1-failure
+     */
+    protected abstract int process();
 
 
     // ----- text output and error handling --------------------------------------------------------

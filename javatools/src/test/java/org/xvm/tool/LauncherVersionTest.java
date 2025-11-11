@@ -24,7 +24,7 @@ public class LauncherVersionTest {
         try {
             // Run xcc --version command
             String[] args = {"xcc", "--version"};
-            Launcher.main(args);
+            Launcher.launch(args);
 
             String output = outputStream.toString().trim();
             assertNotNull(output, "Version output should not be null");
@@ -77,7 +77,7 @@ public class LauncherVersionTest {
         try {
             // Run xec --version command
             String[] args = {"xec", "--version"};
-            Launcher.main(args);
+            Launcher.launch(args);
 
             String output = outputStream.toString().trim();
             assertNotNull(output, "XEC version output should not be null");
@@ -98,7 +98,7 @@ public class LauncherVersionTest {
         try {
             // Run xtc --version command
             String[] args = {"xtc", "--version"};
-            Launcher.main(args);
+            Launcher.launch(args);
 
             String output = outputStream.toString().trim();
             assertNotNull(output, "XTC version output should not be null");
