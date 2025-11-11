@@ -332,14 +332,7 @@ public class Runner
 
                 connector.invoke0(method, asArg);
 
-<<<<<<< HEAD
                 return connector.join();
-=======
-                int exitCode = connector.join();
-                if (exitCode != 0) {
-                    throw new LauncherException(true, "Execution failed with exit code: " + exitCode);
-                }
->>>>>>> b95cd2d40 (Testing the compiler daemon)
             }
         } catch (InterruptedException ignore) {
             return 1;
