@@ -261,10 +261,20 @@ public class CommonBuilder
         }
 
         for (PropertyInfo prop : typeInfo.getProperties().values()) {
-            if (!prop.getIdentity().getNamespace().equals(thisId)) {
-                continue; // not our responsibility
+            if (prop.isFormalType()) {
+                // processed below
+                continue;
             }
-            assembleImplProperty(className, classBuilder, prop);
+
+            IdentityConstant ownerId = prop.getIdentity().getNamespace();
+            if (prop.getIdentity().getNamespace().equals(thisId)) {
+                assembleImplProperty(className, classBuilder, prop);
+            } else {
+                Format ownerFormat = ownerId.getComponent().getFormat();
+                if (ownerFormat == Format.ANNOTATION || ownerFormat == Format.MIXIN) {
+                    assembleImplProperty(className, classBuilder, prop);
+                }
+            }
         }
 
         if (format != Format.INTERFACE && typeInfo.hasGenericTypes()) {
@@ -741,11 +751,19 @@ public class CommonBuilder
      */
     protected void assembleImplMethods(String className, ClassBuilder classBuilder) {
         for (MethodInfo method : typeInfo.getMethods().values()) {
-            if (method.isNative() || !method.getIdentity().getNamespace().equals(thisId)) {
+            if (method.isNative()) {
                 continue; // not our responsibility
             }
 
-            assembleImplMethod(className, classBuilder, method);
+            IdentityConstant ownerId = method.getIdentity().getNamespace();
+            if (ownerId.equals(thisId)) {
+                assembleImplMethod(className, classBuilder, method);
+            } else {
+                Format ownerFormat = ownerId.getComponent().getFormat();
+                if (ownerFormat == Format.ANNOTATION || ownerFormat == Format.MIXIN) {
+                    assembleImplMethod(className, classBuilder, method);
+                }
+            }
         }
 
         if (typeInfo.getClassStructure().getFormat() != Format.INTERFACE) {
@@ -1303,13 +1321,28 @@ public class CommonBuilder
 
         BuildContext bctx = new BuildContext(this, className, typeInfo, method);
 
-        classBuilder.withMethod(jitName, md, flags,
-            methodBuilder -> {
-                if (!method.isAbstract()) {
-                    methodBuilder.withCode(code -> generateCode(md, bctx, code));
-                }
+        classBuilder.withMethod(jitName, md, flags, methodBuilder -> {
+            if (!method.isAbstract()) {
+                methodBuilder.withCode(code -> generateCode(md, bctx, code));
             }
-        );
+        });
+
+        BuildContext bctxDeferred = bctx.getDeferred();
+        while (bctxDeferred != null) {
+            BuildContext   bctxNext = bctxDeferred;
+            JitMethodDesc  jmdNext  = bctxNext.methodDesc;
+            boolean        isOpt    = jmdNext.isOptimized;
+            MethodTypeDesc mdNext   = isOpt ? jmdNext.optimizedMD : jmdNext.standardMD;
+            String         nameNext = method.getJitIdentity().ensureJitMethodName(typeSystem)
+                                        + "$$" + bctxDeferred.callDepth;
+            if (isOpt) {
+                nameNext += OPT;
+            }
+            classBuilder.withMethod(nameNext, mdNext, flags, methodBuilder ->
+                methodBuilder.withCode(code -> generateCode(mdNext, bctxNext, code)));
+
+            bctxDeferred = bctxNext.getDeferred();
+        }
     }
 
     protected void generateCode(MethodTypeDesc md, BuildContext bctx, CodeBuilder code) {
@@ -1325,6 +1358,13 @@ public class CommonBuilder
             defaultLoad(code, md.returnType());
             addReturn(code, md.returnType());
         }
+    }
+
+    // ----- debugging support ---------------------------------------------------------------------
+
+    @Override
+    public String toString() {
+        return thisId.getValueString();
     }
 
     private final static String[] TEST_SET = new String[] {

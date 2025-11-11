@@ -10,6 +10,7 @@ import java.lang.classfile.CodeBuilder;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constants.Access;
 
 import org.xvm.asm.constants.ClassConstant;
@@ -196,7 +197,7 @@ public abstract class OpCallable extends Op {
             ClassStructure clzParentC = (ClassStructure) clzTargetC.getParent();
 
             // if the parent is an annotation part of the virtual child type - no virtualization
-            if (clzParentC.getFormat() != Component.Format.ANNOTATION &&
+            if (clzParentC.getFormat() != Format.ANNOTATION &&
                     !idParentR.equals(clzParentC.getIdentityConstant())) {
                 // find the run-time target's constructor;
                 // note that we don't need to resolve the actual types
@@ -565,28 +566,46 @@ public abstract class OpCallable extends Op {
     protected void buildCall(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
         TypeSystem ts = bctx.typeSystem;
 
-        MethodConstant idMethod;
         ClassDesc      cdTarget;
+        String         sJitName;
         JitMethodDesc  jmdCall;
+        int            cReturns;
         boolean        fSpecial;
 
         if (m_nFunctionId == A_SUPER) {
-            MethodBody body = bctx.callChain[1];
+            MethodBody bodyHead  = bctx.callChain[0];
+            int        nDepth    = bctx.callDepth + 1;
+            MethodBody bodySuper = bctx.callChain[nDepth];
 
-            idMethod = body.getIdentity();
-            cdTarget = bctx.getSuperCD();
-            jmdCall  = body.getJitDesc(ts, bctx.typeInfo.getType());
+            MethodConstant   idSuper  = bodySuper.getIdentity();
+            IdentityConstant idCallee = idSuper.getNamespace();
+            Format           format   = idCallee.getComponent().getFormat();
+
+            if (format == Format.MIXIN) {
+                // we need to generate a synthetic super
+                cdTarget = ClassDesc.of(bctx.className);
+                sJitName = bodyHead.getIdentity().ensureJitMethodName(ts) + "$$" + nDepth;
+
+                bctx.defferAssembly(new BuildContext(bctx, nDepth));
+
+            } else {
+                cdTarget = idCallee.ensureClassDesc(ts);
+                sJitName = idSuper.ensureJitMethodName(ts);
+            }
+            jmdCall  = bodySuper.getJitDesc(ts, bctx.typeInfo.getType());
+            cReturns = idSuper.getSignature().getReturnCount();
             fSpecial = true;
             code.aload(0); // super() can only be on "this"
         } else if (m_nFunctionId <= CONSTANT_OFFSET) {
-            idMethod = (MethodConstant) bctx.getConstant(m_nFunctionId);
-
+            MethodConstant   idMethod   = (MethodConstant) bctx.getConstant(m_nFunctionId);
             IdentityConstant idTarget   = idMethod.getClassIdentity();
             TypeConstant     typeTarget = idTarget.getType();
             MethodInfo       infoMethod = typeTarget.ensureTypeInfo().getMethodById(idMethod);
 
             cdTarget = idTarget.ensureClassDesc(ts); // function; no formal types applicable
+            sJitName = idMethod.ensureJitMethodName(ts);
             jmdCall  = infoMethod.getJitDesc(ts, typeTarget);
+            cReturns = idMethod.getSignature().getReturnCount();
             fSpecial = false;
         } else {
             RegisterInfo regFn = bctx.getRegisterInfo(m_nFunctionId);
@@ -594,7 +613,6 @@ public abstract class OpCallable extends Op {
             throw new UnsupportedOperationException("function call " + regFn.type());
         }
 
-        String         sJitName = idMethod.ensureJitMethodName(ts);
         MethodTypeDesc mdCall;
         if (jmdCall.isOptimized) {
             mdCall  = jmdCall.optimizedMD;
@@ -613,7 +631,6 @@ public abstract class OpCallable extends Op {
             code.invokestatic(cdTarget, sJitName, mdCall);
         }
 
-        int cReturns = idMethod.getSignature().getReturnCount();
         if (cReturns > 0) {
             int[] anVar = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
             bctx.assignReturns(code, jmdCall, cReturns, anVar);
@@ -671,7 +688,7 @@ public abstract class OpCallable extends Op {
                 idCtor.getValueString() + "\" for " + typeTarget.getValueString());
         }
 
-        if (infoTarget.getFormat() == Component.Format.MIXIN) {
+        if (infoTarget.getFormat() == Format.MIXIN) {
             // TODO
             return;
         }

@@ -61,7 +61,7 @@ import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
  */
 public class BuildContext {
     /**
-     * Construct {@link BuildContext} for a method.
+     * Construct {@link BuildContext} for a "top" method in the call chain.
      */
     public BuildContext(Builder builder, String className, TypeInfo typeInfo, MethodInfo methodInfo) {
         this.builder       = builder;
@@ -70,10 +70,30 @@ public class BuildContext {
         this.typeInfo      = typeInfo;
         this.callChain     = methodInfo.getChain();
         this.methodStruct  = callChain[0].getMethodStructure();
-        this.jmd           = methodInfo.getJitDesc(typeSystem, typeInfo.getType());
+        this.callDepth     = 0;
+        this.methodDesc    = methodInfo.getJitDesc(typeSystem, typeInfo.getType());
         this.isFunction    = methodInfo.isFunction();
         this.isConstructor = methodInfo.isConstructor();
-        this.isOptimized   = jmd.optimizedMD != null;
+        this.isOptimized   = methodDesc.optimizedMD != null;
+    }
+
+    /**
+     * Construct {@link BuildContext} for a synthetic method in the call chain.
+     */
+    public BuildContext(BuildContext bctx, int callDepth) {
+        MethodBody body = bctx.callChain[callDepth];
+
+        this.builder       = bctx.builder;
+        this.typeSystem    = bctx.builder.typeSystem;
+        this.className     = bctx.className;
+        this.typeInfo      = bctx.typeInfo;
+        this.callChain     = bctx.callChain;
+        this.methodStruct  = body.getMethodStructure();
+        this.callDepth     = callDepth;
+        this.methodDesc    = body.getJitDesc(typeSystem, typeInfo.getType());
+        this.isFunction    = bctx.isFunction;
+        this.isConstructor = bctx.isConstructor;
+        this.isOptimized   = methodDesc.optimizedMD != null;
     }
 
     /**
@@ -85,25 +105,27 @@ public class BuildContext {
         this.typeSystem    = builder.typeSystem;
         this.className     = className;
         this.typeInfo      = typeInfo;
+        this.callDepth     = 0;
         this.callChain     = isGetter
                 ? propInfo.ensureOptimizedGetChain(typeInfo, null)
                 : propInfo.ensureOptimizedSetChain(typeInfo, null);
         this.methodStruct  = callChain[0].getMethodStructure();
-        this.jmd           = isGetter
+        this.methodDesc = isGetter
                 ? propInfo.getGetterJitDesc(typeSystem)
                 : propInfo.getSetterJitDesc(typeSystem);
         this.isFunction    = propInfo.isConstant();
         this.isConstructor = false;
-        this.isOptimized   = jmd.optimizedMD != null;
+        this.isOptimized   = methodDesc.optimizedMD != null;
     }
 
     public final Builder         builder;
     public final TypeSystem      typeSystem;
     public final String          className;
     public final TypeInfo        typeInfo;
+    public final int             callDepth;
     public final MethodBody[]    callChain;
     public final MethodStructure methodStruct;
-    public final JitMethodDesc   jmd;
+    public final JitMethodDesc   methodDesc;
     public final boolean         isOptimized;
     public final boolean         isFunction;
     public final boolean         isConstructor;
@@ -146,7 +168,12 @@ public class BuildContext {
     /**
      * The map of {@link OpAction}s indexed by the register id.
      */
-    public final Map<Integer, OpAction> actions = new HashMap<>();
+    private final Map<Integer, OpAction> actions = new HashMap<>();
+
+    /**
+     * Deferred compilation context.
+     */
+    private BuildContext deferred;
 
     /**
      * @return the ConstantPool used by this {@link BuildContext}.
@@ -365,6 +392,24 @@ public class BuildContext {
         }
     }
 
+
+    /**
+     * Add a deferred compilation context.
+     */
+    public void defferAssembly(BuildContext bctx) {
+        if (this.deferred != null) {
+            bctx.deferred = this.deferred;
+        }
+        this.deferred = bctx;
+    }
+
+    /**
+     * @return (optional) deferred compilation context
+     */
+    public BuildContext getDeferred() {
+        return deferred;
+    }
+
     /**
      * Add an action for the specified op address.
      */
@@ -442,7 +487,7 @@ public class BuildContext {
             .localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, scope.startLabel, scope.endLabel)
             ;
 
-        int          extraArgs = jmd.getImplicitParamCount(); // account for $ctx, $cctx, thi$
+        int          extraArgs = methodDesc.getImplicitParamCount(); // account for $ctx, $cctx, thi$
         TypeConstant thisType  = typeInfo.getType();
         ClassDesc    CD_this   = thisType.ensureClassDesc(typeSystem);
         if (isConstructor) {
@@ -452,7 +497,7 @@ public class BuildContext {
             registerInfos.put(Op.A_THIS, new SingleSlot(0, thisType, CD_this, "this$"));
         }
 
-        JitParamDesc[] params = isOptimized ? jmd.optimizedParams : jmd.standardParams;
+        JitParamDesc[] params = isOptimized ? methodDesc.optimizedParams : methodDesc.standardParams;
         for (int i = 0, c = params.length; i < c; i++) {
             JitParamDesc paramDesc = params[i];
             int          varIndex  = paramDesc.index;
@@ -1304,5 +1349,12 @@ public class BuildContext {
             }
             return act2.prepare();
         }
+    }
+
+    // ----- debugging support ---------------------------------------------------------------------
+
+    @Override
+    public String toString() {
+        return className + " " + methodStruct.getIdentityConstant().getValueString();
     }
 }

@@ -109,7 +109,7 @@ public class GuardAll
         // $jump1 = false; $jump2 = false; ...
         scopeOuter.allocateJumps(code, m_jumps);
         if (m_fDoReturn) {
-            JitMethodDesc jmd        = bctx.jmd;
+            JitMethodDesc jmd        = bctx.methodDesc;
             boolean       fOptimized = bctx.isOptimized;
             int           cRets      = jmd.standardReturns.length;
 

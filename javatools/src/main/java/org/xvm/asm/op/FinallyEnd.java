@@ -128,7 +128,7 @@ public class FinallyEnd
         int slotRet = scopeGuard.getSynthetic("$doReturn", false);
         if (slotRet >= 0) {
             // this is the topmost FinallyEnd; generate the return code
-            JitMethodDesc jmd        = bctx.jmd;
+            JitMethodDesc jmd        = bctx.methodDesc;
             boolean       fOptimized = bctx.isOptimized;
             int           cRets      = jmd.standardReturns.length;
             String        sRetVal    = "$ret";

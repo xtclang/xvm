@@ -72,7 +72,7 @@ public abstract class OpReturn
         int cRets = anRet.length;
         assert cRets > 0;
 
-        JitMethodDesc jmd        = bctx.jmd;
+        JitMethodDesc jmd        = bctx.methodDesc;
         boolean       fOptimized = bctx.isOptimized;
 
         if (m_fCallFinally) {
