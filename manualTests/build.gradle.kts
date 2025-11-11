@@ -461,3 +461,4 @@ val provideTestModules: Provider<List<String>> = provider {
     list.forEach { logger.lifecycle("[manualTests]     Resolved test module: $it") }
     list
 }
+
