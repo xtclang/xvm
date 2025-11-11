@@ -5,23 +5,23 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.xvm.runtime.template._native.collections.arrays.xRTViewToBit;
-import org.xvm.tool.Compiler;
-import org.xvm.tool.Runner;
+import org.xvm.tool.Launcher;
 
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * Direct tests of javatools Compiler and Runner reentrancy.
- * These tests call the launchers directly (not through Gradle tasks) to prove:
+ * Direct tests of javatools Launcher reentrancy.
+ * These tests call the Launcher directly (not through Gradle tasks) to prove:
  * <ul>
- *   <li>✓ Compiler with fork=false IS reentrant</li>
- *   <li>✗ Runner with fork=false is NOT reentrant</li>
+ *   <li>✓ Compiler (xcc) with fork=false IS reentrant</li>
+ *   <li>✗ Runner (xec) with fork=false is NOT reentrant</li>
  * </ul>
  *
  * <p><b>Root Cause of Runner Bug:</b> Static cache xRTViewToBit.VIEWS (line 109) uses
@@ -69,7 +69,7 @@ public class DirectLauncherReentrancyTest {
     }
 
     /**
-     * Test that Compiler.launch() can be called twice in same JVM.
+     * Test that Launcher (xcc command) can be called twice in same JVM.
      * Demonstrates Compiler IS reentrant.
      */
     @Test
@@ -78,11 +78,9 @@ public class DirectLauncherReentrancyTest {
         Path output2 = tempDir.resolve("TestArray2.xtc");
 
         // First compilation
+        String[] compilerArgs1 = List.of("xcc", "-o", output1.toString(), testArraySource.toString()).toArray(String[]::new);
         try {
-            Compiler.launch(new String[]{
-                "-o", output1.toString(),
-                testArraySource.toString()
-            });
+            Launcher.main(compilerArgs1);
         } catch (Exception e) {
             // Skip if ecstasy not available
             assumeTrue(false, "Skipping: ecstasy resources not available");
@@ -90,41 +88,35 @@ public class DirectLauncherReentrancyTest {
         }
 
         // Second compilation - proves reentrancy
+        String[] compilerArgs2 = List.of("xcc", "-o", output2.toString(), testArraySource.toString()).toArray(String[]::new);
         assertDoesNotThrow(() -> {
-            Compiler.launch(new String[]{
-                "-o", output2.toString(),
-                testArraySource.toString()
-            });
+            Launcher.main(compilerArgs2);
         }, "Compiler IS reentrant - second compilation should succeed");
     }
 
     /**
-     * Test that Runner.launch() CAN be called twice in same JVM with the cache-clearing hack.
+     * Test that Launcher (xec command) CAN be called twice in same JVM with the cache-clearing hack.
      * This test verifies that calling clearViewsCache() between runs allows reentrancy.
      *
      * <p><b>Expected Behavior:</b></p>
      * <ul>
-     *   <li>First Runner.launch(): ✓ SUCCESS - prints "bytes=0x0102030000000000000A"</li>
+     *   <li>First Launcher.main(xec): ✓ SUCCESS - prints "bytes=0x0102030000000000000A"</li>
      *   <li>clearViewsCache(): Clear static VIEWS to force re-initialization</li>
-     *   <li>Second Runner.launch(): ✓ SUCCESS - now works with fresh cache</li>
+     *   <li>Second Launcher.main(xec): ✓ SUCCESS - now works with fresh cache</li>
      * </ul>
      *
-     * <p><b>Workaround:</b> Call xRTViewToBit.clearViewsCache() between Runner.launch() calls</p>
+     * <p><b>Workaround:</b> Call xRTViewToBit.clearViewsCache() between Launcher.main() calls</p>
      */
     @Test
     void testRunnerReentrancyWithCacheClearing() throws Exception {
         // First compile the module
-        Compiler.launch(new String[]{
-            "-o", compiledModule.toString(),
-            testArraySource.toString()
-        });
+        String[] compilerArgs = List.of("xcc", "-o", compiledModule.toString(), testArraySource.toString()).toArray(String[]::new);
+        Launcher.main(compilerArgs);
 
         // First run - should succeed
+        String[] runnerArgs = List.of("xec", "--no-recompile", compiledModule.toString()).toArray(String[]::new);
         assertDoesNotThrow(() -> {
-            Runner.launch(new String[]{
-                "--no-recompile",
-                compiledModule.toString()
-            });
+            Launcher.main(runnerArgs);
         }, "First Runner invocation should succeed");
 
         // HACK: Clear the static VIEWS cache to allow reentrancy
@@ -132,10 +124,7 @@ public class DirectLauncherReentrancyTest {
 
         // Second run - should now succeed with the cache cleared
         assertDoesNotThrow(() -> {
-            Runner.launch(new String[]{
-                "--no-recompile",
-                compiledModule.toString()
-            });
+            Launcher.main(runnerArgs);
         }, "Second Runner invocation should succeed after clearing VIEWS cache");
     }
 }
