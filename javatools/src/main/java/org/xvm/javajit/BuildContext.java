@@ -8,9 +8,11 @@ import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.Annotation;
@@ -36,8 +38,11 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.op.CatchStart;
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
+import org.xvm.asm.op.FinallyEnd;
 import org.xvm.asm.op.FinallyStart;
+import org.xvm.asm.op.GuardAll;
 import org.xvm.asm.op.Guarded;
+import org.xvm.asm.op.Jump;
 
 import static java.lang.constant.ConstantDescs.CD_Throwable;
 import static java.lang.constant.ConstantDescs.CD_boolean;
@@ -52,7 +57,7 @@ import static org.xvm.javajit.Builder.N_TypeMismatch;
 import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
 
 /**
- * Whatever is necessary for the Ops compilation.
+ * Whatever is necessary for the method bytecode production.
  */
 public class BuildContext {
     /**
@@ -148,6 +153,216 @@ public class BuildContext {
      */
     public ConstantPool pool() {
         return typeSystem.pool();
+    }
+
+    /**
+     * Generate the method code.
+     */
+    public void assembleCode(CodeBuilder code) {
+        Op[] ops = methodStruct.getOps();
+
+        enterMethod(code);
+        preprocess(code, ops);
+        process(code, ops);
+
+        exitMethod(code);
+    }
+
+    /**
+     * Preprocess the ops and collect all necessary information to produce the code for "finally"
+     * blocks.
+     * <p>
+     * For every GUARD_ALL - FINALLY - E_FINALLY block we create synthetic variables to generate
+     * conditional jumps as necessary. As an example, for a block:
+     * <pre><code>
+     *  Loop:
+     *    while (True) {
+     *      try {
+     *          return foo();
+     *      } catch (Exception1 e1) {
+     *          bar1();
+     *          continue;
+     *      } catch (ExceptionN eN) {
+     *          barN();
+     *          break;
+     *      } finally {
+     *          fin();
+     *      }
+     *   }
+     * </code></pre>
+     * <p>
+     * we produce the bytecode that look like the following pseudo code:
+     *
+     * <pre><code>
+     *     Throwable $rethrow  = null;
+     *     boolean   $jump1    = false;
+     *     boolean   $jump2    = false;
+     *     boolean   $doReturn = false;
+     *     R1        $r1;
+     *     try {
+     *         try {
+     *             $r1 = foo();
+     *             $doReturn = true;
+     *             GOTO Fin:
+     *         } catch (Exception1 e1) {
+     *             $rethrow = e1;
+     *             bar1();
+     *             $jump1 = true;
+     *             GOTO Fin:
+     *         } catch (ExceptionN eN) {
+     *             $rethrow = eN;
+     *             barn();
+     *             $jump2 = true;
+     *             GOTO Fin:
+     *         }
+     *     } catch (Throwable $t) {
+     *         $rethrow = $t;
+     *     }
+     *
+     *  Fin:
+     *     fin();
+     *
+     *     if ($rethrow != null) throw $rethrow
+     *     if ($jump1) GOTO Loop.Continue
+     *     if ($jump2) GOTO Loop.Exit
+     *     if ($doReturn) return $r1
+     * </code></pre>
+     *
+     * @param code
+     * @param ops
+     */
+    public void preprocess(CodeBuilder code, Op[] ops) {
+        Deque<Integer>       guardStack    = null;
+        Deque<List<Integer>> jumpAddrStack = null;
+        Deque<List<Integer>> jumpDestStack = null;
+
+        int            guard      = -1;
+        List<Integer>  jumpsAddr  = null; // the addresses of Jump ops
+        List<Integer>  jumpsDest  = null; // the addresses of jump destinations
+        boolean        doReturn   = false;
+        for (int iPC = 0, c = ops.length; iPC < c; iPC++) {
+            switch (ops[iPC]) {
+            case GuardAll _:
+                if (guard < 0) {
+                    guardStack    = new ArrayDeque<>();
+                    jumpAddrStack = new ArrayDeque<>();
+                    jumpDestStack = new ArrayDeque<>();
+                } else {
+                    guardStack.push(guard);
+                    jumpAddrStack.push(jumpsAddr);
+                    jumpDestStack.push(jumpsDest);
+                }
+                jumpsAddr = new ArrayList<>();
+                jumpsDest = new ArrayList<>();
+                guard     = iPC;
+                break;
+
+            case Jump jump:
+                if (jump.shouldCallFinally()) {
+                    jumpsAddr.add(iPC);
+                }
+                break;
+
+            case OpReturn ret:
+                if (ret.shouldCallFinally()) {
+                    jumpsAddr.add(iPC);
+                }
+                break;
+
+            case FinallyStart _:
+                if (!jumpsAddr.isEmpty()) {
+                    for (int jumpAddr : jumpsAddr) {
+                        switch (ops[jumpAddr]) {
+                        case Jump jump:
+                            jumpsDest.add(jump.exchangeJump(this, code, iPC));
+                            break;
+                        case OpReturn ret:
+                            ret.registerJump(iPC);
+                            doReturn = true;
+                            break;
+                        default:
+                             throw new IllegalStateException();
+                        }
+                    }
+                // all the jump ops within the finally block are handled by the parent "finally"
+                jumpsAddr = jumpAddrStack.isEmpty()
+                        ? new ArrayList<>()
+                        : jumpAddrStack.pop();
+                }
+                break;
+
+            case FinallyEnd finallyEnd:
+                GuardAll guardAll = (GuardAll) ops[guard];
+                guard = guardStack.isEmpty()
+                        ? -1
+                        : guardStack.pop();
+
+                // only the very top GuardAll allocates the return values
+                guardAll.registerJumps(jumpsDest, doReturn && guard == -1);
+
+                jumpsDest = jumpDestStack.isEmpty()
+                        ? new ArrayList<>()
+                        : jumpDestStack.pop();
+                if (guard == -1) {
+                    doReturn = false;
+                }
+
+                if (iPC == ops.length - 1 || !ops[iPC + 1].isReachable()) {
+                    finallyEnd.setCompletes(false);
+                }
+                break;
+
+            case org.xvm.asm.op.Label label:
+                // there is a chance we are compiling the same ops multiple times (for different
+                // formal types)
+                label.setLabel(null);
+                break;
+
+            default:
+                break;
+            }
+        }
+    }
+
+    /**
+     * Process the ops - build the corresponding bytecode.
+     *
+     * @param code
+     * @param ops
+     */
+    public void process(CodeBuilder code, Op[] ops) {
+        for (int iPC = 0, c = ops.length; iPC < c; iPC++) {
+            try {
+                while (true) {
+                    int skipTo = prepareOp(code, iPC);
+                    if (skipTo < 0) {
+                        break;
+                    }
+                    assert skipTo > iPC;
+                    iPC = skipTo;
+                }
+                ops[iPC].build(this, code);
+            } catch (Throwable e) {
+                MethodStructure struct = methodStruct;
+                StringBuilder sb = new StringBuilder();
+                sb.append(className)
+                    .append('.')
+                    .append(struct.getIdentityConstant().getName())
+                    .append('(')
+                    .append(struct.getContainingClass().getSourceFileName());
+
+                int nLine = struct.calculateLineNumber(iPC);
+                if (nLine > 0) {
+                    sb.append(':').append(nLine);
+                } else {
+                    sb.append(" iPC=")
+                        .append(iPC);
+                }
+                sb.append(')');
+                throw new RuntimeException("Failed to generate code for " +
+                    "op=" + Op.toName(ops[iPC].getOpCode()) + "\n" + sb, e);
+            }
+        }
     }
 
     /**
