@@ -62,10 +62,28 @@ public abstract class Launcher
      * @param asArg  command line arguments
      */
     public static void main(String[] asArg) {
+        try {
+            // use System.exit() to communicate the result of execution back to the caller
+            System.exit(launch(asArg));
+        } catch (LauncherException e) {
+            System.exit(e.error ? 1 : 0);
+        }
+    }
+
+    /**
+     * Helper method for external launchers.
+
+     * @param asArg  command line arguments
+     *
+     * @return the result of the corresponding tool "launch" call
+     *
+     * @throws LauncherException if an unrecoverable exception occurs
+     */
+    public static int launch(String[] asArg) throws LauncherException {
         int argc = asArg.length;
         if (argc < 1) {
             System.err.println("Command name is missing");
-            return;
+            return 1;
         }
 
         String cmd = asArg[0];
@@ -84,20 +102,17 @@ public abstract class Launcher
 
         switch (cmd) {
         case "xtc":
-            new Ecstasy(argv).run();
-            break;
+            return Ecstasy.launch(argv);
 
         case "xcc":
-            Compiler.launch(argv);
-            break;
+            return Compiler.launch(argv);
 
         case "xec":
-            Runner.launch(argv);
-            break;
+            return Runner.launch(argv);
 
         default:
             System.err.println("Command name \"" + cmd + "\" is not supported");
-            break;
+            return 1;
         }
     }
 
@@ -112,7 +127,7 @@ public abstract class Launcher
     /**
      * Execute the Launcher tool.
      *
-     * @return the result of the {@process} call.
+     * @return the result of the {@link #process} call.
      */
     public int run() {
         Options opts = options();

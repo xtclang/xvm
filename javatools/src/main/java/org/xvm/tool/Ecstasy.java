@@ -18,14 +18,27 @@ public class Ecstasy
      */
     public static void main(String[] asArg) {
         try {
-            System.exit(new Ecstasy(asArg).run());
+            System.exit(launch(asArg));
         } catch (LauncherException e) {
             System.exit(e.error ? 1 : 0);
         }
     }
 
     /**
-     * Disassembler constructor.
+     * Helper method for external launchers.
+
+     * @param asArg  command line arguments
+     *
+     * @return the result of the {@link #process()} call
+     *
+     * @throws LauncherException if an unrecoverable exception occurs
+     */
+    public static int launch(String[] asArg) throws LauncherException {
+        return new Ecstasy(asArg, null).run();
+    }
+
+    /**
+     * Ecstasy command constructor.
      *
      * @param asArg command line arguments
      */
@@ -34,7 +47,7 @@ public class Ecstasy
     }
 
     /**
-     * Disassembler constructor.
+     * Ecstasy command constructor.
      *
      * @param asArg    command line arguments
      * @param console  representation of the terminal within which this command is run

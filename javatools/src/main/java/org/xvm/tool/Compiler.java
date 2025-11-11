@@ -124,7 +124,7 @@ public class Compiler
      */
     public static int launch(String[] asArg) throws LauncherException {
         return new Compiler(asArg).run();
-}
+    }
 
     /**
      * Compiler constructor.
