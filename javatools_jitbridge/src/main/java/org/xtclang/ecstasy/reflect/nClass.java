@@ -1,5 +1,7 @@
-package org.xtclang.ecstasy;
+package org.xtclang.ecstasy.reflect;
 
+import org.xtclang.ecstasy.nConst;
+import org.xtclang.ecstasy.nType;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
@@ -7,10 +9,10 @@ import org.xvm.javajit.Ctx;
 /**
  * All Ecstasy `Class<...>` types must extend this class.
  */
-public abstract class xClass
-        extends xConst {
+public abstract class nClass
+    extends nConst {
 
-    public xClass(Ctx ctx, TypeConstant type) {
+    public nClass(Ctx ctx, TypeConstant type) {
         super(ctx);
 
         $type = type;
@@ -18,7 +20,7 @@ public abstract class xClass
 
     public final TypeConstant $type;
 
-    @Override public xType $type(Ctx ctx) {
+    @Override public nType $type(Ctx ctx) {
         return null; // TODO
     }
 }

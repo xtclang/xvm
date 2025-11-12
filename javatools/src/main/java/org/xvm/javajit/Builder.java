@@ -319,8 +319,8 @@ public abstract class Builder {
     public static void loadType(CodeBuilder code, TypeSystem ts, TypeConstant type) {
         code.aload(code.parameterSlot(0)); // ctx
         loadTypeConstant(code, ts, type);
-        code.invokestatic(CD_xType, "$ensureType",
-                MethodTypeDesc.of(CD_xType, CD_Ctx, CD_TypeConstant));
+        code.invokestatic(CD_nType, "$ensureType",
+                          MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
     }
 
     /**
@@ -649,6 +649,7 @@ public abstract class Builder {
     public static final String N_Array        = "org.xtclang.ecstasy.collections.Array";
     public static final String N_Boolean      = "org.xtclang.ecstasy.Boolean";
     public static final String N_Char         = "org.xtclang.ecstasy.text.Char";
+    public static final String N_Class        = "org.xtclang.ecstasy.reflect.nClass";
     public static final String N_Enumeration  = "org.xtclang.ecstasy.reflect.Enumeration";
     public static final String N_Exception    = "org.xtclang.ecstasy.Exception";
     public static final String N_Int8         = "org.xtclang.ecstasy.numbers.Int8";
@@ -665,41 +666,41 @@ public abstract class Builder {
     public static final String N_UInt32       = "org.xtclang.ecstasy.numbers.UInt32";
     public static final String N_UInt64       = "org.xtclang.ecstasy.numbers.UInt64";
 
-    public static final String N_xArrayChar   = "org.xtclang.ecstasy.collections.xArray$Char";
-    public static final String N_xArrayObj    = "org.xtclang.ecstasy.collections.xArray$Object";
-    public static final String N_xClass       = "org.xtclang.ecstasy.xClass";
-    public static final String N_xConst       = "org.xtclang.ecstasy.xConst";
-    public static final String N_xEnum        = "org.xtclang.ecstasy.xEnum";
-    public static final String N_xException   = "org.xtclang.ecstasy.xException";
-    public static final String N_xFunction    = "org.xtclang.ecstasy.xFunction";
-    public static final String N_xModule      = "org.xtclang.ecstasy.xModule";
-    public static final String N_xObj         = "org.xtclang.ecstasy.xObj";
-    public static final String N_xService     = "org.xtclang.ecstasy.xService";
-    public static final String N_xType        = "org.xtclang.ecstasy.xType";
+    public static final String N_nArrayChar   = "org.xtclang.ecstasy.collections.nArrayᐸCharᐳ";
+    public static final String N_nArrayObj    = "org.xtclang.ecstasy.collections.nArrayᐸObjectᐳ";
+    public static final String N_nConst       = "org.xtclang.ecstasy.nConst";
+    public static final String N_nEnum        = "org.xtclang.ecstasy.nEnum";
+    public static final String N_nException   = "org.xtclang.ecstasy.nException";
+    public static final String N_nFunction    = "org.xtclang.ecstasy.nFunction";
+    public static final String N_nModule      = "org.xtclang.ecstasy.nModule";
+    public static final String N_nObj         = "org.xtclang.ecstasy.nObj";
+    public static final String N_xService     = "org.xtclang.ecstasy.nService";
+    public static final String N_nType        = "org.xtclang.ecstasy.nType";
 
     // ----- well-known suffixes -------------------------------------------------------------------
 
+    public static final String MODULE      = "¤module";       // the main module class name
+    public static final String ENUMERATION = "Enumeration";   // a class that represents an Enumeration class
     public static final String EXT         = "$ext";          // a multi-slot extension field of a primitive field
-    public static final String ENUMERATION = "$Enumeration";  // a class that represents an Enumeration class
     public static final String INIT        = "$init";         // the singleton initialization instance method
-    public static final String MODULE      = "$module";       // the main module class name
     public static final String NEW         = "$new";          // the instance creation static method
     public static final String OPT         = "$p";            // methods that contains primitive types
 
     // ----- well-known class descriptors ----------------------------------------------------------
 
     public static final ClassDesc CD_Array         = ClassDesc.of(N_Array);
+    public static final ClassDesc CD_Class         = ClassDesc.of(N_Class);
     public static final ClassDesc CD_Enumeration   = ClassDesc.of(N_Enumeration);
     public static final ClassDesc CD_Exception     = ClassDesc.of(N_Exception);
-    public static final ClassDesc CD_xFunction     = ClassDesc.of(N_xFunction);
-    public static final ClassDesc CD_xModule       = ClassDesc.of(N_xModule);
+    public static final ClassDesc CD_nFunction     = ClassDesc.of(N_nFunction);
+    public static final ClassDesc CD_nModule       = ClassDesc.of(N_nModule);
 
-    public static final ClassDesc CD_xArrayChar    = ClassDesc.of(N_xArrayChar);
-    public static final ClassDesc CD_xArrayObj     = ClassDesc.of(N_xArrayObj);
-    public static final ClassDesc CD_xEnum         = ClassDesc.of(N_xEnum);
-    public static final ClassDesc CD_xException    = ClassDesc.of(N_xException);
-    public static final ClassDesc CD_xObj          = ClassDesc.of(N_xObj);
-    public static final ClassDesc CD_xType         = ClassDesc.of(N_xType);
+    public static final ClassDesc CD_nArrayChar    = ClassDesc.of(N_nArrayChar);
+    public static final ClassDesc CD_nArrayObj     = ClassDesc.of(N_nArrayObj);
+    public static final ClassDesc CD_nEnum         = ClassDesc.of(N_nEnum);
+    public static final ClassDesc CD_nException    = ClassDesc.of(N_nException);
+    public static final ClassDesc CD_nObj          = ClassDesc.of(N_nObj);
+    public static final ClassDesc CD_nType         = ClassDesc.of(N_nType);
 
     public static final ClassDesc CD_Boolean       = ClassDesc.of(N_Boolean);
     public static final ClassDesc CD_Char          = ClassDesc.of(N_Char);
@@ -716,8 +717,7 @@ public abstract class Builder {
     public static final ClassDesc CD_UInt32        = ClassDesc.of(N_UInt32);
     public static final ClassDesc CD_UInt64        = ClassDesc.of(N_UInt64);
 
-    public static final ClassDesc CD_xClass        = ClassDesc.of(N_xClass);
-    public static final ClassDesc CD_xConst        = ClassDesc.of(N_xConst);
+    public static final ClassDesc CD_nConst        = ClassDesc.of(N_nConst);
     public static final ClassDesc CD_Container     = ClassDesc.of(Container.class.getName());
     public static final ClassDesc CD_Ctx           = ClassDesc.of(Ctx.class.getName());
     public static final ClassDesc CD_CtorCtx       = ClassDesc.of(Ctx.CtorCtx.class.getName());

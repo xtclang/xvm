@@ -3,9 +3,10 @@ package org.xtclang.ecstasy;
 import org.xtclang.ecstasy.numbers.Int64;
 import org.xvm.javajit.Ctx;
 
-public class Range$Int64 extends Range {
+public class RangeᐸInt64ᐳ
+    extends Range {
 
-    public Range$Int64(Ctx ctx) {
+    public RangeᐸInt64ᐳ(Ctx ctx) {
         super(ctx);
     }
 

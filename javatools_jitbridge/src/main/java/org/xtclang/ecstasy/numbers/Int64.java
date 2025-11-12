@@ -1,7 +1,7 @@
 package org.xtclang.ecstasy.numbers;
 
 import org.xtclang.ecstasy.Exception;
-import org.xtclang.ecstasy.xConst;
+import org.xtclang.ecstasy.nConst;
 
 import org.xtclang.ecstasy.text.String;
 
@@ -10,7 +10,7 @@ import org.xvm.javajit.Ctx;
 /**
  * Native Int64 wrapper.
  */
-public class Int64 extends xConst {
+public class Int64 extends nConst {
     /**
      * Construct an Ecstasy Int64 object.
      *

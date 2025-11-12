@@ -1,5 +1,6 @@
 package org.xtclang.ecstasy;
 
+import org.xtclang.ecstasy.nFunction.ꖛ0;
 import org.xvm.javajit.Ctx;
 
 /**
@@ -15,12 +16,12 @@ public interface Service extends Object {
     /**
      * {@code void callLater(function void doLater())}
      */
-    void callLater(Ctx ctx, xFunction.$0 doLater);
+    void callLater(Ctx ctx, ꖛ0 doLater);
 
     /**
      * {@code <Value> SharedContext<Value>.Token? findContextToken(SharedContext<Value> ctx)}
      */
-    xObj findContextToken(Ctx ctx, xType t$Value, SharedContext sharedContext);
+    nObj findContextToken(Ctx ctx, nType t$Value, SharedContext sharedContext);
 
     /**
      * {@code void registerContextToken(SharedContext.Token token)}
@@ -35,5 +36,5 @@ public interface Service extends Object {
     /**
      * {@code void registerTimeout(Timeout? timeout)}
      */
-    void registerTimeout(Ctx ctx, xObj timeout);
+    void registerTimeout(Ctx ctx, nObj timeout);
 }

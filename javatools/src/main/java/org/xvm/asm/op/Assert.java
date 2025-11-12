@@ -39,7 +39,7 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_String;
-import static org.xvm.javajit.Builder.CD_xException;
+import static org.xvm.javajit.Builder.CD_nException;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -201,7 +201,7 @@ public class Assert
             Arrays.fill(anArgs, 1, anArgs.length, Op.A_DEFAULT);
 
             ClassDesc cdEx = bctx.buildNew(code, typeEx, idCtor, anArgs);
-            code.getfield(cdEx, "$exception", CD_xException)
+            code.getfield(cdEx, "$exception", CD_nException)
                 .athrow();
         }
         if (!fAlwaysFalse) {

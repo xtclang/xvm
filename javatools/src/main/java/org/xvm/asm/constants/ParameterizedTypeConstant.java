@@ -859,7 +859,9 @@ public class ParameterizedTypeConstant
                 // narrow the actual type up to the conditional contribution's constraint
                 for (Contribution contrib : listContribs) {
                     TypeConstant typeContrib = contrib.getTypeParams().get(constName);
-
+if (typeContrib == null) {
+    continue; // TODO GG - when we renamed xClass to Class for the JIT project
+}
                     if (!typeContrib.equals(typeConstraint)) {
                         if (!fDiff) {
                             aconstCanonical = aconstCanonical.clone();

@@ -50,7 +50,7 @@ import static java.lang.constant.ConstantDescs.CD_boolean;
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_Exception;
 import static org.xvm.javajit.Builder.CD_JavaString;
-import static org.xvm.javajit.Builder.CD_xException;
+import static org.xvm.javajit.Builder.CD_nException;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.N_TypeMismatch;
 
@@ -1219,7 +1219,7 @@ public class BuildContext {
         loadCtx(code);
         code.aconst_null()
             .invokestatic(CD_Exception, "$unsupported",
-                MethodTypeDesc.of(CD_xException, CD_Ctx, CD_JavaString))
+                MethodTypeDesc.of(CD_nException, CD_Ctx, CD_JavaString))
             .athrow();
     }
 
@@ -1243,7 +1243,7 @@ public class BuildContext {
         code.loadConstant(text);
         code.aconst_null()
             .invokevirtual(exCD, "$init", MethodTypeDesc.of(
-                        CD_xException, CD_Ctx, CD_JavaString, CD_Throwable))
+                CD_nException, CD_Ctx, CD_JavaString, CD_Throwable))
             .athrow();
     }
 

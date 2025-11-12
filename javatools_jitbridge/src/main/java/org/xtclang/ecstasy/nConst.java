@@ -5,9 +5,11 @@ import org.xvm.javajit.Ctx;
 /**
  * All Ecstasy `const` types must extend this class.
  */
-public abstract class xConst extends xObj implements Const {
+public abstract class nConst
+    extends nObj
+    implements Const {
 
-    public xConst(Ctx ctx) {
+    public nConst(Ctx ctx) {
         super(ctx);
     }
 

@@ -1,9 +1,9 @@
 package org.xtclang.ecstasy.collections;
 
+import org.xtclang.ecstasy.nEnum;
 import org.xtclang.ecstasy.Range;
 import org.xtclang.ecstasy.reflect.Enumeration;
 import org.xtclang.ecstasy.text.String;
-import org.xtclang.ecstasy.xEnum;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.constants.TypeConstant;
@@ -12,9 +12,9 @@ import org.xvm.javajit.Ctx;
 
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.Iterable;
-import org.xtclang.ecstasy.Range$Int64;
-import org.xtclang.ecstasy.xException;
-import org.xtclang.ecstasy.xObj;
+import org.xtclang.ecstasy.RangeᐸInt64ᐳ;
+import org.xtclang.ecstasy.nException;
+import org.xtclang.ecstasy.nObj;
 import org.xtclang.ecstasy.reflect.Var;
 
 /**
@@ -32,7 +32,7 @@ import org.xtclang.ecstasy.reflect.Var;
  * calls involved in either of those two operations is the goal.
  */
 public abstract class Array
-        extends xObj {
+    extends nObj {
 
     protected Array(Ctx ctx) {
         super(ctx);
@@ -66,7 +66,7 @@ public abstract class Array
      */
     protected long $hashEtc;
 
-    public static class Mutability extends xEnum {
+    public static class Mutability extends nEnum {
         private Mutability(long ordinal, String name) {
             super(null);
 
@@ -92,7 +92,7 @@ public abstract class Array
         }
 
         public Enumeration enumeration$get(Ctx ctx) {
-            return Mutability$Enumeration.$INSTANCE;
+            return eMutability.$INSTANCE;
         }
 
         @Override
@@ -113,14 +113,14 @@ public abstract class Array
         }
     }
 
-    public static class Mutability$Enumeration extends Enumeration {
-        private Mutability$Enumeration() {
+    public static class eMutability extends Enumeration {       // TODO CP should this be eArray$Mutability?
+        private eMutability() {
             ConstantPool pool = Ctx.get().container.typeSystem.pool();
             super(null, pool.ensureClassTypeConstant(pool.clzClass(), null, pool.ensureTerminalTypeConstant(
                     pool.ensureEcstasyClassConstant("collections.Array.Mutability"))));
         }
 
-        public static final Mutability$Enumeration $INSTANCE = new Mutability$Enumeration();
+        public static final eMutability $INSTANCE = new eMutability();
 
         public static final String[] $names = new String[] {
             Mutability.Constant.$name,
@@ -180,7 +180,7 @@ public abstract class Array
     /**
      * Array Constructor: construct(Int size, Element | function Element (Int) supply)
      */
-    public static Array $new$1$p(Ctx ctx, TypeConstant type, long size, xObj supply) {
+    public static Array $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
         throw new UnsupportedOperationException(); // must be implemented by subclasses
     }
 
@@ -203,7 +203,7 @@ public abstract class Array
      *
      * protected construct(ArrayDelegate<Element> delegate, Mutability mutability)
      */
-    public static Array $new$4(Ctx ctx, xObj delegate, Mutability mutability) {
+    public static Array $new$4(Ctx ctx, nObj delegate, Mutability mutability) {
         throw new UnsupportedOperationException(); // must be implemented by subclasses
     }
 
@@ -291,7 +291,7 @@ public abstract class Array
      *
      * @return the element value
      */
-    public xObj getElement$p(Ctx ctx, long index) {
+    public nObj getElement$p(Ctx ctx, long index) {
         throw new UnsupportedOperationException("TODO");
     }
 
@@ -303,7 +303,7 @@ public abstract class Array
      * @param index  the element index
      * @param value  the element value
      */
-    public void setElement$p(Ctx ctx, long index, xObj value) {
+    public void setElement$p(Ctx ctx, long index, nObj value) {
         throw new UnsupportedOperationException("TODO");
     }
 
@@ -324,7 +324,7 @@ public abstract class Array
      *
      *   Array add(Element element)
      */
-    public Array add(Ctx ctx, xObj element) {
+    public Array add(Ctx ctx, nObj element) {
         throw new UnsupportedOperationException("TODO");
     }
 
@@ -363,7 +363,7 @@ public abstract class Array
      *
      * @return a reified array
      */
-    public Array reify(xObj mutability) {
+    public Array reify(nObj mutability) {
         throw new UnsupportedOperationException("TODO");
     }
 
@@ -375,7 +375,7 @@ public abstract class Array
      *
      * @return the specified array slice
      */
-    public Array slice(Ctx ctx, Range$Int64 range) {
+    public Array slice(Ctx ctx, RangeᐸInt64ᐳ range) {
         if (range.$rangeTo128(ctx)) {
             return slice$p(ctx, ctx.i0, ctx.i1);
         } else {
@@ -541,7 +541,7 @@ public abstract class Array
      *
      * @throws Exception
      */
-    protected xException $oob(Ctx ctx, long index) {
+    protected nException $oob(Ctx ctx, long index) {
         if (index < 0) {
             throw Exception.$oob(ctx, "negative index: " + index);
         }
@@ -553,7 +553,7 @@ public abstract class Array
      *
      * @throws Exception
      */
-    protected xException $ro(Ctx ctx) {
+    protected nException $ro(Ctx ctx) {
         throw Exception.$ro(ctx, "array mutability=" + $mutDesc());
     }
 

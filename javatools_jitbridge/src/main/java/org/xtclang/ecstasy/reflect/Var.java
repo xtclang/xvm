@@ -1,6 +1,6 @@
 package org.xtclang.ecstasy.reflect;
 
-import org.xtclang.ecstasy.xObj;
+import org.xtclang.ecstasy.nObj;
 import org.xvm.javajit.Ctx;
 
 /**
@@ -10,5 +10,5 @@ public interface Var extends Ref {
     /**
      * @param referent  the referent to store in this reference
      */
-    void set(Ctx ctx, xObj referent);
+    void set(Ctx ctx, nObj referent);
 }

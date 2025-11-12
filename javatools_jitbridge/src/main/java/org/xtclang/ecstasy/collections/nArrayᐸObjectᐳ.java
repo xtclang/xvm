@@ -2,8 +2,8 @@ package org.xtclang.ecstasy.collections;
 
 import java.util.Arrays;
 
-import org.xtclang.ecstasy.Range$Int64;
-import org.xtclang.ecstasy.xObj;
+import org.xtclang.ecstasy.RangeᐸInt64ᐳ;
+import org.xtclang.ecstasy.nObj;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -12,16 +12,17 @@ import org.xvm.javajit.Ctx;
 import static java.lang.Math.max;
 import static java.lang.System.arraycopy;
 
-public class xArray$Object extends Array {
+public class nArrayᐸObjectᐳ
+    extends Array {
 
-    public xArray$Object(Ctx ctx, TypeConstant type) {
+    public nArrayᐸObjectᐳ(Ctx ctx, TypeConstant type) {
         super(ctx);
         $type = type;
     }
 
     public TypeConstant $type;
-    public xArray$Object $delegate;
-    public xObj[] $storage;
+    public nArrayᐸObjectᐳ $delegate;
+    public nObj[] $storage;
 
     // ----- xObj API ------------------------------------------------------------------------------
 
@@ -35,27 +36,27 @@ public class xArray$Object extends Array {
     /**
      * Array Constructor: construct(Int capacity = 0)
      */
-    public static xArray$Object $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
+    public static nArrayᐸObjectᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
         assert !type.isImmutable();
 
         ctx.alloc(64); // REVIEW how big?
-        xArray$Object array = new xArray$Object(ctx, type);
+        nArrayᐸObjectᐳ array = new nArrayᐸObjectᐳ(ctx, type);
         array.$mut($MUTABLE);
         array.$capCfg(ctx, capacity);
         return array;
     }
 
-    public static xArray$Object $new$1$p(Ctx ctx, TypeConstant type, long size, xObj supply) {
+    public static nArrayᐸObjectᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
-    public static xArray$Object $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, org.xtclang.ecstasy.Iterable elements) {
+    public static nArrayᐸObjectᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, org.xtclang.ecstasy.Iterable elements) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
-    public static xArray$Object $new$3$p(Ctx ctx, TypeConstant type, xArray$Object that) {
+    public static nArrayᐸObjectᐳ $new$3$p(Ctx ctx, TypeConstant type, nArrayᐸObjectᐳ that) {
         // TODO
         throw new UnsupportedOperationException();
     }
@@ -71,7 +72,7 @@ public class xArray$Object extends Array {
         return $delegate == null ? ($sizeEtc & $SIZE_MASK) : $delegate.size$get$p(ctx);
     }
 
-    @Override public xObj getElement$p(Ctx ctx, long index) {
+    @Override public nObj getElement$p(Ctx ctx, long index) {
         if ($delegate != null) {
             return $delegate.getElement$p(ctx, index);
         }
@@ -87,7 +88,7 @@ public class xArray$Object extends Array {
         }
     }
 
-    @Override public void setElement$p(Ctx ctx, long index, xObj value) {
+    @Override public void setElement$p(Ctx ctx, long index, nObj value) {
         if ($delegate != null) {
             $delegate.setElement$p(ctx, index, value);
             return;
@@ -116,7 +117,7 @@ public class xArray$Object extends Array {
     }
 
     @Override
-    public xArray$Object add(Ctx ctx, xObj element) {
+    public nArrayᐸObjectᐳ add(Ctx ctx, nObj element) {
         if ($delegate != null) {
             $delegate.add(ctx, element);
             return this;
@@ -160,16 +161,16 @@ public class xArray$Object extends Array {
 //        }
 //    }
 
-    @Override public xArray$Object slice$p(Ctx ctx, long n1, long n2) {
+    @Override public nArrayᐸObjectᐳ slice$p(Ctx ctx, long n1, long n2) {
         // slice must be in-range
         // TODO check lower bound as well
-        long upper = Range$Int64.$effectiveUpperBound(ctx, n1, n2);
+        long upper = RangeᐸInt64ᐳ.$effectiveUpperBound(ctx, n1, n2);
         if (size$get$p(ctx) > upper) {
             throw $oob(ctx, upper);
         }
 
         // optimized empty slice
-        if (Range$Int64.$empty(ctx, n1, n2)) {
+        if (RangeᐸInt64ᐳ.$empty(ctx, n1, n2)) {
             // return TODO empty Array$Object
         }
 
@@ -179,7 +180,7 @@ public class xArray$Object extends Array {
 
     // ----- Array internals -----------------------------------------------------------------------
 
-    @Override protected xArray$Object $delegate() {
+    @Override protected nArrayᐸObjectᐳ $delegate() {
         return $delegate;
     }
 
@@ -206,7 +207,7 @@ public class xArray$Object extends Array {
                 $growHuge(ctx, cap);
                 return false;
             } else {
-                $storage = new xObj[(int) cap];
+                $storage = new nObj[(int) cap];
                 return true;
             }
         }
@@ -230,7 +231,7 @@ public class xArray$Object extends Array {
     @Override protected void $shrinkToSize(Ctx ctx) {
         int size = $sizeEtc & $MUT_MASK;
         if ($storage != null && $storage.length > size) {
-            xObj[] newArray = new xObj[size];
+            nObj[] newArray = new nObj[size];
             arraycopy($storage, 0, newArray, 0, size);
             $storage = newArray;
         }
@@ -294,7 +295,7 @@ public class xArray$Object extends Array {
         } else if (max(newSize, $MIN_CAP) < ($storage.length >> 2)) {
             // wasting >75%, so resize (future tuning required)
             int newCap = max(Integer.highestOneBit(-1 + newSize + newSize), $MIN_CAP);
-            xObj[] newArray = new xObj[newCap];
+            nObj[] newArray = new nObj[newCap];
             if (moveTo > 0) {
                 arraycopy($storage, 0, newArray, 0, moveTo);
             }

@@ -23,7 +23,7 @@ import org.xvm.runtime.template.xNullable;
 import static java.lang.constant.ConstantDescs.CD_Throwable;
 
 import static org.xvm.javajit.Builder.CD_Exception;
-import static org.xvm.javajit.Builder.CD_xException;
+import static org.xvm.javajit.Builder.CD_nException;
 
 
 /**
@@ -141,8 +141,8 @@ public class FinallyStart
         code.aload(slotRethrow)
             .dup()
             .ifnull(labelNull)
-            .checkcast(CD_xException)
-            .getfield(CD_xException, "exception", CD_Exception);
+            .checkcast(CD_nException)
+            .getfield(CD_nException, "exception", CD_Exception);
         bctx.storeValue(code, regEx);
         code.goto_(labelEnd)
             .labelBinding(labelNull)

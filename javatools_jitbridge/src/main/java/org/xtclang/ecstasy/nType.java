@@ -11,11 +11,11 @@ import org.xvm.javajit.Ctx;
 /**
  * All Ecstasy `Type` types must extend this class.
  */
-public class xType
-        extends xConst
+public class nType
+    extends nConst
         implements Type {
 
-    private xType(Ctx ctx, TypeConstant type) {
+    private nType(Ctx ctx, TypeConstant type) {
         super(ctx);
 
         $type = type;
@@ -23,7 +23,7 @@ public class xType
 
     public final TypeConstant $type;
 
-    public xObj alloc(Ctx ctx) {
+    public nObj alloc(Ctx ctx) {
         throw Exception.$unsupported(ctx, "Type " + $type);
     }
 
@@ -31,12 +31,12 @@ public class xType
         return $type.getType();
     }
 
-    @Override public boolean $isA(Ctx ctx, xType t) {
+    @Override public boolean $isA(Ctx ctx, nType t) {
         return $type.isA(t.$type);
     }
 
     @Override
-    public Boolean structConstructor(Ctx ctx, Type OuterType, xObj outer) {
+    public Boolean structConstructor(Ctx ctx, Type OuterType, nObj outer) {
         throw Exception.$unsupported(ctx, "Type " + $type);
     }
 
@@ -48,7 +48,7 @@ public class xType
     /**
      * @return xType instance for the specified type
      */
-    public static xType $ensureType(Ctx ctx, TypeConstant type) {
-        return (xType) type.ensureXType(() -> new xType(ctx, type));
+    public static nType $ensureType(Ctx ctx, TypeConstant type) {
+        return (nType) type.ensureXType(() -> new nType(ctx, type));
     }
 }

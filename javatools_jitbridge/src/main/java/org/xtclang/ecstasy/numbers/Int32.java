@@ -1,14 +1,14 @@
 package org.xtclang.ecstasy.numbers;
 
 import org.xtclang.ecstasy.text.String;
-import org.xtclang.ecstasy.xConst;
+import org.xtclang.ecstasy.nConst;
 
 import org.xvm.javajit.Ctx;
 
 /**
  * Native Int32 wrapper.
  */
-public class Int32 extends xConst {
+public class Int32 extends nConst {
     /**
      * Construct an Ecstasy Int32 object.
      *

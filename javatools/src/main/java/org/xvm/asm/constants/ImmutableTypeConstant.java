@@ -12,6 +12,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.javajit.ModuleLoader;
 import org.xvm.javajit.TypeSystem;
 
 import org.xvm.util.Hash;

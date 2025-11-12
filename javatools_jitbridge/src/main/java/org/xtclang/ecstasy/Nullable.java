@@ -12,7 +12,7 @@ import org.xvm.javajit.Ctx;
  * Ecstasy Nullable.
  */
 public class Nullable
-        extends xEnum {
+    extends nEnum {
 
     private Nullable() {
         super(null);
@@ -27,7 +27,7 @@ public class Nullable
     }
 
     public Enumeration enumeration$get(Ctx ctx) {
-        return Nullable$Enumeration.$INSTANCE;
+        return eNullable.$INSTANCE;
     }
 
     public String name$get(Ctx ctx) {

@@ -10,8 +10,10 @@ import org.xvm.javajit.Ctx;
 /**
  * All Ecstasy `enum` types must extend this class.
  */
-public abstract class xEnum extends xConst implements Object {
-    public xEnum(Ctx ctx) {
+public abstract class nEnum
+    extends nConst
+    implements Object {
+    public nEnum(Ctx ctx) {
         super(ctx);
     }
 
@@ -24,11 +26,11 @@ public abstract class xEnum extends xConst implements Object {
     abstract public String name$get(Ctx ctx);
     abstract public long ordinal$get$p(Ctx ctx);
 
-    static public boolean equals$p(Ctx ctx, xType CompileType, xEnum o1, xEnum o2) {
+    static public boolean equals$p(Ctx ctx, nType CompileType, nEnum o1, nEnum o2) {
         return o1.ordinal$get$p(ctx) == o2.ordinal$get$p(ctx);
     }
 
-    static public long compare$p(Ctx ctx, xType CompileType, xEnum o1, xEnum o2) {
+    static public long compare$p(Ctx ctx, nType CompileType, nEnum o1, nEnum o2) {
         return o1.ordinal$get$p(ctx) - o2.ordinal$get$p(ctx);
     }
 

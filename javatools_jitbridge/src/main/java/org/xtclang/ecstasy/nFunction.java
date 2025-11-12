@@ -9,7 +9,8 @@ import org.xvm.javajit.Ctx;
 /**
  * All Ecstasy "function" types must extend this class.
  */
-public abstract class xFunction implements Function {
+public abstract class nFunction
+    implements Function {
 
     @Override
     public Tuple invoke(Ctx ctx, Tuple args) {
@@ -21,7 +22,7 @@ public abstract class xFunction implements Function {
     /**
      * This class is registered as a bridge between the Signature of "void()" and the Function type
      */
-    public abstract static class $0 extends xFunction {
+    public abstract static class ꖛ0 extends nFunction {
         /**
          * This name is registered as a bridge and needs to be implemented by all native or
          * auto-generated Function classes.
@@ -31,7 +32,7 @@ public abstract class xFunction implements Function {
         @Override
         public Tuple invoke(Ctx ctx, Tuple args) {
             $call(ctx);
-            return xTuple.Empty;
+            return nTuple.Empty;
         }
     }
 }

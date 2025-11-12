@@ -283,7 +283,7 @@ public class Xvm {
      */
     public String createUniqueSuffix(String name) {
         int count = nameCounters.compute(name, (k, v) -> v == null ? -1 : v + 1);
-        return count == -1 ? "" : "$" + count;
+        return count == -1 ? "" : "ꖛ" + count;
     }
 
     // ----- internal ------------------------------------------------------------------------------

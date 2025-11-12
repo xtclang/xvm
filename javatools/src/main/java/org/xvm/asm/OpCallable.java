@@ -584,7 +584,7 @@ public abstract class OpCallable extends Op {
             if (format == Format.MIXIN) {
                 // we need to generate a synthetic super
                 cdTarget = ClassDesc.of(bctx.className);
-                sJitName = bodyHead.getIdentity().ensureJitMethodName(ts) + "$$" + nDepth;
+                sJitName = bodyHead.getIdentity().ensureJitMethodName(ts) + "ꖛ" + nDepth;
 
                 bctx.buildSuper(sJitName, nDepth);
             } else {

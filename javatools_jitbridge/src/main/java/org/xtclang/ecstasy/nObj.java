@@ -6,8 +6,9 @@ import org.xvm.javajit.Container;
 import org.xvm.javajit.Ctx;
 import org.xvm.javajit.Xvm;
 
-public abstract class xObj implements Object {
-    public xObj(Ctx ctx) {
+public abstract class nObj
+    implements Object {
+    public nObj(Ctx ctx) {
         super();
         $meta = ctx == null ? -1 : ctx.container.id;
     }
@@ -66,16 +67,16 @@ public abstract class xObj implements Object {
     /**
      * Auto-generated for classes that represent generic types.
      */
-    public xType $type(Ctx ctx) {
-        return xType.$ensureType(ctx, $xvmType(ctx));
+    public nType $type(Ctx ctx) {
+        return nType.$ensureType(ctx, $xvmType(ctx));
     }
 
     /**
      * Helper method to resolve generic types.
      */
-    public xType $type(Ctx ctx, String name) {
+    public nType $type(Ctx ctx, String name) {
         TypeConstant type = $xvmType(ctx).resolveGenericType(name);
-        return xType.$ensureType(ctx, type);
+        return nType.$ensureType(ctx, type);
     }
 
     public abstract boolean $isImmut();
@@ -89,21 +90,21 @@ public abstract class xObj implements Object {
     /**
      * This should be overridden by duck-type wrappers.
      */
-    public boolean $isA(Ctx ctx, xType t) {
+    public boolean $isA(Ctx ctx, nType t) {
         return $type(ctx).$type.isA(t.$type);
     }
 
     /**
      * {@code static <CompileType extends Object> Boolean equals(CompileType o1, CompileType o2)}
      */
-    static boolean equals$p(Ctx ctx, xType CompileType, xObj o1, xObj o2) {
+    static boolean equals$p(Ctx ctx, nType CompileType, nObj o1, nObj o2) {
         return o1 == o2; // TODO CP: check unwrap
     }
 
     // ----- static helpers for when references may be non-xObj classes ----------------------------
 
     public static java.lang.Object $makeImmut(Ctx ctx, java.lang.Object ref) {
-        if (ref instanceof xObj xRef) {
+        if (ref instanceof nObj xRef) {
             xRef.$makeImmut(ctx);
             return xRef;
         }
@@ -115,8 +116,8 @@ public abstract class xObj implements Object {
         throw new IllegalStateException();
     }
 
-    public static boolean $isA(Ctx ctx, java.lang.Object ref, xType t) {
-        if (ref instanceof xObj xRef) {
+    public static boolean $isA(Ctx ctx, java.lang.Object ref, nType t) {
+        if (ref instanceof nObj xRef) {
             return xRef.$isA(ctx, t);
         }
 
@@ -131,7 +132,7 @@ public abstract class xObj implements Object {
     }
 
     public static boolean $isImmut(java.lang.Object ref) {
-        if (ref instanceof xObj xRef) {
+        if (ref instanceof nObj xRef) {
             return xRef.$isImmut();
         }
 
@@ -141,8 +142,8 @@ public abstract class xObj implements Object {
         return true;
     }
 
-    public static xType $type(Ctx ctx, java.lang.Object ref) {
-        if (ref instanceof xObj xRef) {
+    public static nType $type(Ctx ctx, java.lang.Object ref) {
+        if (ref instanceof nObj xRef) {
             return xRef.$type(ctx);
         }
 

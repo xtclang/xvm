@@ -13,7 +13,7 @@ import org.xvm.javajit.Ctx;
  * Native representation for "ecstasy.Boolean".
  */
 public class Boolean
-        extends xEnum {
+    extends nEnum {
     private Boolean(boolean value, long ordinal, String name) {
         super(null);
         $value   = value;
@@ -34,7 +34,7 @@ public class Boolean
     }
 
     public Enumeration enumeration$get(Ctx ctx) {
-        return Boolean$Enumeration.$INSTANCE;
+        return eBoolean.$INSTANCE;
     }
 
     @Override

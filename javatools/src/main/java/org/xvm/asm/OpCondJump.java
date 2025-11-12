@@ -33,7 +33,7 @@ import static org.xvm.javajit.Builder.CD_Container;
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_JavaString;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
-import static org.xvm.javajit.Builder.CD_xType;
+import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.MD_TypeIsA;
 import static org.xvm.javajit.Builder.MD_xvmType;
 
@@ -492,7 +492,7 @@ public abstract class OpCondJump
             // dynamic types
             RegisterInfo regType = bctx.loadArgument(code, m_nArg2); // xType
             assert regType.type().isTypeOfType();
-            code.getfield(CD_xType, "$type", CD_TypeConstant);
+            code.getfield(CD_nType, "$type", CD_TypeConstant);
         }
 
         code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);

@@ -50,7 +50,7 @@ public class FunctionBuilder
         MethodTypeDesc invokeMD = computeMethodDesc(paramTypes, returnTypes);
 
         classBuilder
-            .withSuperclass(CD_xFunction)
+            .withSuperclass(CD_nFunction)
             .withMethod("$call", callMD, ClassFile.ACC_PUBLIC | ClassFile.ACC_ABSTRACT, methodBuilder -> {})
             .withMethodBody("$invoke", invokeMD, ClassFile.ACC_PUBLIC, code -> {
                 // TODO: implement the wrapper

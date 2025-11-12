@@ -11,11 +11,11 @@ import org.xvm.javajit.Ctx;
 /**
  * All Ecstasy `module` types must extend this class.
  */
-public class xModule
-        extends xConst
+public class nModule
+    extends nConst
         implements Module {
 
-    public xModule(Ctx ctx) {
+    public nModule(Ctx ctx) {
         super(ctx);
 
         $module = ctx.container.typeSystem.mainModule();

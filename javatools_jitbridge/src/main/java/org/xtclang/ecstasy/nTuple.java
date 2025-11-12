@@ -5,7 +5,8 @@ import org.xtclang.ecstasy.collections.Tuple;
 /**
  * Native Tuple support.
  */
-public class xTuple implements Tuple {
+public class nTuple
+    implements Tuple {
 
-    static final Tuple Empty = new xTuple();
+    static final Tuple Empty = new nTuple();
 }

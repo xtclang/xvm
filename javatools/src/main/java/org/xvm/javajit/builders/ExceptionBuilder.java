@@ -49,7 +49,7 @@ public class ExceptionBuilder extends CommonBuilder {
      */
     public void assembleCreateException(String className, ClassBuilder classBuilder) {
         String         jitName  = "$createJavaException";
-        MethodTypeDesc createMD = MethodTypeDesc.of(CD_xException, CD_Throwable);
+        MethodTypeDesc createMD = MethodTypeDesc.of(CD_nException, CD_Throwable);
         ClassDesc      javaExCD = getShapeDesc(className, ClassfileShape.Exception);
         ClassDesc      thisCD   = ClassDesc.of(className);
         MethodTypeDesc initMD   = MethodTypeDesc.of(CD_void, CD_Throwable, thisCD);
@@ -80,7 +80,7 @@ public class ExceptionBuilder extends CommonBuilder {
         TypeConstant superType = typeInfo.getExtends();
         ClassDesc    superCD;
         if (superType.equals(pool.typeException())) {
-            superCD = CD_xException;
+            superCD = CD_nException;
         } else {
             superCD = getShapeDesc(typeSystem.ensureJitClassName(superType), ClassfileShape.Exception);
         }

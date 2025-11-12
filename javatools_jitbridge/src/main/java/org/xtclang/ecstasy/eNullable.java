@@ -11,14 +11,15 @@ import org.xvm.javajit.Ctx;
 /**
  * Native Enumeration<Nullable>.
  */
-public class Nullable$Enumeration extends Enumeration {
-    private Nullable$Enumeration(Ctx ctx) {
+public class eNullable
+    extends Enumeration {
+    private eNullable(Ctx ctx) {
         ConstantPool pool = ctx.container.typeSystem.pool();
 
         super(ctx, pool.ensureClassTypeConstant(pool.clzClass(), null, pool.typeNullable()));
     }
 
-    public static final Nullable$Enumeration $INSTANCE = new Nullable$Enumeration(Ctx.get());
+    public static final eNullable $INSTANCE = new eNullable(Ctx.get());
 
     public static final String[] $names = new String[] {Nullable.$name};
     public static final Nullable[] $values = new Nullable[] {Nullable.Null};

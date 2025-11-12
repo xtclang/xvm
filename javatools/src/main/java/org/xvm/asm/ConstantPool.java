@@ -2118,6 +2118,7 @@ public class ConstantPool
     public TypeConstant      typeModuleRB()      {TypeConstant      c = m_typeModuleRB;      if (c == null) {m_typeModuleRB      = c = makeNativeRebase(clzModule()                                    );} return c;}
     public TypeConstant      typePackage()       {TypeConstant      c = m_typePackage;       if (c == null) {m_typePackage       = c = ensureTerminalTypeConstant(clzPackage()                         );} return c;}
     public TypeConstant      typePackageRB()     {TypeConstant      c = m_typePackageRB;     if (c == null) {m_typePackageRB     = c = makeNativeRebase(clzPackage()                                   );} return c;}
+    public TypeConstant      typeEnum()          {TypeConstant      c = m_typeEnum;          if (c == null) {m_typeEnum          = c = ensureTerminalTypeConstant(clzEnum()                            );} return c;}
     public TypeConstant      typeEnumRB()        {TypeConstant      c = m_typeEnumRB;        if (c == null) {m_typeEnumRB        = c = makeNativeRebase(clzEnum()                                      );} return c;}
     public TypeConstant      typeEnumeration()   {TypeConstant      c = m_typeEnumeration;   if (c == null) {m_typeEnumeration   = c = ensureTerminalTypeConstant(clzEnumeration()                     );} return c;}
     public TypeConstant      typeEnumValue()     {TypeConstant      c = m_typeEnumValue;     if (c == null) {m_typeEnumValue     = c = ensureTerminalTypeConstant(clzEnumValue()                       );} return c;}
@@ -3585,6 +3586,7 @@ public class ConstantPool
         m_typeModuleRB      = null;
         m_typePackage       = null;
         m_typePackageRB     = null;
+        m_typeEnum          = null;
         m_typeEnumRB        = null;
         m_typeEnumeration   = null;
         m_typeEnumValue     = null;
@@ -3884,6 +3886,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeModuleRB;
     private transient TypeConstant      m_typePackage;
     private transient TypeConstant      m_typePackageRB;
+    private transient TypeConstant      m_typeEnum;
     private transient TypeConstant      m_typeEnumRB;
     private transient TypeConstant      m_typeEnumeration;
     private transient TypeConstant      m_typeEnumValue;

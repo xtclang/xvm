@@ -108,7 +108,7 @@ public class CommonBuilder
     protected ClassDesc getSuperCD() {
         TypeConstant superType = typeInfo.getExtends();
         return superType == null
-            ? CD_xObj
+            ? CD_nObj
             : ClassDesc.of(typeSystem.ensureJitClassName(superType));
     }
 
@@ -651,12 +651,12 @@ public class CommonBuilder
      * Assemble the generic property accessors for the "Impl" shape.
      */
     private void assembleGenericProperty(ClassBuilder classBuilder, String name) {
-        classBuilder.withMethodBody(name + "$get", MethodTypeDesc.of(CD_xType, CD_Ctx),
+        classBuilder.withMethodBody(name + "$get", MethodTypeDesc.of(CD_nType, CD_Ctx),
             ClassFile.ACC_PUBLIC, code ->
                 code.aload(0)                     // this
                     .aload(code.parameterSlot(0)) // ctx
                     .ldc(name)
-                    .invokevirtual(CD_xObj, "$type", MethodTypeDesc.of(CD_xType, CD_Ctx, CD_JavaString))
+                    .invokevirtual(CD_nObj, "$type", MethodTypeDesc.of(CD_nType, CD_Ctx, CD_JavaString))
                     .areturn()
         );
     }

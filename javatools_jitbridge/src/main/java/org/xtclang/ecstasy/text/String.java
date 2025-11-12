@@ -1,8 +1,8 @@
 package org.xtclang.ecstasy.text;
 
 import org.xtclang.ecstasy.Exception;
-import org.xtclang.ecstasy.xConst;
-import org.xtclang.ecstasy.xType;
+import org.xtclang.ecstasy.nConst;
+import org.xtclang.ecstasy.nType;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -49,7 +49,7 @@ import static org.xvm.util.Handy.require;
  * 21-bit (Unicode) values to be stored in each `long`.
  */
 public class String
-        extends xConst {
+    extends nConst {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -277,7 +277,7 @@ public class String
     }
 
 
-    public static boolean equals$p(Ctx ctx, xType type, String s1, String s2) {
+    public static boolean equals$p(Ctx ctx, nType type, String s1, String s2) {
         return false;
     }
 

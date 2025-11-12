@@ -1,14 +1,14 @@
 package org.xtclang.ecstasy.numbers;
 
 import org.xtclang.ecstasy.text.String;
-import org.xtclang.ecstasy.xConst;
+import org.xtclang.ecstasy.nConst;
 
 import org.xvm.javajit.Ctx;
 
 /**
  * Native UInt64 wrapper.
  */
-public class UInt64 extends xConst {
+public class UInt64 extends nConst {
     /**
      * Construct an Ecstasy UInt64 object.
      *

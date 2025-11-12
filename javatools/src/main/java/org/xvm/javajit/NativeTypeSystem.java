@@ -35,8 +35,6 @@ import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.asm.Constants.NATIVE_MODULE;
 import static org.xvm.asm.Constants.TURTLE_MODULE;
 
-import static org.xvm.javajit.Builder.ENUMERATION;
-
 import static org.xvm.util.Handy.require;
 
 /**
@@ -137,9 +135,9 @@ public class NativeTypeSystem
             if (in != null) {
                 byte[] classBytes = in.readAllBytes();
                 String simpleName = name.substring(name.lastIndexOf('.') + 1);
-                if (simpleName.startsWith("x") || simpleName.endsWith(ENUMERATION)) {
-                    // by convention the classes that start with an "x" are "rebase" classes
-                    // that we take "as is" (they don't need to be augmented)
+                if (simpleName.codePointAt(0) == NO_MOD || isEnumerationClass(simpleName)) {
+                    // by convention the classes that start with an "n" are "no-modification"
+                    // classes that we take "as is" (they must not be augmented)
                     return classBytes;
                 }
 
@@ -194,12 +192,12 @@ public class NativeTypeSystem
         ConstantPool pool = pool();
 
         // only rebased types need to be registered
-        nativeByClass.put(pool.clzEnum(),      Builder.N_xEnum);
-        nativeByClass.put(pool.clzEnumValue(), Builder.N_xEnum);
-        nativeByClass.put(pool.clzModule(),    Builder.N_xModule);
-        nativeByClass.put(pool.clzObject(),    Builder.N_xObj);
+        nativeByClass.put(pool.clzEnum(),      Builder.N_nEnum);
+        nativeByClass.put(pool.clzEnumValue(), Builder.N_nEnum);
+        nativeByClass.put(pool.clzModule(),    Builder.N_nModule);
+        nativeByClass.put(pool.clzObject(),    Builder.N_nObj);
         nativeByClass.put(pool.clzService(),   Builder.N_xService);
-        nativeByClass.put(pool.clzType(),      Builder.N_xType);
+        nativeByClass.put(pool.clzType(),      Builder.N_nType);
 
         nativeBuilders.put(pool.typeInt64(),  org.xvm.javajit.builders.Int64Builder.class);
         nativeBuilders.put(pool.typeString(), org.xvm.javajit.builders.StringBuilder.class);
@@ -209,10 +207,10 @@ public class NativeTypeSystem
         // prime the function name counter
         xvm.createUniqueSuffix("");
 
-        // xFunction.$0: function void()
+        // xFunction.ꖛ0: function void()
         String f0 = ensureJitClassName(
             pool.buildFunctionType(TypeConstant.NO_TYPES, TypeConstant.NO_TYPES));
-        assert f0.equals(Builder.N_xFunction + "$$0");
+        assert f0.equals(Builder.N_nFunction + "$ꖛ0");
     }
 }
 
