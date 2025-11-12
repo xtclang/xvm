@@ -201,7 +201,8 @@ public class CommonBuilder
      * Assemble interfaces for the "Impl" shape.
      */
     protected void assembleImplInterfaces(ClassBuilder classBuilder) {
-        boolean isInterface = classStruct.getFormat() == Format.INTERFACE;
+        boolean         isInterface = classStruct.getFormat() == Format.INTERFACE;
+        List<ClassDesc> interfaces  = new ArrayList<>();
         for (Contribution contrib : typeInfo.getContributionList()) {
             switch (contrib.getComposition()) {
                 case Implements:
@@ -211,10 +212,12 @@ public class CommonBuilder
                         // ignore "implements Object" for classes
                         continue;
                     }
-                    classBuilder.withInterfaceSymbols(
-                        ClassDesc.of(typeSystem.ensureJitClassName(contribType)));
+                    interfaces.add(ClassDesc.of(typeSystem.ensureJitClassName(contribType)));
                     break;
             }
+        }
+        if (!interfaces.isEmpty()) {
+            classBuilder.withInterfaceSymbols(interfaces);
         }
     }
 
@@ -755,6 +758,10 @@ public class CommonBuilder
                 continue; // not our responsibility
             }
 
+            if (classStruct.getFormat() != Format.INTERFACE &&
+                    method.getHead().getImplementation() == Implementation.Declared) {
+                assembleImplMethod(className, classBuilder, method);
+            }
             if (shouldGenerate(method.getIdentity())) {
                 assembleImplMethod(className, classBuilder, method);
             }
