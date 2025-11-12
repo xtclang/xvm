@@ -30,11 +30,11 @@ import org.xvm.javajit.builders.ExceptionBuilder;
 import org.xvm.javajit.builders.FunctionBuilder;
 import org.xvm.javajit.builders.ModuleBuilder;
 
-import static java.lang.Math.max;
-import static org.xvm.javajit.Builder.ENUMERATION;
 import static org.xvm.javajit.Builder.MODULE;
 
 import static org.xvm.util.Handy.require;
+
+import static java.lang.Math.max;
 import static java.lang.Math.min;
 
 /**
@@ -325,12 +325,12 @@ public class TypeSystem {
                     builder.assembleImpl(className, classBuilder);
                     break;
 
-                case Exception:
-                    ((ExceptionBuilder) builder).assembleJavaException(className, classBuilder);
+                case Enum:
+                    builder.assembleImpl(className, classBuilder);
                     break;
 
-                case Enum:
-                    builder.assembleImpl(className, classBuilder));
+                case Exception:
+                    ((ExceptionBuilder) builder).assembleJavaException(className, classBuilder);
                     break;
 
                 default:
@@ -361,18 +361,16 @@ public class TypeSystem {
     protected Builder ensureBuilder(Artifact art) {
         ConstantPool pool = pool();
         TypeConstant type = art.type;
-        if (art.shape == ClassfileShape.Enum) {
-            // TODO GG
-            String         enumName   = name.substring(0, name.length() - ENUMERATION.length());
-            ClassStructure enumStruct = (ClassStructure) module.getChildByPath(enumName.replace('$', '.'));
-            assert enumStruct != null;
-            TypeConstant enumerationType = enumStruct.getIdentityConstant().getValueType(pool(), null);
-            return new EnumerationBuilder(this, enumerationType);
-        }
+
         if (type.isA(pool.typeModule())) {
             // it's definitely not Module, since this is not the native TypeSystem
             assert !type.equals(pool.typeModule());
             return new ModuleBuilder(this, type);
+        }
+
+        if (art.shape == ClassfileShape.Enum) {
+            TypeConstant enumerationType = art.clz.getIdentityConstant().getValueType(pool(), null);
+            return new EnumerationBuilder(this, enumerationType);
         }
 
         if (type.isEnum()) {
