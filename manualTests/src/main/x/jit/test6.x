@@ -6,10 +6,10 @@ module test6.examples.org {
     }
 
     void test1() {
-        TestA<String> t = new TestA("hello");
+        TestA<String> ts = new TestA("hello");
         console.print("Element: ", True);
-        console.print(t.Element);
-        // console.print(t.size());
+        console.print(ts.Element);
+        // console.print(ts.size());
     }
 
     class TestA<Element>(Element el)
@@ -19,6 +19,10 @@ module test6.examples.org {
 
     static mixin MixS<Element extends Stringable>
             into TestA<Element> {
+        construct() {
+            console.print("In MixS");
+        }
+
         Int size() {
             return el.estimateStringLength();
         }
@@ -26,6 +30,10 @@ module test6.examples.org {
 
     static mixin MixN<Element extends Number>
             into TestA<Element> {
+        construct() {
+            console.print("In MixN");
+        }
+
         Int value() {
             if (Int n := el.is(Int)) {
                 return n;

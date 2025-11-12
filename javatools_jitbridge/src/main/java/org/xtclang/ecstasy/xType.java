@@ -28,7 +28,7 @@ public class xType
     }
 
     @Override public TypeConstant $xvmType(Ctx ctx) {
-        return $type;
+        return $type.getType();
     }
 
     @Override public boolean $isA(Ctx ctx, xType t) {
