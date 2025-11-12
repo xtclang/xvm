@@ -16,10 +16,10 @@ import org.xvm.javajit.Xvm;
 /**
  * The Injector used for "main" containers.
  */
-public class xMainInjector
+public class nMainInjector
         extends Injector {
 
-    public xMainInjector(Xvm xvm) {
+    public nMainInjector(Xvm xvm) {
         this.xvm = xvm;
     }
 

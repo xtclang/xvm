@@ -3,9 +3,8 @@ package org.xtclang._native.io;
 import org.xtclang.ecstasy.io.Console;
 import org.xtclang.ecstasy.io.IOException;
 
-import org.xtclang.ecstasy.xObj;
-import org.xtclang.ecstasy.xService;
-import org.xtclang.ecstasy.xType;
+import org.xtclang.ecstasy.nObj;
+import org.xtclang.ecstasy.nService;
 
 import org.xtclang.ecstasy.text.String;
 
@@ -18,7 +17,7 @@ import org.xvm.runtime.template._native.io.xTerminalConsole;
  * Native implementation for _native.TerminalConsole.
  */
 public class TerminalConsole
-        extends xService
+    extends nService
         implements Console {
 
     public TerminalConsole() {
@@ -26,14 +25,14 @@ public class TerminalConsole
     }
 
     @Override
-    public TypeConstant $xvmType() {
+    public TypeConstant $xvmType(Ctx ctx) {
         return $xvm().ecstasyPool.ensureEcstasyTypeConstant("io.Console");
     }
 
     /**
      * {@code void print(Object object = "", Boolean suppressNewline = False)}
      */
-    public void print$p(Ctx ctx, xObj object, boolean suppressNewline, boolean dfltSuppressNewline) {
+    public void print$p(Ctx ctx, nObj object, boolean suppressNewline, boolean dfltSuppressNewline) {
         if (object == null) {
             object = String.EmptyString;
         }

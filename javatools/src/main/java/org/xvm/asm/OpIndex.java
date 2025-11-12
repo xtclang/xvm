@@ -33,7 +33,7 @@ import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
-import static org.xvm.javajit.Builder.CD_xObj;
+import static org.xvm.javajit.Builder.CD_nObj;
 
 import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
@@ -336,18 +336,18 @@ public abstract class OpIndex
                     default -> throw new UnsupportedOperationException(toName(getOpCode()));
                 }
             } else {
-                ClassDesc cdArray = Builder.CD_xArrayObj;
+                ClassDesc cdArray = Builder.CD_nArrayObj;
                 bctx.loadCtx(code);
                 bctx.loadArgument(code, m_nIndex);
                 switch (getOpCode()) {
                     case OP_I_GET ->
                         code.invokevirtual(cdArray, "getElement$p",
-                            MethodTypeDesc.of(CD_xObj, CD_Ctx, CD_long));
+                            MethodTypeDesc.of(CD_nObj, CD_Ctx, CD_long));
 
                     case OP_I_SET -> {
                         bctx.loadArgument(code, getValueIndex());
                         code.invokevirtual(cdArray, "setElement$p",
-                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, CD_xObj));
+                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, CD_nObj));
                     }
 
                     default -> throw new UnsupportedOperationException(toName(getOpCode()));

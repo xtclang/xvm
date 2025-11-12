@@ -20,6 +20,7 @@ import org.xvm.javajit.TypeSystem;
 
 import org.xvm.util.Handy;
 
+import static org.xvm.javajit.TypeSystem.escapeJitClassName;
 
 /**
  * An IdentityConstant identifies a Module, Package, Class, Typedef, Property, MultiMethod, or
@@ -665,11 +666,11 @@ public abstract class IdentityConstant
      * @return a dot or '$'-delimited string that represents the corresponding Jit class name
      */
     protected String getJitName(TypeSystem ts) {
-        return buildJitName(ts).substring(1);
+        return escapeJitClassName(buildJitName(ts).substring(1));
     }
 
     /**
-     * Support for {@link #getJitName()}.
+     * Support for {@link #getJitName}.
      */
     protected StringBuilder buildJitName(TypeSystem ts) {
         IdentityConstant idParent = getParentConstant();

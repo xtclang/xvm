@@ -1343,9 +1343,12 @@ public class PropertyInfo
         }
         assert id != null;
 
-        // we need to widen the identity of the owner, but not to lose the type information
-        IdentityConstant idOwner = id.getNamespace();
-        return (idOwner.equals(typeOwner.getSingleUnderlyingClass(true))
+        // we need to widen the identity of the owner, but not to lose the type information;
+        // note that we do not create classes for annotations and mixins
+        IdentityConstant idOwner  = id.getNamespace();
+        Component.Format format   = idOwner.getComponent().getFormat();
+        return (format == Format.MIXIN || format == Format.ANNOTATION ||
+                    idOwner.equals(typeOwner.getSingleUnderlyingClass(true))
                 ? typeOwner
                 : idOwner.getFormalType().resolveGenerics(ts.pool(), typeOwner))
             .ensureClassDesc(ts);
@@ -1424,13 +1427,6 @@ public class PropertyInfo
         } else {
             assert type.isSingleUnderlyingClass(true);
 
-            // the possibilities are:
-            // 1) the formal type is Element and the actual is String; take the formal constraint
-            // 2) the formal type is Array<Element>; take the actual type
-            TypeConstant typeFormal = getIdentity().getType();
-            if (typeFormal.isGenericType()) {
-                type = typeFormal;
-            }
             cd = ClassDesc.of(ts.ensureJitClassName(type));
             apdStdParam = new JitParamDesc[] {
                 new JitParamDesc(type, Specific, cd, 0, 0, false)};

@@ -46,7 +46,7 @@ public class JitConnector
     public void start(Map<String, String> mapInjections) {
         try {
             ClassLoader loader = xvm.nativeTypeSystem.loader;
-            Class       clz    = loader.loadClass("org.xtclang._native.mgmt.xMainInjector");
+            Class       clz    = loader.loadClass("org.xtclang._native.mgmt.nMainInjector");
 
             Injector injector = (Injector) clz.getDeclaredConstructor(Xvm.class).newInstance(xvm);
             try (var ignore = ConstantPool.withPool(xvm.nativeTypeSystem.pool())) {
@@ -55,7 +55,7 @@ public class JitConnector
 
             container = xvm.createContainer(ts, injector);
         } catch (ClassNotFoundException | NoClassDefFoundError e) {
-            throw new RuntimeException("Failed to load xMainInjector", e);
+            throw new RuntimeException("Failed to load nMainInjector", e);
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException("Failed to invoke \"addNativeResources()\" method", e);
         }

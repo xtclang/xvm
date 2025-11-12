@@ -1,7 +1,5 @@
 package org.xvm.javajit.builders;
 
-import java.lang.StringBuilder;
-
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.CodeBuilder;
@@ -12,24 +10,20 @@ import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDescs;
 import java.lang.constant.MethodTypeDesc;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
-import org.xvm.asm.OpReturn;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodBody;
@@ -42,11 +36,6 @@ import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
-
-import org.xvm.asm.op.FinallyEnd;
-import org.xvm.asm.op.FinallyStart;
-import org.xvm.asm.op.GuardAll;
-import org.xvm.asm.op.Jump;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.BuildContext.DoubleSlot;
@@ -119,7 +108,7 @@ public class CommonBuilder
     protected ClassDesc getSuperCD() {
         TypeConstant superType = typeInfo.getExtends();
         return superType == null
-            ? CD_xObj
+            ? CD_nObj
             : ClassDesc.of(typeSystem.ensureJitClassName(superType));
     }
 
@@ -190,9 +179,14 @@ public class CommonBuilder
                 classBuilder.withSuperclass(getSuperCD());
                 break;
 
-            case INTERFACE, MIXIN, ENUM:
+            case INTERFACE, ENUM:
                 flags |= ClassFile.ACC_INTERFACE | ClassFile.ACC_ABSTRACT;
                 break;
+
+            case ANNOTATION, MIXIN:
+                // annotations and mixins are incorporated (copied) into every class that
+                // annotates the annotation or incorporates the mixin
+                return;
 
             default:
                 // TODO: support for mixin, annotations, etc
@@ -207,7 +201,7 @@ public class CommonBuilder
      * Assemble interfaces for the "Impl" shape.
      */
     protected void assembleImplInterfaces(ClassBuilder classBuilder) {
-        boolean isInterface = classStruct.getFormat() == Component.Format.INTERFACE;
+        boolean isInterface = classStruct.getFormat() == Format.INTERFACE;
         for (Contribution contrib : typeInfo.getContributionList()) {
             switch (contrib.getComposition()) {
                 case Implements:
@@ -233,7 +227,7 @@ public class CommonBuilder
 
         for (PropertyInfo prop : structInfo.getProperties().values()) {
             if ((prop.hasField() || prop.isInjected()) &&
-                    prop.getFieldIdentity().getNamespace().equals(thisId)) {
+                    shouldGenerate(prop.getFieldIdentity())) {
                 assembleField(className, classBuilder, prop);
 
                 if (prop.isConstant()) {
@@ -259,17 +253,36 @@ public class CommonBuilder
             assembleStaticInitializer(className, classBuilder, constProps);
         }
 
-        switch (classStruct.getFormat()) {
+        Format format = classStruct.getFormat();
+        switch (format) {
         case CLASS, CONST, SERVICE, MODULE, ENUM, ENUMVALUE:
             assembleInitializer(className, classBuilder, initProps);
             break;
         }
 
         for (PropertyInfo prop : typeInfo.getProperties().values()) {
-            if (!prop.getIdentity().getNamespace().equals(thisId)) {
-                continue; // not our responsibility
+            if (prop.isFormalType()) {
+                // processed below
+                continue;
             }
-            assembleImplProperty(className, classBuilder, prop);
+
+            IdentityConstant ownerId = prop.getIdentity().getNamespace();
+            if (prop.getIdentity().getNamespace().equals(thisId)) {
+                assembleImplProperty(className, classBuilder, prop);
+            } else {
+                Format ownerFormat = ownerId.getComponent().getFormat();
+                if (ownerFormat == Format.ANNOTATION || ownerFormat == Format.MIXIN) {
+                    assembleImplProperty(className, classBuilder, prop);
+                }
+            }
+        }
+
+        if (format != Format.INTERFACE && typeInfo.hasGenericTypes()) {
+            for (var entry : typeInfo.getTypeParams().entrySet()) {
+                if (entry.getKey() instanceof String name) {
+                    assembleGenericProperty(classBuilder, name);
+                }
+            }
         }
     }
 
@@ -447,7 +460,7 @@ public class CommonBuilder
     protected void assembleImplProperty(String className, ClassBuilder classBuilder, PropertyInfo prop) {
         MethodInfo getterInfo = typeInfo.getMethodById(prop.getGetterId());
         if (getterInfo == null) {
-            if (prop.hasField() && prop.getFieldIdentity().getNamespace().equals(thisId)) {
+            if (prop.hasField() && shouldGenerate(prop.getFieldIdentity())) {
                 if (prop.isInjected()) {
                     generateInjected(className, classBuilder, prop);
                 } else {
@@ -474,7 +487,7 @@ public class CommonBuilder
 
         MethodInfo setterInfo = typeInfo.getMethodById(prop.getSetterId());
         if (setterInfo == null) {
-            if (prop.hasField() && prop.getFieldIdentity().getNamespace().equals(thisId)) {
+            if (prop.hasField() && shouldGenerate(prop.getFieldIdentity())) {
                 generateTrivialSetter(className, classBuilder, prop);
             }
         } else {
@@ -634,6 +647,20 @@ public class CommonBuilder
         }
     }
 
+    /**
+     * Assemble the generic property accessors for the "Impl" shape.
+     */
+    private void assembleGenericProperty(ClassBuilder classBuilder, String name) {
+        classBuilder.withMethodBody(name + "$get", MethodTypeDesc.of(CD_nType, CD_Ctx),
+            ClassFile.ACC_PUBLIC, code ->
+                code.aload(0)                     // this
+                    .aload(code.parameterSlot(0)) // ctx
+                    .ldc(name)
+                    .invokevirtual(CD_nObj, "$type", MethodTypeDesc.of(CD_nType, CD_Ctx, CD_JavaString))
+                    .areturn()
+        );
+    }
+
     private void generateInjected(String className, ClassBuilder classBuilder, PropertyInfo prop) {
         assert !prop.isConstant();
 
@@ -724,14 +751,16 @@ public class CommonBuilder
      */
     protected void assembleImplMethods(String className, ClassBuilder classBuilder) {
         for (MethodInfo method : typeInfo.getMethods().values()) {
-            if (method.isNative() || !method.getIdentity().getNamespace().equals(thisId)) {
+            if (method.isNative()) {
                 continue; // not our responsibility
             }
 
-            assembleImplMethod(className, classBuilder, method);
+            if (shouldGenerate(method.getIdentity())) {
+                assembleImplMethod(className, classBuilder, method);
+            }
         }
 
-        if (typeInfo.getClassStructure().getFormat() != Component.Format.INTERFACE) {
+        if (typeInfo.getClassStructure().getFormat() != Format.INTERFACE) {
             assembleXvmType(className, classBuilder);
         }
     }
@@ -752,11 +781,7 @@ public class CommonBuilder
                 code.aload(0)
                     .getfield(ClassDesc.of(className), "$type", CD_TypeConstant);
             } else {
-                // this is almost identical to Builder.loadTypeConstant()
-                code.invokestatic(CD_Ctx, "get", MethodTypeDesc.of(CD_Ctx))
-                    .loadConstant(typeSystem.registerConstant(typeInfo.getType()))
-                    .invokevirtual(CD_Ctx, "getConstant", Ctx.MD_getConstant)
-                    .checkcast(CD_TypeConstant);
+                loadTypeConstant(code, typeSystem, typeInfo.getType());
             }
             code.areturn();
         });
@@ -1259,13 +1284,12 @@ public class CommonBuilder
             flags |= ClassFile.ACC_ABSTRACT;
         }
 
-        BuildContext bctx = new BuildContext(this, typeInfo, prop, isGetter);
+        BuildContext bctx = new BuildContext(this, className, typeInfo, prop, isGetter);
 
         classBuilder.withMethod(jitName, md, flags,
             methodBuilder -> {
                 if (!prop.isAbstract()) {
-                    methodBuilder.withCode(code ->
-                        generateCode(className, md, bctx, code));
+                    methodBuilder.withCode(code -> generateCode(md, bctx, code));
                 }
             }
         );
@@ -1281,7 +1305,7 @@ public class CommonBuilder
             flags |= ClassFile.ACC_ABSTRACT;
         }
         if (method.isFunction() || method.isConstructor()) {
-            if (classStruct.getFormat() == Component.Format.INTERFACE) {
+            if (classStruct.getFormat() == Format.INTERFACE) {
                 // this must be a funky interface method; just ignore
                 return;
             }
@@ -1289,239 +1313,67 @@ public class CommonBuilder
             flags |= ClassFile.ACC_STATIC;
         }
 
-        BuildContext bctx = new BuildContext(this, typeInfo, method);
+        BuildContext bctx = new BuildContext(this, className, typeInfo, method);
 
-        classBuilder.withMethod(jitName, md, flags,
-            methodBuilder -> {
-                if (!method.isAbstract()) {
-                    methodBuilder.withCode(code ->
-                        generateCode(className, md, bctx, code));
-                }
+        classBuilder.withMethod(jitName, md, flags, methodBuilder -> {
+            if (!method.isAbstract()) {
+                methodBuilder.withCode(code -> generateCode(md, bctx, code));
             }
-        );
+        });
+
+        BuildContext bctxDeferred = bctx.getDeferred();
+        while (bctxDeferred != null) {
+            BuildContext   bctxNext = bctxDeferred;
+            JitMethodDesc  jmdNext  = bctxNext.methodDesc;
+            boolean        isOpt    = jmdNext.isOptimized;
+            MethodTypeDesc mdNext   = isOpt ? jmdNext.optimizedMD : jmdNext.standardMD;
+            String         nameNext = bctxNext.methodJitName;
+            if (isOpt) {
+                nameNext += OPT;
+            }
+            classBuilder.withMethod(nameNext, mdNext, flags, methodBuilder ->
+                methodBuilder.withCode(code -> generateCode(mdNext, bctxNext, code)));
+
+            bctxDeferred = bctxNext.getDeferred();
+        }
     }
 
-    protected void generateCode(String className, MethodTypeDesc md, BuildContext bctx,
-                                CodeBuilder code) {
+    protected void generateCode(MethodTypeDesc md, BuildContext bctx, CodeBuilder code) {
 
         String moduleName = thisId.getModuleConstant().getName();
         if (Arrays.stream(TEST_SET).anyMatch(name ->
-                    className.contains(name) || moduleName.contains(name))) {
-            Op[] ops = bctx.methodStruct.getOps();
-
-            int synthSlots = preprocess(bctx, ops, code);
-
-            bctx.enterMethod(code, synthSlots);
-
-            for (int iPC = 0, c = ops.length; iPC < c; iPC++) {
-                try {
-                    while (true) {
-                        int skipTo = bctx.prepareOp(code, iPC);
-                        if (skipTo < 0) {
-                            break;
-                        }
-                        assert skipTo > iPC;
-                        iPC = skipTo;
-                    }
-                    ops[iPC].build(bctx, code);
-                } catch (Throwable e) {
-                    MethodStructure struct = bctx.methodStruct;
-                    StringBuilder sb = new StringBuilder();
-                    sb.append(className)
-                      .append('.')
-                      .append(struct.getIdentityConstant().getName())
-                      .append('(')
-                      .append(struct.getContainingClass().getSourceFileName());
-
-                    int nLine = struct.calculateLineNumber(iPC);
-                    if (nLine > 0) {
-                        sb.append(':').append(nLine);
-                    } else {
-                        sb.append(" iPC=")
-                          .append(iPC);
-                    }
-                    sb.append(')');
-                    throw new RuntimeException("Failed to generate code for " +
-                        "op=" + Op.toName(ops[iPC].getOpCode()) + "\n" + sb, e);
-                }
-            }
-            bctx.exitMethod(code);
+                    bctx.className.contains(name) || moduleName.contains(name))) {
+            bctx.assembleCode(code);
         } else {
-            if (SKIP_SET.add(className)) {
-                System.err.println("*** Skipping code gen for " + className);
+            if (SKIP_SET.add(bctx.className)) {
+                System.err.println("*** Skipping code gen for " + bctx.className);
             }
             defaultLoad(code, md.returnType());
             addReturn(code, md.returnType());
         }
     }
 
+    // ----- helper methods ------------------------------------------------------------------------
+
     /**
-     * Preprocess the ops and collect all necessary information to produce the code for "finally"
-     * blocks.
-     *
-     * For every GUARD_ALL - FINALLY - E_FINALLY block we create synthetic variables to generate
-     * conditional jumps as necessary. As an example, for a block:
-     * <pre><code>
-     *  Loop:
-     *    while (True) {
-     *      try {
-     *          return foo();
-     *      } catch (Exception1 e1) {
-     *          bar1();
-     *          continue;
-     *      } catch (ExceptionN eN) {
-     *          barN();
-     *          break;
-     *      } finally {
-     *          fin();
-     *      }
-     *   }
-     * </code></pre>
-     *
-     * we produce the bytecode that look like the following pseudo code:
-     *
-     *  <pre><code>
-     *     Throwable $rethrow  = null;
-     *     boolean   $jump1    = false;
-     *     boolean   $jump2    = false;
-     *     boolean   $doReturn = false;
-     *     R1        $r1;
-     *     try {
-     *         try {
-     *             $r1 = foo();
-     *             $doReturn = true;
-     *             GOTO Fin:
-     *         } catch (Exception1 e1) {
-     *             $rethrow = e1;
-     *             bar1();
-     *             $jump1 = true;
-     *             GOTO Fin:
-     *         } catch (ExceptionN eN) {
-     *             $rethrow = eN;
-     *             barn();
-     *             $jump2 = true;
-     *             GOTO Fin:
-     *         }
-     *     } catch (Throwable $t) {
-     *         $rethrow = $t;
-     *     }
-     *
-     *  Fin:
-     *     fin();
-     *
-     *     if ($rethrow != null) throw $rethrow
-     *     if ($jump1) GOTO Loop.Continue
-     *     if ($jump2) GOTO Loop.Exit
-     *     if ($doReturn) return $r1
-     * </code></pre>
-     *
-     * @return the max number of the synthetic Java slots that the code generation could use
+     * @return true iff the code for the specified method or property accessors should be generated
+     *         inside this class
      */
-    private int preprocess(BuildContext bctx, Op[] ops, CodeBuilder code) {
-        Deque<Integer>       guardStack    = null;
-        Deque<List<Integer>> jumpAddrStack = null;
-        Deque<List<Integer>> jumpDestStack = null;
-
-        int            guard      = -1;
-        List<Integer>  jumpsAddr  = null; // the addresses of Jump ops
-        List<Integer>  jumpsDest  = null; // the addresses of jump destinations
-        boolean        doReturn   = false;
-        int            synthSlots = 0;
-        for (int iPC = 0, c = ops.length; iPC < c; iPC++) {
-            switch (ops[iPC]) {
-            case GuardAll _:
-                if (guard < 0) {
-                    guardStack    = new ArrayDeque<>();
-                    jumpAddrStack = new ArrayDeque<>();
-                    jumpDestStack = new ArrayDeque<>();
-                } else {
-                    guardStack.push(guard);
-                    jumpAddrStack.push(jumpsAddr);
-                    jumpDestStack.push(jumpsDest);
-                }
-                jumpsAddr = new ArrayList<>();
-                jumpsDest = new ArrayList<>();
-                guard     = iPC;
-
-                synthSlots++; // "$rethrow" allocation
-                break;
-
-            case Jump jump:
-                if (jump.shouldCallFinally()) {
-                    jumpsAddr.add(iPC);
-                }
-                break;
-
-            case OpReturn ret:
-                if (ret.shouldCallFinally()) {
-                    jumpsAddr.add(iPC);
-                }
-                break;
-
-            case FinallyStart _:
-                if (!jumpsAddr.isEmpty()) {
-                    for (int jumpAddr : jumpsAddr) {
-                        switch (ops[jumpAddr]) {
-                        case Jump jump:
-                            jumpsDest.add(jump.exchangeJump(bctx, code, iPC));
-                            break;
-                        case OpReturn ret:
-                            ret.registerJump(iPC);
-                            doReturn = true;
-                            break;
-                        default:
-                             throw new IllegalStateException();
-                        }
-                    }
-                // all the jump ops within the finally block are handled by the parent "finally"
-                jumpsAddr = jumpAddrStack.isEmpty()
-                        ? new ArrayList<>()
-                        : jumpAddrStack.pop();
-                }
-                break;
-
-            case FinallyEnd finallyEnd:
-                GuardAll guardAll = (GuardAll) ops[guard];
-                guard = guardStack.isEmpty()
-                        ? -1
-                        : guardStack.pop();
-
-                // we use a synthetic boolean per jump, a boolean for "$doReturn" and
-                // all the necessary slots for the return values
-                synthSlots += jumpsDest.size();
-
-                // only the very top GuardAll allocates the return values
-                guardAll.registerJumps(jumpsDest, doReturn && guard == -1);
-
-                jumpsDest = jumpDestStack.isEmpty()
-                        ? new ArrayList<>()
-                        : jumpDestStack.pop();
-                if (guard == -1) {
-                    doReturn = false;
-                }
-
-                if (iPC == ops.length - 1 || !ops[iPC + 1].isReachable()) {
-                    finallyEnd.setCompletes(false);
-                }
-                break;
-
-            case org.xvm.asm.op.Label label:
-                // there is a chance we are compiling the same ops multiple times (for different
-                // formal types)
-                label.setLabel(null);
-                break;
-
-            default:
-                break;
-            }
+    private boolean shouldGenerate(IdentityConstant id) {
+        IdentityConstant containerId = id.getNamespace();
+        if (containerId.equals(thisId)) {
+            return true;
         }
-        if (doReturn) {
-            JitMethodDesc jmd = bctx.jmd;
-            synthSlots += 2 + (jmd.isOptimized
-                        ? jmd.optimizedReturns.length * 2 // assume the worst case - two slots per
-                        : jmd.standardReturns.length);
-        }
-        return synthSlots;
+
+        Format ownerFormat = containerId.getComponent().getFormat();
+        return ownerFormat == Format.ANNOTATION || ownerFormat == Format.MIXIN;
+    }
+
+    // ----- debugging support ---------------------------------------------------------------------
+
+    @Override
+    public String toString() {
+        return thisId.getValueString();
     }
 
     private final static String[] TEST_SET = new String[] {

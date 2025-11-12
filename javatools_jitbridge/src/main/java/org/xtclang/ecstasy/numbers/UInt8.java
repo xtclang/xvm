@@ -1,6 +1,6 @@
 package org.xtclang.ecstasy.numbers;
 
-import org.xtclang.ecstasy.xConst;
+import org.xtclang.ecstasy.nConst;
 import org.xtclang.ecstasy.text.String;
 
 import org.xvm.javajit.Ctx;
@@ -8,7 +8,7 @@ import org.xvm.javajit.Ctx;
 /**
  * Native UInt8 (a.k.a. Byte) wrapper.
  */
-public class UInt8 extends xConst {
+public class UInt8 extends nConst {
     /**
      * Construct an Ecstasy UInt8 object.
      *

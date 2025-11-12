@@ -11,14 +11,15 @@ import org.xvm.javajit.Ctx;
 /**
  * Native Enumeration<Boolean>.
  */
-public class Boolean$Enumeration extends Enumeration {
-    private Boolean$Enumeration(Ctx ctx) {
+public class eBoolean
+    extends Enumeration {
+    private eBoolean(Ctx ctx) {
         ConstantPool pool = ctx.container.typeSystem.pool();
 
         super(ctx, pool.ensureClassTypeConstant(pool.clzClass(), null, pool.typeBoolean()));
     }
 
-    public static final Boolean$Enumeration $INSTANCE = new Boolean$Enumeration(Ctx.get());
+    public static final eBoolean $INSTANCE = new eBoolean(Ctx.get());
 
     public static final String[] $names   = new String[] {Boolean.False.$name, Boolean.True.$name};
     public static final Boolean[] $values = new Boolean[] {Boolean.False, Boolean.True};

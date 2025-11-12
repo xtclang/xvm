@@ -21,14 +21,14 @@ public class ModuleBuilder
 
     @Override
     protected ClassDesc getSuperCD() {
-        return CD_xModule;
+        return CD_nModule;
     }
 
     @Override
     public void assembleImplClass(String className, ClassBuilder classBuilder) {
         classBuilder
             .withFlags(ClassFile.ACC_PUBLIC)
-            .withSuperclass(CD_xModule)
+            .withSuperclass(CD_nModule)
             ;
     }
 }

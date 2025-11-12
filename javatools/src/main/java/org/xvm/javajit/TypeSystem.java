@@ -30,10 +30,12 @@ import org.xvm.javajit.builders.ExceptionBuilder;
 import org.xvm.javajit.builders.FunctionBuilder;
 import org.xvm.javajit.builders.ModuleBuilder;
 
-import static org.xvm.javajit.Builder.ENUMERATION;
 import static org.xvm.javajit.Builder.MODULE;
 
 import static org.xvm.util.Handy.require;
+
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 
 /**
  * As part of the Ecstasy JIT implementation targeting the JVM, this class represents an Ecstasy
@@ -158,6 +160,36 @@ public class TypeSystem {
      */
     protected final Map<String, TypeConstant> functionTypes = new ConcurrentHashMap<>();
 
+    // special identifier characters used for encoding class/method/field names in Java ClassFiles
+    public static final int ESC      = 0x10458; // "𐑘"
+    public static final int CLASS    = 'c';     // prefix
+    public static final int INTRFACE = 'i';     // prefix
+    public static final int PROXY    = 'p';     // prefix
+    public static final int DUCK     = 'd';     // prefix
+    public static final int MASK     = 'm';     // prefix
+    public static final int NO_MOD   = 'n';     // prefix - native / no build modification
+    public static final int FUTURE   = 'f';     // prefix
+    public static final int ENUM     = 'e';     // prefix - for Enumeration<Enum> i.e. Class<Enum>
+    public static final int EXCEPT   = 'x';     // prefix - gen'd RuntimeException (holds an Ecstasy Exception ref)
+    public static final int RESERVED = '¤';     // prefix (0xA4)
+    public static final int ID_NUM   = 0xA59B;  // "ꖛ"
+    public static final int DOT      = 0x06F0;  // "۰"
+    public static final int UNION    = 0x01C0;  // "ǀ"
+    public static final int INTRSECT = 0x2D5C;  // "ⵜ"
+    public static final int DIFF     = 0x174D;  // "ᝍ"
+    public static final int NULLABLE = 0xA6EB;  // "ꛫ"
+    public static final int BANG     = 0x01C3;  // "ǃ"
+    public static final int ANNO     = 0x04A8;  // "Ҩ"
+    public static final int SPACE    = 0x203F;  // "‿"
+    public static final int COMMA    = 0x071D;  // "ܝ"
+    public static final int L_PAREN  = 0x100B5; // "𐂵"
+    public static final int R_PAREN  = 0x10C99; // "𐲙"
+    public static final int L_ANGLE  = 0x1438;  // "ᐸ"
+    public static final int R_ANGLE  = 0x1433;  // "ᐳ"
+    public static final int MIN_ESC  = min(ESC, min(ID_NUM, min(DOT, min(UNION, min(INTRSECT,
+            min(DIFF, min(NULLABLE, min(BANG, min(ANNO, min(SPACE, min(COMMA,  min(L_PAREN,
+            min(R_PAREN, min(L_ANGLE, R_ANGLE))))))))))))));
+
     /**
      * @return the ConstantPool associated with this TypeSystem
      */
@@ -274,8 +306,8 @@ public class TypeSystem {
      */
     public byte[] genClass(ModuleLoader moduleLoader, String name) {
         String className = moduleLoader.prefix + name;
-        if (className.startsWith(Builder.N_xFunction)) {
-            TypeConstant fnType = functionTypes.get(className.substring(Builder.N_xFunction.length() + 1));
+        if (className.startsWith(Builder.N_nFunction)) {
+            TypeConstant fnType = functionTypes.get(className.substring(Builder.N_nFunction.length() + 1));
             assert fnType != null;
             return ClassFile.of().
                 build(ClassDesc.of(className), classBuilder ->
@@ -283,38 +315,26 @@ public class TypeSystem {
         }
 
         ModuleStructure module = moduleLoader.module;
-        if (name.endsWith(ENUMERATION)) {
-            String         enumName   = name.substring(0, name.length() - ENUMERATION.length());
-            ClassStructure enumStruct = (ClassStructure) module.getChildByPath(enumName.replace('$', '.'));
-            assert enumStruct != null;
-            TypeConstant enumerationType = enumStruct.getIdentityConstant().getValueType(pool(), null);
-
-            ClassFile classFile = ClassFile.of(
-                ClassFile.ClassHierarchyResolverOption.of(
-                    ClassHierarchyResolver.ofClassLoading(loader))
-            );
-
-            Builder builder = new EnumerationBuilder(this, enumerationType);
-            return classFile.build(ClassDesc.of(className), classBuilder ->
-                    builder.assembleImpl(className, classBuilder));
-        }
-
-        Artifact art = deduceArtifact(module, name);
+        Artifact        art    = deduceArtifact(module, name);
         if (art != null) {
-            Builder builder = ensureBuilder(art.type);
+            Builder builder = ensureBuilder(art);
             Consumer<? super ClassBuilder> handler = classBuilder -> {
                 switch (art.shape) {
-                    case Impl:
-                        classBuilder.with(SourceFileAttribute.of(art.clz.getSourceFileName()));
-                        builder.assembleImpl(className, classBuilder);
-                        break;
+                case Impl:
+                    classBuilder.with(SourceFileAttribute.of(art.clz.getSourceFileName()));
+                    builder.assembleImpl(className, classBuilder);
+                    break;
 
-                    case Exception:
-                        ((ExceptionBuilder) builder).assembleJavaException(className, classBuilder);
-                        break;
+                case Enum:
+                    builder.assembleImpl(className, classBuilder);
+                    break;
 
-                    default:
-                        throw new UnsupportedOperationException();
+                case Exception:
+                    ((ExceptionBuilder) builder).assembleJavaException(className, classBuilder);
+                    break;
+
+                default:
+                    throw new UnsupportedOperationException();
                 }
             };
 
@@ -338,12 +358,19 @@ public class TypeSystem {
     /**
      * @return a builder for the specified type
      */
-    protected Builder ensureBuilder(TypeConstant type) {
+    protected Builder ensureBuilder(Artifact art) {
         ConstantPool pool = pool();
+        TypeConstant type = art.type;
+
         if (type.isA(pool.typeModule())) {
             // it's definitely not Module, since this is not the native TypeSystem
             assert !type.equals(pool.typeModule());
             return new ModuleBuilder(this, type);
+        }
+
+        if (art.shape == ClassfileShape.Enum) {
+            TypeConstant enumerationType = art.clz.getIdentityConstant().getValueType(pool(), null);
+            return new EnumerationBuilder(this, enumerationType);
         }
 
         if (type.isEnum()) {
@@ -376,14 +403,16 @@ public class TypeSystem {
      * Jit class shapes.
      */
     public enum ClassfileShape {
-        Class    ("c$"),  // used to prefix a class name only when a collision would otherwise occur
-        Pure     ("i$"),
-        Proxy    ("p$"),
-        Duck     ("d$"),
-        Mask     ("m$"),
-        Future   ("f$"),
-        Exception("e$"), // RuntimeException "entangled" with the corresponding XTC Exception class
-        Impl     (""),   // needs to be last
+        Class    ("c"), // used to prefix a class name only when a collision would otherwise occur
+        Pure     ("i"), // interface
+        Proxy    ("p"),
+        Duck     ("d"),
+        Enum     ("e"),
+        Mask     ("m"),
+        NoMod    ("n"), // take ClassFile bytes "as is"
+        Future   ("f"),
+        Exception("x"), // RuntimeException "entangled" with the corresponding XTC Exception class
+        Impl     (""),  // needs to be last
         ;
 
         ClassfileShape(String prefix) {
@@ -403,15 +432,12 @@ public class TypeSystem {
         ClassfileShape shape  = ClassfileShape.Impl;
         int            dotIx  = name.lastIndexOf('.');
         String         simple = name.substring(dotIx + 1);
-        if (simple.length() > 2 && simple.charAt(1) == '$') {
+        if (simple.length() > 1) {
             for (ClassfileShape sh : ClassfileShape.values()) {
-                if (sh == ClassfileShape.Impl) {
-                    throw new IllegalStateException("Invalid synthetic name: " + name);
-                }
-                if (simple.startsWith(sh.prefix)) {
+                if (sh.prefix.isEmpty() || simple.startsWith(sh.prefix)) {
                     // all suffixes except Impl are of the length 2
                     String pkg = dotIx < 0 ? "" : name.substring(0, dotIx + 1);
-                    name  = pkg + simple.substring(2);
+                    name  = pkg + simple.substring(sh.prefix.length());
                     shape = sh;
                     break;
                 }
@@ -420,10 +446,10 @@ public class TypeSystem {
 
         // TEMPORARY; TODO REPLACE
         TypeConstant type = null;
-        int idOffset = name.indexOf("$$");
+        int idOffset = name.indexOf("ꖛ");
         if (idOffset > 0) {
             // the name represents a parameterized type with primitive actual type(s)
-            type = (TypeConstant) pool().getConstant(Integer.valueOf(name.substring(idOffset+2)));
+            type = (TypeConstant) pool().getConstant(Integer.valueOf(name.substring(idOffset+1)));
             name = name.substring(0, idOffset);
         }
 
@@ -447,10 +473,10 @@ public class TypeSystem {
                 String name = functionClasses.computeIfAbsent(type, t -> {
                     String suffix =
                         (t.getParamTypesArray().length == 0 // degenerated "function void()"
-                            ? "$0"
+                            ? "ꖛ0"
                             : xvm.createUniqueSuffix(""));
                     functionTypes.putIfAbsent(suffix, type);
-                    return Builder.N_xFunction + '$' + suffix;
+                    return Builder.N_nFunction + '$' + suffix;
                 });
                 return name;
             }
@@ -458,6 +484,115 @@ public class TypeSystem {
             return type.ensureJitClassName(this);
         }
         throw new IllegalArgumentException("No JIT class for " + type.getValueString());
+    }
+
+    /**
+     * Determine if the specified JIT name is an `Enumeration` class.
+     *
+     * @param name  a JIT class name
+     *
+     * @return true iff the name specifies an `Enumeration` class
+     */
+    public static boolean isEnumerationClass(String name) {
+        assert !name.isEmpty();
+        return name.codePointAt(0) == ENUM || name.equals("Enumeration");
+    }
+
+    /**
+     * Build a class name for the `Enumeration` class of the specific already-escaped `Enum` class
+     * name.
+     *
+     * @param name  the JIT name of the `Enum` class
+     *
+     * @return the JIT name of the `Enumeration` class
+     */
+    public static String enumerationClass(String name) {
+        int offset = max(name.lastIndexOf('.'), name.lastIndexOf('$')) + 1;
+        return new StringBuilder(name.length() + ENUM > 0xFFFF ? 2 : 1)
+                .append(name, 0, offset)
+                .appendCodePoint(ENUM)
+                .append(name, offset, name.length())
+                .toString();
+    }
+
+    /**
+     * @param name  a class name to be used as part of a Java ClassFile
+     *
+     * @return the passed in `name` but with any special characters (reserved by the JIT) escaped
+     */
+    public static String escapeJitClassName(String name) {
+        StringBuilder buf = null;
+        int classStart = name.lastIndexOf('.') + 1;
+        for (int index = 0, size = name.length(); index < size; index = name.offsetByCodePoints(index, 1)) {
+            int ch = name.codePointAt(index);
+            if (ch >= MIN_ESC || index == classStart) {
+                switch (ch) {
+                case ESC:
+                case CLASS, INTRFACE, PROXY, DUCK, MASK, NO_MOD, FUTURE, ENUM, EXCEPT, RESERVED:
+                case ID_NUM, DOT, UNION, INTRSECT, DIFF, NULLABLE, BANG, ANNO, SPACE, COMMA:
+                case L_PAREN, R_PAREN, L_ANGLE, R_ANGLE:
+                    if (buf == null) {
+                        buf = new StringBuilder(size + 8).append(name, 0, index);
+                    }
+                    buf.appendCodePoint(ESC);
+                }
+            }
+            if (buf != null) {
+                buf.appendCodePoint(ch);
+            }
+        }
+        return buf == null ? name : buf.toString();
+    }
+
+    // TODO CP - must we escape field/method names?
+    /**
+     * @param name  a method or field name to be used as part of a Java ClassFile
+     *
+     * @return the passed in `name` but with any special characters (reserved by the JIT) escaped
+     */
+    public static String escapeJitMemberName(String name) {
+        StringBuilder buf = null;
+        for (int index = 0, size = name.length(); index < size; index = name.offsetByCodePoints(index, 1)) {
+            int ch = name.codePointAt(index);
+            if (ch >= MIN_ESC) {
+                switch (ch) {
+                case ESC:
+                case ID_NUM, DOT, UNION, INTRSECT, DIFF, NULLABLE, BANG, ANNO, SPACE, COMMA:
+                case L_PAREN, R_PAREN, L_ANGLE, R_ANGLE:
+                    if (buf == null) {
+                        buf = new StringBuilder(size + 8).append(name, 0, index);
+                    }
+                    buf.appendCodePoint(ESC);
+                }
+            }
+            if (buf != null) {
+                buf.appendCodePoint(ch);
+            }
+        }
+        return buf == null ? name : buf.toString();
+    }
+
+    /**
+     * @param name  a previously escaped JIT name
+     *
+     * @return the original unescaped name
+     */
+    public static String unescapeJitName(String name) {
+        StringBuilder buf     = null;
+        boolean       escaped = false;
+        for (int index = 0, size = name.length(); index < size; index = name.offsetByCodePoints(index, 1)) {
+            int ch = name.codePointAt(index);
+            if (ch == ESC && !escaped) {
+                if (buf == null) {
+                    buf = new StringBuilder(size).append(name, 0, index);
+                }
+                escaped = true;
+            } else if (buf != null) {
+                buf.appendCodePoint(ch);
+                escaped = false;
+            }
+        }
+        return buf == null ? name : buf.toString();
     }
 
     /**

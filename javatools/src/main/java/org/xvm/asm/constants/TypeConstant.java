@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
@@ -77,13 +78,14 @@ import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
 import org.xvm.util.TransientThreadLocal;
 
-import static org.xvm.javajit.Builder.N_xArrayChar;
+import static org.xvm.javajit.Builder.N_nArrayChar;
 
 import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
 import static org.xvm.javajit.JitFlavor.Specific;
 import static org.xvm.javajit.JitFlavor.Widened;
-
+import static org.xvm.javajit.TypeSystem.ID_NUM;
+import static org.xvm.javajit.TypeSystem.enumerationClass;
 
 /**
  * A base class for the various forms of Constants that will represent data types.
@@ -6422,87 +6424,82 @@ public abstract class TypeConstant
         if (sJitName == null) {
             // get the master instance of the type constant
             ModuleLoader loader = ts.findOwnerLoader(this);
-            TypeConstant type   = (TypeConstant) loader.module.getConstantPool().register(this);
-
-            synchronized (type) {
-                sJitName = type.m_sJitName;
-                ComputeName:
-                if (sJitName == null) {
-                    ConstantPool     pool = getConstantPool();
-                    IdentityConstant id   = getSingleUnderlyingClass(true);
-                    if (id instanceof ClassConstant idClz) {
-                        sJitName = ts.xvm.nativeTypeSystem.nativeByClass.get(idClz);
-                        if (sJitName != null) {
-                            break ComputeName;
-                        }
-                    }
-                    if (id.equals(pool.clzArray())) {
-                        TypeConstant typeEl = type.getParamType(0);
-                        if (typeEl.isFormalType() || typeEl.equals(pool.typeObject())) {
-                            sJitName = Builder.N_Array;
-                        } else if (typeEl.isPrimitive()){
-                            ClassDesc        cdEl = JitTypeDesc.getPrimitiveClass(typeEl);
-                            IdentityConstant idEl = typeEl.getSingleUnderlyingClass(false);
-
-                            sJitName = switch (cdEl.descriptorString()) {
-                                case "Z" ->          Builder.N_xArrayObj;
-                                case "J" -> switch (idEl.getName()) {
-                                    case "Int64"  -> Builder.N_xArrayObj;
-                                    case "UInt64" -> Builder.N_xArrayObj;
-                                    default -> throw new IllegalStateException();
-                                };
-                                case "I" -> switch (idEl.getName()) {
-                                    case "Char"   -> N_xArrayChar;
-                                    case "Int8"   -> Builder.N_xArrayObj;
-                                    case "Int16"  -> Builder.N_xArrayObj;
-                                    case "Int32"  -> Builder.N_xArrayObj;
-                                    case "UInt8"  -> Builder.N_xArrayObj;
-                                    case "UInt16" -> Builder.N_xArrayObj;
-                                    case "UInt32" -> Builder.N_xArrayObj;
-                                    default -> throw new IllegalStateException();
-                                };
-                                default -> throw new UnsupportedOperationException();
-                            };
-                        } else {
-                            sJitName = Builder.N_xArrayObj;
-                        }
-                        break ComputeName;
-                    }
-                    if (id.equals(pool.clzEnumeration())) {
-                        // JIT class name for Enumeration<Enum> is "Enumeration", but
-                        // JIT class name for Enumeration<X> is "X$Enumeration"
-                        TypeConstant typeValue = type.getParamType(0);
-                        if (typeValue.isFormalType() || typeValue.equals(pool.clzEnum().getType())) {
-                            sJitName = Builder.N_Enumeration;
-                        } else {
-                            sJitName = typeValue.ensureJitClassName(ts) + Builder.ENUMERATION;
-                        }
-                        break ComputeName;
-                    } else if (id.equals(pool.clzClass())) {
-                        TypeConstant typePublic = this.getParamType(0);
-                        if (!typePublic.isFormalType() && typePublic.isEnum() &&
-                                                         !typePublic.equals(pool.clzEnum().getType())) {
-                            // JIT class name for Class<PublicType> or Class<Enum> is "Class", but
-                            // JIT class name for Class<X> where X is an Enum is "X$Enumeration"
-                            sJitName = typePublic.ensureJitClassName(ts) + Builder.ENUMERATION;
-                        } else {
-                            sJitName = Builder.N_xClass;
-                        }
-                        break ComputeName;
-                    }
-                    sJitName = loader.prefix + id.getJitName(ts);
-
-                    TypeConstant typeCanonical = getCanonicalJitType();
-                    if (typeCanonical.getParamsCount() > 0) {
-                        // TEMPORARY: TODO REPLACE the naming
-                        sJitName += "$$" + typeCanonical.getPosition();
-                    }
-                    // TODO: check for collisions, reserved keywords etc.
-                }
-                type.m_sJitName = sJitName;
-            }
+            TypeConstant that = (TypeConstant) loader.module.getConstantPool().register(this);
+            sJitName   = this == that ? buildJitClassName(ts, loader) : that.ensureJitClassName(ts);
+            m_sJitName = sJitName;
         }
         return sJitName;
+    }
+
+    protected synchronized String buildJitClassName(TypeSystem ts, ModuleLoader loader) {
+        ConstantPool     pool = getConstantPool();
+        IdentityConstant id   = getSingleUnderlyingClass(true);
+        if (id instanceof ClassConstant idClz) {
+            String name = ts.xvm.nativeTypeSystem.nativeByClass.get(idClz);
+            if (name != null) {
+                return name;
+            }
+        }
+
+        if (id.equals(pool.clzArray())) {
+            TypeConstant typeEl = getParamType(0);
+            if (typeEl.isFormalType() || typeEl.equals(pool.typeObject())) {
+                return Builder.N_Array;
+            } else if (typeEl.isPrimitive()){
+                ClassDesc        cdEl = JitTypeDesc.getPrimitiveClass(typeEl);
+                IdentityConstant idEl = typeEl.getSingleUnderlyingClass(false);
+
+                return switch (cdEl.descriptorString().charAt(0)) {
+                    case 'Z' ->          Builder.N_nArrayObj;
+                    case 'J' -> switch (idEl.getName()) {
+                        case "Int64"  -> Builder.N_nArrayObj;
+                        case "UInt64" -> Builder.N_nArrayObj;
+                        default -> throw new IllegalStateException();
+                    };
+                    case 'I' -> switch (idEl.getName()) {
+                        case "Char"   -> N_nArrayChar;
+                        case "Int8"   -> Builder.N_nArrayObj;
+                        case "Int16"  -> Builder.N_nArrayObj;
+                        case "Int32"  -> Builder.N_nArrayObj;
+                        case "UInt8"  -> Builder.N_nArrayObj;
+                        case "UInt16" -> Builder.N_nArrayObj;
+                        case "UInt32" -> Builder.N_nArrayObj;
+                        default -> throw new IllegalStateException();
+                    };
+                    default -> throw new UnsupportedOperationException();
+                };
+            } else {
+                return Builder.N_nArrayObj;
+            }
+        }
+
+        if (id.equals(pool.clzClass())) {
+            TypeConstant typePublic = this.getParamType(0);
+            if (typePublic.isEnum()) {
+                // proceed into the enumeration handling below
+                id = pool.clzEnumeration();
+            } else {
+                return Builder.N_Class;
+            }
+        }
+
+        if (id.equals(pool.clzEnumeration())) {
+            // Enumeration<Enum> is "Enumeration"; Enumeration<X> is "eX"
+            TypeConstant typeValue = getParamType(0);
+            return typeValue.isFormalType() || !typeValue.isA(pool.typeEnum())
+                    || (typeValue.isSingleUnderlyingClass(true)
+                        && typeValue.getSingleUnderlyingClass(true).equals(pool.clzEnum()))
+                    ? Builder.N_Enumeration
+                    : enumerationClass(typeValue.ensureJitClassName(ts));
+        }
+
+        StringBuilder sb = new StringBuilder().append(loader.prefix).append(id.getJitName(ts));
+        TypeConstant typeCanonical = getCanonicalJitType();
+        if (typeCanonical.getParamsCount() > 0) {
+            // TODO CP
+            sb.appendCodePoint(ID_NUM).append(typeCanonical.getPosition());
+        }
+        return sb.toString();
     }
 
     /**
@@ -6920,14 +6917,14 @@ public abstract class TypeConstant
     /**
      * Obtain a run-time object representing this type.
      *
-     * @param container  the Container to make the xType for
+     * @param supplier  (TODO GG: fix the doc)  the Container to make the xType for
      *
      * @return an xType object represented by this TypeConstant
      */
-    public Object ensureXType(org.xvm.javajit.Container container) {
+    public Object ensureXType(Supplier<Object> supplier) {
         Object type = m_xType;
         if (type == null) {
-            // TODO: type = m_xType = container.makeType(this);
+            type = m_xType = supplier.get();
         }
         return type;
     }

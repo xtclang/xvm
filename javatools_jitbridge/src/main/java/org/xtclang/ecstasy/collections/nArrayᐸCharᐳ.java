@@ -3,8 +3,8 @@ package org.xtclang.ecstasy.collections;
 import java.util.Arrays;
 
 import org.xtclang.ecstasy.Exception;
-import org.xtclang.ecstasy.Range$Int64;
-import org.xtclang.ecstasy.xObj;
+import org.xtclang.ecstasy.RangeᐸInt64ᐳ;
+import org.xtclang.ecstasy.nObj;
 
 import org.xtclang.ecstasy.text.Char;
 
@@ -34,10 +34,10 @@ import static java.lang.System.arraycopy;
  * Capacity - 48 bits (pre storage)
  * Hash - 64 bits (only if mutability==Constant, requires storage != null)
  */
-public class xArray$Char
+public class nArrayᐸCharᐳ
         extends Array {
 
-    public xArray$Char(Ctx ctx, TypeConstant type) {
+    public nArrayᐸCharᐳ(Ctx ctx, TypeConstant type) {
         super(ctx);
     }
 
@@ -49,13 +49,13 @@ public class xArray$Char
     //      }
     //      return null;
     //  }
-    public xArray$Char $delegate;
+    public nArrayᐸCharᐳ $delegate;
     public long[] $storage;
     public boolean $utf21;      // REVIEW: this could just use a bit in (steal a bit from) $sizeEtc
 
     // ----- xObj API ------------------------------------------------------------------------------
 
-    @Override public TypeConstant $xvmType() {
+    @Override public TypeConstant $xvmType(Ctx ctx) {
         ConstantPool pool = $owner().typeSystem.pool();
         TypeConstant type = pool.ensureArrayType(pool.typeChar());
         return $isImmut() ? type.freeze() : type;
@@ -66,27 +66,27 @@ public class xArray$Char
     /**
      * Array Constructor: construct(Int capacity = 0)
      */
-    public static xArray$Char $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
+    public static nArrayᐸCharᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
         assert !type.isImmutable();
 
         ctx.alloc(64); // REVIEW how big?
-        xArray$Char array = new xArray$Char(ctx, type);
+        nArrayᐸCharᐳ array = new nArrayᐸCharᐳ(ctx, type);
         array.$mut($MUTABLE);
         array.$capCfg(ctx, capacity);
         return array;
     }
 
-    public static xArray$Char $new$1$p(Ctx ctx, TypeConstant type, long size, xObj supply) {
+    public static nArrayᐸCharᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
-    public static xArray$Char $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, org.xtclang.ecstasy.Iterable elements) {
+    public static nArrayᐸCharᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, org.xtclang.ecstasy.Iterable elements) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
-    public static xArray$Char $new$3$p(Ctx ctx, TypeConstant type, xArray$Char that) {
+    public static nArrayᐸCharᐳ $new$3$p(Ctx ctx, TypeConstant type, nArrayᐸCharᐳ that) {
         // TODO
         throw new UnsupportedOperationException();
     }
@@ -130,7 +130,7 @@ public class xArray$Char
         }
     }
 
-    @Override public void setElement$p(Ctx ctx, long index, xObj value) {
+    @Override public void setElement$p(Ctx ctx, long index, nObj value) {
         setElement$pi(ctx, index, ((Char) value).$value);
     }
 
@@ -173,11 +173,11 @@ public class xArray$Char
     }
 
     @Override
-    public xArray$Char add(Ctx ctx, xObj element) {
+    public nArrayᐸCharᐳ add(Ctx ctx, nObj element) {
         return add$p(ctx, ((Char) element).$value);
     }
 
-    public xArray$Char add$p(Ctx ctx, int ch) {
+    public nArrayᐸCharᐳ add$p(Ctx ctx, int ch) {
         if ($delegate != null) {
             $delegate.add$p(ctx, ch);
             return this;
@@ -213,16 +213,16 @@ public class xArray$Char
         }
     }
 
-    @Override public xArray$Char slice$p(Ctx ctx, long n1, long n2) {
+    @Override public nArrayᐸCharᐳ slice$p(Ctx ctx, long n1, long n2) {
         // slice must be in-range
         // TODO check lower bound as well
-        long upper = Range$Int64.$effectiveUpperBound(ctx, n1, n2);
+        long upper = RangeᐸInt64ᐳ.$effectiveUpperBound(ctx, n1, n2);
         if (size$get$p(ctx) > upper) {
             throw $oob(ctx, upper);
         }
 
         // optimized empty slice
-        if (Range$Int64.$empty(ctx, n1, n2)) {
+        if (RangeᐸInt64ᐳ.$empty(ctx, n1, n2)) {
             // return TODO empty Array$Object
         }
 
@@ -292,7 +292,7 @@ public class xArray$Char
 
     // ----- Array internals -----------------------------------------------------------------------
 
-    @Override protected xArray$Char $delegate() {
+    @Override protected nArrayᐸCharᐳ $delegate() {
         return $delegate;
     }
 

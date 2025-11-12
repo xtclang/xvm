@@ -2,10 +2,10 @@ package org.xtclang.ecstasy;
 
 import org.xvm.javajit.Ctx;
 
-public class Range$Sequential
-    extends Range$Orderable {
+public class RangeᐸSequentialᐳ
+    extends RangeᐸOrderableᐳ {
 
-    public Range$Sequential(Ctx ctx) {
+    public RangeᐸSequentialᐳ(Ctx ctx) {
         super(ctx);
     }
 

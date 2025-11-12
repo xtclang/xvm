@@ -9,7 +9,7 @@ import static java.lang.constant.ConstantDescs.CD_float;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
 
-import static org.xvm.javajit.Builder.CD_xObj;
+import static org.xvm.javajit.Builder.CD_nObj;
 
 /**
  * Representation of an Ecstasy type in Java.
@@ -35,7 +35,7 @@ public class JitTypeDesc {
             ? JitParamDesc.getPrimitiveClass(type)
             : type.isSingleUnderlyingClass(true)
                 ? type.ensureClassDesc(ts)
-                : CD_xObj;
+                : CD_nObj;
     }
 
     /**
@@ -76,7 +76,7 @@ public class JitTypeDesc {
     public static ClassDesc getWidenedClass(TypeConstant type) {
         if (!type.isSingleUnderlyingClass(true)) {
             // TODO: this could be more specific
-            return CD_xObj;
+            return CD_nObj;
         }
         return null;
     }

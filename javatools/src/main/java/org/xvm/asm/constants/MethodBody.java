@@ -24,7 +24,7 @@ import org.xvm.util.Handy;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
 
-import static org.xvm.javajit.Builder.CD_xObj;
+import static org.xvm.javajit.Builder.CD_nObj;
 import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
 import static org.xvm.javajit.JitFlavor.PrimitiveWithDefault;
@@ -604,12 +604,12 @@ public class MethodBody {
                 } else if ((cd = JitTypeDesc.getMultiSlotPrimitiveClass(type)) != null) {
                     JitFlavor flavorStd = fDflt ? WidenedWithDefault : Widened;
                     listParamsStd.add(
-                        new JitParamDesc(type, flavorStd, CD_xObj, iOrig, iStd++, false));
+                        new JitParamDesc(type, flavorStd, CD_nObj, iOrig, iStd++, false));
 
                     if (fDflt) {
                         // TODO: we can further optimize to a three-slot (multi-primitive with default)
                         listParamsOpt.add(
-                            new JitParamDesc(type, flavorStd, CD_xObj, iOrig, iOpt++, false));
+                            new JitParamDesc(type, flavorStd, CD_nObj, iOrig, iOpt++, false));
                     } else {
                         fOptimized = true;
                         listParamsOpt.add(
@@ -670,7 +670,7 @@ public class MethodBody {
                     TypeConstant typePrimitive = type.removeNullable();
                     TypeConstant typeBoolean   = pool().typeBoolean();
                     listParamsStd.add(new JitParamDesc(type,
-                            Widened, CD_xObj,               iOrig, ixStdObj++, false));
+                                                       Widened, CD_nObj, iOrig, ixStdObj++, false));
                     listParamsOpt.add(new JitParamDesc(typePrimitive,
                             MultiSlotPrimitive, cd,         iOrig, ixLong++, false));
                     listParamsOpt.add(new JitParamDesc(typeBoolean,

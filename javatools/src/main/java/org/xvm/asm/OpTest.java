@@ -34,7 +34,7 @@ import static java.lang.constant.ConstantDescs.CD_boolean;
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_Ordered;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
-import static org.xvm.javajit.Builder.CD_xType;
+import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.MD_TypeIsA;
 import static org.xvm.javajit.Builder.MD_xvmType;
 import static org.xvm.javajit.Builder.OPT;
@@ -361,7 +361,7 @@ public abstract class OpTest
                 Builder.loadType(code, ts, typeCommon);
                 bctx.loadArgument(code, m_nValue1);
                 bctx.loadArgument(code, m_nValue2);
-                code.invokestatic(cd, sJitName +OPT, MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_xType, cd, cd));
+                code.invokestatic(cd, sJitName +OPT, MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_nType, cd, cd));
                 if (nOp == OP_IS_NEQ) {
                     code.iconst_1()
                         .ixor();
@@ -373,7 +373,7 @@ public abstract class OpTest
                 Builder.loadType(code, ts, typeCommon);
                 bctx.loadArgument(code, m_nValue1);
                 bctx.loadArgument(code, m_nValue2);
-                code.invokestatic(cd, sJitName, MethodTypeDesc.of(CD_Ordered, CD_Ctx, CD_xType, cd, cd));
+                code.invokestatic(cd, sJitName, MethodTypeDesc.of(CD_Ordered, CD_Ctx, CD_nType, cd, cd));
 
                 boolean fInverse;
                 switch (nOp) {
@@ -473,13 +473,14 @@ public abstract class OpTest
                 return;
             } else {
                 RegisterInfo regTarget = bctx.loadArgument(code, m_nValue1);
+                bctx.loadCtx(code);
                 code.invokevirtual(regTarget.cd(), "$xvmType", MD_xvmType); // target type
                 Builder.loadTypeConstant(code, bctx.typeSystem, typeTest);   // test type
             }
         } else {
             RegisterInfo regType = bctx.loadArgument(code, m_nValue2); // xType
             assert regType.type().isTypeOfType();
-            code.getfield(CD_xType, "$type", CD_TypeConstant);
+            code.getfield(CD_nType, "$type", CD_TypeConstant);
         }
 
         code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);

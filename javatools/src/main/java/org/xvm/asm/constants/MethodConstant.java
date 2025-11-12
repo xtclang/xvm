@@ -266,7 +266,7 @@ public class MethodConstant
 
     @Override
     protected StringBuilder buildJitName(TypeSystem ts) {
-        return getParentConstant().buildJitName(ts)
+        return getParentConstant().buildJitName(ts)         // TODO CP getNamespace() ??
                 .append(getSignature().ensureJitMethodName(ts));
     }
 

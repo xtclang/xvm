@@ -8,9 +8,11 @@ import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.Annotation;
@@ -36,8 +38,11 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.op.CatchStart;
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
+import org.xvm.asm.op.FinallyEnd;
 import org.xvm.asm.op.FinallyStart;
+import org.xvm.asm.op.GuardAll;
 import org.xvm.asm.op.Guarded;
+import org.xvm.asm.op.Jump;
 
 import static java.lang.constant.ConstantDescs.CD_Throwable;
 import static java.lang.constant.ConstantDescs.CD_boolean;
@@ -45,57 +50,104 @@ import static java.lang.constant.ConstantDescs.CD_boolean;
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_Exception;
 import static org.xvm.javajit.Builder.CD_JavaString;
-import static org.xvm.javajit.Builder.CD_xException;
+import static org.xvm.javajit.Builder.CD_nException;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.N_TypeMismatch;
 
 import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
 
 /**
- * Whatever is necessary for the Ops compilation.
+ * Whatever is necessary for the method bytecode production.
  */
 public class BuildContext {
     /**
-     * Construct {@link BuildContext} for a method.
+     * Construct {@link BuildContext} for a "top" method in the call chain.
      */
-    public BuildContext(Builder builder, TypeInfo typeInfo, MethodInfo methodInfo) {
+    public BuildContext(Builder builder, String className, TypeInfo typeInfo, MethodInfo methodInfo) {
         this.builder       = builder;
         this.typeSystem    = builder.typeSystem;
+        this.className     = className;
         this.typeInfo      = typeInfo;
         this.callChain     = methodInfo.getChain();
         this.methodStruct  = callChain[0].getMethodStructure();
-        this.jmd           = methodInfo.getJitDesc(typeSystem, typeInfo.getType());
+        this.callDepth     = 0;
+        this.methodDesc    = methodInfo.getJitDesc(typeSystem, typeInfo.getType());
+        this.methodJitName = null;
         this.isFunction    = methodInfo.isFunction();
         this.isConstructor = methodInfo.isConstructor();
-        this.isOptimized   = jmd.optimizedMD != null;
+        this.isOptimized   = methodDesc.optimizedMD != null;
     }
 
     /**
      * Construct {@link BuildContext} for a property accessor.
      */
-    public BuildContext(Builder builder, TypeInfo typeInfo, PropertyInfo propInfo,
+    public BuildContext(Builder builder, String className, TypeInfo typeInfo, PropertyInfo propInfo,
                         boolean isGetter) {
         this.builder       = builder;
         this.typeSystem    = builder.typeSystem;
+        this.className     = className;
         this.typeInfo      = typeInfo;
+        this.callDepth     = 0;
         this.callChain     = isGetter
                 ? propInfo.ensureOptimizedGetChain(typeInfo, null)
                 : propInfo.ensureOptimizedSetChain(typeInfo, null);
         this.methodStruct  = callChain[0].getMethodStructure();
-        this.jmd           = isGetter
+        this.methodDesc = isGetter
                 ? propInfo.getGetterJitDesc(typeSystem)
                 : propInfo.getSetterJitDesc(typeSystem);
+        this.methodJitName = null;
         this.isFunction    = propInfo.isConstant();
         this.isConstructor = false;
-        this.isOptimized   = jmd.optimizedMD != null;
+        this.isOptimized   = methodDesc.optimizedMD != null;
+    }
+
+    /**
+     * Construct {@link BuildContext} for a synthetic method in the call chain.
+     */
+    private BuildContext(BuildContext bctx, String jitName, int callDepth) {
+        MethodBody body = bctx.callChain[callDepth];
+
+        this.builder       = bctx.builder;
+        this.typeSystem    = bctx.builder.typeSystem;
+        this.className     = bctx.className;
+        this.typeInfo      = bctx.typeInfo;
+        this.callChain     = bctx.callChain;
+        this.methodStruct  = body.getMethodStructure();
+        this.callDepth     = callDepth;
+        this.methodDesc    = body.getJitDesc(typeSystem, typeInfo.getType());
+        this.methodJitName = jitName;
+        this.isFunction    = bctx.isFunction;
+        this.isConstructor = bctx.isConstructor;
+        this.isOptimized   = methodDesc.optimizedMD != null;
+    }
+
+    /**
+     * Construct {@link BuildContext} for a synthetic function.
+     */
+    private BuildContext(BuildContext bctx, String jitName, MethodBody body) {
+        this.builder       = bctx.builder;
+        this.typeSystem    = bctx.builder.typeSystem;
+        this.className     = bctx.className;
+        this.typeInfo      = bctx.typeInfo;
+        this.callChain     = bctx.callChain;
+        this.methodStruct  = body.getMethodStructure();
+        this.callDepth     = 0;
+        this.methodDesc    = body.getJitDesc(typeSystem, typeInfo.getType());
+        this.methodJitName = jitName;
+        this.isFunction    = bctx.isFunction;
+        this.isConstructor = bctx.isConstructor;
+        this.isOptimized   = methodDesc.optimizedMD != null;
     }
 
     public final Builder         builder;
     public final TypeSystem      typeSystem;
+    public final String          className;
     public final TypeInfo        typeInfo;
+    public final int             callDepth;
     public final MethodBody[]    callChain;
     public final MethodStructure methodStruct;
-    public final JitMethodDesc   jmd;
+    public final JitMethodDesc   methodDesc;
+    public final String          methodJitName; // used only for deferred
     public final boolean         isOptimized;
     public final boolean         isFunction;
     public final boolean         isConstructor;
@@ -138,13 +190,246 @@ public class BuildContext {
     /**
      * The map of {@link OpAction}s indexed by the register id.
      */
-    public final Map<Integer, OpAction> actions = new HashMap<>();
+    private final Map<Integer, OpAction> actions = new HashMap<>();
+
+    /**
+     * Deferred compilation context.
+     */
+    private BuildContext deferred;
 
     /**
      * @return the ConstantPool used by this {@link BuildContext}.
      */
     public ConstantPool pool() {
         return typeSystem.pool();
+    }
+
+    /**
+     * Generate the method code.
+     */
+    public void assembleCode(CodeBuilder code) {
+        Op[] ops = methodStruct.getOps();
+
+        enterMethod(code);
+        preprocess(code, ops);
+        process(code, ops);
+
+        exitMethod(code);
+    }
+
+    /**
+     * Preprocess the ops and collect all necessary information to produce the code for "finally"
+     * blocks.
+     * <p>
+     * For every GUARD_ALL - FINALLY - E_FINALLY block we create synthetic variables to generate
+     * conditional jumps as necessary. As an example, for a block:
+     * <pre><code>
+     *  Loop:
+     *    while (True) {
+     *      try {
+     *          return foo();
+     *      } catch (Exception1 e1) {
+     *          bar1();
+     *          continue;
+     *      } catch (ExceptionN eN) {
+     *          barN();
+     *          break;
+     *      } finally {
+     *          fin();
+     *      }
+     *   }
+     * </code></pre>
+     * <p>
+     * we produce the bytecode that look like the following pseudo code:
+     *
+     * <pre><code>
+     *     Throwable $rethrow  = null;
+     *     boolean   $jump1    = false;
+     *     boolean   $jump2    = false;
+     *     boolean   $doReturn = false;
+     *     R1        $r1;
+     *     try {
+     *         try {
+     *             $r1 = foo();
+     *             $doReturn = true;
+     *             GOTO Fin:
+     *         } catch (Exception1 e1) {
+     *             $rethrow = e1;
+     *             bar1();
+     *             $jump1 = true;
+     *             GOTO Fin:
+     *         } catch (ExceptionN eN) {
+     *             $rethrow = eN;
+     *             barn();
+     *             $jump2 = true;
+     *             GOTO Fin:
+     *         }
+     *     } catch (Throwable $t) {
+     *         $rethrow = $t;
+     *     }
+     *
+     *  Fin:
+     *     fin();
+     *
+     *     if ($rethrow != null) throw $rethrow
+     *     if ($jump1) GOTO Loop.Continue
+     *     if ($jump2) GOTO Loop.Exit
+     *     if ($doReturn) return $r1
+     * </code></pre>
+     *
+     * @param code
+     * @param ops
+     */
+    public void preprocess(CodeBuilder code, Op[] ops) {
+        Deque<Integer>       guardStack    = null;
+        Deque<List<Integer>> jumpAddrStack = null;
+        Deque<List<Integer>> jumpDestStack = null;
+
+        int            guard      = -1;
+        List<Integer>  jumpsAddr  = null; // the addresses of Jump ops
+        List<Integer>  jumpsDest  = null; // the addresses of jump destinations
+        boolean        doReturn   = false;
+        for (int iPC = 0, c = ops.length; iPC < c; iPC++) {
+            switch (ops[iPC]) {
+            case GuardAll _:
+                if (guard < 0) {
+                    guardStack    = new ArrayDeque<>();
+                    jumpAddrStack = new ArrayDeque<>();
+                    jumpDestStack = new ArrayDeque<>();
+                } else {
+                    guardStack.push(guard);
+                    jumpAddrStack.push(jumpsAddr);
+                    jumpDestStack.push(jumpsDest);
+                }
+                jumpsAddr = new ArrayList<>();
+                jumpsDest = new ArrayList<>();
+                guard     = iPC;
+                break;
+
+            case Jump jump:
+                if (jump.shouldCallFinally()) {
+                    jumpsAddr.add(iPC);
+                }
+                break;
+
+            case OpReturn ret:
+                if (ret.shouldCallFinally()) {
+                    jumpsAddr.add(iPC);
+                }
+                break;
+
+            case FinallyStart _:
+                if (!jumpsAddr.isEmpty()) {
+                    for (int jumpAddr : jumpsAddr) {
+                        switch (ops[jumpAddr]) {
+                        case Jump jump:
+                            jumpsDest.add(jump.exchangeJump(this, code, iPC));
+                            break;
+                        case OpReturn ret:
+                            ret.registerJump(iPC);
+                            doReturn = true;
+                            break;
+                        default:
+                             throw new IllegalStateException();
+                        }
+                    }
+                // all the jump ops within the finally block are handled by the parent "finally"
+                jumpsAddr = jumpAddrStack.isEmpty()
+                        ? new ArrayList<>()
+                        : jumpAddrStack.pop();
+                }
+                break;
+
+            case FinallyEnd finallyEnd:
+                GuardAll guardAll = (GuardAll) ops[guard];
+                guard = guardStack.isEmpty()
+                        ? -1
+                        : guardStack.pop();
+
+                // only the very top GuardAll allocates the return values
+                guardAll.registerJumps(jumpsDest, doReturn && guard == -1);
+
+                jumpsDest = jumpDestStack.isEmpty()
+                        ? new ArrayList<>()
+                        : jumpDestStack.pop();
+                if (guard == -1) {
+                    doReturn = false;
+                }
+
+                if (iPC == ops.length - 1 || !ops[iPC + 1].isReachable()) {
+                    finallyEnd.setCompletes(false);
+                }
+                break;
+
+            case org.xvm.asm.op.Label label:
+                // there is a chance we are compiling the same ops multiple times (for different
+                // formal types)
+                label.setLabel(null);
+                break;
+
+            default:
+                break;
+            }
+        }
+    }
+
+    /**
+     * Process the ops - build the corresponding bytecode.
+     *
+     * @param code
+     * @param ops
+     */
+    public void process(CodeBuilder code, Op[] ops) {
+        for (int iPC = 0, c = ops.length; iPC < c; iPC++) {
+            try {
+                while (true) {
+                    int skipTo = prepareOp(code, iPC);
+                    if (skipTo < 0) {
+                        break;
+                    }
+                    assert skipTo > iPC;
+                    iPC = skipTo;
+                }
+                ops[iPC].build(this, code);
+            } catch (Throwable e) {
+                MethodStructure struct = methodStruct;
+                StringBuilder sb = new StringBuilder();
+                sb.append(className)
+                    .append('.')
+                    .append(struct.getIdentityConstant().getName())
+                    .append('(')
+                    .append(struct.getContainingClass().getSourceFileName());
+
+                int nLine = struct.calculateLineNumber(iPC);
+                if (nLine > 0) {
+                    sb.append(':').append(nLine);
+                } else {
+                    sb.append(" iPC=")
+                        .append(iPC);
+                }
+                sb.append(')');
+                throw new RuntimeException("Failed to generate code for " +
+                    "op=" + Op.toName(ops[iPC].getOpCode()) + "\n" + sb, e);
+            }
+        }
+    }
+
+
+    /**
+     * Add a deferred compilation context.
+     */
+    public void deferAssembly(BuildContext bctx) {
+        if (this.deferred != null) {
+            bctx.deferred = this.deferred;
+        }
+        this.deferred = bctx;
+    }
+
+    /**
+     * @return (optional) deferred compilation context
+     */
+    public BuildContext getDeferred() {
+        return deferred;
     }
 
     /**
@@ -215,7 +500,7 @@ public class BuildContext {
     /**
      * Prepare the compilation.
      */
-    public void enterMethod(CodeBuilder code, int synthSlots) {
+    public void enterMethod(CodeBuilder code) {
         lineNumber = 1; // XVM ops are 0 based; Java is 1-based
         scope      = new Scope(this, code);
         code
@@ -224,7 +509,7 @@ public class BuildContext {
             .localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, scope.startLabel, scope.endLabel)
             ;
 
-        int          extraArgs = jmd.getImplicitParamCount(); // account for $ctx, $cctx, thi$
+        int          extraArgs = methodDesc.getImplicitParamCount(); // account for $ctx, $cctx, thi$
         TypeConstant thisType  = typeInfo.getType();
         ClassDesc    CD_this   = thisType.ensureClassDesc(typeSystem);
         if (isConstructor) {
@@ -234,7 +519,7 @@ public class BuildContext {
             registerInfos.put(Op.A_THIS, new SingleSlot(0, thisType, CD_this, "this$"));
         }
 
-        JitParamDesc[] params = isOptimized ? jmd.optimizedParams : jmd.standardParams;
+        JitParamDesc[] params = isOptimized ? methodDesc.optimizedParams : methodDesc.standardParams;
         for (int i = 0, c = params.length; i < c; i++) {
             JitParamDesc paramDesc = params[i];
             int          varIndex  = paramDesc.index;
@@ -934,7 +1219,7 @@ public class BuildContext {
         loadCtx(code);
         code.aconst_null()
             .invokestatic(CD_Exception, "$unsupported",
-                MethodTypeDesc.of(CD_xException, CD_Ctx, CD_JavaString))
+                MethodTypeDesc.of(CD_nException, CD_Ctx, CD_JavaString))
             .athrow();
     }
 
@@ -958,7 +1243,7 @@ public class BuildContext {
         code.loadConstant(text);
         code.aconst_null()
             .invokevirtual(exCD, "$init", MethodTypeDesc.of(
-                        CD_xException, CD_Ctx, CD_JavaString, CD_Throwable))
+                CD_nException, CD_Ctx, CD_JavaString, CD_Throwable))
             .athrow();
     }
 
@@ -990,6 +1275,24 @@ public class BuildContext {
     }
 
     /**
+     * Create a "deferred" context to generate a synthetic method representing a "super" method
+     * in a call chain that originates from a mixin or annotation.
+     */
+    public void buildSuper(String jitName, int depth) {
+        deferAssembly(new BuildContext(this, jitName, depth));
+    }
+
+    /**
+     * Create a "deferred" context to generate a synthetic function representing a function
+     * that originates from a mixin or annotation.
+     */
+    public void buildFunction(String jitName, MethodBody body) {
+        deferAssembly(new BuildContext(this, jitName, body));
+    }
+
+    // ----- helper methods ------------------------------------------------------------------------
+
+    /**
      * @return the last address (exclusive) to which the action should apply
      */
     private int computeEndScopeAddr(int fromAddr) {
@@ -1016,6 +1319,14 @@ public class BuildContext {
 
     public record SingleSlot(int slot, TypeConstant type, ClassDesc cd, String name)
             implements RegisterInfo {
+
+        public SingleSlot(int slot, TypeConstant type, ClassDesc cd, String name) {
+            this.slot = slot;
+            this.type = type.getCanonicalJitType();
+            this.cd   = cd;
+            this.name = name;
+        }
+
         @Override
         public boolean isSingle() {
             return true;
@@ -1025,6 +1336,17 @@ public class BuildContext {
     public record DoubleSlot(int slot, int extSlot, JitFlavor flavor,
                              TypeConstant type, ClassDesc cd, String name)
             implements RegisterInfo {
+
+        public DoubleSlot(int slot, int extSlot, JitFlavor flavor,
+                             TypeConstant type, ClassDesc cd, String name) {
+            this.slot    = slot;
+            this.extSlot = extSlot;
+            this.flavor  = flavor;
+            this.type    = type.getCanonicalJitType();
+            this.cd      = cd;
+            this.name    = name;
+        }
+
         @Override
         public boolean isSingle() {
             return false;
@@ -1067,5 +1389,12 @@ public class BuildContext {
             }
             return act2.prepare();
         }
+    }
+
+    // ----- debugging support ---------------------------------------------------------------------
+
+    @Override
+    public String toString() {
+        return className + " " + methodStruct.getIdentityConstant().getValueString();
     }
 }

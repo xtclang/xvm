@@ -1,13 +1,16 @@
 package org.xtclang.ecstasy;
 
+import org.xtclang.ecstasy.nFunction.ꖛ0;
 import org.xvm.javajit.Ctx;
 
 /**
  * All Ecstasy `service` types must extend this class.
  */
-public abstract class xService extends xObj implements Service {
+public abstract class nService
+    extends nObj
+    implements Service {
 
-    public xService(Ctx ctx) {
+    public nService(Ctx ctx) {
         super(ctx);
     }
 
@@ -24,7 +27,7 @@ public abstract class xService extends xObj implements Service {
     // ----- Service interface ---------------------------------------------------------------------
 
     @Override
-    public void callLater(Ctx ctx, xFunction.$0 doLater) {
+    public void callLater(Ctx ctx, ꖛ0 doLater) {
         doLater.$call(ctx); // TODO: create a new fiber that calls "doLater.$call(ctx)"
     }
 
@@ -34,7 +37,7 @@ public abstract class xService extends xObj implements Service {
     }
 
     @Override
-    public xObj findContextToken(Ctx ctx, xType t$Value, SharedContext sharedContext) {
+    public nObj findContextToken(Ctx ctx, nType t$Value, SharedContext sharedContext) {
         throw new UnsupportedOperationException();
     }
 
@@ -49,7 +52,7 @@ public abstract class xService extends xObj implements Service {
     }
 
     @Override
-    public void registerTimeout(Ctx ctx, xObj timeout) {
+    public void registerTimeout(Ctx ctx, nObj timeout) {
         throw new UnsupportedOperationException();
     }
 }

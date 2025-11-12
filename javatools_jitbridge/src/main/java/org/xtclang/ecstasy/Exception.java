@@ -8,17 +8,17 @@ import org.xtclang.ecstasy.text.String;
 /**
  * Native implementation for `ecstasy.Exception`.
  */
-public class Exception extends xConst {
+public class Exception extends nConst {
     public Exception(Ctx ctx) {
         super(ctx);
     }
 
     // natural property type: String?
-    public xObj text;
+    public nObj text;
     // natural property type: Exception?
-    public xObj cause;
+    public nObj cause;
     // the associated native Java exception
-    public xException $exception;
+    public nException $exception;
 
     /**
      * This is a static method that will be called by the naturally constructed sub-classes.
@@ -28,7 +28,7 @@ public class Exception extends xConst {
      *
      * @see {@link org.xvm.asm.constants.MethodConstant#ensureJitMethodName}
      */
-    public static void construct(Ctx ctx, CtorCtx cctx, Exception thi$, xObj message, xObj cause) {
+    public static void construct(Ctx ctx, CtorCtx cctx, Exception thi$, nObj message, nObj cause) {
         thi$.text       = message instanceof String text ? text : Nullable.Null;
         thi$.cause      = cause instanceof Exception e ? e : Nullable.Null;
         thi$.$exception = thi$.$createJavaException(cause instanceof Exception e ? e.$exception : null);
@@ -37,9 +37,9 @@ public class Exception extends xConst {
     /**
      * Helper method for native exception construction.
      */
-    public xException $init(Ctx ctx, java.lang.String message, Throwable cause) {
+    public nException $init(Ctx ctx, java.lang.String message, Throwable cause) {
         this.text       = message == null ? String.of(ctx, message) : Nullable.Null;
-        this.cause      = cause instanceof xException e ? e.exception : Nullable.Null;
+        this.cause      = cause instanceof nException e ? e.exception : Nullable.Null;
         this.$exception = $createJavaException(cause);
         return $exception;
     }
@@ -47,8 +47,8 @@ public class Exception extends xConst {
     /**
      * This method will be overridden by each subclass to instantiate a corresponding Java exception.
      */
-    public xException $createJavaException(Throwable cause) {
-        return new xException(cause, this);
+    public nException $createJavaException(Throwable cause) {
+        return new nException(cause, this);
     }
 
     @Override
@@ -76,15 +76,15 @@ public class Exception extends xConst {
         return sb.toString();
     }
 
-    public static xException $ro(Ctx ctx, java.lang.String text) {
+    public static nException $ro(Ctx ctx, java.lang.String text) {
         return new ReadOnly(ctx).$init(ctx, text, null);
     }
 
-    public static xException $oob(Ctx ctx, java.lang.String text) {
+    public static nException $oob(Ctx ctx, java.lang.String text) {
         return new OutOfBounds(ctx).$init(ctx, text, null);
     }
 
-    public static xException $unsupported(Ctx ctx, java.lang.String text) {
+    public static nException $unsupported(Ctx ctx, java.lang.String text) {
         return new Unsupported(ctx).$init(ctx, text, null);
     }
 }

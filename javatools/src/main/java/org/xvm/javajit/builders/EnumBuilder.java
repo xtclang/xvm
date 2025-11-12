@@ -42,7 +42,7 @@ public class EnumBuilder extends CommonBuilder {
 
     @Override
     protected ClassDesc getSuperCD() {
-        return CD_xEnum;
+        return CD_nEnum;
     }
 
     @Override
@@ -101,8 +101,9 @@ public class EnumBuilder extends CommonBuilder {
             .aload(1)
             .aload(2)
             .aload(3)
-            .invokestatic(CD_xEnum, "equals$p", MethodTypeDesc.of(CD_boolean,
-                    CD_Ctx, CD_xType, CD_xEnum, CD_xEnum))
+            .invokestatic(CD_nEnum, "equals$p", MethodTypeDesc.of(CD_boolean,
+                                                                  CD_Ctx, CD_nType, CD_nEnum,
+                                                                  CD_nEnum))
             .ireturn();
     }
 
@@ -123,8 +124,9 @@ public class EnumBuilder extends CommonBuilder {
             .aload(1)
             .aload(2)
             .aload(3)
-            .invokestatic(CD_xEnum, "compare$p", MethodTypeDesc.of(CD_long,
-                    CD_Ctx, CD_xType, CD_xEnum, CD_xEnum))
+            .invokestatic(CD_nEnum, "compare$p", MethodTypeDesc.of(CD_long,
+                                                                   CD_Ctx, CD_nType, CD_nEnum,
+                                                                   CD_nEnum))
             .lstore(4);
 
         Label labelGe = code.newLabel();
