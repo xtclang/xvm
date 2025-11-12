@@ -1,3 +1,4 @@
+import org.gradle.api.attributes.plugin.GradlePluginApiVersion
 import org.gradle.api.component.AdhocComponentWithVariants
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.compile.JavaCompile
@@ -61,7 +62,6 @@ dependencies {
     compileOnly(libs.javatools)
 
     testImplementation(libs.junit.jupiter)
-    testImplementation(libs.javatools)  // For reentrancy tests
 }
 
 // Configure project-specific publishing metadata
@@ -82,12 +82,12 @@ mavenPublishing {
 
 // Add Gradle plugin API version attribute to published variants for proper plugin resolution
 // This is required for Gradle to correctly resolve the plugin when consumed from Maven/Gradle repositories
-val pluginApiVersionAttribute = org.gradle.api.attributes.plugin.GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE
+val pluginApiVersionAttribute = GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE
 
 configurations.all {
     if (name == "runtimeElements" || name == "apiElements") {
         attributes {
-            attribute(pluginApiVersionAttribute, objects.named(org.gradle.api.attributes.plugin.GradlePluginApiVersion::class.java, GradleVersion.current().version))
+            attribute(pluginApiVersionAttribute, objects.named(GradlePluginApiVersion::class.java, GradleVersion.current().version))
         }
     }
 }

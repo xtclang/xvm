@@ -132,7 +132,7 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
      * </ul>
      */
     private ExecResult invokeDirectly(final CommandLine cmd, final File javaToolsJar) {
-        logger.lifecycle("[plugin] Invoking {} directly in current thread (no fork)", cmd.getIdentifier());
+        logger.info("[plugin] Invoking {} directly in current thread (no fork)", cmd.getIdentifier());
 
         try {
             // Convert relative paths to absolute paths for in-thread execution mode, we cannot just reset
@@ -318,7 +318,7 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
         if (path != null) {
             final File file = new File(context.getWorkingDirectory(), path);
             redirectSetter.accept(ProcessBuilder.Redirect.appendTo(file));
-            logger.lifecycle("[plugin] Redirecting {} to: {}", streamName, file.getAbsolutePath());
+            logger.info("[plugin] Redirecting {} to: {}", streamName, file.getAbsolutePath());
         } else {
             redirectSetter.accept(ProcessBuilder.Redirect.INHERIT);
         }

@@ -60,7 +60,7 @@ public class DetachedJavaClasspathLauncher<E extends XtcLauncherTaskExtension, T
     @Override
     protected ExecResult executeForkedProcess(final CommandLine cmd, final File javaToolsJar)
             throws IOException {
-        logger.lifecycle("[plugin] Invoking {} in detached mode", cmd.getIdentifier());
+        logger.info("[plugin] Invoking {} in detached mode", cmd.getIdentifier());
 
         final List<String> command = buildForkedCommand(cmd, javaToolsJar);
         final ProcessBuilder processBuilder = new ProcessBuilder(command).directory(context.getWorkingDirectory());
@@ -72,7 +72,7 @@ public class DetachedJavaClasspathLauncher<E extends XtcLauncherTaskExtension, T
         final Process process = processBuilder.start();
         final long pid = process.pid();
 
-        logger.lifecycle("""
+        logger.info("""
             [plugin] Detached XTC runner Started {} with PID: {}
             [plugin] Stop with: kill {} (unless there is a graceful way to exit)
             """.trim(), cmd.getIdentifier(), pid, pid);

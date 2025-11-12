@@ -294,11 +294,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected XtcLauncher<E, ? extends XtcLauncherTask<E>> createLauncher() {
         final var logger = getLogger();
         final boolean fork = ext.getFork().get();
-        if (fork) {
-            logger.lifecycle("[plugin] Using JavaClasspathLauncher with fork=true (separate process)");
-        } else {
-            logger.lifecycle("[plugin] Using JavaClasspathLauncher with fork=false (in-process execution)");
-        }
+        logger.info("[plugin] Using JavaClasspathLauncher with fork={} ({})", fork, fork ? "separate process" : "in-process execution");
 
         final var context = new LauncherContext(
             projectVersion,
