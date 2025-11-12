@@ -116,7 +116,10 @@ public class ModuleLoader
             List<ClassModel> currentlyLoaded = new ArrayList<>(loadedClasses);
             loadedClasses.clear();
             for (ClassModel model : currentlyLoaded) {
-                out.println("\n**** Class " + model.thisClass().asInternalName().replace('/', '.'));
+                boolean isInterface = (model.flags().flagsMask() & ClassFile.ACC_INTERFACE) != 0;
+                out.println("\n**** " +
+                        (isInterface ? "interface " : "class ") +
+                        model.thisClass().asInternalName().replace('/', '.'));
 
                 model.superclass().ifPresent(ce ->
                     out.println("Extends: " + ce.asInternalName().replace('/', '.')));
