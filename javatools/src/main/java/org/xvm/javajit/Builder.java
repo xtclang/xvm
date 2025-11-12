@@ -680,7 +680,6 @@ public abstract class Builder {
     // ----- well-known suffixes -------------------------------------------------------------------
 
     public static final String MODULE      = "¤module";       // the main module class name
-    public static final String ENUMERATION = "Enumeration";   // a class that represents an Enumeration class
     public static final String EXT         = "$ext";          // a multi-slot extension field of a primitive field
     public static final String INIT        = "$init";         // the singleton initialization instance method
     public static final String NEW         = "$new";          // the instance creation static method
