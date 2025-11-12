@@ -115,20 +115,21 @@ public class ModuleLoader
             List<ClassModel> currentlyLoaded = new ArrayList<>(loadedClasses);
             loadedClasses.clear();
             for (ClassModel model : currentlyLoaded) {
-                out.println("\n**** Class " + model.thisClass().asSymbol().displayName());
+                out.println("\n**** Class " + model.thisClass().asInternalName().replace('/', '.'));
 
                 model.superclass().ifPresent(ce ->
-                    out.println("Extends: " + ce.asSymbol().displayName()));
+                    out.println("Extends: " + ce.asInternalName().replace('/', '.')));
 
                 List<ClassEntry> interfaces = model.interfaces();
                 if (!interfaces.isEmpty()) {
                     out.println("Implements:");
-                    interfaces.stream().map(iface -> "  " + iface.asSymbol().displayName()).
+                    interfaces.stream().map(iface -> "  " + iface.asInternalName().replace('/', '.')).
                         forEach(out::println);
                 }
 
                 out.println("Fields:");
-                model.fields().stream().map(f -> "  " + f.fieldName() + " " + f.fieldTypeSymbol().descriptorString()).
+                model.fields().stream().map(f ->
+                        "  " + f.fieldName() + " " + f.fieldTypeSymbol().descriptorString()).
                     forEach(out::println);
 
                 out.println("Methods:");
