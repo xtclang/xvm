@@ -10,6 +10,11 @@ module test6.examples.org {
         console.print("Element: ", True);
         console.print(ts.Element);
         // console.print(ts.size());
+
+        TestA<Int> ti = new TestA(42);
+        console.print("Element: ", True);
+        console.print(ti.Element);
+        // console.print(ti.value());
     }
 
     class TestA<Element>(Element el)

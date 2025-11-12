@@ -690,8 +690,9 @@ public abstract class OpCallable extends Op {
         ClassDesc cdTarget;
         String    sJitCtor;
         if (infoTarget.getFormat() == Format.MIXIN) {
-            cdTarget = ClassDesc.of(bctx.className);
-            sJitCtor = idTarget.getName() + "$" + idCtor.ensureJitMethodName(ts);
+            cdTarget   = ClassDesc.of(bctx.className);
+            typeTarget = bctx.typeInfo.getType();
+            sJitCtor   = idTarget.getName() + "$" + idCtor.ensureJitMethodName(ts);
 
             bctx.buildFunction(sJitCtor, infoCtor.getHead());
         } else {

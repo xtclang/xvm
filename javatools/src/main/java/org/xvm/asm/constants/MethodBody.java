@@ -569,9 +569,10 @@ public class MethodBody {
     /**
      * @return the JitMethodDesc
      */
-    public JitMethodDesc getJitDesc(TypeSystem ts, TypeConstant typeContainer) {
+    public synchronized JitMethodDesc getJitDesc(TypeSystem ts, TypeConstant typeContainer) {
         JitMethodDesc jmd = m_jmd;
-        if (jmd == null) {
+        if (jmd == null ||
+                isConstructor() && !typeContainer.removeAccess().equals(m_typeJmdContainer)) {
             List<JitParamDesc> listParamsStd = new ArrayList<>();
             List<JitParamDesc> listParamsOpt = new ArrayList<>();
             boolean            fOptimized    = false;
@@ -714,7 +715,7 @@ public class MethodBody {
                 jmd = new JitCtorDesc(typeContainer.ensureClassDesc(ts),
                                       fAddCtorCtx, /*fAddType*/ false,
                                       apdStdReturn, apdStdParam, apdOptReturn, apdOptParam);
-
+                m_typeJmdContainer = typeContainer.removeAccess();
             } else {
                 jmd = new JitMethodDesc(apdStdReturn, apdStdParam, apdOptReturn, apdOptParam);
             }
@@ -771,4 +772,9 @@ public class MethodBody {
      * Cached JitMethodDesc.
      */
     private transient JitMethodDesc m_jmd;
+
+    /**
+     * The container type for which the JitMethodDesc above was computed (used only for constructors).
+     */
+    private transient TypeConstant m_typeJmdContainer;
 }
