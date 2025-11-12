@@ -72,27 +72,9 @@ public class BuildContext {
         this.methodStruct  = callChain[0].getMethodStructure();
         this.callDepth     = 0;
         this.methodDesc    = methodInfo.getJitDesc(typeSystem, typeInfo.getType());
+        this.methodJitName = null;
         this.isFunction    = methodInfo.isFunction();
         this.isConstructor = methodInfo.isConstructor();
-        this.isOptimized   = methodDesc.optimizedMD != null;
-    }
-
-    /**
-     * Construct {@link BuildContext} for a synthetic method in the call chain.
-     */
-    public BuildContext(BuildContext bctx, int callDepth) {
-        MethodBody body = bctx.callChain[callDepth];
-
-        this.builder       = bctx.builder;
-        this.typeSystem    = bctx.builder.typeSystem;
-        this.className     = bctx.className;
-        this.typeInfo      = bctx.typeInfo;
-        this.callChain     = bctx.callChain;
-        this.methodStruct  = body.getMethodStructure();
-        this.callDepth     = callDepth;
-        this.methodDesc    = body.getJitDesc(typeSystem, typeInfo.getType());
-        this.isFunction    = bctx.isFunction;
-        this.isConstructor = bctx.isConstructor;
         this.isOptimized   = methodDesc.optimizedMD != null;
     }
 
@@ -113,8 +95,47 @@ public class BuildContext {
         this.methodDesc = isGetter
                 ? propInfo.getGetterJitDesc(typeSystem)
                 : propInfo.getSetterJitDesc(typeSystem);
+        this.methodJitName = null;
         this.isFunction    = propInfo.isConstant();
         this.isConstructor = false;
+        this.isOptimized   = methodDesc.optimizedMD != null;
+    }
+
+    /**
+     * Construct {@link BuildContext} for a synthetic method in the call chain.
+     */
+    private BuildContext(BuildContext bctx, String jitName, int callDepth) {
+        MethodBody body = bctx.callChain[callDepth];
+
+        this.builder       = bctx.builder;
+        this.typeSystem    = bctx.builder.typeSystem;
+        this.className     = bctx.className;
+        this.typeInfo      = bctx.typeInfo;
+        this.callChain     = bctx.callChain;
+        this.methodStruct  = body.getMethodStructure();
+        this.callDepth     = callDepth;
+        this.methodDesc    = body.getJitDesc(typeSystem, typeInfo.getType());
+        this.methodJitName = jitName;
+        this.isFunction    = bctx.isFunction;
+        this.isConstructor = bctx.isConstructor;
+        this.isOptimized   = methodDesc.optimizedMD != null;
+    }
+
+    /**
+     * Construct {@link BuildContext} for a synthetic function.
+     */
+    private BuildContext(BuildContext bctx, String jitName, MethodBody body) {
+        this.builder       = bctx.builder;
+        this.typeSystem    = bctx.builder.typeSystem;
+        this.className     = bctx.className;
+        this.typeInfo      = bctx.typeInfo;
+        this.callChain     = bctx.callChain;
+        this.methodStruct  = body.getMethodStructure();
+        this.callDepth     = 0;
+        this.methodDesc    = body.getJitDesc(typeSystem, typeInfo.getType());
+        this.methodJitName = jitName;
+        this.isFunction    = bctx.isFunction;
+        this.isConstructor = bctx.isConstructor;
         this.isOptimized   = methodDesc.optimizedMD != null;
     }
 
@@ -126,6 +147,7 @@ public class BuildContext {
     public final MethodBody[]    callChain;
     public final MethodStructure methodStruct;
     public final JitMethodDesc   methodDesc;
+    public final String          methodJitName; // used only for deferred
     public final boolean         isOptimized;
     public final boolean         isFunction;
     public final boolean         isConstructor;
@@ -396,7 +418,7 @@ public class BuildContext {
     /**
      * Add a deferred compilation context.
      */
-    public void defferAssembly(BuildContext bctx) {
+    public void deferAssembly(BuildContext bctx) {
         if (this.deferred != null) {
             bctx.deferred = this.deferred;
         }
@@ -1251,6 +1273,24 @@ public class BuildContext {
         tempRegStack.push(tempReg);
         return tempReg;
     }
+
+    /**
+     * Create a "deferred" context to generate a synthetic method representing a "super" method
+     * in a call chain that originates from a mixin or annotation.
+     */
+    public void buildSuper(String jitName, int depth) {
+        deferAssembly(new BuildContext(this, jitName, depth));
+    }
+
+    /**
+     * Create a "deferred" context to generate a synthetic function representing a function
+     * that originates from a mixin or annotation.
+     */
+    public void buildFunction(String jitName, MethodBody body) {
+        deferAssembly(new BuildContext(this, jitName, body));
+    }
+
+    // ----- helper methods ------------------------------------------------------------------------
 
     /**
      * @return the last address (exclusive) to which the action should apply

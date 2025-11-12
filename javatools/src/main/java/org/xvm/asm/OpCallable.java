@@ -586,8 +586,7 @@ public abstract class OpCallable extends Op {
                 cdTarget = ClassDesc.of(bctx.className);
                 sJitName = bodyHead.getIdentity().ensureJitMethodName(ts) + "$$" + nDepth;
 
-                bctx.defferAssembly(new BuildContext(bctx, nDepth));
-
+                bctx.buildSuper(sJitName, nDepth);
             } else {
                 cdTarget = idCallee.ensureClassDesc(ts);
                 sJitName = idSuper.ensureJitMethodName(ts);
@@ -688,17 +687,21 @@ public abstract class OpCallable extends Op {
                 idCtor.getValueString() + "\" for " + typeTarget.getValueString());
         }
 
+        ClassDesc cdTarget;
+        String    sJitCtor;
         if (infoTarget.getFormat() == Format.MIXIN) {
-            // TODO
-            return;
+            cdTarget = ClassDesc.of(bctx.className);
+            sJitCtor = idTarget.getName() + "$" + idCtor.ensureJitMethodName(ts);
+
+            bctx.buildFunction(sJitCtor, infoCtor.getHead());
+        } else {
+            cdTarget = typeTarget.ensureClassDesc(ts);
+            sJitCtor = idCtor.ensureJitMethodName(ts);
         }
 
-        String        sJitTarget = typeTarget.ensureJitClassName(ts);
-        ClassDesc     cdTarget   = ClassDesc.of(sJitTarget);
-        JitMethodDesc jmdCtor    = infoCtor.getJitDesc(ts, typeTarget);
+        JitMethodDesc jmdCtor = infoCtor.getJitDesc(ts, typeTarget);
 
         boolean fOptimized = jmdCtor.isOptimized;
-        String  sJitCtor   = idCtor.ensureJitMethodName(ts);
         MethodTypeDesc md;
         if (fOptimized) {
             md       = jmdCtor.optimizedMD;

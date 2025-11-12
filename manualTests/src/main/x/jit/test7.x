@@ -42,7 +42,11 @@ module test7.examples.org {
         }
 
         mixin Mix into Base {
-            Int f0() = 41;
+            Int value;
+            construct() {
+                value = 41;
+            }
+            Int f0() = value;
         }
     }
 

@@ -227,7 +227,7 @@ public class CommonBuilder
 
         for (PropertyInfo prop : structInfo.getProperties().values()) {
             if ((prop.hasField() || prop.isInjected()) &&
-                    prop.getFieldIdentity().getNamespace().equals(thisId)) {
+                    shouldGenerate(prop.getFieldIdentity())) {
                 assembleField(className, classBuilder, prop);
 
                 if (prop.isConstant()) {
@@ -460,7 +460,7 @@ public class CommonBuilder
     protected void assembleImplProperty(String className, ClassBuilder classBuilder, PropertyInfo prop) {
         MethodInfo getterInfo = typeInfo.getMethodById(prop.getGetterId());
         if (getterInfo == null) {
-            if (prop.hasField() && prop.getFieldIdentity().getNamespace().equals(thisId)) {
+            if (prop.hasField() && shouldGenerate(prop.getFieldIdentity())) {
                 if (prop.isInjected()) {
                     generateInjected(className, classBuilder, prop);
                 } else {
@@ -487,7 +487,7 @@ public class CommonBuilder
 
         MethodInfo setterInfo = typeInfo.getMethodById(prop.getSetterId());
         if (setterInfo == null) {
-            if (prop.hasField() && prop.getFieldIdentity().getNamespace().equals(thisId)) {
+            if (prop.hasField() && shouldGenerate(prop.getFieldIdentity())) {
                 generateTrivialSetter(className, classBuilder, prop);
             }
         } else {
@@ -755,14 +755,8 @@ public class CommonBuilder
                 continue; // not our responsibility
             }
 
-            IdentityConstant ownerId = method.getIdentity().getNamespace();
-            if (ownerId.equals(thisId)) {
+            if (shouldGenerate(method.getIdentity())) {
                 assembleImplMethod(className, classBuilder, method);
-            } else {
-                Format ownerFormat = ownerId.getComponent().getFormat();
-                if (ownerFormat == Format.ANNOTATION || ownerFormat == Format.MIXIN) {
-                    assembleImplMethod(className, classBuilder, method);
-                }
             }
         }
 
@@ -1333,8 +1327,7 @@ public class CommonBuilder
             JitMethodDesc  jmdNext  = bctxNext.methodDesc;
             boolean        isOpt    = jmdNext.isOptimized;
             MethodTypeDesc mdNext   = isOpt ? jmdNext.optimizedMD : jmdNext.standardMD;
-            String         nameNext = method.getJitIdentity().ensureJitMethodName(typeSystem)
-                                        + "$$" + bctxDeferred.callDepth;
+            String         nameNext = bctxNext.methodJitName;
             if (isOpt) {
                 nameNext += OPT;
             }
@@ -1358,6 +1351,22 @@ public class CommonBuilder
             defaultLoad(code, md.returnType());
             addReturn(code, md.returnType());
         }
+    }
+
+    // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * @return true iff the code for the specified method or property accessors should be generated
+     *         inside this class
+     */
+    private boolean shouldGenerate(IdentityConstant id) {
+        IdentityConstant containerId = id.getNamespace();
+        if (containerId.equals(thisId)) {
+            return true;
+        }
+
+        Format ownerFormat = containerId.getComponent().getFormat();
+        return ownerFormat == Format.ANNOTATION || ownerFormat == Format.MIXIN;
     }
 
     // ----- debugging support ---------------------------------------------------------------------
