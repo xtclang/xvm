@@ -113,14 +113,12 @@ public abstract class Array
         }
     }
 
-    public static class eMutability extends Enumeration {       // TODO CP should this be eArray$Mutability?
-        private eMutability() {
-            ConstantPool pool = Ctx.get().container.typeSystem.pool();
-            super(null, pool.ensureClassTypeConstant(pool.clzClass(), null, pool.ensureTerminalTypeConstant(
-                    pool.ensureEcstasyClassConstant("collections.Array.Mutability"))));
+    public static class eMutability extends Enumeration {
+        private eMutability(Ctx ctx) {
+            super(ctx);
         }
 
-        public static final eMutability $INSTANCE = new eMutability();
+        public static final eMutability $INSTANCE = new eMutability(Ctx.get());
 
         public static final String[] $names = new String[] {
             Mutability.Constant.$name,
@@ -136,6 +134,12 @@ public abstract class Array
             Mutability.Mutable,
         };
 
+        @Override public TypeConstant $xvmType(Ctx ctx) {
+            ConstantPool pool = ctx.container.typeSystem.pool();
+            return pool.ensureClassTypeConstant(pool.clzClass(), null,
+                    pool.ensureEcstasyTypeConstant("collections.Array.Mutability"));
+        }
+
         @Override
         public long count$get$p() {
             return 4;
@@ -145,6 +149,7 @@ public abstract class Array
         public Mutability[] values$get() {
             return $values;
         }
+
         @Override
         public String[] names$get() {
             return $names;
