@@ -55,7 +55,7 @@ public abstract class ProjectDelegate<T, R> {
 
         // Read XDK version once at construction time and compute semantic version
         this.xdkVersion = readXdkVersionFromBuildInfo();
-        this.xdkSemanticVersion = "org.xtclang:" + projectName + ':' + xdkVersion;
+        this.xdkSemanticVersion = "org.xtclang:xdk:" + xdkVersion;
     }
 
     @SuppressWarnings("UnusedReturnValue")

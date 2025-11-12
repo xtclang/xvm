@@ -70,18 +70,11 @@ import org.xtclang.plugin.launchers.XtcLauncher;
 // TODO: Add WorkerExecutor and the Gradle Worker API to execute in parallel if there are no dependencies.
 //   Any task with zero defined outputs is not cacheable, which should be enough for all run tasks.
 // TODO: Make the module path/set pattern filterable for the module DSL.
-@SuppressWarnings("this-escape") // Initializer block safely accesses parent's getOutputs()
 public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> implements XtcRuntimeExtension {
     private static final String XEC_ARG_RUN_METHOD = "--method";
 
     private final Map<XtcRunModule, ExecResult> executedModules; // TODO we can cache output here to if we want.
     private final Property<@NotNull DefaultXtcRuntimeExtension> taskLocalModules;
-
-    // Run tasks have side effects and should never be UP-TO-DATE or cached
-    // This matches the behavior of Gradle's JavaExec task
-    {
-        getOutputs().upToDateWhen(_ -> false);
-    }
 
     /**
      * Create an XTC run task, currently delegating instead of inheriting the plugin project
@@ -90,13 +83,18 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
      *
      * @param project  Project
      */
-    @SuppressWarnings("ConstructorNotProtectedInAbstractClass") // Has to be public for code injection to work.
+    @SuppressWarnings({"ConstructorNotProtectedInAbstractClass", "this-escape"}) // Has to be public for code injection to work
     @Inject
     public XtcRunTask(final Project project) {
         // TODO clean this up:
         super(project, XtcProjectDelegate.resolveXtcRuntimeExtension(project));
         this.executedModules = new LinkedHashMap<>();
         this.taskLocalModules = objects.property(DefaultXtcRuntimeExtension.class).convention(objects.newInstance(DefaultXtcRuntimeExtension.class));
+
+        // Run tasks have side effects and should never be UP-TO-DATE or cached
+        // This matches the behavior of Gradle's JavaExec task
+        getOutputs().upToDateWhen(_ -> false);
+        getOutputs().cacheIf(_ -> false);
     }
 
 
@@ -152,7 +150,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
 
     // TODO: We may need to keep track of all input, even though we only resolve one out of three possible run configurations.
     //   XTC Modules declared in run configurations in project, or overridden in task, that we want to run.
-    // Note: @Input removed because this task is never up-to-date (see getOutputs().upToDateWhen above)
+    // Note: @Input removed because this task is never up-to-date (see constructor where outputs are configured)
     // and the XtcRunModule objects are not serializable for configuration cache.
     @Internal
     @Override
