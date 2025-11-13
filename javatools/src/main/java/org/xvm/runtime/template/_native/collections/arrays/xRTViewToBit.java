@@ -105,18 +105,4 @@ public class xRTViewToBit
         throw new UnsupportedOperationException("RTViewToBitFrom" + typeElement.getValueString());
     }
 
-    /**
-     * Clear the static VIEWS cache to allow reentrancy.
-     * This is a workaround for the reentrancy bug where TypeConstant keys
-     * from different ConstantPools don't match due to object identity comparison.
-     * <p>
-     * TODO: We should keep track of reentrant state that may be cleared through something
-     * like a Reentrency interface instead, or something explicit like that. Or just
-     * handle static caches and similar global tables in ome specific place or module-
-     * <p<
-     * This should be called between Runner.launch() invocations in the same JVM.
-     */
-    public static void clearViewsCache() {
-        VIEWS = null;
-    }
 }
