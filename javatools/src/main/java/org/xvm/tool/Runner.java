@@ -14,6 +14,8 @@ import java.util.Set;
 import org.xvm.api.Connector;
 
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorList;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
@@ -24,7 +26,11 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.JitConnector;
 
+import org.xvm.tool.LauncherOptions.CompilerOptions;
+import org.xvm.tool.LauncherOptions.RunnerOptions;
+
 import org.xvm.util.Handy;
+import org.xvm.util.ListMap;
 import org.xvm.util.ListSet;
 import org.xvm.util.Severity;
 
@@ -43,58 +49,51 @@ import static org.xvm.util.Handy.quotedString;
  *
  * where the default method is "run" with no arguments.
  */
-public class Runner
-        extends Launcher {
+public class Runner extends Launcher<RunnerOptions> {
     /**
-     * Entry point from the OS.
+     * Entry point from the OS. Delegates to Launcher.
      *
      * @param asArg command line arguments
      */
     public static void main(String[] asArg) {
-        try {
-            // use System.exit() to communicate the result of execution back to the caller
-            System.exit(launch(asArg));
-        } catch (LauncherException e) {
-            System.exit(e.error ? 1 : 0);
-        }
+        Launcher.main(insertCommand("xec", asArg));
     }
 
     /**
-     * Helper method for external launchers.
-
-     * @param asArg  command line arguments
-     *
-     * @return the result of the {@link #process()} call
-     *
-     * @throws LauncherException if an unrecoverable exception occurs
-     */
-    public static int launch(String[] asArg) throws LauncherException {
-        return new Runner(asArg).run();
-    }
-
-    /**
-     * Runner constructor.
+     * Programmatic entry point. Delegates to Launcher.
      *
      * @param asArg command line arguments
+     * @param errListener ErrorListener to receive errors
+     * @return exit code
      */
-    public Runner(String[] asArg) {
-        this(asArg, null);
+    public static int launch(String[] asArg, ErrorListener errListener) {
+        return Launcher.launch("xec", asArg, errListener);
     }
 
     /**
-     * Runner constructor.
+     * Runner constructor for programmatic use.
      *
-     * @param asArg    command line arguments
-     * @param console  representation of the terminal within which this command is run
+     * @param options     pre-configured runner options
+     * @param console     representation of the terminal within which this command is run, or null
+     * @param errListener optional ErrorListener to receive errors, or null for no delegation
      */
-    public Runner(String[] asArg, Console console) {
-        super(asArg, console);
+    public Runner(RunnerOptions options, Console console, ErrorListener errListener) {
+        super(options, console, errListener);
+    }
+
+    /**
+     * Runner constructor (simplified, for programmatic use).
+     *
+     * @param options pre-configured runner options
+     */
+    public Runner(RunnerOptions options) {
+        this(options, null, null);
     }
 
     @Override
     protected int process() {
         // repository setup
-        Options          options = options();
+        RunnerOptions    options = m_options;
         ModuleRepository repo    = configureLibraryRepo(options.getModulePath());
         checkErrors();
 
@@ -118,7 +117,7 @@ public class Runner
         ModuleStructure module     = null;
         String          binLocDesc;
         if (isExplicitCompiledFile(filePath) && fileSpec.exists()
-                && (options().isCompileDisabled() || isPathed(filePath))) {
+                && (options.isCompileDisabled() || isPathed(filePath))) {
             // the caller has explicitly specified the exact .xtc file and/or
             fileBin    = fileSpec;
             binExists  = true;
@@ -129,9 +128,9 @@ public class Runner
             binLocDesc = "the repository";
         } else {
             ModuleInfo info    = null;
-            File       outFile = (File) options.values().get("o");
+            File       outFile = options.getOutputFile();
             try {
-                info = new ModuleInfo(fileSpec, options().deduce(), null, outFile);
+                info = new ModuleInfo(fileSpec, options.deduce(), null, outFile);
             } catch (RuntimeException e) {
                 log(Severity.ERROR, "Failed to identify the module for: " + fileSpec + " (" + e + ")");
             }
@@ -187,7 +186,7 @@ public class Runner
                 }
             }
 
-            if (binExists && !options().isCompileDisabled() && info.getSourceFile() != null
+            if (binExists && !options.isCompileDisabled() && info.getSourceFile() != null
                     && info.getSourceFile().exists() && !info.isUpToDate()) {
                 log(Severity.INFO, "The compiled module \"" + info.getQualifiedModuleName()
                         + "\" is out-of-date; recompiling ....");
@@ -196,33 +195,25 @@ public class Runner
             checkErrors();
 
             if (fCompile) {
-                List<String> compilerArgs = new ArrayList<>();
-                if (options.verbose()) {
-                    compilerArgs.add("-v");
-                }
-
-                if (options.deduce()) {
-                    compilerArgs.add("-d");
-                }
+                // Build CompilerOptions programmatically
+                CompilerOptions.Builder builder = new CompilerOptions.Builder();
 
                 List<File> libPath = options.getModulePath();
-                if (!libPath.isEmpty()) {
-                    for (File libFile : libPath) {
-                        compilerArgs.add("-L");
-                        compilerArgs.add(libFile.getPath());
-                    }
+                for (File libFile : libPath) {
+                    builder.modulePath(libFile);
                 }
 
                 if (outFile != null) {
-                    compilerArgs.add("-o");
-                    compilerArgs.add(outFile.getPath());
+                    builder.output(outFile);
                 }
 
-                compilerArgs.add(fileSpec.getPath());
+                builder.input(fileSpec);
 
-                new Compiler(compilerArgs.toArray(new String[0]), m_console).run();
+                CompilerOptions compilerOpts = builder.build();
 
-                info      = new ModuleInfo(fileSpec, options().deduce(), null, outFile);
+                new Compiler(compilerOpts, m_console, m_errDelegate).run();
+
+                info      = new ModuleInfo(fileSpec, options.deduce(), null, outFile);
                 fileBin   = info.getBinaryFile();
                 binExists = fileBin != null && fileBin.exists();
                 repo      = configureLibraryRepo(libPath);
@@ -282,7 +273,7 @@ public class Runner
 
             ConstantPool pool = connector.getConstantPool();
             try (var ignore = ConstantPool.withPool(pool)) {
-                String               sMethod    = options().getMethodName();
+                String               sMethod    = options.getMethodName();
                 Set<MethodStructure> setMethods = connector.findMethods(sMethod);
                 if (setMethods.size() != 1) {
                     if (setMethods.isEmpty()) {
@@ -293,7 +284,7 @@ public class Runner
                     abort(true);
                 }
 
-                String[]        asArg       = options().getMethodArgs();
+                String[]        asArg       = options.getMethodArgs();
                 MethodStructure method      = setMethods.iterator().next();
                 TypeConstant    typeStrings = pool.ensureArrayType(pool.typeString());
 
@@ -370,94 +361,8 @@ public class Runner
     // ----- options -------------------------------------------------------------------------------
 
     @Override
-    public Options options() {
-        return (Options) super.options();
-    }
-
-    @Override
-    protected Options instantiateOptions() {
-        return new Options();
-    }
-
-    /**
-     * Runner command-line options implementation.
-     */
-    public class Options
-        extends Launcher.Options {
-        /**
-         * Construct the Runner Options.
-         */
-        public Options() {
-            super();
-
-            addOption("I" ,     "inject",       Form.Pair,   true,  "Specifies name/value pairs for injection; the format is \"name1=value1,name2=value2\"");
-            addOption("J" ,     "jit",          Form.Name,   false, "Enable the JIT-to-Java back-end");
-            addOption("L" ,     null,           Form.Repo,   true,  "Module path; a \"" + File.pathSeparator + "\"-delimited list of file and/or directory names");
-            addOption("M",      "method",       Form.String, false, "Method name; defaults to \"run\"");
-            addOption(null,     "no-recompile", Form.Name,   false, "Disable automatic compilation");
-            addOption("o",      null,           Form.File,   false, "If compilation is necessary, the file or directory to write compiler output to");
-            addOption(Trailing, null,           Form.File,   false, "Module file name (.xtc) to execute");
-            addOption(ArgV,     null,           Form.AsIs,   true,  "Arguments to pass to the method");
-        }
-
-        /**
-         * @return the list of files in the module path (empty list if none specified)
-         */
-        public List<File> getModulePath() {
-            return (List<File>) values().getOrDefault("L", Collections.emptyList());
-        }
-
-        /**
-         * @return the method name
-         */
-        public String getMethodName() {
-            return (String) values().getOrDefault("M", "run");
-        }
-
-        /**
-         * @return true iff "--no-recompile" is specified
-         */
-        public boolean isCompileDisabled() {
-            return specified("no-recompile");
-        }
-
-        /**
-         * @return true iff "-J" or "--jit" is specified
-         */
-        public boolean isJit() {
-            return specified("jit");
-        }
-
-        /**
-         * @return the file to execute
-         */
-        public File getTarget() {
-            return (File) values().get(Trailing);
-        }
-
-        /**
-         * @return the method arguments as an array of String, or null if none specified
-         */
-        public String[] getMethodArgs() {
-            List<String> listArgs = (List<String>) values().get(ArgV);
-            return listArgs == null
-                    ? null
-                    : listArgs.toArray(Handy.NO_ARGS);
-        }
-
-        /**
-         * @return the map of specified injection keys and values
-         */
-        public Map<String, String> getInjections() {
-            return (Map<String, String>) values().getOrDefault("I", Collections.emptyMap());
-        }
-
-        @Override
-        public void validate() {
-            super.validate();
-
-            // validate the -L path of file(s)/dir(s)
-            validateModulePath(getModulePath());
-        }
+    protected void validateOptions() {
+        // Validate the -L path of file(s)/dir(s)
+        validateModulePath(m_options.getModulePath());
     }
 }

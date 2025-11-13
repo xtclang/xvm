@@ -1,0 +1,121 @@
+⏺ Perfect! Now I have all the information I need. Let me compile a comprehensive response about the launcher
+  options.
+
+  Based on my investigation of the XVM launcher code, here's a comprehensive overview of the default values and
+  usage patterns for compiler and runner options:
+
+  Default Values
+
+  Compiler (xcc) Options
+
+  From javatools/src/main/java/org/xvm/tool/Compiler.java:653-664:
+
+  | Option        | Form   | Multi | Default     | Description                     |
+  |---------------|--------|-------|-------------|---------------------------------|
+  | -L            | Repo   | Yes   | Empty list  | Module path                     |
+  | -r            | File   | Yes   | Empty array | Resource locations              |
+  | -o            | File   | No    | null        | Output location                 |
+  | --rebuild     | Name   | No    | false       | Force rebuild                   |
+  | --strict      | Name   | No    | false       | Treat warnings as errors        |
+  | --nowarn      | Name   | No    | false       | Suppress warnings               |
+  | --qualify     | Name   | No    | false       | Use full module name for output |
+  | --set-version | String | No    | null        | Version stamp                   |
+
+  Runner (xec) Options
+
+  From javatools/src/main/java/org/xvm/tool/Runner.java:389-400:
+
+  | Option         | Form   | Multi | Default    | Description               |
+  |----------------|--------|-------|------------|---------------------------|
+  | -I / --inject  | Pair   | Yes   | Empty map  | Injection key/value pairs |
+  | -J / --jit     | Name   | No    | false      | Enable JIT                |
+  | -L             | Repo   | Yes   | Empty list | Module path               |
+  | -M / --method  | String | No    | "run"      | Method name               |
+  | --no-recompile | Name   | No    | false      | Disable auto compilation  |
+  | -o             | File   | No    | null       | Compiler output location  |
+
+  Multi-Value Properties
+
+  1. Repo Form (-L option) - Colon/Semicolon Delimited
+
+  The -L option accepts a path-separator-delimited list (: on Unix, ; on Windows):
+
+  # Single argument with multiple paths (preferred)
+  xcc -L ~/lib:./build:Utils.xtc MyApp.x
+  xec -L ~/lib:./build:Utils.xtc MyApp.xtc
+
+  # Multiple -L arguments (also works, accumulated into a list)
+  xcc -L ~/lib -L ./build -L Utils.xtc MyApp.x
+  xec -L ~/lib -L ./build -L Utils.xtc MyApp.xtc
+
+  From Launcher.java:921-948, the Repo form uses File.pathSeparatorChar to parse the delimited string.
+
+  2. Pair Form (-I / --inject option) - Comma-Delimited Key=Value
+
+  The inject option uses comma-separated key=value pairs:
+
+  # Single argument with multiple pairs
+  xec -I key1=value1,key2=value2 MyApp.xtc
+
+  # Multiple -I arguments (accumulated into a map)
+  xec -I key1=value1 -I key2=value2 MyApp.xtc
+
+  # With quoted values (for special characters)
+  xec -I name="John Doe",count=42 MyApp.xtc
+
+  # Values with commas require single quotes inside double quotes
+  xec -I "message='Hello, World!'" MyApp.xtc
+
+  From Launcher.java:951-955 and Handy.java:608-687, the parsing logic:
+  - Uses = to delimit key from value
+  - Uses , to delimit pairs
+  - Supports quoted strings with ", ', or `
+  - Values with special chars (, or =) need quoting
+
+  3. File Form (-r option) - Multiple Separate Arguments
+
+  Resource paths must be specified with multiple -r flags:
+
+  # Multiple resource locations
+  xcc -r ~/resources -r ./local_resources MyApp.x
+
+  Boolean Flags
+
+  From Launcher.java:849-868, boolean options accept:
+
+  True values: T, t, Y, y, 1, true, yes (case-insensitive)False values: F, f, N, n, 0, false, no (case-insensitive)
+
+  However, there are currently NO boolean Form options defined in either Compiler or Runner - all flags use
+  Form.Name instead, which means they're presence/absence switches, not explicit boolean values.
+
+  The boolean parsing code exists in the framework but isn't used by the current tools. If a boolean option were
+  added, it would look like:
+
+  # Hypothetical boolean option
+  xcc --some-flag true MyApp.x
+  xcc --some-flag false MyApp.x
+
+  Summary Examples
+
+  # Compiler with multiple module paths (single -L)
+  xcc -L ~/lib:./build:../modules MyApp.x
+
+  # Compiler with multiple module paths (multiple -L)
+  xcc -L ~/lib -L ./build -L ../modules MyApp.x
+
+  # Runner with injections (single -I)
+  xec -I timeout=30,debug=true -M main MyApp.xtc
+
+  # Runner with injections (multiple -I)
+  xec -I timeout=30 -I debug=true -M main MyApp.xtc
+
+  # Combined example
+  xec -L ~/lib:./build -I env=prod,port=8080 -M run MyApp.xtc arg1 arg2
+
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+> ju 
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+

@@ -11,10 +11,12 @@ import java.time.ZoneOffset;
 
 import java.time.format.TextStyle;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
@@ -29,9 +31,10 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.UInt8ArrayConstant;
 
+import org.xvm.tool.LauncherOptions.DisassemblerOptions;
+
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
-
 
 import static org.xvm.compiler.ast.FileExpression.createdTime;
 import static org.xvm.compiler.ast.FileExpression.modifiedTime;
@@ -44,9 +47,10 @@ import static org.xvm.util.Handy.readFileChars;
  * The "disassemble" command:
  *
  *  java org.xvm.tool.Disassembler xtc_path
+ *
  */
 public class Disassembler
-        extends Launcher {
+        extends Launcher<DisassemblerOptions> {
     /**
      * Entry point from the OS.
      *
@@ -76,12 +80,29 @@ public class Disassembler
      * @param console  representation of the terminal within which this command is run
      */
     public Disassembler (String[] asArg, Console console) {
-        super(asArg, console);
+        super(DisassemblerOptions.parse(asArg), console, null);
+    }
+
+    @Override
+    protected void validateOptions() {
+        // Validate the target file
+        File fileModule = m_options.getTarget();
+        if (fileModule == null) {
+            log(Severity.ERROR, "No module file specified");
+            return;
+        }
+
+        if (!fileModule.exists()) {
+            log(Severity.ERROR, "Module file does not exist: " + fileModule);
+        }
+
+        // Validate the -L path of file(s)/dir(s)
+        validateModulePath(m_options.getModulePath());
     }
 
     @Override
     protected int process() {
-        File      fileModule = options().getTarget();
+        File      fileModule = m_options.getTarget();
         String    sModule    = fileModule.getName();
         Component component  = null;
         if (sModule.endsWith(".xtc")) {
@@ -97,7 +118,7 @@ public class Disassembler
         } else {
             // it's a module; set up the repository
             log(Severity.INFO, "Creating and pre-populating library and build repositories");
-            ModuleRepository repo = configureLibraryRepo(options().getModulePath());
+            ModuleRepository repo = configureLibraryRepo(m_options.getModulePath());
             checkErrors();
 
             log(Severity.INFO, "Loading module: " + sModule);
@@ -109,10 +130,10 @@ public class Disassembler
         }
         checkErrors();
 
-        if (options().specified("files")) {
+        if (m_options.isListFiles()) {
             dumpFiles(component);
-        } else if (options().specified("findfile")) {
-            findFile(component, (File) options().values().get("findfile"));
+        } else if (m_options.getFindFile() != null) {
+            findFile(component, m_options.getFindFile());
         } else {
             component.visitChildren(this::dump, false, true);
         }
@@ -437,70 +458,6 @@ public class Disassembler
             or:
                 xam <options> <filename>.xtc
             """;
-    }
-
-
-    // ----- options -------------------------------------------------------------------------------
-
-    @Override
-    public Options options() {
-        return (Options) super.options();
-    }
-
-    @Override
-    protected Options instantiateOptions() {
-        return new Options();
-    }
-
-    /**
-     * Disassembler command-line options implementation.
-     */
-    public class Options
-        extends Launcher.Options {
-        /**
-         * Construct the Disassembler Options.
-         */
-        public Options() {
-            super();
-
-            addOption("L" ,     null,      Form.Repo, true,  "Module path; a \"" + File.pathSeparator + "\"-delimited list of file and/or directory names");
-            addOption(null,     "files",    Form.Name, false, "List all files embedded in the module");
-            addOption(null,     "findfile",  Form.File, false, "File to search for in the module");
-            addOption(Trailing, null,      Form.File, false, "Module file name (.xtc) to disassemble");
-        }
-
-        /**
-         * @return the list of files in the module path (empty list if none specified)
-         */
-        public List<File> getModulePath() {
-            return (List<File>) values().getOrDefault("L", Collections.emptyList());
-        }
-
-        /**
-         * @return the file to execute
-         */
-        public File getTarget() {
-            return (File) values().get(Trailing);
-        }
-
-        @Override
-        public void validate() {
-            super.validate();
-
-            // validate the trailing file (to execute)
-            File fileModule = getTarget();
-            if (fileModule == null || fileModule.length() == 0) {
-                log(Severity.ERROR, "Module file required");
-            } else if (fileModule.getName().endsWith(".xtc")) {
-                if (!fileModule.exists()) {
-                    log(Severity.ERROR, "Specified module file does not exist");
-                } else if (!fileModule.isFile()) {
-                    log(Severity.ERROR, "Specified module file is not a file");
-                } else if (!fileModule.canRead()) {
-                    log(Severity.ERROR, "Specified module file cannot be read");
-                }
-            }
-        }
     }
 }
 
