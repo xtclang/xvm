@@ -577,9 +577,8 @@ public class MethodBody {
             List<JitParamDesc> listParamsOpt = new ArrayList<>();
             boolean            fOptimized    = false;
             MethodStructure    method        = getMethodStructure();
-            SignatureConstant  sigFormal     = getIdentity().getSignature();
-            SignatureConstant  sigActual     = getSignature();
-            TypeConstant[]     atypeFormal   = sigFormal.getRawParams();
+            TypeConstant       typeCanonical = typeContainer.getCanonicalJitType().normalizeParameters();
+            SignatureConstant  sigActual     = getIdentity().getSignature().resolveGenericTypes(ts.pool(), typeCanonical);
             TypeConstant[]     atypeActual   = sigActual.getRawParams();
 
             for (int iOrig = 0, iStd = 0, iOpt = 0, c = method.getParamCount(); iOrig < c; iOrig++) {
@@ -625,14 +624,6 @@ public class MethodBody {
                 } else {
                     assert type.isSingleUnderlyingClass(true);
 
-                    // the possibilities are:
-                    // 1) the formal type is Element and the actual is String; take the formal constraint
-                    // 2) the formal type is String or Array<Element>; take the actual type
-                    TypeConstant typeFormal = atypeFormal[iOrig];
-                    if (typeFormal.isGenericType()) {
-                        type = typeFormal;
-                    }
-
                     cd = ClassDesc.of(ts.ensureJitClassName(type));
 
                     JitFlavor flavor = fDflt ? SpecificWithDefault : Specific;
@@ -651,7 +642,6 @@ public class MethodBody {
             listParamsStd.clear();
             listParamsOpt.clear();
 
-            atypeFormal = sigFormal.getRawReturns();
             atypeActual = sigActual.getRawReturns();
 
             int ixLong   = -1; // an index of the long return value in the Ctx (only for optimized)
@@ -682,12 +672,6 @@ public class MethodBody {
                     listParamsOpt.add(new JitParamDesc(type, Widened, cd, iOrig, ixOptObj++, false));
                 } else {
                     assert type.isSingleUnderlyingClass(true);
-
-                    // see the comment above
-                    TypeConstant typeFormal = atypeFormal[iOrig];
-                    if (typeFormal.isGenericType()) {
-                        type = typeFormal;
-                    }
 
                     cd = ClassDesc.of(ts.ensureJitClassName(type));
 

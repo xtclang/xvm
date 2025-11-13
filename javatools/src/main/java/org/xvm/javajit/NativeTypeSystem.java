@@ -5,6 +5,7 @@ import java.io.InputStream;
 
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
+import java.lang.classfile.Interfaces;
 import java.lang.classfile.Superclass;
 
 import java.net.MalformedURLException;
@@ -162,7 +163,16 @@ public class NativeTypeSystem
         Builder builder = ensureBuilder(type, model);
 
         return ClassFile.of().transformClass(model, (classBuilder, element) -> {
-            classBuilder.with(element); // copy everything "as is"
+            if (element instanceof Interfaces) {
+                // don't copy an interface list; it would prevent the builder to add any;
+                // NOTE: any "implements" declared by the native classes will be removed
+                //       unless the corresponding component declares them as well; if that ever
+                //       becomes a problem, we can collect the declared ones here and pass it to
+                //       the builder to merge
+                return;
+            }
+
+            classBuilder.with(element); // copy everything else "as is"
 
             if (element instanceof Superclass) {
                 // augment the new classfile using the Ecstasy class structure (just once!)
@@ -200,7 +210,6 @@ public class NativeTypeSystem
         nativeByClass.put(pool.clzType(),      Builder.N_nType);
 
         nativeBuilders.put(pool.typeInt64(),  org.xvm.javajit.builders.Int64Builder.class);
-        nativeBuilders.put(pool.typeString(), org.xvm.javajit.builders.StringBuilder.class);
 
         // pre-register functions used by the native classes
 
