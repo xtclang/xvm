@@ -22,6 +22,8 @@ public class xRTViewToBit
         extends xRTView {
     public static xRTViewToBit INSTANCE;
 
+    private static Map<TypeConstant, xRTViewToBit> VIEWS;
+
     public xRTViewToBit(Container container, ClassStructure structure, boolean fInstance) {
         super(container, structure);
 
@@ -103,8 +105,4 @@ public class xRTViewToBit
         throw new UnsupportedOperationException("RTViewToBitFrom" + typeElement.getValueString());
     }
 
-
-    // ----- constants -----------------------------------------------------------------------------
-
-    private static Map<TypeConstant, xRTViewToBit> VIEWS;
 }

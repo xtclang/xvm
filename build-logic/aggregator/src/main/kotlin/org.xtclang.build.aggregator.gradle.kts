@@ -1,8 +1,10 @@
+import org.gradle.api.execution.TaskExecutionGraph
 import org.gradle.language.base.plugins.LifecycleBasePlugin.ASSEMBLE_TASK_NAME
 import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
 import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_TASK_NAME
 import org.gradle.language.base.plugins.LifecycleBasePlugin.CHECK_TASK_NAME
 import org.gradle.language.base.plugins.LifecycleBasePlugin.CLEAN_TASK_NAME
+import org.gradle.kotlin.dsl.closureOf
 
 plugins {
     base
@@ -30,7 +32,6 @@ private class XdkBuildAggregator(val project: Project) : Runnable {
             !attach
         }.toSet()
 
-        checkStartParameterState()
         aggregateTasks(lifeCycleTasks, BUILD_GROUP, "lifecycle", ignoredIncludedBuilds)
         aggregateTasks(diagnosticTasks, "help", "diagnostic", ignoredIncludedBuilds)
     }
@@ -43,6 +44,40 @@ private class XdkBuildAggregator(val project: Project) : Runnable {
             task.apply {
                 this.group = group
                 description = "Aggregates and executes the '$taskName' task for all included builds."
+
+                // Special check for 'clean' task - it cannot run with other lifecycle tasks
+                if (taskName == CLEAN_TASK_NAME) {
+                    gradle.taskGraph.whenReady(closureOf<TaskExecutionGraph> {
+                        // Only check if clean is actually in the task graph
+                        val cleanInGraph = allTasks.any { it.project == project && it.name == CLEAN_TASK_NAME }
+                        if (!cleanInGraph) {
+                            return@closureOf
+                        }
+
+                        val requestedTasks = gradle.startParameter.taskRequests.flatMap { it.args }
+                            .filter { !it.startsWith("-") }
+                        val otherLifecycleTasks = requestedTasks.filter { it != CLEAN_TASK_NAME && lifeCycleTasks.contains(it) }
+
+                        logger.info("[aggregator] Clean task in graph. Requested tasks: $requestedTasks")
+
+                        if (otherLifecycleTasks.isNotEmpty()) {
+                            val msg = """
+
+                                ================================================================================
+                                [aggregator] FORBIDDEN: 'clean' cannot run with other tasks: $otherLifecycleTasks
+
+                                The 'clean' task conflicts with other lifecycle tasks in composite builds.
+                                Run tasks individually:
+                                  ./gradlew clean
+                                  ./gradlew build
+                                ================================================================================
+
+                            """.trimIndent()
+                            logger.error(msg)
+                            throw GradleException(msg)
+                        }
+                    })
+                }
 
                 // Filter included builds: exclude explicitly ignored builds and all build-logic projects
                 val buildsToAggregate = gradle.includedBuilds
@@ -64,80 +99,6 @@ private class XdkBuildAggregator(val project: Project) : Runnable {
         }
     }
 
-    private fun checkStartParameterState() {
-        val startParameter = gradle.startParameter
-        logger.info(
-            """
-            [aggregator] Start parameter tasks: ${startParameter.taskNames}
-            [aggregator] Start parameter init scripts: ${startParameter.allInitScripts}
-        """.trimIndent()
-        )
-
-        // Gradle options that take arguments (we need to skip both the option and its argument)
-        val optionsWithArgs = setOf(
-            "--build-file",
-            "--console",
-            "--exclude-task",
-            "--gradle-user-home",
-            "--init-script",
-            "--max-workers",
-            "--parallel",
-            "--profile",
-            "--project-cache-dir",
-            "--project-dir",
-            "--rerun-tasks",
-            "--settings-file",
-            "--tests"
-        )
-
-        // Filter out command-line options and their arguments to get actual tasks
-        val actualTasks = mutableListOf<String>()
-        val taskNames = startParameter.taskNames
-        var i = 0
-        while (i < taskNames.size) {
-            val current = taskNames[i]
-            when {
-                // Skip all flags (both - and --)
-                current.startsWith("-") -> {
-                    // If this flag takes an argument, skip the next item too
-                    if (optionsWithArgs.contains(current)) {
-                        // Only skip the next item if the argument is not provided inline with '='
-                        if (!current.contains("=")) {
-                            i++ // Skip the argument
-                        }
-                    }
-                }
-                else -> actualTasks.add(current)
-            }
-            i++
-        }
-
-        logger.info("[aggregator] Filtered actual tasks (excluding command-line options): $actualTasks")
-
-        if (actualTasks.size > 1) {
-            val conflictingTasks = actualTasks.filter { it == "clean" || lifeCycleTasks.contains(it) }
-            val allowMultipleTasks = (project.properties["allowMultipleTasks"]?.toString() ?: "false").toBoolean()
-
-            when {
-                conflictingTasks.size > 1 -> {
-                    val msg = "[aggregator] Multiple conflicting lifecycle tasks detected. Please run lifecycle tasks individually: $conflictingTasks"
-                    logger.error(msg)
-                    throw GradleException(msg)
-                }
-                !allowMultipleTasks -> {
-                    val msg = """
-                        [aggregator] Multiple tasks detected.
-                        Please run tasks individually or use -PallowMultipleTasks=true if you know exactly what you are doing: $actualTasks
-                    """.trimIndent().replace("\n", " ")
-                    logger.error(msg)
-                    throw GradleException(msg)
-                }
-                else -> logger.info("[aggregator] Multiple tasks allowed via -PallowMultipleTasks=true: $actualTasks")
-            }
-        }
-
-        logger.info("[aggregator] Start Parameter(s): $startParameter")
-    }
 }
 
 XdkBuildAggregator(project).run()

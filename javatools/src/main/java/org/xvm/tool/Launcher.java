@@ -133,7 +133,7 @@ public abstract class Launcher
         Options opts = options();
 
         boolean fHelp = opts.parse(m_asArgs);
-        if (Runtime.version().version().get(0) < 21) {
+        if (Runtime.version().version().getFirst() < 21) {
             log(Severity.INFO, "The suggested minimum JVM version is 21; this JVM version ("
                     + Runtime.version() + ") appears to be older");
         } else {
@@ -901,14 +901,14 @@ public abstract class Launcher
                                 break;
 
                             case 1:
-                                oVal = listFiles.get(0);
+                                oVal = listFiles.getFirst();
                                 break;
 
                             default:
                                 if (fMulti) {
                                     oVal = listFiles;
                                 } else {
-                                    oVal = listFiles.get(0);
+                                    oVal = listFiles.getFirst();
                                     log(Severity.ERROR, "Multiple (" + listFiles.size()
                                             + ") files specified for \"" + sPrev
                                             + "\", but only one file allowed");
@@ -1189,7 +1189,7 @@ public abstract class Launcher
         }
 
         LinkedRepository repoLinked = (LinkedRepository) repoLib;
-        return (BuildRepository) repoLinked.asList().get(0);
+        return (BuildRepository) repoLinked.asList().getFirst();
     }
 
     /**
@@ -1395,6 +1395,7 @@ public abstract class Launcher
         if (dir != null && !dir.exists()) {
             log(Severity.INFO, "Creating directory " + dir);
             // ignore any errors here; errors would end up being reported further down
+            //noinspection ResultOfMethodCallIgnored
             dir.mkdirs();
         }
 
@@ -1573,11 +1574,15 @@ public abstract class Launcher
          * @param error  true to abort with an error status
          */
         public LauncherException(final boolean error) {
-            this(error, null);
+            this(error, null, null);
         }
 
         public LauncherException(final boolean error, final String msg) {
-            super(msg);
+            this(error, msg, null);
+        }
+
+        public LauncherException(final boolean error, final String msg, final Throwable cause) {
+            super(msg, cause);
             this.error = error;
         }
 

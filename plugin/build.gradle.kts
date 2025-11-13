@@ -1,3 +1,10 @@
+import org.gradle.api.attributes.plugin.GradlePluginApiVersion
+import org.gradle.api.component.AdhocComponentWithVariants
+import org.gradle.api.publish.maven.MavenPublication
+import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.plugin.devel.GradlePluginDevelopmentExtension
+import org.gradle.util.GradleVersion
+
 plugins {
     alias(libs.plugins.xdk.build.java)
     alias(libs.plugins.gradle.portal.publish)  // Automatically applies java-gradle-plugin
@@ -51,6 +58,9 @@ repositories {
 }
 
 dependencies {
+    // Compile-time only - javatools types available for compilation but loaded via custom classloader at runtime
+    compileOnly(libs.javatools)
+
     testImplementation(libs.junit.jupiter)
 }
 
@@ -68,6 +78,18 @@ mavenPublishing {
             sourcesJar = true
         )
     )
+}
+
+// Add Gradle plugin API version attribute to published variants for proper plugin resolution
+// This is required for Gradle to correctly resolve the plugin when consumed from Maven/Gradle repositories
+val pluginApiVersionAttribute = GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE
+
+configurations.all {
+    if (name == "runtimeElements" || name == "apiElements") {
+        attributes {
+            attribute(pluginApiVersionAttribute, objects.named(GradlePluginApiVersion::class.java, GradleVersion.current().version))
+        }
+    }
 }
 
 // Type-safe plugin configuration - resolve during configuration for gradlePlugin DSL

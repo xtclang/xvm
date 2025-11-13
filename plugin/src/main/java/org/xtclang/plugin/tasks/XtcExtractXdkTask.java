@@ -1,7 +1,5 @@
 package org.xtclang.plugin.tasks;
 
-import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_INCOMING;
-import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_INCOMING_ZIP;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_ARTIFACT_ID;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_ARTIFACT_SUFFIX;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_MODULE_FILE_EXTENSION;
@@ -23,8 +21,6 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
 
-import org.xtclang.plugin.XtcProjectDelegate;
-
 @CacheableTask
 public abstract class XtcExtractXdkTask extends XtcDefaultTask {
     private static final String XDK_ARCHIVE_DEFAULT_EXTENSION = "zip";
@@ -35,8 +31,8 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
 
     @SuppressWarnings("ConstructorNotProtectedInAbstractClass")
     @Inject
-    public XtcExtractXdkTask(final Project project, final FileSystemOperations fileSystemOperations, final ArchiveOperations archiveOperations) {
-        super(project);
+    public XtcExtractXdkTask(final FileSystemOperations fileSystemOperations, final ArchiveOperations archiveOperations) {
+        super();
 
         // Store injected services
         this.fileSystemOperations = fileSystemOperations;
@@ -60,7 +56,6 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
 
         // The task is configured at this point. We should indeed have found a zip archive from some xdkDistributionProvider somewhere.
         final var archives = getInputXdkArchive().filter(XtcExtractXdkTask::isXdkArchive);
-
         if (archives.isEmpty()) {
             logger.info("[plugin] Project does NOT depend on the XDK; {} is a nop.", getName());
             return;

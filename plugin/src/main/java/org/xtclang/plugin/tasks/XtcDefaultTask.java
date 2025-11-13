@@ -1,81 +1,94 @@
 package org.xtclang.plugin.tasks;
 
+import javax.inject.Inject;
+
 import org.gradle.api.DefaultTask;
-import org.gradle.api.GradleException;
-import org.gradle.api.Project;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.model.ObjectFactory;
+import org.gradle.api.provider.Property;
+import org.gradle.api.provider.ProviderFactory;
 import org.gradle.api.tasks.Internal;
 
-import org.xtclang.plugin.ProjectDelegate;
+import org.jetbrains.annotations.NotNull;
 
-// TODO: This is intended a common superclass to avoid the messy delegate pattern.
-//   We also put XTC launcher common logic in here, like e.g. fork, jvmArgs and such.
+import static org.xtclang.plugin.XtcPluginConstants.PROPERTY_VERBOSE_LOGGING_OVERRIDE;
 
-// TODO: We'd like our tasks to have the same kind of extension pattern as the XtcProjectDelegate
-//   now that we have a working inheritance hierarchy no longer constrained to multiple inheritance
-//   or various Gradle APIs.
+/**
+ * Base class for XTC tasks using modern Gradle 9.2 best practices:
+ * <ul>
+ *   <li>No field storage - services injected on-demand via @Inject</li>
+ *   <li>Configuration cache compatible - no Project references</li>
+ *   <li>Lazy property evaluation - configured by plugin, evaluated at execution</li>
+ *   <li>Minimal API surface - only what's actually needed</li>
+ * </ul>
+ */
 public abstract class XtcDefaultTask extends DefaultTask {
-    /**
-     * Used to print only key messages with an "always" semantic. Used to quickly switch on and off,
-     * or persist in the shell, a setting that is used for stuff like always printing launcher command
-     * lines, regardless of log level, but not doing it if the override is turned off (default).
-     */
 
-    // TODO gradually remove the delegate and distribute the logic to its correct places in the "normal" Gradle plugin and DSL APIs and implementations.
+    /**
+     * Gradle automatically injects services via these abstract getters.
+     * Service references are configuration cache compatible.
+     */
+    @Inject
+    public abstract ObjectFactory getObjects();
+
+    @Inject
+    public abstract ProviderFactory getProviders();
+
+    // Store as fields for convenient access throughout task lifecycle
     protected final String projectName;
     protected final ObjectFactory objects;
+    protected final ProviderFactory providers;
     protected final Logger logger;
-    protected final boolean overrideVerboseLogging;
-    private final boolean hasVerboseLogging;
-
-    private boolean isBeingExecuted;
-
-    protected XtcDefaultTask(final Project project) {
-        this(project, ProjectDelegate.hasVerboseLogging(project));
-    }
-
-    protected XtcDefaultTask(final Project project, final boolean overrideVerboseLogging) {
-        this.projectName = project.getName();
-        this.objects = project.getObjects();
-        this.logger = project.getLogger();
-        this.overrideVerboseLogging = overrideVerboseLogging;
-        this.hasVerboseLogging = overrideVerboseLogging || ProjectDelegate.hasVerboseLogging(project);
-    }
-
 
     /**
-     * We count everything with the log level "info" or finer as verbose logging.
-     * This was at project level before, but is now at task level, so we can react and be
-     * verbose if someone has set the verbose flag for the task. We may want to dump
-     * stuff we send to the launcher, not just make the launcher more talkative.
-     *
-     * @return True of we are running with verbose logging enabled, false otherwise.
+     * Verbose logging override as a lazy property instead of eager field.
+     * Plugin sets convention from project property at configuration time.
+     * Task evaluates lazily at execution time.
      */
-    public boolean hasVerboseLogging() {
-        return hasVerboseLogging;
-    }
+    @Internal  // Not a task input - doesn't affect up-to-date checks
+    public abstract Property<@NotNull Boolean> getVerboseLoggingOverride();
 
-    protected void executeTask() {
-        isBeingExecuted = true;
-    }
-
-    @Internal
-    protected boolean isBeingExecuted() {
-        return isBeingExecuted;
-    }
-
-    protected void checkIsBeingExecuted() {
-        checkIsBeingExecuted(this);
-    }
-
-    @SuppressWarnings("UnusedReturnValue")
-    protected <T> T checkIsBeingExecuted(final T configData) {
-        // Used to implement sanity checks that we have started a TaskAction before resolving configuration contents.
-        if (!isBeingExecuted()) {
-            throw new GradleException("[plugin] Task '" + getName() + "' attempts to use configuration before it is fully resolved.");
+    /**
+     * Check if verbose logging is enabled.
+     * Respects Gradle --info/--debug flags AND project property overrides.
+     * <p>
+     * This method is called at execution time, so it's safe to evaluate properties.
+     */
+    protected boolean hasVerboseLogging() {
+        // Gradle log levels take precedence
+        if (logger.isInfoEnabled() || logger.isDebugEnabled()) {
+            return true;
         }
-        return configData;
+
+        // Check project property override
+        return getVerboseLoggingOverride().getOrElse(false);
     }
 
+    /**
+     * Called at the start of task execution.
+     * Subclasses should override and call super.executeTask() to add phase assertions.
+     */
+    protected void executeTask() {
+        // Base implementation does nothing - subclasses add phase assertions
+    }
+
+    /**
+     * Initialize default property values.
+     * Plugin can override these conventions.
+     */
+    @SuppressWarnings("this-escape") // Calling getProject() and @Inject methods in constructor is safe
+    public XtcDefaultTask() {
+        this.projectName = getProject().getName();
+        this.objects = getObjects();
+        this.providers = getProviders();
+        this.logger = getLogger();
+
+        // Read verbose logging override from project properties
+        final var verboseOverride = providers
+            .gradleProperty(PROPERTY_VERBOSE_LOGGING_OVERRIDE)
+            .map(Boolean::parseBoolean)
+            .orElse(false);
+
+        getVerboseLoggingOverride().convention(verboseOverride);
+    }
 }

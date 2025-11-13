@@ -60,8 +60,6 @@ env:
     ORG_GRADLE_PROJECT_includeBuildManualTests: true
     ORG_GRADLE_PROJECT_includeBuildAttachManualTests: true
     ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
-    # Allow multiple tasks in a single gradlew command (we run multiple manual test tasks for parallel speed)
-    ORG_GRADLE_PROJECT_allowMultipleTasks: true
 
     skip_manual_tests: ${{ github.event.inputs.skip-tests == true || github.event.inputs.skip-tests == 'true' }}
     run_manual_tests_parallel: ${{ github.event.inputs.parallel-test-mode == true || github.event.inputs.parallel-test-mode == 'true' }}

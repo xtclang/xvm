@@ -176,6 +176,16 @@ sourceSets {
 // Defaults inherited and overridable by all xtcCompile tasks
 xtcCompile {
     /*
+     * Fork behavior can be controlled globally via gradle.properties:
+     *   org.xtclang.plugin.launcher.fork=false
+     *
+     * Or overridden per-task here:
+     *   fork = false
+     *
+     * Default is true (fork to separate JVM). Set to false for in-process execution.
+     */
+
+    /*
      * Displays XTC runtime version (should be semanticVersion of this XDK), default is "false"
      */
     showVersion = false
@@ -186,24 +196,13 @@ xtcCompile {
     verbose = false
 
     /*
-     * Use the debug = true flag, either here, or on a per-task level, to suspend and allow you to attach a debugger
-     * after launcher has been spawned in a child process. You can also use the system variable XTC_DEBUG=true
-     * (and optionally, XTC_DEBUG_PORT=<int>")
-     */
-    debug = false
-
-    /*
-     * Compile in build process thread. Enables seamless IDE debugging in the Gradle build, with breakpoints
-     * in e.g. Javatools classes, but is brittle, and should not be used for production use, for example
-     * if the launched app does System.exit, this will kill the build job too.
+     * To debug the XTC compiler, use standard JDWP arguments via jvmArgs:
      *
-     * Javatools launchers should be debuggable through a standard Run/Debug Configuration (for example in IntelliJ)
-     * where the Javatools project is added as a Java Application (and not a Gradle job). So just set the debug
-     * flag instead, for most common cases.
+     * jvmArgs("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005")
      *
-     * Default is true.
+     * Then attach your debugger to port 5005. For more information on debugging,
+     * see plugin/README.md in the XVM repository.
      */
-    fork = true
 
     /*
      * Should all compilations be forced to rerun every time this build is performed? This is not
@@ -229,17 +228,43 @@ xtcCompile {
     rebuild = false
 
     /*
-     * By default, a Gradle task swallows stdin, but it's possible to override standard input and
-     * output for any XTC launcher task.
+     * ============================================================================
+     * STDOUT/STDERR REDIRECTION (Configuration Cache Compatible)
+     * ============================================================================
      *
-     * To redirect any I/O stream, for example if you want to input data to the XTC debugger or
-     * to the console, such as credentials/interactive prompts, the error, output and input streams
-     * can be redirected to a custom source.
+     * By default, forked processes inherit I/O from the parent (console output).
+     * You can redirect stdout/stderr to files using several approaches:
      *
-     * This should at least enable the "ugly" use case of breaking into the debugger on the
-     * console when an "assert:debug" statement is evaluated.
+     * 1. Simple string path with timestamp placeholder (= for simple types):
+     *    stdoutPath = "build/logs/compiler-%TIMESTAMP%.log"
+     *    stderrPath = "build/logs/compiler-errors-%TIMESTAMP%.log"
+     *
+     *    The %TIMESTAMP% placeholder expands to yyyyMMddHHmmss format at execution time.
+     *
+     * 2. Provider with .set() (recommended - lazy and configuration cache compatible):
+     *    stdoutPath.set(layout.buildDirectory.file("logs/compiler.log").map { it.asFile.absolutePath })
+     *    stderrPath.set(layout.buildDirectory.file("logs/errors.log").map { it.asFile.absolutePath })
+     *
+     * 3. Provider with timestamp in path:
+     *    stdoutPath.set(layout.buildDirectory.file("logs/compile-%TIMESTAMP%.log")
+     *        .map { it.asFile.absolutePath })
+     *
+     * 4. File-based (convenience method):
+     *    stdoutPath(project.file("my-output.log"))
+     *    stderrPath(project.file("my-errors.log"))
+     *
+     * 5. Dynamic provider logic:
+     *    stdoutPath.set(provider {
+     *        val env = findProperty("buildEnv") ?: "dev"
+     *        "build/logs/${env}/compiler-%TIMESTAMP%.log"
+     *    })
+     *
+     * Convention: Use = for simple types, .set() for Property/Provider types
+     *
+     * Example usage (commented out):
      */
-    // stdin = System.`in`
+    // stdoutPath.set(layout.buildDirectory.file("logs/compiler-%TIMESTAMP%.log").map { it.asFile.absolutePath })
+    // stderrPath.set(layout.buildDirectory.file("logs/compiler-errors-%TIMESTAMP%.log").map { it.asFile.absolutePath })
 }
 
 // Defaults inherited and overridable by all runXtc tasks you chose to create. The default xtcRun task
@@ -256,16 +281,38 @@ xtcRun {
     verbose = true
 
     /*
-     * Use an XTC native launcher (requires a local XDK installation on the test machine.)
-     *
-     * The default is false.
-     */
-    useNativeLauncher = false
-
-    /*
     * Add a JVM argument to the defaults. Will be ignored if the launch does not spawn a forked JVM for its run.
     */
     jvmArgs("-showversion", "--enable-preview")
+
+    /*
+     * ============================================================================
+     * STDOUT/STDERR REDIRECTION FOR RUN TASKS
+     * ============================================================================
+     *
+     * Same options as xtcCompile (see above), plus special defaults for detached mode:
+     *
+     * NORMAL MODE (detach = false):
+     *   Default: stdout/stderr inherit from console
+     *   Override: Use any of the approaches shown in xtcCompile section
+     *
+     * DETACHED MODE (detach = true):
+     *   Default: stdout/stderr redirect to "{toolname}_pid_{timestamp}.log"
+     *   Override: Specify custom paths to change the default
+     *
+     * Example for detached mode with simple string path:
+     *   detach = true
+     *   stdoutPath = "build/logs/server-%TIMESTAMP%.log"
+     *   stderrPath = "build/logs/server-errors-%TIMESTAMP%.log"
+     *
+     * Example for detached mode using layout provider:
+     *   detach = true
+     *   stdoutPath.set(layout.buildDirectory.file("logs/server-%TIMESTAMP%.log")
+     *       .map { it.asFile.absolutePath })
+     *
+     * Note: In detached mode, the process continues running after Gradle exits.
+     *       Use 'kill <PID>' to stop it (PID is logged on startup).
+     */
 
     /**
      * The default runXtc task is configured to run what is here in the xtcRun configuration.
@@ -285,11 +332,9 @@ xtcRun {
 val runTwoTestsInSequence by tasks.registering(XtcRunTask::class) {
     group = "application"
 
-    // The default debugger settings are debug = false, debugPort = 4711 and debugSuspend = true
-    // If you run with debugSuspend = false, you can attach a debugger to the debugPort at any time.
-    //debug = true
-    //debugPort = 5005
-    //debugSuspend = false
+    // To debug, use standard JDWP arguments:
+    // jvmArgs("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005")
+    // See plugin/README.md for more information on debugging.
 
     verbose = true // override a default from xtcRun
     module {
@@ -300,12 +345,31 @@ val runTwoTestsInSequence by tasks.registering(XtcRunTask::class) {
     moduleName("TestArray")
 }
 
+// Test task that explicitly uses fork=false to test in-process execution
+// NOTE: TestArray currently fails with fork=false due to an unrelated issue
+val runTestsInProcess by tasks.registering(XtcRunTask::class) {
+    group = "application"
+    fork = false
+    verbose = true
+    module {
+        moduleName = "EchoTest"
+        moduleArg("InProcess")
+    }
+}
+
+// Test running TestArray alone with fork=false to debug the crash
+val runTestArrayInProcess by tasks.registering(XtcRunTask::class) {
+    group = "application"
+    fork = false
+    verbose = true
+    moduleName("TestArray")
+}
+
 // This allows running a single test, e.g.: ./gradlew manualTests:runOne -PtestName="TestArray"
 val runOne by tasks.registering(XtcRunTask::class) {
     group = "application"
     description = "Runs one test as given by the property 'testName', or a default test if not set."
-    // Override debug flag from xtcRun extension here to suspend the process launched for this task, and allow to attach.
-    //debug = true
+    // To debug, use: jvmArgs("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005")
     module {
         moduleName = resolveTestNameProperty() // this syntax also has the moduleName("...") shorthand
     }
@@ -397,3 +461,4 @@ val provideTestModules: Provider<List<String>> = provider {
     list.forEach { logger.lifecycle("[manualTests]     Resolved test module: $it") }
     list
 }
+

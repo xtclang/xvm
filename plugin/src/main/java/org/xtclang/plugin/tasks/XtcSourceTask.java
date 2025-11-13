@@ -38,6 +38,7 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
     @SuppressWarnings("this-escape")
     protected XtcSourceTask(final Project project) {
         super(project, XtcProjectDelegate.resolveXtcCompileExtension(project));
+        final var objects = getObjects();
         this.patternSet = objects.newInstance(PatternSet.class);
         this.sourceFiles = objects.fileCollection();
     }
@@ -77,7 +78,7 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
      * @param source The source.
      */
     public void setSource(final Object source) {
-        sourceFiles = objects.fileCollection().from(source);
+        sourceFiles = getObjects().fileCollection().from(source);
     }
 
     /**
@@ -183,6 +184,7 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
     protected boolean isTopLevelSource(final SourceSet sourceSet, final File file) {
         assert file.isFile();
         final var topLevelSourceDirs = new java.util.HashSet<>(sourceSet.getAllSource().getSrcDirs());
+        final var logger = getLogger();
         final var dir = file.getParentFile();
         assert dir != null && dir.isDirectory();
         final var isTopLevelSrc = topLevelSourceDirs.contains(dir);

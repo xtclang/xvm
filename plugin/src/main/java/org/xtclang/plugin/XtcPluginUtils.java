@@ -13,11 +13,16 @@ import java.io.IOException;
 
 import java.nio.file.Files;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
+
+import org.gradle.api.GradleException;
 
 /**
  * XTC Plugin Helper methods in a utility class.
@@ -39,6 +44,22 @@ public final class XtcPluginUtils {
 
     public static String capitalize(final String string) {
         return Character.toUpperCase(string.charAt(0)) + string.substring(1);
+    }
+
+    /**
+     * Expands %TIMESTAMP% placeholder in a file path pattern to yyyyMMddHHmmss format.
+     * This format matches the timestamp used throughout the XTC plugin for log files.
+     *
+     * @param pathPattern The path pattern that may contain %TIMESTAMP% (must not be null)
+     * @return The path with timestamp placeholder expanded, or the original path if no placeholder found
+     */
+    public static String expandTimestampPlaceholder(final String pathPattern) {
+        requireNonNull(pathPattern, "Path pattern must not be null");
+        if (!pathPattern.contains("%TIMESTAMP%")) {
+            return pathPattern;
+        }
+        final String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        return pathPattern.replace("%TIMESTAMP%", timestamp);
     }
 
     public static final class FileUtils {
@@ -70,7 +91,6 @@ public final class XtcPluginUtils {
          *
          * @param file file to check
          * @return true if the file seems to be a valid XTC module, false otherwise
-         * @throws XtcBuildRuntimeException if there's an I/O error reading the file
          */
         public static boolean isValidXtcModule(final File file) {
             return isValidXtcModule(file, true);
@@ -87,7 +107,7 @@ public final class XtcPluginUtils {
         public static boolean isValidXtcModuleSafe(final File file, final org.gradle.api.logging.Logger logger) {
             try {
                 return isValidXtcModule(file);
-            } catch (final XtcBuildRuntimeException e) {
+            } catch (final GradleException e) {
                 // Log the exception and return false for safe usage in filters
                 logger.warn("[plugin] Cannot validate XTC module file '{}': {}", file.getAbsolutePath(), e.getMessage(), e);
                 return false;
@@ -107,8 +127,7 @@ public final class XtcPluginUtils {
             } catch (final IOException e) {
                 // IOException when reading magic number must be logged and propagated
                 // This could happen due to file corruption, truncation, or permission issues
-                throw new XtcBuildRuntimeException(e, "Failed to read magic number from potential XTC module file: '{}'", 
-                    file.getAbsolutePath());
+                throw new GradleException("Failed to read magic number from potential XTC module file: " + file.getAbsolutePath(), e);
             }
         }
 
@@ -120,7 +139,7 @@ public final class XtcPluginUtils {
         @SuppressWarnings("SameParameterValue")
         private static File checkXtcModule(final File file, final boolean checkMagic) {
             if (!isValidXtcModule(file, checkMagic)) {
-                throw new XtcBuildRuntimeException("Processed '{}' as an XTC module, but it is not.", file.getAbsolutePath());
+                throw new GradleException("Processed '" + file.getAbsolutePath() + "' as an XTC module, but it is not.");
             }
             return file;
         }
@@ -141,11 +160,11 @@ public final class XtcPluginUtils {
                 final Manifest m = jarFile.getManifest();
                 final var implVersion = m.getMainAttributes().get(Attributes.Name.IMPLEMENTATION_VERSION);
                 if (implVersion == null) {
-                    throw new XtcBuildRuntimeException("Invalid manifest entries found in '{}'", path);
+                    throw new GradleException("Invalid manifest entries found in '" + path + "'");
                 }
                 return implVersion.toString();
             } catch (final IOException e) {
-                throw new XtcBuildRuntimeException(e, "Not a valid '{}': '{}'", path, XDK_JAVATOOLS_NAME_JAR);
+                throw new GradleException("Not a valid '" + XDK_JAVATOOLS_NAME_JAR + "': '" + path + "'", e);
             }
         }
 

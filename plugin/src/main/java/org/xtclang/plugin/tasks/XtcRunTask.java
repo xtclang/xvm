@@ -7,7 +7,6 @@ import static org.gradle.api.logging.LogLevel.INFO;
 import static org.gradle.api.logging.LogLevel.LIFECYCLE;
 
 import static org.xtclang.plugin.XtcPluginConstants.XTC_RUNNER_CLASS_NAME;
-import static org.xtclang.plugin.XtcPluginConstants.XTC_RUNNER_LAUNCHER_NAME;
 
 import java.io.File;
 
@@ -22,7 +21,6 @@ import org.gradle.api.Action;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.api.file.Directory;
-import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.logging.LogLevel;
 import org.gradle.api.provider.ListProperty;
@@ -45,8 +43,8 @@ import org.xtclang.plugin.XtcRunModule;
 import org.xtclang.plugin.XtcRuntimeExtension;
 import org.xtclang.plugin.internal.DefaultXtcRuntimeExtension;
 import org.xtclang.plugin.launchers.CommandLine;
-import org.xtclang.plugin.launchers.DetachedJavaExecLauncher;
-import org.xtclang.plugin.launchers.DetachedNativeBinaryLauncher;
+import org.xtclang.plugin.launchers.DetachedJavaClasspathLauncher;
+import org.xtclang.plugin.launchers.LauncherContext;
 import org.xtclang.plugin.launchers.XtcLauncher;
 
 /**
@@ -78,10 +76,6 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     private final Map<XtcRunModule, ExecResult> executedModules; // TODO we can cache output here to if we want.
     private final Property<@NotNull DefaultXtcRuntimeExtension> taskLocalModules;
 
-    // Captured at configuration time for configuration cache compatibility
-    private final DirectoryProperty buildDirectory;
-    private final DirectoryProperty projectDirectory;
-
     /**
      * Create an XTC run task, currently delegating instead of inheriting the plugin project
      * delegate. We are slowly getting rid of this delegate pattern, now that the intra-plugin
@@ -89,27 +83,20 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
      *
      * @param project  Project
      */
-    @SuppressWarnings("ConstructorNotProtectedInAbstractClass") // Has to be public for code injection to work.
+    @SuppressWarnings({"ConstructorNotProtectedInAbstractClass", "this-escape"}) // Has to be public for code injection to work
     @Inject
     public XtcRunTask(final Project project) {
         // TODO clean this up:
         super(project, XtcProjectDelegate.resolveXtcRuntimeExtension(project));
         this.executedModules = new LinkedHashMap<>();
-        this.taskLocalModules = objects.property(DefaultXtcRuntimeExtension.class).convention(objects.newInstance(DefaultXtcRuntimeExtension.class, project));
+        this.taskLocalModules = objects.property(DefaultXtcRuntimeExtension.class).convention(objects.newInstance(DefaultXtcRuntimeExtension.class));
 
-        // Capture directories at configuration time for configuration cache compatibility
-        this.buildDirectory = objects.directoryProperty();
-        this.buildDirectory.set(project.getLayout().getBuildDirectory());
-        this.projectDirectory = objects.directoryProperty();
-        this.projectDirectory.set(project.getLayout().getProjectDirectory());
+        // Run tasks have side effects and should never be UP-TO-DATE or cached
+        // This matches the behavior of Gradle's JavaExec task
+        getOutputs().upToDateWhen(_ -> false);
+        getOutputs().cacheIf(_ -> false);
     }
 
-
-    @Internal
-    @Override
-    public final String getNativeLauncherCommandName() {
-        return XTC_RUNNER_LAUNCHER_NAME;
-    }
 
     @Internal
     @Override
@@ -119,29 +106,26 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
 
     @Override
     protected XtcLauncher<XtcRuntimeExtension, ? extends XtcLauncherTask<XtcRuntimeExtension>> createLauncher() {
+        final boolean detach = getDetach().get();
+
         // Use parent's createLauncher for normal mode
-        if (!getDetach().get()) {
+        if (!detach) {
             return super.createLauncher();
         }
 
-        // Validate detach mode requirements - fail fast
-        if (!useNativeLauncherValue && !forkValue) {
-            throw new GradleException("[plugin] Detach mode requires fork=true. Set 'fork = true' in xtcRun configuration.");
-        }
+        // Detach mode: use JavaClasspathLauncher with detach=true
+        // DetachedJavaClasspathLauncher automatically sets fork=true and detach=true
+        getLogger().lifecycle("[plugin] Using DetachedJavaClasspathLauncher (background process)");
 
-        // Extract common directory resolution for detached launchers (DRY)
-        final File buildDir = buildDirectory.get().getAsFile();
-        final File projectDir = projectDirectory.get().getAsFile();
+        final var context = new LauncherContext(
+            projectVersion,
+            xdkFileTree,
+            javaToolsConfig,
+            toolchainExecutable,
+            projectDirectory.get().getAsFile()
+        );
 
-        if (useNativeLauncherValue) {
-            getLogger().info("[plugin] Created XTC launcher: detached native executable.");
-            return new DetachedNativeBinaryLauncher<>(this, getLogger(), getExecOperations(), buildDir, projectDir);
-        }
-
-        // Must be fork mode (validated above)
-        getLogger().info("[plugin] Created XTC launcher: detached Java process.");
-        return new DetachedJavaExecLauncher<>(this, getLogger(), getExecOperations(),
-            toolchainExecutable, projectVersion, xdkFileTree, javaToolsConfig, buildDir, projectDir);
+        return new DetachedJavaClasspathLauncher<>(this, getLogger(), context);
     }
 
     // XTC modules needed to resolve module path (the contents of the XDK required to build and run this project)
@@ -166,7 +150,9 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
 
     // TODO: We may need to keep track of all input, even though we only resolve one out of three possible run configurations.
     //   XTC Modules declared in run configurations in project, or overridden in task, that we want to run.
-    @Input
+    // Note: @Input removed because this task is never up-to-date (see constructor where outputs are configured)
+    // and the XtcRunModule objects are not serializable for configuration cache.
+    @Internal
     @Override
     public ListProperty<@NotNull XtcRunModule> getModules() {
         if (taskLocalModules.get().isEmpty()) {
@@ -279,8 +265,6 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     }
 
     protected List<XtcRunModule> resolveModulesToRunFromModulePath(final List<File> resolvedModulePath) {
-        checkIsBeingExecuted();
-
         logger.info("[plugin] Resolving modules to run from module path: '{}'", resolvedModulePath);
         if (isEmpty()) {
             logger.warn("[plugin] Task extension '{}' and/or local task configuration do not declare any modules to run for '{}'. Skipping task.", ext.getName(), getName());
@@ -342,7 +326,6 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     }
 
     private void logFinishedRuns() {
-        checkIsBeingExecuted();
         final int count = executedModules.size();
         logger.info("[plugin] Task executed {} modules:", count);
         int i = 0;

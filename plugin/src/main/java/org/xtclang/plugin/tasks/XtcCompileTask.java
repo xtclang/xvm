@@ -1,7 +1,6 @@
 package org.xtclang.plugin.tasks;
 
 import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILER_CLASS_NAME;
-import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILER_LAUNCHER_NAME;
 import static org.xtclang.plugin.XtcPluginUtils.FileUtils.isValidXtcModuleSafe;
 
 import java.io.File;
@@ -9,6 +8,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import javax.inject.Inject;
 
@@ -68,19 +68,21 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
      * so that Gradle will correctly instantiate the task with build script reference (which is what happens
      * when you instantiate it from the ObjectFactory in a project):
      */
-    @SuppressWarnings("ConstructorNotProtectedInAbstractClass")
+    @SuppressWarnings({"ConstructorNotProtectedInAbstractClass", "this-escape"})
     @Inject
     public XtcCompileTask(final Project project, final SourceSet sourceSet) {
         // the compile task name should be determined by its source set
         // a runtime task can by default depend on all source sets, it's fine. even a test task.
         super(project);
 
+        final var objects = getObjects();
+
         // The outputFilenames property only exists in the compile task, not in the compile configuration.
         this.outputFilenames = objects.listProperty(String.class).value(new ArrayList<>());
-        
+
         // Capture all necessary data at configuration time to avoid Project references during execution
         this.projectDirectory = objects.directoryProperty().value(project.getLayout().getProjectDirectory());
-        
+
         // Capture source set data at configuration time to avoid Project references during execution
         this.cachedCompileSourceSetName = sourceSet.getName();
         this.cachedResourceDirectory = XtcProjectDelegate.getXtcResourceOutputDirectory(project, sourceSet).get();
@@ -109,12 +111,6 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     // should point out the other source sets as well, for example for a test task, but not for the
     // main task. I suppose the most generic way to do this is to be able to add a source set to the
     // module path in the task, but let's try to work incrementally.
-
-    @Internal
-    @Override
-    public final String getNativeLauncherCommandName() {
-        return XTC_COMPILER_LAUNCHER_NAME;
-    }
 
     @Internal
     @Override
@@ -190,9 +186,9 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     Provider<@NotNull Directory> getResourceDirectory() {
         // TODO: This is wrong. The compile task should not be the one depending on resources src, but resources build.
         //   But that is java behavior, so make sure at least we get the resource input dependency.
-        return objects.directoryProperty().value(getResourceDirectoryInternal());
+        return getObjects().directoryProperty().value(getResourceDirectoryInternal());
     }
-    
+
     private Directory getResourceDirectoryInternal() {
         return cachedResourceDirectory;
     }
@@ -200,7 +196,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     @OutputDirectory
     Provider<@NotNull Directory> getOutputDirectory() {
         // TODO We can make this configurable later.
-        return objects.directoryProperty().value(getOutputDirectoryInternal());
+        return getObjects().directoryProperty().value(getOutputDirectoryInternal());
     }
     
     private Directory getOutputDirectoryInternal() {
@@ -226,6 +222,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     public void executeTask() {
         super.executeTask();
 
+        final var logger = getLogger();
         final var sourceSetName = getCompileSourceSetName();
         final var args = new CommandLine(XTC_COMPILER_CLASS_NAME, resolveJvmArgs());
 
@@ -288,7 +285,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
      * in the DSL for the compile task (the outputFilenames property with its value pairs).
      */
     private void finalizeOutputs() {
-        objects.fileTree().from(getOutputDirectory()).filter(f -> isValidXtcModuleSafe(f, getLogger())).getFiles().forEach(this::renameOutput);
+        getObjects().fileTree().from(getOutputDirectory()).filter(f -> isValidXtcModuleSafe(f, getLogger())).getFiles().forEach(this::renameOutput);
     }
 
     private void renameOutput(final File oldFile) {
