@@ -161,32 +161,32 @@ public class TypeSystem {
     protected final Map<String, TypeConstant> functionTypes = new ConcurrentHashMap<>();
 
     // special identifier characters used for encoding class/method/field names in Java ClassFiles
-    public static final int ESC      = 0x10458; // "𐑘"
-    public static final int CLASS    = 'c';     // prefix
-    public static final int INTRFACE = 'i';     // prefix
-    public static final int PROXY    = 'p';     // prefix
-    public static final int DUCK     = 'd';     // prefix
-    public static final int MASK     = 'm';     // prefix
-    public static final int NO_MOD   = 'n';     // prefix - native / no build modification
-    public static final int FUTURE   = 'f';     // prefix
-    public static final int ENUM     = 'e';     // prefix - for Enumeration<Enum> i.e. Class<Enum>
-    public static final int EXCEPT   = 'x';     // prefix - gen'd RuntimeException (holds an Ecstasy Exception ref)
-    public static final int RESERVED = '¤';     // prefix (0xA4)
-    public static final int ID_NUM   = 0xA59B;  // "ꖛ"
-    public static final int DOT      = 0x06F0;  // "۰"
-    public static final int UNION    = 0x01C0;  // "ǀ"
-    public static final int INTRSECT = 0x2D5C;  // "ⵜ"
-    public static final int DIFF     = 0x174D;  // "ᝍ"
-    public static final int NULLABLE = 0xA6EB;  // "ꛫ"
-    public static final int BANG     = 0x01C3;  // "ǃ"
-    public static final int ANNO     = 0x04A8;  // "Ҩ"
-    public static final int SPACE    = 0x203F;  // "‿"
-    public static final int COMMA    = 0x071D;  // "ܝ"
-    public static final int L_PAREN  = 0x100B5; // "𐂵"
-    public static final int R_PAREN  = 0x10C99; // "𐲙"
-    public static final int L_ANGLE  = 0x1438;  // "ᐸ"
-    public static final int R_ANGLE  = 0x1433;  // "ᐳ"
-    public static final int MIN_ESC  = min(ESC, min(ID_NUM, min(DOT, min(UNION, min(INTRSECT,
+    public static final int  ESC      = 0x10458; // "𐑘"
+    public static final char CLASS    = 'c';     // prefix
+    public static final char INTRFACE = 'i';     // prefix
+    public static final char PROXY    = 'p';     // prefix
+    public static final char DUCK     = 'd';     // prefix
+    public static final char MASK     = 'm';     // prefix
+    public static final char NO_MOD   = 'n';     // prefix - native / no build modification
+    public static final char FUTURE   = 'f';     // prefix
+    public static final char ENUM     = 'e';     // prefix - for Enumeration<Enum> i.e. Class<Enum>
+    public static final char EXCEPT   = 'x';     // prefix - gen'd RuntimeException (holds an Ecstasy Exception ref)
+    public static final char RESERVED = '¤';     // prefix (0xA4)
+    public static final char ID_NUM   = 'ꖛ';     // 0xA59B
+    public static final char DOT      = '۰';     // 0x06F0
+    public static final char UNION    = 'ǀ';     // 0x01C0
+    public static final char INTRSECT = 'ⵜ';     // 0x2D5C
+    public static final char DIFF     = 'ᝍ';     // 0x174D
+    public static final char NULLABLE = 'ꛫ';     // 0xA6EB
+    public static final char BANG     = 'ǃ';     // 0x01C3
+    public static final char ANNO     = 'Ҩ';     // 0x04A8
+    public static final char SPACE    = '‿';     // 0x203F
+    public static final char COMMA    = 'ܝ';     // 0x071D
+    public static final char L_PAREN  = 'ꕿ';     // 0xA57F
+    public static final char R_PAREN  = 'ꛑ';     // 0xA6D1
+    public static final char L_ANGLE  = 'ᐸ';     // 0x1438
+    public static final char R_ANGLE  = 'ᐳ';     // 0x1433
+    public static final int  MIN_ESC  = min(ESC, min(ID_NUM, min(DOT, min(UNION, min(INTRSECT,
             min(DIFF, min(NULLABLE, min(BANG, min(ANNO, min(SPACE, min(COMMA,  min(L_PAREN,
             min(R_PAREN, min(L_ANGLE, R_ANGLE))))))))))))));
 
