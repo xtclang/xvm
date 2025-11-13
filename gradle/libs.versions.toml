@@ -14,7 +14,7 @@
 #
 
 [versions]
-apache-commons-cli = "1.10.0"
+apache-commons-cli = "1.11.0"
 download = "5.6.0"
 gradle-doctor = "0.12.1"
 gradle-portal-publish = "2.0.0"
@@ -80,6 +80,7 @@ jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "j
 jline = { module = "org.jline:jline", version.ref = "jline" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version = "1.11.4" }
 
 [bundles]
 unicode = ["jakarta-activation-api", "jakarta-xml-bind-api", "jaxb-runtime"]

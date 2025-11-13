@@ -2,21 +2,17 @@ package org.xvm.tool;
 
 
 import java.io.File;
-import java.io.IOException;
-
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Stream;
 
+import org.xvm.asm.BuildInfo;
 import org.xvm.asm.Constants;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
@@ -35,15 +31,17 @@ import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.LauncherOptions.RunnerOptions;
 import org.xvm.tool.ModuleInfo.Node;
 
-import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 import static org.xvm.tool.ModuleInfo.isExplicitCompiledFile;
-
-import static org.xvm.util.Handy.quotedString;
 import static org.xvm.util.Handy.resolveFile;
 import static org.xvm.util.Handy.toPathString;
+import static org.xvm.util.Severity.ERROR;
+import static org.xvm.util.Severity.FATAL;
+import static org.xvm.util.Severity.INFO;
+import static org.xvm.util.Severity.NONE;
+import static org.xvm.util.Severity.WARNING;
 
 
 /**
@@ -53,20 +51,37 @@ import static org.xvm.util.Handy.toPathString;
  * </li><li> <code>xec</code> <i>("exec")</i> routes to {@link Runner}
  * </li></ul>
  *
- * @param <O> the Options type for this launcher
+ * @param <T> the Options type for this launcher
  */
-public abstract class Launcher<O extends LauncherOptions> implements ErrorListener {
+public abstract class Launcher<T extends LauncherOptions> implements ErrorListener {
+
+    private static final int JDK_VERSION_MIN = 21;
+
     /**
-     * Entry point from the OS.
+     * Constructor for programmatic invocation (uses pre-built Options).
+     *
+     * @param options the pre-configured Options
+     * @param console representation of the terminal within which this command is run
+     * @param errListener ErrorListener to receive errors
+     */
+    protected Launcher(T options, Console console, ErrorListener errListener) {
+        m_console = console == null ? DEFAULT_CONSOLE : console;
+        m_errDelegate = errListener;
+        m_options = options;
+    }
+
+    /**
+     * Entry point from the OS. The only thing main should do is turn any return values from processing
+     * into a {@code System.exit}, that terminates the process with a system exit code based on this status
      *
      * @param asArg  command line arguments (first arg is command name: xcc, xec, or xtc)
      */
-    public static void main(String[] asArg) {
+    static void main(String[] asArg) {
         try {
             // use System.exit() to communicate the result of execution back to the caller
             System.exit(launch(asArg));
         } catch (LauncherException e) {
-            System.exit(e.error ? 1 : 0);
+            System.exit(e.getExitCode());
         }
     }
 
@@ -80,27 +95,70 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
      * @throws LauncherException if an unrecoverable exception occurs
      */
     public static int launch(String[] asArg) throws LauncherException {
-        int argc = asArg.length;
-        if (argc < 1) {
+        if (asArg.length < 1) {
             System.err.println("Command name is missing");
             return 1;
         }
+        return launch(
+                stripDebugPrefix(asArg[0]),
+                Arrays.copyOfRange(asArg, 1, asArg.length),
+                DEFAULT_CONSOLE,
+                null);
+    }
 
-        String cmd = asArg[0];
+    /**
+     * Strips the debug prefix from a command name if present.
+     * Supports both "debug_xec" and "debugxec" formats.
+     *
+     * @param cmd the raw command name potentially with debug prefix
+     * @return the command name with debug prefix stripped, or the original if no prefix found
+     */
+    private static String stripDebugPrefix(String cmd) {
+        String cmdLower = cmd.toLowerCase();
+        return Arrays.stream(DEBUG_PREFIXES)
+                .filter(cmdLower::startsWith)
+                .findFirst()
+                .map(String::length)
+                .map(cmd::substring)
+                .orElse(cmd);
+    }
 
-        --argc;
-        String[] argv = new String[argc];
-        System.arraycopy(asArg, 1, argv, 0, argc);
+    /**
+     * Executes a launcher command and returns an exit code.
+     * Use this when calling from a daemon or other long-running process.
+     *
+     * @param cmd command name (xcc or xec)
+     * @param args command line arguments (without the command name)
+     * @param console console for output (must not be null)
+     * @param errListener optional ErrorListener to receive errors, or null
+     * @return exit code (0 for success, non-zero for error)
+     */
+    public static int launch(String cmd, String[] args, Console console, ErrorListener errListener) {
+        Launcher<?> launcher;
+        try {
+            launcher = switch (cmd) {
+                case "xcc" -> new Compiler(CompilerOptions.parse(args), console, errListener);
+                case "xec" -> new Runner(RunnerOptions.parse(args), console, errListener);
+                default -> {
+                    console.log(ERROR, "Command name \"" + cmd + "\" is not supported");
+                    yield null;
+                }
+            };
 
-        // if the command is prefixed with "debug", then strip that off
-        if (cmd.length() > 5 && cmd.toLowerCase().startsWith("debug")) {
-            cmd = cmd.substring("debug".length());
-            if (cmd.charAt(0) == '_') {
-                cmd = cmd.substring(1);
+            if (launcher == null) {
+                return 1;
             }
-        }
 
-        return launch(cmd, argv, null);
+            return launcher.run();
+        } catch (IllegalArgumentException e) {
+            console.log(ERROR, e.getMessage());
+            return 1;
+        } catch (LauncherException e) {
+            if (e.isError()) {
+                console.log(ERROR, e.getMessage());
+            }
+            return e.getExitCode();
+        }
     }
 
     /**
@@ -112,74 +170,7 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
      * @return new array with command inserted at the beginning
      */
     protected static String[] insertCommand(String cmd, String[] args) {
-        String[] result = new String[args.length + 1];
-        result[0] = cmd;
-        System.arraycopy(args, 0, result, 1, args.length);
-        return result;
-    }
-
-    /**
-     * Creates a Launcher instance for the specified command.
-     *
-     * @param cmd command name (xcc or xec)
-     * @param args command line arguments (without the command name)
-     * @param errListener optional ErrorListener to receive errors, or null
-     * @return Launcher instance, or null if command is not supported or parsing failed
-     */
-    private static Launcher<?> create(String cmd, String[] args, ErrorListener errListener) {
-        try {
-            return switch (cmd) {
-                case "xcc" -> new Compiler(CompilerOptions.parse(args), null, errListener);
-                case "xec" -> new Runner(RunnerOptions.parse(args), null, errListener);
-                default -> {
-                    System.err.println("Command name \"" + cmd + "\" is not supported");
-                    yield null;
-                }
-            };
-        } catch (IllegalArgumentException e) {
-            // Parsing failed - log all errors and show help
-            System.err.println("Error parsing command-line arguments:");
-            System.err.println(e.getMessage());
-            System.err.println();
-            System.err.println("Use --help for usage information");
-            return null;
-        }
-    }
-
-    /**
-     * Executes a launcher command and returns an exit code.
-     * Use this when calling from a daemon or other long-running process.
-     *
-     * @param cmd command name (xcc or xec)
-     * @param args command line arguments (without the command name)
-     * @param errListener optional ErrorListener to receive errors, or null
-     * @return exit code (0 for success, non-zero for error)
-     */
-    public static int launch(String cmd, String[] args, ErrorListener errListener) {
-        Launcher<?> launcher = create(cmd, args, errListener);
-        if (launcher == null) {
-            return 1;
-        }
-
-        try {
-            return launcher.run();
-        } catch (LauncherException e) {
-            // Convert LauncherException to exit code
-            return e.error ? 1 : 0;
-        }
-    }
-
-    /**
-     * Constructor for programmatic invocation (uses pre-built Options).
-     *
-     * @param options the pre-configured Options
-     * @param console representation of the terminal within which this command is run
-     * @param errListener ErrorListener to receive errors
-     */
-    protected Launcher(O options, Console console, ErrorListener errListener) {
-        m_console = console == null ? DefaultConsole : console;
-        m_errDelegate = errListener;
-        m_options = options;
+        return Stream.concat(Stream.of(cmd), Arrays.stream(args)).toArray(String[]::new);
     }
 
     /**
@@ -187,20 +178,28 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
      *
      * @return the result of the {@link #process} call.
      */
+    @SuppressWarnings({"AssertWithSideEffects", "ConstantValue"})
     public int run() {
-        if (Runtime.version().version().getFirst() < 21) {
-            log(Severity.INFO, "The suggested minimum JVM version is 21; this JVM version ("
-                    + Runtime.version() + ") appears to be older");
+        final T options = options();
+
+        final Runtime.Version jdkVersion = Runtime.version();
+        if (jdkVersion.version().getFirst() < JDK_VERSION_MIN) {
+            log(INFO, "The suggested minimum JVM version is 21; this JVM version (" + Runtime.version() + ") appears to be older");
         } else {
-            log(Severity.INFO, "JVM version: " + Runtime.version());
+            log(INFO, "JVM version: " + Runtime.version());
             boolean fAssertsEnabled = false;
             assert  fAssertsEnabled = true;
-            log(Severity.INFO, "Java assertions are " + (fAssertsEnabled ? "enabled" : "disabled"));
+            log(INFO, "Java assertions are " + (fAssertsEnabled ? "enabled" : "disabled"));
         }
 
-        if (m_options.verbose()) {
+        if (options.showHelp()) {
+            displayHelp();
+            return 0;
+        }
+
+        if (options.verbose()) {
             out();
-            out("Options: " + m_options);
+            out("Options: " + options);
             out();
         }
 
@@ -209,7 +208,7 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
 
         int result = process();
 
-        if (m_options.verbose()) {
+        if (options.verbose()) {
             out();
         }
         return result;
@@ -244,8 +243,8 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
             m_console.log(sev, sMsg);
         }
 
-        if (sev == Severity.FATAL) {
-            abort(true);
+        if (sev == FATAL) {
+            throw abort(true, sMsg);
         }
     }
 
@@ -291,6 +290,7 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
     /**
      * Suspend error detection.
      */
+    @SuppressWarnings("unused")
     protected void suspendErrors() {
         ++m_cSuspended;
     }
@@ -305,11 +305,12 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
     /**
      * Suspend error detection.
      */
+    @SuppressWarnings("unused")
     protected void resumeErrors() {
         if (m_cSuspended > 0) {
             --m_cSuspended;
         } else {
-            log(Severity.FATAL, "Attempt to resume errors when errors have not been suspended");
+            log(FATAL, "Attempt to resume errors when errors have not been suspended");
         }
     }
 
@@ -318,7 +319,7 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
      */
     protected void checkErrors() {
         if (isBadEnoughToAbort(m_sevWorst)) {
-            abort(true);
+            throw abort(true);
         }
     }
 
@@ -333,17 +334,57 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
         }
 
         if (fHelp || isBadEnoughToAbort(m_sevWorst)) {
-            abort(isBadEnoughToAbort(m_sevWorst));
+            throw abort(isBadEnoughToAbort(m_sevWorst));
         }
     }
 
     /**
      * Abort the command line with or without an error status.
      *
-     * @param fError  true to abort with an error status
+     * @param fError  true to abort with an error status (otherwise end of run, but not an error)
      */
-    protected void abort(boolean fError) {
-        throw new LauncherException(fError);
+    protected void abortThrowing(boolean fError) {
+        throw abort(fError, null);
+    }
+
+    /**
+     * Abort the command line with or without an error status.
+     *
+     * @param fError  true to abort with an error status (otherwise end of run, but not an error)
+     * @param msg     an optional message to display with the exception when it is caught and parsed.
+     */
+    protected void abortThrowing(@SuppressWarnings("SameParameterValue") boolean fError, String msg) {
+        throw abort(fError, msg);
+    }
+
+    /**
+     * Abort the command line with or without an error status.
+     *
+     * @param fError  true to abort with an error status (otherwise end of run, but not an error)
+     */
+    protected LauncherException abort(boolean fError) {
+        return abort(fError, null, null);
+    }
+
+    /**
+     * Abort the command line with or without an error status.
+     *
+     * @param fError  true to abort with an error status (otherwise end of run, but not an error)
+     * @param msg     an optional message to display with the exception when it is caught and parsed.
+     */
+    protected LauncherException abort(boolean fError, String msg) {
+        return abort(fError, msg, null);
+    }
+
+    /**
+     * Abort the command line with or without an error status.
+     *
+     * @param fError  true to abort with an error status (otherwise end of run, but not an error)
+     * @param msg     an optional message to display with the exception when it is caught and parsed.
+     * @para, cause   an underlying excpeption and cause.
+     */
+    protected LauncherException abort(@SuppressWarnings("SameParameterValue") boolean fError, String msg, Exception cause) {
+        return new LauncherException(fError, msg, cause);
     }
 
     /**
@@ -353,16 +394,15 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
     public void displayHelp() {
         out();
         out(desc());
-        out();
-
-        // Get help text from options
-        String helpText = m_options.getHelpText();
+        final var helpText = options().getHelpText();
         if (helpText != null && !helpText.isEmpty()) {
-            out("Options:");
+            out();
             out(helpText);
-        } else {
-            out("Use --help for detailed options");
+            out();
+            return;
         }
+        out();
+        out("Use --help for detailed options");
         out();
     }
 
@@ -373,50 +413,11 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
         return this.getClass().getSimpleName();
     }
 
-    /**
-     * Produce a string representation of the specified option value.
-     *
-     * @param oVal  the value
-     * @param form  the form of the value
-     *
-     * @return a string representation of the value
-     */
-    public static String stringFor(Object oVal, Form form) {
-        switch (form) {
-        case Name:
-        case Boolean:
-        case Int:
-        case AsIs:
-            return String.valueOf(oVal);
-
-        case String:
-            return quotedString((String) oVal);
-
-        case File:
-            return toPathString((File) oVal);
-
-        case Repo:
-            StringBuilder sb    = new StringBuilder();
-            boolean      first = true;
-            for (File file : (List<File>) oVal) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(':');
-                }
-                sb.append(toPathString(file));
-            }
-            return sb.toString();
-
-        default:
-            throw new IllegalStateException();
-        }
-    }
-
 
     // ----- ErrorListener interface ---------------------------------------------------------------
 
-    @Override public boolean log(ErrorInfo err) {
+    @Override
+    public boolean log(ErrorInfo err) {
         // Forward to delegate (always non-null, default is ErrorList)
         if (m_errDelegate != null) { m_errDelegate.log(err); }
 
@@ -424,15 +425,18 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
         return isAbortDesired();
     }
 
-    @Override public boolean isAbortDesired() {
+    @Override
+    public boolean isAbortDesired() {
         return isBadEnoughToAbort(m_sevWorst);
     }
 
-    @Override public boolean hasSeriousErrors() {
-        return m_sevWorst.compareTo(Severity.ERROR) >= 0;
+    @Override
+    public boolean hasSeriousErrors() {
+        return m_sevWorst.compareTo(ERROR) >= 0;
     }
 
-    @Override public boolean isSilent() {
+    @Override
+    public boolean isSilent() {
         return errorsSuspended();
     }
 
@@ -457,7 +461,7 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
      * @return true if an error of that severity should be displayed
      */
     protected boolean isBadEnoughToPrint(Severity sev) {
-        return m_options.verbose() || sev.compareTo(Severity.WARNING) >= 0;
+        return options().verbose() || sev.compareTo(WARNING) >= 0;
     }
 
     /**
@@ -468,10 +472,8 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
      * @return true if an error of that severity should exit the program
      */
     protected boolean isBadEnoughToAbort(Severity sev) {
-        return sev.compareTo(Severity.ERROR) >= 0;
+        return sev.compareTo(ERROR) >= 0;
     }
-
-
 
     // ----- repository management -----------------------------------------------------------------
 
@@ -557,28 +559,28 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
     protected void prelinkSystemLibraries(ModuleRepository reposLib) {
         ModuleStructure moduleEcstasy = reposLib.loadModule(Constants.ECSTASY_MODULE);
         if (moduleEcstasy == null) {
-            log(Severity.FATAL, "Unable to load module: " + Constants.ECSTASY_MODULE);
+            log(FATAL, "Unable to load module: " + Constants.ECSTASY_MODULE);
         }
 
-        FileStructure structEcstasy = moduleEcstasy.getFileStructure();
+        FileStructure structEcstasy = Objects.requireNonNull(moduleEcstasy).getFileStructure();
         if (structEcstasy != null) {
             ModuleConstant idMissing = structEcstasy.linkModules(reposLib, false);
             if (idMissing != null) {
-                log(Severity.FATAL, "Unable to link module " + Constants.ECSTASY_MODULE
+                log(FATAL, "Unable to link module " + Constants.ECSTASY_MODULE
                     + " due to missing module:" + idMissing.getName());
             }
         }
 
         ModuleStructure moduleTurtle = reposLib.loadModule(Constants.TURTLE_MODULE);
         if (moduleTurtle == null) {
-            log(Severity.FATAL, "Unable to load module: " + Constants.TURTLE_MODULE);
+            log(FATAL, "Unable to load module: " + Constants.TURTLE_MODULE);
         }
 
-        FileStructure structTurtle = moduleTurtle.getFileStructure();
+        FileStructure structTurtle = Objects.requireNonNull(moduleTurtle).getFileStructure();
         if (structTurtle != null) {
             ModuleConstant idMissing = structTurtle.linkModules(reposLib, false);
             if (idMissing != null) {
-                log(Severity.FATAL, "Unable to link module " + Constants.TURTLE_MODULE
+                log(FATAL, "Unable to link module " + Constants.TURTLE_MODULE
                     + " due to missing module:" + idMissing.getName());
             }
         }
@@ -597,7 +599,7 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
 
         // Use version from single source of truth if module version is not available
         if (sVer == null) {
-            sVer = org.xvm.asm.BuildInfo.getXdkVersion();
+            sVer = BuildInfo.getXdkVersion();
         }
 
         // Build version string with optional git information
@@ -606,8 +608,8 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
                .append(" (").append(Constants.VERSION_MAJOR_CUR).append(".").append(Constants.VERSION_MINOR_CUR).append(")");
 
         // Add git info if available
-        String gitCommit = org.xvm.asm.BuildInfo.getGitCommit();
-        String gitStatus = org.xvm.asm.BuildInfo.getGitStatus();
+        String gitCommit = BuildInfo.getGitCommit();
+        String gitStatus = BuildInfo.getGitStatus();
         if (!gitCommit.isEmpty()) {
             // Use full commit ID for better traceability
             version.append(" [").append(gitCommit).append("]");
@@ -643,7 +645,7 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
             }
         }
 
-        ModuleInfo info = new ModuleInfo(fileSpec, m_options.deduce(), resourceSpecs, binarySpec);
+        ModuleInfo info = new ModuleInfo(fileSpec, options().deduce(), resourceSpecs, binarySpec);
 
         if (fCache) {
             if (moduleCache == null) {
@@ -658,10 +660,10 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
     /**
      * Validate that the contents of the path are existent directories and/or .xtc files.
      *
-     * @param listPath
+     * @param modulePath a list of individual module paths.
      */
-    public void validateModulePath(List<File> listPath) throws LauncherException {
-        for (File file : listPath) {
+    public void validateModulePath(List<File> modulePath) throws LauncherException {
+        for (File file : modulePath) {
             String sMsg = "File or directory";
             if (file.isDirectory()) {
                 sMsg = "Directory";
@@ -670,11 +672,11 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
             }
 
             if (!file.exists()) {
-                log(Severity.ERROR, "File or directory \"" + file + "\" does not exist");
+                log(ERROR, "File or directory \"" + file + "\" does not exist");
             } else if (!file.canRead()) {
-                log(Severity.ERROR, sMsg + " \"" + file + "\" does not exist");
+                log(ERROR, sMsg + " \"" + file + "\" does not exist");
             } else if (file.isFile() && !file.getName().endsWith(".xtc")) {
-                log(Severity.WARNING, "File \"" + file + "\" does not have the \".xtc\" extension");
+                log(WARNING, "File \"" + file + "\" does not have the \".xtc\" extension");
             }
         }
     }
@@ -693,15 +695,15 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
                 ModuleInfo info = ensureModuleInfo(file, null, null);
                 File srcFile = info == null ? null : info.getSourceFile();
                 if (srcFile == null || !srcFile.exists()) {
-                    log(Severity.ERROR, "Failed to locate the module source code for: " + file);
+                    log(ERROR, "Failed to locate the module source code for: " + file);
                 }
             } catch (RuntimeException e) {
-                log(Severity.ERROR, "Failed to identify the module for: " + file + " (" + e + ")");
+                log(ERROR, "Failed to identify the module for: " + file + " (" + e + ")");
             }
         } else if (!file.canRead()) {
-            log(Severity.ERROR, "File not readable: " + file);
+            log(ERROR, "File not readable: " + file);
         } else if (!file.getName().endsWith(".x")) {
-            log(Severity.WARNING, "Source file does not have a \".x\" extension: " + file);
+            log(WARNING, "Source file does not have a \".x\" extension: " + file);
         }
         return file;
     }
@@ -721,14 +723,13 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
 
         boolean fSingle = isExplicitCompiledFile(file.getName());
         if (fSingle && fMulti) {
-            log(Severity.ERROR, "The single file " + file
-                    + " is specified, but multiple modules are expected");
+            log(ERROR, "The single file " + file + " is specified, but multiple modules are expected");
             return;
         }
 
         File dir = fSingle ? file.getParentFile() : file;
         if (dir != null && !dir.exists()) {
-            log(Severity.INFO, "Creating directory " + dir);
+            log(INFO, "Creating directory " + dir);
             // ignore any errors here; errors would end up being reported further down
             //noinspection ResultOfMethodCallIgnored
             dir.mkdirs();
@@ -737,52 +738,21 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
         if (file.exists()) {
             if (!file.isDirectory()) {
                 if (!fSingle) {
-                    log(Severity.WARNING, "File " + file + " does not have the \".xtc\" extension");
+                    log(WARNING, "File " + file + " does not have the \".xtc\" extension");
                 }
 
                 if (fMulti) {
-                    log(Severity.ERROR, "The single file " + file
+                    log(ERROR, "The single file " + file
                             + " is specified, but multiple modules are expected");
                 }
 
                 if (!file.canWrite()) {
-                    log(Severity.ERROR, "File " + file + " can not be written to");
+                    log(ERROR, "File " + file + " can not be written to");
                 }
             }
         } else if (dir != null && !dir.exists()) {
-            log(Severity.ERROR, "Directory " + dir + " is missing");
+            log(ERROR, "Directory " + dir + " is missing");
         }
-    }
-
-    /**
-     * Resolve the specified "path string" into a list of files.
-     *
-     * @param sPath   the path to resolve, which may be a file or directory name, and may include
-     *                wildcards, etc.
-     *
-     * @return a list of File objects
-     *
-     * @throws IOException
-     */
-    protected static List<File> resolvePath(String sPath)
-            throws IOException {
-        List<File> files = new ArrayList<>();
-
-        if (sPath.length() >= 2 && sPath.charAt(0) == '~'
-                && (sPath.charAt(1) == '/' || sPath.charAt(1) == File.separatorChar)) {
-            sPath = System.getProperty("user.home") + File.separatorChar + sPath.substring(2);
-        }
-
-        if (sPath.indexOf('*') >= 0 || sPath.indexOf('?') >= 0) {
-            // wildcard file names
-            try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get("."), sPath)) {
-                stream.forEach(path -> files.add(path.toFile()));
-            }
-        } else {
-            files.add(new File(sPath));
-        }
-
-        return files;
     }
 
     /**
@@ -808,17 +778,17 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
                 }
             } catch (IllegalStateException | IllegalArgumentException e) {
                 String msg = e.getMessage();
-                log(Severity.ERROR, "Could not find module information for " + toPathString(file)
+                log(ERROR, "Could not find module information for " + toPathString(file)
                         + " (" + (msg == null ? "Reason unknown" : msg) + ")");
             }
             if (srcFile == null) {
-                log(Severity.ERROR, "Unable to find module source for file: " + file);
+                log(ERROR, "Unable to find module source for file: " + file);
             } else if (mapResults.containsKey(srcFile)) {
                 if (setDups == null) {
                     setDups = new HashSet<>();
                 }
                 if (!setDups.contains(srcFile)) {
-                    log(Severity.WARNING, "Module source was specified multiple times: " + srcFile);
+                    log(WARNING, "Module source was specified multiple times: " + srcFile);
                     setDups.add(srcFile);
                 }
             } else {
@@ -849,7 +819,7 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
      * Clean up any transient state
      */
     protected void reset() {
-        m_sevWorst   = Severity.NONE;
+        m_sevWorst   = NONE;
         m_cSuspended = 0;
         moduleCache  = null;
     }
@@ -902,12 +872,13 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
 
     /**
      * RuntimeException thrown upon a launcher failure.
+     * TODO: Ideally this should not be a runtime exception. We can have throws declaration and do more processing
+     *   and recovery attempts if we explcitly declarte how to handle LauncherException in subclasses in code.
      */
-    static public class LauncherException
-            extends RuntimeException {
-        /**
-         * @param error  true to abort with an error status
-         */
+    static public class LauncherException extends RuntimeException {
+        private final boolean error;
+        private final int exitCode;
+
         public LauncherException(final boolean error) {
             this(error, null, null);
         }
@@ -916,98 +887,31 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
             this(error, msg, null);
         }
 
+        public LauncherException(final boolean error, final Throwable e) {
+            this(error, e.getMessage(), null);
+        }
+
         public LauncherException(final boolean error, final String msg, final Throwable cause) {
             super(msg, cause);
             this.error = error;
+            this.exitCode = error ? 0 : 1;
+        }
+
+        public int getExitCode() {
+            return this.exitCode;
+        }
+
+        public boolean isError() {
+            return this.error;
         }
 
         @Override
         public String toString() {
-            return '[' + getClass().getSimpleName() + ": isError=" + error + ", msg=" + getMessage() + ']';
+            return '[' + getClass().getSimpleName() + ": isError=" + isError() + ", msg=" + getMessage() + ']';
         }
-
-        public final boolean error;
     }
 
     // ----- constants -----------------------------------------------------------------------------
-
-    /**
-     * The default Console implementation.
-     */
-    public static final Console DefaultConsole = new Console() {};
-
-    /**
-     * The various forms of command-line options can take:
-     *
-     * <ul><li><tt>Name</tt>      - either the option is specified or it is not;
-     *                              e.g. "{@code --verbose}"
-     * </li><li><tt>Boolean</tt>  - an explicitly boolean option;
-     *                              e.g. "{@code --suppressBeep=False}"
-     * </li><li><tt>Int</tt>      - an integer valued option;
-     *                              e.g. "{@code --limit=5}" or "{@code --limit 5}"
-     * </li><li><tt>String</tt>   - a String valued option (useful when no either form works);
-     *                              e.g. "{@code --name="Bob"}" or "{@code --name "Bob"}"
-     * </li><li><tt>File</tt>     - a File valued option;
-     *                              e.g. "{@code --src=./My.x}" or "{@code --src ./My.x}"
-     * </li><li><tt>Repo</tt>     - a colon-delimited search path valued option;
-     *                              e.g. "{@code -L ~/lib:./lib:./}" or "{@code -L~/lib:./}"
-     * </li><li><tt>Pair</tt>     - an equal-sign-delimited key/value pairing, comma-delimited for
-     *                              multi; e.g. "{@code -I x=0,y=1,s="'Hello, = World!'"} (and note
-     *                              that the use of spaces requires the value to be
-     *                              quoted, and the occurrence of ',' or '=' within a value requires
-     *                              the value to be quoted again using single quotes, because the
-     *                              Java command line removes the double quotes)
-     * </li><li><tt>AsIs</tt>     - an AsIs valued option is a String that is not modified, useful
-     *                              when being passed on to a further "argv-aware" program
-     *                              e.g. "{@code xec MyApp.xtc -o=7 -X="q"} -> {@code -o=7 -X="q"}"
-     * </li></ul>
-     */
-    public enum Form {
-        Name("Switch"),
-        Boolean,
-        Int,
-        String,
-        File,
-        Repo('\"' + java.io.File.pathSeparator + "\"-delimited File list"),
-        Pair("\"key=value\" Pair"),
-        AsIs;
-
-        Form() {
-            this(null);
-        }
-
-        Form(String desc) {
-            DESC = desc;
-        }
-
-        public String desc() {
-            return DESC == null ? name() : DESC;
-        }
-
-        private final String DESC;
-    }
-
-    /**
-     * This is the name used for an option that does not have a name. It is called "trailing"
-     * because it comes at the end of a sequence of options, such as the sequence of file names
-     * at the end of the command: "{@code xcc -o ../build --verbose MyApp.x MyTest.x}".
-     * <p/>
-     * If a Launcher supports trailing files, for example, then the {@link Options#options()} method
-     * should return a map containing an entry whose key is {@code Trailing} and whose value is
-     * {@link Form#File}, with {@code allowMultiple(Trailing)} returning {@code true}.
-     */
-    protected static final String Trailing = "<_>";
-
-    /**
-     * This is the name used for an option that represents "the remainder of the options".
-     * <p/>
-     * To use this option, the Launcher must support no "Trailing", or a single "Trailing", but not
-     * multiple "Trailing" values.
-     */
-    protected static final String ArgV = "...";
-
-    protected enum Stage {Init, Parsed, Named, Linked}
-
     /**
      * Unknown fatal error. {0}
      */
@@ -1025,6 +929,22 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
      */
     public static final String READ_FAILURE     = "LAUNCHER-04";
 
+    /**
+     * Debug prefixes to strip from launcher command names.
+     * Checked in order, so "debug_" must come before "debug".
+     */
+    private static final String[] DEBUG_PREFIXES = {"debug_", "debug"};
+
+    /**
+     * The default Console implementation.
+     */
+    private static final Console DEFAULT_CONSOLE = new Console() {};
+
+    /**
+     * Enum representing ther different Stages of launchers.
+     */
+    protected enum Stage {Init, Parsed, Named, Linked}
+
 
     // ----- fields --------------------------------------------------------------------------------
 
@@ -1036,12 +956,21 @@ public abstract class Launcher<O extends LauncherOptions> implements ErrorListen
     /**
      * The parsed options.
      */
-    protected O m_options;
+    private final T m_options;
+
+    /**
+     * Get the parsed options for this launcher.
+     *
+     * @return the options instance
+     */
+    protected final T options() {
+        return m_options;
+    }
 
     /**
      * The worst severity issue encountered thus far.
      */
-    protected Severity m_sevWorst = Severity.NONE;
+    protected Severity m_sevWorst = NONE;
 
     /**
      * Delegate ErrorListener that receives errors in addition to this Launcher's own logging.

@@ -50,8 +50,7 @@ public interface ErrorListener {
      * @return true to attempt to abort the process that reported the error, or
      *         false to attempt to continue the process
      */
-    default boolean log(Severity severity, String sCode, Object[] aoParam,
-            Source source, long lPosStart, long lPosEnd) {
+    default boolean log(Severity severity, String sCode, Object[] aoParam, Source source, long lPosStart, long lPosEnd) {
         return log(new ErrorInfo(severity, sCode, aoParam, source, lPosStart, lPosEnd));
     }
 

@@ -41,14 +41,14 @@ class OptionsTest {
     @Test
     void testCompilerOptionsBuilder() {
         CompilerOptions opts = new CompilerOptions.Builder()
-                .rebuild(true)
-                .strict(true)
-                .modulePath(new File("/lib1"))
-                .modulePath(new File("/lib2"))
-                .output(new File("/tmp/out"))
-                .input(new File("foo.x"))
-                .input(new File("bar.x"))
-                .version("1.2.3")
+                .forceRebuild(true)
+                .enableStrictMode(true)
+                .addModulePath(new File("/lib1"))
+                .addModulePath(new File("/lib2"))
+                .setOutputLocation(new File("/tmp/out"))
+                .addInputFile(new File("foo.x"))
+                .addInputFile(new File("bar.x"))
+                .setModuleVersion("1.2.3")
                 .build();
 
         assertTrue(opts.isForcedRebuild());
@@ -70,11 +70,11 @@ class OptionsTest {
     @Test
     void testCompilerOptionsSerializeToArgs() {
         CompilerOptions opts = new CompilerOptions.Builder()
-                .rebuild(true)
-                .strict(true)
-                .modulePath(new File("/lib1"))
-                .output(new File("/tmp/out"))
-                .input(new File("foo.x"))
+                .forceRebuild(true)
+                .enableStrictMode(true)
+                .addModulePath(new File("/lib1"))
+                .setOutputLocation(new File("/tmp/out"))
+                .addInputFile(new File("foo.x"))
                 .build();
 
         String[] args = opts.toCommandLine();
@@ -138,14 +138,14 @@ class OptionsTest {
         assertFalse(opts.isJit());
         assertEquals("run", opts.getMethodName()); // Default method name
         assertEquals(new File("MyModule.xtc"), opts.getTarget());
-        assertNull(opts.getMethodArgs());
+        assertEquals(0, opts.getMethodArgs().length); // Returns empty array, not null
         assertTrue(opts.getInjections().isEmpty());
     }
 
     @Test
     void testCompilerOptionsImmutability() {
         CompilerOptions opts = new CompilerOptions.Builder()
-                .modulePath(new File("/lib1"))
+                .addModulePath(new File("/lib1"))
                 .build();
 
         // Options should be immutable - getModulePath returns unmodifiable list
@@ -222,13 +222,33 @@ class OptionsTest {
 
     @Test
     void testLongFormFlags() {
-        String[] args = {"--rebuild", "--strict", "--nowarn", "foo.x"};
+        String[] args = {"--rebuild", "--strict", "foo.x"};
 
         CompilerOptions opts = CompilerOptions.parse(args);
 
         assertTrue(opts.isForcedRebuild());
         assertTrue(opts.isStrict());
+        assertFalse(opts.isNoWarn());
+    }
+
+    @Test
+    void testNoWarnFlag() {
+        String[] args = {"--nowarn", "foo.x"};
+
+        CompilerOptions opts = CompilerOptions.parse(args);
+
+        assertFalse(opts.isStrict());
         assertTrue(opts.isNoWarn());
+    }
+
+    @Test
+    void testStrictAndNoWarnMutualExclusion() {
+        // Test that --strict and --nowarn are mutually exclusive
+        String[] args = {"--strict", "--nowarn", "foo.x"};
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            CompilerOptions.parse(args);
+        });
     }
 
     @Test
@@ -416,6 +436,89 @@ class OptionsTest {
         Version version = opts.getVersion();
         assertNotNull(version);
         assertEquals("1.2.3", version.toString());
+    }
+
+    @Test
+    void testHelpTextGeneration() {
+        // Test that help text can be generated for each options type
+        CompilerOptions compilerOpts = new CompilerOptions.Builder().build();
+        String compilerHelp = compilerOpts.getHelpText();
+        assertNotNull(compilerHelp);
+        assertTrue(compilerHelp.contains("-L"));
+        assertTrue(compilerHelp.contains("-o"));
+        assertTrue(compilerHelp.contains("--strict"));
+
+        RunnerOptions runnerOpts = new RunnerOptions.Builder().build();
+        String runnerHelp = runnerOpts.getHelpText();
+        assertNotNull(runnerHelp);
+        assertTrue(runnerHelp.contains("-L"));
+        assertTrue(runnerHelp.contains("-M"));
+        assertTrue(runnerHelp.contains("-J"));
+    }
+
+    @Test
+    void testPartiallyInvalidOptions() {
+        // When some options are valid and some are invalid, parsing should fail immediately
+        // Apache CLI will detect the first unknown option and throw an exception
+
+        // Valid options followed by invalid option
+        assertThrows(IllegalArgumentException.class, () -> {
+            CompilerOptions.parse(new String[]{"-L", "/lib", "--invalid-flag", "foo.x"});
+        });
+
+        // Invalid option followed by valid options
+        assertThrows(IllegalArgumentException.class, () -> {
+            CompilerOptions.parse(new String[]{"--bad-option", "-L", "/lib", "foo.x"});
+        });
+
+        // Mix of valid, invalid, and file arguments
+        assertThrows(IllegalArgumentException.class, () -> {
+            RunnerOptions.parse(new String[]{"-J", "--unknown", "-M", "main", "Test.xtc"});
+        });
+    }
+
+    @Test
+    void testCustomUsageLines() {
+        CompilerOptions compilerOpts = new CompilerOptions.Builder().build();
+        String compilerUsage = compilerOpts.buildUsageLine("xtc");
+        assertTrue(compilerUsage.contains("xtc"));
+        assertTrue(compilerUsage.contains("source_files"));
+
+        RunnerOptions runnerOpts = new RunnerOptions.Builder().build();
+        String runnerUsage = runnerOpts.buildUsageLine("xec");
+        assertTrue(runnerUsage.contains("xec"));
+        assertTrue(runnerUsage.contains("module_or_file"));
+        assertTrue(runnerUsage.contains("args"));
+    }
+
+    @Test
+    void testConflictingOptionsStrictAndNowarn() {
+        // Test that --strict and --nowarn cannot be used together
+        String[] args = {"--strict", "--nowarn", "foo.x"};
+
+        // Should throw IllegalArgumentException due to mutually exclusive options
+        assertThrows(IllegalArgumentException.class, () -> CompilerOptions.parse(args),
+                "Expected parse to fail when both --strict and --nowarn are specified");
+    }
+
+    @Test
+    void testStrictOptionAlone() {
+        // Test that --strict works when used alone
+        String[] args = {"--strict", "foo.x"};
+        CompilerOptions opts = CompilerOptions.parse(args);
+
+        assertTrue(opts.isStrict());
+        assertFalse(opts.isNoWarn());
+    }
+
+    @Test
+    void testNowarnOptionAlone() {
+        // Test that --nowarn works when used alone
+        String[] args = {"--nowarn", "foo.x"};
+        CompilerOptions opts = CompilerOptions.parse(args);
+
+        assertFalse(opts.isStrict());
+        assertTrue(opts.isNoWarn());
     }
 
     // Helper

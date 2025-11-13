@@ -118,7 +118,7 @@ public class ResourceDir {
                 FileTime newTime = createdTime(file);
                 if (created == null) {
                     created = newTime;
-                } else if (newTime.compareTo(created) > 0) {
+                } else if (newTime != null && newTime.compareTo(created) > 0) {
                     created = newTime;
                 }
             }

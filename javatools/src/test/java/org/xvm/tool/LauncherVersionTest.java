@@ -90,20 +90,20 @@ public class LauncherVersionTest {
 
     @Test
     public void testXtcVersionOutput() {
-        // Test that xtc --version also works
+        // Test that xcc --version also works
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         PrintStream originalOut = System.out;
         System.setOut(new PrintStream(outputStream));
 
         try {
-            // Run xtc --version command
-            String[] args = {"xtc", "--version"};
+            // Run xcc --version command
+            String[] args = {"xcc", "--version"};
             Launcher.launch(args);
 
             String output = outputStream.toString().trim();
-            assertNotNull(output, "XTC version output should not be null");
+            assertNotNull(output, "XCC version output should not be null");
             assertTrue(output.startsWith("xdk version"),
-                      "XTC version output should also start with 'xdk version'");
+                      "XCC version output should also start with 'xdk version'");
         } finally {
             System.setOut(originalOut);
         }
