@@ -82,11 +82,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         // Capture at configuration time
         this.projectDirectory = objects.directoryProperty().value(project.getLayout().getProjectDirectory());
         this.xdkContentsDir = XtcProjectDelegate.getXdkContentsDir(project);
-        this.xdkFileTree = xdkContentsDir.map(dir -> {
-            final var tree = objects.fileTree();
-            tree.setDir(dir);
-            return tree;
-        });
+        this.xdkFileTree = xdkContentsDir.map(dir -> objects.fileTree().setDir(dir));
 
         final var sourceSets = XtcProjectDelegate.getSourceSets(project);
         this.sourceSetNames = sourceSets.stream().map(SourceSet::getName).toList();

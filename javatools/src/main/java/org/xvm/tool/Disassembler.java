@@ -1,27 +1,22 @@
 package org.xvm.tool;
 
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 
 import java.time.format.TextStyle;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
@@ -34,108 +29,135 @@ import org.xvm.asm.constants.UInt8ArrayConstant;
 import org.xvm.tool.LauncherOptions.DisassemblerOptions;
 
 import org.xvm.util.Handy;
-import org.xvm.util.Severity;
 
+import static java.time.ZoneOffset.UTC;
+import static java.util.Objects.requireNonNull;
 import static org.xvm.compiler.ast.FileExpression.createdTime;
 import static org.xvm.compiler.ast.FileExpression.modifiedTime;
-
 import static org.xvm.util.Handy.readFileBytes;
 import static org.xvm.util.Handy.readFileChars;
+import static org.xvm.util.Severity.ERROR;
+import static org.xvm.util.Severity.INFO;
 
 
 /**
  * The "disassemble" command:
- *
+ * <p>
  *  java org.xvm.tool.Disassembler xtc_path
  *
  */
-public class Disassembler
-        extends Launcher<DisassemblerOptions> {
+public class Disassembler extends Launcher<DisassemblerOptions> {
+    @SuppressWarnings("unused")
+    private static final byte FREE    = 0;
+    private static final byte DIR     = 1;
+    private static final byte FILE    = 2;
+    private static final byte EXISTS  = DIR | FILE;
+    private static final byte CLAIMED = 4;
+    private static final LocalDateTime SOON   = LocalDateTime.now().plusDays(1);
+    private static final LocalDateTime RECENT = LocalDateTime.now().minusMonths(6);
+
     /**
      * Entry point from the OS.
      *
      * @param asArg command line arguments
      */
-    public static void main(String[] asArg) {
+    static void main(String[] asArg) {
         try {
-            System.exit(new Disassembler(asArg).run());
+            System.exit(launch(asArg));
         } catch (LauncherException e) {
-            System.exit(e.error ? 1 : 0);
+            System.exit(e.getExitCode());
         }
     }
 
     /**
-     * Disassembler constructor.
+     * Programmatic entry point that returns an exit code instead of calling System.exit().
+     * Use this when calling the disassembler from a daemon or other long-running process.
      *
      * @param asArg command line arguments
+     * @return exit code (0 for success, non-zero for error)
      */
-    public Disassembler(String[] asArg) {
-        this(asArg, null);
+    public static int launch(String[] asArg) {
+        try {
+            DisassemblerOptions options = DisassemblerOptions.parse(asArg);
+            return new Disassembler(options, null, null).run();
+        } catch (IllegalArgumentException e) {
+            System.err.println("Error: " + e.getMessage());
+            return 1;
+        }
     }
 
     /**
-     * Disassembler constructor.
+     * Disassembler constructor for programmatic use.
      *
-     * @param asArg    command line arguments
-     * @param console  representation of the terminal within which this command is run
+     * @param options     pre-configured disassembler options
+     * @param console     representation of the terminal within which this command is run, or null
+     * @param errListener optional ErrorListener to receive errors, or null for no delegation
      */
-    public Disassembler (String[] asArg, Console console) {
-        super(DisassemblerOptions.parse(asArg), console, null);
+    public Disassembler(DisassemblerOptions options, Console console, ErrorListener errListener) {
+        super(options, console, errListener);
     }
 
     @Override
     protected void validateOptions() {
+        DisassemblerOptions options = options();
+
         // Validate the target file
-        File fileModule = m_options.getTarget();
+        File fileModule = options.getTarget();
         if (fileModule == null) {
-            log(Severity.ERROR, "No module file specified");
+            log(ERROR, "No module file specified");
             return;
         }
 
         if (!fileModule.exists()) {
-            log(Severity.ERROR, "Module file does not exist: " + fileModule);
+            log(ERROR, "Module file does not exist: " + fileModule);
         }
 
         // Validate the -L path of file(s)/dir(s)
-        validateModulePath(m_options.getModulePath());
+        validateModulePath(options.getModulePath());
     }
 
     @Override
     protected int process() {
-        File      fileModule = m_options.getTarget();
+        DisassemblerOptions options = options();
+        File      fileModule = options.getTarget();
         String    sModule    = fileModule.getName();
         Component component  = null;
+
         if (sModule.endsWith(".xtc")) {
             // it's a file
-            log(Severity.INFO, "Loading module file: " + sModule);
+            log(INFO, "Loading module file: " + sModule);
             try {
                 try (FileInputStream in = new FileInputStream(fileModule)) {
                     component = new FileStructure(in);
                 }
             } catch (IOException e) {
-                log(Severity.ERROR, "I/O exception (" + e + ") reading module file: " + fileModule);
+                log(ERROR, "I/O exception (" + e + ") reading module file: " + fileModule);
             }
         } else {
             // it's a module; set up the repository
-            log(Severity.INFO, "Creating and pre-populating library and build repositories");
-            ModuleRepository repo = configureLibraryRepo(m_options.getModulePath());
+            log(INFO, "Creating and pre-populating library and build repositories");
+            ModuleRepository repo = configureLibraryRepo(options.getModulePath());
             checkErrors();
 
-            log(Severity.INFO, "Loading module: " + sModule);
+            log(INFO, "Loading module: " + sModule);
             component = repo.loadModule(sModule);
         }
 
         if (component == null) {
-            log(Severity.ERROR, "Unable to load module: " + fileModule);
+            log(ERROR, "Unable to load module: " + fileModule);
         }
         checkErrors();
 
-        if (m_options.isListFiles()) {
-            dumpFiles(component);
-        } else if (m_options.getFindFile() != null) {
-            findFile(component, m_options.getFindFile());
-        } else {
-            component.visitChildren(this::dump, false, true);
+        if (component != null) {
+            File findFile = options.getFindFile();
+            if (options.isListFiles()) {
+                dumpFiles(component);
+            } else if (findFile != null) {
+                findFile(component, findFile);
+            } else {
+                component.visitChildren(this::dump, false, true);
+            }
+            component.getConstantPool();
         }
         return hasSeriousErrors() ? 1 : 0;
     }
@@ -154,14 +176,6 @@ public class Disassembler
             }
         }
     }
-
-    private static final byte FREE    = 0;
-    private static final byte DIR     = 1;
-    private static final byte FILE    = 2;
-    private static final byte EXISTS  = DIR | FILE;
-    private static final byte CLAIMED = 4;
-    private static final LocalDateTime SOON   = LocalDateTime.now().plusDays(1);
-    private static final LocalDateTime RECENT = LocalDateTime.now().minusMonths(6);
 
     public void dumpFiles(Component component) {
         Constant[] aconst  = component.getConstantPool().getConstants();
@@ -315,16 +329,15 @@ public class Disassembler
         // name
         buf.append(' ');
         if (linked) {
-            if (indent.length() > 0) {
-                buf.append(indent.substring(0, indent.length()-4))
-                   .append(" |  ");
+            if (!indent.isEmpty()) {
+                buf.append(indent, 0, indent.length() - 4).append(" |  ");
             }
             buf.append("-> ");
         } else {
             buf.append(indent);
         }
         String name = fsNode.getName();
-        if (name.length() == 0) {
+        if (name.isEmpty()) {
             buf.append('/');
         } else {
             Handy.appendString(buf, name);
@@ -342,7 +355,7 @@ public class Disassembler
                 FSNodeConstant[] aKidNodes  = fsNode.getDirectoryContents();
                 int              cKidNodes  = aKidNodes.length;
                 String           nextIndent = " |- ";
-                if (indent.length() > 0) {
+                if (!indent.isEmpty()) {
                     nextIndent = indent.substring(0, indent.length()-4)
                                + (last ? "    " : " |  ")
                                + nextIndent;
@@ -396,8 +409,8 @@ public class Disassembler
 
         // load the file metadata
         String   findName     = target.getName();
-        String   findCreated  = createdTime(target).toInstant().atOffset(ZoneOffset.UTC).toString();
-        String   findModified = modifiedTime(target).toInstant().atOffset(ZoneOffset.UTC).toString();
+        String   findCreated  = requireNonNull(createdTime(target)).toInstant().atOffset(UTC).toString();
+        String   findModified = requireNonNull(modifiedTime(target)).toInstant().atOffset(UTC).toString();
         int      findSize     = findBytes.length;
 
         ConstantPool pool = component.getConstantPool();
@@ -419,7 +432,7 @@ public class Disassembler
                 }
             }
             case String -> {
-                if (findString != null && ((StringConstant) constant).getValue().equals(findString)) {
+                if (((StringConstant) constant).getValue().equals(findString)) {
                     out("String constant [" + constant.getPosition() + "] matches file contents");
                     ++matches;
                 }
@@ -448,16 +461,9 @@ public class Disassembler
         return """
             Ecstasy disassembler:
 
-            Examines a compiled Ecstasy module.
-            
-            Note: The xam command will be removed, and replaced with an option on the xtc command.
+                Examines a compiled Ecstasy module.
 
-            Usage:
-
-                xam <options> <modulename>
-            or:
-                xam <options> <filename>.xtc
-            """;
+                Note: The xam command will be removed, and replaced with an option on the xtc command.""";
     }
 }
 

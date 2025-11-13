@@ -22,6 +22,7 @@ import java.io.File
 
 plugins {
     alias(libs.plugins.xdk.build.properties)  // Apply first to set group/version
+    alias(libs.plugins.xdk.build.java)  // Provides java plugin + test framework
     alias(libs.plugins.xtc)  // Apply after properties are set
     alias(libs.plugins.xdk.build.publishing)
     application
@@ -67,6 +68,8 @@ repositories {
 
 dependencies {
     xdkJavaTools(libs.javatools)
+    // Test dependencies for integration tests
+    testImplementation(libs.javatools)
     xdkJavaToolsJitBridge(libs.javatools.jitbridge)
     xtcModule(libs.xdk.ecstasy)
     xtcModule(libs.xdk.aggregate)
@@ -409,10 +412,20 @@ tasks.withType<Tar>().configureEach {
     archiveExtension = "tar.gz"
 }
 
-val test by tasks.existing {
-    doLast {
-        TODO("Implement response to the check lifecycle, probably some kind of aggregate XUnit.")
+// Configure test task to run integration tests after XDK is fully built
+tasks.test {
+    // Tests require the XDK to be fully installed with all XTC libraries
+    dependsOn(tasks.installDist)
+
+    useJUnitPlatform()
+
+    testLogging {
+        events("passed", "skipped", "failed")
+        showStandardStreams = true
     }
+
+    // Set working directory for tests
+    workingDir = projectDir
 }
 
 val withNativeLaunchersDistZip by tasks.existing {

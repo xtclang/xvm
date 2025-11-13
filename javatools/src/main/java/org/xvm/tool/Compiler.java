@@ -4,8 +4,6 @@ package org.xvm.tool;
 import java.io.File;
 import java.io.IOException;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -33,6 +31,10 @@ import org.xvm.util.Severity;
 import static org.xvm.compiler.Compiler.MODULE_MISSING;
 import static org.xvm.tool.ModuleInfo.isExplicitCompiledFile;
 import static org.xvm.util.Handy.resolveFile;
+import static org.xvm.util.Severity.ERROR;
+import static org.xvm.util.Severity.FATAL;
+import static org.xvm.util.Severity.INFO;
+import static org.xvm.util.Severity.WARNING;
 
 
 /**
@@ -100,26 +102,14 @@ import static org.xvm.util.Handy.resolveFile;
  * <li>{@code -v} / {@code --verbose} - provide information about the work being done by the compilation process</li>
  * </ul>
  */
-public class Compiler
-        extends Launcher<CompilerOptions> {
+public class Compiler extends Launcher<CompilerOptions> {
     /**
      * Entry point from the OS. Delegates to Launcher.
      *
      * @param asArg command line arguments
      */
-    public static void main(String[] asArg) {
+    static void main(String[] asArg) {
         Launcher.main(insertCommand("xcc", asArg));
-    }
-
-    /**
-     * Programmatic entry point. Delegates to Launcher.
-     *
-     * @param asArg command line arguments
-     * @param errListener ErrorListener to receive errors
-     * @return exit code
-     */
-    public static int launch(String[] asArg, ErrorListener errListener) {
-        return Launcher.launch("xcc", asArg, errListener);
     }
 
     /**
@@ -133,15 +123,6 @@ public class Compiler
         super(options, console, errListener);
     }
 
-    /**
-     * Compiler constructor (simplified, for programmatic use).
-     *
-     * @param options pre-configured compiler options
-     */
-    public Compiler(CompilerOptions options) {
-        this(options, null, null);
-    }
-
     @Override
     protected int process() {
         final var opts = options();
@@ -152,7 +133,6 @@ public class Compiler
 
         log(Severity.INFO, "Selecting compilation targets");
 
-        // source tree setup
         File[]       resourceDirs = options.getResourceLocation();
         File         outputLoc    = options.getOutputLocation();
         ModuleInfo[] aTarget      = selectTargets(options.getInputLocations(), resourceDirs, outputLoc).toArray(new ModuleInfo[0]);
@@ -176,7 +156,7 @@ public class Compiler
                     if (outputDir.exists()) {
                         // it needs to be a directory
                         if (!outputDir.isDirectory()) {
-                            log(Severity.ERROR, "The output file is " + outputLoc
+                            log(ERROR, "The output file is " + outputLoc
                                     + " but the parent directory cannot be created because"
                                     + " a file already exists with the same name");
                         }
@@ -192,33 +172,31 @@ public class Compiler
             File       srcFile = info.getSourceFile();
             File       binFile = info.getBinaryFile();
 
-            log(srcFile == null ? Severity.ERROR : Severity.INFO,
-                    "  [" + i + "]=" + srcFile == null ? "<unknown>" : srcFile.getPath());
+            log(srcFile == null ? ERROR : INFO, "  [" + i + "]=" + (srcFile == null ? "<unknown>" : srcFile.getPath()));
 
-            if (i == 1 && outputLoc != null && !outputLoc.isDirectory()
-                    && isExplicitCompiledFile(outputLoc.getName())) {
-                log(Severity.ERROR, "Multiple modules are being compiled, but only one output"
+            if (i == 1 && outputLoc != null && !outputLoc.isDirectory() && isExplicitCompiledFile(outputLoc.getName())) {
+                log(ERROR, "Multiple modules are being compiled, but only one output"
                         + " module file name (" + outputLoc + ") was specified;"
                         + " specify a target directory instead");
             }
 
             if (srcFile == null || !srcFile.exists()) {
-                log(Severity.ERROR, "Could not locate the source for the module " + info.getFileSpec());
+                log(ERROR, "Could not locate the source for the module " + info.getFileSpec());
             }
 
             if (sModule == null) {
-                log(Severity.ERROR, "Could not determine the module name for " + info.getFileSpec());
+                log(ERROR, "Could not determine the module name for " + info.getFileSpec());
             } else {
                 infoByName.put(sModule, info);
             }
 
             if (binFile == null) {
-                log(Severity.ERROR, "Could not determine the target location for " + info.getFileSpec()
+                log(ERROR, "Could not determine the target location for " + info.getFileSpec()
                         + "; the module project may be missing a \"build\" or \"target\" directory");
             } else {
                 File binDir = binFile.getParentFile();
                 if (!binDir.isDirectory() && binDir.exists()) {
-                    log(Severity.ERROR, "The output file " + binFile
+                    log(ERROR, "The output file " + binFile
                             + " cannot be written because its parent directory cannot be created"
                             + " because a file already exists with the same name");
                 }
@@ -228,12 +206,12 @@ public class Compiler
 
         boolean fRebuild = options.isForcedRebuild();
         Version verStamp = options.getVersion();
-        log(Severity.INFO, "Output-path=" + outputLoc + ", force-rebuild=" + fRebuild);
+        log(INFO, "Output-path=" + outputLoc + ", force-rebuild=" + fRebuild);
 
         Map<File, Node> mapTargets     = new ListMap<>(cTargets);
         int             cSystemModules = 0;
         for (ModuleInfo moduleInfo : aTarget) {
-            log(Severity.INFO, "Loading and parsing sources for module: "
+            log(INFO, "Loading and parsing sources for module: "
                     + moduleInfo.getQualifiedModuleName());
             Node node = moduleInfo.getSourceTree(this);
 
@@ -245,7 +223,7 @@ public class Compiler
                 }
             } else if (verStamp != null && !verStamp.equals(moduleInfo.getModuleVersion())) {
                 // recompile is not required, but the version stamp needs to be added
-                log(Severity.INFO, "Stamping version " + verStamp
+                log(INFO, "Stamping version " + verStamp
                         + " onto module: " + moduleInfo.getQualifiedModuleName());
                 addVersion(moduleInfo, verStamp);
             }
@@ -253,7 +231,7 @@ public class Compiler
         checkErrors();
 
         if (mapTargets.isEmpty()) {
-            log(Severity.INFO, "All modules are up to date; terminating compiler");
+            log(INFO, "All modules are up to date; terminating compiler");
             return 0;
         }
 
@@ -265,7 +243,7 @@ public class Compiler
         checkErrors();
 
         if (cSystemModules == 0) {
-            log(Severity.INFO, "Pre-loading and linking system libraries");
+            log(INFO, "Pre-loading and linking system libraries");
             prelinkSystemLibraries(repoLib);
         }
         prevLibs = repoLib;
@@ -276,11 +254,11 @@ public class Compiler
         checkErrors();
 
         // the code below could be extracted if necessary: compile(allNodes, repoLib, repoOutput);
-        log(Severity.INFO, "Creating empty modules and populating namespaces");
+        log(INFO, "Creating empty modules and populating namespaces");
         Map<String, org.xvm.compiler.Compiler> mapCompilers = populateNamespace(allNodes, repoLib);
         flushAndCheckErrors(allNodes);
 
-        log(Severity.INFO, "Resolving names and dependencies");
+        log(INFO, "Resolving names and dependencies");
         org.xvm.compiler.Compiler[] compilers = mapCompilers.values().toArray(NO_COMPILERS);
         linkModules(compilers, repoLib);
         flushAndCheckErrors(allNodes);
@@ -291,27 +269,27 @@ public class Compiler
         injectNativeTurtle(repoLib);
         checkErrors();
 
-        log(Severity.INFO, "Validating expressions");
+        log(INFO, "Validating expressions");
         validateExpressions(compilers);
         flushAndCheckErrors(allNodes);
 
-        log(Severity.INFO, "Generating code");
+        log(INFO, "Generating code");
         generateCode(compilers);
         flushAndCheckErrors(allNodes);
 
         if (allNodes.length == 1) {
-            log(Severity.INFO, "Storing results of compilation: " + allNodes[0].moduleInfo().getBinaryFile());
+            log(INFO, "Storing results of compilation: " + allNodes[0].moduleInfo().getBinaryFile());
         } else {
-            log(Severity.INFO, "Storing results of compilation:");
+            log(INFO, "Storing results of compilation:");
             for (Node node : allNodes) {
                 ModuleInfo info = node.moduleInfo();
-                log(Severity.INFO, "  " + info.getQualifiedModuleName() + " -> " + info.getBinaryFile());
+                log(INFO, "  " + info.getQualifiedModuleName() + " -> " + info.getBinaryFile());
             }
         }
         emitModules(allNodes, repoOutput);
         flushAndCheckErrors(allNodes);
 
-        log(Severity.INFO, "Finished; terminating compiler");
+        log(INFO, "Finished; terminating compiler");
         return hasSeriousErrors() ? 1 : 0;
     }
 
@@ -338,7 +316,7 @@ public class Compiler
     }
 
     /**
-     * Link all of the AST objects for each module into a single parse tree, and create the outline
+     * Link all the AST objects for each module into a single parse tree, and create the outline
      * of the finished FileStructure.
      *
      * @param allNodes  the array of module sources being compiled
@@ -353,7 +331,7 @@ public class Compiler
         for (Node node : allNodes) {
             // create a module/package/class structure for each dir/file node in the "module tree"
             if (node.type().getCategory().getId() != Token.Id.MODULE) {
-                log(Severity.ERROR, "File \"" + node + "\" doesn't contain a module statement");
+                log(ERROR, "File \"" + node + "\" doesn't contain a module statement");
                 continue;
             }
 
@@ -365,7 +343,7 @@ public class Compiler
 
             String name = struct.getModuleId().getName();
             if (mapCompilers.containsKey(name)) {
-                log(Severity.ERROR, "Duplicate module name: \"" + name + "\"");
+                log(ERROR, "Duplicate module name: \"" + name + "\"");
                 continue;
             }
 
@@ -378,7 +356,7 @@ public class Compiler
                 repo.storeModule(struct.getModule());
                 assert repoBuild.loadModule(name) != null;
             } catch (IOException e) {
-                log(Severity.FATAL, e.toString());
+                log(FATAL, e.toString());
             }
         }
 
@@ -392,8 +370,8 @@ public class Compiler
      */
     protected ModuleRepository ensureLibraryRepo() {
         if (repoLib == null) {
-            log(Severity.INFO, "Creating and pre-populating library and build repositories");
-            repoLib = configureLibraryRepo(m_options.getModulePath());
+            log(INFO, "Creating and pre-populating library and build repositories");
+            repoLib = configureLibraryRepo(options().getModulePath());
         }
         return repoLib;
     }
@@ -407,8 +385,7 @@ public class Compiler
         for (var compiler : compilers) {
             ModuleConstant idMissing = compiler.linkModules(repo);
             if (idMissing != null) {
-                compiler.getErrorListener().log(Severity.FATAL,
-                        MODULE_MISSING, new String[]{idMissing.getName()}, null);
+                compiler.getErrorListener().log(FATAL, MODULE_MISSING, new String[]{idMissing.getName()}, null);
                 return;
             }
         }
@@ -489,7 +466,7 @@ public class Compiler
                     System.err.println("Failed to generate code for " + compiler);
                     e.printStackTrace(System.err);
 
-                    log(Severity.ERROR, "Failed to generate code for " + compiler
+                    log(ERROR, "Failed to generate code for " + compiler
                             + " due to exception: " + e);
                 }
             }
@@ -504,7 +481,8 @@ public class Compiler
         }
     }
 
-    protected boolean addVersion(ModuleInfo info, Version ver) {
+    @SuppressWarnings("UnusedReturnValue")
+    private boolean addVersion(ModuleInfo info, Version ver) {
         File fileBin = info.getBinaryFile();
         try {
             FileStructure struct = new FileStructure(fileBin);
@@ -512,7 +490,7 @@ public class Compiler
             struct.writeTo(fileBin);
             return true;
         } catch (IOException e) {
-            log(Severity.ERROR, "Failed to stamp version " + ver + " onto file " + fileBin);
+            log(ERROR, "Failed to stamp version " + ver + " onto file " + fileBin);
             return false;
         }
     }
@@ -521,7 +499,7 @@ public class Compiler
      * Emit the results of compilation.
      */
     protected void emitModules(Node[] allNodes, ModuleRepository repoOutput) {
-        CompilerOptions options = m_options;
+        CompilerOptions options = options();
         Version version = options.getVersion();
         for (Node nodeModule : allNodes) {
             ModuleStructure module = (ModuleStructure) nodeModule.type().getComponent();
@@ -535,13 +513,13 @@ public class Compiler
                 try {
                     repoOutput.storeModule(module);
                 } catch (IOException e) {
-                    log(Severity.FATAL, e.toString());
+                    log(FATAL, e.toString());
                 }
             } else {
                 // figure out where to put the resulting module
                 File file = nodeModule.file().getParentFile();
                 if (file == null) {
-                    log(Severity.ERROR, "Unable to determine output location for module \""
+                    log(ERROR, "Unable to determine output location for module \""
                             + nodeModule.name() + "\" from file :" + nodeModule.file());
                     continue;
                 }
@@ -563,7 +541,7 @@ public class Compiler
                 try {
                     struct.writeTo(file);
                 } catch (IOException e) {
-                    log(Severity.FATAL, "Exception (" + e
+                    log(FATAL, "Exception (" + e
                             + ") occurred while attempting to write module file \""
                             + file.getAbsolutePath() + "\"");
                 }
@@ -605,44 +583,41 @@ public class Compiler
         return """
             Ecstasy compiler:
 
-            Converts ".x" files into a compiled ".xtc" Ecstasy module.
-
-            Usage:
-
-                xcc <options> <filename>.x ...""";
+                Converts ".x" files into a compiled ".xtc" Ecstasy module.""";
     }
 
     @Override
     protected boolean isBadEnoughToPrint(Severity sev) {
-        if (m_options.verbose()) {
+        if (options().verbose()) {
             return true;
         }
 
         return switch (strictLevel) {
-            case None, Suppressed -> sev.compareTo(Severity.ERROR) >= 0;
-            case Normal, Stickler -> sev.compareTo(Severity.WARNING) >= 0;
+            case None, Suppressed -> sev.compareTo(ERROR) >= 0;
+            case Normal, Stickler -> sev.compareTo(WARNING) >= 0;
         };
     }
 
     @Override
     protected boolean isBadEnoughToAbort(Severity sev) {
-        Severity limit = strictLevel == Strictness.Stickler ? Severity.WARNING : Severity.ERROR;
-        return sev.compareTo(limit) >= 0;
+        return sev.compareTo(strictLevel == Strictness.Stickler ? WARNING : ERROR) >= 0;
     }
 
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @SuppressWarnings("unused")
     public ModuleInfo[] getModuleInfos() {
         return prevModules;
     }
 
     public ModuleRepository getLibraryRepo() {
         return prevLibs == null
-                ? configureLibraryRepo(m_options.getModulePath())
+                ? configureLibraryRepo(options().getModulePath())
                 : prevLibs;
     }
 
+    @SuppressWarnings("unused")
     public ModuleRepository getOutputRepo() {
         return prevOutput == null
                 ? getLibraryRepo()
@@ -654,14 +629,13 @@ public class Compiler
 
     @Override
     protected void validateOptions() {
-        CompilerOptions opts = m_options;
+        CompilerOptions opts = options();
 
         // Set strictness level based on options
+        // Note: --strict and --nowarn are mutually exclusive (enforced by OptionGroup in LauncherOptions), so we
+        // do not need to check if nowarn and strict are both set and conflicting.
         if (opts.isStrict()) {
             strictLevel = Strictness.Stickler;
-            if (opts.isNoWarn()) {
-                log(Severity.ERROR, "Conflicting options specified: \"--strict\" and \"--nowarn\"");
-            }
         } else if (opts.isNoWarn()) {
             strictLevel = Strictness.Suppressed;
         }
@@ -683,10 +657,9 @@ public class Compiler
         validateModuleOutput(opts.getOutputLocation(), listInputs.size() > 1);
     }
 
-
     // ----- constants -----------------------------------------------------------------------------
 
-    protected enum Strictness {None, Suppressed, Normal, Stickler}
+    protected enum Strictness { None, Suppressed, Normal, Stickler }
 
     protected static org.xvm.compiler.Compiler[] NO_COMPILERS = new org.xvm.compiler.Compiler[0];
 

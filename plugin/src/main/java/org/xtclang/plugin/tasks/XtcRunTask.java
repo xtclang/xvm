@@ -236,6 +236,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
                 """);
         }
 
+        // TODO: This should not send the class name to the command line.
         final var cmd = new CommandLine(XTC_RUNNER_CLASS_NAME, resolveJvmArgs());
         cmd.addBoolean("--version", getShowVersion().get());
         cmd.addBoolean("--verbose", getVerbose().get());

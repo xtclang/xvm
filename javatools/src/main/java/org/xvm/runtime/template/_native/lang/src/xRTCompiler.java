@@ -66,8 +66,7 @@ import org.xvm.util.Severity;
 /**
  * Native xRTCompiler implementation.
  */
-public class xRTCompiler
-        extends xService {
+public class xRTCompiler extends xService {
     public static xRTCompiler INSTANCE;
 
     public xRTCompiler(Container container, ClassStructure structure, boolean fInstance) {
@@ -311,8 +310,8 @@ public class xRTCompiler
         protected CompilerAdapter(ErrorListener errListener) {
             // Build minimal immutable options - adapter overrides access via its own fields
             super(new CompilerOptions.Builder()
-                    .rebuild(true)
-                    .qualify(true)
+                    .forceRebuild()
+                    .qualifyOutputNames()
                     .build(), null, errListener);
         }
 
@@ -378,7 +377,7 @@ public class xRTCompiler
                 repoOutput = m_repoOutput;
                 allNodes   = m_allNodes;
             } else {
-                // Use adapter's fields directly, not m_options
+                // Use adapter's fields directly, not options()
                 File[]           resourceDirs = ModuleInfo.NO_FILES;
                 File             fileOutput   = null;
                 List<ModuleInfo> listTargets  = selectTargets(getSourceLocations(), resourceDirs, fileOutput);
@@ -489,7 +488,7 @@ public class xRTCompiler
         @Override
         protected void linkModules(org.xvm.compiler.Compiler[] compilers, ModuleRepository repo) {
             // inlined; should not be called
-            throw new IllegalStateException();
+            throw new IllegalStateException("linkModules");
         }
 
         @Override
@@ -509,8 +508,8 @@ public class xRTCompiler
         }
 
         @Override
-        protected void abort(boolean fError) {
-            throw new CompilerException("");
+        protected LauncherException abort(boolean fError) {
+            return new CompilerException("");
         }
 
         // ----- fields ----------------------------------------------------------------------------

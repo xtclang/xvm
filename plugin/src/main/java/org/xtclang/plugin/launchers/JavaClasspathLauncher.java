@@ -78,47 +78,6 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
     }
 
     /**
-     * Compiles using the bridge's compile() method with XtcCompileTask.
-     *
-     * @param compileTask the XtcCompileTask with configuration
-     * @return the execution result
-     */
-    public ExecResult compile(final org.xtclang.plugin.tasks.XtcCompileTask compileTask) {
-        logger.info("[plugin] Compiling via bridge (project version: {})", context.getProjectVersion());
-        final var javaToolsJar = resolveJavaTools(context.getProjectVersion(), context.getJavaToolsConfig(), context.getXdkFileTree(), logger);
-        logger.lifecycle("[plugin] Invoking compiler via bridge.compile() (no fork)");
-
-        try {
-            try (URLClassLoader bridgeClassLoader = getBridgeClassLoader(javaToolsJar)) {
-                final Class<?> bridgeClass = bridgeClassLoader.loadClass("org.xtclang.plugin.javatools.JavaToolsBridge");
-                final Object bridge = bridgeClass.getDeclaredConstructor().newInstance();
-
-                // Get compile method that takes XtcCompileTask
-                final Class<?> xtcCompileTaskClass = Class.forName("org.xtclang.plugin.tasks.XtcCompileTask");
-                final Method compileMethod = bridgeClass.getMethod("compile", xtcCompileTaskClass);
-                final Object result = compileMethod.invoke(bridge, compileTask);
-
-                // Extract results from BridgeResult
-                final Class<?> resultClass = result.getClass();
-                final boolean success = (Boolean) resultClass.getField("success").get(result);
-                final int exitCode = (Integer) resultClass.getField("exitCode").get(result);
-                final String errorMessage = (String) resultClass.getField("errorMessage").get(result);
-
-                if (success) {
-                    logger.info("[plugin] Compilation completed successfully");
-                    return SimpleExecResult.success(exitCode);
-                }
-                logger.error("[plugin] Compilation failed with exit code: {}", exitCode);
-                final GradleException gradleException = new GradleException("XTC compilation failed: " + errorMessage);
-                return SimpleExecResult.failure(exitCode, gradleException);
-            }
-        } catch (final Exception e) {
-            logger.error("[plugin] Bridge compilation failed with exception", e);
-            return SimpleExecResult.failure(-1, e);
-        }
-    }
-
-    /**
      * Logs detailed information about the launch command.
      *
      * @param cmd The command line to execute

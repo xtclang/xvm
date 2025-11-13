@@ -163,7 +163,6 @@ public class ModuleInfo {
                 break;
             }
 
-            assert binCount == 0;
             if (srcCount == 0) {
                 // no source files, no binary files, so start looking for the project directory from
                 // this point

@@ -46,6 +46,7 @@ public class ModuleInfoRepository
     /**
      * @return true iff read-only
      */
+    @SuppressWarnings("unused")
     public boolean isReadOnly() {
         return readOnly;
     }
