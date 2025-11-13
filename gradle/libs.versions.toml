@@ -12,8 +12,9 @@
 # in a typesafe way, e.g. alias(libs.versions) for a plugin. Or
 # libs.versions.xdkVersion version number.
 #
+
 [versions]
-# Third party dependency versions
+apache-commons-cli = "1.10.0"
 download = "5.6.0"
 gradle-doctor = "0.12.1"
 gradle-portal-publish = "2.0.0"
@@ -71,6 +72,7 @@ javatools-turtle = { group = "org.xtclang", name = "javatools-turtle" }
 javatools-unicode = { group = "org.xtclang", name = "javatools-unicode" }
 javatools-utils = { group = "org.xtclang", name = "javatools-utils" }
 
+apache-commons-cli = { module = "commons-cli:commons-cli", version.ref = "apache-commons-cli" }
 jakarta-activation-api = { module = "jakarta.activation:jakarta.activation-api", version.ref = "jakarta-activation" }
 jakarta-xml-bind-api = { module = "jakarta.xml.bind:jakarta.xml.bind-api", version.ref = "jakarta-xml-bind-api" }
 jaxb-runtime = { module = "org.glassfish.jaxb:jaxb-runtime", version.ref = "jaxb-runtime" }

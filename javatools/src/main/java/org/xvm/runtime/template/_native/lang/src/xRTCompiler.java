@@ -11,6 +11,7 @@ import java.util.Map;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileRepository;
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.MethodStructure;
@@ -54,6 +55,7 @@ import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTe
 import org.xvm.runtime.template._native.reflect.xRTFileTemplate;
 
 import org.xvm.tool.Compiler;
+import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.ModuleInfo;
 import org.xvm.tool.ModuleInfo.Node;
 
@@ -95,7 +97,7 @@ public class xRTCompiler
     public ServiceHandle createServiceHandle(ServiceContext context, ClassComposition clz,
                                              TypeConstant typeMask) {
         CompilerHandle hCompiler =
-                new CompilerHandle(clz.maskAs(typeMask), context, new CompilerAdapter());
+                new CompilerHandle(clz.maskAs(typeMask), context, new CompilerAdapter(null));
         context.setService(hCompiler);
         return hCompiler;
     }
@@ -306,8 +308,12 @@ public class xRTCompiler
      */
     protected static class CompilerAdapter
             extends Compiler {
-        protected CompilerAdapter() {
-            super(null);
+        protected CompilerAdapter(ErrorListener errListener) {
+            // Build minimal immutable options - adapter overrides access via its own fields
+            super(new CompilerOptions.Builder()
+                    .rebuild(true)
+                    .qualify(true)
+                    .build(), null, errListener);
         }
 
         // ----- accessors -------------------------------------------------------------------------
@@ -372,10 +378,11 @@ public class xRTCompiler
                 repoOutput = m_repoOutput;
                 allNodes   = m_allNodes;
             } else {
-                File[]           resourceDirs = options().getResourceLocation();
-                File             fileOutput   = options().getOutputLocation();
-                List<ModuleInfo> listTargets  = selectTargets(options().getInputLocations(), resourceDirs, fileOutput);
-                boolean          fRebuild     = options().isForcedRebuild();
+                // Use adapter's fields directly, not m_options
+                File[]           resourceDirs = ModuleInfo.NO_FILES;
+                File             fileOutput   = null;
+                List<ModuleInfo> listTargets  = selectTargets(getSourceLocations(), resourceDirs, fileOutput);
+                boolean          fRebuild     = isForcedRebuild();
                 checkErrors();
 
                 Map<File, Node> mapTargets     = new ListMap<>(listTargets.size());
@@ -400,8 +407,8 @@ public class xRTCompiler
                 allNodes = mapTargets.values().toArray(new Node[0]);
                 flushAndCheckErrors(allNodes);
 
-                // repository setup
-                repoLib = configureLibraryRepo(options().getModulePath());
+                // repository setup - adapter sets repos via setLibraryRepos, not via module path
+                repoLib = configureLibraryRepo(null);
                 checkErrors();
 
                 if (cSystemModules == 0) {
@@ -504,39 +511,6 @@ public class xRTCompiler
         @Override
         protected void abort(boolean fError) {
             throw new CompilerException("");
-        }
-
-        // ----- Options adapter -------------------------------------------------------------------
-
-        @Override
-        protected Compiler.Options instantiateOptions() {
-            return new Options();
-        }
-
-        /**
-         * A non-command-line Options implementation.
-         */
-        class Options
-                extends Compiler.Options {
-            @Override
-            public List<File> getInputLocations() {
-                return CompilerAdapter.this.getSourceLocations();
-            }
-
-            @Override
-            public Version getVersion() {
-                return CompilerAdapter.this.getVersion();
-            }
-
-            @Override
-            public boolean isOutputFilenameQualified() {
-                return true;
-            }
-
-            @Override
-            public boolean isForcedRebuild() {
-                return CompilerAdapter.this.isForcedRebuild();
-            }
         }
 
         // ----- fields ----------------------------------------------------------------------------

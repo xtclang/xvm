@@ -680,7 +680,7 @@ public class ModuleInfo {
         }
 
         if (errs == null) {
-            errs = new ErrorList(100);
+            errs = new ErrorList();
         }
 
         if (sourceIsTree) {

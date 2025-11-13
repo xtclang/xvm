@@ -56,6 +56,26 @@ public interface ErrorListener {
     }
 
     /**
+     * Handles the logging of an error that originates in Ecstasy source code.
+     * Varargs version for cleaner call sites.
+     *
+     * @param severity    the severity level of the error; one of
+     *                    {@link Severity#INFO}, {@link Severity#WARNING},
+     *                    {@link Severity#ERROR}, or {@link Severity#FATAL}
+     * @param sCode       the error code that identifies the error message
+     * @param source      the source code (optional)
+     * @param lPosStart   the position in the source where the error was detected
+     * @param lPosEnd     the position in the source at which the error concluded
+     * @param aoParam     the parameters for the error message (varargs)
+     *
+     * @return true to attempt to abort the process that reported the error, or
+     *         false to attempt to continue the process
+     */
+    default boolean log(Severity severity, String sCode, Source source, long lPosStart, long lPosEnd, Object... aoParam) {
+        return log(new ErrorInfo(severity, sCode, aoParam, source, lPosStart, lPosEnd));
+    }
+
+    /**
      * Handles the logging of an error that originates in an Ecstasy XVM structure.
      *
      * @param severity    the severity level of the error; one of
@@ -70,6 +90,25 @@ public interface ErrorListener {
      *         false to attempt continue the process
      */
     default boolean log(Severity severity, String sCode, Object[] aoParam, XvmStructure xs) {
+        return log(new ErrorInfo(severity, sCode, aoParam, xs));
+    }
+
+    /**
+     * Handles the logging of an error that originates in an Ecstasy XVM structure.
+     * Varargs version for cleaner call sites.
+     *
+     * @param severity    the severity level of the error; one of
+     *                    {@link Severity#INFO}, {@link Severity#WARNING,
+     *                    {@link Severity#ERROR}, or {@link Severity#FATAL}
+     * @param sCode       the error code that identifies the error message
+     * @param xs          the XvmStructure that the error is related to; may
+     *                    be null
+     * @param aoParam     the parameters for the error message (varargs)
+     *
+     * @return true to attempt to abort the process that reported the error, or
+     *         false to attempt continue the process
+     */
+    default boolean log(Severity severity, String sCode, XvmStructure xs, Object... aoParam) {
         return log(new ErrorInfo(severity, sCode, aoParam, xs));
     }
 

@@ -189,7 +189,8 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         return getObjects().directoryProperty().value(getResourceDirectoryInternal());
     }
 
-    private Directory getResourceDirectoryInternal() {
+    @Internal
+    public Directory getResourceDirectoryInternal() {
         return cachedResourceDirectory;
     }
 
@@ -198,8 +199,9 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         // TODO We can make this configurable later.
         return getObjects().directoryProperty().value(getOutputDirectoryInternal());
     }
-    
-    private Directory getOutputDirectoryInternal() {
+
+    @Internal
+    public Directory getOutputDirectoryInternal() {
         return cachedOutputDirectory;
     }
 
@@ -224,45 +226,14 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
 
         final var logger = getLogger();
         final var sourceSetName = getCompileSourceSetName();
-        final var args = new CommandLine(XTC_COMPILER_CLASS_NAME, resolveJvmArgs());
 
-        final File outputDir = getOutputDirectoryInternal().getAsFile();
-        args.add("-o", projectDirectory.get().getAsFile().toPath().relativize(outputDir.toPath()).toString());
-
-        logger.info("[plugin] Output directory for {} is : {}", sourceSetName, outputDir);
-        final var processedResourcesDir = getResourceDirectoryInternal().getAsFile();
-        logger.info("[plugin] Resolving resource dir (build): '{}'.", processedResourcesDir);
-        if (processedResourcesDir.exists()) {
-            logger.info("[plugin] '{}' Added as resource directory for '{}'.", processedResourcesDir.getAbsolutePath(), getName());
-            args.add("-r", projectDirectory.get().getAsFile().toPath().relativize(processedResourcesDir.toPath()).toString());
-        }
-
-        args.addBoolean("--version", getShowVersion().get());
-        args.addBoolean("--rebuild", getRebuild().get());
-        args.addBoolean("--nowarn", getDisableWarnings().get());
-        args.addBoolean("--verbose", getVerbose().get());
-        args.addBoolean("--strict", getStrict().get());
-        args.addBoolean("--qualify", getQualifiedOutputName().get());
-
-        // If xtcVersion is set, we stamp that, otherwise we ignore it for now. It may be that we should stamp as xcc version used to compile if not given?
-        final String moduleVersion = resolveModuleVersion();
-        if (moduleVersion != null) {
-            if (hasVerboseLogging()) {
-                logger.lifecycle("[plugin] Stamping XTC module with version: '{}'", moduleVersion);
-            }
-            args.add("--set-version", semanticVersion(moduleVersion));
-        }
-        args.addRepeatedRelative("-L", resolveFullModulePath(), projectDirectory.get().getAsFile());
-        final var sourceFiles = resolveXtcSourceFiles().stream()
-                .map(file -> projectDirectory.get().getAsFile().toPath().relativize(file.toPath()).toString())
-                .sorted().toList();
-        if (sourceFiles.isEmpty()) {
-            logger.warn("[plugin] No source file found for source set: '{}'", sourceSetName);
-        }
-        sourceFiles.forEach(args::addRaw);
-
+        // Use bridge compile() method instead of building args
         final var launcher = createLauncher();
-        handleExecResult(launcher.apply(args));
+        if (launcher instanceof org.xtclang.plugin.launchers.JavaClasspathLauncher<?, ?> javaLauncher) {
+            handleExecResult(javaLauncher.compile(this));
+        } else {
+            throw new IllegalStateException("Expected JavaClasspathLauncher but got " + launcher.getClass());
+        }
         finalizeOutputs();
     }
 
@@ -270,7 +241,8 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         return version.endsWith("-SNAPSHOT") ? version.replace("-SNAPSHOT", "+SNAPSHOT") : version;
     }
 
-    private String resolveModuleVersion() {
+    @Internal
+    public String resolveModuleVersion() {
         // TODO: We need to tell the plugin, when we build it, which version it has from the catalog.
         //    This is actually the XTC artifact that needs to be asked its version. The launcher? the xdk dependency? Figure this one out.
         if (getXtcVersion().isPresent()) {
@@ -305,7 +277,8 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         throw new GradleException("Failed to rename '" + oldFile + "' to '" + newFile + "'. Output file already exists and could not be deleted: '" + newFile.getAbsoluteFile() + "'");
     }
 
-    private Set<File> resolveXtcSourceFiles() {
+    @Internal
+    public Set<File> resolveXtcSourceFiles() {
         final var resolvedSources = getSource().filter(this::isTopLevelXtcSourceFile).getFiles();
         logger.info("[plugin] Resolved top level sources (should be module definitions, or XTC will fail later): {}", resolvedSources);
         return resolvedSources;

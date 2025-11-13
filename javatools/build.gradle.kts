@@ -27,6 +27,7 @@ val xdkJavaToolsProvider by configurations.registering {
 dependencies {
     implementation(libs.javatools.utils)
     implementation(libs.jline)
+    implementation(libs.apache.commons.cli)
     testImplementation(libs.javatools.utils)
 }
 

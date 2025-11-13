@@ -18,6 +18,10 @@ public class ErrorList
         implements ErrorListener {
     // ----- constructors --------------------------------------------------------------------------
 
+    public ErrorList() {
+        this(0);
+    }
+
     public ErrorList(int cMaxErrors) {
         f_cMaxErrors = cMaxErrors;
     }
