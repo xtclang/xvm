@@ -25,6 +25,7 @@
 \.#*
 *~
 TAGS
+
 # Makefile generated make-depends for XTC files
 *.d
 
@@ -72,6 +73,7 @@ prj/
 *.new
 *.bak
 *.backup
+*.jasm
 
 # Eventually, after code reformatting and package renaming, we want an .editorconfig in the root.
 # Right now, to phase that in, we allow an .editorconfig symlink in the root pointing out another
