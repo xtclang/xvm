@@ -351,5 +351,4 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         // jvmArgs("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005")
         return Collections.unmodifiableList(list);
     }
-
 }
