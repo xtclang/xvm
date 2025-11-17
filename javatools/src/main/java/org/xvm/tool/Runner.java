@@ -106,9 +106,10 @@ public class Runner
 
         final File fileSpec = options.getTarget();
         if (fileSpec == null) {
-            if (!fShowVer) {
-                displayHelp();
+            if (fShowVer) {
+                return 0;
             }
+            displayHelp();
             return 1;
         }
 

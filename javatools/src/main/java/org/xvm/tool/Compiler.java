@@ -149,7 +149,6 @@ public class Compiler
     protected int process() {
         if (options().showVersion()) {
             showSystemVersion(ensureLibraryRepo());
-            return 0;
         }
 
         // source tree setup
@@ -162,9 +161,11 @@ public class Compiler
 
         int cTargets = aTarget.length;
         if (cTargets == 0) {
-            if (!options().showVersion()) {
-                displayHelp();
+            if (options().showVersion()) {
+                return 0;
             }
+
+            displayHelp();
             return 1;
         }
 
