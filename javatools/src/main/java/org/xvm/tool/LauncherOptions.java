@@ -24,6 +24,14 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.help.HelpFormatter;
 import org.apache.commons.cli.help.TextHelpAppendable;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
+
 import static org.apache.commons.cli.Option.builder;
 
 /**
@@ -245,6 +253,93 @@ public abstract class LauncherOptions {
         getModulePath().stream()
                 .map(File::getPath)
                 .forEach(path -> args.addAll(List.of("-L", path)));
+        return args.toArray(String[]::new);
+    }
+
+    /**
+     * Convert this options instance to JSON for configuration files or IPC.
+     * Automatically serializes all parsed options by introspecting the CommandLine.
+     *
+     * @return JSON string representation (pretty-printed with 2-space indent)
+     */
+    public String toJson() {
+        JsonObject json = new JsonObject();
+
+        // Iterate through the schema to get ALL option values (handles repeated options like -L)
+        for (var schemaOpt : schema.getOptions()) {
+            String key = schemaOpt.getLongOpt() != null ? schemaOpt.getLongOpt() : schemaOpt.getOpt();
+
+            if (!schemaOpt.hasArg()) {
+                // Boolean flag - check if present
+                if (commandLine.hasOption(key)) {
+                    json.addProperty(key, true);
+                }
+            } else {
+                // Option with values - use getOptionValues to get ALL values (handles repeated options)
+                String[] values = commandLine.getOptionValues(key);
+                if (values != null && values.length > 0) {
+                    if (values.length == 1) {
+                        json.addProperty(key, values[0]);
+                    } else {
+                        JsonArray arr = new JsonArray();
+                        for (String val : values) arr.add(val);
+                        json.add(key, arr);
+                    }
+                }
+            }
+        }
+
+        // Add trailing args if present
+        String[] trailing = getTrailingArgs();
+        if (trailing.length > 0) {
+            JsonArray arr = new JsonArray();
+            for (String arg : trailing) arr.add(arg);
+            json.add("args", arr);
+        }
+
+        return new GsonBuilder().setPrettyPrinting().create().toJson(json);
+    }
+
+    /**
+     * Convert JSON back to command-line arguments.
+     * Automatically reconstructs args from any JSON using the schema.
+     *
+     * @param jsonString the JSON configuration
+     * @param schema the Options schema
+     * @return array of command-line arguments
+     */
+    protected static String[] jsonToArgs(String jsonString, Options schema) {
+        JsonObject json = JsonParser.parseString(jsonString).getAsJsonObject();
+        List<String> args = new ArrayList<>();
+
+        // Process each option from schema
+        for (var opt : schema.getOptions()) {
+            String key = opt.getLongOpt() != null ? opt.getLongOpt() : opt.getOpt();
+            if (!json.has(key)) continue;
+
+            String flag = (opt.getLongOpt() != null ? "--" : "-") + key;
+            JsonElement value = json.get(key);
+
+            if (value.isJsonPrimitive() && value.getAsJsonPrimitive().isBoolean()) {
+                if (value.getAsBoolean()) args.add(flag);
+            } else if (value.isJsonArray()) {
+                for (JsonElement elem : value.getAsJsonArray()) {
+                    args.add(flag);
+                    args.add(elem.getAsString());
+                }
+            } else {
+                args.add(flag);
+                args.add(value.getAsString());
+            }
+        }
+
+        // Add trailing args
+        if (json.has("args")) {
+            for (JsonElement elem : json.getAsJsonArray("args")) {
+                args.add(elem.getAsString());
+            }
+        }
+
         return args.toArray(String[]::new);
     }
 
@@ -536,6 +631,16 @@ public abstract class LauncherOptions {
                     .forEach(args::add);
 
             return args.toArray(String[]::new);
+        }
+
+        /**
+         * Create CompilerOptions from JSON string.
+         *
+         * @param jsonString the JSON configuration
+         * @return CompilerOptions instance
+         */
+        public static CompilerOptions fromJson(String jsonString) {
+            return CompilerOptions.parse(jsonToArgs(jsonString, COMPILER_OPTIONS));
         }
 
         /**
@@ -835,6 +940,16 @@ public abstract class LauncherOptions {
         }
 
         /**
+         * Create RunnerOptions from JSON string.
+         *
+         * @param jsonString the JSON configuration
+         * @return RunnerOptions instance
+         */
+        public static RunnerOptions fromJson(String jsonString) {
+            return RunnerOptions.parse(jsonToArgs(jsonString, RUNNER_OPTIONS));
+        }
+
+        /**
          * Builder for constructing RunnerOptions programmatically.
          * Builds a synthetic command-line array and parses it.
          */
@@ -1019,8 +1134,6 @@ public abstract class LauncherOptions {
             return cmdName + " [options] <module_file>";
         }
 
-        // Typed getters for all disassembler-specific options
-
         public File getTarget() {
             // First trailing arg is the module file to disassemble
             final var trailing = getTrailingArgs();
@@ -1061,6 +1174,16 @@ public abstract class LauncherOptions {
             }
 
             return args.toArray(String[]::new);
+        }
+
+        /**
+         * Create DisassemblerOptions from JSON string.
+         *
+         * @param jsonString the JSON configuration
+         * @return DisassemblerOptions instance
+         */
+        public static DisassemblerOptions fromJson(String jsonString) {
+            return DisassemblerOptions.parse(jsonToArgs(jsonString, DISASSEMBLER_OPTIONS));
         }
 
         /**

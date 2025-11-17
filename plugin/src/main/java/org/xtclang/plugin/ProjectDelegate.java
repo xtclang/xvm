@@ -19,6 +19,9 @@ import org.gradle.api.tasks.TaskContainer;
 
 import org.xtclang.plugin.internal.GradlePhaseAssertions;
 
+// Plugin TODO: Implement test task with java like semantics tied to life cycle check.
+// Plugin TODO: Unify launchers under ServerLoader to get rid of brittle bridge crap.
+
 public abstract class ProjectDelegate<T, R> {
     protected final String projectName;
     protected final ObjectFactory objects;
@@ -70,26 +73,6 @@ public abstract class ProjectDelegate<T, R> {
         case DEBUG, INFO -> true;
         default -> overrideVerboseLogging;
         };
-    }
-
-    /**
-     * Flag task as always needing to be re-run. Cached state will be ignored.
-     * <p>
-     * Can be used to implement, behaviors that require a task to run fresh every time.
-     * Note that it's easier to just flag a task implementation as @NonCacheable. This is intended for
-     * unit tested, extended existing tasks and finer granularity levels of dependencies.
-     * The implementation forbids the task to cache outputs, and it will never be reported as
-     * up to date. Be aware that this totally removes most of the benefits of Gradle.
-     * <p>
-     * From the user side, it makes more sense to do --rerun-tasks when building the project.
-     *
-     * @param task Task to flag as perpetually not up to date.
-     */
-    @SuppressWarnings("unused")
-    public void considerNeverUpToDate(final Task task) {
-        task.getOutputs().cacheIf(t -> false);
-        task.getOutputs().upToDateWhen(t -> false);
-        logger.warn("[plugin] WARNING: '{}' is configured to always be treated as out of date, and will be run.", task.getName());
     }
 
     protected static <E> E ensureExtension(final Project project, final String name, final Class<E> clazz) {

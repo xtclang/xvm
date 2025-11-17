@@ -92,9 +92,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         this.taskLocalModules = objects.property(DefaultXtcRuntimeExtension.class).convention(objects.newInstance(DefaultXtcRuntimeExtension.class));
 
         // Run tasks have side effects and should never be UP-TO-DATE or cached
-        // This matches the behavior of Gradle's JavaExec task
-        getOutputs().upToDateWhen(_ -> false);
-        getOutputs().cacheIf(_ -> false);
+        considerNeverUpToDate();
     }
 
 

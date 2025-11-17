@@ -381,7 +381,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      *
      * @param fError  true to abort with an error status (otherwise end of run, but not an error)
      * @param msg     an optional message to display with the exception when it is caught and parsed.
-     * @para, cause   an underlying excpeption and cause.
+     * @param,cause   an underlying excpeption and cause.
      */
     protected LauncherException abort(@SuppressWarnings("SameParameterValue") boolean fError, String msg, Exception cause) {
         return new LauncherException(fError, msg, cause);
