@@ -311,6 +311,8 @@ public class PropertyClassTypeConstant
 
                 if (!listExplode.isEmpty()) {
                     // TODO: explode properties
+// TODO CP remove
+System.err.println("*** skipping explode-properties for {" + listExplode + "} on " + idBase);
                 }
 
                 if (mapContribProps.isEmpty() && mapContribMethods.isEmpty() &&
@@ -356,17 +358,21 @@ public class PropertyClassTypeConstant
             }
 
             if (!mapContribProps.isEmpty()) {
-                layerOnProps(idBase, fSelf, null, mapProps, mapVirtProps, typeContrib,
-                        mapContribProps, errs);
+// TODO CP is there ever a ContribSource for annotations, mixins, conditional mixins, ...
+                layerOnProps(idBase, fSelf ? ContribSource.Self : ContribSource.Regular, null,
+                        mapProps, mapVirtProps, typeContrib, mapContribProps, errs);
             }
 
             if (!mapContribMethods.isEmpty()) {
+// TODO CP is there ever a ContribSource for annotations, mixins, conditional mixins, ...
                 layerOnMethods(idBase, fSelf ? ContribSource.Self : ContribSource.Regular, null,
                         mapMethods, mapVirtMethods, typeContrib, mapContribMethods, errs);
             }
 
             if (!mapContribChildren.isEmpty()) {
                 // TODO process children
+// TODO CP remove
+System.err.println("*** skipping TypeInfo generation for {" + mapContribChildren.keySet() + "} on " + idBase);
             }
         }
 
