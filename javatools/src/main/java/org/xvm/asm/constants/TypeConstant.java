@@ -705,6 +705,33 @@ public abstract class TypeConstant
     }
 
     /**
+     * @return true iff the type is the Object interface
+     */
+    public boolean isRootObject() {
+        return isInterfaceType() && isSingleDefiningConstant()
+                && getDefiningConstant() instanceof ClassConstant idThis
+                && idThis.equals(getConstantPool().clzObject());
+    }
+
+    /**
+     * @return true iff the type is the Object interface or any interface that Object extends
+     */
+    public boolean isRootInterface() {
+        if (isInterfaceType() && isSingleDefiningConstant()
+                && getDefiningConstant() instanceof ClassConstant idThis
+                && idThis.getModuleConstant().isEcstasyModule()) {
+            ConstantPool  pool     = getConstantPool();
+            ClassConstant idObject = pool.clzObject();
+            if (idThis.equals(idObject)) {
+                return true;
+            }
+            ClassStructure clzObject = (ClassStructure) idObject.getComponent();
+            return clzObject.hasContribution(idThis);
+        }
+        return false;
+    }
+
+    /**
      * @return the Ecstasy class name, including package name(s), otherwise "?"
      */
     public String getEcstasyClassName() {
@@ -1612,6 +1639,9 @@ public abstract class TypeConstant
      * @return the flattened TypeInfo that represents the resolved type of this TypeConstant
      */
     public TypeInfo ensureTypeInfo(ErrorListener errs) {
+        // ensure the root Object is built first, since it helps to avoid chicken-and-egg issues
+        ensureObjectTypeInfo(errs);
+
         TypeInfo info = getTypeInfo();
         if (isComplete(info) && isUpToDate(info)) {
             return info;
@@ -1700,14 +1730,14 @@ public abstract class TypeConstant
 
                         TypeInfo infoDeferred = typeDeferred.getTypeInfo();
                         if (!isComplete(infoDeferred)) {
-                            // if there's something wrong with this logic, we'll end up with infinite
-                            // recursion, so be very careful about what can allow a TypeInfo to be built
-                            // "incomplete" (it needs to be impossible to rebuild a TypeInfo and have it
-                            // be incomplete for the second time)
+                            // if there's something wrong with this logic, we'll end up with
+                            // infinite recursion, so be very careful about what can allow a
+                            // TypeInfo to be built "incomplete" (it needs to be impossible to
+                            // rebuild a TypeInfo and have it be incomplete for the second time)
                             if (m_cRecursiveDepth.getAndIncrement() > 2) {
                                 // an infinite loop
-                                throw new IllegalStateException("Infinite loop while producing a TypeInfo for "
-                                        + this + "; deferred type=" + typeDeferred);
+                                throw new IllegalStateException("Infinite loop while producing a " +
+                                        "TypeInfo for " + this + "; deferred type=" + typeDeferred);
                             }
 
                             // merge the errors only after the completed "buildTypeInfo" run
@@ -1767,13 +1797,21 @@ public abstract class TypeConstant
      */
     protected TypeInfo ensureTypeInfoInternal(ErrorListener errs) {
         TypeInfo info = getTypeInfo();
+        if (info == null) {
+            // ensure the root Object is built first, since it helps to avoid chicken-and-egg issues
+            ensureObjectTypeInfo(errs);
+            // just in case the TypeInfo we're looking for is one that we just built
+            info = getTypeInfo();
+        }
+
         if (info != null && info.isPlaceHolder()) {
             // the TypeInfo is already being built, so we're in the catch-22 situation; note that it
             // is even more complicated, because it could be being built by a different thread, so
             // always add it to the deferred list _on this thread_ so that we will force the rebuild
             // of the TypeInfo if necessary (imagine that the other thread is super slow, so we need
             // to preemptively duplicate its work on this thread, so we don't have to "wait" for
-            // the other thread)
+            // the other thread); the one exception is for the root of the type system, Object, and
+            // any interfaces that it depends on
             addDeferredTypeInfo(this);
             return null;
         }
@@ -1781,7 +1819,9 @@ public abstract class TypeConstant
         if (info == null || !isUpToDate(info)) {
             setTypeInfo(getConstantPool().infoPlaceholder());
             info = buildTypeInfo(errs);
-            if (info != null) {
+            if (info == null) {
+                clearTypeInfoPlaceholder();
+            } else {
                 setTypeInfo(info);
                 if (errs.hasSeriousErrors()) {
                     info.markWithError();
@@ -1789,11 +1829,59 @@ public abstract class TypeConstant
             }
         }
 
+        // if this created an incomplete TypeInfo for an interface being built for Object to build
+        // its own TypeInfo, then we avoid the chicken-and-egg problem by just ignoring the
+        // incompleteness of the super-interface of Object at this point
         if (!isComplete(info)) {
             addDeferredTypeInfo(this);
         }
 
         return info;
+    }
+
+    /**
+     * Before we build any other TypeInfo objects, make sure we have built Object to avoid any
+     * chicken-and-egg issues later from the weird fact that Object depends on Comparable (which is
+     * itself obviously an Object from most points of view). This implementation allows anything
+     * that Object depends on (i.e. to build its own TypeInfo) to be partially created without
+     * having Object already created, and then once Object is created, those partially created
+     * TypeInfos are all discarded.
+     *
+     * @param errs  the error list to log to
+     *
+     * @return a completed TypeInfo for Object
+     */
+    private void ensureObjectTypeInfo(ErrorListener errs) {
+        ConstantPool pool       = getConstantPool();
+        TypeConstant typeObject = pool.typeObject();
+        TypeInfo     infoObject = typeObject.getTypeInfo();
+        if (infoObject == null) {
+            // this is basically an inlined ensureTypeInfoInternal()
+            try (var ignore = ConstantPool.withPool(pool)) {
+                typeObject.setTypeInfo(getConstantPool().infoPlaceholder());
+                infoObject = typeObject.buildTypeInfo(errs);
+                typeObject.setTypeInfo(infoObject);
+            } finally {
+                typeObject.clearTypeInfoPlaceholder();
+            }
+
+            if (infoObject == null || infoObject.getProgress() != Progress.Complete) {
+                if (!errs.hasSeriousErrors()) {
+                    log(errs, Severity.ERROR, VE_UNKNOWN, "Failed to create TypeInfo for root Object");
+                }
+            } else {
+                // discard any partial TypeInfos created as part of creating the Object TypeInfo
+                for (int i = 0, c = pool.size(); i < c; ++i) {
+                    if (pool.getConstant(i) instanceof TypeConstant type
+                            && type.getTypeInfo() != null && !type.isRootObject()) {
+                        type.clearTypeInfo();
+                    }
+                }
+                // discard the list of any "must retry building these TypeInfos" (since we're also
+                // discarding all built TypeInfos other than Object)
+                var ignoreDeferred = takeDeferredTypeInfo();
+            }
+        }
     }
 
     /**
@@ -1873,6 +1961,13 @@ public abstract class TypeConstant
     }
 
     /**
+     * Clear out the "place holder" TypeInfo for this one specific TypeConstant.
+     */
+    protected void clearTypeInfoPlaceholder() {
+        s_typeinfo.compareAndSet(this, getConstantPool().infoPlaceholder(), null);
+    }
+
+    /**
      * Rank is null, place-holder, incomplete, complete.
      *
      * @param info  a TypeInfo
@@ -1902,6 +1997,10 @@ public abstract class TypeConstant
      * @return true iff the TypeInfo can be used as-is
      */
     protected boolean isUpToDate(TypeInfo info) {
+        if (isRootInterface()) {
+            return info != null;
+        }
+
         ConstantPool pool       = getConstantPool();
         int          cOldInvals = getInvalidationCount();
         int          cNewInvals = pool.getInvalidationCount();
@@ -2556,14 +2655,9 @@ public abstract class TypeConstant
                 listProcess.add(struct.new Contribution(Composition.Implements, typeNatural));
                 typeExtends = pool.typeObject();
             } else {
-                // Object does not (and must not) implement anything despite what it says
-                if (constId.equals(pool.clzObject())) {
-                    cContribs = 0;
-                } else {
-                    // an interface implies the set of methods present in Object
-                    // (use the "Into" composition to make the Object methods implicit-only, as
-                    // opposed to explicitly being present in this interface)
-                    typeInto = pool.typeObject();
+                if (listContribs.isEmpty()) {
+                    // add the implicit "extends Object"
+                    ++cContribs;
                 }
             }
             break;
@@ -2626,7 +2720,7 @@ public abstract class TypeConstant
                 break;
 
             case Import:
-                // ignore
+                // ignore (it's a package contribution that indicates the module being represented)
                 break;
 
             default:
@@ -2644,11 +2738,10 @@ public abstract class TypeConstant
             listProcess.add(struct.new Contribution(Composition.Implements, pool.typeInner()));
         }
 
-        // the last three contributions to get processed are the "into" (which we also use for
-        // filling out the implied methods under interfaces, i.e. "into Object"),  the "extends",
+        // the last three contributions to get processed are the "into", the "extends",
         // and the "re-base", which should be added at the bottom (and processed first)
         if (typeInto != null) {
-            if (!typeInto.equals(pool.typeObject()) && !typeInto.isAccessSpecified() &&
+            if (!typeInto.isRootInterface() && !typeInto.isAccessSpecified() &&
                     typeInto.isSingleUnderlyingClass(true)) {
                 // annotation or mixin should have at least protected access to the "into" class
                 Access access = struct.isDescendant(typeInto.getSingleUnderlyingClass(true))
@@ -2968,7 +3061,8 @@ public abstract class TypeConstant
             ListMap<IdentityConstant, Origin> listmapClassChain,
             ListMap<IdentityConstant, Origin> listmapDefaultChain,
             ErrorListener                     errs) {
-        boolean fIncomplete = false;
+        boolean                           fIncomplete      = false;
+        ListMap<IdentityConstant, Origin> listmapRootChain = new ListMap<>();
 
         for (Contribution contrib : listProcess) {
             Composition composition = contrib.getComposition();
@@ -3000,7 +3094,7 @@ public abstract class TypeConstant
                 TypeInfo     infoContrib = typeContrib.adjustAccess(constId).ensureTypeInfoInternal(errs);
 
                 if (!isComplete(infoContrib)) {
-                    fIncomplete = computeIncomplete(composition, typeContrib, infoContrib, setDepends);
+                    fIncomplete |= computeIncomplete(composition, typeContrib, infoContrib, setDepends);
                     if (fIncomplete) {
                         errs = ErrorListener.BLACKHOLE;
                         if (infoContrib == null || composition == Composition.Into) {
@@ -3009,15 +3103,24 @@ public abstract class TypeConstant
                         }
                     }
                 }
-
-                infoContrib.contributeChains(listmapClassChain, listmapDefaultChain, composition);
-
-                layerOnTypeParams(mapTypeParams, typeContrib, infoContrib.getTypeParams(), errs);
+                if (infoContrib != null) {
+                    infoContrib.contributeChains(listmapClassChain, listmapDefaultChain,
+                                                 listmapRootChain, composition);
+                    layerOnTypeParams(mapTypeParams, typeContrib, infoContrib.getTypeParams(), errs);
+                }
                 break;
             }
 
             default:
                 throw new IllegalStateException("composition=" + composition);
+            }
+        }
+
+        // add the default chains for the "root type" to the end
+        for (Iterator<IdentityConstant> iterId = listmapRootChain.keySet().iterator(); iterId.hasNext(); ) {
+            IdentityConstant id = iterId.next();
+            if (!listmapDefaultChain.containsKey(id)) {
+                listmapDefaultChain.put(id, listmapRootChain.get(id));
             }
         }
 
@@ -3028,11 +3131,25 @@ public abstract class TypeConstant
      * Given the incomplete TypeInfo for the specified contribution, check if this type could
      * nevertheless complete its TypeInfo calculation.
      *
+     * @param composition  describes how the contribution is being contributed
+     * @param typeContrib  the type being contributed
+     * @param infoContrib  the TypeInfo (which may be null) for the type being contributed
+     * @param setDepends   TODO GG doc
+     *
      * @return true iff the TypeInfo for this type cannot be completed
      */
     private boolean computeIncomplete(Composition composition, TypeConstant typeContrib,
                                       TypeInfo infoContrib, Set<TypeConstant> setDepends) {
         if (composition == Composition.Into || infoContrib == null) {
+            if (this.isRootInterface()) {
+                // if we're building Object or some interface that Object depends on, then we ignore
+                // chicken-and-egg problems because the Object interface should still be able to be
+                // successfully and correctly built; specifically,  Object depends on Comparable,
+                // but in reality, Comparable "is a" Object, so we need to solve the chicken-and-egg
+                // problem by allowing the creation of Object to proceed
+                return false;
+            }
+
             // if this type represents a mixin we cannot complete until the "into" type does
             if (typeContrib instanceof UnionTypeConstant typeUnion) {
                 typeUnion.decompose(setDepends);
@@ -3169,16 +3286,17 @@ public abstract class TypeConstant
             } else {
                 TypeInfo infoContrib = typeContrib.adjustAccess(constId).ensureTypeInfoInternal(errs);
                 if (!isComplete(infoContrib)) {
-                    fIncomplete = computeIncomplete(composition, typeContrib, infoContrib, setDepends);
+                    fIncomplete |= computeIncomplete(composition, typeContrib, infoContrib, setDepends);
                     if (fIncomplete) {
                         errs = ErrorListener.BLACKHOLE;
-                        if (infoContrib == null || composition == Composition.Into) {
-                            // even if the contribution has an incomplete info we can still proceed
-                            // collecting [non-complete] information, except when this type
-                            // represents a mixin, in which case we must discard the incomplete
-                            // "into" info and apply it only when the "left side" info is complete
-                            continue;
-                        }
+                    }
+
+                    if (fIncomplete || infoContrib == null || composition == Composition.Into) {
+                        // even if the contribution has an incomplete info we can still proceed
+                        // collecting [non-complete] information, except when this type
+                        // represents a mixin, in which case we must discard the incomplete
+                        // "into" info and apply it only when the "left side" info is complete
+                        continue;
                     }
                 }
 
@@ -3221,10 +3339,12 @@ public abstract class TypeConstant
                             // REVIEW: consider removing the "retainOnly" call with a simple check:
                             //
                             // IdentityConstant idProp = entry.getKey().getClassIdentity();
-                            // if (!setClass.contains(idProp) && !setDefault.contains(idProp))
-                            //    {
-                            //    iter.remove();
-                            //}
+                            // if (!setClass.contains(idProp) && !setDefault.contains(idProp)) {
+                            //     iter.remove();
+                            // }
+                            //
+                            // (but this would require us to first clone mapContribProps so we don't
+                            // mutate the TypeInfo of the type being contributed)
                             PropertyInfo infoReduced = entry.getValue().
                                     retainOnly(entry.getKey(), setClass, setDefault);
                             if (infoReduced != null) {
@@ -4095,18 +4215,30 @@ public abstract class TypeConstant
                     Object nidBase = null;
                     for (Object nid : listMatches) {
                         MethodInfo methodMatch = mapVirtMethods.get(nid);
-                        if (methodMatch != null && !nid.equals(nidContrib)) {
-                            if (methodMatch.isCapped()) {
-                                if (methodBase == null) {
-                                    // take a possible match, but keep looking
-                                    methodBase = methodMatch;
-                                    nidBase    = nid;
-                                }
-                            } else {
+                        if (methodMatch == null || nid.equals(nidContrib)) {
+                            // TODO if methodMatch != null, should we be stealing any missing DECLARE, DEFAULT, etc. bodies?
+                            continue;
+                        }
+                        if (methodMatch.isCapped()) {
+                            if (methodBase == null) {
+                                // take a possible match, but keep looking
                                 methodBase = methodMatch;
                                 nidBase    = nid;
-                                break;
                             }
+                        } else {
+                            methodBase = methodMatch;
+                            nidBase    = nid;
+                            // the signatures may be "the same" in this context, e.g. the only
+                            // difference may be two different "this:type" types for the same parameter
+                            // or return type TODO GG how to handle NestedIdentity
+                            if (nid instanceof SignatureConstant sig1
+                                    && nidContrib instanceof SignatureConstant sig2
+                                    && sig1.isSubstitutableFor(sig2, this)
+                                    && sig2.isSubstitutableFor(sig1, this)) {
+
+                                methodBase.markAsDuplicate();
+                            }
+                            break;
                         }
                     }
 
@@ -4354,8 +4486,8 @@ public abstract class TypeConstant
      * Helper to select the "best" signature from an array of signatures; in other words, choose
      * the one that any other signature could "super" to.
      *
-     * @param aSig    an array of signatures
-     * @param sigSub  (optional) if specified, it's a common "sub" method for all signatures
+     * @param setSigs  a set of signatures
+     * @param sigSub   (optional) if specified, it's a common "sub" method for all signatures
      *
      * @return the "best" signature to use
      */
@@ -4574,7 +4706,10 @@ public abstract class TypeConstant
             SignatureConstant sig          = id.getSignature().resolveGenericTypes(pool,
                                                     method.isFunction() ? null : this);
             if (fRebase && fHasNoCode && !fNative) {
-                // align the structure with the info (may be used by the runtime)
+                // for "rebased" types like small-s `service` and small-c `const`, any methods that
+                // require an implementation but have none in the MethodStructure will obviously
+                // have an implementation provided by the "runtime", whatever that is (interpreter,
+                // JIT, ...)
                 fNative = true;
                 method.markNative();
                 pool.invalidateTypeInfos(id.getNamespace());
@@ -4600,8 +4735,8 @@ public abstract class TypeConstant
 
             PropertyConstant  id    = prop.getIdentityConstant();
             int               nRank = nBasePropRank + mapProps.size();
-            PropertyInfo      info  = createPropertyInfo(prop, constId,
-                                            fRebase | prop.isNative(), fFromIface, nRank, errs);
+            PropertyInfo      info  = createPropertyInfo(prop, constId, fRebase | prop.isNative(),
+                                                         fFromIface, nRank, errs);
             mapProps.put(id, info);
 
             if (info.isCustomLogic() || info.isRefAnnotated()) {

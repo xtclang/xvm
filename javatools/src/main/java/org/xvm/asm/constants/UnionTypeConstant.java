@@ -143,13 +143,13 @@ public class UnionTypeConstant
      */
     public void decompose(Set<TypeConstant> setTypes) {
         TypeConstant type1 = m_constType1;
-        TypeConstant type2 = m_constType2;
-
         if (type1 instanceof UnionTypeConstant typeUnion) {
             typeUnion.decompose(setTypes);
         } else {
             setTypes.add(type1);
         }
+
+        TypeConstant type2 = m_constType2;
         if (type2 instanceof UnionTypeConstant typeUnion) {
             typeUnion.decompose(setTypes);
         } else {

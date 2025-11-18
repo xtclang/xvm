@@ -619,4 +619,9 @@ public class MethodBody {
      * The container type for which the JitMethodDesc above was computed (used only for constructors).
      */
     private transient TypeConstant m_typeJmdContainer;
+
+    /**
+     * TODO remove this field
+     */
+    transient boolean m_fDuplicate;
 }
