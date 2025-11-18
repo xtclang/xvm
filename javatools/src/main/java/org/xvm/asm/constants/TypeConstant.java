@@ -4076,18 +4076,30 @@ public abstract class TypeConstant
                     Object nidBase = null;
                     for (Object nid : listMatches) {
                         MethodInfo methodMatch = mapVirtMethods.get(nid);
-                        if (methodMatch != null && !nid.equals(nidContrib)) {
-                            if (methodMatch.isCapped()) {
-                                if (methodBase == null) {
-                                    // take a possible match, but keep looking
-                                    methodBase = methodMatch;
-                                    nidBase    = nid;
-                                }
-                            } else {
+                        if (methodMatch == null || nid.equals(nidContrib)) {
+                            // TODO if methodMatch != null, should we be stealing any missing DECLARE, DEFAULT, etc. bodies?
+                            continue;
+                        }
+                        if (methodMatch.isCapped()) {
+                            if (methodBase == null) {
+                                // take a possible match, but keep looking
                                 methodBase = methodMatch;
                                 nidBase    = nid;
-                                break;
                             }
+                        } else {
+                            methodBase = methodMatch;
+                            nidBase    = nid;
+                            // the signatures may be "the same" in this context, e.g. the only
+                            // difference may be two different "this:type" types for the same parameter
+                            // or return type TODO GG how to handle NestedIdentity
+                            if (nid instanceof SignatureConstant sig1
+                                    && nidContrib instanceof SignatureConstant sig2
+                                    && sig1.isSubstitutableFor(sig2, this)
+                                    && sig2.isSubstitutableFor(sig1, this)) {
+
+                                methodBase.markAsDuplicate();
+                            }
+                            break;
                         }
                     }
 

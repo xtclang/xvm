@@ -801,7 +801,11 @@ public class CommonBuilder
         boolean cap    = method.isCapped();
         boolean router = false;
 
-        String jitName = method.getJitIdentity().ensureJitMethodName(typeSystem);
+        if (method.isDuplicate()) {
+            return;
+        }
+
+        String jitName = method.ensureJitMethodName(typeSystem);
 
         if (!cap) {
             MethodBody[] chain = method.ensureOptimizedMethodChain(typeInfo);
