@@ -226,7 +226,8 @@ class ObjectOutputStream(Schema schema, Writer writer)
         /**
          * Invoked when a child is writing.
          */
-        protected void childWriting() {}
+        // TODO CP why is "protected" not working for this?
+        void childWriting() {}
 
         /**
          * If the DocOutput is inside a JSON object, then it has a field name.

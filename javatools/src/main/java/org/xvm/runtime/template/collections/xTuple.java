@@ -407,7 +407,7 @@ public class xTuple
                 throw new IllegalStateException();
             }
         }
-        return Op.R_NEXT;
+        return frame.assignValue(iReturn, hTuple);
     }
 
     private int freezeValues(Frame frame, ObjectHandle[] ahValue, boolean fInPlace, int index) {

@@ -76,7 +76,6 @@ public class PropertyConstant
         }
     }
 
-
     // ----- FormalConstant methods ----------------------------------------------------------------
 
     @Override
@@ -139,7 +138,6 @@ public class PropertyConstant
                 ? new PropertyExprAST(ctx.getThisRegisterAST(), this)
                 : null;
     }
-
 
     // ----- type-specific functionality -----------------------------------------------------------
 
@@ -288,7 +286,6 @@ public class PropertyConstant
         m_typeConstraint = null;
     }
 
-
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override
@@ -310,7 +307,6 @@ public class PropertyConstant
         return pool.ensureParameterizedTypeConstant(pool.typeProperty(),
                 typeTarget, typeReferent, typeImpl);
     }
-
 
     // ----- JIT support ---------------------------------------------------------------------------
 
@@ -342,7 +338,6 @@ public class PropertyConstant
         }
         return sJitName;
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -414,7 +409,6 @@ public class PropertyConstant
         return that.getConstantPool().ensurePropertyConstant(that, getName());
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -434,8 +428,7 @@ public class PropertyConstant
 
     @Override
     public String getDescription() {
-        StringBuilder sb = new StringBuilder("property=");
-        sb.append(getName());
+        StringBuilder sb = new StringBuilder().append(getName());
         IdentityConstant idParent = getNamespace();
         while (idParent != null) {
             switch (idParent.getFormat()) {
@@ -452,7 +445,6 @@ public class PropertyConstant
 
         return sb.toString();
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 

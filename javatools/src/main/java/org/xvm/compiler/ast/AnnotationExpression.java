@@ -147,8 +147,8 @@ public class AnnotationExpression
                 if (exprArg instanceof LiteralExpression exprLit) {
                     if (exprLit.getLiteral().getId() == Id.LIT_STRING) {
                         // only String literals have a predictable runtime type (no @Auto conversions)
-                        aconstArgs[iArg] = pool.ensureStringConstant(((LiteralExpression) exprArg)
-                                .getLiteral().getValue().toString());
+                        aconstArgs[iArg] = pool.ensureStringConstant(
+                                exprLit.getLiteral().getValue().toString());
                     } else {
                         aconstArgs[iArg] = exprLit.getLiteralConstant();
                     }
@@ -246,6 +246,12 @@ public class AnnotationExpression
         if (cArgs > 0) {
             MethodStructure constructor = infoAnno.getMethodById(idConstruct).
                                             getTopmostMethodStructure(infoAnno);
+            if (constructor == null) {
+                if (!errs.hasSeriousErrors()) {
+                    log(errs, Severity.ERROR, Compiler.MISSING_CONSTRUCTOR, idAnno.getValueString());
+                }
+                return;
+            }
             if (containsNamedArgs(listArgs)) {
                 listArgs = rearrangeNamedArgs(constructor, listArgs, errs);
                 if (listArgs == null) {
@@ -374,7 +380,11 @@ public class AnnotationExpression
         }
 
         if (cArgs > 0 && containsNamedArgs(listArgs)) {
-            listArgs = rearrangeNamedArgs((MethodStructure) idConstruct.getComponent(), listArgs, errs);
+            MethodStructure method = (MethodStructure) idConstruct.getComponent();
+            if (method == null) {
+                return null;
+            }
+            listArgs = rearrangeNamedArgs(method, listArgs, errs);
             if (listArgs == null) {
                 return null;
             }

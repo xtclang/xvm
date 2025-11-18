@@ -20,16 +20,16 @@ service OSFileChannel
 
     @Override
     Int size {
-        Int get() = rawChannel.size;
-        void set(Int newSize) {
+        @Override Int get() = rawChannel.size;
+        @Override void set(Int newSize) {
             rawChannel.size = newSize;
         }
     }
 
     @Override
     Int position {
-        Int get() = rawChannel.position;
-        void set(Int newPosition) {
+        @Override Int get() = rawChannel.position;
+        @Override void set(Int newPosition) {
             rawChannel.position = newPosition;
         }
     }

@@ -1101,12 +1101,12 @@ public abstract class AstNode
 
         NextMethod: for (MethodConstant idMethod : setMethods) {
             MethodInfo        infoMethod = infoTarget.getMethodById(idMethod);
-            MethodStructure   method     = infoMethod.getTopmostMethodStructure(infoTarget);
             SignatureConstant sigMethod  = idMethod.getSignature();
+            MethodStructure   method     = infoMethod.getTopmostMethodStructure(infoTarget);
 
-            int cTypeParams = method.getTypeParamCount();
-            int cVisible    = method.getVisibleParamCount();
-            int cRequired   = method.getRequiredParamCount();
+            int cTypeParams = infoMethod.getTypeParamCount(infoTarget);
+            int cVisible    = infoMethod.getVisibleParamCount(infoTarget);
+            int cRequired   = infoMethod.getRequiredParamCount(infoTarget);
 
             if (cExprs > cVisible || fCall && cExprs < cRequired) {
                 if (cNameErrs == 0 && cArityErrs++ == 0 && cTypeErrs == 0) {
@@ -1116,7 +1116,7 @@ public abstract class AstNode
                 continue;
             }
 
-            int cMethodRets = method.getReturnCount();
+            int cMethodRets = infoMethod.getReturnCount();
             if (cReturns > cMethodRets) {
                 // the only allowed mismatch is a void method's return into an empty Tuple
                 boolean fTuple = cReturns == 1 && isVoid(atypeReturn);

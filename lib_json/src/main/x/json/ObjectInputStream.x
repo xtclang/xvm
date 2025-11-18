@@ -369,7 +369,8 @@ class ObjectInputStream
          *
          * @param child  the child that closed
          */
-        protected void childClosed(DocInputStream! child) {
+        // TODO CP why is "protected" not working for this?
+        void childClosed(DocInputStream! child) {
             if (child.&parser == this.&parser && !child.peekingAhead) {
                 loadNext();
             }
@@ -533,7 +534,8 @@ class ObjectInputStream
         }
 
         @Override
-        protected void childClosed(DocInputStream! child) {
+        // TODO CP why is "protected" not working for this?
+        void childClosed(DocInputStream! child) {
             if (child.peekingAhead) {
                 canRead = True;
             }

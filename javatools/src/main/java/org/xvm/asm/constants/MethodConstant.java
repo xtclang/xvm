@@ -610,9 +610,13 @@ public class MethodConstant
 
     @Override
     public String getValueString() {
-        return isNascent()
-                ? getPathElementString()
-                : m_constSig.getValueString();
+        if (isNascent()) {
+            return getPathElementString();
+        }
+
+        return isTopLevel()
+                ? m_constSig.getValueString()
+                : getPathString();
     }
 
 

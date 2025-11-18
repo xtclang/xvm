@@ -400,6 +400,9 @@ public class InvocationExpression
             // handle method or function
             if (argMethod instanceof MethodConstant idMethod) {
                 MethodStructure     method      = m_method;
+                if (method == null) {
+                    int q=0;
+                }
                 int                 cTypeParams = method.getTypeParamCount();
                 int                 cReturns    = method.getReturnCount();
                 GenericTypeResolver resolver    = null;
@@ -2405,13 +2408,13 @@ public class InvocationExpression
         Argument arg = findCallable(ctx, typeLeft, infoLeft, sName, kind, false, atypeReturn, errsMain);
         if (arg != null) {
             if (arg instanceof MethodConstant idMethod) {
-                m_argMethod = idMethod;
-                m_method    = getMethod(ctx, typeLeft, infoLeft, idMethod);
+                m_method = getMethod(ctx, typeLeft, infoLeft, idMethod);
                 if (m_method == null) {
                     log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
                             idMethod.getValueString(), typeLeft.getValueString());
                     return null;
                 }
+                m_argMethod   = idMethod;
                 m_fBindTarget = !m_method.isFunction();
             } else {
                 // just return the property; the rest will be handled by the caller
@@ -2963,8 +2966,8 @@ public class InvocationExpression
      * <p/>
      * The purpose of this method is to make sure that despite that "disconnect", the identity of
      * the "rebased" MethodConstant parent identifies the parent of the actual method structure,
-     * allowing the runtime quickly identify the topmost structure in the virtual call chain that
-     * is known at the compile time.
+     * allowing the runtime interpreter to quickly identify the topmost structure in the virtual
+     * call chain that is known at compile-time.
      *
      * @param idMethod  the MethodConstant to evaluate and, if necessary, rebase the parent of
      * @param method    the actual method structure
@@ -2980,13 +2983,12 @@ public class InvocationExpression
             } else if (idMethod.isTopLevel()) { // exempt methods inside properties or methods
                 Component parentId     = idMethod.getNamespace().getComponent();
                 Component parentMethod = method.getParent().getParent();
-                if (!parentId.equals(parentMethod)) {
+                if (parentId != null && parentMethod != null && !parentId.equals(parentMethod)) {
                     idMethod = pool().ensureMethodConstant(
                             parentMethod.getIdentityConstant(), idMethod.getSignature());
                 }
             }
         }
-
         return idMethod;
     }
 

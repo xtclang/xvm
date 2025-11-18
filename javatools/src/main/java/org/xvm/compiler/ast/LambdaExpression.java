@@ -958,7 +958,7 @@ public class LambdaExpression
 
         Component            container = getParent().getComponent();
         MultiMethodStructure structMM  = container.ensureMultiMethodStructure(METHOD_NAME);
-        MethodStructure      method    =  structMM.createLambda(atypes, asParams);
+        MethodStructure      method    = structMM.createLambda(atypes, asParams);
         donateSource(method);
         return method;
     }

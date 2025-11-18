@@ -308,7 +308,7 @@ public class xRTType
         switch (method.getName()) {
         case "dump":
             return frame.assignValue(iReturn,
-                xString.makeHandle(hType.getUnsafeDataType().ensureTypeInfo().toString(true)));
+                xString.makeHandle(hType.getUnsafeDataType().ensureTypeInfo().toString()));
         }
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
     }

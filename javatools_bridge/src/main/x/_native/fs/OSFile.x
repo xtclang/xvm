@@ -12,8 +12,8 @@ const OSFile
 
     @Override
     immutable Byte[] contents {
-        immutable Byte[] get()                       = TODO("native");
-        void             set(immutable Byte[] bytes) = TODO("native");
+        @Override immutable Byte[] get()                       = TODO("native");
+        @Override void             set(immutable Byte[] bytes) = TODO("native");
     }
 
     @Override

@@ -179,7 +179,7 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * An internal, mutable record of Changes for a specific transaction.
      */
     @Concurrent
-    protected class Changes(Int writeId, Future<Int>? pendingReadId) {
+    protected class Changes {
         construct(Int writeId, Future<Int> pendingReadId) {
             this.writeId       = writeId;
             this.readId        = NO_TX;
@@ -192,11 +192,17 @@ service ObjectStore(Catalog catalog, DboInfo info)
         Int writeId;
 
         /**
+         * This is the "read" txId, which may not have been determined yet. See [readId].
+         */
+        protected Future<Int>? pendingReadId;
+
+        /**
          * The read txId that this transaction is based from. (Note that the "read" id may itself be
          * a "write" id, which will occur during the prepare phase when a Rectifier or Distributor
          * is being executed, and the thus-far-prepared transaction is visible by the read id.)
          */
         Int readId {
+            @Override
             Int get() {
                 Int id = super();
                 if (id == NO_TX) {
@@ -206,6 +212,7 @@ service ObjectStore(Catalog catalog, DboInfo info)
                 return id;
             }
 
+            @Override
             void set(Int id) {
                 super(id);
                 if (id != NO_TX) {

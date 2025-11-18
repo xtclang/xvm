@@ -22,6 +22,7 @@ import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.ByteConstant;
+import org.xvm.asm.constants.UnionTypeConstant;
 
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.ClassComposition.FieldInfo;
@@ -620,13 +621,20 @@ public class xConst
 
                 TypeConstant typeProp = pool.register(clzBase.getFieldType(enid));
 
-                // this check is only to provide a better exception description
-                if (typeProp.findCallable(pool.sigCompare()) == null) {
-                    return frameCaller.raiseException("Property \"" + field.getName() +
-                            "\" is not Orderable");
+                int iResult;
+                if (typeProp instanceof UnionTypeConstant && typeProp.isA(pool.typeOrderable())) {
+                    iResult = typeProp.callCompare(frameCaller, h1, h2, Op.A_STACK);
+                } else {
+                    // this check is only to provide a better exception description
+                    if (typeProp.findCallable(pool.sigCompare()) == null) {
+                        return frameCaller.raiseException("Property \"" + field.getName() +
+                                "\" is not Orderable");
+                    }
+
+                    iResult = typeProp.callCompare(frameCaller, h1, h2, Op.A_STACK);
                 }
 
-                switch (typeProp.callCompare(frameCaller, h1, h2, Op.A_STACK)) {
+                switch (iResult) {
                 case Op.R_NEXT:
                     EnumHandle hResult = (EnumHandle) frameCaller.popStack();
                     if (hResult != xOrdered.EQUAL) {
@@ -711,21 +719,25 @@ public class xConst
                 typeProp = typeProp.resolveGenerics(pool,
                             frameCaller.getGenericsResolver(typeProp.containsDynamicType()));
 
-                MethodStructure methodHash = typeProp.findCallable(HASH_SIG);
-                if (methodHash == null) {
-                    // ignore this field
-                    continue;
-                }
-
                 int iResult;
-                if (methodHash.isNative()) {
-                    iResult = hProp.getTemplate().invokeNativeN(frameCaller, methodHash, null,
-                        new ObjectHandle[] {typeProp.ensureTypeHandle(container), hProp}, Op.A_STACK);
+                if (typeProp instanceof UnionTypeConstant && typeProp.isA(pool.typeHashable())) {
+                    iResult = typeProp.callHashCode(frameCaller, hProp, Op.A_STACK);
                 } else {
-                    ObjectHandle[] ahVar = new ObjectHandle[methodHash.getMaxVars()];
-                    ahVar[0] = typeProp.ensureTypeHandle(container);
-                    ahVar[1] = hProp;
-                    iResult = frameCaller.call1(methodHash, null, ahVar, Op.A_STACK);
+                    MethodStructure methodHash = typeProp.findCallable(HASH_SIG);
+                    if (methodHash == null) {
+                        // ignore this field
+                        continue;
+                    }
+
+                    if (methodHash.isNative()) {
+                        iResult = hProp.getTemplate().invokeNativeN(frameCaller, methodHash, null,
+                            new ObjectHandle[] {typeProp.ensureTypeHandle(container), hProp}, Op.A_STACK);
+                    } else {
+                        ObjectHandle[] ahVar = new ObjectHandle[methodHash.getMaxVars()];
+                        ahVar[0] = typeProp.ensureTypeHandle(container);
+                        ahVar[1] = hProp;
+                        iResult = frameCaller.call1(methodHash, null, ahVar, Op.A_STACK);
+                    }
                 }
 
                 switch (iResult) {

@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import java.util.function.Predicate;
+
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -23,6 +25,7 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.constants.MethodBody.Existence;
 import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.PropertyBody.Effect;
+import org.xvm.asm.constants.TypeConstant.ContribSource;
 
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
@@ -78,15 +81,19 @@ public class PropertyInfo
      * Combine the information in this PropertyInfo with the information from a contribution type's
      * PropertyInfo.
      *
-     * @param that    the "contribution" PropertyInfo to layer on top of this property
-     * @param fSelf   true if the layer being added ("that") represents the "Equals" contribution of
-     *                the type
-     * @param fMixin  true if the layer(s) being added ("that") represents a mixin or annotation
-     * @param errs    the error list to log any conflicts to
+     * @param that           the "contribution" PropertyInfo to layer on top of this property
+     * @param contribSource  the ContribSource for the information being layered on
+     * @param fMixin         true if the layer(s) being added ("that") represents a mixin or
+     *                       annotation
+     * @param errs           the error list to log any conflicts to
      *
      * @return a PropertyInfo representing the combined information
      */
-    public PropertyInfo layerOn(PropertyInfo that, boolean fSelf, boolean fMixin, ErrorListener errs) {
+    public PropertyInfo layerOn(
+            PropertyInfo   that,
+            ContribSource  contribSource,
+            boolean        fMixin,
+            ErrorListener  errs) {
         assert that != null && errs != null;
 
         PropertyConstant idProp = getIdentity();
@@ -109,7 +116,7 @@ public class PropertyInfo
         // that it annotates)
         TypeConstant typeThis       = this.getType();
         TypeConstant typeThat       = that.getType();
-        boolean      fAllowWidening = fMixin || !fSelf;
+        boolean      fAllowWidening = fMixin || contribSource != ContribSource.Self;
         if (!(typeThat.isA(typeThis) || fAllowWidening && typeThis.isA(typeThat))) {
             idProp.log(errs, Severity.ERROR, VE_PROPERTY_TYPES_INCOMPATIBLE,
                     that.getIdentity().getPathString(),
@@ -142,7 +149,7 @@ public class PropertyInfo
                 // discard duplicate "into" and class properties
                 if (bodyAdd.equals(bodyBase) ||
                     bodyAdd.getIdentity().equals(bodyBase.getIdentity())
-                        && bodyAdd.getImplementation() == Implementation.Implicit) {
+                        && bodyAdd.getImplementation() == Implementation.FromInto) {
                     // we found a duplicate, so we can ignore it (it'll get added when we add
                     // all of the bodies from this)
                     continue NextLayer;
@@ -163,7 +170,7 @@ public class PropertyInfo
         PropertyBody[] aResult = listMerge.toArray(new PropertyBody[0]);
 
         // check @Override (formal types are naturally exempt)
-        if (fSelf && !isFormalType()) {
+        if (contribSource == ContribSource.Self && !isFormalType()) {
             // should only have one layer (or zero layers, in which case we wouldn't have been
             // called) of property body for the "self" layer
             assert cAdd == 1;
@@ -189,7 +196,7 @@ public class PropertyInfo
                 // if one implicit body goes on top of another
                 Existence exBase = getHead().getExistence();
                 if (typeAdd.isA(typeResult) &&
-                        (exAdd != Existence.Implied || exBase == Existence.Implied)) {
+                        (exAdd != Existence.Implicit || exBase == Existence.Implicit)) {
                     // type has been narrowed
                     typeResult = typeAdd;
                 }
@@ -238,7 +245,7 @@ public class PropertyInfo
         // checking against), because transitivity.
         Annotation[] aAnnoBase = this.getRefAnnotations();
         int          cAnnoBase = aAnnoBase.length;
-        if (cAnnoBase > 0 && this.getExistence() != Existence.Implied) {
+        if (cAnnoBase > 0 && this.getExistence() != Existence.Implicit) {
             for (int iBodyAdd = cAdd - 1; iBodyAdd >= 0; --iBodyAdd) {
                 PropertyBody bodyAdd  = aAdd[iBodyAdd];
                 Annotation[] aAnnoAdd = bodyAdd.getRefAnnotations();
@@ -301,8 +308,8 @@ public class PropertyInfo
 
     /**
      * When a property on a class originates on an interface, it may not have been evaluated for a
-     * field. This method is invoked on all of the properties of a class once all of the interfaces
-     * have been applied to the class, giving the properties a chance to replace themselves with an
+     * field. This method is invoked on all properties of a class once all interfaces have been
+     * applied to the class, giving the properties a chance to replace themselves with an
      * appropriate PropertyInfo.
      *
      * @param fNative  true iff the type being assembled is a native rebase class
@@ -324,7 +331,7 @@ public class PropertyInfo
         PropertyStructure struct = null;
         boolean           fRO    = false;
         for (PropertyBody body : m_aBody) {
-            if (body.getExistence() != Existence.Implied) {
+            if (body.getExistence() != Existence.Implicit) {
                 assert body.getExistence() == Existence.Interface;
 
                 if (struct == null) {
@@ -346,7 +353,7 @@ public class PropertyInfo
                     Effect.BlocksSuper, fRO ? Effect.None : Effect.BlocksSuper, false, false, null, null)
                 : new PropertyBody(struct, Implementation.SansCode, null, getType(), fRO, false, false,
                     Effect.None, Effect.None, !fRO, false, null, null);
-        return layerOn(new PropertyInfo(bodyNew, f_nRank), false, false, errs);
+        return layerOn(new PropertyInfo(bodyNew, f_nRank), ContribSource.Regular, false, errs);
     }
 
     /**
@@ -366,10 +373,11 @@ public class PropertyInfo
         PropertyBody[]     aBody = m_aBody;
         for (int i = 0, c = aBody.length; i < c; ++i) {
             PropertyBody     body     = aBody[i];
-            IdentityConstant constClz = idProp.getClassIdentity();
+            IdentityConstant constClz = idProp.getClassIdentity(); // TODO GG explain (and why inside the loop?)
             boolean fRetain;
             switch (body.getImplementation()) {
-            case Implicit:      // "into" isn't in the call chain
+            case FromInto:      // "into" isn't in the call chain
+            case Implicit:
             case Default:       // interface type - allow multiple copies to survive
             case Declared:      // interface type - allow multiple copies to survive
                 fRetain = true;
@@ -450,27 +458,67 @@ public class PropertyInfo
     }
 
     /**
-     * @return the "into" version of this PropertyInfo
+     * @param setFromInto  the pre-calculated graph of identity nodes that form the "into" and omit
+     *                     the mixin (preventing circularity)
+     *
+     * @return the contents of this PropertyInfo, but excluding bodies from classes in the passed set,
+     *         or null if all bodies are excluded
      */
-    public PropertyInfo asInto() {
+    public PropertyInfo excluding(Set<IdentityConstant> setFromInto) {
+        PropertyBody[]     aBodyOld = m_aBody;
+        int                cBodies  = aBodyOld.length;
+        List<PropertyBody> listNew  = null;
+        for (int iBody = 0; iBody < cBodies; iBody++) {
+            PropertyBody body = aBodyOld[iBody];
+            if (setFromInto.contains(body.getIdentity().getClassIdentity())) {
+                if (listNew == null) {
+                    listNew = cBodies == 1 ? Collections.emptyList() : new ArrayList<>(cBodies - 1);
+                    for (int iCopy = 0; iCopy < iBody; ++iCopy) {
+                        listNew.add(aBodyOld[iCopy]);
+                    }
+                }
+            } else {
+                if (listNew != null) {
+                    listNew.add(body);
+                }
+            }
+        }
+
+        return listNew == null ? this
+                : listNew.isEmpty() ? null
+                : new PropertyInfo(listNew.toArray(new PropertyBody[0]), m_type, m_fRequireField,
+                                   m_fSuppressVar, f_nRank);
+    }
+
+    /**
+     * @param setFromInto  the pre-calculated graph of identity nodes that form the "into" and omit
+     *                     the mixin (preventing circularity), or null to include everything
+     *
+     * @return the "into" version of this PropertyInfo, or null to exclude from the "into"
+     */
+    public PropertyInfo asInto(Set<IdentityConstant> setFromInto) {
         // if the property is a constant or a formal type, it stays as-is; otherwise, it needs to be
         // turned into a chain of implicit entries
         if (isConstant() || isFormalType()) {
             return this;
         }
 
-        PropertyBody[] aBodyOld = m_aBody;
-        int            cBodies  = aBodyOld.length;
-        PropertyBody[] aBodyNew = new PropertyBody[cBodies];
+        PropertyBody[]          aBodyOld = m_aBody;
+        int                     cBodies  = aBodyOld.length;
+        ArrayList<PropertyBody> listNew = new ArrayList<>(cBodies); // may be smaller than cBodies
         for (int i = 0; i < cBodies; i++) {
             PropertyBody body = aBodyOld[i];
-
-            aBodyNew[i] = new PropertyBody(body.getStructure(), Implementation.Implicit, null,
-                body.getType(), body.isRO(), body.isRW(), body.hasCustomCode(), Effect.None, Effect.None,
-                body.hasField(), false, null, null);
+            if (setFromInto == null || setFromInto.contains(body.getIdentity().getClassIdentity())) {
+                listNew.add(new PropertyBody(body.getStructure(), Implementation.FromInto, null,
+                        body.getType(), body.isRO(), body.isRW(), body.hasCustomCode(), Effect.None,
+                        Effect.None, body.hasField(), false, null, null));
+            }
         }
 
-        return new PropertyInfo(aBodyNew, m_type, m_fRequireField, m_fSuppressVar, f_nRank);
+        return listNew.isEmpty()
+                ? null
+                : new PropertyInfo(listNew.toArray(new PropertyBody[0]), m_type, m_fRequireField,
+                                   m_fSuppressVar, f_nRank);
     }
 
     /**
@@ -517,11 +565,25 @@ public class PropertyInfo
     }
 
     /**
-     * @return true iff any body of this info has the specified property id
+     * @return true iff any PropertyBody of this PropertyInfo has the specified property id
      */
     public boolean containsBody(PropertyConstant id) {
         for (PropertyBody body : m_aBody) {
             if (id.equals(body.getIdentity())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @param match  the predicate to match a PropertyInfo
+     *
+     * @return true iff any PropertyBody of this PropertyInfo matches
+     */
+    public boolean containsBody(Predicate<PropertyBody> match) {
+        for (PropertyBody body : m_aBody) {
+            if (match.test(body)) {
                 return true;
             }
         }
@@ -1208,6 +1270,12 @@ public class PropertyInfo
         return false;
     }
 
+    /**
+     * @return true iff this property has been "exploded"
+     */
+    public boolean isExploded() {
+        return containsBody(PropertyBody::isExploded);
+    }
 
     // ----- helpers -------------------------------------------------------------------------------
 

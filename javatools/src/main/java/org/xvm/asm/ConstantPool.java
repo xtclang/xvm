@@ -81,7 +81,7 @@ public class ConstantPool
      * @return the Constant at that index
      */
     public Constant getConstant(int i) {
-        return i == -1 ? null : m_listConst.get(i);
+        return i == -1 ? null : f_listConst.get(i);
     }
 
     /**
@@ -99,7 +99,7 @@ public class ConstantPool
         if (i == -1) {
             return null;
         }
-        Constant constant = m_listConst.get(i);
+        Constant constant = f_listConst.get(i);
         try {
             return type.cast(constant);
         } catch (ClassCastException e) {
@@ -114,7 +114,7 @@ public class ConstantPool
      * @return the count of constants in the pool
      */
     public int size() {
-        return m_listConst.size();
+        return f_listConst.size();
     }
 
     /**
@@ -129,7 +129,7 @@ public class ConstantPool
      */
     public Constant[] getConstants() {
         // note: this is expensive!!! (but purposeful)
-        return m_listConst.toArray(Constant.NO_CONSTS);
+        return f_listConst.toArray(Constant.NO_CONSTS);
     }
 
     /**
@@ -205,8 +205,8 @@ public class ConstantPool
                     return (T) mapConstants.get(constant);
                 }
 
-                constant.setPosition(m_listConst.size());
-                m_listConst.add(constant);
+                constant.setPosition(f_listConst.size());
+                f_listConst.add(constant);
                 mapConstants.put(constant, constant);
 
                 // also allow the constant to be looked up by a locator
@@ -248,7 +248,7 @@ public class ConstantPool
             // constant pools that we are allowed to refer to from this constant pool, so this
             // is an assertion to make sure that we don't accidentally refer to a constant pool
             // that isn't in that set of valid pools
-            constant.checkValidPools(m_setValidPools, new int[] {0});
+            constant.checkValidPools(f_setValidPools, new int[] {0});
         }
 
         return constant;
@@ -258,7 +258,7 @@ public class ConstantPool
      * Create a set or ConstantPools (upstream) that this ConstantPool is allowed to depend on.
      */
     public void buildValidPoolSet() {
-        Set<ConstantPool> set = m_setValidPools;
+        Set<ConstantPool> set = f_setValidPools;
         if (set.isEmpty()) {
             contributeToValidPoolSet(set);
         }
@@ -1333,7 +1333,7 @@ public class ConstantPool
 
         MultiMethodConstant constMultiMethod = switch (constParent.getFormat()) {
             case MultiMethod -> (MultiMethodConstant) constParent;
-            case Module, Package, Class, Method, Property, TypeParameter, FormalTypeChild ->
+            case Module, Package, Class, Method, Property, PureType, TypeParameter, FormalTypeChild ->
                     ensureMultiMethodConstant(constParent, sName);
             default -> throw new IllegalArgumentException("constant " + constParent.getFormat()
                     + " is not a Module, Package, Class, Method, or Property");
@@ -1357,8 +1357,8 @@ public class ConstantPool
 
         MultiMethodConstant constMultiMethod = switch (constParent.getFormat()) {
             case MultiMethod -> (MultiMethodConstant) constParent;
-            case Module, Package, Class, NativeClass, Method, Property, TypeParameter, FormalTypeChild, DynamicFormal ->
-                    ensureMultiMethodConstant(constParent, constSig.getName());
+            case Module, Package, Class, NativeClass, Method, Property, PureType, TypeParameter,
+                 FormalTypeChild, DynamicFormal -> ensureMultiMethodConstant(constParent, constSig.getName());
             default -> throw new IllegalArgumentException("constant " + constParent.getFormat()
                     + " is not a Module, Package, Class, Method, or Property");
         };
@@ -1897,6 +1897,23 @@ public class ConstantPool
     }
 
     /**
+     * Obtain an "pure type" IdentityConstant for a TypeConstant.
+     *
+     * @param type  the pure type
+     *
+     * @return the PureIdentityConstant representing the pure type
+     */
+    public PureIdentityConstant ensurePureIdentityConstant(TypeConstant type) {
+        assert type != null;
+
+        PureIdentityConstant id = (PureIdentityConstant) ensureLocatorLookup(Format.PureType).get(type);
+        if (id == null) {
+            id = register(new PureIdentityConstant(this, type));
+        }
+        return id;
+    }
+
+    /**
      * Given the specified register index, obtain a TypeConstant that represents the type parameter.
      *
      * @param constMethod  the containing method
@@ -2098,6 +2115,7 @@ public class ConstantPool
     // ----- caching helpers -----------------------------------------------------------------------
 
     public ModuleConstant    modEcstasy()        {ModuleConstant    c = m_valEcstasy;        if (c == null) {m_valEcstasy        = c = ensureModuleConstant(ECSTASY_MODULE)                             ;} return c;}
+    public ClassConstant     clzComparable()     {ClassConstant     c = m_clzComparable;     if (c == null) {m_clzComparable     = c = (ClassConstant) getImplicitlyImportedIdentity("Comparable"      );} return c;}
     public ClassConstant     clzObject()         {ClassConstant     c = m_clzObject;         if (c == null) {m_clzObject         = c = (ClassConstant) getImplicitlyImportedIdentity("Object"          );} return c;}
     public ClassConstant     clzInner()          {ClassConstant     c = m_clzInner;          if (c == null) {m_clzInner          = c = (ClassConstant) getImplicitlyImportedIdentity("Inner"           );} return c;}
     public ClassConstant     clzOuter()          {ClassConstant     c = m_clzOuter;          if (c == null) {m_clzOuter          = c = (ClassConstant) getImplicitlyImportedIdentity("Outer"           );} return c;}
@@ -2147,6 +2165,7 @@ public class ConstantPool
     public ClassConstant     clzTransient()      {ClassConstant     c = m_clzTransient;      if (c == null) {m_clzTransient      = c = (ClassConstant) getImplicitlyImportedIdentity("Transient"       );} return c;}
     public ClassConstant     clzUnassigned()     {ClassConstant     c = m_clzUnassigned;     if (c == null) {m_clzUnassigned     = c = (ClassConstant) getImplicitlyImportedIdentity("Unassigned"      );} return c;}
     public ClassConstant     clzVolatile()       {ClassConstant     c = m_clzVolatile;       if (c == null) {m_clzVolatile       = c = (ClassConstant) getImplicitlyImportedIdentity("Volatile"        );} return c;}
+    public TypeConstant      typeComparable()    {TypeConstant      c = m_typeComparable;    if (c == null) {m_typeComparable    = c = ensureTerminalTypeConstant(clzComparable()                      );} return c;}
     public TypeConstant      typeObject()        {TypeConstant      c = m_typeObject;        if (c == null) {m_typeObject        = c = ensureTerminalTypeConstant(clzObject()                          );} return c;}
     public TypeConstant      typeInner()         {TypeConstant      c = m_typeInner;         if (c == null) {m_typeInner         = c = ensureVirtualChildTypeConstant(typeOuter(), "Inner"             );} return c;}
     public TypeConstant      typeOuter()         {TypeConstant      c = m_typeOuter;         if (c == null) {m_typeOuter         = c = ensureTerminalTypeConstant(clzOuter()                           );} return c;}
@@ -2256,6 +2275,7 @@ public class ConstantPool
     public SingletonConstant valLesser()         {SingletonConstant c = m_valLesser;         if (c == null) {m_valLesser         = c = ensureSingletonConstConstant(clzLesser()                        );} return c;}
     public SingletonConstant valEqual()          {SingletonConstant c = m_valEqual;          if (c == null) {m_valEqual          = c = ensureSingletonConstConstant(clzEqual()                         );} return c;}
     public SingletonConstant valGreater()        {SingletonConstant c = m_valGreater;        if (c == null) {m_valGreater        = c = ensureSingletonConstConstant(clzGreater()                       );} return c;}
+    public SingletonConstant valNull()           {SingletonConstant c = m_valNull;           if (c == null) {m_valNull           = c = ensureSingletonConstConstant(clzNull()                          );} return c;}
     public SingletonConstant valTiesToEven()     {SingletonConstant c = m_valTiesToEven;     if (c == null) {m_valTiesToEven     = c = ensureSingletonConstConstant(clzTiesToEven()                    );} return c;}
     public SingletonConstant valTiesToAway()     {SingletonConstant c = m_valTiesToAway;     if (c == null) {m_valTiesToAway     = c = ensureSingletonConstConstant(clzTiesToAway()                    );} return c;}
     public SingletonConstant valTowardPositive() {SingletonConstant c = m_valTowardPositive; if (c == null) {m_valTowardPositive = c = ensureSingletonConstConstant(clzTowardPositive()                );} return c;}
@@ -2394,12 +2414,12 @@ public class ConstantPool
      * after serialization.
      */
     void replaceModule(ModuleConstant idOld, ModuleConstant idNew) {
-        for (Constant constant : m_listConst) {
+        for (Constant constant : f_listConst) {
             if (constant instanceof IdentityConstant id && id.getParentConstant() == idOld) {
                 int nPos = id.getPosition();
                 id = id.replaceParentConstant(idNew);
                 id.setPosition(nPos);
-                m_listConst.set(nPos, id);
+                f_listConst.set(nPos, id);
             }
         }
     }
@@ -2439,15 +2459,15 @@ public class ConstantPool
 
             @Override
             public boolean hasNext() {
-                return iNext < m_listConst.size();
+                return iNext < f_listConst.size();
             }
 
             @Override
             public XvmStructure next() {
-                if (iNext >= m_listConst.size()) {
+                if (iNext >= f_listConst.size()) {
                     throw new NoSuchElementException();
                 }
-                return m_listConst.get(iNext++);
+                return f_listConst.get(iNext++);
             }
         };
     }
@@ -2494,13 +2514,13 @@ public class ConstantPool
     @Override
     protected void disassemble(DataInput in)
             throws IOException {
-        m_listConst.clear();
+        f_listConst.clear();
         m_mapConstants.clear();
         m_mapLocators.clear();
 
         // read the number of constants in the pool
         int cConst = readMagnitude(in);
-        m_listConst.ensureCapacity(cConst);
+        f_listConst.ensureCapacity(cConst);
 
         // load the constant pool from the stream
         for (int i = 0; i < cConst; ++i) {
@@ -2701,6 +2721,10 @@ public class ConstantPool
                 constant = new ChildClassConstant(this, format, in);
                 break;
 
+            case PureType:
+                constant = new PureIdentityConstant(this, format, in);
+                break;
+
             case TypeParameter:
                 constant = new TypeParameterConstant(this, format, in);
                 break;
@@ -2835,11 +2859,11 @@ public class ConstantPool
             }
 
             constant.setPosition(i);
-            m_listConst.add(constant);
+            f_listConst.add(constant);
         }
 
         // convert indexes into constant references
-        for (Constant constant : m_listConst) {
+        for (Constant constant : f_listConst) {
             constant.resolveConstants();
         }
     }
@@ -2856,8 +2880,8 @@ public class ConstantPool
     @Override
     protected void assemble(DataOutput out)
             throws IOException {
-        writePackedLong(out, m_listConst.size());
-        for (Constant constant : m_listConst) {
+        writePackedLong(out, f_listConst.size());
+        for (Constant constant : f_listConst) {
             constant.assemble(out);
         }
     }
@@ -2871,7 +2895,7 @@ public class ConstantPool
         sb.append("module=")
           .append(getFileStructure().getModuleId().getName())
           .append(", size=")
-          .append(m_listConst.size());
+          .append(f_listConst.size());
 
         if (m_fRecurseReg) {
             sb.append(", recursive registration on");
@@ -2881,7 +2905,7 @@ public class ConstantPool
 
     @Override
     protected void dump(PrintWriter out, String sIndent) {
-        dumpStructureCollection(out, sIndent, "Constants", m_listConst);
+        dumpStructureCollection(out, sIndent, "Constants", f_listConst);
     }
 
 
@@ -2898,7 +2922,7 @@ public class ConstantPool
         }
 
         // compare each constant in the pool for equality
-        return this.m_listConst.equals(that.m_listConst);
+        return this.f_listConst.equals(that.f_listConst);
     }
 
 
@@ -2916,7 +2940,7 @@ public class ConstantPool
         assert !m_fRecurseReg;
         m_fRecurseReg = true;
 
-        m_listConst.forEach(Constant::resetRefs);
+        f_listConst.forEach(Constant::resetRefs);
     }
 
     /**
@@ -2966,7 +2990,7 @@ public class ConstantPool
                 mapConstNew.put(format, new ConcurrentHashMap<>());
             }
 
-            for (Constant constant : m_listConst) {
+            for (Constant constant : f_listConst) {
                 Constant constantOld = mapConstNew.get(constant.getFormat()).put(constant, constant);
                 if (constantOld != null && constantOld != constant) {
                     throw new IllegalStateException("constant collision: old=" + constantOld + ", new=" + constant);
@@ -3077,6 +3101,20 @@ public class ConstantPool
         synchronized (f_listInvalidated) {
             f_listInvalidated.add(register(id));
             m_cInvalidated = f_listInvalidated.size();
+        }
+    }
+
+    /**
+     * Cause all TypeInfos that are built from the specified TypeInfo to re-build.
+     *
+     * @param type  a TypeConstant
+     */
+    public void invalidateTypeInfos(TypeConstant type) {
+        // TODO eventually each TypeInfo must track which TypeConstants provided TypeInfos that it
+        //      was built from, so that invalidating any TypeConstant would cause all downstream
+        //      TypeInfos to automatically rebuild; this class-centric approach is temporary
+        if (type.isSingleUnderlyingClass(true)) {
+            invalidateTypeInfos(type.getSingleUnderlyingClass(true));
         }
     }
 
@@ -3555,54 +3593,8 @@ public class ConstantPool
         }
 
         TypeInfo info = m_typeNakedRef.ensureTypeInfo();
-
-        Map<Object, ParamInfo> mapTypeParams = new HashMap<>();
-        mapTypeParams.put("Referent", new ParamInfo("Referent", typeReferent, typeObject()));
-
-        MethodConstant    id        = info.findMethods("get", 0, TypeInfo.MethodKind.Method).iterator().next();
-        SignatureConstant sig       = id.getSignature();
-        MethodInfo        method    = info.getMethodById(id);
-        MethodBody        body      = method.getHead();
-        MethodConstant    idNew     = ensureMethodConstant(info.getIdentity(),
-                                        sig.resolveGenericTypes(this, resolver));
-        SignatureConstant sigNew    = idNew.getSignature();
-        MethodBody        bodyNew   = new MethodBody(idNew, sigNew, body.getImplementation(), null);
-        MethodInfo        methodNew = new MethodInfo(bodyNew, method.getRank());
-        bodyNew.setMethodStructure(body.getMethodStructure());
-
-        Map<MethodConstant, MethodInfo> mapMethods = new HashMap<>(info.getMethods());
-        mapMethods.remove(id);
-        mapMethods.put(methodNew.getIdentity(), methodNew);
-
-        Map<Object, MethodInfo> mapVirtMethods = new HashMap<>(info.getVirtMethods());
-        mapVirtMethods.remove(sig);
-        mapVirtMethods.put(sigNew, methodNew);
-
-        return new TypeInfo(
-                info.getType(),         // unresolved formal type from the "native" pool
-                0,                      // cInvals
-                null,                   // struct
-                0,                      // depth
-                true,                   // synthetic
-                mapTypeParams,
-                Annotation.NO_ANNOTATIONS,
-                Annotation.NO_ANNOTATIONS,
-                null,                   // typeExtends
-                null,                   // typeRebase
-                null,                   // typeInto
-                Collections.emptyList(), // listProcess,
-                ListMap.EMPTY,          // listmapClassChain
-                ListMap.EMPTY,          // listmapDefaultChain
-                Collections.emptyMap(),  // mapProps
-                mapMethods,
-                Collections.emptyMap(),  // mapVirtProps
-                mapVirtMethods,
-                ListMap.EMPTY,          // mapChildren
-                null, Progress.Complete
-                );
+        return info.asNakedRef(this, typeReferent, resolver);
     }
-
-    public SingletonConstant valNull()           {SingletonConstant c = m_valNull;           if (c == null) {m_valNull           = c = ensureSingletonConstConstant(clzNull()                          );} return c;}
 
     /**
      * @return a ContextPool associated with the current thread
@@ -3633,14 +3625,14 @@ public class ConstantPool
         ConstantPool pollPrior = poolHolder[0];
         poolHolder[0] = pool;
         return () -> poolHolder[0] = pollPrior;
-}
+    }
 
     /**
      * Discard unused Constants and order the remaining constants so that the most-referred-to
      * Constants occur before the less used constants.
      */
     private void optimize() {
-        ArrayList<Constant> list = m_listConst;
+        ArrayList<Constant> list = f_listConst;
 
         // remove unused constants
         int cBefore       = list.size();
@@ -3656,6 +3648,7 @@ public class ConstantPool
         }
 
         m_valEcstasy        = null;
+        m_clzComparable     = null;
         m_clzObject         = null;
         m_clzInner          = null;
         m_clzOuter          = null;
@@ -3704,6 +3697,7 @@ public class ConstantPool
         m_clzTransient      = null;
         m_clzUnassigned     = null;
         m_clzVolatile       = null;
+        m_typeComparable    = null;
         m_typeObject        = null;
         m_typeInner         = null;
         m_typeOuter         = null;
@@ -3894,7 +3888,7 @@ public class ConstantPool
     /**
      * Storage of Constant objects by index.
      */
-    private final ArrayList<Constant> m_listConst = new ArrayList<>();
+    private final ArrayList<Constant> f_listConst = new ArrayList<>();
 
     /**
      * Reverse lookup structure to find a particular constant by constant.
@@ -3914,7 +3908,7 @@ public class ConstantPool
      * Set of references to ConstantPool instances, defining the only ConstantPool references that
      * may be referred to (directly or indirectly) from constants stored in this pool.
      */
-    private final Set<ConstantPool> m_setValidPools = Collections.newSetFromMap(new IdentityHashMap<>());
+    private final Set<ConstantPool> f_setValidPools = Collections.newSetFromMap(new IdentityHashMap<>());
 
     /**
      * Tracks whether the ConstantPool should recursively register constants.
@@ -3962,6 +3956,7 @@ public class ConstantPool
      * Often used constants.
      */
     private transient ModuleConstant    m_valEcstasy;
+    private transient ClassConstant     m_clzComparable;
     private transient ClassConstant     m_clzObject;
     private transient ClassConstant     m_clzInner;
     private transient ClassConstant     m_clzOuter;
@@ -4011,6 +4006,7 @@ public class ConstantPool
     private transient ClassConstant     m_clzTransient;
     private transient ClassConstant     m_clzUnassigned;
     private transient ClassConstant     m_clzVolatile;
+    private transient TypeConstant      m_typeComparable;
     private transient TypeConstant      m_typeObject;
     private transient TypeConstant      m_typeInner;
     private transient TypeConstant      m_typeOuter;

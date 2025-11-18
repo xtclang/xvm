@@ -138,7 +138,10 @@ public class NativeContainer
         fileRoot.merge(moduleTurtle, true, false);
         fileRoot.merge(moduleNative, true, false);
 
-        fileRoot.linkModules(f_repository, true);
+        ModuleConstant idMissing = fileRoot.linkModules(f_repository, true);
+        if (idMissing != null) {
+            throw new LauncherException(true, "Missing module: " + idMissing.getName());
+        }
 
         // obtain the cloned modules that belong to the merged container
         m_moduleSystem = fileRoot.getChild(ECSTASY_MODULE);

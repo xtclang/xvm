@@ -15,6 +15,6 @@ const NaturalHasher<Value extends Hashable>
 
     @Override
     Boolean areEqual(Value value1, Value value2) {
-        return Value.equals(value1, value2);
+        return value1 == value2;
     }
 }

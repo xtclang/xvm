@@ -52,8 +52,10 @@ public class AccessTypeConstant
         if (constType.isAccessSpecified()) {
             throw new IllegalArgumentException("type access is already specified");
         }
-        if (!constType.isSingleDefiningConstant()) {
-            throw new IllegalArgumentException("access cannot be specified for a relational type");
+        if (!constType.isSingleUnderlyingClass(true) && !constType.containsUnresolved()) {
+            if (!constType.isSingleDefiningConstant()) { // TODO GG remove this carve-out
+                throw new IllegalArgumentException("access " + access + " cannot be specified for type: " + constType);
+            }
         }
 
         m_constType = constType;
@@ -81,7 +83,6 @@ public class AccessTypeConstant
     protected void resolveConstants() {
         m_constType = getConstantPool().getConstant(m_iType, TypeConstant.class);
     }
-
 
     // ----- TypeConstant methods ------------------------------------------------------------------
 
@@ -121,6 +122,23 @@ public class AccessTypeConstant
         return true;
     }
 
+// TODO CP - this appears to be an incorrect assumption (this change is from November)
+//
+//    @Override
+//    public Category getCategory() {
+//        return switch (super.getCategory()) {
+//            case CLASS, IFACE -> Category.IFACE;
+//            default -> Category.OTHER;
+//        };
+//    }
+
+    @Override
+    public TypeConstant asImplementable() {
+        TypeConstant typeOrig = getUnderlyingType();
+        TypeConstant typeNew  = typeOrig.asImplementable();
+        return typeOrig == typeNew ? this : typeNew.ensureAccess(m_access);
+    }
+
     @Override
     public TypeConstant removeAccess() {
         return m_constType;
@@ -153,7 +171,6 @@ public class AccessTypeConstant
         return super.resolveContributedName(sName, access, idMethod, collector);
     }
 
-
     // ----- TypeInfo support ----------------------------------------------------------------------
 
     @Override
@@ -175,19 +192,6 @@ public class AccessTypeConstant
                 : super.buildTypeInfo(errs);
     }
 
-    @Override
-    public void invalidateTypeInfo() {
-        super.invalidateTypeInfo();
-
-        // clear the TypeInfo for the base and PRIVATE types
-        getUnderlyingType().clearTypeInfo();
-        if (getAccess() != Access.PRIVATE) {
-            getConstantPool().ensureAccessTypeConstant(
-                    getUnderlyingType(), Access.PRIVATE).clearTypeInfo();
-        }
-    }
-
-
     // ----- type comparison support ---------------------------------------------------------------
 
     @Override
@@ -206,14 +210,12 @@ public class AccessTypeConstant
         return super.checkProduction(sTypeName, m_access, listParams);
     }
 
-
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
     public String ensureJitClassName(TypeSystem ts) {
         return m_constType.ensureJitClassName(ts);
     }
-
 
     // ----- Constant methods ----------------------------------------------------------------------
 
@@ -256,7 +258,6 @@ public class AccessTypeConstant
         return m_constType.getValueString() + ':' + m_access.KEYWORD;
     }
 
-
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
@@ -289,7 +290,6 @@ public class AccessTypeConstant
         return false;
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -297,7 +297,6 @@ public class AccessTypeConstant
         return Hash.of(m_constType,
                Hash.of(m_access));
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
