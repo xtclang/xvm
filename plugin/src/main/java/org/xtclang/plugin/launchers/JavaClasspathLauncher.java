@@ -16,6 +16,8 @@ import org.xtclang.plugin.tasks.XtcLauncherTask;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
@@ -271,12 +273,26 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
         final var command = buildForkedCommand(cmd, javaToolsJar);
         final var processBuilder = new ProcessBuilder(command).directory(context.getWorkingDirectory());
 
-        // Configure I/O redirection based on DSL settings
+        // Determine which streams need to be copied to console
+        final boolean copyStdout = !task.hasStdoutRedirect() && getDefaultStdoutPath(cmd) == null;
+        final boolean copyStderr = !task.hasStderrRedirect() && getDefaultStderrPath(cmd) == null;
+
         configureIoRedirection(processBuilder, cmd);
 
         logger.info("[plugin] Starting forked process: {}", String.join(" ", command));
         final Process process = processBuilder.start();
+
+        // Copy streams that aren't redirected to files
+        final var streamThreads = (copyStdout || copyStderr) ? copyProcessStreams(process, copyStdout, copyStderr) : null;
+
         final int exitCode = process.waitFor();
+
+        // Wait for stream copying threads to finish
+        if (streamThreads != null) {
+            for (final var thread : streamThreads) {
+                thread.join();
+            }
+        }
 
         if (exitCode != 0) {
             final Exception failure = new GradleException("Forked process exited with code: " + exitCode);
@@ -285,6 +301,54 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
         }
         logger.info("[plugin] Forked process completed successfully");
         return SimpleExecResult.success(exitCode);
+    }
+
+    /**
+     * Copies process stdout/stderr to System.out/err in background threads.
+     * This is necessary when Gradle has redirected file descriptors and inheritIO() doesn't work.
+     * Uses byte-buffer based copying (like Gradle's implementation) for better performance and
+     * to capture all output including partial lines.
+     *
+     * @param process the process whose streams to copy
+     * @param copyStdout whether to copy stdout to System.out
+     * @param copyStderr whether to copy stderr to System.err
+     * @return list of threads copying the streams
+     */
+    private List<Thread> copyProcessStreams(final Process process, final boolean copyStdout, final boolean copyStderr) {
+        record StreamCopy(InputStream input, OutputStream output, String name) {}
+
+        final var streams = new ArrayList<StreamCopy>(2);
+        if (copyStdout) {
+            streams.add(new StreamCopy(process.getInputStream(), System.out, "xtc-stdout-copy"));
+        }
+        if (copyStderr) {
+            streams.add(new StreamCopy(process.getErrorStream(), System.err, "xtc-stderr-copy"));
+        }
+
+        final var threads = new ArrayList<Thread>(streams.size());
+        for (final var stream : streams) {
+            final var thread = new Thread(() -> {
+                try {
+                    final byte[] buffer = new byte[8192]; // 8KB buffer like Gradle
+                    int bytesRead;
+                    while ((bytesRead = stream.input.read(buffer)) != -1) {
+                        stream.output.write(buffer, 0, bytesRead);
+                        stream.output.flush();
+                    }
+                } catch (final IOException e) {
+                    logger.warn("[plugin] Error copying {}: {}", stream.name, e.getMessage());
+                } finally {
+                    try {
+                        stream.input.close();
+                    } catch (final IOException e) {
+                        // Ignore close errors
+                    }
+                }
+            }, stream.name);
+            thread.start();
+            threads.add(thread);
+        }
+        return threads;
     }
 
     /**
@@ -298,12 +362,23 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
         final String stdoutPath = resolveOutputPath(task.hasStdoutRedirect(), task.getStdoutPath(), getDefaultStdoutPath(cmd));
         final String stderrPath = resolveOutputPath(task.hasStderrRedirect(), task.getStderrPath(), getDefaultStderrPath(cmd));
 
-        configureStream(processBuilder::redirectOutput, stdoutPath, "stdout");
-        configureStream(processBuilder::redirectError, stderrPath, "stderr");
+        // Configure each stream independently - redirect to file if specified, otherwise leave as PIPE
+        if (stdoutPath != null) {
+            configureStream(processBuilder::redirectOutput, stdoutPath, "stdout");
+        }
+        if (stderrPath != null) {
+            configureStream(processBuilder::redirectError, stderrPath, "stderr");
+        }
         processBuilder.redirectInput(ProcessBuilder.Redirect.INHERIT);
 
         if (stdoutPath == null && stderrPath == null) {
             logger.info("[plugin] Using inherited I/O (console output)");
+        } else if (stdoutPath != null && stderrPath != null) {
+            logger.info("[plugin] Redirecting both stdout and stderr to files");
+        } else {
+            logger.info("[plugin] Redirecting {} to file, {} to console",
+                    stdoutPath != null ? "stdout" : "stderr",
+                    stdoutPath != null ? "stderr" : "stdout");
         }
     }
 

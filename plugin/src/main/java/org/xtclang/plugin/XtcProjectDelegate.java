@@ -614,7 +614,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Project, Void> {
 
     private void checkProjectIsVersioned(final Project project) {
         if (UNSPECIFIED.equalsIgnoreCase(project.getVersion().toString())) {
-            logger.lifecycle("[plugin] WARNING: Project '{}' has unspecified version.", projectName);
+            logger.warn("[plugin] WARNING: Project '{}' has unspecified version.", projectName);
         }
     }
 

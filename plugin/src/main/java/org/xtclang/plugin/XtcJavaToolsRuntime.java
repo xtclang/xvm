@@ -93,9 +93,7 @@ public final class XtcJavaToolsRuntime {
         try {
             // Create a shared classloader with javatools.jar and set as thread context classloader
             javaToolsClassLoader = createAndSetJavaToolsClassLoader(javaToolsJar, logger);
-            logger.lifecycle("[plugin] ******* Loaded javatools.jar into plugin classpath: {}", javaToolsJar.getAbsolutePath());
-            logger.info("[plugin] All javatools types now available throughout plugin");
-
+            logger.info("[plugin] ******* Loaded javatools.jar into plugin classpath: {}", javaToolsJar.getAbsolutePath());
         } catch (final Exception e) {
             throw new GradleException("[plugin] Failed to load javatools.jar into classpath: " + javaToolsJar.getAbsolutePath(), e);
         }
