@@ -135,6 +135,8 @@ public class TypeInfo {
 
         assert cInvalidations == 0 // necessary for TYPEINFO_PLACEHOLDER construction
             || cInvalidations <= type.getConstantPool().getInvalidationCount();
+
+        validate(); // TODO remove?
     }
 
     /**
@@ -178,6 +180,49 @@ public class TypeInfo {
         m_fImplicitAbstract = false;
 
         assert cInvalidations <= typeFormal.getConstantPool().getInvalidationCount();
+
+        validate(); // TODO remove?
+    }
+
+    // TODO remove?
+    private void validate() {
+        // find each virtual method from f_mapVirtMethods in f_mapMethods
+        for (var entry : f_mapVirtMethods.entrySet()) {
+            Object     key = entry.getKey();
+            MethodInfo val = entry.getValue();
+            if (key == null) {
+                throw new AssertionError("TypeInfo for " + f_type
+                        + " contains null key in f_mapVirtMethods");
+            }
+            if (val == null) {
+                throw new AssertionError("TypeInfo for " + f_type
+                        + " contains null value in f_mapVirtMethods for key=" + key);
+            }
+            if (key instanceof NestedIdentity) {
+                // TODO
+            } else if (key instanceof SignatureConstant) {
+                // TODO
+            } else {
+                throw new AssertionError("TypeInfo for " + f_type + " contains unexpected key class "
+                        + key.getClass() + ": " + key);
+            }
+        }
+
+        // find each virtual method from f_mapMethods in f_mapVirtMethods
+        for (var entry : f_mapMethods.entrySet()) {
+            MethodConstant key = entry.getKey();
+            MethodInfo     val = entry.getValue();
+            if (key == null) {
+                throw new AssertionError("TypeInfo for " + f_type
+                                             + " contains null key in f_mapMethods");
+            }
+            if (val == null) {
+                throw new AssertionError("TypeInfo for " + f_type
+                                             + " contains null value in f_mapMethods for key=" + key);
+            }
+
+            // TODO find the MethodInfo in the f_mapVirtMethods map
+        }
     }
 
     /**
@@ -293,10 +338,11 @@ public class TypeInfo {
 
                 // convert the method into an "into" method
                 method = method.asInto();
-
-                mapMethods.put(id, method);
-                if (method.isVirtual()) {
-                    mapVirtMethods.put(id.resolveNestedIdentity(pool, null), method);
+                if (method != null) {
+                    mapMethods.put(id, method);
+                    if (method.isVirtual()) {
+                        mapVirtMethods.put(id.resolveNestedIdentity(pool, null), method);
+                    }
                 }
             }
 
@@ -373,13 +419,15 @@ public class TypeInfo {
      * Contribute this TypeInfo's knowledge of potential call chain information to another deriving
      * type's TypeInfo information.
      *
-     * @param listmapClassChain    the class chain being collected for the derivative type
-     * @param listmapDefaultChain  the default chain being collected for the derivative type
-     * @param composition          the composition of the contribution
+     * @param listmapClassChain   the class chain being collected for the derivative type
+     * @param listmapDefaultChain the default chain being collected for the derivative type
+     * @param listmapRootChain    default chain for types covered by isRootInterface()
+     * @param composition         the composition of the contribution
      */
     public void contributeChains(
             ListMap<IdentityConstant, Origin> listmapClassChain,
             ListMap<IdentityConstant, Origin> listmapDefaultChain,
+            ListMap<IdentityConstant, Origin> listmapRootChain,
             Composition composition) {
         Origin originTrue  = f_type.new Origin(true);
         Origin originFalse = f_type.new Origin(false);
@@ -408,7 +456,9 @@ public class TypeInfo {
 
         // append our defaults to the default chain (just the ones that are absent from the chain)
         for (IdentityConstant constId : f_listmapDefaultChain.keySet()) {
-            listmapDefaultChain.putIfAbsent(constId, originTrue);
+            // this inlined test needs to be the equivalent of TypeConstant.isRootInterface()
+            (constId.equals(pool().clzObject()) || constId.equals(pool().clzComparable()) ?
+                    listmapRootChain : listmapDefaultChain).putIfAbsent(constId, originTrue);
         }
     }
 
@@ -1251,7 +1301,7 @@ public class TypeInfo {
     /**
      * Same as the method above, but allowing for relaxed run-time matching rules.
      *
-     * Note: this method should not be called to retrieve "regular" (non-virtual) constructors
+     * Warning: Do NOT use this method to find "regular" (non-virtual) constructors.
      *
      * @param sig       a SignatureConstant to find the method for
      * @param fRuntime  true iff this method is called by the runtime chain computation logic
@@ -2208,7 +2258,14 @@ public class TypeInfo {
 
         sb.append("TypeInfo: ")
           .append(f_type)
-          .append(" (format=")
+          .append(" (");
+
+        if (f_progress != Progress.Complete) {
+            sb.append(f_progress)
+              .append(", ");
+        }
+
+        sb.append("format=")
           .append(getFormat());
 
         if (isAbstract()) {
@@ -2313,6 +2370,9 @@ public class TypeInfo {
                 sb.append("\n  [")
                   .append(i++)
                   .append("] ");
+                if (method.isDuplicate()) {
+                    sb.append("***");
+                }
                 if (f_mapVirtMethods.containsKey(entry.getKey().resolveNestedIdentity(pool, null))) {
                     sb.append("(v) ");
                 }
@@ -2413,13 +2473,23 @@ public class TypeInfo {
      * @return null if all is good; a first offending method otherwise
      */
     public MethodInfo validateCapped() {
-        for (MethodInfo method : f_mapMethods.values()) {
-            if (method.isCapped() && getNarrowingMethod(method) == null) {
-                return method;
+        for (Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet()) {
+            MethodConstant id     = entry.getKey();
+            MethodInfo     method = entry.getValue();
+            if (method.isCapped()) {
+                if (getNarrowingMethod(method) == null) {
+                    return method;
+                }
+            } /* TODO this is temporary */ else if (id.getNestedDepth() == 2 && method.isVirtual()) {
+                MethodInfo m2 = getMethodBySignature(method.getSignature());
+                if (m2 != method) {
+                    method.markAsDuplicate();
+                }
             }
         }
         return null;
     }
+
     public static boolean containsAnnotation(Annotation[] annotations, String sName) {
         if (annotations == null || annotations.length == 0) {
             return false;

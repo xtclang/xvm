@@ -143,7 +143,7 @@ public class PropertyInfo
                 // discard duplicate "into" and class properties
                 if (bodyAdd.equals(bodyBase) ||
                     bodyAdd.getIdentity().equals(bodyBase.getIdentity())
-                        && bodyAdd.getImplementation() == Implementation.Implicit) {
+                        && bodyAdd.getImplementation() == Implementation.FromInto) {
                     // we found a duplicate, so we can ignore it (it'll get added when we add
                     // all of the bodies from this)
                     continue NextLayer;
@@ -190,7 +190,7 @@ public class PropertyInfo
                 // if one implicit body goes on top of another
                 Existence exBase = getHead().getExistence();
                 if (typeAdd.isA(typeResult) &&
-                        (exAdd != Existence.Implied || exBase == Existence.Implied)) {
+                        (exAdd != Existence.Implicit || exBase == Existence.Implicit)) {
                     // type has been narrowed
                     typeResult = typeAdd;
                 }
@@ -239,7 +239,7 @@ public class PropertyInfo
         // checking against), because transitivity.
         Annotation[] aAnnoBase = this.getRefAnnotations();
         int          cAnnoBase = aAnnoBase.length;
-        if (cAnnoBase > 0 && this.getExistence() != Existence.Implied) {
+        if (cAnnoBase > 0 && this.getExistence() != Existence.Implicit) {
             for (int iBodyAdd = cAdd - 1; iBodyAdd >= 0; --iBodyAdd) {
                 PropertyBody bodyAdd  = aAdd[iBodyAdd];
                 Annotation[] aAnnoAdd = bodyAdd.getRefAnnotations();
@@ -325,7 +325,7 @@ public class PropertyInfo
         PropertyStructure struct = null;
         boolean           fRO    = false;
         for (PropertyBody body : m_aBody) {
-            if (body.getExistence() != Existence.Implied) {
+            if (body.getExistence() != Existence.Implicit) {
                 assert body.getExistence() == Existence.Interface;
 
                 if (struct == null) {
@@ -370,7 +370,7 @@ public class PropertyInfo
             IdentityConstant constClz = idProp.getClassIdentity();
             boolean fRetain;
             switch (body.getImplementation()) {
-            case Implicit:      // "into" isn't in the call chain
+            case FromInto:      // "into" isn't in the call chain
             case Default:       // interface type - allow multiple copies to survive
             case Declared:      // interface type - allow multiple copies to survive
                 fRetain = true;
@@ -466,9 +466,9 @@ public class PropertyInfo
         for (int i = 0; i < cBodies; i++) {
             PropertyBody body = aBodyOld[i];
 
-            aBodyNew[i] = new PropertyBody(body.getStructure(), Implementation.Implicit, null,
-                body.getType(), body.isRO(), body.isRW(), body.hasCustomCode(), Effect.None, Effect.None,
-                body.hasField(), false, null, null);
+            aBodyNew[i] = new PropertyBody(body.getStructure(), Implementation.FromInto, null,
+                    body.getType(), body.isRO(), body.isRW(), body.hasCustomCode(), Effect.None,
+                    Effect.None, body.hasField(), false, null, null);
         }
 
         return new PropertyInfo(aBodyNew, m_type, m_fRequireField, m_fSuppressVar, f_nRank);
@@ -806,7 +806,7 @@ public class PropertyInfo
     public boolean isNative() {
         for (PropertyBody body : m_aBody) {
             switch (body.getImplementation()) {
-            case Implicit:
+            case FromInto:
                 continue;
 
             case Native:

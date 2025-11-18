@@ -2074,6 +2074,7 @@ public class ConstantPool
     // ----- caching helpers -----------------------------------------------------------------------
 
     public ModuleConstant    modEcstasy()        {ModuleConstant    c = m_valEcstasy;        if (c == null) {m_valEcstasy        = c = ensureModuleConstant(ECSTASY_MODULE)                             ;} return c;}
+    public ClassConstant     clzComparable()     {ClassConstant     c = m_clzComparable;     if (c == null) {m_clzComparable     = c = (ClassConstant) getImplicitlyImportedIdentity("Comparable"      );} return c;}
     public ClassConstant     clzObject()         {ClassConstant     c = m_clzObject;         if (c == null) {m_clzObject         = c = (ClassConstant) getImplicitlyImportedIdentity("Object"          );} return c;}
     public ClassConstant     clzInner()          {ClassConstant     c = m_clzInner;          if (c == null) {m_clzInner          = c = (ClassConstant) getImplicitlyImportedIdentity("Inner"           );} return c;}
     public ClassConstant     clzOuter()          {ClassConstant     c = m_clzOuter;          if (c == null) {m_clzOuter          = c = (ClassConstant) getImplicitlyImportedIdentity("Outer"           );} return c;}
@@ -2121,6 +2122,7 @@ public class ConstantPool
     public ClassConstant     clzTransient()      {ClassConstant     c = m_clzTransient;      if (c == null) {m_clzTransient      = c = (ClassConstant) getImplicitlyImportedIdentity("Transient"       );} return c;}
     public ClassConstant     clzUnassigned()     {ClassConstant     c = m_clzUnassigned;     if (c == null) {m_clzUnassigned     = c = (ClassConstant) getImplicitlyImportedIdentity("Unassigned"      );} return c;}
     public ClassConstant     clzVolatile()       {ClassConstant     c = m_clzVolatile;       if (c == null) {m_clzVolatile       = c = (ClassConstant) getImplicitlyImportedIdentity("Volatile"        );} return c;}
+    public TypeConstant      typeComparable()    {TypeConstant      c = m_typeComparable;    if (c == null) {m_typeComparable    = c = ensureTerminalTypeConstant(clzComparable()                      );} return c;}
     public TypeConstant      typeObject()        {TypeConstant      c = m_typeObject;        if (c == null) {m_typeObject        = c = ensureTerminalTypeConstant(clzObject()                          );} return c;}
     public TypeConstant      typeInner()         {TypeConstant      c = m_typeInner;         if (c == null) {m_typeInner         = c = ensureVirtualChildTypeConstant(typeOuter(), "Inner"             );} return c;}
     public TypeConstant      typeOuter()         {TypeConstant      c = m_typeOuter;         if (c == null) {m_typeOuter         = c = ensureTerminalTypeConstant(clzOuter()                           );} return c;}
@@ -3582,6 +3584,7 @@ public class ConstantPool
         }
 
         m_valEcstasy        = null;
+        m_clzComparable     = null;
         m_clzObject         = null;
         m_clzInner          = null;
         m_clzOuter          = null;
@@ -3628,6 +3631,7 @@ public class ConstantPool
         m_clzTransient      = null;
         m_clzUnassigned     = null;
         m_clzVolatile       = null;
+        m_typeComparable    = null;
         m_typeObject        = null;
         m_typeInner         = null;
         m_typeOuter         = null;
@@ -3881,6 +3885,7 @@ public class ConstantPool
      * Often used constants.
      */
     private transient ModuleConstant    m_valEcstasy;
+    private transient ClassConstant     m_clzComparable;
     private transient ClassConstant     m_clzObject;
     private transient ClassConstant     m_clzInner;
     private transient ClassConstant     m_clzOuter;
@@ -3928,6 +3933,7 @@ public class ConstantPool
     private transient ClassConstant     m_clzTransient;
     private transient ClassConstant     m_clzUnassigned;
     private transient ClassConstant     m_clzVolatile;
+    private transient TypeConstant      m_typeComparable;
     private transient TypeConstant      m_typeObject;
     private transient TypeConstant      m_typeInner;
     private transient TypeConstant      m_typeOuter;

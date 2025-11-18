@@ -154,13 +154,13 @@ public class UnionTypeConstant
      */
     public void decompose(Set<TypeConstant> setTypes) {
         TypeConstant type1 = m_constType1;
-        TypeConstant type2 = m_constType2;
-
         if (type1 instanceof UnionTypeConstant typeUnion) {
             typeUnion.decompose(setTypes);
         } else {
             setTypes.add(type1);
         }
+
+        TypeConstant type2 = m_constType2;
         if (type2 instanceof UnionTypeConstant typeUnion) {
             typeUnion.decompose(setTypes);
         } else {
@@ -320,20 +320,12 @@ public class UnionTypeConstant
 
         Category cat1 = m_constType1.getCategory();
         Category cat2 = m_constType2.getCategory();
-
-        return switch (cat1) {
-            case CLASS -> switch (cat2) {
-                    case CLASS -> Category.CLASS;
-                    default    -> Category.OTHER;
-                };
-
-            case IFACE -> switch (cat2) {
-                    case IFACE -> Category.IFACE;
-                    default    -> Category.OTHER;
-                };
-
-            default -> Category.OTHER;
-        };
+        if (cat1 == cat2) {
+            if (cat1 == Category.CLASS || cat1 == Category.IFACE) {
+                return cat1;
+            }
+        }
+        return Category.OTHER;
     }
 
     @Override
@@ -621,7 +613,7 @@ public class UnionTypeConstant
                         bodySynth = new PropertyBody(propSynth,
                                 new ParamInfo(sName, prop1.getConstraintType(), prop1.getType()));
                     } else {
-                        bodySynth = new PropertyBody(propSynth, Implementation.Implicit,
+                        bodySynth = new PropertyBody(propSynth, Implementation.FromInto,
                             null, type1, /*fRO*/ false, /*fRO*/ true, /*fCustom*/ false,
                             Effect.None, Effect.None, /*fReqField*/ false, /*fConst*/ false, null, null);
                     }
@@ -717,7 +709,7 @@ public class UnionTypeConstant
                     MethodConstant  idSynthMethod  = methodSynth.getIdentityConstant();
 
                     mapMerged.put(idSynthMethod,
-                        new MethodInfo(new MethodBody(idSynthMethod, sig, Implementation.Implicit),
+                        new MethodInfo(new MethodBody(idSynthMethod, sig, Implementation.FromInto),
                                 method1.getRank()));
                 }
             }

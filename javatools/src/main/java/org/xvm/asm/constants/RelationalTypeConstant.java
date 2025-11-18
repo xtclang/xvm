@@ -411,6 +411,11 @@ public abstract class RelationalTypeConstant
     }
 
     @Override
+    public TypeConstant asImplementable() {
+        return this;
+    }
+
+    @Override
     public boolean isIntoPropertyType() {
         return false;
     }

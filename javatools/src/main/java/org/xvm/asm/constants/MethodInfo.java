@@ -101,6 +101,41 @@ public class MethodInfo
     }
 
     /**
+     * Determine if "that" is the real body that "this" implicitly represents.
+     *
+     * @param that   the "contribution" MethodInfo to layer onto this MethodInfo
+     * @param fSelf  true if the layer being added represents the "Equals" contribution of the type
+     *
+     * @return true iff "this" is an implicit MethodInfo that was originally produced from "that"
+     */
+    public boolean isIntoFrom(MethodInfo that, boolean fSelf) {
+        assert this.getIdentity().getName().equals(that.getIdentity().getName());
+        assert !this.isFunction() && !that.isFunction();
+
+        if (fSelf) {
+            // determine if "this" base method chain ends with a FromInto body, and the we match the
+            // tail of the MethodInfo that crated that chain
+            // "that" method chain (to layer onto the base) finds itself in the method chain from the
+            // MethodInfo represented by the FromInto body
+            MethodBody[] aBase = this.m_aBody;
+            MethodBody[] aAdd  = that.m_aBody;
+            if (aBase.length == 1 && aAdd.length == 1) {
+                MethodBody base = aBase[0];
+                if (base.isInto()) {
+                    MethodInfo baseInfo = base.getIntoMethodInfo();
+                    if (baseInfo != null) {
+// TODO CP review this change again!!! it's the test foo() case, but what if the "super" is on the right side not the left?
+//                        return baseInfo.containsBody(aAdd[0]);
+                        return baseInfo.getTail().equals(aAdd[0]);
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * In terms of the "glass planes" metaphor, the glass planes from "that" are to be layered on to
      * the glass planes of "this", with the resulting combination of glass planes returned as a
      * MethodInfo.
@@ -112,8 +147,10 @@ public class MethodInfo
      * @return the resulting MethodInfo
      */
     public MethodInfo layerOn(MethodInfo that, boolean fSelf, ErrorListener errs) {
-        assert this.getIdentity().getName().equals(that.getIdentity().getName());
-        assert !this.isFunction() && !that.isFunction();
+        // check if "this" is actually the implicit of "that", in which case we just take the "that"
+        if (isIntoFrom(that, fSelf)) {
+            return that;
+        }
 
         if (!this.getAccess().isAsAccessibleAs(Access.PROTECTED) ||
             !that.getAccess().isAsAccessibleAs(Access.PROTECTED) ||
@@ -374,7 +411,7 @@ public class MethodInfo
 
             boolean fRetain = switch (body.getImplementation()) {
                 // allow these duplicates to survive (ignore retain set)
-                case Implicit, SansCode, Declared, Default, Native -> true;
+                case FromInto, SansCode, Declared, Default, Native -> true;
                 default -> setClass.contains(constClz) || setDefault.contains(constClz);
             };
 
@@ -417,7 +454,7 @@ public class MethodInfo
         MethodBody bodyFirstNonDefault = null;
         for (MethodBody body : m_aBody) {
             switch (body.getImplementation()) {
-            case Implicit:
+            case FromInto:
             case Declared:
             case Abstract:
             case SansCode:
@@ -474,14 +511,50 @@ public class MethodInfo
      * @return the "into" version of this MethodInfo
      */
     public MethodInfo asInto() {
-        // if the method is a function, constructor or a "cap", it stays as-is (unless it's a function
-        // on the Object class); otherwise, it needs to be turned into a chain of implicit entries
-        if ((isFunction() || isCtorOrValidator() || isCapped()) &&
-                    !getIdentity().getNamespace().equals(pool().clzObject())) {
+        // functions in the "into" are visible to the mixin, as-is
+        if (isFunction()) {
             return this;
         }
 
-        return markImplicit();
+        if (m_aBody.length == 1 && m_aBody[0].isInto()) {
+            return this;
+        }
+
+        MethodBody body = m_aBody[0];
+        return new MethodInfo(new MethodBody[]{new MethodBody(body.getIdentity(), body.getSignature(), Implementation.FromInto, this)}, f_nRank);
+    }
+
+    /**
+     * @return true iff this MethodInfo comes from an "into"
+     */
+    public boolean hasInto() {
+        for (MethodBody body : m_aBody) {
+            if (body.isInto()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * For a method chain that includes an "into" body, remove that "into" body and anything that
+     * follows it. This method is a helper that should only be used internally.
+     *
+     * @return a MethodInfo without the "into" (and any subsequent) portion of the chain
+     */
+    public MethodInfo withoutInto() {
+        for (int i = 0, cOld = m_aBody.length; i < cOld; ++i) {
+            if (m_aBody[i].isInto()) {
+                int cNew = i;
+                if (cNew <= 0) {
+                    return null;
+                }
+                MethodBody[] aNew = new MethodBody[cNew];
+                System.arraycopy(m_aBody, 0, aNew, 0, cNew);
+                return new MethodInfo(aNew, f_nRank);
+            }
+        }
+        throw new IllegalStateException("expected a FromInto body");
     }
 
     /**
@@ -503,7 +576,7 @@ public class MethodInfo
         for (int i = 0; i < cBodies; i++) {
             MethodBody body = aBodyOld[i];
 
-            aBodyNew[i] = new MethodBody(body.getIdentity(), body.getSignature(), Implementation.Implicit);
+            aBodyNew[i] = new MethodBody(body.getIdentity(), body.getSignature(), Implementation.FromInto);
         }
         return new MethodInfo(aBodyNew, f_nRank);
     }
@@ -517,11 +590,23 @@ public class MethodInfo
     }
 
     /**
-     * @return true iff any body of this info has the specified method id
+     * @return true iff any MethodBody of this info has the specified method id
      */
     public boolean containsBody(MethodConstant id) {
         for (MethodBody body : m_aBody) {
             if (id.equals(body.getIdentity())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @return true iff any MethodBody of this MethodInfo is equal to the passed MethodBody
+     */
+    public boolean containsBody(MethodBody that) {
+        for (MethodBody body : m_aBody) {
+            if (body.equals(that)) {
                 return true;
             }
         }
@@ -613,7 +698,7 @@ public class MethodInfo
         int     cDeclReturns    = -1;
         for (MethodBody body : m_aBody) {
             switch (body.getImplementation()) {
-            case Implicit:
+            case FromInto:
                 if (body.isCtorOrValidator()) {
                     // constructors can only be marked as implicit on virtual child classes
                     // by TypeConstant#layerOnMethods (see an extended explanation there)
@@ -777,7 +862,34 @@ public class MethodInfo
      * @return true iff the method chain is capped
      */
     public boolean isCapped() {
-        return getHead().getImplementation() == Implementation.Capped;
+        return isCapped(null);
+    }
+
+    /**
+     * @param bodyPOV  when determining the capped status within an incomplete type system (where
+     *                 TypeInfo information is still being assembled), this body represents the
+     *                 "point of view" / point-of-reference from which the
+     *
+     * @return true iff the method chain is capped
+     */
+    public boolean isCapped(MethodBody bodyPOV) {
+        MethodBody     head = getHead();
+        Implementation impl = head.getImplementation();
+        if (impl == Implementation.Capped) {
+            return true;
+        }
+
+        // special handling for mixins: if the "from into" MethodInfo is capped, then this is
+        // capped, unless we find the "POV body" in the FromInto, which means there's circular
+        // recursion that we're in the process of determining and eliminating (as part of the
+        // "layer on" processing during TypeInfo creation)
+        if (impl == Implementation.FromInto) {
+            MethodInfo infoInto = head.getIntoMethodInfo();
+            return infoInto != null && infoInto.isCapped() &&
+                    (bodyPOV == null || !infoInto.containsBody(bodyPOV));
+        }
+
+        return false;
     }
 
     /**
@@ -870,7 +982,7 @@ public class MethodInfo
                     }
                 }
                 switch (impl) {
-                case Implicit:
+                case FromInto:
                     if (fAnno || fMixin) {
                         // since annotations and mixins themselves are not concrete
                         // (instantiatable) we cannot discard the Implicit body; it will be done
@@ -1043,7 +1155,7 @@ public class MethodInfo
         for (int i = 0, cMethods = 0, cAll = chain.length; i < cAll; ++i) {
             MethodBody body = chain[i];
             switch (body.getImplementation()) {
-            case Implicit:
+            case FromInto:
                 if (fAnno || fMixin) {
                     cMethods++;
                 }
@@ -1146,6 +1258,21 @@ public class MethodInfo
         return f_nRank;
     }
 
+    public boolean isDuplicate() {
+        for (MethodBody body : m_aBody) {
+            if (body.m_fDuplicate) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void markAsDuplicate() {
+        for (MethodBody body : m_aBody) {
+            body.m_fDuplicate = true;
+        }
+    }
+
     /**
      * @return the ConstantPool
      */
@@ -1170,7 +1297,7 @@ public class MethodInfo
         // for functions - get the highest in the chain
         MethodConstant id = null;
         for (MethodBody body : aBody) {
-            if (id == null || body.getImplementation() != Implementation.Implicit) {
+            if (id == null || body.getImplementation() != Implementation.FromInto) {
                 id = body.getIdentity();
                 if (body.isFunction()) {
                     break;

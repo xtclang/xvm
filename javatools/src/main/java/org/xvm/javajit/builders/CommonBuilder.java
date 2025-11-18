@@ -908,6 +908,11 @@ public class CommonBuilder
         if (!methodNames.add(jitName)) {
             return;
         }
+        // TODO alternatively:
+        // if (method.isDuplicate()) {
+        //     return;
+        // }
+        // String jitName = method.getJitIdentity().ensureJitMethodName(typeSystem);
 
         if (!cap) {
             MethodBody[] chain = method.ensureOptimizedMethodChain(typeInfo);

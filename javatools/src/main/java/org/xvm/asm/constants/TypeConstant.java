@@ -723,6 +723,33 @@ public abstract class TypeConstant
     }
 
     /**
+     * @return true iff the type is the Object interface
+     */
+    public boolean isRootObject() {
+        return isInterfaceType() && isSingleDefiningConstant()
+                && getDefiningConstant() instanceof ClassConstant idThis
+                && idThis.equals(getConstantPool().clzObject());
+    }
+
+    /**
+     * @return true iff the type is the Object interface or any interface that Object extends
+     */
+    public boolean isRootInterface() {
+        if (isInterfaceType() && isSingleDefiningConstant()
+                && getDefiningConstant() instanceof ClassConstant idThis
+                && idThis.getModuleConstant().isEcstasyModule()) {
+            ConstantPool  pool     = getConstantPool();
+            ClassConstant idObject = pool.clzObject();
+            if (idThis.equals(idObject)) {
+                return true;
+            }
+            ClassStructure clzObject = (ClassStructure) idObject.getComponent();
+            return clzObject.hasContribution(idThis);
+        }
+        return false;
+    }
+
+    /**
      * @return the Ecstasy class name, including package name(s), otherwise "?"
      */
     public String getEcstasyClassName() {
@@ -1638,6 +1665,9 @@ public abstract class TypeConstant
      * @return the flattened TypeInfo that represents the resolved type of this TypeConstant
      */
     public TypeInfo ensureTypeInfo(ErrorListener errs) {
+        // ensure the root Object is built first, since it helps to avoid chicken-and-egg issues
+        ensureObjectTypeInfo(errs);
+
         TypeInfo info = getTypeInfo();
         if (isComplete(info) && isUpToDate(info)) {
             return info;
@@ -1726,14 +1756,14 @@ public abstract class TypeConstant
 
                         TypeInfo infoDeferred = typeDeferred.getTypeInfo();
                         if (!isComplete(infoDeferred)) {
-                            // if there's something wrong with this logic, we'll end up with infinite
-                            // recursion, so be very careful about what can allow a TypeInfo to be built
-                            // "incomplete" (it needs to be impossible to rebuild a TypeInfo and have it
-                            // be incomplete for the second time)
+                            // if there's something wrong with this logic, we'll end up with
+                            // infinite recursion, so be very careful about what can allow a
+                            // TypeInfo to be built "incomplete" (it needs to be impossible to
+                            // rebuild a TypeInfo and have it be incomplete for the second time)
                             if (m_cRecursiveDepth.getAndIncrement() > 2) {
                                 // an infinite loop
-                                throw new IllegalStateException("Infinite loop while producing a TypeInfo for "
-                                        + this + "; deferred type=" + typeDeferred);
+                                throw new IllegalStateException("Infinite loop while producing a " +
+                                        "TypeInfo for " + this + "; deferred type=" + typeDeferred);
                             }
 
                             // merge the errors only after the completed "buildTypeInfo" run
@@ -1793,13 +1823,21 @@ public abstract class TypeConstant
      */
     protected TypeInfo ensureTypeInfoInternal(ErrorListener errs) {
         TypeInfo info = getTypeInfo();
+        if (info == null) {
+            // ensure the root Object is built first, since it helps to avoid chicken-and-egg issues
+            ensureObjectTypeInfo(errs);
+            // just in case the TypeInfo we're looking for is one that we just built
+            info = getTypeInfo();
+        }
+
         if (info != null && info.isPlaceHolder()) {
             // the TypeInfo is already being built, so we're in the catch-22 situation; note that it
             // is even more complicated, because it could be being built by a different thread, so
             // always add it to the deferred list _on this thread_ so that we will force the rebuild
             // of the TypeInfo if necessary (imagine that the other thread is super slow, so we need
             // to preemptively duplicate its work on this thread, so we don't have to "wait" for
-            // the other thread)
+            // the other thread); the one exception is for the root of the type system, Object, and
+            // any interfaces that it depends on
             addDeferredTypeInfo(this);
             return null;
         }
@@ -1807,7 +1845,9 @@ public abstract class TypeConstant
         if (info == null || !isUpToDate(info)) {
             setTypeInfo(getConstantPool().infoPlaceholder());
             info = buildTypeInfo(errs);
-            if (info != null) {
+            if (info == null) {
+                clearTypeInfoPlaceholder();
+            } else {
                 setTypeInfo(info);
                 if (errs.hasSeriousErrors()) {
                     info.markWithError();
@@ -1815,11 +1855,59 @@ public abstract class TypeConstant
             }
         }
 
+        // if this created an incomplete TypeInfo for an interface being built for Object to build
+        // its own TypeInfo, then we avoid the chicken-and-egg problem by just ignoring the
+        // incompleteness of the super-interface of Object at this point
         if (!isComplete(info)) {
             addDeferredTypeInfo(this);
         }
 
         return info;
+    }
+
+    /**
+     * Before we build any other TypeInfo objects, make sure we have built Object to avoid any
+     * chicken-and-egg issues later from the weird fact that Object depends on Comparable (which is
+     * itself obviously an Object from most points of view). This implementation allows anything
+     * that Object depends on (i.e. to build its own TypeInfo) to be partially created without
+     * having Object already created, and then once Object is created, those partially created
+     * TypeInfos are all discarded.
+     *
+     * @param errs  the error list to log to
+     *
+     * @return a completed TypeInfo for Object
+     */
+    private void ensureObjectTypeInfo(ErrorListener errs) {
+        ConstantPool pool       = getConstantPool();
+        TypeConstant typeObject = pool.typeObject();
+        TypeInfo     infoObject = typeObject.getTypeInfo();
+        if (infoObject == null) {
+            // this is basically an inlined ensureTypeInfoInternal()
+            try (var ignore = ConstantPool.withPool(pool)) {
+                typeObject.setTypeInfo(getConstantPool().infoPlaceholder());
+                infoObject = typeObject.buildTypeInfo(errs);
+                typeObject.setTypeInfo(infoObject);
+            } finally {
+                typeObject.clearTypeInfoPlaceholder();
+            }
+
+            if (infoObject == null || infoObject.getProgress() != Progress.Complete) {
+                if (!errs.hasSeriousErrors()) {
+                    log(errs, Severity.ERROR, VE_UNKNOWN, "Failed to create TypeInfo for root Object");
+                }
+            } else {
+                // discard any partial TypeInfos created as part of creating the Object TypeInfo
+                for (int i = 0, c = pool.size(); i < c; ++i) {
+                    if (pool.getConstant(i) instanceof TypeConstant type
+                            && type.getTypeInfo() != null && !type.isRootObject()) {
+                        type.clearTypeInfo();
+                    }
+                }
+                // discard the list of any "must retry building these TypeInfos" (since we're also
+                // discarding all built TypeInfos other than Object)
+                var ignoreDeferred = takeDeferredTypeInfo();
+            }
+        }
     }
 
     /**
@@ -1882,7 +1970,7 @@ public abstract class TypeConstant
         }
 
         if (isSingleDefiningConstant() && !isAccessSpecified()) {
-            // clear the TypeInfo for the PRIVATE type
+            // clear the TypeInfo for the PRIVATE type TODO CP why not PROTECTED and STRUCT??
             getConstantPool().ensureAccessTypeConstant(this, Access.PRIVATE).clearTypeInfo();
         }
 
@@ -1896,6 +1984,13 @@ public abstract class TypeConstant
      */
     protected void clearTypeInfo() {
         s_typeinfo.set(this, null);
+    }
+
+    /**
+     * Clear out the "place-holder" TypeInfo for this one specific TypeConstant.
+     */
+    protected void clearTypeInfoPlaceholder() {
+        s_typeinfo.compareAndSet(this, getConstantPool().infoPlaceholder(), null);
     }
 
     /**
@@ -1928,6 +2023,10 @@ public abstract class TypeConstant
      * @return true iff the TypeInfo can be used as-is
      */
     protected boolean isUpToDate(TypeInfo info) {
+        if (isRootInterface()) {
+            return info != null;
+        }
+
         ConstantPool pool       = getConstantPool();
         int          cOldInvals = getInvalidationCount();
         int          cNewInvals = pool.getInvalidationCount();
@@ -2030,15 +2129,17 @@ public abstract class TypeConstant
 
         Annotation[] aAnnoMixin = struct.collectAnnotations(false);
         Annotation[] aAnnoClass = struct.collectAnnotations(true);
+        TypeInfo     result;
         if (aAnnoMixin.length > 0) {
             // build a partial info without the annotations
             TypeInfo infoBase = buildBaseTypeInfoImpl(constId, struct, Annotation.NO_ANNOTATIONS,
                     cInvals, /*fComplete*/ false, errs);
 
-            return layerOnAnnotations(constId, struct, infoBase, aAnnoMixin, aAnnoClass, cInvals, errs);
+            result = layerOnAnnotations(constId, struct, infoBase, aAnnoMixin, aAnnoClass, cInvals, errs);
+        } else {
+            result = buildBaseTypeInfoImpl(constId, struct, aAnnoClass, cInvals, /*fComplete*/ true, errs);
         }
-
-        return buildBaseTypeInfoImpl(constId, struct, aAnnoClass, cInvals, /*fComplete*/ true, errs);
+        return result;
     }
 
     /**
@@ -2070,6 +2171,37 @@ public abstract class TypeConstant
         TypeConstant typeInto    = atypeSpecial[0];
         TypeConstant typeExtends = atypeSpecial[1];
         TypeConstant typeRebase  = atypeSpecial[2];
+
+        // mixins are allowed to extend mixins, which means that they may have a different "into"
+        // type; the "into" type must be either the same as the super mixin's "into" type, or it
+        // can be _narrowed_; any other change to the "into" type on the mixin sub-class is an error
+        if (typeInto != null && typeExtends != null) {
+            TypeConstant typeSuperInto = typeExtends.getExplicitClassInto(true);
+
+            // this type adjustment is the same logic found in createContributionList()
+            ConstantPool pool = getConstantPool();
+            if (!typeSuperInto.isRootInterface() && !typeSuperInto.isAccessSpecified() &&
+                typeSuperInto.isSingleUnderlyingClass(true)) {
+                Access access = struct.isDescendant(typeSuperInto.getSingleUnderlyingClass(true))
+                    ? Access.PRIVATE
+                    : Access.PROTECTED;
+                typeSuperInto = pool.ensureAccessTypeConstant(typeSuperInto, access);
+            }
+
+            if (typeInto.equals(typeSuperInto)) {
+                // the "into" type is identical so we can (and should) discard the "into" step
+                listProcess.removeIf(it -> it.getComposition() == Composition.Into);
+            } else {
+                // this error should have already been checked for and reported, and the "into"
+                // forcibly adjusted to a legal type
+                assert typeInto.isA(typeSuperInto);
+
+                // the "into" step needs to add only the diff from the super's "into"
+                Contribution intoDiff = struct.new Contribution(Composition.Into,
+                        pool.ensureDifferenceTypeConstant(typeInto, typeSuperInto));
+                listProcess.replaceAll(it -> it.getComposition() == Composition.Into ? intoDiff : it);
+            }
+        }
 
         // we're going to build a map from name to param info, including whatever parameters are
         // specified by this class/interface, but also each of the contributing classes/interfaces
@@ -2126,6 +2258,7 @@ public abstract class TypeConstant
             }
         }
 
+        // TODO the info from the conditional incorporations do not show up in the listmapClassChain/listmapDefaultChain
         return atypeCondInc == null || !fComplete
                 ? info
                 : mergeConditionalIncorporates(cInvalidations, constId, info, atypeCondInc, errs);
@@ -2180,23 +2313,32 @@ public abstract class TypeConstant
      * @param aAnnoClass      an array of into "Class" annotations for this type
      * @param cInvalidations  the count of TypeInfo invalidations before staring building the info
      * @param errs            the error list to log to
+     *
+     * @return a complete TypeInfo with the specified annotations applied, or null or an incomplete
+     *         TypeInfo if building a completed TypeInfo for the requested annotated type is not yet
+     *         possible
      */
-    protected TypeInfo layerOnAnnotations(IdentityConstant constId, ClassStructure struct,
-                                          TypeInfo infoBase,
-                                          Annotation[] aAnnoMixin, Annotation[] aAnnoClass,
-                                          int cInvalidations, ErrorListener errs) {
-        ConstantPool pool     = getConstantPool();
-        TypeInfo     infoNext = infoBase;
-        TypeConstant typeNext = infoBase.getType();
+    protected TypeInfo layerOnAnnotations(
+            IdentityConstant constId,
+            ClassStructure   struct,
+            TypeInfo         infoBase,
+            Annotation[]     aAnnoMixin,
+            Annotation[]     aAnnoClass,
+            int              cInvalidations,
+            ErrorListener    errs) {
 
-        for (int c = aAnnoMixin.length, i = c-1; i >= 0; --i) {
-            Annotation            anno      = aAnnoMixin[i];
-            AnnotatedTypeConstant constAnno = pool.ensureAnnotatedTypeConstant(typeNext, anno);
-
-            TypeConstant typeAnno        = constAnno.getAnnotationType();
-            TypeConstant typeAnnoPrivate = pool.ensureAccessTypeConstant(typeAnno, Access.PRIVATE);
-            TypeInfo     infoAnno        = typeAnnoPrivate.ensureTypeInfoInternal(errs);
-
+        // annotations are applied in reverse order, like building an onion from the core outwards
+        ConstantPool pool       = getConstantPool();
+        TypeInfo     infoResult = infoBase;                     // start from the onion "core"
+        TypeConstant typeResult = infoBase.getType();
+        Annotation[] aAnnoApply = Annotation.NO_ANNOTATIONS;    // class annotations to apply
+        for (int i = aAnnoMixin.length - 1; i >= 0; --i) {      // onion layers inner to outer (0)
+            Annotation            annoMixin     = aAnnoMixin[i];
+            TypeConstant          typePrev      = typeResult;
+            AnnotatedTypeConstant typeAnnotated = pool.ensureAnnotatedTypeConstant(typePrev, annoMixin);
+            TypeConstant          typeAnnoRaw   = typeAnnotated.getAnnotationType();
+            TypeConstant          typeAnno      = pool.ensureAccessTypeConstant(typeAnnoRaw, Access.PRIVATE);
+            TypeInfo              infoAnno      = typeAnno.ensureTypeInfoInternal(errs);
             if (infoAnno == null) {
                 // we are always called with an incomplete infoBase when building an annotated class
                 // (e.g. @M1 @M2 class TestM {}), rather than a run-time annotated type
@@ -2209,14 +2351,18 @@ public abstract class TypeConstant
             // about the "into" type (which is probably this type), so the assumption is that
             // it has enough information about itself to be used for layering logic
 
-            infoNext = typeNext.mergeMixinTypeInfo(this, cInvalidations, constId,
-                    struct, infoNext, infoAnno,
-                    i == 0 ? aAnnoClass : Annotation.NO_ANNOTATIONS, anno, errs);
-            typeNext = constAnno;
+            // continuing the onion analogy, class annotations (like "@Abstract") are only applied
+            // to the "outermost" type
+            if (i == 0) {
+                aAnnoApply = aAnnoClass;
+            }
+            typeResult = typeAnnotated;
+            infoResult = typePrev.mergeMixinTypeInfo(this, cInvalidations, constId, struct,
+                                                     infoResult, infoAnno, aAnnoApply, annoMixin, errs);
         }
 
-        assert infoNext.getType().equals(this);
-        return infoNext;
+        assert infoResult.getType().equals(this);   // verify that the desired onion was built
+        return infoResult;
     }
 
     /**
@@ -2297,7 +2443,7 @@ public abstract class TypeConstant
                         PropertyInfo prop = entry.getValue();
 
                         if (prop.hasField() && prop.getRefAccess() == Access.PRIVATE &&
-                                prop.getHead().getImplementation() != Implementation.Implicit) {
+                                prop.getHead().getImplementation() != Implementation.FromInto) {
                             mapProps.putIfAbsent(entry.getKey(), prop);
                         }
                     }
@@ -2408,6 +2554,7 @@ public abstract class TypeConstant
      *
      * @param constId      the identity constant of the class that the type is based on
      * @param struct       the structure of the class that the type is based on
+     * @param aContribType TODO GG doc e.g. "these are the already-resolved types of the contributions"
      * @param listProcess  a list of contributions, which will be filled by this method in the
      *                     order that they should be processed
      * @param errs         the error list to log to
@@ -2560,12 +2707,26 @@ public abstract class TypeConstant
                     break;
                 }
 
-                if (!fInto) {
-                    typeInto = typeExtends.getExplicitClassInto(true);
+                TypeConstant typeSuperInto = typeExtends.getExplicitClassInto(true);
+                if (fInto) {
+                    // if the "into" from the super mixin is the same as the "into" from this mixin,
+                    // then the "into" is treated as a no-op; otherwise if this "into" differs from
+                    // the super mixin's "into", then this "into" must narrow the super mixin's into
+                    if (!typeInto.equals(typeSuperInto) && !typeInto.isA(typeSuperInto)) {
+                        log(errs, Severity.ERROR, VE_INCOMPATIBLE_INTO,
+                            this.getValueString(), typeInto.getValueString(),
+                            typeExtends.getValueString(), typeSuperInto.getValueString());
+                        typeInto = typeSuperInto;
+                    }
+                } else {
+                    typeInto = typeSuperInto;
                 }
             } else if (!fInto) {
-                // add fake "into Object"
+                // if this mixin does not extend another mixin (which would have an "into"), and
+                // this mixin does not specify an "into" of its own, then the implicit "into" is
+                // "into Object"
                 typeInto = pool.typeObject();
+                // TODO CP shouldn't this be added as a contribution? or logged as an error?
             }
             break;
         }
@@ -2581,14 +2742,9 @@ public abstract class TypeConstant
                 listProcess.add(struct.new Contribution(Composition.Implements, typeNatural));
                 typeExtends = pool.typeObject();
             } else {
-                // Object does not (and must not) implement anything despite what it says
-                if (constId.equals(pool.clzObject())) {
-                    cContribs = 0;
-                } else {
-                    // an interface implies the set of methods present in Object
-                    // (use the "Into" composition to make the Object methods implicit-only, as
-                    // opposed to explicitly being present in this interface)
-                    typeInto = pool.typeObject();
+                if (listContribs.isEmpty()) {
+                    // add the implicit "extends Object"
+                    ++cContribs;
                 }
             }
             break;
@@ -2647,11 +2803,14 @@ public abstract class TypeConstant
                 break;
 
             case Implements:
+                if (typeInto != null) {
+                    typeContrib = pool.ensureDifferenceTypeConstant(typeContrib, typeInto);
+                }
                 processImplements(constId, typeContrib, struct, listProcess, errs);
                 break;
 
             case Import:
-                // ignore
+                // ignore (it's a package contribution that indicates the module being represented)
                 break;
 
             default:
@@ -2669,11 +2828,17 @@ public abstract class TypeConstant
             listProcess.add(struct.new Contribution(Composition.Implements, pool.typeInner()));
         }
 
-        // the last three contributions to get processed are the "into" (which we also use for
-        // filling out the implied methods under interfaces, i.e. "into Object"),  the "extends",
+        // the last three contributions to get processed are the "extends", the "into",
         // and the "re-base", which should be added at the bottom (and processed first)
+        if (typeExtends != null) {
+            Composition composition = typeExtends.equals(pool.typeObject())
+                    ? Composition.Implements
+                    : Composition.Extends;
+            listProcess.add(struct.new Contribution(composition,
+                    pool.ensureAccessTypeConstant(typeExtends, Access.PROTECTED)));
+        }
         if (typeInto != null) {
-            if (!typeInto.equals(pool.typeObject()) && !typeInto.isAccessSpecified() &&
+            if (!typeInto.isRootInterface() && !typeInto.isAccessSpecified() &&
                     typeInto.isSingleUnderlyingClass(true)) {
                 // annotation or mixin should have at least protected access to the "into" class
                 Access access = struct.isDescendant(typeInto.getSingleUnderlyingClass(true))
@@ -2682,13 +2847,6 @@ public abstract class TypeConstant
                 typeInto = pool.ensureAccessTypeConstant(typeInto, access);
             }
             listProcess.add(struct.new Contribution(Composition.Into, typeInto));
-        }
-        if (typeExtends != null) {
-            Composition composition = typeExtends.equals(pool.typeObject())
-                    ? Composition.Implements
-                    : Composition.Extends;
-            listProcess.add(struct.new Contribution(composition,
-                    pool.ensureAccessTypeConstant(typeExtends, Access.PROTECTED)));
         }
         if (typeRebase != null) {
             listProcess.add(struct.new Contribution(Composition.RebasesOnto,
@@ -2718,7 +2876,7 @@ public abstract class TypeConstant
         List<TypeConstant> listCondContribs = null;
 
         // process the annotations and conditional incorporates at the front of the contribution list
-        for (int iContrib = 0, cContribs = listContribs.size(); iContrib < cContribs; ++iContrib) {
+        NextMixin: for (int iContrib = 0, cContribs = listContribs.size(); iContrib < cContribs; ++iContrib) {
             // only process conditional incorporates
             Contribution contrib   = listContribs.get(iContrib);
             TypeConstant typeMixin = aContribType[iContrib];
@@ -2756,11 +2914,14 @@ public abstract class TypeConstant
                 listCondContribs = new ArrayList<>();
             } else {
                 // check if this mixin extends any of the already collected ones
+                ClassConstant idNew = (ClassConstant) typeMixin.getSingleUnderlyingClass(false);
                 for (Iterator<TypeConstant> iter = listCondContribs.iterator(); iter.hasNext();) {
-                    TypeConstant     typeOther = iter.next();
-                    IdentityConstant idOther   = typeOther.getSingleUnderlyingClass(true);
+                    TypeConstant  typeOther = iter.next();
+                    ClassConstant idOther   = (ClassConstant) typeOther.getSingleUnderlyingClass(false);
                     if (typeMixin.extendsClass(idOther)) {
                         iter.remove();
+                    } else if (idOther.extendsClass(idNew)) {
+                        continue NextMixin;
                     }
                 }
             }
@@ -2937,25 +3098,28 @@ public abstract class TypeConstant
     private void processImplements(IdentityConstant constId, TypeConstant typeContrib,
                                    ClassStructure struct,
                                    List<Contribution> listProcess, ErrorListener errs) {
-        if (!typeContrib.isExplicitClassIdentity(true)) {
-            log(errs, Severity.ERROR, VE_IMPLEMENTS_NOT_CLASS,
-                    constId.getPathString(),
-                    typeContrib.getValueString());
-            return;
-        }
+        if (typeContrib.isExplicitClassIdentity(true) && !typeContrib.isAccessSpecified()) {
+            // must be an "interface type" (not a class type)
+            if (typeContrib.isSingleUnderlyingClass(false)) {
+                log(errs, Severity.ERROR, VE_IMPLEMENTS_NOT_INTERFACE,
+                        typeContrib.getValueString(), constId.getPathString());
+                return;
+            }
 
-        // must be an "interface type" (not a class type)
-        if (typeContrib.isSingleUnderlyingClass(false)) {
-            log(errs, Severity.ERROR, VE_IMPLEMENTS_NOT_INTERFACE,
-                    typeContrib.getValueString(),
-                    constId.getPathString());
-            return;
-        }
-
-        if (typeContrib.isAccessSpecified() || typeContrib.isAnnotated()) {
-            log(errs, Severity.ERROR, VE_TYPE_MODIFIER_ILLEGAL, constId.getPathString(),
-                    typeContrib.getValueString());
-            return;
+            if (typeContrib.isAnnotated()) {
+                log(errs, Severity.ERROR, VE_TYPE_MODIFIER_ILLEGAL, constId.getPathString(),
+                        typeContrib.getValueString());
+                return;
+            }
+        } else {
+            switch (typeContrib.getCategory()) {
+            case CLASS, IFACE:
+                break;
+            default:
+                log(errs, Severity.ERROR, VE_IMPLEMENTS_NOT_INTERFACE,
+                        typeContrib.getValueString(), constId.getPathString());
+                return;
+            }
         }
 
         // check for duplicate implements
@@ -2965,8 +3129,7 @@ public abstract class TypeConstant
             log(errs, Severity.ERROR, VE_DUP_IMPLEMENTS,
                     constId.getPathString(), typeContrib.getValueString());
         } else {
-            listProcess.add(struct.new Contribution(Composition.Implements,
-                    typeContrib.ensureAccess(Access.PROTECTED)));
+            listProcess.add(struct.new Contribution(Composition.Implements, typeContrib.asImplementable()));
         }
     }
 
@@ -2993,7 +3156,8 @@ public abstract class TypeConstant
             ListMap<IdentityConstant, Origin> listmapClassChain,
             ListMap<IdentityConstant, Origin> listmapDefaultChain,
             ErrorListener                     errs) {
-        boolean fIncomplete = false;
+        boolean                           fIncomplete      = false;
+        ListMap<IdentityConstant, Origin> listmapRootChain = new ListMap<>();
 
         for (Contribution contrib : listProcess) {
             Composition composition = contrib.getComposition();
@@ -3025,24 +3189,33 @@ public abstract class TypeConstant
                 TypeInfo     infoContrib = typeContrib.adjustAccess(constId).ensureTypeInfoInternal(errs);
 
                 if (!isComplete(infoContrib)) {
-                    fIncomplete = computeIncomplete(composition, typeContrib, infoContrib, setDepends);
+                    fIncomplete |= computeIncomplete(composition, typeContrib, infoContrib, setDepends);
                     if (fIncomplete) {
                         errs = ErrorListener.BLACKHOLE;
-                        if (infoContrib == null || composition == Composition.Into) {
-                            // see the comment at the similar block at "collectMemberInfo"
-                            break;
-                        }
+//                        if (infoContrib == null || composition == Composition.Into) {
+//                            // see the comment at the similar block at "collectMemberInfo"
+//                            break; // TODO CP this could be "continue" or we could get rid of this entire "if" since we test "!= null" below???
+//                        }
                     }
                 }
-
-                infoContrib.contributeChains(listmapClassChain, listmapDefaultChain, composition);
-
-                layerOnTypeParams(mapTypeParams, typeContrib, infoContrib.getTypeParams(), errs);
+                if (infoContrib != null) {
+                    infoContrib.contributeChains(listmapClassChain, listmapDefaultChain,
+                                                 listmapRootChain, composition);
+                    layerOnTypeParams(mapTypeParams, typeContrib, infoContrib.getTypeParams(), errs);
+                }
                 break;
             }
 
             default:
                 throw new IllegalStateException("composition=" + composition);
+            }
+        }
+
+        // add the default chains for the "root type" to the end
+        for (Iterator<IdentityConstant> iterId = listmapRootChain.keySet().iterator(); iterId.hasNext(); ) {
+            IdentityConstant id = iterId.next();
+            if (!listmapDefaultChain.containsKey(id)) {
+                listmapDefaultChain.put(id, listmapRootChain.get(id));
             }
         }
 
@@ -3053,12 +3226,31 @@ public abstract class TypeConstant
      * Given the incomplete TypeInfo for the specified contribution, check if this type could
      * nevertheless complete its TypeInfo calculation.
      *
+     * @param composition  describes how the contribution is being contributed
+     * @param typeContrib  the type being contributed
+     * @param infoContrib  the TypeInfo (which may be null) for the type being contributed
+     * @param setDepends   TODO GG doc
+     *
      * @return true iff the TypeInfo for this type cannot be completed
      */
     private boolean computeIncomplete(Composition composition, TypeConstant typeContrib,
                                       TypeInfo infoContrib, Set<TypeConstant> setDepends) {
+        // first, carve out the case where we couldn't build the TypeInfo at all (possible at the
+        // root of the type system, e.g. when trying to build the root Object and Comparable
+        // interfaces), and the case where we're moving from the "right" column (a mixin) to the
+        // "left" column (the thing that mixin mixes into)
         if (composition == Composition.Into || infoContrib == null) {
+            if (this.isRootInterface()) {
+                // if we're building Object or some interface that Object depends on, then we ignore
+                // chicken-and-egg problems because the Object interface should still be able to be
+                // successfully and correctly built; specifically,  Object depends on Comparable,
+                // but in reality, Comparable "is a" Object, so we need to solve the chicken-and-egg
+                // problem by allowing the creation of Object to proceed
+                return false;
+            }
+
             // if this type represents a mixin we cannot complete until the "into" type does
+            assert composition == Composition.Into;
             if (typeContrib instanceof UnionTypeConstant typeUnion) {
                 typeUnion.decompose(setDepends);
             } else {
@@ -3071,7 +3263,7 @@ public abstract class TypeConstant
                 // type, or ii) "into" a union that includes this type, and in either case we can
                 // take the partial mixin's info, which contains properties and methods of the mixin
                 // itself, and may miss the information from the "into" type(s), which we already
-                // have (i) or don't care about (ii)
+                // (i) have or (ii) don't care about
                 if (infoContrib.dependsOn(this.removeAccess())) {
                     return !setDepends.isEmpty();
                 }
@@ -3137,8 +3329,8 @@ public abstract class TypeConstant
             TypeConstant     typeContrib = contrib.getTypeConstant();
             Composition      composition = contrib.getComposition();
             PropertyConstant idDelegate  = contrib.getDelegatePropertyConstant();
+            TypeInfo         infoContrib = null;
             boolean          fSelf       = composition == Composition.Equal;
-
             if (fSelf) {
                 mapContribProps    = new HashMap<>();
                 mapContribMethods  = new HashMap<>();
@@ -3192,18 +3384,20 @@ public abstract class TypeConstant
                     }
                 }
             } else {
-                TypeInfo infoContrib = typeContrib.adjustAccess(constId).ensureTypeInfoInternal(errs);
+                infoContrib = typeContrib.adjustAccess(constId).ensureTypeInfoInternal(errs);
                 if (!isComplete(infoContrib)) {
-                    fIncomplete = computeIncomplete(composition, typeContrib, infoContrib, setDepends);
+                    fIncomplete |= computeIncomplete(composition, typeContrib, infoContrib, setDepends);
                     if (fIncomplete) {
                         errs = ErrorListener.BLACKHOLE;
-                        if (infoContrib == null || composition == Composition.Into) {
-                            // even if the contribution has an incomplete info we can still proceed
-                            // collecting [non-complete] information, except when this type
-                            // represents a mixin, in which case we must discard the incomplete
-                            // "into" info and apply it only when the "left side" info is complete
-                            continue;
-                        }
+                    }
+// TODO CP this is the problem: we bail out instead of using the incomplete data
+//                    if (fIncomplete || infoContrib == null || composition == Composition.Into) {
+                    if (infoContrib == null) {
+                        // even if the contribution has an incomplete info we can still proceed
+                        // collecting [non-complete] information, except when this type
+                        // represents a mixin, in which case we must discard the incomplete
+                        // "into" info and apply it only when the "left side" info is complete
+                        continue;
                     }
                 }
 
@@ -3246,10 +3440,12 @@ public abstract class TypeConstant
                             // REVIEW: consider removing the "retainOnly" call with a simple check:
                             //
                             // IdentityConstant idProp = entry.getKey().getClassIdentity();
-                            // if (!setClass.contains(idProp) && !setDefault.contains(idProp))
-                            //    {
-                            //    iter.remove();
-                            //}
+                            // if (!setClass.contains(idProp) && !setDefault.contains(idProp)) {
+                            //     iter.remove();
+                            // }
+                            //
+                            // (but this would require us to first clone mapContribProps so we don't
+                            // mutate the TypeInfo of the type being contributed)
                             PropertyInfo infoReduced = entry.getValue().
                                     retainOnly(entry.getKey(), setClass, setDefault);
                             if (infoReduced != null) {
@@ -3313,18 +3509,24 @@ public abstract class TypeConstant
 
             // process methods
             if (!mapContribMethods.isEmpty()) {
-                layerOnMethods(constId, fSelf ? ContribSource.Self : ContribSource.Regular,
-                        idDelegate, mapMethods, mapVirtMethods, typeContrib, mapContribMethods, errs);
+                assert contrib.getComposition() != Composition.Annotation;
+                ContribSource contribSource = fSelf
+                        ? ContribSource.Self
+                        : contrib.getComposition() == Composition.Incorporates
+                                ? ContribSource.Mixin
+                                : ContribSource.Regular;
+                layerOnMethods(constId, contribSource, idDelegate, mapMethods, mapVirtMethods,
+                               typeContrib, mapContribMethods, errs);
             }
 
             // process children
             if (!mapContribChildren.isEmpty()) {
                 for (Entry<String, ChildInfo> entry : mapContribChildren.entrySet()) {
-                    String    sName       = entry.getKey();
-                    ChildInfo infoContrib = entry.getValue();
-                    ChildInfo infoPrev    = mapChildren.putIfAbsent(sName, infoContrib);
+                    String    sName     = entry.getKey();
+                    ChildInfo infoChild = entry.getValue();
+                    ChildInfo infoPrev  = mapChildren.putIfAbsent(sName, infoChild);
                     if (infoPrev != null) {
-                        ChildInfo infoNew = infoPrev.layerOn(infoContrib);
+                        ChildInfo infoNew = infoPrev.layerOn(infoChild);
                         if (infoNew == null) {
                             log(errs, Severity.ERROR, VE_CHILD_COLLISION,
                                     constId,
@@ -3475,11 +3677,11 @@ public abstract class TypeConstant
                                 idGet.getValueString() + " at " + this.getValueString());
                     }
                     infoGet = infoGet.layerOn(new MethodInfo(new MethodBody(
-                            idGet, idGet.getSignature(), Implementation.Implicit), nRank), false, errs);
+                            idGet, idGet.getSignature(), Implementation.FromInto), nRank), false, errs);
 
                     if (infoSet != null) {
                         infoSet = infoSet.layerOn(new MethodInfo(new MethodBody(
-                                idSet, idSet.getSignature(), Implementation.Implicit), nRank+1), false, errs);
+                                idSet, idSet.getSignature(), Implementation.FromInto), nRank+1), false, errs);
                     }
                 }
 
@@ -3548,6 +3750,7 @@ public abstract class TypeConstant
                 }
                 mapContribMethods.put(idContrib, infoMethod);
             }
+            // TODO CP is this always ContribSource.Regular ??
             layerOnMethods(constId, ContribSource.Regular, null, mapMethods, mapVirtMethods,
                     typeContrib, mapContribMethods, errs);
         }
@@ -3744,19 +3947,19 @@ public abstract class TypeConstant
         // the challenge here is that the methods being contributed may @Override a method that
         // does not have the same exact signature, in which case the method signature is
         // _narrowed_. there are a few different possible outcomes when this occurs:
-        // 1) there is only one method in the contribution that narrows the method signature,
-        //    and no method in the contribution that has the same signature: this is the
-        //    typical case, in which the method signature is truly narrowed, but the resulting
-        //    data structure carries a record of that choice. first, the method that is being
-        //    narrowed is *capped*, which is to say that it can no longer be extended (although
-        //    it still exists and can be found by the un-narrowed signature, since it is
-        //    necessary for the system to be able to find the method chain that corresponds to
-        //    that un-narrowed signature, because that is the signature that will appear in any
-        //    code that was compiled against the base type). Further, the cap indicates what
-        //    signature it was narrowed to, and its runtime behavior is to virtually invoke that
-        //    narrowed signature, which in turn will be able to walk up its super chain to the
-        //    bottom-most narrowing method, which then supers to the method chain that is under
-        //    the cap.
+        // 1) there is only one method in the contribution that narrows the method signature (of the
+        //    method being layered onto), and no other method from the contribution that has the
+        //    same signature as the method being layered onto; this is the typical narrowing case,
+        //    and the resulting data structure carries a record of that choice: (i) the method that
+        //    is being narrowed is "capped", which marks it as no longer extendable (although the
+        //    capped method still exists separately and can be found by its un-narrowed signature,
+        //    since it is necessary to be able to find the method chain that corresponds to that
+        //    un-narrowed signature, because that is the signature that will appear in any code that
+        //    was compiled against the base type); (ii) the cap holds the signature that it was
+        //    narrowed to (i.e. a "forward pointer"); (iii) the runtime behavior of the cap is to
+        //    virtually invoke that "forward pointer" signature, which corresponds to a chain of
+        //    method bodies; and (iv) the last method in that chain "supers to" the method body
+        //    immediately under the cap.
         // 2) there are one or more methods in the contribution that narrow the method
         //    signature, and there is also a method in the contribution that has the same
         //    exact non-narrowed signature: this is a less common case, but it is one that is
@@ -3783,10 +3986,12 @@ public abstract class TypeConstant
         Map<Object, MethodInfo>  mapVirtMods     = new HashMap<>();
         Map<Object, Set<Object>> mapNarrowedNids = null;
         boolean                  fSelf           = contribSource == ContribSource.Self;
-        boolean                  fAnnotation     = contribSource == ContribSource.Annotation;
-        boolean                  fOnTop          = fAnnotation ||
-                                                   contribSource == ContribSource.ConditionalIncorp;
-
+        boolean                  fMixingIn       = contribSource == ContribSource.Annotation ||
+                                                   contribSource == ContribSource.Mixin ||
+                                                   contribSource == ContribSource.ConditionalMixin;
+        boolean                  fMixOnTop       = contribSource == ContribSource.Annotation ||
+                                                   contribSource == ContribSource.ConditionalMixin;
+        boolean                  fThisMixesIn    = constId.getComponent().getFormat().mixesIn();
         for (Entry<MethodConstant, MethodInfo> entry : mapContribMethods.entrySet()) {
             MethodConstant    idContrib       = entry.getKey();
             MethodInfo        methodContrib   = entry.getValue();
@@ -3807,8 +4012,7 @@ public abstract class TypeConstant
                 if (methodContrib.isCtorOrValidator()) {
                     // not top-level or annotation constructors are not part of this type
                     // constructor call chains; however the annotation "validators" are
-                    if (!idContrib.isTopLevel() ||
-                            fAnnotation && !methodContrib.isValidator()) {
+                    if (fMixingIn && !methodContrib.isValidator() || !idContrib.isTopLevel()) {
                         continue;
                     }
 
@@ -3821,7 +4025,7 @@ public abstract class TypeConstant
                         if (methodBase != null) {
                             methodContrib = methodBase.layerOnValidator(methodContrib);
                         }
-                    } else if (!fAnnotation) {
+                    } else if (!fMixingIn) {
                         // In general constructors are not virtual, unless a class, annotation or
                         // mixin implements an interface that declares a virtual constructor or the
                         // class is a virtual child.
@@ -3875,8 +4079,7 @@ public abstract class TypeConstant
                                         mapNarrowedNids = addNarrowingNid(mapNarrowedNids,
                                                             idBase.getSignature(), nidContrib);
                                     }
-                                } else if (isVirtualChild() && fSelf &&
-                                        ctor.getHead().getImplementation() == Implementation.Implicit) {
+                                } else if (isVirtualChild() && fSelf && ctor.getHead().isInto()) {
                                     mapMethods.remove(idBase);
                                 }
                             }
@@ -3911,7 +4114,7 @@ public abstract class TypeConstant
                         log(errs, Severity.ERROR, VE_SUPER_MISSING,
                                 methodContrib.getIdentity().getPathString(),
                                 constId.getValueString());
-                    } else if (!methodContrib.isFunction() && fOnTop) {
+                    } else if (!methodContrib.isFunction() && fMixOnTop) {
                         // ignore private methods that came from any "onTop" contribution
                         fKeep = false;
                     }
@@ -3927,6 +4130,7 @@ public abstract class TypeConstant
                         // unlike the virtual methods, we don't re-resolve nested identity
                         // (via constId.appendNestedIdentity(pool, nidContrib)
                         // and instead keep all functions keyed by their "original" id
+                        // TODO CP handle mixin case
                         mapMethods.put(idContrib, methodContrib);
                     }
                 }
@@ -3937,24 +4141,26 @@ public abstract class TypeConstant
             // virtual methods are registered using their nested identities
             // TODO: explain why only "fSelf" idContrib should be resolved
             MethodInfo  methodResult = methodContrib;
-            Object      nidContrib   = fSelf
-                                        ? idContrib.resolveNestedIdentity(pool, this)
-                                        : idContrib.getNestedIdentity();
+            Object      nidContrib   = idContrib.resolveNestedIdentity(getConstantPool(), this);
 
-            if (fAnnotation) {
-                if (methodContrib.isAbstract()) {
-                    // this was added synthetically by "asInto" processing; ignore
-                    continue;
-                }
-                if (methodContrib.isCapped()) {
-                    // the cap was introduced by the annotation itself; keep it as is
-                    mapVirtMods.put(nidContrib, methodContrib);
+            if (fMixingIn && methodContrib.hasInto()) { // TODO CP review again
+                // remove the "into" information and let the remainder of the chain merge
+                methodContrib = methodContrib.withoutInto();
+                if (methodContrib == null) {
+                    // the only thing in the chain is the "into", so skip this method completely
                     continue;
                 }
             }
 
             List<Object> listMatches = collectPotentialSuperMethods(
                     methodContrib, nidContrib, mapVirtMethods);
+
+            // if this type is a mixin, then remove any of the matching methods that originate from
+            // the contribution (i.e. that represent infinite recursion)
+            if (fThisMixesIn && !listMatches.isEmpty()) {
+                // TODO CP
+            }
+
             if (bodyContribTail.isOverride()) {
                 // the @Override tag gives us permission to look for a method with a
                 // different signature that can be narrowed to the signature of the
@@ -3963,7 +4169,7 @@ public abstract class TypeConstant
                     if (bodyContribTail.isNative()) {
                         // take it as is
                         mapVirtMods.put(nidContrib, methodResult);
-                    } else if (bodyContribTail.getImplementation() != Implementation.Implicit) {
+                    } else if (!bodyContribTail.isInto()) {
                         log(errs, Severity.ERROR, VE_SUPER_MISSING,
                                 methodContrib.getIdentity().getPathString(),
                                 constId.getValueString());
@@ -3975,8 +4181,8 @@ public abstract class TypeConstant
                     if (listMatches.size() == 1) {
                         nidBase      = listMatches.get(0);
                         methodBase   = mapVirtMethods.get(nidBase);
-                        if (methodBase.isCapped()) {
-                            if (fAnnotation) {
+                        if (methodBase.isCapped()) { // TODO CP review/test capping issues
+                            if (fMixingIn) {
                                 // the "super" method we found is capped, but the cap itself apparently
                                 // didn't match; this can happen for "into (A | B)" annotations
                                 // replace the capped method with the narrowing one
@@ -4062,9 +4268,8 @@ public abstract class TypeConstant
                 }
             } else {
                 // override is not specified by the tail
-                if (fSelf ||
-                        fOnTop && !methodContrib.isCapped() && !bodyContrib.isOverride() &&
-                                  bodyContrib.getImplementation() != Implementation.Implicit) {
+                if (fSelf || fMixOnTop && !methodContrib.isCapped() && !bodyContrib.isOverride()
+                        && bodyContrib.isInto()) {
                     // report "override required" if necessary
                     for (Object nid : listMatches) {
                         MethodInfo methodMatch = mapVirtMethods.get(nid);
@@ -4073,19 +4278,12 @@ public abstract class TypeConstant
                         }
 
                         // the fact that @Override is not specified, but there is a match
-                        // among the underlying methods is almost always wrong except two
-                        // special scenarios:
-                        // a) the contribution is identical to the "head", which adds nothing to
-                        //    the chain and the issue either has already been reported, or
-                        //    allowed for some reason - not our responsibility either way
-                        // b) the contribution is identical to the tail of the chain, in which
-                        //    case the override is not necessary
+                        // among the underlying methods is almost always wrong -- except when we see
+                        // the contribution body already existing in the base
                         MethodConstant idMethod = methodContrib.getIdentity();
                         MethodBody     bodyHead = methodMatch.getHead();
-                        MethodBody     bodyTail = methodMatch.getTail();
-                        if (!bodyHead.getIdentity().equals(idMethod) &&
-                                (bodyTail == bodyHead || !bodyTail.getIdentity().equals(idMethod))) {
-                            if (fAnnotation) {
+                        if (!methodMatch.containsBody(idMethod)) {
+                            if (fMixingIn) {
                                 // the annotation sits on top of the annotated class and makes the
                                 // underlying call chain inaccessible
                                 if (!errs.hasSeriousErrors() && !bodyHead.isAbstract()) {
@@ -4095,8 +4293,11 @@ public abstract class TypeConstant
                                         bodyHead.getIdentity().getPathString()
                                         );
                                 }
-                            } else {
-                                MethodBody bodyOverride = fOnTop ? bodyHead : bodyTail;
+                            // otherwise we need to make sure we ignore circularity caused by seeing
+                            // ourselves in the base and failing to override that mirage
+                            } else if (!bodyHead.isInto() || bodyHead.getIntoMethodInfo() == null
+                                    || !bodyHead.getIntoMethodInfo().containsBody(idMethod)) {
+                                MethodBody bodyOverride = fMixOnTop ? bodyHead : methodMatch.getTail();
                                 log(errs, Severity.ERROR, VE_METHOD_OVERRIDE_REQUIRED,
                                         idMethod.getNamespace().getValueString(),
                                         bodyOverride.getSignature().getValueString(),
@@ -4110,7 +4311,10 @@ public abstract class TypeConstant
                 // find the best base method to layer on; use a capped base method only if nothing
                 // else matches
                 MethodInfo methodBase = mapVirtMethods.get(nidContrib);
-                if (methodBase == null || methodBase.isCapped()) {
+                if (methodBase != null && methodBase.isIntoFrom(methodContrib, fSelf)) {
+                    // the base originally came from the contribution, so it's redundant info
+                    methodBase = null;
+                } else if (methodBase == null || methodBase.isCapped()) {
                     if (methodBase != null && methodBase.containsBody(idContrib)) {
                         // this has already been processed and capped, which can occur when a method
                         // on a natural contribution comes after a rebase or an "into" contribution
@@ -4118,29 +4322,35 @@ public abstract class TypeConstant
                         continue;
                     }
 
-                    Object nidBase = null;
-                    for (Object nid : listMatches) {
-                        MethodInfo methodMatch = mapVirtMethods.get(nid);
-                        if (methodMatch != null && !nid.equals(nidContrib)) {
-                            if (methodMatch.isCapped()) {
-                                if (methodBase == null) {
-                                    // take a possible match, but keep looking
-                                    methodBase = methodMatch;
-                                    nidBase    = nid;
-                                }
-                            } else {
-                                methodBase = methodMatch;
-                                nidBase    = nid;
-                                break;
-                            }
+                    int cUncappedMatches = 0;
+                    for (Object nidMatch : listMatches) {
+                        MethodInfo methodMatch = mapVirtMethods.get(nidMatch);
+                        if (methodMatch == null || nidMatch.equals(nidContrib)) {
+                            continue;
                         }
-                    }
 
-                    if (methodBase != null &&
-                            methodBase.getHead().getImplementation() == Implementation.Implicit) {
-                        // we are replacing an implicit base, which could be just a remnant of
-                        // the "asInto" transformation; no need to keep it any longer
-                        mapMethods.remove((MethodConstant) constId.appendNestedIdentity(pool, nidBase));
+                        if (methodMatch.isCapped()) {
+                            if (methodBase == null) {
+                                // take a possible match, but keep looking
+                                methodBase = methodMatch;
+                            } else if (methodBase.isCapped()) {
+                                // TODO handle cap -> cap -> cap ... must settle on the leftmost one
+                            }
+                        } else {
+                            if (cUncappedMatches++ > 0) {
+                                // the signatures may be "the same" in this context, e.g. the only
+                                // difference may be two different "this:type" types for the same parameter
+                                // or return type
+                                // TODO this should handle NestedIdentity as well
+                                if (nidMatch instanceof SignatureConstant sig1
+                                        && nidContrib instanceof SignatureConstant sig2
+                                        && sig1.isSubstitutableFor(sig2, this)
+                                        && sig2.isSubstitutableFor(sig1, this)) {
+                                    methodBase.markAsDuplicate();
+                                }
+                            }
+                            methodBase = methodMatch;
+                        }
                     }
                 } else {
                     // nidContrib directly points to a "super" method, so it must be in the list
@@ -4380,8 +4590,8 @@ public abstract class TypeConstant
      * Helper to select the "best" signature from an array of signatures; in other words, choose
      * the one that any other signature could "super" to.
      *
-     * @param aSig    an array of signatures
-     * @param sigSub  (optional) if specified, it's a common "sub" method for all signatures
+     * @param setSigs  a set of signatures
+     * @param sigSub   (optional) if specified, it's a common "sub" method for all signatures
      *
      * @return the "best" signature to use
      */
@@ -4600,7 +4810,10 @@ public abstract class TypeConstant
             SignatureConstant sig          = id.getSignature().resolveGenericTypes(pool,
                                                     method.isFunction() ? null : this);
             if (fRebase && fHasNoCode && !fNative) {
-                // align the structure with the info (may be used by the runtime)
+                // for "rebased" types like small-s `service` and small-c `const`, any methods that
+                // require an implementation but have none in the MethodStructure will obviously
+                // have an implementation provided by the "runtime", whatever that is (interpreter,
+                // JIT, ...)
                 fNative = true;
                 method.markNative();
                 pool.invalidateTypeInfos(id.getNamespace());
@@ -4626,8 +4839,8 @@ public abstract class TypeConstant
 
             PropertyConstant  id    = prop.getIdentityConstant();
             int               nRank = nBasePropRank + mapProps.size();
-            PropertyInfo      info  = createPropertyInfo(prop, constId,
-                                            fRebase | prop.isNative(), fFromIface, nRank, errs);
+            PropertyInfo      info  = createPropertyInfo(prop, constId, fRebase | prop.isNative(),
+                                                         fFromIface, nRank, errs);
             mapProps.put(id, info);
 
             if (info.isCustomLogic() || info.isRefAnnotated()) {
@@ -5103,7 +5316,7 @@ public abstract class TypeConstant
             TypeConstant typePrivate = pool.ensureAccessTypeConstant(typeMixin, Access.PRIVATE);
             TypeInfo infoMixin = typePrivate.ensureTypeInfoInternal(errs);
             if (infoMixin == null) {
-                // return the incomplete info of for we've got so far
+                // return the incomplete info for whatever we've got so far
                 return new TypeInfo(this, cInvalidations, infoBase.getClassStructure(), 0, false,
                     info.getTypeParams(), Annotation.NO_ANNOTATIONS, Annotation.NO_ANNOTATIONS,
                     info.getExtends(), info.getRebases(), info.getInto(),
@@ -5133,7 +5346,7 @@ public abstract class TypeConstant
      * @param annotation     (optional) the annotation; null for incorporation
      * @param errs           the error listener to log into
      *
-     * @return the resulting TypeInfo
+     * @return the resulting TypeInfo (never null)
      */
     protected TypeInfo mergeMixinTypeInfo(
             TypeConstant     typeTarget,
@@ -5147,7 +5360,7 @@ public abstract class TypeConstant
             ErrorListener    errs) {
         ConstantPool pool = getConstantPool();
 
-        // merge the private view of the annotation on top if the specified view of the underlying type
+        // merge the private view of the annotation on top of the information from infoSource
         Map<Object          , ParamInfo>    mapMixinParams   = infoMixin.getTypeParams();
         Map<PropertyConstant, PropertyInfo> mapMixinProps    = infoMixin.getProperties();
         Map<MethodConstant  , MethodInfo>   mapMixinMethods  = infoMixin.getMethods();
@@ -5165,23 +5378,20 @@ public abstract class TypeConstant
 
         Map<String, Constant> mapDefaults = null;
         if (annotation != null) {
-            Constant[]      aconstArgs = annotation.getParams();
-            MethodStructure ctor       = infoMixin.getClassStructure().findConstructor(
-                                                aconstArgs, typeTarget);
+            Constant[]      args = annotation.getParams();
+            MethodStructure ctor = infoMixin.getClassStructure().findConstructor(args, typeTarget);
             if (ctor == null) {
                 log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
                         annotation.getValueString(), typeTarget.getValueString());
             } else {
                 mapDefaults = new HashMap<>();
-                ctor.collectDefaultParams(aconstArgs, mapDefaults);
+                ctor.collectDefaultParams(args, mapDefaults);
             }
         }
 
-        int nBaseRank = mapProps.values().stream().
-                            map(PropertyInfo::getRank).max(Integer::compare).orElse(0);
+        int nBaseRank = mapProps.values().stream().map(PropertyInfo::getRank).max(Integer::compare).orElse(0);
         for (Map.Entry<PropertyConstant, PropertyInfo> entry : mapMixinProps.entrySet()) {
             PropertyConstant idProp = entry.getKey();
-
             layerOnMixinProp(pool, infoSource, idBase, mapProps, mapVirtProps, idProp, entry.getValue(),
                     mapDefaults == null ? null : mapDefaults.get(idProp.getName()), nBaseRank, errs);
         }
@@ -5190,7 +5400,6 @@ public abstract class TypeConstant
             String    sName    = entry.getKey();
             ChildInfo childNew = entry.getValue();
             ChildInfo childOld = mapChildren.get(sName);
-
             if (childOld == null) {
                 mapChildren.put(entry.getKey(), entry.getValue());
             } else if (!childOld.equals(childNew)) {
@@ -5199,7 +5408,7 @@ public abstract class TypeConstant
         }
 
         ContribSource contribSource = annotation == null
-                ? ContribSource.ConditionalIncorp
+                ? ContribSource.ConditionalMixin
                 : ContribSource.Annotation;
         typeTarget.layerOnMethods(idBase, contribSource, null, mapMethods, mapVirtMethods,
                 typeMixin, mapMixinMethods, errs);
@@ -6013,6 +6222,16 @@ public abstract class TypeConstant
      */
     public boolean isInterfaceType() {
         return getCategory() == Category.IFACE;
+    }
+
+    /**
+     * @return the TypeConstant that should be implemented,
+     */
+    public TypeConstant asImplementable() {
+        return switch (getCategory()) {
+            case CLASS, IFACE -> isAccessSpecified() ? this : ensureAccess(Access.PROTECTED);
+            default -> throw new UnsupportedOperationException();
+        };
     }
 
     /**
@@ -7311,9 +7530,10 @@ public abstract class TypeConstant
      *  - Regular: standard structural contribution (super class, implemented interface, etc.)
      *  - Self: the class itself
      *  - Annotation: an annotation
-     *  - ConditionalIncorp: a conditional incorporate mixin
+     *  - Mixin
+     *  - ConditionalMixin: a conditional incorporate mixin
      */
-    protected enum ContribSource {Regular, Self, Annotation, ConditionalIncorp}
+    protected enum ContribSource {Regular, Self, Annotation, Mixin, ConditionalMixin}
 
 
     // ----- fields --------------------------------------------------------------------------------
