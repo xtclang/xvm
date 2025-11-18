@@ -590,6 +590,10 @@ public interface Constants {
      * {0} is annotated by {1}, which makes its method {2} unreachable.
      */
     String VE_METHOD_UNREACHABLE                  = "VERIFY-92";
+    /**
+     * "mixin {0} into {1}" extends "mixin {2} into {3}", but type {1} does not narrow type {3}.
+     */
+    String VE_INCOMPATIBLE_INTO                   = "VERIFY-93";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------

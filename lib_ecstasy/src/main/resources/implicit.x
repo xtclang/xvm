@@ -4,6 +4,7 @@ import ecstasy.Boolean;
 import ecstasy.Boolean.True;
 import ecstasy.Boolean.False;
 import ecstasy.Closeable;
+import ecstasy.Comparable;
 import ecstasy.ConcurrentModification;
 import ecstasy.Const;
 import ecstasy.SynchronizedSection;

@@ -121,6 +121,21 @@ public class AccessTypeConstant
     }
 
     @Override
+    public Category getCategory() {
+        return switch (super.getCategory()) {
+            case CLASS, IFACE -> Category.IFACE;
+            default -> Category.OTHER;
+        };
+    }
+
+    @Override
+    public TypeConstant asImplementable() {
+        TypeConstant typeOrig = getUnderlyingType();
+        TypeConstant typeNew  = typeOrig.asImplementable();
+        return typeOrig == typeNew ? this : typeNew.ensureAccess(m_access);
+    }
+
+    @Override
     public TypeConstant removeAccess() {
         return m_constType;
     }

@@ -2366,6 +2366,16 @@ public abstract class Component
         }
 
         /**
+         * Determine if the format represents something that can be mixed into a component of
+         * another format.
+         *
+         * @return true iff the format is ANNOTATION or MIXIN
+         */
+        public boolean mixesIn() {
+            return this == ANNOTATION || this == MIXIN;
+        }
+
+        /**
          * Instantiate a component as it is being read from a stream, reading its body (but NOT its
          * children).
          *

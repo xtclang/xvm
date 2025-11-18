@@ -111,8 +111,8 @@
 // next register allocation (variables, including refs)
 // - does NOT support "local property" mode
 +VAR        TYPE                                    ; uninitialized anonymous variable
-+VAR_I      TYPE, rvalue-src                        ; ("I"=) initialized anonymous variable
 +VAR_N      TYPE, STRING                            ; uninitialized ("N"=) named variable
++VAR_I      TYPE, rvalue-src                        ; ("I"=) initialized anonymous variable
 +VAR_IN     TYPE, STRING, rvalue-src                ; ("I"=) initialized ("N"=) named variable
 +VAR_D      TYPE                                    ; anonymous ("D"=) dynamic reference
 +VAR_DN     TYPE, STRING                            ; ("N"=) named ("D"=) dynamic reference
