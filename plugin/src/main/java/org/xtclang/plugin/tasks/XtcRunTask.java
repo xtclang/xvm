@@ -273,7 +273,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
 
         final List<XtcRunModule> selectedModules = getModules().get();
         if (!taskLocalModules.get().isEmpty()) {
-            logger.lifecycle("[plugin] Task local module configuration is present, overriding extension configuration.");
+            logger.info("[plugin] Task local module configuration is present, overriding extension configuration.");
         }
 
         // TODO: Add abstraction that actually implements a ModulePath instance, including keeping track of its status and perhaps a method for resolving it.
