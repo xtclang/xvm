@@ -1156,22 +1156,35 @@ public class MethodInfo
     // ----- JIT support ---------------------------------------------------------------------------
 
     /**
-     * @return the identity of the property to be used by the JIT compiler
+     * @return the identity of the method to be used by the JIT compiler
      */
     public MethodConstant getJitIdentity() {
-        // for methods   - get the lowest explicit in the chain
-        // for functions - get the highest explicit in the chain
+        return getJitIdentity(m_aBody);
+    }
+
+    /**
+     * @return the identity of the method to be used by the JIT compiler
+     */
+    public static MethodConstant getJitIdentity(MethodBody[] aBody) {
+        // for methods   - get the lowest non-implicit in the chain
+        // for functions - get the highest in the chain
         MethodConstant id = null;
-        for (MethodBody body : m_aBody) {
-            if (id == null ||
-                    body.getImplementation() == Implementation.Explicit) {
+        for (MethodBody body : aBody) {
+            if (id == null || body.getImplementation() != Implementation.Implicit) {
                 id = body.getIdentity();
-                if (isFunction()) {
+                if (body.isFunction()) {
                     break;
                 }
             }
         }
         return id;
+    }
+
+    /**
+     * Ensure a unique name for this method at the specified TypeSystem.
+     */
+    public String ensureJitMethodName(TypeSystem ts) {
+        return getJitIdentity().ensureJitMethodName(ts);
     }
 
     /**

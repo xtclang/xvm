@@ -807,12 +807,7 @@ public class CommonBuilder
             MethodBody[] chain = method.ensureOptimizedMethodChain(typeInfo);
             int          depth = chain.length;
             if (depth > 0) {
-                if (chain[0].getImplementation() == Implementation.Delegating) {
-                    router = true;
-                } else if (depth > 1) {
-                    String nextJitName = chain[1].getIdentity().ensureJitMethodName(typeSystem);
-                    router = !jitName.equals(nextJitName);
-                }
+                router = chain[0].getImplementation() == Implementation.Delegating;
             }
         }
 
@@ -1244,7 +1239,7 @@ public class CommonBuilder
 
             // step 6: call the constructor
             // construct$17(ctx, cctx, [type], thi$, x, y, z);
-            String        ctorName = constructor.getIdentity().ensureJitMethodName(typeSystem);
+            String        ctorName = constructor.ensureJitMethodName(typeSystem);
             JitMethodDesc ctorDesc = constructor.getJitDesc(typeSystem, typeInfo.getType());
 
             code.aload(ctxSlot)

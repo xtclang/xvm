@@ -573,9 +573,10 @@ public abstract class OpCallable extends Op {
         boolean        fSpecial;
 
         if (m_nFunctionId == A_SUPER) {
-            MethodBody bodyHead  = bctx.callChain[0];
             int        nDepth    = bctx.callDepth + 1;
             MethodBody bodySuper = bctx.callChain[nDepth];
+
+            sJitName = MethodInfo.getJitIdentity(bctx.callChain).ensureJitMethodName(ts);
 
             MethodConstant   idSuper  = bodySuper.getIdentity();
             IdentityConstant idCallee = idSuper.getNamespace();
@@ -583,13 +584,12 @@ public abstract class OpCallable extends Op {
 
             if (format == Format.MIXIN) {
                 // we need to generate a synthetic super
-                cdTarget = ClassDesc.of(bctx.className);
-                sJitName = bodyHead.getIdentity().ensureJitMethodName(ts) + "ꖛ" + nDepth;
+                cdTarget  = ClassDesc.of(bctx.className);
+                sJitName += "ꖛ" + nDepth;
 
                 bctx.buildSuper(sJitName, nDepth);
             } else {
                 cdTarget = idCallee.ensureClassDesc(ts);
-                sJitName = idSuper.ensureJitMethodName(ts);
             }
             jmdCall  = bodySuper.getJitDesc(ts, bctx.typeInfo.getType());
             cReturns = idSuper.getSignature().getReturnCount();
@@ -602,7 +602,7 @@ public abstract class OpCallable extends Op {
             MethodInfo       infoMethod = typeTarget.ensureTypeInfo().getMethodById(idMethod);
 
             cdTarget = idTarget.ensureClassDesc(ts); // function; no formal types applicable
-            sJitName = idMethod.ensureJitMethodName(ts);
+            sJitName = infoMethod.ensureJitMethodName(ts);
             jmdCall  = infoMethod.getJitDesc(ts, typeTarget);
             cReturns = idMethod.getSignature().getReturnCount();
             fSpecial = false;
@@ -692,12 +692,12 @@ public abstract class OpCallable extends Op {
         if (infoTarget.getFormat() == Format.MIXIN) {
             cdTarget   = ClassDesc.of(bctx.className);
             typeTarget = bctx.typeInfo.getType();
-            sJitCtor   = idTarget.getName() + "$" + idCtor.ensureJitMethodName(ts);
+            sJitCtor   = idTarget.getName() + "$" + infoCtor.ensureJitMethodName(ts);
 
             bctx.buildFunction(sJitCtor, infoCtor.getHead());
         } else {
             cdTarget = typeTarget.ensureClassDesc(ts);
-            sJitCtor = idCtor.ensureJitMethodName(ts);
+            sJitCtor = infoCtor.ensureJitMethodName(ts);
         }
 
         JitMethodDesc jmdCtor = infoCtor.getJitDesc(ts, typeTarget);
