@@ -38,6 +38,8 @@ import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
+import static org.xvm.javajit.TypeSystem.ID_NUM;
+
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -585,7 +587,7 @@ public abstract class OpCallable extends Op {
             if (format == Format.MIXIN) {
                 // we need to generate a synthetic super
                 cdTarget  = ClassDesc.of(bctx.className);
-                sJitName += "ꖛ" + nDepth;
+                sJitName += ID_NUM + String.valueOf(nDepth);
 
                 bctx.buildSuper(sJitName, nDepth);
             } else {

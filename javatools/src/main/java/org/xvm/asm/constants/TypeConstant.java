@@ -1427,6 +1427,14 @@ public abstract class TypeConstant
     }
 
     /**
+     * @return true iff the type is a Function type
+     */
+    public boolean isFunction() {
+        TypeConstant constThis = resolveTypedefs();
+        return constThis.isA(getConstantPool().typeFunction());
+    }
+
+    /**
      * Determine compatibility for purposes of comparing equality.
      *
      * @param that             another type
@@ -6484,6 +6492,7 @@ public abstract class TypeConstant
                     default -> throw new UnsupportedOperationException();
                 };
             } else {
+                // REVIEW CP: this is wrong
                 return Builder.N_nArrayObj;
             }
         }

@@ -762,6 +762,7 @@ public class CommonBuilder
                     method.getHead().getImplementation() == Implementation.Declared) {
                 assembleImplMethod(className, classBuilder, method);
             }
+
             if (shouldGenerate(method.getIdentity())) {
                 assembleImplMethod(className, classBuilder, method);
             }

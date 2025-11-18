@@ -835,6 +835,10 @@ public class ParameterizedTypeConstant
             if (typeOriginal.isPrimitive()) {
                 fTrivial = false;
             } else {
+                // TODO: REMOVE - compensation for Array handling in TypeConstant#buildJitClassName
+                if (m_constType.isArray()) {
+                    return pool.ensureArrayType(pool.typeObject());
+                }
                 var            entryParam     = listTypeParams.get(i);
                 StringConstant constName      = entryParam.getKey();
                 TypeConstant   typeConstraint = entryParam.getValue();

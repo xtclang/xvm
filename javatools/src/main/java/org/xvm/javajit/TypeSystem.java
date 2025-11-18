@@ -467,7 +467,7 @@ public class TypeSystem {
      */
     public String ensureJitClassName(TypeConstant type) {
         if (type.isSingleUnderlyingClass(true)) {
-            if (type.isA(pool().typeFunction())) {
+            if (type.isFunction()) {
                 // Jit class name for functions has format of "xFunction.$n"
 
                 String name = functionClasses.computeIfAbsent(type, t -> {

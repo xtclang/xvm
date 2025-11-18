@@ -979,8 +979,10 @@ public class BuildContext {
      * Ensure a {@link RegisterInfo} for the specified register id.
      */
     public RegisterInfo ensureRegInfo(int regId, TypeConstant type, ClassDesc cd, String name) {
-        return registerInfos.computeIfAbsent(regId, ix -> new SingleSlot(
-                scope.allocateLocal(ix, cd), type, cd, name));
+        return regId == Op.A_IGNORE
+            ? new SingleSlot(regId, type, cd, name)
+            : registerInfos.computeIfAbsent(regId, ix -> new SingleSlot(
+                    scope.allocateLocal(ix, cd), type, cd, name));
     }
 
     /**

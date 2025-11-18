@@ -8,7 +8,6 @@ import java.util.Iterator;
 import java.util.Map;
 
 import java.util.concurrent.ConcurrentHashMap;
-
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.xvm.asm.ConstantPool;
@@ -16,10 +15,10 @@ import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Version;
 
-import static java.util.Arrays.copyOf;
-
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.asm.Constants.NATIVE_MODULE;
+
+import static org.xvm.javajit.TypeSystem.ID_NUM;
 
 import static org.xvm.util.Handy.checkElementsNonNull;
 import static org.xvm.util.Handy.isDigit;
@@ -283,7 +282,7 @@ public class Xvm {
      */
     public String createUniqueSuffix(String name) {
         int count = nameCounters.compute(name, (k, v) -> v == null ? -1 : v + 1);
-        return count == -1 ? "" : "ꖛ" + count;
+        return count == -1 ? "" : ID_NUM + String.valueOf(count);
     }
 
     // ----- internal ------------------------------------------------------------------------------
@@ -529,7 +528,7 @@ public class Xvm {
                     (index = scan(packages, null  )) < 0) {
                     // replace a full array with a bigger array
                     index    = packages.length;
-                    packages = copyOf(packages, packages.length * 2);
+                    packages = Arrays.copyOf(packages, packages.length * 2);
                 }
             }
             packages[index] = unique;

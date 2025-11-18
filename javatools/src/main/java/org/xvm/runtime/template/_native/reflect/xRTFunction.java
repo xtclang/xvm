@@ -81,7 +81,7 @@ public class xRTFunction
         // lies on the "invoke" implementation
         ConstantPool pool = container.getConstantPool();
 
-        assert typeActual.isA(pool.typeFunction());
+        assert typeActual.isFunction();
 
         TypeConstant typeP   = pool.typeTuple0();
         TypeConstant typeR   = typeActual.getParamType(1);
