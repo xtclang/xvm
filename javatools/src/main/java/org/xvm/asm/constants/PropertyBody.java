@@ -22,7 +22,10 @@ public class PropertyBody
      * Construct a PropertyBody from the passed information.
      *
      * @param struct         the property structure that this body is derived from
-     * @param impl           one of Implicit, Declared, Delegating, or Explicit
+     * @param impl           one of Implicit, Declared (interface), Delegating, Explicit
+     *                       (declaration on a class), SansCode, or Native
+     *                       TODO we explicitly new PropertyBody in PropertyInfo using SansCode ... explain
+     *                       TODO we explicitly new PropertyBody in ?? using Native ... explain
      * @param constDelegate  the property constant that provides the reference to delegate to
      * @param type           the type of the property, including any type annotations (required)
      * @param fRO            true iff the property has any of a number of indicators that would

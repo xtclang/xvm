@@ -474,14 +474,32 @@ public class MethodInfo
      * @return the "into" version of this MethodInfo
      */
     public MethodInfo asInto() {
-        // if the method is a function, constructor or a "cap", it stays as-is (unless it's a function
-        // on the Object class); otherwise, it needs to be turned into a chain of implicit entries
-        if ((isFunction() || isCtorOrValidator() || isCapped()) &&
-                    !getIdentity().getNamespace().equals(pool().clzObject())) {
+        // functions in the "into" are visible to the mixin, as-is
+        if (isFunction()) {
             return this;
         }
 
-        return markImplicit();
+        MethodBody useBody = null;
+        if (isCapped()) {
+            useBody = m_aBody[0]; // head is a cap
+            assert useBody.getImplementation() == Implementation.Capped;
+        } else if (m_aBody.length == 1) {
+            if (m_aBody[0].getImplementation() == Implementation.Implicit) {
+                return this;
+            }
+        } else {
+            for (MethodBody body : m_aBody) {
+                if (body.getImplementation() == Implementation.Implicit) {
+                    useBody = body;
+                }
+            }
+        }
+
+        if (useBody == null) {
+            MethodBody body = m_aBody[0];
+            useBody = new MethodBody(body.getIdentity(), body.getSignature(), Implementation.Implicit);
+        }
+        return new MethodInfo(new MethodBody[]{useBody}, f_nRank);
     }
 
     /**
@@ -1144,6 +1162,21 @@ public class MethodInfo
      */
     public int getRank() {
         return f_nRank;
+    }
+
+    public boolean isDuplicate() {
+        for (MethodBody body : m_aBody) {
+            if (body.m_fDuplicate) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void markAsDuplicate() {
+        for (MethodBody body : m_aBody) {
+            body.m_fDuplicate = true;
+        }
     }
 
     /**
