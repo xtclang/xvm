@@ -649,7 +649,7 @@ public abstract class Builder {
     public static final String N_Array        = "org.xtclang.ecstasy.collections.Array";
     public static final String N_Boolean      = "org.xtclang.ecstasy.Boolean";
     public static final String N_Char         = "org.xtclang.ecstasy.text.Char";
-    public static final String N_Class        = "org.xtclang.ecstasy.reflect.nClass";
+    public static final String N_Class        = "org.xtclang.ecstasy.reflect.Class";
     public static final String N_Enumeration  = "org.xtclang.ecstasy.reflect.Enumeration";
     public static final String N_Exception    = "org.xtclang.ecstasy.Exception";
     public static final String N_Int8         = "org.xtclang.ecstasy.numbers.Int8";

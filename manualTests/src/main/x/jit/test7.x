@@ -39,6 +39,17 @@ module test7.examples.org {
     package t1 {
         class Base incorporates Mix {
             Int f1() = f0() + 1;
+
+            // JIT compiler produced Java code for Base contains the following synthetic code:
+            // construct() {
+            //     Mix$construct();
+            // }
+            // Int value;
+            //
+            // Mix$construct() {
+            //     value = 41;
+            // }
+            // Int f0() = value;
         }
 
         mixin Mix into Base {

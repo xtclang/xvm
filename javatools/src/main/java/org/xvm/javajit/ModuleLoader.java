@@ -12,6 +12,7 @@ import java.util.List;
 
 import org.xvm.asm.ModuleStructure;
 
+import static org.xvm.util.Handy.isHexit;
 import static org.xvm.util.Handy.require;
 
 /**
@@ -115,29 +116,58 @@ public class ModuleLoader
             List<ClassModel> currentlyLoaded = new ArrayList<>(loadedClasses);
             loadedClasses.clear();
             for (ClassModel model : currentlyLoaded) {
-                out.println("\n**** Class " + model.thisClass().asSymbol().displayName());
+                boolean isInterface = (model.flags().flagsMask() & ClassFile.ACC_INTERFACE) != 0;
+                out.println("\n**** " +
+                        (isInterface ? "interface " : "class ") +
+                        model.thisClass().asInternalName().replace('/', '.'));
 
                 model.superclass().ifPresent(ce ->
-                    out.println("Extends: " + ce.asSymbol().displayName()));
+                    out.println("Extends: " + ce.asInternalName().replace('/', '.')));
 
                 List<ClassEntry> interfaces = model.interfaces();
                 if (!interfaces.isEmpty()) {
                     out.println("Implements:");
-                    interfaces.stream().map(iface -> "  " + iface.asSymbol().displayName()).
+                    interfaces.stream().map(iface -> "  " + iface.asInternalName().replace('/', '.')).
                         forEach(out::println);
                 }
 
                 out.println("Fields:");
-                model.fields().stream().map(f -> "  " + f.fieldName() + " " + f.fieldTypeSymbol().descriptorString()).
+                model.fields().stream().map(f ->
+                        "  " + f.fieldName() + " " + f.fieldTypeSymbol().descriptorString()).
                     forEach(out::println);
 
                 out.println("Methods:");
                 model.methods().stream().map(m -> "  " + m.methodName() +
                     m.methodTypeSymbol().displayDescriptor() +
-                        (m.code().isPresent() ? "\n" + m.code().get().toDebugString() : "")).
+                        (m.code().isPresent() ? "\n" + render(m.code().get().toDebugString()) : "")).
                     forEach(out::println);
             }
         } while (!loadedClasses.isEmpty() && --iters > 0);
+    }
+
+    /**
+     * Fix JDK output.
+     *
+     * @param s  a String resulting from the ClassFile API
+     *
+     * @return a more readable String (sans slash-u encodings)
+     */
+    public static String render(String s) {
+        StringBuilder sb = null;
+        for (int i = 0, c = s.length(); i < c; ++i) {
+            char ch = s.charAt(i);
+            if (ch == '\\' && i + 5 < c && s.charAt(i+1) == 'u' && isHexit(s.charAt(i+2))
+                    && isHexit(s.charAt(i+3)) && isHexit(s.charAt(i+4)) && isHexit(s.charAt(i+5))) {
+                if (sb == null) {
+                    sb = new StringBuilder(c).append(s, 0, i);
+                }
+                sb.append((char) Integer.parseInt(s, i+2, i+6, 16));
+                i += 5;
+            } else if (sb != null) {
+                sb.append(ch);
+            }
+        }
+        return sb == null ? s : sb.toString();
     }
 
     private final List<ClassModel> loadedClasses = new ArrayList<>();

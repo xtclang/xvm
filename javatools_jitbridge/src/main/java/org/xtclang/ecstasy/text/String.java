@@ -49,7 +49,7 @@ import static org.xvm.util.Handy.require;
  * 21-bit (Unicode) values to be stored in each `long`.
  */
 public class String
-    extends nConst {
+        extends nConst {
     // ----- constructors --------------------------------------------------------------------------
 
     /**

@@ -242,7 +242,7 @@ public abstract class OpGeneral
                 }
                 TypeConstant  type     = regTarget.type();
                 MethodInfo    method   = type.ensureTypeInfo().findOpMethod(sName, sOp, 1);
-                String        sJitName = method.getJitIdentity().ensureJitMethodName(bctx.typeSystem);
+                String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
                 JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem, type);
 
                 MethodTypeDesc md;
@@ -271,7 +271,7 @@ public abstract class OpGeneral
                 }
                 TypeConstant  type     = regTarget.type();
                 MethodInfo    method   = type.ensureTypeInfo().findOpMethod(sName, sOp, 0);
-                String        sJitName = method.getJitIdentity().ensureJitMethodName(bctx.typeSystem);
+                String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
                 JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem, type);
 
                 MethodTypeDesc md;

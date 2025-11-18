@@ -379,7 +379,7 @@ public abstract class OpIndex
                 default          -> throw new UnsupportedOperationException(toName(getOpCode()));
             }
             MethodInfo    method   = type.ensureTypeInfo().findOpMethod(sName, sOp, 1);
-            String        sJitName = method.getJitIdentity().ensureJitMethodName(ts);
+            String        sJitName = method.ensureJitMethodName(ts);
             throw new UnsupportedOperationException("TODO");
         }
 

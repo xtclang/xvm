@@ -2535,7 +2535,7 @@ public abstract class TypeConstant
                     typeNatural = pool.ensureParameterizedTypeConstant(typeNatural, getParamTypesArray());
                 }
                 listProcess.add(struct.new Contribution(Composition.Implements, typeNatural));
-                listProcess.add(struct.new Contribution(Composition.Implements, pool.typeObject()));
+                typeExtends = pool.typeObject();
             } else {
                 // Object does not (and must not) implement anything despite what it says
                 if (constId.equals(pool.clzObject())) {
@@ -2640,7 +2640,10 @@ public abstract class TypeConstant
             listProcess.add(struct.new Contribution(Composition.Into, typeInto));
         }
         if (typeExtends != null) {
-            listProcess.add(struct.new Contribution(Composition.Extends,
+            Composition composition = typeExtends.equals(pool.typeObject())
+                    ? Composition.Implements
+                    : Composition.Extends;
+            listProcess.add(struct.new Contribution(composition,
                     pool.ensureAccessTypeConstant(typeExtends, Access.PROTECTED)));
         }
         if (typeRebase != null) {

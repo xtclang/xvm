@@ -481,7 +481,7 @@ public abstract class OpCondJump
                 RegisterInfo regTarget = bctx.loadArgument(code, m_nArg);
                 bctx.loadCtx(code);
                 code.invokevirtual(regTarget.cd(), "$xvmType", MD_xvmType); // target type
-                Builder.loadTypeConstant(code, bctx.typeSystem, typeTest);   // test type
+                Builder.loadTypeConstant(code, bctx.typeSystem, typeTest);  // test type
             }
             if (getOpCode() == OP_JMP_TYPE) {
                 bctx.narrowTarget(code, m_nArg, nAddrJump, -1, typeTest);

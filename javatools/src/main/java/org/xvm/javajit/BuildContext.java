@@ -1117,7 +1117,7 @@ public class BuildContext {
                                     (JitCtorDesc) infoCtor.getJitDesc(typeSystem, typeTarget));
 
         boolean fOptimized = jmdNew.isOptimized;
-        String  sJitNew    = idCtor.ensureJitMethodName(typeSystem).replace("construct", Builder.NEW);
+        String  sJitNew    = infoCtor.ensureJitMethodName(typeSystem).replace("construct", Builder.NEW);
         MethodTypeDesc md;
         if (fOptimized) {
             md       = jmdNew.optimizedMD;

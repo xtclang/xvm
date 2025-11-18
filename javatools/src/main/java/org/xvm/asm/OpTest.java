@@ -347,11 +347,10 @@ public abstract class OpTest
                 case OP_IS_GT, OP_IS_GTE, OP_IS_LT, OP_IS_LTE -> pool.sigCompare();
                 default                                       -> throw new IllegalStateException();
             };
-            MethodInfo     method   = typeCommon.ensureTypeInfo().getMethodBySignature(sig);
-            JitMethodDesc  jmd      = method.getJitDesc(ts, typeCommon);
-            MethodConstant idFn     = method.getJitIdentity();
-            ClassDesc      cd       = idFn.getNamespace().ensureClassDesc(ts);
-            String         sJitName = idFn.ensureJitMethodName(ts);
+            MethodInfo    method   = typeCommon.ensureTypeInfo().getMethodBySignature(sig);
+            ClassDesc     cd       = method.getJitIdentity().getNamespace().ensureClassDesc(ts);
+            JitMethodDesc jmd      = method.getJitDesc(ts, typeCommon);
+            String        sJitName = method.ensureJitMethodName(ts);
 
             bctx.loadCtx(code);
             switch (nOp) {
