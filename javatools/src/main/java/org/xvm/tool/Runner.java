@@ -101,7 +101,6 @@ public class Runner
         boolean fShowVer = options.showVersion();
         if (fShowVer) {
             showSystemVersion(repo);
-            return 0;
         }
 
         final File fileSpec = options.getTarget();

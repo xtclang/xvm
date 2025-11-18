@@ -7,6 +7,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -14,6 +15,7 @@ import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.xBoolean;
@@ -21,6 +23,7 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template.text.xString;
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template.reflect.xRef;
 
@@ -59,9 +62,23 @@ public class xInject
         Constant[] aParams = anno.getParams();
 
         Constant constName = aParams.length == 0 ? null : aParams[0];
-        String   sResource = constName instanceof StringConstant constString
-                                ? constString.getValue()
-                                : sName;
+        String   sResource;
+
+        if (constName instanceof StringConstant constString) {
+            sResource = constString.getValue();
+        } else if (constName instanceof RegisterConstant constReg) {
+            try {
+                int nRegister = constReg.getRegisterIndex();
+                sResource = nRegister == Op.A_DEFAULT
+                        ? sName
+                        : ((StringHandle) frame.getArgument(nRegister)).getStringValue();
+            } catch (ExceptionHandle.WrapperException e) {
+                throw new IllegalArgumentException("Invalid resource name: " + constName);
+            }
+        } else {
+            sResource = sName;
+        }
+
         if (aParams.length < 2) {
             // opts are not specified; the handle could be trivially initialized on-the-spot
             InjectedHandle hInject = new InjectedHandle(clazz.ensureAccess(Access.PUBLIC), sName, sResource);

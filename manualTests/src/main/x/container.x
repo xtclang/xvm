@@ -23,10 +23,10 @@ module TestContainer {
             container.invoke("run", (depth+1));
         } else {
             // run TestSimple
-            ModuleTemplate   template = repository.getResolvedModule("TestSimple");
-            ResourceProvider injector = new BasicResourceProvider();
+            ModuleTemplate template = repository.getResolvedModule("TestSimple");
 
-            Container container = new Container(template, Lightweight, repository, injector);
+            Container container =
+                new Container(template, Lightweight, repository, SimpleResourceProvider);
             container.invoke("run", ());
 
             // run TestContained
@@ -42,7 +42,8 @@ module TestContainer {
 
             switch (type, name) {
             case (String, _):
-                return "hello";
+                @Inject(resourceName=name) String value;
+                return &value.assigned ? value : "hello";
 
             case (Int, "value"):
                 return Int:42;
