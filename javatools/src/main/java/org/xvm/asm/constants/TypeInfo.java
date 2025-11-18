@@ -135,6 +135,8 @@ public class TypeInfo {
 
         assert cInvalidations == 0 // necessary for TYPEINFO_PLACEHOLDER construction
             || cInvalidations <= type.getConstantPool().getInvalidationCount();
+
+        validate(); // TODO remove?
     }
 
     /**
@@ -178,6 +180,49 @@ public class TypeInfo {
         m_fImplicitAbstract = false;
 
         assert cInvalidations <= typeFormal.getConstantPool().getInvalidationCount();
+
+        validate(); // TODO remove?
+    }
+
+    // TODO remove?
+    private void validate() {
+        // find each virtual method from f_mapVirtMethods in f_mapMethods
+        for (var entry : f_mapVirtMethods.entrySet()) {
+            Object     key = entry.getKey();
+            MethodInfo val = entry.getValue();
+            if (key == null) {
+                throw new AssertionError("TypeInfo for " + f_type
+                        + " contains null key in f_mapVirtMethods");
+            }
+            if (val == null) {
+                throw new AssertionError("TypeInfo for " + f_type
+                        + " contains null value in f_mapVirtMethods for key=" + key);
+            }
+            if (key instanceof NestedIdentity) {
+                // TODO
+            } else if (key instanceof SignatureConstant) {
+                // TODO
+            } else {
+                throw new AssertionError("TypeInfo for " + f_type + " contains unexpected key class "
+                        + key.getClass() + ": " + key);
+            }
+        }
+
+        // find each virtual method from f_mapMethods in f_mapVirtMethods
+        for (var entry : f_mapMethods.entrySet()) {
+            MethodConstant key = entry.getKey();
+            MethodInfo     val = entry.getValue();
+            if (key == null) {
+                throw new AssertionError("TypeInfo for " + f_type
+                                             + " contains null key in f_mapMethods");
+            }
+            if (val == null) {
+                throw new AssertionError("TypeInfo for " + f_type
+                                             + " contains null value in f_mapMethods for key=" + key);
+            }
+
+            // TODO find the MethodInfo in the f_mapVirtMethods map
+        }
     }
 
     /**
@@ -264,58 +309,148 @@ public class TypeInfo {
     }
 
     /**
-     * @return the "into" version of this TypeInfo
+     * @param setFromInto  the pre-calculated graph of identity nodes that form the "into" and omit
+     *                     the mixin (preventing circularity); never null
+     *
+     * @return the information from this TypeInfo, but excluding members from the passed set
      */
-    public TypeInfo asInto() {
-        TypeInfo info = m_into;
-        if (info == null) {
-            ConstantPool                        pool         = pool();
-            Map<PropertyConstant, PropertyInfo> mapProps     = new HashMap<>();
-            Map<Object          , PropertyInfo> mapVirtProps = new HashMap<>();
-            for (Entry<PropertyConstant, PropertyInfo> entry : f_mapProps.entrySet()) {
-                PropertyConstant id   = entry.getKey();
-                PropertyInfo     prop = entry.getValue();
+    public TypeInfo excluding(Set<IdentityConstant> setFromInto) {
+        assert setFromInto != null;
+        ConstantPool                        pool         = pool();
+        Map<PropertyConstant, PropertyInfo> mapProps     = new HashMap<>();
+        Map<Object          , PropertyInfo> mapVirtProps = new HashMap<>();
+        for (Entry<PropertyConstant, PropertyInfo> entry : f_mapProps.entrySet()) {
+            PropertyConstant id   = entry.getKey();
+            PropertyInfo     prop = entry.getValue();
 
-                // convert the property into an "into" property
-                prop = prop.asInto();
-
+            // convert the property into an "into" property
+            prop = prop.excluding(setFromInto);
+            if (prop != null) {
                 mapProps.put(id, prop);
                 if (prop.isVirtual()) {
                     mapVirtProps.put(id.resolveNestedIdentity(pool, null), prop);
                 }
             }
+        }
 
-            Map<MethodConstant, MethodInfo> mapMethods     = new HashMap<>();
-            Map<Object        , MethodInfo> mapVirtMethods = new HashMap<>();
-            for (Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet()) {
-                MethodConstant id     = entry.getKey();
-                MethodInfo     method = entry.getValue();
+        Map<MethodConstant, MethodInfo> mapMethods     = new HashMap<>();
+        Map<Object        , MethodInfo> mapVirtMethods = new HashMap<>();
+        for (Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet()) {
+            MethodConstant id     = entry.getKey();
+            MethodInfo     method = entry.getValue();
 
-                // convert the method into an "into" method
-                method = method.asInto();
-
+            // convert the method into an "into" method
+            method = method.excluding(setFromInto);
+            if (method != null) {
                 mapMethods.put(id, method);
                 if (method.isVirtual()) {
                     mapVirtMethods.put(id.resolveNestedIdentity(pool, null), method);
                 }
             }
+        }
 
-            info = new TypeInfo(f_type, f_cInvalidations, f_struct, f_cDepth, true,
-                    f_mapTypeParams, f_aannoClass, f_aannoMixin,
-                    f_typeExtends, f_typeRebases, f_typeInto,
-                    f_listProcess, f_listmapClassChain, f_listmapDefaultChain,
-                    mapProps, mapMethods, mapVirtProps, mapVirtMethods,
-                    f_mapChildren, f_setDepends, f_progress);
+        return new TypeInfo(f_type, f_cInvalidations, f_struct, f_cDepth, true,
+                f_mapTypeParams, f_aannoClass, f_aannoMixin,
+                f_typeExtends, f_typeRebases, f_typeInto,
+                f_listProcess, f_listmapClassChain, f_listmapDefaultChain,
+                mapProps, mapMethods, mapVirtProps, mapVirtMethods,
+                f_mapChildren, f_setDepends, f_progress);
+    }
 
-            if (f_progress == Progress.Complete) {
-                // cache the result
-                m_into = info;
+    /**
+     * @param setFromInto  the pre-calculated graph of identity nodes that form the "into" and omit
+     *                     the mixin (preventing circularity)
+     *
+     * @return the "into" version of this TypeInfo
+     */
+    public TypeInfo asInto(Set<IdentityConstant> setFromInto) {
+        ConstantPool                            pool             = pool();
+        Map<PropertyConstant, PropertyInfo    > mapProps         = new HashMap<>();
+        Map<Object          , PropertyInfo    > mapVirtProps     = new HashMap<>();
+        Map<Object          , PropertyConstant> mapRetainedProps = new HashMap<>();
 
-                // cache the result on the result itself, so it doesn't have to build its own "into"
-                info.m_into = info;
+        // we need to evaluate each property for inclusion in the "into" result, but only those that
+        // are from a class that is in the setFromInto can be included, and if a property is nested,
+        // then it can only be included if its parent is included; this should be easier to process,
+        // but the identities are not normalized in any way, so unfortunately we need to create our
+        // own hierarchical identity structure as we process this, breadth-first (depth-last); this
+        // approach should be considered a "temporary hack", although it is likely to last fpr years
+        int nDepth = 1;
+        int cProps = f_mapProps.size();
+        int cDone  = 0;
+        while (cDone < cProps) {
+            for (Entry<PropertyConstant, PropertyInfo> entry : f_mapProps.entrySet()) {
+                PropertyConstant id = entry.getKey();
+                if (id.getNestedDepth() == nDepth) {
+                    // track the number of properties we've processed (so we know when we're done)
+                    ++cDone;
+
+                    // don't retain any nested property unless their parent is a retained property
+                    PropertyInfo prop = entry.getValue();
+                    Object       nid  = id.resolveNestedIdentity(pool, null);
+                    if (nDepth > 1) {
+                        if (id.getParentConstant() instanceof PropertyConstant idParent) {
+                            if (!mapRetainedProps.containsKey(idParent.resolveNestedIdentity(pool, null))) {
+                                // parent is not retained; do not include this property
+                                continue;
+                            }
+                        } else {
+                            // parent is not a property; do not include this property
+                            continue;
+                        }
+                    }
+
+                    // evaluate property origin to decide whether to retain the property
+                    PropertyBody tail = prop.getTail();
+                    if (tail.getImplementation() != Implementation.Native &&
+                            !setFromInto.contains(tail.getIdentity().getClassIdentity())) {
+                        continue;
+                    }
+
+                    // convert the property into an "into" property
+                    prop = prop.asInto(setFromInto);
+                    if (prop != null) {
+                        mapProps.put(id, prop);
+                        if (prop.isVirtual()) {
+                            mapVirtProps.put(nid, prop);
+                        }
+                        mapRetainedProps.put(nid, id);
+                    }
+                }
+            }
+            // keep going deeper processing nested properties until they've all been processed
+            ++nDepth;
+        }
+
+        Map<MethodConstant, MethodInfo> mapMethods     = new HashMap<>();
+        Map<Object        , MethodInfo> mapVirtMethods = new HashMap<>();
+        for (Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet()) {
+            MethodConstant id     = entry.getKey();
+            MethodInfo     method = entry.getValue();
+
+            // skip any methods nested under properties that were not retained
+            if (id.getNamespace() instanceof PropertyConstant idProp &&
+                    !mapRetainedProps.containsKey(idProp.resolveNestedIdentity(pool, null))) {
+                continue;
+            }
+
+            // convert the method into an "into" method
+            method = method.asInto(setFromInto);
+            if (method != null) {
+                mapMethods.put(id, method);
+                if (method.isVirtual()) {
+                    mapVirtMethods.put(id.resolveNestedIdentity(pool, null), method);
+                }
             }
         }
-        return info;
+
+        // warning: do NOT attempt to cache this
+        return new TypeInfo(f_type, f_cInvalidations, f_struct, f_cDepth, true,
+                f_mapTypeParams, f_aannoClass, f_aannoMixin,
+                f_typeExtends, f_typeRebases, f_typeInto,
+                f_listProcess, f_listmapClassChain, f_listmapDefaultChain,
+                mapProps, mapMethods, mapVirtProps, mapVirtMethods,
+                f_mapChildren, f_setDepends, f_progress);
     }
 
     /**
@@ -373,13 +508,15 @@ public class TypeInfo {
      * Contribute this TypeInfo's knowledge of potential call chain information to another deriving
      * type's TypeInfo information.
      *
-     * @param listmapClassChain    the class chain being collected for the derivative type
-     * @param listmapDefaultChain  the default chain being collected for the derivative type
-     * @param composition          the composition of the contribution
+     * @param listmapClassChain   the class chain being collected for the derivative type
+     * @param listmapDefaultChain the default chain being collected for the derivative type
+     * @param listmapRootChain    default chain for types covered by isRootInterface()
+     * @param composition         the composition of the contribution
      */
     public void contributeChains(
             ListMap<IdentityConstant, Origin> listmapClassChain,
             ListMap<IdentityConstant, Origin> listmapDefaultChain,
+            ListMap<IdentityConstant, Origin> listmapRootChain,
             Composition composition) {
         Origin originTrue  = f_type.new Origin(true);
         Origin originFalse = f_type.new Origin(false);
@@ -408,7 +545,9 @@ public class TypeInfo {
 
         // append our defaults to the default chain (just the ones that are absent from the chain)
         for (IdentityConstant constId : f_listmapDefaultChain.keySet()) {
-            listmapDefaultChain.putIfAbsent(constId, originTrue);
+            // this inlined test needs to be the equivalent of TypeConstant.isRootInterface()
+            (constId.equals(pool().clzObject()) || constId.equals(pool().clzComparable()) ?
+                    listmapRootChain : listmapDefaultChain).putIfAbsent(constId, originTrue);
         }
     }
 
@@ -635,7 +774,7 @@ public class TypeInfo {
     /**
      * Report one or more reasons why this type is "not newable".
      *
-     * @param sTarget      the name of the type that is being new'd
+     * @param sTarget     the name of the type that is being new'd
      * @param sChild      (optional) a child name
      * @param fSingleton  if true, report an absence of the default constructor
      * @param errs        the error listener
@@ -1251,7 +1390,7 @@ public class TypeInfo {
     /**
      * Same as the method above, but allowing for relaxed run-time matching rules.
      *
-     * Note: this method should not be called to retrieve "regular" (non-virtual) constructors
+     * Warning: Do NOT use this method to find "regular" (non-virtual) constructors.
      *
      * @param sig       a SignatureConstant to find the method for
      * @param fRuntime  true iff this method is called by the runtime chain computation logic
@@ -2243,7 +2382,14 @@ public class TypeInfo {
 
         sb.append("TypeInfo: ")
           .append(f_type)
-          .append(" (format=")
+          .append(" (");
+
+        if (f_progress != Progress.Complete) {
+            sb.append(f_progress)
+              .append(", ");
+        }
+
+        sb.append("format=")
           .append(getFormat());
 
         if (isAbstract()) {
@@ -2348,6 +2494,9 @@ public class TypeInfo {
                 sb.append("\n  [")
                   .append(i++)
                   .append("] ");
+                if (method.isDuplicate()) {
+                    sb.append("***");
+                }
                 if (f_mapVirtMethods.containsKey(entry.getKey().resolveNestedIdentity(pool, null))) {
                     sb.append("(v) ");
                 }
@@ -2448,13 +2597,23 @@ public class TypeInfo {
      * @return null if all is good; a first offending method otherwise
      */
     public MethodInfo validateCapped() {
-        for (MethodInfo method : f_mapMethods.values()) {
-            if (method.isCapped() && getNarrowingMethod(method) == null) {
-                return method;
+        for (Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet()) {
+            MethodConstant id     = entry.getKey();
+            MethodInfo     method = entry.getValue();
+            if (method.isCapped()) {
+                if (getNarrowingMethod(method) == null) {
+                    return method;
+                }
+            } /* TODO this is temporary */ else if (id.getNestedDepth() == 2 && method.isVirtual()) {
+                MethodInfo m2 = getMethodBySignature(method.getSignature());
+                if (m2 != method) {
+                    method.markAsDuplicate();
+                }
             }
         }
         return null;
     }
+
     public static boolean containsAnnotation(Annotation[] annotations, String sName) {
         if (annotations == null || annotations.length == 0) {
             return false;
@@ -2654,7 +2813,6 @@ public class TypeInfo {
     private final Map<MethodConstant, MethodInfo> f_cacheById;
     private final Map<Object, MethodInfo>         f_cacheByNid;
 
-    private transient          TypeInfo                                         m_into;
     private transient          TypeInfo                                         m_delegates;
     private transient          Set<MethodInfo>                                  m_setAuto;
     private transient          Set<MethodInfo>                                  m_setOps;

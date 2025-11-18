@@ -11,7 +11,7 @@ mixin Interval<Element extends immutable Sequential>
      */
     interface IntervalIterator
             extends Iterator<Element> {
-        @RO Boolean hasNext;
+        @RO Boolean hasNext; // TODO CP get rid of this interface, and implement knownEmpty() and knownSize()
     }
 
     /**

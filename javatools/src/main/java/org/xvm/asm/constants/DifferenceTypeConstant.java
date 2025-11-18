@@ -128,17 +128,14 @@ public class DifferenceTypeConstant
     @Override
     public Category getCategory() {
         // a difference type for classes or interfaces is an interface
-
         Category cat1 = m_constType1.getCategory();
-        Category cat2 = m_constType2.getCategory();
-
-        return switch (cat1) {
-            case CLASS, IFACE -> switch (cat2) {
-                case CLASS, IFACE -> Category.IFACE;
-                default -> Category.OTHER;
-            };
-            default -> Category.OTHER;
-        };
+        if (cat1 == Category.CLASS || cat1 == Category.IFACE) {
+            Category cat2 = m_constType2.getCategory();
+            if (cat2 == Category.CLASS || cat2 == Category.IFACE) {
+                return Category.IFACE;
+            }
+        }
+        return Category.OTHER;
     }
 
     @Override
@@ -190,6 +187,15 @@ public class DifferenceTypeConstant
         }
 
         return null;
+    }
+
+    @Override
+    protected void collectContribs(
+            Set<IdentityConstant> setVisited,
+            Set<IdentityConstant> setOmit,
+            ErrorListener         errs) {
+        m_constType1.collectContribs(setVisited, setOmit, errs);
+        // do NOT include the second part of the difference, since it "takes away" from the type
     }
 
     @Override

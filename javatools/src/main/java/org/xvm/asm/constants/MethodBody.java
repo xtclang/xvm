@@ -2,6 +2,8 @@ package org.xvm.asm.constants;
 
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ConstantPool;
@@ -54,9 +56,18 @@ public class MethodBody {
     public MethodBody(MethodConstant id, SignatureConstant sig, Implementation impl, Object target) {
         assert id != null && sig != null && impl != null;
         switch (impl) {
+        case FromInto:
+            assert target == null || target instanceof MethodInfo;
+            break;
         case Capped:
             assert target instanceof SignatureConstant
                 || target instanceof IdentityConstant.NestedIdentity;
+
+            // TODO CP remove
+            if (target.equals(id.getSignature())) {
+                int q = 0;
+            }
+
             break;
         case Delegating:
         case Field:
@@ -119,26 +130,40 @@ public class MethodBody {
     }
 
     /**
-     * @return the Access required for the method
+     * @return the Access required for the method, or null if unknown
      */
     public Access getAccess() {
-        return m_structMethod == null
-                ? Access.PUBLIC
-                : m_structMethod.getAccess();
+        if (m_structMethod != null) {
+            return m_structMethod.getAccess();
+        }
+
+        switch (m_impl) {
+        case FromInto:
+            MethodInfo infoInto = getIntoMethodInfo();
+            return infoInto == null ? null : infoInto.getAccess();
+
+        case Delegating:
+        case Field:
+        case Capped:
+            // TODO CP - need more context info!!!
+        }
+
+        return null;
     }
 
     /**
      * @return the MethodStructure that this MethodBody represents, or null if the method
      *         implementation does not have a MethodStructure, such as when the implementation is
-     *         Delegating, Field, or Capped
+     *         FromInto, Delegating, Field, or Capped
      */
     public MethodStructure getMethodStructure() {
         MethodStructure structMethod = m_structMethod;
         if (structMethod == null) {
             switch (m_impl) {
-            case Capped:
+            case FromInto:
             case Delegating:
             case Field:
+            case Capped:
                 return null;
 
             default:
@@ -164,7 +189,7 @@ public class MethodBody {
      */
     public boolean isAbstract() {
         return switch (m_impl) {
-            case Implicit,
+            case FromInto,
                  Declared,
                  Abstract,
                  SansCode -> true;  // special case -> it could be used to make a chain non-abstract,
@@ -184,7 +209,7 @@ public class MethodBody {
      */
     public boolean isConcrete() {
         return switch (m_impl) {
-            case Implicit,
+            case FromInto,
                  Declared,
                  Default,               // default methods are neither abstract nor concrete
                  Abstract,
@@ -204,6 +229,36 @@ public class MethodBody {
     public boolean isFunction() {
         MethodStructure structMethod = getMethodStructure();
         return structMethod != null && structMethod.isFunction();
+    }
+
+    /**
+     * @return assuming that this is the last body in a chain in a method in a TypeInfo, determine
+     *         if this body represents a method present in an "into" type
+     */
+    public boolean isInto() {
+        return m_impl == Implementation.FromInto;
+    }
+
+    /**
+     * @return the (potentially incomplete) MethodInfo from which the "into" MethodBody was created
+     */
+    MethodInfo getIntoMethodInfo() {
+        assert isInto();
+        return (MethodInfo) m_target;
+    }
+
+    /**
+     * @return true iff the method body is on a (i.e. from a) mixin
+     */
+    public boolean isMixin() {
+        if (getImplementation().getExistence() == Existence.Class) {
+            MethodStructure structMethod = getMethodStructure();
+            if (structMethod != null && structMethod.getContaining() instanceof ClassStructure clz) {
+                    Format fmt = clz.getFormat();
+                    return fmt == Format.ANNOTATION || fmt == Format.MIXIN;
+            }
+        }
+        return false;
     }
 
     /**
@@ -284,7 +339,7 @@ public class MethodBody {
      */
     public boolean isOptimized() {
         return switch (m_impl) {
-            case Implicit,
+            case FromInto,
                  Declared,
                  Abstract,
                  SansCode,
@@ -317,7 +372,7 @@ public class MethodBody {
      */
     public boolean blocksSuper() {
         switch (m_impl) {
-        case Implicit:
+        case FromInto:
         case Declared:
         case Capped:    // this does redirect, but eventually the chain comes back to the super
         case Abstract:
@@ -355,7 +410,18 @@ public class MethodBody {
      *         is a cap
      */
     public Object getNarrowingNestedIdentity() {
-        return m_impl == Implementation.Capped ? m_target : null;
+        if (m_impl == Implementation.Capped) {
+            return m_target;
+        }
+
+        if (m_impl == Implementation.FromInto) {
+            MethodInfo intoInfo = getIntoMethodInfo();
+            if (intoInfo != null) {
+                return intoInfo.getHead().getNarrowingNestedIdentity();
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -445,7 +511,6 @@ public class MethodBody {
         return ConstantPool.getCurrentPool();
     }
 
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -479,13 +544,21 @@ public class MethodBody {
           .append(m_impl);
 
         if (m_target != null) {
-            sb.append(", target=")
-              .append(m_target instanceof Constant constant ? constant.getValueString() : m_target);
+            sb.append(", target=");
+            if (isInto()) {
+                sb.append(getIntoMethodInfo().getHead().getIdentity());
+                if (getIntoMethodInfo().isCapped()) {
+                    sb.append(" (Capped -> ")
+                      .append(getIntoMethodInfo().getHead().getNarrowingNestedIdentity())
+                      .append(")");
+                }
+            } else {
+                sb.append(m_target instanceof Constant constant ? constant.getValueString() : m_target);
+            }
         }
 
         return sb.append('}').toString();
     }
-
 
     // ----- enumeration: Implementation -----------------------------------------------------------
 
@@ -510,7 +583,7 @@ public class MethodBody {
      * </ul>
      */
     public enum Implementation {
-        Implicit,
+        FromInto,       // these must only exist within a mixin's TypeInfo
         Declared,
         Default,
         Abstract,
@@ -519,11 +592,12 @@ public class MethodBody {
         Delegating,
         Field,
         Native,
-        Explicit;
+        Explicit,
+        ;
 
         public Existence getExistence() {
             return switch (this) {
-                case Implicit -> Existence.Implied;
+                case FromInto -> Existence.Implicit;
                 case Declared, Default -> Existence.Interface;
                 default -> Existence.Class;
             };
@@ -545,11 +619,10 @@ public class MethodBody {
      * considered to have an Existence of "Class".
      */
     public enum Existence {
-        Implied,
+        Implicit,
         Interface,
         Class
     }
-
 
     // ----- JIT support ---------------------------------------------------------------------------
 
@@ -601,13 +674,20 @@ public class MethodBody {
     /**
      * The constant denoting additional information (if required) for the MethodBody implementation:
      * <ul>
-     * <li>For Implementation Capped, this specifies a <i>resolved</i> nid for the narrowing method
-     * that the cap redirects execution to via a virtual method call;</li>
-     * <li>For Implementation Delegating, this specifies the property which contains the reference
+     * <li>For Implementation "Capped", this specifies a <i>resolved</i> nid for the narrowing
+     * method that the cap redirects execution to via a virtual method call;</li>
+     * <li>For Implementation "Delegating", this specifies the property which contains the reference
      * to delegate to.</li>
-     * <li>For Implementation Field, this specifies the property that the method body corresponds
+     * <li>For Implementation "Field", this specifies the property that the method body corresponds
      * to. For example, this is used to represent the field access for a {@code get()} method on a
      * property.</li>
+     * <li>For Implementation "FromInto", this specifies a MethodInfo that the MethodBody came from.
+     * (The value may be null.) First, this makes it possible to avoid incorporates/into infinite
+     * recursion. Second, capped chains are visible from the mixin side, allowing for meaningful
+     * compiler errors to be raised when methods on the mixin side are overriding known-capped
+     * chains. (A mixin may be incorporated at runtime in a manner that collides with a cap, but
+     * this would be a validation error at link- or run-time, not at compile-time; the goal is to
+     * catch errors at compile time if possible.)</li>
      * </ul>
      */
     private final Object m_target;
@@ -626,4 +706,9 @@ public class MethodBody {
      * The container type for which the JitMethodDesc above was computed (used only for constructors).
      */
     private transient TypeConstant m_typeJmdContainer;
+
+    /**
+     * TODO CP remove this field
+     */
+    transient boolean m_fDuplicate;
 }

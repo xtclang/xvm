@@ -22,7 +22,10 @@ public class PropertyBody
      * Construct a PropertyBody from the passed information.
      *
      * @param struct         the property structure that this body is derived from
-     * @param impl           one of Implicit, Declared, Delegating, or Explicit
+     * @param impl           one of Implicit, Declared (interface), Delegating, Explicit
+     *                       (declaration on a class), SansCode, or Native
+     *                       TODO we explicitly new PropertyBody in PropertyInfo using SansCode ... explain
+     *                       TODO we explicitly new PropertyBody in ?? using Native ... explain
      * @param constDelegate  the property constant that provides the reference to delegate to
      * @param type           the type of the property, including any type annotations (required)
      * @param fRO            true iff the property has any of a number of indicators that would
@@ -54,7 +57,7 @@ public class PropertyBody
             MethodConstant    constInitFunc) {
         assert struct    != null;
         assert type      != null;
-        assert     impl == Implementation.Implicit
+        assert     impl == Implementation.FromInto
                 || impl == Implementation.Declared
                 || impl == Implementation.Default
                 || impl == Implementation.Delegating
@@ -72,7 +75,7 @@ public class PropertyBody
             // this can only happen when we're building the TypeInfo for a partially compiled class,
             // so we will need to invalidate the TypeInfo afterward;
             // mark the implementation as "Implicit" just to assert it gets replaced later
-            impl = Implementation.Implicit;
+            impl = Implementation.FromInto;
         }
         assert effectGet != null && effectSet != null;
 
@@ -366,7 +369,7 @@ public class PropertyBody
      */
     public boolean isExplicitAbstract() {
         PropertyStructure prop = m_structProp;
-        return prop != null && m_impl != Implementation.Implicit
+        return prop != null && m_impl != Implementation.FromInto
                 && TypeInfo.containsAnnotation(prop.getPropertyAnnotations(), "Abstract");
     }
 
@@ -376,7 +379,7 @@ public class PropertyBody
      */
     public boolean isImplicitAbstract() {
         PropertyStructure prop = m_structProp;
-        return prop != null && m_impl != Implementation.Implicit
+        return prop != null && m_impl != Implementation.FromInto
                 && !isInjected() && !hasGetter()
                 && isExplicitReadOnly() && prop.getContainingClass().isExplicitlyAbstract();
     }
@@ -386,7 +389,7 @@ public class PropertyBody
      */
     public boolean isExplicitOverride() {
         PropertyStructure prop = m_structProp;
-        return prop != null && m_impl != Implementation.Implicit && prop.isExplicitOverride();
+        return prop != null && m_impl != Implementation.FromInto && prop.isExplicitOverride();
     }
 
     /**
@@ -394,7 +397,7 @@ public class PropertyBody
      */
     public boolean isExplicitReadOnly() {
         PropertyStructure prop = m_structProp;
-        return prop != null && m_impl != Implementation.Implicit && prop.isExplicitReadOnly();
+        return prop != null && m_impl != Implementation.FromInto && prop.isExplicitReadOnly();
     }
 
     /**
@@ -402,7 +405,7 @@ public class PropertyBody
      */
     public boolean isInjected() {
         PropertyStructure prop = m_structProp;
-        return prop != null && m_impl != Implementation.Implicit && prop.isInjected();
+        return prop != null && m_impl != Implementation.FromInto && prop.isInjected();
     }
 
 

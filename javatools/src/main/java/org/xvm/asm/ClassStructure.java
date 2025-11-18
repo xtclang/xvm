@@ -977,7 +977,9 @@ public class ClassStructure
         // because they are effectively final
         Component parent = getParent();
         if (parent instanceof MethodStructure) {
-            return false;
+            // a class (etc.) contained within a method/function is treated much the same as if it
+            // were under a module
+            return true;
         }
 
         // otherwise, assuming that this not the "outermost" class, keep asking up the parent chain

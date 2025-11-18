@@ -158,6 +158,13 @@ public class IntersectionTypeConstant
     }
 
     @Override
+    public TypeConstant asImplementable() {
+        return m_constType1.getCategory() == Category.CLASS && !m_constType1.isAccessSpecified()
+                ? ensureAccess(Access.PROTECTED)
+                : this;
+    }
+
+    @Override
     public boolean isNullable() {
         TypeConstant type1 = m_constType1;
         TypeConstant type2 = m_constType2;
@@ -232,17 +239,13 @@ public class IntersectionTypeConstant
         // an intersection of classes is a class;
         // an intersection of a class and an interface is a class
         // an intersection of interfaces is an interface
-
-        Category cat1 = m_constType1.getCategory();
-        Category cat2 = m_constType2.getCategory();
-
-        return switch (cat1) {
-            case CLASS -> switch (cat2) {
+        return switch (m_constType1.getCategory()) {
+            case CLASS -> switch (m_constType2.getCategory()) {
                 case CLASS, IFACE -> Category.CLASS;
-                default -> Category.OTHER;
+                default           -> Category.OTHER;
                 };
 
-            case IFACE -> switch (cat2) {
+            case IFACE -> switch (m_constType2.getCategory()) {
                 case CLASS -> Category.CLASS;
                 case IFACE -> Category.IFACE;
                 default    -> Category.OTHER;

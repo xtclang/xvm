@@ -273,6 +273,15 @@ public abstract class RelationalTypeConstant
     }
 
     @Override
+    protected void collectContribs(
+            Set<IdentityConstant> setVisited,
+            Set<IdentityConstant> setOmit,
+            ErrorListener         errs) {
+        m_constType1.collectContribs(setVisited, setOmit, errs);
+        m_constType2.collectContribs(setVisited, setOmit, errs);
+    }
+
+    @Override
     public boolean containsDynamicType(Register register) {
         return m_constType1.containsDynamicType(register)
             || m_constType2.containsDynamicType(register);
@@ -408,6 +417,11 @@ public abstract class RelationalTypeConstant
             return typeResult;
         }
         return constThis2.resolveTypeParameter(constThat1, sFormalName);
+    }
+
+    @Override
+    public TypeConstant asImplementable() {
+        return this;
     }
 
     @Override

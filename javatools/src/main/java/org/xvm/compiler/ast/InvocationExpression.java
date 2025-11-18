@@ -400,6 +400,9 @@ public class InvocationExpression
             // handle method or function
             if (argMethod instanceof MethodConstant idMethod) {
                 MethodStructure     method      = m_method;
+                if (method == null) {
+                    int q=0;
+                }
                 int                 cTypeParams = method.getTypeParamCount();
                 int                 cReturns    = method.getReturnCount();
                 GenericTypeResolver resolver    = null;
@@ -2407,13 +2410,13 @@ public class InvocationExpression
         Argument arg = findCallable(ctx, typeLeft, infoLeft, sName, kind, false, atypeReturn, errsMain);
         if (arg != null) {
             if (arg instanceof MethodConstant idMethod) {
-                m_argMethod = idMethod;
-                m_method    = getMethod(ctx, typeLeft, infoLeft, idMethod);
+                m_method = getMethod(ctx, typeLeft, infoLeft, idMethod);
                 if (m_method == null) {
                     log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
                             idMethod.getValueString(), typeLeft.getValueString());
                     return null;
                 }
+                m_argMethod   = idMethod;
                 m_fBindTarget = !m_method.isFunction();
             } else {
                 // just return the property; the rest will be handled by the caller

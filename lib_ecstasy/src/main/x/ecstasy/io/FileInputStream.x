@@ -34,8 +34,10 @@ class FileInputStream(File file)
 
     @Override
     Int offset {
+        @Override
         Int get() = channel.position;
 
+        @Override
         void set(Int newOffset) {
             assert:bounds newOffset < size;
             channel.position = newOffset;

@@ -354,7 +354,6 @@ public class Register
      * Force the register to be treated as effectively final from this point forward.
      */
     public void markEffectivelyFinal() {
-        assert m_fEffectivelyFinal || !m_fRO;
         m_fRO               = true;
         m_fEffectivelyFinal = true;
     }

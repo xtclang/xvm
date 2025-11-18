@@ -1512,7 +1512,7 @@ public class TypeCompositionStatement
             TypeConstant typeContrib = contrib.getTypeConstant();
             Composition  composition = contrib.getComposition();
             switch (composition) {
-            case Extends, Implements, Incorporates: {
+            case Extends, Incorporates:
                 if (!typeContrib.isExplicitClassIdentity(true)) {
                     reportRequireClass(component, contrib, typeContrib, errs);
                     return;
@@ -1538,7 +1538,15 @@ public class TypeCompositionStatement
                     }
                 }
                 break;
-            }
+
+            case Implements:
+                if (typeContrib.isExplicitClassIdentity(true)) {
+                    // TODO CP it needs to be an interface, but apparently we don't check that here
+                } else {
+                    // TODO CP this used to be an error, but we need to allow all pure types
+                }
+
+                break;
             }
         }
 

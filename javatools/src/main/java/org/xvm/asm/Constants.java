@@ -231,17 +231,17 @@ public interface Constants {
      */
     String VE_TYPE_PARAM_INCOMPATIBLE_TYPE        = "VERIFY-05";
     /**
-     * {0} type parameter {1} is specified as two different types ({2} and {3}) by {4}.
+     * Unexpected and unsupported contribution #{0}: {1} "{2)" {3}.
      */
-    String VE_TYPE_PARAM_CONFLICTING_TYPES        = "VERIFY-06";
+    String VE_CONTRIBUTION_UNEXPECTED             = "VERIFY-06";
     /**
      * {0} is annotated by type {1}, but it is not an explicit class identity.
      */
     String VE_ANNOTATION_NOT_CLASS                = "VERIFY-07";
     /**
-     * Unexpected "extends" {0} on {1}; an "extends" specifier cannot occur on interfaces (or on the
-     * root Object), there must be only one, and it must occur first (after any annotations, and
-     * after the "into" for an annotation or a mixin).
+     * Unexpected "extends {1}" on "{0}": An "extends" specifier cannot occur on interfaces (or on the root Object),
+     * there must be only one, and it must occur first (after any annotations, and after the "into" for an annotation
+     * or a mixin).
      */
     String VE_EXTENDS_UNEXPECTED                  = "VERIFY-08";
     /**
@@ -590,6 +590,10 @@ public interface Constants {
      * {0} is annotated by {1}, which makes its method {2} unreachable.
      */
     String VE_METHOD_UNREACHABLE                  = "VERIFY-92";
+    /**
+     * "mixin {0} into {1}" extends "mixin {2} into {3}", but type {1} does not narrow type {3}.
+     */
+    String VE_INCOMPATIBLE_INTO                   = "VERIFY-93";
 
 
     // ----- miscellaneous -------------------------------------------------------------------------
