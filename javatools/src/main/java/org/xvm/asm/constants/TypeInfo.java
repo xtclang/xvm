@@ -1253,7 +1253,7 @@ public class TypeInfo {
     /**
      * Same as the method above, but allowing for relaxed run-time matching rules.
      *
-     * Note: this method should not be called to retrieve "regular" (non-virtual) constructors
+     * Warning: Do NOT use this method to find "regular" (non-virtual) constructors.
      *
      * @param sig       a SignatureConstant to find the method for
      * @param fRuntime  true iff this method is called by the runtime chain computation logic
@@ -2280,6 +2280,9 @@ public class TypeInfo {
                 sb.append("\n  [")
                   .append(i++)
                   .append("] ");
+                if (method.isDuplicate()) {
+                    sb.append("***");
+                }
                 if (f_mapVirtMethods.containsKey(entry.getKey().resolveNestedIdentity(pool, null))) {
                     sb.append("(v) ");
                 }
@@ -2380,13 +2383,23 @@ public class TypeInfo {
      * @return null if all is good; a first offending method otherwise
      */
     public MethodInfo validateCapped() {
-        for (MethodInfo method : f_mapMethods.values()) {
-            if (method.isCapped() && getNarrowingMethod(method) == null) {
-                return method;
+        for (Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet()) {
+            MethodConstant id     = entry.getKey();
+            MethodInfo     method = entry.getValue();
+            if (method.isCapped()) {
+                if (getNarrowingMethod(method) == null) {
+                    return method;
+                }
+            } else if (id.getNestedDepth() == 2 && method.isVirtual()) {
+                MethodInfo m2 = getMethodBySignature(method.getSignature());
+                if (m2 != method) {
+                    method.markAsDuplicate();
+                }
             }
         }
         return null;
     }
+
     public static boolean containsAnnotation(Annotation[] annotations, String sName) {
         if (annotations == null || annotations.length == 0) {
             return false;

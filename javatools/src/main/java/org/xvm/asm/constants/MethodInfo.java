@@ -1146,6 +1146,21 @@ public class MethodInfo
         return f_nRank;
     }
 
+    public boolean isDuplicate() {
+        for (MethodBody body : m_aBody) {
+            if (body.m_fDuplicate) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void markAsDuplicate() {
+        for (MethodBody body : m_aBody) {
+            body.m_fDuplicate = true;
+        }
+    }
+
     /**
      * @return the ConstantPool
      */
