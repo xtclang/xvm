@@ -13,6 +13,8 @@ import java.io.IOException;
 
 import java.nio.file.Files;
 
+import java.text.MessageFormat;
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -44,6 +46,68 @@ public final class XtcPluginUtils {
 
     public static String capitalize(final String string) {
         return Character.toUpperCase(string.charAt(0)) + string.substring(1);
+    }
+
+    /**
+     * Create a GradleException with a formatted message using {} placeholders.
+     * This provides a cleaner alternative to string concatenation for error messages.
+     *
+     * <p>Example usage:
+     * <pre>
+     * throw failure("Failed to process file {} with size {}", file.getName(), size);
+     * </pre>
+     *
+     * @param template The message template with {} placeholders
+     * @param params   Parameters to substitute into the template
+     * @return A GradleException with the formatted message
+     */
+    public static GradleException failure(final String template, final Object... params) {
+        return failure(null, template, params);
+    }
+
+    /**
+     * Create a GradleException with a formatted message and a cause.
+     *
+     * @param cause    The underlying cause of the exception
+     * @param template The message template with {} placeholders
+     * @param params   Parameters to substitute into the template
+     * @return A GradleException with the formatted message and cause
+     */
+    public static GradleException failure(final Throwable cause, final String template, final Object... params) {
+        return new GradleException(formatTemplate(template, params), cause);
+    }
+
+    /**
+     * Format a message template by replacing {} placeholders with provided parameters.
+     * This uses the same formatting logic as the Console in javatools.
+     *
+     * @param template The message template with {} placeholders
+     * @param params   Parameters to substitute into the template
+     * @return The formatted message
+     */
+    private static String formatTemplate(final String template, final Object... params) {
+        if (template == null || params == null || params.length == 0) {
+            return template;
+        }
+        var numbered = new StringBuilder(template.length() + params.length * 3);
+        int paramIndex = 0;
+        int pos = 0;
+        while (pos < template.length()) {
+            int openBrace = template.indexOf('{', pos);
+            if (openBrace == -1) {
+                numbered.append(template.substring(pos));
+                break;
+            }
+            numbered.append(template, pos, openBrace);
+            if (openBrace + 1 < template.length() && template.charAt(openBrace + 1) == '}') {
+                numbered.append('{').append(paramIndex++).append('}');
+                pos = openBrace + 2;
+            } else {
+                numbered.append('{');
+                pos = openBrace + 1;
+            }
+        }
+        return MessageFormat.format(numbered.toString(), params);
     }
 
     /**
@@ -127,7 +191,7 @@ public final class XtcPluginUtils {
             } catch (final IOException e) {
                 // IOException when reading magic number must be logged and propagated
                 // This could happen due to file corruption, truncation, or permission issues
-                throw new GradleException("Failed to read magic number from potential XTC module file: " + file.getAbsolutePath(), e);
+                throw failure(e, "Failed to read magic number from potential XTC module file: {}", file.getAbsolutePath());
             }
         }
 
@@ -139,7 +203,7 @@ public final class XtcPluginUtils {
         @SuppressWarnings("SameParameterValue")
         private static File checkXtcModule(final File file, final boolean checkMagic) {
             if (!isValidXtcModule(file, checkMagic)) {
-                throw new GradleException("Processed '" + file.getAbsolutePath() + "' as an XTC module, but it is not.");
+                throw failure("Processed '{}' as an XTC module, but it is not.", file.getAbsolutePath());
             }
             return file;
         }
@@ -157,14 +221,14 @@ public final class XtcPluginUtils {
             final var path = file.getAbsolutePath();
             assert file.isFile();
             try (var jarFile = new JarFile(file)) {
-                final Manifest m = jarFile.getManifest();
+                final var m = jarFile.getManifest();
                 final var implVersion = m.getMainAttributes().get(Attributes.Name.IMPLEMENTATION_VERSION);
                 if (implVersion == null) {
-                    throw new GradleException("Invalid manifest entries found in '" + path + "'");
+                    throw failure("Invalid manifest entries found in '{}'", path);
                 }
                 return implVersion.toString();
             } catch (final IOException e) {
-                throw new GradleException("Not a valid '" + XDK_JAVATOOLS_NAME_JAR + "': '" + path + "'", e);
+                throw failure(e, "Not a valid '{}': '{}'", XDK_JAVATOOLS_NAME_JAR, path);
             }
         }
 

@@ -1,28 +1,16 @@
 package org.xvm.util;
 
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInput;
-import java.io.DataInputStream;
-import java.io.DataOutput;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-
-import java.math.BigInteger;
-
-import java.util.Random;
-
-import java.util.concurrent.ThreadLocalRandom;
-
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import java.io.*;
+import java.math.BigInteger;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
-import static org.xvm.util.Handy.appendByteArrayAsHex;
-import static org.xvm.util.Handy.appendByteAsHex;
-import static org.xvm.util.Handy.hexStringToByteArray;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.xvm.util.Handy.*;
 import static org.xvm.util.PackedInteger.readLong;
 import static org.xvm.util.PackedInteger.writeLong;
 
@@ -89,8 +77,7 @@ public class PackedIntegerTest {
     }
 
     @Test
-    public void testReadAndWritePackedLongRnd()
-            throws IOException {
+    public void testReadAndWritePackedLongRnd() throws IOException {
         Random rnd    = ThreadLocalRandom.current();
         long   lStart = System.currentTimeMillis();
         long   lStop  = lStart + 1000;           // TODO move to "slow" tests (and up the seconds)
@@ -117,8 +104,7 @@ public class PackedIntegerTest {
     }
 
     @Test
-    public void testSer()
-            throws IOException {
+    public void testSer() throws IOException {
         testSer("00");
         testSer("01");
         testSer("80");
@@ -234,12 +220,12 @@ public class PackedIntegerTest {
             }
 
             @Override
-            public void write(byte[] b) {
+            public void write(byte @NotNull [] b) {
                 appendByteArrayAsHex(sb, b);
             }
 
             @Override
-            public void write(byte[] b, int off, int len) {
+            public void write(byte @NotNull [] b, int off, int len) {
                 appendByteArrayAsHex(sb, b, off, len);
             }
         });

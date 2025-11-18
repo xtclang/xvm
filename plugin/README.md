@@ -790,7 +790,7 @@ Allocation Profiling (track heap allocations):
 
 If you suspect garbage collection is impacting build time, enable GC logging:
 
-**Java 9+ (Unified Logging):**
+**Java 9+ (Unified Logging):**  
 ```bash
 ./gradlew build \
   -Dorg.gradle.jvmargs="-Xlog:gc*:file=gc.log:time,level,tags"

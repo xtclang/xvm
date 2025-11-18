@@ -5,38 +5,35 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
-import java.util.List;
-import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.xvm.api.Connector;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
-
-import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.JitConnector;
 
 import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.LauncherOptions.RunnerOptions;
 
+import org.xvm.util.Handy;
 import org.xvm.util.ListSet;
 
 import static org.xvm.tool.ModuleInfo.isExplicitCompiledFile;
 import static org.xvm.tool.ModuleInfo.isExplicitEcstasyFile;
 import static org.xvm.util.Handy.checkReadable;
 import static org.xvm.util.Handy.isPathed;
-import static org.xvm.util.Handy.quotedString;
+import static org.xvm.util.Handy.quoted;
 import static org.xvm.util.Severity.ERROR;
 import static org.xvm.util.Severity.FATAL;
 import static org.xvm.util.Severity.INFO;
 import static org.xvm.util.Severity.WARNING;
-
+import static java.util.Objects.requireNonNull;
 
 /**
  * The "execute" command:
@@ -46,14 +43,8 @@ import static org.xvm.util.Severity.WARNING;
  * where the default method is "run" with no arguments.
  */
 public class Runner extends Launcher<RunnerOptions> {
-    /**
-     * Entry point from the OS. Delegates to Launcher.
-     *
-     * @param asArg command line arguments
-     */
-    static void main(String[] asArg) {
-        Launcher.main(insertCommand("xec", asArg));
-    }
+
+    static final String COMMAND_NAME = "xec";
 
     /**
      * Runner constructor for programmatic use.
@@ -66,18 +57,27 @@ public class Runner extends Launcher<RunnerOptions> {
         super(options, console, errListener);
     }
 
+    /**
+     * Entry point from the OS. Delegates to Launcher.
+     *
+     * @param asArg command line arguments
+     */
+    static void main(String[] asArg) {
+        Launcher.main(insertCommand(COMMAND_NAME, asArg));
+    }
+
     @Override
     protected int process() {
         // repository setup
-        RunnerOptions    options = options();
-        ModuleRepository repo    = configureLibraryRepo(options.getModulePath());
+        final var opts = options();
+        ModuleRepository repo = configureLibraryRepo(opts.getModulePath());
         checkErrors();
 
-        if (options.showVersion()) {
+        if (opts.showVersion()) {
             showSystemVersion(repo);
         }
 
-        final File fileSpec = options.getTarget();
+        final File fileSpec = opts.getTarget();
         if (fileSpec == null) {
             if (fShowVer) {
                 return 0;
@@ -86,12 +86,12 @@ public class Runner extends Launcher<RunnerOptions> {
             return 1;
         }
 
-        String          filePath   = fileSpec.getPath();
+        var             filePath   = fileSpec.getPath();
         File            fileBin    = null;
         boolean         binExists  = false;
         ModuleStructure module     = null;
         String          binLocDesc;
-        if (isExplicitCompiledFile(filePath) && fileSpec.exists() && (options.isCompileDisabled() || isPathed(filePath))) {
+        if (isExplicitCompiledFile(filePath) && fileSpec.exists() && (opts.isCompileDisabled() || isPathed(filePath))) {
             // the caller has explicitly specified the exact .xtc file and/or
             fileBin    = fileSpec;
             binExists  = true;
@@ -101,44 +101,35 @@ public class Runner extends Launcher<RunnerOptions> {
             binLocDesc = "the repository";
         } else {
             ModuleInfo info    = null;
-            File       outFile = options.getOutputFile();
+            File       outFile = opts.getOutputFile();
             try {
-                info = new ModuleInfo(fileSpec, options.deduce(), null, outFile);
+                info = new ModuleInfo(fileSpec, opts.deduce(), null, outFile);
             } catch (RuntimeException e) {
-                log(ERROR, "Failed to identify the module for: " + fileSpec + " (" + e + ")");
+                log(ERROR, "Failed to identify the module for: {} ({})", fileSpec, e);
             }
             checkErrors();
 
-            fileBin   = Objects.requireNonNull(info).getBinaryFile();
+            fileBin   = requireNonNull(info).getBinaryFile();
             binExists = fileBin != null && fileBin.exists();
 
             boolean fCompile = false;
             if (!binExists) {
-                String qualName = info.getQualifiedModuleName();
+                var qualName = info.getQualifiedModuleName();
                 module = repo.loadModule(qualName);
                 if (module == null) {
-                    File fileSrc = info.getSourceFile();
-                    if (fileSrc != null && fileSrc.exists() && !options.isCompileDisabled()) {
-                        log(INFO, "The compiled module \"" + info.getQualifiedModuleName()
-                                + "\" is missing; attempting to compile it from "
-                                + info.getSourceFile() + " ....");
+                    var fileSrc = info.getSourceFile();
+                    if (fileSrc != null && fileSrc.exists() && !opts.isCompileDisabled()) {
+                        log(INFO, "The compiled module {} is missing; attempting to compile it from {} ...", quoted(info.getQualifiedModuleName()), info.getSourceFile());
                         fCompile = true;
                     } else {
                         var possibles = resolvePossibleTargets(qualName, repo);
                         if (possibles == null) {
-                            log(ERROR, "Failed to locate the module for: " + fileSpec);
+                            log(ERROR, "Failed to locate the module for: {}", fileSpec);
                         } else if (possibles.size() == 1) {
-                            log(ERROR, "Unable to locate the module for " + fileSpec
-                                    + "; did you mean " + quotedString(possibles.iterator().next())
-                                    + '?');
+                            log(ERROR, "Unable to locate the module for {}; did you mean {}?", fileSpec, quoted(possibles.iterator().next()));
                         } else {
-                            var buf = new StringBuilder();
-                            for (String name : possibles) {
-                                buf.append(", ")
-                                   .append(quotedString(name));
-                            }
-                            log(ERROR, "Unable to locate the module for " + fileSpec
-                                    + "; did you mean one of: " + buf.substring(2) + '?');
+                            final var names = possibles.stream().map(Handy::quoted).collect(Collectors.joining(", "));
+                            log(ERROR, "Unable to locate the module for {}; did you mean one of: {}?", fileSpec, names);
                         }
                     }
                 } else {
@@ -146,37 +137,27 @@ public class Runner extends Launcher<RunnerOptions> {
                 }
             }
 
-            if (binExists && !options.isCompileDisabled() && info.getSourceFile() != null
+            if (binExists && !opts.isCompileDisabled() && info.getSourceFile() != null
                     && info.getSourceFile().exists() && !info.isUpToDate()) {
-                log(INFO, "The compiled module \"" + info.getQualifiedModuleName()
-                        + "\" is out-of-date; recompiling ....");
+                log(INFO, "The compiled module \"{}\" is out-of-date; recompiling ...", info.getQualifiedModuleName());
                 fCompile = true;
             }
             checkErrors();
 
             if (fCompile) {
-                // Build CompilerOptions programmatically
-                CompilerOptions.Builder builder = new CompilerOptions.Builder();
-
-                List<File> libPath = options.getModulePath();
-                for (File libFile : libPath) {
-                    builder.addModulePath(libFile);
-                }
-
+                // Build CompilerOptions programmatically using fluent API
+                final var builder = new CompilerOptions.Builder().addInputFile(fileSpec);
+                opts.getModulePath().forEach(builder::addModulePath);
                 if (outFile != null) {
                     builder.setOutputLocation(outFile);
                 }
-
-                builder.addInputFile(fileSpec);
-
-                CompilerOptions compilerOpts = builder.build();
-
+                final var compilerOpts = builder.build();
                 new Compiler(compilerOpts, m_console, m_errDelegate).run();
-
-                info      = new ModuleInfo(fileSpec, options.deduce(), null, outFile);
+                // TODO: No one checks the return value of the compile?
+                info      = new ModuleInfo(fileSpec, opts.deduce(), null, outFile);
                 fileBin   = info.getBinaryFile();
                 binExists = fileBin != null && fileBin.exists();
-                repo      = configureLibraryRepo(libPath);
+                repo      = configureLibraryRepo(opts.getModulePath());
                 module    = repo.loadModule(info.getQualifiedModuleName());
             }
 
@@ -187,83 +168,81 @@ public class Runner extends Launcher<RunnerOptions> {
         if (module == null && binExists) {
             if (checkReadable(fileBin)) {
                 try {
-                    try (FileInputStream in = new FileInputStream(fileBin)) {
-                        FileStructure struct = new FileStructure(in);
+                    try (var in = new FileInputStream(fileBin)) {
+                        var struct = new FileStructure(in);
                         module = struct.getModule();
                     }
                 } catch (IOException e) {
-                    log(FATAL, "I/O exception (" + e + ") reading module file: " + fileBin);
+                    log(FATAL, "I/O exception ({}) reading module file: {}", e, fileBin);
                     throw abort(true);
                 }
             }
         }
 
         if (module == null) {
-            log(ERROR, "Missing module for " + fileSpec);
+            log(ERROR, "Missing module for {}", fileSpec);
             throw abort(true);
         }
         try {
             repo.storeModule(module);
         } catch (IOException e) {
-            log(FATAL, "I/O exception (" + e + ") storing module file: " + fileSpec);
+            log(FATAL, "I/O exception ({}) storing module file: {}", e, fileSpec);
             throw abort(true);
         }
         checkErrors();
 
-        String sName = Objects.requireNonNull(module).getName();
+        var sName = requireNonNull(module).getName();
         if (sName.equals(module.getSimpleName())) {
             // quote the "simpleName" to visually differentiate it (there is no qualified name)
-            sName = quotedString(sName);
+            sName = quoted(sName);
         }
 
-        log(INFO, "Executing " + sName + " from " + binLocDesc);
+        log(INFO, "Executing {} from {}", sName, binLocDesc);
         try {
-            Connector connector = options.isJit() ? new JitConnector(repo) : new Connector(repo);
+            var connector = opts.isJit() ? new JitConnector(repo) : new Connector(repo);
             connector.loadModule(module.getName());
-            connector.start(options.getInjections());
+            connector.start(opts.getInjections());
 
-            ConstantPool pool = connector.getConstantPool();
+            var pool = connector.getConstantPool();
             try (var ignore = ConstantPool.withPool(pool)) {
-                String               sMethod    = options.getMethodName();
-                Set<MethodStructure> setMethods = connector.findMethods(sMethod);
+                final var sMethod    = opts.getMethodName();
+                final var setMethods = connector.findMethods(sMethod);
                 if (setMethods.size() != 1) {
-                    log(ERROR, (setMethods.isEmpty() ? "Missing" : "Ambiguous") + " method \"" + sMethod + "\" in module " + sName);
+                    log(ERROR, "{} method {} in module {}", setMethods.isEmpty() ? "Missing" : "Ambiguous", quoted(sMethod), sName);
                     throw abort(true);
                 }
 
-                String[]        asArg       = options.getMethodArgs();
-                MethodStructure method      = setMethods.iterator().next();
-                TypeConstant    typeStrings = pool.ensureArrayType(pool.typeString());
+                var asArg       = opts.getMethodArgs();
+                var method      = setMethods.iterator().next();
+                var typeStrings = pool.ensureArrayType(pool.typeString());
 
                 switch (method.getRequiredParamCount()) {
                 case 0:
                     if (asArg != null) {
                         // the method doesn't require anything, but there are args
                         if (method.getParamCount() > 0) {
-                            TypeConstant typeArg = method.getParam(0).getType();
+                            var typeArg = method.getParam(0).getType();
                             if (!typeStrings.isA(typeArg)) {
-                                log(ERROR, "Unsupported argument type \"" +
-                                    typeArg.getValueString() + "\" for method \"" + sMethod + "\"");
+                                log(ERROR, "Unsupported argument type {} for method {}", quoted(typeArg.getValueString()), quoted(sMethod));
                                 throw abort(true);
                             }
                         } else {
-                            log(WARNING, "Method \"" + sMethod +
-                                "\" does not take any parameters; ignoring the specified arguments");
+                            log(WARNING, "Method {} does not take any parameters; ignoring the specified arguments", quoted(sMethod));
                         }
                     }
                     break;
 
                 case 1: {
-                    TypeConstant typeArg = method.getParam(0).getType();
+                    var typeArg = method.getParam(0).getType();
                     if (!typeStrings.isA(typeArg)) {
-                        log(ERROR, "Unsupported argument type \"" + typeArg.getValueString() + "\" for method \"" + sMethod + "\"");
+                        log(ERROR, "Unsupported argument type {} for method {}", quoted(typeArg.getValueString()), quoted(sMethod));
                         throw abort(true);
                     }
                     break;
                 }
 
                 default:
-                    log(ERROR, "Unsupported method arguments \"" + method.getIdentityConstant().getSignature().getValueString());
+                    log(ERROR, "Unsupported method arguments {}", quoted(method.getIdentityConstant().getSignature().getValueString()));
                     throw abort(true);
                 }
 
@@ -272,6 +251,7 @@ public class Runner extends Launcher<RunnerOptions> {
                 return connector.join();
             }
         } catch (InterruptedException ignore) {
+            log(WARNING, "Interrupted while waiting for method {}", quoted(sName));
             return 1;
         } catch (Throwable e) {
             e.printStackTrace(System.err);

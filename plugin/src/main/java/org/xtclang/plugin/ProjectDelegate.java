@@ -3,13 +3,13 @@ package org.xtclang.plugin;
 import static org.xtclang.plugin.XtcPluginConstants.PLUGIN_BUILD_INFO_FILENAME;
 import static org.xtclang.plugin.XtcPluginConstants.PLUGIN_BUILD_INFO_RESOURCE_PATH;
 import static org.xtclang.plugin.XtcPluginConstants.PROPERTY_VERBOSE_LOGGING_OVERRIDE;
+import static org.xtclang.plugin.XtcPluginUtils.failure;
 
 import java.util.Properties;
 
 import org.gradle.StartParameter;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
-import org.gradle.api.Task;
 import org.gradle.api.artifacts.ConfigurationContainer;
 import org.gradle.api.component.AdhocComponentWithVariants;
 import org.gradle.api.file.ProjectLayout;
@@ -41,6 +41,7 @@ public abstract class ProjectDelegate<T, R> {
     protected ProjectDelegate(final Project project) {
         this(project, null);
     }
+
     protected ProjectDelegate(final Project project, final AdhocComponentWithVariants component) {
         // Assert that we're in configuration phase - ProjectDelegate should never be used during execution
         GradlePhaseAssertions.assertProjectAccessDuringConfiguration(project, "ProjectDelegate construction");
@@ -128,35 +129,7 @@ public abstract class ProjectDelegate<T, R> {
      * @throws GradleException if the version cannot be read
      */
     public static String readXdkVersion() {
-        try (final var resourceStream = ProjectDelegate.class.getResourceAsStream(PLUGIN_BUILD_INFO_RESOURCE_PATH)) {
-            if (resourceStream == null) {
-                throw new IllegalStateException("Cannot find " + PLUGIN_BUILD_INFO_FILENAME + " in plugin JAR");
-            }
-
-            final var props = new Properties();
-            props.load(resourceStream);
-            final var version = props.getProperty("xdk.version");
-
-            if (version == null || version.isBlank()) {
-                throw new IllegalStateException("xdk.version not found in " + PLUGIN_BUILD_INFO_FILENAME);
-            }
-
-            return version;
-        } catch (final Exception e) {
-            throw new GradleException("[plugin] FATAL: Plugin build is broken - cannot read XDK version: " + e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Get the semantic version string for a project using the XDK version from build-info.properties.
-     * Format: org.xtclang:&lt;projectName&gt;:&lt;xdkVersion&gt;
-     *
-     * @param projectName the name of the project
-     * @return the semantic version string
-     * @throws GradleException if the XDK version cannot be read
-     */
-    public static String getSemanticVersion(final String projectName) {
-        return "org.xtclang:" + projectName + ':' + readXdkVersion();
+        return readBuildInfoProperty("xdk.version", "XDK version");
     }
 
     /**
@@ -166,23 +139,33 @@ public abstract class ProjectDelegate<T, R> {
      * @return the JDK version as an integer
      * @throws GradleException if the version cannot be read
      */
-    public static int readJdkVersion() {
+    protected static int readJdkVersion() {
+        return Integer.parseInt(readBuildInfoProperty("jdk.version", "JDK version"));
+    }
+
+    /**
+     * Read a property from the plugin's build-info.properties resource.
+     * This is a unified implementation to avoid duplication.
+     *
+     * @param propertyKey the property key to read
+     * @param propertyDescription human-readable description for error messages
+     * @return the property value
+     * @throws GradleException if the property cannot be read
+     */
+    private static String readBuildInfoProperty(String propertyKey, String propertyDescription) {
         try (final var resourceStream = ProjectDelegate.class.getResourceAsStream(PLUGIN_BUILD_INFO_RESOURCE_PATH)) {
             if (resourceStream == null) {
                 throw new IllegalStateException("Cannot find " + PLUGIN_BUILD_INFO_FILENAME + " in plugin JAR");
             }
-
             final var props = new Properties();
             props.load(resourceStream);
-            final var version = props.getProperty("jdk.version");
-
-            if (version == null || version.isBlank()) {
-                throw new IllegalStateException("jdk.version not found in " + PLUGIN_BUILD_INFO_FILENAME);
+            final var value = props.getProperty(propertyKey);
+            if (value == null || value.isBlank()) {
+                throw new IllegalStateException(propertyKey + " not found in " + PLUGIN_BUILD_INFO_FILENAME);
             }
-
-            return Integer.parseInt(version);
+            return value;
         } catch (final Exception e) {
-            throw new GradleException("[plugin] FATAL: Plugin build is broken - cannot read JDK version: " + e.getMessage(), e);
+            throw failure(e, "[plugin] FATAL: Plugin build is broken - cannot read {}: {}", propertyDescription, e.getMessage());
         }
     }
 }

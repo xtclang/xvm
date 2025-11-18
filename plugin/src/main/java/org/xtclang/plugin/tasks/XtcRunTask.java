@@ -7,6 +7,7 @@ import static org.gradle.api.logging.LogLevel.INFO;
 import static org.gradle.api.logging.LogLevel.LIFECYCLE;
 
 import static org.xtclang.plugin.XtcPluginConstants.XTC_RUNNER_CLASS_NAME;
+import static org.xtclang.plugin.XtcPluginUtils.failure;
 
 import java.io.File;
 
@@ -302,8 +303,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     @SuppressWarnings("UnusedReturnValue")
     private ExecResult runSingleModule(
         final XtcRunModule runConfig,
-        final XtcLauncher<XtcRuntimeExtension,
-        ? extends XtcLauncherTask<XtcRuntimeExtension>> launcher,
+        final XtcLauncher<XtcRuntimeExtension, ? extends XtcLauncherTask<XtcRuntimeExtension>> launcher,
         final CommandLine cmd) {
         // TODO: Maybe make this inheritable + add a runMultipleModules, so that we can customize even better
         //  (e.g. XUnit, and a less hacky way of executing the XTC parallel test runner, for example)

@@ -22,7 +22,6 @@ public final class XtcPluginConstants {
     public static final String XTC_DEFAULT_RUN_METHOD_NAME_PREFIX = "run";
     public static final String XTC_RUNNER_CLASS_NAME = "org.xvm.tool.Runner";
 
-
     // XDK Distribution constants:
     public static final String XDK_CONFIG_NAME_INCOMING = "xdk";
     public static final String XDK_CONFIG_NAME_INCOMING_ZIP = "xdkDistribution";
@@ -44,7 +43,7 @@ public final class XtcPluginConstants {
     public static final String PLUGIN_BUILD_INFO_FILENAME = "plugin-build-info.properties";
     public static final String PLUGIN_BUILD_INFO_RESOURCE_PATH = "/org/xtclang/build/internal/" + PLUGIN_BUILD_INFO_FILENAME;
 
-    // Config artifacts from the XDK build; this is only resolved when we are using the plugin to build the XDK itself,
+    // Config artifacts from the XDK build; this is only resolved when we are using the plugin to build the XDself,
     // of which it is a part, the XdkDistribution supplied the artifact name for the javatools the plugin needs.
     // If we are applying the plugin to an external project (all other use cases), then we depend on extractXdk to
     // unpack the zipped xtc-plugin artifact to a build system location, and use that javatools.jar as classpath.
@@ -62,4 +61,3 @@ public final class XtcPluginConstants {
     private XtcPluginConstants() {
     }
 }
-

@@ -24,13 +24,11 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.help.HelpFormatter;
 import org.apache.commons.cli.help.TextHelpAppendable;
 
-import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.google.gson.JsonPrimitive;
 
 import static org.apache.commons.cli.Option.builder;
 
@@ -44,6 +42,52 @@ import static org.apache.commons.cli.Option.builder;
  */
 public abstract class LauncherOptions {
 
+    private static final String PSEP = File.pathSeparator;
+
+    private static final char FSEP = File.separatorChar;
+
+    private static final Options COMMON_OPTIONS = new Options()
+        .addOption(builder("d").longOpt("deduce").desc("Automatically deduce locations when possible").get())
+        .addOption(builder("h").longOpt("help").desc("Display this help message").get())
+        .addOption(builder("L").argName("path").hasArg()
+            .desc("Module path (can be specified multiple times, or use " + PSEP + " separator)").get())
+        .addOption(builder("v").longOpt("verbose").desc("Enable verbose logging and messages").get())
+        .addOption(builder().longOpt("version").desc("Display the Ecstasy runtime version").get());
+
+    /**
+     * Apache Commons CLI Options schema for the compiler.
+     */
+    private static final Options COMPILER_OPTIONS = conflictingOptions(copyOptions(COMMON_OPTIONS)
+        .addOption(builder().longOpt("rebuild").desc("Force rebuild").get())
+        .addOption(builder().longOpt("qualify").desc("Use full module name for the output file name").get())
+        .addOption(builder("r").argName("resource").hasArg()
+            .desc("Files and/or directories to read resources from (can use " + PSEP + " separator)").get())
+        .addOption(builder("o").argName("file").hasArg()
+            .desc("File or directory to write output to").get())
+        .addOption(builder().longOpt("set-version").argName("version").hasArg()
+            .desc("Specify the version to stamp onto the compiled module(s)").get()));
+
+    /**
+     * Apache Commons CLI Options schema for the runner.
+     */
+    private static final Options RUNNER_OPTIONS = copyOptions(COMMON_OPTIONS)
+        .addOption(builder("J").longOpt("jit").desc("Enable the JIT-to-Java back-end").get())
+        .addOption(builder().longOpt("no-recompile").desc("Disable automatic compilation").get())
+        .addOption(builder("M").longOpt("method").argName("method").hasArg()
+            .desc("Method name; defaults to \"run\"").get())
+        .addOption(builder("o").argName("file").hasArg()
+            .desc("If compilation is necessary, the file or directory to write compiler output to").get())
+        .addOption(builder("I").longOpt("inject").argName("name=value").hasArg()
+            .desc("Specifies name/value pairs for injection; format is \"name=value\"").get());
+
+    /**
+     * Apache Commons CLI Options schema for the disassembler.
+     */
+    private static final Options DISASSEMBLER_OPTIONS = copyOptions(COMMON_OPTIONS)
+        .addOption(builder().longOpt("files").desc("List all files embedded in the module").get())
+        .addOption(builder().longOpt("findfile").argName("file").hasArg()
+            .desc("File to search for in the module").get());
+
     /**
      * Parsed command line from Apache Commons CLI.
      * Provides direct access to all parsed options.
@@ -56,70 +100,28 @@ public abstract class LauncherOptions {
      */
     private final Options schema;
 
+    private final String commandName;
+
+
     /**
      * Constructor from parsed command line.
      *
      * @param commandLine the parsed command line
      * @param schema the Options schema used to parse the command line
+     * @param commandName the "alias" for the launcher in question, e.g. "xcc" or "xec"
      */
-    protected LauncherOptions(CommandLine commandLine, Options schema) {
+    protected LauncherOptions(CommandLine commandLine, Options schema, String commandName) {
         this.commandLine = commandLine;
         this.schema = schema;
+        this.commandName = commandName;
     }
 
-
-    // ----- Static Options Schemas ----------------------------------------------------------------
-
-    /**
-     * Common launcher options shared by all tools.
-     */
-    private static final Options LAUNCHER_OPTIONS = new Options()
-            .addOption(builder("d").longOpt("deduce").desc("Automatically deduce locations when possible").get())
-            .addOption(builder("h").longOpt("help").desc("Display this help message").get())
-            .addOption(builder("L").argName("path").hasArg()
-                    .desc("Module path (can be specified multiple times, or use " + File.pathSeparator + " separator)").get())
-            .addOption(builder("v").longOpt("verbose").desc("Enable verbose logging and messages").get())
-            .addOption(builder().longOpt("version").desc("Display the Ecstasy runtime version").get());
-
-    /**
-     * Apache Commons CLI Options schema for the compiler.
-     */
-    private static final Options COMPILER_OPTIONS = conflictingOptions(copyOptions(LAUNCHER_OPTIONS)
-            .addOption(builder().longOpt("rebuild").desc("Force rebuild").get())
-            .addOption(builder().longOpt("qualify").desc("Use full module name for the output file name").get())
-            .addOption(builder("r").argName("resource").hasArg()
-                    .desc("Files and/or directories to read resources from (can use " + File.pathSeparator + " separator)").get())
-            .addOption(builder("o").argName("file").hasArg()
-                    .desc("File or directory to write output to").get())
-            .addOption(builder().longOpt("set-version").argName("version").hasArg()
-                    .desc("Specify the version to stamp onto the compiled module(s)").get()));
-
-    /**
-     * Apache Commons CLI Options schema for the runner.
-     */
-    private static final Options RUNNER_OPTIONS = copyOptions(LAUNCHER_OPTIONS)
-            .addOption(builder("J").longOpt("jit").desc("Enable the JIT-to-Java back-end").get())
-            .addOption(builder().longOpt("no-recompile").desc("Disable automatic compilation").get())
-            .addOption(builder("M").longOpt("method").argName("method").hasArg()
-                    .desc("Method name; defaults to \"run\"").get())
-            .addOption(builder("o").argName("file").hasArg()
-                    .desc("If compilation is necessary, the file or directory to write compiler output to").get())
-            .addOption(builder("I").longOpt("inject").argName("name=value").hasArg()
-                    .desc("Specifies name/value pairs for injection; format is \"name=value\"").get());
-
-    /**
-     * Apache Commons CLI Options schema for the disassembler.
-     */
-    private static final Options DISASSEMBLER_OPTIONS = copyOptions(LAUNCHER_OPTIONS)
-            .addOption(builder().longOpt("files").desc("List all files embedded in the module").get())
-            .addOption(builder().longOpt("findfile").argName("file").hasArg()
-                    .desc("File to search for in the module").get());
 
     /**
      * Copy an Options object by adding all its options to a new Options instance.
      */
-    private static Options copyOptions(@SuppressWarnings("SameParameterValue") Options source) {
-        return source.getOptions().stream().collect(Options::new, Options::addOption, (_, _) -> {});
+    private static Options copyOptions(@SuppressWarnings("SameParameterValue") final Options options) {
+        return options.getOptions().stream().collect(Options::new, Options::addOption, (_, _) -> {});
     }
 
     /**
@@ -164,26 +166,29 @@ public abstract class LauncherOptions {
      * @return list of resolved File objects (may contain multiple files if wildcards used)
      */
     protected static List<File> resolvePath(String sPath, File cwd) {
-        List<File> files = new ArrayList<>();
-
+        final List<File> files = new ArrayList<>();
         // Expand tilde for home directory
-        if (sPath.length() >= 2 && sPath.charAt(0) == '~'
-                && (sPath.charAt(1) == '/' || sPath.charAt(1) == File.separatorChar)) {
-            sPath = System.getProperty("user.home") + File.separatorChar + sPath.substring(2);
+
+        // TODO: Why can't we rely on the shell doing this?
+        // TODO: This is very brittle and globs do not work well at all.
+        // TODO: This is not fully platform independent.
+        if (sPath.length() >= 2 && sPath.charAt(0) == '~' && (sPath.charAt(1) == '/' || sPath.charAt(1) == FSEP)) {
+            sPath = System.getProperty("user.home") + FSEP + sPath.substring(2);
         }
 
         // Handle wildcards
         // TODO: Why are we handling wildcards here, that is ususually the job for the launching shell?
         if (sPath.indexOf('*') >= 0 || sPath.indexOf('?') >= 0) {
-            try (DirectoryStream<Path> stream = Files.newDirectoryStream(cwd.toPath(), sPath)) {
+            try (final DirectoryStream<Path> stream = Files.newDirectoryStream(cwd.toPath(), sPath)) {
                 stream.forEach(path -> files.add(path.toFile()));
-            } catch (IOException e) {
+            } catch (final IOException e) {
                 // If wildcard resolution fails, treat as literal path
                 files.add(new File(cwd, sPath));
             }
             return files;
         }
         files.add(new File(sPath));
+
         return files;
     }
 
@@ -196,12 +201,12 @@ public abstract class LauncherOptions {
      * @return list of File objects parsed from the option values
      */
     protected List<File> getPathList(String optionName) {
-        String[] vals = commandLine.getOptionValues(optionName);
+        final var vals = commandLine.getOptionValues(optionName);
         if (vals == null) {
             return Collections.emptyList();
         }
         return Arrays.stream(vals)
-                .flatMap(val -> Arrays.stream(val.split(File.pathSeparator)))
+                .flatMap(val -> Arrays.stream(val.split(PSEP)))
                 .filter(path -> !path.isEmpty())
                 .flatMap(path -> resolvePath(path).stream())
                 .toList();
@@ -263,28 +268,26 @@ public abstract class LauncherOptions {
      * @return JSON string representation (pretty-printed with 2-space indent)
      */
     public String toJson() {
-        JsonObject json = new JsonObject();
-
+        final var json = new JsonObject();
         // Iterate through the schema to get ALL option values (handles repeated options like -L)
-        for (var schemaOpt : schema.getOptions()) {
-            String key = schemaOpt.getLongOpt() != null ? schemaOpt.getLongOpt() : schemaOpt.getOpt();
-
+        for (final var schemaOpt : schema.getOptions()) {
+            final var key = schemaOpt.getLongOpt() != null ? schemaOpt.getLongOpt() : schemaOpt.getOpt();
             if (!schemaOpt.hasArg()) {
                 // Boolean flag - check if present
                 if (commandLine.hasOption(key)) {
                     json.addProperty(key, true);
                 }
-            } else {
-                // Option with values - use getOptionValues to get ALL values (handles repeated options)
-                String[] values = commandLine.getOptionValues(key);
-                if (values != null && values.length > 0) {
-                    if (values.length == 1) {
-                        json.addProperty(key, values[0]);
-                    } else {
-                        JsonArray arr = new JsonArray();
-                        for (String val : values) arr.add(val);
-                        json.add(key, arr);
-                    }
+                continue;
+            }
+            // Option with values - use getOptionValues to get ALL values (handles repeated options)
+            final var values = commandLine.getOptionValues(key);
+            if (values != null && values.length > 0) {
+                if (values.length == 1) {
+                    json.addProperty(key, values[0]);
+                } else {
+                    final var arr = new JsonArray();
+                    for (String val : values) arr.add(val);
+                    json.add(key, arr);
                 }
             }
         }
@@ -313,17 +316,19 @@ public abstract class LauncherOptions {
         List<String> args = new ArrayList<>();
 
         // Process each option from schema
-        for (var opt : schema.getOptions()) {
-            String key = opt.getLongOpt() != null ? opt.getLongOpt() : opt.getOpt();
-            if (!json.has(key)) continue;
+        for (final var opt : schema.getOptions()) {
+            final var key = opt.getLongOpt() != null ? opt.getLongOpt() : opt.getOpt();
+            if (!json.has(key)) {
+                continue;
+            }
 
-            String flag = (opt.getLongOpt() != null ? "--" : "-") + key;
-            JsonElement value = json.get(key);
+            final var flag = (opt.getLongOpt() != null ? "--" : "-") + key;
+            final var value = json.get(key);
 
             if (value.isJsonPrimitive() && value.getAsJsonPrimitive().isBoolean()) {
                 if (value.getAsBoolean()) args.add(flag);
             } else if (value.isJsonArray()) {
-                for (JsonElement elem : value.getAsJsonArray()) {
+                for (final var elem : value.getAsJsonArray()) {
                     args.add(flag);
                     args.add(elem.getAsString());
                 }
@@ -388,13 +393,11 @@ public abstract class LauncherOptions {
             return null;
         }
 
-        var sb = new StringBuilder();
-
         // Add usage line with command syntax
-        sb.append("Usage:\n");
-        sb.append("    ");
-        sb.append(buildUsageLine(getCommandName()));
-        sb.append("\n\n");
+        var sb  = new StringBuilder("Usage:\n")
+            .append("    ")
+            .append(buildUsageLine(commandName))
+            .append("\n\n");
 
         var helpAppendable = new TextHelpAppendable(sb);
         helpAppendable.setMaxWidth(120);  // Allow up to 120 characters per line
@@ -408,7 +411,7 @@ public abstract class LauncherOptions {
                 .get();
         try {
             formatter.printOptions(schema);
-        } catch (IOException e) {
+        } catch (final IOException e) {
             return "Error generating help: " + e.getMessage();
         }
 
@@ -423,22 +426,14 @@ public abstract class LauncherOptions {
     }
 
     /**
-     * Get the command name for this launcher (e.g., "xcc", "xec", "xtc").
-     * Subclasses must override to provide their command name.
-     *
-     * @return the command name
-     */
-    protected abstract String getCommandName();
-
-    /**
      * Build the usage line for help display.
      * Subclasses can override to customize the usage string.
      *
-     * @param cmdName the command name
+     * @param commandName the command name
      * @return the usage line string
      */
-    protected String buildUsageLine(String cmdName) {
-        return cmdName + " [options]";
+    protected String buildUsageLine(String commandName) {
+        return commandName + " [options]";
     }
 
 
@@ -450,7 +445,7 @@ public abstract class LauncherOptions {
      *
      * @param <T> The concrete builder type for method chaining
      */
-    protected abstract static class BaseBuilder<T extends BaseBuilder<T>> {
+    protected abstract static class AbstractBuilder<T extends AbstractBuilder<T>> {
         protected final List<String> args = new ArrayList<>();
 
         /**
@@ -506,6 +501,12 @@ public abstract class LauncherOptions {
             return (T) this;
         }
 
+        @SuppressWarnings("unchecked")
+        public T addModulePaths(List<File> paths) {
+            paths.forEach(this::addModulePath);
+            return (T) this;
+        }
+
         /**
          * Add a directory or file to the module path.
          *
@@ -524,12 +525,7 @@ public abstract class LauncherOptions {
     public static class CompilerOptions extends LauncherOptions {
 
         CompilerOptions(CommandLine commandLine) {
-            super(commandLine, COMPILER_OPTIONS);
-        }
-
-        @Override
-        protected String getCommandName() {
-            return "xcc";
+            super(commandLine, COMPILER_OPTIONS, Compiler.COMMAND_NAME);
         }
 
         /**
@@ -647,7 +643,7 @@ public abstract class LauncherOptions {
          * Builder for programmatically constructing CompilerOptions.
          * Builds a synthetic command-line array and parses it.
          */
-        public static class Builder extends BaseBuilder<Builder> {
+        public static class Builder extends AbstractBuilder<Builder> {
             /**
              * Force a complete rebuild of all sources.
              */
@@ -815,12 +811,7 @@ public abstract class LauncherOptions {
     public static class RunnerOptions extends LauncherOptions {
 
         RunnerOptions(CommandLine commandLine) {
-            super(commandLine, RUNNER_OPTIONS);
-        }
-
-        @Override
-        protected String getCommandName() {
-            return "xec";
+            super(commandLine, RUNNER_OPTIONS, Runner.COMMAND_NAME);
         }
 
         /**
@@ -953,7 +944,7 @@ public abstract class LauncherOptions {
          * Builder for constructing RunnerOptions programmatically.
          * Builds a synthetic command-line array and parses it.
          */
-        public static class Builder extends BaseBuilder<Builder> {
+        public static class Builder extends AbstractBuilder<Builder> {
             /**
              * Enable the JIT-to-Java back-end.
              */
@@ -1107,12 +1098,7 @@ public abstract class LauncherOptions {
     public static class DisassemblerOptions extends LauncherOptions {
 
         DisassemblerOptions(CommandLine commandLine) {
-            super(commandLine, DISASSEMBLER_OPTIONS);
-        }
-
-        @Override
-        protected String getCommandName() {
-            return "xtc";
+            super(commandLine, DISASSEMBLER_OPTIONS, Disassembler.COMMAND_NAME);
         }
 
         /**
@@ -1190,7 +1176,7 @@ public abstract class LauncherOptions {
          * Builder for constructing DisassemblerOptions programmatically.
          * Builds a synthetic command-line array and parses it.
          */
-        public static class Builder extends BaseBuilder<Builder> {
+        public static class Builder extends AbstractBuilder<Builder> {
 
             /**
              * List all files embedded in the module.

@@ -468,12 +468,12 @@ public class HandyTest {
             }
 
             @Override
-            public void write(final @NotNull byte[] b) {
+            public void write(final byte @NotNull [] b) {
                 appendByteArrayAsHex(sb, b);
             }
 
             @Override
-            public void write(final @NotNull byte[] b, final int off, final int len) {
+            public void write(final byte @NotNull [] b, final int off, final int len) {
                 appendByteArrayAsHex(sb, b, off, len);
             }
         });

@@ -2,8 +2,8 @@ package org.xvm.util;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -23,40 +23,41 @@ public class WeakHasherMapTest {
     void shouldFindInKeys() {
         Map<Integer, String> map = new WeakHasherMap<>(Hasher.natural());
         map.put(1, "hello");
-        assertTrue(map.keySet().contains(1));
-        assertFalse(map.keySet().contains(2));
+        assertTrue(map.containsKey(1));
+        assertFalse(map.containsKey(2));
     }
 
     @Test
     void shouldRemoveFromKeys() {
         Map<Integer, String> map = new WeakHasherMap<>(Hasher.natural());
         map.put(1, "hello");
+        //noinspection RedundantCollectionOperation
         assertTrue(map.keySet().remove(1));
-        assertFalse(map.keySet().contains(1));
+        assertFalse(map.containsKey(1));
         assertFalse(map.containsKey(1));
         assertNull(map.get(1));
     }
 
     @Test
-    void souldRetainAll() {
-        Map<Integer, String> map = new WeakHasherMap<>(Hasher.natural());
-        Map<Integer, String> map2 = new HashMap<>();
-        map.put(1, "1");
-        map.put(2, "2");
-        map.put(3, "3");
-        map2.put(2, "2");
-        map2.put(4, "4");
-        map.keySet().retainAll(map2.keySet());
-        assertEquals(1, map.size());
-        assertFalse(map.containsKey(1));
-        assertTrue(map.containsKey(2));
-        assertFalse(map.containsKey(3));
-        assertFalse(map.containsKey(4));
+    void shouldRetainAll() {
+        var map = new WeakHasherMap<Integer, String>(Hasher.natural()) {{
+            put(1, "1");
+            put(2, "2");
+            put(3, "3");
+        }};
+        map.keySet().retainAll(Set.of(2));
+        assertAll(
+                () -> assertEquals(1, map.size()),
+                () -> assertTrue(map.containsKey(2)),
+                () -> assertFalse(map.containsKey(1)),
+                () -> assertFalse(map.containsKey(3)),
+                () -> assertFalse(map.containsKey(4))
+        );
     }
 
     @Test
     void shouldGC() {
-        Map<Integer, String> map = new WeakHasherMap<>(Hasher.natural());
+        final var map = new WeakHasherMap<Integer, String>(Hasher.natural());
         int priorSize = map.size();
         for (int i = 0; map.size() >= priorSize; ++i) {
             priorSize = map.size();

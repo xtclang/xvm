@@ -7,6 +7,7 @@ import static org.xtclang.plugin.XtcPluginConstants.XTC_CONFIG_NAME_MODULE_DEPEN
 import static org.xtclang.plugin.XtcPluginConstants.XTC_LANGUAGE_NAME;
 import static org.xtclang.plugin.XtcPluginUtils.FileUtils.isValidXtcModuleSafe;
 import static org.xtclang.plugin.XtcPluginUtils.capitalize;
+import static org.xtclang.plugin.XtcPluginUtils.failure;
 
 import java.io.File;
 
@@ -130,7 +131,7 @@ public class ModulePathResolver {
             final List<File> dupes = modulePathSet.stream().filter(File::isFile).filter(f -> f.getName().equals(module.getName())).toList();
             assert !dupes.isEmpty();
             if (dupes.size() != 1) {
-                throw new GradleException("[plugin] A dependency with the same name is defined in more than one (" + dupes.size() + ") location on the module path.");
+                throw failure("[plugin] A dependency with the same name is defined in more than one ({}) location on the module path.", dupes.size());
             }
         }
     }
