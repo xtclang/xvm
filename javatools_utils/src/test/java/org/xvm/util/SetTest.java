@@ -576,6 +576,7 @@ public class SetTest {
         assertFalse(iter.hasNext());
     }
 
+    @SuppressWarnings("StringBufferReplaceableByString")
     @Test
     public void repro1() {
         // Exception on set# 0 in step# 49: null
@@ -644,6 +645,7 @@ public class SetTest {
         replayTest(sb.toString());
     }
 
+    @SuppressWarnings("StringBufferReplaceableByString")
     @Test
     public void repro2() {
         // Exception on set# 0 in step# 31: expected:<false> but was:<true>
@@ -659,8 +661,8 @@ public class SetTest {
         // 	at org.xvm.util.SetTest.replayTest(SetTest.java:296)
         // 	at org.xvm.util.SetTest.repro2(SetTest.java:174)
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("[0] add UAY -> true\n")
+        final var sb = new StringBuilder()
+          .append("[0] add UAY -> true\n")
           .append("[1] add NBT -> true\n")
           .append("[2] size -> 2\n")
           .append("[3] size -> 2\n")
@@ -695,6 +697,7 @@ public class SetTest {
         replayTest(sb.toString());
     }
 
+    @SuppressWarnings("StringBufferReplaceableByString")
     @Test
     public void repro3() {
         // Exception on set# 0 in step# 71: expected:<true> but was:<false>
@@ -710,8 +713,8 @@ public class SetTest {
         //     at org.xvm.util.SetTest.replayTest(SetTest.java:388)
         //     at org.xvm.util.SetTest.repro3(SetTest.java:266)
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("[0] size -> 0\n")
+        final var sb = new StringBuilder()
+          .append("[0] size -> 0\n")
           .append("[1] add LA -> true\n")
           .append("[2] add HJZ -> true\n")
           .append("[3] remove LA -> true\n")
@@ -786,6 +789,7 @@ public class SetTest {
         replayTest(sb.toString());
     }
 
+    @SuppressWarnings("StringBufferReplaceableByString")
     @Test
     public void repro4() {
         // Exception on set# 0 in step# 116: null
@@ -797,8 +801,8 @@ public class SetTest {
         //     at org.xvm.util.SetTest$OpAdd.test(SetTest.java:589)
         //     at org.xvm.util.SetTest.randomTest(SetTest.java:360)
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("[0] add IL -> true\n")
+        final var sb = new StringBuilder()
+          .append("[0] add IL -> true\n")
           .append("[1] add IL -> false\n")
           .append("[2] add JP -> true\n")
           .append("[3] add WQ -> true\n")
@@ -918,6 +922,7 @@ public class SetTest {
         replayTest(sb.toString());
     }
 
+    @SuppressWarnings("StringBufferReplaceableByString")
     @Test
     public void repro5() {
         // Exception on set# 0 in step# 41: expected:<false> but was:<true>
@@ -967,11 +972,12 @@ public class SetTest {
         replayTest(sb.toString());
     }
 
+    @SuppressWarnings("StringBufferReplaceableByString")
     @Test
     public void repro6() {
         // Exception on set# 0 in step# 34: expected:<true> but was:<false>
-        StringBuilder sb = new StringBuilder();
-        sb.append("[0] remove SD -> false\n")
+        final var sb = new StringBuilder()
+          .append("[0] remove SD -> false\n")
           .append("[1] add DUM -> true\n")
           .append("[2] add IZE -> true\n")
           .append("[3] add YNE -> true\n")
@@ -1009,11 +1015,12 @@ public class SetTest {
         replayTest(sb.toString());
     }
 
+    @SuppressWarnings("StringBufferReplaceableByString")
     @Test
     public void repro7() {
         // Exception on set# 0 in step# 55: expected:<true> but was:<false>
-        StringBuilder sb = new StringBuilder();
-        sb.append("[0] add SAN -> true\n")
+        final var sb = new StringBuilder()
+          .append("[0] add SAN -> true\n")
           .append("[1] iterate -> 1\n")
           .append("[2] add SAN -> false\n")
           .append("[3] add SAN -> false\n")
@@ -1072,11 +1079,12 @@ public class SetTest {
         replayTest(sb.toString());
     }
 
+    @SuppressWarnings("StringBufferReplaceableByString")
     @Test
     public void repro8() {
         // Exception on set# 0 in step# 39: expected:<true> but was:<false>
-        StringBuilder sb = new StringBuilder();
-        sb.append("[0] add JWD -> true\n")
+        final var sb = new StringBuilder()
+          .append("[0] add JWD -> true\n")
           .append("[1] add JWD -> false\n")
           .append("[2] iterate -> 1\n")
           .append("[3] add XMH -> true\n")
@@ -1119,11 +1127,12 @@ public class SetTest {
         replayTest(sb.toString());
     }
 
+    @SuppressWarnings("StringBufferReplaceableByString")
     @Test
     public void repro9() {
         // Exception on set# 0 in step# 13: expected:<7> but was:<6>
-        StringBuilder sb = new StringBuilder();
-        sb.append("[0] iterate -> 0\n")
+        final var sb = new StringBuilder()
+          .append("[0] iterate -> 0\n")
           .append("[1] add TV -> true\n")
           .append("[2] add BQK -> true\n")
           .append("[3] add KZ -> true\n")

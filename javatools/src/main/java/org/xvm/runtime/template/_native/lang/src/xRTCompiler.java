@@ -350,7 +350,7 @@ public class xRTCompiler extends xService {
         }
 
         protected List<String> getErrors() {
-            return m_log == null ? Collections.emptyList() : m_log;
+            return m_log;
         }
 
         protected ModuleRepository getBuildRepository() {
@@ -419,9 +419,9 @@ public class xRTCompiler extends xService {
                 checkErrors();
 
                 // the code below could be extracted if necessary: compile(allNodes, repoLib, repoOutput);
-                Map<String, org.xvm.compiler.Compiler> mapCompilers = populateNamespace(allNodes, repoLib);
-                flushAndCheckErrors(allNodes);
+                var mapCompilers = populateNamespace(allNodes, repoLib);
 
+                flushAndCheckErrors(allNodes);
                 compilers = mapCompilers.values().toArray(NO_COMPILERS);
             }
 
@@ -492,18 +492,12 @@ public class xRTCompiler extends xService {
         }
 
         @Override
-        protected void log(Severity sev, String sMsg) {
-            List<String> log = m_log;
-            if (log == null) {
-                log = m_log = new ArrayList<>();
-            }
-
+        protected void log(Severity sev, String msg, Object... params) {
             if (sev.compareTo(m_sevWorst) > 0) {
                 m_sevWorst = sev;
             }
-
             if (sev.compareTo(Severity.WARNING) >= 0) {
-                log.add(sev.desc() + ": " + sMsg);
+                m_log.add(sev.desc() + ": " + Console.formatTemplate(msg, params));
             }
         }
 
@@ -518,7 +512,7 @@ public class xRTCompiler extends xService {
         private List<File>             m_listSources;
         private ModuleRepository       m_repoResults;
         private Version                m_version = new Version("CI");
-        private List<String>           m_log = new ArrayList<>();
+        private final List<String>     m_log = new ArrayList<>();
 
         // re-entry support
         private org.xvm.compiler.Compiler[] m_compilers;

@@ -12,6 +12,7 @@ dependencies {
 }
 
 tasks.test {
-    // Use custom logging configuration to suppress INFO-level cleanup messages
+    // Use custom logging configuration to suppress INFO-level cleanup messages from
+    // CooperativelyCleanableReference during tests (especially the shouldIgnoreExceptionsWhileCleaning test)
     systemProperty("java.util.logging.config.file", file("src/test/resources/logging.properties").absolutePath)
 }

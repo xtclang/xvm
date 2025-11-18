@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
@@ -209,6 +210,7 @@ public class ModuleInfo {
             } else if (binaryDir != null) {
                 projectDir = deduce ? projectDirFromSubDir(binaryDir) : binaryDir;
             } else if (curDir != null) {
+                // TODO: curDir can never be null of we get here?
                 projectDir = deduce ? projectDirFromSubDir(curDir) : curDir;
             } else {
                 throw new IllegalArgumentException(
@@ -327,6 +329,9 @@ public class ModuleInfo {
         }
     }
 
+    Function<File, ModuleInfo> makeModuleInfoFactory(boolean deduce, File[] resources, File binary) {
+        return f -> new ModuleInfo(f, deduce, resources, binary);
+    }
 
     // ----- general -------------------------------------------------------------------------------
 

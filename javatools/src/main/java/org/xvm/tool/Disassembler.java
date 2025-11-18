@@ -15,14 +15,11 @@ import java.util.Locale;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.ModuleRepository;
 
 import org.xvm.asm.constants.FSNodeConstant;
-import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.UInt8ArrayConstant;
 
@@ -47,44 +44,19 @@ import static org.xvm.util.Severity.INFO;
  *
  */
 public class Disassembler extends Launcher<DisassemblerOptions> {
+
+    static final String COMMAND_NAME = "xac";
+
     @SuppressWarnings("unused")
     private static final byte FREE    = 0;
     private static final byte DIR     = 1;
     private static final byte FILE    = 2;
     private static final byte EXISTS  = DIR | FILE;
     private static final byte CLAIMED = 4;
-    private static final LocalDateTime SOON   = LocalDateTime.now().plusDays(1);
-    private static final LocalDateTime RECENT = LocalDateTime.now().minusMonths(6);
 
-    /**
-     * Entry point from the OS.
-     *
-     * @param asArg command line arguments
-     */
-    static void main(String[] asArg) {
-        try {
-            System.exit(launch(asArg));
-        } catch (LauncherException e) {
-            System.exit(e.getExitCode());
-        }
-    }
-
-    /**
-     * Programmatic entry point that returns an exit code instead of calling System.exit().
-     * Use this when calling the disassembler from a daemon or other long-running process.
-     *
-     * @param asArg command line arguments
-     * @return exit code (0 for success, non-zero for error)
-     */
-    public static int launch(String[] asArg) {
-        try {
-            DisassemblerOptions options = DisassemblerOptions.parse(asArg);
-            return new Disassembler(options, null, null).run();
-        } catch (IllegalArgumentException e) {
-            System.err.println("Error: " + e.getMessage());
-            return 1;
-        }
-    }
+    private static final LocalDateTime NOW    = LocalDateTime.now();
+    private static final LocalDateTime SOON   = NOW.plusDays(1);
+    private static final LocalDateTime RECENT = NOW.minusMonths(6);
 
     /**
      * Disassembler constructor for programmatic use.
@@ -97,60 +69,66 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         super(options, console, errListener);
     }
 
+    /**
+     * Entry point from the OS. Delegates to Launcher.
+     *
+     * @param args command line arguments
+     */
+    static void main(String[] args) {
+        Launcher.main(insertCommand(COMMAND_NAME, args));
+    }
+
     @Override
     protected void validateOptions() {
-        DisassemblerOptions options = options();
-
+        var opts = options();
         // Validate the target file
-        File fileModule = options.getTarget();
+        var fileModule = opts.getTarget();
         if (fileModule == null) {
             log(ERROR, "No module file specified");
             return;
         }
-
         if (!fileModule.exists()) {
-            log(ERROR, "Module file does not exist: " + fileModule);
+            log(ERROR, "Module file does not exist: {}", fileModule);
         }
-
         // Validate the -L path of file(s)/dir(s)
-        validateModulePath(options.getModulePath());
+        validateModulePath(opts.getModulePath());
     }
 
     @Override
     protected int process() {
-        DisassemblerOptions options = options();
-        File      fileModule = options.getTarget();
-        String    sModule    = fileModule.getName();
+        var opts = options();
+        var fileModule = opts.getTarget();
+        var sModule    = fileModule.getName();
         Component component  = null;
 
         if (sModule.endsWith(".xtc")) {
             // it's a file
-            log(INFO, "Loading module file: " + sModule);
+            log(INFO, "Loading module file: {}", sModule);
             try {
-                try (FileInputStream in = new FileInputStream(fileModule)) {
+                try (var in = new FileInputStream(fileModule)) {
                     component = new FileStructure(in);
                 }
             } catch (IOException e) {
-                log(ERROR, "I/O exception (" + e + ") reading module file: " + fileModule);
+                log(ERROR, "I/O exception ({}) reading module file: {}", e, fileModule);
             }
         } else {
             // it's a module; set up the repository
             log(INFO, "Creating and pre-populating library and build repositories");
-            ModuleRepository repo = configureLibraryRepo(options.getModulePath());
+            var repo = configureLibraryRepo(opts.getModulePath());
             checkErrors();
 
-            log(INFO, "Loading module: " + sModule);
+            log(INFO, "Loading module: {}", sModule);
             component = repo.loadModule(sModule);
         }
 
         if (component == null) {
-            log(ERROR, "Unable to load module: " + fileModule);
+            log(ERROR, "Unable to load module: {}", fileModule);
         }
         checkErrors();
 
         if (component != null) {
-            File findFile = options.getFindFile();
-            if (options.isListFiles()) {
+            var findFile = opts.getFindFile();
+            if (opts.isListFiles()) {
                 dumpFiles(component);
             } else if (findFile != null) {
                 findFile(component, findFile);
@@ -164,8 +142,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
 
     public void dump(Component component) {
         if (component instanceof MethodStructure method) {
-            MethodConstant id = method.getIdentityConstant();
-
+            final var id = method.getIdentityConstant();
             if (method.hasCode() && method.ensureCode() != null && !method.isNative()) {
                 out("** code for " + id);
                 out(method.ensureCode().toString());
@@ -188,7 +165,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
 
         // first, identify all filing system nodes
         for (int i = 0; i < cConsts; ++i) {
-            Constant constant = aconst[i];
+            var constant = aconst[i];
             if (constant instanceof FSNodeConstant fsNode) {
                 if (i > maxId) {
                     maxId = i;
@@ -197,7 +174,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
                 switch (constant.getFormat()) {
                 case FSDir:
                     aflags[i] |= DIR;
-                    for (FSNodeConstant fsChildNode : fsNode.getDirectoryContents()) {
+                    for (var fsChildNode : fsNode.getDirectoryContents()) {
                         claimNode(fsChildNode, aflags);
                     }
                     ++cDirs;
@@ -228,14 +205,15 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
             boolean[] visited = new boolean[cConsts];
             for (int i = 0; i < cConsts; ++i) {
                 if ((aflags[i] & EXISTS) != 0 && (aflags[i] & CLAIMED) == 0) {
-                    FSNodeConstant fsNode = (FSNodeConstant) aconst[i];
+                    var fsNode = (FSNodeConstant) aconst[i];
                     printNode(fsNode, "", false, false, visited,
-                              String.valueOf(maxId).length(), String.valueOf(maxSize).length());
+                            String.valueOf(maxId).length(), String.valueOf(maxSize).length());
                 }
             }
-        } else {
-            out("Module contains no files.");
+            return;
         }
+
+        out("Module contains no files.");
     }
 
     private void claimNode(FSNodeConstant fsNode, byte[] aflags) {
@@ -244,7 +222,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
             aflags[i] |= CLAIMED;
             switch (fsNode.getFormat()) {
             case FSDir:
-                for (FSNodeConstant fsChildNode : fsNode.getDirectoryContents()) {
+                for (var fsChildNode : fsNode.getDirectoryContents()) {
                     claimNode(fsChildNode, aflags);
                 }
                 break;
@@ -263,7 +241,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
                            boolean[]      visited,
                            int            idLen,
                            int            sizeLen) {
-        StringBuilder buf = new StringBuilder();
+        var buf = new StringBuilder();
 
         // constant id
         int    id     = fsNode.getPosition();
@@ -336,7 +314,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         } else {
             buf.append(indent);
         }
-        String name = fsNode.getName();
+        var name = fsNode.getName();
         if (name.isEmpty()) {
             buf.append('/');
         } else {
@@ -352,9 +330,9 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
                 out(buf);
             } else {
                 out(buf);
-                FSNodeConstant[] aKidNodes  = fsNode.getDirectoryContents();
-                int              cKidNodes  = aKidNodes.length;
-                String           nextIndent = " |- ";
+                var      aKidNodes  = fsNode.getDirectoryContents();
+                int      cKidNodes  = aKidNodes.length;
+                String   nextIndent = " |- ";
                 if (!indent.isEmpty()) {
                     nextIndent = indent.substring(0, indent.length()-4)
                                + (last ? "    " : " |  ")
@@ -408,18 +386,18 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         } catch (IOException ignore) {}
 
         // load the file metadata
-        String   findName     = target.getName();
-        String   findCreated  = requireNonNull(createdTime(target)).toInstant().atOffset(UTC).toString();
-        String   findModified = requireNonNull(modifiedTime(target)).toInstant().atOffset(UTC).toString();
-        int      findSize     = findBytes.length;
+        var    findName     = target.getName();
+        var    findCreated  = requireNonNull(createdTime(target)).toInstant().atOffset(UTC).toString();
+        var    findModified = requireNonNull(modifiedTime(target)).toInstant().atOffset(UTC).toString();
+        int    findSize     = findBytes.length;
 
-        ConstantPool pool = component.getConstantPool();
+        var pool = component.getConstantPool();
         int matches = 0;
         for (int i = 0, c = pool.size(); i < c; ++i) {
-            Constant constant = pool.getConstant(i);
+            var constant = pool.getConstant(i);
             switch (constant.getFormat()) {
             case FSFile -> {
-                FSNodeConstant fsnode = (FSNodeConstant) constant;
+                var fsnode = (FSNodeConstant) constant;
                 if (fsnode.getName().equals(findName) && Arrays.equals(fsnode.getFileBytes(), findBytes)) {
                     out("File constant [" + constant.getPosition() + "] matches file name and contents");
                     if (!fsnode.getCreated().equals(findCreated)) {
@@ -466,4 +444,3 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
                 Note: The xam command will be removed, and replaced with an option on the xtc command.""";
     }
 }
-

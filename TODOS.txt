@@ -1,0 +1,4 @@
+Deprecate native launchers or replace them with something
+xtc command Ecstasy.java
+Create release 
+profiling

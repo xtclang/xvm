@@ -73,6 +73,7 @@ javatools-turtle = { group = "org.xtclang", name = "javatools-turtle" }
 javatools-unicode = { group = "org.xtclang", name = "javatools-unicode" }
 javatools-utils = { group = "org.xtclang", name = "javatools-utils" }
 
+# Third party
 apache-commons-cli = { module = "commons-cli:commons-cli", version.ref = "apache-commons-cli" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 jakarta-activation-api = { module = "jakarta.activation:jakarta.activation-api", version.ref = "jakarta-activation" }

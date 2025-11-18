@@ -12,18 +12,14 @@ import java.io.UTFDataFormatException;
 
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
-import java.nio.file.Files;
+import java.nio.file.*;
 
 import java.nio.charset.Charset;
 
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Map;
+import java.util.*;
 
 import static java.util.Arrays.sort;
 
@@ -817,8 +813,11 @@ public final class Handy {
      *         escaping characters if and when necessary
      */
     public static String quotedString(final String s) {
-        return appendString(new StringBuilder(s.length() + 2).append('\"'), s).append(
-                '\"').toString();
+        return appendString(new StringBuilder(s.length() + 2).append('\"'), s).append('\"').toString();
+    }
+
+    public static String quoted(final Object o) {
+        return quotedString(Objects.toString(o));
     }
 
     /**
@@ -1346,6 +1345,7 @@ public final class Handy {
      *
      * @return a resolved file or directory
      */
+    /*
     public static File resolveFile(final File file) {
         if (file != null) {
             try {
@@ -1359,6 +1359,17 @@ public final class Handy {
             return new File(".").getAbsoluteFile().getCanonicalFile();
         } catch (final IOException e) {
             return new File(".").getAbsoluteFile();
+        }
+    }*/
+
+    public static File resolveFile(final File file) {
+        final Path p = (file == null) ? Paths.get(".") : file.toPath();
+        try {
+            // toRealPath resolves symlinks and returns an absolute, normalized path
+            return p.toRealPath(LinkOption.NOFOLLOW_LINKS).toFile();
+        } catch (IOException | SecurityException | InvalidPathException e) {
+            // Best-effort fallback: absolute + normalized (but won't resolve missing symlink targets)
+            return p.toAbsolutePath().normalize().toFile();
         }
     }
 

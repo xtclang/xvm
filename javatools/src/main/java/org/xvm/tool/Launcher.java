@@ -2,23 +2,20 @@ package org.xvm.tool;
 
 
 import java.io.File;
-import java.util.ArrayList;
+import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Stream;
 
 import org.xvm.asm.BuildInfo;
-import org.xvm.asm.Constants;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileRepository;
-import org.xvm.asm.FileStructure;
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
@@ -28,13 +25,19 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.compiler.BuildRepository;
 
 import org.xvm.tool.LauncherOptions.CompilerOptions;
+import org.xvm.tool.LauncherOptions.DisassemblerOptions;
 import org.xvm.tool.LauncherOptions.RunnerOptions;
 import org.xvm.tool.ModuleInfo.Node;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.Constants.ECSTASY_MODULE;
+import static org.xvm.asm.Constants.TURTLE_MODULE;
+import static org.xvm.asm.Constants.VERSION_MAJOR_CUR;
+import static org.xvm.asm.Constants.VERSION_MINOR_CUR;
 import static org.xvm.tool.ModuleInfo.isExplicitCompiledFile;
+import static org.xvm.util.Handy.quoted;
 import static org.xvm.util.Handy.resolveFile;
 import static org.xvm.util.Handy.toPathString;
 import static org.xvm.util.Severity.ERROR;
@@ -57,6 +60,36 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
 
     private static final int JDK_VERSION_MIN = 21;
 
+    protected final Map<File, ModuleInfo> moduleCache;
+
+    /**
+     * A representation of the Console (e.g. terminal) that this tool is running in.
+     */
+    protected final Console m_console;
+
+    /**
+     * The worst severity issue encountered thus far.
+     */
+    protected Severity m_sevWorst = NONE;
+
+    /**
+     * Delegate ErrorListener that receives errors in addition to this Launcher's own logging.
+     * This allows callers to capture errors programmatically while still using the Launcher's
+     * built-in error tracking and reporting. If null was passed to the constructor, this will
+     * be a default ErrorList instance.
+     */
+    protected final ErrorListener m_errDelegate;
+
+    /**
+     * The number of times that errors have been suspended without being resumed.
+     */
+    protected int m_cSuspended;
+
+    /**
+     * The parsed options.
+     */
+    private final T m_options;
+
     /**
      * Constructor for programmatic invocation (uses pre-built Options).
      *
@@ -68,6 +101,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
         m_console = console == null ? DEFAULT_CONSOLE : console;
         m_errDelegate = errListener;
         m_options = options;
+        moduleCache = new HashMap<>();
     }
 
     /**
@@ -78,7 +112,6 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      */
     static void main(String[] asArg) {
         try {
-            // use System.exit() to communicate the result of execution back to the caller
             System.exit(launch(asArg));
         } catch (LauncherException e) {
             System.exit(e.getExitCode());
@@ -134,21 +167,19 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * @return exit code (0 for success, non-zero for error)
      */
     public static int launch(String cmd, String[] args, Console console, ErrorListener errListener) {
-        Launcher<?> launcher;
         try {
-            launcher = switch (cmd) {
-                case "xcc" -> new Compiler(CompilerOptions.parse(args), console, errListener);
-                case "xec" -> new Runner(RunnerOptions.parse(args), console, errListener);
+            final var launcher = switch (cmd) {
+                case Compiler.COMMAND_NAME -> new Compiler(CompilerOptions.parse(args), console, errListener);
+                case Runner.COMMAND_NAME -> new Runner(RunnerOptions.parse(args), console, errListener);
+                case Disassembler.COMMAND_NAME -> new Disassembler(DisassemblerOptions.parse(args), console, errListener);
                 default -> {
-                    console.log(ERROR, "Command name \"" + cmd + "\" is not supported");
+                    console.log(ERROR, "Command name {} is not supported", quoted(cmd));
                     yield null;
                 }
             };
-
             if (launcher == null) {
                 return 1;
             }
-
             return launcher.run();
         } catch (IllegalArgumentException e) {
             console.log(ERROR, e.getMessage());
@@ -180,26 +211,26 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      */
     @SuppressWarnings({"AssertWithSideEffects", "ConstantValue"})
     public int run() {
-        final T options = options();
+        final T opts = options();
 
         final Runtime.Version jdkVersion = Runtime.version();
         if (jdkVersion.version().getFirst() < JDK_VERSION_MIN) {
-            log(INFO, "The suggested minimum JVM version is 21; this JVM version (" + Runtime.version() + ") appears to be older");
+            log(INFO, "The suggested minimum JVM version is 21; this JVM version ({}) appears to be older", Runtime.version());
         } else {
-            log(INFO, "JVM version: " + Runtime.version());
+            log(INFO, "JVM version: {}", Runtime.version());
             boolean fAssertsEnabled = false;
             assert  fAssertsEnabled = true;
-            log(INFO, "Java assertions are " + (fAssertsEnabled ? "enabled" : "disabled"));
+            log(INFO, "Java assertions are {}", fAssertsEnabled ? "enabled" : "disabled");
         }
 
-        if (options.showHelp()) {
+        if (opts.showHelp()) {
             displayHelp();
             return 0;
         }
 
-        if (options.verbose()) {
+        if (opts.verbose()) {
             out();
-            out("Options: " + options);
+            out("Options: " + opts);
             out();
         }
 
@@ -207,8 +238,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
         checkErrors();
 
         int result = process();
-
-        if (options.verbose()) {
+        if (opts.verbose()) {
             out();
         }
         return result;
@@ -225,26 +255,25 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     // ----- text output and error handling --------------------------------------------------------
 
     /**
-     * Log a message of a specified severity.
+     * Log a message with template substitution (SLF4J-style).
+     * Use {} placeholders in the template for parameter substitution.
      *
-     * @param sev   the severity (may indicate an error)
-     * @param sMsg  the message or error to display
+     * @param sev       the severity (may indicate an error)
+     * @param msg       the message template with {} placeholders
+     * @param params    parameters to substitute into the template
      */
-    protected void log(Severity sev, String sMsg) {
+    protected void log(Severity sev, String msg, Object... params) {
         if (errorsSuspended()) {
             return;
         }
-
         if (sev.compareTo(m_sevWorst) > 0) {
             m_sevWorst = sev;
         }
-
         if (isBadEnoughToPrint(sev)) {
-            m_console.log(sev, sMsg);
+            m_console.log(sev, msg, params);
         }
-
         if (sev == FATAL) {
-            throw abort(true, sMsg);
+            throw abort(true, Console.formatTemplate(msg, params));
         }
     }
 
@@ -254,9 +283,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * @param errs  the ErrorList
      */
     protected void log(ErrorList errs) {
-        for (ErrorInfo err : errs.getErrors()) {
-            log(err.getSeverity(), err.toString());
-        }
+        errs.getErrors().forEach(err -> log(err.getSeverity(), err.toString()));
     }
 
     /**
@@ -328,11 +355,11 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      *
      * @param fHelp  true iff the help message should be displayed and the program should exit
      */
+    @SuppressWarnings("unused")
     protected void checkErrors(boolean fHelp) {
         if (fHelp) {
             displayHelp();
         }
-
         if (fHelp || isBadEnoughToAbort(m_sevWorst)) {
             throw abort(isBadEnoughToAbort(m_sevWorst));
         }
@@ -343,7 +370,8 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      *
      * @param fError  true to abort with an error status (otherwise end of run, but not an error)
      */
-    protected void abortThrowing(boolean fError) {
+    @SuppressWarnings("unused")
+    protected void abortAndThrow(boolean fError) {
         throw abort(fError, null);
     }
 
@@ -353,7 +381,8 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * @param fError  true to abort with an error status (otherwise end of run, but not an error)
      * @param msg     an optional message to display with the exception when it is caught and parsed.
      */
-    protected void abortThrowing(@SuppressWarnings("SameParameterValue") boolean fError, String msg) {
+    @SuppressWarnings("unused")
+    protected void abortAndThrow(boolean fError, String msg) {
         throw abort(fError, msg);
     }
 
@@ -381,9 +410,9 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      *
      * @param fError  true to abort with an error status (otherwise end of run, but not an error)
      * @param msg     an optional message to display with the exception when it is caught and parsed.
-     * @param,cause   an underlying excpeption and cause.
+     * @param cause   an underlying excpeption and cause.
      */
-    protected LauncherException abort(@SuppressWarnings("SameParameterValue") boolean fError, String msg, Exception cause) {
+    protected LauncherException abort(boolean fError, String msg, Exception cause) {
         return new LauncherException(fError, msg, cause);
     }
 
@@ -413,14 +442,14 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
         return this.getClass().getSimpleName();
     }
 
-
     // ----- ErrorListener interface ---------------------------------------------------------------
 
     @Override
     public boolean log(ErrorInfo err) {
         // Forward to delegate (always non-null, default is ErrorList)
-        if (m_errDelegate != null) { m_errDelegate.log(err); }
-
+        if (m_errDelegate != null) {
+            m_errDelegate.log(err);
+        }
         log(err.getSeverity(), err.toString());
         return isAbortDesired();
     }
@@ -439,9 +468,6 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     public boolean isSilent() {
         return errorsSuspended();
     }
-
-
-    // ----- options -------------------------------------------------------------------------------
 
     /**
      * Validate the options. This is called after options have been parsed and set.
@@ -473,6 +499,14 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      */
     protected boolean isBadEnoughToAbort(Severity sev) {
         return sev.compareTo(ERROR) >= 0;
+    }
+    /**
+     * Get the parsed options for this launcher.
+     *
+     * @return the options instance
+     */
+    protected final T options() {
+        return m_options;
     }
 
     // ----- repository management -----------------------------------------------------------------
@@ -553,35 +587,21 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * Note: This implementation assumes that the read-through option on LinkedRepository is being
      * used.
      *
-     * @param reposLib  the repository to use, as it would be returned from
-     *                  {@link #configureLibraryRepo}
+     * @param reposLib  the repository to use, as it would be returned from {@link #configureLibraryRepo}
      */
     protected void prelinkSystemLibraries(ModuleRepository reposLib) {
-        ModuleStructure moduleEcstasy = reposLib.loadModule(Constants.ECSTASY_MODULE);
-        if (moduleEcstasy == null) {
-            log(FATAL, "Unable to load module: " + Constants.ECSTASY_MODULE);
-        }
-
-        FileStructure structEcstasy = Objects.requireNonNull(moduleEcstasy).getFileStructure();
-        if (structEcstasy != null) {
-            ModuleConstant idMissing = structEcstasy.linkModules(reposLib, false);
-            if (idMissing != null) {
-                log(FATAL, "Unable to link module " + Constants.ECSTASY_MODULE
-                    + " due to missing module:" + idMissing.getName());
+        for (String moduleName : List.of(ECSTASY_MODULE, TURTLE_MODULE)) {
+            ModuleStructure module = reposLib.loadModule(moduleName);
+            if (module == null) {
+                log(FATAL, "Unable to load module: {}", moduleName);
             }
-        }
 
-        ModuleStructure moduleTurtle = reposLib.loadModule(Constants.TURTLE_MODULE);
-        if (moduleTurtle == null) {
-            log(FATAL, "Unable to load module: " + Constants.TURTLE_MODULE);
-        }
-
-        FileStructure structTurtle = Objects.requireNonNull(moduleTurtle).getFileStructure();
-        if (structTurtle != null) {
-            ModuleConstant idMissing = structTurtle.linkModules(reposLib, false);
-            if (idMissing != null) {
-                log(FATAL, "Unable to link module " + Constants.TURTLE_MODULE
-                    + " due to missing module:" + idMissing.getName());
+            final var struct = Objects.requireNonNull(module).getFileStructure();
+            if (struct != null) {
+                ModuleConstant idMissing = struct.linkModules(reposLib, false);
+                if (idMissing != null) {
+                    log(FATAL, "Unable to link module {} due to missing module: {}", moduleName, idMissing.getName());
+                }
             }
         }
     }
@@ -594,7 +614,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     protected void showSystemVersion(ModuleRepository reposLib) {
         String sVer = null;
         try {
-            sVer = reposLib.loadModule(Constants.ECSTASY_MODULE).getVersionString();
+            sVer = reposLib.loadModule(ECSTASY_MODULE).getVersionString();
         } catch (Exception ignore) {}
 
         // Use version from single source of truth if module version is not available
@@ -603,9 +623,9 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
         }
 
         // Build version string with optional git information
-        StringBuilder version = new StringBuilder();
+        var version = new StringBuilder();
         version.append("xdk version ").append(sVer)
-               .append(" (").append(Constants.VERSION_MAJOR_CUR).append(".").append(Constants.VERSION_MINOR_CUR).append(")");
+               .append(" (").append(VERSION_MAJOR_CUR).append(".").append(VERSION_MINOR_CUR).append(")");
 
         // Add git info if available
         String gitCommit = BuildInfo.getGitCommit();
@@ -637,24 +657,11 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      *                       binary; as provided to the compiler using the "-o" command line switch
      */
     public ModuleInfo ensureModuleInfo(File fileSpec, File[] resourceSpecs, File binarySpec) {
-        boolean fCache = (resourceSpecs == null || resourceSpecs.length == 0) && binarySpec == null;
-        if (fCache && moduleCache != null) {
-            ModuleInfo info = moduleCache.get(fileSpec);
-            if (info != null) {
-                return info;
-            }
-        }
-
-        ModuleInfo info = new ModuleInfo(fileSpec, options().deduce(), resourceSpecs, binarySpec);
-
-        if (fCache) {
-            if (moduleCache == null) {
-                moduleCache = new HashMap<>();
-            }
-            moduleCache.put(fileSpec, info);
-        }
-
-        return info;
+        final boolean fCache = (resourceSpecs == null || resourceSpecs.length == 0) && binarySpec == null;
+        final boolean deduce = options().deduce();
+        return fCache
+                ? moduleCache.computeIfAbsent(fileSpec, _ -> new ModuleInfo(fileSpec, deduce, resourceSpecs, binarySpec))
+                : new ModuleInfo(fileSpec, deduce, resourceSpecs, binarySpec);
     }
 
     /**
@@ -662,21 +669,15 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      *
      * @param modulePath a list of individual module paths.
      */
-    public void validateModulePath(List<File> modulePath) throws LauncherException {
-        for (File file : modulePath) {
-            String sMsg = "File or directory";
-            if (file.isDirectory()) {
-                sMsg = "Directory";
-            } else if (file.isFile()) {
-                sMsg = "File";
-            }
-
+    protected final void validateModulePath(List<File> modulePath) {
+        for (final var file : modulePath) {
+            final var fileType = file.isDirectory() ? "Directory" : file.isFile() ? "File" : "File or directory";
             if (!file.exists()) {
-                log(ERROR, "File or directory \"" + file + "\" does not exist");
+                log(ERROR, "File or directory {} does not exist", quoted(file));
             } else if (!file.canRead()) {
-                log(ERROR, sMsg + " \"" + file + "\" does not exist");
+                log(ERROR, "{} {} is not readable", fileType, quoted(file));
             } else if (file.isFile() && !file.getName().endsWith(".xtc")) {
-                log(WARNING, "File \"" + file + "\" does not have the \".xtc\" extension");
+                log(WARNING, "File {} does not have the \".xtc\" extension", quoted(file));
             }
         }
     }
@@ -695,15 +696,15 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
                 ModuleInfo info = ensureModuleInfo(file, null, null);
                 File srcFile = info == null ? null : info.getSourceFile();
                 if (srcFile == null || !srcFile.exists()) {
-                    log(ERROR, "Failed to locate the module source code for: " + file);
+                    log(ERROR, "Failed to locate the module source code for: {}", file);
                 }
             } catch (RuntimeException e) {
-                log(ERROR, "Failed to identify the module for: " + file + " (" + e + ")");
+                log(ERROR, "Failed to identify the module for: {} ({})", file, e);
             }
         } else if (!file.canRead()) {
-            log(ERROR, "File not readable: " + file);
+            log(ERROR, "File not readable: {}", quoted(file));
         } else if (!file.getName().endsWith(".x")) {
-            log(WARNING, "Source file does not have a \".x\" extension: " + file);
+            log(WARNING, "Source file does not have a \".x\" extension: {}", quoted(file));
         }
         return file;
     }
@@ -723,13 +724,13 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
 
         boolean fSingle = isExplicitCompiledFile(file.getName());
         if (fSingle && fMulti) {
-            log(ERROR, "The single file " + file + " is specified, but multiple modules are expected");
+            log(ERROR, "The single file {} is specified, but multiple modules are expected", file);
             return;
         }
 
         File dir = fSingle ? file.getParentFile() : file;
         if (dir != null && !dir.exists()) {
-            log(INFO, "Creating directory " + dir);
+            log(INFO, "Creating directory {}", dir);
             // ignore any errors here; errors would end up being reported further down
             //noinspection ResultOfMethodCallIgnored
             dir.mkdirs();
@@ -738,20 +739,17 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
         if (file.exists()) {
             if (!file.isDirectory()) {
                 if (!fSingle) {
-                    log(WARNING, "File " + file + " does not have the \".xtc\" extension");
+                    log(WARNING, "File {} does not have the \".xtc\" extension", file);
                 }
-
                 if (fMulti) {
-                    log(ERROR, "The single file " + file
-                            + " is specified, but multiple modules are expected");
+                    log(ERROR, "The single file {} is specified, but multiple modules are expected", file);
                 }
-
                 if (!file.canWrite()) {
-                    log(ERROR, "File " + file + " can not be written to");
+                    log(ERROR, "File {} can not be written to", file);
                 }
             }
         } else if (dir != null && !dir.exists()) {
-            log(ERROR, "Directory " + dir + " is missing");
+            log(ERROR, "Directory {} is missing", dir);
         }
     }
 
@@ -765,38 +763,28 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * @return a list of "module files", each representing a module's source code
      */
     protected List<ModuleInfo> selectTargets(List<File> listSources, File[] resourceSpecs, File outputSpec) {
-        ListMap<File, ModuleInfo> mapResults = new ListMap<>();
+        final var mapResults = new ListMap<File, ModuleInfo>();
+        final var dups = new HashSet<File>();
 
-        Set<File> setDups = null;
-        for (File file : listSources) {
-            ModuleInfo info    = null;
-            File       srcFile = null;
+        for (final var file : listSources) {
             try {
-                info = ensureModuleInfo(file, resourceSpecs, outputSpec);
-                if (info != null) {
-                    srcFile = info.getSourceFile();
+                final var info = ensureModuleInfo(file, resourceSpecs, outputSpec);
+                final var srcFile = info != null ? info.getSourceFile() : null;
+                if (srcFile == null) {
+                    log(ERROR, "Unable to find module source for file: {}", file);
+                } else if (mapResults.containsKey(srcFile)) {
+                    if (dups.add(srcFile)) {
+                        log(WARNING, "Module source was specified multiple times: {}", srcFile);
+                    }
+                } else {
+                    mapResults.put(srcFile, info);
                 }
             } catch (IllegalStateException | IllegalArgumentException e) {
-                String msg = e.getMessage();
-                log(ERROR, "Could not find module information for " + toPathString(file)
-                        + " (" + (msg == null ? "Reason unknown" : msg) + ")");
-            }
-            if (srcFile == null) {
-                log(ERROR, "Unable to find module source for file: " + file);
-            } else if (mapResults.containsKey(srcFile)) {
-                if (setDups == null) {
-                    setDups = new HashSet<>();
-                }
-                if (!setDups.contains(srcFile)) {
-                    log(WARNING, "Module source was specified multiple times: " + srcFile);
-                    setDups.add(srcFile);
-                }
-            } else {
-                mapResults.put(srcFile, info);
+                final var msg = e.getMessage();
+                log(ERROR, "Could not find module information for {} ({})", toPathString(file), msg != null ? msg : "Reason unknown");
             }
         }
-
-        return new ArrayList<>(mapResults.values());
+        return List.copyOf(mapResults.values());
     }
 
     /**
@@ -821,7 +809,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     protected void reset() {
         m_sevWorst   = NONE;
         m_cSuspended = 0;
-        moduleCache  = null;
+        moduleCache.clear();
     }
 
 
@@ -868,6 +856,54 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
         default void log(Severity sev, String sMsg) {
             out(sev.desc() + ": " + sMsg);
         }
+
+        /**
+         * Log a message with template substitution (SLF4J-style).
+         * Use {} placeholders in the template for parameter substitution.
+         * <p>
+         * Example: log(ERROR, "Command {} not found in {}", cmdName, location)
+         *
+         * @param sev       the severity (may indicate an error)
+         * @param template  the message template with {} placeholders
+         * @param params    parameters to substitute into the template
+         */
+        default void log(Severity sev, String template, Object... params) {
+            out(sev.desc() + ": " + formatTemplate(template, params));
+        }
+
+        /**
+         * Format a message template by substituting {} placeholders with parameters.
+         * Converts SLF4J-style {} placeholders to MessageFormat-style {0}, {1}, etc.
+         * and delegates to MessageFormat for actual formatting.
+         *
+         * @param template  the template string with {} placeholders
+         * @param params    parameters to substitute
+         * @return formatted message
+         */
+        static String formatTemplate(String template, Object... params) {
+            if (template == null || params == null || params.length == 0) {
+                return template;
+            }
+            final var numbered = new StringBuilder(template.length() + params.length * 3);
+            int paramIndex = 0;
+            int pos = 0;
+            while (pos < template.length()) {
+                int openBrace = template.indexOf('{', pos);
+                if (openBrace == -1) {
+                    numbered.append(template.substring(pos));
+                    break;
+                }
+                numbered.append(template, pos, openBrace);
+                if (openBrace + 1 < template.length() && template.charAt(openBrace + 1) == '}') {
+                    numbered.append('{').append(paramIndex++).append('}');
+                    pos = openBrace + 2;
+                } else {
+                    numbered.append('{');
+                    pos = openBrace + 1;
+                }
+            }
+            return MessageFormat.format(numbered.toString(), params);
+        }
     }
 
     /**
@@ -878,10 +914,6 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     static public class LauncherException extends RuntimeException {
         private final boolean error;
         private final int exitCode;
-
-        public LauncherException(final boolean error) {
-            this(error, null, null);
-        }
 
         public LauncherException(final boolean error, final String msg) {
             this(error, msg, null);
@@ -945,45 +977,4 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      */
     protected enum Stage {Init, Parsed, Named, Linked}
 
-
-    // ----- fields --------------------------------------------------------------------------------
-
-    /**
-     * A representation of the Console (e.g. terminal) that this tool is running in.
-     */
-    protected final Console m_console;
-
-    /**
-     * The parsed options.
-     */
-    private final T m_options;
-
-    /**
-     * Get the parsed options for this launcher.
-     *
-     * @return the options instance
-     */
-    protected final T options() {
-        return m_options;
-    }
-
-    /**
-     * The worst severity issue encountered thus far.
-     */
-    protected Severity m_sevWorst = NONE;
-
-    /**
-     * Delegate ErrorListener that receives errors in addition to this Launcher's own logging.
-     * This allows callers to capture errors programmatically while still using the Launcher's
-     * built-in error tracking and reporting. If null was passed to the constructor, this will
-     * be a default ErrorList instance.
-     */
-    protected final ErrorListener m_errDelegate;
-
-    /**
-     * The number of times that errors have been suspended without being resumed.
-     */
-    protected int m_cSuspended;
-
-    protected Map<File, ModuleInfo> moduleCache;
 }

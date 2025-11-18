@@ -164,15 +164,15 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
 
                 if (success) {
                     logger.info("[plugin] Tool execution completed successfully");
-                    return SimpleExecResult.success(exitCode);
+                    return SimpleExecResult.ok(exitCode);
                 }
                 logger.error("[plugin] Tool execution failed with exit code: {}", exitCode);
                 final GradleException gradleException = new GradleException("XTC tool execution failed: " + errorMessage);
-                return SimpleExecResult.failure(exitCode, gradleException);
+                return SimpleExecResult.error(exitCode, gradleException);
             }
         } catch (final Exception e) {
             logger.error("[plugin] Direct invocation failed with exception", e);
-            return SimpleExecResult.failure(-1, e);
+            return SimpleExecResult.error(-1, e);
         }
     }
 
@@ -228,7 +228,7 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
             return executeForkedProcess(cmd, javaToolsJar);
         } catch (final IOException | InterruptedException e) {
             logger.error("[plugin] Forked invocation failed with exception", e);
-            return SimpleExecResult.failure(-1, e);
+            return SimpleExecResult.error(-1, e);
         }
     }
 
@@ -297,10 +297,10 @@ public class JavaClasspathLauncher<E extends XtcLauncherTaskExtension, T extends
         if (exitCode != 0) {
             final Exception failure = new GradleException("Forked process exited with code: " + exitCode);
             logger.error("[plugin] Forked process failed with exit code: {}", exitCode);
-            return SimpleExecResult.failure(exitCode, failure);
+            return SimpleExecResult.error(exitCode, failure);
         }
         logger.info("[plugin] Forked process completed successfully");
-        return SimpleExecResult.success(exitCode);
+        return SimpleExecResult.ok(exitCode);
     }
 
     /**

@@ -2,6 +2,7 @@ package org.xtclang.plugin.tasks;
 
 import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILER_CLASS_NAME;
 import static org.xtclang.plugin.XtcPluginUtils.FileUtils.isValidXtcModuleSafe;
+import static org.xtclang.plugin.XtcPluginUtils.failure;
 
 import java.io.File;
 
@@ -302,7 +303,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
                     oldName, newName, path.getAbsolutePath());
             return;
         }
-        throw new GradleException("Failed to rename '" + oldFile + "' to '" + newFile + "'. Output file already exists and could not be deleted: '" + newFile.getAbsoluteFile() + "'");
+        throw failure("Failed to rename '{}' to '{}'. Output file already exists and could not be deleted: '{}'", oldFile, newFile, newFile.getAbsoluteFile());
     }
 
     private Set<File> resolveXtcSourceFiles() {

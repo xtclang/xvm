@@ -265,9 +265,10 @@ public class ModuleStructure
      *
      * @param constTimestamp  the literal constant indicating the compile date/time, or null
      */
-    public void setTimestamp(LiteralConstant constTimestamp) {
+    public ModuleStructure setTimestamp(LiteralConstant constTimestamp) {
         m_constTimestamp = constTimestamp;
         markModified();
+        return this;
     }
 
     /**
@@ -283,10 +284,11 @@ public class ModuleStructure
      *
      * @param version  the version constant
      */
-    public void setVersion(Version version) {
+    public ModuleStructure setVersion(Version version) {
         assert !isFingerprint();
         markModified();
         m_constVersion = getConstantPool().ensureVersionConstant(version);
+        return this;
     }
 
     /**
@@ -313,11 +315,12 @@ public class ModuleStructure
      *
      * @param vtreeAllow  the version tree of versions to allow (true) and avoid (false)
      */
-    public void setFingerprintVersions(VersionTree<Boolean> vtreeAllow) {
+    public ModuleStructure setFingerprintVersions(VersionTree<Boolean> vtreeAllow) {
         assert isFingerprint();
         m_vtreeImportAllowVers.clear();
         m_vtreeImportAllowVers.putAll(vtreeAllow);
         markModified();
+        return this;
     }
 
     /**

@@ -78,7 +78,7 @@ public class DetachedJavaClasspathLauncher<E extends XtcLauncherTaskExtension, T
             """.trim(), cmd.getIdentifier(), pid, pid);
 
         // Return success immediately without waiting
-        return SimpleExecResult.success(0);
+        return SimpleExecResult.ok(0);
     }
 
     /**

@@ -4,7 +4,6 @@ package org.xvm.tool;
 import java.io.File;
 import java.io.IOException;
 
-import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
@@ -17,9 +16,6 @@ import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Version;
 
-import org.xvm.asm.constants.ModuleConstant;
-import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.compiler.Token;
 
 import org.xvm.tool.LauncherOptions.CompilerOptions;
@@ -30,6 +26,7 @@ import org.xvm.util.Severity;
 
 import static org.xvm.compiler.Compiler.MODULE_MISSING;
 import static org.xvm.tool.ModuleInfo.isExplicitCompiledFile;
+import static org.xvm.util.Handy.quoted;
 import static org.xvm.util.Handy.resolveFile;
 import static org.xvm.util.Severity.ERROR;
 import static org.xvm.util.Severity.FATAL;
@@ -103,14 +100,8 @@ import static org.xvm.util.Severity.WARNING;
  * </ul>
  */
 public class Compiler extends Launcher<CompilerOptions> {
-    /**
-     * Entry point from the OS. Delegates to Launcher.
-     *
-     * @param asArg command line arguments
-     */
-    static void main(String[] asArg) {
-        Launcher.main(insertCommand("xcc", asArg));
-    }
+
+    static final String COMMAND_NAME = "xcc";
 
     /**
      * Compiler constructor for programmatic use.
@@ -123,10 +114,19 @@ public class Compiler extends Launcher<CompilerOptions> {
         super(options, console, errListener);
     }
 
+    /**
+     * Entry point from the OS. Delegates to Launcher.
+     *
+     * @param args command line arguments
+     */
+    static void main(String[] args) {
+        Launcher.main(insertCommand(COMMAND_NAME, args));
+    }
+
     @Override
     protected int process() {
         final var opts = options();
-
+        var opts = options();
         if (opts.showVersion()) {
             showSystemVersion(ensureLibraryRepo());
         }
@@ -135,12 +135,13 @@ public class Compiler extends Launcher<CompilerOptions> {
 
         File[]       resourceDirs = options.getResourceLocation();
         File         outputLoc    = options.getOutputLocation();
-        ModuleInfo[] aTarget      = selectTargets(options.getInputLocations(), resourceDirs, outputLoc).toArray(new ModuleInfo[0]);
+        ModuleInfo[] aTarget      = selectTargets(opts.getInputLocations(), resourceDirs, outputLoc).toArray(new ModuleInfo[0]);
+
         prevModules = aTarget;
 
         int cTargets = aTarget.length;
         if (cTargets == 0) {
-            if (!options.showVersion()) {
+            if (!opts.showVersion()) {
                 displayHelp();
             }
 
@@ -152,69 +153,57 @@ public class Compiler extends Launcher<CompilerOptions> {
             outputLoc = resolveFile(outputLoc);
             if (!outputLoc.exists()) {
                 if (isExplicitCompiledFile(outputLoc.getName())) {
-                    File outputDir = outputLoc.getParentFile();
+                    var outputDir = outputLoc.getParentFile();
                     if (outputDir.exists()) {
                         // it needs to be a directory
                         if (!outputDir.isDirectory()) {
-                            log(ERROR, "The output file is " + outputLoc
-                                    + " but the parent directory cannot be created because"
-                                    + " a file already exists with the same name");
+                            log(ERROR, "The output file is {} but the parent directory cannot be created because a file already exists with the same name", outputLoc);
                         }
                     }
                 }
             }
         }
 
-        Map<String, ModuleInfo> infoByName = new ListMap<>(cTargets);
+        var infoByName = new ListMap<String, ModuleInfo>(cTargets);
         for (int i = 0; i < cTargets; ++i) {
-            ModuleInfo info    = aTarget[i];
-            String     sModule = info.getQualifiedModuleName();
-            File       srcFile = info.getSourceFile();
-            File       binFile = info.getBinaryFile();
+            var info    = aTarget[i];
+            var sModule = info.getQualifiedModuleName();
+            var srcFile = info.getSourceFile();
+            var binFile = info.getBinaryFile();
 
-            log(srcFile == null ? ERROR : INFO, "  [" + i + "]=" + (srcFile == null ? "<unknown>" : srcFile.getPath()));
+            log(srcFile == null ? ERROR : INFO, "  [{}]={}", i, srcFile == null ? "<unknown>" : srcFile.getPath());
 
             if (i == 1 && outputLoc != null && !outputLoc.isDirectory() && isExplicitCompiledFile(outputLoc.getName())) {
-                log(ERROR, "Multiple modules are being compiled, but only one output"
-                        + " module file name (" + outputLoc + ") was specified;"
-                        + " specify a target directory instead");
+                log(ERROR, "Multiple modules are being compiled, but only one output module file name ({}) was specified; specify a target directory instead", outputLoc);
             }
-
             if (srcFile == null || !srcFile.exists()) {
-                log(ERROR, "Could not locate the source for the module " + info.getFileSpec());
+                log(ERROR, "Could not locate the source for the module {}", info.getFileSpec());
             }
-
             if (sModule == null) {
-                log(ERROR, "Could not determine the module name for " + info.getFileSpec());
+                log(ERROR, "Could not determine the module name for {}", info.getFileSpec());
             } else {
                 infoByName.put(sModule, info);
             }
-
             if (binFile == null) {
-                log(ERROR, "Could not determine the target location for " + info.getFileSpec()
-                        + "; the module project may be missing a \"build\" or \"target\" directory");
+                log(ERROR, "Could not determine the target location for {}; the module project may be missing a \"build\" or \"target\" directory", info.getFileSpec());
             } else {
-                File binDir = binFile.getParentFile();
+                var binDir = binFile.getParentFile();
                 if (!binDir.isDirectory() && binDir.exists()) {
-                    log(ERROR, "The output file " + binFile
-                            + " cannot be written because its parent directory cannot be created"
-                            + " because a file already exists with the same name");
+                    log(ERROR, "The output file {} cannot be written because its parent directory cannot be created because a file already exists with the same name", binFile);
                 }
             }
         }
         checkErrors();
 
-        boolean fRebuild = options.isForcedRebuild();
-        Version verStamp = options.getVersion();
-        log(INFO, "Output-path=" + outputLoc + ", force-rebuild=" + fRebuild);
+        final boolean fRebuild = opts.isForcedRebuild();
+        final Version verStamp = opts.getVersion();
+        log(INFO, "Output-path={}, force-rebuild={}", outputLoc, fRebuild);
 
-        Map<File, Node> mapTargets     = new ListMap<>(cTargets);
-        int             cSystemModules = 0;
-        for (ModuleInfo moduleInfo : aTarget) {
-            log(INFO, "Loading and parsing sources for module: "
-                    + moduleInfo.getQualifiedModuleName());
-            Node node = moduleInfo.getSourceTree(this);
-
+        final var mapTargets = new ListMap<File, Node>(cTargets);
+        var cSystemModules = 0;
+        for (final var moduleInfo : aTarget) {
+            log(INFO, "Loading and parsing sources for module: {}", moduleInfo.getQualifiedModuleName());
+            var node = moduleInfo.getSourceTree(this);
             // short-circuit the compilation of any up-to-date modules
             if (fRebuild || !moduleInfo.isUpToDate()) {
                 mapTargets.put(moduleInfo.getSourceFile(), node);
@@ -223,8 +212,7 @@ public class Compiler extends Launcher<CompilerOptions> {
                 }
             } else if (verStamp != null && !verStamp.equals(moduleInfo.getModuleVersion())) {
                 // recompile is not required, but the version stamp needs to be added
-                log(INFO, "Stamping version " + verStamp
-                        + " onto module: " + moduleInfo.getQualifiedModuleName());
+                log(INFO, "Stamping version {} onto module: {}", verStamp, moduleInfo.getQualifiedModuleName());
                 addVersion(moduleInfo, verStamp);
             }
         }
@@ -234,8 +222,7 @@ public class Compiler extends Launcher<CompilerOptions> {
             log(INFO, "All modules are up to date; terminating compiler");
             return 0;
         }
-
-        Node[] allNodes = mapTargets.values().toArray(new Node[0]);
+        final var allNodes = mapTargets.values().toArray(new Node[0]);
         flushAndCheckErrors(allNodes);
 
         // repository setup
@@ -249,17 +236,17 @@ public class Compiler extends Launcher<CompilerOptions> {
         prevLibs = repoLib;
         checkErrors();
 
-        ModuleRepository repoOutput = new ModuleInfoRepository(infoByName, false);
+        final var repoOutput = new ModuleInfoRepository(infoByName, false);
         prevOutput = repoOutput;
         checkErrors();
 
         // the code below could be extracted if necessary: compile(allNodes, repoLib, repoOutput);
         log(INFO, "Creating empty modules and populating namespaces");
-        Map<String, org.xvm.compiler.Compiler> mapCompilers = populateNamespace(allNodes, repoLib);
+        final var mapCompilers = populateNamespace(allNodes, repoLib);
         flushAndCheckErrors(allNodes);
 
         log(INFO, "Resolving names and dependencies");
-        org.xvm.compiler.Compiler[] compilers = mapCompilers.values().toArray(NO_COMPILERS);
+        final var compilers = mapCompilers.values().toArray(NO_COMPILERS);
         linkModules(compilers, repoLib);
         flushAndCheckErrors(allNodes);
 
@@ -278,12 +265,12 @@ public class Compiler extends Launcher<CompilerOptions> {
         flushAndCheckErrors(allNodes);
 
         if (allNodes.length == 1) {
-            log(INFO, "Storing results of compilation: " + allNodes[0].moduleInfo().getBinaryFile());
+            log(INFO, "Storing results of compilation: {}", allNodes[0].moduleInfo().getBinaryFile());
         } else {
             log(INFO, "Storing results of compilation:");
-            for (Node node : allNodes) {
-                ModuleInfo info = node.moduleInfo();
-                log(INFO, "  " + info.getQualifiedModuleName() + " -> " + info.getBinaryFile());
+            for (var node : allNodes) {
+                var info = node.moduleInfo();
+                log(INFO, "  {} -> {}", info.getQualifiedModuleName(), info.getBinaryFile());
             }
         }
         emitModules(allNodes, repoOutput);
@@ -300,15 +287,15 @@ public class Compiler extends Launcher<CompilerOptions> {
      * @param repoLib  the library repository being used for compilation
      */
     protected void injectNativeTurtle(ModuleRepository repoLib) {
-        ModuleRepository repoBuild    = extractBuildRepo(repoLib);
-        ModuleStructure  moduleTurtle = repoBuild.loadModule(Constants.TURTLE_MODULE);
+        var repoBuild    = extractBuildRepo(repoLib);
+        var moduleTurtle = repoBuild.loadModule(Constants.TURTLE_MODULE);
         if (moduleTurtle != null) {
             try (var ignore = ConstantPool.withPool(moduleTurtle.getConstantPool())) {
-                ClassStructure clzNakedRef  = (ClassStructure) moduleTurtle.getChild("NakedRef");
-                TypeConstant   typeNakedRef = clzNakedRef.getFormalType();
+                var clzNakedRef = (ClassStructure) moduleTurtle.getChild("NakedRef");
+                var typeNakedRef = clzNakedRef.getFormalType();
 
-                for (String sModule : repoBuild.getModuleNames()) {
-                    ModuleStructure module = repoBuild.loadModule(sModule);
+                for (var sModule : repoBuild.getModuleNames()) {
+                    var module = repoBuild.loadModule(sModule);
                     module.getConstantPool().setNakedRefType(typeNakedRef);
                 }
             }
@@ -325,32 +312,27 @@ public class Compiler extends Launcher<CompilerOptions> {
      * @return a map from module name to compiler, one for each module being compiled
      */
     protected Map<String, org.xvm.compiler.Compiler> populateNamespace(Node[] allNodes, ModuleRepository repo) {
-        Map<String, org.xvm.compiler.Compiler> mapCompilers = new ListMap<>();
-
-        ModuleRepository repoBuild = extractBuildRepo(repo);
-        for (Node node : allNodes) {
-            // create a module/package/class structure for each dir/file node in the "module tree"
+        final var mapCompilers = new ListMap<String, org.xvm.compiler.Compiler>();
+        final var repoBuild = extractBuildRepo(repo);
+        for (final var node : allNodes) {
+            // Create a module/package/class structure for each dir/file node in the "module tree"
             if (node.type().getCategory().getId() != Token.Id.MODULE) {
-                log(ERROR, "File \"" + node + "\" doesn't contain a module statement");
+                log(ERROR, "File {} doesn't contain a module statement", quoted(node));
                 continue;
             }
-
-            var           compiler = new org.xvm.compiler.Compiler(node.type(), node.errs());
-            FileStructure struct   = compiler.generateInitialFileStructure();
+            final var compiler = new org.xvm.compiler.Compiler(node.type(), node.errs());
+            final var struct = compiler.generateInitialFileStructure();
             if (struct == null) {
                 return null;
             }
-
-            String name = struct.getModuleId().getName();
+            final var name = struct.getModuleId().getName();
             if (mapCompilers.containsKey(name)) {
-                log(ERROR, "Duplicate module name: \"" + name + "\"");
+                log(ERROR, "Duplicate module name: {}", quoted(name));
                 continue;
             }
-
-            // hold on to the module compiler
+            // Hold on to the module compiler
             mapCompilers.put(name, compiler);
-
-            // hold on to the resulting module structure (it will be in the build repository)
+            // Hold on to the resulting module structure (it will be in the build repository)
             assert repoBuild.loadModule(name) == null;
             try {
                 repo.storeModule(struct.getModule());
@@ -359,7 +341,6 @@ public class Compiler extends Launcher<CompilerOptions> {
                 log(FATAL, e.toString());
             }
         }
-
         return mapCompilers;
     }
 
@@ -382,12 +363,75 @@ public class Compiler extends Launcher<CompilerOptions> {
      * @param compilers  a module compiler for each module
      */
     protected void linkModules(org.xvm.compiler.Compiler[] compilers, ModuleRepository repo) {
-        for (var compiler : compilers) {
-            ModuleConstant idMissing = compiler.linkModules(repo);
+        for (final var compiler : compilers) {
+            final var idMissing = compiler.linkModules(repo);
             if (idMissing != null) {
                 compiler.getErrorListener().log(FATAL, MODULE_MISSING, new String[]{idMissing.getName()}, null);
                 return;
             }
+        }
+    }
+
+    /**
+     * Execute a compilation phase across all compilers with retry logic.
+     *
+     * @param compilers  the compilers to execute the phase on
+     * @param phase      the compilation phase to execute
+     * @param phaseName  the name of the phase (for logging)
+     */
+    protected void executeCompilationPhase(org.xvm.compiler.Compiler[] compilers, CompilationPhase phase, String phaseName) {
+        int cTriesLeft = 0x3F;
+        do {
+            boolean fDone = true;
+            for (var compiler : compilers) {
+                try {
+                    fDone &= phase.execute(compiler, cTriesLeft == 1);
+                    if (compiler.isAbortDesired()) {
+                        return;
+                    }
+                } catch (final Throwable e) {
+                    if (phase.shouldLogException()) {
+                        e.printStackTrace(System.err);
+                        log(ERROR, "Failed to {} for {} due to exception: {}", phaseName, compiler, e);
+                    } else {
+                        throw e;
+                    }
+                }
+            }
+            if (fDone) {
+                return;
+            }
+        } while (--cTriesLeft > 0);
+
+        // something couldn't get resolved; must be a bug in the compiler
+        for (var compiler : compilers) {
+            compiler.logRemainingDeferredAsErrors();
+        }
+    }
+
+    /**
+     * Functional interface for a compilation phase.
+     */
+    @FunctionalInterface
+    protected interface CompilationPhase {
+        /**
+         * Execute this phase on a compiler.
+         *
+         * @param compiler  the compiler to execute on
+         * @param fForce    whether to force completion (last try)
+         *
+         * @return true if this phase is complete for this compiler
+         */
+        boolean execute(org.xvm.compiler.Compiler compiler, boolean fForce);
+
+        /**
+         * Whether exceptions during this phase should be logged and continue,
+         * or re-thrown.
+         *
+         * @return true to log and continue, false to re-throw
+         */
+        default boolean shouldLogException() {
+            return false;
         }
     }
 
@@ -398,25 +442,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      * @param compilers  a module compiler for each module
      */
     protected void resolveNames(org.xvm.compiler.Compiler[] compilers) {
-        int cTriesLeft = 0x3F;
-        do {
-            boolean fDone = true;
-            for (var compiler : compilers) {
-                fDone &= compiler.resolveNames(cTriesLeft == 1);
-
-                if (compiler.isAbortDesired()) {
-                    return;
-                }
-            }
-            if (fDone) {
-                return;
-            }
-        } while (--cTriesLeft > 0);
-
-        // something couldn't get resolved; must be a bug in the compiler
-        for (var compiler : compilers) {
-            compiler.logRemainingDeferredAsErrors();
-        }
+        executeCompilationPhase(compilers, org.xvm.compiler.Compiler::resolveNames, "resolve names");
     }
 
     /**
@@ -425,25 +451,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      * @param compilers  a module compiler for each module
      */
     protected void validateExpressions(org.xvm.compiler.Compiler[] compilers) {
-        int cTriesLeft = 0x3F;
-        do {
-            boolean fDone = true;
-            for (var compiler : compilers) {
-                fDone &= compiler.validateExpressions(cTriesLeft == 1);
-
-                if (compiler.isAbortDesired()) {
-                    return;
-                }
-            }
-            if (fDone) {
-                return;
-            }
-        } while (--cTriesLeft > 0);
-
-        // something couldn't get resolved; must be a bug in the compiler
-        for (var compiler : compilers) {
-            compiler.logRemainingDeferredAsErrors();
-        }
+        executeCompilationPhase(compilers, org.xvm.compiler.Compiler::validateExpressions, "validate expressions");
     }
 
     /**
@@ -452,45 +460,30 @@ public class Compiler extends Launcher<CompilerOptions> {
      * @param compilers  a module compiler for each module
      */
     protected void generateCode(org.xvm.compiler.Compiler[] compilers) {
-        int cTriesLeft = 0x3F;
-        do {
-            boolean fDone = true;
-            for (var compiler : compilers) {
-                try {
-                    fDone &= compiler.generateCode(cTriesLeft == 1);
-
-                    if (compiler.isAbortDesired()) {
-                        return;
-                    }
-                } catch (Throwable e) {
-                    System.err.println("Failed to generate code for " + compiler);
-                    e.printStackTrace(System.err);
-
-                    log(ERROR, "Failed to generate code for " + compiler
-                            + " due to exception: " + e);
-                }
+        final var codeGenPhase = new CompilationPhase() {
+            @Override
+            public boolean execute(org.xvm.compiler.Compiler compiler, boolean fForce) {
+                return compiler.generateCode(fForce);
             }
-            if (fDone) {
-                return;
-            }
-        } while (--cTriesLeft > 0);
 
-        // something couldn't get resolved; must be a bug in the compiler
-        for (var compiler : compilers) {
-            compiler.logRemainingDeferredAsErrors();
-        }
+            @Override
+            public boolean shouldLogException() {
+                return true;  // generateCode catches and logs exceptions
+            }
+        };
+        executeCompilationPhase(compilers, codeGenPhase, "generate code");
     }
 
     @SuppressWarnings("UnusedReturnValue")
     private boolean addVersion(ModuleInfo info, Version ver) {
-        File fileBin = info.getBinaryFile();
+        var fileBin = info.getBinaryFile();
         try {
-            FileStructure struct = new FileStructure(fileBin);
+            var struct = new FileStructure(fileBin);
             struct.getModule().setVersion(ver);
             struct.writeTo(fileBin);
             return true;
         } catch (IOException e) {
-            log(ERROR, "Failed to stamp version " + ver + " onto file " + fileBin);
+            log(ERROR, "Failed to stamp version {} onto file {}", ver, fileBin);
             return false;
         }
     }
@@ -499,10 +492,10 @@ public class Compiler extends Launcher<CompilerOptions> {
      * Emit the results of compilation.
      */
     protected void emitModules(Node[] allNodes, ModuleRepository repoOutput) {
-        CompilerOptions options = options();
-        Version version = options.getVersion();
-        for (Node nodeModule : allNodes) {
-            ModuleStructure module = (ModuleStructure) nodeModule.type().getComponent();
+        var opts = options();
+        var version = opts.getVersion();
+        for (var nodeModule : allNodes) {
+            var module = (ModuleStructure) nodeModule.type().getComponent();
 
             assert !module.isFingerprint();
             if (version != null) {
@@ -517,18 +510,17 @@ public class Compiler extends Launcher<CompilerOptions> {
                 }
             } else {
                 // figure out where to put the resulting module
-                File file = nodeModule.file().getParentFile();
+                var file = nodeModule.file().getParentFile();
                 if (file == null) {
-                    log(ERROR, "Unable to determine output location for module \""
-                            + nodeModule.name() + "\" from file :" + nodeModule.file());
+                    log(ERROR, "Unable to determine output location for module {} from file:{}", quoted(nodeModule.name()), nodeModule.file());
                     continue;
                 }
 
                 // at this point, we either have a directory or a file to put it in; resolve that to
                 // an actual compiled module file name
                 if (file.isDirectory()) {
-                    String sName = nodeModule.name();
-                    if (!options.isOutputFilenameQualified()) {
+                    var sName = nodeModule.name();
+                    if (!opts.isOutputFilenameQualified()) {
                         int ofDot = sName.indexOf('.');
                         if (ofDot > 0) {
                             sName = sName.substring(0, ofDot);
@@ -537,13 +529,11 @@ public class Compiler extends Launcher<CompilerOptions> {
                     file = new File(file, sName + ".xtc");
                 }
 
-                FileStructure struct = module.getFileStructure();
+                var struct = module.getFileStructure();
                 try {
                     struct.writeTo(file);
                 } catch (IOException e) {
-                    log(FATAL, "Exception (" + e
-                            + ") occurred while attempting to write module file \""
-                            + file.getAbsolutePath() + "\"");
+                    log(FATAL, "Exception ({}) occurred while attempting to write module file {}", e, quoted(file.getAbsolutePath()));
                 }
             }
         }
@@ -554,14 +544,14 @@ public class Compiler extends Launcher<CompilerOptions> {
 
     @Override
     protected void log(ErrorList errs) {
-        List<ErrorInfo> listErrs = errs.getErrors();
-        int             cErrs    = listErrs.size();
+        var listErrs = errs.getErrors();
+        int cErrs    = listErrs.size();
 
         if (cErrs > 0) {
             // if there are any COMPILER errors, suppress all VERIFY errors except the first three
             boolean fSuppressVerify = false;
 
-            for (ErrorInfo err : listErrs) {
+            for (var err : listErrs) {
                 if (err.getCode().startsWith("COMPILER")) {
                     fSuppressVerify = true;
                     break;
@@ -569,7 +559,7 @@ public class Compiler extends Launcher<CompilerOptions> {
             }
 
             int cVerify = 0;
-            for (ErrorInfo err : listErrs) {
+            for (var err : listErrs) {
                 if (fSuppressVerify && err.getCode().startsWith("VERIFY") && ++cVerify > 3) {
                     continue;
                 }
@@ -591,7 +581,6 @@ public class Compiler extends Launcher<CompilerOptions> {
         if (options().verbose()) {
             return true;
         }
-
         return switch (strictLevel) {
             case None, Suppressed -> sev.compareTo(ERROR) >= 0;
             case Normal, Stickler -> sev.compareTo(WARNING) >= 0;
@@ -603,7 +592,6 @@ public class Compiler extends Launcher<CompilerOptions> {
         return sev.compareTo(strictLevel == Strictness.Stickler ? WARNING : ERROR) >= 0;
     }
 
-
     // ----- accessors -----------------------------------------------------------------------------
 
     @SuppressWarnings("unused")
@@ -612,16 +600,12 @@ public class Compiler extends Launcher<CompilerOptions> {
     }
 
     public ModuleRepository getLibraryRepo() {
-        return prevLibs == null
-                ? configureLibraryRepo(options().getModulePath())
-                : prevLibs;
+        return prevLibs == null ? configureLibraryRepo(options().getModulePath()) : prevLibs;
     }
 
     @SuppressWarnings("unused")
     public ModuleRepository getOutputRepo() {
-        return prevOutput == null
-                ? getLibraryRepo()
-                : prevOutput;
+        return prevOutput == null ? getLibraryRepo() : prevOutput;
     }
 
 
@@ -629,11 +613,11 @@ public class Compiler extends Launcher<CompilerOptions> {
 
     @Override
     protected void validateOptions() {
-        CompilerOptions opts = options();
-
+        var opts = options();
         // Set strictness level based on options
-        // Note: --strict and --nowarn are mutually exclusive (enforced by OptionGroup in LauncherOptions), so we
-        // do not need to check if nowarn and strict are both set and conflicting.
+        //   NOTE: --strict and --nowarn are mutually exclusive (enforced by OptionGroup in LauncherOptions), so we
+        //   do not need to check if nowarn and strict are both set and conflicting.
+        assert !(opts.isStrict() && opts.isNoWarn()): "Incompatible option groups should be checked already.";
         if (opts.isStrict()) {
             strictLevel = Strictness.Stickler;
         } else if (opts.isNoWarn()) {
@@ -644,7 +628,7 @@ public class Compiler extends Launcher<CompilerOptions> {
         validateModulePath(opts.getModulePath());
 
         // Validate the trailing file(s)/dir(s)
-        List<File> listInputs = opts.getInputLocations();
+        var listInputs = opts.getInputLocations();
         for (int i = 0, c = listInputs.size(); i < c; ++i) {
             File fileOld = listInputs.get(i);
             File fileNew = validateSourceInput(fileOld);
@@ -659,7 +643,12 @@ public class Compiler extends Launcher<CompilerOptions> {
 
     // ----- constants -----------------------------------------------------------------------------
 
-    protected enum Strictness { None, Suppressed, Normal, Stickler }
+    protected enum Strictness {
+        None,
+        Suppressed,
+        Normal,
+        Stickler
+    }
 
     protected static org.xvm.compiler.Compiler[] NO_COMPILERS = new org.xvm.compiler.Compiler[0];
 

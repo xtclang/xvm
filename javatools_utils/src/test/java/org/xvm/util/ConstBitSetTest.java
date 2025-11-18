@@ -12,7 +12,7 @@ public final class ConstBitSetTest {
     private ConstBitSetTest() {
     }
 
-    public static void main(String[] args) {
+    static void main(String[] ignoredArgs) {
         BitSet bs = new BitSet();
         for (int i = 0; i < 1000; ++i) {
             ConstBitSet cbs = new ConstBitSet(bs);

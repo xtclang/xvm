@@ -82,12 +82,14 @@ mavenPublishing {
 
 // Add Gradle plugin API version attribute to published variants for proper plugin resolution
 // This is required for Gradle to correctly resolve the plugin when consumed from Maven/Gradle repositories
+// Set to minimum supported Gradle version to ensure compatibility with consumers using older Gradle versions
 val pluginApiVersionAttribute = GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE
+val minimumSupportedGradleVersion = "9.1.0"
 
 configurations.all {
     if (name == "runtimeElements" || name == "apiElements") {
         attributes {
-            attribute(pluginApiVersionAttribute, objects.named(GradlePluginApiVersion::class.java, GradleVersion.current().version))
+            attribute(pluginApiVersionAttribute, objects.named(GradlePluginApiVersion::class.java, minimumSupportedGradleVersion))
         }
     }
 }

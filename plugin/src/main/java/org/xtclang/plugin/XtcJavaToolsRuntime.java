@@ -21,6 +21,7 @@ import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_IN
 import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_NAME_JAR;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_NAME_MANIFEST;
 import static org.xtclang.plugin.XtcPluginUtils.FileUtils.readXdkVersionFromJar;
+import static org.xtclang.plugin.XtcPluginUtils.failure;
 
 /**
  * Runtime utility for accessing javatools classes throughout the plugin.
@@ -95,7 +96,7 @@ public final class XtcJavaToolsRuntime {
             javaToolsClassLoader = createAndSetJavaToolsClassLoader(javaToolsJar, logger);
             logger.info("[plugin] ******* Loaded javatools.jar into plugin classpath: {}", javaToolsJar.getAbsolutePath());
         } catch (final Exception e) {
-            throw new GradleException("[plugin] Failed to load javatools.jar into classpath: " + javaToolsJar.getAbsolutePath(), e);
+            throw failure(e, "[plugin] Failed to load javatools.jar into classpath: {}", javaToolsJar.getAbsolutePath());
         }
     }
 
@@ -136,9 +137,7 @@ public final class XtcJavaToolsRuntime {
         final File resolvedFromXdk = javaToolsFromXdk.isEmpty() ? null : javaToolsFromXdk.getSingleFile();
 
         if (resolvedFromConfig == null && resolvedFromXdk == null) {
-            throw new GradleException("[plugin] ERROR: Failed to resolve '" + XDK_JAVATOOLS_NAME_JAR +
-                    "' from any configuration or dependency. " +
-                    "Ensure the XDK dependency is configured correctly.");
+            throw failure("[plugin] ERROR: Failed to resolve '{}' from any configuration or dependency. Ensure the XDK dependency is configured correctly.", XDK_JAVATOOLS_NAME_JAR);
         }
 
         logger.info("""
@@ -255,21 +254,20 @@ public final class XtcJavaToolsRuntime {
         try {
             return FileUtils.areIdenticalFiles(f1, f2);
         } catch (final IOException e) {
-            throw new GradleException("[plugin] Resolved non-identical multiple '" + XDK_JAVATOOLS_NAME_JAR +
-                    "' ('" + f1.getAbsolutePath() + "' and '" + f2.getAbsolutePath() + "')");
+            throw failure("[plugin] Resolved non-identical multiple '{}' ('{}' and '{}')", XDK_JAVATOOLS_NAME_JAR, f1.getAbsolutePath(), f2.getAbsolutePath());
         }
     }
 
     private static File validateAndReturn(final File file) {
         if (!file.exists()) {
-            throw new GradleException("[plugin] Resolved javatools.jar does not exist: " + file.getAbsolutePath());
+            throw failure("[plugin] Resolved javatools.jar does not exist: {}", file.getAbsolutePath());
         }
         try (var zip = new ZipFile(file)) {
             if (zip.getEntry(XDK_JAVATOOLS_NAME_MANIFEST) == null) {
-                throw new GradleException("[plugin] File is not a valid JAR: " + file.getAbsolutePath());
+                throw failure("[plugin] File is not a valid JAR: {}", file.getAbsolutePath());
             }
         } catch (final IOException e) {
-            throw new GradleException("[plugin] Failed to validate javatools.jar: " + file.getAbsolutePath(), e);
+            throw failure(e, "[plugin] Failed to validate javatools.jar: {}", file.getAbsolutePath());
         }
 
         return file;
