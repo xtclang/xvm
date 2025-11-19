@@ -1,4 +1,5 @@
-Deprecate native launchers or replace them with something
-xtc command Ecstasy.java
-Create release 
-profiling
+* Deprecate native launchers or replace them with something
+* xtc command Ecstasy.java
+* Create release
+* Profiling (see readme)
+* Do we need -PallowRelease for safety still? Test the release process

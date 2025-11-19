@@ -60,7 +60,6 @@ This repository contains comprehensive documentation organized hierarchically:
 ### Development Documentation  
 - **[Docker Guide](docker/README.md)** - Container development, build instructions, and CI integration
 - **[GitHub Actions](/.github/GITHUB_WORKFLOWS.md)** - CI/CD pipeline, workflows, and automation documentation
-- **[Testing Guide](manualTests/TESTING_GUIDE.md)** - Manual testing procedures and test suite documentation
 
 ### Language Documentation
 - **[Ecstasy Language Wiki](https://github.com/xtclang/xvm/wiki)** - Language specification, tutorials, and examples
@@ -71,12 +70,12 @@ This repository contains comprehensive documentation organized hierarchically:
 
 ## What is Ecstasy?
 
-<table cellspacing="0" cellpadding="0" style="border-collapse: collapse; border: none;">
-<tr style="border: none;"><td style="border: none;">
+<table style="border-collapse: collapse; border: none; border-spacing: 0; padding: 0;">
+<tr style="border: none;"><td style="border: none; padding: 0;">
 
 ![Ecstasy](./doc/logo/x.jpg "The Ecstasy Project")
 
-</td><td style="border: none;">
+</td><td style="border: none; padding: 0;">
 
 Ecstasy is an application programming language, designed to enable modular development and long-term
 sustainability of secure, "serverless cloud" applications. Ecstasy leverages a reactive,
@@ -249,7 +248,7 @@ repositories {
 
 **Future Repository Access:** We plan to publish Maven artifacts to Maven Central (Sonatype OSSRH), which will eliminate the need for GitHub user/token configuration. This will make XDK artifacts available through standard Maven Central without authentication.
 
-**Gradle Plugin Portal:** The XTC language plugin is published to the [Gradle Plugin Portal](https://plugins.gradle.org/) and we're moving toward continuous publication of plugin updates. This means you can use the plugin without any special repository configuration:
+**Gradle Plugin Portal:** The XTC language plugin is published to the [Gradle Plugin Portal](https://plugins.gradle.org/), and we're moving toward continuous publication of plugin updates. This means you can use the plugin without any special repository configuration:
 
 ```kotlin
 // No special repositories needed - fetched from Gradle Plugin Portal
@@ -382,7 +381,7 @@ This approach shouldn't be controversial since production installations are hand
 
 ### Environment Configuration
 
-Once you have an XDK installation (via any of the install tasks), configure your environment:
+Once you have an XDK installation (via any of the `install` group tasks), configure your environment:
 
 - **XDK_HOME**: Set this to the root of your XDK installation directory (e.g., `xdk/build/install/xdk`)
 - **PATH**: Add `$XDK_HOME/bin` to your PATH to access `xec` and `xcc` launchers
@@ -405,7 +404,7 @@ The difference between `build` and `installDist` is that `build` creates all the
 
 ### XTC Plugin and Build System Testing
 
-For comprehensive examples of using the XTC Gradle plugin and testing XTC applications, see the [**manualTests**](manualTests/README.md) project documentation. This project demonstrates:
+For comprehensive examples of using the XTC Gradle plugin and testing XTC applications, see the [**manualTests**](manualTests/build.gradle.kts) inline documentation. This project demonstrates:
 
 - XTC Gradle plugin configuration and usage
 - Build lifecycle best practices and caching
@@ -443,7 +442,7 @@ The output of the first command should be `true`. If not, run one of the configu
 **Rule 1**: Always work in feature branches. Direct commits to master are prohibited.
 **Rule 2**: Always rebase your branch on top of latest master. Never merge master into your branch.
 
-##### 1. Create and Setup Your Feature Branch
+##### 1. Create and Set Up Your Feature Branch
 
 ```bash
 # Create new branch from latest master
@@ -675,7 +674,7 @@ The project is organized as a number of subprojects, with the important ones to 
   located at `xdk/javatools/javatools.jar`.
 
 * There is an Ecstasy library in [xvm/javatools_bridge](./javatools_bridge) that is used by the Java
-  interpreter to boot-strap the runtime. When the XDK is built, the resulting module is located at
+  interpreter to bootstrap the runtime. When the XDK is built, the resulting module is located at
   `xdk/javatools/javatools_bridge.xtc`.
 
 * The wiki documentation is [online](https://github.com/xtclang/xvm/wiki). There is an
@@ -827,7 +826,7 @@ To see the list of available tasks for the XDK build, use:
 ./gradlew publishTask --no-parallel
 ```
 
-Remember to run `clean` and the publish task separately due to our composite build architecture.
+Remember to run `clean` and the `publish` task separately due to our composite build architecture.
 
 The group and version of the current XDK build and the XTC Plugin are currently defined in
 the properties file "version.properties". Here, we define the version of the current XDK
@@ -838,7 +837,7 @@ the plugin has the same version or group as the XDK. It's just convenient for ti
 
 The file `gradle/libs.versions.toml` contains all internal and external by-artifact version
 dependencies to the XDK project. If you need to add a new plugin, library, or bundle, always define
-its details in this version catalog, and nowhere else. The XDK build logic, will dynamically plugin
+its details in this version catalog, and nowhere else. The XDK build logic, will dynamically plug in
 in values for the XDK and XTC Plugin artifacts that will be used only as references outside this file.
 
 *TODO*: In the future we will also support tagging and publishing releases on GitHub, using JReleaser or a
@@ -898,7 +897,7 @@ The current semi-manual process looks like this:
 3) To publish the XDK distro to Maven Central: (... TODO ... )
 
 You can already refer to the XDK and the XTC Plugin as external artifacts for your favourite
-XTC project, either by mnaually setting up a link to the XTC Org GitHub Maven Repository like this:
+XTC project, either by manually setting up a link to the XTC Org GitHub Maven Repository like this:
 
 ```
 repositories {
@@ -958,9 +957,9 @@ command like to build or execute the system or anything built on top of it.
 Implementing language support for an alien language on top of Gradle, however, is a fairly
 complex undertaking, and requires deeper knowledge of the Gradle architecture. It is
 our firm belief, though, that the user should not have to drill down to these levels, unless he/she
-specifically wants to. As it is, any open source developer today still needs to grasp some basic
-fundamentals about artifacts and the Gradle build system. This is not just our assumption; it is
-actually industry-wide.
+specifically wants to. As it is, any open source developer today still needs to grasp some fundamentals 
+about artifacts and the Gradle build system. This is not just our assumption; it is actually 
+industry-wide.
 
 We believe the following concepts are necessary to understand, in order to work with XDK
 projects or the XDK. None of them are at all specific to XTC:
@@ -978,16 +977,16 @@ projects or the XDK. None of them are at all specific to XTC:
 * The concept of the Gradle/Maven cache, build daemons, and why "clean" is not what you think  
   of as "clean" in a C++ Makefile and why is it often better not to use it, in a cached, incrementally
   built Gradle project.
-* The concept of Maven/Gradle source sets, like "main", "resources" and "test".
+* The concept of Maven/Gradle source sets, like `main`, `resources` and `test`.
 * The concept of a Gradle build scan, and understanding how to inspect it and how to use it to
   spot build issues.
-* The standard flags that can be used to control Gradle debug log levels, --info, -q, --stacktrace
+* The standard flags that can be used to control Gradle debug log levels, `--info`, `-q`, `--stacktrace`
   and so on.
 * The concept of goal of self-contained software, which specifies its complete dependencies
   as part of its source controlled configuration.
     1) On the Maven model level, this means semantically versioned Maven artifacts.
     2) On the software build and execution level, this also means specific versions of external
-       pieces of software, for example Java, NodeJS or Yarn. This also means that we CAN and SHOULD
+       pieces of software, for example Java, Node.js or Yarn. This also means that we CAN and SHOULD
        always be able to containerize for development purposes.
 
 Today, it is pretty safe to assume that most open source developers who has worked on any Gradle

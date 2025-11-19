@@ -5,18 +5,16 @@ import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Arrays;
 import java.util.Map;
+import java.util.LinkedHashMap;
 
 import org.xvm.asm.Version;
 
-import org.xvm.util.ListMap;
-
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.OptionGroup;
 import org.apache.commons.cli.Options;
@@ -74,11 +72,11 @@ public abstract class LauncherOptions {
         .addOption(builder("J").longOpt("jit").desc("Enable the JIT-to-Java back-end").get())
         .addOption(builder().longOpt("no-recompile").desc("Disable automatic compilation").get())
         .addOption(builder("M").longOpt("method").argName("method").hasArg()
-            .desc("Method name; defaults to \"run\"").get())
+            .desc("Method name; defaults to 'run'").get())
         .addOption(builder("o").argName("file").hasArg()
             .desc("If compilation is necessary, the file or directory to write compiler output to").get())
         .addOption(builder("I").longOpt("inject").argName("name=value").hasArg()
-            .desc("Specifies name/value pairs for injection; format is \"name=value\"").get());
+            .desc("Specifies name/value pairs for injection; format is 'name=value'").get());
 
     /**
      * Apache Commons CLI Options schema for the disassembler.
@@ -102,7 +100,6 @@ public abstract class LauncherOptions {
 
     private final String commandName;
 
-
     /**
      * Constructor from parsed command line.
      *
@@ -110,7 +107,7 @@ public abstract class LauncherOptions {
      * @param schema the Options schema used to parse the command line
      * @param commandName the "alias" for the launcher in question, e.g. "xcc" or "xec"
      */
-    protected LauncherOptions(CommandLine commandLine, Options schema, String commandName) {
+    protected LauncherOptions(final CommandLine commandLine, final Options schema, final String commandName) {
         this.commandLine = commandLine;
         this.schema = schema;
         this.commandName = commandName;
@@ -127,7 +124,7 @@ public abstract class LauncherOptions {
     /**
      * Add mutually exclusive warning options (--strict and --nowarn) to an Options instance.
      */
-    private static Options conflictingOptions(Options options) {
+    private static Options conflictingOptions(final Options options) {
         OptionGroup group = new OptionGroup();
         group.addOption(builder().longOpt("strict").desc("Treat warnings as errors").get());
         group.addOption(builder().longOpt("nowarn").desc("Suppress all warnings").get());
@@ -151,7 +148,7 @@ public abstract class LauncherOptions {
      * @param sPath the path to resolve
      * @return list of resolved File objects (may contain multiple files if wildcards used)
      */
-    protected static List<File> resolvePath(String sPath) {
+    protected static List<File> resolvePath(final String sPath) {
         return resolvePath(sPath, new File("."));
     }
 
@@ -165,7 +162,7 @@ public abstract class LauncherOptions {
      * @param cwd the base directory for resolving relative paths and wildcards (null means current directory)
      * @return list of resolved File objects (may contain multiple files if wildcards used)
      */
-    protected static List<File> resolvePath(String sPath, File cwd) {
+    protected static List<File> resolvePath(String sPath, final File cwd) {
         final List<File> files = new ArrayList<>();
         // Expand tilde for home directory
 
@@ -200,7 +197,7 @@ public abstract class LauncherOptions {
      * @param optionName the short option name (e.g., "L", "r")
      * @return list of File objects parsed from the option values
      */
-    protected List<File> getPathList(String optionName) {
+    protected List<File> getPathList(final String optionName) {
         final var vals = commandLine.getOptionValues(optionName);
         if (vals == null) {
             return Collections.emptyList();
@@ -286,17 +283,17 @@ public abstract class LauncherOptions {
                     json.addProperty(key, values[0]);
                 } else {
                     final var arr = new JsonArray();
-                    for (String val : values) arr.add(val);
+                    for (final String val : values) arr.add(val);
                     json.add(key, arr);
                 }
             }
         }
 
         // Add trailing args if present
-        String[] trailing = getTrailingArgs();
-        if (trailing.length > 0) {
-            JsonArray arr = new JsonArray();
-            for (String arg : trailing) arr.add(arg);
+        final var trailingArgs = getTrailingArgs();
+        if (!trailingArgs.isEmpty()) {
+            final var arr = new JsonArray();
+            trailingArgs.forEach(arr::add);
             json.add("args", arr);
         }
 
@@ -311,7 +308,7 @@ public abstract class LauncherOptions {
      * @param schema the Options schema
      * @return array of command-line arguments
      */
-    protected static String[] jsonToArgs(String jsonString, Options schema) {
+    protected static String[] jsonToArgs(final String jsonString, final Options schema) {
         JsonObject json = JsonParser.parseString(jsonString).getAsJsonObject();
         List<String> args = new ArrayList<>();
 
@@ -340,7 +337,7 @@ public abstract class LauncherOptions {
 
         // Add trailing args
         if (json.has("args")) {
-            for (JsonElement elem : json.getAsJsonArray("args")) {
+            for (final JsonElement elem : json.getAsJsonArray("args")) {
                 args.add(elem.getAsString());
             }
         }
@@ -363,13 +360,13 @@ public abstract class LauncherOptions {
      * Flags are simple presence/absence switches (present = true, absent = false).
      * Stops at first non-option argument to collect trailing args.
      */
-    protected static CommandLine parseCommandLine(Options options, String[] args) throws IllegalArgumentException {
+    protected static CommandLine parseCommandLine(final Options options, final String[] args) {
         try {
-            CommandLineParser parser = new DefaultParser();
             // stopAtNonOption=false means we'll catch unknown options as errors
             // This gives better error messages for typos like --unknown
+            final var parser = new DefaultParser();
             return parser.parse(options, args, false);
-        } catch (ParseException e) {
+        } catch (final ParseException e) {
             throw new IllegalArgumentException("Error parsing command-line arguments: " + e.getMessage(), e);
         }
     }
@@ -377,9 +374,10 @@ public abstract class LauncherOptions {
     /**
      * Get trailing arguments (non-option arguments at end of command line).
      */
-    protected String[] getTrailingArgs() {
-        String[] trailing = commandLine.getArgs();
-        return trailing != null ? trailing : new String[0];
+    protected List<String> getTrailingArgs() {
+        final String[] trailing = commandLine.getArgs();
+        assert trailing != null : "commandLine.getArgs() should never return null.";
+        return List.of(trailing);
     }
 
     /**
@@ -394,23 +392,22 @@ public abstract class LauncherOptions {
         }
 
         // Add usage line with command syntax
-        var sb  = new StringBuilder("Usage:\n")
+        final var sb  = new StringBuilder("Usage:\n")
             .append("    ")
             .append(buildUsageLine(commandName))
             .append("\n\n");
 
-        var helpAppendable = new TextHelpAppendable(sb);
-        helpAppendable.setMaxWidth(120);  // Allow up to 120 characters per line
-        helpAppendable.setLeftPad(2);      // Add 2 spaces to the left of each line (default is 1)
-        // Note: setIndent() doesn't affect table column wrapping; HelpFormatter uses hardcoded TextStyle
-        helpAppendable.setIndent(4);       // Indent for paragraph wrapping (not used in option tables)
-
-        var formatter = HelpFormatter.builder()
-                .setShowSince(false)
-                .setHelpAppendable(helpAppendable)
-                .get();
+        // Allow up to 120 characters per line
+        // Left pad 2 spaces to the left of each line (default is 1)
+        // Indent for paragraph wrapping (not used in option tables)
+        // NOTE: setIndent() doesn't affect table column wrapping; HelpFormatter uses hardcoded TextStyle
         try {
-            formatter.printOptions(schema);
+            final var help = new TextHelpAppendable(sb);
+            help.setMaxWidth(120);
+            help.setMaxWidth(120);
+            help.setLeftPad(2);
+            help.setIndent(4);
+            HelpFormatter.builder().setShowSince(false).setHelpAppendable(help).get().printOptions(schema);
         } catch (final IOException e) {
             return "Error generating help: " + e.getMessage();
         }
@@ -432,7 +429,7 @@ public abstract class LauncherOptions {
      * @param commandName the command name
      * @return the usage line string
      */
-    protected String buildUsageLine(String commandName) {
+    protected String buildUsageLine(final String commandName) {
         return commandName + " [options]";
     }
 
@@ -462,7 +459,7 @@ public abstract class LauncherOptions {
          * @param verbose true to enable verbose mode, false otherwise
          */
         @SuppressWarnings("unchecked")
-        public T enableVerbose(boolean verbose) {
+        public T enableVerbose(final boolean verbose) {
             if (verbose) {
                 args.add("-v");
             }
@@ -483,7 +480,7 @@ public abstract class LauncherOptions {
          * @param deduce true to enable deduction, false otherwise
          */
         @SuppressWarnings("unchecked")
-        public T enableDeduction(boolean deduce) {
+        public T enableDeduction(final boolean deduce) {
             if (deduce) {
                 args.add("-d");
             }
@@ -495,15 +492,15 @@ public abstract class LauncherOptions {
          *
          * @param path the path to add
          */
-        @SuppressWarnings("unchecked")
-        public T addModulePath(File path) {
-            args.addAll(List.of("-L", path.getPath()));
-            return (T) this;
+        public T addModulePath(final File path) {
+            return addModulePaths(List.of(path));
         }
 
-        @SuppressWarnings("unchecked")
-        public T addModulePaths(List<File> paths) {
-            paths.forEach(this::addModulePath);
+        @SuppressWarnings({"unchecked", "unused"})
+        public T addModulePaths(final List<File> paths) {
+            for (final var path : paths) {
+                args.addAll(List.of("-L", path.getPath()));
+            }
             return (T) this;
         }
 
@@ -513,7 +510,7 @@ public abstract class LauncherOptions {
          * @param path the path to add as a string
          */
         @SuppressWarnings("unused")
-        public T addModulePath(String path) {
+        public T addModulePath(final String path) {
             return addModulePath(new File(path));
         }
     }
@@ -524,14 +521,14 @@ public abstract class LauncherOptions {
      */
     public static class CompilerOptions extends LauncherOptions {
 
-        CompilerOptions(CommandLine commandLine) {
+        CompilerOptions(final CommandLine commandLine) {
             super(commandLine, COMPILER_OPTIONS, Compiler.COMMAND_NAME);
         }
 
         /**
          * Parse command-line arguments into CompilerOptions.
          */
-        public static CompilerOptions parse(String[] args) {
+        public static CompilerOptions parse(final String[] args) {
             return new CompilerOptions(parseCommandLine(COMPILER_OPTIONS, args));
         }
 
@@ -543,14 +540,13 @@ public abstract class LauncherOptions {
         }
 
         @Override
-        protected String buildUsageLine(String cmdName) {
+        protected String buildUsageLine(final String cmdName) {
             return cmdName + " [options] <source_files>";
         }
 
         // Typed getters - just delegate to Apache CLI
-
         public List<File> getInputLocations() {
-            return Arrays.stream(getTrailingArgs()).map(File::new).toList();
+            return getTrailingArgs().stream().map(File::new).toList();
         }
 
         public File[] getResourceLocation() {
@@ -622,9 +618,7 @@ public abstract class LauncherOptions {
             }
 
             // Add input files (trailing args)
-            getInputLocations().stream()
-                    .map(File::getPath)
-                    .forEach(args::add);
+            getInputLocations().stream().map(File::getPath).forEach(args::add);
 
             return args.toArray(String[]::new);
         }
@@ -635,7 +629,7 @@ public abstract class LauncherOptions {
          * @param jsonString the JSON configuration
          * @return CompilerOptions instance
          */
-        public static CompilerOptions fromJson(String jsonString) {
+        public static CompilerOptions fromJson(final String jsonString) {
             return CompilerOptions.parse(jsonToArgs(jsonString, COMPILER_OPTIONS));
         }
 
@@ -656,7 +650,7 @@ public abstract class LauncherOptions {
              *
              * @param rebuild true to force rebuild, false otherwise
              */
-            public Builder forceRebuild(boolean rebuild) {
+            public Builder forceRebuild(final boolean rebuild) {
                 if (rebuild) {
                     args.add("--rebuild");
                 }
@@ -676,7 +670,7 @@ public abstract class LauncherOptions {
              *
              * @param strict true to enable strict mode, false otherwise
              */
-            public Builder enableStrictMode(boolean strict) {
+            public Builder enableStrictMode(final boolean strict) {
                 if (strict) {
                     args.add("--strict");
                 }
@@ -696,7 +690,7 @@ public abstract class LauncherOptions {
              *
              * @param disable true to disable warnings, false otherwise
              */
-            public Builder disableWarnings(boolean disable) {
+            public Builder disableWarnings(final boolean disable) {
                 if (disable) {
                     args.add("--nowarn");
                 }
@@ -715,7 +709,7 @@ public abstract class LauncherOptions {
              *
              * @param qualify true to use qualified names, false otherwise
              */
-            public Builder qualifyOutputNames(boolean qualify) {
+            public Builder qualifyOutputNames(final boolean qualify) {
                 if (qualify) {
                     args.add("--qualify");
                 }
@@ -727,7 +721,7 @@ public abstract class LauncherOptions {
              *
              * @param resource the resource file or directory
              */
-            public Builder addResourceLocation(File resource) {
+            public Builder addResourceLocation(final File resource) {
                 args.addAll(List.of("-r", resource.getPath()));
                 return this;
             }
@@ -738,7 +732,7 @@ public abstract class LauncherOptions {
              * @param resource the resource file or directory path as a string
              */
             @SuppressWarnings("unused")
-            public Builder addResourceLocation(String resource) {
+            public Builder addResourceLocation(final String resource) {
                 return addResourceLocation(new File(resource));
             }
 
@@ -747,7 +741,7 @@ public abstract class LauncherOptions {
              *
              * @param output the output file or directory
              */
-            public Builder setOutputLocation(File output) {
+            public Builder setOutputLocation(final File output) {
                 args.addAll(List.of("-o", output.getPath()));
                 return this;
             }
@@ -758,7 +752,7 @@ public abstract class LauncherOptions {
              * @param output the output file or directory path as a string
              */
             @SuppressWarnings("unused")
-            public Builder setOutputLocation(String output) {
+            public Builder setOutputLocation(final String output) {
                 return setOutputLocation(new File(output));
             }
 
@@ -767,7 +761,7 @@ public abstract class LauncherOptions {
              *
              * @param version the version string
              */
-            public Builder setModuleVersion(String version) {
+            public Builder setModuleVersion(final String version) {
                 args.addAll(List.of("--set-version", version));
                 return this;
             }
@@ -777,7 +771,7 @@ public abstract class LauncherOptions {
              *
              * @param input the source file
              */
-            public Builder addInputFile(File input) {
+            public Builder addInputFile(final File input) {
                 args.add(input.getPath());
                 return this;
             }
@@ -788,7 +782,7 @@ public abstract class LauncherOptions {
              * @param input the source file path as a string
              */
             @SuppressWarnings("unused")
-            public Builder addInputFile(String input) {
+            public Builder addInputFile(final String input) {
                 return addInputFile(new File(input));
             }
 
@@ -810,7 +804,7 @@ public abstract class LauncherOptions {
      */
     public static class RunnerOptions extends LauncherOptions {
 
-        RunnerOptions(CommandLine commandLine) {
+        RunnerOptions(final CommandLine commandLine) {
             super(commandLine, RUNNER_OPTIONS, Runner.COMMAND_NAME);
         }
 
@@ -818,7 +812,7 @@ public abstract class LauncherOptions {
          * Parse command-line arguments into RunnerOptions.
          * Throws IllegalArgumentException if there are any parsing errors.
          */
-        public static RunnerOptions parse(String[] args) {
+        public static RunnerOptions parse(final String[] args) {
             return new RunnerOptions(parseCommandLine(RUNNER_OPTIONS, args));
         }
 
@@ -830,15 +824,14 @@ public abstract class LauncherOptions {
         }
 
         @Override
-        protected String buildUsageLine(String cmdName) {
+        protected String buildUsageLine(final String cmdName) {
             return cmdName + " [options] <module_or_file> [args...]";
         }
 
         // Typed getters for all runner-specific options
 
         public String getMethodName() {
-            String method = commandLine.getOptionValue("M");
-            return method != null ? method : "run";
+            return commandLine.getOptionValue("M", "run");
         }
 
         public boolean isCompileDisabled() {
@@ -851,24 +844,22 @@ public abstract class LauncherOptions {
 
         public File getTarget() {
             // First trailing arg is the module/file to execute
-            String[] trailing = getTrailingArgs();
-            return trailing.length > 0 ? new File(trailing[0]) : null;
+            final var trailing = getTrailingArgs();
+            return trailing.isEmpty() ? null : new File(trailing.getFirst());
         }
 
         public File getOutputFile() {
-            String val = commandLine.getOptionValue("o");
-            return val != null ? new File(val) : null;
+            final String val = commandLine.getOptionValue("o");
+            return val == null ? null : new File(val);
         }
 
         public String[] getMethodArgs() {
             // Everything after the first trailing arg goes to the method
-            String[] trailing = getTrailingArgs();
-            if (trailing.length <= 1) {
+            final var trailing = getTrailingArgs();
+            if (trailing.size() <= 1) {
                 return new String[0];
             }
-            String[] methodArgs = new String[trailing.length - 1];
-            System.arraycopy(trailing, 1, methodArgs, 0, methodArgs.length);
-            return methodArgs;
+            return trailing.subList(1, trailing.size()).toArray(String[]::new);
         }
 
         public Map<String, String> getInjections() {
@@ -876,8 +867,8 @@ public abstract class LauncherOptions {
             if (vals == null) {
                 return Collections.emptyMap();
             }
-            Map<String, String> injections = new ListMap<>();
-            for (String val : vals) {
+            final var injections = new LinkedHashMap<String, String>();
+            for (final String val : vals) {
                 int idx = val.indexOf('=');
                 if (idx > 0) {
                     injections.put(val.substring(0, idx), val.substring(idx + 1));
@@ -936,7 +927,7 @@ public abstract class LauncherOptions {
          * @param jsonString the JSON configuration
          * @return RunnerOptions instance
          */
-        public static RunnerOptions fromJson(String jsonString) {
+        public static RunnerOptions fromJson(final String jsonString) {
             return RunnerOptions.parse(jsonToArgs(jsonString, RUNNER_OPTIONS));
         }
 
@@ -958,7 +949,7 @@ public abstract class LauncherOptions {
              *
              * @param enable true to enable JIT, false otherwise
              */
-            public Builder enableJit(boolean enable) {
+            public Builder enableJit(final boolean enable) {
                 if (enable) {
                     args.add("-J");
                 }
@@ -978,7 +969,7 @@ public abstract class LauncherOptions {
              *
              * @param disable true to disable auto-compilation, false otherwise
              */
-            public Builder disableRebuild(boolean disable) {
+            public Builder disableRebuild(final boolean disable) {
                 if (disable) {
                     args.add("--no-recompile");
                 }
@@ -990,7 +981,7 @@ public abstract class LauncherOptions {
              *
              * @param methodName the method name
              */
-            public Builder setMethodName(String methodName) {
+            public Builder setMethodName(final String methodName) {
                 args.addAll(List.of("-M", methodName));
                 return this;
             }
@@ -1000,7 +991,7 @@ public abstract class LauncherOptions {
              *
              * @param output the output file or directory
              */
-            public Builder setOutputLocation(File output) {
+            public Builder setOutputLocation(final File output) {
                 args.addAll(List.of("-o", output.getPath()));
                 return this;
             }
@@ -1011,7 +1002,7 @@ public abstract class LauncherOptions {
              * @param output the output file or directory path as a string
              */
             @SuppressWarnings("unused")
-            public Builder setOutputLocation(String output) {
+            public Builder setOutputLocation(final String output) {
                 return setOutputLocation(new File(output));
             }
 
@@ -1022,7 +1013,7 @@ public abstract class LauncherOptions {
              * @param value the injection value
              */
             @SuppressWarnings("unused")
-            public Builder addInjection(String name, String value) {
+            public Builder addInjection(final String name, final String value) {
                 args.addAll(List.of("-I", name + "=" + value));
                 return this;
             }
@@ -1032,7 +1023,7 @@ public abstract class LauncherOptions {
              *
              * @param target the module or file to run
              */
-            public Builder setTarget(File target) {
+            public Builder setTarget(final File target) {
                 args.add(target.getPath());
                 return this;
             }
@@ -1042,7 +1033,7 @@ public abstract class LauncherOptions {
              *
              * @param target the module or file path as a string
              */
-            public Builder setTarget(String target) {
+            public Builder setTarget(final String target) {
                 return setTarget(new File(target));
             }
 
@@ -1052,7 +1043,7 @@ public abstract class LauncherOptions {
              * @param target the module or file to run
              * @param methodArgs the arguments to pass to the executed method
              */
-            public Builder setTarget(File target, String... methodArgs) {
+            public Builder setTarget(final File target, final String... methodArgs) {
                 args.add(target.getPath());
                 Collections.addAll(args, methodArgs);
                 return this;
@@ -1065,7 +1056,7 @@ public abstract class LauncherOptions {
              * @param methodArgs the arguments to pass to the executed method
              */
             @SuppressWarnings("unused")
-            public Builder setTarget(String target, String... methodArgs) {
+            public Builder setTarget(final String target, final String... methodArgs) {
                 return setTarget(new File(target), methodArgs);
             }
 
@@ -1075,7 +1066,7 @@ public abstract class LauncherOptions {
              * @param arg the argument
              */
             @SuppressWarnings("unused")
-            public Builder addMethodArgument(String arg) {
+            public Builder addMethodArgument(final String arg) {
                 args.add(arg);
                 return this;
             }
@@ -1097,14 +1088,14 @@ public abstract class LauncherOptions {
      */
     public static class DisassemblerOptions extends LauncherOptions {
 
-        DisassemblerOptions(CommandLine commandLine) {
+        DisassemblerOptions(final CommandLine commandLine) {
             super(commandLine, DISASSEMBLER_OPTIONS, Disassembler.COMMAND_NAME);
         }
 
         /**
          * Parse command-line arguments into DisassemblerOptions.
          */
-        public static DisassemblerOptions parse(String[] args) {
+        public static DisassemblerOptions parse(final String[] args) {
             return new DisassemblerOptions(parseCommandLine(DISASSEMBLER_OPTIONS, args));
         }
 
@@ -1116,14 +1107,14 @@ public abstract class LauncherOptions {
         }
 
         @Override
-        protected String buildUsageLine(String cmdName) {
+        protected String buildUsageLine(final String cmdName) {
             return cmdName + " [options] <module_file>";
         }
 
         public File getTarget() {
             // First trailing arg is the module file to disassemble
             final var trailing = getTrailingArgs();
-            return trailing.length > 0 ? new File(trailing[0]) : null;
+            return trailing.isEmpty() ? null : new File(trailing.getFirst());
         }
 
         public boolean isListFiles() {
@@ -1137,28 +1128,19 @@ public abstract class LauncherOptions {
 
         @Override
         public String[] toCommandLine() {
-            List<String> args = new ArrayList<>();
-
-            // Add common flags from base class
+            final List<String> args = new ArrayList<>();
             Collections.addAll(args, super.toCommandLine());
-
-            // Add disassembler-specific flags
             if (isListFiles()) {
                 args.add("--files");
             }
-
-            // Add findfile
-            File findFile = getFindFile();
+            final File findFile = getFindFile();
             if (findFile != null) {
                 args.addAll(List.of("--findfile", findFile.getPath()));
             }
-
-            // Add target file
-            File target = getTarget();
+            final File target = getTarget();
             if (target != null) {
                 args.add(target.getPath());
             }
-
             return args.toArray(String[]::new);
         }
 
@@ -1168,7 +1150,7 @@ public abstract class LauncherOptions {
          * @param jsonString the JSON configuration
          * @return DisassemblerOptions instance
          */
-        public static DisassemblerOptions fromJson(String jsonString) {
+        public static DisassemblerOptions fromJson(final String jsonString) {
             return DisassemblerOptions.parse(jsonToArgs(jsonString, DISASSEMBLER_OPTIONS));
         }
 
@@ -1191,7 +1173,7 @@ public abstract class LauncherOptions {
              *
              * @param list true to list files, false otherwise
              */
-            public Builder listEmbeddedFiles(boolean list) {
+            public Builder listEmbeddedFiles(final boolean list) {
                 if (list) {
                     args.add("--files");
                 }
@@ -1203,7 +1185,7 @@ public abstract class LauncherOptions {
              *
              * @param file the file to search for
              */
-            public Builder findEmbeddedFile(File file) {
+            public Builder findEmbeddedFile(final File file) {
                 args.addAll(List.of("--findfile", file.getPath()));
                 return this;
             }
@@ -1214,7 +1196,7 @@ public abstract class LauncherOptions {
              * @param file the file path as a string
              */
             @SuppressWarnings("unused")
-            public Builder findEmbeddedFile(String file) {
+            public Builder findEmbeddedFile(final String file) {
                 return findEmbeddedFile(new File(file));
             }
 
@@ -1223,7 +1205,7 @@ public abstract class LauncherOptions {
              *
              * @param target the module file
              */
-            public Builder setTarget(File target) {
+            public Builder setTarget(final File target) {
                 args.add(target.getPath());
                 return this;
             }
@@ -1233,7 +1215,7 @@ public abstract class LauncherOptions {
              *
              * @param target the module file path as a string
              */
-            public Builder setTarget(String target) {
+            public Builder setTarget(final String target) {
                 return setTarget(new File(target));
             }
 

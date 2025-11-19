@@ -341,7 +341,7 @@ public class Compiler {
      */
     private void validateCompiler() {
         if (getStage() == Stage.Discarded) {
-            throw new IllegalStateException();
+            throw new IllegalStateException("Compiler has been discarded.");
         }
     }
 
@@ -471,7 +471,7 @@ public class Compiler {
          */
         public void ensureValid() {
             if (this == Discarded) {
-                throw new IllegalStateException();
+                throw new IllegalStateException("Compiler has been discarded.");
             }
         }
 

@@ -171,12 +171,10 @@ public class Runner extends Launcher<RunnerOptions> {
         // check if the compiled module file name was specified
         if (module == null && binExists) {
             if (checkReadable(fileBin)) {
-                try {
-                    try (var in = new FileInputStream(fileBin)) {
-                        var struct = new FileStructure(in);
-                        module = struct.getModule();
-                    }
-                } catch (IOException e) {
+                try (var in = new FileInputStream(fileBin)) {
+                    var struct = new FileStructure(in);
+                    module = struct.getModule();
+                } catch (final IOException e) {
                     log(FATAL, "I/O exception ({}) reading module file: {}", e, fileBin);
                     throw abort(true);
                 }
@@ -189,8 +187,10 @@ public class Runner extends Launcher<RunnerOptions> {
         }
         try {
             repo.storeModule(module);
-        } catch (IOException e) {
-            log(FATAL, "I/O exception ({}) storing module file: {}", e, fileSpec);
+        } catch (final IOException e) {
+            // TODO: This is kind of weird. "FATAL" is pretty much always "bad enough to print", and
+            //   logging something fatal will abort. Not 100% consistent to also abort.
+            log(FATAL, "I/O exception ({}) storing module file: {}", e.getMessage(), fileSpec);
             throw abort(true);
         }
         checkErrors();

@@ -101,7 +101,25 @@ import static org.xvm.util.Severity.WARNING;
  */
 public class Compiler extends Launcher<CompilerOptions> {
 
-    static final String COMMAND_NAME = "xcc";
+    protected static final String COMMAND_NAME = "xcc";
+
+    protected static org.xvm.compiler.Compiler[] NO_COMPILERS = new org.xvm.compiler.Compiler[0];
+
+    // ----- constants -----------------------------------------------------------------------------
+
+    protected enum Strictness {
+        None,
+        Suppressed,
+        Normal,
+        Stickler
+    }
+
+    protected Strictness strictLevel = Strictness.Normal;
+
+    protected ModuleRepository repoLib;
+    protected ModuleInfo[]     prevModules;
+    protected ModuleRepository prevLibs;
+    protected ModuleRepository prevOutput;
 
     /**
      * Compiler constructor for programmatic use.
@@ -110,16 +128,17 @@ public class Compiler extends Launcher<CompilerOptions> {
      * @param console     representation of the terminal within which this command is run, or null
      * @param errListener optional ErrorListener to receive errors, or null for no delegation
      */
-    public Compiler(CompilerOptions options, Console console, ErrorListener errListener) {
+    public Compiler(final CompilerOptions options, final Console console, final ErrorListener errListener) {
         super(options, console, errListener);
     }
 
     /**
+     *
      * Entry point from the OS. Delegates to Launcher.
      *
      * @param args command line arguments
      */
-    static void main(String[] args) {
+    static void main(final String[] args) {
         Launcher.main(insertCommand(COMMAND_NAME, args));
     }
 
@@ -269,7 +288,7 @@ public class Compiler extends Launcher<CompilerOptions> {
             log(INFO, "Storing results of compilation: {}", allNodes[0].moduleInfo().getBinaryFile());
         } else {
             log(INFO, "Storing results of compilation:");
-            for (var node : allNodes) {
+            for (final var node : allNodes) {
                 var info = node.moduleInfo();
                 log(INFO, "  {} -> {}", info.getQualifiedModuleName(), info.getBinaryFile());
             }
@@ -287,7 +306,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      *
      * @param repoLib  the library repository being used for compilation
      */
-    protected void injectNativeTurtle(ModuleRepository repoLib) {
+    protected void injectNativeTurtle(final ModuleRepository repoLib) {
         var repoBuild    = extractBuildRepo(repoLib);
         var moduleTurtle = repoBuild.loadModule(Constants.TURTLE_MODULE);
         if (moduleTurtle != null) {
@@ -295,7 +314,7 @@ public class Compiler extends Launcher<CompilerOptions> {
                 var clzNakedRef = (ClassStructure) moduleTurtle.getChild("NakedRef");
                 var typeNakedRef = clzNakedRef.getFormalType();
 
-                for (var sModule : repoBuild.getModuleNames()) {
+                for (final var sModule : repoBuild.getModuleNames()) {
                     var module = repoBuild.loadModule(sModule);
                     module.getConstantPool().setNakedRefType(typeNakedRef);
                 }
@@ -312,7 +331,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      *
      * @return a map from module name to compiler, one for each module being compiled
      */
-    protected Map<String, org.xvm.compiler.Compiler> populateNamespace(Node[] allNodes, ModuleRepository repo) {
+    protected Map<String, org.xvm.compiler.Compiler> populateNamespace(final Node[] allNodes, final ModuleRepository repo) {
         final var mapCompilers = new ListMap<String, org.xvm.compiler.Compiler>();
         final var repoBuild = extractBuildRepo(repo);
         for (final var node : allNodes) {
@@ -338,7 +357,7 @@ public class Compiler extends Launcher<CompilerOptions> {
             try {
                 repo.storeModule(struct.getModule());
                 assert repoBuild.loadModule(name) != null;
-            } catch (IOException e) {
+            } catch (final IOException e) {
                 log(FATAL, e.toString());
             }
         }
@@ -363,7 +382,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      *
      * @param compilers  a module compiler for each module
      */
-    protected void linkModules(org.xvm.compiler.Compiler[] compilers, ModuleRepository repo) {
+    protected void linkModules(final org.xvm.compiler.Compiler[] compilers, final ModuleRepository repo) {
         for (final var compiler : compilers) {
             final var idMissing = compiler.linkModules(repo);
             if (idMissing != null) {
@@ -380,17 +399,17 @@ public class Compiler extends Launcher<CompilerOptions> {
      * @param phase      the compilation phase to execute
      * @param phaseName  the name of the phase (for logging)
      */
-    protected void executeCompilationPhase(org.xvm.compiler.Compiler[] compilers, CompilationPhase phase, String phaseName) {
+    protected void executeCompilationPhase(final org.xvm.compiler.Compiler[] compilers, final CompilationPhase phase, final String phaseName) {
         int cTriesLeft = 0x3F;
         do {
             boolean fDone = true;
-            for (var compiler : compilers) {
+            for (final var compiler : compilers) {
                 try {
                     fDone &= phase.execute(compiler, cTriesLeft == 1);
                     if (compiler.isAbortDesired()) {
                         return;
                     }
-                } catch (final Throwable e) {
+                } catch (final RuntimeException e) {
                     if (phase.shouldLogException()) {
                         e.printStackTrace(System.err);
                         log(ERROR, "Failed to {} for {} due to exception: {}", phaseName, compiler, e);
@@ -405,7 +424,7 @@ public class Compiler extends Launcher<CompilerOptions> {
         } while (--cTriesLeft > 0);
 
         // something couldn't get resolved; must be a bug in the compiler
-        for (var compiler : compilers) {
+        for (final var compiler : compilers) {
             compiler.logRemainingDeferredAsErrors();
         }
     }
@@ -442,7 +461,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      *
      * @param compilers  a module compiler for each module
      */
-    protected void resolveNames(org.xvm.compiler.Compiler[] compilers) {
+    protected void resolveNames(final org.xvm.compiler.Compiler[] compilers) {
         executeCompilationPhase(compilers, org.xvm.compiler.Compiler::resolveNames, "resolve names");
     }
 
@@ -451,7 +470,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      *
      * @param compilers  a module compiler for each module
      */
-    protected void validateExpressions(org.xvm.compiler.Compiler[] compilers) {
+    protected void validateExpressions(final org.xvm.compiler.Compiler[] compilers) {
         executeCompilationPhase(compilers, org.xvm.compiler.Compiler::validateExpressions, "validate expressions");
     }
 
@@ -460,10 +479,10 @@ public class Compiler extends Launcher<CompilerOptions> {
      *
      * @param compilers  a module compiler for each module
      */
-    protected void generateCode(org.xvm.compiler.Compiler[] compilers) {
+    protected void generateCode(final org.xvm.compiler.Compiler[] compilers) {
         final var codeGenPhase = new CompilationPhase() {
             @Override
-            public boolean execute(org.xvm.compiler.Compiler compiler, boolean fForce) {
+            public boolean execute(final org.xvm.compiler.Compiler compiler, final boolean fForce) {
                 return compiler.generateCode(fForce);
             }
 
@@ -476,14 +495,14 @@ public class Compiler extends Launcher<CompilerOptions> {
     }
 
     @SuppressWarnings("UnusedReturnValue")
-    private boolean addVersion(ModuleInfo info, Version ver) {
+    private boolean addVersion(final ModuleInfo info, final Version ver) {
         var fileBin = info.getBinaryFile();
         try {
             var struct = new FileStructure(fileBin);
             struct.getModule().setVersion(ver);
             struct.writeTo(fileBin);
             return true;
-        } catch (IOException e) {
+        } catch (final IOException e) {
             log(ERROR, "Failed to stamp version {} onto file {}", ver, fileBin);
             return false;
         }
@@ -492,10 +511,10 @@ public class Compiler extends Launcher<CompilerOptions> {
     /**
      * Emit the results of compilation.
      */
-    protected void emitModules(Node[] allNodes, ModuleRepository repoOutput) {
+    protected void emitModules(final Node[] allNodes, final ModuleRepository repoOutput) {
         var opts = options();
         var version = opts.getVersion();
-        for (var nodeModule : allNodes) {
+        for (final var nodeModule : allNodes) {
             var module = (ModuleStructure) nodeModule.type().getComponent();
 
             assert !module.isFingerprint();
@@ -506,14 +525,14 @@ public class Compiler extends Launcher<CompilerOptions> {
             if (repoOutput != null) {
                 try {
                     repoOutput.storeModule(module);
-                } catch (IOException e) {
+                } catch (final IOException e) {
                     log(FATAL, e.toString());
                 }
             } else {
                 // figure out where to put the resulting module
                 var file = nodeModule.file().getParentFile();
                 if (file == null) {
-                    log(ERROR, "Unable to determine output location for module {} from file:{}", quoted(nodeModule.name()), nodeModule.file());
+                    log(ERROR, "Unable to determine output location for module {} from file: {}", quoted(nodeModule.name()), nodeModule.file());
                     continue;
                 }
 
@@ -533,7 +552,7 @@ public class Compiler extends Launcher<CompilerOptions> {
                 var struct = module.getFileStructure();
                 try {
                     struct.writeTo(file);
-                } catch (IOException e) {
+                } catch (final IOException e) {
                     log(FATAL, "Exception ({}) occurred while attempting to write module file {}", e, quoted(file.getAbsolutePath()));
                 }
             }
@@ -544,7 +563,7 @@ public class Compiler extends Launcher<CompilerOptions> {
     // ----- text output and error handling --------------------------------------------------------
 
     @Override
-    protected void log(ErrorList errs) {
+    protected void log(final ErrorList errs) {
         var listErrs = errs.getErrors();
         int cErrs    = listErrs.size();
 
@@ -552,7 +571,7 @@ public class Compiler extends Launcher<CompilerOptions> {
             // if there are any COMPILER errors, suppress all VERIFY errors except the first three
             boolean fSuppressVerify = false;
 
-            for (var err : listErrs) {
+            for (final var err : listErrs) {
                 if (err.getCode().startsWith("COMPILER")) {
                     fSuppressVerify = true;
                     break;
@@ -560,7 +579,7 @@ public class Compiler extends Launcher<CompilerOptions> {
             }
 
             int cVerify = 0;
-            for (var err : listErrs) {
+            for (final var err : listErrs) {
                 if (fSuppressVerify && err.getCode().startsWith("VERIFY") && ++cVerify > 3) {
                     continue;
                 }
@@ -578,7 +597,7 @@ public class Compiler extends Launcher<CompilerOptions> {
     }
 
     @Override
-    protected boolean isBadEnoughToPrint(Severity sev) {
+    protected boolean isBadEnoughToPrint(final Severity sev) {
         if (options().verbose()) {
             return true;
         }
@@ -589,7 +608,7 @@ public class Compiler extends Launcher<CompilerOptions> {
     }
 
     @Override
-    protected boolean isBadEnoughToAbort(Severity sev) {
+    protected boolean isBadEnoughToAbort(final Severity sev) {
         return sev.compareTo(strictLevel == Strictness.Stickler ? WARNING : ERROR) >= 0;
     }
 
@@ -641,25 +660,4 @@ public class Compiler extends Launcher<CompilerOptions> {
         // Validate the -o file/dir
         validateModuleOutput(opts.getOutputLocation(), listInputs.size() > 1);
     }
-
-    // ----- constants -----------------------------------------------------------------------------
-
-    protected enum Strictness {
-        None,
-        Suppressed,
-        Normal,
-        Stickler
-    }
-
-    protected static org.xvm.compiler.Compiler[] NO_COMPILERS = new org.xvm.compiler.Compiler[0];
-
-
-    // ----- fields --------------------------------------------------------------------------------
-
-    protected Strictness strictLevel = Strictness.Normal;
-
-    protected ModuleRepository repoLib;
-    protected ModuleInfo[]     prevModules;
-    protected ModuleRepository prevLibs;
-    protected ModuleRepository prevOutput;
 }

@@ -4,7 +4,6 @@ package org.xvm.runtime.template._native.lang.src;
 import java.io.File;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -55,6 +54,7 @@ import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTe
 import org.xvm.runtime.template._native.reflect.xRTFileTemplate;
 
 import org.xvm.tool.Compiler;
+import org.xvm.tool.Console;
 import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.ModuleInfo;
 import org.xvm.tool.ModuleInfo.Node;
@@ -93,10 +93,8 @@ public class xRTCompiler extends xService {
     }
 
     @Override
-    public ServiceHandle createServiceHandle(ServiceContext context, ClassComposition clz,
-                                             TypeConstant typeMask) {
-        CompilerHandle hCompiler =
-                new CompilerHandle(clz.maskAs(typeMask), context, new CompilerAdapter(null));
+    public ServiceHandle createServiceHandle(ServiceContext context, ClassComposition clz, TypeConstant typeMask) {
+        var hCompiler = new CompilerHandle(clz.maskAs(typeMask), context, new CompilerAdapter(null));
         context.setService(hCompiler);
         return hCompiler;
     }
