@@ -66,20 +66,23 @@ public class Runner extends Launcher<RunnerOptions> {
         Launcher.main(insertCommand(COMMAND_NAME, asArg));
     }
 
+    // TODO: Also support process calls with an overriding options object as parameter.
     @Override
     protected int process() {
         // repository setup
         final var opts = options();
-        ModuleRepository repo = configureLibraryRepo(opts.getModulePath());
-        checkErrors();
 
+	var repo = configureLibraryRepo(opts.getModulePath());
+
+	checkErrors();
+	
         if (opts.showVersion()) {
             showSystemVersion(repo);
         }
 
         final File fileSpec = opts.getTarget();
         if (fileSpec == null) {
-            if (fShowVer) {
+            if (opts.showVersion()) {
                 return 0;
             }
             displayHelp();
@@ -91,6 +94,7 @@ public class Runner extends Launcher<RunnerOptions> {
         boolean         binExists  = false;
         ModuleStructure module     = null;
         String          binLocDesc;
+
         if (isExplicitCompiledFile(filePath) && fileSpec.exists() && (opts.isCompileDisabled() || isPathed(filePath))) {
             // the caller has explicitly specified the exact .xtc file and/or
             fileBin    = fileSpec;

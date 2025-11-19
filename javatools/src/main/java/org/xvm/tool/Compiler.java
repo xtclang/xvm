@@ -123,28 +123,28 @@ public class Compiler extends Launcher<CompilerOptions> {
         Launcher.main(insertCommand(COMMAND_NAME, args));
     }
 
+    // TODO: Also support a process call with an optional options paramter (and likely run and stuff...)
     @Override
     protected int process() {
         final var opts = options();
-        var opts = options();
+
         if (opts.showVersion()) {
             showSystemVersion(ensureLibraryRepo());
         }
 
         log(Severity.INFO, "Selecting compilation targets");
 
-        File[]       resourceDirs = options.getResourceLocation();
-        File         outputLoc    = options.getOutputLocation();
+        File[]       resourceDirs = opts.getResourceLocation();
+        File         outputLoc    = opts.getOutputLocation();
         ModuleInfo[] aTarget      = selectTargets(opts.getInputLocations(), resourceDirs, outputLoc).toArray(new ModuleInfo[0]);
 
         prevModules = aTarget;
 
         int cTargets = aTarget.length;
         if (cTargets == 0) {
-            if (!opts.showVersion()) {
-                displayHelp();
+            if (opts.showVersion()) {
+                return 0;
             }
-
             displayHelp();
             return 1;
         }
@@ -179,6 +179,7 @@ public class Compiler extends Launcher<CompilerOptions> {
             if (srcFile == null || !srcFile.exists()) {
                 log(ERROR, "Could not locate the source for the module {}", info.getFileSpec());
             }
+	    // TODO: Consider log(ERROR, ...) -> error(...) 
             if (sModule == null) {
                 log(ERROR, "Could not determine the module name for {}", info.getFileSpec());
             } else {
