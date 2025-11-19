@@ -381,7 +381,7 @@ public class MyOptions {
     }
     
     // Get trailing args (e.g., main class name + its args)
-    public String[] getTrailingArgs() {
+    public List<String> getTrailingArgs() {
         return trailingArgs;
     }
     

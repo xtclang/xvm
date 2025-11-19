@@ -1,12 +1,11 @@
 package org.xvm.tool;
 
-
 import java.io.File;
-import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
@@ -50,27 +49,32 @@ import static org.xvm.util.Severity.WARNING;
 /**
  * The "launcher" commands:
  *
- * <ul><li> <code>xcc</code> <i>("ecstasy")</i> routes to {@link Compiler}
- * </li><li> <code>xec</code> <i>("exec")</i> routes to {@link Runner}
+ * <ul><li> {@code xcc} <i>("ecstasy")</i> routes to {@link Compiler}
+ * </li><li> {@code xec} <i>("exec")</i> routes to {@link Runner}
  * </li></ul>
  *
  * @param <T> the Options type for this launcher
  */
 public abstract class Launcher<T extends LauncherOptions> implements ErrorListener {
 
+    private static final Locale DEFAULT_LOCALE = Locale.getDefault();
+
     private static final int JDK_VERSION_MIN = 21;
 
+    /**
+     * Cached modules.
+     */
     protected final Map<File, ModuleInfo> moduleCache;
+
+    /**
+     * The parsed options.
+     */
+    private final T m_options;
 
     /**
      * A representation of the Console (e.g. terminal) that this tool is running in.
      */
     protected final Console m_console;
-
-    /**
-     * The worst severity issue encountered thus far.
-     */
-    protected Severity m_sevWorst = NONE;
 
     /**
      * Delegate ErrorListener that receives errors in addition to this Launcher's own logging.
@@ -81,14 +85,14 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     protected final ErrorListener m_errDelegate;
 
     /**
+     * The worst severity issue encountered thus far.
+     */
+    protected Severity m_sevWorst = NONE;
+
+    /**
      * The number of times that errors have been suspended without being resumed.
      */
     protected int m_cSuspended;
-
-    /**
-     * The parsed options.
-     */
-    private final T m_options;
 
     /**
      * Constructor for programmatic invocation (uses pre-built Options).
@@ -97,7 +101,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * @param console representation of the terminal within which this command is run
      * @param errListener ErrorListener to receive errors
      */
-    protected Launcher(T options, Console console, ErrorListener errListener) {
+    protected Launcher(final T options, final Console console, final ErrorListener errListener) {
         m_console = console == null ? DEFAULT_CONSOLE : console;
         m_errDelegate = errListener;
         m_options = options;
@@ -110,10 +114,10 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      *
      * @param asArg  command line arguments (first arg is command name: xcc, xec, or xtc)
      */
-    static void main(String[] asArg) {
+    static void main(final String[] asArg) {
         try {
             System.exit(launch(asArg));
-        } catch (LauncherException e) {
+        } catch (final LauncherException e) {
             System.exit(e.getExitCode());
         }
     }
@@ -127,33 +131,12 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      *
      * @throws LauncherException if an unrecoverable exception occurs
      */
-    public static int launch(String[] asArg) throws LauncherException {
+    public static int launch(final String[] asArg) {
         if (asArg.length < 1) {
             System.err.println("Command name is missing");
             return 1;
         }
-        return launch(
-                stripDebugPrefix(asArg[0]),
-                Arrays.copyOfRange(asArg, 1, asArg.length),
-                DEFAULT_CONSOLE,
-                null);
-    }
-
-    /**
-     * Strips the debug prefix from a command name if present.
-     * Supports both "debug_xec" and "debugxec" formats.
-     *
-     * @param cmd the raw command name potentially with debug prefix
-     * @return the command name with debug prefix stripped, or the original if no prefix found
-     */
-    private static String stripDebugPrefix(String cmd) {
-        String cmdLower = cmd.toLowerCase();
-        return Arrays.stream(DEBUG_PREFIXES)
-                .filter(cmdLower::startsWith)
-                .findFirst()
-                .map(String::length)
-                .map(cmd::substring)
-                .orElse(cmd);
+        return launch(stripDebugPrefix(asArg[0]), Arrays.copyOfRange(asArg, 1, asArg.length), DEFAULT_CONSOLE, null);
     }
 
     /**
@@ -166,7 +149,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * @param errListener optional ErrorListener to receive errors, or null
      * @return exit code (0 for success, non-zero for error)
      */
-    public static int launch(String cmd, String[] args, Console console, ErrorListener errListener) {
+    public static int launch(final String cmd, final String[] args, final Console console, final ErrorListener errListener) {
         try {
             final var launcher = switch (cmd) {
                 case Compiler.COMMAND_NAME -> new Compiler(CompilerOptions.parse(args), console, errListener);
@@ -181,10 +164,10 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
                 return 1;
             }
             return launcher.run();
-        } catch (IllegalArgumentException e) {
+        } catch (final IllegalArgumentException e) {
             console.log(ERROR, e.getMessage());
             return 1;
-        } catch (LauncherException e) {
+        } catch (final LauncherException e) {
             if (e.isError()) {
                 console.log(ERROR, e.getMessage());
             }
@@ -200,8 +183,25 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * @param args the existing arguments
      * @return new array with command inserted at the beginning
      */
-    protected static String[] insertCommand(String cmd, String[] args) {
+    protected static String[] insertCommand(final String cmd, final String[] args) {
         return Stream.concat(Stream.of(cmd), Arrays.stream(args)).toArray(String[]::new);
+    }
+
+    /**
+     * Strips the debug prefix from a command name if present.
+     * Supports both "debug_xec" and "debugxec" formats.
+     *
+     * @param cmd the raw command name potentially with debug prefix
+     * @return the command name with debug prefix stripped, or the original if no prefix found
+     */
+    private static String stripDebugPrefix(final String cmd) {
+        String cmdLower = cmd.toLowerCase(DEFAULT_LOCALE);
+        return Arrays.stream(DEBUG_PREFIXES)
+                .filter(cmdLower::startsWith)
+                .findFirst()
+                .map(String::length)
+                .map(cmd::substring)
+                .orElse(cmd);
     }
 
     /**
@@ -218,6 +218,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
             log(INFO, "The suggested minimum JVM version is 21; this JVM version ({}) appears to be older", Runtime.version());
         } else {
             log(INFO, "JVM version: {}", Runtime.version());
+            // TODO: Use a less warning prone way to determine if -ea is in use.
             boolean fAssertsEnabled = false;
             assert  fAssertsEnabled = true;
             log(INFO, "Java assertions are {}", fAssertsEnabled ? "enabled" : "disabled");
@@ -237,7 +238,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
         validateOptions();
         checkErrors();
 
-        int result = process();
+        final int result = process();
         if (opts.verbose()) {
             out();
         }
@@ -259,21 +260,22 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * Use {} placeholders in the template for parameter substitution.
      *
      * @param sev       the severity (may indicate an error)
-     * @param msg       the message template with {} placeholders
+     * @param template  the message template with {} placeholders
      * @param params    parameters to substitute into the template
      */
-    protected void log(Severity sev, String msg, Object... params) {
+    protected void log(final Severity sev, final String template, final Object... params) {
         if (errorsSuspended()) {
             return;
         }
-        if (sev.compareTo(m_sevWorst) > 0) {
-            m_sevWorst = sev;
-        }
+        // Update worst severity to far, if increased.
+        m_sevWorst = sev.compareTo(m_sevWorst) > 0 ? sev : m_sevWorst;
+
+        final var msg = Console.formatTemplate(template, params);
         if (isBadEnoughToPrint(sev)) {
-            m_console.log(sev, msg, params);
+            m_console.log(sev, msg);
         }
         if (sev == FATAL) {
-            throw abort(true, Console.formatTemplate(msg, params));
+            throw abort(true, msg);
         }
     }
 
@@ -282,7 +284,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      *
      * @param errs  the ErrorList
      */
-    protected void log(ErrorList errs) {
+    protected void log(final ErrorList errs) {
         errs.getErrors().forEach(err -> log(err.getSeverity(), err.toString()));
     }
 
@@ -296,7 +298,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     /**
      * Print the String value of some object to the terminal.
      */
-    public void out(Object o) {
+    public void out(final Object o) {
         m_console.out(o);
     }
 
@@ -310,7 +312,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     /**
      * Print the String value of some object to the terminal.
      */
-    public void err(Object o) {
+    public void err(final Object o) {
         m_console.err(o);
     }
 
@@ -356,7 +358,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * @param fHelp  true iff the help message should be displayed and the program should exit
      */
     @SuppressWarnings("unused")
-    protected void checkErrors(boolean fHelp) {
+    protected void checkErrors(final boolean fHelp) {
         if (fHelp) {
             displayHelp();
         }
@@ -370,28 +372,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      *
      * @param fError  true to abort with an error status (otherwise end of run, but not an error)
      */
-    @SuppressWarnings("unused")
-    protected void abortAndThrow(boolean fError) {
-        throw abort(fError, null);
-    }
-
-    /**
-     * Abort the command line with or without an error status.
-     *
-     * @param fError  true to abort with an error status (otherwise end of run, but not an error)
-     * @param msg     an optional message to display with the exception when it is caught and parsed.
-     */
-    @SuppressWarnings("unused")
-    protected void abortAndThrow(boolean fError, String msg) {
-        throw abort(fError, msg);
-    }
-
-    /**
-     * Abort the command line with or without an error status.
-     *
-     * @param fError  true to abort with an error status (otherwise end of run, but not an error)
-     */
-    protected LauncherException abort(boolean fError) {
+    protected LauncherException abort(final boolean fError) {
         return abort(fError, null, null);
     }
 
@@ -401,7 +382,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * @param fError  true to abort with an error status (otherwise end of run, but not an error)
      * @param msg     an optional message to display with the exception when it is caught and parsed.
      */
-    protected LauncherException abort(boolean fError, String msg) {
+    protected static LauncherException abort(final boolean fError, final String msg) {
         return abort(fError, msg, null);
     }
 
@@ -412,7 +393,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * @param msg     an optional message to display with the exception when it is caught and parsed.
      * @param cause   an underlying excpeption and cause.
      */
-    protected LauncherException abort(boolean fError, String msg, Exception cause) {
+    protected static LauncherException abort(final boolean fError, final String msg, final Throwable cause) {
         return new LauncherException(fError, msg, cause);
     }
 
@@ -431,7 +412,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
             return;
         }
         out();
-        out("Use --help for detailed options");
+        out("Use --help for detailed options.");
         out();
     }
 
@@ -445,7 +426,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     // ----- ErrorListener interface ---------------------------------------------------------------
 
     @Override
-    public boolean log(ErrorInfo err) {
+    public boolean log(final ErrorInfo err) {
         // Forward to delegate (always non-null, default is ErrorList)
         if (m_errDelegate != null) {
             m_errDelegate.log(err);
@@ -486,7 +467,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * @param sev the severity to evaluate
      * @return true if an error of that severity should be displayed
      */
-    protected boolean isBadEnoughToPrint(Severity sev) {
+    protected boolean isBadEnoughToPrint(final Severity sev) {
         return options().verbose() || sev.compareTo(WARNING) >= 0;
     }
 
@@ -497,7 +478,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * @param sev the severity to evaluate
      * @return true if an error of that severity should exit the program
      */
-    protected boolean isBadEnoughToAbort(Severity sev) {
+    protected boolean isBadEnoughToAbort(final Severity sev) {
         return sev.compareTo(ERROR) >= 0;
     }
     /**
@@ -507,6 +488,10 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      */
     protected final T options() {
         return m_options;
+    }
+
+    protected final Console console() {
+        return m_console;
     }
 
     // ----- repository management -----------------------------------------------------------------
@@ -521,7 +506,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      *
      * @return the library repository, including a build repository at the head of the repo
      */
-    protected ModuleRepository configureLibraryRepo(List<File> path) {
+    protected ModuleRepository configureLibraryRepo(final List<File> path) {
         if (path == null || path.isEmpty()) {
             // this is the easiest way to deliver an empty repository
             return makeBuildRepo();
@@ -554,8 +539,8 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      *
      * @return the BuildRepository
      */
-    protected BuildRepository extractBuildRepo(ModuleRepository repoLib) {
-        if (repoLib instanceof BuildRepository repoBuild) {
+    protected BuildRepository extractBuildRepo(final ModuleRepository repoLib) {
+        if (repoLib instanceof final BuildRepository repoBuild) {
             return repoBuild;
         }
 
@@ -589,8 +574,8 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      *
      * @param reposLib  the repository to use, as it would be returned from {@link #configureLibraryRepo}
      */
-    protected void prelinkSystemLibraries(ModuleRepository reposLib) {
-        for (String moduleName : List.of(ECSTASY_MODULE, TURTLE_MODULE)) {
+    protected void prelinkSystemLibraries(final ModuleRepository reposLib) {
+        for (final String moduleName : List.of(ECSTASY_MODULE, TURTLE_MODULE)) {
             ModuleStructure module = reposLib.loadModule(moduleName);
             if (module == null) {
                 log(FATAL, "Unable to load module: {}", moduleName);
@@ -611,11 +596,11 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      *
      * @param reposLib  the repository that contains the Ecstasy library
      */
-    protected void showSystemVersion(ModuleRepository reposLib) {
+    protected void showSystemVersion(final ModuleRepository reposLib) {
         String sVer = null;
         try {
             sVer = reposLib.loadModule(ECSTASY_MODULE).getVersionString();
-        } catch (Exception ignore) {}
+        } catch (final Exception ignore) {}
 
         // Use version from single source of truth if module version is not available
         if (sVer == null) {
@@ -623,17 +608,21 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
         }
 
         // Build version string with optional git information
-        var version = new StringBuilder();
-        version.append("xdk version ").append(sVer)
-               .append(" (").append(VERSION_MAJOR_CUR).append(".").append(VERSION_MINOR_CUR).append(")");
+        final var version = new StringBuilder("xdk version ")
+            .append(sVer)
+            .append(" (")
+            .append(VERSION_MAJOR_CUR)
+            .append(".")
+            .append(VERSION_MINOR_CUR)
+            .append(")");
 
-        // Add git info if available
-        String gitCommit = BuildInfo.getGitCommit();
-        String gitStatus = BuildInfo.getGitStatus();
+        // Add Git info to be woven into the build, if available.
+        // NOTE: We use the full hash in code and CI for the commit
+        final var gitCommit = BuildInfo.getGitCommit();
         if (!gitCommit.isEmpty()) {
-            // Use full commit ID for better traceability
             version.append(" [").append(gitCommit).append("]");
         }
+        final var gitStatus = BuildInfo.getGitStatus();
         if (!gitStatus.isEmpty()) {
             version.append(" (").append(gitStatus).append(")");
         }
@@ -656,7 +645,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * @param binarySpec     (optional) the file or directory which represents the target of the
      *                       binary; as provided to the compiler using the "-o" command line switch
      */
-    public ModuleInfo ensureModuleInfo(File fileSpec, File[] resourceSpecs, File binarySpec) {
+    public ModuleInfo ensureModuleInfo(final File fileSpec, final File[] resourceSpecs, final File binarySpec) {
         final boolean fCache = (resourceSpecs == null || resourceSpecs.length == 0) && binarySpec == null;
         final boolean deduce = options().deduce();
         return fCache
@@ -669,7 +658,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      *
      * @param modulePath a list of individual module paths.
      */
-    protected final void validateModulePath(List<File> modulePath) {
+    protected final void validateModulePath(final List<File> modulePath) {
         for (final var file : modulePath) {
             final var fileType = file.isDirectory() ? "Directory" : file.isFile() ? "File" : "File or directory";
             if (!file.exists()) {
@@ -689,7 +678,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      *
      * @return the validated file or directory to read source code from
      */
-    public File validateSourceInput(File file) {
+    public File validateSourceInput(final File file) {
         // this is expected to be the name of a file to compile
         if (!file.exists() || file.isDirectory()) {
             try {
@@ -698,7 +687,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
                 if (srcFile == null || !srcFile.exists()) {
                     log(ERROR, "Failed to locate the module source code for: {}", file);
                 }
-            } catch (RuntimeException e) {
+            } catch (final RuntimeException e) {
                 log(ERROR, "Failed to identify the module for: {} ({})", file, e);
             }
         } else if (!file.canRead()) {
@@ -717,7 +706,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      *                default)
      * @param fMulti  true indicates that multiple modules will be written
      */
-    public void validateModuleOutput(File file, boolean fMulti) {
+    public void validateModuleOutput(final File file, final boolean fMulti) {
         if (file == null) {
             return;
         }
@@ -762,7 +751,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      *
      * @return a list of "module files", each representing a module's source code
      */
-    protected List<ModuleInfo> selectTargets(List<File> listSources, File[] resourceSpecs, File outputSpec) {
+    protected List<ModuleInfo> selectTargets(final List<File> listSources, final File[] resourceSpecs, final File outputSpec) {
         final var mapResults = new ListMap<File, ModuleInfo>();
         final var dups = new HashSet<File>();
 
@@ -779,7 +768,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
                 } else {
                     mapResults.put(srcFile, info);
                 }
-            } catch (IllegalStateException | IllegalArgumentException e) {
+            } catch (final IllegalStateException | IllegalArgumentException e) {
                 final var msg = e.getMessage();
                 log(ERROR, "Could not find module information for {} ({})", toPathString(file), msg != null ? msg : "Reason unknown");
             }
@@ -792,9 +781,9 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      *
      * @param nodes  the nodes to flush
      */
-    protected void flushAndCheckErrors(Node[] nodes) {
+    protected void flushAndCheckErrors(final Node[] nodes) {
         if (nodes != null) {
-            for (Node node : nodes) {
+            for (final Node node : nodes) {
                 if (node != null) {
                     node.logErrors(this);
                 }
@@ -814,97 +803,6 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
 
 
     // ----- Console -------------------------------------------------------------------------------
-
-    /**
-     * An interface representing this tool's interaction with the terminal.
-     */
-    public interface Console {
-        /**
-         * Print a blank line to the terminal.
-         */
-        default void out() {
-            out("");
-        }
-
-        /**
-         * Print the String value of some object to the terminal.
-         */
-        default void out(Object o) {
-            System.out.println(o);
-        }
-
-        /**
-         * Print a blank line to the terminal.
-         */
-        default void err() {
-            err("");
-        }
-
-        /**
-         * Print the String value of some object to the terminal.
-         */
-        default void err(Object o) {
-            System.err.println(o);
-        }
-
-        /**
-         * Log a message of a specified severity.
-         *
-         * @param sev   the severity (may indicate an error)
-         * @param sMsg  the message or error to display
-         */
-        default void log(Severity sev, String sMsg) {
-            out(sev.desc() + ": " + sMsg);
-        }
-
-        /**
-         * Log a message with template substitution (SLF4J-style).
-         * Use {} placeholders in the template for parameter substitution.
-         * <p>
-         * Example: log(ERROR, "Command {} not found in {}", cmdName, location)
-         *
-         * @param sev       the severity (may indicate an error)
-         * @param template  the message template with {} placeholders
-         * @param params    parameters to substitute into the template
-         */
-        default void log(Severity sev, String template, Object... params) {
-            out(sev.desc() + ": " + formatTemplate(template, params));
-        }
-
-        /**
-         * Format a message template by substituting {} placeholders with parameters.
-         * Converts SLF4J-style {} placeholders to MessageFormat-style {0}, {1}, etc.
-         * and delegates to MessageFormat for actual formatting.
-         *
-         * @param template  the template string with {} placeholders
-         * @param params    parameters to substitute
-         * @return formatted message
-         */
-        static String formatTemplate(String template, Object... params) {
-            if (template == null || params == null || params.length == 0) {
-                return template;
-            }
-            final var numbered = new StringBuilder(template.length() + params.length * 3);
-            int paramIndex = 0;
-            int pos = 0;
-            while (pos < template.length()) {
-                int openBrace = template.indexOf('{', pos);
-                if (openBrace == -1) {
-                    numbered.append(template.substring(pos));
-                    break;
-                }
-                numbered.append(template, pos, openBrace);
-                if (openBrace + 1 < template.length() && template.charAt(openBrace + 1) == '}') {
-                    numbered.append('{').append(paramIndex++).append('}');
-                    pos = openBrace + 2;
-                } else {
-                    numbered.append('{');
-                    pos = openBrace + 1;
-                }
-            }
-            return MessageFormat.format(numbered.toString(), params);
-        }
-    }
 
     /**
      * RuntimeException thrown upon a launcher failure.

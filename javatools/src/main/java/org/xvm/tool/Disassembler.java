@@ -36,7 +36,6 @@ import static org.xvm.util.Handy.readFileChars;
 import static org.xvm.util.Severity.ERROR;
 import static org.xvm.util.Severity.INFO;
 
-
 /**
  * The "disassemble" command:
  * <p>
@@ -65,7 +64,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
      * @param console     representation of the terminal within which this command is run, or null
      * @param errListener optional ErrorListener to receive errors, or null for no delegation
      */
-    public Disassembler(DisassemblerOptions options, Console console, ErrorListener errListener) {
+    public Disassembler(final DisassemblerOptions options, final Console console, final ErrorListener errListener) {
         super(options, console, errListener);
     }
 
@@ -74,15 +73,14 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
      *
      * @param args command line arguments
      */
-    static void main(String[] args) {
+    static void main(final String[] args) {
         Launcher.main(insertCommand(COMMAND_NAME, args));
     }
 
     @Override
     protected void validateOptions() {
-        var opts = options();
-        // Validate the target file
-        var fileModule = opts.getTarget();
+        final var opts = options();
+        final var fileModule = opts.getTarget();
         if (fileModule == null) {
             log(ERROR, "No module file specified");
             return;
@@ -104,11 +102,9 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         if (sModule.endsWith(".xtc")) {
             // it's a file
             log(INFO, "Loading module file: {}", sModule);
-            try {
-                try (var in = new FileInputStream(fileModule)) {
-                    component = new FileStructure(in);
-                }
-            } catch (IOException e) {
+            try (var in = new FileInputStream(fileModule)) {
+                component = new FileStructure(in);
+            } catch (final IOException e) {
                 log(ERROR, "I/O exception ({}) reading module file: {}", e, fileModule);
             }
         } else {
@@ -140,8 +136,8 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         return hasSeriousErrors() ? 1 : 0;
     }
 
-    public void dump(Component component) {
-        if (component instanceof MethodStructure method) {
+    public void dump(final Component component) {
+        if (component instanceof final MethodStructure method) {
             final var id = method.getIdentityConstant();
             if (method.hasCode() && method.ensureCode() != null && !method.isNative()) {
                 out("** code for " + id);
@@ -154,7 +150,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         }
     }
 
-    public void dumpFiles(Component component) {
+    public void dumpFiles(final Component component) {
         Constant[] aconst  = component.getConstantPool().getConstants();
         int        cConsts = aconst.length;
         byte[]     aflags  = new byte[cConsts];
@@ -166,7 +162,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         // first, identify all filing system nodes
         for (int i = 0; i < cConsts; ++i) {
             var constant = aconst[i];
-            if (constant instanceof FSNodeConstant fsNode) {
+            if (constant instanceof final FSNodeConstant fsNode) {
                 if (i > maxId) {
                     maxId = i;
                 }
@@ -174,7 +170,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
                 switch (constant.getFormat()) {
                 case FSDir:
                     aflags[i] |= DIR;
-                    for (var fsChildNode : fsNode.getDirectoryContents()) {
+                    for (final var fsChildNode : fsNode.getDirectoryContents()) {
                         claimNode(fsChildNode, aflags);
                     }
                     ++cDirs;
@@ -216,13 +212,13 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         out("Module contains no files.");
     }
 
-    private void claimNode(FSNodeConstant fsNode, byte[] aflags) {
+    private static void claimNode(final FSNodeConstant fsNode, final byte[] aflags) {
         int i = fsNode.getPosition();
         if ((aflags[i] & CLAIMED) == 0) {
             aflags[i] |= CLAIMED;
             switch (fsNode.getFormat()) {
             case FSDir:
-                for (var fsChildNode : fsNode.getDirectoryContents()) {
+                for (final var fsChildNode : fsNode.getDirectoryContents()) {
                     claimNode(fsChildNode, aflags);
                 }
                 break;
@@ -234,13 +230,13 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         }
     }
 
-    private void printNode(FSNodeConstant fsNode,
-                           String         indent,
-                           boolean        last,
-                           boolean        linked,
-                           boolean[]      visited,
-                           int            idLen,
-                           int            sizeLen) {
+    private void printNode(final FSNodeConstant fsNode,
+                           final String         indent,
+                           final boolean        last,
+                           final boolean        linked,
+                           final boolean[]      visited,
+                           final int            idLen,
+                           final int            sizeLen) {
         var buf = new StringBuilder();
 
         // constant id
@@ -271,7 +267,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         LocalDateTime time = null;
         try {
             time = OffsetDateTime.parse(fsNode.getModified()).toLocalDateTime();
-        } catch (Exception ignore) {}
+        } catch (final Exception ignore) {}
         if (time == null) {
             buf.append("??? ??  ????");
         } else {
@@ -355,7 +351,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         }
     }
 
-    public void findFile(Component component, File target) {
+    public void findFile(final Component component, final File target) {
         if (target == null) {
             out("No file specified.");
             return;
@@ -376,14 +372,14 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         byte[] findBytes;
         try {
             findBytes = readFileBytes(target);
-        } catch (IOException e) {
+        } catch (final IOException e) {
             out("Failure reading " + target + ":\n" + e);
             return;
         }
         String findString = null;
         try {
             findString = new String(readFileChars(target));
-        } catch (IOException ignore) {}
+        } catch (final IOException ignore) {}
 
         // load the file metadata
         var    findName     = target.getName();
