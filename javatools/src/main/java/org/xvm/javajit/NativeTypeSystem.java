@@ -124,6 +124,11 @@ public class NativeTypeSystem
     public final Map<ClassConstant, String> nativeByClass = new ConcurrentHashMap<>();
 
     /**
+     * A registry of function JIT class names keyed by the function types.
+     */
+    public final Map<TypeConstant, String> nativeFunctions = new ConcurrentHashMap<>();
+
+    /**
      * A cache of builders for native classes keyed by type.
      */
     public final Map<TypeConstant, Class> nativeBuilders = new ConcurrentHashMap<>();
@@ -198,7 +203,7 @@ public class NativeTypeSystem
 
     // ----- internal ------------------------------------------------------------------------------
 
-    private void registerNativeClasses() {
+    void registerNativeClasses() {
         ConstantPool pool = pool();
 
         // only rebased types need to be registered
@@ -206,7 +211,7 @@ public class NativeTypeSystem
         nativeByClass.put(pool.clzEnumValue(), Builder.N_nEnum);
         nativeByClass.put(pool.clzModule(),    Builder.N_nModule);
         nativeByClass.put(pool.clzObject(),    Builder.N_nObj);
-        nativeByClass.put(pool.clzService(),   Builder.N_xService);
+        nativeByClass.put(pool.clzService(),   Builder.N_nService);
         nativeByClass.put(pool.clzType(),      Builder.N_nType);
 
         nativeBuilders.put(pool.typeInt64(),  org.xvm.javajit.builders.Int64Builder.class);
@@ -217,9 +222,9 @@ public class NativeTypeSystem
         xvm.createUniqueSuffix("");
 
         // xFunction.ꖛ0: function void()
-        String f0 = ensureJitClassName(
-            pool.buildFunctionType(TypeConstant.NO_TYPES, TypeConstant.NO_TYPES));
-        assert f0.equals(Builder.N_nFunction + "$ꖛ0");
+        nativeFunctions.put(
+            pool.buildFunctionType(TypeConstant.NO_TYPES, TypeConstant.NO_TYPES),
+            Builder.N_nFunction + "$ꖛ0");
     }
 }
 

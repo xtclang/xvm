@@ -78,6 +78,7 @@ import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
 import org.xvm.util.TransientThreadLocal;
 
+import static org.xvm.javajit.Builder.FUNCTION;
 import static org.xvm.javajit.Builder.N_nArrayChar;
 
 import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
@@ -1432,6 +1433,14 @@ public abstract class TypeConstant
     public boolean isFunction() {
         TypeConstant constThis = resolveTypedefs();
         return constThis.isA(getConstantPool().typeFunction());
+    }
+
+    /**
+     * @return true iff the type is a Method type
+     */
+    public boolean isMethod() {
+        TypeConstant constThis = resolveTypedefs();
+        return constThis.isA(getConstantPool().typeMethod());
     }
 
     /**
@@ -6517,8 +6526,20 @@ public abstract class TypeConstant
                     : enumerationClass(typeValue.ensureJitClassName(ts));
         }
 
-        StringBuilder sb = new StringBuilder().append(loader.prefix).append(id.getJitName(ts));
         TypeConstant typeCanonical = getCanonicalJitType();
+
+        StringBuilder sb = new StringBuilder().append(loader.prefix);
+        if (id.equals(pool.clzFunction())) {
+            String name = ts.xvm.nativeTypeSystem.nativeFunctions.get(typeCanonical);
+            if (name != null) {
+                return name;
+            }
+            // Jit class name for functions has format of "[prefix].¤fnꖛn"
+            sb.append(FUNCTION);
+        } else {
+            sb.append(id.getJitName(ts));
+        }
+
         if (typeCanonical.getParamsCount() > 0) {
             // TODO CP
             sb.appendCodePoint(ID_NUM).append(typeCanonical.getPosition());
@@ -6549,7 +6570,7 @@ public abstract class TypeConstant
         }
         assert isSingleUnderlyingClass(true);
 
-        return new JitTypeDesc(getCanonicalJitType(), Specific, ClassDesc.of(ts.ensureJitClassName(this)));
+        return new JitTypeDesc(getCanonicalJitType(), Specific, ensureClassDesc(ts));
     }
 
     /**

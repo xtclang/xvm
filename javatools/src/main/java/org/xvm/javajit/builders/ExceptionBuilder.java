@@ -82,10 +82,10 @@ public class ExceptionBuilder extends CommonBuilder {
         if (superType.equals(pool.typeException())) {
             superCD = CD_nException;
         } else {
-            superCD = getShapeDesc(typeSystem.ensureJitClassName(superType), ClassfileShape.Exception);
+            superCD = getShapeDesc(superType.ensureJitClassName(typeSystem), ClassfileShape.Exception);
         }
 
-        ClassDesc exCD = ClassDesc.of(typeSystem.ensureJitClassName(typeInfo.getType()));
+        ClassDesc exCD = typeInfo.getType().ensureClassDesc(typeSystem);
 
         classBuilder.withFlags(ClassFile.ACC_PUBLIC)
                     .withSuperclass(superCD);

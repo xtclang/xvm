@@ -588,7 +588,7 @@ public class MethodBody {
 
                 if ((cd = JitTypeDesc.getPrimitiveClass(type)) != null) {
                     JitFlavor flavor = fDflt ? SpecificWithDefault : Specific;
-                    ClassDesc cdStd  = ClassDesc.of(ts.ensureJitClassName(type));
+                    ClassDesc cdStd  = type.ensureClassDesc(ts);
 
                     listParamsStd.add(new JitParamDesc(type, flavor, cdStd, iOrig, iStd++, false));
 
@@ -624,7 +624,7 @@ public class MethodBody {
                 } else {
                     assert type.isSingleUnderlyingClass(true);
 
-                    cd = ClassDesc.of(ts.ensureJitClassName(type));
+                    cd = type.ensureClassDesc(ts);
 
                     JitFlavor flavor = fDflt ? SpecificWithDefault : Specific;
 
@@ -652,7 +652,7 @@ public class MethodBody {
                 ClassDesc    cd;
 
                 if ((cd = JitTypeDesc.getPrimitiveClass(type)) != null) {
-                    ClassDesc cdStd = ClassDesc.of(ts.ensureJitClassName(type));
+                    ClassDesc cdStd = type.ensureClassDesc(ts);
 
                     listParamsStd.add(new JitParamDesc(type, Specific, cdStd, iOrig, ixStdObj++, false));
                     listParamsOpt.add(new JitParamDesc(type, Primitive, cd,   iOrig, ixLong++, false));
@@ -673,7 +673,7 @@ public class MethodBody {
                 } else {
                     assert type.isSingleUnderlyingClass(true);
 
-                    cd = ClassDesc.of(ts.ensureJitClassName(type));
+                    cd = type.ensureClassDesc(ts);
 
                     listParamsStd.add(new JitParamDesc(type, Specific, cd, iOrig, ixStdObj++, false));
                     listParamsOpt.add(new JitParamDesc(type, Specific, cd, iOrig, ixOptObj++, false));

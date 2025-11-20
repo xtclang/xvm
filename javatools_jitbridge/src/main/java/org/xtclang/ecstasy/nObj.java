@@ -6,8 +6,7 @@ import org.xvm.javajit.Container;
 import org.xvm.javajit.Ctx;
 import org.xvm.javajit.Xvm;
 
-public abstract class nObj
-    implements Object {
+public abstract class nObj implements Object {
     public nObj(Ctx ctx) {
         super();
         $meta = ctx == null ? -1 : ctx.container.id;

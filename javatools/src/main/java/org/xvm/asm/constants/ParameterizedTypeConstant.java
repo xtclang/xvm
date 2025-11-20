@@ -826,6 +826,51 @@ public class ParameterizedTypeConstant
         var             listTypeParams = clz.getTypeParamsAsList();
         var             listContribs   = clz.collectConditionalIncorporates(this);
 
+        // TODO: REMOVE - compensation for Array handling in TypeConstant#buildJitClassName
+        if (m_constType.isArray() && !getParamType(0).isPrimitive()) {
+            return pool.ensureArrayType(pool.typeObject());
+        }
+
+        if (m_constType.isFunction()) {
+            // functions are special; we need to canonicalize the params and return types
+
+            TypeConstant[] atypeParams = m_atypeParams.length > 0
+                    ? m_atypeParams[0].getParamTypesArray()
+                    : TypeConstant.NO_TYPES;
+            boolean fDiffParams = false;
+            for (int i = 0, c = atypeParams.length; i < c; ++i) {
+                TypeConstant typeOrig  = atypeParams[i];
+                TypeConstant typeCanon = typeOrig.getCanonicalJitType();
+                if (!typeCanon.equals(typeOrig)) {
+                    if (!fDiffParams) {
+                        atypeParams = atypeParams.clone();
+                        fDiffParams = true;
+                    }
+                    atypeParams[i] = typeCanon;
+                }
+            }
+
+            TypeConstant[] atypeReturns = m_atypeParams.length > 1
+                    ? m_atypeParams[1].getParamTypesArray()
+                    : TypeConstant.NO_TYPES;
+            boolean fDiffReturns = false;
+            for (int i = 0, c = atypeReturns.length; i < c; ++i) {
+                TypeConstant typeOrig  = atypeReturns[i];
+                TypeConstant typeCanon = typeOrig.getCanonicalJitType();
+                if (!typeCanon.equals(typeOrig)) {
+                    if (!fDiffReturns) {
+                        atypeReturns = atypeReturns.clone();
+                        fDiffReturns = true;
+                    }
+                    atypeReturns[i] = typeCanon;
+                }
+            }
+
+            return fDiffParams || fDiffReturns
+                    ? getConstantPool().buildFunctionType(atypeParams, atypeReturns)
+                    : this;
+        }
+
         TypeConstant[] aconstOriginal  = m_atypeParams;
         TypeConstant[] aconstCanonical = aconstOriginal;
         boolean        fDiff           = false;
@@ -835,10 +880,6 @@ public class ParameterizedTypeConstant
             if (typeOriginal.isPrimitive()) {
                 fTrivial = false;
             } else {
-                // TODO: REMOVE - compensation for Array handling in TypeConstant#buildJitClassName
-                if (m_constType.isArray()) {
-                    return pool.ensureArrayType(pool.typeObject());
-                }
                 var            entryParam     = listTypeParams.get(i);
                 StringConstant constName      = entryParam.getKey();
                 TypeConstant   typeConstraint = entryParam.getValue();

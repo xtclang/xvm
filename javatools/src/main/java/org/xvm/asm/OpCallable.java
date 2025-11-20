@@ -38,6 +38,11 @@ import org.xvm.runtime.template.xException;
 
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
+import static java.lang.constant.ConstantDescs.CD_MethodHandle;
+import static java.lang.constant.ConstantDescs.CD_void;
+
+import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.CD_nFunction;
 import static org.xvm.javajit.TypeSystem.ID_NUM;
 
 import static org.xvm.util.Handy.readPackedInt;
@@ -568,11 +573,11 @@ public abstract class OpCallable extends Op {
     protected void buildCall(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
         TypeSystem ts = bctx.typeSystem;
 
-        ClassDesc      cdTarget;
-        String         sJitName;
-        JitMethodDesc  jmdCall;
-        int            cReturns;
-        boolean        fSpecial;
+        ClassDesc     cdTarget;
+        String        sJitName;
+        JitMethodDesc jmdCall;
+        int           cReturns;
+        boolean       fSpecial;
 
         if (m_nFunctionId == A_SUPER) {
             int        nDepth    = bctx.callDepth + 1;
@@ -609,9 +614,24 @@ public abstract class OpCallable extends Op {
             cReturns = idMethod.getSignature().getReturnCount();
             fSpecial = false;
         } else {
-            RegisterInfo regFn = bctx.getRegisterInfo(m_nFunctionId);
-            // TODO: call "invoke(Ctx ctx, Tuple args)"
-            throw new UnsupportedOperationException("function call " + regFn.type());
+            RegisterInfo regFn = bctx.loadArgument(code, m_nFunctionId);
+            // call "$invoke(Ctx ctx, Object... args)"
+
+            TypeConstant typeFn = regFn.type();
+            assert typeFn.isFunction();
+
+            code.getfield(CD_nFunction, "stdMethod", CD_MethodHandle);
+            bctx.loadCtx(code);
+
+            // TODO: compute the jmdCall
+            // bctx.loadArguments(code, jmdCall, anArgValue);
+
+            code.invokevirtual(CD_MethodHandle, "invokeExact", MethodTypeDesc.of(CD_void, CD_Ctx));
+//            if (cReturns > 0) {
+//                int[] anVar = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
+//                bctx.assignReturns(code, jmdCall, cReturns, anVar);
+//            }
+            return;
         }
 
         MethodTypeDesc mdCall;
@@ -696,7 +716,7 @@ public abstract class OpCallable extends Op {
             typeTarget = bctx.typeInfo.getType();
             sJitCtor   = idTarget.getName() + "$" + infoCtor.ensureJitMethodName(ts);
 
-            bctx.buildFunction(sJitCtor, infoCtor.getHead());
+            bctx.buildMethod(sJitCtor, infoCtor.getHead());
         } else {
             cdTarget = typeTarget.ensureClassDesc(ts);
             sJitCtor = infoCtor.ensureJitMethodName(ts);

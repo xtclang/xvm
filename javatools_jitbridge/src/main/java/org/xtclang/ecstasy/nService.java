@@ -1,6 +1,5 @@
 package org.xtclang.ecstasy;
 
-import org.xtclang.ecstasy.nFunction.ꖛ0;
 import org.xvm.javajit.Ctx;
 
 /**
@@ -27,8 +26,8 @@ public abstract class nService
     // ----- Service interface ---------------------------------------------------------------------
 
     @Override
-    public void callLater(Ctx ctx, ꖛ0 doLater) {
-        doLater.$call(ctx); // TODO: create a new fiber that calls "doLater.$call(ctx)"
+    public void callLater(Ctx ctx, nFunction.ꖛ0 doLater) {
+        doLater.$invoke(ctx); // TODO: create a new fiber that calls "doLater.$invoke(ctx)"
     }
 
     @Override

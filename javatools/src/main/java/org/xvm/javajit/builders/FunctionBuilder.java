@@ -29,13 +29,13 @@ public class FunctionBuilder
     /**
      * Create an abstract function that in general should look like:
      * <pre><code>
-     *   public abstract static class {name} extends xFunction {
-     *       abstract xObj $call(Ctx ctx, xObj... params);
+     *   public static class {name} extends nFunction {
+     *       nObj $call(Ctx ctx, nObj... params) {}
      *
-     *       // @Override
+     *       @Override
      *       public Tuple invoke(Ctx ctx, Tuple args) {
-     *          xObj retValue = $call(ctx, Tuple.unwrap(ctx, args));
-     *          return xTuple.wrap(ctx, retValue, $ctx.o0, ctx.o1, ...);
+     *          nObj retValue = $call(ctx, Tuple.unwrap(ctx, args));
+     *          return Tuple.wrap(ctx, retValue, ctx.o0, ctx.o1, ...);
      *       }
      *   }
      * </code></pre>

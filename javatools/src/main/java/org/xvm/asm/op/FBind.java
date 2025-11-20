@@ -5,11 +5,15 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 import org.xvm.asm.Register;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -195,6 +199,23 @@ public class FBind
         }
         return sb.toString();
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+
+        if (m_nFunctionId == A_SUPER) {
+            System.err.println("*** Skipping FBind gen for super()");
+        } else if (m_nFunctionId <= CONSTANT_OFFSET) {
+            System.err.println("*** Skipping FBind gen for " +
+                bctx.getConstant(m_nFunctionId).getValueString());
+        } else {
+            System.err.println("*** Skipping FBind gen for register " + m_nFunctionId);
+        }
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private final int[] m_anParamIx;
     private       int[] m_anParamValue;

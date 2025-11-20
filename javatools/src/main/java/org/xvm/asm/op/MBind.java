@@ -5,15 +5,33 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
+import java.lang.constant.ClassDesc;
+import java.lang.constant.MethodTypeDesc;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpInvocable;
 
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+
+import static java.lang.constant.ConstantDescs.CD_MethodHandle;
+import static java.lang.constant.ConstantDescs.CD_boolean;
+import static java.lang.constant.ConstantDescs.CD_void;
+import static java.lang.constant.ConstantDescs.INIT_NAME;
+
+import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.CD_JavaObject;
+import static org.xvm.javajit.Builder.CD_nMethod;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -88,5 +106,62 @@ public class MBind
         }
 
         return getCallChain(frame, hTarget).bindTarget(frame, hTarget, m_nRetValue);
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        RegisterInfo regMethod  = bctx.loadArgument(code, m_nMethodId);
+        int          slotMethod = bctx.storeTempValue(code, CD_nMethod);
+
+        assert regMethod.type().isMethod() && regMethod.cd() == CD_nMethod;
+
+        RegisterInfo regTarget  = bctx.loadArgument(code, m_nTarget);
+        int          slotTarget = bctx.storeTempValue(code, regTarget.cd());
+
+        /* The code we need to generate looks like the following:
+
+              MethodHandle std = method.stdMethod.bindTo(target);
+              MethodHandle opt = method.optMethod == null ? null : method.optMethod.bindTo(target);
+              boolean      imm = target.$isImmut();
+              retValue = new fnꖛN(ctx, std, opt, imm);
+
+           Note that the resulting function is immutable if the target is immutable.
+        */
+
+        code.aload(slotMethod)
+            .getfield(CD_nMethod, "stdMethod", CD_MethodHandle)
+            .aload(slotTarget)
+            .invokevirtual(CD_MethodHandle, "bindTo", MethodTypeDesc.of(CD_MethodHandle, CD_JavaObject));
+        int slotStd = bctx.storeTempValue(code, CD_MethodHandle);
+
+        java.lang.classfile.Label ifNull = code.newLabel();
+        code.aload(slotMethod)
+            .getfield(CD_nMethod, "optMethod", CD_MethodHandle)
+            .dup()
+            .ifnull(ifNull)
+            .aload(slotTarget)
+            .invokevirtual(CD_MethodHandle, "bindTo", MethodTypeDesc.of(CD_MethodHandle, CD_JavaObject))
+            .labelBinding(ifNull);
+        int slotOpt = bctx.storeTempValue(code, CD_MethodHandle);
+
+        code.aload(slotTarget)
+            .invokevirtual(regTarget.cd(), "$isImmut", MethodTypeDesc.of(CD_boolean));
+        int slotImm = bctx.storeTempValue(code, CD_boolean);
+
+        TypeConstant typeFn = bctx.pool().bindMethodTarget(regMethod.type());
+        ClassDesc    cdFn   = typeFn.ensureClassDesc(bctx.typeSystem);
+        code.new_(cdFn)
+            .dup()
+            .aload(code.parameterSlot(0)) // ctx
+            .aload(slotStd)
+            .aload(slotOpt)
+            .iload(slotImm)
+            .invokespecial(cdFn, INIT_NAME,
+                MethodTypeDesc.of(CD_void, CD_Ctx, CD_MethodHandle, CD_MethodHandle, CD_boolean));
+
+        RegisterInfo regRet = bctx.ensureRegInfo(m_nRetValue, typeFn, cdFn, "");
+        bctx.storeValue(code, regRet);
     }
 }

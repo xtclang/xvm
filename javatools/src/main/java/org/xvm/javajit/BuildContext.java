@@ -700,7 +700,7 @@ public class BuildContext {
                         .loadLocal(Builder.toTypeKind(cd), doubleSlot.slot)
                         .goto_(endIf)
                         .labelBinding(ifTrue);
-                    builder.loadConstant(code, parameter.getDefaultValue());
+                    builder.loadConstant(this, code, parameter.getDefaultValue());
                     code.labelBinding(endIf);
                     return new SingleSlot(Op.A_STACK, reg.type(), cd, reg.name());
 
@@ -764,7 +764,7 @@ public class BuildContext {
      * We **always** load a primitive value if possible.
      */
     public RegisterInfo loadConstant(CodeBuilder code, Constant constant) {
-        return builder.loadConstant(code, constant);
+        return builder.loadConstant(this, code, constant);
     }
 
     /**
@@ -1277,6 +1277,15 @@ public class BuildContext {
     }
 
     /**
+     * Store a value for the specified ClassDesc on Java stack onto a temporary slot.
+     */
+    public int storeTempValue(CodeBuilder code, ClassDesc cd) {
+        int slot = scope.allocateJavaSlot(cd);
+        Builder.store(code, cd, slot);
+        return slot;
+    }
+
+    /**
      * Create a "deferred" context to generate a synthetic method representing a "super" method
      * in a call chain that originates from a mixin or annotation.
      */
@@ -1285,10 +1294,10 @@ public class BuildContext {
     }
 
     /**
-     * Create a "deferred" context to generate a synthetic function representing a function
-     * that originates from a mixin or annotation.
+     * Create a "deferred" context to generate a synthetic Java method representing a method or
+     * function that originates from a mixin, annotation or a lambda.
      */
-    public void buildFunction(String jitName, MethodBody body) {
+    public void buildMethod(String jitName, MethodBody body) {
         deferAssembly(new BuildContext(this, jitName, body));
     }
 

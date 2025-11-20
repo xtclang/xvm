@@ -109,7 +109,7 @@ public class CommonBuilder
         TypeConstant superType = typeInfo.getExtends();
         return superType == null
             ? CD_nObj
-            : ClassDesc.of(typeSystem.ensureJitClassName(superType));
+            : superType.ensureClassDesc(typeSystem);
     }
 
     /**
@@ -212,7 +212,7 @@ public class CommonBuilder
                         // ignore "implements Object" for classes
                         continue;
                     }
-                    interfaces.add(ClassDesc.of(typeSystem.ensureJitClassName(contribType)));
+                    interfaces.add(contribType.ensureClassDesc(typeSystem));
                     break;
             }
         }
@@ -1338,7 +1338,12 @@ public class CommonBuilder
             if (isOpt) {
                 nameNext += OPT;
             }
-            classBuilder.withMethod(nameNext, mdNext, flags, methodBuilder ->
+
+            int flagsNext = bctxNext.methodStruct.isStatic()
+                ? flags | ClassFile.ACC_STATIC
+                : flags;
+
+            classBuilder.withMethod(nameNext, mdNext, flagsNext, methodBuilder ->
                 methodBuilder.withCode(code -> generateCode(mdNext, bctxNext, code)));
 
             bctxDeferred = bctxNext.getDeferred();
@@ -1387,6 +1392,7 @@ public class CommonBuilder
         "Test", "test",
         "IOException", "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState",
         "Boolean", "Ordered",
+//        "Array",
         "TerminalConsole",
     };
     private final static HashSet<String> SKIP_SET = new HashSet<>();
