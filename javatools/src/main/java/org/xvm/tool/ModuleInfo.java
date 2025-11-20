@@ -12,10 +12,10 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -33,7 +33,6 @@ import org.xvm.compiler.ast.Statement;
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
-import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 
@@ -1151,9 +1150,9 @@ public class ModuleInfo {
         }
 
         /**
-         * @return the map containing all class nodes by file
+         * @return the (ordered) map containing all class nodes by file
          */
-        public ListMap<File, FileNode> classNodes() {
+        public Map<File, FileNode> classNodes() {
             return m_mapClzNodes;
         }
 
@@ -1187,7 +1186,7 @@ public class ModuleInfo {
         /**
          * The classes nested directly in the module or package.
          */
-        private final ListMap<File, FileNode> m_mapClzNodes = new ListMap<>();
+        private final Map<File, FileNode> m_mapClzNodes = new LinkedHashMap<>();
 
         /**
          * The packages nested directly in the module or package.

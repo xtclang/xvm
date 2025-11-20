@@ -24,7 +24,6 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.BuildRepository;
-import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.InstantRepository;
 
 import org.xvm.runtime.CallChain;
@@ -303,8 +302,7 @@ public class xRTCompiler extends xService {
     /**
      * Adapter into the native compiler.
      */
-    protected static class CompilerAdapter
-            extends Compiler {
+    protected static class CompilerAdapter extends Compiler {
         protected CompilerAdapter(ErrorListener errListener) {
             // Build minimal immutable options - adapter overrides access via its own fields
             super(new CompilerOptions.Builder()
@@ -316,7 +314,8 @@ public class xRTCompiler extends xService {
         // ----- accessors -------------------------------------------------------------------------
 
         protected void setLibraryRepos(List<ModuleRepository> listRepos) {
-            m_listRepos = listRepos;
+            m_listRepos.clear();
+            m_listRepos.addAll(listRepos);
         }
 
         protected void addRepo(ModuleStructure module) {
@@ -328,7 +327,8 @@ public class xRTCompiler extends xService {
         }
 
         protected void setSourceLocations(List<File> listSources) {
-            m_listSources = listSources;
+            m_listSources.clear();
+            m_listSources.addAll(listSources);
         }
 
         protected Version getVersion() {
@@ -364,10 +364,10 @@ public class xRTCompiler extends xService {
          * @return a name of a missing module if any
          */
         protected String partialCompile(boolean fReenter) {
-            org.xvm.compiler.Compiler[] compilers;
-            ModuleRepository            repoLib;
-            ModuleRepository            repoOutput;
-            Node[]                      allNodes;
+            List<org.xvm.compiler.Compiler> compilers;
+            ModuleRepository                repoLib;
+            ModuleRepository                repoOutput;
+            Node[]                          allNodes;
 
             if (fReenter) {
                 compilers  = m_compilers;
@@ -420,7 +420,7 @@ public class xRTCompiler extends xService {
                 var mapCompilers = populateNamespace(allNodes, repoLib);
 
                 flushAndCheckErrors(allNodes);
-                compilers = mapCompilers.values().toArray(NO_COMPILERS);
+                compilers = List.copyOf(mapCompilers.values());
             }
 
             // inline linkModules() implementation
@@ -428,7 +428,8 @@ public class xRTCompiler extends xService {
                 ModuleConstant idMissing = compiler.linkModules(repoLib);
                 if (idMissing != null) {
                     // save off the necessary state
-                    m_compilers  = compilers;
+                    m_compilers.clear();
+                    m_compilers.addAll(compilers);
                     m_repoOutput = repoOutput;
                     m_allNodes   = allNodes;
                     return idMissing.getName();
@@ -457,10 +458,10 @@ public class xRTCompiler extends xService {
         protected void reset() {
             super.reset();
 
-            m_listSources = null;
-            m_listRepos   = null;
+            m_listSources.clear();
+            m_listRepos.clear();
             m_repoResults = null;
-            m_compilers   = null;
+            m_compilers.clear();
             m_repoOutput  = null;
             m_allNodes    = null;
             m_log.clear();
@@ -484,7 +485,7 @@ public class xRTCompiler extends xService {
         }
 
         @Override
-        protected void linkModules(org.xvm.compiler.Compiler[] compilers, ModuleRepository repo) {
+        protected void linkModules(List<org.xvm.compiler.Compiler> compilers, ModuleRepository repo) {
             // inlined; should not be called
             throw new IllegalStateException("linkModules");
         }
@@ -500,22 +501,33 @@ public class xRTCompiler extends xService {
         }
 
         @Override
-        protected LauncherException abort(boolean fError) {
-            return new CompilerException("");
+        protected void log(Severity sev, Throwable cause, String template, Object... params) {
+            if (sev.compareTo(m_sevWorst) > 0) {
+                m_sevWorst = sev;
+            }
+            if (sev.compareTo(Severity.WARNING) >= 0) {
+                final String msg;
+                if (template != null && !template.isEmpty()) {
+                    msg = Console.formatTemplate(template, params) + ": " + cause.getMessage();
+                } else {
+                    msg = cause.getMessage() != null ? cause.getMessage() : cause.toString();
+                }
+                m_log.add(sev.desc() + ": " + msg);
+            }
         }
 
         // ----- fields ----------------------------------------------------------------------------
 
-        private List<ModuleRepository> m_listRepos;
-        private List<File>             m_listSources;
-        private ModuleRepository       m_repoResults;
-        private Version                m_version = new Version("CI");
-        private final List<String>     m_log = new ArrayList<>();
+        private final List<ModuleRepository>        m_listRepos    = new ArrayList<>();
+        private final List<File>                    m_listSources  = new ArrayList<>();
+        private ModuleRepository                    m_repoResults;
+        private Version                             m_version      = new Version("CI");
+        private final List<String>                  m_log          = new ArrayList<>();
 
         // re-entry support
-        private org.xvm.compiler.Compiler[] m_compilers;
-        private ModuleRepository            m_repoOutput;
-        private Node[]                      m_allNodes;
+        private final List<org.xvm.compiler.Compiler> m_compilers  = new ArrayList<>();
+        private ModuleRepository                      m_repoOutput;
+        private Node[]                                m_allNodes;
     }
 
     // ----- constants -----------------------------------------------------------------------------

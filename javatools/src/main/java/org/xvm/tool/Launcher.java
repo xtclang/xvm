@@ -28,7 +28,6 @@ import org.xvm.tool.LauncherOptions.DisassemblerOptions;
 import org.xvm.tool.LauncherOptions.RunnerOptions;
 import org.xvm.tool.ModuleInfo.Node;
 
-import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
@@ -258,6 +257,9 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     /**
      * Log a message with template substitution (SLF4J-style).
      * Use {} placeholders in the template for parameter substitution.
+     * <p>
+     * <p>This method ONLY logs - it never throws exceptions. If you need to log and abort,
+     * use {@link #logAndAbort(Severity, String, Object...)} instead.
      *
      * @param sev       the severity (may indicate an error)
      * @param template  the message template with {} placeholders
@@ -267,15 +269,43 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
         if (errorsSuspended()) {
             return;
         }
-        // Update worst severity to far, if increased.
+        // Update worst severity so far, if increased.
         m_sevWorst = sev.compareTo(m_sevWorst) > 0 ? sev : m_sevWorst;
 
         final var msg = Console.formatTemplate(template, params);
         if (isBadEnoughToPrint(sev)) {
             m_console.log(sev, msg);
         }
-        if (sev == FATAL) {
-            throw abort(true, msg);
+    }
+
+    /**
+     * Log an exception with an optional message template.
+     * Use {} placeholders in the template for parameter substitution.
+     * The exception message and stack trace information will be included in the log.
+     * <p>
+     * <p>This method ONLY logs - it never throws exceptions.
+     *
+     * @param sev       the severity (may indicate an error)
+     * @param cause     the exception that caused this log entry
+     * @param template  optional message template with {} placeholders (if null, uses exception message)
+     * @param params    parameters to substitute into the template
+     */
+    protected void log(final Severity sev, final Throwable cause, final String template, final Object... params) {
+        if (errorsSuspended()) {
+            return;
+        }
+        // Update worst severity so far, if increased.
+        m_sevWorst = sev.compareTo(m_sevWorst) > 0 ? sev : m_sevWorst;
+
+        final String msg;
+        if (template != null && !template.isEmpty()) {
+            msg = Console.formatTemplate(template, params) + ": " + cause.getMessage();
+        } else {
+            msg = cause.getMessage() != null ? cause.getMessage() : cause.toString();
+        }
+
+        if (isBadEnoughToPrint(sev)) {
+            m_console.log(sev, msg);
         }
     }
 
@@ -286,6 +316,45 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      */
     protected void log(final ErrorList errs) {
         errs.getErrors().forEach(err -> log(err.getSeverity(), err.toString()));
+    }
+
+    /**
+     * Log a message and abort execution.
+     * This is a convenience method that logs the message and then throws a LauncherException.
+     *
+     * <p>Subclasses should NOT override this method - override {@link #log(Severity, String, Object...)}
+     * instead to preserve the separation of concerns.
+     *
+     * @param sev       the severity (typically FATAL or ERROR)
+     * @param template  the message template with {} placeholders
+     * @param params    parameters to substitute into the template
+     * @return LauncherException (never actually returns, always throws)
+     * @throws LauncherException always
+     */
+    protected LauncherException logAndAbort(final Severity sev, final String template, final Object... params) {
+        log(sev, template, params);
+        final var msg = Console.formatTemplate(template, params);
+        throw new LauncherException(true, msg, null);
+    }
+
+    /**
+     * Log a message with a cause exception and abort execution.
+     * This is a convenience method that logs the message and then throws a LauncherException wrapping the cause.
+     *
+     * <p>Subclasses should NOT override this method - override {@link #log(Severity, String, Object...)}
+     * instead to preserve the separation of concerns.
+     *
+     * @param sev       the severity (typically FATAL or ERROR)
+     * @param cause     the underlying exception that caused this abort
+     * @param template  the message template with {} placeholders
+     * @param params    parameters to substitute into the template
+     * @return LauncherException (never actually returns, always throws)
+     * @throws LauncherException always
+     */
+    protected LauncherException logAndAbort(final Severity sev, final Throwable cause, final String template, final Object... params) {
+        log(sev, cause, template, params);
+        final var msg = Console.formatTemplate(template, params);
+        throw new LauncherException(true, msg, cause);
     }
 
     /**
@@ -339,16 +408,17 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
         if (m_cSuspended > 0) {
             --m_cSuspended;
         } else {
-            log(FATAL, "Attempt to resume errors when errors have not been suspended");
+            throw logAndAbort(FATAL, "Attempt to resume errors when errors have not been suspended");
         }
     }
 
     /**
      * Determine if a previously logged error should cause the program to exit, and if so, exit.
+     * Throws LauncherException if errors have accumulated that are severe enough to abort.
      */
     protected void checkErrors() {
         if (isBadEnoughToAbort(m_sevWorst)) {
-            throw abort(true);
+            throw new LauncherException(true, null, null);
         }
     }
 
@@ -357,44 +427,14 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      *
      * @param fHelp  true iff the help message should be displayed and the program should exit
      */
-    @SuppressWarnings("unused")
     protected void checkErrors(final boolean fHelp) {
         if (fHelp) {
             displayHelp();
         }
-        if (fHelp || isBadEnoughToAbort(m_sevWorst)) {
-            throw abort(isBadEnoughToAbort(m_sevWorst));
+        final var fAbort = isBadEnoughToAbort(m_sevWorst);
+        if (fHelp || fAbort) {
+            throw new LauncherException(fAbort, null, null);
         }
-    }
-
-    /**
-     * Abort the command line with or without an error status.
-     *
-     * @param fError  true to abort with an error status (otherwise end of run, but not an error)
-     */
-    protected LauncherException abort(final boolean fError) {
-        return abort(fError, null, null);
-    }
-
-    /**
-     * Abort the command line with or without an error status.
-     *
-     * @param fError  true to abort with an error status (otherwise end of run, but not an error)
-     * @param msg     an optional message to display with the exception when it is caught and parsed.
-     */
-    protected static LauncherException abort(final boolean fError, final String msg) {
-        return abort(fError, msg, null);
-    }
-
-    /**
-     * Abort the command line with or without an error status.
-     *
-     * @param fError  true to abort with an error status (otherwise end of run, but not an error)
-     * @param msg     an optional message to display with the exception when it is caught and parsed.
-     * @param cause   an underlying excpeption and cause.
-     */
-    protected static LauncherException abort(final boolean fError, final String msg, final Throwable cause) {
-        return new LauncherException(fError, msg, cause);
     }
 
     /**
@@ -578,14 +618,14 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
         for (final String moduleName : List.of(ECSTASY_MODULE, TURTLE_MODULE)) {
             ModuleStructure module = reposLib.loadModule(moduleName);
             if (module == null) {
-                log(FATAL, "Unable to load module: {}", moduleName);
+                throw logAndAbort(FATAL, "Unable to load module: {}", moduleName);
             }
 
             final var struct = Objects.requireNonNull(module).getFileStructure();
             if (struct != null) {
                 ModuleConstant idMissing = struct.linkModules(reposLib, false);
                 if (idMissing != null) {
-                    log(FATAL, "Unable to link module {} due to missing module: {}", moduleName, idMissing.getName());
+                    throw logAndAbort(FATAL, "Unable to link module {} due to missing module: {}", moduleName, idMissing.getName());
                 }
             }
         }
@@ -752,7 +792,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * @return a list of "module files", each representing a module's source code
      */
     protected List<ModuleInfo> selectTargets(final List<File> listSources, final File[] resourceSpecs, final File outputSpec) {
-        final var mapResults = new ListMap<File, ModuleInfo>();
+        final var mapResults = new java.util.LinkedHashMap<File, ModuleInfo>();
         final var dups = new HashSet<File>();
 
         for (final var file : listSources) {

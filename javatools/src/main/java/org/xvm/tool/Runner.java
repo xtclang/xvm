@@ -53,7 +53,7 @@ public class Runner extends Launcher<RunnerOptions> {
      * @param console     representation of the terminal within which this command is run, or null
      * @param errListener optional ErrorListener to receive errors, or null for no delegation
      */
-    public Runner(RunnerOptions options, Console console, ErrorListener errListener) {
+    public Runner(final RunnerOptions options, final Console console, final ErrorListener errListener) {
         super(options, console, errListener);
     }
 
@@ -62,7 +62,7 @@ public class Runner extends Launcher<RunnerOptions> {
      *
      * @param asArg command line arguments
      */
-    static void main(String[] asArg) {
+    static void main(final String[] asArg) {
         Launcher.main(insertCommand(COMMAND_NAME, asArg));
     }
 
@@ -108,7 +108,7 @@ public class Runner extends Launcher<RunnerOptions> {
             File       outFile = opts.getOutputFile();
             try {
                 info = new ModuleInfo(fileSpec, opts.deduce(), null, outFile);
-            } catch (RuntimeException e) {
+            } catch (final RuntimeException e) {
                 log(ERROR, "Failed to identify the module for: {} ({})", fileSpec, e);
             }
             checkErrors();
@@ -127,7 +127,7 @@ public class Runner extends Launcher<RunnerOptions> {
                         fCompile = true;
                     } else {
                         var possibles = resolvePossibleTargets(qualName, repo);
-                        if (possibles == null) {
+                        if (possibles.isEmpty()) {
                             log(ERROR, "Failed to locate the module for: {}", fileSpec);
                         } else if (possibles.size() == 1) {
                             log(ERROR, "Unable to locate the module for {}; did you mean {}?", fileSpec, quoted(possibles.iterator().next()));
@@ -175,23 +175,22 @@ public class Runner extends Launcher<RunnerOptions> {
                     var struct = new FileStructure(in);
                     module = struct.getModule();
                 } catch (final IOException e) {
-                    log(FATAL, "I/O exception ({}) reading module file: {}", e, fileBin);
-                    throw abort(true);
+                    log(FATAL, e, "I/O exception reading module file: {}", fileBin);
+                    return 1;
                 }
             }
         }
 
         if (module == null) {
             log(ERROR, "Missing module for {}", fileSpec);
-            throw abort(true);
+            return 1;
         }
+
         try {
             repo.storeModule(module);
         } catch (final IOException e) {
-            // TODO: This is kind of weird. "FATAL" is pretty much always "bad enough to print", and
-            //   logging something fatal will abort. Not 100% consistent to also abort.
-            log(FATAL, "I/O exception ({}) storing module file: {}", e.getMessage(), fileSpec);
-            throw abort(true);
+            log(FATAL, e, "I/O exception storing module file: {}", fileSpec);
+            return 1;
         }
         checkErrors();
 
@@ -213,7 +212,7 @@ public class Runner extends Launcher<RunnerOptions> {
                 final var setMethods = connector.findMethods(sMethod);
                 if (setMethods.size() != 1) {
                     log(ERROR, "{} method {} in module {}", setMethods.isEmpty() ? "Missing" : "Ambiguous", quoted(sMethod), sName);
-                    throw abort(true);
+                    return 1;
                 }
 
                 var asArg       = opts.getMethodArgs();
@@ -228,7 +227,7 @@ public class Runner extends Launcher<RunnerOptions> {
                             var typeArg = method.getParam(0).getType();
                             if (!typeStrings.isA(typeArg)) {
                                 log(ERROR, "Unsupported argument type {} for method {}", quoted(typeArg.getValueString()), quoted(sMethod));
-                                throw abort(true);
+                                return 1;
                             }
                         } else {
                             log(WARNING, "Method {} does not take any parameters; ignoring the specified arguments", quoted(sMethod));
@@ -240,41 +239,39 @@ public class Runner extends Launcher<RunnerOptions> {
                     var typeArg = method.getParam(0).getType();
                     if (!typeStrings.isA(typeArg)) {
                         log(ERROR, "Unsupported argument type {} for method {}", quoted(typeArg.getValueString()), quoted(sMethod));
-                        throw abort(true);
+                        return 1;
                     }
                     break;
                 }
 
                 default:
                     log(ERROR, "Unsupported method arguments {}", quoted(method.getIdentityConstant().getSignature().getValueString()));
-                    throw abort(true);
+                    return 1;
                 }
 
                 connector.invoke0(method, asArg);
 
                 return connector.join();
             }
-        } catch (InterruptedException ignore) {
+        } catch (final InterruptedException _) {
             log(WARNING, "Interrupted while waiting for method {}", quoted(sName));
             return 1;
-        } catch (Throwable e) {
+        } catch (final Exception e) {
+            // Catch all non-LauncherException errors from the connector
             e.printStackTrace(System.err);
-            log(FATAL, e.toString());
+            log(FATAL, e, "Unexpected error");
             return 1;
         }
     }
 
-    private static Set<String> resolvePossibleTargets(String qualName, ModuleRepository repo) {
-        Set<String> possibles = null;
+    private static Set<String> resolvePossibleTargets(final String qualName, final ModuleRepository repo) {
+        final var possibles = new ListSet<String>();
         if (qualName.indexOf('.') < 0) {
             // the qualified name wasn't qualified; that may have been user input
             // error; find all the names that they may have meant to type
-            for (String name : repo.getModuleNames()) {
-                int ofDot = name.indexOf('.');
+            for (final String name : repo.getModuleNames()) {
+                final int ofDot = name.indexOf('.');
                 if (ofDot > 0 && name.substring(0, ofDot).equals(qualName)) {
-                    if (possibles == null) {
-                        possibles = new ListSet<>();
-                    }
                     possibles.add(name);
                 }
             }
@@ -295,7 +292,6 @@ public class Runner extends Launcher<RunnerOptions> {
                 Also supports:
                     <filename>, <filename>.x, or <filename>.xtc""";
     }
-
 
     // ----- options -------------------------------------------------------------------------------
 
