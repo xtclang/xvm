@@ -4,6 +4,8 @@ package org.xvm.tool;
 import java.io.File;
 import java.io.IOException;
 
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
@@ -17,11 +19,11 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Version;
 
 import org.xvm.compiler.Token;
+import org.xvm.compiler.Token.Id;
 
 import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.ModuleInfo.Node;
 
-import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 import static org.xvm.compiler.Compiler.MODULE_MISSING;
@@ -103,8 +105,6 @@ public class Compiler extends Launcher<CompilerOptions> {
 
     protected static final String COMMAND_NAME = "xcc";
 
-    protected static org.xvm.compiler.Compiler[] NO_COMPILERS = new org.xvm.compiler.Compiler[0];
-
     // ----- constants -----------------------------------------------------------------------------
 
     protected enum Strictness {
@@ -183,7 +183,7 @@ public class Compiler extends Launcher<CompilerOptions> {
             }
         }
 
-        var infoByName = new ListMap<String, ModuleInfo>(cTargets);
+        var infoByName = new LinkedHashMap<String, ModuleInfo>();
         for (int i = 0; i < cTargets; ++i) {
             var info    = aTarget[i];
             var sModule = info.getQualifiedModuleName();
@@ -219,7 +219,7 @@ public class Compiler extends Launcher<CompilerOptions> {
         final Version verStamp = opts.getVersion();
         log(INFO, "Output-path={}, force-rebuild={}", outputLoc, fRebuild);
 
-        final var mapTargets = new ListMap<File, Node>(cTargets);
+        final var mapTargets = new LinkedHashMap<File, Node>();
         var cSystemModules = 0;
         for (final var moduleInfo : aTarget) {
             log(INFO, "Loading and parsing sources for module: {}", moduleInfo.getQualifiedModuleName());
@@ -266,7 +266,7 @@ public class Compiler extends Launcher<CompilerOptions> {
         flushAndCheckErrors(allNodes);
 
         log(INFO, "Resolving names and dependencies");
-        final var compilers = mapCompilers.values().toArray(NO_COMPILERS);
+        final var compilers = List.copyOf(mapCompilers.values());
         linkModules(compilers, repoLib);
         flushAndCheckErrors(allNodes);
 
@@ -332,18 +332,18 @@ public class Compiler extends Launcher<CompilerOptions> {
      * @return a map from module name to compiler, one for each module being compiled
      */
     protected Map<String, org.xvm.compiler.Compiler> populateNamespace(final Node[] allNodes, final ModuleRepository repo) {
-        final var mapCompilers = new ListMap<String, org.xvm.compiler.Compiler>();
+        final var mapCompilers = new LinkedHashMap<String, org.xvm.compiler.Compiler>();
         final var repoBuild = extractBuildRepo(repo);
         for (final var node : allNodes) {
             // Create a module/package/class structure for each dir/file node in the "module tree"
-            if (node.type().getCategory().getId() != Token.Id.MODULE) {
+            if (node.type().getCategory().getId() != Id.MODULE) {
                 log(ERROR, "File {} doesn't contain a module statement", quoted(node));
                 continue;
             }
             final var compiler = new org.xvm.compiler.Compiler(node.type(), node.errs());
             final var struct = compiler.generateInitialFileStructure();
             if (struct == null) {
-                return null;
+                continue;
             }
             final var name = struct.getModuleId().getName();
             if (mapCompilers.containsKey(name)) {
@@ -358,7 +358,8 @@ public class Compiler extends Launcher<CompilerOptions> {
                 repo.storeModule(struct.getModule());
                 assert repoBuild.loadModule(name) != null;
             } catch (final IOException e) {
-                log(FATAL, e.toString());
+                log(FATAL, e, "I/O exception storing module: {}", name);
+                // Error accumulates in m_sevWorst, flushAndCheckErrors() will abort if needed
             }
         }
         return mapCompilers;
@@ -382,7 +383,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      *
      * @param compilers  a module compiler for each module
      */
-    protected void linkModules(final org.xvm.compiler.Compiler[] compilers, final ModuleRepository repo) {
+    protected void linkModules(final List<org.xvm.compiler.Compiler> compilers, final ModuleRepository repo) {
         for (final var compiler : compilers) {
             final var idMissing = compiler.linkModules(repo);
             if (idMissing != null) {
@@ -399,7 +400,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      * @param phase      the compilation phase to execute
      * @param phaseName  the name of the phase (for logging)
      */
-    protected void executeCompilationPhase(final org.xvm.compiler.Compiler[] compilers, final CompilationPhase phase, final String phaseName) {
+    protected void executeCompilationPhase(final List<org.xvm.compiler.Compiler> compilers, final CompilationPhase phase, final String phaseName) {
         int cTriesLeft = 0x3F;
         do {
             boolean fDone = true;
@@ -461,7 +462,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      *
      * @param compilers  a module compiler for each module
      */
-    protected void resolveNames(final org.xvm.compiler.Compiler[] compilers) {
+    protected void resolveNames(final List<org.xvm.compiler.Compiler> compilers) {
         executeCompilationPhase(compilers, org.xvm.compiler.Compiler::resolveNames, "resolve names");
     }
 
@@ -470,7 +471,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      *
      * @param compilers  a module compiler for each module
      */
-    protected void validateExpressions(final org.xvm.compiler.Compiler[] compilers) {
+    protected void validateExpressions(final List<org.xvm.compiler.Compiler> compilers) {
         executeCompilationPhase(compilers, org.xvm.compiler.Compiler::validateExpressions, "validate expressions");
     }
 
@@ -479,7 +480,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      *
      * @param compilers  a module compiler for each module
      */
-    protected void generateCode(final org.xvm.compiler.Compiler[] compilers) {
+    protected void generateCode(final List<org.xvm.compiler.Compiler> compilers) {
         final var codeGenPhase = new CompilationPhase() {
             @Override
             public boolean execute(final org.xvm.compiler.Compiler compiler, final boolean fForce) {
@@ -526,7 +527,8 @@ public class Compiler extends Launcher<CompilerOptions> {
                 try {
                     repoOutput.storeModule(module);
                 } catch (final IOException e) {
-                    log(FATAL, e.toString());
+                    log(FATAL, e, "I/O exception storing module: {}", module.getName());
+                    continue;
                 }
             } else {
                 // figure out where to put the resulting module
@@ -553,7 +555,7 @@ public class Compiler extends Launcher<CompilerOptions> {
                 try {
                     struct.writeTo(file);
                 } catch (final IOException e) {
-                    log(FATAL, "Exception ({}) occurred while attempting to write module file {}", e, quoted(file.getAbsolutePath()));
+                    log(FATAL, e, "Exception occurred while attempting to write module file {}", quoted(file.getAbsolutePath()));
                 }
             }
         }
