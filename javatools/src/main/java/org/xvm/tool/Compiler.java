@@ -18,7 +18,6 @@ import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Version;
 
-import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.tool.LauncherOptions.CompilerOptions;
@@ -121,6 +120,10 @@ public class Compiler extends Launcher<CompilerOptions> {
     protected ModuleRepository prevLibs;
     protected ModuleRepository prevOutput;
 
+    public Compiler(final CompilerOptions options) {
+        this(options, Launcher.DEFAULT_CONSOLE, null);
+    }
+
     /**
      * Compiler constructor for programmatic use.
      *
@@ -142,6 +145,16 @@ public class Compiler extends Launcher<CompilerOptions> {
         Launcher.main(insertCommand(COMMAND_NAME, args));
     }
 
+    /**
+     * Get the input locations (source files) to compile.
+     * Subclasses can override to provide dynamic sources.
+     *
+     * @return list of input source files
+     */
+    protected List<File> getInputLocations() {
+        return options().getInputLocations();
+    }
+
     // TODO: Also support a process call with an optional options paramter (and likely run and stuff...)
     @Override
     protected int process() {
@@ -151,7 +164,7 @@ public class Compiler extends Launcher<CompilerOptions> {
             showSystemVersion(ensureLibraryRepo());
         }
 
-        log(Severity.INFO, "Selecting compilation targets");
+        log(INFO, "Selecting compilation targets");
 
         File[]       resourceDirs = opts.getResourceLocation();
         File         outputLoc    = opts.getOutputLocation();
@@ -262,7 +275,8 @@ public class Compiler extends Launcher<CompilerOptions> {
 
         // the code below could be extracted if necessary: compile(allNodes, repoLib, repoOutput);
         log(INFO, "Creating empty modules and populating namespaces");
-        final var mapCompilers = populateNamespace(allNodes, repoLib);
+        final var mapCompilers = resolveCompilers(allNodes, repoLib);
+        log(INFO, "Resolved compilers: {}", mapCompilers);
         flushAndCheckErrors(allNodes);
 
         log(INFO, "Resolving names and dependencies");
@@ -331,7 +345,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      *
      * @return a map from module name to compiler, one for each module being compiled
      */
-    protected Map<String, org.xvm.compiler.Compiler> populateNamespace(final Node[] allNodes, final ModuleRepository repo) {
+    protected Map<String, org.xvm.compiler.Compiler> resolveCompilers(final Node[] allNodes, final ModuleRepository repo) {
         final var mapCompilers = new LinkedHashMap<String, org.xvm.compiler.Compiler>();
         final var repoBuild = extractBuildRepo(repo);
         for (final var node : allNodes) {
@@ -394,29 +408,45 @@ public class Compiler extends Launcher<CompilerOptions> {
     }
 
     /**
-     * Execute a compilation phase across all compilers with retry logic.
+     * Resolve dependencies, including among multiple modules that are being compiled at the same
+     * time.
      *
-     * @param compilers  the compilers to execute the phase on
-     * @param phase      the compilation phase to execute
-     * @param phaseName  the name of the phase (for logging)
+     * @param compilers  a module compiler for each module
      */
-    protected void executeCompilationPhase(final List<org.xvm.compiler.Compiler> compilers, final CompilationPhase phase, final String phaseName) {
+    protected static void resolveNames(final List<org.xvm.compiler.Compiler> compilers) {
         int cTriesLeft = 0x3F;
         do {
             boolean fDone = true;
             for (final var compiler : compilers) {
-                try {
-                    fDone &= phase.execute(compiler, cTriesLeft == 1);
-                    if (compiler.isAbortDesired()) {
-                        return;
-                    }
-                } catch (final RuntimeException e) {
-                    if (phase.shouldLogException()) {
-                        e.printStackTrace(System.err);
-                        log(ERROR, "Failed to {} for {} due to exception: {}", phaseName, compiler, e);
-                    } else {
-                        throw e;
-                    }
+                fDone &= compiler.resolveNames(cTriesLeft == 1);
+                if (compiler.isAbortDesired()) {
+                    return;
+                }
+            }
+            if (fDone) {
+                return;
+            }
+        } while (--cTriesLeft > 0);
+        // something couldn't get resolved; must be a bug in the compiler
+        for (final var compiler : compilers) {
+            compiler.logRemainingDeferredAsErrors();
+        }
+    }
+
+    /**
+     * Validation phase, before code generation.
+     *
+     * @param compilers  a module compiler for each module
+     */
+    protected static void validateExpressions(final List<org.xvm.compiler.Compiler> compilers) {
+        int cTriesLeft = 0x3F;
+        do {
+            boolean fDone = true;
+            for (final var compiler : compilers) {
+                fDone &= compiler.validateExpressions(cTriesLeft == 1);
+
+                if (compiler.isAbortDesired()) {
+                    return;
                 }
             }
             if (fDone) {
@@ -431,68 +461,35 @@ public class Compiler extends Launcher<CompilerOptions> {
     }
 
     /**
-     * Functional interface for a compilation phase.
-     */
-    @FunctionalInterface
-    protected interface CompilationPhase {
-        /**
-         * Execute this phase on a compiler.
-         *
-         * @param compiler  the compiler to execute on
-         * @param fForce    whether to force completion (last try)
-         *
-         * @return true if this phase is complete for this compiler
-         */
-        boolean execute(org.xvm.compiler.Compiler compiler, boolean fForce);
-
-        /**
-         * Whether exceptions during this phase should be logged and continue,
-         * or re-thrown.
-         *
-         * @return true to log and continue, false to re-throw
-         */
-        default boolean shouldLogException() {
-            return false;
-        }
-    }
-
-    /**
-     * Resolve dependencies, including among multiple modules that are being compiled at the same
-     * time.
-     *
-     * @param compilers  a module compiler for each module
-     */
-    protected void resolveNames(final List<org.xvm.compiler.Compiler> compilers) {
-        executeCompilationPhase(compilers, org.xvm.compiler.Compiler::resolveNames, "resolve names");
-    }
-
-    /**
-     * Validation phase, before code generation.
-     *
-     * @param compilers  a module compiler for each module
-     */
-    protected void validateExpressions(final List<org.xvm.compiler.Compiler> compilers) {
-        executeCompilationPhase(compilers, org.xvm.compiler.Compiler::validateExpressions, "validate expressions");
-    }
-
-    /**
      * After names/dependencies are resolved, generate the actual code.
      *
      * @param compilers  a module compiler for each module
      */
     protected void generateCode(final List<org.xvm.compiler.Compiler> compilers) {
-        final var codeGenPhase = new CompilationPhase() {
-            @Override
-            public boolean execute(final org.xvm.compiler.Compiler compiler, final boolean fForce) {
-                return compiler.generateCode(fForce);
+        int cTriesLeft = 0x3F;
+        do {
+            boolean fDone = true;
+            for (final var compiler : compilers) {
+                try {
+                    fDone &= compiler.generateCode(cTriesLeft == 1);
+                    if (compiler.isAbortDesired()) {
+                        return;
+                    }
+                } catch (final Throwable e) {
+                    System.err.println("Failed to generate code for " + compiler);
+                    e.printStackTrace(System.err);
+                    log(ERROR, "Failed to generate code for {} due to exception: {}", compiler, e);
+                }
             }
+            if (fDone) {
+                return;
+            }
+        } while (--cTriesLeft > 0);
 
-            @Override
-            public boolean shouldLogException() {
-                return true;  // generateCode catches and logs exceptions
-            }
-        };
-        executeCompilationPhase(compilers, codeGenPhase, "generate code");
+        // something couldn't get resolved; must be a bug in the compiler
+        for (final var compiler : compilers) {
+            compiler.logRemainingDeferredAsErrors();
+        }
     }
 
     @SuppressWarnings("UnusedReturnValue")
@@ -528,14 +525,14 @@ public class Compiler extends Launcher<CompilerOptions> {
                     repoOutput.storeModule(module);
                 } catch (final IOException e) {
                     log(FATAL, e, "I/O exception storing module: {}", module.getName());
-                    continue;
                 }
+                checkErrors();
             } else {
                 // figure out where to put the resulting module
                 var file = nodeModule.file().getParentFile();
                 if (file == null) {
                     log(ERROR, "Unable to determine output location for module {} from file: {}", quoted(nodeModule.name()), nodeModule.file());
-                    continue;
+                    checkErrors();
                 }
 
                 // at this point, we either have a directory or a file to put it in; resolve that to
@@ -572,14 +569,12 @@ public class Compiler extends Launcher<CompilerOptions> {
         if (cErrs > 0) {
             // if there are any COMPILER errors, suppress all VERIFY errors except the first three
             boolean fSuppressVerify = false;
-
             for (final var err : listErrs) {
                 if (err.getCode().startsWith("COMPILER")) {
                     fSuppressVerify = true;
                     break;
                 }
             }
-
             int cVerify = 0;
             for (final var err : listErrs) {
                 if (fSuppressVerify && err.getCode().startsWith("VERIFY") && ++cVerify > 3) {
@@ -598,20 +593,28 @@ public class Compiler extends Launcher<CompilerOptions> {
                 Converts ".x" files into a compiled ".xtc" Ecstasy module.""";
     }
 
+
     @Override
     protected boolean isBadEnoughToPrint(final Severity sev) {
-        if (options().verbose()) {
+        if (options().isVerbose()) {
             return true;
         }
         return switch (strictLevel) {
-            case None, Suppressed -> sev.compareTo(ERROR) >= 0;
-            case Normal, Stickler -> sev.compareTo(WARNING) >= 0;
+            case None, Suppressed -> sev.isAtLeast(ERROR);
+            case Normal, Stickler -> sev.isAtLeast(WARNING);
         };
     }
 
     @Override
     protected boolean isBadEnoughToAbort(final Severity sev) {
         return sev.compareTo(strictLevel == Strictness.Stickler ? WARNING : ERROR) >= 0;
+    }
+
+    @Override
+    public boolean isAbortDesired() {
+        // Check BOTH Console (tool errors) AND ErrorListener delegate (compiler errors)
+        // Use Compiler's strictness-aware abort threshold
+        return isBadEnoughToAbort(m_sevWorst) || (m_errors != ErrorListener.BLACKHOLE && m_errors.isAbortDesired());
     }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -629,7 +632,6 @@ public class Compiler extends Launcher<CompilerOptions> {
     public ModuleRepository getOutputRepo() {
         return prevOutput == null ? getLibraryRepo() : prevOutput;
     }
-
 
     // ----- options -------------------------------------------------------------------------------
 

@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
+import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -22,7 +23,6 @@ import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.LauncherOptions.RunnerOptions;
 
 import org.xvm.util.Handy;
-import org.xvm.util.ListSet;
 
 import static org.xvm.tool.ModuleInfo.isExplicitCompiledFile;
 import static org.xvm.tool.ModuleInfo.isExplicitEcstasyFile;
@@ -44,7 +44,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class Runner extends Launcher<RunnerOptions> {
 
-    static final String COMMAND_NAME = "xec";
+    protected static final String COMMAND_NAME = "xec";
 
     /**
      * Runner constructor for programmatic use.
@@ -72,9 +72,8 @@ public class Runner extends Launcher<RunnerOptions> {
         // repository setup
         final var opts = options();
 
-	var repo = configureLibraryRepo(opts.getModulePath());
-
-	checkErrors();
+        var repo = configureLibraryRepo(opts.getModulePath());
+    	checkErrors();
 	
         if (opts.showVersion()) {
             showSystemVersion(repo);
@@ -107,7 +106,7 @@ public class Runner extends Launcher<RunnerOptions> {
             ModuleInfo info    = null;
             File       outFile = opts.getOutputFile();
             try {
-                info = new ModuleInfo(fileSpec, opts.deduce(), null, outFile);
+                info = new ModuleInfo(fileSpec, opts.mayDeduceLocations(), null, outFile);
             } catch (final RuntimeException e) {
                 log(ERROR, "Failed to identify the module for: {} ({})", fileSpec, e);
             }
@@ -156,9 +155,9 @@ public class Runner extends Launcher<RunnerOptions> {
                     builder.setOutputLocation(outFile);
                 }
                 final var compilerOpts = builder.build();
-                new Compiler(compilerOpts, m_console, m_errDelegate).run();
+                new Compiler(compilerOpts, m_console, m_errors).run();
                 // TODO: No one checks the return value of the compile?
-                info      = new ModuleInfo(fileSpec, opts.deduce(), null, outFile);
+                info      = new ModuleInfo(fileSpec, opts.mayDeduceLocations(), null, outFile);
                 fileBin   = info.getBinaryFile();
                 binExists = fileBin != null && fileBin.exists();
                 repo      = configureLibraryRepo(opts.getModulePath());
@@ -176,21 +175,22 @@ public class Runner extends Launcher<RunnerOptions> {
                     module = struct.getModule();
                 } catch (final IOException e) {
                     log(FATAL, e, "I/O exception reading module file: {}", fileBin);
-                    return 1;
+                    throw new AssertionError(); // Unreachable - log(FATAL) throws
                 }
             }
         }
 
         if (module == null) {
             log(ERROR, "Missing module for {}", fileSpec);
-            return 1;
+            checkErrors();  // Throws LauncherException
+            return 1;  // Unreachable
         }
 
         try {
             repo.storeModule(module);
         } catch (final IOException e) {
             log(FATAL, e, "I/O exception storing module file: {}", fileSpec);
-            return 1;
+            throw new AssertionError(); // Unreachable - log(FATAL) throws
         }
         checkErrors();
 
@@ -212,7 +212,8 @@ public class Runner extends Launcher<RunnerOptions> {
                 final var setMethods = connector.findMethods(sMethod);
                 if (setMethods.size() != 1) {
                     log(ERROR, "{} method {} in module {}", setMethods.isEmpty() ? "Missing" : "Ambiguous", quoted(sMethod), sName);
-                    return 1;
+                    checkErrors();  // Throws LauncherException
+                    return 1;  // Unreachable
                 }
 
                 var asArg       = opts.getMethodArgs();
@@ -227,7 +228,8 @@ public class Runner extends Launcher<RunnerOptions> {
                             var typeArg = method.getParam(0).getType();
                             if (!typeStrings.isA(typeArg)) {
                                 log(ERROR, "Unsupported argument type {} for method {}", quoted(typeArg.getValueString()), quoted(sMethod));
-                                return 1;
+                                checkErrors();  // Throws LauncherException
+                                return 1;  // Unreachable
                             }
                         } else {
                             log(WARNING, "Method {} does not take any parameters; ignoring the specified arguments", quoted(sMethod));
@@ -239,14 +241,16 @@ public class Runner extends Launcher<RunnerOptions> {
                     var typeArg = method.getParam(0).getType();
                     if (!typeStrings.isA(typeArg)) {
                         log(ERROR, "Unsupported argument type {} for method {}", quoted(typeArg.getValueString()), quoted(sMethod));
-                        return 1;
+                        checkErrors();  // Throws LauncherException
+                        return 1;  // Unreachable
                     }
                     break;
                 }
 
                 default:
                     log(ERROR, "Unsupported method arguments {}", quoted(method.getIdentityConstant().getSignature().getValueString()));
-                    return 1;
+                    checkErrors();  // Throws LauncherException
+                    return 1;  // Unreachable
                 }
 
                 connector.invoke0(method, asArg);
@@ -256,16 +260,20 @@ public class Runner extends Launcher<RunnerOptions> {
         } catch (final InterruptedException _) {
             log(WARNING, "Interrupted while waiting for method {}", quoted(sName));
             return 1;
+        } catch (final LauncherException e) {
+            // Let LauncherException propagate unchanged
+            throw e;
         } catch (final Exception e) {
-            // Catch all non-LauncherException errors from the connector
+            // Catch all other unexpected errors from the connector
             e.printStackTrace(System.err);
             log(FATAL, e, "Unexpected error");
-            return 1;
+            throw new AssertionError(e); // Unreachable - log(FATAL) throws
         }
     }
 
+    // TODO: Does the order here matter, and if not,
     private static Set<String> resolvePossibleTargets(final String qualName, final ModuleRepository repo) {
-        final var possibles = new ListSet<String>();
+        final var possibles = new LinkedHashSet<String>();
         if (qualName.indexOf('.') < 0) {
             // the qualified name wasn't qualified; that may have been user input
             // error; find all the names that they may have meant to type

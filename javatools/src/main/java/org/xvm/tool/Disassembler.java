@@ -44,7 +44,7 @@ import static org.xvm.util.Severity.INFO;
  */
 public class Disassembler extends Launcher<DisassemblerOptions> {
 
-    static final String COMMAND_NAME = "xac";
+    protected static final String COMMAND_NAME = "xac";
 
     @SuppressWarnings("unused")
     private static final byte FREE    = 0;

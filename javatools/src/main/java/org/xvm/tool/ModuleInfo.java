@@ -71,7 +71,7 @@ public class ModuleInfo {
      * @param fileSpec the file to analyze, which may or may not exist
      * @param deduce   pass true to enable the algorithm to deduce/search for likely locations
      */
-    public ModuleInfo(File fileSpec, boolean deduce) {
+    public ModuleInfo(final File fileSpec, final boolean deduce) {
         this(fileSpec, deduce, null, null);
     }
 
@@ -88,7 +88,7 @@ public class ModuleInfo {
      * @param binarySpec    the file or directory which represents the target of the binary; as
      *                      provided to the compiler using the "-o" command line switch
      */
-    public ModuleInfo(File fileSpec, boolean deduce, File[] resourceSpecs, File binarySpec) {
+    public ModuleInfo(final File fileSpec, final boolean deduce, File[] resourceSpecs, File binarySpec) {
         if (fileSpec == null) {
             throw new IllegalArgumentException("A file specification is required for the module");
         }
@@ -302,7 +302,7 @@ public class ModuleInfo {
         }
 
         if (resourceSpecs != null && resourceSpecs.length > 0) {
-            for (File file : resourceSpecs) {
+            for (final File file : resourceSpecs) {
                 if (file == null) {
                     throw new IllegalArgumentException("A resource location is specified as null");
                 }
@@ -328,7 +328,7 @@ public class ModuleInfo {
         }
     }
 
-    Function<File, ModuleInfo> makeModuleInfoFactory(boolean deduce, File[] resources, File binary) {
+    Function<File, ModuleInfo> makeModuleInfoFactory(final boolean deduce, final File[] resources, final File binary) {
         return f -> new ModuleInfo(f, deduce, resources, binary);
     }
 
@@ -570,7 +570,7 @@ public class ModuleInfo {
                     binaryVersion = struct.getModule().getVersion();
                     binaryContent = Content.Module;
                     return true;
-                } catch (Exception ignore) {}
+                } catch (final Exception ignore) {}
             } else {
                 binaryStatus = Status.NotExists;
             }
@@ -598,7 +598,7 @@ public class ModuleInfo {
      *
      * @return an array of 0 or more compiled module files; never null
      */
-    private File[] getBinaryFiles(File dir) {
+    private File[] getBinaryFiles(final File dir) {
         return dir == null || !dir.isDirectory()
                 ? NO_FILES
                 : dir.listFiles(f -> !f.isDirectory() && "xtc".equalsIgnoreCase(getExtension(f.getName())));
@@ -641,9 +641,9 @@ public class ModuleInfo {
      * @param ext      an optional extension to match; otherwise null
      * @param visitor  the visitor to invoke with each matching non-directory file
      */
-    private void visitTree(File dir, String ext, Consumer<File> visitor) {
+    private void visitTree(final File dir, final String ext, final Consumer<File> visitor) {
         TreeMap<String, File> children = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-        for (File child : dir.listFiles()) {
+        for (final File child : dir.listFiles()) {
             String name = child.getName();
             if (ext == null || ext.equalsIgnoreCase(getExtension(name))) {
                 assert !children.containsKey(name);
@@ -651,7 +651,7 @@ public class ModuleInfo {
             }
         }
 
-        for (File child : children.values()) {
+        for (final File child : children.values()) {
             if (child.isDirectory()) {
                 visitTree(child, ext, visitor);
             } else {
@@ -733,7 +733,7 @@ public class ModuleInfo {
          * @param parent  the parent node
          * @param file    the file that this node will represent
          */
-        protected Node(DirNode parent, File file) {
+        protected Node(final DirNode parent, final File file) {
             // at least one of the parameters is required
             assert parent != null || file != null;
 
@@ -760,7 +760,7 @@ public class ModuleInfo {
          */
         public FileNode module() {
             Node rootNode = root();
-            if (rootNode instanceof DirNode rootDir) {
+            if (rootNode instanceof final DirNode rootDir) {
                 return rootDir.sourceNode();
             } else {
                 return (FileNode) rootNode;
@@ -838,7 +838,7 @@ public class ModuleInfo {
         public abstract TypeCompositionStatement type();
 
         @Override
-        public boolean log(ErrorInfo err) {
+        public boolean log(final ErrorInfo err) {
             return errs().log(err);
         }
 
@@ -853,7 +853,7 @@ public class ModuleInfo {
         }
 
         @Override
-        public boolean hasError(String sCode) {
+        public boolean hasError(final String sCode) {
             return m_errs != null && m_errs.hasError(sCode);
         }
 
@@ -871,10 +871,10 @@ public class ModuleInfo {
         /**
          * @return log any errors accumulated on (or under) this node
          */
-        public void logErrors(ErrorListener errs) {
+        public void logErrors(final ErrorListener errs) {
             ErrorList deferred = m_errs;
             if (deferred != null) {
-                for (ErrorInfo err : deferred.getErrors()) {
+                for (final ErrorInfo err : deferred.getErrors()) {
                     errs.log(err);
                 }
                 deferred.clear();
@@ -917,7 +917,7 @@ public class ModuleInfo {
          * @param dir      the directory that this node will represent
          * @param fileSrc  the file for the package.x file (or null if it does not exist)
          */
-        DirNode(DirNode parent, File dir, File fileSrc) {
+        DirNode(final DirNode parent, final File dir, final File fileSrc) {
             super(parent, dir);
             assert dir.isDirectory();
 
@@ -932,7 +932,7 @@ public class ModuleInfo {
          */
         void buildSourceTree() {
             File thisDir = file();
-            for (File file : listFiles(thisDir)) {
+            for (final File file : listFiles(thisDir)) {
                 String name = file.getName();
                 if (file.isDirectory()) {
                     // if the directory has no corresponding ".x" file, then it is an implied package
@@ -1023,11 +1023,11 @@ public class ModuleInfo {
             }
             m_nodeSrc.parse();
 
-            for (FileNode cmpFile : m_mapClzNodes.values()) {
+            for (final FileNode cmpFile : m_mapClzNodes.values()) {
                 cmpFile.parse();
             }
 
-            for (DirNode child : m_listPkgNodes) {
+            for (final DirNode child : m_listPkgNodes) {
                 child.parse();
             }
         }
@@ -1041,12 +1041,12 @@ public class ModuleInfo {
 
             sourceNode().registerNames();
 
-            for (FileNode clz : classNodes().values()) {
+            for (final FileNode clz : classNodes().values()) {
                 clz.registerNames();
                 registerName(clz.name(), clz);
             }
 
-            for (DirNode pkg : packageNodes()) {
+            for (final DirNode pkg : packageNodes()) {
                 pkg.registerNames();
                 registerName(pkg.name(), pkg);
             }
@@ -1060,7 +1060,7 @@ public class ModuleInfo {
          *              raised
          * @param node  the child node to register with the specified name
          */
-        public void registerName(String name, Node node) {
+        public void registerName(final String name, final Node node) {
             if (name != null) {
                 if (children().containsKey(name)) {
                     log(Severity.ERROR, DUP_NAME, new Object[] {name, descriptiveName()}, null);
@@ -1078,11 +1078,11 @@ public class ModuleInfo {
             } else {
                 TypeCompositionStatement typePkg = nodePkg.type();
 
-                for (FileNode nodeClz : classNodes().values()) {
+                for (final FileNode nodeClz : classNodes().values()) {
                     typePkg.addEnclosed(nodeClz.ast());
                 }
 
-                for (DirNode nodeNestedPkg : packageNodes()) {
+                for (final DirNode nodeNestedPkg : packageNodes()) {
                     // nest the package within this package
                     typePkg.addEnclosed(nodeNestedPkg.sourceNode().ast());
 
@@ -1112,18 +1112,18 @@ public class ModuleInfo {
         }
 
         @Override
-        public void logErrors(ErrorListener errs) {
+        public void logErrors(final ErrorListener errs) {
             super.logErrors(errs);
 
             if (sourceNode() != null) {
                 sourceNode().logErrors(errs);
             }
 
-            for (FileNode clz : classNodes().values()) {
+            for (final FileNode clz : classNodes().values()) {
                 clz.logErrors(errs);
             }
 
-            for (DirNode pkg : packageNodes()) {
+            for (final DirNode pkg : packageNodes()) {
                 pkg.logErrors(errs);
             }
         }
@@ -1210,7 +1210,7 @@ public class ModuleInfo {
          * @param parent  the parent node
          * @param file    the file that this node will represent
          */
-        FileNode(DirNode parent, File file) {
+        FileNode(final DirNode parent, final File file) {
             super(parent, file);
         }
 
@@ -1219,7 +1219,7 @@ public class ModuleInfo {
          *
          * @param code  the source code
          */
-        public FileNode(DirNode parent, String code) {
+        public FileNode(final DirNode parent, final String code) {
             super(parent, null);
             m_text = code;
         }
@@ -1300,7 +1300,7 @@ public class ModuleInfo {
 
             try {
                 return readFileChars(m_file);
-            } catch (IOException e) {
+            } catch (final IOException e) {
                 log(Severity.ERROR, READ_FAILURE, new Object[] {m_file}, null);
             }
 
@@ -1365,7 +1365,7 @@ public class ModuleInfo {
                     }
                 } else {
                     Object resource = dir.getByName(segment);
-                    if (resource instanceof ResourceDir subdir) {
+                    if (resource instanceof final ResourceDir subdir) {
                         dir = subdir;
                     } else {
                         return i == last && !fRequireDir ? resource : null;
@@ -1380,7 +1380,7 @@ public class ModuleInfo {
             Source source = source();
             try {
                 m_stmtAST = new Parser(source, this).parseSource();
-            } catch (CompilerException e) {
+            } catch (final CompilerException e) {
                 if (!hasSeriousErrors()) {
                     log(Severity.FATAL, Parser.FATAL_ERROR, null,
                         source, source.getPosition(), source.getPosition());
@@ -1393,7 +1393,7 @@ public class ModuleInfo {
             // this can only happen if the errors were ignored
             Statement stmt = ast();
             if (stmt != null) {
-                if (stmt instanceof TypeCompositionStatement stmtType) {
+                if (stmt instanceof final TypeCompositionStatement stmtType) {
                     m_stmtType = stmtType;
                 } else {
                     List<Statement> list = ((StatementBlock) stmt).getStatements();
@@ -1461,7 +1461,7 @@ public class ModuleInfo {
      *
      * @return the module's name if the file declares a module; null otherwise
      */
-    public static String extractModuleName(File file) {
+    public static String extractModuleName(final File file) {
         if (file.exists() && file.canRead()) {
             String name = file.getName();
             if (isExplicitSourceFile(name)) {
@@ -1469,11 +1469,11 @@ public class ModuleInfo {
                     Source source = new Source(file);
                     Parser parser = new Parser(source, ErrorListener.BLACKHOLE);
                     return parser.parseModuleNameIgnoreEverythingElse();
-                } catch (CompilerException | IOException ignore) {}
+                } catch (final CompilerException | IOException ignore) {}
             } else if (isExplicitCompiledFile(name)) {
                 try {
                     return new FileStructure(file).getModuleId().getName();
-                } catch (IOException ignore) {}
+                } catch (final IOException ignore) {}
             }
         }
 
@@ -1493,7 +1493,7 @@ public class ModuleInfo {
      *
      * @return the version of the XVM that compiled the specified module
      */
-    public static Version getXvmVersion(File moduleFile) {
+    public static Version getXvmVersion(final File moduleFile) {
         if (moduleFile == null) {
             throw new IllegalArgumentException("Compiled module file required");
         }
@@ -1505,7 +1505,7 @@ public class ModuleInfo {
         try {
             FileStructure struct = new FileStructure(moduleFile);
             return new Version(new int[] {struct.getFileMajorVersion(), struct.getFileMinorVersion()}, null);
-        } catch (IOException e) {
+        } catch (final IOException e) {
             throw new RuntimeException("Failed to read module file: " + moduleFile);
         }
     }
@@ -1517,7 +1517,7 @@ public class ModuleInfo {
     public static Version getXdkVersion() {
         try {
             return getModuleVersion(new File(getJarFile().getParentFile().getParentFile(), "lib/ecstasy.xtc"));
-        } catch (Exception ignore) {
+        } catch (final Exception ignore) {
             return null;
         }
     }
@@ -1525,7 +1525,7 @@ public class ModuleInfo {
     /**
      * @return the Version that was stamped onto the specified compiled module file
      */
-    public static Version getModuleVersion(File moduleFile) {
+    public static Version getModuleVersion(final File moduleFile) {
         if (moduleFile == null) {
             throw new IllegalArgumentException("Compiled module file required");
         }
@@ -1536,7 +1536,7 @@ public class ModuleInfo {
 
         try {
             return new FileStructure(moduleFile).getModule().getVersion();
-        } catch (Exception ignore) {
+        } catch (final Exception ignore) {
             return null;
         }
     }
@@ -1546,26 +1546,7 @@ public class ModuleInfo {
      *         is not part of a well-formed XDK image
      */
     private static File getJarFile() {
-        Class clz    = ModuleInfo.class;
-        URL   jarUrl = null;
-        try {
-            jarUrl = clz.getProtectionDomain().getCodeSource().getLocation();
-        } catch (SecurityException | NullPointerException ignore) {}
-
-        if (jarUrl == null) {
-            URL clzUrl = clz.getResource(clz.getSimpleName() + ".class");
-            if (clzUrl != null) {
-                String clzPath = clzUrl.toString();
-                String clzTail = clz.getCanonicalName().replace('.', '/') + ".class";
-                if (clzPath.endsWith(clzTail)) {
-                    try {
-                        jarUrl = new URI(clzPath.substring(0, clzPath.length() - clzTail.length())).
-                                    toURL();
-                    } catch (MalformedURLException | URISyntaxException ignore) {}
-                }
-            }
-        }
-
+        final URL jarUrl = getUrl();
         if (jarUrl == null) {
             return null;
         }
@@ -1585,12 +1566,38 @@ public class ModuleInfo {
                 jarPath = "file:/" + jarPath.substring(5);
             }
             jarFile = new File(new URI(jarPath));
-        } catch (Exception ignore) {
+        } catch (final Exception ignore) {
             if (jarPath.startsWith("file:")) {
                 jarFile = new File(jarPath.substring(5));
             }
         }
         return jarFile;
+    }
+
+    private static URL getUrl() {
+        Class<?> clz = ModuleInfo.class;
+        URL jarUrl = null;
+        try {
+            jarUrl = clz.getProtectionDomain().getCodeSource().getLocation();
+        } catch (final SecurityException | NullPointerException _) {
+            // ignored
+        }
+
+        if (jarUrl == null) {
+            URL clzUrl = clz.getResource(clz.getSimpleName() + ".class");
+            if (clzUrl != null) {
+                String clzPath = clzUrl.toString();
+                String clzTail = clz.getCanonicalName().replace('.', '/') + ".class";
+                if (clzPath.endsWith(clzTail)) {
+                    try {
+                        jarUrl = new URI(clzPath.substring(0, clzPath.length() - clzTail.length())).toURL();
+                    } catch (final MalformedURLException | URISyntaxException _) {
+
+                    }
+                }
+            }
+        }
+        return jarUrl;
     }
 
     /**
@@ -1599,13 +1606,13 @@ public class ModuleInfo {
      * @return the modification date in the format "YYYY-MM-DD.HH-MM-SS", or null if it could not be
      *         determined
      */
-    private static String fileTimestampToBuildString(File file) {
+    private static String fileTimestampToBuildString(final File file) {
         try {
             long timestamp = file.lastModified();
             return timestamp == 0
                     ? null
                     : dateString(timestamp).replace(':', '-').replace(' ', '.');
-        } catch (RuntimeException ignore) {
+        } catch (final RuntimeException ignore) {
             return null;
         }
     }
@@ -1618,7 +1625,7 @@ public class ModuleInfo {
      *
      * @return true iff the passed name is an explicit Ecstasy source or compiled module file name
      */
-    public static boolean isExplicitEcstasyFile(String sFile) {
+    public static boolean isExplicitEcstasyFile(final String sFile) {
         String sExt = getExtension(sFile);
         return "x".equalsIgnoreCase(sExt) || "xtc".equalsIgnoreCase(sExt);
     }
@@ -1630,7 +1637,7 @@ public class ModuleInfo {
      *
      * @return true iff the passed name is an explicit Ecstasy source or compiled module file name
      */
-    public static boolean isExplicitSourceFile(String sFile) {
+    public static boolean isExplicitSourceFile(final String sFile) {
         String sExt = getExtension(sFile);
         return "x".equalsIgnoreCase(sExt);
     }
@@ -1642,7 +1649,7 @@ public class ModuleInfo {
      *
      * @return an array of zero or more source files
      */
-    public static File[] sourceFiles(File dir) {
+    public static File[] sourceFiles(final File dir) {
         return listFiles(dir, "x");
     }
 
@@ -1653,7 +1660,7 @@ public class ModuleInfo {
      *
      * @return true iff the passed name is an explicit Ecstasy source or compiled module file name
      */
-    public static boolean isExplicitCompiledFile(String sFile) {
+    public static boolean isExplicitCompiledFile(final String sFile) {
         String sExt = getExtension(sFile);
         return "xtc".equalsIgnoreCase(sExt);
     }
@@ -1665,7 +1672,7 @@ public class ModuleInfo {
      *
      * @return an array of zero or more compiled module files
      */
-    public static File[] compiledFiles(File dir) {
+    public static File[] compiledFiles(final File dir) {
         return listFiles(dir, "xtc");
     }
 
@@ -1674,7 +1681,7 @@ public class ModuleInfo {
      *
      * @return true iff the directory appears to be a project directory
      */
-    public static boolean isProjectDir(File dir) {
+    public static boolean isProjectDir(final File dir) {
         return dir != null && dir.isDirectory() &&
             (new File(dir, "src"   ).exists() && !new File(dir, "src.x"   ).exists() ||
              new File(dir, "source").exists() && !new File(dir, "source.x").exists());
@@ -1743,7 +1750,7 @@ public class ModuleInfo {
      *
      * @return the best guess at the location of the source directory
      */
-    public static File sourceDirFromPrjDir(File prjDir) {
+    public static File sourceDirFromPrjDir(final File prjDir) {
         assert prjDir != null;
 
         // locate the source directory, starting by assuming that the project directory could also
@@ -1800,7 +1807,7 @@ public class ModuleInfo {
      *
      * @return the best guess at the location of the binary directory
      */
-    public static File binaryDirFromPrjDir(File prjDir) {
+    public static File binaryDirFromPrjDir(final File prjDir) {
         assert prjDir != null;
 
         File subdir;

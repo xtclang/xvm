@@ -139,8 +139,7 @@ public class LinkedRepository
     }
 
     @Override
-    public void storeModule(ModuleStructure module)
-            throws IOException {
+    public void storeModule(ModuleStructure module) throws IOException {
         repos[0].storeModule(module);
     }
 
@@ -156,5 +155,5 @@ public class LinkedRepository
     /**
      * A value of true stores a copy of all read modules in the first repository.
      */
-    private final boolean            readThrough;
+    private final boolean readThrough;
 }

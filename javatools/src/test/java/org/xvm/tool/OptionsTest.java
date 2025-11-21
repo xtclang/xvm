@@ -6,10 +6,13 @@ import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.LauncherOptions.RunnerOptions;
 
 import java.io.File;
-import java.util.List;
-import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit tests for the Options2 system.
@@ -19,20 +22,19 @@ class OptionsTest {
 
     @Test
     void testCompilerOptionsParseFromArgs() {
-        String[] args = {"--rebuild", "--strict", "-L", "/lib1", "-o", "/tmp/out", "foo.x", "bar.x"};
-
-        CompilerOptions opts = CompilerOptions.parse(args);
+        final var args = new String[]{"--rebuild", "--strict", "-L", "/lib1", "-o", "/tmp/out", "foo.x", "bar.x"};
+        final var opts = CompilerOptions.parse(args);
 
         assertTrue(opts.isForcedRebuild());
         assertTrue(opts.isStrict());
         assertFalse(opts.isNoWarn());
         assertEquals(new File("/tmp/out"), opts.getOutputLocation());
 
-        List<File> modulePath = opts.getModulePath();
+        final var modulePath = opts.getModulePath();
         assertEquals(1, modulePath.size());
         assertEquals(new File("/lib1"), modulePath.get(0));
 
-        List<File> sources = opts.getInputLocations();
+        final var sources = opts.getInputLocations();
         assertEquals(2, sources.size());
         assertEquals(new File("foo.x"), sources.get(0));
         assertEquals(new File("bar.x"), sources.get(1));
@@ -40,7 +42,7 @@ class OptionsTest {
 
     @Test
     void testCompilerOptionsBuilder() {
-        CompilerOptions opts = new CompilerOptions.Builder()
+        final var opts = new CompilerOptions.Builder()
                 .forceRebuild(true)
                 .enableStrictMode(true)
                 .addModulePath(new File("/lib1"))
@@ -56,12 +58,12 @@ class OptionsTest {
         assertEquals(new File("/tmp/out"), opts.getOutputLocation());
         assertEquals(new Version("1.2.3"), opts.getVersion());
 
-        List<File> modulePath = opts.getModulePath();
+        final var modulePath = opts.getModulePath();
         assertEquals(2, modulePath.size());
         assertEquals(new File("/lib1"), modulePath.get(0));
         assertEquals(new File("/lib2"), modulePath.get(1));
 
-        List<File> sources = opts.getInputLocations();
+        final var sources = opts.getInputLocations();
         assertEquals(2, sources.size());
         assertEquals(new File("foo.x"), sources.get(0));
         assertEquals(new File("bar.x"), sources.get(1));
@@ -69,7 +71,7 @@ class OptionsTest {
 
     @Test
     void testCompilerOptionsSerializeToArgs() {
-        CompilerOptions opts = new CompilerOptions.Builder()
+        final var opts = new CompilerOptions.Builder()
                 .forceRebuild(true)
                 .enableStrictMode(true)
                 .addModulePath(new File("/lib1"))
@@ -93,7 +95,7 @@ class OptionsTest {
     void testCompilerOptionsRoundTrip() {
         String[] originalArgs = {"--rebuild", "-L", "/lib1", "-o", "/tmp/out", "foo.x"};
 
-        CompilerOptions opts = CompilerOptions.parse(originalArgs);
+        final var opts = CompilerOptions.parse(originalArgs);
         String[] serializedArgs = opts.toCommandLine();
         CompilerOptions reparsed = CompilerOptions.parse(serializedArgs);
 
@@ -105,35 +107,35 @@ class OptionsTest {
 
     @Test
     void testRunnerOptionsParseFromArgs() {
-        String[] args = {"-J", "-M", "main", "-I", "key1=value1", "-I", "key2=value2",
+        final String[] args = {"-J", "-M", "main", "-I", "key1=value1", "-I", "key2=value2",
                          "-L", "/lib1", "MyModule.xtc", "arg1", "arg2"};
 
-        RunnerOptions opts = RunnerOptions.parse(args);
+        final var opts = RunnerOptions.parse(args);
 
         assertTrue(opts.isJit());
         assertEquals("main", opts.getMethodName());
         assertFalse(opts.isCompileDisabled());
         assertEquals(new File("MyModule.xtc"), opts.getTarget());
 
-        Map<String, String> injections = opts.getInjections();
+        final var injections = opts.getInjections();
         assertEquals(2, injections.size());
         assertEquals("value1", injections.get("key1"));
         assertEquals("value2", injections.get("key2"));
 
-        String[] methodArgs = opts.getMethodArgs();
+        final var methodArgs = opts.getMethodArgs();
         assertNotNull(methodArgs);
         assertEquals(2, methodArgs.length);
         assertEquals("arg1", methodArgs[0]);
         assertEquals("arg2", methodArgs[1]);
 
-        List<File> modulePath = opts.getModulePath();
+        final var modulePath = opts.getModulePath();
         assertEquals(1, modulePath.size());
         assertEquals(new File("/lib1"), modulePath.get(0));
     }
 
     @Test
     void testRunnerOptionsBuilderWithDefaults() {
-        RunnerOptions opts = RunnerOptions.parse(new String[]{"MyModule.xtc"});
+        final var opts = RunnerOptions.parse(new String[]{"MyModule.xtc"});
 
         assertFalse(opts.isJit());
         assertEquals("run", opts.getMethodName()); // Default method name
@@ -144,23 +146,21 @@ class OptionsTest {
 
     @Test
     void testCompilerOptionsImmutability() {
-        CompilerOptions opts = new CompilerOptions.Builder()
+        final var opts = new CompilerOptions.Builder()
                 .addModulePath(new File("/lib1"))
                 .build();
 
         // Options should be immutable - getModulePath returns unmodifiable list
-        assertThrows(UnsupportedOperationException.class, () -> {
-            opts.getModulePath().add(new File("bad"));
-        });
+        assertThrows(UnsupportedOperationException.class, () -> opts.getModulePath().add(new File("bad")));
     }
 
     @Test
     void testModulePathMultipleForms() {
         // Test 1: Single -L with colon-separated paths (Unix style)
-        String sep = File.pathSeparator; // : on Unix, ; on Windows
+        final var sep = File.pathSeparator; // : on Unix, ; on Windows
         String[] args1 = {"-L", "/lib" + sep + "/build" + sep + "/modules", "Test.x"};
         CompilerOptions opts1 = CompilerOptions.parse(args1);
-        List<File> paths1 = opts1.getModulePath();
+        final var paths1 = opts1.getModulePath();
         assertEquals(3, paths1.size());
         assertEquals(new File("/lib"), paths1.get(0));
         assertEquals(new File("/build"), paths1.get(1));
@@ -169,7 +169,7 @@ class OptionsTest {
         // Test 2: Multiple -L flags
         String[] args2 = {"-L", "/lib", "-L", "/build", "-L", "/modules", "Test.x"};
         CompilerOptions opts2 = CompilerOptions.parse(args2);
-        List<File> paths2 = opts2.getModulePath();
+        final var paths2 = opts2.getModulePath();
         assertEquals(3, paths2.size());
         assertEquals(new File("/lib"), paths2.get(0));
         assertEquals(new File("/build"), paths2.get(1));
@@ -178,7 +178,7 @@ class OptionsTest {
         // Test 3: Combination of both forms
         String[] args3 = {"-L", "/lib" + sep + "/build", "-L", "/modules", "Test.x"};
         CompilerOptions opts3 = CompilerOptions.parse(args3);
-        List<File> paths3 = opts3.getModulePath();
+        final var paths3 = opts3.getModulePath();
         assertEquals(3, paths3.size());
         assertEquals(new File("/lib"), paths3.get(0));
         assertEquals(new File("/build"), paths3.get(1));
@@ -188,13 +188,8 @@ class OptionsTest {
     @Test
     void testInvalidOptionDetection() {
         // Apache CLI should throw IllegalArgumentException for unknown options
-        assertThrows(IllegalArgumentException.class, () -> {
-            CompilerOptions.parse(new String[]{"--invalid-option", "Test.x"});
-        });
-
-        assertThrows(IllegalArgumentException.class, () -> {
-            RunnerOptions.parse(new String[]{"--bad-flag", "Test.xtc"});
-        });
+        assertThrows(IllegalArgumentException.class, () -> CompilerOptions.parse(new String[]{"--invalid-option", "Test.x"}));
+        assertThrows(IllegalArgumentException.class, () -> RunnerOptions.parse(new String[]{"--bad-flag", "Test.xtc"}));
     }
 
     @Test
@@ -211,8 +206,8 @@ class OptionsTest {
 
     @Test
     void testRunnerOptionsImmutability() {
-        String[] args = {"-I", "key=value", "MyModule.xtc"};
-        RunnerOptions opts = RunnerOptions.parse(args);
+        final String[] args = {"-I", "key=value", "MyModule.xtc"};
+        final var opts = RunnerOptions.parse(args);
 
         // Options should be immutable - getInjections returns unmodifiable map
         assertThrows(UnsupportedOperationException.class, () -> {
@@ -222,9 +217,9 @@ class OptionsTest {
 
     @Test
     void testLongFormFlags() {
-        String[] args = {"--rebuild", "--strict", "foo.x"};
+        final String[] args = {"--rebuild", "--strict", "foo.x"};
 
-        CompilerOptions opts = CompilerOptions.parse(args);
+        final var opts = CompilerOptions.parse(args);
 
         assertTrue(opts.isForcedRebuild());
         assertTrue(opts.isStrict());
@@ -233,9 +228,9 @@ class OptionsTest {
 
     @Test
     void testNoWarnFlag() {
-        String[] args = {"--nowarn", "foo.x"};
+        final String[] args = {"--nowarn", "foo.x"};
 
-        CompilerOptions opts = CompilerOptions.parse(args);
+        final var opts = CompilerOptions.parse(args);
 
         assertFalse(opts.isStrict());
         assertTrue(opts.isNoWarn());
@@ -243,8 +238,8 @@ class OptionsTest {
 
     @Test
     void testStrictAndNoWarnMutualExclusion() {
-        // Test that --strict and --nowarn are mutually exclusive
-        String[] args = {"--strict", "--nowarn", "foo.x"};
+        // Test that --strict and --nowarn are mutually exclusive when parsing args
+        final String[] args = {"--strict", "--nowarn", "foo.x"};
 
         assertThrows(IllegalArgumentException.class, () -> {
             CompilerOptions.parse(args);
@@ -252,10 +247,22 @@ class OptionsTest {
     }
 
     @Test
-    void testMissingOptionalValues() {
-        String[] args = {"foo.x"};
+    void testStrictAndNoWarnMutualExclusionBuilder() {
+        // Test that --strict and --nowarn are mutually exclusive when using builder
+        assertThrows(IllegalArgumentException.class, () -> {
+            new CompilerOptions.Builder()
+                    .enableStrictMode(true)
+                    .disableWarnings(true)
+                    .addInputFile(new File("foo.x"))
+                    .build();
+        });
+    }
 
-        CompilerOptions opts = CompilerOptions.parse(args);
+    @Test
+    void testMissingOptionalValues() {
+        final String[] args = {"foo.x"};
+
+        final var opts = CompilerOptions.parse(args);
 
         assertFalse(opts.isForcedRebuild());
         assertFalse(opts.isStrict());
@@ -267,7 +274,7 @@ class OptionsTest {
     @Test
     void testEmptyOptions() {
         // Test that empty constructor creates valid empty options
-        CompilerOptions opts = new CompilerOptions.Builder().build();
+        final var opts = new CompilerOptions.Builder().build();
 
         assertNotNull(opts);
         assertFalse(opts.isForcedRebuild());
@@ -279,28 +286,28 @@ class OptionsTest {
 
     @Test
     void testFlagWithoutValue() {
-        String[] args = {"-v", "foo.x"};
-        CompilerOptions opts = CompilerOptions.parse(args);
-        assertTrue(opts.verbose());
+        final String[] args = {"-v", "foo.x"};
+        final var opts = CompilerOptions.parse(args);
+        assertTrue(opts.isVerbose());
     }
 
     @Test
     void testFlagWithFileArg() {
         // Apache Commons CLI treats flags as presence/absence
         // Next arg is treated as trailing if not an option
-        String[] args = {"-v", "foo.x"};
-        CompilerOptions opts = CompilerOptions.parse(args);
-        assertTrue(opts.verbose());
+        final String[] args = {"-v", "foo.x"};
+        final var opts = CompilerOptions.parse(args);
+        assertTrue(opts.isVerbose());
         assertEquals(1, opts.getInputLocations().size());
         assertEquals(new File("foo.x"), opts.getInputLocations().get(0));
     }
 
     @Test
     void testRepeatedMultiArgs() {
-        String[] args = {"-L", "/lib1", "-L", "/lib2", "-L", "/lib3", "foo.x"};
-        CompilerOptions opts = CompilerOptions.parse(args);
+        final String[] args = {"-L", "/lib1", "-L", "/lib2", "-L", "/lib3", "foo.x"};
+        final var opts = CompilerOptions.parse(args);
 
-        List<File> modulePath = opts.getModulePath();
+        final var modulePath = opts.getModulePath();
         assertEquals(3, modulePath.size());
         assertEquals(new File("/lib1"), modulePath.get(0));
         assertEquals(new File("/lib2"), modulePath.get(1));
@@ -309,10 +316,10 @@ class OptionsTest {
 
     @Test
     void testMultipleTrailingArgs() {
-        String[] args = {"-v", "file1.x", "file2.x", "file3.x"};
-        CompilerOptions opts = CompilerOptions.parse(args);
+        final String[] args = {"-v", "file1.x", "file2.x", "file3.x"};
+        final var opts = CompilerOptions.parse(args);
 
-        List<File> inputs = opts.getInputLocations();
+        final var inputs = opts.getInputLocations();
         assertEquals(3, inputs.size());
         assertEquals(new File("file1.x"), inputs.get(0));
         assertEquals(new File("file2.x"), inputs.get(1));
@@ -321,11 +328,11 @@ class OptionsTest {
 
     @Test
     void testTrailingArgsFollowedByModuleArgs() {
-        String[] args = {"-M", "main", "MyModule.xtc", "arg1", "arg2", "arg3"};
-        RunnerOptions opts = RunnerOptions.parse(args);
+        final String[] args = {"-M", "main", "MyModule.xtc", "arg1", "arg2", "arg3"};
+        final var opts = RunnerOptions.parse(args);
 
         assertEquals(new File("MyModule.xtc"), opts.getTarget());
-        String[] methodArgs = opts.getMethodArgs();
+        final var methodArgs = opts.getMethodArgs();
         assertEquals(3, methodArgs.length);
         assertEquals("arg1", methodArgs[0]);
         assertEquals("arg2", methodArgs[1]);
@@ -334,10 +341,10 @@ class OptionsTest {
 
     @Test
     void testMixedShortAndLongFormOptions() {
-        String[] args = {"-v", "--rebuild", "-L", "/lib", "--strict", "foo.x"};
-        CompilerOptions opts = CompilerOptions.parse(args);
+        final String[] args = {"-v", "--rebuild", "-L", "/lib", "--strict", "foo.x"};
+        final var opts = CompilerOptions.parse(args);
 
-        assertTrue(opts.verbose());
+        assertTrue(opts.isVerbose());
         assertTrue(opts.isForcedRebuild());
         assertTrue(opts.isStrict());
         assertEquals(1, opts.getModulePath().size());
@@ -345,9 +352,9 @@ class OptionsTest {
 
     @Test
     void testUnknownOption() {
-        String[] args = {"--unknown", "foo.x"};
+        final String[] args = {"--unknown", "foo.x"};
 
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> {
+        final var e = assertThrows(IllegalArgumentException.class, () -> {
             CompilerOptions.parse(args);
         });
         assertTrue(e.getMessage().contains("Unrecognized option") || e.getMessage().contains("unknown"));
@@ -355,9 +362,9 @@ class OptionsTest {
 
     @Test
     void testMissingRequiredValue() {
-        String[] args = {"-o"}; // Missing value for -o
+        final String[] args = {"-o"}; // Missing value for -o
 
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> {
+        final var e = assertThrows(IllegalArgumentException.class, () -> {
             CompilerOptions.parse(args);
         });
         assertTrue(e.getMessage().contains("Missing argument") || e.getMessage().contains("requires"));
@@ -365,38 +372,38 @@ class OptionsTest {
 
     @Test
     void testMultipleErrors() {
-        String[] args = {"--unknown1", "--unknown2", "foo.x"};
+        final String[] args = {"--unknown1", "--unknown2", "foo.x"};
 
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> {
+        final var e = assertThrows(IllegalArgumentException.class, () -> {
             CompilerOptions.parse(args);
         });
         // Apache CLI stops at first error
-        String message = e.getMessage();
+        final var message = e.getMessage();
         assertTrue(message.contains("unknown1") || message.contains("Unrecognized"),
             "Expected error in message: " + message);
     }
 
     @Test
     void testEmptyArgs() {
-        String[] args = {};
-        CompilerOptions opts = CompilerOptions.parse(args);
+        final String[] args = {};
+        final var opts = CompilerOptions.parse(args);
         assertNotNull(opts);
         assertTrue(opts.getInputLocations().isEmpty());
     }
 
     @Test
     void testNullArgs() {
-        CompilerOptions opts = CompilerOptions.parse(null);
+        final var opts = CompilerOptions.parse(null);
         assertNotNull(opts);
         assertTrue(opts.getInputLocations().isEmpty());
     }
 
     @Test
     void testRepeatedInjections() {
-        String[] args = {"-I", "key1=value1", "-I", "key2=value2", "-I", "key3=value3", "MyModule.xtc"};
-        RunnerOptions opts = RunnerOptions.parse(args);
+        final String[] args = {"-I", "key1=value1", "-I", "key2=value2", "-I", "key3=value3", "MyModule.xtc"};
+        final var opts = RunnerOptions.parse(args);
 
-        Map<String, String> injections = opts.getInjections();
+        final var injections = opts.getInjections();
         assertEquals(3, injections.size());
         assertEquals("value1", injections.get("key1"));
         assertEquals("value2", injections.get("key2"));
@@ -407,21 +414,21 @@ class OptionsTest {
     void testInvalidMapValue() {
         // Apache Commons CLI doesn't validate format - we parse and it just won't have '='
         // So the map will be empty or have incorrect parsing
-        String[] args = {"-I", "invalidpair", "MyModule.xtc"};
+        final String[] args = {"-I", "invalidpair", "MyModule.xtc"};
 
-        RunnerOptions opts = RunnerOptions.parse(args);
+        final var opts = RunnerOptions.parse(args);
         // Invalid format means it won't be parsed into the map correctly
-        Map<String, String> injections = opts.getInjections();
+        final var injections = opts.getInjections();
         assertTrue(injections.isEmpty() || !injections.containsKey("invalidpair"));
     }
 
     @Test
     void testRepoPathParsing() {
-        String pathSeparator = File.pathSeparator;
-        String[] args = {"-L", "/lib1" + pathSeparator + "/lib2" + pathSeparator + "/lib3", "foo.x"};
-        CompilerOptions opts = CompilerOptions.parse(args);
+        final var pathSeparator = File.pathSeparator;
+        final String[] args = {"-L", "/lib1" + pathSeparator + "/lib2" + pathSeparator + "/lib3", "foo.x"};
+        final var opts = CompilerOptions.parse(args);
 
-        List<File> modulePath = opts.getModulePath();
+        final var modulePath = opts.getModulePath();
         assertEquals(3, modulePath.size());
         assertEquals(new File("/lib1"), modulePath.get(0));
         assertEquals(new File("/lib2"), modulePath.get(1));
@@ -430,10 +437,10 @@ class OptionsTest {
 
     @Test
     void testQuotedStringValue() {
-        String[] args = {"--set-version", "1.2.3", "foo.x"};
-        CompilerOptions opts = CompilerOptions.parse(args);
+        final String[] args = {"--set-version", "1.2.3", "foo.x"};
+        final var opts = CompilerOptions.parse(args);
 
-        Version version = opts.getVersion();
+        final var version = opts.getVersion();
         assertNotNull(version);
         assertEquals("1.2.3", version.toString());
     }
@@ -442,14 +449,14 @@ class OptionsTest {
     void testHelpTextGeneration() {
         // Test that help text can be generated for each options type
         CompilerOptions compilerOpts = new CompilerOptions.Builder().build();
-        String compilerHelp = compilerOpts.getHelpText();
+        final var compilerHelp = compilerOpts.getHelpText();
         assertNotNull(compilerHelp);
         assertTrue(compilerHelp.contains("-L"));
         assertTrue(compilerHelp.contains("-o"));
         assertTrue(compilerHelp.contains("--strict"));
 
         RunnerOptions runnerOpts = new RunnerOptions.Builder().build();
-        String runnerHelp = runnerOpts.getHelpText();
+        final var runnerHelp = runnerOpts.getHelpText();
         assertNotNull(runnerHelp);
         assertTrue(runnerHelp.contains("-L"));
         assertTrue(runnerHelp.contains("-M"));
@@ -480,12 +487,12 @@ class OptionsTest {
     @Test
     void testCustomUsageLines() {
         CompilerOptions compilerOpts = new CompilerOptions.Builder().build();
-        String compilerUsage = compilerOpts.buildUsageLine("xtc");
+        final var compilerUsage = compilerOpts.buildUsageLine("xtc");
         assertTrue(compilerUsage.contains("xtc"));
         assertTrue(compilerUsage.contains("source_files"));
 
         RunnerOptions runnerOpts = new RunnerOptions.Builder().build();
-        String runnerUsage = runnerOpts.buildUsageLine("xec");
+        final var runnerUsage = runnerOpts.buildUsageLine("xec");
         assertTrue(runnerUsage.contains("xec"));
         assertTrue(runnerUsage.contains("module_or_file"));
         assertTrue(runnerUsage.contains("args"));
@@ -494,7 +501,7 @@ class OptionsTest {
     @Test
     void testConflictingOptionsStrictAndNowarn() {
         // Test that --strict and --nowarn cannot be used together
-        String[] args = {"--strict", "--nowarn", "foo.x"};
+        final String[] args = {"--strict", "--nowarn", "foo.x"};
 
         // Should throw IllegalArgumentException due to mutually exclusive options
         assertThrows(IllegalArgumentException.class, () -> CompilerOptions.parse(args),
@@ -504,25 +511,25 @@ class OptionsTest {
     @Test
     void testStrictOptionAlone() {
         // Test that --strict works when used alone
-        String[] args = {"--strict", "foo.x"};
-        CompilerOptions opts = CompilerOptions.parse(args);
+        final String[] args = {"--strict", "foo.x"};
+        final var opts = CompilerOptions.parse(args);
 
         assertTrue(opts.isStrict());
         assertFalse(opts.isNoWarn());
     }
 
     @Test
-    void testNowarnOptionAlone() {
+    void testNoWarnOptionAlone() {
         // Test that --nowarn works when used alone
-        String[] args = {"--nowarn", "foo.x"};
-        CompilerOptions opts = CompilerOptions.parse(args);
+        final String[] args = {"--nowarn", "foo.x"};
+        final var opts = CompilerOptions.parse(args);
 
         assertFalse(opts.isStrict());
         assertTrue(opts.isNoWarn());
     }
 
     // Helper
-    private boolean contains(String[] array, String value) {
+    private static boolean contains(final String[] array, final String value) {
         for (String s : array) {
             if (s.equals(value)) {
                 return true;

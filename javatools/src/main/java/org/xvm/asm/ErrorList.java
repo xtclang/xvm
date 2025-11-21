@@ -38,22 +38,17 @@ public class ErrorList
     public boolean log(ErrorInfo err) {
         String uid = err.genUID();
         if (f_setUID.add(uid)) {
+            final Severity severity = err.getSeverity();
             // remember the highest severity encountered
-            Severity severity = err.getSeverity();
-            if (severity.ordinal() > m_severity.ordinal()) {
-                m_severity = severity;
-            }
-
+            m_severity = Severity.worstOf(m_severity, severity);
             // accumulate all the errors in a list
             f_list.add(err);
-
             // keep track of the number of serious errors; quit the process once
             // that number grows too large
-            if (severity.compareTo(Severity.ERROR) >= 0) {
+            if (severity.isAtLeast(Severity.ERROR)) {
                 ++m_cErrors;
             }
         }
-
         return isAbortDesired();
     }
 
@@ -150,12 +145,8 @@ public class ErrorList
         if (m_cErrors == 0) {
             return "Empty";
         }
-
-        return "Count=" + m_cErrors
-                + ", Severity=" +  m_severity.name()
-                + ", Last=" + f_list.get(f_list.size()-1);
+        return "Count=" + m_cErrors + ", Severity=" +  m_severity.name() + ", Last=" + f_list.getLast();
     }
-
 
     // ----- inner class: BranchedErrorListener ----------------------------------------------------
 

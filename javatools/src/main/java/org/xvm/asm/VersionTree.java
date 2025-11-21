@@ -285,7 +285,7 @@ public class VersionTree<V>
     public void retainAll(VersionTree<?> that) {
         // first, collect a list of versions to remove, so that removal (in the middle of our
         // iteration) does not cause instability in the iterator
-        ArrayList<Version> listRemove = null;
+        var listRemove = new ArrayList<Version>();
         for (Version ver : this) {
             if (that.get(ver) == null) {
                 if (listRemove == null) {
@@ -333,7 +333,7 @@ public class VersionTree<V>
             return true;
         }
 
-        if (o instanceof VersionTree<?> that) {
+        if (o instanceof final VersionTree<?> that) {
             if (this.size() == that.size()) {
                 for (Iterator<Version> iterThis = this.iterator(), iterThat = that.iterator();
                         iterThis.hasNext(); ) {
