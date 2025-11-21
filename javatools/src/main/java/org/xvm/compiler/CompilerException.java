@@ -8,12 +8,12 @@ import org.xvm.tool.Launcher.LauncherException;
  * source material being compiled.
  */
 public class CompilerException extends LauncherException {
-    public CompilerException(String message) {
+    public CompilerException(final String message) {
         super(true, message);
     }
 
     @SuppressWarnings("unused")
-    public CompilerException(Throwable cause) {
-        super(true, cause);
+    public CompilerException(final Throwable cause) {
+        super(cause);
     }
 }

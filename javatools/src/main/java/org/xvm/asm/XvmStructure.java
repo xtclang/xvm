@@ -238,7 +238,7 @@ public abstract class XvmStructure
     }
 
     /**
-     * Aggregate all of the conditions for a specified XVM Structure by walking the tree up to its
+     * Aggregate all conditions for a specified XVM Structure by walking the tree up to its
      * root.
      *
      * @param cConditions  the number of conditions present further down in the tree
@@ -281,7 +281,7 @@ public abstract class XvmStructure
      *                   Structure has no additional conditions to its presence at runtime
      */
     protected void setCondition(ConditionalConstant condition) {
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("setCondition");
     }
 
     /**
@@ -596,8 +596,7 @@ public abstract class XvmStructure
         if (constant != null) {
             return constant.hashCode();
         }
-
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("XvmStructure hashCode called too early.");
     }
 
     @Override

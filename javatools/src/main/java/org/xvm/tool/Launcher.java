@@ -41,7 +41,6 @@ import static org.xvm.util.Handy.toPathString;
 import static org.xvm.util.Severity.ERROR;
 import static org.xvm.util.Severity.FATAL;
 import static org.xvm.util.Severity.INFO;
-import static org.xvm.util.Severity.NONE;
 import static org.xvm.util.Severity.WARNING;
 
 
@@ -54,7 +53,8 @@ import static org.xvm.util.Severity.WARNING;
  *
  * @param <T> the Options type for this launcher
  */
-public abstract class Launcher<T extends LauncherOptions> implements ErrorListener {
+public abstract class Launcher<T extends LauncherOptions>
+        implements ErrorListener {
 
     private static final Locale DEFAULT_LOCALE = Locale.getDefault();
 
@@ -68,7 +68,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     /**
      * The parsed options.
      */
-    private final T m_options;
+    protected T m_options;
 
     /**
      * A representation of the Console (e.g. terminal) that this tool is running in.
@@ -76,17 +76,17 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     protected final Console m_console;
 
     /**
-     * Delegate ErrorListener that receives errors in addition to this Launcher's own logging.
-     * This allows callers to capture errors programmatically while still using the Launcher's
-     * built-in error tracking and reporting. If null was passed to the constructor, this will
-     * be a default ErrorList instance.
+     * Optional ErrorListener that receives ALL errors (tool-level and compilation).
+     * When provided (not null), errors are forwarded for external programmatic access.
+     * Console displays errors, but m_errors provides structured access.
      */
-    protected final ErrorListener m_errDelegate;
+    protected final ErrorListener m_errors;
 
     /**
      * The worst severity issue encountered thus far.
+     * Tracked in Launcher for control flow decisions (abort/continue).
      */
-    protected Severity m_sevWorst = NONE;
+    protected Severity m_sevWorst = Severity.NONE;
 
     /**
      * The number of times that errors have been suspended without being resumed.
@@ -97,12 +97,12 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * Constructor for programmatic invocation (uses pre-built Options).
      *
      * @param options the pre-configured Options
-     * @param console representation of the terminal within which this command is run
-     * @param errListener ErrorListener to receive errors
+     * @param console representation of the terminal within which this command is run (null = default)
+     * @param errors optional ErrorListener to receive all errors (null = BLACKHOLE)
      */
-    protected Launcher(final T options, final Console console, final ErrorListener errListener) {
+    protected Launcher(final T options, final Console console, final ErrorListener errors) {
         m_console = console == null ? DEFAULT_CONSOLE : console;
-        m_errDelegate = errListener;
+        m_errors = errors == null ? ErrorListener.BLACKHOLE : errors;
         m_options = options;
         moduleCache = new HashMap<>();
     }
@@ -123,7 +123,8 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
 
     /**
      * Helper method for external launchers.
-
+     * Creates a CliConsole for command-line usage.
+     *
      * @param asArg  command line arguments
      *
      * @return the result of the corresponding tool "launch" call
@@ -135,7 +136,9 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
             System.err.println("Command name is missing");
             return 1;
         }
-        return launch(stripDebugPrefix(asArg[0]), Arrays.copyOfRange(asArg, 1, asArg.length), DEFAULT_CONSOLE, null);
+
+        final Console console = new Console() {};
+        return launch(stripDebugPrefix(asArg[0]), Arrays.copyOfRange(asArg, 1, asArg.length), console, null);
     }
 
     /**
@@ -228,7 +231,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
             return 0;
         }
 
-        if (opts.verbose()) {
+        if (opts.isVerbose()) {
             out();
             out("Options: " + opts);
             out();
@@ -238,7 +241,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
         checkErrors();
 
         final int result = process();
-        if (opts.verbose()) {
+        if (opts.isVerbose()) {
             out();
         }
         return result;
@@ -255,35 +258,32 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     // ----- text output and error handling --------------------------------------------------------
 
     /**
-     * Log a message with template substitution (SLF4J-style).
+     * Log a tool-level message with template substitution (SLF4J-style).
      * Use {} placeholders in the template for parameter substitution.
      * <p>
-     * <p>This method ONLY logs - it never throws exceptions. If you need to log and abort,
-     * use {@link #logAndAbort(Severity, String, Object...)} instead.
+     * Tool-level logs (file not found, invalid options, etc.) are displayed via Console
+     * and tracked in Launcher for control flow, but NOT sent to ErrorListener.
+     * ErrorListener is only for compilation/runtime errors from compiler/runner.
+     * <p>
+     * If severity is FATAL, this method throws LauncherException immediately after logging.
      *
      * @param sev       the severity (may indicate an error)
      * @param template  the message template with {} placeholders
      * @param params    parameters to substitute into the template
      */
     protected void log(final Severity sev, final String template, final Object... params) {
-        if (errorsSuspended()) {
-            return;
-        }
-        // Update worst severity so far, if increased.
-        m_sevWorst = sev.compareTo(m_sevWorst) > 0 ? sev : m_sevWorst;
-
-        final var msg = Console.formatTemplate(template, params);
-        if (isBadEnoughToPrint(sev)) {
-            m_console.log(sev, msg);
-        }
+        log(sev, null, template, params);
     }
 
     /**
      * Log an exception with an optional message template.
      * Use {} placeholders in the template for parameter substitution.
-     * The exception message and stack trace information will be included in the log.
+     * The exception message will be included in the log.Conso
      * <p>
-     * <p>This method ONLY logs - it never throws exceptions.
+     * Tool-level exception logs are displayed via Console and tracked in Launcher,
+     * but NOT sent to ErrorListener.
+     * <p>
+     * If severity is FATAL, this method throws LauncherException immediately after logging.
      *
      * @param sev       the severity (may indicate an error)
      * @param cause     the exception that caused this log entry
@@ -294,18 +294,16 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
         if (errorsSuspended()) {
             return;
         }
-        // Update worst severity so far, if increased.
-        m_sevWorst = sev.compareTo(m_sevWorst) > 0 ? sev : m_sevWorst;
-
-        final String msg;
-        if (template != null && !template.isEmpty()) {
-            msg = Console.formatTemplate(template, params) + ": " + cause.getMessage();
-        } else {
-            msg = cause.getMessage() != null ? cause.getMessage() : cause.toString();
-        }
-
+        // 1) Track worst severity in Launcher
+        // 2) Filter and display on Console if bad enough to print
+        m_sevWorst = Severity.worstOf(m_sevWorst, sev);
         if (isBadEnoughToPrint(sev)) {
-            m_console.log(sev, msg);
+            m_console.log(sev, cause, template, params);
+        }
+        // TODO: Slightly scary - we should probably do our own error handling.
+        // FATAL errors abort immediately
+        if (sev == FATAL) {
+            throw new LauncherException(true, Console.formatTemplate(template, params), cause);
         }
     }
 
@@ -316,45 +314,6 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      */
     protected void log(final ErrorList errs) {
         errs.getErrors().forEach(err -> log(err.getSeverity(), err.toString()));
-    }
-
-    /**
-     * Log a message and abort execution.
-     * This is a convenience method that logs the message and then throws a LauncherException.
-     *
-     * <p>Subclasses should NOT override this method - override {@link #log(Severity, String, Object...)}
-     * instead to preserve the separation of concerns.
-     *
-     * @param sev       the severity (typically FATAL or ERROR)
-     * @param template  the message template with {} placeholders
-     * @param params    parameters to substitute into the template
-     * @return LauncherException (never actually returns, always throws)
-     * @throws LauncherException always
-     */
-    protected LauncherException logAndAbort(final Severity sev, final String template, final Object... params) {
-        log(sev, template, params);
-        final var msg = Console.formatTemplate(template, params);
-        throw new LauncherException(true, msg, null);
-    }
-
-    /**
-     * Log a message with a cause exception and abort execution.
-     * This is a convenience method that logs the message and then throws a LauncherException wrapping the cause.
-     *
-     * <p>Subclasses should NOT override this method - override {@link #log(Severity, String, Object...)}
-     * instead to preserve the separation of concerns.
-     *
-     * @param sev       the severity (typically FATAL or ERROR)
-     * @param cause     the underlying exception that caused this abort
-     * @param template  the message template with {} placeholders
-     * @param params    parameters to substitute into the template
-     * @return LauncherException (never actually returns, always throws)
-     * @throws LauncherException always
-     */
-    protected LauncherException logAndAbort(final Severity sev, final Throwable cause, final String template, final Object... params) {
-        log(sev, cause, template, params);
-        final var msg = Console.formatTemplate(template, params);
-        throw new LauncherException(true, msg, cause);
     }
 
     /**
@@ -408,32 +367,20 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
         if (m_cSuspended > 0) {
             --m_cSuspended;
         } else {
-            throw logAndAbort(FATAL, "Attempt to resume errors when errors have not been suspended");
+            log(FATAL, "Attempt to resume errors when errors have not been suspended");
+            // log(FATAL) throws LauncherException immediately
         }
     }
 
     /**
      * Determine if a previously logged error should cause the program to exit, and if so, exit.
      * Throws LauncherException if errors have accumulated that are severe enough to abort.
+     * <p>
+     * Checks BOTH Console (tool errors) AND ErrorListener delegate (compiler errors).
      */
     protected void checkErrors() {
-        if (isBadEnoughToAbort(m_sevWorst)) {
+        if (isAbortDesired()) {
             throw new LauncherException(true, null, null);
-        }
-    }
-
-    /**
-     * Determine if a previously logged error should cause the program to exit, and if so, exit.
-     *
-     * @param fHelp  true iff the help message should be displayed and the program should exit
-     */
-    protected void checkErrors(final boolean fHelp) {
-        if (fHelp) {
-            displayHelp();
-        }
-        final var fAbort = isBadEnoughToAbort(m_sevWorst);
-        if (fHelp || fAbort) {
-            throw new LauncherException(fAbort, null, null);
         }
     }
 
@@ -441,11 +388,11 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * Display a help message describing how to use this command-line tool.
      * Delegates to the options class for help text generation.
      */
-    public void displayHelp() {
+    protected void displayHelp() {
         out();
         out(desc());
         final var helpText = options().getHelpText();
-        if (helpText != null && !helpText.isEmpty()) {
+        if (!helpText.isEmpty()) {
             out();
             out(helpText);
             out();
@@ -463,28 +410,49 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
         return this.getClass().getSimpleName();
     }
 
-    // ----- ErrorListener interface ---------------------------------------------------------------
+    // ----- ErrorListener implementation ----------------------------------------------------------
 
+    /**
+     * Log a compilation error (ErrorInfo from AST nodes).
+     * Displays via Console and forwards to external ErrorListener if provided.
+     *
+     * @param err the error information
+     * @return true if compilation should abort
+     */
     @Override
     public boolean log(final ErrorInfo err) {
-        // Forward to delegate (always non-null, default is ErrorList)
-        if (m_errDelegate != null) {
-            m_errDelegate.log(err);
-        }
+        m_sevWorst = Severity.worstOf(m_sevWorst, err.getSeverity());
         log(err.getSeverity(), err.toString());
+        m_errors.log(err);
         return isAbortDesired();
     }
 
+    /**
+     * Check if compilation should abort based on severity of errors encountered.
+     *
+     * @return true if errors are bad enough to abort
+     */
     @Override
     public boolean isAbortDesired() {
-        return isBadEnoughToAbort(m_sevWorst);
+        // Check Launcher's tracked severity for control flow decision
+        return m_sevWorst.isAtLeast(ERROR);
     }
 
+    /**
+     * Check if any serious errors (ERROR or worse) have been logged.
+     *
+     * @return true if serious errors encountered
+     */
     @Override
     public boolean hasSeriousErrors() {
-        return m_sevWorst.compareTo(ERROR) >= 0;
+        return m_sevWorst.isAtLeast(ERROR);
     }
 
+    /**
+     * Check if error logging is currently suspended.
+     *
+     * @return true if errors are suspended
+     */
     @Override
     public boolean isSilent() {
         return errorsSuspended();
@@ -501,14 +469,14 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      protected abstract void validateOptions();
 
     /**
-     * Determine if a message or error of a particular severity should be displayed.
-     * Subclasses can override this to implement custom severity filtering.
+     * Determine if a message should be printed based on severity and verbose settings.
+     * Subclasses can override for custom filtering (e.g., Compiler strictness levels).
      *
-     * @param sev the severity to evaluate
-     * @return true if an error of that severity should be displayed
+     * @param sev the severity to check
+     * @return true if the message should be printed
      */
     protected boolean isBadEnoughToPrint(final Severity sev) {
-        return options().verbose() || sev.compareTo(WARNING) >= 0;
+        return options().isVerbose() || sev.isAtLeast(WARNING);
     }
 
     /**
@@ -519,14 +487,14 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * @return true if an error of that severity should exit the program
      */
     protected boolean isBadEnoughToAbort(final Severity sev) {
-        return sev.compareTo(ERROR) >= 0;
+        return sev.isAtLeast(ERROR);
     }
     /**
      * Get the parsed options for this launcher.
      *
      * @return the options instance
      */
-    protected final T options() {
+    protected T options() {
         return m_options;
     }
 
@@ -568,7 +536,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      *
      * @return a new BuildRepository
      */
-    protected BuildRepository makeBuildRepo() {
+    protected static BuildRepository makeBuildRepo() {
         return new BuildRepository();
     }
 
@@ -579,11 +547,10 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      *
      * @return the BuildRepository
      */
-    protected BuildRepository extractBuildRepo(final ModuleRepository repoLib) {
+    protected static BuildRepository extractBuildRepo(final ModuleRepository repoLib) {
         if (repoLib instanceof final BuildRepository repoBuild) {
             return repoBuild;
         }
-
         LinkedRepository repoLinked = (LinkedRepository) repoLib;
         return (BuildRepository) repoLinked.asList().getFirst();
     }
@@ -618,14 +585,18 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
         for (final String moduleName : List.of(ECSTASY_MODULE, TURTLE_MODULE)) {
             ModuleStructure module = reposLib.loadModule(moduleName);
             if (module == null) {
-                throw logAndAbort(FATAL, "Unable to load module: {}", moduleName);
+                log(FATAL, "Unable to load module: {}", moduleName);
+                // log(FATAL) throws LauncherException immediately - never gets here
+                return;
             }
 
             final var struct = Objects.requireNonNull(module).getFileStructure();
             if (struct != null) {
                 ModuleConstant idMissing = struct.linkModules(reposLib, false);
                 if (idMissing != null) {
-                    throw logAndAbort(FATAL, "Unable to link module {} due to missing module: {}", moduleName, idMissing.getName());
+                    log(FATAL, "Unable to link module {} due to missing module: {}", moduleName, idMissing.getName());
+                    // log(FATAL) throws LauncherException immediately - never gets here
+                    return;
                 }
             }
         }
@@ -687,7 +658,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      */
     public ModuleInfo ensureModuleInfo(final File fileSpec, final File[] resourceSpecs, final File binarySpec) {
         final boolean fCache = (resourceSpecs == null || resourceSpecs.length == 0) && binarySpec == null;
-        final boolean deduce = options().deduce();
+        final boolean deduce = options().mayDeduceLocations();
         return fCache
                 ? moduleCache.computeIfAbsent(fileSpec, _ -> new ModuleInfo(fileSpec, deduce, resourceSpecs, binarySpec))
                 : new ModuleInfo(fileSpec, deduce, resourceSpecs, binarySpec);
@@ -833,10 +804,11 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     }
 
     /**
-     * Clean up any transient state
+     * Clean up any transient state.
+     * Resets severity tracking and clears module cache.
      */
     protected void reset() {
-        m_sevWorst   = NONE;
+        m_sevWorst = Severity.NONE;
         m_cSuspended = 0;
         moduleCache.clear();
     }
@@ -847,7 +819,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     /**
      * RuntimeException thrown upon a launcher failure.
      * TODO: Ideally this should not be a runtime exception. We can have throws declaration and do more processing
-     *   and recovery attempts if we explcitly declarte how to handle LauncherException in subclasses in code.
+     *   and recovery attempts if we explicitly declare how to handle LauncherException in subclasses in code.
      */
     static public class LauncherException extends RuntimeException {
         private final boolean error;
@@ -857,8 +829,8 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
             this(error, msg, null);
         }
 
-        public LauncherException(final boolean error, final Throwable e) {
-            this(error, e.getMessage(), null);
+        public LauncherException(final Throwable cause) {
+            this(true, cause == null ? null : cause.getMessage(), cause);
         }
 
         public LauncherException(final boolean error, final String msg, final Throwable cause) {
@@ -908,11 +880,10 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     /**
      * The default Console implementation.
      */
-    private static final Console DEFAULT_CONSOLE = new Console() {};
+    protected static final Console DEFAULT_CONSOLE = new Console() {};
 
     /**
-     * Enum representing ther different Stages of launchers.
+     * Enum representing the different Stages of launchers.
      */
     protected enum Stage {Init, Parsed, Named, Linked}
-
 }

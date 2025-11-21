@@ -74,7 +74,7 @@ class XdkIntegrationTest {
     }
 
     @Test
-    void testCompilerWithBuilderAPI(@TempDir Path tempDir) throws IOException {
+    void testCompilerWithBuilderAPI(@TempDir final Path tempDir) throws IOException {
         // Create a simple XTC source file
         String sourceCode = """
             module HelloWorld {
@@ -101,7 +101,7 @@ class XdkIntegrationTest {
             .build();
 
         // Verify options were built correctly
-        assertTrue(options.verbose(), "Verbose flag should be set");
+        assertTrue(options.isVerbose(), "Verbose flag should be set");
         assertEquals(outputDir, options.getOutputLocation());
         assertTrue(options.getModulePath().contains(xdkLibDir));
         assertTrue(options.getInputLocations().contains(sourceFile));
@@ -124,7 +124,7 @@ class XdkIntegrationTest {
     }
 
     @Test
-    void testCompilerWithParseAPI(@TempDir Path tempDir) throws IOException {
+    void testCompilerWithParseAPI(@TempDir final Path tempDir) throws IOException {
         // Create a simple XTC source file
         String sourceCode = """
             module TestModule {
@@ -153,7 +153,7 @@ class XdkIntegrationTest {
         CompilerOptions options = CompilerOptions.parse(args);
 
         // Verify parsed options
-        assertTrue(options.verbose());
+        assertTrue(options.isVerbose());
         assertEquals(outputDir, options.getOutputLocation());
         assertTrue(options.getModulePath().contains(xdkLibDir));
 
@@ -183,7 +183,7 @@ class XdkIntegrationTest {
     }
 
     @Test
-    void testCompilerMissingModulePath(@TempDir Path tempDir) throws IOException {
+    void testCompilerMissingModulePath(@TempDir final Path tempDir) throws IOException {
         // Create source without providing module path (should fail to resolve ecstasy.xtc)
         String sourceCode = """
             module TestModule {
@@ -206,13 +206,13 @@ class XdkIntegrationTest {
         Compiler compiler = new Compiler(options, null, errors);
 
         // Should throw LauncherException because ecstasy module cannot be found
-        Launcher.LauncherException exception = assertThrows(Launcher.LauncherException.class, () -> compiler.run(),
+        Launcher.LauncherException exception = assertThrows(Launcher.LauncherException.class, compiler::run,
                 "Compilation should throw exception without module path");
         assertTrue(exception.isError(), "Exception should indicate an error condition");
     }
 
     @Test
-    void testRunnerOptionsBuilderAPI(@TempDir Path tempDir) throws IOException {
+    void testRunnerOptionsBuilderAPI(@TempDir final Path tempDir) throws IOException {
         // First compile a simple module
         String sourceCode = """
             module RunnerTest {
@@ -270,7 +270,7 @@ class XdkIntegrationTest {
     }
 
     @Test
-    void testRunnerOptionsParseAPI(@TempDir Path tempDir) throws IOException {
+    void testRunnerOptionsParseAPI(@TempDir final Path tempDir) throws IOException {
         // First compile a module
         String sourceCode = """
             module ParseTestModule {
@@ -378,7 +378,7 @@ class XdkIntegrationTest {
             "net.xtc"
         };
 
-        for (String lib : requiredLibraries) {
+        for (final String lib : requiredLibraries) {
             File libFile = new File(xdkLibDir, lib);
             assertTrue(libFile.exists(), "Required library should exist: " + lib);
             assertTrue(libFile.length() > 0, "Library should not be empty: " + lib);
@@ -386,7 +386,7 @@ class XdkIntegrationTest {
     }
 
     @Test
-    void testCompilerStrictMode(@TempDir Path tempDir) throws IOException {
+    void testCompilerStrictMode(@TempDir final Path tempDir) throws IOException {
         // Test that strict mode flag is properly set and used
         String sourceCode = """
             module StrictTest {

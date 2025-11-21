@@ -2,7 +2,6 @@ package org.xvm.tool;
 
 import org.junit.jupiter.api.Test;
 import org.xvm.asm.ErrorListener;
-import org.xvm.asm.ErrorListener.ErrorInfo;
 import org.xvm.tool.Launcher.LauncherException;
 import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.util.Severity;
@@ -23,25 +22,19 @@ class LauncherErrorHandlingTest {
 
     /**
      * Custom console that captures log output for testing.
+     * Implements Console with output capturing for verification.
      */
-    private static class TestConsole implements Console {
+    private static final class TestConsole implements Console {
         private final List<String> messages = new ArrayList<>();
         private final List<Severity> severities = new ArrayList<>();
 
         @Override
-        public void out(Object o) {
-            // Capture stdout
-        }
-
-        @Override
-        public void err(Object o) {
-            // Capture stderr
-        }
-
-        @Override
-        public void log(Severity sev, String sMsg) {
+        public String log(final Severity sev, final Throwable cause, final String template, final Object... params) {
+            // Capture severity and formatted message directly
+            final var str = Console.super.log(sev, cause, template, params);
             severities.add(sev);
-            messages.add(sMsg);
+            messages.add(str);
+            return str;
         }
 
         public List<String> getMessages() {
@@ -64,12 +57,12 @@ class LauncherErrorHandlingTest {
     private static class TestErrorListener implements ErrorListener {
         private final List<String> errors = new ArrayList<>();
         private final List<Severity> severities = new ArrayList<>();
-        private Severity worstSeverity = Severity.NONE;
+        private Severity worstSeverity = NONE;
 
         @Override
-        public boolean log(ErrorInfo err) {
+        public boolean log(final ErrorInfo err) {
             severities.add(err.getSeverity());
-            errors.add(err.getCode() + ": " + err.toString());
+            errors.add(err.getCode() + ": " + err);
             if (err.getSeverity().compareTo(worstSeverity) > 0) {
                 worstSeverity = err.getSeverity();
             }
@@ -98,8 +91,8 @@ class LauncherErrorHandlingTest {
     /**
      * Test compiler that allows us to inject errors for testing.
      */
-    private static class TestCompiler extends Compiler {
-        public TestCompiler(CompilerOptions options, Console console, ErrorListener errListener) {
+    private static final class TestCompiler extends Compiler {
+        private TestCompiler(final CompilerOptions options, final Console console, final ErrorListener errListener) {
             super(options, console, errListener);
         }
 
@@ -110,11 +103,11 @@ class LauncherErrorHandlingTest {
         }
 
         // Expose protected methods for testing
-        public void testLog(Severity sev, String template, Object... params) {
+        public void testLog(final Severity sev, final String template, final Object... params) {
             log(sev, template, params);
         }
 
-        public void testLogWithThrowable(Severity sev, Throwable cause, String template, Object... params) {
+        public void testLogWithThrowable(final Severity sev, final Throwable cause, final String template, final Object... params) {
             log(sev, cause, template, params);
         }
 
@@ -122,87 +115,83 @@ class LauncherErrorHandlingTest {
             checkErrors();
         }
 
-        public Severity testGetWorstSeverity() {
-            return m_sevWorst;
+        public void testReset() {
+            reset();
         }
 
-        public boolean testIsBadEnoughToAbort(Severity sev) {
-            return isBadEnoughToAbort(sev);
+        public Severity testGetWorstSeverity() {
+            return m_sevWorst;
         }
     }
 
     @Test
     void testInfoLogging() {
-        TestConsole console = new TestConsole();
+        final var console = new TestConsole();
         CompilerOptions opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
-                .enableVerbose() // Enable verbose to see INFO messages
+                .enableVerbose() // Also enable in options (for consistency)
                 .build();
         TestCompiler compiler = new TestCompiler(opts, console, null);
 
         compiler.testLog(INFO, "Test info message");
 
         assertEquals(1, console.getMessages().size());
-        assertTrue(console.getMessages().get(0).contains("Test info message"));
-        assertEquals(INFO, console.getSeverities().get(0));
+        assertTrue(console.getMessages().getFirst().contains("Test info message"));
+        assertEquals(INFO, console.getSeverities().getFirst());
         assertEquals(INFO, compiler.testGetWorstSeverity());
     }
 
     @Test
     void testWarningLogging() {
-        TestConsole console = new TestConsole();
+        final var console = new TestConsole();
         CompilerOptions opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        TestCompiler compiler = new TestCompiler(opts, console, null);
-
+        final var compiler = new TestCompiler(opts, console, null);
         compiler.testLog(WARNING, "Test warning: {}", "detail");
-
         assertEquals(1, console.getMessages().size());
-        assertTrue(console.getMessages().get(0).contains("Test warning: detail"));
-        assertEquals(WARNING, console.getSeverities().get(0));
+        assertTrue(console.getMessages().getFirst().contains("Test warning: detail"));
+        assertEquals(WARNING, console.getSeverities().getFirst());
         assertEquals(WARNING, compiler.testGetWorstSeverity());
     }
 
     @Test
     void testErrorLogging() {
-        TestConsole console = new TestConsole();
+        final var console = new TestConsole();
         CompilerOptions opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        TestCompiler compiler = new TestCompiler(opts, console, null);
-
+        final var compiler = new TestCompiler(opts, console, null);
         compiler.testLog(ERROR, "Test error: {} at line {}", "syntax", 42);
-
         assertEquals(1, console.getMessages().size());
-        assertTrue(console.getMessages().get(0).contains("Test error: syntax at line 42"));
-        assertEquals(ERROR, console.getSeverities().get(0));
+        assertTrue(console.getMessages().getFirst().contains("Test error: syntax at line 42"));
+        assertEquals(ERROR, console.getSeverities().getFirst());
         assertEquals(ERROR, compiler.testGetWorstSeverity());
     }
 
     @Test
     void testFatalLogging() {
-        TestConsole console = new TestConsole();
-        CompilerOptions opts = new CompilerOptions.Builder()
+        final var console = new TestConsole();
+        final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        TestCompiler compiler = new TestCompiler(opts, console, null);
-
-        compiler.testLog(FATAL, "Fatal error occurred");
-
+        final var compiler = new TestCompiler(opts, console, null);
+        // FATAL now throws LauncherException immediately
+        assertThrows(LauncherException.class, () -> compiler.testLog(FATAL, "Fatal error occurred"));
+        // Message was logged before exception was thrown
         assertEquals(1, console.getMessages().size());
-        assertTrue(console.getMessages().get(0).contains("Fatal error occurred"));
-        assertEquals(FATAL, console.getSeverities().get(0));
+        assertTrue(console.getMessages().getFirst().contains("Fatal error occurred"));
+        assertEquals(FATAL, console.getSeverities().getFirst());
         assertEquals(FATAL, compiler.testGetWorstSeverity());
     }
 
     @Test
     void testSeverityTracking() {
-        TestConsole console = new TestConsole();
-        CompilerOptions opts = new CompilerOptions.Builder()
+        final var console = new TestConsole();
+        final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        TestCompiler compiler = new TestCompiler(opts, console, null);
+        final var compiler = new TestCompiler(opts, console, null);
 
         // Log multiple messages with different severities
         compiler.testLog(INFO, "Info message");
@@ -223,73 +212,71 @@ class LauncherErrorHandlingTest {
 
     @Test
     void testCheckErrorsWithInfo() {
-        TestConsole console = new TestConsole();
-        CompilerOptions opts = new CompilerOptions.Builder()
+        final var console = new TestConsole();
+        final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        TestCompiler compiler = new TestCompiler(opts, console, null);
+        final var compiler = new TestCompiler(opts, console, null);
 
         compiler.testLog(INFO, "Info message");
 
         // Should not throw - INFO is not bad enough to abort
-        assertDoesNotThrow(() -> compiler.testCheckErrors());
+        assertDoesNotThrow(compiler::testCheckErrors);
     }
 
     @Test
     void testCheckErrorsWithWarning() {
-        TestConsole console = new TestConsole();
-        CompilerOptions opts = new CompilerOptions.Builder()
+        final var console = new TestConsole();
+        final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        TestCompiler compiler = new TestCompiler(opts, console, null);
+        final var compiler = new TestCompiler(opts, console, null);
 
         compiler.testLog(WARNING, "Warning message");
 
         // Should not throw - WARNING is not bad enough to abort (in base Launcher)
-        assertDoesNotThrow(() -> compiler.testCheckErrors());
+        assertDoesNotThrow(compiler::testCheckErrors);
     }
 
     @Test
     void testCheckErrorsWithError() {
-        TestConsole console = new TestConsole();
-        CompilerOptions opts = new CompilerOptions.Builder()
+        final var console = new TestConsole();
+        final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        TestCompiler compiler = new TestCompiler(opts, console, null);
+        final var compiler = new TestCompiler(opts, console, null);
 
         compiler.testLog(ERROR, "Error message");
 
         // Should throw - ERROR is bad enough to abort
-        assertThrows(LauncherException.class, () -> compiler.testCheckErrors());
+        assertThrows(LauncherException.class, compiler::testCheckErrors);
     }
 
     @Test
     void testCheckErrorsWithFatal() {
-        TestConsole console = new TestConsole();
-        CompilerOptions opts = new CompilerOptions.Builder()
+        final var console = new TestConsole();
+        final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        TestCompiler compiler = new TestCompiler(opts, console, null);
+        final var compiler = new TestCompiler(opts, console, null);
 
-        compiler.testLog(FATAL, "Fatal error");
-
-        // Should throw - FATAL is bad enough to abort
-        assertThrows(LauncherException.class, () -> compiler.testCheckErrors());
+        // FATAL now throws LauncherException immediately - no need to call checkErrors()
+        assertThrows(LauncherException.class, () -> compiler.testLog(FATAL, "Fatal error"));
     }
 
     @Test
     void testLogWithThrowable() {
-        TestConsole console = new TestConsole();
-        CompilerOptions opts = new CompilerOptions.Builder()
+        final var console = new TestConsole();
+        final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        TestCompiler compiler = new TestCompiler(opts, console, null);
+        final var compiler = new TestCompiler(opts, console, null);
 
-        IOException cause = new IOException("File not found");
+        final var cause = new IOException("File not found");
         compiler.testLogWithThrowable(ERROR, cause, "Failed to read file: {}", "test.x");
 
         assertEquals(1, console.getMessages().size());
-        String message = console.getMessages().get(0);
+        String message = console.getMessages().getFirst();
         assertTrue(message.contains("Failed to read file: test.x"));
         assertTrue(message.contains("File not found"));
         assertEquals(ERROR, compiler.testGetWorstSeverity());
@@ -297,62 +284,79 @@ class LauncherErrorHandlingTest {
 
     @Test
     void testLogWithThrowableNoTemplate() {
-        TestConsole console = new TestConsole();
-        CompilerOptions opts = new CompilerOptions.Builder()
+        final var console = new TestConsole();
+        final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        TestCompiler compiler = new TestCompiler(opts, console, null);
+        final var compiler = new TestCompiler(opts, console, null);
 
         IOException cause = new IOException("File not found");
         compiler.testLogWithThrowable(ERROR, cause, null);
 
         assertEquals(1, console.getMessages().size());
-        String message = console.getMessages().get(0);
+        String message = console.getMessages().getFirst();
         assertTrue(message.contains("File not found"));
         assertEquals(ERROR, compiler.testGetWorstSeverity());
     }
 
     @Test
     void testLogWithThrowableEmptyTemplate() {
-        TestConsole console = new TestConsole();
-        CompilerOptions opts = new CompilerOptions.Builder()
+        final var console = new TestConsole();
+        final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        TestCompiler compiler = new TestCompiler(opts, console, null);
+        final var compiler = new TestCompiler(opts, console, null);
 
         IOException cause = new IOException("File not found");
         compiler.testLogWithThrowable(ERROR, cause, "");
 
         assertEquals(1, console.getMessages().size());
-        String message = console.getMessages().get(0);
+        String message = console.getMessages().getFirst();
         assertTrue(message.contains("File not found"));
         assertEquals(ERROR, compiler.testGetWorstSeverity());
     }
 
     @Test
-    void testIsBadEnoughToAbort() {
-        TestConsole console = new TestConsole();
-        CompilerOptions opts = new CompilerOptions.Builder()
+    void testShouldAbortBehavior() {
+        final var console = new TestConsole();
+        final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        TestCompiler compiler = new TestCompiler(opts, console, null);
+        var compiler = new TestCompiler(opts, console, null);
 
-        // Test base Launcher behavior: ERROR and worse should abort
-        assertFalse(compiler.testIsBadEnoughToAbort(Severity.NONE));
-        assertFalse(compiler.testIsBadEnoughToAbort(INFO));
-        assertFalse(compiler.testIsBadEnoughToAbort(WARNING));
-        assertTrue(compiler.testIsBadEnoughToAbort(ERROR));
-        assertTrue(compiler.testIsBadEnoughToAbort(FATAL));
+        // Test abort behavior: ERROR and worse should trigger abort (via Launcher.isAbortDesired())
+        compiler.testLog(Severity.NONE, "None message");
+        assertFalse(compiler.isAbortDesired());
+
+        console.clear();
+        compiler = new TestCompiler(opts, console, null);
+        compiler.testLog(INFO, "Info message");
+        assertFalse(compiler.isAbortDesired());
+
+        console.clear();
+        compiler = new TestCompiler(opts, console, null);
+        compiler.testLog(WARNING, "Warning message");
+        assertFalse(compiler.isAbortDesired());
+
+        console.clear();
+        compiler = new TestCompiler(opts, console, null);
+        compiler.testLog(ERROR, "Error message");
+        assertTrue(compiler.isAbortDesired());
+
+        console.clear();
+        final TestCompiler fatalCompiler = new TestCompiler(opts, console, null);
+        // FATAL now throws LauncherException immediately
+        assertThrows(LauncherException.class, () -> fatalCompiler.testLog(FATAL, "Fatal message"));
     }
 
     @Test
     void testErrorAccumulation() {
-        TestConsole console = new TestConsole();
+        final var console = new TestConsole();
         TestErrorListener errorListener = new TestErrorListener();
-        CompilerOptions opts = new CompilerOptions.Builder()
+        final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        TestCompiler compiler = new TestCompiler(opts, console, errorListener);
+        final var compiler = new TestCompiler(opts, console, errorListener);
 
         // Log multiple errors
         compiler.testLog(INFO, "Info 1");
@@ -368,76 +372,32 @@ class LauncherErrorHandlingTest {
         assertEquals(4, console.getMessages().size());
 
         // checkErrors should throw because worst is ERROR
-        assertThrows(LauncherException.class, () -> compiler.testCheckErrors());
+        assertThrows(LauncherException.class, compiler::testCheckErrors);
     }
 
-    @Test
-    void testLogAndAbortThrowsImmediately() {
-        TestConsole console = new TestConsole();
-        CompilerOptions opts = new CompilerOptions.Builder()
-                .addInputFile(new File("test.x"))
-                .build();
-        TestCompiler compiler = new TestCompiler(opts, console, null);
-
-        // logAndAbort should throw immediately
-        LauncherException ex = assertThrows(LauncherException.class, () -> {
-            throw compiler.logAndAbort(ERROR, "Fatal error: {}", "test");
-        });
-
-        // Should have logged before throwing
-        assertEquals(1, console.getMessages().size());
-        assertTrue(console.getMessages().get(0).contains("Fatal error: test"));
-    }
-
-    @Test
-    void testLogAndAbortWithThrowable() {
-        TestConsole console = new TestConsole();
-        CompilerOptions opts = new CompilerOptions.Builder()
-                .addInputFile(new File("test.x"))
-                .build();
-        TestCompiler compiler = new TestCompiler(opts, console, null);
-
-        IOException cause = new IOException("I/O error");
-
-        // logAndAbort should throw immediately
-        LauncherException ex = assertThrows(LauncherException.class, () -> {
-            throw compiler.logAndAbort(FATAL, cause, "Failed: {}",  "operation");
-        });
-
-        // Should have logged before throwing
-        assertEquals(1, console.getMessages().size());
-        String message = console.getMessages().get(0);
-        assertTrue(message.contains("Failed: operation"));
-        assertTrue(message.contains("I/O error"));
-    }
 
     @Test
     void testMultipleCheckErrorsCalls() {
-        TestConsole console = new TestConsole();
-        CompilerOptions opts = new CompilerOptions.Builder()
+        final var console = new TestConsole();
+        final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        TestCompiler compiler = new TestCompiler(opts, console, null);
+        final var compiler = new TestCompiler(opts, console, null);
 
         // First checkpoint - should not throw
         compiler.testLog(INFO, "Info 1");
-        assertDoesNotThrow(() -> compiler.testCheckErrors());
+        assertDoesNotThrow(compiler::testCheckErrors);
+        compiler.testReset();
+        console.clear();
 
         // Second checkpoint - should not throw
         compiler.testLog(WARNING, "Warning 1");
-        assertDoesNotThrow(() -> compiler.testCheckErrors());
+        assertDoesNotThrow(compiler::testCheckErrors);
+        compiler.testReset();
+        console.clear();
 
         // Third checkpoint - should throw
         compiler.testLog(ERROR, "Error 1");
-        assertThrows(LauncherException.class, () -> compiler.testCheckErrors());
-    }
-
-    @Test
-    void testSeverityOrdering() {
-        // Verify severity comparison works as expected
-        assertTrue(INFO.compareTo(Severity.NONE) > 0);
-        assertTrue(WARNING.compareTo(INFO) > 0);
-        assertTrue(ERROR.compareTo(WARNING) > 0);
-        assertTrue(FATAL.compareTo(ERROR) > 0);
+        assertThrows(LauncherException.class, compiler::testCheckErrors);
     }
 }

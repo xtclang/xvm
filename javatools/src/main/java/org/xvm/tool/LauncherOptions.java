@@ -212,14 +212,14 @@ public abstract class LauncherOptions {
     /**
      * Check if verbose mode is enabled.
      */
-    public boolean verbose() {
+    public boolean isVerbose() {
         return commandLine.hasOption("v");
     }
 
     /**
      * Check if deduce mode is enabled.
      */
-    public boolean deduce() {
+    public boolean mayDeduceLocations() {
         return commandLine.hasOption("d");
     }
 
@@ -243,18 +243,16 @@ public abstract class LauncherOptions {
      */
     public String[] toCommandLine() {
         final List<String> args = new ArrayList<>();
-        if (verbose()) {
+        if (isVerbose()) {
             args.add("-v");
         }
-        if (deduce()) {
+        if (mayDeduceLocations()) {
             args.add("-d");
         }
         if (showVersion()) {
             args.add("--version");
         }
-        getModulePath().stream()
-                .map(File::getPath)
-                .forEach(path -> args.addAll(List.of("-L", path)));
+        getModulePath().stream().map(File::getPath).forEach(path -> args.addAll(List.of("-L", path)));
         return args.toArray(String[]::new);
     }
 
@@ -283,7 +281,9 @@ public abstract class LauncherOptions {
                     json.addProperty(key, values[0]);
                 } else {
                     final var arr = new JsonArray();
-                    for (final String val : values) arr.add(val);
+                    for (final String val : values) {
+                        arr.add(val);
+                    }
                     json.add(key, arr);
                 }
             }
@@ -375,7 +375,7 @@ public abstract class LauncherOptions {
      * Get trailing arguments (non-option arguments at end of command line).
      */
     protected List<String> getTrailingArgs() {
-        final String[] trailing = commandLine.getArgs();
+        final var trailing = commandLine.getArgs();
         assert trailing != null : "commandLine.getArgs() should never return null.";
         return List.of(trailing);
     }
@@ -387,11 +387,8 @@ public abstract class LauncherOptions {
      * @return formatted help text, or null if no schema available
      */
     public final String getHelpText() {
-        if (schema == null) {
-            return null;
-        }
-
         // Add usage line with command syntax
+        assert schema != null;
         final var sb  = new StringBuilder("Usage:\n")
             .append("    ")
             .append(buildUsageLine(commandName))
@@ -764,6 +761,15 @@ public abstract class LauncherOptions {
             public Builder setModuleVersion(final String version) {
                 args.addAll(List.of("--set-version", version));
                 return this;
+            }
+
+            /**
+             * Set the version to stamp on compiled modules.
+             *
+             * @param version the Version object
+             */
+            public Builder setModuleVersion(final Version version) {
+                return setModuleVersion(version.toString());
             }
 
             /**

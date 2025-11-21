@@ -4,7 +4,10 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test JSON serialization and deserialization for LauncherOptions.
@@ -14,7 +17,7 @@ class LauncherOptionsJsonTest {
     @Test
     void testCompilerOptionsJsonRoundTrip() {
         // Create options via Builder
-        LauncherOptions.CompilerOptions original = LauncherOptions.CompilerOptions.builder()
+        final var original = LauncherOptions.CompilerOptions.builder()
                 .enableVerbose()
                 .forceRebuild()
                 .enableStrictMode()
@@ -30,7 +33,7 @@ class LauncherOptionsJsonTest {
         System.out.println("Original module paths: " + original.getModulePath());
 
         // Serialize to JSON
-        String json = original.toJson();
+        final String json = original.toJson();
         assertNotNull(json);
         System.out.println("JSON:\n" + json);
         assertTrue(json.contains("\"verbose\""));
@@ -38,11 +41,11 @@ class LauncherOptionsJsonTest {
         assertTrue(json.contains("\"strict\""));
 
         // Deserialize from JSON
-        LauncherOptions.CompilerOptions restored = LauncherOptions.CompilerOptions.fromJson(json);
+        final var restored = LauncherOptions.CompilerOptions.fromJson(json);
         System.out.println("Restored module paths: " + restored.getModulePath());
 
         // Verify all options match
-        assertEquals(original.verbose(), restored.verbose());
+        assertEquals(original.isVerbose(), restored.isVerbose());
         assertEquals(original.isForcedRebuild(), restored.isForcedRebuild());
         assertEquals(original.isStrict(), restored.isStrict());
         assertEquals(original.getModulePath(), restored.getModulePath());
@@ -55,7 +58,7 @@ class LauncherOptionsJsonTest {
     @Test
     void testRunnerOptionsJsonRoundTrip() {
         // Create options with injections
-        LauncherOptions.RunnerOptions original = LauncherOptions.RunnerOptions.builder()
+        final var original = LauncherOptions.RunnerOptions.builder()
                 .enableVerbose()
                 .enableJit()
                 .setMethodName("main")
@@ -66,14 +69,14 @@ class LauncherOptionsJsonTest {
                 .build();
 
         // Serialize to JSON
-        String json = original.toJson();
+        final String json = original.toJson();
         assertNotNull(json);
 
         // Deserialize from JSON
-        LauncherOptions.RunnerOptions restored = LauncherOptions.RunnerOptions.fromJson(json);
+        final var restored = LauncherOptions.RunnerOptions.fromJson(json);
 
         // Verify all options match
-        assertEquals(original.verbose(), restored.verbose());
+        assertEquals(original.isVerbose(), restored.isVerbose());
         assertEquals(original.isJit(), restored.isJit());
         assertEquals(original.getMethodName(), restored.getMethodName());
         assertEquals(original.getModulePath(), restored.getModulePath());
@@ -85,7 +88,7 @@ class LauncherOptionsJsonTest {
     @Test
     void testDisassemblerOptionsJsonRoundTrip() {
         // Create disassembler options
-        LauncherOptions.DisassemblerOptions original = LauncherOptions.DisassemblerOptions.builder()
+        final var original = LauncherOptions.DisassemblerOptions.builder()
                 .enableVerbose()
                 .listEmbeddedFiles()
                 .addModulePath(new File("/lib"))
@@ -93,14 +96,16 @@ class LauncherOptionsJsonTest {
                 .build();
 
         // Serialize to JSON
-        String json = original.toJson();
+        final String json = original.toJson();
+        System.out.println(json);
         assertNotNull(json);
 
         // Deserialize from JSON
-        LauncherOptions.DisassemblerOptions restored = LauncherOptions.DisassemblerOptions.fromJson(json);
+        final var restored = LauncherOptions.DisassemblerOptions.fromJson(json);
+        System.err.println(restored);
 
         // Verify all options match
-        assertEquals(original.verbose(), restored.verbose());
+        assertEquals(original.isVerbose(), restored.isVerbose());
         assertEquals(original.isListFiles(), restored.isListFiles());
         assertEquals(original.getModulePath(), restored.getModulePath());
         assertEquals(original.getTarget(), restored.getTarget());
@@ -108,13 +113,12 @@ class LauncherOptionsJsonTest {
 
     @Test
     void testJsonPrettyPrinting() {
-        LauncherOptions.CompilerOptions options = LauncherOptions.CompilerOptions.builder()
+        final var options = LauncherOptions.CompilerOptions.builder()
                 .enableVerbose()
                 .addInputFile("Test.x")
                 .build();
-
-        String json = options.toJson();
-
+        final String json = options.toJson();
+        System.out.println(json);
         // Verify pretty printing (should have newlines)
         assertTrue(json.contains("\n"));
         assertTrue(json.contains("  ")); // Should have indentation
@@ -123,12 +127,11 @@ class LauncherOptionsJsonTest {
     @Test
     void testEmptyOptions() {
         // Parse minimal options
-        LauncherOptions.CompilerOptions original = LauncherOptions.CompilerOptions.parse(new String[]{"Test.x"});
-
-        String json = original.toJson();
-        LauncherOptions.CompilerOptions restored = LauncherOptions.CompilerOptions.fromJson(json);
-
-        assertEquals(original.verbose(), restored.verbose());
+        final var original = LauncherOptions.CompilerOptions.parse(new String[]{"Test.x"});
+        final String json = original.toJson();
+        System.out.println(json);
+        final var restored = LauncherOptions.CompilerOptions.fromJson(json);
+        assertEquals(original.isVerbose(), restored.isVerbose());
         assertEquals(original.getInputLocations(), restored.getInputLocations());
     }
 }

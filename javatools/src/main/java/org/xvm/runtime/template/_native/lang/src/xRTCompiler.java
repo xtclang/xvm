@@ -1,23 +1,22 @@
 package org.xvm.runtime.template._native.lang.src;
 
-
 import java.io.File;
-
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
-import org.xvm.asm.ErrorListener;
+import org.xvm.asm.ErrorList;
 import org.xvm.asm.FileRepository;
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
-import org.xvm.asm.Version;
+import org.xvm.asm.XvmStructure;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
@@ -53,12 +52,10 @@ import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTe
 import org.xvm.runtime.template._native.reflect.xRTFileTemplate;
 
 import org.xvm.tool.Compiler;
-import org.xvm.tool.Console;
 import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.ModuleInfo;
 import org.xvm.tool.ModuleInfo.Node;
 
-import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 
@@ -68,7 +65,11 @@ import org.xvm.util.Severity;
 public class xRTCompiler extends xService {
     public static xRTCompiler INSTANCE;
 
-    public xRTCompiler(Container container, ClassStructure structure, boolean fInstance) {
+    private static final int[] STACK_2 = {Op.A_STACK, Op.A_STACK};
+
+    private static MethodConstant GET_MODULE_ID;
+
+    public xRTCompiler(final Container container, final ClassStructure structure, final boolean fInstance) {
         super(container, structure, false);
 
         if (fInstance) {
@@ -92,15 +93,22 @@ public class xRTCompiler extends xService {
     }
 
     @Override
-    public ServiceHandle createServiceHandle(ServiceContext context, ClassComposition clz, TypeConstant typeMask) {
-        var hCompiler = new CompilerHandle(clz.maskAs(typeMask), context, new CompilerAdapter(null));
+    public ServiceHandle createServiceHandle(final ServiceContext context, final ClassComposition clz,
+                                             final TypeConstant typeMask) {
+        // Create options with defaults - source files will be set per compilation
+        CompilerOptions options = CompilerOptions.builder()
+                .forceRebuild()
+                .qualifyOutputNames()
+                .build();
+        CompilerHandle hCompiler =
+                new CompilerHandle(clz.maskAs(typeMask), context, new CompilerAdapter(options));
         context.setService(hCompiler);
         return hCompiler;
     }
 
     @Override
-    public int invokeNativeNN(Frame frame, MethodStructure method,
-                              ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn) {
+    public int invokeNativeNN(final Frame frame, final MethodStructure method,
+                              final ObjectHandle hTarget, final ObjectHandle[] ahArg, final int[] aiReturn) {
         CompilerHandle hCompiler = (CompilerHandle) hTarget;
         switch (method.getName()) {
         case "compileImpl":
@@ -109,7 +117,7 @@ public class xRTCompiler extends xService {
                 ArrayHandle    haSources = (ArrayHandle) ahArg[1];
                 ObjectHandle[] ahSource  = haSources.getTemplate().toArray(frame, haSources);
                 return invokeCompileImpl(frame, hCompiler, hRepo, ahSource, aiReturn);
-            } catch (ExceptionHandle.WrapperException e) {
+            } catch (final ExceptionHandle.WrapperException e) {
                 return frame.raiseException(e);
             }
         }
@@ -122,12 +130,12 @@ public class xRTCompiler extends xService {
      *      "(FileTemplate[] modules, String[] errors)
      *          compileImpl(ModuleRepository repo, OSFileNode[] sources)"
      */
-    protected int invokeCompileImpl(Frame frame, CompilerHandle hCompiler, ObjectHandle hRepo,
-                                    ObjectHandle[] ahSources, int[] aiReturn) {
+    protected int invokeCompileImpl(final Frame frame, final CompilerHandle hCompiler, final ObjectHandle hRepo,
+                                    final ObjectHandle[] ahSources, final int[] aiReturn) {
         CompilerAdapter compiler = hCompiler.fAdapter;
 
-        List<File> listSources = new ArrayList<>();
-        for (ObjectHandle hSource : ahSources) {
+        final var listSources = new ArrayList<File>();
+        for (final ObjectHandle hSource : ahSources) {
             listSources.add(((NodeHandle) hSource).getPath().toFile());
         }
         compiler.setSourceLocations(listSources);
@@ -138,10 +146,10 @@ public class xRTCompiler extends xService {
         List<ModuleRepository> listNew = new ArrayList<>();
         listNew.add(new BuildRepository());
 
-        for (ModuleRepository repo : repoCore.asList()) {
+        for (final var repo : repoCore.asList()) {
             // take all read-only repositories
-            if (repo instanceof DirRepository  repoDir  && repoDir .isReadOnly() ||
-                repo instanceof FileRepository repoFile && repoFile.isReadOnly()) {
+            if (repo instanceof final DirRepository  repoDir  && repoDir .isReadOnly() ||
+                repo instanceof final FileRepository repoFile && repoFile.isReadOnly()) {
                 listNew.add(repo);
             }
         }
@@ -151,8 +159,8 @@ public class xRTCompiler extends xService {
         return doCompile(frame, compiler, hRepo, null, aiReturn);
     }
 
-    private int doCompile(Frame frame, CompilerAdapter compiler,
-                          ObjectHandle hRepo, String sMissingPrev, int[] aiReturn) {
+    private int doCompile(final Frame frame, final CompilerAdapter compiler,
+                          final ObjectHandle hRepo, final String sMissingPrev, final int[] aiReturn) {
         try {
             String sMissing = compiler.partialCompile(sMissingPrev != null);
             if (sMissing != null) {
@@ -161,33 +169,33 @@ public class xRTCompiler extends xService {
                 }
                 CallChain chain = computeGetModuleChain(frame, hRepo);
                 switch (chain.invoke(frame, hRepo, xString.makeHandle(sMissing), STACK_2)) {
-                case Op.R_NEXT:
-                    return popModuleStructure(frame, compiler)
-                        ? doCompile(frame, compiler, hRepo, sMissing, aiReturn)
-                        : completeWithError(frame, compiler, sMissing, aiReturn);
+                    case Op.R_NEXT:
+                        return popModuleStructure(frame, compiler)
+                                ? doCompile(frame, compiler, hRepo, sMissing, aiReturn)
+                                : completeWithError(frame, compiler, sMissing, aiReturn);
 
-                case Op.R_CALL:
-                    Frame.Continuation nextStep = frameCaller ->
-                        popModuleStructure(frameCaller, compiler)
-                            ? doCompile(frameCaller, compiler, hRepo, sMissing, aiReturn)
-                            : completeWithError(frameCaller, compiler, sMissing, aiReturn);
-                    frame.m_frameNext.addContinuation(nextStep);
-                    return Op.R_CALL;
+                    case Op.R_CALL:
+                        Frame.Continuation nextStep = frameCaller ->
+                                popModuleStructure(frameCaller, compiler)
+                                        ? doCompile(frameCaller, compiler, hRepo, sMissing, aiReturn)
+                                        : completeWithError(frameCaller, compiler, sMissing, aiReturn);
+                        frame.m_frameNext.addContinuation(nextStep);
+                        return Op.R_CALL;
 
-                case Op.R_EXCEPTION:
-                    return Op.R_EXCEPTION;
+                    case Op.R_EXCEPTION:
+                        return Op.R_EXCEPTION;
 
-                default:
-                    throw new IllegalStateException();
+                    default:
+                        throw new IllegalStateException("Unknown Op");
                 }
             }
             return completeCompilation(frame, compiler, null, aiReturn);
-        } catch (Exception e) {
+        } catch (final Exception e) {
             return completeCompilation(frame, compiler, e, aiReturn);
         }
     }
 
-    private CallChain computeGetModuleChain(Frame frame, ObjectHandle hRepo) {
+    private CallChain computeGetModuleChain(final Frame frame, final ObjectHandle hRepo) {
         Object nid = GET_MODULE_ID.resolveNestedIdentity(
                         frame.poolContext(), frame.getGenericsResolver(true));
 
@@ -208,9 +216,9 @@ public class xRTCompiler extends xService {
      *
      * @return true iff the module was successfully loaded and added
      */
-    private boolean popModuleStructure(Frame frame, CompilerAdapter compiler) {
+    private boolean popModuleStructure(final Frame frame, final CompilerAdapter compiler) {
         ObjectHandle hReturn = frame.popStack();
-        if (hReturn instanceof ComponentTemplateHandle hModule) {
+        if (hReturn instanceof final ComponentTemplateHandle hModule) {
             assert frame.popStack() == xBoolean.TRUE;
             compiler.addRepo((ModuleStructure) hModule.getComponent());
             return true;
@@ -220,15 +228,15 @@ public class xRTCompiler extends xService {
         return false;
     }
 
-    private int completeWithError(Frame frame, CompilerAdapter compiler, String
-                                  sMissing, int[] aiReturn) {
+    private int completeWithError(final Frame frame, final CompilerAdapter compiler, final String
+                                  sMissing, final int[] aiReturn) {
         // org.xvm.compiler.Compiler.MODULE_MISSING
-        compiler.log(Severity.FATAL, "Module missing: \"" + sMissing + '"');
+        compiler.logError(Severity.FATAL, "MODULE_MISSING", new Object[] {sMissing});
         return completeCompilation(frame, compiler, null, aiReturn);
     }
 
-    private int completeCompilation(Frame frame, CompilerAdapter compiler,
-                                    Exception exception, int[] aiReturn) {
+    private int completeCompilation(final Frame frame, final CompilerAdapter compiler,
+                                    final Exception exception, final int[] aiReturn) {
         List<ComponentTemplateHandle> listFiles = new ArrayList<>();
         List<String>                  listErrors = compiler.getErrors();
         boolean      fSuccess;
@@ -237,7 +245,7 @@ public class xRTCompiler extends xService {
             if (fSuccess) {
                 Container        container = frame.f_context.f_container;
                 ModuleRepository repoBuild = compiler.getBuildRepository();
-                for (String sModule : repoBuild.getModuleNames()) {
+                for (final String sModule : repoBuild.getModuleNames()) {
                     listFiles.add(xRTFileTemplate.makeHandle(container,
                             repoBuild.loadModule(sModule).getFileStructure()));
                 }
@@ -268,7 +276,7 @@ public class xRTCompiler extends xService {
         return frame.assignValues(aiReturn, haTemplates, haErrors);
     }
 
-    private List<String> addError(Exception exception, List<String> listErrors) {
+    private static List<String> addError(final Exception exception, List<String> listErrors) {
         if (listErrors.isEmpty()) {
             listErrors = new ArrayList<>();
         }
@@ -279,7 +287,7 @@ public class xRTCompiler extends xService {
     /**
      * Injection support.
      */
-    public ObjectHandle ensureCompiler(Frame frame, ObjectHandle hOpts) {
+    public ObjectHandle ensureCompiler(final Frame frame, final ObjectHandle hOpts) {
         return createServiceHandle(
                 f_container.createServiceContext("Compiler"),
                     getCanonicalClass(), getCanonicalType());
@@ -288,13 +296,11 @@ public class xRTCompiler extends xService {
 
     // ----- ObjectHandle --------------------------------------------------------------------------
 
-    protected static class CompilerHandle
-            extends ServiceHandle {
+    protected static class CompilerHandle extends ServiceHandle {
         protected final CompilerAdapter fAdapter;
 
-        protected CompilerHandle(TypeComposition clazz, ServiceContext context, CompilerAdapter adapter) {
+        protected CompilerHandle(final TypeComposition clazz, final ServiceContext context, final CompilerAdapter adapter) {
             super(clazz, context);
-
             fAdapter = adapter;
         }
     }
@@ -303,44 +309,40 @@ public class xRTCompiler extends xService {
      * Adapter into the native compiler.
      */
     protected static class CompilerAdapter extends Compiler {
-        protected CompilerAdapter(ErrorListener errListener) {
-            // Build minimal immutable options - adapter overrides access via its own fields
-            super(new CompilerOptions.Builder()
-                    .forceRebuild()
-                    .qualifyOutputNames()
-                    .build(), null, errListener);
+
+        private List<ModuleRepository> m_listRepos;
+        private List<File>             m_listSources;
+        private ModuleRepository       m_repoResults;
+
+        // re-entry support
+        private List<org.xvm.compiler.Compiler> m_compilers;
+        private ModuleRepository                m_repoOutput;
+        private Node[]                          m_allNodes;
+
+        // error collection
+        private final ErrorList m_errorList;
+
+        protected CompilerAdapter(final CompilerOptions options) {
+            super(options, null, m_errorList = new ErrorList(100));
         }
 
         // ----- accessors -------------------------------------------------------------------------
 
-        protected void setLibraryRepos(List<ModuleRepository> listRepos) {
-            m_listRepos.clear();
-            m_listRepos.addAll(listRepos);
+        protected void setLibraryRepos(final List<ModuleRepository> listRepos) {
+            m_listRepos = listRepos;
         }
 
-        protected void addRepo(ModuleStructure module) {
+        protected void addRepo(final ModuleStructure module) {
             m_listRepos.add(new InstantRepository(module));
         }
 
-        protected List<File> getSourceLocations() {
-            return m_listSources;
+        protected void setSourceLocations(final List<File> listSources) {
+            m_listSources = listSources;
         }
 
-        protected void setSourceLocations(List<File> listSources) {
-            m_listSources.clear();
-            m_listSources.addAll(listSources);
-        }
-
-        protected Version getVersion() {
-            return m_version;
-        }
-
-        protected void setVersion(Version version) {
-            m_version = version;
-        }
-
-        protected boolean isForcedRebuild() {
-            return true;
+        @Override
+        protected List<File> getInputLocations() {
+            return m_listSources != null ? m_listSources : List.of();
         }
 
         protected Severity getSeverity() {
@@ -348,11 +350,17 @@ public class xRTCompiler extends xService {
         }
 
         protected List<String> getErrors() {
-            return m_log;
+            return m_errorList.getErrors().stream()
+                    .map(err -> err.getSeverity().desc() + ": " + err.getMessage())
+                    .toList();
         }
 
         protected ModuleRepository getBuildRepository() {
             return m_repoResults;
+        }
+
+        protected void logError(final Severity severity, final String sCode, final Object[] aoParam) {
+            m_errorList.log(severity, sCode, aoParam, (XvmStructure) null);
         }
 
         /**
@@ -363,7 +371,7 @@ public class xRTCompiler extends xService {
          *
          * @return a name of a missing module if any
          */
-        protected String partialCompile(boolean fReenter) {
+        protected String partialCompile(final boolean fReenter) {
             List<org.xvm.compiler.Compiler> compilers;
             ModuleRepository                repoLib;
             ModuleRepository                repoOutput;
@@ -375,16 +383,15 @@ public class xRTCompiler extends xService {
                 repoOutput = m_repoOutput;
                 allNodes   = m_allNodes;
             } else {
-                // Use adapter's fields directly, not options()
-                File[]           resourceDirs = ModuleInfo.NO_FILES;
-                File             fileOutput   = null;
-                List<ModuleInfo> listTargets  = selectTargets(getSourceLocations(), resourceDirs, fileOutput);
-                boolean          fRebuild     = isForcedRebuild();
+                File[]           resourceDirs = options().getResourceLocation();
+                File             fileOutput   = options().getOutputLocation();
+                List<ModuleInfo> listTargets  = selectTargets(getInputLocations(), resourceDirs, fileOutput);
+                boolean          fRebuild     = options().isForcedRebuild();
                 checkErrors();
 
-                Map<File, Node> mapTargets     = new ListMap<>(listTargets.size());
-                int             cSystemModules = 0;
-                for (ModuleInfo moduleInfo : listTargets) {
+                final var mapTargets = new LinkedHashMap<File, Node>(listTargets.size());
+                int cSystemModules = 0;
+                for (final ModuleInfo moduleInfo : listTargets) {
                     Node node = moduleInfo.getSourceTree(this);
 
                     // short-circuit the compilation of any up-to-date modules
@@ -404,8 +411,8 @@ public class xRTCompiler extends xService {
                 allNodes = mapTargets.values().toArray(new Node[0]);
                 flushAndCheckErrors(allNodes);
 
-                // repository setup - adapter sets repos via setLibraryRepos, not via module path
-                repoLib = configureLibraryRepo(null);
+                // repository setup
+                repoLib = configureLibraryRepo(options().getModulePath());
                 checkErrors();
 
                 if (cSystemModules == 0) {
@@ -417,19 +424,17 @@ public class xRTCompiler extends xService {
                 checkErrors();
 
                 // the code below could be extracted if necessary: compile(allNodes, repoLib, repoOutput);
-                var mapCompilers = populateNamespace(allNodes, repoLib);
-
+                final var mapCompilers = resolveCompilers(allNodes, repoLib);
                 flushAndCheckErrors(allNodes);
-                compilers = List.copyOf(mapCompilers.values());
+                compilers = new ArrayList<>(mapCompilers.values());
             }
 
             // inline linkModules() implementation
-            for (var compiler : compilers) {
+            for (final var compiler : compilers) {
                 ModuleConstant idMissing = compiler.linkModules(repoLib);
                 if (idMissing != null) {
                     // save off the necessary state
-                    m_compilers.clear();
-                    m_compilers.addAll(compilers);
+                    m_compilers  = compilers;
                     m_repoOutput = repoOutput;
                     m_allNodes   = allNodes;
                     return idMissing.getName();
@@ -458,25 +463,25 @@ public class xRTCompiler extends xService {
         protected void reset() {
             super.reset();
 
-            m_listSources.clear();
-            m_listRepos.clear();
+            m_listSources = null;
+            m_listRepos   = null;
             m_repoResults = null;
-            m_compilers.clear();
+            m_compilers   = null;
             m_repoOutput  = null;
             m_allNodes    = null;
-            m_log.clear();
+            m_errorList.clear();
         }
 
         // ----- Compiler API ----------------------------------------------------------------------
 
         @Override
-        protected ModuleRepository configureLibraryRepo(List<File> ignore) {
+        protected ModuleRepository configureLibraryRepo(final List<File> ignore) {
             return new LinkedRepository(true, m_listRepos.toArray(ModuleRepository.NO_REPOS));
         }
 
         @Override
-        protected ModuleRepository configureResultRepo(File fileDest) {
-            return m_repoResults = makeBuildRepo();
+        protected ModuleRepository configureResultRepo(final File fileDest) {
+            return m_repoResults = new BuildRepository();
         }
 
         @Override
@@ -485,54 +490,9 @@ public class xRTCompiler extends xService {
         }
 
         @Override
-        protected void linkModules(List<org.xvm.compiler.Compiler> compilers, ModuleRepository repo) {
+        protected void linkModules(final List<org.xvm.compiler.Compiler> compilers, final ModuleRepository repo) {
             // inlined; should not be called
-            throw new IllegalStateException("linkModules");
+            throw new IllegalStateException("xRTCompiler.linkModules");
         }
-
-        @Override
-        protected void log(Severity sev, String msg, Object... params) {
-            if (sev.compareTo(m_sevWorst) > 0) {
-                m_sevWorst = sev;
-            }
-            if (sev.compareTo(Severity.WARNING) >= 0) {
-                m_log.add(sev.desc() + ": " + Console.formatTemplate(msg, params));
-            }
-        }
-
-        @Override
-        protected void log(Severity sev, Throwable cause, String template, Object... params) {
-            if (sev.compareTo(m_sevWorst) > 0) {
-                m_sevWorst = sev;
-            }
-            if (sev.compareTo(Severity.WARNING) >= 0) {
-                final String msg;
-                if (template != null && !template.isEmpty()) {
-                    msg = Console.formatTemplate(template, params) + ": " + cause.getMessage();
-                } else {
-                    msg = cause.getMessage() != null ? cause.getMessage() : cause.toString();
-                }
-                m_log.add(sev.desc() + ": " + msg);
-            }
-        }
-
-        // ----- fields ----------------------------------------------------------------------------
-
-        private final List<ModuleRepository>        m_listRepos    = new ArrayList<>();
-        private final List<File>                    m_listSources  = new ArrayList<>();
-        private ModuleRepository                    m_repoResults;
-        private Version                             m_version      = new Version("CI");
-        private final List<String>                  m_log          = new ArrayList<>();
-
-        // re-entry support
-        private final List<org.xvm.compiler.Compiler> m_compilers  = new ArrayList<>();
-        private ModuleRepository                      m_repoOutput;
-        private Node[]                                m_allNodes;
     }
-
-    // ----- constants -----------------------------------------------------------------------------
-
-    private static final int[] STACK_2 = new int[] {Op.A_STACK, Op.A_STACK};
-
-    private static MethodConstant GET_MODULE_ID;
 }
