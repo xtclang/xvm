@@ -58,7 +58,7 @@ jobs:
 
         steps:
             - name: Fetch Sources
-              uses: actions/checkout@v5
+              uses: actions/checkout@v6
               with:
                   fetch-depth: 1
                   show-progress: true
@@ -110,7 +110,7 @@ jobs:
 
         steps:
             - name: Fetch Sources
-              uses: actions/checkout@v5
+              uses: actions/checkout@v6
               with:
                   fetch-depth: 1
                   show-progress: true
@@ -275,7 +275,7 @@ jobs:
 
         steps:
             - name: Fetch Sources
-              uses: actions/checkout@v5
+              uses: actions/checkout@v6
               with:
                   fetch-depth: 1
                   show-progress: true
