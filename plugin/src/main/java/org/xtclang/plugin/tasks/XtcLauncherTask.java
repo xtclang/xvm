@@ -27,17 +27,15 @@ import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SourceSet;
-import org.gradle.process.ExecResult;
 
 import org.jetbrains.annotations.NotNull;
 
+import org.xtclang.plugin.XtcJavaToolsRuntime;
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.internal.GradlePhaseAssertions;
-import org.xtclang.plugin.launchers.JavaClasspathLauncher;
-import org.xtclang.plugin.launchers.LauncherContext;
+import org.xtclang.plugin.launchers.ExecutionMode;
 import org.xtclang.plugin.launchers.ModulePathResolver;
-import org.xtclang.plugin.launchers.XtcLauncher;
 
 /**
  * Abstract class that represents and XTC Launcher execution (i.e. Compiler, Runner, Disassembler etc.),
@@ -152,6 +150,16 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     public void executeTask() {
         // Assert that we're in execution phase during task execution
         GradlePhaseAssertions.assertExecutionPhase(this, "XtcLauncherTask execution");
+
+        // Ensure javatools.jar is loaded into the plugin classloader before any task uses LauncherOptions types
+        // This is critical for published plugin users who have XDK as a dependency
+        XtcJavaToolsRuntime.ensureJavaToolsInClasspath(
+                getProjectVersion(),
+                getJavaToolsConfiguration(),
+                getXdkFileTree(),
+                getLogger()
+        );
+
         super.executeTask();
     }
 
@@ -240,8 +248,8 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     @Input
     @Override
-    public Property<@NotNull Boolean> getFork() {
-        return ext.getFork();
+    public Property<@NotNull ExecutionMode> getExecutionMode() {
+        return ext.getExecutionMode();
     }
 
     @Optional
@@ -262,48 +270,16 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @Internal
     public abstract String getJavaLauncherClassName();
 
-    protected <R extends ExecResult> R handleExecResult(final R result) {
-        final int exitValue = result.getExitValue();
-        if (exitValue != 0) {
-            final String taskName = getName();
-            final String launcherType = "JavaClasspath (fork=" + ext.getFork().get() + ")";
-            getLogger().error("""
-
-                [plugin] ==============================================================================
-                [plugin] XTC Compilation Failed
-                [plugin] ==============================================================================
-                [plugin] Task:        {}
-                [plugin] Launcher:    {}
-                [plugin] Exit Code:   {}
-                [plugin] ------------------------------------------------------------------------------
-                [plugin] The XTC compiler process terminated with a non-zero exit code ({}).
-                [plugin] This typically indicates compilation errors in your XTC source files.
-                [plugin] Review the compiler output above for specific error messages.
-                [plugin] ==============================================================================
-                """, taskName, launcherType, exitValue, exitValue);
-        }
-        result.rethrowFailure();
-        result.assertNormalExitValue();
-        return result;
+    @Internal
+    public Provider<@NotNull Directory> getProjectDirectory() {
+        return projectDirectory;
     }
 
-    protected XtcLauncher<E, ? extends XtcLauncherTask<E>> createLauncher() {
-        final var logger = getLogger();
-        final boolean fork = ext.getFork().get();
-        logger.info("[plugin] Using JavaClasspathLauncher with fork={} ({})", fork, fork ? "separate process" : "in-process execution");
-
-        final var context = new LauncherContext(
-            projectVersion,
-            xdkFileTree,
-            javaToolsConfig,
-            toolchainExecutable,
-            projectDirectory.get().getAsFile()
-        );
-
-        return new JavaClasspathLauncher<>(this, logger, context, fork);
+    public File resolveJavaTools() {
+        return getJavaToolsConfiguration().get().getSingleFile();
     }
 
-    protected List<File> resolveFullModulePath() {
+    public List<File> resolveFullModulePath() {
         return new ModulePathResolver(this).resolveFullModulePath();
     }
 
@@ -328,6 +304,21 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @Internal
     public Map<String, Provider<@NotNull Directory>> getSourceSetOutputDirs() {
         return sourceSetOutputDirs;
+    }
+
+    @Internal
+    protected Provider<@NotNull String> getProjectVersion() {
+        return projectVersion;
+    }
+
+    @Internal
+    protected Provider<@NotNull FileCollection> getJavaToolsConfiguration() {
+        return javaToolsConfig;
+    }
+
+    @Internal
+    protected Provider<@NotNull FileTree> getXdkFileTree() {
+        return xdkFileTree;
     }
 
     @Optional

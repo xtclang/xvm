@@ -165,7 +165,7 @@ public abstract class ProjectDelegate<T, R> {
             }
             return value;
         } catch (final Exception e) {
-            throw failure(e, "[plugin] FATAL: Plugin build is broken - cannot read {}: {}", propertyDescription, e.getMessage());
+            throw failure(e, "FATAL: Plugin build is broken - cannot read {}: {}", propertyDescription, e.getMessage());
         }
     }
 }

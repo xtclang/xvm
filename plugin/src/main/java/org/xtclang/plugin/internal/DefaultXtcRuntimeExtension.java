@@ -51,7 +51,6 @@ public abstract class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskE
      * mode, that is the only way to talk to the XTC debugger ATM.
      */
     private final ListProperty<@NotNull XtcRunModule> modules;
-    private final Property<@NotNull Boolean> detach;
     private final Property<@NotNull Boolean> parallel;
 
     @Inject
@@ -59,7 +58,6 @@ public abstract class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskE
     public DefaultXtcRuntimeExtension() {
         final ObjectFactory objects = getObjects();
         this.modules = objects.listProperty(XtcRunModule.class).value(emptyList());
-        this.detach = objects.property(Boolean.class).convention(false);
         this.parallel = objects.property(Boolean.class).convention(false);
     }
 
@@ -116,11 +114,6 @@ public abstract class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskE
     @Override
     public void setModules(final XtcRunModule... modules) {
         setModules(Arrays.asList(modules));
-    }
-
-    @Override
-    public Property<@NotNull Boolean> getDetach() {
-        return detach;
     }
 
     @Override

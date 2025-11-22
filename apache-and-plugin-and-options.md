@@ -1,187 +1,11 @@
+# Further unrelated TODOs:
+# TODO: Publish a release 
+# TODO: Language server
+# TODO: Language plugins for various IDEs? 
+# TODO: 
+
 Tell me if there is a simple, small, popular Java library for command line arg parsing that handles - and — arg names with 0 or one arguments each and trailing arga at the end of the command line and how to use it. Can it also verify args on type and number of args?
 
-
-Yes, picocli is exactly what you're looking for. It's small, popular, and handles all your requirements elegantly.
-Basic Usage
-
-```java
-import picocli.CommandLine;
-import picocli.CommandLine.Command;
-import picocli.CommandLine.Option;
-import picocli.CommandLine.Parameters;
-
-@Command(name = "myapp", mixinStandardHelpOptions = true)
-class MyApp implements Runnable {
-    
-    @Option(names = {"-v", "--verbose"}, 
-            description = "Enable verbose output")
-    private boolean verbose;
-    
-    @Option(names = {"-o", "--output"}, 
-            description = "Output file")
-    private String outputFile;
-    
-    @Option(names = {"-n", "--count"}, 
-            description = "Number of iterations")
-    private int count = 1;
-    
-    @Parameters(description = "Trailing arguments")
-    private List<String> files = new ArrayList<>();
-    
-    @Override
-    public void run() {
-        System.out.println("Verbose: " + verbose);
-        System.out.println("Output: " + outputFile);
-        System.out.println("Count: " + count);
-        System.out.println("Files: " + files);
-    }
-    
-    public static void main(String[] args) {
-        int exitCode = new CommandLine(new MyApp()).execute(args);
-        System.exit(exitCode);
-    }
-}
-Maven Dependency
-
-```xml
-<dependency>
-    <groupId>info.picocli</groupId>
-    <artifactId>picocli</artifactId>
-    <version>4.7.5</version>
-</dependency>
-Type Validation
-Picocli automatically validates types. If you specify private int count, it will reject non-integer values and show an error. You can also add custom validation:
-
-```java
-@Option(names = {"-p", "--port"}, 
-        description = "Port number (1-65535)")
-private int port;
-
-// Add validation in run() or use arity
-@Option(names = {"-f", "--files"}, 
-        arity = "1..3",  // Requires 1-3 arguments
-        description = "Input files")
-private List<String> inputFiles;
-The arity parameter controls how many arguments an option takes (e.g., "0" for flags, "1" for single argument, "1..3" for range).
-Alternative: Apache Commons CLI is also popular but more verbose. Picocli is generally preferred for its cleaner annotation-based approach and better type safety.
-
-```
-
-I want to turn this command line into an options instance using some kind of builder pattern and also turn it back into a command line - can I do that ?
-Can you also show me this in Apache cli?
-
-
-Yes, both libraries support programmatic building and reconstructing command lines.
-Picocli with Builder Pattern
-
-```java
-import picocli.CommandLine;
-import picocli.CommandLine.Model.*;
-
-// Parse command line to options
-String[] args = {"-v", "--output", "file.txt", "-n", "5", "input1.txt", "input2.txt"};
-```
-
-CommandSpec spec = CommandSpec.create();
-spec.addOption(OptionSpec.builder("-v", "--verbose")
-    .type(boolean.class)
-    .build());
-spec.addOption(OptionSpec.builder("-o", "--output")
-    .type(String.class)
-    .arity("1")
-    .build());
-spec.addOption(OptionSpec.builder("-n", "--count")
-    .type(int.class)
-    .arity("1")
-    .build());
-spec.addPositional(PositionalParamSpec.builder()
-    .type(String[].class)
-    .arity("0..*")
-    .build());
-
-CommandLine cmd = new CommandLine(spec);
-ParseResult parseResult = cmd.parseArgs(args);
-
-// Access parsed values
-boolean verbose = parseResult.matchedOption('v').getValue();
-String output = parseResult.matchedOption('o').getValue();
-int count = parseResult.matchedOption('n').getValue();
-List<String> files = parseResult.matchedPositional(0).getValue();
-
-// Reconstruct command line
-List<String> reconstructed = new ArrayList<>();
-if (verbose) reconstructed.add("-v");
-if (output != null) {
-    reconstructed.add("--output");
-    reconstructed.add(output);
-}
-reconstructed.add("-n");
-reconstructed.add(String.valueOf(count));
-reconstructed.addAll(files);
-Apache Commons CLI
-
-```java
-import org.apache.commons.cli.*;
-
-// Build options
-Options options = new Options();
-options.addOption("v", "verbose", false, "Enable verbose output");
-options.addOption(Option.builder("o")
-    .longOpt("output")
-    .hasArg()
-    .argName("file")
-    .desc("Output file")
-    .build());
-options.addOption(Option.builder("n")
-    .longOpt("count")
-    .hasArg()
-    .type(Number.class)
-    .argName("num")
-    .desc("Number of iterations")
-    .build());
-
-// Parse command line
-String[] args = {"-v", "--output", "file.txt", "-n", "5", "input1.txt", "input2.txt"};
-CommandLineParser parser = new DefaultParser();
-CommandLine cmd = parser.parse(options, args);
-
-// Access parsed values
-boolean verbose = cmd.hasOption("v");
-String output = cmd.getOptionValue("o");
-int count = Integer.parseInt(cmd.getOptionValue("n", "1"));
-String[] files = cmd.getArgs(); // Trailing args
-
-// Reconstruct command line
-List<String> reconstructed = new ArrayList<>();
-for (Option opt : cmd.getOptions()) {
-    reconstructed.add("-" + opt.getOpt());
-    if (opt.hasArg()) {
-        reconstructed.add(opt.getValue());
-    }
-}
-reconstructed.addAll(Arrays.asList(files));
-Maven Dependencies
-
-```xml
-<!-- Apache Commons CLI -->
-<dependency>
-    <groupId>commons-cli</groupId>
-    <artifactId>commons-cli</artifactId>
-    <version>1.6.0</version>
-</dependency>
-Key differences:
-Picocli has better type safety and automatic type conversion
-Commons CLI is simpler but requires manual type conversion and doesn't validate types automatically
-Both support the builder pattern, though Picocli's is more verbose for programmatic use
-For reconstruction, you'll need to manually iterate through parsed options in both cases
-Commons CLI is smaller (~70KB) vs Picocli (~600KB), so if size matters and you don't need advanced features, Commons CLI might be preferable.
-
-```
-
-Can it handle repeated arguments - for example sending in a path with two -p flags and a single string argument to each?
-
-
-Yes, both libraries support repeated arguments.
 Apache Commons CLI (Simpler)
 
 ```java
@@ -720,7 +544,7 @@ public class MyOptions {
         
         // Define property option (key=value pairs)
         options.addOption(Option.builder("D")
-            .argName("property=value")
+            .argName("property@=value")
             .numberOfArgs(2)
             .valueSeparator('=')
             .desc("Set a property")
@@ -842,7 +666,7 @@ Approach 3: With Builder Pattern
 
 ```java
 public static class Builder {
-    private Map<String, String> properties = new HashMap<>();
+    private Map<String, String> propertipaes = new HashMap<>();
     private Map<String, String> config = new HashMap<>();
     // ... other fields
     

@@ -485,6 +485,29 @@ public abstract class LauncherOptions {
         }
 
         /**
+         * Enable version display (--version flag).
+         * Not to be confused with setModuleVersion() which sets the module version.
+         */
+        @SuppressWarnings("unused")
+        public T enableShowVersion() {
+            return enableShowVersion(true);
+        }
+
+        /**
+         * Enable version display (--version flag).
+         * Not to be confused with setModuleVersion() which sets the module version.
+         *
+         * @param showVersion true to enable version display, false otherwise
+         */
+        @SuppressWarnings("unchecked")
+        public T enableShowVersion(final boolean showVersion) {
+            if (showVersion) {
+                args.add("--version");
+            }
+            return (T) this;
+        }
+
+        /**
          * Add a directory or file to the module path.
          *
          * @param path the path to add
@@ -550,14 +573,24 @@ public abstract class LauncherOptions {
             return getPathList("r").toArray(File[]::new);
         }
 
+        public boolean hasResourceLocation() {
+            return commandLine.hasOption("r");
+        }
+
         public File getOutputLocation() {
-            String val = commandLine.getOptionValue("o");
-            return val != null ? new File(val) : null;
+            return hasOutputLocation() ? new File(commandLine.getOptionValue("o")) : null;
+        }
+
+        public boolean hasOutputLocation() {
+            return commandLine.hasOption("o");
         }
 
         public Version getVersion() {
-            String sVersion = commandLine.getOptionValue("set-version");
-            return sVersion == null ? null : new Version(sVersion);
+            return hasVersion() ? new Version(commandLine.getOptionValue("set-version")) : null;
+        }
+
+        public boolean hasVersion() {
+            return commandLine.hasOption("set-version");
         }
 
         public boolean isForcedRebuild() {
@@ -854,9 +887,16 @@ public abstract class LauncherOptions {
             return trailing.isEmpty() ? null : new File(trailing.getFirst());
         }
 
+        public boolean hasTarget() {
+            return !getTrailingArgs().isEmpty();
+        }
+
         public File getOutputFile() {
-            final String val = commandLine.getOptionValue("o");
-            return val == null ? null : new File(val);
+            return hasOutputFile() ? new File(commandLine.getOptionValue("o")) : null;
+        }
+
+        public boolean hasOutputFile() {
+            return commandLine.hasOption("o");
         }
 
         public String[] getMethodArgs() {
@@ -905,7 +945,7 @@ public abstract class LauncherOptions {
             }
 
             // Add output file
-            File output = getOutputFile();
+            final File output = getOutputFile();
             if (output != null) {
                 args.addAll(List.of("-o", output.getPath()));
             }

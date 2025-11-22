@@ -19,7 +19,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.gradle.api.GradleException;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileCollection;
@@ -60,13 +59,13 @@ public class ModulePathResolver {
 
         // If custom module path is specified, use it instead of xtcModule dependencies
         // This supports aggregator projects that collect modules in a custom location
-        if (!customModulePath.isEmpty()) {
-            final Set<File> customModulePathSet = resolveAsDirectories(customModulePath);
-            map.put("customModulePath", customModulePathSet);
-        } else {
+        if (customModulePath.isEmpty()) {
             // Use xtcModule dependencies only when no custom module path is set
-            final Set<File> xtcModuleDeclarations = resolveFiles(xtcModuleDependencies.get());
+            final var xtcModuleDeclarations = resolveFiles(xtcModuleDependencies.get());
             map.put(XTC_CONFIG_NAME_MODULE_DEPENDENCY, xtcModuleDeclarations);
+        } else {
+            final var customModulePathSet = resolveAsDirectories(customModulePath);
+            map.put("customModulePath", customModulePathSet);
         }
 
         for (final var entry : sourceSetOutputDirs.entrySet()) {
@@ -131,7 +130,7 @@ public class ModulePathResolver {
             final List<File> dupes = modulePathSet.stream().filter(File::isFile).filter(f -> f.getName().equals(module.getName())).toList();
             assert !dupes.isEmpty();
             if (dupes.size() != 1) {
-                throw failure("[plugin] A dependency with the same name is defined in more than one ({}) location on the module path.", dupes.size());
+                throw failure("A dependency with the same name is defined in more than one ({}) location on the module path.", dupes.size());
             }
         }
     }

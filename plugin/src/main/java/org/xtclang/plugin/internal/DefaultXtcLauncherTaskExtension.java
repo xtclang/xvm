@@ -1,7 +1,6 @@
 package org.xtclang.plugin.internal;
 
 import static org.xtclang.plugin.XtcPluginConstants.PLUGIN_BUILD_INFO_RESOURCE_PATH;
-import static org.xtclang.plugin.XtcPluginConstants.PROPERTY_LAUNCHER_FORK;
 
 import java.util.Collections;
 import java.util.List;
@@ -15,12 +14,12 @@ import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
-import org.gradle.api.provider.ProviderFactory;
 
 import org.jetbrains.annotations.NotNull;
 
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.XtcPluginUtils;
+import org.xtclang.plugin.launchers.ExecutionMode;
 
 public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTaskExtension {
     private static final Logger logger = Logging.getLogger(DefaultXtcLauncherTaskExtension.class);
@@ -29,12 +28,9 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     @Inject
     protected abstract ObjectFactory getObjects();
 
-    @Inject
-    protected abstract ProviderFactory getProviders();
-
     protected final List<String> defaultJvmArgs;
     protected final ConfigurableFileCollection modulePath;
-    protected final Property<@NotNull Boolean> fork;
+    protected final Property<@NotNull ExecutionMode> executionMode;
     protected final ListProperty<@NotNull String> jvmArgs;
     protected final Property<@NotNull Boolean> verbose;
     protected final Property<@NotNull Boolean> showVersion;
@@ -45,11 +41,10 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     @SuppressWarnings("this-escape")
     protected DefaultXtcLauncherTaskExtension() {
         final ObjectFactory objects = getObjects();
-        final ProviderFactory providers = getProviders();
         this.modulePath = objects.fileCollection();
         this.defaultJvmArgs = loadDefaultJvmArgs();
         logger.info("[plugin] Loaded default JVM args: {}", defaultJvmArgs);
-        this.fork = objects.property(Boolean.class).convention(resolveForkProperty(providers));
+        this.executionMode = objects.property(ExecutionMode.class).convention(ExecutionMode.ATTACHED);
         this.jvmArgs = objects.listProperty(String.class).convention(defaultJvmArgs);
         this.verbose = objects.property(Boolean.class).convention(false);
         this.showVersion = objects.property(Boolean.class).convention(false);
@@ -65,8 +60,8 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
     }
 
     @Override
-    public Property<@NotNull Boolean> getFork() {
-        return fork;
+    public Property<@NotNull ExecutionMode> getExecutionMode() {
+        return executionMode;
     }
 
     @Override
@@ -130,21 +125,6 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
             userArgs.forEach(combinedArgs::add);
             return combinedArgs;
         }));
-    }
-
-    /**
-     * Resolves the fork property from Gradle project properties.
-     * Checks for the property {@link org.xtclang.plugin.XtcPluginConstants#PROPERTY_LAUNCHER_FORK} which can be set:
-     * - In gradle.properties file
-     * - Via command line: -Porg.xtclang.plugin.launcher.fork=false
-     * - Via system property: -Dorg.gradle.project.org.xtclang.plugin.launcher.fork=false
-     *
-     * @param providers The Gradle ProviderFactory for accessing properties
-     * @return The fork value from property, or true (default) if not specified
-     */
-    private static boolean resolveForkProperty(final ProviderFactory providers) {
-        final Provider<@NotNull String> propertyValue = providers.gradleProperty(PROPERTY_LAUNCHER_FORK);
-        return !propertyValue.isPresent() || Boolean.parseBoolean(propertyValue.get());
     }
 
     private static List<String> loadDefaultJvmArgs() {

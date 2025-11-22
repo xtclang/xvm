@@ -210,9 +210,7 @@ class OptionsTest {
         final var opts = RunnerOptions.parse(args);
 
         // Options should be immutable - getInjections returns unmodifiable map
-        assertThrows(UnsupportedOperationException.class, () -> {
-            opts.getInjections().put("bad", "value");
-        });
+        assertThrows(UnsupportedOperationException.class, () -> opts.getInjections().put("bad", "value"));
     }
 
     @Test
@@ -469,19 +467,12 @@ class OptionsTest {
         // Apache CLI will detect the first unknown option and throw an exception
 
         // Valid options followed by invalid option
-        assertThrows(IllegalArgumentException.class, () -> {
-            CompilerOptions.parse(new String[]{"-L", "/lib", "--invalid-flag", "foo.x"});
-        });
-
+        assertThrows(IllegalArgumentException.class, () -> CompilerOptions.parse(new String[] {"-L", "/lib", "--invalid-flag", "foo.x"}));
         // Invalid option followed by valid options
-        assertThrows(IllegalArgumentException.class, () -> {
-            CompilerOptions.parse(new String[]{"--bad-option", "-L", "/lib", "foo.x"});
-        });
+        assertThrows(IllegalArgumentException.class, () -> CompilerOptions.parse(new String[] {"--bad-option", "-L", "/lib", "foo.x"}));
 
         // Mix of valid, invalid, and file arguments
-        assertThrows(IllegalArgumentException.class, () -> {
-            RunnerOptions.parse(new String[]{"-J", "--unknown", "-M", "main", "Test.xtc"});
-        });
+        assertThrows(IllegalArgumentException.class, () -> RunnerOptions.parse(new String[]{"-J", "--unknown", "-M", "main", "Test.xtc"}));
     }
 
     @Test

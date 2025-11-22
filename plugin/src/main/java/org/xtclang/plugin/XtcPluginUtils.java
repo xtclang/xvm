@@ -74,7 +74,7 @@ public final class XtcPluginUtils {
      * @return A GradleException with the formatted message and cause
      */
     public static GradleException failure(final Throwable cause, final String template, final Object... params) {
-        return new GradleException(formatTemplate(template, params), cause);
+        return new GradleException("[plugin] " + formatTemplate(template, params), cause);
     }
 
     /**
@@ -89,7 +89,7 @@ public final class XtcPluginUtils {
         if (template == null || params == null || params.length == 0) {
             return template;
         }
-        var numbered = new StringBuilder(template.length() + params.length * 3);
+        final var numbered = new StringBuilder(template.length() + params.length * 3);
         int paramIndex = 0;
         int pos = 0;
         while (pos < template.length()) {

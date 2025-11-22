@@ -1,3 +1,4 @@
+import org.xtclang.plugin.launchers.ExecutionMode
 import org.xtclang.plugin.tasks.XtcRunTask
 
 /**
@@ -176,13 +177,15 @@ sourceSets {
 // Defaults inherited and overridable by all xtcCompile tasks
 xtcCompile {
     /*
-     * Fork behavior can be controlled globally via gradle.properties:
-     *   org.xtclang.plugin.launcher.fork=false
+     * Execution mode controls how the compiler runs:
+     *   - DIRECT: In-process via ServiceLoader (fastest, shares JVM)
+     *   - ATTACHED: Forked JVM with inherited I/O (default, isolated)
+     *   - DETACHED: Not supported for compile tasks
      *
-     * Or overridden per-task here:
-     *   fork = false
+     * Override per-task:
+     *   executionMode = ExecutionMode.DIRECT
      *
-     * Default is true (fork to separate JVM). Set to false for in-process execution.
+     * Default is ATTACHED (forked JVM with console output).
      */
 
     /*
@@ -287,26 +290,29 @@ xtcRun {
 
     /*
      * ============================================================================
-     * STDOUT/STDERR REDIRECTION FOR RUN TASKS
+     * EXECUTION MODE AND STDOUT/STDERR REDIRECTION FOR RUN TASKS
      * ============================================================================
      *
-     * Same options as xtcCompile (see above), plus special defaults for detached mode:
+     * Execution modes:
+     *   - DIRECT: In-process via ServiceLoader
+     *   - ATTACHED: Forked JVM with inherited I/O (default)
+     *   - DETACHED: Forked JVM running in background with file redirects
      *
-     * NORMAL MODE (detach = false):
+     * ATTACHED MODE (default):
      *   Default: stdout/stderr inherit from console
      *   Override: Use any of the approaches shown in xtcCompile section
      *
-     * DETACHED MODE (detach = true):
+     * DETACHED MODE (executionMode = ExecutionMode.DETACHED):
      *   Default: stdout/stderr redirect to "{toolname}_pid_{timestamp}.log"
      *   Override: Specify custom paths to change the default
      *
      * Example for detached mode with simple string path:
-     *   detach = true
+     *   executionMode = ExecutionMode.DETACHED
      *   stdoutPath = "build/logs/server-%TIMESTAMP%.log"
      *   stderrPath = "build/logs/server-errors-%TIMESTAMP%.log"
      *
      * Example for detached mode using layout provider:
-     *   detach = true
+     *   executionMode = ExecutionMode.DETACHED
      *   stdoutPath.set(layout.buildDirectory.file("logs/server-%TIMESTAMP%.log")
      *       .map { it.asFile.absolutePath })
      *
@@ -345,11 +351,11 @@ val runTwoTestsInSequence by tasks.registering(XtcRunTask::class) {
     moduleName("TestArray")
 }
 
-// Test task that explicitly uses fork=false to test in-process execution
-// NOTE: TestArray currently fails with fork=false due to an unrelated issue
+// Test task that explicitly uses executionMode=DIRECT to test in-process execution
+// NOTE: TestArray currently fails with executionMode=DIRECT due to an unrelated issue
 val runTestsInProcess by tasks.registering(XtcRunTask::class) {
     group = "application"
-    fork = false
+    executionMode = ExecutionMode.DIRECT
     verbose = true
     module {
         moduleName = "EchoTest"
@@ -357,10 +363,10 @@ val runTestsInProcess by tasks.registering(XtcRunTask::class) {
     }
 }
 
-// Test running TestArray alone with fork=false to debug the crash
+// Test running TestArray alone with executionMode=DIRECT to debug the crash
 val runTestArrayInProcess by tasks.registering(XtcRunTask::class) {
     group = "application"
-    fork = false
+    executionMode = ExecutionMode.DIRECT
     verbose = true
     moduleName("TestArray")
 }

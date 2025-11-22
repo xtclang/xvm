@@ -37,7 +37,7 @@ import static org.xtclang.plugin.XtcPluginUtils.failure;
  *   <li>resolveJavaTools() finds javatools.jar from composite build for forked processes</li>
  * </ul>
  *
- * <p><b>Scenario 2: Published Plugin Users (using XDK as dependency)</b>
+ *
  * <ul>
  *   <li>Plugin has compileOnly dependency on javatools (type info only)</li>
  *   <li>User project has XDK distribution as dependency (contains javatools.jar)</li>
@@ -96,7 +96,7 @@ public final class XtcJavaToolsRuntime {
             javaToolsClassLoader = createAndSetJavaToolsClassLoader(javaToolsJar, logger);
             logger.info("[plugin] ******* Loaded javatools.jar into plugin classpath: {}", javaToolsJar.getAbsolutePath());
         } catch (final Exception e) {
-            throw failure(e, "[plugin] Failed to load javatools.jar into classpath: {}", javaToolsJar.getAbsolutePath());
+            throw failure(e, "Failed to load javatools.jar into classpath: {}", javaToolsJar.getAbsolutePath());
         }
     }
 
@@ -137,7 +137,7 @@ public final class XtcJavaToolsRuntime {
         final File resolvedFromXdk = javaToolsFromXdk.isEmpty() ? null : javaToolsFromXdk.getSingleFile();
 
         if (resolvedFromConfig == null && resolvedFromXdk == null) {
-            throw failure("[plugin] ERROR: Failed to resolve '{}' from any configuration or dependency. Ensure the XDK dependency is configured correctly.", XDK_JAVATOOLS_NAME_JAR);
+            throw failure("ERROR: Failed to resolve '{}' from any configuration or dependency. Ensure the XDK dependency is configured correctly.", XDK_JAVATOOLS_NAME_JAR);
         }
 
         logger.info("""
@@ -254,20 +254,20 @@ public final class XtcJavaToolsRuntime {
         try {
             return FileUtils.areIdenticalFiles(f1, f2);
         } catch (final IOException e) {
-            throw failure("[plugin] Resolved non-identical multiple '{}' ('{}' and '{}')", XDK_JAVATOOLS_NAME_JAR, f1.getAbsolutePath(), f2.getAbsolutePath());
+            throw failure(e, "Resolved non-identical multiple '{}' ('{}' and '{}')", XDK_JAVATOOLS_NAME_JAR, f1.getAbsolutePath(), f2.getAbsolutePath());
         }
     }
 
     private static File validateAndReturn(final File file) {
         if (!file.exists()) {
-            throw failure("[plugin] Resolved javatools.jar does not exist: {}", file.getAbsolutePath());
+            throw failure("Resolved javatools.jar does not exist: {}", file.getAbsolutePath());
         }
         try (var zip = new ZipFile(file)) {
             if (zip.getEntry(XDK_JAVATOOLS_NAME_MANIFEST) == null) {
-                throw failure("[plugin] File is not a valid JAR: {}", file.getAbsolutePath());
+                throw failure("File is not a valid JAR: {}", file.getAbsolutePath());
             }
         } catch (final IOException e) {
-            throw failure(e, "[plugin] Failed to validate javatools.jar: {}", file.getAbsolutePath());
+            throw failure(e, "Failed to validate javatools.jar: {}", file.getAbsolutePath());
         }
 
         return file;

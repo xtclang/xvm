@@ -29,6 +29,9 @@ public abstract class DefaultXtcCompilerExtension extends DefaultXtcLauncherTask
     protected final Property<@NotNull Boolean> rebuild;
 
     @Inject
+    protected abstract ProviderFactory getProviders();
+
+    @Inject
     @SuppressWarnings("this-escape") // Calling @Inject abstract method in constructor is safe
     public DefaultXtcCompilerExtension() {
         final ObjectFactory objects = getObjects();
