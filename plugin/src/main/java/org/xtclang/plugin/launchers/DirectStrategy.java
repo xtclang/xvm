@@ -1,5 +1,6 @@
 package org.xtclang.plugin.launchers;
 
+import java.util.List;
 import java.util.ServiceLoader;
 
 import org.gradle.api.logging.Logger;
@@ -18,7 +19,7 @@ import org.xtclang.plugin.tasks.XtcRunTask;
  * Uses javatools classes already loaded by XtcLoadJavaToolsTask via ServiceLoader.
  * Works for both compile and run tasks.
  */
-public class DirectStrategy<T extends XtcLauncherTask<?>> implements ExecutionStrategy<T> {
+public class DirectStrategy<T extends XtcLauncherTask<?>> implements ExecutionStrategy {
 
     private final Logger logger;
     private final Console console;
@@ -57,15 +58,11 @@ public class DirectStrategy<T extends XtcLauncherTask<?>> implements ExecutionSt
             // Use ServiceLoader - javatools already loaded by XtcLoadJavaToolsTask
             final ServiceLoader<Launchable> loader = ServiceLoader.load(Launchable.class);
             final Launchable launcher = loader.iterator().next();
-
             // Extract module info from runConfig
             final String moduleName = runConfig.getModuleName().get();
-            final String[] moduleArgs = runConfig.getModuleArgs().get().toArray(String[]::new);
-
+            final List<String> moduleArgs = runConfig.getModuleArgs().get();
             final var options = LauncherOptionsBuilder.buildRunnerOptions(task, moduleName, moduleArgs);
-
             return launcher.launch(options, console, errorListener);
-
         } catch (final Exception e) {
             logger.error("[plugin] Direct runner execution failed", e);
             return -1;

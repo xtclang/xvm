@@ -756,12 +756,15 @@ public abstract class LauncherOptions {
                 return this;
             }
 
+            public Builder addResourceLocation(final Path resource) {
+                return addResourceLocation(resource.toFile());
+            }
+
             /**
              * Add a resource location for compilation.
              *
              * @param resource the resource file or directory path as a string
              */
-            @SuppressWarnings("unused")
             public Builder addResourceLocation(final String resource) {
                 return addResourceLocation(new File(resource));
             }
@@ -776,12 +779,15 @@ public abstract class LauncherOptions {
                 return this;
             }
 
+            public Builder setOutputLocation(final Path output) {
+                return setOutputLocation(output.toFile());
+            }
+
             /**
              * Set the output location for compiled modules.
              *
              * @param output the output file or directory path as a string
              */
-            @SuppressWarnings("unused")
             public Builder setOutputLocation(final String output) {
                 return setOutputLocation(new File(output));
             }
@@ -1006,8 +1012,13 @@ public abstract class LauncherOptions {
              * Disable automatic recompilation of sources.
              */
             @SuppressWarnings("unused")
-            public Builder disableRebuild() {
-                return disableRebuild(true);
+            public Builder disableAutomaticCompilation() {
+                return disableAutomaticCompilation(true);
+            }
+
+            // TODO: Test
+            public Builder noRecompile() {
+                return disableAutomaticCompilation(false);
             }
 
             /**
@@ -1015,7 +1026,7 @@ public abstract class LauncherOptions {
              *
              * @param disable true to disable auto-compilation, false otherwise
              */
-            public Builder disableRebuild(final boolean disable) {
+            public Builder disableAutomaticCompilation(final boolean disable) {
                 if (disable) {
                     args.add("--no-recompile");
                 }
@@ -1089,9 +1100,18 @@ public abstract class LauncherOptions {
              * @param target the module or file to run
              * @param methodArgs the arguments to pass to the executed method
              */
-            public Builder setTarget(final File target, final String... methodArgs) {
+            public Builder setTarget(final File target, final List<String> methodArgs) {
+                // TODO This shold be relativized and we should check that getPath doesn't mess up the cache again.
                 args.add(target.getPath());
-                Collections.addAll(args, methodArgs);
+                args.addAll(methodArgs);
+                return this;
+            }
+
+            public Builder setTarget(final String target, final List<String> methodArgs) {
+                // TODO: We can accept a string module name here, but it is confusing with both files and names
+                // It is also wrong - we shouldn't turn a target name to a file
+                args.add(target);
+                args.addAll(methodArgs);
                 return this;
             }
 
@@ -1103,7 +1123,11 @@ public abstract class LauncherOptions {
              */
             @SuppressWarnings("unused")
             public Builder setTarget(final String target, final String... methodArgs) {
-                return setTarget(new File(target), methodArgs);
+                return setTarget(target, List.of(methodArgs));
+            }
+
+            public Builder setTarget(final File target, final String... methodArgs) {
+                return setTarget(target, List.of(methodArgs));
             }
 
             /**

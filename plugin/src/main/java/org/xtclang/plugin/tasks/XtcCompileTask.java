@@ -119,7 +119,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         return resourceDir;
     }
 
-    public String resolveModuleVersion() {
+    public String resolveXtcVersion() {
         if (getXtcVersion().isPresent()) {
             return getXtcVersion().get();
         }
@@ -254,7 +254,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         finalizeOutputs();
     }
 
-    private ExecutionStrategy<XtcCompileTask> createCompileStrategy() {
+    private ExecutionStrategy createCompileStrategy() {
         final ExecutionMode mode = getExecutionMode().get();
         return switch (mode) {
             case DIRECT -> new DirectStrategy<>(getLogger(), null, null);

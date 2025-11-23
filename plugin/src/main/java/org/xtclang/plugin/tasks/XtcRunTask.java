@@ -101,7 +101,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         return XTC_RUNNER_CLASS_NAME;
     }
 
-    private ExecutionStrategy<XtcRunTask> createStrategy() {
+    private ExecutionStrategy createStrategy() {
         final ExecutionMode mode = getExecutionMode().get();
         return switch (mode) {
             case DIRECT -> new DirectStrategy<>(getLogger(), null, null);
@@ -282,7 +282,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     }
 
     @SuppressWarnings("UnusedReturnValue")
-    private int runSingleModule(final XtcRunModule runConfig, final ExecutionStrategy<XtcRunTask> strategy) {
+    private int runSingleModule(final XtcRunModule runConfig, final ExecutionStrategy strategy) {
         // TODO: Maybe make this inheritable + add a runMultipleModules, so that we can customize even better
         //  (e.g. XUnit, and a less hacky way of executing the XTC parallel test runner, for example)
         logger.info("[plugin] Executing resolved xtcRuntime module closure: {}", runConfig);

@@ -335,13 +335,13 @@ xtcRun {
 }
 
 // This shows how to add a custom run task that overrides the global xtcRun config.
+//
+// To debug, use standard JDWP arguments:
+// jvmArgs("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005")
+// See plugin/README.md for more information on debugging.
+//
 val runTwoTestsInSequence by tasks.registering(XtcRunTask::class) {
     group = "application"
-
-    // To debug, use standard JDWP arguments:
-    // jvmArgs("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005")
-    // See plugin/README.md for more information on debugging.
-
     verbose = true // override a default from xtcRun
     module {
         moduleName = "EchoTest"

@@ -160,7 +160,6 @@ public class XtcProjectDelegate extends ProjectDelegate<Project, Void> {
         createXtcComponents(project);
 
         // Add xtc extension.
-        // TODO: Later move any non-specific task flags, like "fork = <boolean>" here, and it will be applied to all tasks.
         resolveXtcExtension(project);
 
         // Ensure extensions for configuring the xtc and xec exist.

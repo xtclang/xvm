@@ -19,7 +19,7 @@ import org.xtclang.plugin.XtcPluginUtils;
 import org.xtclang.plugin.XtcRunModule;
 
 public class DefaultXtcRunModule implements XtcRunModule {
-    private static final String DEFAULT_METHOD_NAME = "run";
+    public static final String DEFAULT_METHOD_NAME = "run";
 
     protected final Property<@NotNull String> moduleName;
     protected final Property<@NotNull String> methodName;

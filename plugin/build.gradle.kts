@@ -1,9 +1,5 @@
 import org.gradle.api.attributes.plugin.GradlePluginApiVersion
-import org.gradle.api.component.AdhocComponentWithVariants
-import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.compile.JavaCompile
-import org.gradle.plugin.devel.GradlePluginDevelopmentExtension
-import org.gradle.util.GradleVersion
 
 plugins {
     alias(libs.plugins.xdk.build.java)
@@ -11,6 +7,7 @@ plugins {
     alias(libs.plugins.xdk.build.publishing)
 }
 
+private val minimumSupportedGradleVersion = "9.2.0"
 private val defaultJvmArgs: Provider<List<String>> = extensions.getByName<Provider<List<String>>>("defaultJvmArgs")
 private val jdkVersionProvider = xdkProperties.int("org.xtclang.java.jdk")
 
@@ -60,7 +57,6 @@ repositories {
 dependencies {
     // Compile-time only - javatools types available for compilation but loaded via custom classloader at runtime
     compileOnly(libs.javatools)
-
     testImplementation(libs.junit.jupiter)
 }
 
@@ -84,7 +80,6 @@ mavenPublishing {
 // This is required for Gradle to correctly resolve the plugin when consumed from Maven/Gradle repositories
 // Set to minimum supported Gradle version to ensure compatibility with consumers using older Gradle versions
 val pluginApiVersionAttribute = GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE
-val minimumSupportedGradleVersion = "9.1.0"
 
 configurations.all {
     if (name == "runtimeElements" || name == "apiElements") {
@@ -117,17 +112,16 @@ gradlePlugin {
     }
 }
 
-
 tasks.withType<Javadoc>().configureEach {
     enabled = false
     // TODO: Write JavaDocs for plugin.
 }
 
-// Enable lint warnings specifically for the plugin project
+// Enable overriding lint warnings specifically for the plugin project.
+// TODO: Should be global default, but javatools has many linting errors.
 tasks.withType<JavaCompile>().configureEach {
     options.compilerArgs.add("-Xlint:all")
 }
-
 
 tasks.withType<Jar>().configureEach {
     val taskName = name

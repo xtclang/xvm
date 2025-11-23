@@ -9,6 +9,8 @@ import org.gradle.api.logging.Logger;
 
 import org.xtclang.plugin.tasks.XtcLauncherTask;
 
+import static org.xtclang.plugin.XtcPluginUtils.failure;
+
 /**
  * Detached (background) execution strategy.
  * Launches in a separate JVM process that continues after Gradle exits.
@@ -86,15 +88,18 @@ public class DetachedStrategy<T extends XtcLauncherTask<?>> extends ForkedStrate
         return "Invoking in detached background process (fork=true, detach=true)";
     }
 
-    private String expandTimestampPlaceholder(final String path, final String timestamp) {
+    private static String expandTimestampPlaceholder(final String path, final String timestamp) {
         return path.replace("%TIMESTAMP%", timestamp);
     }
 
     private void ensureParentDirectoryExists(final File file) throws IOException {
         final File parentDir = file.getParentFile();
+        if (parentDir == null) {
+            logger.error("[plugin] Parent directory does not exist: {}", file.getAbsolutePath());
+        }
         if (parentDir != null && !parentDir.exists()) {
             if (!parentDir.mkdirs()) {
-                throw new IOException("Failed to create directory: " + parentDir.getAbsolutePath());
+                throw failure("ensureParentDirectoryExists; failed to create directory: {}", parentDir.getAbsolutePath());
             }
         }
     }

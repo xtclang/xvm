@@ -1,7 +1,5 @@
 package org.xtclang.plugin.launchers;
 
-import java.io.IOException;
-
 import org.gradle.api.logging.Logger;
 
 import org.xtclang.plugin.tasks.XtcLauncherTask;
@@ -19,7 +17,7 @@ public class AttachedStrategy<T extends XtcLauncherTask<?>> extends ForkedStrate
 
     @Override
     protected boolean configureIO(final ProcessBuilder pb, final XtcLauncherTask<?> task) {
-        // Don't use inheritIO() - it doesn't work when Gradle redirects file descriptors
+        // NOTE: Don't use inheritIO() - it doesn't work when Gradle redirects file descriptors
         // Leave streams as PIPE (default) and manually copy them
         pb.redirectInput(ProcessBuilder.Redirect.INHERIT);
         return true; // Signal that we need to manually copy stdout/stderr

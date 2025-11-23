@@ -18,6 +18,7 @@ import org.gradle.api.provider.Provider;
 import org.jetbrains.annotations.NotNull;
 
 import org.xtclang.plugin.XtcLauncherTaskExtension;
+import org.xtclang.plugin.XtcPluginConstants;
 import org.xtclang.plugin.XtcPluginUtils;
 import org.xtclang.plugin.launchers.ExecutionMode;
 
@@ -44,7 +45,7 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
         this.modulePath = objects.fileCollection();
         this.defaultJvmArgs = loadDefaultJvmArgs();
         logger.info("[plugin] Loaded default JVM args: {}", defaultJvmArgs);
-        this.executionMode = objects.property(ExecutionMode.class).convention(ExecutionMode.ATTACHED);
+        this.executionMode = objects.property(ExecutionMode.class).convention(XtcPluginConstants.DEFAULT_EXECUTION_MODE);
         this.jvmArgs = objects.listProperty(String.class).convention(defaultJvmArgs);
         this.verbose = objects.property(Boolean.class).convention(false);
         this.showVersion = objects.property(Boolean.class).convention(false);

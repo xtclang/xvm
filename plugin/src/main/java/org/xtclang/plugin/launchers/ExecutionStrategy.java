@@ -2,16 +2,13 @@ package org.xtclang.plugin.launchers;
 
 import org.xtclang.plugin.XtcRunModule;
 import org.xtclang.plugin.tasks.XtcCompileTask;
-import org.xtclang.plugin.tasks.XtcLauncherTask;
 import org.xtclang.plugin.tasks.XtcRunTask;
 
 /**
  * Strategy for executing XTC launcher tasks (compile or run).
-t * Implementations support both compile and run execution.
- *
- * @param <T> The type of launcher task (XtcCompileTask or XtcRunTask)
+ * Implementations support both compile and run execution.
  */
-public interface ExecutionStrategy<T extends XtcLauncherTask<?>> {
+public interface ExecutionStrategy {
 
     /**
      * Execute a compile task using this strategy.

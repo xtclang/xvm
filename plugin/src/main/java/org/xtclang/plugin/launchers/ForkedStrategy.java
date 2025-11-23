@@ -19,7 +19,7 @@ import org.xtclang.plugin.tasks.XtcRunTask;
  * Base class for forked (out-of-process) execution strategies.
  * Handles common logic for building ProcessBuilder and executing forked JVM processes.
  */
-public abstract class ForkedStrategy<T extends XtcLauncherTask<?>> implements ExecutionStrategy<T> {
+public abstract class ForkedStrategy<T extends XtcLauncherTask<?>> implements ExecutionStrategy {
 
     protected final Logger logger;
     protected final String javaExecutable;
@@ -42,9 +42,7 @@ public abstract class ForkedStrategy<T extends XtcLauncherTask<?>> implements Ex
 
             // Copy streams if needed (when inheritIO doesn't work due to Gradle redirects)
             final var streamThreads = shouldCopyStreams ? copyProcessStreams(process) : null;
-
             final int exitCode = waitForProcess(process);
-
             // Wait for stream copying threads to finish
             if (streamThreads != null) {
                 for (final var thread : streamThreads) {
@@ -70,25 +68,18 @@ public abstract class ForkedStrategy<T extends XtcLauncherTask<?>> implements Ex
 
         try {
             final String moduleName = runConfig.getModuleName().get();
-            final String[] moduleArgs = runConfig.getModuleArgs().get().toArray(String[]::new);
+            final List<String> moduleArgs = runConfig.getModuleArgs().get();
             final var options = LauncherOptionsBuilder.buildRunnerOptions(task, moduleName, moduleArgs);
             final ProcessBuilder pb = buildProcess(task, options.toCommandLine());
             final boolean shouldCopyStreams = configureIO(pb, task);
-
             final Process process = pb.start();
-
             // Copy streams if needed (when inheritIO doesn't work due to Gradle redirects)
             final List<Thread> streamThreads = shouldCopyStreams ? copyProcessStreams(process) : Collections.emptyList();
-
             final int exitCode = waitForProcess(process);
-
-            // Wait for stream copying threads to finish
             for (final Thread thread : streamThreads) {
                 thread.join();
             }
-
             return exitCode;
-
         } catch (final IOException e) {
             logger.error("[plugin] Failed to start runner process", e);
             return -1;
@@ -119,9 +110,7 @@ public abstract class ForkedStrategy<T extends XtcLauncherTask<?>> implements Ex
         // Program arguments from options.toCommandLine()
         command.addAll(Arrays.asList(programArgs));
 
-        final ProcessBuilder pb = new ProcessBuilder(command);
-        pb.directory(projectDir);
-
+        final ProcessBuilder pb = new ProcessBuilder(command).directory(projectDir);
         logger.lifecycle("[plugin] Forked process command: {}", String.join(" ", command));
 
         return pb;
@@ -148,8 +137,8 @@ public abstract class ForkedStrategy<T extends XtcLauncherTask<?>> implements Ex
         record StreamCopy(InputStream input, OutputStream output, String name) {}
 
         final var streams = List.of(
-            new StreamCopy(process.getInputStream(), System.out, "xtc-stdout-copy"),
-            new StreamCopy(process.getErrorStream(), System.err, "xtc-stderr-copy")
+            new StreamCopy(process.getInputStream(), System.out, "stdout"),
+            new StreamCopy(process.getErrorStream(), System.err, "stderr")
         );
 
         final var threads = new ArrayList<Thread>(streams.size());
@@ -168,7 +157,7 @@ public abstract class ForkedStrategy<T extends XtcLauncherTask<?>> implements Ex
                     try {
                         stream.input.close();
                     } catch (final IOException e) {
-                        // Ignore close errors
+                        logger.warn("[plugin] copyProcessString; problem closing {}: {} (ignored)", stream.name, e.getMessage());
                     }
                 }
             }, stream.name);
@@ -188,6 +177,7 @@ public abstract class ForkedStrategy<T extends XtcLauncherTask<?>> implements Ex
 
     /**
      * Get the log message describing this strategy.
+     * TODO: Change to execution mode and have excution mode provide toString dsscs and its name()
      */
     protected abstract String getLogMessage();
 }

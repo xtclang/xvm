@@ -1,6 +1,7 @@
 package org.xtclang.plugin;
 
 import org.gradle.api.Project;
+import org.xtclang.plugin.launchers.ExecutionMode;
 
 public final class XtcPluginConstants {
     // XTC Language and dependency constants:
@@ -54,7 +55,7 @@ public final class XtcPluginConstants {
 
     // Project property names
     public static final String PROPERTY_VERBOSE_LOGGING_OVERRIDE = "xtcPluginOverrideVerboseLogging";
-    public static final String PROPERTY_LAUNCHER_FORK = "xtcPluginOverrideFork";
+    public static final ExecutionMode DEFAULT_EXECUTION_MODE = ExecutionMode.ATTACHED;
 
     public static final String UNSPECIFIED = Project.DEFAULT_VERSION;
 
