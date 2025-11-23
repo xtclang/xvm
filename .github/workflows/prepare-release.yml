@@ -39,7 +39,7 @@ jobs:
 
         steps:
             - name: Checkout branch
-              uses: actions/checkout@v5
+              uses: actions/checkout@v6
               with:
                   ref: ${{ github.event.inputs.branch || 'master' }}
                   fetch-depth: 0
@@ -151,7 +151,7 @@ jobs:
 
         steps:
             - name: Checkout release tag
-              uses: actions/checkout@v5
+              uses: actions/checkout@v6
               with:
                   ref: v${{ needs.prepare-release.outputs.release-version }}
                   fetch-depth: 1
@@ -270,7 +270,7 @@ jobs:
 
         steps:
             - name: Checkout repository
-              uses: actions/checkout@v5
+              uses: actions/checkout@v6
 
             - name: Create PR to master
               env:
