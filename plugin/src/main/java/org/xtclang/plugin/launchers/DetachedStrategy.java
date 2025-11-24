@@ -2,15 +2,13 @@ package org.xtclang.plugin.launchers;
 
 import java.io.File;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
 import org.gradle.api.logging.Logger;
 
 import org.xtclang.plugin.tasks.XtcLauncherTask;
 
-import static java.time.format.DateTimeFormatter.ofPattern;
-import static org.xtclang.plugin.XtcPluginUtils.failure;
+import static org.xtclang.plugin.XtcPluginUtils.*;
 
 /**
  * Detached (background) execution strategy.
@@ -20,21 +18,17 @@ import static org.xtclang.plugin.XtcPluginUtils.failure;
  */
 public class DetachedStrategy<T extends XtcLauncherTask<?>> extends ForkedStrategy<T> {
 
-    private static final DateTimeFormatter TIMESTAMP_FORMAT = ofPattern("yyyyMMdd_HHmmss", Locale.ROOT);
-
     public DetachedStrategy(final Logger logger, final String javaExecutable) {
-        super(logger, javaExecutable);
-        logger.lifecycle("[plugin] [DetachedStrategy] javaExecutable: {}", javaExecutable);
+        super(ExecutionMode.DETACHED, logger, javaExecutable);
     }
 
     @Override
     protected boolean configureIO(final ProcessBuilder pb, final XtcLauncherTask<?> task) {
         final var buildDir = task.getBuildDirectory().get().getAsFile();
-        final String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMAT);
         final String taskType = task.getClass().getSimpleName().toLowerCase(Locale.ROOT).replace("task", "");
         logger.lifecycle("[plugin] [DetachedStrategy] task: {}, taskType: {}", task.getName(), taskType);
-        configureStream(pb, task, buildDir, timestamp, taskType, true);
-        configureStream(pb, task, buildDir, timestamp, taskType, false);
+        configureStream(pb, task, buildDir, taskType, true);
+        configureStream(pb, task, buildDir, taskType, false);
         return false; // Streams are redirected to files, no need to manually copy
     }
 
@@ -42,7 +36,6 @@ public class DetachedStrategy<T extends XtcLauncherTask<?>> extends ForkedStrate
             final ProcessBuilder pb,
             final XtcLauncherTask<?> task,
             final File buildDir,
-            final String timestamp,
             final String taskType,
             final boolean isStdout) {
 
@@ -50,24 +43,24 @@ public class DetachedStrategy<T extends XtcLauncherTask<?>> extends ForkedStrate
         final String streamName = isStdout ? "stdout" : "stderr";
 
         final File file;
-        final String logMessage;
+        final String msg;
 
         if (hasRedirect) {
-            final String configuredPath = isStdout ? task.getStdoutPath().get() : task.getStderrPath().get();
-            final String expandedPath = expandTimestampPlaceholder(configuredPath, timestamp);
+            final String configuredPath = expandTimestampPlaceholder(isStdout ? task.getStdoutPath().get() : task.getStderrPath().get());
             // User-configured paths are relative to project directory
-            file = new File(task.getProjectDirectory().get().getAsFile(), expandedPath);
-            logMessage = "[plugin] Configured " + streamName + " redirect to: {}";
+            file = new File(task.getProjectDirectory().get().getAsFile(), configuredPath);
+            msg = "[plugin] Configured " + streamName + " redirect to: {}";
         } else {
             // Default paths go in build/xtc directory (build directory from layout)
             final File xtcDir = new File(buildDir, "xtc");
+            final String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMAT);
             file = new File(xtcDir, taskType + "_" + streamName + "_" + timestamp + ".log");
-            logMessage = "[plugin] Using default " + streamName + " redirect: {}";
+            msg = "[plugin] Using default " + streamName + " redirect: {}";
         }
         ensureParentDirectoryExists(file);
         final var redirect = ProcessBuilder.Redirect.to(file);
         if (isStdout) pb.redirectOutput(redirect); else pb.redirectError(redirect);
-        logger.lifecycle(logMessage, file.getAbsolutePath());
+        logger.lifecycle(msg, file.getAbsolutePath());
     }
 
     @Override
@@ -79,12 +72,8 @@ public class DetachedStrategy<T extends XtcLauncherTask<?>> extends ForkedStrate
     }
 
     @Override
-    protected String getLogMessage() {
+    protected String getDesc() {
         return "Invoking in detached background process (fork=true, detach=true)";
-    }
-
-    private static String expandTimestampPlaceholder(final String path, final String timestamp) {
-        return path.replace("%TIMESTAMP%", timestamp);
     }
 
     private void ensureParentDirectoryExists(final File file) {

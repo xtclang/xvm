@@ -10,6 +10,8 @@ import org.xtclang.plugin.tasks.XtcRunTask;
  */
 public interface ExecutionStrategy {
 
+    ExecutionMode getMode();
+
     /**
      * Execute a compile task using this strategy.
      *

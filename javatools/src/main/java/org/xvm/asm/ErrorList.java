@@ -4,6 +4,7 @@ package org.xvm.asm;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.xvm.compiler.ast.AstNode;
 
@@ -14,18 +15,16 @@ import org.xvm.util.Severity;
  * Represents a list of errors collected from a process such as compilation, assembly, or the
  * verifier, with an option to abort the process should a maximum number of errors be exceeded.
  */
-public class ErrorList
-        implements ErrorListener {
+public class ErrorList implements ErrorListener {
     // ----- constructors --------------------------------------------------------------------------
 
     public ErrorList() {
         this(0);
     }
 
-    public ErrorList(int cMaxErrors) {
+    public ErrorList(final int cMaxErrors) {
         f_cMaxErrors = cMaxErrors;
     }
-
 
     // ----- ErrorListener methods -----------------------------------------------------------------
 
@@ -121,6 +120,13 @@ public class ErrorList
     }
 
     /**
+     * @return number of total errors,
+     */
+    public int size() {
+        return f_list.size();
+    }
+
+    /**
      * Clear the list of errors, resetting the error collection state.
      */
     public void clear() {
@@ -199,7 +205,6 @@ public class ErrorList
         private final AstNode       f_node;
     }
 
-
     // ----- data members --------------------------------------------------------------------------
 
     /**
@@ -220,10 +225,10 @@ public class ErrorList
     /**
      * The accumulated list of errors.
      */
-    private final ArrayList<ErrorInfo> f_list = new ArrayList<>();
+    private final List<ErrorInfo> f_list = new ArrayList<>();
 
     /**
      * The UIDs of previously logged errors.
      */
-    private final HashSet<String> f_setUID = new HashSet<>();
+    private final Set<String> f_setUID = new HashSet<>();
 }

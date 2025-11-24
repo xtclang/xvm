@@ -1,5 +1,6 @@
 package org.xtclang.plugin;
 
+import static java.time.format.DateTimeFormatter.ofPattern;
 import static java.util.Objects.requireNonNull;
 
 import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_NAME_JAR;
@@ -20,9 +21,9 @@ import java.time.format.DateTimeFormatter;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
-import java.util.jar.Manifest;
 
 import org.gradle.api.GradleException;
 
@@ -32,6 +33,9 @@ import org.gradle.api.GradleException;
  * TODO: Move the state independent/reentrant stuff from the ProjectDelegate and its subclasses to here.
  */
 public final class XtcPluginUtils {
+
+    public static final DateTimeFormatter TIMESTAMP_FORMAT = ofPattern("yyyyMMdd_HHmmss", Locale.ROOT);
+
     private XtcPluginUtils() {
     }
 
@@ -122,7 +126,7 @@ public final class XtcPluginUtils {
         if (!pathPattern.contains("%TIMESTAMP%")) {
             return pathPattern;
         }
-        final String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        final String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMAT);
         return pathPattern.replace("%TIMESTAMP%", timestamp);
     }
 

@@ -21,20 +21,33 @@ import org.xtclang.plugin.tasks.XtcRunTask;
  */
 public abstract class ForkedStrategy<T extends XtcLauncherTask<?>> implements ExecutionStrategy {
 
+    protected final ExecutionMode mode;
     protected final Logger logger;
     protected final String javaExecutable;
 
-    protected ForkedStrategy(final Logger logger, final String javaExecutable) {
+    protected ForkedStrategy(final ExecutionMode mode, final Logger logger, final String javaExecutable) {
+        this.mode = mode;
         this.logger = logger;
         this.javaExecutable = javaExecutable;
+        logger.lifecycle("[plugin] [{}}] javaExecutable: {}", mode, javaExecutable);
+    }
+
+    @Override
+    public ExecutionMode getMode() {
+        return this.mode;
+    }
+
+    protected LauncherOptionsBuilder optionsBuilder() {
+        return new LauncherOptionsBuilder(getMode());
     }
 
     @Override
     public int execute(final XtcCompileTask task) {
-        logger.info("[plugin] {}", getLogMessage());
+        logger.info("[plugin] {}", getDesc());
 
         try {
-            final var options = LauncherOptionsBuilder.buildCompilerOptions(task);
+            // Use relative paths for forked mode to preserve build caching
+            final var options = optionsBuilder().buildCompilerOptions(task);
             final ProcessBuilder pb = buildProcess(task, options.toCommandLine());
             final boolean shouldCopyStreams = configureIO(pb, task);
 
@@ -64,12 +77,13 @@ public abstract class ForkedStrategy<T extends XtcLauncherTask<?>> implements Ex
 
     @Override
     public int execute(final XtcRunTask task, final XtcRunModule runConfig) {
-        logger.info("[plugin] {}", getLogMessage());
+        logger.info("[plugin] {}", getDesc());
 
         try {
             final String moduleName = runConfig.getModuleName().get();
             final List<String> moduleArgs = runConfig.getModuleArgs().get();
-            final var options = LauncherOptionsBuilder.buildRunnerOptions(task, moduleName, moduleArgs);
+            // Use relative paths for forked mode to preserve build caching
+            final var options = optionsBuilder().buildRunnerOptions(task, moduleName, moduleArgs);
             final ProcessBuilder pb = buildProcess(task, options.toCommandLine());
             final boolean shouldCopyStreams = configureIO(pb, task);
             final Process process = pb.start();
@@ -179,5 +193,5 @@ public abstract class ForkedStrategy<T extends XtcLauncherTask<?>> implements Ex
      * Get the log message describing this strategy.
      * TODO: Change to execution mode and have excution mode provide toString dsscs and its name()
      */
-    protected abstract String getLogMessage();
+    protected abstract String getDesc();
 }

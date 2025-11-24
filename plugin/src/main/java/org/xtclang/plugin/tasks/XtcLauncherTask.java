@@ -5,7 +5,6 @@ import static org.xtclang.plugin.XtcPluginUtils.argumentArrayToList;
 
 import java.io.File;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -283,6 +282,10 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     }
 
     public File resolveJavaTools() {
+        // NOTE: To our utmost satisfaction we note that when building the XDK we bootstrap using the
+        // "javatools-<semanticversion>.jar artifact in the javatools outputs as javatools jar.
+        // When we are running manualTests, which have an "xdk" dependency, we correctly grab it
+        // from the distribution instead, e.g.: $HOME/src/xvm/manualTests/build/xtc/xdk/lib/javatools.jar
         return XtcJavaToolsRuntime.resolveJavaTools(
                 getProjectVersion(),
                 getJavaToolsConfiguration(),
@@ -348,10 +351,11 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         throw new UnsupportedOperationException("getDependentSourceSets() should not be called at execution time for configuration cache compatibility. Use sourceSetNames instead.");
     }
 
+    /*
     protected final List<String> resolveJvmArgs() {
         final var list = new ArrayList<>(getJvmArgs().get());
         // Debug arguments are now specified via jvmArgs() - use standard JDWP format:
         // jvmArgs("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005")
         return Collections.unmodifiableList(list);
-    }
+    }*/
 }

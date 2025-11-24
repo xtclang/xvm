@@ -12,7 +12,6 @@ import static org.xtclang.plugin.XtcPluginUtils.failure;
 import java.io.File;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +28,8 @@ import org.gradle.api.provider.Provider;
 import org.jetbrains.annotations.NotNull;
 
 import org.xtclang.plugin.tasks.XtcLauncherTask;
+
+import static java.util.stream.Collectors.toUnmodifiableSet;
 
 /**
  * Resolves and validates the module path for XTC launcher tasks.
@@ -71,8 +72,12 @@ public class ModulePathResolver {
         for (final var entry : sourceSetOutputDirs.entrySet()) {
             final String sourceSetName = entry.getKey();
             final Provider<@NotNull Directory> outputDir = entry.getValue();
-            final Set<File> sourceSetOutput = resolveDirectories(outputDir);
-            map.put(XTC_LANGUAGE_NAME + capitalize(sourceSetName), sourceSetOutput);
+            final File outputDirFile = outputDir.get().getAsFile();
+            if (!outputDirFile.exists()) {
+                logger.warn("[plugin] Skipping non-existent source set output directory for '{}': {}", sourceSetName, outputDirFile.getAbsolutePath());
+                continue;
+            }
+            map.put(XTC_LANGUAGE_NAME + capitalize(sourceSetName), resolveDirectories(outputDir));
         }
 
         logger.info("[plugin] Compilation/runtime full module path resolved as: ");
@@ -89,11 +94,10 @@ public class ModulePathResolver {
             if (files.isEmpty()) {
                 logger.info("[plugin]         (empty)");
             }
-            files.forEach(f -> logger.info("[plugin]         {}", f.getAbsolutePath()));
-
+            files.forEach(f -> logger.lifecycle("[plugin]         {}", f.getAbsolutePath()));
             modulePathList.addAll(files.stream().filter(f -> {
                 if (f.isDirectory()) {
-                    logger.info("[plugin] Adding directory to module path ({}).", f.getAbsolutePath());
+                    logger.lifecycle("[plugin] Adding directory to module path ({}).", f.getAbsolutePath());
                 } else if (!isValidXtcModuleSafe(f, logger)) {
                     logger.warn("[plugin] Has a non .xtc module file on the module path ({}). Was this intended?", f.getAbsolutePath());
                     return false;
@@ -102,15 +106,13 @@ public class ModulePathResolver {
             }).toList());
         });
 
-        final Set<File> modulePathSet = modulePathList.stream().collect(Collectors.toUnmodifiableSet());
+        // Check that we don't have name collisions with the same dependency declared in several places.
+        final var modulePathSet = modulePathList.stream().collect(Collectors.toUnmodifiableSet());
         final int modulePathListSize = modulePathList.size();
         final int modulePathSetSize = modulePathSet.size();
-
-        // Check that we don't have name collisions with the same dependency declared in several places.
         if (modulePathListSize != modulePathSetSize) {
             logger.warn("[plugin] There are {} duplicated modules on the full module path.", modulePathListSize - modulePathSetSize);
         }
-
         checkDuplicatesInModulePaths(modulePathSet);
 
         // Check that all modules on path are XTC files.
@@ -127,20 +129,20 @@ public class ModulePathResolver {
                 //  The Set data structure already takes care of silently removing them, however.
                 continue;
             }
-            final List<File> dupes = modulePathSet.stream().filter(File::isFile).filter(f -> f.getName().equals(module.getName())).toList();
-            assert !dupes.isEmpty();
-            if (dupes.size() != 1) {
-                throw failure("A dependency with the same name is defined in more than one ({}) location on the module path.", dupes.size());
+            final var dups = modulePathSet.stream().filter(File::isFile).filter(f -> f.getName().equals(module.getName())).toList();
+            assert !dups.isEmpty();
+            if (dups.size() != 1) {
+                throw failure("A dependency with the same name is defined in more than one ({}) location on the module path.", dups.size());
             }
         }
     }
 
     public static Set<File> resolveFiles(final FileCollection files) {
-        return files.isEmpty() ? Collections.emptySet() : files.getAsFileTree().getFiles();
+        return files.isEmpty() ? Set.of() : files.getAsFileTree().getFiles();
     }
 
     public static Set<File> resolveDirectories(final Set<File> files) {
-        return files.stream().map(f -> requireNonNull(f.getParentFile())).collect(Collectors.toUnmodifiableSet());
+        return files.stream().map(f -> requireNonNull(f.getParentFile())).collect(toUnmodifiableSet());
     }
 
     /**
@@ -149,16 +151,9 @@ public class ModulePathResolver {
      */
     public static Set<File> resolveAsDirectories(final FileCollection files) {
         if (files.isEmpty()) {
-            return Collections.emptySet();
+            return Set.of();
         }
-        return files.getFiles().stream()
-                .map(f -> f.isDirectory() ? f : requireNonNull(f.getParentFile()))
-                .collect(Collectors.toUnmodifiableSet());
-    }
-
-    @SuppressWarnings("unused")
-    protected Set<File> resolveFiles(final Provider<@NotNull Directory> dirProvider) {
-        return resolveFiles(objects.fileCollection().from(dirProvider));
+        return files.getFiles().stream().map(f -> f.isDirectory() ? f : f.getParentFile()).collect(toUnmodifiableSet());
     }
 
     protected Set<File> resolveDirectories(final Provider<@NotNull Directory> dirProvider) {

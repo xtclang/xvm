@@ -12,7 +12,7 @@ import org.xtclang.plugin.tasks.XtcLauncherTask;
 public class AttachedStrategy<T extends XtcLauncherTask<?>> extends ForkedStrategy<T> {
 
     public AttachedStrategy(final Logger logger, final String javaExecutable) {
-        super(logger, javaExecutable);
+        super(ExecutionMode.ATTACHED, logger, javaExecutable);
     }
 
     @Override
@@ -24,7 +24,7 @@ public class AttachedStrategy<T extends XtcLauncherTask<?>> extends ForkedStrate
     }
 
     @Override
-    protected String getLogMessage() {
+    protected String getDesc() {
         return "Invoking in forked JVM with inherited I/O (fork=true, detach=false)";
     }
 }

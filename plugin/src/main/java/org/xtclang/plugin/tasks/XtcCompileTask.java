@@ -17,6 +17,7 @@ import kotlin.Pair;
 import org.gradle.api.Project;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileTree;
+import org.gradle.api.logging.Logger;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
@@ -54,7 +55,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     private final ListProperty<@NotNull String> outputFilenames;
     
     // Configuration-time captured data to avoid Project references during execution
-    private final Provider<@NotNull Directory> projectDirectory;
+    //private final Provider<@NotNull Directory> projectDir;
     private final String sourceSetName;
     private final Directory resourceDir;
     private final Directory outputDir;
@@ -83,7 +84,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         this.outputFilenames = objects.listProperty(String.class).value(new ArrayList<>());
 
         // Capture all necessary data at configuration time to avoid Project references during execution
-        this.projectDirectory = objects.directoryProperty().value(project.getLayout().getProjectDirectory());
+        // this.projectDir = objects.directoryProperty().value(project.getLayout().getProjectDirectory());
 
         // Capture source set data at configuration time to avoid Project references during execution
         this.sourceSetName = sourceSet.getName();
@@ -109,6 +110,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         return SourceSet.MAIN_SOURCE_SET_NAME.equals(getCompileSourceSetName());
     }
 
+    // TODO Why do we even have these internals?
     @Internal
     public Directory getOutputDirectoryInternal() {
         return outputDir;
@@ -123,8 +125,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         if (getXtcVersion().isPresent()) {
             return getXtcVersion().get();
         }
-        getLogger().warn("[plugin] WARNING: No XTC version was resolved. Module will not be versioned.");
-        return null;
+        throw failure("resolveXtcVersion returned null, no XTC version configured.");
     }
 
     public static String semanticVersion(final String version) {
@@ -256,9 +257,10 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
 
     private ExecutionStrategy createCompileStrategy() {
         final ExecutionMode mode = getExecutionMode().get();
+        final Logger logger = getLogger();
         return switch (mode) {
-            case DIRECT -> new DirectStrategy<>(getLogger(), null, null);
-            case ATTACHED -> new AttachedStrategy<>(getLogger(), resolveJavaExecutable());
+            case DIRECT -> new DirectStrategy<>(logger);
+            case ATTACHED -> new AttachedStrategy<>(logger, resolveJavaExecutable());
             case DETACHED -> throw new UnsupportedOperationException("DETACHED mode not supported for compile tasks");
         };
     }
@@ -289,8 +291,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         final File path = oldFile.getParentFile();
         final File newFile = new File(path, newName);
         if ((!newFile.exists() || newFile.delete()) && oldFile.renameTo(newFile)) {
-            logger.info("[plugin] Renamed and finalized compiler output XTC filename: '{}' to '{}' (path: '{}')",
-                    oldName, newName, path.getAbsolutePath());
+            logger.lifecycle("[plugin] Renamed and finalized compiler output XTC filename: '{}' to '{}' (path: '{}')", oldName, newName, path.getAbsolutePath());
             return;
         }
         throw failure("Failed to rename '{}' to '{}'. Output file already exists and could not be deleted: '{}'", oldFile, newFile, newFile.getAbsoluteFile());

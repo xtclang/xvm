@@ -24,6 +24,7 @@ import org.gradle.api.Project;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.logging.LogLevel;
+import org.gradle.api.logging.Logger;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
@@ -103,10 +104,11 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
 
     private ExecutionStrategy createStrategy() {
         final ExecutionMode mode = getExecutionMode().get();
+        final Logger logger = getLogger();
         return switch (mode) {
-            case DIRECT -> new DirectStrategy<>(getLogger(), null, null);
-            case ATTACHED -> new AttachedStrategy<>(getLogger(), resolveJavaExecutable());
-            case DETACHED -> new DetachedStrategy<>(getLogger(), resolveJavaExecutable());
+            case DIRECT -> new DirectStrategy<>(logger);
+            case ATTACHED -> new AttachedStrategy<>(logger, resolveJavaExecutable());
+            case DETACHED -> new DetachedStrategy<>(logger, resolveJavaExecutable());
         };
     }
 

@@ -19,22 +19,27 @@ import org.xtclang.plugin.tasks.XtcRunTask;
  */
 public final class LauncherOptionsBuilder {
 
-    private LauncherOptionsBuilder() {
-        // Utility class
+    private final ExecutionMode mode;
+
+    LauncherOptionsBuilder(final ExecutionMode mode) {
+        this.mode = mode;
+    }
+
+    protected boolean useAbsolutePaths() {
+        return mode == ExecutionMode.DIRECT;
     }
 
     /**
      * Builds CompilerOptions from XtcCompileTask.
      * Used by ALL compile strategies (Direct, Attached, Detached).
+     *
+     * @param task the compile task
      */
-    public static CompilerOptions buildCompilerOptions(final XtcCompileTask task) {
+    public CompilerOptions buildCompilerOptions(final XtcCompileTask task) {
         final Path projectDir  = task.getProjectDirectory().get().getAsFile().toPath();
         final Path outputDir   = task.getOutputDirectoryInternal().getAsFile().toPath();
         final Path resourceDir = task.getResourceDirectoryInternal().getAsFile().toPath();
-        // TODO: Revisit why we need to do relativize - it has something to do with build caching, I think.
-        // TODO: Remove the String version of setOutputLocation, since we want the paths validated in one place only.
-        // Add resource directory if it exists - if unspecified it is in the source set resource dir.
-        // TODO: Check if we can skip the isDirectory check
+
         System.err.println("** enableShowversion " + task.getShowVersion().get());
         final var builder = CompilerOptions.builder()
             .forceRebuild(task.getRebuild().get())
@@ -43,14 +48,14 @@ public final class LauncherOptionsBuilder {
             .disableWarnings(task.getDisableWarnings().get())
             .enableStrictMode(task.getStrict().get())
             .qualifyOutputNames(task.getQualifiedOutputName().get())
-            .setOutputLocation(projectDir.relativize(outputDir));
+            .setOutputLocation(useAbsolutePaths() ? outputDir.toString() : projectDir.relativize(outputDir).toString());
 
         if (isDirectory(resourceDir)) {
-            builder.addResourceLocation(projectDir.relativize(resourceDir));
+            builder.addResourceLocation(useAbsolutePaths() ? resourceDir.toString() : projectDir.relativize(resourceDir).toString());
         }
         // Add module paths
         for (final var modulePath : task.resolveFullModulePath()) {
-            builder.addModulePath(projectDir.relativize(modulePath.toPath()).toString());
+            builder.addModulePath(useAbsolutePaths() ? modulePath.getAbsolutePath() : projectDir.relativize(modulePath.toPath()).toString());
         }
 
         // Set module version if specified
@@ -59,11 +64,9 @@ public final class LauncherOptionsBuilder {
             builder.setModuleVersion(XtcCompileTask.semanticVersion(moduleVersion));
         }
 
-        // Set qualified output names
-
         // Add source files
         for (final File sourceFile : task.resolveXtcSourceFiles()) {
-            builder.addInputFile(projectDir.relativize(sourceFile.toPath()).toString());
+            builder.addInputFile(useAbsolutePaths() ? sourceFile.getAbsolutePath() : projectDir.relativize(sourceFile.toPath()).toString());
         }
 
         return builder.build();
@@ -72,14 +75,16 @@ public final class LauncherOptionsBuilder {
     /**
      * Builds RunnerOptions from XtcRunTask.
      * Used by ALL run strategies (Direct, Attached, Detached).
+     *
+     * @param task the run task
+     * @param moduleName the module to run
+     * @param moduleArgs arguments to pass to the module
      */
-    public static RunnerOptions buildRunnerOptions(final XtcRunTask task, final String moduleName, final List<String> moduleArgs) {
+    public RunnerOptions buildRunnerOptions(final XtcRunTask task, final String moduleName, final List<String> moduleArgs) {
         final var projectDir = task.getProjectDirectory().get().getAsFile().toPath();
         final var methodName = task.getMethodName().getOrElse(DEFAULT_METHOD_NAME);
         assert !methodName.isEmpty();
 
-        // TODO: Add build check for duplicate options, and make it possible to reset a set flag by
-        //   removing a boolean flag (and argument) from the arg list, for robustness.
         // Set flags
         final var builder = RunnerOptions.builder()
             .enableShowVersion(task.getShowVersion().get())
@@ -87,10 +92,12 @@ public final class LauncherOptionsBuilder {
             .setMethodName(methodName)
             .setTarget(moduleName, moduleArgs)
             .noRecompile(); // --no-recompile, note there is confusion with --rebuild in the compiler and this
+
         // Add module paths
         for (final var modulePath : task.resolveFullModulePath()) {
-            builder.addModulePath(projectDir.relativize(modulePath.toPath()).toString());
+            builder.addModulePath(useAbsolutePaths() ? modulePath.getAbsolutePath() : projectDir.relativize(modulePath.toPath()).toString());
         }
         return builder.build();
     }
 }
+

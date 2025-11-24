@@ -58,7 +58,7 @@ import static org.xtclang.plugin.XtcPluginUtils.failure;
  * </ul>
  */
 public final class XtcJavaToolsRuntime {
-    private static volatile ClassLoader javaToolsClassLoader = null;
+    private static volatile ClassLoader javaToolsClassLoader;
 
     private XtcJavaToolsRuntime() {
         // Utility class
@@ -128,10 +128,8 @@ public final class XtcJavaToolsRuntime {
             @NotNull final Logger logger) {
 
         final String artifactVersion = projectVersion.get();
-        final var javaToolsFromConfig = javaToolsConfig.get().filter(file ->
-                FileUtils.isValidJavaToolsArtifact(file, artifactVersion));
-        final var javaToolsFromXdk = xdkFileTree.get().filter(file ->
-                FileUtils.isValidJavaToolsArtifact(file, artifactVersion));
+        final var javaToolsFromConfig = javaToolsConfig.get().filter(file -> FileUtils.isValidJavaToolsArtifact(file, artifactVersion));
+        final var javaToolsFromXdk = xdkFileTree.get().filter(file -> FileUtils.isValidJavaToolsArtifact(file, artifactVersion));
 
         logger.lifecycle("""
                 [plugin] [javatools_runtime] javaToolsFromConfig files: {}
