@@ -13,11 +13,12 @@ import org.xtclang.plugin.XtcPluginUtils.FileUtils;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.concurrent.Callable;
+import java.util.Date;
 import java.util.zip.ZipFile;
 
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
@@ -152,13 +153,13 @@ public final class XtcJavaToolsRuntime {
         // Log detailed javatools.jar information
         if (resolvedFromConfig != null) {
             logger.lifecycle("[plugin]     javatools.jar path: {}", resolvedFromConfig.getAbsolutePath());
-            logger.lifecycle("[plugin]     javatools.jar last modified: {}", new java.util.Date(resolvedFromConfig.lastModified()));
+            logger.lifecycle("[plugin]     javatools.jar last modified: {}", new Date(resolvedFromConfig.lastModified()));
             logger.lifecycle("[plugin]     javatools.jar size: {} bytes", resolvedFromConfig.length());
             logger.lifecycle("[plugin]     javatools.jar MD5: {}", computeMD5(resolvedFromConfig, logger));
         }
         if (resolvedFromXdk != null && !resolvedFromXdk.equals(resolvedFromConfig)) {
             logger.lifecycle("[plugin]     xdk javatools.jar path: {}", resolvedFromXdk.getAbsolutePath());
-            logger.lifecycle("[plugin]     xdk javatools.jar last modified: {}", new java.util.Date(resolvedFromXdk.lastModified()));
+            logger.lifecycle("[plugin]     xdk javatools.jar last modified: {}", new Date(resolvedFromXdk.lastModified()));
             logger.lifecycle("[plugin]     xdk javatools.jar size: {} bytes", resolvedFromXdk.length());
             logger.lifecycle("[plugin]     xdk javatools.jar MD5: {}", computeMD5(resolvedFromXdk, logger));
         }
@@ -190,9 +191,7 @@ public final class XtcJavaToolsRuntime {
      * @return The created URLClassLoader
      * @throws Exception if URL conversion or reflection fails
      */
-    private static URLClassLoader createAndSetJavaToolsClassLoader(
-            @NotNull final File javaToolsJar,
-            @NotNull final Logger logger) throws Exception {
+    private static URLClassLoader createAndSetJavaToolsClassLoader(@NotNull final File javaToolsJar, @NotNull final Logger logger) throws MalformedURLException {
         final URL javaToolsUrl = javaToolsJar.toURI().toURL();
 
         // Get the plugin's classloader (the one that loaded this class)

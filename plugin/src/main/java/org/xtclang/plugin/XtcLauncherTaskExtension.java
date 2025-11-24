@@ -13,7 +13,6 @@ import org.jetbrains.annotations.NotNull;
 
 import org.xtclang.plugin.launchers.ExecutionMode;
 
-@SuppressWarnings("unused")
 public interface XtcLauncherTaskExtension extends Named {
     /**
      * Additional module path entries (files or directories) to add to the -L flag.

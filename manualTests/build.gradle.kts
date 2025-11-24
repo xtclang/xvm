@@ -361,8 +361,17 @@ val executionModeTasks = ExecutionMode.entries.associateWith { mode ->
         module {
             // TODO: We may want sugar for parallel flag and execution mode specialization in individual modules later.
             moduleName = "EchoTest"
-            moduleArg("ExecutionMode: $mode")
+            moduleArg("Testing Execution Mode:")
+            moduleArg("  $mode")
         }
+        //doLast {
+            // Redirect stdout and stderr to files with timestamp
+            // TODO: This doesn't work  TODO
+            //val redirect = stdoutPath.getOrElse("stdout")
+            //println("REDIRECTED: $redirect")
+            //stdoutPath.set(layout.buildDirectory.file("logs/runOne-stdout-%TIMESTAMP%.log").map { it.asFile.absolutePath })
+            //stderrPath.set(layout.buildDirectory.file("logs/runOne-stderr-%TIMESTAMP%.log").map { it.asFile.absolutePath })
+        //}
     }
 }
 
@@ -382,6 +391,7 @@ val runOne by tasks.registering(XtcRunTask::class) {
         Runs one test as given by the property 'testName' (has a hardcoded default test name)
         Arguments are in 'testArgs'. (no arguments if property not defined)
     """.trimIndent()
+
     module {
         moduleName = resolveTestNameProperty() // NOTE: this syntax also has the moduleName("...") shorthand
         moduleArgs(provider { resolveTestArgumentsProperty() })

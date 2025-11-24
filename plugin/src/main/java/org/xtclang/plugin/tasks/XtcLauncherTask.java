@@ -55,6 +55,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     // Captured at configuration time for configuration cache compatibility
     final Provider<@NotNull Directory> projectDirectory;
+    final Provider<@NotNull Directory> buildDirectory;
     final Provider<@NotNull Directory> xdkContentsDir;
     final Provider<@NotNull FileTree> xdkFileTree;
     final Map<String, Provider<@NotNull Directory>> sourceSetOutputDirs;
@@ -79,6 +80,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
         // Capture at configuration time
         this.projectDirectory = objects.directoryProperty().value(project.getLayout().getProjectDirectory());
+        this.buildDirectory = objects.directoryProperty().value(project.getLayout().getBuildDirectory());
         this.xdkContentsDir = XtcProjectDelegate.getXdkContentsDir(project);
         this.xdkFileTree = xdkContentsDir.map(dir -> objects.fileTree().setDir(dir));
 
@@ -273,6 +275,11 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @Internal
     public Provider<@NotNull Directory> getProjectDirectory() {
         return projectDirectory;
+    }
+
+    @Internal
+    public Provider<@NotNull Directory> getBuildDirectory() {
+        return buildDirectory;
     }
 
     public File resolveJavaTools() {

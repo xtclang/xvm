@@ -1,14 +1,15 @@
 package org.xtclang.plugin.launchers;
 
 import java.io.File;
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 import org.gradle.api.logging.Logger;
 
 import org.xtclang.plugin.tasks.XtcLauncherTask;
 
+import static java.time.format.DateTimeFormatter.ofPattern;
 import static org.xtclang.plugin.XtcPluginUtils.failure;
 
 /**
@@ -19,60 +20,54 @@ import static org.xtclang.plugin.XtcPluginUtils.failure;
  */
 public class DetachedStrategy<T extends XtcLauncherTask<?>> extends ForkedStrategy<T> {
 
-    private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+    private static final DateTimeFormatter TIMESTAMP_FORMAT = ofPattern("yyyyMMdd_HHmmss", Locale.ROOT);
 
     public DetachedStrategy(final Logger logger, final String javaExecutable) {
         super(logger, javaExecutable);
+        logger.lifecycle("[plugin] [DetachedStrategy] javaExecutable: {}", javaExecutable);
     }
 
     @Override
-    protected boolean configureIO(final ProcessBuilder pb, final XtcLauncherTask<?> task) throws IOException {
-        final var projectDir = task.getProjectDirectory().get().getAsFile();
+    protected boolean configureIO(final ProcessBuilder pb, final XtcLauncherTask<?> task) {
+        final var buildDir = task.getBuildDirectory().get().getAsFile();
         final String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMAT);
-
-        // Configure stdout redirect
-        if (task.hasStdoutRedirect()) {
-            final String stdoutPath = expandTimestampPlaceholder(task.getStdoutPath().get(), timestamp);
-            final File stdoutFile = new File(projectDir, stdoutPath);
-            ensureParentDirectoryExists(stdoutFile);
-            pb.redirectOutput(ProcessBuilder.Redirect.to(stdoutFile));
-            logger.info("[plugin] Configured stdout redirect to: {}", stdoutFile.getAbsolutePath());
-        } else {
-            // Default stdout for detached process
-            final String taskType = task.getClass().getSimpleName().toLowerCase().replace("task", "");
-            final String defaultStdout = "build/xtc/" + taskType + "_stdout_" + timestamp + ".log";
-            final File stdoutFile = new File(projectDir, defaultStdout);
-            ensureParentDirectoryExists(stdoutFile);
-            pb.redirectOutput(ProcessBuilder.Redirect.to(stdoutFile));
-            logger.info("[plugin] Using default stdout redirect: {}", stdoutFile.getAbsolutePath());
-        }
-
-        // Configure stderr redirect
-        if (task.hasStderrRedirect()) {
-            final String stderrPath = expandTimestampPlaceholder(task.getStderrPath().get(), timestamp);
-            final File stderrFile = new File(projectDir, stderrPath);
-            ensureParentDirectoryExists(stderrFile);
-            pb.redirectError(ProcessBuilder.Redirect.to(stderrFile));
-            logger.info("[plugin] Configured stderr redirect to: {}", stderrFile.getAbsolutePath());
-        } else {
-            // Default stderr for detached process
-            final String taskType = task.getClass().getSimpleName().toLowerCase().replace("task", "");
-            final String defaultStderr = "build/xtc/" + taskType + "_stderr_" + timestamp + ".log";
-            final File stderrFile = new File(projectDir, defaultStderr);
-            ensureParentDirectoryExists(stderrFile);
-            pb.redirectError(ProcessBuilder.Redirect.to(stderrFile));
-            logger.info("[plugin] Using default stderr redirect: {}", stderrFile.getAbsolutePath());
-        }
-
-        // Log redirect info after process starts
-        if (task.hasStdoutRedirect()) {
-            logger.lifecycle("[plugin] stdout redirected to: {}", pb.redirectOutput().file());
-        }
-        if (task.hasStderrRedirect()) {
-            logger.lifecycle("[plugin] stderr redirected to: {}", pb.redirectError().file());
-        }
-
+        final String taskType = task.getClass().getSimpleName().toLowerCase(Locale.ROOT).replace("task", "");
+        logger.lifecycle("[plugin] [DetachedStrategy] task: {}, taskType: {}", task.getName(), taskType);
+        configureStream(pb, task, buildDir, timestamp, taskType, true);
+        configureStream(pb, task, buildDir, timestamp, taskType, false);
         return false; // Streams are redirected to files, no need to manually copy
+    }
+
+    private void configureStream(
+            final ProcessBuilder pb,
+            final XtcLauncherTask<?> task,
+            final File buildDir,
+            final String timestamp,
+            final String taskType,
+            final boolean isStdout) {
+
+        final boolean hasRedirect = isStdout ? task.hasStdoutRedirect() : task.hasStderrRedirect();
+        final String streamName = isStdout ? "stdout" : "stderr";
+
+        final File file;
+        final String logMessage;
+
+        if (hasRedirect) {
+            final String configuredPath = isStdout ? task.getStdoutPath().get() : task.getStderrPath().get();
+            final String expandedPath = expandTimestampPlaceholder(configuredPath, timestamp);
+            // User-configured paths are relative to project directory
+            file = new File(task.getProjectDirectory().get().getAsFile(), expandedPath);
+            logMessage = "[plugin] Configured " + streamName + " redirect to: {}";
+        } else {
+            // Default paths go in build/xtc directory (build directory from layout)
+            final File xtcDir = new File(buildDir, "xtc");
+            file = new File(xtcDir, taskType + "_" + streamName + "_" + timestamp + ".log");
+            logMessage = "[plugin] Using default " + streamName + " redirect: {}";
+        }
+        ensureParentDirectoryExists(file);
+        final var redirect = ProcessBuilder.Redirect.to(file);
+        if (isStdout) pb.redirectOutput(redirect); else pb.redirectError(redirect);
+        logger.lifecycle(logMessage, file.getAbsolutePath());
     }
 
     @Override
@@ -92,7 +87,7 @@ public class DetachedStrategy<T extends XtcLauncherTask<?>> extends ForkedStrate
         return path.replace("%TIMESTAMP%", timestamp);
     }
 
-    private void ensureParentDirectoryExists(final File file) throws IOException {
+    private void ensureParentDirectoryExists(final File file) {
         final File parentDir = file.getParentFile();
         if (parentDir == null) {
             logger.error("[plugin] Parent directory does not exist: {}", file.getAbsolutePath());

@@ -2,7 +2,7 @@
 # TODO: Publish a release 
 # TODO: Language server
 # TODO: Language plugins for various IDEs? 
-# TODO: 
+# TODO: When I change something simple in the plugin, I don't expected the entire XDK to be rebuilt, or it should at least understand it is cached.
 
 Tell me if there is a simple, small, popular Java library for command line arg parsing that handles - and — arg names with 0 or one arguments each and trailing arga at the end of the command line and how to use it. Can it also verify args on type and number of args?
 
