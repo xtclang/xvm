@@ -19,6 +19,7 @@ class LauncherOptionsJsonTest {
         // Create options via Builder
         final var original = LauncherOptions.CompilerOptions.builder()
                 .enableVerbose()
+                .enableShowVersion()
                 .forceRebuild()
                 .enableStrictMode()
                 .addModulePath(new File("/lib/path1"))

@@ -351,33 +351,43 @@ val runTwoTestsInSequence by tasks.registering(XtcRunTask::class) {
     moduleName("TestArray")
 }
 
-// Test task that explicitly uses executionMode=DIRECT to test in-process execution
-// NOTE: TestArray currently fails with executionMode=DIRECT due to an unrelated issue
-val runTestsInProcess by tasks.registering(XtcRunTask::class) {
-    group = "application"
-    executionMode = ExecutionMode.DIRECT
-    verbose = true
-    module {
-        moduleName = "EchoTest"
-        moduleArg("InProcess")
+// Generate map of execution modes to task names
+val executionModeTasks = ExecutionMode.entries.associateWith { mode ->
+    val taskName = "runTestWith${mode.name.lowercase().replaceFirstChar { it.uppercase() }}"
+    tasks.register<XtcRunTask>(taskName) {
+        group = "application"
+        executionMode = mode
+        verbose = true
+        module {
+            // TODO: We may want sugar for parallel flag and execution mode specialization in individual modules later.
+            moduleName = "EchoTest"
+            moduleArg("ExecutionMode: $mode")
+        }
     }
 }
 
-// Test running TestArray alone with executionMode=DIRECT to debug the crash
-val runTestArrayInProcess by tasks.registering(XtcRunTask::class) {
+val runTestAllExecutionModes by tasks.registering {
     group = "application"
-    executionMode = ExecutionMode.DIRECT
-    verbose = true
-    moduleName("TestArray")
+    description = "Run EchoTest in all execution modes to verify that they work."
+    dependsOn(executionModeTasks.values)
+    doLast {
+        logger.lifecycle("Finished testing all execution modes.")
+    }
 }
 
 // This allows running a single test, e.g.: ./gradlew manualTests:runOne -PtestName="TestArray"
 val runOne by tasks.registering(XtcRunTask::class) {
     group = "application"
-    description = "Runs one test as given by the property 'testName', or a default test if not set."
-    // To debug, use: jvmArgs("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005")
+    description = """
+        Runs one test as given by the property 'testName' (has a hardcoded default test name)
+        Arguments are in 'testArgs'. (no arguments if property not defined)
+    """.trimIndent()
     module {
-        moduleName = resolveTestNameProperty() // this syntax also has the moduleName("...") shorthand
+        moduleName = resolveTestNameProperty() // NOTE: this syntax also has the moduleName("...") shorthand
+        moduleArgs(provider { resolveTestArgumentsProperty() })
+    }
+    doFirst {
+        logger.lifecycle("manualTests:runOne: $name")
     }
 }
 
@@ -432,6 +442,11 @@ val runAllTestTasks by tasks.registering {
 
 fun resolveTestNameProperty(defaultTestName: String = "EchoTest"): String {
     return if (hasProperty("testName")) (properties["testName"] as String) else defaultTestName
+}
+
+fun resolveTestArgumentsProperty(defaultTestArguments: String = ""): List<String> {
+    val argsString = if (hasProperty("testArgs")) (properties["testArgs"] as String) else defaultTestArguments
+    return if (argsString.isEmpty()) emptyList() else argsString.split(",").map { it.trim() }
 }
 
 /**

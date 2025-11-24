@@ -11,9 +11,12 @@ import org.jetbrains.annotations.NotNull;
 import org.xtclang.plugin.XtcPluginUtils.FileUtils;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.Callable;
 import java.util.zip.ZipFile;
 
@@ -78,7 +81,7 @@ public final class XtcJavaToolsRuntime {
      * @param xdkFileTree The XDK file tree (from extracted distribution)
      * @param logger Logger for diagnostic output
      */
-    public static synchronized void ensureJavaToolsInClasspath(
+    public static synchronized boolean ensureJavaToolsInClasspath(
             @NotNull final Provider<@NotNull String> projectVersion,
             @NotNull final Provider<@NotNull FileCollection> javaToolsConfig,
             @NotNull final Provider<@NotNull FileTree> xdkFileTree,
@@ -86,7 +89,7 @@ public final class XtcJavaToolsRuntime {
 
         if (javaToolsClassLoader != null) {
             logger.debug("[plugin] javatools.jar already loaded into classpath");
-            return;
+            return false;
         }
 
         final File javaToolsJar = resolveJavaTools(projectVersion, javaToolsConfig, xdkFileTree, logger);
@@ -95,6 +98,7 @@ public final class XtcJavaToolsRuntime {
             // Create a shared classloader with javatools.jar and set as thread context classloader
             javaToolsClassLoader = createAndSetJavaToolsClassLoader(javaToolsJar, logger);
             logger.info("[plugin] ******* Loaded javatools.jar into plugin classpath: {}", javaToolsJar.getAbsolutePath());
+            return true;
         } catch (final Exception e) {
             throw failure(e, "Failed to load javatools.jar into classpath: {}", javaToolsJar.getAbsolutePath());
         }
@@ -128,7 +132,7 @@ public final class XtcJavaToolsRuntime {
         final var javaToolsFromXdk = xdkFileTree.get().filter(file ->
                 FileUtils.isValidJavaToolsArtifact(file, artifactVersion));
 
-        logger.info("""
+        logger.lifecycle("""
                 [plugin] [javatools_runtime] javaToolsFromConfig files: {}
                 [plugin] [javatools_runtime] javaToolsFromXdk files: {}
                 """.trim(), javaToolsFromConfig.getFiles(), javaToolsFromXdk.getFiles());
@@ -140,77 +144,41 @@ public final class XtcJavaToolsRuntime {
             throw failure("ERROR: Failed to resolve '{}' from any configuration or dependency. Ensure the XDK dependency is configured correctly.", XDK_JAVATOOLS_NAME_JAR);
         }
 
-        logger.info("""
+        logger.lifecycle("""
                 [plugin] Check for '{}' in {} config and XDK (unpacked zip, or module collection) dependency, if present.
                 [plugin]     Resolved to: [xdkJavaTools: {}, xdkContents: {}]
                 """.trim(), XDK_JAVATOOLS_NAME_JAR, XDK_CONFIG_NAME_JAVATOOLS_INCOMING, resolvedFromConfig, resolvedFromXdk);
 
-        final String versionConfig = readXdkVersionFromJar(resolvedFromConfig);
-        final String versionXdk = readXdkVersionFromJar(resolvedFromXdk);
+        // Log detailed javatools.jar information
+        if (resolvedFromConfig != null) {
+            logger.lifecycle("[plugin]     javatools.jar path: {}", resolvedFromConfig.getAbsolutePath());
+            logger.lifecycle("[plugin]     javatools.jar last modified: {}", new java.util.Date(resolvedFromConfig.lastModified()));
+            logger.lifecycle("[plugin]     javatools.jar size: {} bytes", resolvedFromConfig.length());
+            logger.lifecycle("[plugin]     javatools.jar MD5: {}", computeMD5(resolvedFromConfig, logger));
+        }
+        if (resolvedFromXdk != null && !resolvedFromXdk.equals(resolvedFromConfig)) {
+            logger.lifecycle("[plugin]     xdk javatools.jar path: {}", resolvedFromXdk.getAbsolutePath());
+            logger.lifecycle("[plugin]     xdk javatools.jar last modified: {}", new java.util.Date(resolvedFromXdk.lastModified()));
+            logger.lifecycle("[plugin]     xdk javatools.jar size: {} bytes", resolvedFromXdk.length());
+            logger.lifecycle("[plugin]     xdk javatools.jar MD5: {}", computeMD5(resolvedFromXdk, logger));
+        }
+
+        final var versionConfig = readXdkVersionFromJar(resolvedFromConfig);
+        final var versionXdk = readXdkVersionFromJar(resolvedFromXdk);
 
         if (resolvedFromConfig != null && resolvedFromXdk != null) {
             if (!versionConfig.equals(versionXdk) || !areIdenticalFiles(resolvedFromConfig, resolvedFromXdk)) {
-                logger.warn("[plugin] Different '{}' files resolved, preferring the non-XDK version: {}",
-                        XDK_JAVATOOLS_NAME_JAR, resolvedFromConfig.getAbsolutePath());
+                logger.warn("[plugin] Different '{}' files resolved, preferring the non-XDK version: {}", XDK_JAVATOOLS_NAME_JAR, resolvedFromConfig.getAbsolutePath());
                 return validateAndReturn(resolvedFromConfig);
             }
         }
-
         if (resolvedFromConfig != null) {
-            logger.info("[plugin] Resolved unique '{}' from config/artifacts/dependencies: {} (version: {})",
-                    XDK_JAVATOOLS_NAME_JAR, resolvedFromConfig.getAbsolutePath(), versionConfig);
+            logger.info("[plugin] Resolved unique '{}' from config/artifacts/dependencies: {} (version: {})", XDK_JAVATOOLS_NAME_JAR, resolvedFromConfig.getAbsolutePath(), versionConfig);
             return validateAndReturn(resolvedFromConfig);
+        } else {
+            logger.info("[plugin] Resolved unique '{}' from XDK: {} (version: {})", XDK_JAVATOOLS_NAME_JAR, resolvedFromXdk.getAbsolutePath(), versionXdk);
         }
-
-        logger.info("[plugin] Resolved unique '{}' from XDK: {} (version: {})",
-                XDK_JAVATOOLS_NAME_JAR, resolvedFromXdk.getAbsolutePath(), versionXdk);
         return validateAndReturn(resolvedFromXdk);
-    }
-
-    /**
-     * Executes code with javatools classes available on the thread context classloader.
-     * This is needed for in-process execution where javatools code may use Thread.currentThread().getContextClassLoader().
-     *
-     * <p>This method:
-     * <ol>
-     *   <li>Creates a URLClassLoader with javatools.jar</li>
-     *   <li>Sets it as the thread context classloader</li>
-     *   <li>Executes the provided callable</li>
-     *   <li>Restores the original classloader</li>
-     *   <li>Closes the URLClassLoader</li>
-     *   <li>Returns the result</li>
-     * </ol>
-     *
-     * <p><b>Example:</b>
-     * <pre>{@code
-     * ErrorList errors = XtcJavaToolsRuntime.withJavaTools(javaToolsJar, logger, () -> {
-     *     ErrorList errorList = new ErrorList(100);
-     *     // ... use javatools classes ...
-     *     return errorList;
-     * });
-     * }</pre>
-     *
-     * @param javaToolsJar The javatools.jar file
-     * @param logger Logger for diagnostic output
-     * @param callable The code to execute with javatools on classpath
-     * @param <T> The return type
-     * @return The result from the callable
-     * @throws Exception if the callable throws an exception
-     */
-    public static <T> T withJavaTools(
-            @NotNull final File javaToolsJar,
-            @NotNull final Logger logger,
-            @NotNull final Callable<T> callable) throws Exception {
-        final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
-        final URLClassLoader javaToolsClassLoader = createAndSetJavaToolsClassLoader(javaToolsJar, logger);
-        try (javaToolsClassLoader) {
-            logger.lifecycle("[plugin] ******* Added javatools.jar to runtime classpath: {}", javaToolsJar.getAbsolutePath());
-            logger.info("[plugin] Set thread context classloader to javatools classloader");
-            return callable.call();
-        } finally {
-            Thread.currentThread().setContextClassLoader(originalClassLoader);
-            logger.info("[plugin] Restored original thread context classloader");
-        }
     }
 
     /**
@@ -271,5 +239,34 @@ public final class XtcJavaToolsRuntime {
         }
 
         return file;
+    }
+
+    /**
+     * Computes the MD5 hash of a file for verification purposes.
+     *
+     * @param file The file to compute MD5 hash for
+     * @param logger Logger for diagnostic output
+     * @return The MD5 hash as a hexadecimal string, or "ERROR" if computation fails
+     */
+    private static String computeMD5(final File file, final Logger logger) {
+        try {
+            final MessageDigest md = MessageDigest.getInstance("MD5");
+            try (final FileInputStream fis = new FileInputStream(file)) {
+                final byte[] buffer = new byte[8192];
+                int bytesRead;
+                while ((bytesRead = fis.read(buffer)) != -1) {
+                    md.update(buffer, 0, bytesRead);
+                }
+            }
+            final byte[] digest = md.digest();
+            final StringBuilder sb = new StringBuilder();
+            for (final byte b : digest) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (final NoSuchAlgorithmException | IOException e) {
+            logger.warn("[plugin] Failed to compute MD5 hash for {}: {}", file.getAbsolutePath(), e.getMessage());
+            return "ERROR";
+        }
     }
 }

@@ -35,6 +35,7 @@ public final class LauncherOptionsBuilder {
         // TODO: Remove the String version of setOutputLocation, since we want the paths validated in one place only.
         // Add resource directory if it exists - if unspecified it is in the source set resource dir.
         // TODO: Check if we can skip the isDirectory check
+        System.err.println("** enableShowversion " + task.getShowVersion().get());
         final var builder = CompilerOptions.builder()
             .forceRebuild(task.getRebuild().get())
             .enableShowVersion(task.getShowVersion().get())

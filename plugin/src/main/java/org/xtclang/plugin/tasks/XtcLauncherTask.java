@@ -276,7 +276,12 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     }
 
     public File resolveJavaTools() {
-        return getJavaToolsConfiguration().get().getSingleFile();
+        return XtcJavaToolsRuntime.resolveJavaTools(
+                getProjectVersion(),
+                getJavaToolsConfiguration(),
+                getXdkFileTree(),
+                getLogger()
+        );
     }
 
     public List<File> resolveFullModulePath() {

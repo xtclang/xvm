@@ -2,6 +2,10 @@ package org.xtclang.plugin.tasks;
 
 import javax.inject.Inject;
 
+import java.net.URLClassLoader;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.gradle.api.DefaultTask;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.FileTree;
@@ -38,26 +42,54 @@ public abstract class XtcLoadJavaToolsTask extends DefaultTask {
     @SuppressWarnings("this-escape")
     @Inject
     public XtcLoadJavaToolsTask() {
-        // Task is never up-to-date - always loads javatools
+        // Task is never up-to-date - always loads javatools (TODO: Use the utility method for this as in XtcRunTask?)
         getOutputs().upToDateWhen(task -> false);
     }
 
     @TaskAction
     public void loadJavaTools() {
-        getLogger().info("[plugin] Loading javatools.jar into plugin classloader");
+        final var logger = getLogger();
+        logger.info("[plugin] Loading javatools.jar into plugin classloader");
+
+        // Log classpath before loading javatools
+        final var classLoader = getClass().getClassLoader();
+        final var lines = new ArrayList<String>();
+        lines.add("[plugin] Classpath BEFORE ensureJavaToolsInClasspath:");
+        lines.addAll(logClasspath(classLoader));
 
         // Use providers that were set at configuration time
         final Provider<@NotNull String> versionProvider = getProjectVersion().map(v -> v);
         final Provider<@NotNull FileCollection> javaToolsProvider = getJavaToolsConfiguration().map(fc -> fc);
         final Provider<@NotNull FileTree> xdkProvider = getXdkFileTree().map(ft -> ft);
 
-        XtcJavaToolsRuntime.ensureJavaToolsInClasspath(
-                versionProvider,
-                javaToolsProvider,
-                xdkProvider,
-                getLogger()
-        );
+        final boolean changed = XtcJavaToolsRuntime.ensureJavaToolsInClasspath(versionProvider, javaToolsProvider, xdkProvider, logger);
 
-        getLogger().info("[plugin] Java tools loaded successfully");
+        // Log classpath after loading javatools
+        if (changed) {
+            lines.add("[plugin] Java tools loaded successfully.");
+            lines.add("[plugin] Classpath AFTER ensureJavaToolsInClasspath:");
+            lines.addAll(logClasspath(classLoader));
+        } else {
+            lines.removeIf(line -> !line.contains("javatools"));
+            lines.add("[plugin] Java tools were already loaded.");
+        }
+        lines.forEach(logger::lifecycle);
+    }
+
+    private List<String> logClasspath(final ClassLoader classLoader) {
+        final var lines = new ArrayList<String>();
+        final var logger = getLogger();
+        if (classLoader instanceof final URLClassLoader urlClassLoader) {
+            final var urls = urlClassLoader.getURLs();
+            lines.add("[plugin]   URLClassLoader with " + urls.length + " URLs:");
+            for (int i = 0; i < urls.length; i++) {
+                lines.add("[plugin]     [" + i + "] " + urls[i]);
+            }
+            return lines;
+        }
+        lines.add("[plugin]   ClassLoader type: " + classLoader.getClass().getName());
+        lines.add("[plugin]   (Not a URLClassLoader, cannot enumerate classpath)");
+        //lines.forEach(logger::info);
+        return lines;
     }
 }
