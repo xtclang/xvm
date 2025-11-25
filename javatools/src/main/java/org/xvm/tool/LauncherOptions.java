@@ -200,7 +200,7 @@ public abstract class LauncherOptions {
     protected List<File> getPathList(final String optionName) {
         final var vals = commandLine.getOptionValues(optionName);
         if (vals == null) {
-            return Collections.emptyList();
+            return List.of();
         }
         return Arrays.stream(vals)
                 .flatMap(val -> Arrays.stream(val.split(PSEP)))
@@ -917,11 +917,11 @@ public abstract class LauncherOptions {
         public Map<String, String> getInjections() {
             String[] vals = commandLine.getOptionValues("I");
             if (vals == null) {
-                return Collections.emptyMap();
+                return Map.of();
             }
             final var injections = new LinkedHashMap<String, String>();
             for (final String val : vals) {
-                int idx = val.indexOf('=');
+                final int idx = val.indexOf('=');
                 if (idx > 0) {
                     injections.put(val.substring(0, idx), val.substring(idx + 1));
                 }

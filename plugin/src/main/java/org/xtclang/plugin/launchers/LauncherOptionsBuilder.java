@@ -40,7 +40,8 @@ public final class LauncherOptionsBuilder {
         final Path outputDir   = task.getOutputDirectoryInternal().getAsFile().toPath();
         final Path resourceDir = task.getResourceDirectoryInternal().getAsFile().toPath();
 
-        System.err.println("** enableShowversion " + task.getShowVersion().get());
+        System.err.println("*** CompilerOptions: ForceRebuild: " + task.getRebuild().get());
+
         final var builder = CompilerOptions.builder()
             .forceRebuild(task.getRebuild().get())
             .enableShowVersion(task.getShowVersion().get())

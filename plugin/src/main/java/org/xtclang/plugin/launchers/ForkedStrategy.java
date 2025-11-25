@@ -29,7 +29,7 @@ public abstract class ForkedStrategy<T extends XtcLauncherTask<?>> implements Ex
         this.mode = mode;
         this.logger = logger;
         this.javaExecutable = javaExecutable;
-        logger.lifecycle("[plugin] [{}}] javaExecutable: {}", mode, javaExecutable);
+        logger.lifecycle("[plugin] [{}] *** javaExecutable: {}", mode, javaExecutable);
     }
 
     @Override

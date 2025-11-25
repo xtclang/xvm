@@ -11,14 +11,10 @@ import org.jetbrains.annotations.NotNull;
 import org.xtclang.plugin.XtcPluginUtils.FileUtils;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Date;
 import java.util.zip.ZipFile;
 
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
@@ -127,7 +123,7 @@ public final class XtcJavaToolsRuntime {
             @NotNull final Provider<@NotNull FileTree> xdkFileTree,
             @NotNull final Logger logger) {
 
-        final String artifactVersion = projectVersion.get();
+        final var artifactVersion = projectVersion.get();
         final var javaToolsFromConfig = javaToolsConfig.get().filter(file -> FileUtils.isValidJavaToolsArtifact(file, artifactVersion));
         final var javaToolsFromXdk = xdkFileTree.get().filter(file -> FileUtils.isValidJavaToolsArtifact(file, artifactVersion));
 
@@ -150,16 +146,10 @@ public final class XtcJavaToolsRuntime {
 
         // Log detailed javatools.jar information
         if (resolvedFromConfig != null) {
-            logger.lifecycle("[plugin]     javatools.jar path: {}", resolvedFromConfig.getAbsolutePath());
-            logger.lifecycle("[plugin]     javatools.jar last modified: {}", new Date(resolvedFromConfig.lastModified()));
-            logger.lifecycle("[plugin]     javatools.jar size: {} bytes", resolvedFromConfig.length());
-            logger.lifecycle("[plugin]     javatools.jar MD5: {}", computeMD5(resolvedFromConfig, logger));
+            logger.lifecycle("[plugin]     javatools.jar: {}", FileUtils.formatJarMetadata(resolvedFromConfig));
         }
         if (resolvedFromXdk != null && !resolvedFromXdk.equals(resolvedFromConfig)) {
-            logger.lifecycle("[plugin]     xdk javatools.jar path: {}", resolvedFromXdk.getAbsolutePath());
-            logger.lifecycle("[plugin]     xdk javatools.jar last modified: {}", new Date(resolvedFromXdk.lastModified()));
-            logger.lifecycle("[plugin]     xdk javatools.jar size: {} bytes", resolvedFromXdk.length());
-            logger.lifecycle("[plugin]     xdk javatools.jar MD5: {}", computeMD5(resolvedFromXdk, logger));
+            logger.lifecycle("[plugin]     xdk javatools.jar: {}", FileUtils.formatJarMetadata(resolvedFromXdk));
         }
 
         final var versionConfig = readXdkVersionFromJar(resolvedFromConfig);
@@ -187,7 +177,7 @@ public final class XtcJavaToolsRuntime {
      * @param javaToolsJar The javatools.jar file
      * @param logger Logger for diagnostic output
      * @return The created URLClassLoader
-     * @throws Exception if URL conversion or reflection fails
+     * @throws MalformedURLException if URL conversion fails
      */
     private static URLClassLoader createAndSetJavaToolsClassLoader(@NotNull final File javaToolsJar, @NotNull final Logger logger) throws MalformedURLException {
         final URL javaToolsUrl = javaToolsJar.toURI().toURL();
@@ -208,8 +198,8 @@ public final class XtcJavaToolsRuntime {
         }
 
         // Also set thread context classloader for compatibility
-        final ClassLoader parentClassLoader = Thread.currentThread().getContextClassLoader();
-        final URLClassLoader javaToolsClassLoader = new URLClassLoader(new URL[]{javaToolsUrl}, parentClassLoader);
+        final var parentClassLoader = Thread.currentThread().getContextClassLoader();
+        final var javaToolsClassLoader = new URLClassLoader(new URL[]{javaToolsUrl}, parentClassLoader);
         Thread.currentThread().setContextClassLoader(javaToolsClassLoader);
         logger.debug("[plugin] Created URLClassLoader with javatools.jar: {}", javaToolsUrl);
         return javaToolsClassLoader;
@@ -234,36 +224,6 @@ public final class XtcJavaToolsRuntime {
         } catch (final IOException e) {
             throw failure(e, "Failed to validate javatools.jar: {}", file.getAbsolutePath());
         }
-
         return file;
-    }
-
-    /**
-     * Computes the MD5 hash of a file for verification purposes.
-     *
-     * @param file The file to compute MD5 hash for
-     * @param logger Logger for diagnostic output
-     * @return The MD5 hash as a hexadecimal string, or "ERROR" if computation fails
-     */
-    private static String computeMD5(final File file, final Logger logger) {
-        try {
-            final MessageDigest md = MessageDigest.getInstance("MD5");
-            try (final FileInputStream fis = new FileInputStream(file)) {
-                final byte[] buffer = new byte[8192];
-                int bytesRead;
-                while ((bytesRead = fis.read(buffer)) != -1) {
-                    md.update(buffer, 0, bytesRead);
-                }
-            }
-            final byte[] digest = md.digest();
-            final StringBuilder sb = new StringBuilder();
-            for (final byte b : digest) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (final NoSuchAlgorithmException | IOException e) {
-            logger.warn("[plugin] Failed to compute MD5 hash for {}: {}", file.getAbsolutePath(), e.getMessage());
-            return "ERROR";
-        }
     }
 }

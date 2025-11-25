@@ -58,6 +58,8 @@ import org.xvm.tool.ModuleInfo.Node;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.util.Severity.INFO;
+
 
 /**
  * Native xRTCompiler implementation.
@@ -404,7 +406,7 @@ public class xRTCompiler extends xService {
                 }
 
                 if (mapTargets.isEmpty()) {
-                    log(Severity.INFO, "All modules are up to date; terminating compiler");
+                    log(INFO, "All modules are up to date; terminating compiler");
                     return null;
                 }
 

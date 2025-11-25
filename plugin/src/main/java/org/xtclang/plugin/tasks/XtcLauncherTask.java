@@ -70,12 +70,13 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     @SuppressWarnings("this-escape") // Suppressed because launchers need task reference in constructor
     protected XtcLauncherTask(final Project project, final E ext) {
-        // Parent XtcDefaultTask initializes objects, providers, logger fields
         super();
 
         // Assert that we're in configuration phase during task construction
         GradlePhaseAssertions.assertProjectAccessDuringConfiguration(project, "XtcLauncherTask construction");
         this.ext = ext;
+
+        final var objects = getObjects();
 
         // Capture at configuration time
         this.projectDirectory = objects.directoryProperty().value(project.getLayout().getProjectDirectory());
@@ -147,8 +148,11 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     //@Inject
     //public abstract ExecOperations getExecOperations();
 
-    @Override
-    public void executeTask() {
+    /**
+     * Hook called at start of launcher task execution.
+     * Ensures phase assertions and javatools loading before task execution.
+     */
+    protected void executeTask() {
         // Assert that we're in execution phase during task execution
         GradlePhaseAssertions.assertExecutionPhase(this, "XtcLauncherTask execution");
 
@@ -160,13 +164,20 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
                 getXdkFileTree(),
                 getLogger()
         );
-
-        super.executeTask();
     }
 
-    @Override
+    /**
+     * Check if verbose logging is enabled for launcher tasks.
+     * Respects Gradle --info/--debug flags AND per-task verbose setting.
+     */
     public boolean hasVerboseLogging() {
-        return super.hasVerboseLogging() || verbose.get();
+        final var logger = getLogger();
+        // Gradle log levels take precedence
+        if (logger.isInfoEnabled() || logger.isDebugEnabled()) {
+            return true;
+        }
+        // Check task-specific verbose setting
+        return verbose.get();
     }
 
     @Internal
@@ -207,7 +218,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     @Override
     public void jvmArg(final Provider<? extends @NotNull String> arg) {
-        // Use objects factory instead of Project to create provider
+        // Use injected ObjectFactory to create provider
         jvmArgs(getObjects().listProperty(String.class).value(arg.map(Collections::singletonList)));
     }
 

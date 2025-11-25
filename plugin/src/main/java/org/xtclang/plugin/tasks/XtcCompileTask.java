@@ -282,6 +282,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     }
 
     private void renameOutput(final File oldFile) {
+        final var logger = getLogger();
         final String oldName = oldFile.getName();
         final String newName = resolveOutputFilename(oldName);
         if (oldName.equals(newName)) {
@@ -302,6 +303,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     }
 
     private boolean isTopLevelSource(final File file) {
+        final var logger = getLogger();
         assert file.isFile();
         final var dir = file.getParentFile();
         assert dir != null && dir.isDirectory();

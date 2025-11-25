@@ -14,9 +14,13 @@ import java.io.IOException;
 
 import java.nio.file.Files;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.text.MessageFormat;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 import java.util.Arrays;
@@ -252,6 +256,47 @@ public final class XtcPluginUtils {
 
         public static boolean areIdenticalFiles(final File f1, final File f2) throws IOException {
             return Files.mismatch(requireNonNull(f1).toPath(), requireNonNull(f2).toPath()) == -1L;
+        }
+
+        /**
+         * Computes the MD5 hash of a file for verification purposes.
+         *
+         * @param file The file to compute MD5 hash for
+         * @return The MD5 hash as a hexadecimal string, or "ERROR" if computation fails
+         */
+        public static String computeMd5(final File file) {
+            try (final FileInputStream fis = new FileInputStream(file)) {
+                final MessageDigest md = MessageDigest.getInstance("MD5");
+                final byte[] buffer = new byte[8192];
+                int bytesRead;
+                while ((bytesRead = fis.read(buffer)) != -1) {
+                    md.update(buffer, 0, bytesRead);
+                }
+                final byte[] digest = md.digest();
+                final StringBuilder sb = new StringBuilder();
+                for (final byte b : digest) {
+                    sb.append(String.format("%02x", b));
+                }
+                return sb.toString();
+            } catch (final NoSuchAlgorithmException | IOException e) {
+                return "ERROR";
+            }
+        }
+
+        /**
+         * Creates a one-line log string with jar file metadata: path, last modified timestamp, size, and MD5 hash.
+         * Uses modern Java time types (java.time.Instant) instead of deprecated java.util.Date.
+         *
+         * @param file The jar file to log metadata for
+         * @return A formatted string containing: path, ISO-8601 timestamp, size in bytes, and MD5 hash
+         */
+        public static String formatJarMetadata(final File file) {
+            final String path = file.getAbsolutePath();
+            final Instant lastModified = Instant.ofEpochMilli(file.lastModified());
+            final String timestamp = DateTimeFormatter.ISO_INSTANT.format(lastModified);
+            final long size = file.length();
+            final String md5 = computeMd5(file);
+            return String.format("path=%s, modified=%s, size=%d bytes, md5=%s", path, timestamp, size, md5);
         }
     }
 }
