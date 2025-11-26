@@ -2539,8 +2539,7 @@ public class NameExpression
                         break ComputePropertyInfo;
                     }
 
-                    if (typeDesired != null && typeDesired.isA(pool.typeFunction()) &&
-                            !typeProp.isA(pool.typeFunction())) {
+                    if (typeDesired != null && typeDesired.isFunction() && !typeProp.isFunction()) {
                         // turn the property into a lambda
                         m_plan = Plan.BjarneLambda;
                         if (!fDraft) {
@@ -2778,7 +2777,7 @@ public class NameExpression
                     m_mapTypeParams = mapTypeParams;
                 }
 
-                if (m_plan == Plan.BindTarget && typeDesired.isA(pool.typeFunction())) {
+                if (m_plan == Plan.BindTarget && typeDesired.isFunction()) {
                     int cArgDesired  = pool.extractFunctionParams(typeDesired).length;
                     int cArgVisible  = method.getVisibleParamCount();
                     int cArgRequired = method.getRequiredParamCount();

@@ -87,4 +87,8 @@ public class Exception extends nConst {
     public static nException $unsupported(Ctx ctx, java.lang.String text) {
         return new Unsupported(ctx).$init(ctx, text, null);
     }
+
+    public static nException $typeMismatch(Ctx ctx, java.lang.String text) {
+        return new TypeMismatch(ctx).$init(ctx, text, null);
+    }
 }

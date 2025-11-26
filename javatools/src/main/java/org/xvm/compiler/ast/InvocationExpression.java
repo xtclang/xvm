@@ -386,7 +386,7 @@ public class InvocationExpression
                 TypeConstant[] atypeConvRets = m_idConvert.getRawReturns();
                 TypeConstant   typeFn        = atypeConvRets[0];
 
-                assert typeFn.isA(pool.typeFunction());
+                assert typeFn.isFunction();
                 if (m_fCall) {
                     return pool.extractFunctionReturns(typeFn);
                 }
@@ -742,7 +742,7 @@ public class InvocationExpression
                 TypeConstant[] atypeConvRets = m_idConvert.getRawReturns();
                 TypeConstant   typeFn        = atypeConvRets[0];
 
-                assert typeFn.isA(pool.typeFunction());
+                assert typeFn.isFunction();
 
                 if (fCall) {
                     atypeResult = pool.extractFunctionReturns(typeFn);
@@ -957,7 +957,7 @@ public class InvocationExpression
 
                         cDefaults   = method.getDefaultParamCount();
                         cTypeParams = method.getTypeParamCount();
-                        if (cTypeParams > 0 && typeFn.isA(pool.typeFunction())) {
+                        if (cTypeParams > 0 && typeFn.isFunction()) {
                             Argument[] aargTypeParam = new Argument[cTypeParams];
                             for (int i = 0; i < cTypeParams; i++) {
                                 aargTypeParam[i] = ctx.getParameter(i);
@@ -1500,7 +1500,7 @@ public class InvocationExpression
             assert !m_fBindTarget;
             argFn = expr.generateArgument(ctx, code, false, errs);
             astFn = expr.getExprAST(ctx);
-            assert argFn.getType().isA(pool.typeFunction());
+            assert argFn.getType().isFunction();
         }
 
         // bind arguments and/or generate a call to the function specified by argFn; first, convert
@@ -2499,7 +2499,7 @@ public class InvocationExpression
             }
         }
 
-        if (exprLeft instanceof NameExpression nameLeft && typeLeft.isA(pool.typeFunction())) {
+        if (exprLeft instanceof NameExpression nameLeft && typeLeft.isFunction()) {
             // it appears that they try to use a variable or property, but have a function instead
             if (errsMain.hasError(Compiler.MISSING_METHOD) &&
                     infoLeft.findMethods(sName, -1, MethodKind.Any).isEmpty()) {
@@ -2680,7 +2680,7 @@ public class InvocationExpression
         // conversion to a function
         typeFn = typeFn.resolveTypedefs();
 
-        boolean        fFunction = typeFn.isA(pool.typeFunction());
+        boolean        fFunction = typeFn.isFunction();
         MethodConstant idConvert = null;
         if (!fFunction) {
             if (typeFn.isA(pool.typeMethod())) {

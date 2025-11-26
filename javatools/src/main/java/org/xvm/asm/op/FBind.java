@@ -5,12 +5,26 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.Label;
+
+import java.lang.constant.ClassDesc;
+import java.lang.constant.MethodTypeDesc;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.OpCallable;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitMethodDesc;
+import org.xvm.javajit.RegisterInfo;
+import org.xvm.javajit.TypeSystem;
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -19,6 +33,18 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
+
+import static java.lang.constant.ConstantDescs.CD_MethodHandle;
+import static java.lang.constant.ConstantDescs.CD_boolean;
+import static java.lang.constant.ConstantDescs.CD_int;
+import static java.lang.constant.ConstantDescs.CD_void;
+import static java.lang.constant.ConstantDescs.INIT_NAME;
+
+import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.CD_JavaObject;
+import static org.xvm.javajit.Builder.CD_TypeConstant;
+import static org.xvm.javajit.Builder.CD_nFunction;
+import static org.xvm.javajit.Builder.CD_nObj;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -195,6 +221,172 @@ public class FBind
         }
         return sb.toString();
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+
+        TypeSystem   ts     = bctx.typeSystem;
+        ConstantPool pool   = ts.pool();
+        RegisterInfo regFn  = bctx.ensureRegister(code, m_nFunctionId);
+        TypeConstant typeFn = regFn.type();
+
+        assert typeFn.isFunction() && regFn.cd() == CD_nFunction;
+        assert !bctx.isConstructor;
+
+        JitMethodDesc jmdBefore = JitMethodDesc.of(
+                pool.extractFunctionParams(typeFn),
+                pool.extractFunctionReturns(typeFn),
+                false, null, Integer.MAX_VALUE, ts);
+
+        MethodTypeDesc MD_Bind    = MethodTypeDesc.of(CD_MethodHandle, CD_int, CD_JavaObject);
+        boolean        fOptBefore = jmdBefore.isOptimized;
+
+         // initialize slots for the resulting handles
+        code.aload(regFn.slot())
+            .getfield(CD_nFunction, "stdMethod", CD_MethodHandle);
+        int slotStd = bctx.storeTempValue(code, CD_MethodHandle);
+
+        code.aload(regFn.slot())
+            .getfield(CD_nFunction, "optMethod", CD_MethodHandle);
+        int slotOpt = bctx.storeTempValue(code, CD_MethodHandle);
+
+        code.aload(regFn.slot())
+            .getfield(CD_nFunction, "immutable", CD_boolean);
+        int slotImm = bctx.storeTempValue(code, CD_boolean);
+
+        int[] anArg = m_anParamValue;
+        int   cArgs = anArg.length;
+
+        for (int i = 0; i < cArgs; i++) {
+            typeFn = pool.bindFunctionParam(typeFn, i);
+
+            JitMethodDesc jmdAfter = JitMethodDesc.of(
+                    pool.extractFunctionParams(typeFn),
+                    pool.extractFunctionReturns(typeFn),
+                    false, null, Integer.MAX_VALUE, ts);
+
+            boolean fOptAfter = jmdAfter.isOptimized;
+
+            /* The code we need to generate looks like the following:
+                 MethodHandle stdMethod = method.stdMethod;
+                 MethodHandle optMethod = method.optMethod;
+                 boolean      imm       = method.imm;
+                 for (arg : args) {
+                     if (!fOptBefore) {
+                        stdMethod = MethodHandles.insertArguments(stdMethod, i, arg);
+                        optMethod = null;
+                        imm      &= arg.$isImmut();
+                     } else if (!OptAfter) {
+                        stdMethod = MethodHandles.insertArguments(optMethod, i, arg);
+                        optMethod = null;
+                     } else {
+                        if (arg is unboxed) {
+                            stdMethod = MethodHandles.insertArguments(stdMethod, i, box(arg));
+                            optMethod = MethodHandles.insertArguments(optMethod, i, arg);
+                        } else if (arg is not primitive) {
+                            stdMethod = MethodHandles.insertArguments(stdMethod, i, arg);
+                            optMethod = MethodHandles.insertArguments(optMethod, i, arg);
+                            imm      &= arg.$isImmut();
+                        } else { // primitive, but not unboxed - conditional boxing failed
+                            stdMethod = MethodHandles.insertArguments(stdMethod, i, arg);
+                            optMethod = null;
+                        }
+                     }
+                 }
+                 retValue = new FunctionN(ctx, std, opt, imm);
+
+            */
+
+            // we assume that the indexes are sorted in the ascending order;
+            // after every step, the resulting function accepts one less parameter, so it needs to
+            // compensate the absolute position as long as Ctx argument
+            RegisterInfo regArg = bctx.ensureRegister(code, anArg[i]);
+            int          nPos   = 1 + m_anParamIx[i] - i;
+
+            if (!fOptBefore) {
+                assert !fOptAfter && !regArg.cd().isPrimitive();
+
+                bindArgument(code, slotStd, nPos, regArg, false);
+                code.aconst_null()
+                    .astore(slotOpt);
+
+                computeImmutable(code, slotImm, regArg);
+            } else if (!fOptAfter) {
+                assert regArg.cd().isPrimitive(); // transition from opt -> !opt
+
+                bindArgument(code, slotStd, nPos, regArg, false);
+                code.aconst_null()
+                    .astore(slotOpt);
+            } else if (regArg.cd().isPrimitive()) {
+                bindArgument(code, slotStd, nPos, regArg, true);
+                bindArgument(code, slotOpt, nPos, regArg, false);
+            } else if (!regArg.type().isPrimitive()) {
+                bindArgument(code, slotStd, nPos, regArg, false);
+                bindArgument(code, slotOpt, nPos, regArg, false);
+
+                computeImmutable(code, slotImm, regArg);
+            } else {
+                // the type is primitive, but the CD is not
+                bindArgument(code, slotStd, nPos, regArg, false);
+                code.aconst_null()
+                    .astore(slotOpt);
+            }
+
+            fOptBefore = fOptAfter;
+        }
+
+        ClassDesc cdFn = typeFn.ensureClassDesc(ts);
+        code.new_(cdFn)
+            .dup()
+            .aload(code.parameterSlot(0)); // ctx
+        Builder.loadTypeConstant(code, ts, typeFn);
+        code.aload(slotStd)
+            .aload(slotOpt)
+            .iload(slotImm)
+            .invokespecial(cdFn, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant,
+                    CD_MethodHandle, CD_MethodHandle, CD_boolean));
+
+        RegisterInfo regRet = bctx.ensureRegInfo(m_nRetValue, typeFn, cdFn, "");
+        bctx.storeValue(code, regRet);
+    }
+
+    private static void bindArgument(CodeBuilder code, int slotMethod, int nPos, RegisterInfo regArg, boolean fBox) {
+        code.aload(slotMethod)
+            .ldc(nPos);
+
+        // create an Object array with one element (for the single value to bind)
+        // and store the arg value at index zero
+        code.iconst_1()
+            .anewarray(CD_JavaObject)
+            .dup()
+            .iconst_0();
+        Builder.load(code, regArg.cd(), regArg.slot());
+        if (fBox) {
+            Builder.box(code, regArg.type(), regArg.cd());
+        } else if (regArg.cd().isPrimitive()) {
+            Builder.boxJava(code, regArg.cd());
+        }
+        code.aastore();
+
+        code.invokestatic(ClassDesc.of("java.lang.invoke.MethodHandles"), "insertArguments",
+                MethodTypeDesc.of(CD_MethodHandle, CD_MethodHandle, CD_int, CD_JavaObject.arrayType()))
+            .astore(slotMethod);
+    }
+
+    public static void computeImmutable(CodeBuilder code, int slotImm, RegisterInfo regArg) {
+        Label labelEnd = code.newLabel();
+        code.iload(slotImm)
+            .ifeq(labelEnd);
+        Builder.load(code, regArg.cd(), regArg.slot());
+        code.invokevirtual(CD_nObj, "$isImmut", MethodTypeDesc.of(CD_boolean))
+            .iand()
+            .istore(slotImm)
+            .labelBinding(labelEnd);
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private final int[] m_anParamIx;
     private       int[] m_anParamValue;

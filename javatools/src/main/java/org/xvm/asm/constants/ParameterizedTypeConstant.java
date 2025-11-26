@@ -826,6 +826,37 @@ public class ParameterizedTypeConstant
         var             listTypeParams = clz.getTypeParamsAsList();
         var             listContribs   = clz.collectConditionalIncorporates(this);
 
+        // TODO: REMOVE - compensation for Array handling in TypeConstant#buildJitClassName
+        if (m_constType.isArray() && !getParamType(0).isPrimitive()) {
+            return pool.ensureArrayType(pool.typeObject());
+        }
+
+        boolean fFunction;
+        if ((fFunction = m_constType.isFunction()) || m_constType.isMethod()) {
+            // functions are special; we need to canonicalize the params and return types
+
+            TypeConstant[] atypeParams  = pool.extractFunctionParams(this);
+            TypeConstant[] atypeReturns = pool.extractFunctionReturns(this);
+            boolean        fDiff        = false;
+
+            TypeConstant[] atypeCanon = toCanonicalTypes(atypeParams);
+            if (atypeCanon != null) {
+                atypeParams = atypeCanon;
+                fDiff       = true;
+            }
+            atypeCanon = toCanonicalTypes(atypeReturns);
+            if (atypeCanon != null) {
+                atypeReturns = atypeCanon;
+                fDiff        = true;
+            }
+
+            return fDiff
+                    ? fFunction
+                        ? pool.buildFunctionType(atypeParams, atypeReturns)
+                        : pool.buildMethodType(m_atypeParams[0], atypeParams, atypeReturns)
+                    : this;
+        }
+
         TypeConstant[] aconstOriginal  = m_atypeParams;
         TypeConstant[] aconstCanonical = aconstOriginal;
         boolean        fDiff           = false;
@@ -883,6 +914,25 @@ public class ParameterizedTypeConstant
                 : fDiff
                     ? pool.ensureParameterizedTypeConstant(m_constType, aconstCanonical)
                     : this;
+    }
+
+    /**
+     * @return an array of converted canonical types; null if no changes were made
+     */
+    private TypeConstant[] toCanonicalTypes(TypeConstant[] atype) {
+        boolean fDiff = false;
+        for (int i = 0, c = atype.length; i < c; ++i) {
+            TypeConstant typeOrig  = atype[i];
+            TypeConstant typeCanon = typeOrig.getCanonicalJitType();
+            if (!typeCanon.equals(typeOrig)) {
+                if (!fDiff) {
+                    atype = atype.clone();
+                    fDiff = true;
+                }
+                atype[i] = typeCanon;
+            }
+        }
+        return fDiff ? atype : null;
     }
 
     // ----- Constant methods ----------------------------------------------------------------------

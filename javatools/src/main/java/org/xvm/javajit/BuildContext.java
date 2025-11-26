@@ -5,6 +5,8 @@ import java.lang.classfile.Label;
 import java.lang.classfile.TypeKind;
 
 import java.lang.constant.ClassDesc;
+import java.lang.constant.DirectMethodHandleDesc;
+import java.lang.constant.MethodHandleDesc;
 import java.lang.constant.MethodTypeDesc;
 
 import java.util.ArrayDeque;
@@ -16,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
@@ -25,6 +28,7 @@ import org.xvm.asm.OpReturn;
 import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -44,17 +48,25 @@ import org.xvm.asm.op.GuardAll;
 import org.xvm.asm.op.Guarded;
 import org.xvm.asm.op.Jump;
 
+import static java.lang.constant.ConstantDescs.CD_MethodHandle;
 import static java.lang.constant.ConstantDescs.CD_Throwable;
 import static java.lang.constant.ConstantDescs.CD_boolean;
+import static java.lang.constant.ConstantDescs.CD_void;
+import static java.lang.constant.ConstantDescs.INIT_NAME;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_Exception;
+import static org.xvm.javajit.Builder.CD_JavaObject;
 import static org.xvm.javajit.Builder.CD_JavaString;
+import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nException;
+import static org.xvm.javajit.Builder.CD_nFunction;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.N_TypeMismatch;
+import static org.xvm.javajit.Builder.OPT;
 
 import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
+import static org.xvm.javajit.TypeSystem.ID_NUM;
 
 /**
  * Whatever is necessary for the method bytecode production.
@@ -72,7 +84,7 @@ public class BuildContext {
         this.methodStruct  = callChain[0].getMethodStructure();
         this.callDepth     = 0;
         this.methodDesc    = methodInfo.getJitDesc(typeSystem, typeInfo.getType());
-        this.methodJitName = null;
+        this.methodJitName = methodInfo.ensureJitMethodName(typeSystem);
         this.isFunction    = methodInfo.isFunction();
         this.isConstructor = methodInfo.isConstructor();
         this.isOptimized   = methodDesc.optimizedMD != null;
@@ -95,7 +107,9 @@ public class BuildContext {
         this.methodDesc = isGetter
                 ? propInfo.getGetterJitDesc(typeSystem)
                 : propInfo.getSetterJitDesc(typeSystem);
-        this.methodJitName = null;
+        this.methodJitName = isGetter
+                ? propInfo.ensureGetterJitMethodName(typeSystem)
+                : propInfo.ensureSetterJitMethodName(typeSystem);
         this.isFunction    = propInfo.isConstant();
         this.isConstructor = false;
         this.isOptimized   = methodDesc.optimizedMD != null;
@@ -147,7 +161,7 @@ public class BuildContext {
     public final MethodBody[]    callChain;
     public final MethodStructure methodStruct;
     public final JitMethodDesc   methodDesc;
-    public final String          methodJitName; // used only for deferred
+    public final String          methodJitName; // standard name
     public final boolean         isOptimized;
     public final boolean         isFunction;
     public final boolean         isConstructor;
@@ -700,7 +714,7 @@ public class BuildContext {
                         .loadLocal(Builder.toTypeKind(cd), doubleSlot.slot)
                         .goto_(endIf)
                         .labelBinding(ifTrue);
-                    builder.loadConstant(code, parameter.getDefaultValue());
+                    builder.loadConstant(this, code, parameter.getDefaultValue());
                     code.labelBinding(endIf);
                     return new SingleSlot(Op.A_STACK, reg.type(), cd, reg.name());
 
@@ -719,7 +733,10 @@ public class BuildContext {
     }
 
     /**
-     * Build the code to load an argument value on the Java stack.
+     * Build the code to load an argument value on the Java stack. If the argument represents a
+     * constant, the corresponding value gets loaded on the Java stack directly, without allocating
+     * a Java slot, in which case the RegisterInfo.slot() returns the value of {@link Op#A_STACK}
+     * (-1).
      *
      * @param targetDesc  the desired type description
      */
@@ -734,15 +751,15 @@ public class BuildContext {
                 Label endIf  = code.newLabel();
 
                 code.ifne(ifTrue);
-                builder.box(code, reg.type().removeNullable(), reg.cd());
+                Builder.box(code, reg.type().removeNullable(), reg.cd());
                 code.goto_(endIf)
                     .labelBinding(ifTrue);
-                    Builder.pop(code, doubleSlot.cd);
-                    Builder.loadNull(code);
+                Builder.pop(code, doubleSlot.cd);
+                Builder.loadNull(code);
                 code.labelBinding(endIf);
                 reg = new SingleSlot(Op.A_STACK, targetDesc.type, targetDesc.cd, reg.name() + "?");
             } else {
-                builder.box(code, reg.type(), reg.cd());
+                Builder.box(code, reg.type(), reg.cd());
                 reg = new SingleSlot(Op.A_STACK, targetDesc.type, targetDesc.cd, reg.name());
             }
         }
@@ -750,7 +767,29 @@ public class BuildContext {
     }
 
     /**
-     * Build the code to load a value for a constant on the stack.
+     * Check if the specified argument has been already assigned a Java slot. If the argument points
+     * to a constant, create a temporary Java slot for it. In either case, the corresponding value
+     * is not loaded on the Java stack.
+     */
+    public RegisterInfo ensureRegister(CodeBuilder code, int argId) {
+        if (argId >= 0) {
+            return getRegisterInfo(argId);
+        }
+        RegisterInfo reg = argId <= Op.CONSTANT_OFFSET
+                ? loadConstant(code, argId)
+                : loadPredefineArgument(code, argId);
+        if (reg.slot() == 0) {
+            return reg; // Op.A_THIS;
+        }
+
+        assert reg.isSingle() && reg.slot() < 0;
+
+        int slot = storeTempValue(code, reg.cd());
+        return new SingleSlot(slot, reg.type(), reg.cd(), reg.name());
+    }
+
+    /**
+     * Build the code to load a value for a constant on the Java stack.
      *
      * We **always** load a primitive value if possible.
      */
@@ -759,12 +798,12 @@ public class BuildContext {
     }
 
     /**
-     * Build the code to load a value for a constant on the stack.
+     * Build the code to load a value for a constant on the Java stack.
      *
      * We **always** load a primitive value if possible.
      */
     public RegisterInfo loadConstant(CodeBuilder code, Constant constant) {
-        return builder.loadConstant(code, constant);
+        return builder.loadConstant(this, code, constant);
     }
 
     /**
@@ -784,9 +823,73 @@ public class BuildContext {
         case Op.A_THIS:
             return loadThis(code);
 
+        case Op.A_SUPER: {
+            return loadSuper(code);
+        }
+
         default:
             throw new UnsupportedOperationException("id=" + argId);
         }
+    }
+
+    /**
+     * Build the code to load "super()" function instance on the Java stack.
+     */
+    private SingleSlot loadSuper(CodeBuilder code) {
+        // instantiate a function object (see Builder.loadConstant for MethodConstant)
+
+        int              nDepth      = callDepth + 1;
+        MethodBody       bodySuper   = callChain[nDepth];
+        MethodConstant   superId     = bodySuper.getIdentity();
+        IdentityConstant containerId = superId.getNamespace();
+        Component.Format format      = containerId.getComponent().getFormat();
+        String           jitName     = MethodInfo.getJitIdentity(callChain).ensureJitMethodName(typeSystem);
+        ClassDesc        containerCD;
+
+        if (format == Component.Format.MIXIN) {
+            // we need to generate a synthetic super
+            containerCD = ClassDesc.of(className);
+            jitName += ID_NUM + String.valueOf(nDepth);
+
+            buildSuper(jitName, nDepth);
+        } else {
+            containerCD = containerId.ensureClassDesc(typeSystem);
+        }
+
+        JitMethodDesc               jmd  = bodySuper.getJitDesc(typeSystem, typeInfo.getType());
+        DirectMethodHandleDesc.Kind kind = DirectMethodHandleDesc.Kind.SPECIAL;
+
+        DirectMethodHandleDesc stdMD = MethodHandleDesc.ofMethod(kind,
+                containerCD, methodJitName, jmd.standardMD);
+        DirectMethodHandleDesc optMD = isOptimized
+                ? MethodHandleDesc.ofMethod(kind, containerCD, methodJitName+OPT, jmd.optimizedMD)
+                : null;
+
+        TypeConstant fnType = bodySuper.getIdentity().getType();
+        assert fnType.isMethod();
+
+        fnType = pool().bindMethodTarget(fnType);
+
+        MethodTypeDesc bindDesc = MethodTypeDesc.of(CD_MethodHandle, CD_JavaObject);
+        ClassDesc      cd       = CD_nFunction;
+        code.new_(cd)
+            .dup()
+            .aload(code.parameterSlot(0)); // ctx
+        Builder.loadTypeConstant(code, typeSystem, fnType);
+        code.ldc(stdMD)
+            .aload(0)
+            .invokevirtual(CD_MethodHandle, "bindTo", bindDesc);
+        if (optMD == null) {
+            code.aconst_null();
+        } else {
+            code.ldc(optMD)
+                .aload(0)
+                .invokevirtual(CD_MethodHandle, "bindTo", bindDesc);
+        }
+        code.iconst_1() // immutable = true
+            .invokespecial(cd, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant,
+                CD_MethodHandle, CD_MethodHandle, CD_boolean));
+        return new SingleSlot(Op.A_STACK, fnType, cd, "");
     }
 
     /**
@@ -979,8 +1082,10 @@ public class BuildContext {
      * Ensure a {@link RegisterInfo} for the specified register id.
      */
     public RegisterInfo ensureRegInfo(int regId, TypeConstant type, ClassDesc cd, String name) {
-        return registerInfos.computeIfAbsent(regId, ix -> new SingleSlot(
-                scope.allocateLocal(ix, cd), type, cd, name));
+        return regId == Op.A_IGNORE
+            ? new SingleSlot(regId, type, cd, name)
+            : registerInfos.computeIfAbsent(regId, ix -> new SingleSlot(
+                    scope.allocateLocal(ix, cd), type, cd, name));
     }
 
     /**
@@ -1021,7 +1126,7 @@ public class BuildContext {
             Builder.load(code, origReg.cd(), origReg.slot());
             if (narrowedCD.isPrimitive() && !origReg.cd().isPrimitive()) {
                 code.checkcast(narrowedType.ensureClassDesc(typeSystem)); // boxed
-                builder.unbox(code, narrowedType, narrowedCD);
+                Builder.unbox(code, narrowedType, narrowedCD);
             } else {
                 code.checkcast(narrowedCD);
             }
@@ -1164,7 +1269,7 @@ public class BuildContext {
                         Label ifTrue = code.newLabel();
                         Label endIf  = code.newLabel();
                         code.ifne(ifTrue);
-                        builder.box(code, typeRet, cdRet);
+                        Builder.box(code, typeRet, cdRet);
                         code.goto_(endIf)
                             .labelBinding(ifTrue)
                             .pop();
@@ -1193,7 +1298,7 @@ public class BuildContext {
                         Label endIf  = code.newLabel();
                         code.iconst_0()
                             .if_icmpeq(ifTrue);
-                        builder.box(code, typeRet, cdRet);
+                        Builder.box(code, typeRet, cdRet);
                         code.goto_(endIf);
                         code.labelBinding(ifTrue)
                             .pop();
@@ -1275,6 +1380,15 @@ public class BuildContext {
     }
 
     /**
+     * Store a value for the specified ClassDesc on Java stack onto a temporary slot.
+     */
+    public int storeTempValue(CodeBuilder code, ClassDesc cd) {
+        int slot = scope.allocateJavaSlot(cd);
+        Builder.store(code, cd, slot);
+        return slot;
+    }
+
+    /**
      * Create a "deferred" context to generate a synthetic method representing a "super" method
      * in a call chain that originates from a mixin or annotation.
      */
@@ -1283,10 +1397,10 @@ public class BuildContext {
     }
 
     /**
-     * Create a "deferred" context to generate a synthetic function representing a function
-     * that originates from a mixin or annotation.
+     * Create a "deferred" context to generate a synthetic Java method representing a method or
+     * function that originates from a mixin, annotation or a lambda.
      */
-    public void buildFunction(String jitName, MethodBody body) {
+    public void buildMethod(String jitName, MethodBody body) {
         deferAssembly(new BuildContext(this, jitName, body));
     }
 

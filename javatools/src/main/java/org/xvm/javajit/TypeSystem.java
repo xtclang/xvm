@@ -8,8 +8,6 @@ import java.lang.classfile.attribute.SourceFileAttribute;
 
 import java.lang.constant.ClassDesc;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
@@ -27,7 +25,6 @@ import org.xvm.javajit.builders.EnumBuilder;
 import org.xvm.javajit.builders.EnumValueBuilder;
 import org.xvm.javajit.builders.EnumerationBuilder;
 import org.xvm.javajit.builders.ExceptionBuilder;
-import org.xvm.javajit.builders.FunctionBuilder;
 import org.xvm.javajit.builders.ModuleBuilder;
 
 import static org.xvm.javajit.Builder.MODULE;
@@ -149,16 +146,6 @@ public class TypeSystem {
      * The ModuleLoaders that this TypeSystem is responsible for generating and loading code for.
      */
     public final ModuleLoader[] owned;
-
-    /**
-     * A cache of function JIT class names keyed by the function types.
-     */
-    protected final Map<TypeConstant, String> functionClasses = new ConcurrentHashMap<>();
-
-    /**
-     * A cache of function types keyed by the corresponding JIT function class suffix ("$N").
-     */
-    protected final Map<String, TypeConstant> functionTypes = new ConcurrentHashMap<>();
 
     // special identifier characters used for encoding class/method/field names in Java ClassFiles
     public static final int  ESC      = 0x10458; // "𐑘"
@@ -306,13 +293,6 @@ public class TypeSystem {
      */
     public byte[] genClass(ModuleLoader moduleLoader, String name) {
         String className = moduleLoader.prefix + name;
-        if (className.startsWith(Builder.N_nFunction)) {
-            TypeConstant fnType = functionTypes.get(className.substring(Builder.N_nFunction.length() + 1));
-            assert fnType != null;
-            return ClassFile.of().
-                build(ClassDesc.of(className), classBuilder ->
-                    new FunctionBuilder(this, fnType).assemblePure(className, classBuilder));
-        }
 
         ModuleStructure module = moduleLoader.module;
         Artifact        art    = deduceArtifact(module, name);
@@ -444,9 +424,8 @@ public class TypeSystem {
             }
         }
 
-        // TEMPORARY; TODO REPLACE
-        TypeConstant type = null;
-        int idOffset = name.indexOf("ꖛ");
+        TypeConstant type     = null;
+        int          idOffset = name.indexOf(ID_NUM);
         if (idOffset > 0) {
             // the name represents a parameterized type with primitive actual type(s)
             type = (TypeConstant) pool().getConstant(Integer.valueOf(name.substring(idOffset+1)));
@@ -460,30 +439,6 @@ public class TypeSystem {
             return new Artifact(type, struct, shape);
         }
         return null;
-    }
-
-    /**
-     * Ensure a unique Java class name for the specified Ecstasy type.
-     */
-    public String ensureJitClassName(TypeConstant type) {
-        if (type.isSingleUnderlyingClass(true)) {
-            if (type.isA(pool().typeFunction())) {
-                // Jit class name for functions has format of "xFunction.$n"
-
-                String name = functionClasses.computeIfAbsent(type, t -> {
-                    String suffix =
-                        (t.getParamTypesArray().length == 0 // degenerated "function void()"
-                            ? "ꖛ0"
-                            : xvm.createUniqueSuffix(""));
-                    functionTypes.putIfAbsent(suffix, type);
-                    return Builder.N_nFunction + '$' + suffix;
-                });
-                return name;
-            }
-
-            return type.ensureJitClassName(this);
-        }
-        throw new IllegalArgumentException("No JIT class for " + type.getValueString());
     }
 
     /**

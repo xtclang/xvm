@@ -1,6 +1,5 @@
 package org.xtclang.ecstasy;
 
-import org.xtclang.ecstasy.nFunction.ꖛ0;
 import org.xvm.javajit.Ctx;
 
 /**
@@ -16,7 +15,7 @@ public interface Service extends Object {
     /**
      * {@code void callLater(function void doLater())}
      */
-    void callLater(Ctx ctx, ꖛ0 doLater);
+    void callLater(Ctx ctx, nFunction doLater);
 
     /**
      * {@code <Value> SharedContext<Value>.Token? findContextToken(SharedContext<Value> ctx)}

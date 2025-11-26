@@ -1,6 +1,5 @@
 package org.xtclang.ecstasy;
 
-import org.xtclang.ecstasy.nFunction.ꖛ0;
 import org.xvm.javajit.Ctx;
 
 /**
@@ -27,8 +26,16 @@ public abstract class nService
     // ----- Service interface ---------------------------------------------------------------------
 
     @Override
-    public void callLater(Ctx ctx, ꖛ0 doLater) {
-        doLater.$call(ctx); // TODO: create a new fiber that calls "doLater.$call(ctx)"
+    public void callLater(Ctx ctx, nFunction doLater) {
+        try {
+            doLater.stdMethod.invokeExact();
+        } catch (nException nEx) {
+            throw nEx;
+        } catch (Throwable e) {
+            // documentation for invokeExact() says it can throw WrongMethodTypeException; any
+            // other exception should have originated in Ecstasy code as an nException
+            throw Exception.$typeMismatch(ctx, e.getMessage());
+        }
     }
 
     @Override

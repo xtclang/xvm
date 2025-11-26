@@ -534,9 +534,7 @@ public class SignatureConstant
      *         target type
      */
     public TypeConstant asMethodType(ConstantPool pool, TypeConstant typeTarget) {
-        return pool.ensureParameterizedTypeConstant(pool.typeMethod(), typeTarget,
-                pool.ensureTupleType(m_aconstParams),
-                pool.ensureTupleType(m_aconstReturns));
+        return pool.buildMethodType(typeTarget, m_aconstParams, m_aconstReturns);
     }
 
     /**

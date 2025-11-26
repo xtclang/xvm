@@ -17,6 +17,7 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.Builder;
 import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
@@ -96,9 +97,9 @@ public class Move
         if (typeFrom.isA(typeTo)) {
             if (cdFrom.isPrimitive() ^ cdTo.isPrimitive()) {
                 if (cdFrom.isPrimitive()) {
-                    bctx.builder.box(code, typeFrom, cdFrom);
+                    Builder.box(code, typeFrom, cdFrom);
                 } else {
-                    bctx.builder.unbox(code, typeTo, cdTo);
+                    Builder.unbox(code, typeTo, cdTo);
                 }
             }
         } else {
@@ -107,12 +108,12 @@ public class Move
                     throw new IllegalStateException("Unreconcilable types " +
                         typeFrom.getValueString() + " -> " + typeTo.getValueString());
                 }
-                bctx.builder.box(code, typeFrom, cdFrom);
+                Builder.box(code, typeFrom, cdFrom);
             }
             // TODO: generateCheckCast()
             code.checkcast(regTo.type().ensureClassDesc(bctx.typeSystem));
             if (cdTo.isPrimitive()) {
-                bctx.builder.unbox(code, typeTo, cdTo);
+                Builder.unbox(code, typeTo, cdTo);
             }
         }
         bctx.storeValue(code, regTo);

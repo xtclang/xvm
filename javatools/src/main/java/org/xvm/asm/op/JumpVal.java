@@ -400,12 +400,12 @@ public class JumpVal
         }
 
         switch (constant) {
-        case ByteConstant _       -> buildByteSwitch(bctx, code, regArg);
-        case CharConstant _       -> buildCharSwitch(bctx, code, regArg);
-        case IntConstant _        -> buildLongSwitch(bctx, code, regArg);
-        case StringConstant _     -> buildStringSwitch(bctx, code, regArg);
-        case EnumValueConstant _  -> buildEnumSwitch(bctx, code, regArg);
-        default                   -> buildIfLadder(bctx, code, regArg);
+            case ByteConstant      _ -> buildByteSwitch(bctx, code, regArg);
+            case CharConstant      _ -> buildCharSwitch(bctx, code, regArg);
+            case IntConstant       _ -> buildLongSwitch(bctx, code, regArg);
+            case StringConstant    _ -> buildStringSwitch(bctx, code, regArg);
+            case EnumValueConstant _ -> buildEnumSwitch(bctx, code, regArg);
+            default                  -> buildIfLadder(bctx, code, regArg);
         }
     }
 
