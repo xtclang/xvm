@@ -169,7 +169,6 @@ module test8.examples.org {
 
         static Int mul(Int x, Int y) = x + 2*y;
 
-
         static Int log(Int count, String message) {
             while (count-- > 0) {
                 console.print(message);
