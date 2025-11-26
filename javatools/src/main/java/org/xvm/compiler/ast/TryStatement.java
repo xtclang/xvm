@@ -221,7 +221,7 @@ public class TryStatement
 
                 if (catchNew == null) {
                     fValid = false;
-                } else {
+                } else if (fValid) {
                     if (catchNew != catchOld) {
                         catches.set(i, catchNew);
                     }
