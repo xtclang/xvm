@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
@@ -23,6 +24,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.IdentityConstant;
@@ -80,7 +82,21 @@ public class CommonBuilder
     protected final ClassStructure   classStruct;
     protected final IdentityConstant thisId;
 
+    /**
+     * The shallow size of object in bytes.
+     */
     protected long implSize;
+
+    /**
+     * Methods that were added during the compilation. They are either nested in properties/methods
+     * or methods declared on the mixins or annotations that were added to the "impl" class.
+     */
+    protected Set<IdentityConstant> extraMethods = new HashSet<>();
+
+    /**
+     * TEMPORARY: compensation for TypeInfo dupes.
+     */
+    protected final Set<String> methodNames = new HashSet<>();
 
     @Override
     public void assembleImpl(String className, ClassBuilder classBuilder) {
@@ -109,7 +125,7 @@ public class CommonBuilder
         TypeConstant superType = typeInfo.getExtends();
         return superType == null
             ? CD_nObj
-            : ClassDesc.of(typeSystem.ensureJitClassName(superType));
+            : superType.ensureClassDesc(typeSystem);
     }
 
     /**
@@ -212,7 +228,7 @@ public class CommonBuilder
                         // ignore "implements Object" for classes
                         continue;
                     }
-                    interfaces.add(ClassDesc.of(typeSystem.ensureJitClassName(contribType)));
+                    interfaces.add(contribType.ensureClassDesc(typeSystem));
                     break;
             }
         }
@@ -762,6 +778,7 @@ public class CommonBuilder
                     method.getHead().getImplementation() == Implementation.Declared) {
                 assembleImplMethod(className, classBuilder, method);
             }
+
             if (shouldGenerate(method.getIdentity())) {
                 assembleImplMethod(className, classBuilder, method);
             }
@@ -801,7 +818,12 @@ public class CommonBuilder
         boolean cap    = method.isCapped();
         boolean router = false;
 
-        String jitName = method.getJitIdentity().ensureJitMethodName(typeSystem);
+        String jitName = method.ensureJitMethodName(typeSystem);
+
+        // TODO REMOVE: temporary compensation for duplicates in the TypeInfo
+        if (!methodNames.add(jitName)) {
+            return;
+        }
 
         if (!cap) {
             MethodBody[] chain = method.ensureOptimizedMethodChain(typeInfo);
@@ -1325,17 +1347,25 @@ public class CommonBuilder
 
         BuildContext bctxDeferred = bctx.getDeferred();
         while (bctxDeferred != null) {
-            BuildContext   bctxNext = bctxDeferred;
-            JitMethodDesc  jmdNext  = bctxNext.methodDesc;
-            boolean        isOpt    = jmdNext.isOptimized;
-            MethodTypeDesc mdNext   = isOpt ? jmdNext.optimizedMD : jmdNext.standardMD;
-            String         nameNext = bctxNext.methodJitName;
-            if (isOpt) {
-                nameNext += OPT;
-            }
-            classBuilder.withMethod(nameNext, mdNext, flags, methodBuilder ->
-                methodBuilder.withCode(code -> generateCode(mdNext, bctxNext, code)));
+            BuildContext    bctxNext     = bctxDeferred;
+            MethodStructure methodStruct = bctxNext.methodStruct;
+            boolean         fStatic      = methodStruct.isStatic();
 
+            if (extraMethods.add(methodStruct.getIdentityConstant())) {
+                JitMethodDesc  jmdNext  = bctxNext.methodDesc;
+                boolean        isOpt    = jmdNext.isOptimized;
+                MethodTypeDesc mdNext   = isOpt ? jmdNext.optimizedMD : jmdNext.standardMD;
+                String         nameNext = bctxNext.methodJitName;
+                if (isOpt) {
+                    assembleMethodWrapper(className, classBuilder, nameNext, jmdNext, fStatic, false);
+                    nameNext += OPT;
+                }
+
+                int flagsNext =  fStatic ? flags | ClassFile.ACC_STATIC : flags;
+
+                classBuilder.withMethodBody(nameNext, mdNext, flagsNext,
+                    code -> generateCode(mdNext, bctxNext, code));
+            }
             bctxDeferred = bctxNext.getDeferred();
         }
     }
@@ -1382,6 +1412,7 @@ public class CommonBuilder
         "Test", "test",
         "IOException", "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState",
         "Boolean", "Ordered",
+//        "Array",
         "TerminalConsole",
     };
     private final static HashSet<String> SKIP_SET = new HashSet<>();

@@ -78,12 +78,11 @@ import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
 import org.xvm.util.TransientThreadLocal;
 
-import static org.xvm.javajit.Builder.N_nArrayChar;
-
 import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
 import static org.xvm.javajit.JitFlavor.Specific;
 import static org.xvm.javajit.JitFlavor.Widened;
+
 import static org.xvm.javajit.TypeSystem.ID_NUM;
 import static org.xvm.javajit.TypeSystem.enumerationClass;
 
@@ -1424,6 +1423,22 @@ public abstract class TypeConstant
         TypeConstant constThis = resolveTypedefs();
         assert !constThis.containsUnresolved();
         return constThis.isA(getConstantPool().typeArray());
+    }
+
+    /**
+     * @return true iff the type is a Function type
+     */
+    public boolean isFunction() {
+        TypeConstant constThis = resolveTypedefs();
+        return constThis.isA(getConstantPool().typeFunction());
+    }
+
+    /**
+     * @return true iff the type is a Method type
+     */
+    public boolean isMethod() {
+        TypeConstant constThis = resolveTypedefs();
+        return constThis.isA(getConstantPool().typeMethod());
     }
 
     /**
@@ -6460,7 +6475,7 @@ public abstract class TypeConstant
                         default -> throw new IllegalStateException();
                     };
                     case 'I' -> switch (idEl.getName()) {
-                        case "Char"   -> N_nArrayChar;
+                        case "Char"   -> Builder.N_nArrayChar;
                         case "Int8"   -> Builder.N_nArrayObj;
                         case "Int16"  -> Builder.N_nArrayObj;
                         case "Int32"  -> Builder.N_nArrayObj;
@@ -6472,6 +6487,7 @@ public abstract class TypeConstant
                     default -> throw new UnsupportedOperationException();
                 };
             } else {
+                // REVIEW CP: this is wrong
                 return Builder.N_nArrayObj;
             }
         }
@@ -6496,7 +6512,14 @@ public abstract class TypeConstant
                     : enumerationClass(typeValue.ensureJitClassName(ts));
         }
 
-        StringBuilder sb = new StringBuilder().append(loader.prefix).append(id.getJitName(ts));
+        if (id.equals(pool.clzFunction())) {
+            return Builder.N_nFunction;
+        }
+
+        StringBuilder sb = new StringBuilder()
+            .append(loader.prefix)
+            .append(id.getJitName(ts));
+
         TypeConstant typeCanonical = getCanonicalJitType();
         if (typeCanonical.getParamsCount() > 0) {
             // TODO CP
@@ -6528,7 +6551,7 @@ public abstract class TypeConstant
         }
         assert isSingleUnderlyingClass(true);
 
-        return new JitTypeDesc(getCanonicalJitType(), Specific, ClassDesc.of(ts.ensureJitClassName(this)));
+        return new JitTypeDesc(getCanonicalJitType(), Specific, ensureClassDesc(ts));
     }
 
     /**

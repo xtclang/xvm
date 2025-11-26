@@ -463,7 +463,7 @@ public class LambdaExpression
                         break;
                     }
                 }
-            } else if (typeRequired.isA(pool.typeFunction())) {
+            } else if (typeRequired.isFunction()) {
                 atypeReqParams  = pool.extractFunctionParams(typeRequired);
                 atypeReqReturns = pool.extractFunctionReturns(typeRequired);
                 fCondReturn     = pool.isConditionalReturn(typeRequired);

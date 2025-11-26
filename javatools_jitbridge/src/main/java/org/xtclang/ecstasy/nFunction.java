@@ -1,16 +1,40 @@
 package org.xtclang.ecstasy;
 
+import java.lang.invoke.MethodHandle;
+
 import org.xtclang.ecstasy.collections.Tuple;
 
 import org.xtclang.ecstasy.reflect.Function;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.javajit.Ctx;
 
 /**
- * All Ecstasy "function" types must extend this class.
+ * Native "Function" support.
  */
-public abstract class nFunction
-    implements Function {
+public class nFunction extends nObj implements Function {
+    public nFunction(Ctx ctx, TypeConstant type,
+                     MethodHandle stdMethod, MethodHandle optMethod, boolean immmutable) {
+        super(ctx);
+
+        assert type.isFunction();
+
+        this.type      = type;
+        this.stdMethod = stdMethod;
+        this.optMethod = optMethod;
+        this.immutable = immmutable;
+    }
+
+    public final TypeConstant type;
+    public final MethodHandle stdMethod;
+    public final MethodHandle optMethod;
+    public final boolean      immutable;
+
+    @Override
+    public TypeConstant $xvmType(Ctx ctx) {
+        return type;
+    }
 
     @Override
     public Tuple invoke(Ctx ctx, Tuple args) {
@@ -19,20 +43,8 @@ public abstract class nFunction
         return null;
     }
 
-    /**
-     * This class is registered as a bridge between the Signature of "void()" and the Function type
-     */
-    public abstract static class ꖛ0 extends nFunction {
-        /**
-         * This name is registered as a bridge and needs to be implemented by all native or
-         * auto-generated Function classes.
-         */
-        abstract void $call(Ctx ctx);
-
-        @Override
-        public Tuple invoke(Ctx ctx, Tuple args) {
-            $call(ctx);
-            return nTuple.Empty;
-        }
+    @Override
+    public boolean $isImmut() {
+        return immutable;
     }
 }

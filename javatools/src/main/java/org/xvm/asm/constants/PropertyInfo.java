@@ -1408,7 +1408,7 @@ public class PropertyInfo
         ClassDesc cd;
 
         if ((cd = JitTypeDesc.getPrimitiveClass(type)) != null) {
-            ClassDesc cdStd  = ClassDesc.of(ts.ensureJitClassName(type));
+            ClassDesc cdStd = type.ensureClassDesc(ts);
 
             apdStdParam = new JitParamDesc[] {
                 new JitParamDesc(type, Specific, cdStd, 0, 0, false)};
@@ -1427,7 +1427,7 @@ public class PropertyInfo
         } else {
             assert type.isSingleUnderlyingClass(true);
 
-            cd = ClassDesc.of(ts.ensureJitClassName(type));
+            cd = type.ensureClassDesc(ts);
             apdStdParam = new JitParamDesc[] {
                 new JitParamDesc(type, Specific, cd, 0, 0, false)};
         }

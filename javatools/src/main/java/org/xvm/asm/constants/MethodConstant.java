@@ -295,34 +295,11 @@ public class MethodConstant
                     ix++;
                 }
                 assert fFound;
-                sJitName = ix == 0 ? getName() : getName() + "$" + ix;
+                sJitName = computePrefix(ts) + (ix == 0 ? getName() : getName() + "$" + ix);
             } else {
-                StringBuilder    prefix   = new StringBuilder();
-                IdentityConstant idParent = getNamespace();
-
                 String sReservedName = NativeNames.findReservedJitName(this);
                 if (sReservedName == null) {
-                    ComputeName: while (true) {
-                        switch (idParent.getFormat()) {
-                        case Class, Package, Module:
-                            break ComputeName;
-
-                        case Property:
-                            prefix.insert(0, '$')
-                                  .insert(0, ((PropertyConstant) idParent).ensureJitPropertyName(ts));
-                            break;
-
-                        case Method:
-                            prefix.insert(0, '$')
-                                  .insert(0, ((MethodConstant) idParent).ensureJitMethodName(ts));
-                            break;
-
-                        default:
-                            throw new IllegalStateException();
-                        }
-                        idParent = idParent.getNamespace();
-                    }
-
+                    String            prefix = computePrefix(ts);
                     SignatureConstant sigJit = getSignature();
                     if (!prefix.isEmpty()) {
                         sigJit  = sigJit.getConstantPool().ensureSignatureConstant(
@@ -336,6 +313,31 @@ public class MethodConstant
             m_sJitName = sJitName;
         }
         return sJitName;
+    }
+
+    private String computePrefix(TypeSystem ts) {
+        StringBuilder    prefix   = new StringBuilder();
+        IdentityConstant idParent = getNamespace();
+        while (true) {
+            switch (idParent.getFormat()) {
+            case Class, Package, Module:
+                return prefix.toString();
+
+            case Property:
+                prefix.insert(0, '$')
+                      .insert(0, ((PropertyConstant) idParent).ensureJitPropertyName(ts));
+                break;
+
+            case Method:
+                prefix.insert(0, '$')
+                      .insert(0, ((MethodConstant) idParent).ensureJitMethodName(ts));
+                break;
+
+            default:
+                throw new IllegalStateException();
+            }
+            idParent = idParent.getNamespace();
+        }
     }
 
 
@@ -441,8 +443,8 @@ public class MethodConstant
                 IdentityConstant idTarget = getNamespace();
                 TypeConstant     typeTarget;
 
-                if (idTarget.isClass()) {
-                    typeTarget = ((ClassStructure) idTarget.getComponent()).getFormalType();
+                if (idTarget.getComponent() instanceof ClassStructure clz) {
+                    typeTarget = clz.getFormalType();
                     if (isConstructor()) {
                         typeTarget = pool.ensureAccessTypeConstant(typeTarget, Access.STRUCT);
                     }

@@ -3251,6 +3251,21 @@ public class ConstantPool
     }
 
     /**
+     * Build a TypeConstant for a Method.
+     *
+     * @param typeTarget    the targete type
+     * @param atypeParams   the parameter types of the method
+     * @param atypeReturns  the return types of the method
+     *
+     * @return the method type
+     */
+    public TypeConstant buildMethodType(TypeConstant typeTarget,
+                                        TypeConstant[] atypeParams, TypeConstant... atypeReturns) {
+        return ensureParameterizedTypeConstant(
+                typeMethod(), typeTarget, ensureTupleType(atypeParams), ensureTupleType(atypeReturns));
+    }
+
+    /**
      * Build a TypeConstant for a function with conditional return.
      *
      * @param atypeParams   the parameter types of the function
@@ -3371,7 +3386,7 @@ public class ConstantPool
      * @return a new function type that skips the specified parameter
      */
     public TypeConstant bindFunctionParam(TypeConstant typeFn, int iParam) {
-        assert typeFn.isA(typeFunction()) && typeFn.getParamsCount() > 0;
+        assert typeFn.isFunction() && typeFn.getParamsCount() > 0;
 
         TypeConstant typeP = typeFn.getParamType(0);
         TypeConstant typeR = typeFn.getParamType(1);
@@ -3394,6 +3409,28 @@ public class ConstantPool
             typeP = ensureTupleType(atypeNew);
         }
 
+        return ensureParameterizedTypeConstant(typeFunction(), typeP, typeR);
+    }
+
+    /**
+     * Create a new function type by binding the method target.
+     *
+     * @param typeMethod  the method type
+     *
+     * @return a new function type
+     */
+    public TypeConstant bindMethodTarget(TypeConstant typeMethod) {
+        assert typeMethod.isMethod() && typeMethod.getParamsCount() > 0;
+
+        TypeConstant typeP = typeMethod.getParamType(1);
+        TypeConstant typeR = typeMethod.getParamType(2);
+
+        if (typeP.getParamsCount() == 0) {
+            typeP = typeTuple0();
+        }
+        if (typeR.getParamsCount() == 0) {
+            typeR = typeTuple0();
+        }
         return ensureParameterizedTypeConstant(typeFunction(), typeP, typeR);
     }
 

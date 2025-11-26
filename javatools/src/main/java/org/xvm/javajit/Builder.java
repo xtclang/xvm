@@ -5,10 +5,13 @@ import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.TypeKind;
 
 import java.lang.constant.ClassDesc;
+import java.lang.constant.DirectMethodHandleDesc;
+import java.lang.constant.MethodHandleDesc;
 import java.lang.constant.MethodTypeDesc;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ByteConstant;
@@ -16,6 +19,9 @@ import org.xvm.asm.constants.CharConstant;
 import org.xvm.asm.constants.EnumValueConstant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.LiteralConstant;
+import org.xvm.asm.constants.MethodBody;
+import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.NamedCondition;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
@@ -27,6 +33,7 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.javajit.BuildContext.SingleSlot;
 import org.xvm.javajit.TypeSystem.ClassfileShape;
 
+import static java.lang.constant.ConstantDescs.CD_MethodHandle;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
@@ -70,29 +77,20 @@ public abstract class Builder {
     // ----- helper methods ------------------------------------------------------------------------
 
     /**
-     * Compute a MethodTypeDesc for a Java method with the specified parameter and return types.
+     * Build the code to load a value for a constant on the Java stack.
+     *
+     * We **always** load a primitive value if possible.
      */
-    public MethodTypeDesc computeMethodDesc(TypeConstant[] paramTypes,
-                                            TypeConstant[] returnTypes) {
-        int         paramCount = paramTypes.length;
-        ClassDesc[] paramCDs   = new ClassDesc[paramCount + 1];
-
-        paramCDs[0] = ClassDesc.of(Ctx.class.getName());
-
-        for (int i = 0; i < paramCount; i++)
-            {
-            paramCDs[i+1] = paramTypes[i].ensureClassDesc(typeSystem);
-            }
-        return MethodTypeDesc.of(returnTypes.length == 0 ? CD_void :
-                returnTypes[0].ensureClassDesc(typeSystem), paramCDs);
-        }
+    public RegisterInfo loadConstant(CodeBuilder code, Constant constant) {
+        return loadConstant(null, code, constant);
+    }
 
     /**
      * Build the code to load a value for a constant on the Java stack.
      *
      * We **always** load a primitive value if possible.
      */
-    public RegisterInfo loadConstant(CodeBuilder code, Constant constant) {
+    public RegisterInfo loadConstant(BuildContext bctx, CodeBuilder code, Constant constant) {
         // see NativeContainer#getConstType()
 
         switch (constant) {
@@ -159,7 +157,7 @@ public abstract class Builder {
             Builder.loadTypeConstant(code, typeSystem, type);
             return new SingleSlot(Op.A_STACK, type.getType(), CD_TypeConstant, "");
 
-        case PropertyConstant propId:
+        case PropertyConstant propId: {
             // support for the "local property" mode
             code.aload(0);
             JitMethodDesc jmd = loadProperty(code, getThisType(), propId);
@@ -172,6 +170,92 @@ public abstract class Builder {
                 throw new UnsupportedOperationException("TODO multislot property");
             }
             return new SingleSlot(Op.A_STACK, type, jtd.cd, "");
+        }
+
+        case MethodConstant methodId: {
+            if (bctx == null) {
+                throw new IllegalStateException("Context is missing");
+            }
+
+            // 1) ensure the method exists
+            String     jitName = methodId.ensureJitMethodName(typeSystem);
+            MethodBody body;
+            if (methodId.isLambda()) {
+                // generate the method itself
+                MethodStructure lambda = (MethodStructure) methodId.getComponent();
+                jitName = jitName.replace("->", LAMBDA);
+                body    = new MethodBody(lambda);
+                bctx.buildMethod(jitName, body);
+            } else {
+                MethodInfo method = bctx.typeInfo.getMethodById(methodId);
+                body = method.getHead();
+                if (body.getIdentity().getNestedDepth() > 2) {
+                    // methods nested inside properties or methods are not visible otherwise
+                    // and need to built on-the-spot
+                    bctx.buildMethod(jitName, body);
+                }
+            }
+
+            // 2) create the MethodHandle(s)
+            TypeConstant  containerType = bctx.typeInfo.getType();
+            ClassDesc     containerCD   = ClassDesc.of(bctx.className);
+            JitMethodDesc jmd           = body.getJitDesc(typeSystem, containerType);
+            boolean       isFunction    = body.getMethodStructure().isFunction();
+
+            DirectMethodHandleDesc.Kind kind = isFunction
+                    ? DirectMethodHandleDesc.Kind.STATIC
+                    : DirectMethodHandleDesc.Kind.VIRTUAL;
+
+            DirectMethodHandleDesc stdMD = MethodHandleDesc.ofMethod(kind,
+                    containerCD, jitName, jmd.standardMD);
+
+            DirectMethodHandleDesc optMD = jmd.isOptimized
+                    ? MethodHandleDesc.ofMethod(kind, containerCD, jitName+OPT, jmd.optimizedMD)
+                    : null;
+
+            TypeConstant type = body.getIdentity().getType();
+            if (isFunction) {
+                // 3) instantiate a function object
+                //      new FunctionN(ctx, stdHandle, optHandle, immutable);
+                assert type.isFunction();
+
+                ClassDesc cd = CD_nFunction;
+                code.new_(cd)
+                    .dup()
+                    .aload(code.parameterSlot(0)); // ctx
+                loadTypeConstant(code, typeSystem, type);
+                code.ldc(stdMD);
+                if (optMD == null) {
+                    code.aconst_null();
+                } else {
+                    code.ldc(optMD);
+                }
+                code.iconst_1() // immutable = true
+                    .invokespecial(cd, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant,
+                        CD_MethodHandle, CD_MethodHandle, CD_boolean));
+                return new SingleSlot(Op.A_STACK, type, cd, "");
+            } else {
+                // 3) instantiate an nMethod object
+                //      new nMethod(ctx, type, stdHandle, optHandle);
+
+                assert type.isMethod();
+
+                ClassDesc cd = CD_nMethod;
+                code.new_(cd)
+                    .dup()
+                    .aload(code.parameterSlot(0)); // ctx
+                loadTypeConstant(code, typeSystem, type);
+                code.ldc(stdMD);
+                if (optMD == null) {
+                    code.aconst_null();
+                } else {
+                    code.ldc(optMD);
+                }
+                code.invokespecial(cd, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant,
+                        CD_MethodHandle, CD_MethodHandle));
+                return new SingleSlot(Op.A_STACK, type, cd, "");
+            }
+        }
 
         default:
             break;
@@ -387,18 +471,18 @@ public abstract class Builder {
      * Generate unboxing opcodes for a wrapper reference on the stack and the specified primitive
      * class.
      *
-     * In: the boxed reference
-     * Out: unboxed primitive value
+     * In: a boxed XVM reference
+     * Out: the unboxed primitive value
      *
      * @param type the primitive type
      * @param cd   the corresponding ClassDesc
      */
-    public void unbox(CodeBuilder code, TypeConstant type, ClassDesc cd) {
+    public static void unbox(CodeBuilder code, TypeConstant type, ClassDesc cd) {
         assert cd.isPrimitive() && type.isPrimitive();
 
         switch (cd.descriptorString()) {
         case "Z": // boolean
-            assert type.equals(typeSystem.pool().typeBoolean());
+            assert type.equals(type.getConstantPool().typeBoolean());
             code.getfield(CD_Boolean, "$value", cd);
             break;
 
@@ -431,15 +515,15 @@ public abstract class Builder {
     /**
      * Generate boxing opcodes for a primitive value of the specified primitive class on the stack.
      *
-     * In: unboxed primitive value
-     * Out: the boxed reference
+     * In: an unboxed primitive value
+     * Out: the boxed XVM reference
      */
-    public void box(CodeBuilder code, TypeConstant type, ClassDesc cd) {
+    public static void box(CodeBuilder code, TypeConstant type, ClassDesc cd) {
         assert cd.isPrimitive() && type.isPrimitive();
 
         switch (cd.descriptorString()) {
         case "Z": // boolean
-            assert type.equals(typeSystem.pool().typeBoolean());
+            assert type.equals(type.getConstantPool().typeBoolean());
             code.invokestatic(CD_Boolean, "$box", MD_Boolean_box);
             break;
 
@@ -462,6 +546,34 @@ public abstract class Builder {
                 case "UInt32" -> code.invokestatic(CD_UInt32, "$box", MD_UInt32_box);
                 default       -> throw new IllegalStateException();
             }
+            break;
+
+        default:
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    /**
+     * Generate Java boxing opcodes for a primitive value of the specified primitive class on the
+     * stack.
+     *
+     * In: an unboxed primitive value
+     * Out: the boxed Java reference
+     */
+    public static void boxJava(CodeBuilder code, ClassDesc cd) {
+        assert cd.isPrimitive();
+
+        switch (cd.descriptorString()) {
+        case "Z": // boolean
+            code.invokestatic(CD_JavaBoolean, "valueOf", MethodTypeDesc.of(CD_JavaBoolean, CD_boolean));
+            break;
+
+        case "J": // long
+            code.invokestatic(CD_JavaLong, "valueOf", MethodTypeDesc.of(CD_JavaLong, CD_long));
+            break;
+
+        case "I": // int
+            code.invokestatic(CD_JavaInteger, "valueOf", MethodTypeDesc.of(CD_JavaInteger, CD_int));
             break;
 
         default:
@@ -672,18 +784,20 @@ public abstract class Builder {
     public static final String N_nEnum        = "org.xtclang.ecstasy.nEnum";
     public static final String N_nException   = "org.xtclang.ecstasy.nException";
     public static final String N_nFunction    = "org.xtclang.ecstasy.nFunction";
+    public static final String N_nMethod      = "org.xtclang.ecstasy.nMethod";
     public static final String N_nModule      = "org.xtclang.ecstasy.nModule";
     public static final String N_nObj         = "org.xtclang.ecstasy.nObj";
-    public static final String N_xService     = "org.xtclang.ecstasy.nService";
+    public static final String N_nService     = "org.xtclang.ecstasy.nService";
     public static final String N_nType        = "org.xtclang.ecstasy.nType";
 
     // ----- well-known suffixes -------------------------------------------------------------------
 
-    public static final String MODULE      = "¤module";       // the main module class name
-    public static final String EXT         = "$ext";          // a multi-slot extension field of a primitive field
-    public static final String INIT        = "$init";         // the singleton initialization instance method
-    public static final String NEW         = "$new";          // the instance creation static method
-    public static final String OPT         = "$p";            // methods that contains primitive types
+    public static final String MODULE         = "¤module"; // the main module class name
+    public static final String LAMBDA         = "lambda¤"; // the base of the lambda function name
+    public static final String EXT            = "$ext";    // a multi-slot extension field of a primitive field
+    public static final String INIT           = "$init";   // the singleton initialization instance method
+    public static final String NEW            = "$new";    // the instance creation static method
+    public static final String OPT            = "$p";      // methods that contains primitive types
 
     // ----- well-known class descriptors ----------------------------------------------------------
 
@@ -692,6 +806,7 @@ public abstract class Builder {
     public static final ClassDesc CD_Enumeration   = ClassDesc.of(N_Enumeration);
     public static final ClassDesc CD_Exception     = ClassDesc.of(N_Exception);
     public static final ClassDesc CD_nFunction     = ClassDesc.of(N_nFunction);
+    public static final ClassDesc CD_nMethod       = ClassDesc.of(N_nMethod);
     public static final ClassDesc CD_nModule       = ClassDesc.of(N_nModule);
 
     public static final ClassDesc CD_nArrayChar    = ClassDesc.of(N_nArrayChar);
@@ -723,8 +838,11 @@ public abstract class Builder {
     public static final ClassDesc CD_TypeConstant  = ClassDesc.of(TypeConstant.class.getName());
     public static final ClassDesc CD_TypeSystem    = ClassDesc.of(TypeSystem.class.getName());
 
-    public static final ClassDesc CD_JavaString    = ClassDesc.of(java.lang.String.class.getName());
+    public static final ClassDesc CD_JavaBoolean   = ClassDesc.of(java.lang.Boolean.class.getName());
+    public static final ClassDesc CD_JavaInteger   = ClassDesc.of(java.lang.Integer.class.getName());
+    public static final ClassDesc CD_JavaLong      = ClassDesc.of(java.lang.Long.class.getName());
     public static final ClassDesc CD_JavaObject    = ClassDesc.of(java.lang.Object.class.getName());
+    public static final ClassDesc CD_JavaString    = ClassDesc.of(java.lang.String.class.getName());
 
     // ----- well-known methods --------------------------------------------------------------------
 

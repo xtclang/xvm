@@ -308,7 +308,7 @@ public class xArray
                 TypeConstant typeValue = hValue.getType();
 
                 IsFunction:
-                if (typeValue.isA(pool.typeFunction())) {
+                if (typeValue.isFunction()) {
                     TypeConstant[] atypeParam = pool.extractFunctionParams(typeValue);
                     if (atypeParam.length != 1 || !atypeParam[0].equals(pool.typeInt64())) {
                         break IsFunction;
