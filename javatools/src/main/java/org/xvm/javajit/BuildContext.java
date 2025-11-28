@@ -1074,7 +1074,7 @@ public class BuildContext {
      */
     public RegisterInfo getRegisterInfo(int regId) {
         RegisterInfo reg = registerInfos.get(regId);
-        if (reg instanceof Narrowed narrowed && currOpAddr > narrowed.lastOp) {
+        if (reg instanceof Narrowed narrowed && currOpAddr >= narrowed.lastOp) {
             reg = resetRegister(regId, narrowed);
         }
         return reg;
@@ -1111,8 +1111,10 @@ public class BuildContext {
      * @param toAddr        the address after which the narrowing should not apply (exclusive;
      *                      could be -1)
      * @param narrowedType  the narrowed type
+     *
+     * @return the narrowed register (if applied)
      */
-    public void narrowTarget(CodeBuilder code, int regId, int fromAddr, int toAddr,
+    public RegisterInfo narrowTarget(CodeBuilder code, int regId, int fromAddr, int toAddr,
                              TypeConstant narrowedType) {
         RegisterInfo origReg = getRegisterInfo(regId);
         assert origReg != null;
@@ -1121,7 +1123,7 @@ public class BuildContext {
             int endAddr = computeEndScopeAddr(fromAddr);
             if (endAddr == fromAddr) {
                 // there is nothing to apply narrowing to
-                return;
+                return origReg;
             }
             toAddr = endAddr;
         }
@@ -1130,8 +1132,8 @@ public class BuildContext {
         int       narrowedSlot = scope.allocateJavaSlot(narrowedCD);
 
         Narrowed narrowedReg = new Narrowed(narrowedSlot, narrowedType, narrowedCD,
-            origReg.name(), fromAddr, toAddr, origReg);
-        addAction(fromAddr, () -> {
+                origReg.name(), fromAddr, toAddr, origReg);
+        OpAction action = () -> {
             registerInfos.put(regId, narrowedReg);
             Builder.load(code, origReg.cd(), origReg.slot());
             if (narrowedCD.isPrimitive() && !origReg.cd().isPrimitive()) {
@@ -1142,7 +1144,14 @@ public class BuildContext {
             }
             Builder.store(code, narrowedCD, narrowedSlot);
             return -1;
-        });
+        };
+
+        if (fromAddr == currOpAddr) {
+            action.prepare();
+        } else {
+            addAction(fromAddr, action);
+        }
+        return narrowedReg;
     }
 
     /**

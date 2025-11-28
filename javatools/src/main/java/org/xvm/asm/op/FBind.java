@@ -358,7 +358,8 @@ public class FBind
         bctx.storeValue(code, regRet);
     }
 
-    private static void bindArgument(CodeBuilder code, int slotMethod, int nPos, RegisterInfo regArg, boolean fBox) {
+    private static void bindArgument(CodeBuilder code, int slotMethod, int nPos,
+                                     RegisterInfo regArg, boolean fBox) {
         code.aload(slotMethod)
             .ldc(nPos);
 

@@ -11,7 +11,6 @@ import java.lang.classfile.Label;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
-import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -34,6 +33,7 @@ import static java.lang.constant.ConstantDescs.CD_boolean;
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_Ordered;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
+import static org.xvm.javajit.Builder.CD_nObj;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.MD_TypeIsA;
 import static org.xvm.javajit.Builder.MD_xvmType;
@@ -275,17 +275,97 @@ public abstract class OpTest
     }
 
     protected void buildBinary(BuildContext bctx, CodeBuilder code) {
-        TypeSystem   ts         = bctx.typeSystem;
-        TypeConstant type1      = bctx.getArgumentType(m_nValue1);
-        TypeConstant type2      = bctx.getArgumentType(m_nValue2);
-        TypeConstant typeCommon = selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
+        // this is very similar to OpCondJump logic
+        TypeConstant type1       = bctx.getArgumentType(m_nValue1);
+        TypeConstant type2       = bctx.getArgumentType(m_nValue2);
+        TypeConstant typeCommon  = selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
+        TypeConstant typeCompare = bctx.getType(m_nType); // TODO: can we get rid of it?
 
-        // TODO: remove the assert and potentially get rid of m_nType
-        assert typeCommon.equals(bctx.getConstant(m_nType));
+        if (typeCommon.equals(typeCompare)) {
+            assembleUniformTest(bctx, code, null, null, typeCommon);
+        } else {
+            // the compiler allows a comparison of union types
+            assert switch (getOpCode()) {
+                case OP_IS_EQ, OP_IS_NEQ -> true;
+                default -> false;
+            };
 
+            // consider the following scenario:
+            //      boolean test(T1|T2 o1, T2 o2) = (o1 == o2);
+            // the common type is T2, and we need to add a runtime type check for "o1" or "o2"
+            RegisterInfo reg1     = null;
+            RegisterInfo reg2     = null;
+            Label        labelEnd = code.newLabel();
+            int          nAddr    = getAddress();
+
+            if (!type1.isA(typeCompare)) {
+                reg1 = bctx.ensureRegister(code, m_nValue1);
+                if (!reg1.isSingle()) {
+                    throw new UnsupportedOperationException("Handle MultiSlotPrimitive");
+                }
+                assembleExpandedTest(bctx, code, reg1, typeCompare, labelEnd);
+                reg1 = bctx.narrowTarget(code, m_nValue1, nAddr, nAddr + 1, typeCompare);
+            } else {
+                assert !type2.isA(typeCompare);
+
+                reg2 = bctx.ensureRegister(code, m_nValue2);
+                if (!reg2.isSingle()) {
+                    throw new UnsupportedOperationException("Handle MultiSlotPrimitive");
+                }
+                assembleExpandedTest(bctx, code, reg2, typeCompare, labelEnd);
+                reg2 = bctx.narrowTarget(code, m_nValue2, nAddr, nAddr + 1, typeCompare);
+            }
+        assembleUniformTest(bctx, code, reg1, reg2, typeCompare);
+        code.labelBinding(labelEnd);
+        }
+    }
+
+    /**
+     * Assemble the test starting with a type check for the specified argument.
+     */
+    private void assembleExpandedTest(BuildContext bctx, CodeBuilder code,
+                                      RegisterInfo regTest, TypeConstant typeCompare,
+                                      Label labelEnd) {
+        assert !regTest.cd().isPrimitive();
+
+        Label labelIsA = code.newLabel();
+
+        // o1.$xvmType(ctx).isA(typeCompare)
+        code.aload(regTest.slot());
+        bctx.loadCtx(code);
+        code.invokevirtual(CD_nObj, "$xvmType", MD_xvmType);
+        Builder.loadTypeConstant(code, bctx.typeSystem, typeCompare);
+        code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA)
+            .ifne(labelIsA);
+
+        if (getOpCode() == OP_IS_EQ) {
+            code.iconst_0(); // the values cannot be equal - the result is false
+        } else {
+            code.iconst_1(); // the values cannot be equal - the result is true
+        }
+        bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, bctx.pool().typeBoolean()));
+        code.goto_(labelEnd);
+        code.labelBinding(labelIsA);
+    }
+
+    /**
+     * Generate the test for arguments of the same type.
+     */
+    private void assembleUniformTest(BuildContext bctx, CodeBuilder code,
+                                     RegisterInfo reg1, RegisterInfo reg2,
+                                     TypeConstant typeCommon) {
         if (typeCommon.isPrimitive()) {
-            bctx.loadArgument(code, m_nValue1);
-            bctx.loadArgument(code, m_nValue2);
+            if (reg1 == null) {
+                reg1 = bctx.loadArgument(code, m_nValue1);
+            } else {
+                Builder.load(code, reg1.cd(), reg1.slot());
+            }
+
+            if (reg2 == null) {
+                reg2 = bctx.loadArgument(code, m_nValue2);
+            } else {
+                Builder.load(code, reg2.cd(), reg2.slot());
+            }
 
             ClassDesc cdCommon = JitTypeDesc.getPrimitiveClass(typeCommon);
             Label     lblTrue  = code.newLabel();
@@ -296,7 +376,7 @@ public abstract class OpTest
                 switch (getOpCode()) {
                     case OP_CMP -> {
                         code.isub();
-                        bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeCommon));
+                        generateOrdered(bctx, code);
                         return;
                     }
                     case OP_IS_EQ  -> code.if_icmpeq(lblTrue);
@@ -317,7 +397,7 @@ public abstract class OpTest
                 }
                 switch (getOpCode()) {
                     case OP_CMP -> {
-                        bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeCommon));
+                        generateOrdered(bctx, code);
                         return;
                     }
                     case OP_IS_EQ  -> code.ifeq(lblTrue);
@@ -340,7 +420,12 @@ public abstract class OpTest
                 .iconst_1()
                 .labelBinding(lblEnd);
         } else {
-            ConstantPool pool = bctx.pool();
+            //  TODO: we assume typeCommon is a terminal type; we need to move some of this logic to
+            //        the TypeConstant and override it for relational types
+            assert typeCommon.isSingleUnderlyingClass(true);
+
+            TypeSystem   ts   = bctx.typeSystem;
+            ConstantPool pool = ts.pool();
             int          nOp  = getOpCode();
             SignatureConstant sig = switch (nOp) {
                 case OP_IS_EQ, OP_IS_NEQ                      -> pool.sigEquals();
@@ -360,14 +445,15 @@ public abstract class OpTest
                 Builder.loadType(code, ts, typeCommon);
                 bctx.loadArgument(code, m_nValue1);
                 bctx.loadArgument(code, m_nValue2);
-                code.invokestatic(cd, sJitName +OPT, MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_nType, cd, cd));
+                code.invokestatic(cd, sJitName+OPT,
+                        MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_nType, cd, cd));
                 if (nOp == OP_IS_NEQ) {
                     code.iconst_1()
                         .ixor();
                 }
                 break;
 
-            case OP_IS_GT, OP_IS_GTE, OP_IS_LT, OP_IS_LTE:
+            case OP_CMP, OP_IS_GT, OP_IS_GTE, OP_IS_LT, OP_IS_LTE:
                 // Ordered compare(Ctx,Type,xObj,xObj)
                 Builder.loadType(code, ts, typeCommon);
                 bctx.loadArgument(code, m_nValue1);
@@ -376,6 +462,10 @@ public abstract class OpTest
 
                 boolean fInverse;
                 switch (nOp) {
+                case OP_CMP:
+                    bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, bctx.pool().typeOrdered()));
+                    return;
+
                 case OP_IS_GT:
                     bctx.loadConstant(code, pool.valGreater());
                     fInverse = false;
@@ -411,6 +501,10 @@ public abstract class OpTest
             }
         }
         bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, bctx.pool().typeBoolean()));
+    }
+
+    private void generateOrdered(BuildContext bctx, CodeBuilder code) {
+        throw new UnsupportedOperationException("TODO");
     }
 
     protected void buildUnary(BuildContext bctx, CodeBuilder code) {
