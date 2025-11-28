@@ -299,25 +299,26 @@ public class BuildContext {
         Deque<List<Integer>> jumpAddrStack = null;
         Deque<List<Integer>> jumpDestStack = null;
 
-        int            guard      = -1;
-        List<Integer>  jumpsAddr  = null; // the addresses of Jump ops
-        List<Integer>  jumpsDest  = null; // the addresses of jump destinations
-        boolean        doReturn   = false;
+        int            guardAddr = -1;     // the address of the last GuardAll op
+        int            finAddr   = -1;     // the address of the last FinallyEnd op
+        List<Integer>  jumpsAddr  = null;  // the addresses of Jump ops
+        List<Integer>  jumpsDest  = null;  // the addresses of jump destinations
+        boolean        doReturn   = false; // indicates whether FinallyEnd should generate returns
         for (int iPC = 0, c = ops.length; iPC < c; iPC++) {
             switch (ops[iPC]) {
             case GuardAll _:
-                if (guard < 0) {
+                if (guardAddr < 0) {
                     guardStack    = new ArrayDeque<>();
                     jumpAddrStack = new ArrayDeque<>();
                     jumpDestStack = new ArrayDeque<>();
                 } else {
-                    guardStack.push(guard);
+                    guardStack.push(guardAddr);
                     jumpAddrStack.push(jumpsAddr);
                     jumpDestStack.push(jumpsDest);
                 }
                 jumpsAddr = new ArrayList<>();
                 jumpsDest = new ArrayList<>();
-                guard     = iPC;
+                guardAddr = iPC;
                 break;
 
             case Jump jump:
@@ -352,22 +353,31 @@ public class BuildContext {
                         ? new ArrayList<>()
                         : jumpAddrStack.pop();
                 }
+
+                if (finAddr != -1) {
+                    // the previous "FinallyEnd" needs to jump here upon a return
+                    ((FinallyEnd) ops[finAddr]).registerJump(iPC);
+                }
                 break;
 
             case FinallyEnd finallyEnd:
-                GuardAll guardAll = (GuardAll) ops[guard];
-                guard = guardStack.isEmpty()
+                GuardAll guardAll = (GuardAll) ops[guardAddr];
+                guardAddr = guardStack.isEmpty()
                         ? -1
                         : guardStack.pop();
 
                 // only the very top GuardAll allocates the return values
-                guardAll.registerJumps(jumpsDest, doReturn && guard == -1);
+                guardAll.registerJumps(jumpsDest, doReturn && guardAddr == -1);
 
                 jumpsDest = jumpDestStack.isEmpty()
                         ? new ArrayList<>()
                         : jumpDestStack.pop();
-                if (guard == -1) {
+                if (guardAddr == -1) {
                     doReturn = false;
+                    finAddr  = -1;
+                } else {
+                    // the next FinallyEnd will tell us where to jump upon a return
+                    finAddr = iPC;
                 }
 
                 if (iPC == ops.length - 1 || !ops[iPC + 1].isReachable()) {
@@ -571,8 +581,8 @@ public class BuildContext {
     /**
      * @return the newly entered scope
      */
-    public Scope enterScope(CodeBuilder code) {
-        scope = scope.enter();
+    public Scope enterScope(CodeBuilder code, int startAddr) {
+        scope = scope.enter(startAddr);
         code.labelBinding(scope.startLabel);
         return scope;
     }

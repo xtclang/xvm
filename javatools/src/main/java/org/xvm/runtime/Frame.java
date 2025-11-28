@@ -2304,7 +2304,7 @@ public class Frame
      */
     public abstract static class DeferredGuardAction {
         protected DeferredGuardAction(int ixGuard) {
-            this(ixGuard, 0);
+            this(ixGuard, -1);
         }
 
         protected DeferredGuardAction(int ixGuardStart, int ixGuardBase) {
