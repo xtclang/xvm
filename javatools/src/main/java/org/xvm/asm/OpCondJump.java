@@ -13,15 +13,19 @@ import java.lang.constant.MethodTypeDesc;
 
 import java.util.List;
 
+import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.BuildContext.DoubleSlot;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitFlavor;
+import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.RegisterInfo;
 
+import org.xvm.javajit.TypeSystem;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -29,14 +33,18 @@ import org.xvm.runtime.Utils;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
 
+import static java.lang.constant.ConstantDescs.CD_long;
 import static org.xvm.javajit.Builder.CD_Container;
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_JavaString;
+import static org.xvm.javajit.Builder.CD_Ordered;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
+import static org.xvm.javajit.Builder.CD_nObj;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.MD_TypeIsA;
 import static org.xvm.javajit.Builder.MD_xvmType;
 
+import static org.xvm.javajit.Builder.OPT;
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -324,17 +332,83 @@ public abstract class OpCondJump
     }
 
     protected void buildBinary(BuildContext bctx, CodeBuilder code) {
-        RegisterInfo reg1       = bctx.loadArgument(code, m_nArg);
-        RegisterInfo reg2       = bctx.loadArgument(code, m_nArg2);
-        TypeConstant typeCommon = selectCommonType(reg1.type(), reg2.type(), ErrorListener.BLACKHOLE);
-        ClassDesc    cdCommon   = JitTypeDesc.getPrimitiveClass(typeCommon);
+        // this is very similar to OpTest logic
+        TypeConstant type1       = bctx.getArgumentType(m_nArg);
+        TypeConstant type2       = bctx.getArgumentType(m_nArg2);
+        TypeConstant typeCommon  = selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
+        TypeConstant typeCompare = bctx.getType(m_nType); // TODO: can we get rid of it?
 
-        // TODO: remove the assert
-        assert ((TypeConstant) bctx.getConstant(m_nType)).removeAutoNarrowing().equals(typeCommon);
+        if (typeCommon.equals(typeCompare)) {
+            assembleUniformJump(bctx, code, typeCommon);
+        } else {
+            // the compiler allows a comparison of union types
+            assert switch (getOpCode()) {
+                case OP_JMP_EQ, OP_JMP_NEQ -> true;
+                default -> false;
+            };
+
+            // consider the following scenario:
+            //      boolean test(T1|T2 o1, T2 o2) = (o1 == o2);
+            // the common type is T2, and we need to add a runtime type check for "o1" or "o2"
+            if (!type1.isA(typeCompare)) {
+                RegisterInfo reg1 = bctx.ensureRegister(code, m_nArg);
+                if (!reg1.isSingle()) {
+                    throw new UnsupportedOperationException("Handle MultiSlotPrimitive");
+                }
+                assembleExpandedJump(bctx, code, reg1, typeCompare);
+            } else {
+                assert !type2.isA(typeCompare);
+
+                RegisterInfo reg2 = bctx.ensureRegister(code, m_nArg2);
+                if (!reg2.isSingle()) {
+                    throw new UnsupportedOperationException("Handle MultiSlotPrimitive");
+                }
+                assembleExpandedJump(bctx, code, reg2, typeCompare);
+            }
+        }
+    }
+
+    /**
+     * Assemble the test starting with a type check for the specified argument.
+     */
+    private void assembleExpandedJump(BuildContext bctx, CodeBuilder code,
+                                      RegisterInfo regTest, TypeConstant typeCompare) {
+        assert !regTest.cd().isPrimitive();
+
+        Label labelEnd = code.newLabel();
+        int   nAddr    = getAddress();
+
+        // o1.$xvmType(ctx).isA(typeCompare)
+        code.aload(regTest.slot());
+        bctx.loadCtx(code);
+        code.invokevirtual(CD_nObj, "$xvmType", MD_xvmType);
+        Builder.loadTypeConstant(code, bctx.typeSystem, typeCompare);
+        code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
+
+        if (getOpCode() == OP_JMP_EQ) {
+            code.ifeq(labelEnd); // the values cannot be equal - proceed
+        } else {
+            Label labelJump = bctx.ensureLabel(code, getAddress() + m_ofJmp);
+            code.ifeq(labelJump); // the values cannot be equal - jump
+        }
+        // TODO: narrow
+        assembleUniformJump(bctx, code, typeCompare);
+        code.labelBinding(labelEnd);
+    }
+
+
+    /**
+     * Generate the jump for arguments of the same type.
+     */
+    private void assembleUniformJump(BuildContext bctx, CodeBuilder code, TypeConstant typeCommon) {
+        ClassDesc cdCommon = JitTypeDesc.getJitClass(bctx.typeSystem, typeCommon);
+        Label     lblJump  = bctx.ensureLabel(code, getAddress() + m_ofJmp);
 
         if (cdCommon.isPrimitive()) {
-            Label  lblJump = bctx.ensureLabel(code, getAddress() + m_ofJmp);
-            String desc    = cdCommon.descriptorString();
+            bctx.loadArgument(code, m_nArg);
+            bctx.loadArgument(code, m_nArg2);
+
+            String desc = cdCommon.descriptorString();
             switch (desc) {
             case "I", "S", "B", "C", "Z":
                 switch (getOpCode()) {
@@ -354,22 +428,105 @@ public abstract class OpCondJump
                     case "F" -> code.fcmpl(); // REVIEW CP: fcmpl vs fcmpg?
                     case "D" -> code.dcmpl(); // REVIEW CP: ditto
                 }
-                switch (getOpCode()) {
-                    case OP_JMP_EQ  -> code.ifeq(lblJump);
-                    case OP_JMP_NEQ -> code.ifne(lblJump);
-                    case OP_JMP_GT  -> code.ifgt(lblJump);
-                    case OP_JMP_GTE -> code.ifge(lblJump);
-                    case OP_JMP_LT  -> code.iflt(lblJump);
-                    case OP_JMP_LTE -> code.ifle(lblJump);
-                    default -> throw new IllegalStateException();
-                }
+                generateCmpJump(code, lblJump);
                 break;
 
             default:
                 throw new IllegalStateException();
             }
+        } else if (typeCommon.isEnum()) {
+            // strictly speaking, this code is not needed since the generic algorithm covers the
+            // enums as well, but this path is slightly more optimal
+            bctx.loadArgument(code, m_nArg2);
+            bctx.loadCtx(code);
+            code.invokevirtual(cdCommon, "ordinal$get$p", MethodTypeDesc.of(CD_long, CD_Ctx));
+            int slotOrd2 = bctx.storeTempValue(code, CD_long);
+            bctx.loadArgument(code, m_nArg2);
+            bctx.loadCtx(code);
+            code.invokevirtual(cdCommon, "ordinal$get$p", MethodTypeDesc.of(CD_long, CD_Ctx))
+                .lload(slotOrd2)
+                .lcmp();
+            generateCmpJump(code, lblJump);
         } else {
-            throw new UnsupportedOperationException("Non primitive " + toName(getOpCode()));
+            //  TODO: we assume typeCommon is a terminal type; we need to move some of this logic to
+            //        the TypeConstant and override it for relational types
+            assert typeCommon.isSingleUnderlyingClass(true);
+
+            TypeSystem ts   = bctx.typeSystem;
+            ConstantPool pool = ts.pool();
+            int          nOp  = getOpCode();
+            SignatureConstant sig = switch (nOp) {
+                case OP_JMP_EQ, OP_JMP_NEQ                        -> pool.sigEquals();
+                case OP_JMP_GT, OP_JMP_GTE, OP_JMP_LT, OP_JMP_LTE -> pool.sigCompare();
+                default                                           -> throw new IllegalStateException();
+            };
+            MethodInfo    method   = typeCommon.ensureTypeInfo().getMethodBySignature(sig);
+            ClassDesc     cd       = method.getJitIdentity().getNamespace().ensureClassDesc(ts);
+            JitMethodDesc jmd      = method.getJitDesc(ts, typeCommon);
+            String        sJitName = method.ensureJitMethodName(ts);
+
+            bctx.loadCtx(code);
+            switch (nOp) {
+            case OP_JMP_EQ, OP_JMP_NEQ:
+                assert jmd.isOptimized;
+                // Boolean equals(Ctx,xType,xObj,xObj)
+                Builder.loadType(code, ts, typeCommon);
+                bctx.loadArgument(code, m_nArg);
+                bctx.loadArgument(code, m_nArg2);
+                code.invokestatic(cd, sJitName+OPT,
+                        MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_nType, cd, cd));
+                generateCmpJump(code, lblJump);
+                break;
+
+            case OP_JMP_GT, OP_JMP_GTE, OP_JMP_LT, OP_JMP_LTE:
+                // Ordered compare(Ctx,Type,xObj,xObj)
+                Builder.loadType(code, ts, typeCommon);
+                bctx.loadArgument(code, m_nArg);
+                bctx.loadArgument(code, m_nArg2);
+                code.invokestatic(cd, sJitName, MethodTypeDesc.of(CD_Ordered, CD_Ctx, CD_nType, cd, cd));
+                generateOrderedJump(bctx, code, lblJump);
+            }
+        }
+    }
+
+    /**
+     * Generate a jump opcode for a "lcmp" op result on the Java stack.
+     */
+    private void generateCmpJump(CodeBuilder code, Label lblJump) {
+        switch (getOpCode()) {
+            case OP_JMP_EQ  -> code.ifeq(lblJump);
+            case OP_JMP_NEQ -> code.ifne(lblJump);
+            case OP_JMP_GT  -> code.ifgt(lblJump);
+            case OP_JMP_GTE -> code.ifge(lblJump);
+            case OP_JMP_LT  -> code.iflt(lblJump);
+            case OP_JMP_LTE -> code.ifle(lblJump);
+            default -> throw new IllegalStateException();
+        }
+    }
+
+    /**
+     * Generate a jump opcode for an "Ordered" result on the Java stack.
+     */
+    private void generateOrderedJump(BuildContext bctx, CodeBuilder code, Label lblJump) {
+        ConstantPool pool = bctx.pool();
+        switch (getOpCode()) {
+            case OP_JMP_GT -> {
+                bctx.loadConstant(code, pool.valGreater());
+                code.if_acmpeq(lblJump);
+            }
+            case OP_JMP_GTE -> {
+                bctx.loadConstant(code, pool.valLesser());
+                code.if_acmpne(lblJump);
+            }
+            case OP_JMP_LT -> {
+                bctx.loadConstant(code, pool.valLesser());
+                code.if_acmpeq(lblJump);
+            }
+            case OP_JMP_LTE -> {
+                bctx.loadConstant(code, pool.valGreater());
+                code.if_acmpne(lblJump);
+            }
+            default -> throw new IllegalStateException();
         }
     }
 
@@ -497,9 +654,9 @@ public abstract class OpCondJump
 
         code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
 
-        if (getOpCode() == OP_IS_TYPE) {
+        if (getOpCode() == OP_JMP_TYPE) {
             code.ifne(lblJump);
-        } else { // OP_IS_NTYPE
+        } else { // OP_JMP_NTYPE
             code.ifeq(lblJump);
         }
     }
