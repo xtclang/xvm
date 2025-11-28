@@ -26,6 +26,7 @@ public class Scope {
         this.startLocal = -1;
         this.topLocal   = -1;
         this.topReg     = 0;
+        this.startAddr  = 0;
 
         startLabel = code.newLabel();
         endLabel   = code.newLabel();
@@ -34,7 +35,7 @@ public class Scope {
     /**
      * Construct the child scope.
      */
-    private Scope(Scope parent) {
+    private Scope(Scope parent, int startAddr) {
         this(parent.bctx, parent.code);
 
         this.parent     = parent;
@@ -42,6 +43,7 @@ public class Scope {
         this.topLocal   = parent.topLocal;
         this.topReg     = parent.topReg;
         this.depth      = parent.depth + 1;
+        this.startAddr  = startAddr;
     }
 
     private final BuildContext bctx;
@@ -83,6 +85,11 @@ public class Scope {
     public int depth;
 
     /**
+     * The address of the starting op for this scope. Used for debugging.
+     */
+    public int startAddr;
+
+    /**
      * The list of jumps addresses the "finally" block may need to conditionally jump to.
      */
     public List<Integer> jumps;
@@ -94,9 +101,11 @@ public class Scope {
 
     /**
      * Enter a new Scope.
+     *
+     * @param startAddr  the address of the corresponding op
      */
-    public Scope enter() {
-        return new Scope(this);
+    public Scope enter(int startAddr) {
+        return new Scope(this, startAddr);
     }
 
     /**

@@ -86,12 +86,20 @@ public class FinallyEnd
     }
 
     /**
-     * @param fCompletes  if true, indicates Whether this FinallyEnd op-code can proceed in a normal
+     * @param fCompletes  if true, indicates whether this FinallyEnd op-code can proceed in a normal
      *                    fashion (to the next op); otherwise, only via a throw or jump
      */
     public void setCompletes(boolean fCompletes) {
         m_fAdvances = fCompletes;
     }
+
+    /**
+     * Save the address of the parent "finally" block to jump to if a return has been encountered.
+     */
+    public void registerJump(int nFinallyAddr) {
+        m_nFinallyAddr = nFinallyAddr;
+    }
+
 
     // ----- JIT support ---------------------------------------------------------------------------
 
@@ -186,11 +194,20 @@ public class FinallyEnd
             if (labelSkip != null) {
                 code.labelBinding(labelSkip);
             }
+        } else if (m_nFinallyAddr != -1) {
+            // check if the "return" has beed encountered and if so, jump to the next "finally"
+            slotRet = scopeGuard.getSynthetic("$doReturn", true);
+            assert slotRet >= 0;
+
+            code.iload(slotRet);  // boolean: if true, a return has been encountered (see OpReturn)
+            code.ifne(bctx.ensureLabel(code, m_nFinallyAddr));
+
         }
         bctx.exitScope(code);
     }
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private transient boolean m_fAdvances = true;
+    private transient boolean m_fAdvances    = true;
+    private transient int     m_nFinallyAddr = -1;
 }

@@ -179,7 +179,7 @@ public class GuardStart
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         // the GuardStart-GuardEnd are the scope boundary ops as well
-        bctx.enterScope(code);
+        bctx.enterScope(code, getAddress());
 
         for (int ofCatch : m_aofCatch) {
             bctx.ensureGuarded(getAddress() + ofCatch);

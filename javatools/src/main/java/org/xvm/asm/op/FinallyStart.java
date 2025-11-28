@@ -130,7 +130,7 @@ public class FinallyStart
             .labelBinding(labelFin);
 
         // enter the "finally {}" scope
-        bctx.enterScope(code);
+        bctx.enterScope(code, getAddress());
 
         // initialize "try.exception" synthetic variable
         // (TODO: we only need it if the m_nVar variable is used)
