@@ -1,9 +1,9 @@
 package org.xvm.api;
 
-
-import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.FileStructure;
@@ -11,8 +11,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
-import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -28,10 +26,10 @@ import org.xvm.runtime.template.text.xString;
 
 /**
  * The API between Java host environment and an XVM runtime.
- *
+ * <p>
  * For a given Connector there is one and only one Runtime and one and only one top level
  * Container. All underlying Containers will use the same Runtime.
- *
+ * <p>
  * Normally, the usage of the Connector follows these steps:
  * <ul>
  *   <li> instantiate a Connector
@@ -46,7 +44,7 @@ public class Connector {
     /**
      * Construct the Connector based on the specified ModuleRepository.
      */
-    public Connector(ModuleRepository repository) {
+    public Connector(final ModuleRepository repository) {
         f_repository      = repository;
         f_runtime         = new Runtime();
         f_containerNative = new NativeContainer(f_runtime, repository);
@@ -55,7 +53,7 @@ public class Connector {
     /**
      * Create the main container for the specified module.
      */
-    public void loadModule(String sAppName) {
+    public void loadModule(final String sAppName) {
         if (m_containerMain != null) {
             throw new IllegalStateException("Connector is already activated");
         }
@@ -91,7 +89,7 @@ public class Connector {
     /**
      * Start the Runtime and the main Container.
      */
-    public void start(Map<String, String> mapInjections) {
+    public void start(final Map<String, String> mapInjections) {
         if (!m_fStarted) {
             f_runtime.start();
             m_fStarted = true;
@@ -103,60 +101,62 @@ public class Connector {
     /**
      * Find any possible entry points for a given name in the main module.
      */
-    public Set<MethodStructure> findMethods(String sMethodName) {
+    public Set<MethodStructure> findMethods(final String sMethodName) {
         return findMethods(m_containerMain.getModule(), sMethodName);
     }
 
     /**
      * Find an entry points for a given name in the specified module.
      */
-    protected Set<MethodStructure> findMethods(ModuleConstant idModule, String sMethodName) {
-        TypeInfo             typeInfo    = idModule.getType().ensureTypeInfo();
-        Set<MethodConstant>  setMethodId = typeInfo.findMethods(sMethodName, -1, TypeInfo.MethodKind.Any);
-        Set<MethodStructure> setMethods  = new HashSet<>();
-        for (MethodConstant idMethod : setMethodId) {
-            MethodInfo infoMethod = typeInfo.getMethodById(idMethod);
-            setMethods.add(infoMethod.getHead().getMethodStructure());
-        }
-        return setMethods;
+    protected Set<MethodStructure> findMethods(final ModuleConstant idModule, final String sMethodName) {
+        final var typeInfo = idModule.getType().ensureTypeInfo();
+        return typeInfo.findMethods(sMethodName, -1, TypeInfo.MethodKind.Any).stream()
+                .map(typeInfo::getMethodById)
+                .map(info -> info.getHead().getMethodStructure())
+                .collect(Collectors.toSet());
     }
 
     /**
      * Invoke an XTC method with a void return and specified arguments.
      *
      * @param method  the method structure
-     * @param asArg   arguments
+     * @param args    arguments (varargs for compatibility)
      */
-    public void invoke0(MethodStructure method, String... asArg) {
+    public void invoke0(final MethodStructure method, final String... args) {
+        invoke0(method, List.of(args));
+    }
+
+    /**
+     * Invoke an XTC method with a void return and specified arguments.
+     * <p>
+     * Supports methods with signatures like:
+     * <ul>
+     *   <li>{@code void run()} - no params, args ignored</li>
+     *   <li>{@code void run(String[] args = [])} - optional param, args passed if present</li>
+     *   <li>{@code void run(String[] args)} - required param, args always passed</li>
+     * </ul>
+     *
+     * @param method  the method structure
+     * @param args    arguments as a list (never null)
+     */
+    public void invoke0(final MethodStructure method, final List<String> args) {
         if (!m_fStarted) {
             throw new IllegalStateException("The container has not been started");
         }
 
-        ConstantPool   pool        = ConstantPool.getCurrentPool();
-        TypeConstant   typeStrings = pool.ensureArrayType(pool.typeString());
-        ObjectHandle[] ahArg       = Utils.OBJECTS_NONE;
+        final int requiredParams = method.getRequiredParamCount();
+        final int totalParams    = method.getParamCount();
 
-        switch (method.getRequiredParamCount()) {
-        case 0:
-            if (asArg != null) {
-                assert method.getParamCount() > 0;
-                TypeConstant typeArg = method.getParam(0).getType();
+        // Determine if we should pass args to the method
+        final boolean shouldPassArgs = requiredParams > 0 || (!args.isEmpty() && totalParams > 0);
 
-                assert typeStrings.isA(typeArg);
-                ahArg = new ObjectHandle[]{xString.makeArrayHandle(asArg)};
-            }
-            break;
-
-        case 1: {
-            TypeConstant typeArg = method.getParam(0).getType();
-            assert typeStrings.isA(typeArg);
-            // the method requires an array that we can supply
-            ahArg = new ObjectHandle[] {
-                asArg == null
-                    ? xString.ensureEmptyArray()
-                    : xString.makeArrayHandle(asArg)};
-            break;
-        }
+        ObjectHandle[] ahArg = Utils.OBJECTS_NONE;
+        if (shouldPassArgs && totalParams > 0) {
+            ConstantPool pool        = ConstantPool.getCurrentPool();
+            TypeConstant typeStrings = pool.ensureArrayType(pool.typeString());
+            TypeConstant typeArg     = method.getParam(0).getType();
+            assert typeStrings.isA(typeArg) : "First parameter must be String[]";
+            ahArg = new ObjectHandle[]{xString.makeArrayHandle(args.toArray(String[]::new))};
         }
 
         m_containerMain.invoke0(method.getName(), ahArg);
@@ -168,8 +168,7 @@ public class Connector {
      * @return zero if the main method was void or the return type not an int-convertible; otherwise
      *              the return value
      */
-    public int join()
-            throws InterruptedException {
+    public int join() throws InterruptedException {
         // extremely naive; replace
         do  {
             Thread.sleep(500);

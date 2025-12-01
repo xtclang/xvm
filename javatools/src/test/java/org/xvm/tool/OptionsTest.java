@@ -6,6 +6,8 @@ import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.LauncherOptions.RunnerOptions;
 
 import java.io.File;
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -117,20 +119,9 @@ class OptionsTest {
         assertFalse(opts.isCompileDisabled());
         assertEquals(new File("MyModule.xtc"), opts.getTarget());
 
-        final var injections = opts.getInjections();
-        assertEquals(2, injections.size());
-        assertEquals("value1", injections.get("key1"));
-        assertEquals("value2", injections.get("key2"));
-
-        final var methodArgs = opts.getMethodArgs();
-        assertNotNull(methodArgs);
-        assertEquals(2, methodArgs.length);
-        assertEquals("arg1", methodArgs[0]);
-        assertEquals("arg2", methodArgs[1]);
-
-        final var modulePath = opts.getModulePath();
-        assertEquals(1, modulePath.size());
-        assertEquals(new File("/lib1"), modulePath.get(0));
+        assertEquals(Map.of("key1", "value1", "key2", "value2"), opts.getInjections());
+        assertEquals(List.of("arg1", "arg2"), opts.getMethodArgs());
+        assertEquals(List.of(new File("/lib1")), opts.getModulePath());
     }
 
     @Test
@@ -138,9 +129,9 @@ class OptionsTest {
         final var opts = RunnerOptions.parse(new String[]{"MyModule.xtc"});
 
         assertFalse(opts.isJit());
-        assertEquals("run", opts.getMethodName()); // Default method name
+        assertEquals("run", opts.getMethodName());
         assertEquals(new File("MyModule.xtc"), opts.getTarget());
-        assertEquals(0, opts.getMethodArgs().length); // Returns empty array, not null
+        assertTrue(opts.getMethodArgs().isEmpty());
         assertTrue(opts.getInjections().isEmpty());
     }
 
@@ -330,11 +321,7 @@ class OptionsTest {
         final var opts = RunnerOptions.parse(args);
 
         assertEquals(new File("MyModule.xtc"), opts.getTarget());
-        final var methodArgs = opts.getMethodArgs();
-        assertEquals(3, methodArgs.length);
-        assertEquals("arg1", methodArgs[0]);
-        assertEquals("arg2", methodArgs[1]);
-        assertEquals("arg3", methodArgs[2]);
+        assertEquals(List.of("arg1", "arg2", "arg3"), opts.getMethodArgs());
     }
 
     @Test
@@ -372,9 +359,7 @@ class OptionsTest {
     void testMultipleErrors() {
         final String[] args = {"--unknown1", "--unknown2", "foo.x"};
 
-        final var e = assertThrows(IllegalArgumentException.class, () -> {
-            CompilerOptions.parse(args);
-        });
+        final var e = assertThrows(IllegalArgumentException.class, () -> CompilerOptions.parse(args));
         // Apache CLI stops at first error
         final var message = e.getMessage();
         assertTrue(message.contains("unknown1") || message.contains("Unrecognized"),

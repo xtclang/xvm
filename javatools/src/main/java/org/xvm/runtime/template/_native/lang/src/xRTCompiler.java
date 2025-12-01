@@ -4,7 +4,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
@@ -289,7 +288,7 @@ public class xRTCompiler extends xService {
     /**
      * Injection support.
      */
-    public ObjectHandle ensureCompiler(final Frame frame, final ObjectHandle hOpts) {
+    public ObjectHandle ensureCompiler(@SuppressWarnings("unused") final Frame frame, final ObjectHandle hOpts) {
         return createServiceHandle(
                 f_container.createServiceContext("Compiler"),
                     getCanonicalClass(), getCanonicalType());
@@ -361,6 +360,7 @@ public class xRTCompiler extends xService {
             return m_repoResults;
         }
 
+        @SuppressWarnings("SameParameterValue")
         protected void logError(final Severity severity, final String sCode, final Object[] aoParam) {
             m_errorList.log(severity, sCode, aoParam, (XvmStructure) null);
         }
@@ -385,17 +385,17 @@ public class xRTCompiler extends xService {
                 repoOutput = m_repoOutput;
                 allNodes   = m_allNodes;
             } else {
-                File[]           resourceDirs = options().getResourceLocation();
-                File             fileOutput   = options().getOutputLocation();
-                List<ModuleInfo> listTargets  = selectTargets(getInputLocations(), resourceDirs, fileOutput);
-                boolean          fRebuild     = options().isForcedRebuild();
+                final var              opts = options();
+                final List<File>       resourceDirs = opts.getResourceLocations();
+                final File             fileOutput   = opts.getOutputLocation();
+                final boolean          fRebuild     = opts.isForcedRebuild();
+                final List<ModuleInfo> listTargets  = selectTargets(getInputLocations(), resourceDirs, fileOutput);
                 checkErrors();
 
                 final var mapTargets = new LinkedHashMap<File, Node>(listTargets.size());
                 int cSystemModules = 0;
                 for (final ModuleInfo moduleInfo : listTargets) {
                     Node node = moduleInfo.getSourceTree(this);
-
                     // short-circuit the compilation of any up-to-date modules
                     if (fRebuild || !moduleInfo.isUpToDate()) {
                         mapTargets.put(moduleInfo.getSourceFile(), node);

@@ -656,8 +656,9 @@ public abstract class Launcher<T extends LauncherOptions>
      * @param binarySpec     (optional) the file or directory which represents the target of the
      *                       binary; as provided to the compiler using the "-o" command line switch
      */
-    public ModuleInfo ensureModuleInfo(final File fileSpec, final File[] resourceSpecs, final File binarySpec) {
-        final boolean fCache = (resourceSpecs == null || resourceSpecs.length == 0) && binarySpec == null;
+    public ModuleInfo ensureModuleInfo(final File fileSpec, final List<File> resourceSpecs, final File binarySpec) {
+        assert resourceSpecs != null;
+        final boolean fCache = resourceSpecs.isEmpty() && binarySpec == null;
         final boolean deduce = options().mayDeduceLocations();
         return fCache
                 ? moduleCache.computeIfAbsent(fileSpec, _ -> new ModuleInfo(fileSpec, deduce, resourceSpecs, binarySpec))
@@ -693,7 +694,7 @@ public abstract class Launcher<T extends LauncherOptions>
         // this is expected to be the name of a file to compile
         if (!file.exists() || file.isDirectory()) {
             try {
-                ModuleInfo info = ensureModuleInfo(file, null, null);
+                ModuleInfo info = ensureModuleInfo(file, List.of(), null);
                 File srcFile = info == null ? null : info.getSourceFile();
                 if (srcFile == null || !srcFile.exists()) {
                     log(ERROR, "Failed to locate the module source code for: {}", file);
@@ -762,7 +763,7 @@ public abstract class Launcher<T extends LauncherOptions>
      *
      * @return a list of "module files", each representing a module's source code
      */
-    protected List<ModuleInfo> selectTargets(final List<File> listSources, final File[] resourceSpecs, final File outputSpec) {
+    protected List<ModuleInfo> selectTargets(final List<File> listSources, final List<File> resourceSpecs, final File outputSpec) {
         final var mapResults = new java.util.LinkedHashMap<File, ModuleInfo>();
         final var dups = new HashSet<File>();
 
@@ -836,7 +837,7 @@ public abstract class Launcher<T extends LauncherOptions>
         public LauncherException(final boolean error, final String msg, final Throwable cause) {
             super(msg, cause);
             this.error = error;
-            this.exitCode = error ? 0 : 1;
+            this.exitCode = error ? 1 : 0;
         }
 
         public int getExitCode() {

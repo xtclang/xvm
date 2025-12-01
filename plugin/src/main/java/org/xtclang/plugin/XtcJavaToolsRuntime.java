@@ -127,10 +127,7 @@ public final class XtcJavaToolsRuntime {
         final var javaToolsFromConfig = javaToolsConfig.get().filter(file -> FileUtils.isValidJavaToolsArtifact(file, artifactVersion));
         final var javaToolsFromXdk = xdkFileTree.get().filter(file -> FileUtils.isValidJavaToolsArtifact(file, artifactVersion));
 
-        logger.lifecycle("""
-                [plugin] [javatools_runtime] javaToolsFromConfig files: {}
-                [plugin] [javatools_runtime] javaToolsFromXdk files: {}
-                """.trim(), javaToolsFromConfig.getFiles(), javaToolsFromXdk.getFiles());
+        logger.lifecycle("[plugin] JAVA_TOOLS: javaToolsFromConfig files: {}, javaToolsFromXdk files: {}");
 
         final File resolvedFromConfig = javaToolsFromConfig.isEmpty() ? null : javaToolsFromConfig.getSingleFile();
         final File resolvedFromXdk = javaToolsFromXdk.isEmpty() ? null : javaToolsFromXdk.getSingleFile();
@@ -138,8 +135,7 @@ public final class XtcJavaToolsRuntime {
         if (resolvedFromConfig == null && resolvedFromXdk == null) {
             throw failure("ERROR: Failed to resolve '{}' from any configuration or dependency. Ensure the XDK dependency is configured correctly.", XDK_JAVATOOLS_NAME_JAR);
         }
-
-        logger.lifecycle("""
+        logger.info("""
                 [plugin] Check for '{}' in {} config and XDK (unpacked zip, or module collection) dependency, if present.
                 [plugin]     Resolved to: [xdkJavaTools: {}, xdkContents: {}]
                 """.trim(), XDK_JAVATOOLS_NAME_JAR, XDK_CONFIG_NAME_JAVATOOLS_INCOMING, resolvedFromConfig, resolvedFromXdk);
@@ -149,7 +145,7 @@ public final class XtcJavaToolsRuntime {
             logger.lifecycle("[plugin]     javatools.jar: {}", FileUtils.formatJarMetadata(resolvedFromConfig));
         }
         if (resolvedFromXdk != null && !resolvedFromXdk.equals(resolvedFromConfig)) {
-            logger.lifecycle("[plugin]     xdk javatools.jar: {}", FileUtils.formatJarMetadata(resolvedFromXdk));
+            logger.lifecycle("[plugin]     XDK javatools.jar: {}", FileUtils.formatJarMetadata(resolvedFromXdk));
         }
 
         final var versionConfig = readXdkVersionFromJar(resolvedFromConfig);

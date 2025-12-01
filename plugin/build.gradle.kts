@@ -7,7 +7,9 @@ plugins {
     alias(libs.plugins.xdk.build.publishing)
 }
 
-private val minimumSupportedGradleVersion = "9.2.0"
+private val minimumGradleVersion = xdkProperties.stringValue(
+    "org.xtclang.plugin.minimum.gradle.version",
+    default = gradle.gradleVersion)
 private val defaultJvmArgs: Provider<List<String>> = extensions.getByName<Provider<List<String>>>("defaultJvmArgs")
 private val jdkVersionProvider = xdkProperties.int("org.xtclang.java.jdk")
 
@@ -16,14 +18,18 @@ val generatePluginResources by tasks.registering {
     val outputDir = layout.buildDirectory.dir("generated/resources")
     val buildInfoFile = outputDir.map { it.file("org/xtclang/build/internal/plugin-build-info.properties") }
     val xdkVersionProvider = provider { version.toString() }
-    inputs.property("defaultJvmArgs", defaultJvmArgs)
-    inputs.property("xdkVersion", xdkVersionProvider)
-    inputs.property("jdkVersion", jdkVersionProvider)
+    inputs.properties(mapOf(
+        "defaultJvmArgs" to defaultJvmArgs,
+        "xdkVersion" to xdkVersionProvider,
+        "jdkVersion" to jdkVersionProvider,
+        "minimumGradleVersion" to minimumGradleVersion
+    ))
     outputs.file(buildInfoFile)
     doLast {
         val jvmArgs = defaultJvmArgs.get()
         val xdkVersion = xdkVersionProvider.get()
         val jdkVersion = jdkVersionProvider.get()
+        logger.lifecycle("Generating build info [xdkVersion=$xdkVersion, minimumGradleVersion=${minimumGradleVersion}, jvmArgs=$jvmArgs]")
         // Generate buildInfo.properties with all build-time configuration
         buildInfoFile.get().asFile.apply {
             parentFile.mkdirs()
@@ -84,7 +90,7 @@ val pluginApiVersionAttribute = GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION
 configurations.all {
     if (name == "runtimeElements" || name == "apiElements") {
         attributes {
-            attribute(pluginApiVersionAttribute, objects.named(GradlePluginApiVersion::class.java, minimumSupportedGradleVersion))
+            attribute(pluginApiVersionAttribute, objects.named(GradlePluginApiVersion::class.java, minimumGradleVersion))
         }
     }
 }

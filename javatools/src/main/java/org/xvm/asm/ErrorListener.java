@@ -162,8 +162,7 @@ public interface ErrorListener {
      * A simple implementation of the ErrorListener that can be used at runtime. Errors will throw,
      * and non-errors will go to standard out.
      */
-    class RuntimeErrorListener
-            implements ErrorListener {
+    class RuntimeErrorListener implements ErrorListener {
         @Override
         public boolean log(ErrorInfo err) {
             String s = err.toString();

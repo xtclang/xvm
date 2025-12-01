@@ -1,6 +1,6 @@
 package org.xvm.javajit;
 
-import java.io.PrintStream;
+import java.io.PrintWriter;
 
 import java.util.Arrays;
 
@@ -80,7 +80,7 @@ public class TypeSystemLoader
 
     // ----- debugging -----------------------------------------------------------------------------
 
-    public void dump(PrintStream out) {
+    public void dump(PrintWriter out) {
         // Arrays.stream(shared).forEach(loader -> loader.dump(out));
         Arrays.stream(owned).forEach(loader -> loader.dump(out));
     }

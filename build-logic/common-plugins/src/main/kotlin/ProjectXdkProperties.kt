@@ -1,6 +1,8 @@
 import org.gradle.api.Project
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
+import org.gradle.api.Task
+import org.gradle.api.Action
 import javax.inject.Inject
 
 abstract class ProjectXdkProperties @Inject constructor(
@@ -80,3 +82,17 @@ val Project.xdkProperties: ProjectXdkProperties
  */
 val Project.semanticVersion: String
     get() = "$group:$name:$version"
+
+
+// The doLastTask/doFirstTask extensions would be useful for cases where you're in a nested lambda inside a
+// task block and want to ensure you're using the task's logger, but they're not necessary for the straightforward
+// cases already in the codebase.
+//
+// If we are in a val taskName by registering/existing block, we will be configuration cache compatible anyway
+// since we are delegating to the task, not to the build script fields like e.g. loggers.
+fun Task.doFirstTask(block: Task.() -> Unit) {
+    doFirst(Action { block(this) })
+}
+fun Task.doLastTask(block: Task.() -> Unit) {
+    doLast(Action { block(this) })
+}

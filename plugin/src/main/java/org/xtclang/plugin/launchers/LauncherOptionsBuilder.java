@@ -25,7 +25,7 @@ public final class LauncherOptionsBuilder {
         this.mode = mode;
     }
 
-    protected boolean useAbsolutePaths() {
+    private boolean useAbsolutePaths() {
         return mode == ExecutionMode.DIRECT;
     }
 
@@ -39,8 +39,6 @@ public final class LauncherOptionsBuilder {
         final Path projectDir  = task.getProjectDirectory().get().getAsFile().toPath();
         final Path outputDir   = task.getOutputDirectoryInternal().getAsFile().toPath();
         final Path resourceDir = task.getResourceDirectoryInternal().getAsFile().toPath();
-
-        System.err.println("*** CompilerOptions: ForceRebuild: " + task.getRebuild().get());
 
         final var builder = CompilerOptions.builder()
             .forceRebuild(task.getRebuild().get())

@@ -87,7 +87,7 @@ public class MainContainer
                 }
                 typeInject = typeInject.removeNullable();
             }
-            if (typeInject instanceof UnionTypeConstant typeUnion) {
+            if (typeInject instanceof final UnionTypeConstant typeUnion) {
                 // the injection's declared type is A|B; this should be extremely rare, if ever
                 // used at all; the code below is just for completeness
                 Set<TypeConstant> setMatch = typeUnion.collectExtended(typeResource, null);
@@ -115,9 +115,9 @@ public class MainContainer
     /**
      * Start the main container.
      *
-     * @param (optional) a map of custom injections
+     * @param mapInjections (optional) a map of custom injections
      */
-    public void start(Map<String, String> mapInjections) {
+    public void start(final Map<String, String> mapInjections) {
         if (m_contextMain != null) {
             throw new IllegalStateException("Already started");
         }
@@ -178,7 +178,7 @@ public class MainContainer
 
             m_contextMain.callLater(hInstantiateModuleAndRun, Utils.OBJECTS_NONE);
         } catch (Exception e) {
-            throw new RuntimeException("failed to run: " + f_idModule + ". Cause: " + e.getMessage());
+            throw new RuntimeException("failed to run: " + f_idModule + ". Cause: " + e.getMessage(), e);
         }
     }
 

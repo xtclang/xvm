@@ -30,6 +30,8 @@ import com.google.gson.JsonParser;
 
 import static org.apache.commons.cli.Option.builder;
 
+import org.jetbrains.annotations.NotNull;
+
 /**
  * Base class for launcher command-line options that wraps Apache Commons CLI.
  * Provides both command-line parsing and programmatic building via Builder pattern.
@@ -130,7 +132,6 @@ public abstract class LauncherOptions {
         group.addOption(builder().longOpt("nowarn").desc("Suppress all warnings").get());
         return options.addOptionGroup(group);
     }
-
 
     // ----- Common Getters ------------------------------------------------------------------------
 
@@ -309,8 +310,8 @@ public abstract class LauncherOptions {
      * @return array of command-line arguments
      */
     protected static String[] jsonToArgs(final String jsonString, final Options schema) {
-        JsonObject json = JsonParser.parseString(jsonString).getAsJsonObject();
-        List<String> args = new ArrayList<>();
+        final JsonObject json = JsonParser.parseString(jsonString).getAsJsonObject();
+        final List<String> args = new ArrayList<>();
 
         // Process each option from schema
         for (final var opt : schema.getOptions()) {
@@ -351,8 +352,7 @@ public abstract class LauncherOptions {
      */
     @Override
     public String toString() {
-        String[] args = toCommandLine();
-        return String.join(" ", args);
+        return String.join(" ", toCommandLine());
     }
 
     /**
@@ -440,7 +440,19 @@ public abstract class LauncherOptions {
      * @param <T> The concrete builder type for method chaining
      */
     protected abstract static class AbstractBuilder<T extends AbstractBuilder<T>> {
-        protected final List<String> args = new ArrayList<>();
+        protected final List<@NotNull String> args = new ArrayList<>();
+
+        protected boolean removeeArgsAndValues(final String arg) {
+            boolean removed = false;
+            int i;
+            while ((i = args.indexOf(arg)) != -1) {
+                removed = true;
+                final var key = args.remove(i);
+                final var value = args.remove(i);
+                assert value.indexOf('-') == 0 : "Inconsistent key value arg: " + key + ' ' + value;
+            }
+            return removed;
+        }
 
         /**
          * Enable verbose output and logging.
@@ -478,6 +490,7 @@ public abstract class LauncherOptions {
          */
         @SuppressWarnings("unchecked")
         public T enableDeduction(final boolean deduce) {
+            args.remove("-d");
             if (deduce) {
                 args.add("-d");
             }
@@ -501,27 +514,57 @@ public abstract class LauncherOptions {
          */
         @SuppressWarnings("unchecked")
         public T enableShowVersion(final boolean showVersion) {
+            args.remove("--version");
             if (showVersion) {
                 args.add("--version");
             }
             return (T) this;
         }
 
-        /**
-         * Add a directory or file to the module path.
-         *
-         * @param path the path to add
-         */
-        public T addModulePath(final File path) {
-            return addModulePaths(List.of(path));
+        public T setModulePath(final File path) {
+            removeeArgsAndValues("-L");
+            return addModulePath(path);
         }
 
-        @SuppressWarnings({"unchecked", "unused"})
-        public T addModulePaths(final List<File> paths) {
+        public T setModulePath(final Path path) {
+            return setModulePath(path.toFile());
+        }
+
+        public T setModulePath(final String path) {
+            return setModulePath(new File(path));
+        }
+
+        public T setModulePath(final List<File> paths) {
+            removeeArgsAndValues("-L");
+            return addModulePath(paths);
+        }
+
+        public T setModulePath(final File... paths) {
+            return setModulePath(Arrays.asList(paths));
+        }
+
+        public T setModulePath(final String... paths) {
+            return setModulePath(Arrays.stream(paths).map(File::new).toList());
+        }
+
+        public T addModulePath(final File path) {
+            return addModulePath(List.of(path));
+        }
+
+        @SuppressWarnings("unchecked")
+        public T addModulePath(final List<File> paths) {
             for (final var path : paths) {
                 args.addAll(List.of("-L", path.getPath()));
             }
             return (T) this;
+        }
+
+        public T addModulePath(final File... paths) {
+            return addModulePath(Arrays.asList(paths));
+        }
+
+        public T addModulePath(final String... paths) {
+            return addModulePath(Arrays.stream(paths).map(File::new).toList());
         }
 
         /**
@@ -529,7 +572,6 @@ public abstract class LauncherOptions {
          *
          * @param path the path to add as a string
          */
-        @SuppressWarnings("unused")
         public T addModulePath(final String path) {
             return addModulePath(new File(path));
         }
@@ -569,8 +611,8 @@ public abstract class LauncherOptions {
             return getTrailingArgs().stream().map(File::new).toList();
         }
 
-        public File[] getResourceLocation() {
-            return getPathList("r").toArray(File[]::new);
+        public List<File> getResourceLocations() {
+            return getPathList("r");
         }
 
         public boolean hasResourceLocation() {
@@ -611,9 +653,7 @@ public abstract class LauncherOptions {
 
         @Override
         public String[] toCommandLine() {
-            List<String> args = new ArrayList<>();
-
-            // Add common flags from base class
+            final List<String> args = new ArrayList<>();
             Collections.addAll(args, super.toCommandLine());
 
             // Add compiler-specific flags
@@ -629,27 +669,16 @@ public abstract class LauncherOptions {
             if (isOutputFilenameQualified()) {
                 args.add("--qualify");
             }
-
-            // Add resource paths
-            Arrays.stream(getResourceLocation())
-                    .map(File::getPath)
-                    .forEach(path -> args.addAll(List.of("-r", path)));
-
-            // Add output location
-            File output = getOutputLocation();
+            getResourceLocations().stream().map(File::getPath).forEach(path -> args.addAll(List.of("-r", path)));
+            final File output = getOutputLocation();
             if (output != null) {
                 args.addAll(List.of("-o", output.getPath()));
             }
-
-            // Add version
-            Version version = getVersion();
+            final Version version = getVersion();
             if (version != null) {
                 args.addAll(List.of("--set-version", version.toString()));
             }
-
-            // Add input files (trailing args)
             getInputLocations().stream().map(File::getPath).forEach(args::add);
-
             return args.toArray(String[]::new);
         }
 
@@ -701,6 +730,7 @@ public abstract class LauncherOptions {
              * @param strict true to enable strict mode, false otherwise
              */
             public Builder enableStrictMode(final boolean strict) {
+                args.remove("--strict");
                 if (strict) {
                     args.add("--strict");
                 }
@@ -721,6 +751,7 @@ public abstract class LauncherOptions {
              * @param disable true to disable warnings, false otherwise
              */
             public Builder disableWarnings(final boolean disable) {
+                args.remove("--nowarn");
                 if (disable) {
                     args.add("--nowarn");
                 }
@@ -740,6 +771,7 @@ public abstract class LauncherOptions {
              * @param qualify true to use qualified names, false otherwise
              */
             public Builder qualifyOutputNames(final boolean qualify) {
+                args.remove("--qualify");
                 if (qualify) {
                     args.add("--qualify");
                 }
@@ -775,12 +807,15 @@ public abstract class LauncherOptions {
              * @param output the output file or directory
              */
             public Builder setOutputLocation(final File output) {
-                args.addAll(List.of("-o", output.getPath()));
+                removeeArgsAndValues("-o");
+                if (output != null) {
+                    args.addAll(List.of("-o", output.getPath()));
+                }
                 return this;
             }
 
             public Builder setOutputLocation(final Path output) {
-                return setOutputLocation(output.toFile());
+                return setOutputLocation(output == null ? null : output.toFile());
             }
 
             /**
@@ -789,7 +824,7 @@ public abstract class LauncherOptions {
              * @param output the output file or directory path as a string
              */
             public Builder setOutputLocation(final String output) {
-                return setOutputLocation(new File(output));
+                return setOutputLocation(output == null ? null : new File(output));
             }
 
             /**
@@ -798,6 +833,7 @@ public abstract class LauncherOptions {
              * @param version the version string
              */
             public Builder setModuleVersion(final String version) {
+                removeeArgsAndValues("--set-version");
                 args.addAll(List.of("--set-version", version));
                 return this;
             }
@@ -905,13 +941,13 @@ public abstract class LauncherOptions {
             return commandLine.hasOption("o");
         }
 
-        public String[] getMethodArgs() {
+        public List<String> getMethodArgs() {
             // Everything after the first trailing arg goes to the method
             final var trailing = getTrailingArgs();
             if (trailing.size() <= 1) {
-                return new String[0];
+                return List.of();
             }
-            return trailing.subList(1, trailing.size()).toArray(String[]::new);
+            return trailing.subList(1, trailing.size());
         }
 
         public Map<String, String> getInjections() {
@@ -958,18 +994,14 @@ public abstract class LauncherOptions {
 
             // Add injections
             getInjections().entrySet().stream()
-                    .map(entry -> entry.getKey() + "=" + entry.getValue())
-                    .forEach(injection -> args.addAll(List.of("-I", injection)));
+                .map(entry -> entry.getKey() + "=" + entry.getValue())
+                .forEach(injection -> args.addAll(List.of("-I", injection)));
 
-            // Add target file (first trailing arg)
-            File target = getTarget();
-            if (target != null) {
-                args.add(target.getPath());
+            // Add target file and method args
+            if (hasTarget()) {
+                args.add(getTarget().getPath());
             }
-
-            // Add method args (remaining trailing args)
-            Collections.addAll(args, getMethodArgs());
-
+            args.addAll(getMethodArgs());
             return args.toArray(String[]::new);
         }
 
@@ -1002,6 +1034,7 @@ public abstract class LauncherOptions {
              * @param enable true to enable JIT, false otherwise
              */
             public Builder enableJit(final boolean enable) {
+                args.remove("-J");
                 if (enable) {
                     args.add("-J");
                 }
@@ -1027,6 +1060,7 @@ public abstract class LauncherOptions {
              * @param disable true to disable auto-compilation, false otherwise
              */
             public Builder disableAutomaticCompilation(final boolean disable) {
+                args.remove("--no-recompile");
                 if (disable) {
                     args.add("--no-recompile");
                 }
@@ -1039,6 +1073,7 @@ public abstract class LauncherOptions {
              * @param methodName the method name
              */
             public Builder setMethodName(final String methodName) {
+                removeeArgsAndValues("-M");
                 args.addAll(List.of("-M", methodName));
                 return this;
             }
@@ -1049,6 +1084,7 @@ public abstract class LauncherOptions {
              * @param output the output file or directory
              */
             public Builder setOutputLocation(final File output) {
+                removeeArgsAndValues("-o");
                 args.addAll(List.of("-o", output.getPath()));
                 return this;
             }

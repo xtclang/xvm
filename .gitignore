@@ -20,6 +20,10 @@
 # User specific tool settings
 *.swp
 
+# Eclipse
+.project
+.settings
+
 # Emacs
 \#*#
 \.#*

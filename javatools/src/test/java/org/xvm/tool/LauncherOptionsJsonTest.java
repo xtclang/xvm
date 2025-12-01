@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -51,7 +50,7 @@ class LauncherOptionsJsonTest {
         assertEquals(original.isStrict(), restored.isStrict());
         assertEquals(original.getModulePath(), restored.getModulePath());
         assertEquals(original.getInputLocations(), restored.getInputLocations());
-        assertArrayEquals(original.getResourceLocation(), restored.getResourceLocation());
+        assertEquals(original.getResourceLocations(), restored.getResourceLocations());
         assertEquals(original.getOutputLocation(), restored.getOutputLocation());
         assertEquals(original.getVersion(), restored.getVersion());
     }
@@ -82,7 +81,7 @@ class LauncherOptionsJsonTest {
         assertEquals(original.getMethodName(), restored.getMethodName());
         assertEquals(original.getModulePath(), restored.getModulePath());
         assertEquals(original.getTarget(), restored.getTarget());
-        assertArrayEquals(original.getMethodArgs(), restored.getMethodArgs());
+        assertEquals(original.getMethodArgs(), restored.getMethodArgs());
         assertEquals(original.getInjections(), restored.getInjections());
     }
 

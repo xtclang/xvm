@@ -15,6 +15,8 @@ import org.xtclang.plugin.tasks.XtcCompileTask;
 import org.xtclang.plugin.tasks.XtcLauncherTask;
 import org.xtclang.plugin.tasks.XtcRunTask;
 
+import static org.xtclang.plugin.tasks.XtcLauncherTask.EXIT_CODE_ERROR;
+
 /**
  * Direct (in-process) execution strategy.
  * Uses javatools classes already loaded by XtcLoadJavaToolsTask via ServiceLoader.
@@ -72,7 +74,7 @@ public class DirectStrategy<T extends XtcLauncherTask<?>> implements ExecutionSt
             return exitCode;
         } catch (final Exception e) {
             logger.error("[plugin] Direct compiler execution failed", e);
-            return -1;
+            return EXIT_CODE_ERROR;
         }
     }
 

@@ -273,7 +273,7 @@ public class ResourceDir {
     }
 
     /**
-     * A ResourceDir that represents an empty set of resources.
+     * A ResourceDir that represents an empty set of resourc1es.
      */
     public static final ResourceDir NoResources = new ResourceDir(new File[0]);
 

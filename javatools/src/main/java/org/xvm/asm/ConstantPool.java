@@ -56,8 +56,7 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * A shared pool of all Constant objects used in a particular FileStructure.
  */
-public class ConstantPool
-        extends XvmStructure {
+public class ConstantPool extends XvmStructure {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -3499,7 +3498,13 @@ public class ConstantPool
         ConstantPool pollPrior = poolHolder[0];
         poolHolder[0] = pool;
         return () -> poolHolder[0] = pollPrior;
-}
+    }
+
+    public static void withPool(ConstantPool pool, Runnable body) {
+        try (var _ = withPool(pool)) {
+            body.run();
+        }
+    }
 
     /**
      * Discard unused Constants and order the remaining constants so that the most-referred-to

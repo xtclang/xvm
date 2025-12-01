@@ -10,7 +10,6 @@ import java.net.URISyntaxException;
 import java.net.URL;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -72,7 +71,7 @@ public class ModuleInfo {
      * @param deduce   pass true to enable the algorithm to deduce/search for likely locations
      */
     public ModuleInfo(final File fileSpec, final boolean deduce) {
-        this(fileSpec, deduce, null, null);
+        this(fileSpec, deduce, List.of(), null);
     }
 
     /**
@@ -88,7 +87,7 @@ public class ModuleInfo {
      * @param binarySpec    the file or directory which represents the target of the binary; as
      *                      provided to the compiler using the "-o" command line switch
      */
-    public ModuleInfo(final File fileSpec, final boolean deduce, File[] resourceSpecs, File binarySpec) {
+    public ModuleInfo(final File fileSpec, final boolean deduce, final List<File> resourceSpecs, File binarySpec) {
         if (fileSpec == null) {
             throw new IllegalArgumentException("A file specification is required for the module");
         }
@@ -145,25 +144,23 @@ public class ModuleInfo {
         // search, but the main thing we're looking for here is the project directory
         File curDir = null;     // no project dir identified, but begin looking from here
         do {
-            File[] srcFiles = sourceFiles(dirSpec);
-            File[] binFiles = compiledFiles(dirSpec);
-            int    srcCount = srcFiles.length;
-            int    binCount = binFiles.length;
-            if (srcCount > 0 && binCount > 0) {
+            var srcFiles = sourceFiles(dirSpec);
+            var binFiles = compiledFiles(dirSpec);
+            if (!srcFiles.isEmpty() && !binFiles.isEmpty()) {
                 // we're in a directory with both source and compiled files; assume that this is
                 // where we'll find everything that we need
                 projectDir = binaryDir = sourceDir = dirSpec;
                 break;
             }
 
-            if (srcCount == 0 && binCount > 0) {
+            if (srcFiles.isEmpty() && !binFiles.isEmpty()) {
                 // we're in a directory with compiled files; it's probably a "build" directory under
                 // the project directory
                 binaryDir = dirSpec;
                 break;
             }
 
-            if (srcCount == 0) {
+            if (srcFiles.isEmpty()) {
                 // no source files, no binary files, so start looking for the project directory from
                 // this point
                 curDir = dirSpec;
@@ -174,8 +171,8 @@ public class ModuleInfo {
                 do {
                     sourceDir = searchDir;
                     if (srcName == null) {
-                        if (srcCount == 1) {
-                            File file = srcFiles[0];
+                        if (srcFiles.size() == 1) {
+                            File file = srcFiles.getFirst();
                             moduleName = extractModuleName(file);
                             if (moduleName != null) {
                                 // we found "the" module
@@ -186,7 +183,7 @@ public class ModuleInfo {
                             }
                         }
                     } else {
-                        if (Arrays.stream(srcFiles).anyMatch(f -> !f.isDirectory()
+                        if (srcFiles.stream().anyMatch(f -> !f.isDirectory()
                                 && (f.getName().equals(srcName) || f.getName().equals(srcName2)))) {
                             break;
                         }
@@ -198,8 +195,7 @@ public class ModuleInfo {
                     }
 
                     srcFiles = sourceFiles(searchDir);
-                    srcCount = srcFiles.length;
-                } while (deduce && srcCount > 0);
+                } while (deduce && !srcFiles.isEmpty());
             }
         } while (false);
 
@@ -209,7 +205,7 @@ public class ModuleInfo {
             } else if (binaryDir != null) {
                 projectDir = deduce ? projectDirFromSubDir(binaryDir) : binaryDir;
             } else if (curDir != null) {
-                // TODO: curDir can never be null of we get here?
+                // TODO: curDir can never be null if we get here?
                 projectDir = deduce ? projectDirFromSubDir(curDir) : curDir;
             } else {
                 throw new IllegalArgumentException(
@@ -226,9 +222,9 @@ public class ModuleInfo {
 
             if (sourceDir != null) {
                 if (fileName == null) {
-                    File[] files = sourceFiles(sourceDir);
-                    if (files.length == 1) {
-                        fileName = removeExtension(files[0].getName());
+                    final var files = sourceFiles(sourceDir);
+                    if (files.size() == 1) {
+                        fileName = removeExtension(files.getFirst().getName());
                     }
                 }
 
@@ -301,7 +297,7 @@ public class ModuleInfo {
             }
         }
 
-        if (resourceSpecs != null && resourceSpecs.length > 0) {
+        if (resourceSpecs != null && !resourceSpecs.isEmpty()) {
             for (final File file : resourceSpecs) {
                 if (file == null) {
                     throw new IllegalArgumentException("A resource location is specified as null");
@@ -316,19 +312,21 @@ public class ModuleInfo {
             // merge the resource directory lists, with the specified ones having priority
             File[] dftResDirs = getResourceDir().getLocations();
             int    cDfts      = dftResDirs.length;
+            File[] allResDirs;
             if (cDfts > 0) {
-                int    cSpecs = resourceSpecs.length;
-                File[] allResDirs = new File[cSpecs + cDfts];
-                System.arraycopy(resourceSpecs, 0, allResDirs, 0, cSpecs);
+                int cSpecs = resourceSpecs.size();
+                allResDirs = new File[cSpecs + cDfts];
+                resourceSpecs.toArray(allResDirs);
                 System.arraycopy(dftResDirs, 0, allResDirs, cSpecs, cDfts);
-                resourceSpecs = allResDirs;
+            } else {
+                allResDirs = resourceSpecs.toArray(new File[0]);
             }
 
-            resourceDir = new ResourceDir(resourceSpecs);
+            resourceDir = new ResourceDir(allResDirs);
         }
     }
 
-    Function<File, ModuleInfo> makeModuleInfoFactory(final boolean deduce, final File[] resources, final File binary) {
+    Function<File, ModuleInfo> makeModuleInfoFactory(final boolean deduce, final List<File> resources, final File binary) {
         return f -> new ModuleInfo(f, deduce, resources, binary);
     }
 
@@ -491,7 +489,11 @@ public class ModuleInfo {
     public ResourceDir getResourceDir() {
         if (resourceDir == null) {
             File sourceFile = getSourceFile();
-            resourceDir = sourceFile.exists() ? ResourceDir.forSource(sourceFile, deduce) : NoResources;
+            System.err.println("[DEBUG] getResourceDir: sourceFile=" + sourceFile + ", exists=" + (sourceFile != null && sourceFile.exists()) + ", deduce=" + deduce);
+            resourceDir = sourceFile != null && sourceFile.exists()
+                    ? ResourceDir.forSource(sourceFile, deduce)
+                    : NoResources;
+            System.err.println("[DEBUG] getResourceDir: result=" + resourceDir);
         }
 
         return resourceDir;
@@ -1647,9 +1649,9 @@ public class ModuleInfo {
      *
      * @param dir  a directory that may contain Ecstasy source files
      *
-     * @return an array of zero or more source files
+     * @return a list of zero or more source files
      */
-    public static File[] sourceFiles(final File dir) {
+    public static List<File> sourceFiles(final File dir) {
         return listFiles(dir, "x");
     }
 
@@ -1661,8 +1663,7 @@ public class ModuleInfo {
      * @return true iff the passed name is an explicit Ecstasy source or compiled module file name
      */
     public static boolean isExplicitCompiledFile(final String sFile) {
-        String sExt = getExtension(sFile);
-        return "xtc".equalsIgnoreCase(sExt);
+        return "xtc".equalsIgnoreCase(getExtension(sFile));
     }
 
     /**
@@ -1670,9 +1671,9 @@ public class ModuleInfo {
      *
      * @param dir  a directory that may contain Ecstasy compiled module files
      *
-     * @return an array of zero or more compiled module files
+     * @return a list of zero or more compiled module files
      */
-    public static File[] compiledFiles(final File dir) {
+    public static List<File> compiledFiles(final File dir) {
         return listFiles(dir, "xtc");
     }
 
@@ -1758,8 +1759,8 @@ public class ModuleInfo {
         File curDir = prjDir;
         File srcDir = curDir;
         FindSrcDir: for (int i = 0; i <= 3; ++i) {
-            File[] srcFiles = sourceFiles(curDir);
-            if (srcFiles.length == 0) {
+            List<File> srcFiles = sourceFiles(curDir);
+            if (srcFiles.isEmpty()) {
                 File subdir;
                 switch (i) {
                 case 0:
@@ -1816,7 +1817,7 @@ public class ModuleInfo {
             return subdir;
         }
 
-        if (sourceFiles(prjDir).length > 0 || compiledFiles(prjDir).length > 0) {
+        if (!sourceFiles(prjDir).isEmpty() || !compiledFiles(prjDir).isEmpty()) {
             return prjDir;
         }
 

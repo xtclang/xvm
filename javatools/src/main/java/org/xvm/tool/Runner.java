@@ -1,11 +1,11 @@
 package org.xvm.tool;
 
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -14,8 +14,10 @@ import org.xvm.api.Connector;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.JitConnector;
 
@@ -103,12 +105,13 @@ public class Runner extends Launcher<RunnerOptions> {
             // use the module we found in the repo
             binLocDesc = "the repository";
         } else {
-            ModuleInfo info    = null;
             File       outFile = opts.getOutputFile();
+            ModuleInfo info;
             try {
-                info = new ModuleInfo(fileSpec, opts.mayDeduceLocations(), null, outFile);
+                info = new ModuleInfo(fileSpec, opts.mayDeduceLocations(), List.of(), outFile);
             } catch (final RuntimeException e) {
                 log(ERROR, "Failed to identify the module for: {} ({})", fileSpec, e);
+                throw new AssertionError("Unreachable", e);
             }
             checkErrors();
 
@@ -149,15 +152,19 @@ public class Runner extends Launcher<RunnerOptions> {
 
             if (fCompile) {
                 // Build CompilerOptions programmatically using fluent API
-                final var builder = new CompilerOptions.Builder().addInputFile(fileSpec);
-                opts.getModulePath().forEach(builder::addModulePath);
+                final var builder = CompilerOptions.builder()
+                        .addInputFile(fileSpec)
+                        .addModulePath(opts.getModulePath());
                 if (outFile != null) {
                     builder.setOutputLocation(outFile);
                 }
-                final var compilerOpts = builder.build();
-                new Compiler(compilerOpts, m_console, m_errors).run();
-                // TODO: No one checks the return value of the compile?
-                info      = new ModuleInfo(fileSpec, opts.mayDeduceLocations(), null, outFile);
+                final var exitCode = new Compiler(builder.build(), m_console, m_errors).run();
+                if (exitCode != 0) {
+                    log(ERROR, "Runner invoked compilation failed with exit code {}", exitCode);
+                    checkErrors();
+                    throw new AssertionError("Unreachable");
+                }
+                info      = new ModuleInfo(fileSpec, opts.mayDeduceLocations(), List.of(), outFile);
                 fileBin   = info.getBinaryFile();
                 binExists = fileBin != null && fileBin.exists();
                 repo      = configureLibraryRepo(opts.getModulePath());
@@ -175,7 +182,7 @@ public class Runner extends Launcher<RunnerOptions> {
                     module = struct.getModule();
                 } catch (final IOException e) {
                     log(FATAL, e, "I/O exception reading module file: {}", fileBin);
-                    throw new AssertionError(); // Unreachable - log(FATAL) throws
+                    throw new AssertionError("Unreachable", e); // Unreachable - log(FATAL) throws
                 }
             }
         }
@@ -190,7 +197,7 @@ public class Runner extends Launcher<RunnerOptions> {
             repo.storeModule(module);
         } catch (final IOException e) {
             log(FATAL, e, "I/O exception storing module file: {}", fileSpec);
-            throw new AssertionError(); // Unreachable - log(FATAL) throws
+            throw new AssertionError("Unreachable", e); // Unreachable - log(FATAL) throws
         }
         checkErrors();
 
@@ -201,73 +208,69 @@ public class Runner extends Launcher<RunnerOptions> {
         }
 
         log(INFO, "Executing {} from {}", sName, binLocDesc);
-        try {
-            var connector = opts.isJit() ? new JitConnector(repo) : new Connector(repo);
-            connector.loadModule(module.getName());
-            connector.start(opts.getInjections());
 
-            var pool = connector.getConstantPool();
-            try (var ignore = ConstantPool.withPool(pool)) {
-                final var sMethod    = opts.getMethodName();
-                final var setMethods = connector.findMethods(sMethod);
-                if (setMethods.size() != 1) {
-                    log(ERROR, "{} method {} in module {}", setMethods.isEmpty() ? "Missing" : "Ambiguous", quoted(sMethod), sName);
-                    checkErrors();  // Throws LauncherException
-                    return 1;  // Unreachable
-                }
+        var connector = opts.isJit() ? new JitConnector(repo) : new Connector(repo);
+        connector.loadModule(module.getName());
+        connector.start(opts.getInjections());
 
-                var asArg       = opts.getMethodArgs();
-                var method      = setMethods.iterator().next();
-                var typeStrings = pool.ensureArrayType(pool.typeString());
-
-                switch (method.getRequiredParamCount()) {
-                case 0:
-                    if (asArg != null) {
-                        // the method doesn't require anything, but there are args
-                        if (method.getParamCount() > 0) {
-                            var typeArg = method.getParam(0).getType();
-                            if (!typeStrings.isA(typeArg)) {
-                                log(ERROR, "Unsupported argument type {} for method {}", quoted(typeArg.getValueString()), quoted(sMethod));
-                                checkErrors();  // Throws LauncherException
-                                return 1;  // Unreachable
-                            }
-                        } else {
-                            log(WARNING, "Method {} does not take any parameters; ignoring the specified arguments", quoted(sMethod));
-                        }
-                    }
-                    break;
-
-                case 1: {
-                    var typeArg = method.getParam(0).getType();
-                    if (!typeStrings.isA(typeArg)) {
-                        log(ERROR, "Unsupported argument type {} for method {}", quoted(typeArg.getValueString()), quoted(sMethod));
-                        checkErrors();  // Throws LauncherException
-                        return 1;  // Unreachable
-                    }
-                    break;
-                }
-
-                default:
-                    log(ERROR, "Unsupported method arguments {}", quoted(method.getIdentityConstant().getSignature().getValueString()));
-                    checkErrors();  // Throws LauncherException
-                    return 1;  // Unreachable
-                }
-
-                connector.invoke0(method, asArg);
-
-                return connector.join();
+        var pool = connector.getConstantPool();
+        try (var _ = ConstantPool.withPool(pool)) {
+            final var sMethod    = opts.getMethodName();
+            final var setMethods = connector.findMethods(sMethod);
+            if (setMethods.size() != 1) {
+                log(ERROR, "{} method {} in module {}", setMethods.isEmpty() ? "Missing" : "Ambiguous", quoted(sMethod), sName);
+                checkErrors();  // Throws LauncherException
+                return 1;  // Unreachable
             }
+
+            var args = opts.getMethodArgs();
+            var method = setMethods.iterator().next();
+            var typeStrings = pool.ensureArrayType(pool.typeString());
+            validateMethodArgs(sMethod, method, args, typeStrings);
+            connector.invoke0(method, args);
+            return connector.join();
         } catch (final InterruptedException _) {
             log(WARNING, "Interrupted while waiting for method {}", quoted(sName));
             return 1;
         } catch (final LauncherException e) {
-            // Let LauncherException propagate unchanged
             throw e;
         } catch (final Exception e) {
-            // Catch all other unexpected errors from the connector
             e.printStackTrace(System.err);
             log(FATAL, e, "Unexpected error");
-            throw new AssertionError(e); // Unreachable - log(FATAL) throws
+            throw new AssertionError("Unreachable", e); // Unreachable - log(FATAL) throws
+        }
+    }
+
+    /**
+     * Validate that the method arguments are compatible with the method signature.
+     */
+    private void validateMethodArgs(final String sMethod, final MethodStructure method, final List<String> asArg, final TypeConstant typeStrings) {
+        final var requiredCount = method.getRequiredParamCount();
+        final var totalCount    = method.getParamCount();
+
+        // Only methods with 0 or 1 required parameters are supported
+        if (requiredCount > 1) {
+            log(ERROR, "Unsupported method arguments {}", quoted(method.getIdentityConstant().getSignature().getValueString()));
+            checkErrors();  // Throws LauncherException
+            return;
+        }
+
+        // Warn if args provided but method takes no parameters
+        if (!asArg.isEmpty() && totalCount == 0) {
+            log(WARNING, "Method {} does not take any parameters; ignoring the specified arguments", quoted(sMethod));
+            return;
+        }
+
+        // Validate parameter type when args will be passed:
+        // - required param exists (requiredCount == 1), or
+        // - args provided and method can accept them
+        boolean willPassArgs = requiredCount > 0 || (!asArg.isEmpty() && totalCount > 0);
+        if (willPassArgs) {
+            var typeArg = method.getParam(0).getType();
+            if (!typeStrings.isA(typeArg)) {
+                log(ERROR, "Unsupported argument type {} for method {}", quoted(typeArg.getValueString()), quoted(sMethod));
+                checkErrors();  // Throws LauncherException
+            }
         }
     }
 
@@ -286,9 +289,6 @@ public class Runner extends Launcher<RunnerOptions> {
         }
         return possibles;
     }
-
-
-    // ----- text output and error handling --------------------------------------------------------
 
     @Override
     public String desc() {

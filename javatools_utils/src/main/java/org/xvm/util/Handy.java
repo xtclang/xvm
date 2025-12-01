@@ -21,6 +21,10 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
+import java.util.function.Predicate;
+
+import java.util.stream.Stream;
+
 import static java.util.Arrays.sort;
 
 
@@ -600,7 +604,7 @@ public final class Handy {
      * @return null iff the passed string was not parseable; otherwise a map from string keys to
      *         string values
      */
-    @SuppressWarnings("fallthrough")
+    //@SuppressWarnings("fallthrough")
     public static Map<String, String> parseStringMap(final String s) {
         if (s == null || s.isEmpty()) {
             return Collections.emptyMap();
@@ -1102,8 +1106,7 @@ public final class Handy {
      * @throws IOException  if an I/O exception occurs while reading the data,
      *         or if a UTF-8 format error is detected
      */
-    public static int readUtf8Char(final DataInput in)
-            throws IOException {
+    public static int readUtf8Char(final DataInput in) throws IOException {
         int b = in.readUnsignedByte();
         if ((b & 0x80) == 0) {
             // ASCII - single byte 0xxxxxxx format
@@ -1162,8 +1165,7 @@ public final class Handy {
      * @throws IOException  if an I/O exception occurs while writing the data,
      *         or if a UTF-8 format error is detected
      */
-    public static void writeUtf8Char(final DataOutput out, final int ch)
-            throws IOException {
+    public static void writeUtf8Char(final DataOutput out, final int ch) throws IOException {
         if ((ch & ~0x7F) == 0) {
             // ASCII - single byte 0xxxxxxx format
             out.write(ch);
@@ -1412,32 +1414,42 @@ public final class Handy {
     }
 
     /**
-     * @return an array of files in the specified directory ordered by case-insensitive name
+     * List all files in a directory, sorted case-insensitively by name.
+     *
+     * @param dir  the directory to list
+     * @return a list of files, or empty list if dir is null or not a directory
      */
-    public static File[] listFiles(final File dir) {
-        if (dir == null || !dir.isDirectory()) {
-            return NO_FILES;
-        }
-
-        File[] aFile = dir.listFiles();
-        assert aFile != null;
-        sort(aFile, Comparator.comparing(File::getName, String.CASE_INSENSITIVE_ORDER));
-        return aFile;
+    public static List<File> listFiles(final File dir) {
+        return listFilesFiltered(dir, null);
     }
 
     /**
-     * Obtain an array of files (not including directories) from the specified directory that match
-     * the specified case-insensitive extension.
+     * List files (not directories) in a directory that have the specified extension.
      *
      * @param dir        the directory to search
-     * @param extension  the extension to match; null will match files with no '.' in their name
-     *
-     * @return an array of zero or more files that match the specified extension
+     * @param extension  the extension to match (case-insensitive); null matches files with no extension
+     * @return a list of matching files, sorted case-insensitively by name
      */
-    public static File[] listFiles(final File dir, final String extension) {
-        return extension == null
-                ? dir.listFiles(f -> !f.isDirectory() && getExtension(f.getName()) == null)
-                : dir.listFiles(f -> !f.isDirectory() && extension.equalsIgnoreCase(getExtension(f.getName())));
+    public static List<File> listFiles(final File dir, final String extension) {
+        return listFilesFiltered(dir, f -> !f.isDirectory() && hasExtension(f, extension));
+    }
+
+    /**
+     * Common implementation for listing files with optional filtering.
+     */
+    private static List<File> listFilesFiltered(final File dir, final Predicate<File> filter) {
+        if (dir == null || !dir.isDirectory()) {
+            return List.of();
+        }
+        final File[] files = dir.listFiles();
+        if (files == null) {
+            return List.of();
+        }
+        Stream<File> stream = Arrays.stream(files);
+        if (filter != null) {
+            stream = stream.filter(filter);
+        }
+        return stream.sorted(Comparator.comparing(File::getName, String.CASE_INSENSITIVE_ORDER)).toList();
     }
 
     /**
@@ -1452,56 +1464,77 @@ public final class Handy {
     }
 
     /**
-     * If the passed file  has a "dot extension" such as ".x" or ".xtc" extension, then return the
-     * extension, such as "x" or "xtc"
+     * Extract just the file name portion from a path, stripping any directory components.
+     *
+     * @param path  a file path or name
+     * @return the file name without any directory path
+     */
+    private static String baseName(final String path) {
+        int lastSep = Math.max(path.lastIndexOf('/'), path.lastIndexOf(File.separatorChar));
+        return lastSep >= 0 ? path.substring(lastSep + 1) : path;
+    }
+
+    /**
+     * Get the file extension (the part after the last dot in the file name).
      *
      * @param file  the file
-     *
-     * @return the extension, if the file has an extension; otherwise null
+     * @return the extension without the dot (e.g., "x" or "xtc"), or null if none
      */
     public static String getExtension(final File file) {
         return file == null ? null : getExtension(file.getName());
     }
 
     /**
-     * If the passed file name has a "dot extension" such as ".x" or ".xtc" extension, then return
-     * the extension, such as "x" or "xtc"
+     * Get the file extension from a file name or path.
      *
-     * @param sFile  the file name
-     *
-     * @return the extension, if the file has an extension; otherwise null
+     * @param path  the file name or path
+     * @return the extension without the dot (e.g., "x" or "xtc"), or null if none
      */
-    public static String getExtension(final String sFile) {
-        if (sFile == null) {
+    public static String getExtension(final String path) {
+        if (path == null) {
             return null;
         }
-
-        int ofDot = sFile.lastIndexOf('.');
-        if (ofDot <= 0) {
-            return null;
-        }
-
-        String sExt = sFile.substring(ofDot + 1);
-        return isPathed(sExt) ? null : sExt;
+        String name = baseName(path);
+        int dot = name.lastIndexOf('.');
+        return dot > 0 ? name.substring(dot + 1) : null;
     }
 
     /**
-     * If the passed file name ends with an extension (such as ".x" or a ".xtc"), then return the
-     * file name without the extension.
-     *
-     * @param sFile  the file name, possibly with an extension such as ".x" or ".xtc"
-     *
-     * @return the same file name, but without an extension (if it previously had an extension)
+     * Check if a file has any extension.
      */
-    public static String removeExtension(final String sFile) {
-        int ofDot = sFile.lastIndexOf('.');
-        if (ofDot <= 0) {
-            return sFile;
-        }
+    public static boolean hasExtension(final File file) {
+        return getExtension(file) != null;
+    }
 
-        return sFile.lastIndexOf('/') < ofDot && sFile.lastIndexOf(File.separatorChar) < ofDot
-                ? sFile.substring(0, ofDot)
-                : sFile;
+    /**
+     * Check if a file has the specified extension (case-insensitive).
+     *
+     * @param file  the file to check
+     * @param sExt   the extension to match, or null to match files with no extension
+     */
+    public static boolean hasExtension(final File file, final String sExt) {
+        final String existing = getExtension(file);
+        return sExt == null ? existing == null : sExt.equalsIgnoreCase(existing);
+    }
+
+    /**
+     * Remove the extension from a file name or sPath.
+     *
+     * @param sPath  the file name or sPath, possibly with an extension
+     * @return the sPath without the extension
+     */
+    public static String removeExtension(final String sPath) {
+        if (sPath == null) {
+            return null;
+        }
+        final String name = baseName(sPath);
+        int dot = name.lastIndexOf('.');
+        if (dot <= 0) {
+            return sPath;
+        }
+        // Calculate position of dot in original sPath
+        int dotInPath = sPath.length() - name.length() + dot;
+        return sPath.substring(0, dotInPath);
     }
 
     /**
@@ -1553,13 +1586,11 @@ public final class Handy {
     public static InputStream toInputStream(final File file)
             throws IOException {
         if (!file.exists()) {
-            throw new IOException("file does not exist: " + file);
+            throw new IOException("File does not exist: " + file);
         }
-
         if (!file.isFile() || !file.canRead()) {
-            throw new IOException("not a readable file: " + file);
+            throw new IOException("Not a readable file: " + file);
         }
-
         return Files.newInputStream(file.toPath());
     }
 
@@ -2074,9 +2105,4 @@ public final class Handy {
      * A constant empty array of <tt>String</tt>.
      */
     public static final String[] NO_ARGS = new String[0];
-
-    /**
-     * A constant empty array of <tt>File</tt>.
-     */
-    public static final File[] NO_FILES = new File[0];
 }

@@ -15,11 +15,16 @@ import org.xtclang.plugin.tasks.XtcCompileTask;
 import org.xtclang.plugin.tasks.XtcLauncherTask;
 import org.xtclang.plugin.tasks.XtcRunTask;
 
+import static org.xtclang.plugin.XtcPluginUtils.failure;
+import static org.xtclang.plugin.tasks.XtcLauncherTask.EXIT_CODE_ERROR;
+
 /**
  * Base class for forked (out-of-process) execution strategies.
  * Handles common logic for building ProcessBuilder and executing forked JVM processes.
  */
 public abstract class ForkedStrategy<T extends XtcLauncherTask<?>> implements ExecutionStrategy {
+
+    private static final int STD_BUFFER_SIZE = 8192;
 
     protected final ExecutionMode mode;
     protected final Logger logger;
@@ -43,7 +48,7 @@ public abstract class ForkedStrategy<T extends XtcLauncherTask<?>> implements Ex
 
     @Override
     public int execute(final XtcCompileTask task) {
-        logger.info("[plugin] {}", getDesc());
+        logger.info("[plugin] execute(XtcCompileTask): {}", getDesc());
 
         try {
             // Use relative paths for forked mode to preserve build caching
@@ -54,9 +59,11 @@ public abstract class ForkedStrategy<T extends XtcLauncherTask<?>> implements Ex
             final Process process = pb.start();
 
             // Copy streams if needed (when inheritIO doesn't work due to Gradle redirects)
+            // We need to wait for stream copying threads to finish.
+            // NOTE: The javaexec task does this automatically, but it is hard to configure it as detachable,
+            //   and the ProcessBuilder solution is not Java centric, and is more extensible.
             final var streamThreads = shouldCopyStreams ? copyProcessStreams(process) : null;
             final int exitCode = waitForProcess(process);
-            // Wait for stream copying threads to finish
             if (streamThreads != null) {
                 for (final var thread : streamThreads) {
                     thread.join();
@@ -66,25 +73,24 @@ public abstract class ForkedStrategy<T extends XtcLauncherTask<?>> implements Ex
             return exitCode;
 
         } catch (final IOException e) {
-            logger.error("[plugin] Failed to start compiler process", e);
-            return -1;
+            throw failure(e, "[plugin] Failed to start compiler process");
         } catch (final InterruptedException e) {
-            logger.error("[plugin] Compiler process was interrupted", e);
+            logger.error("[plugin] ERROR: Compiler process was interrupted", e);
             Thread.currentThread().interrupt();
-            return -1;
+            return EXIT_CODE_ERROR;
         }
     }
 
     @Override
     public int execute(final XtcRunTask task, final XtcRunModule runConfig) {
-        logger.info("[plugin] {}", getDesc());
+        logger.info("[plugin] execute(XtcRunTask): {} (runConfig: {})", getDesc(), runConfig);
 
         try {
-            final String moduleName = runConfig.getModuleName().get();
-            final List<String> moduleArgs = runConfig.getModuleArgs().get();
+            final var moduleName = runConfig.getModuleName().get();
+            final var moduleArgs = runConfig.getModuleArgs().get();
             // Use relative paths for forked mode to preserve build caching
             final var options = optionsBuilder().buildRunnerOptions(task, moduleName, moduleArgs);
-            final ProcessBuilder pb = buildProcess(task, options.toCommandLine());
+            final var pb = buildProcess(task, options.toCommandLine());
             final boolean shouldCopyStreams = configureIO(pb, task);
             final Process process = pb.start();
             // Copy streams if needed (when inheritIO doesn't work due to Gradle redirects)
@@ -107,26 +113,14 @@ public abstract class ForkedStrategy<T extends XtcLauncherTask<?>> implements Ex
     private ProcessBuilder buildProcess(final XtcLauncherTask<?> task, final String[] programArgs) {
         final var projectDir = task.getProjectDirectory().get().getAsFile();
         final List<String> command = new ArrayList<>();
-
-        // Java executable
         command.add(javaExecutable);
-
-        // JVM arguments
         command.addAll(task.getJvmArgs().get());
-
-        // Classpath (javatools JAR)
         command.add("-cp");
         command.add(task.resolveJavaTools().getAbsolutePath());
-
-        // Main class (XTC compiler or runner)
         command.add(task.getJavaLauncherClassName());
-
-        // Program arguments from options.toCommandLine()
         command.addAll(Arrays.asList(programArgs));
-
         final ProcessBuilder pb = new ProcessBuilder(command).directory(projectDir);
         logger.lifecycle("[plugin] Forked process command: {}", String.join(" ", command));
-
         return pb;
     }
 
@@ -159,7 +153,7 @@ public abstract class ForkedStrategy<T extends XtcLauncherTask<?>> implements Ex
         for (final var stream : streams) {
             final var thread = new Thread(() -> {
                 try {
-                    final byte[] buffer = new byte[8192]; // 8KB buffer like Gradle
+                    final byte[] buffer = new byte[STD_BUFFER_SIZE]; // 8KB buffer like Gradle
                     int bytesRead;
                     while ((bytesRead = stream.input.read(buffer)) != -1) {
                         stream.output.write(buffer, 0, bytesRead);

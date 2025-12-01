@@ -1,12 +1,15 @@
 package org.xvm.javajit;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.PrintStream;
+import java.io.PrintWriter;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -17,16 +20,16 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 
-public class JitConnector
-        extends Connector {
-    public JitConnector(ModuleRepository repo) {
-        super(repo);
+import static java.nio.charset.StandardCharsets.UTF_8;
 
+public class JitConnector extends Connector {
+    public JitConnector(final ModuleRepository repo) {
+        super(repo);
         xvm = new Xvm(repo);
     }
 
     @Override
-    public void loadModule(String appName) {
+    public void loadModule(final String appName) {
         module = f_repository.loadModule(appName);
         if (module == null) {
             throw new IllegalStateException("Unable to load module \"" + appName + "\"");
@@ -37,91 +40,96 @@ public class JitConnector
     }
 
     @Override
-    public ConstantPool getConstantPool()
-        {
+    public ConstantPool getConstantPool() {
         return module.getConstantPool();
-        }
+    }
 
     @Override
-    public void start(Map<String, String> mapInjections) {
+    public void start(final Map<String, String> mapInjections) {
         try {
-            ClassLoader loader = xvm.nativeTypeSystem.loader;
-            Class       clz    = loader.loadClass("org.xtclang._native.mgmt.nMainInjector");
-
-            Injector injector = (Injector) clz.getDeclaredConstructor(Xvm.class).newInstance(xvm);
-            try (var ignore = ConstantPool.withPool(xvm.nativeTypeSystem.pool())) {
+            var loader = xvm.nativeTypeSystem.loader;
+            var clz = loader.loadClass("org.xtclang._native.mgmt.nMainInjector");
+            var injector = (Injector) clz.getDeclaredConstructor(Xvm.class).newInstance(xvm);
+            try (var _ = ConstantPool.withPool(xvm.nativeTypeSystem.pool())) {
                 clz.getMethod("addNativeResources").invoke(injector);
             }
-
             container = xvm.createContainer(ts, injector);
-        } catch (ClassNotFoundException | NoClassDefFoundError e) {
+        } catch (final ClassNotFoundException | NoClassDefFoundError e) {
             throw new RuntimeException("Failed to load nMainInjector", e);
-        } catch (ReflectiveOperationException e) {
+        } catch (final ReflectiveOperationException e) {
             throw new RuntimeException("Failed to invoke \"addNativeResources()\" method", e);
         }
     }
 
     @Override
-    public Set<MethodStructure> findMethods(String sMethodName) {
+    public Set<MethodStructure> findMethods(final String sMethodName) {
         return findMethods(module.getIdentityConstant(), sMethodName);
     }
 
     @Override
-    public void invoke0(MethodStructure methodStructure, String... asArg) {
-        ScopedValue.where(Ctx.Current, new Ctx(xvm, container)).run(
-            () -> invoke0Impl(methodStructure, asArg));
+    public void invoke0(final MethodStructure method, final List<String> args) {
+        ScopedValue.where(Ctx.Current, new Ctx(xvm, container)).run(() -> invoke0Impl(method, args));
     }
 
-    public void invoke0Impl(MethodStructure methodStructure, String... asArg) {
+    private void invoke0Impl(final MethodStructure methodStructure, final List<String> args) {
         String typeName = ts.owned[0].module.getIdentityConstant().getType().ensureJitClassName(ts);
-
         TypeSystemLoader loader = ts.loader;
-        try {
-            Class  clz    = loader.loadClass(typeName);
-            Ctx    ctx    = Ctx.get();
-            Object module = clz.getDeclaredConstructor(Ctx.class).newInstance(ctx);
 
-            Object result;
-            if (asArg == null || asArg.length == 0) {
+        try {
+            var clz = loader.loadClass(typeName);
+            var ctx = Ctx.get();
+            var mod = clz.getDeclaredConstructor(Ctx.class).newInstance(ctx);
+
+            Object res;
+            if (args.isEmpty()) {
                 Method method = clz.getMethod("run", Ctx.class);
-                result = method.invoke(module, ctx);
+                res = method.invoke(mod, ctx);
             } else {
-                Method method = clz.getMethod("run", Ctx.class, String.class.arrayType());
-                result = method.invoke(module, ctx, asArg); // TODO create xStr args
+                Method method = clz.getMethod("run", Ctx.class, String[].class);
+                res = method.invoke(mod, ctx, args.toArray(String[]::new));
             }
-            if (result instanceof Long lr) {
-                this.result = lr;
+            if (res instanceof final Long l) {
+                this.result = l;
             }
-        } catch (ClassNotFoundException | NoClassDefFoundError e) {
-            e.printStackTrace();
+        } catch (final ClassNotFoundException | NoClassDefFoundError e) {
+            e.printStackTrace(System.err);
             throw new RuntimeException("Failed to load class \"" + typeName + '"', e);
-        } catch (NoSuchMethodException e) {
+        } catch (final NoSuchMethodException e) {
             throw new RuntimeException("No \"run()\" method", e);
-        } catch (InstantiationException | IllegalAccessException e) {
+        } catch (final InstantiationException | IllegalAccessException e) {
             throw new RuntimeException("Failed to invoke \"run()\" method", e);
-        } catch (InvocationTargetException e) {
-            Throwable cause = e.getCause();
-            String    name  = cause.getClass().getSimpleName();
-            if (name.equals("xException") ||
-                    name.startsWith(TypeSystem.ClassfileShape.Exception.prefix)) {
-                try {
-                    // TODO: add the service info; see Utils.log()
-                    System.out.println("\nUnhandled exception: " +
-                        cause.getClass().getField("exception").get(cause));
-                } catch (Throwable ignore) {}
-            } else {
-                e.printStackTrace();
-                throw new RuntimeException(cause);
-            }
+        } catch (final InvocationTargetException e) {
+            handleInvocationException(e);
         } finally {
-            try {
-                // dump the generated classes
-                loader.dump(new PrintStream(
-                    new FileOutputStream(loader.typeSystem.mainModule().getSimpleName() + ".jasm")));
-                xvm.nativeTypeSystem.loader.dump(
-                            new PrintStream(new FileOutputStream("ecstasy.jasm")));
-            } catch (IOException ignore) {}
+            dumpGeneratedClasses(loader);
         }
+    }
+
+    private static void handleInvocationException(final InvocationTargetException e) {
+        Throwable cause = e.getCause();
+        String name = cause.getClass().getSimpleName();
+        if ("xException".equals(name) || name.startsWith(TypeSystem.ClassfileShape.Exception.prefix)) {
+            try {
+                // TODO: add the service info; see Utils.log()
+                System.out.println("\nUnhandled exception: " + cause.getClass().getField("exception").get(cause));
+            } catch (final ReflectiveOperationException _) {
+                // ignored
+            }
+        } else {
+            e.printStackTrace(System.err);
+            throw new RuntimeException(cause);
+        }
+    }
+
+    private void dumpGeneratedClasses(final TypeSystemLoader loader) {
+        dumpToFile(loader, loader.typeSystem.mainModule().getSimpleName() + ".jasm");
+        dumpToFile(xvm.nativeTypeSystem.loader, "ecstasy.jasm");
+    }
+
+    private static void dumpToFile(final TypeSystemLoader loader, final String filename) {
+        try (var out = new PrintWriter(Files.newBufferedWriter(Path.of(filename), UTF_8))) {
+            loader.dump(out);
+        } catch (final IOException ignored) {}
     }
 
     @Override

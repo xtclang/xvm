@@ -19,7 +19,7 @@ import org.gradle.api.tasks.TaskAction;
 
 import org.jetbrains.annotations.NotNull;
 
-import org.xtclang.plugin.XtcJavaToolsRuntime;
+import static org.xtclang.plugin.XtcJavaToolsRuntime.ensureJavaToolsInClasspath;
 
 /**
  * Task that loads javatools.jar into the plugin classloader.
@@ -49,30 +49,21 @@ public abstract class XtcLoadJavaToolsTask extends DefaultTask {
     public void loadJavaTools() {
         final var logger = getLogger();
         logger.info("[plugin] Loading javatools.jar into plugin classloader");
-
         // Log classpath before loading javatools
         final var classLoader = getClass().getClassLoader();
         final var lines = new ArrayList<String>();
-        lines.add("[plugin] Classpath BEFORE ensureJavaToolsInClasspath:");
-        lines.addAll(logClasspath(classLoader));
-
+        //lines.add("[plugin] Classpath BEFORE ensureJavaToolsInClasspath:");
+        //lines.addAll(logClasspath(classLoader));
         // Use providers that were set at configuration time
         final var versionProvider = getProjectVersion().map(v -> v);
         final var javaToolsProvider = getJavaToolsConfiguration().map(fc -> fc);
         final var xdkProvider = getXdkFileTree().map(ft -> ft);
-
-        final boolean changed = XtcJavaToolsRuntime.ensureJavaToolsInClasspath(versionProvider, javaToolsProvider, xdkProvider, logger);
-
+        final boolean changed = ensureJavaToolsInClasspath(versionProvider, javaToolsProvider, xdkProvider, logger);
         // Log classpath after loading javatools
         if (changed) {
-            lines.add("[plugin] Java tools loaded successfully.");
-            lines.add("[plugin] Classpath AFTER ensureJavaToolsInClasspath:");
             lines.addAll(logClasspath(classLoader));
-        } else {
-            lines.removeIf(line -> !line.contains("javatools"));
-            lines.add("[plugin] Java tools were already loaded.");
+            lines.forEach(logger::lifecycle);
         }
-        lines.forEach(logger::lifecycle);
     }
 
     private static List<String> logClasspath(final ClassLoader classLoader) {

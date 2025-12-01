@@ -292,7 +292,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         final File path = oldFile.getParentFile();
         final File newFile = new File(path, newName);
         if ((!newFile.exists() || newFile.delete()) && oldFile.renameTo(newFile)) {
-            logger.lifecycle("[plugin] Renamed and finalized compiler output XTC filename: '{}' to '{}' (path: '{}')", oldName, newName, path.getAbsolutePath());
+            logger.info("[plugin] Renamed and finalized compiler output XTC filename: '{}' to '{}' (path: '{}')", oldName, newName, path.getAbsolutePath());
             return;
         }
         throw failure("Failed to rename '{}' to '{}'. Output file already exists and could not be deleted: '{}'", oldFile, newFile, newFile.getAbsoluteFile());

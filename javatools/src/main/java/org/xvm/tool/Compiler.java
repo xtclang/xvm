@@ -166,7 +166,7 @@ public class Compiler extends Launcher<CompilerOptions> {
 
         log(INFO, "Selecting compilation targets");
 
-        File[]       resourceDirs = opts.getResourceLocation();
+        List<File>   resourceDirs = opts.getResourceLocations();
         File         outputLoc    = opts.getOutputLocation();
         ModuleInfo[] aTarget      = selectTargets(opts.getInputLocations(), resourceDirs, outputLoc).toArray(new ModuleInfo[0]);
 
