@@ -279,7 +279,8 @@ public abstract class OpTest
         TypeConstant type1       = bctx.getArgumentType(m_nValue1);
         TypeConstant type2       = bctx.getArgumentType(m_nValue2);
         TypeConstant typeCommon  = selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
-        TypeConstant typeCompare = bctx.getType(m_nType); // TODO: can we get rid of it?
+        TypeConstant typeCompare = bctx.getType(m_nType); // TODO: can we get rid of it? e.g. use
+                                                          //       the narrower of the two types
 
         if (typeCommon.equals(typeCompare)) {
             assembleUniformTest(bctx, code, null, null, typeCommon);
@@ -303,7 +304,7 @@ public abstract class OpTest
                 if (!reg1.isSingle()) {
                     throw new UnsupportedOperationException("Handle MultiSlotPrimitive");
                 }
-                assembleExpandedTest(bctx, code, reg1, typeCompare, labelEnd);
+                assembleRuntimeCheck(bctx, code, reg1, typeCompare, labelEnd);
                 reg1 = bctx.narrowTarget(code, m_nValue1, nAddr, nAddr + 1, typeCompare);
             } else {
                 assert !type2.isA(typeCompare);
@@ -312,18 +313,25 @@ public abstract class OpTest
                 if (!reg2.isSingle()) {
                     throw new UnsupportedOperationException("Handle MultiSlotPrimitive");
                 }
-                assembleExpandedTest(bctx, code, reg2, typeCompare, labelEnd);
+                assembleRuntimeCheck(bctx, code, reg2, typeCompare, labelEnd);
                 reg2 = bctx.narrowTarget(code, m_nValue2, nAddr, nAddr + 1, typeCompare);
             }
-        assembleUniformTest(bctx, code, reg1, reg2, typeCompare);
-        code.labelBinding(labelEnd);
+
+            assembleUniformTest(bctx, code, reg1, reg2, typeCompare);
+            code.labelBinding(labelEnd);
+        }
+
+        if (getOpCode() == OP_CMP) {
+            bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, bctx.pool().typeOrdered()));
+        } else {
+            bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, bctx.pool().typeBoolean()));
         }
     }
 
     /**
-     * Assemble the test starting with a type check for the specified argument.
+     * Assemble the runtime type check for the specified argument.
      */
-    private void assembleExpandedTest(BuildContext bctx, CodeBuilder code,
+    private void assembleRuntimeCheck(BuildContext bctx, CodeBuilder code,
                                       RegisterInfo regTest, TypeConstant typeCompare,
                                       Label labelEnd) {
         assert !regTest.cd().isPrimitive();
@@ -343,7 +351,6 @@ public abstract class OpTest
         } else {
             code.iconst_1(); // the values cannot be equal - the result is true
         }
-        bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, bctx.pool().typeBoolean()));
         code.goto_(labelEnd);
         code.labelBinding(labelIsA);
     }
@@ -358,13 +365,13 @@ public abstract class OpTest
             if (reg1 == null) {
                 reg1 = bctx.loadArgument(code, m_nValue1);
             } else {
-                Builder.load(code, reg1.cd(), reg1.slot());
+                Builder.load(code, reg1);
             }
 
             if (reg2 == null) {
                 reg2 = bctx.loadArgument(code, m_nValue2);
             } else {
-                Builder.load(code, reg2.cd(), reg2.slot());
+                Builder.load(code, reg2);
             }
 
             ClassDesc cdCommon = JitTypeDesc.getPrimitiveClass(typeCommon);
@@ -463,7 +470,6 @@ public abstract class OpTest
                 boolean fInverse;
                 switch (nOp) {
                 case OP_CMP:
-                    bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, bctx.pool().typeOrdered()));
                     return;
 
                 case OP_IS_GT:
@@ -486,21 +492,20 @@ public abstract class OpTest
                     throw new IllegalStateException();
                 }
 
-                Label labelTrue = code.newLabel();
+                Label lblTrue = code.newLabel();
                 if (fInverse) {
-                    code.if_acmpne(labelTrue);
+                    code.if_acmpne(lblTrue);
                 } else {
-                    code.if_acmpeq(labelTrue);
+                    code.if_acmpeq(lblTrue);
                 }
-                Label labelEnd = code.newLabel();
+                Label lblEnd = code.newLabel();
                 code.iconst_0()
-                    .goto_(labelEnd)
-                    .labelBinding(labelTrue)
+                    .goto_(lblEnd)
+                    .labelBinding(lblTrue)
                     .iconst_1()
-                    .labelBinding(labelEnd);
+                    .labelBinding(lblEnd);
             }
         }
-        bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, bctx.pool().typeBoolean()));
     }
 
     private void generateOrdered(BuildContext bctx, CodeBuilder code) {
