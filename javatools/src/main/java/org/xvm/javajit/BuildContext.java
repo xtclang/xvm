@@ -643,13 +643,6 @@ public class BuildContext {
     }
 
     /**
-     * @return ClassDesc for "super" class
-     */
-    public ClassDesc getSuperCD() {
-        return typeInfo.getExtends().ensureClassDesc(typeSystem);
-    }
-
-    /**
      * Build the code to load the Ctx instance on the Java stack.
      */
     public CodeBuilder loadCtx(CodeBuilder code) {
@@ -824,10 +817,7 @@ public class BuildContext {
         case Op.A_STACK:
             // this refers to a synthetic RegInfo created by the pushTempRegister() method
             RegisterInfo reg = tempRegStack.pop();
-            if (reg instanceof DoubleSlot doubleSlot) {
-                code.iload(doubleSlot.extSlot()); // load the boolean flag
-            }
-            Builder.load(code, reg.cd(), reg.slot());
+            Builder.load(code, reg);
             return reg;
 
         case Op.A_THIS:
@@ -906,14 +896,10 @@ public class BuildContext {
      * Store one or two values at the Java stack into the Java slot for the specified register.
      */
     public void storeValue(CodeBuilder code, RegisterInfo reg) {
-        if (reg instanceof DoubleSlot doubleSlot) {
-            code.istore(doubleSlot.extSlot()); // store the boolean flag
-        }
-
         if (reg.isIgnore()) {
             Builder.pop(code, reg.cd());
         } else {
-            Builder.store(code, reg.cd(), reg.slot());
+            Builder.store(code, reg);
         }
 
         Label varStart = unassignedRegisters.remove(reg);
@@ -1115,7 +1101,7 @@ public class BuildContext {
      * @return the narrowed register (if applied)
      */
     public RegisterInfo narrowTarget(CodeBuilder code, int regId, int fromAddr, int toAddr,
-                             TypeConstant narrowedType) {
+                                     TypeConstant narrowedType) {
         RegisterInfo origReg = getRegisterInfo(regId);
         assert origReg != null;
 
@@ -1135,7 +1121,7 @@ public class BuildContext {
                 origReg.name(), fromAddr, toAddr, origReg);
         OpAction action = () -> {
             registerInfos.put(regId, narrowedReg);
-            Builder.load(code, origReg.cd(), origReg.slot());
+            Builder.load(code, origReg);
             if (narrowedCD.isPrimitive() && !origReg.cd().isPrimitive()) {
                 code.checkcast(narrowedType.ensureClassDesc(typeSystem)); // boxed
                 Builder.unbox(code, narrowedType, narrowedCD);

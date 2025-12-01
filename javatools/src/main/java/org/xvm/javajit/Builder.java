@@ -31,6 +31,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.javajit.BuildContext.SingleSlot;
+import org.xvm.javajit.BuildContext.DoubleSlot;
 import org.xvm.javajit.TypeSystem.ClassfileShape;
 
 import static java.lang.constant.ConstantDescs.CD_MethodHandle;
@@ -301,6 +302,17 @@ public abstract class Builder {
     }
 
     /**
+     * Generate a value "load" for the specified register. If the register is a {@link DoubleSlot},
+     * load the "extension" boolean flag first.
+     */
+    public static void load(CodeBuilder code, RegisterInfo reg) {
+        if (reg instanceof DoubleSlot doubleSlot) {
+            code.iload(doubleSlot.extSlot());
+        }
+        load(code, reg.cd(), reg.slot());
+    }
+
+    /**
      * Generate a value "load" for the specified Java class.
      */
     public static void load(CodeBuilder code, ClassDesc cd, int slot) {
@@ -324,6 +336,17 @@ public abstract class Builder {
         } else {
             code.aload(slot);
         }
+    }
+
+    /**
+     * Generate a value "store" for the specified register.  If the register is a {@link DoubleSlot},
+     * store the "extension" boolean flag first.
+     */
+    public static void store(CodeBuilder code, RegisterInfo reg) {
+        if (reg instanceof DoubleSlot doubleSlot) {
+            code.istore(doubleSlot.extSlot());
+        }
+        store(code, reg.cd(), reg.slot());
     }
 
     /**

@@ -926,7 +926,7 @@ public class CommonBuilder
                             .labelBinding(ifNotNull)
                             .aload(stdParamSlot);
                         unbox(code, stdParamType, optParamDesc.cd); // unwrapped primitive
-                        code.iconst_0();                                        // false
+                        code.iconst_0();                            // false
 
                         code.labelBinding(endIf);
                         i++; // skip over the next "that" parameter
@@ -953,7 +953,7 @@ public class CommonBuilder
                             .labelBinding(ifNotNull)
                             .aload(stdParamSlot);
                         unbox(code, primitiveType, optParamDesc.cd); // unboxed primitive
-                        code.iconst_0();                                         // false
+                        code.iconst_0();                             // false
 
                         code.labelBinding(endIf);
                         i++; // skip over the next "that" parameter

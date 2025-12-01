@@ -369,7 +369,7 @@ public class FBind
             .anewarray(CD_JavaObject)
             .dup()
             .iconst_0();
-        Builder.load(code, regArg.cd(), regArg.slot());
+        Builder.load(code, regArg);
         if (fBox) {
             Builder.box(code, regArg.type(), regArg.cd());
         } else if (regArg.cd().isPrimitive()) {
@@ -386,7 +386,7 @@ public class FBind
         Label labelEnd = code.newLabel();
         code.iload(slotImm)
             .ifeq(labelEnd);
-        Builder.load(code, regArg.cd(), regArg.slot());
+        Builder.load(code, regArg);
         code.invokevirtual(CD_nObj, "$isImmut", MethodTypeDesc.of(CD_boolean))
             .iand()
             .istore(slotImm)
