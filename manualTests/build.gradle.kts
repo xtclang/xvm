@@ -111,6 +111,7 @@ sourceSets {
             exclude("**/archive/**")
             exclude("**/dbTests/**")
             exclude("**/json/**")
+            exclude("**/jsondb/**")
             exclude("**/multiModule/**")
             exclude("**/webTests/**")
             exclude(

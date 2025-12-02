@@ -1,21 +1,27 @@
+import jsondb.storage.JsonValueStore;
+
+import test_db.*;
+
+import xunit.annotations.RegisterExtension;
+
+/**
+ * General JsonValueStore tests.
+ */
 class JsonValueStoreTest {
 
-    import jsondb.storage.JsonValueStore;
-
-    import test_db.*;
-
-    @Inject Console console;
+    @RegisterExtension
+    static TestClientProvider clientProvider = new TestClientProvider();
 
     @Test
     void shouldCreateStoreWithInitialValue() {
-        @Inject TestClient client;
+        assert TestClient client := clientProvider.getClient();
         TestSchema schema = client.testSchema;
         assert schema.value.get() == TestSchema.VALUE_INITIAL;
     }
 
     @Test
     void shouldStartEmpty() {
-        @Inject TestClient client;
+        assert TestClient client := clientProvider.getClient();
         TestSchema schema = client.testSchema;
         JsonValueStore<String> store = schema.getValueStore();
         assert store.model == Empty;
@@ -23,7 +29,7 @@ class JsonValueStoreTest {
 
     @Test
     void shouldBeSmallAfterUpdate() {
-        @Inject TestClient client;
+        assert TestClient client := clientProvider.getClient();
         TestSchema schema = client.testSchema;
         schema.value.set("Abc");
         JsonValueStore<String> store = schema.getValueStore();
@@ -32,7 +38,7 @@ class JsonValueStoreTest {
 
     @Test
     void shouldSetValue() {
-        @Inject TestClient client;
+        assert TestClient client := clientProvider.getClient();
         TestSchema schema = client.testSchema;
         schema.value.set("Bar");
         assert schema.value.get() == "Bar";
@@ -45,7 +51,7 @@ class JsonValueStoreTest {
     @Test
     @DBInit(/resources/test-data/db1)
     void shouldLoadPreviousDatabaseFiles() {
-        @Inject TestClient client;
+        assert TestClient client := clientProvider.getClient();
         TestSchema schema = client.testSchema;
         assert schema.value.get() == "Bar";
         JsonValueStore<String> store = schema.getValueStore();

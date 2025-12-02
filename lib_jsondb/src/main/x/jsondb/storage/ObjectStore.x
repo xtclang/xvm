@@ -638,10 +638,23 @@ service ObjectStore(Catalog catalog, DboInfo info)
      * Determine the files owned by this storage.
      *
      * @return an iterator over all of the files that are presumed to be owned by this storage
+     * @return the number of files that are presumed to be owned by this storage
+     * @return the total size of all of the files that are presumed to be owned by this storage
      */
     @Synchronized
-    Iterator<File> findFiles() {
-        return dataDir.files().filter(f -> f.name.endsWith(".json")).toArray().iterator();
+    (Iterator<File>, Int, Int) findFiles() {
+        Array<File> files      = new Array<File>();
+        Int         totalFiles = 0;
+        Int         totalBytes = 0;
+
+        for (File file : dataDir.files()) {
+            if (file.name.endsWith(".json")) {
+                totalFiles++;
+                totalBytes += file.size;
+                files.add(file);
+            }
+        }
+        return (files.iterator(), totalFiles, totalBytes);
     }
 
     /**
@@ -664,9 +677,8 @@ service ObjectStore(Catalog catalog, DboInfo info)
             lastAccessed = dir.accessed;
             lastModified = dir.modified;
 
-            for (File file : findFiles()) {
-                ++filesUsed;
-                bytesUsed   += file.size;
+            (Iterator<File> files, filesUsed, bytesUsed) = findFiles();
+            for (File file : files) {
                 lastAccessed = lastAccessed?.notLessThan(file.accessed) : file.accessed;
                 lastModified = lastModified?.notLessThan(file.modified) : file.modified;
             }

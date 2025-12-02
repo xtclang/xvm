@@ -57,8 +57,9 @@ service JsonNtxCounterStore(Catalog catalog, DboInfo info)
     }
 
     @Override
-    Iterator<File> findFiles() {
-        return (dataFile.exists ? [dataFile] : []).iterator();
+    (Iterator<File>, Int, Int) findFiles() {
+        return dataFile.exists ? ([dataFile].iterator(), 1, dataFile.size)
+                : (Array<File>:[].iterator(), 0, 0);
     }
 
     @Override

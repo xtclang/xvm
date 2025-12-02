@@ -1,4 +1,6 @@
 [
-{"_op":"created", "_ts":"2025-10-30T07:44:20.942Z", "_prev_v":0, "safepoint":0},
-{"_v":1, "_tx":1, "_name":"autocommit", "_ts":"2025-10-30T07:44:20.965Z", "value":"Bar"}
+{"_op":"created", "_ts":"2025-11-02T11:22:29.206Z", "_prev_v":0, "safepoint":0},
+{"_v":1, "_tx":1, "_name":"autocommit", "_ts":"2025-11-02T11:22:29.228Z", "mapData":[{"k":"One", "v":"Value-One"}]},
+{"_v":2, "_tx":2, "_name":"autocommit", "_ts":"2025-11-02T11:22:29.24Z", "mapData":[{"k":"Two", "v":"Value-Two"}]},
+{"_op":"closed", "_ts":"2025-11-02T11:22:29.249Z", "safepoint":2}
 ]
