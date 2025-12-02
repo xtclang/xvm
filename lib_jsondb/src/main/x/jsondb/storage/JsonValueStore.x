@@ -502,9 +502,9 @@ service JsonValueStore<Value extends immutable Const>
     }
 
     @Override
-    Iterator<File> findFiles() {
-        File file = dataFile;
-        return (file.exists ? [file] : []).iterator();
+    (Iterator<File>, Int, Int) findFiles() {
+        return dataFile.exists ? ([dataFile].iterator(), 1, dataFile.size)
+                : (Array<File>:[].iterator(), 0, 0);
     }
 
     @Override

@@ -8,6 +8,7 @@ service TestClient
     import jsondb.Client;
     import jsondb.Client.DBMapImpl;
     import jsondb.Client.DBValueImpl;
+    import jsondb.TxManager;
     import jsondb.model.DboInfo;
     import jsondb.storage.JsonMapStore;
     import jsondb.storage.JsonValueStore;
@@ -61,6 +62,28 @@ service TestClient
             assert DBMapImpl<Int, Person> impl := &people.revealAs((protected DBMapImpl<Int, Person>));
             assert JsonMapStore<Int, Person> store := impl.&store_.revealAs((protected JsonMapStore<Int, Person>));
             return store;
+        }
+
+        @Override
+        DBMap<Id, String> complexKeyMap.get() = outer.implFor(IDX_COMPLEX_KEY_MAP).as(DBMap<Id, String>);
+
+        @Override
+        JsonMapStore<Id, String> getComplexKeyMapStore() {
+            assert DBMapImpl<Id, String> impl := &complexKeyMap.revealAs((protected DBMapImpl<Id, String>));
+            assert JsonMapStore<Id, String> store := impl.&store_.revealAs((protected JsonMapStore<Id, String>));
+            return store;
+        }
+
+        @Override
+        Catalog<TestSchema> catalog.get() {
+            assert val catalog := outer.&catalog.revealAs((protected Catalog<TestSchema>));
+            return catalog;
+        }
+
+        @Override
+        TxManager<TestSchema> txManager.get() {
+            assert val txMgr := catalog.&txManager.revealAs((protected TxManager<TestSchema>));
+            return txMgr;
         }
 
         @Override

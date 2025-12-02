@@ -41,9 +41,76 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         this.jsonSchema   = catalog.jsonSchema;
         this.keyMapping   = keyMapping;
         this.valueMapping = valueMapping;
-        this.rowMapping   = this.jsonSchema.ensureMapping(DataFileRow<Key, Value>);
+
+        // Model default sizes can be overridden by injectable configuration values
+        @Inject(ConfigSmallModelMaxBytes)
+        Int? smallModelBytesMax;
+        @Inject(ConfigSmallModelMaxFiles)
+        Int? smallModelFilesMax;
+        @Inject(ConfigMediumModelMaxBytes)
+        Int? mediumModelBytesMax;
+        @Inject(ConfigMediumModelMaxFiles)
+        Int? mediumModelFilesMax;
+
+        this.smallModelBytesMax  = smallModelBytesMax  ?: DEFAULT_SMALL_MAX_BYTES;
+        this.smallModelFilesMax  = smallModelFilesMax  ?: DEFAULT_SMALL_MAX_FILES;
+        this.mediumModelBytesMax = mediumModelBytesMax ?: DEFAULT_MEDIUM_MAX_BYTES;
+        this.mediumModelFilesMax = mediumModelFilesMax ?: DEFAULT_MEDIUM_MAX_FILES;
+
+        // The small model sizes are validated, if they are OK, there is no need to validate the
+        // medium values as they will be valid too.
+        validateSmallModelBytesMax(this.smallModelBytesMax, this.mediumModelBytesMax);
+        validateSmallModelFilesMax(this.smallModelFilesMax, this.mediumModelFilesMax);
     }
 
+    /**
+     * The injection name prefix for JSON DB map configuration.
+     */
+    static String ConfigMapStoragePrefix = storage.ConfigStoragePrefix + ".maps";
+
+    /**
+     * The configuration injection name for the `smallModelBytesMax` value.
+     */
+    static String ConfigSmallModelMaxBytes = ConfigMapStoragePrefix + ".smallModelBytesMax";
+
+    /**
+     * The configuration injection name for the `smallModelFilesMax` value.
+     */
+    static String ConfigSmallModelMaxFiles = ConfigMapStoragePrefix + ".smallModelFilesMax";
+
+    /**
+     * The configuration injection name for the `mediumModelBytesMax` value.
+     */
+    static String ConfigMediumModelMaxBytes = ConfigMapStoragePrefix + ".mediumModelBytesMax";
+
+    /**
+     * The configuration injection name for the `mediumModelFilesMax` value.
+     */
+    static String ConfigMediumModelMaxFiles = ConfigMapStoragePrefix + ".mediumModelFilesMax";
+
+    /**
+     * The default maximum number of bytes a JSON DB DBMap can store before transitioning to a
+     * medium model.
+     */
+    static Int DEFAULT_SMALL_MAX_BYTES = 0x03FFFF;
+
+    /**
+     * The default maximum number of files a JSON DB DBMap can use before transitioning to a
+     * medium model.
+     */
+    static Int DEFAULT_SMALL_MAX_FILES = 0x03FF;
+
+    /**
+     * The default maximum number of bytes a JSON DB DBMap can store before transitioning to a
+     * large model.
+     */
+    static Int DEFAULT_MEDIUM_MAX_BYTES = 0xFFFFFF;
+
+    /**
+     * The default maximum number of files a JSON DB DBMap can use before transitioning to a
+     * large model.
+     */
+    static Int DEFAULT_MEDIUM_MAX_FILES = 0xFFFF;
 
     // ----- properties ----------------------------------------------------------------------------
 
@@ -63,22 +130,27 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     public/protected Mapping<Value> valueMapping;
 
     /**
-     * The JSON `Mapping` for a `DataFileRow<Key, Value>`.
+     * Used internally within the MapStore data structures to represent something other than a
+     * normal Value.
      */
-    protected Mapping<DataFileRow<Key, Value>> rowMapping;
-
-    /**
-     * Used internally within the in-memory MapStore data structures to represent a deleted
-     * key/value pair.
-     */
-    protected enum Deletion {Deleted}
+    protected enum Marker {
+        /**
+         * `Deleted` is used to represent a `Value` that has been deleted.
+         */
+        Deleted,
+        /**
+         * `OffHeap` is used to represent a `Value` that is present in the DBMap
+         * but the real value is stored off-heap.
+         */
+        OffHeap
+    }
 
     /**
      * A type representing a value stored in this map.
      *
-     * A value could be an actual `Value` or a `Deletion` or a value stored on disc.
+     * A value could be an actual `Value` or a `Marker`.
      */
-    typedef Value | Deletion | DiscStorage as MapValue;
+    typedef Value | Marker as MapValue;
 
     /**
      * Used as a "singleton" empty map.
@@ -129,11 +201,6 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     protected SkiplistMap<Int, Changes> inFlight = new SkiplistMap();
 
     /**
-     * An type that represents an entry in the DBMap JSON data file.
-     */
-    static const DataFileRow<K, V>(Int tx, K k, V? v = Null);
-
-    /**
      * Cached key/transaction/value triples. This is "the database", in the sense that this is the same
      * data that is stored on disk.
      */
@@ -177,6 +244,78 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
      */
     public/protected Set<String> cleanupPending = new HashSet();
 
+    /**
+     * The maximum number of bytes a JSON DB DBMap small model can store before transitioning to a
+     * medium model.
+     */
+    public/protected Int smallModelBytesMax.set(Int value) {
+        validateSmallModelBytesMax(value, mediumModelBytesMax);
+        super(value);
+    }
+
+    /**
+     * Check a value is valid to use for the smallModelBytesMax property.
+     *
+     * @param value                the value to validate
+     * @param mediumModelBytesMax  the medium model max bytes value to use for validation
+     *
+     * @throws IllegalArgument if the value is invalid
+     */
+    static void validateSmallModelBytesMax(Int value, Int mediumModelBytesMax) {
+        assert:arg value > 0 as $"Invalid smallModelBytesMax {value} JSON DB DBMap small model maximum bytes must be greater than zero. ";
+        assert:arg value < mediumModelBytesMax as $"Invalid smallModelBytesMax {value} JSON DB DBMap small model maximum bytes must be less than medium model maximum bytes {mediumModelBytesMax}.";
+    }
+
+    /**
+     * The maximum number of files a JSON DB DBMap small model can use before transitioning to a
+     * medium model.
+     */
+    public/protected Int smallModelFilesMax.set(Int value) {
+        validateSmallModelFilesMax(value, mediumModelFilesMax);
+        super(value);
+    }
+
+    /**
+     * Check a value is valid to use for the smallModelFilesMax property.
+     *
+     * @param value                the value to validate
+     * @param mediumModelFilesMax  the medium model max files value to use for validation
+     *
+     * @throws IllegalArgument if the value is invalid
+     */
+    static void validateSmallModelFilesMax(Int value, Int mediumModelFilesMax) {
+        assert:arg value > 0 as $"Invalid smallModelFilesMax {value} JSON DB DBMap small model maximum files must be greater than zero. ";
+        assert:arg value < mediumModelFilesMax as $"Invalid smallModelFilesMax {value} JSON DB DBMap small model maximum files must be less than medium model maximum files {mediumModelFilesMax}.";
+    }
+
+    /**
+     * The maximum number of bytes a JSON DB DBMap medium model can store before transitioning to a
+     * large model.
+     */
+    public/protected Int mediumModelBytesMax.set(Int value) {
+        assert:arg value > smallModelBytesMax as $"Invalid mediumModelBytesMax {value} JSON DB DBMap medium model maximum bytes must be greater than smallModelBytesMax {smallModelBytesMax}.";
+        super(value);
+    }
+
+    /**
+     * The maximum number of files a JSON DB DBMap can use before transitioning to a large
+     * model.
+     */
+    public/protected Int mediumModelFilesMax.set(Int value) {
+        assert:arg value > smallModelFilesMax as $"Invalid mediumModelFilesMax {value} JSON DB DBMap medium model maximum files must be greater than smallModelFilesMax {smallModelFilesMax}.";
+        super(value);
+    }
+
+    /**
+     * The `StorageModel` last time clean-up executed.
+     */
+    public/protected StorageModel modelAtCleanup = Empty;
+
+    /**
+     * The latest transaction that caused the model size to transition.
+     */
+    public/protected Int lastModelTransitionTx = NO_TX;
+
     // ----- storage API exposed to the client -----------------------------------------------------
 
     @Override
@@ -190,7 +329,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
             Int readId = tx.readId;
             Int size   = sizeAt(readId);
             for ((Key key, MapValue value) : tx.peekMods()) {
-                if (value.is(Deletion)) {
+                if (value == Deleted) {
                     --size;
                 } else if (!existsAt(readId, key)) {
                     ++size;
@@ -225,7 +364,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
             // the entire MapStore is cached in the history map
             if (History valueHistory := history.get(key), Int txFloor := valueHistory.floor(txId)) {
                 assert MapValue value := valueHistory.get(txFloor);
-                return !value.is(Deletion);
+                return value != Deleted;
             }
             return False;
 
@@ -278,13 +417,13 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                                 History valueHistory = histEntry.value;
                                 if (Int txFloor := valueHistory.floor(readId),
                                         MapValue value := valueHistory.get(txFloor),
-                                        !value.is(Deletion)) {
+                                        value != Deleted) {
                                     keys += histEntry.key;
                                 }
                                 continue NextKey;
 
                             case Equal:
-                                if (!modEntry.value.is(Deletion)) {
+                                if (modEntry.value != Deleted) {
                                     keys += modEntry.key; // i.e. same as histEntry.key
                                 }
 
@@ -299,7 +438,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
 
                             case Greater:
                                 // the mod appears to be an insert
-                                if (!modEntry.value.is(Deletion)) {
+                                if (modEntry.value != Deleted) {
                                     keys += modEntry.key;
                                 }
 
@@ -316,7 +455,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                     } else {
                         // we have exhausted the history, so drain the remainder of the mods
                         do {
-                            if (!modEntry.value.is(Deletion)) {
+                            if (modEntry.value != Deleted) {
                                 keys += modEntry.key;
                             }
                         } while (modEntry := modEntries.next());
@@ -332,7 +471,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
 
                 if (Int txFloor := valueHistory.floor(readId),
                         MapValue value := valueHistory.get(txFloor),
-                        !value.is(Deletion)) {
+                        value != Deleted) {
                     keys += histEntry.key;
                 }
             }
@@ -362,12 +501,37 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
             // the entire MapStore is cached in the history map
             if (History valueHistory := history.get(key), Int txFloor := valueHistory.floor(txId)) {
                 assert MapValue value := valueHistory.get(txFloor);
-                return valueFrom(txId, key, value);
+                switch(value) {
+                case Deleted:
+                    return False;
+                case OffHeap:
+                    if (Value v := loadValueFromOffHeap(txFloor, key)) {
+                        // the model was previously greater than Small and the value was still
+                        // off-heap, so we can now load it back into memory
+                        valueHistory.put(txFloor, v);
+                        return True, v;
+                    }
+                    return False;
+                default:
+                    return True, value.as(Value);
+                }
             }
             return False;
 
         case Medium:
-            return loadValueFromDisc(txId, key);
+            // the values are off-heap
+            if (History valueHistory := history.get(key), Int txFloor := valueHistory.floor(txId)) {
+                assert MapValue value := valueHistory.get(txFloor);
+                switch(value) {
+                case Deleted:
+                    return False;
+                case OffHeap:
+                    return loadValueFromOffHeap(txFloor, key);
+                default:
+                    return True, value.as(Value);
+                }
+            }
+            return False;
 
         case Large:
             TODO
@@ -381,7 +545,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
 
     @Override
     void delete(Int txId, Key key) {
-        storeImpl(txId, key, Deletion.Deleted);
+        storeImpl(txId, key, Deleted);
     }
 
     // ----- transaction API exposed to TxManager --------------------------------------------------
@@ -409,6 +573,12 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                     assert Int latestTx := valueHistory.last(), latestTx < prepareId;
                     if (latestTx > readId) {
                         assert MapValue latest := valueHistory.get(latestTx);
+                        if (latest == OffHeap) {
+                            assert Value v := loadValueFromOffHeap(latestTx, key);
+                            // cache the value back into the history
+                            valueHistory.put(latestTx, v);
+                            latest = v;
+                        }
 
                         MapValue prev;
                         if (Int prevTx := valueHistory.floor(readId)) {
@@ -435,23 +605,22 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         Int     size    = sizeAt(prepareId-1);
         for ((Key key, MapValue value) : mods) {
             // Determine the actual value to store in the history based on the current model
-            MapValue storeValue = model <= Small ? value : OnDisc;
+            MapValue storeValue = model <= Small ? value : OffHeap;
 
             if (History valueHistory := history.get(key)) {
                 assert Int      latestTx := valueHistory.last();
                 assert MapValue latest   := valueHistory.get(latestTx);
 
-                switch (latest.is(Deletion), value.is(Deletion)) {
+                switch (latest == Deleted, value == Deleted) {
                 case (False, False):
                     if (&value != &latest) {
-
                         valueHistory.put(prepareId, storeValue);
                         changed = True;
                     }
                     break;
 
                 case (False, True):
-                    valueHistory.put(prepareId, storeValue);
+                    valueHistory.put(prepareId, value);
                     changed = True;
                     --size;
                     break;
@@ -468,7 +637,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                     mods.remove(key);
                     break;
                 }
-            } else if (value.is(Deletion)) {
+            } else if (value == Deleted) {
                 // technically, this should not be possible, but we're deleting something that
                 // doesn't exist in the history, so the deletion modification has no effect
                 mods.remove(key);
@@ -482,7 +651,6 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         }
 
         if (changed) {
-            // TODO CP: when is it a "safe" time to transition from Small to Medium model, etc.
             if (model == Empty) {
                 model = Small;
             }
@@ -541,7 +709,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                     if (model <= Small) {
                         valueHistory.put(prepareId, value);
                     } else {
-                        valueHistory.put(prepareId, OnDisc);
+                        valueHistory.put(prepareId, OffHeap);
                     }
                 }
 
@@ -601,7 +769,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
 
             buf.append("\"k\":").append(jsonK);
 
-            if (!value.is(Deletion)) {
+            if (value != Deleted) {
                 buf.append(", \"v\":")
                    .append(worker.writeUsing(valueMapping, value));
             }
@@ -620,8 +788,9 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     void commit(Int[] writeIds) {
         assert !writeIds.empty;
 
-        Boolean cleanup      = !cleanupPending.empty;
-        Int     lastCommitId = NO_TX;
+        Boolean              cleanup         = !cleanupPending.empty;
+        Int                  lastCommitId    = NO_TX;
+        Map<Int, Array<Key>> updatedKeysByTx = new HashMap<Int, Array<Key>>();
 
         Map<String, StringBuffer> buffers = new HashMap();
         for (Int writeId : writeIds) {
@@ -631,7 +800,8 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
             if (Changes tx := peekTx(writeId)) {
                 assert tx.prepared, tx.sealed, Map<Key, String> jsonEntries ?= tx.jsonEntries;
 
-                Int prepareId = tx.readId;
+                Int        prepareId   = tx.readId;
+                Array<Key> updatedKeys = updatedKeysByTx.computeIfAbsent(prepareId, () -> new Array<Key>());
 
                 for ((Key key, String jsonEntry) : jsonEntries) {
                     String fileName = nameForKey(key);
@@ -661,6 +831,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                     EntryLayout entryLayout = fileLayout.computeIfAbsent(fileName, () -> new HashMap());
 
                     entryLayout.put(key, startOffset ..< fileOffset + buf.size);
+                    updatedKeys.add(key);
                 }
 
                 modsByTx.remove(prepareId);
@@ -711,6 +882,28 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         // discard the transactional records
         for (Int writeId : writeIds) {
             inFlight.remove(writeId);
+        }
+
+        // After a commit the model could have become larger.
+        StorageModel newModel  = checkModelSize();
+        StorageModel prevModel = model;
+        if (newModel != prevModel && newModel != Small) {
+            // The model size has changed and is not Small (there is nothing to do going from Empty to Small)
+            lastModelTransitionTx = lastCommit;
+            model                 = newModel;
+            if (newModel == Medium && prevModel <= Small) {
+                // The model has transitioned from Empty/Small to Medium so values in the history
+                // for this transaction can to be changed to OffHeap.
+                // Other entries in the history will be moved OffHeap during maintenance
+                for ((Int txId, Array<Key> keys) : updatedKeysByTx) {
+                    for (Key key : keys) {
+                        if (History valueHistory := history.get(key)) {
+                            valueHistory.put(txId, OffHeap);
+                        }
+                    }
+                }
+            }
+            // ToDo When have Large support then the same applies for moving keys and values off-heap
         }
     }
 
@@ -769,6 +962,25 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                 }
             }
             cleanupPending.clear();
+        }
+
+        // the model may have grown due to commits since the last call to retainTx, or shrunk due to clean-up of files
+        StorageModel modelNow = checkModelSize();
+        if (modelAtCleanup != modelNow) {
+            // the model has changed since the last clean-up
+            if (modelAtCleanup <= Small && modelNow == Medium) {
+                // The model has grown to Medium, mark all history values as OffHeap
+                for ((Key key, History valueHistory) : history) {
+                    for (Map.Entry<Int, MapValue> entry : valueHistory.entries) {
+                        entry.value = OffHeap;
+                    }
+                }
+            } else if (modelAtCleanup <= Medium && modelNow == Large) {
+                // The model has grown to Large, mark all history keys and values as OffHeap
+                // ToDo we need to add logic for transition to Large after we add Large model support
+            }
+            modelAtCleanup = modelNow;
+            model          = modelNow;
         }
     }
 
@@ -835,42 +1047,45 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
      * @param key    the key in the map to obtain the value for
      * @param value  the current value
      *
-     * @return True iff the value is present in the DBMap or can be loaded from disc
-     * @return the value for the specified transaction id and key
+     * @return True iff the value is present in the DBMap or can be loaded from off-heap storage
+     * @return the value associated with the specified transaction id and key (conditional)
      */
     protected conditional Value valueFrom(Int txId, Key key, MapValue value) {
-        switch(value.is(_)) {
-        case Deletion:
-            return False;
-        case DiscStorage:
-            return loadValueFromDisc(txId, key);
-        default:
-            return True, value.as(Value);
-        }
+        return switch(value) {
+            case Deleted: False;
+            case OffHeap: loadValueFromOffHeap(txId, key);
+            default:      (True, value.as(Value));
+        };
     }
 
     /**
-     * Returns a value from disc.
+     * Returns a value from off-heap storage.
      *
      * @param txId   the transaction id to read from
      * @param key    the key in the map to obtain the value for
      *
-     * @return True iff the value can be loaded from disc
-     * @return the value for the specified transaction id and key
+     * @return True iff the value can be loaded from off-heap storage
+     * @return the value associated with the specified transaction id and key (conditional)
      */
-    protected conditional Value loadValueFromDisc(Int txId, Key key) {
+    protected conditional Value loadValueFromOffHeap(Int txId, Key key) {
         if (FileLayout fileLayout := storageLayout.get(txId)) {
             String fileName = nameForKey(key);
             if (EntryLayout entryLayout := fileLayout.get(fileName)) {
                 if (Range<Int> location := entryLayout.get(key)) {
                     File       file      = dataDir.fileFor(fileName);
                     Byte[]     bytes     = file.read(location);
-                    String     jsonValue = bytes.unpackUtf8();
-                    using (ObjectInputStream stream = new ObjectInputStream(jsonSchema, jsonValue.toReader())) {
-                        DataFileRow<Key, Value> row = rowMapping.read(stream.ensureElementInput());
-                        Value? v = row.v;
-                        if (v.is(Value)) {
-                            return  True, v;
+                    String     jsonStr   = bytes.unpackUtf8();
+                    Parser     parser    = new Parser(jsonStr.toReader());
+                    using (val objectParser = parser.expectObject()) {
+                        objectParser.expectKey("tx");
+                        objectParser.skipDoc();
+                        objectParser.expectKey("k");
+                        objectParser.skipDoc();
+                        if (objectParser.matchKey("v")) {
+                            using (ObjectInputStream stream =new ObjectInputStream(jsonSchema, objectParser)) {
+                                Value value = valueMapping.read(stream.ensureElementInput());
+                                return True, value;
+                            }
                         }
                     }
                 }
@@ -880,18 +1095,51 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     }
 
     /**
-     * Returns `True` iff the current value for a key is stored on disc
-     * rather than in memory.
+     * Returns `True` iff the current value for a key is stored off-heap.
+     *
+     * @param key  the key of the entry to find the storage location for
+     *
+     * @return `True` iff the current value for a key is stored off-heap
      */
-    protected Boolean isValueOnDisc(Key key) {
+    protected Boolean isValueOffHeap(Key key) {
         if (History valueHistory := history.get(key)) {
             assert Int readId := valueHistory.last();
             assert MapValue value := valueHistory.get(readId);
-            return value.is(DiscStorage);
+            return value == OffHeap;
         }
         return False;
     }
 
+    /**
+     * Returns `True` iff the current value for a key and transaction id is stored off-heap.
+     *
+     * @param txId  the transaction id to find the storage location for
+     * @param key   the key of the entry to find the storage location for
+     *
+     * @return `True` iff the current specified key and transaction id are in the store's history
+     * @return `True` if the value for the specified key and transaction id are stored off-heap
+     *                (conditional)
+     */
+    protected conditional Boolean isValueOffHeap(Int txId, Key key) {
+        if (History valueHistory := history.get(key)) {
+            if (MapValue value := valueHistory.get(txId)) {
+                return True, value == OffHeap;
+            }
+        }
+        return False;
+    }
+
+    /**
+     * Returns a `Range<Int>` describing the location of the data file entry for a specific
+     * transaction id and key.
+     *
+     * @param txId  the transaction id
+     * @param key   the key
+     *
+     * @return True if there is an entry in the data file for the specified transaction id and key
+     * @return a `Range<Int>` describing the location of the data file entry for the transaction
+     *         id and key (conditional)
+     */
     protected conditional Range<Int> storageLocation(Int txId, Key key) {
         if (FileLayout fileLayout := storageLayout.get(txId)) {
             if (EntryLayout entryLayout := fileLayout.get(nameForKey(key))) {
@@ -923,10 +1171,10 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
             };
         }
 
-        Int totalBytes = 0;
-        Int totalFiles = 0;
+        (Iterator<File> files, Int totalFiles, Int totalBytes) = findFiles();
+        model = checkModelSize(totalFiles, totalBytes);
 
-        for (File file : findFiles()) {
+        for (File file : files) {
             String                  fileName   = file.name;
             Byte[]                  bytes      = file.contents;
             String                  jsonStr    = bytes.unpackUtf8();
@@ -936,6 +1184,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
             Map<Key, Range<Int>>    entryLoc   = new HashMap();
             Map<Key, Int>           closestTx  = new HashMap();
             SkiplistMap<Int, Key[]> keysByTx   = new SkiplistMap();
+            Token[]                 tokens     = new Token[];
 
             using (val arrayParser = fileParser.expectArray()) {
                 while (!arrayParser.eof) {
@@ -998,9 +1247,6 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                 continue;
             }
 
-            totalFiles++;
-            totalBytes += bytes.size;
-
             StringBuffer buf = new StringBuffer();
             if (rebuild) {
                 buf.append("[");
@@ -1036,7 +1282,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                             }
                         } else {
                             History valueHistory = new SkiplistMap();
-                            valueHistory.put(txId, OnDisc);
+                            valueHistory.put(txId, OffHeap);
                             history.put(key, valueHistory);
                         }
                     }
@@ -1067,21 +1313,8 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     @Override
     Boolean quickScan() {
         if (super() && model != Empty) {
-//            TODO: uncomment when the Medium model is implemented
-//            StorageModel quantity = switch (filesUsed) {
-//                case 0x00: assert;
-//                case 0x0001..0x03FF: Small;
-//                case 0x0400..0xFFFF: Medium;
-//                default: Large;
-//            };
-//
-//            StorageModel weight = bytesUsed <= 0x03FFFF ? Small : Medium;
-//
-//            // combine the two measure into the model to actually use
-//            model = StorageModel.maxOf(quantity, weight);
-            model = Small;
+            model = checkModelSize();
         }
-
         return True;
     }
 
@@ -1143,13 +1376,13 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         OrderedMap<Key, MapValue> mods = tx.ensureMods();
         if (MapValue current := mods.get(key)) {
             if (&value != &current) {
-                if (value.is(Deletion) && !existsAt(tx.readId, key)) {
+                if (value == Deleted && !existsAt(tx.readId, key)) {
                     mods.remove(key);
                 } else {
                     mods.put(key, value);
                 }
             }
-        } else if (!(value.is(Deletion) && !existsAt(tx.readId, key))) {
+        } else if (!(value == Deleted && !existsAt(tx.readId, key))) {
             mods.put(key, value);
         }
     }
@@ -1166,6 +1399,49 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     }
 
     // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * Returns the model size that this store should be using based on the number of files currently
+     * in use and the total number of bytes in use.
+     */
+    protected StorageModel checkModelSize() {
+        return checkModelSize(filesUsed, bytesUsed);
+    }
+
+    /**
+     * Returns a model size based on the specified number of files and number of bytes.
+     *
+     * @param totalFiles  the number of files to use to calculate to model size
+     * @param totalBytes  the number of bytes to use to calculate to model size
+     */
+    protected StorageModel checkModelSize(Int totalFiles, Int totalBytes) {
+        StorageModel quantity;
+        if (totalFiles <= smallModelFilesMax) {
+            quantity = Small;
+        } else if (totalFiles <= mediumModelBytesMax) {
+            quantity = Medium;
+        } else if (totalFiles > mediumModelBytesMax) {
+//            quantity = Large; // ToDo Large model support not yet implemented
+            quantity = Medium;
+        } else {
+            assert as "Invalid number of files: " + totalFiles;
+        }
+
+        StorageModel weight;
+        if (totalBytes <= smallModelBytesMax) {
+            weight = Small;
+        } else if (totalBytes <= mediumModelBytesMax) {
+            weight = Medium;
+        } else if (totalBytes > mediumModelBytesMax) {
+//            weight = Large; // ToDo Large model support not yet implemented
+            weight = Medium;
+        } else {
+            assert as "Invalid number of bytes: " + totalBytes;
+        }
+
+        // combine the two measure into the model to actually use
+        return StorageModel.maxOf(quantity, weight);
+    }
 
     /**
      * Rebuild the content of the specified file.
