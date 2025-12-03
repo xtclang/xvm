@@ -27,8 +27,6 @@ import org.gradle.api.provider.Provider;
 
 import org.jetbrains.annotations.NotNull;
 
-import org.xtclang.plugin.tasks.XtcLauncherTask;
-
 import static java.util.stream.Collectors.toUnmodifiableSet;
 
 /**
@@ -43,13 +41,19 @@ public class ModulePathResolver {
     private final ConfigurableFileCollection customModulePath;
     private final Provider<@NotNull FileCollection> xtcModuleDependencies;
 
-    public ModulePathResolver(final XtcLauncherTask<?> task) {
-        this.logger = task.getLogger();
-        this.objects = task.getObjects();
-        this.xdkContentsDir = task.getInputXdkContents();
-        this.sourceSetOutputDirs = task.getSourceSetOutputDirs();
-        this.customModulePath = task.getModulePath();
-        this.xtcModuleDependencies = task.getXtcModuleDependenciesProvider();
+    public ModulePathResolver(
+            final Logger logger,
+            final ObjectFactory objects,
+            final Provider<@NotNull Directory> xdkContentsDir,
+            final Map<String, Provider<@NotNull Directory>> sourceSetOutputDirs,
+            final ConfigurableFileCollection customModulePath,
+            final Provider<@NotNull FileCollection> xtcModuleDependencies) {
+        this.logger = logger;
+        this.objects = objects;
+        this.xdkContentsDir = xdkContentsDir;
+        this.sourceSetOutputDirs = sourceSetOutputDirs;
+        this.customModulePath = customModulePath;
+        this.xtcModuleDependencies = xtcModuleDependencies;
     }
 
     public List<File> resolveFullModulePath() {
@@ -74,7 +78,7 @@ public class ModulePathResolver {
             final Provider<@NotNull Directory> outputDir = entry.getValue();
             final File outputDirFile = outputDir.get().getAsFile();
             if (!outputDirFile.exists()) {
-                logger.warn("[plugin] Skipping non-existent source set output directory for '{}': {}", sourceSetName, outputDirFile.getAbsolutePath());
+                logger.info("[plugin] Skipping non-existent source set output directory for '{}': {}", sourceSetName, outputDirFile.getAbsolutePath());
                 continue;
             }
             map.put(XTC_LANGUAGE_NAME + capitalize(sourceSetName), resolveDirectories(outputDir));
@@ -94,10 +98,10 @@ public class ModulePathResolver {
             if (files.isEmpty()) {
                 logger.info("[plugin]         (empty)");
             }
-            files.forEach(f -> logger.lifecycle("[plugin]         {}", f.getAbsolutePath()));
+            files.forEach(f -> logger.info("[plugin]         {}", f.getAbsolutePath()));
             modulePathList.addAll(files.stream().filter(f -> {
                 if (f.isDirectory()) {
-                    logger.lifecycle("[plugin] Adding directory to module path ({}).", f.getAbsolutePath());
+                    logger.info("[plugin] Adding directory to module path ({}).", f.getAbsolutePath());
                 } else if (!isValidXtcModuleSafe(f, logger)) {
                     logger.warn("[plugin] Has a non .xtc module file on the module path ({}). Was this intended?", f.getAbsolutePath());
                     return false;

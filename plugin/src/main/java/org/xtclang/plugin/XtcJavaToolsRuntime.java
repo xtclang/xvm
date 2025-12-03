@@ -20,7 +20,7 @@ import java.util.zip.ZipFile;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_NAME_JAR;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_NAME_MANIFEST;
-import static org.xtclang.plugin.XtcPluginUtils.FileUtils.readXdkVersionFromJar;
+import static org.xtclang.plugin.XtcPluginUtils.FileUtils.*;
 import static org.xtclang.plugin.XtcPluginUtils.failure;
 
 /**
@@ -124,10 +124,8 @@ public final class XtcJavaToolsRuntime {
             @NotNull final Logger logger) {
 
         final var artifactVersion = projectVersion.get();
-        final var javaToolsFromConfig = javaToolsConfig.get().filter(file -> FileUtils.isValidJavaToolsArtifact(file, artifactVersion));
-        final var javaToolsFromXdk = xdkFileTree.get().filter(file -> FileUtils.isValidJavaToolsArtifact(file, artifactVersion));
-
-        logger.lifecycle("[plugin] JAVA_TOOLS: javaToolsFromConfig files: {}, javaToolsFromXdk files: {}");
+        final var javaToolsFromConfig = javaToolsConfig.get().filter(file -> isValidJavaToolsArtifact(file, artifactVersion));
+        final var javaToolsFromXdk = xdkFileTree.get().filter(file -> isValidJavaToolsArtifact(file, artifactVersion));
 
         final File resolvedFromConfig = javaToolsFromConfig.isEmpty() ? null : javaToolsFromConfig.getSingleFile();
         final File resolvedFromXdk = javaToolsFromXdk.isEmpty() ? null : javaToolsFromXdk.getSingleFile();
@@ -142,10 +140,10 @@ public final class XtcJavaToolsRuntime {
 
         // Log detailed javatools.jar information
         if (resolvedFromConfig != null) {
-            logger.lifecycle("[plugin]     javatools.jar: {}", FileUtils.formatJarMetadata(resolvedFromConfig));
+            logger.info("[plugin]     javatools.jar: {}", formatJarMetadata(resolvedFromConfig));
         }
         if (resolvedFromXdk != null && !resolvedFromXdk.equals(resolvedFromConfig)) {
-            logger.lifecycle("[plugin]     XDK javatools.jar: {}", FileUtils.formatJarMetadata(resolvedFromXdk));
+            logger.info("[plugin]     XDK javatools.jar: {}", formatJarMetadata(resolvedFromXdk));
         }
 
         final var versionConfig = readXdkVersionFromJar(resolvedFromConfig);
@@ -160,9 +158,8 @@ public final class XtcJavaToolsRuntime {
         if (resolvedFromConfig != null) {
             logger.info("[plugin] Resolved unique '{}' from config/artifacts/dependencies: {} (version: {})", XDK_JAVATOOLS_NAME_JAR, resolvedFromConfig.getAbsolutePath(), versionConfig);
             return validateAndReturn(resolvedFromConfig);
-        } else {
-            logger.info("[plugin] Resolved unique '{}' from XDK: {} (version: {})", XDK_JAVATOOLS_NAME_JAR, resolvedFromXdk.getAbsolutePath(), versionXdk);
         }
+        logger.info("[plugin] Resolved unique '{}' from XDK: {} (version: {})", XDK_JAVATOOLS_NAME_JAR, resolvedFromXdk.getAbsolutePath(), versionXdk);
         return validateAndReturn(resolvedFromXdk);
     }
 
@@ -187,7 +184,7 @@ public final class XtcJavaToolsRuntime {
                 final java.lang.reflect.Method addURL = java.net.URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
                 addURL.setAccessible(true);
                 addURL.invoke(pluginClassLoader, javaToolsUrl);
-                logger.lifecycle("[plugin] Injected javatools.jar into plugin classloader: {}", javaToolsUrl);
+                logger.info("[plugin] Injected javatools.jar into plugin classloader: {}", javaToolsUrl);
             } catch (final Exception e) {
                 logger.warn("[plugin] Failed to inject into plugin classloader, falling back to thread context classloader", e);
             }

@@ -34,7 +34,7 @@ public abstract class ForkedStrategy<T extends XtcLauncherTask<?>> implements Ex
         this.mode = mode;
         this.logger = logger;
         this.javaExecutable = javaExecutable;
-        logger.lifecycle("[plugin] [{}] *** javaExecutable: {}", mode, javaExecutable);
+        logger.info("[plugin] [{}] *** launching; javaExecutable from toolchain: {}", mode, javaExecutable);
     }
 
     @Override
@@ -94,7 +94,7 @@ public abstract class ForkedStrategy<T extends XtcLauncherTask<?>> implements Ex
             final boolean shouldCopyStreams = configureIO(pb, task);
             final Process process = pb.start();
             // Copy streams if needed (when inheritIO doesn't work due to Gradle redirects)
-            final List<Thread> streamThreads = shouldCopyStreams ? copyProcessStreams(process) : Collections.emptyList();
+            final List<Thread> streamThreads = shouldCopyStreams ? copyProcessStreams(process) : List.of();
             final int exitCode = waitForProcess(process);
             for (final Thread thread : streamThreads) {
                 thread.join();
@@ -120,7 +120,9 @@ public abstract class ForkedStrategy<T extends XtcLauncherTask<?>> implements Ex
         command.add(task.getJavaLauncherClassName());
         command.addAll(Arrays.asList(programArgs));
         final ProcessBuilder pb = new ProcessBuilder(command).directory(projectDir);
-        logger.lifecycle("[plugin] Forked process command: {}", String.join(" ", command));
+        if (task.hasVerboseLogging()) {
+            logger.lifecycle("[plugin] Forked process command: {}", String.join(" ", command));
+        }
         return pb;
     }
 

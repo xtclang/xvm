@@ -1,5 +1,7 @@
 package org.xtclang.plugin.tasks;
 
+import static org.xtclang.plugin.XtcJavaToolsRuntime.ensureJavaToolsInClasspath;
+import static org.xtclang.plugin.XtcPluginConstants.PROPERTY_VERBOSE_LOGGING_OVERRIDE;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
 import static org.xtclang.plugin.XtcPluginUtils.argumentArrayToList;
 import static org.xtclang.plugin.internal.GradlePhaseAssertions.validateConfigurationTimeCapture;
@@ -13,6 +15,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.gradle.api.Project;
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileCollection;
@@ -73,15 +76,16 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected final Provider<@NotNull String> toolchainExecutable;
     protected final Provider<@NotNull String> projectVersion;
 
-    @SuppressWarnings("this-escape") // Suppressed because launchers need task reference in constructor
-    protected XtcLauncherTask(final Project project, final E ext) {
-        super();
+    // Captured at configuration time to support xtcPluginOverrideVerboseLogging property
+    private final boolean overrideVerboseLogging;
+
+    protected XtcLauncherTask(final ObjectFactory objects, final Project project, final E ext) {
+        super(objects);
 
         // Assert that we're in configuration phase during task construction
         GradlePhaseAssertions.assertProjectAccessDuringConfiguration(project, "XtcLauncherTask construction");
         this.ext = ext;
-
-        final var objects = getObjects();
+        this.overrideVerboseLogging = Boolean.parseBoolean(String.valueOf(project.findProperty(PROPERTY_VERBOSE_LOGGING_OVERRIDE)));
 
         // Capture at configuration time
         this.projectDirectory = objects.directoryProperty().value(project.getLayout().getProjectDirectory());
@@ -163,22 +167,30 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
         // Ensure javatools.jar is loaded into the plugin classloader before any task uses LauncherOptions types
         // This is critical for published plugin users who have XDK as a dependency
-        XtcJavaToolsRuntime.ensureJavaToolsInClasspath(
+        ensureJavaToolsInClasspath(
                 getProjectVersion(),
                 getJavaToolsConfiguration(),
                 getXdkFileTree(),
-                getLogger()
+                logger
         );
     }
 
     /**
      * Check if verbose logging is enabled for launcher tasks.
-     * Respects Gradle --info/--debug flags AND per-task verbose setting.
+     * Checks (in order):
+     * <ol>
+     *   <li>Gradle --info/--debug flags (logger level)</li>
+     *   <li>Project property: xtcPluginOverrideVerboseLogging=true</li>
+     *   <li>Task/extension configuration: verbose = true</li>
+     * </ol>
      */
     public boolean hasVerboseLogging() {
-        final var logger = getLogger();
         // Gradle log levels take precedence
         if (logger.isInfoEnabled() || logger.isDebugEnabled()) {
+            return true;
+        }
+        // Check global override property (captured at configuration time)
+        if (overrideVerboseLogging) {
             return true;
         }
         // Check task-specific verbose setting
@@ -223,8 +235,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     @Override
     public void jvmArg(final Provider<? extends @NotNull String> arg) {
-        // Use injected ObjectFactory to create provider
-        jvmArgs(getObjects().listProperty(String.class).value(arg.map(Collections::singletonList)));
+        jvmArgs(objects.listProperty(String.class).value(arg.map(Collections::singletonList)));
     }
 
     @Override
@@ -306,12 +317,19 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
                 getProjectVersion(),
                 getJavaToolsConfiguration(),
                 getXdkFileTree(),
-                getLogger()
+                logger
         );
     }
 
     public List<File> resolveFullModulePath() {
-        return new ModulePathResolver(this).resolveFullModulePath();
+        return new ModulePathResolver(
+                logger,
+                objects,
+                xdkContentsDir,
+                sourceSetOutputDirs,
+                modulePath,
+                xtcModuleDependencies
+        ).resolveFullModulePath();
     }
 
     @InputDirectory

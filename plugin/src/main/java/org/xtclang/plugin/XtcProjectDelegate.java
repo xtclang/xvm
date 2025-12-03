@@ -602,7 +602,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Project, Void> {
     private static JavaPluginExtension getJavaExtensionContainer(final Project project) {
         /*
          * The Java sourceSets and the application of the Java plugin modifies the life cycle.
-         * We may have to extend the compileClasspath and runtimeClasspath for the Java plugin with XTC
+         * We may have to extend the compileClasspath and runtimeClasspath for the Java plugiqwith XTC
          * stuff to get the compilation properly hooked up, but this seems to work right now:
          */
         final var container = project.getExtensions().findByType(JavaPluginExtension.class);

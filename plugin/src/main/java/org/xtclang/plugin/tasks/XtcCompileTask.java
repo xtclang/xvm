@@ -15,9 +15,9 @@ import javax.inject.Inject;
 import kotlin.Pair;
 
 import org.gradle.api.Project;
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileTree;
-import org.gradle.api.logging.Logger;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
@@ -71,14 +71,12 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
      * so that Gradle will correctly instantiate the task with build script reference (which is what happens
      * when you instantiate it from the ObjectFactory in a project):
      */
-    @SuppressWarnings({"ConstructorNotProtectedInAbstractClass", "this-escape"})
+    @SuppressWarnings("ConstructorNotProtectedInAbstractClass")
     @Inject
-    public XtcCompileTask(final Project project, final SourceSet sourceSet) {
+    public XtcCompileTask(final ObjectFactory objects, final Project project, final SourceSet sourceSet) {
         // the compile task name should be determined by its source set
         // a runtime task can by default depend on all source sets, it's fine. even a test task.
-        super(project);
-
-        final var objects = getObjects();
+        super(objects, project);
 
         // The outputFilenames property only exists in the compile task, not in the compile configuration.
         this.outputFilenames = objects.listProperty(String.class).value(new ArrayList<>());
@@ -134,7 +132,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
 
     public Set<File> resolveXtcSourceFiles() {
         final var resolvedSources = getSource().filter(this::isTopLevelXtcSourceFile).getFiles();
-        getLogger().info("[plugin] Resolved top level sources (should be module definitions, or XTC will fail later): {}", resolvedSources);
+        logger.info("[plugin] Resolved top level sources (should be module definitions, or XTC will fail later): {}", resolvedSources);
         return resolvedSources;
     }
 
@@ -218,13 +216,13 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     Provider<@NotNull Directory> getResourceDirectory() {
         // TODO: This is wrong. The compile task should not be the one depending on resources src, but resources build.
         //   But that is java behavior, so make sure at least we get the resource input dependency.
-        return getObjects().directoryProperty().value(getResourceDirectoryInternal());
+        return objects.directoryProperty().value(getResourceDirectoryInternal());
     }
 
     @OutputDirectory
     Provider<@NotNull Directory> getOutputDirectory() {
         // TODO We can make this configurable later.
-        return getObjects().directoryProperty().value(getOutputDirectoryInternal());
+        return objects.directoryProperty().value(getOutputDirectoryInternal());
     }
 
     /**
@@ -257,7 +255,6 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
 
     private ExecutionStrategy createCompileStrategy() {
         final ExecutionMode mode = getExecutionMode().get();
-        final Logger logger = getLogger();
         return switch (mode) {
             case DIRECT -> new DirectStrategy<>(logger);
             case ATTACHED -> new AttachedStrategy<>(logger, resolveJavaExecutable());
@@ -278,11 +275,10 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
      * in the DSL for the compile task (the outputFilenames property with its value pairs).
      */
     private void finalizeOutputs() {
-        getObjects().fileTree().from(getOutputDirectory()).filter(f -> isValidXtcModuleSafe(f, getLogger())).getFiles().forEach(this::renameOutput);
+        objects.fileTree().from(getOutputDirectory()).filter(f -> isValidXtcModuleSafe(f, logger)).getFiles().forEach(this::renameOutput);
     }
 
     private void renameOutput(final File oldFile) {
-        final var logger = getLogger();
         final String oldName = oldFile.getName();
         final String newName = resolveOutputFilename(oldName);
         if (oldName.equals(newName)) {
@@ -303,7 +299,6 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     }
 
     private boolean isTopLevelSource(final File file) {
-        final var logger = getLogger();
         assert file.isFile();
         final var dir = file.getParentFile();
         assert dir != null && dir.isDirectory();

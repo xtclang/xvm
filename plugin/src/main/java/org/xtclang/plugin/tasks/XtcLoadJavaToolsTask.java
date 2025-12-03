@@ -51,7 +51,6 @@ public abstract class XtcLoadJavaToolsTask extends DefaultTask {
         logger.info("[plugin] Loading javatools.jar into plugin classloader");
         // Log classpath before loading javatools
         final var classLoader = getClass().getClassLoader();
-        final var lines = new ArrayList<String>();
         //lines.add("[plugin] Classpath BEFORE ensureJavaToolsInClasspath:");
         //lines.addAll(logClasspath(classLoader));
         // Use providers that were set at configuration time
@@ -61,8 +60,8 @@ public abstract class XtcLoadJavaToolsTask extends DefaultTask {
         final boolean changed = ensureJavaToolsInClasspath(versionProvider, javaToolsProvider, xdkProvider, logger);
         // Log classpath after loading javatools
         if (changed) {
-            lines.addAll(logClasspath(classLoader));
-            lines.forEach(logger::lifecycle);
+            final var lines = new ArrayList<>(logClasspath(classLoader));
+            lines.forEach(logger::info);
         }
     }
 

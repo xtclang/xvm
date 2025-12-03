@@ -489,11 +489,9 @@ public class ModuleInfo {
     public ResourceDir getResourceDir() {
         if (resourceDir == null) {
             File sourceFile = getSourceFile();
-            System.err.println("[DEBUG] getResourceDir: sourceFile=" + sourceFile + ", exists=" + (sourceFile != null && sourceFile.exists()) + ", deduce=" + deduce);
             resourceDir = sourceFile != null && sourceFile.exists()
                     ? ResourceDir.forSource(sourceFile, deduce)
                     : NoResources;
-            System.err.println("[DEBUG] getResourceDir: result=" + resourceDir);
         }
 
         return resourceDir;
