@@ -8,6 +8,7 @@ import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
 plugins {
     alias(libs.plugins.xdk.build.aggregator)
     alias(libs.plugins.xdk.build.properties)
+    id("jacoco-report-aggregation")
 }
 
 // Root aggregator: version set automatically by properties plugin
@@ -15,6 +16,16 @@ group = xdkProperties.stringValue("xdk.group")
 version = xdkProperties.stringValue("xdk.version")
 
 logger.info("[xvm] Root aggregator version: $group:$name:$version")
+
+// Required for JaCoCo plugin dependencies
+repositories {
+    mavenCentral()
+}
+
+// Configure JaCoCo for aggregation
+configure<JacocoPluginExtension> {
+    toolVersion = "0.8.14"
+}
 
 /**
  * Print version information for the root aggregator and all included builds.
@@ -169,4 +180,76 @@ dockerTaskNames.forEach { taskName ->
             dependsOn(installDist)
         }
     }
+}
+
+/**
+ * JaCoCo aggregated coverage report across all Java projects in the composite build.
+ * This creates a single unified report combining coverage from all included builds.
+ */
+
+// List of all included builds with Java projects that produce JaCoCo coverage data
+private val javaBuilds = listOf(
+    gradle.includedBuild("javatools"),
+    gradle.includedBuild("javatools_jitbridge"),
+    gradle.includedBuild("javatools_utils"),
+    gradle.includedBuild("javatools_unicode")
+)
+
+val enableCoverage = xdkProperties.boolean("org.xtclang.java.coverage", false)
+
+// Aggregate test report across all included builds
+val testCodeCoverageReport by tasks.registering(JacocoReport::class) {
+    group = "verification"
+    description = "Generate aggregated JaCoCo coverage report for all Java projects"
+
+    val coverageEnabled = enableCoverage
+
+    // Collect execution data from all included builds
+    executionData.from(
+        javaBuilds.map { build ->
+            layout.projectDirectory.file("${build.name}/build/jacoco/test.exec")
+        }
+    )
+
+    // Collect source and class directories from all included builds
+    sourceDirectories.from(
+        javaBuilds.map { build ->
+            layout.projectDirectory.dir("${build.name}/src/main/java")
+        }
+    )
+
+    classDirectories.from(
+        javaBuilds.map { build ->
+            layout.projectDirectory.dir("${build.name}/build/classes/java/main")
+        }
+    )
+
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+        csv.required.set(false)
+    }
+
+    // Set output location
+    reports.html.outputLocation.set(layout.buildDirectory.dir("reports/jacoco/aggregate"))
+    reports.xml.outputLocation.set(layout.buildDirectory.file("reports/jacoco/aggregate/jacocoTestReport.xml"))
+
+    // Only run if coverage is enabled
+    onlyIf { coverageEnabled.get() }
+
+    // Depend on all tests completing first
+    javaBuilds.forEach { build ->
+        dependsOn(build.task(":test"))
+    }
+}
+
+// Add convenience task for running tests and generating aggregated coverage
+val testCoverage by tasks.registering {
+    group = "verification"
+    description = "Run all tests and generate aggregated coverage report (use -Porg.xtclang.java.coverage=true)"
+
+    javaBuilds.forEach { build ->
+        dependsOn(build.task(":test"))
+    }
+    dependsOn(testCodeCoverageReport)
 }

@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 plugins {
     id("org.xtclang.build.xdk.properties")
     java
+    jacoco
 }
 
 private class DefaultJvmArgsProvider(
@@ -171,4 +172,40 @@ tasks.withType<Test>().configureEach {
     jvmArgumentProviders.add(DefaultJvmArgsProvider(defaultJvmArgs))
     inputs.property("defaultJvmArgs", defaultJvmArgs)
     inputs.property("showTestStdout", showTestStdout)
+}
+
+/* ── JaCoCo Code Coverage ─────────────────────────────────────────────────── */
+
+val enableCoverage = xdkProperties.boolean("$pprefix.coverage", false)
+
+jacoco {
+    // JaCoCo 0.8.13+ supports Java 25 (class file version 69)
+    toolVersion = "0.8.14"
+}
+
+tasks.withType<Test>().configureEach {
+    val enabled = enableCoverage
+    configure<JacocoTaskExtension> {
+        isEnabled = enabled.get()
+    }
+}
+
+tasks.withType<JacocoReport>().configureEach {
+    // Capture enableCoverage Provider for configuration cache compatibility
+    val coverageEnabled = enableCoverage
+
+    inputs.property("enableCoverage", coverageEnabled)
+
+    // Configure source directories for the report
+    sourceDirectories.from(sourceSets.main.map { it.allSource.srcDirs })
+    classDirectories.from(sourceSets.main.map { it.output })
+
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+        csv.required.set(false)
+    }
+
+    // Only generate report if coverage is enabled
+    onlyIf { coverageEnabled.get() }
 }

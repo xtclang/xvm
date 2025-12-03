@@ -3,7 +3,6 @@ package org.xtclang.plugin.tasks;
 import javax.inject.Inject;
 
 import org.gradle.api.DefaultTask;
-import org.gradle.api.logging.Logger;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.ProviderFactory;
@@ -14,12 +13,11 @@ import org.jetbrains.annotations.NotNull;
 import static org.xtclang.plugin.XtcPluginConstants.PROPERTY_VERBOSE_LOGGING_OVERRIDE;
 
 /**
- * Base class for XTC tasks using modern Gradle 9.2 best practices:
+ * Base class for XTC tasks providing centralized verbose logging configuration.
  * <ul>
- *   <li>No field storage - services injected on-demand via @Inject</li>
- *   <li>Configuration cache compatible - no Project references</li>
+ *   <li>Configuration cache compatible - no field storage, services via @Inject</li>
  *   <li>Lazy property evaluation - configured by plugin, evaluated at execution</li>
- *   <li>Minimal API surface - only what's actually needed</li>
+ *   <li>Minimal API surface - only verbose logging override property</li>
  * </ul>
  */
 public abstract class XtcDefaultTask extends DefaultTask {
@@ -33,12 +31,6 @@ public abstract class XtcDefaultTask extends DefaultTask {
 
     @Inject
     public abstract ProviderFactory getProviders();
-
-    // Store as fields for convenient access throughout task lifecycle
-    protected final String projectName;
-    protected final ObjectFactory objects;
-    protected final ProviderFactory providers;
-    protected final Logger logger;
 
     /**
      * Verbose logging override as a lazy property instead of eager field.
@@ -55,6 +47,7 @@ public abstract class XtcDefaultTask extends DefaultTask {
      * This method is called at execution time, so it's safe to evaluate properties.
      */
     protected boolean hasVerboseLogging() {
+        final var logger = getLogger();
         // Gradle log levels take precedence
         if (logger.isInfoEnabled() || logger.isDebugEnabled()) {
             return true;
@@ -76,15 +69,10 @@ public abstract class XtcDefaultTask extends DefaultTask {
      * Initialize default property values.
      * Plugin can override these conventions.
      */
-    @SuppressWarnings("this-escape") // Calling getProject() and @Inject methods in constructor is safe
+    @SuppressWarnings("this-escape") // Calling @Inject methods in constructor is safe
     public XtcDefaultTask() {
-        this.projectName = getProject().getName();
-        this.objects = getObjects();
-        this.providers = getProviders();
-        this.logger = getLogger();
-
         // Read verbose logging override from project properties
-        final var verboseOverride = providers
+        final var verboseOverride = getProviders()
             .gradleProperty(PROPERTY_VERBOSE_LOGGING_OVERRIDE)
             .map(Boolean::parseBoolean)
             .orElse(false);

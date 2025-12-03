@@ -54,6 +54,7 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
     public void extractXdk() {
         executeTask();
 
+        final var logger = getLogger();
         // The task is configured at this point. We should indeed have found a zip archive from some xdkDistributionProvider somewhere.
         final var archives = getInputXdkArchive().filter(XtcExtractXdkTask::isXdkArchive);
         if (archives.isEmpty()) {
