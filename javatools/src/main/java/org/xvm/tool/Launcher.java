@@ -1,5 +1,21 @@
 package org.xvm.tool;
 
+import org.xvm.asm.BuildInfo;
+import org.xvm.asm.DirRepository;
+import org.xvm.asm.ErrorList;
+import org.xvm.asm.ErrorListener;
+import org.xvm.asm.FileRepository;
+import org.xvm.asm.LinkedRepository;
+import org.xvm.asm.ModuleRepository;
+import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.constants.ModuleConstant;
+import org.xvm.compiler.BuildRepository;
+import org.xvm.tool.LauncherOptions.CompilerOptions;
+import org.xvm.tool.LauncherOptions.DisassemblerOptions;
+import org.xvm.tool.LauncherOptions.RunnerOptions;
+import org.xvm.tool.ModuleInfo.Node;
+import org.xvm.util.Severity;
+
 import java.io.File;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -10,38 +26,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-import org.xvm.asm.BuildInfo;
-import org.xvm.asm.DirRepository;
-import org.xvm.asm.ErrorList;
-import org.xvm.asm.ErrorListener;
-import org.xvm.asm.FileRepository;
-import org.xvm.asm.LinkedRepository;
-import org.xvm.asm.ModuleRepository;
-import org.xvm.asm.ModuleStructure;
-
-import org.xvm.asm.constants.ModuleConstant;
-
-import org.xvm.compiler.BuildRepository;
-
-import org.xvm.tool.LauncherOptions.CompilerOptions;
-import org.xvm.tool.LauncherOptions.DisassemblerOptions;
-import org.xvm.tool.LauncherOptions.RunnerOptions;
-import org.xvm.tool.ModuleInfo.Node;
-
-import org.xvm.util.Severity;
-
-import static org.xvm.asm.Constants.ECSTASY_MODULE;
-import static org.xvm.asm.Constants.TURTLE_MODULE;
-import static org.xvm.asm.Constants.VERSION_MAJOR_CUR;
-import static org.xvm.asm.Constants.VERSION_MINOR_CUR;
+import static org.xvm.asm.Constants.*;
 import static org.xvm.tool.ModuleInfo.isExplicitCompiledFile;
-import static org.xvm.util.Handy.quoted;
-import static org.xvm.util.Handy.resolveFile;
-import static org.xvm.util.Handy.toPathString;
-import static org.xvm.util.Severity.ERROR;
-import static org.xvm.util.Severity.FATAL;
-import static org.xvm.util.Severity.INFO;
-import static org.xvm.util.Severity.WARNING;
+import static org.xvm.util.Handy.*;
+import static org.xvm.util.Severity.*;
 
 
 /**
@@ -53,8 +41,7 @@ import static org.xvm.util.Severity.WARNING;
  *
  * @param <T> the Options type for this launcher
  */
-public abstract class Launcher<T extends LauncherOptions>
-        implements ErrorListener {
+public abstract class Launcher<T extends LauncherOptions> implements ErrorListener {
 
     private static final Locale DEFAULT_LOCALE = Locale.getDefault();
 
@@ -86,7 +73,7 @@ public abstract class Launcher<T extends LauncherOptions>
      * The worst severity issue encountered thus far.
      * Tracked in Launcher for control flow decisions (abort/continue).
      */
-    protected Severity m_sevWorst = Severity.NONE;
+    protected Severity m_sevWorst = NONE;
 
     /**
      * The number of times that errors have been suspended without being resumed.
@@ -137,8 +124,12 @@ public abstract class Launcher<T extends LauncherOptions>
             return 1;
         }
 
-        final Console console = new Console() {};
-        return launch(stripDebugPrefix(asArg[0]), Arrays.copyOfRange(asArg, 1, asArg.length), console, null);
+        final var console = new Console() {};
+        return launch(
+                stripDebugPrefix(asArg[0]),
+                Arrays.copyOfRange(asArg, 1, asArg.length),
+                console,
+                null);
     }
 
     /**
@@ -153,27 +144,62 @@ public abstract class Launcher<T extends LauncherOptions>
      */
     public static int launch(final String cmd, final String[] args, final Console console, final ErrorListener errListener) {
         try {
-            final var launcher = switch (cmd) {
-                case Compiler.COMMAND_NAME -> new Compiler(CompilerOptions.parse(args), console, errListener);
-                case Runner.COMMAND_NAME -> new Runner(RunnerOptions.parse(args), console, errListener);
-                case Disassembler.COMMAND_NAME -> new Disassembler(DisassemblerOptions.parse(args), console, errListener);
+            final LauncherOptions options = switch (cmd) {
+                case Compiler.COMMAND_NAME -> CompilerOptions.parse(args);
+                case Runner.COMMAND_NAME -> RunnerOptions.parse(args);
+                case Disassembler.COMMAND_NAME -> DisassemblerOptions.parse(args);
                 default -> {
                     console.log(ERROR, "Command name {} is not supported", quoted(cmd));
                     yield null;
                 }
             };
-            if (launcher == null) {
-                return 1;
-            }
-            return launcher.run();
+            return options != null ? launch(options, console, errListener) : 1;
         } catch (final IllegalArgumentException e) {
             console.log(ERROR, e.getMessage());
             return 1;
+        }
+    }
+
+    /**
+     * Launch a tool directly with pre-built options.
+     * This is the preferred API for programmatic invocation as it avoids the overhead
+     * of serializing options to command-line strings and parsing them back.
+     *
+     * @param options pre-built options (CompilerOptions, RunnerOptions, or DisassemblerOptions)
+     * @param console console for output (must not be null)
+     * @param errListener optional ErrorListener to receive errors, or null
+     * @return exit code (0 for success, non-zero for error)
+     */
+    public static int launch(final LauncherOptions options, final Console console, final ErrorListener errListener) {
+        if (options == null) {
+            console.log(ERROR, "Options must not be null");
+            return 1;
+        }
+
+        final Launcher<?> launcher = switch (options) {
+            case final CompilerOptions opts -> new Compiler(opts, console, errListener);
+            case final RunnerOptions opts -> new Runner(opts, console, errListener);
+            case final DisassemblerOptions opts -> new Disassembler(opts, console, errListener);
+            default -> {
+                console.log(ERROR, "Unknown options type: {}", options.getClass().getName());
+                yield null;
+            }
+        };
+
+        if (launcher == null) {
+            return 1;
+        }
+
+        try {
+            return launcher.run();
         } catch (final LauncherException e) {
             if (e.isError()) {
                 console.log(ERROR, e.getMessage());
             }
             return e.getExitCode();
+        } catch (final Exception e) {
+            console.log(ERROR, "Unexpected error: {}", e.getMessage());
+            return 1;
         }
     }
 
@@ -194,7 +220,7 @@ public abstract class Launcher<T extends LauncherOptions>
      * Supports both "debug_xec" and "debugxec" formats.
      *
      * @param cmd the raw command name potentially with debug prefix
-     * @return the command name with debug prefix stripped, or the original if no prefix found
+     * @return the command name with debug prefix stripped, or the origensurenal if no prefix found
      */
     private static String stripDebugPrefix(final String cmd) {
         String cmdLower = cmd.toLowerCase(DEFAULT_LOCALE);
@@ -278,7 +304,7 @@ public abstract class Launcher<T extends LauncherOptions>
     /**
      * Log an exception with an optional message template.
      * Use {} placeholders in the template for parameter substitution.
-     * The exception message will be included in the log.Conso
+     * The exception message will be included in the Console
      * <p>
      * Tool-level exception logs are displayed via Console and tracked in Launcher,
      * but NOT sent to ErrorListener.
@@ -296,7 +322,7 @@ public abstract class Launcher<T extends LauncherOptions>
         }
         // 1) Track worst severity in Launcher
         // 2) Filter and display on Console if bad enough to print
-        m_sevWorst = Severity.worstOf(m_sevWorst, sev);
+        m_sevWorst = worstOf(m_sevWorst, sev);
         if (isBadEnoughToPrint(sev)) {
             m_console.log(sev, cause, template, params);
         }
@@ -421,7 +447,7 @@ public abstract class Launcher<T extends LauncherOptions>
      */
     @Override
     public boolean log(final ErrorInfo err) {
-        m_sevWorst = Severity.worstOf(m_sevWorst, err.getSeverity());
+        m_sevWorst = worstOf(m_sevWorst, err.getSeverity());
         log(err.getSeverity(), err.toString());
         m_errors.log(err);
         return isAbortDesired();
@@ -658,11 +684,13 @@ public abstract class Launcher<T extends LauncherOptions>
      */
     public ModuleInfo ensureModuleInfo(final File fileSpec, final List<File> resourceSpecs, final File binarySpec) {
         assert resourceSpecs != null;
-        final boolean fCache = resourceSpecs.isEmpty() && binarySpec == null;
         final boolean deduce = options().mayDeduceLocations();
-        return fCache
-                ? moduleCache.computeIfAbsent(fileSpec, _ -> new ModuleInfo(fileSpec, deduce, resourceSpecs, binarySpec))
-                : new ModuleInfo(fileSpec, deduce, resourceSpecs, binarySpec);
+        // Cache only when using defaults (no explicit resources or binary location)
+        // When fCache is true, binarySpec is null by definition, so we use null directly in the lambda
+        if (resourceSpecs.isEmpty() && binarySpec == null) {
+            return moduleCache.computeIfAbsent(fileSpec, _ -> new ModuleInfo(fileSpec, deduce, List.of(), null));
+        }
+        return new ModuleInfo(fileSpec, deduce, resourceSpecs, binarySpec);
     }
 
     /**
@@ -729,7 +757,7 @@ public abstract class Launcher<T extends LauncherOptions>
             return;
         }
 
-        File dir = fSingle ? file.getParentFile() : file;
+        File dir = fSingle ? parentOf(file).orElse(null) : file;
         if (dir != null && !dir.exists()) {
             log(INFO, "Creating directory {}", dir);
             // ignore any errors here; errors would end up being reported further down
@@ -809,7 +837,7 @@ public abstract class Launcher<T extends LauncherOptions>
      * Resets severity tracking and clears module cache.
      */
     protected void reset() {
-        m_sevWorst = Severity.NONE;
+        m_sevWorst = NONE;
         m_cSuspended = 0;
         moduleCache.clear();
     }

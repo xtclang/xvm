@@ -1,14 +1,11 @@
 package org.xtclang.plugin.launchers;
 
-import java.util.List;
-import java.util.ServiceLoader;
-
 import org.gradle.api.logging.Logger;
 
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.tool.Console;
-import org.xvm.tool.Launchable;
+import org.xvm.tool.Launcher;
 
 import org.xtclang.plugin.XtcRunModule;
 import org.xtclang.plugin.tasks.XtcCompileTask;
@@ -19,7 +16,7 @@ import static org.xtclang.plugin.tasks.XtcLauncherTask.EXIT_CODE_ERROR;
 
 /**
  * Direct (in-process) execution strategy.
- * Uses javatools classes already loaded by XtcLoadJavaToolsTask via ServiceLoader.
+ * Calls Launcher.launch() directly with pre-built options.
  * Works for both compile and run tasks.
  */
 public class DirectStrategy<T extends XtcLauncherTask<?>> implements ExecutionStrategy {
@@ -62,14 +59,9 @@ public class DirectStrategy<T extends XtcLauncherTask<?>> implements ExecutionSt
     @Override
     public int execute(final XtcCompileTask task) {
         logger.info("[plugin] Invoking compiler directly in current thread (no fork)");
-
         try {
-            // Use ServiceLoader - javatools already loaded by XtcLoadJavaToolsTask
-            final ServiceLoader<Launchable> loader = ServiceLoader.load(Launchable.class);
-            final Launchable launcher = loader.iterator().next();
-            // Use absolute paths for DIRECT mode since we can't control the working directory
             final var options = optionsBuilder().buildCompilerOptions(task);
-            final int exitCode = launcher.launch(options, console, err);
+            final int exitCode = Launcher.launch(options, console, err);
             logger.lifecycle("Finished calling xcc; {})", err);
             return exitCode;
         } catch (final Exception e) {
@@ -81,23 +73,14 @@ public class DirectStrategy<T extends XtcLauncherTask<?>> implements ExecutionSt
     @Override
     public int execute(final XtcRunTask task, final XtcRunModule runConfig) {
         logger.info("[plugin] Invoking runner directly in current thread (no fork)");
-        // This runs in task execution time, and hence it is fine to work with the javatools
-        // classses. compileApi to javatools makes it possible to refer to them anywhere, but
-        // unless javatools.jar has been loaded and we are at task execution time for any task
-        // we cannot execute code with the types, though.
         try {
-            // Use ServiceLoader - javatools already loaded by XtcLoadJavaToolsTask
-            final ServiceLoader<Launchable> loader = ServiceLoader.load(Launchable.class);
-            final Launchable launcher = loader.iterator().next();
-            // Extract module info from runConfig
             final String moduleName = runConfig.getModuleName().get();
             final var moduleArgs = runConfig.getModuleArgs().get();
-            // Use absolute paths for DIRECT mode since we can't control the working directory
             final var options = optionsBuilder().buildRunnerOptions(task, moduleName, moduleArgs);
-            return launcher.launch(options, console, err);
+            return Launcher.launch(options, console, err);
         } catch (final Exception e) {
             logger.error("[plugin] Direct runner execution failed", e);
-            return -1;
+            return EXIT_CODE_ERROR;
         }
     }
 }

@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.NoSuchElementException;
 
 import org.xvm.tool.ModuleInfo.FileNode;
+import org.xvm.tool.ResourceDir;
 
 import static org.xvm.compiler.Lexer.isLineTerminator;
 
@@ -137,9 +138,15 @@ public class Source
      * @return a File, a ResourceDir, or null if unresolvable
      */
     public Object resolvePath(String sFile) {
-        return sFile != null && !sFile.isEmpty() && m_node != null
-                ? m_node.resolveResource(sFile)
-                : null;
+        if (sFile == null || sFile.isEmpty() || m_node == null) {
+            return null;
+        }
+        return m_node.resolveResource(sFile)
+                .map(entry -> switch (entry) {
+                    case ResourceDir.ResourceEntry.FileEntry(var f) -> (Object) f;
+                    case ResourceDir.ResourceEntry.DirEntry(var d) -> d;
+                })
+                .orElse(null);
     }
 
     /**

@@ -835,7 +835,7 @@ public final class Handy {
     public static int closingQuote(final String s, final int of) {
         int offset = of;
         if (s == null || offset < 0) {
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException(s + " offset=" + of);
         }
 
         int cch = s.length();
@@ -999,8 +999,7 @@ public final class Handy {
      * @throws NumberFormatException  if the integer does not fit into
      *         a <tt>long</tt> value
      */
-    public static long readPackedLong(final DataInput in)
-            throws IOException {
+    public static long readPackedLong(final DataInput in) throws IOException {
         return PackedInteger.readLong(in);
     }
 
@@ -1347,32 +1346,25 @@ public final class Handy {
      *
      * @return a resolved file or directory
      */
-    /*
-    public static File resolveFile(final File file) {
-        if (file != null) {
-            try {
-                return file.getCanonicalFile();
-            } catch (final IOException e) {
-                return file.getAbsoluteFile();
-            }
-        }
-
-        try {
-            return new File(".").getAbsoluteFile().getCanonicalFile();
-        } catch (final IOException e) {
-            return new File(".").getAbsoluteFile();
-        }
-    }*/
-
     public static File resolveFile(final File file) {
         final Path p = (file == null) ? Paths.get(".") : file.toPath();
         try {
             // toRealPath resolves symlinks and returns an absolute, normalized path
             return p.toRealPath(LinkOption.NOFOLLOW_LINKS).toFile();
-        } catch (IOException | SecurityException | InvalidPathException e) {
+        } catch (final IOException | SecurityException | InvalidPathException e) {
             // Best-effort fallback: absolute + normalized (but won't resolve missing symlink targets)
             return p.toAbsolutePath().normalize().toFile();
         }
+    }
+
+    /**
+     * Get the parent of a file, wrapped in Optional to avoid null checks.
+     *
+     * @param file  a file (may be null)
+     * @return Optional containing the parent file, or empty if file is null or has no parent
+     */
+    public static Optional<File> parentOf(final File file) {
+        return Optional.ofNullable(file).map(File::getParentFile);
     }
 
     /**
@@ -2089,7 +2081,7 @@ public final class Handy {
     /**
      * DateTimeFormatter for "yyyy-MM-dd HH:mm:ss" format.
      */
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.ROOT);
 
     /**
      * A constant empty array of <tt>byte</tt>.

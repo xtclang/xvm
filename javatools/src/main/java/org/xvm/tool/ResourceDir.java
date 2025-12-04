@@ -1,18 +1,20 @@
 package org.xvm.tool;
 
-
 import java.io.File;
-
 import java.nio.file.attribute.FileTime;
-
-import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
-import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import org.xvm.compiler.ast.FileExpression;
 
-import static org.xvm.compiler.ast.FileExpression.createdTime;
-import static org.xvm.compiler.ast.FileExpression.modifiedTime;
-
+import static org.xvm.util.Handy.parentOf;
 
 /**
  * Represents a directory that contains resources, based on the contents of one or more directories
@@ -20,266 +22,185 @@ import static org.xvm.compiler.ast.FileExpression.modifiedTime;
  */
 public class ResourceDir {
     /**
-     * @param resourceLoc  the non-null File indicating the directory (or single file)
-     *                     location to use as the entire resource path
+     * A resource entry - either a file or a subdirectory.
      */
-    public ResourceDir(File resourceLoc) {
-        this(new File[] {resourceLoc});
+    public sealed interface ResourceEntry {
+        record FileEntry(File file) implements ResourceEntry {}
+        record DirEntry(ResourceDir dir) implements ResourceEntry {}
     }
 
     /**
-     * @param resourcePath  the non-null array of non-null File objects indicating the sequence
-     *                      of directory (or single file) locations to use as the resource path
+     * A ResourceDir that represents an empty set of resources.
      */
-    public ResourceDir(File[] resourcePath) {
-        this(null, "", resourcePath.clone());
+    static final ResourceDir NO_RESOURCES = new ResourceDir(List.of());
 
-        for (File file : resourcePath) {
-            if (file == null) {
-                throw new IllegalArgumentException("Resource location must not be null");
-            }
+    private final ResourceDir parent;
+    private final String name;
+    private final List<File> resourcePath;
 
+    @SuppressWarnings("unused")
+    public ResourceDir(final File resourceLoc) {
+        this(List.of(resourceLoc));
+    }
+
+    public ResourceDir(final List<File> resourcePath) {
+        this(null, "", resourcePath);
+    }
+
+    protected ResourceDir(final ResourceDir parent, final String name, final List<File> resourcePath) {
+        for (final var file : resourcePath) {
+            Objects.requireNonNull(file, "Resource location must not be null");
             if (!file.exists()) {
-                throw new IllegalArgumentException(
-                        "Resource location \"" + file + "\" does not exist");
+                throw new IllegalArgumentException("Resource location \"" + file + "\" does not exist");
             }
         }
-    }
-
-    /**
-     * @param resourcePath  the non-null array of non-null File objects indicating the sequence
-     *                      of directory (or single file) locations to use as the resource path
-     */
-    protected ResourceDir(ResourceDir parent, String name, File[] resourcePath) {
         this.parent       = parent;
         this.name         = name;
-        this.resourcePath = resourcePath;
+        this.resourcePath = List.copyOf(resourcePath);
     }
 
     /**
      * Given a source file, create the default ResourceDir that corresponds to that source file.
-     *
-     * @param sourceFile the location of an Ecstasy module source file
-     * @param deduce     pass true to enable the algorithm to search for a likely resource directory
      */
-    public static ResourceDir forSource(File sourceFile, boolean deduce) {
+    public static ResourceDir forSource(final File sourceFile, final boolean deduce) {
         if (sourceFile == null) {
-            return NoResources;
+            return NO_RESOURCES;
         }
+        var info   = new ModuleInfo(sourceFile, deduce);
+        var srcDir = info.getSourceDir();
+        if (srcDir == null) {
+            return NO_RESOURCES;
+        }
+        var resDir = deduce ? findResourcesDir(srcDir, info.getProjectDir()) : null;
+        return new ResourceDir(resDir != null ? List.of(srcDir, resDir) : List.of(srcDir));
+    }
 
-        ModuleInfo info   = new ModuleInfo(sourceFile, deduce);
-        File       prjDir = info.getProjectDir();
-        File       srcDir = info.getSourceDir();
-        if (deduce && prjDir != null && srcDir != null && !prjDir.equals(srcDir)) {
-            File parentDir = srcDir.getParentFile();
-            while (parentDir != null && parentDir.isDirectory()) {
-                File resDir = new File(parentDir, "resources");
-                if (resDir.isDirectory()) {
-                    return new ResourceDir(new File[] {srcDir, resDir});
-                }
+    /**
+     * Given source and project directories directly, create the ResourceDir without creating a ModuleInfo.
+     * This avoids recursion when called from within ModuleInfo construction.
+     */
+    public static ResourceDir forSourceDir(final File srcDir, final File projectDir, final boolean deduce) {
+        if (srcDir == null) {
+            return NO_RESOURCES;
+        }
+        var resDir = deduce ? findResourcesDir(srcDir, projectDir) : null;
+        return new ResourceDir(resDir != null ? List.of(srcDir, resDir) : List.of(srcDir));
+    }
 
-                // don't go "up" past the project directory
-                if (parentDir.equals(prjDir)) {
-                    break;
-                }
-
-                parentDir = parentDir.getParentFile();
+    /**
+     * Walk parent directories from srcDir up to prjDir, looking for a "resources" sibling.
+     */
+    private static File findResourcesDir(final File srcDir, final File prjDir) {
+        if (prjDir == null || prjDir.equals(srcDir)) {
+            return null;
+        }
+        for (var dir = srcDir.getParentFile(); dir != null && dir.isDirectory(); dir = dir.getParentFile()) {
+            var resDir = new File(dir, "resources");
+            if (resDir.isDirectory()) {
+                return resDir;
+            }
+            if (dir.equals(prjDir)) {
+                return null;
             }
         }
-
-        if (srcDir != null) {
-            return new ResourceDir(new File[] {srcDir});
-        }
-
-        return NoResources;
+        return null;
     }
 
-    /**
-     * @return the parent of this ResourceDir, of null iff this is the "root" ResourceDir
-     */
-    public ResourceDir getParent() {
-        return parent;
+    public boolean isEmpty() {
+        return resourcePath.isEmpty();
     }
 
-    /**
-     * @return the name by which this ResourceDir is known within its parent ResourceDir
-     */
+    public Optional<ResourceDir> getParent() {
+        return Optional.ofNullable(parent);
+    }
+
     public String getName() {
         return name;
     }
 
-    /**
-     * @return the creation date/time for the directory itself
-     */
-    public FileTime getCreatedTime() {
-        FileTime created = null;
-        for (File file : resourcePath) {
-            if (file.isDirectory()) {
-                FileTime newTime = createdTime(file);
-                if (created == null) {
-                    created = newTime;
-                } else if (newTime != null && newTime.compareTo(created) > 0) {
-                    created = newTime;
-                }
-            }
-        }
-        return created;
+    public Optional<FileTime> getCreatedTime() {
+        return getLatestTime(FileExpression::createdTime);
     }
 
-    /**
-     * @return the modification date/time for the directory itself
-     */
-    public FileTime getModifiedTime() {
-        FileTime modified = null;
-        for (File file : resourcePath) {
-            if (file.isDirectory()) {
-                FileTime newTime = modifiedTime(file);
-                if (modified == null) {
-                    modified = newTime;
-                } else if (newTime.compareTo(modified) > 0) {
-                    modified = newTime;
-                }
-            }
-        }
-        return modified;
+    public Optional<FileTime> getModifiedTime() {
+        return getLatestTime(FileExpression::modifiedTime);
     }
 
-    /**
-     * @return the depth of this ResourceDir, with zero being the "root" ResourceDir
-     */
+    private Optional<FileTime> getLatestTime(final Function<File, FileTime> timeFunc) {
+        return resourcePath.stream()
+                .filter(File::isDirectory)
+                .map(timeFunc)
+                .filter(Objects::nonNull)
+                .max(FileTime::compareTo);
+    }
+
     public int getDepth() {
         return parent == null ? 0 : 1 + parent.getDepth();
     }
 
-    /**
-     * @return an array of File objects, each of which represents a resource or a resource
-     *         directory
-     */
-    public File[] getLocations() {
-        return resourcePath.clone();
+    public List<File> getLocations() {
+        return resourcePath;
     }
 
-    /**
-     * Obtain the set of names contained directly within this ResourceDir. The set is ordered in
-     * a predictable (i.e. stable) manner.
-     *
-     * @return a set of names of resource files and/or directories inside this ResourceDir
-     */
     public Set<String> getNames() {
-        TreeMap<String, Object> names = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-        for (File file : resourcePath) {
-            if (file.isDirectory()) {
-                for (String name : file.list()) {
-                    names.putIfAbsent(name, null);
-                }
-            } else if (file.exists()) {
-                names.putIfAbsent(file.getName(), null);
-            }
-        }
-        return names.keySet();
+        return resourcePath.stream()
+                .flatMap(file -> file.isDirectory()
+                        ? Optional.ofNullable(file.list()).stream().flatMap(Arrays::stream)
+                        : file.exists() ? Stream.of(file.getName()) : Stream.empty())
+                .collect(Collectors.toCollection(() -> new TreeSet<>(String.CASE_INSENSITIVE_ORDER)));
     }
 
     /**
      * Find the specified resource name within this ResourceDir.
-     *
-     * @param name  the name of a file or directory within this ResourceDir
-     *
-     * @return the specified ResourceDir or File object iff the name exists in this ResourceDir;
-     *         otherwise null
      */
-    public Object getByName(String name) {
-        ArrayList<File> subdirs = null;
-        for (File file : resourcePath) {
-            if (file.isDirectory()) {
-                File child = new File(file, name);
-                if (child.exists()) {
-                    if (child.isDirectory()) {
-                        if (subdirs == null) {
-                            subdirs = new ArrayList<>();
-                        }
-                        subdirs.add(child);
-                    } else if (subdirs == null) {
-                        return child;
-                    }
-                }
-            } else if (subdirs == null && file.getName().equalsIgnoreCase(name)) {
-                return file;
-            }
+    public Optional<ResourceEntry> find(final String name) {
+        // Directories take precedence
+        final var subDirs = resourcePath.stream()
+                .filter(File::isDirectory)
+                .map(dir -> new File(dir, name))
+                .filter(child -> child.exists() && child.isDirectory())
+                .toList();
+
+        if (!subDirs.isEmpty()) {
+            return Optional.of(new ResourceEntry.DirEntry(new ResourceDir(this, name, subDirs)));
         }
 
-        return subdirs == null
-                ? null
-                : new ResourceDir(this, name, subdirs.toArray(new File[0]));
+        // Look for a matching file
+        return resourcePath.stream()
+                .map(file -> file.isDirectory() ? new File(file, name) : file)
+                .filter(file -> file.exists() && !file.isDirectory() && file.getName().equalsIgnoreCase(name))
+                .findFirst()
+                .map(ResourceEntry.FileEntry::new);
     }
 
     /**
-     * Obtain a ResourceDir (a resource directory) that is located in this ResourceDir.
-     *
-     * @param name  the directory name
-     *
-     * @return the specified ResourceDir, if it exists nested directly within this ResourceDir,
-     *         otherwise null
+     * Get a subdirectory by name.
      */
-    public ResourceDir getDirectory(String name) {
-        return getByName(name) instanceof ResourceDir dir ? dir : null;
+    public ResourceDir getDirectory(final String name) {
+        return find(name)
+                .filter(ResourceEntry.DirEntry.class::isInstance)
+                .map(e -> ((ResourceEntry.DirEntry) e).dir())
+                .orElse(NO_RESOURCES);
     }
 
-    /**
-     * Obtain a File that is located in this ResourceDir.
-     *
-     * @param name  the file name
-     *
-     * @return the specified file, if it exists in the ResourceDir, otherwise null
-     */
-    public File getFile(String name) {
-        return getByName(name) instanceof File file ? file : null;
-    }
-
-    /**
-     * @return the timestamp for all of the resources (i.e. the most recent file timestamp);
-     *         if there are no resources, 0L is returned
-     */
     public long getTimestamp() {
-        long timestamp = 0L;
-        for (File file : resourcePath) {
-            timestamp = Math.max(timestamp, calcTimestamp(file));
-        }
-        return timestamp;
+        return resourcePath.stream()
+                .mapToLong(this::calcTimestamp)
+                .max()
+                .orElse(0L);
     }
 
-    private long calcTimestamp(File dirOrFile) {
-        long timestamp = dirOrFile.lastModified();
-        if (dirOrFile.isDirectory()) {
-            File[] files = dirOrFile.listFiles();
-            if (files != null) {
-                for (File file : files) {
-                    timestamp = Math.max(timestamp, calcTimestamp(file));
-                }
-            }
-        }
-        return timestamp;
+    private long calcTimestamp(final File file) {
+        return Optional.ofNullable(file.listFiles())
+                .stream()
+                .flatMap(Arrays::stream)
+                .mapToLong(this::calcTimestamp)
+                .max()
+                .orElseGet(file::lastModified);
     }
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder().append("ResourceDir(");
-        for (int i = 0, c = resourcePath.length; i < c; ++i) {
-            if (i > 0) {
-                buf.append(", ");
-            }
-            buf.append(resourcePath[i]);
-        }
-        return buf.append(')').toString();
+        return "ResourceDir(" + String.join(", ", resourcePath.stream().map(File::toString).toList()) + ')';
     }
-
-    /**
-     * A ResourceDir that represents an empty set of resourc1es.
-     */
-    public static final ResourceDir NoResources = new ResourceDir(new File[0]);
-
-    private final ResourceDir parent;
-
-    private final String name;
-
-    private final File[] resourcePath;
 }

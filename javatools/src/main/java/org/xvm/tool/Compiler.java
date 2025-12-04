@@ -27,6 +27,7 @@ import org.xvm.util.Severity;
 
 import static org.xvm.compiler.Compiler.MODULE_MISSING;
 import static org.xvm.tool.ModuleInfo.isExplicitCompiledFile;
+import static org.xvm.util.Handy.parentOf;
 import static org.xvm.util.Handy.quoted;
 import static org.xvm.util.Handy.resolveFile;
 import static org.xvm.util.Severity.ERROR;
@@ -183,16 +184,14 @@ public class Compiler extends Launcher<CompilerOptions> {
 
         if (outputLoc != null) {
             outputLoc = resolveFile(outputLoc);
-            if (!outputLoc.exists()) {
-                if (isExplicitCompiledFile(outputLoc.getName())) {
-                    var outputDir = outputLoc.getParentFile();
-                    if (outputDir.exists()) {
-                        // it needs to be a directory
-                        if (!outputDir.isDirectory()) {
-                            log(ERROR, "The output file is {} but the parent directory cannot be created because a file already exists with the same name", outputLoc);
-                        }
-                    }
-                }
+            if (!outputLoc.exists() && isExplicitCompiledFile(outputLoc.getName())) {
+                final File outFile = outputLoc;
+                parentOf(outFile)
+                        .filter(File::exists)
+                        .filter(dir -> !dir.isDirectory())
+                        .ifPresent(_ -> log(ERROR,
+                                "The output file is {} but the parent directory cannot be created because a file already exists with the same name",
+                                outFile));
             }
         }
 
@@ -220,10 +219,11 @@ public class Compiler extends Launcher<CompilerOptions> {
             if (binFile == null) {
                 log(ERROR, "Could not determine the target location for {}; the module project may be missing a \"build\" or \"target\" directory", info.getFileSpec());
             } else {
-                var binDir = binFile.getParentFile();
-                if (!binDir.isDirectory() && binDir.exists()) {
-                    log(ERROR, "The output file {} cannot be written because its parent directory cannot be created because a file already exists with the same name", binFile);
-                }
+                parentOf(binFile)
+                        .filter(dir -> !dir.isDirectory() && dir.exists())
+                        .ifPresent(dir -> log(ERROR,
+                                "The output file {} cannot be written because its parent directory cannot be created because a file already exists with the same name",
+                                binFile));
             }
         }
         checkErrors();

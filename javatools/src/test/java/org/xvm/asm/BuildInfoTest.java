@@ -2,22 +2,23 @@ package org.xvm.asm;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import java.util.regex.Pattern;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests for BuildInfo functionality and version information.
  */
 public class BuildInfoTest {
+    private static final Pattern PATTERN = Pattern.compile("[a-f0-9]+");
+
     @Test
     public void testBuildInfoLoaded() {
         // Test that BuildInfo can load properties
         String xdkVersion = BuildInfo.getXdkVersion();
         assertNotNull(xdkVersion, "XDK version should not be null");
         assertFalse(xdkVersion.isEmpty(), "XDK version should not be empty");
-        assertFalse(xdkVersion.equals("0.0.0-unknown"), "XDK version should not be default fallback");
+        assertNotEquals("0.0.0-unknown", xdkVersion, "XDK version should not be default fallback");
     }
 
     @Test
@@ -44,23 +45,21 @@ public class BuildInfoTest {
 
         // Git info might not be available in all build environments, so allow empty
         if (!gitCommit.isEmpty()) {
-            assertTrue(gitCommit.length() >= 7, "Git commit should be at least 7 characters (short hash)");
-            assertTrue(gitCommit.matches("[a-f0-9]+"), "Git commit should be hexadecimal");
+            assertTrue(gitCommit.length() >= 12, "Git commit should be at least long hash");
+            assertTrue(PATTERN.matcher(gitCommit).matches(), "Git commit should be hexadecimal");
         }
 
         // Git status now contains branch name or "detached-head"
-        if (!gitStatus.isEmpty()) {
-            assertNotNull(gitStatus, "Git status should not be null");
-            assertFalse(gitStatus.isEmpty(), "Git status should not be empty");
-        }
+        assertNotNull(gitStatus, "Git status should not be null");
+        assertFalse(gitStatus.isEmpty(), "Git status should not be empty");
     }
 
     @Test
     public void testConstantsUseBuildInfo() {
         // Test that Constants properly uses BuildInfo values
-        assertEquals(BuildInfo.getXvmVersionMajor(), Constants.VERSION_MAJOR_CUR,
+        assertEquals(Constants.VERSION_MAJOR_CUR, BuildInfo.getXvmVersionMajor(),
                     "Constants should use BuildInfo for major version");
-        assertEquals(BuildInfo.getXvmVersionMinor(), Constants.VERSION_MINOR_CUR,
+        assertEquals(Constants.VERSION_MINOR_CUR, BuildInfo.getXvmVersionMinor(),
                     "Constants should use BuildInfo for minor version");
     }
 }

@@ -4,7 +4,6 @@ package org.xvm.tool;
 import java.io.File;
 import java.io.IOException;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -15,13 +14,17 @@ import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.VersionTree;
 
+import static org.xvm.util.Handy.parentOf;
+
 
 /**
  * A ModuleRepository based on the information in ModuleInfo structures.
  */
-public class ModuleInfoRepository
-        implements ModuleRepository {
-    // ----- constructors  -------------------------------------------------------------------------
+public class ModuleInfoRepository implements ModuleRepository {
+    private final Map<String, ModuleInfo>     infos;
+    private final boolean                     readOnly;
+    private final Map<String, FileRepository> repos = new HashMap<>();
+
 
     /**
      * Construct a ModuleRepository that represents the modules corresponding to the provided
@@ -30,7 +33,7 @@ public class ModuleInfoRepository
      * @param infos     ModuleInfos, keyed by qualified module names
      * @param readOnly  true to make the repository "read-only"
      */
-    public ModuleInfoRepository(Map<String, ModuleInfo> infos, boolean readOnly) {
+    public ModuleInfoRepository(final Map<String, ModuleInfo> infos, final boolean readOnly) {
         assert infos.keySet().stream().allMatch(Objects::nonNull);
         assert infos.values().stream().allMatch(info -> info != null
                 && info.getQualifiedModuleName() != null
@@ -39,7 +42,6 @@ public class ModuleInfoRepository
         this.infos    = infos;
         this.readOnly = readOnly;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -51,16 +53,15 @@ public class ModuleInfoRepository
         return readOnly;
     }
 
-
     // ----- ModuleRepository API ------------------------------------------------------------------
 
     @Override
     public Set<String> getModuleNames() {
-        return Collections.unmodifiableSet(infos.keySet());
+        return Set.copyOf(infos.keySet());
     }
 
     @Override
-    public VersionTree<Boolean> getAvailableVersions(String name) {
+    public VersionTree<Boolean> getAvailableVersions(final String name) {
         ModuleInfo info = infos.get(name);
         return info == null
                 ? null
@@ -68,7 +69,7 @@ public class ModuleInfoRepository
     }
 
     @Override
-    public ModuleStructure loadModule(String name) {
+    public ModuleStructure loadModule(final String name) {
         ModuleInfo info = infos.get(name);
         return info == null
                 ? null
@@ -76,7 +77,7 @@ public class ModuleInfoRepository
     }
 
     @Override
-    public void storeModule(ModuleStructure module)
+    public void storeModule(final ModuleStructure module)
             throws IOException {
         if (readOnly) {
             throw new IOException("repository is read-only: " + this);
@@ -89,19 +90,21 @@ public class ModuleInfoRepository
         }
     }
 
-
     // ----- internal ------------------------------------------------------------------------------
 
-    private FileRepository ensureRepo(ModuleInfo info) {
+    private FileRepository ensureRepo(final ModuleInfo info) {
         String name = info.getQualifiedModuleName();
         FileRepository repo = repos.get(name);
         if (repo == null) {
             File file = info.getBinaryFile();
-            File dir  = file.getParentFile();
-            if (!readOnly && !dir.isDirectory()) {
-                if (!dir.mkdirs()) {
-                    throw new IllegalStateException("could not create directory: " + dir);
-                }
+            if (!readOnly) {
+                parentOf(file)
+                        .filter(dir -> !dir.isDirectory())
+                        .ifPresent(dir -> {
+                            if (!dir.mkdirs()) {
+                                throw new IllegalStateException("could not create directory: " + dir);
+                            }
+                        });
             }
             repo = new FileRepository(file, readOnly);
             repos.put(name, repo);
@@ -118,24 +121,15 @@ public class ModuleInfoRepository
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (obj == this || !(obj instanceof ModuleInfoRepository that)) {
+    public boolean equals(final Object obj) {
+        if (obj == this || !(obj instanceof final ModuleInfoRepository that)) {
             return obj == this;
         }
-
-        return this.infos.equals(that.infos) &&
-               this.readOnly == that.readOnly;
+        return this.infos.equals(that.infos) && this.readOnly == that.readOnly;
     }
 
     @Override
     public String toString() {
         return "ModuleInfoRepository(Infos=" + infos + ", RO=" + readOnly + ")";
     }
-
-
-    // ----- fields --------------------------------------------------------------------------------
-
-    private final Map<String, ModuleInfo>     infos;
-    private final boolean                     readOnly;
-    private final Map<String, FileRepository> repos = new HashMap<>();
 }

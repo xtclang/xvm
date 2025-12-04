@@ -223,10 +223,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
 
         // Validate that parallel execution is not enabled (not yet implemented)
         if (getParallel().get()) {
-            throw new UnsupportedOperationException("""
-                [plugin] Parallel module execution is not yet implemented. \
-                Please set 'parallel = false' in your xtcRun configuration or remove the parallel setting.\
-                """);
+            throw new UnsupportedOperationException("[plugin] Parallel module execution is not yet implemented. Please set 'parallel = false' in your xtcRun configuration or remove the parallel setting-");
         }
 
         // Create module path from xtcModule dependencies, XDK contents and output of our source set.

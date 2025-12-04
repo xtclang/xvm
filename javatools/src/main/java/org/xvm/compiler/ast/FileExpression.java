@@ -380,20 +380,15 @@ public class FileExpression
         int              iConst   = 0;
         for (String child : children) {
             assert iConst < cConsts;
-            Object resource = dir.getByName(child);
-            if (resource instanceof ResourceDir subdir) {
-                aConsts[iConst++] = buildDirectoryConstant(pool, subdir);
-            } else if (resource instanceof File file) {
-                aConsts[iConst++] = buildFileConstant(pool, file);
-            } else {
-                throw new IllegalStateException("unknown resource \"" + child + "\" from " + dir +
-                                                " : " + resource);
-            }
+            aConsts[iConst++] = switch (dir.find(child).orElseThrow()) {
+                case ResourceDir.ResourceEntry.DirEntry(var subdir) -> buildDirectoryConstant(pool, subdir);
+                case ResourceDir.ResourceEntry.FileEntry(var file) -> buildFileConstant(pool, file);
+            };
         }
         assert iConst == cConsts;
 
         return pool.ensureDirectoryConstant(dir.getName(),
-                dir.getCreatedTime(), dir.getModifiedTime(), aConsts);
+                dir.getCreatedTime().orElse(null), dir.getModifiedTime().orElse(null), aConsts);
     }
 
     /**
