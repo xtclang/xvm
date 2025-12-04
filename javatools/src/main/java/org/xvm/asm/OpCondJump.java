@@ -641,9 +641,9 @@ public abstract class OpCondJump
                 Builder.loadTypeConstant(code, bctx.typeSystem, typeTest);  // test type
             }
             if (getOpCode() == OP_JMP_TYPE) {
-                bctx.narrowTarget(code, m_nArg, nAddrJump, -1, typeTest);
+                bctx.narrowRegister(code, m_nArg, nAddrJump, -1, typeTest);
             } else {
-                bctx.narrowTarget(code, m_nArg, nAddrThis + 1, nAddrJump, typeTest);
+                bctx.narrowRegister(code, m_nArg, nAddrThis + 1, nAddrJump, typeTest);
             }
         } else {
             // dynamic types

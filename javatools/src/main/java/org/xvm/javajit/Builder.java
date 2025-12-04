@@ -97,15 +97,15 @@ public abstract class Builder {
         switch (constant) {
         case StringConstant stringConst:
             loadString(code, stringConst.getValue());
-            return new SingleSlot(Op.A_STACK, stringConst.getType(), CD_String, "");
+            return new SingleSlot(stringConst.getType(), CD_String, "");
 
         case IntConstant intConstant:// TODO: support all Int/UInt types
             code.ldc(intConstant.getValue().getLong());
-            return new SingleSlot(Op.A_STACK, constant.getType(), CD_long, "");
+            return new SingleSlot(constant.getType(), CD_long, "");
 
         case ByteConstant byteConstant:
             code.ldc(byteConstant.getValue().intValue());
-            return new SingleSlot(Op.A_STACK, constant.getType(), CD_int, "");
+            return new SingleSlot(constant.getType(), CD_int, "");
 
         case LiteralConstant litConstant:
             switch (litConstant.getFormat()) {
@@ -123,7 +123,7 @@ public abstract class Builder {
                 ConstantPool pool = constant.getConstantPool();
                 if (enumConstant.getType().isOnlyNullable()) {
                     Builder.loadNull(code);
-                    return new SingleSlot(Op.A_STACK, pool.typeNullable(), CD_Nullable, "");
+                    return new SingleSlot(pool.typeNullable(), CD_Nullable, "");
                 }
                 else if (enumConstant.getType().isA(pool.typeBoolean())) {
                     if (enumConstant.getIntValue().getInt() == 0) {
@@ -132,7 +132,7 @@ public abstract class Builder {
                     else {
                         code.iconst_1();
                     }
-                    return new SingleSlot(Op.A_STACK, pool.typeBoolean(), CD_boolean, "");
+                    return new SingleSlot(pool.typeBoolean(), CD_boolean, "");
                 }
             }
 
@@ -143,20 +143,20 @@ public abstract class Builder {
             // retrieve from Singleton.$INSTANCE (see CommonBuilder.assembleStaticInitializer)
             ClassDesc cd = jtd.cd;
             code.getstatic(cd, Instance, cd);
-            return new SingleSlot(Op.A_STACK, type, cd, "");
+            return new SingleSlot(type, cd, "");
         }
 
         case CharConstant ch:
             code.loadConstant(ch.getValue());
-            return new SingleSlot(Op.A_STACK, constant.getConstantPool().typeChar(), CD_Char, "");
+            return new SingleSlot(constant.getConstantPool().typeChar(), CD_Char, "");
 
         case NamedCondition cond:
             code.loadConstant(cond.getName());
-            return new SingleSlot(Op.A_STACK, cond.getConstantPool().typeString(), CD_String, "");
+            return new SingleSlot(cond.getConstantPool().typeString(), CD_String, "");
 
         case TypeConstant type:
             Builder.loadTypeConstant(code, typeSystem, type);
-            return new SingleSlot(Op.A_STACK, type.getType(), CD_TypeConstant, "");
+            return new SingleSlot(type.getType(), CD_TypeConstant, "");
 
         case PropertyConstant propId: {
             // support for the "local property" mode
@@ -170,7 +170,7 @@ public abstract class Builder {
             if (jtd.flavor == MultiSlotPrimitive) {
                 throw new UnsupportedOperationException("TODO multislot property");
             }
-            return new SingleSlot(Op.A_STACK, type, jtd.cd, "");
+            return new SingleSlot(type, jtd.cd, "");
         }
 
         case MethodConstant methodId: {
@@ -234,7 +234,7 @@ public abstract class Builder {
                 code.iconst_1() // immutable = true
                     .invokespecial(cd, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant,
                         CD_MethodHandle, CD_MethodHandle, CD_boolean));
-                return new SingleSlot(Op.A_STACK, type, cd, "");
+                return new SingleSlot(type, cd, "");
             } else {
                 // 3) instantiate an nMethod object
                 //      new nMethod(ctx, type, stdHandle, optHandle);
@@ -254,7 +254,7 @@ public abstract class Builder {
                 }
                 code.invokespecial(cd, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant,
                         CD_MethodHandle, CD_MethodHandle));
-                return new SingleSlot(Op.A_STACK, type, cd, "");
+                return new SingleSlot(type, cd, "");
             }
         }
 
@@ -491,14 +491,25 @@ public abstract class Builder {
     }
 
     /**
-     * Generate unboxing opcodes for a wrapper reference on the stack and the specified primitive
-     * class.
+     * Generate unboxing opcodes for a wrapper reference on the Java stack.
      *
      * In: a boxed XVM reference
      * Out: the unboxed primitive value
      *
-     * @param type the primitive type
-     * @param cd   the corresponding ClassDesc
+     * @param reg  the RegisterInfo for the unboxed value
+     */
+    public static void unbox(CodeBuilder code, RegisterInfo reg) {
+        unbox(code, reg.type(), reg.cd());
+    }
+
+    /**
+     * Generate unboxing opcodes for a wrapper reference on the Java stack.
+     *
+     * In: a boxed XVM reference
+     * Out: the unboxed primitive value
+     *
+     * @param type  the primitive type for the boxed value
+     * @param cd    the corresponding ClassDesc to unbox to
      */
     public static void unbox(CodeBuilder code, TypeConstant type, ClassDesc cd) {
         assert cd.isPrimitive() && type.isPrimitive();
