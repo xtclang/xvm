@@ -11,7 +11,14 @@ import org.xvm.asm.constants.TypeConstant;
  */
 public interface RegisterInfo {
     /**
-     * @return the corresponding Java slot index
+     * @return the corresponding register id, which could be a negative value - one of the
+     *         Op.A_ constants (e.g. {@link Op#A_THIS})
+     */
+    int regId();
+
+    /**
+     * @return the corresponding Java slot index or -1 if the corresponding value has been placed on
+     *         the Java stack
      */
     int slot();
 
@@ -39,13 +46,23 @@ public interface RegisterInfo {
      * @return true iff the XTC register represents a value to be ignored
      */
     default boolean isIgnore() {
-        return slot() == Op.A_IGNORE;
+        return regId() == Op.A_IGNORE;
     }
 
     /**
      * @return true iff the XTC register represents a pre-defined "this" value
      */
     default boolean isThis() {
-        return slot() == Op.A_THIS;
+        return regId() == Op.A_THIS;
     }
+
+    /**
+     * Used for the value of the {@link #slot()} to indicates that the value is on the Java stack.
+     */
+    int JAVA_STACK = -1;
+
+    /**
+     * Used for the value of the {@link #slot()} to indicates that there is no slot for the value.
+     */
+    int NONE = -2;
 }

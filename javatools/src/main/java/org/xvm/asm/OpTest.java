@@ -297,7 +297,6 @@ public abstract class OpTest
             RegisterInfo reg1     = null;
             RegisterInfo reg2     = null;
             Label        labelEnd = code.newLabel();
-            int          nAddr    = getAddress();
 
             if (!type1.isA(typeCompare)) {
                 reg1 = bctx.ensureRegister(code, m_nValue1);
@@ -305,7 +304,7 @@ public abstract class OpTest
                     throw new UnsupportedOperationException("Handle MultiSlotPrimitive");
                 }
                 assembleRuntimeCheck(bctx, code, reg1, typeCompare, labelEnd);
-                reg1 = bctx.narrowTarget(code, m_nValue1, nAddr, nAddr + 1, typeCompare);
+                reg1 = bctx.narrowRegister(code, reg1, typeCompare);
             } else {
                 assert !type2.isA(typeCompare);
 
@@ -314,7 +313,7 @@ public abstract class OpTest
                     throw new UnsupportedOperationException("Handle MultiSlotPrimitive");
                 }
                 assembleRuntimeCheck(bctx, code, reg2, typeCompare, labelEnd);
-                reg2 = bctx.narrowTarget(code, m_nValue2, nAddr, nAddr + 1, typeCompare);
+                reg2 = bctx.narrowRegister(code, reg2, typeCompare);
             }
 
             assembleUniformTest(bctx, code, reg1, reg2, typeCompare);
