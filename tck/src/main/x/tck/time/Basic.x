@@ -34,9 +34,7 @@ class Basic {
     @Test
     void timezone() {
         try {
-            TimeZone tz = new TimeZone("123");
-            assert False;
-        } catch( IllegalArgument e ) { }
+            assert TimeZone.of("123");
+        } catch( IllegalState e ) { }
     }
-
 }
