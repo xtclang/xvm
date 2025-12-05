@@ -893,7 +893,7 @@ public abstract class Utils {
                             return callFreeze(frameCaller, hVal, true, _ -> Op.R_NEXT);
                         } else {
                             return frameCaller.raiseException(xException.notFreezableProperty(
-                                frameCaller, idProp.getName(), idProp.getType()));
+                                frameCaller, idProp.getName(), idProp.getNamespace().getType()));
                         }
                     }
                     return Op.R_NEXT;
