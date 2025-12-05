@@ -1,0 +1,133 @@
+package org.xtclang.plugin.internal;
+
+import static java.util.Collections.emptyList;
+
+import java.util.Arrays;
+import java.util.List;
+
+import javax.inject.Inject;
+
+import org.gradle.api.Action;
+import org.gradle.api.model.ObjectFactory;
+import org.gradle.api.provider.ListProperty;
+import org.gradle.api.provider.Property;
+
+import org.jetbrains.annotations.NotNull;
+
+import org.xtclang.plugin.XtcTestModule;
+import org.xtclang.plugin.XtcTestExtension;
+
+public abstract class DefaultXtcTestExtension extends DefaultXtcLauncherTaskExtension implements XtcTestExtension {
+    // TODO: Make it possible to add to the module path, both here and in the XTC compiler with explicit paths.
+    //  well in the compiler, it just corresponds to the SourceSet and you can edit that already (except for
+    //  maybe the XDK handling behind the scenes). Anyway I'll make it a common property for both environments.
+    //  You never know.
+
+    /**
+     * Should we enable the debugger for this task? Note that the "classic" Java attach way of debugging
+     * runs into some complications with Gradle. Here is a good source of information for debugging
+     * a Gradle build with "classic Java style", and it may well involve re-invoking Gradle with
+     * --no-daemon and --no-build-cache. See e.g.
+     * "<a href="https://www.thomaskeller.biz/blog/2020/11/17/debugging-with-gradle/">...</a>"
+     * <p>
+     * We are working on a more seamless approach, triggered on assert:debug in Ecstasy code, and
+     * controlling the executing process. While Gradle eats and throws away STDIN in lots of
+     * configurations, the "robust" way to make what we are trying to work, is to redirect
+     * stdin and use it to talk to a debugger over the console. This requires, e.g. changing
+     * the scope of a JavaExec so that it runs in the Gradle build process, with daemons enabled.
+     * To have a "fits all" solution to temporarily fall back on the existing XTC debugger,
+     * we would also need to create a Gradle compatible console handler and use it to display
+     * output and request user input (debugger) commands. That should be possible just by starting
+     * a compile or run task with special changes to configuration (e.g. fork = false, stdin = ...)
+     * <p>
+     * Ideally, we'd like full control over this in only one place, the build/run system with
+     * Gradle/Maven, or completely in the XDK implementation. For the latter, which will also
+     * help us break out and port current functionality to the WIP XTC Language Server, it makes
+     * sense to add an abstraction layer for communication between the user and the debugger
+     * process. This interface could run over sockets or whatever is available, and would
+     * contain one implementation of the interface that implements the current stdout/stdin
+     * mode, that is the only way to talk to the XTC debugger ATM.
+     */
+    private final ListProperty<@NotNull XtcTestModule> modules;
+    private final Property<@NotNull Boolean> detach;
+    private final Property<@NotNull Boolean> parallel;
+
+    @Inject
+    @SuppressWarnings("this-escape")
+    public DefaultXtcTestExtension() {
+        final ObjectFactory objects = getObjects();
+        this.modules = objects.listProperty(XtcTestModule.class).value(emptyList());
+        this.detach = objects.property(Boolean.class).convention(false);
+        this.parallel = objects.property(Boolean.class).convention(false);
+    }
+
+    private XtcTestModule createModule(final String moduleName) {
+        final var runModule = getObjects().newInstance(DefaultXtcTestModule.class);
+        runModule.getModuleName().set(moduleName);
+        return runModule;
+    }
+
+    private XtcTestModule addModule(final XtcTestModule runModule) {
+        modules.add(runModule);
+        return runModule;
+    }
+
+    @Override
+    public XtcTestModule module(final Action<@NotNull XtcTestModule> action) {
+        final var runModule = getObjects().newInstance(DefaultXtcTestModule.class);
+        action.execute(runModule);
+        return addModule(runModule);
+    }
+
+    @Override
+    public void moduleName(final String name) {
+        addModule(createModule(name));
+    }
+
+    @Override
+    public void moduleNames(final String... names) {
+        Arrays.asList(names).forEach(this::moduleName);
+    }
+
+    @Override
+    public ListProperty<@NotNull XtcTestModule> getModules() {
+        return modules;
+    }
+
+    @Override
+    public void setModuleNames(final List<String> moduleNames) {
+        modules.empty();
+        moduleNames.forEach(this::moduleName);
+    }
+
+    @Override
+    public void setModuleNames(final String... moduleNames) {
+        setModuleNames(Arrays.asList(moduleNames));
+    }
+
+    @Override
+    public void setModules(final List<XtcTestModule> modules) {
+        this.modules.empty();
+        modules.forEach(this::addModule);
+    }
+
+    @Override
+    public void setModules(final XtcTestModule... modules) {
+        setModules(Arrays.asList(modules));
+    }
+
+    @Override
+    public Property<@NotNull Boolean> getDetach() {
+        return detach;
+    }
+
+    @Override
+    public Property<@NotNull Boolean> getParallel() {
+        return parallel;
+    }
+
+    @Override
+    public int size() {
+        return modules.get().size();
+    }
+}

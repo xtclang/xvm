@@ -21,6 +21,9 @@ public final class XtcPluginConstants {
     public static final String XTC_EXTENSION_NAME_RUNTIME = "xtcRun";
     public static final String XTC_DEFAULT_RUN_METHOD_NAME_PREFIX = "run";
     public static final String XTC_RUNNER_CLASS_NAME = "org.xvm.tool.Runner";
+    public static final String XTC_EXTENSION_NAME_TEST = "xtcTest";
+    public static final String XTC_DEFAULT_TEST_METHOD_NAME_PREFIX = "test";
+    public static final String XTC_TEST_RUNNER_CLASS_NAME = "org.xvm.tool.TestRunner";
 
     // XDK Distribution constants:
     public static final String XDK_CONFIG_NAME_INCOMING = "xdk";
