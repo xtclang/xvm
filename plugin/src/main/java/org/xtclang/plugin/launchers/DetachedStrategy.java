@@ -16,7 +16,7 @@ import static org.xtclang.plugin.XtcPluginUtils.*;
  * Supports stdout/stderr redirection with %TIMESTAMP% placeholder expansion.
  * Works for both compile and run tasks.
  */
-public class DetachedStrategy<T extends XtcLauncherTask<?>> extends ForkedStrategy<T> {
+public class DetachedStrategy<T extends XtcLauncherTask<?>> extends ForkedStrategy {
 
     public DetachedStrategy(final Logger logger, final String javaExecutable) {
         super(ExecutionMode.DETACHED, logger, javaExecutable);

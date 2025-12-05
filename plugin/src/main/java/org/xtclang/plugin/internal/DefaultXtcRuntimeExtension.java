@@ -9,6 +9,7 @@ import org.gradle.api.Action;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
+import org.gradle.api.provider.ProviderFactory;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -16,20 +17,19 @@ import org.xtclang.plugin.XtcRunModule;
 import org.xtclang.plugin.XtcRuntimeExtension;
 
 public abstract class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskExtension implements XtcRuntimeExtension {
-
     private final ListProperty<@NotNull XtcRunModule> modules;
     private final Property<@NotNull Boolean> parallel;
 
     @Inject
-    @SuppressWarnings({"this-escape", "ConstructorNotProtectedInAbstractClass"})
-    public DefaultXtcRuntimeExtension() {
-        final ObjectFactory objects = getObjects();
+    @SuppressWarnings("ConstructorNotProtectedInAbstractClass")
+    public DefaultXtcRuntimeExtension(final ObjectFactory objects, final ProviderFactory providers) {
+        super(objects, providers);
         this.modules = objects.listProperty(XtcRunModule.class).value(List.of());
         this.parallel = objects.property(Boolean.class).convention(false);
     }
 
     private XtcRunModule createModule(final String moduleName) {
-        final var runModule = getObjects().newInstance(DefaultXtcRunModule.class);
+        final var runModule = objects.newInstance(DefaultXtcRunModule.class);
         runModule.getModuleName().set(moduleName);
         return runModule;
     }
@@ -41,7 +41,7 @@ public abstract class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskE
 
     @Override
     public XtcRunModule module(final Action<@NotNull XtcRunModule> action) {
-        final var runModule = getObjects().newInstance(DefaultXtcRunModule.class);
+        final var runModule = objects.newInstance(DefaultXtcRunModule.class);
         action.execute(runModule);
         return addModule(runModule);
     }

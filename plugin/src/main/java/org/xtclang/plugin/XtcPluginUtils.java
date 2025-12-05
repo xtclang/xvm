@@ -20,7 +20,6 @@ import java.text.MessageFormat;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
 import java.util.Arrays;
@@ -34,7 +33,7 @@ import org.gradle.api.GradleException;
 /**
  * XTC Plugin Helper methods in a utility class.
  * <p>
- * TODO: Move the state independent/reentrant stuff from the ProjectDelegate and its subclasses to here.
+ * TODO: Move the state independent/reentrant stuff from XtcProjectDelegate to here.
  */
 public final class XtcPluginUtils {
 

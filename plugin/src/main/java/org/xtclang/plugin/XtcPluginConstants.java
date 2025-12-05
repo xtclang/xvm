@@ -11,6 +11,7 @@ public final class XtcPluginConstants {
     public static final String XTC_SOURCE_FILE_EXTENSION = "x";
     public static final String XTC_SOURCE_SET_DIRECTORY_ROOT_NAME = "x";
     public static final String XTC_CONFIG_NAME_INCOMING = "xtcModule";
+    @SuppressWarnings("StringConcatenationMissingWhitespace")
     public static final String XTC_CONFIG_NAME_OUTGOING = XTC_CONFIG_NAME_INCOMING + "Provider";
     public static final String XTC_CONFIG_NAME_MODULE_DEPENDENCY = "xtcModuleDeps";
 
@@ -37,6 +38,7 @@ public final class XtcPluginConstants {
     public static final String XDK_JAVATOOLS_ARTIFACT_ID = "javatools";
     public static final String XDK_JAVATOOLS_ARTIFACT_SUFFIX = "jar";
     public static final String XDK_CONFIG_NAME_JAVATOOLS_INCOMING = "xdkJavaTools";
+    @SuppressWarnings("StringConcatenationMissingWhitespace")
     public static final String XDK_CONFIG_NAME_JAVATOOLS_OUTGOING = XDK_CONFIG_NAME_JAVATOOLS_INCOMING + "Provider";
     public static final String XDK_JAVATOOLS_NAME_MANIFEST = "META-INF/MANIFEST.MF";
     public static final String XDK_JAVATOOLS_NAME_JAR = XDK_JAVATOOLS_ARTIFACT_ID + '.' + XDK_JAVATOOLS_ARTIFACT_SUFFIX;
@@ -44,7 +46,7 @@ public final class XtcPluginConstants {
     public static final String PLUGIN_BUILD_INFO_FILENAME = "plugin-build-info.properties";
     public static final String PLUGIN_BUILD_INFO_RESOURCE_PATH = "/org/xtclang/build/internal/" + PLUGIN_BUILD_INFO_FILENAME;
 
-    // Config artifacts from the XDK build; this is only resolved when we are using the plugin to build the XDself,
+    // Config artifacts from the XDK build; this is only resolved when we are using the plugin to build the XDK itself,
     // of which it is a part, the XdkDistribution supplied the artifact name for the javatools the plugin needs.
     // If we are applying the plugin to an external project (all other use cases), then we depend on extractXdk to
     // unpack the zipped xtc-plugin artifact to a build system location, and use that javatools.jar as classpath.

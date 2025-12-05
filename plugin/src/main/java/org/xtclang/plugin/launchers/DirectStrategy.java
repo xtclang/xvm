@@ -6,10 +6,10 @@ import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.tool.Console;
 import org.xvm.tool.Launcher;
+import org.xvm.util.Severity;
 
 import org.xtclang.plugin.XtcRunModule;
 import org.xtclang.plugin.tasks.XtcCompileTask;
-import org.xtclang.plugin.tasks.XtcLauncherTask;
 import org.xtclang.plugin.tasks.XtcRunTask;
 
 import static org.xtclang.plugin.tasks.XtcLauncherTask.EXIT_CODE_ERROR;
@@ -19,7 +19,7 @@ import static org.xtclang.plugin.tasks.XtcLauncherTask.EXIT_CODE_ERROR;
  * Calls Launcher.launch() directly with pre-built options.
  * Works for both compile and run tasks.
  */
-public class DirectStrategy<T extends XtcLauncherTask<?>> implements ExecutionStrategy {
+public class DirectStrategy implements ExecutionStrategy {
 
     private final Logger logger;
     private final Console console;
@@ -34,7 +34,7 @@ public class DirectStrategy<T extends XtcLauncherTask<?>> implements ExecutionSt
     private static Console createConsole(final Logger logger) {
         return new Console() {
             @Override
-            public String log(final org.xvm.util.Severity severity, final String template, final Object... params) {
+            public String log(final Severity severity, final String template, final Object... params) {
                 final String message = Console.formatTemplate(template, params);
                 switch (severity) {
                     case ERROR, FATAL -> logger.error(message);

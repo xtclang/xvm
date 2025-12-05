@@ -5,7 +5,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import org.gradle.api.logging.Logger;
@@ -22,7 +21,7 @@ import static org.xtclang.plugin.tasks.XtcLauncherTask.EXIT_CODE_ERROR;
  * Base class for forked (out-of-process) execution strategies.
  * Handles common logic for building ProcessBuilder and executing forked JVM processes.
  */
-public abstract class ForkedStrategy<T extends XtcLauncherTask<?>> implements ExecutionStrategy {
+public abstract class ForkedStrategy implements ExecutionStrategy {
 
     private static final int STD_BUFFER_SIZE = 8192;
 

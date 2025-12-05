@@ -345,6 +345,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         return xtcModuleDependencies.get();
     }
 
+    /*
     @Internal
     public Provider<@NotNull FileCollection> getXtcModuleDependenciesProvider() {
         return xtcModuleDependencies;
@@ -353,7 +354,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @Internal
     public Map<String, Provider<@NotNull Directory>> getSourceSetOutputDirs() {
         return sourceSetOutputDirs;
-    }
+    }*/
 
     @Internal
     protected Provider<@NotNull String> getProjectVersion() {

@@ -1,7 +1,5 @@
 package org.xtclang.plugin.tasks;
 
-import static java.util.Collections.emptyList;
-
 import static org.gradle.api.logging.LogLevel.ERROR;
 import static org.gradle.api.logging.LogLevel.INFO;
 import static org.gradle.api.logging.LogLevel.LIFECYCLE;
@@ -107,7 +105,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     private ExecutionStrategy createStrategy() {
         final ExecutionMode mode = getExecutionMode().get();
         return switch (mode) {
-            case DIRECT -> new DirectStrategy<>(logger);
+            case DIRECT -> new DirectStrategy(logger);
             case ATTACHED -> new AttachedStrategy<>(logger, resolveJavaExecutable());
             case DETACHED -> new DetachedStrategy<>(logger, resolveJavaExecutable());
         };

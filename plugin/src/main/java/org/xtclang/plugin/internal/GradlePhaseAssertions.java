@@ -2,6 +2,7 @@ package org.xtclang.plugin.internal;
 
 import org.gradle.api.Project;
 import org.gradle.api.Task;
+import org.gradle.api.logging.Logger;
 
 /**
  * Utility class for asserting that we're in the expected Gradle build phase.
@@ -78,18 +79,12 @@ public final class GradlePhaseAssertions {
      */
     public static void validateConfigurationTimeCapture(final Object data, final String dataDescription) {
         switch (data) {
-        case null ->
-                throw new IllegalStateException("Configuration-time captured data is null: " + dataDescription + ". This may indicate improper configuration cache setup.");
-
+        case null -> throw new IllegalStateException("Configuration-time captured data is null: " + dataDescription + ". This may indicate improper configuration cache setup.");
         // Ensure data is of a serializable type for configuration cache
-        case final Project _ ->
-                throw new IllegalStateException("Project instance captured at configuration time: " + dataDescription + ". This will break configuration cache. Use Provider patterns instead.");
-
+        case final Project _ -> throw new IllegalStateException("Project instance captured at configuration time: " + dataDescription + ". This will break configuration cache. Use Provider patterns instead.");
         // Add more checks for common non-serializable types
-        case final org.gradle.api.logging.Logger _ ->
-                throw new IllegalStateException("Logger instance captured at configuration time: " + dataDescription + ". This will break configuration cache. Use task.getLogger() during execution instead.");
-        default -> {
-        }
+        case final Logger _ -> throw new IllegalStateException("Logger instance captured at configuration time: " + dataDescription + ". This will break configuration cache. Use task.getLogger() during execution instead.");
+        default -> {}
         }
     }
 }

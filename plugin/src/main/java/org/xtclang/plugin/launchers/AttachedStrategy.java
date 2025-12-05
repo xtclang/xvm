@@ -9,7 +9,7 @@ import org.xtclang.plugin.tasks.XtcLauncherTask;
  * Launches in a separate JVM process with inherited I/O (stdout/stderr go to parent process).
  * Works for both compile and run tasks.
  */
-public class AttachedStrategy<T extends XtcLauncherTask<?>> extends ForkedStrategy<T> {
+public class AttachedStrategy<T extends XtcLauncherTask<?>> extends ForkedStrategy {
 
     public AttachedStrategy(final Logger logger, final String javaExecutable) {
         super(ExecutionMode.ATTACHED, logger, javaExecutable);
