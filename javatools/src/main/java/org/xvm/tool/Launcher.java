@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -120,8 +121,15 @@ public abstract class Launcher
      * @param asArgs  the Launcher's command-line arguments
      */
     public Launcher(String[] asArgs, Console console) {
-        m_asArgs  = asArgs;
-        m_console = console == null ? DefaultConsole : console;
+        this(asArgs == null ? List.of() : List.of(asArgs), console);
+    }
+
+    /**
+     * @param listArgs  the Launcher's command-line arguments
+     */
+    public Launcher(List<String> listArgs, Console console) {
+        m_listArgs = listArgs == null ? List.of() : listArgs;
+        m_console  = console == null ? DefaultConsole : console;
     }
 
     /**
@@ -132,7 +140,7 @@ public abstract class Launcher
     public int run() {
         Options opts = options();
 
-        boolean fHelp = opts.parse(m_asArgs);
+        boolean fHelp = opts.parse(m_listArgs);
         if (Runtime.version().version().getFirst() < 21) {
             log(Severity.INFO, "The suggested minimum JVM version is 21; this JVM version ("
                     + Runtime.version() + ") appears to be older");
@@ -479,13 +487,30 @@ public abstract class Launcher
          * @param desc       a human-readable description of the option, for the help display
          */
         protected void addOption(String posixName, String linuxName, Form form, boolean multi, String desc) {
+            addOption(posixName, linuxName, form, multi, desc, null);
+        }
+
+        /**
+         * (Internal) Add meta-data for an option that is supported for this command line tool.
+         *
+         * @param posixName   the POSIX-like command line switch ("-X" would be passed as "X")
+         * @param linuxName   the Linux-like command line switch ("--test" would be passed as "test")
+         * @param form        the form of the data for the option (or {@link Form#Name} for a switch)
+         * @param multi       pass true if the option can appear multiple times on the command line
+         * @param desc        a human-readable description of the option, for the help display
+         * @param injectable  an optional key to use if this option is also passed to the
+         *                    container as an injectable
+         */
+        protected void addOption(String posixName, String linuxName, Form form, boolean multi,
+                                 String desc, String injectable) {
             assert posixName != null || linuxName != null;
             assert posixName == null || posixName.length() == 1 || posixName.equals(ArgV) || posixName.equals(Trailing);
             assert !Trailing.equals(posixName) || linuxName == null;
             assert !ArgV    .equals(posixName) || linuxName == null;
             assert form != null;
+            assert form == Form.String || injectable == null;
 
-            Option opt = new Option(posixName, linuxName, form, multi, desc);
+            Option opt = new Option(posixName, linuxName, form, multi, desc, injectable);
             if (posixName != null) {
                 var prev = options().put(posixName, opt);
                 assert prev == null;
@@ -712,6 +737,17 @@ public abstract class Launcher
          */
         boolean deduce() {
             return specified("deduce");
+        }
+
+        /**
+         * Parse the command line arguments into
+         *
+         * @param listArgs  the command line arguments to parse
+         *
+         * @return true iff help should be shown
+         */
+        public boolean parse(List<String> listArgs) {
+            return parse(listArgs.toArray(String[]::new));
         }
 
         /**
@@ -1675,16 +1711,17 @@ public abstract class Launcher
      * Represents a single available command line option.
      */
     public static class Option {
-        public Option(String sPosix, String sLinux, Form form, boolean fMulti, String sDesc) {
+        public Option(String sPosix, String sLinux, Form form, boolean fMulti, String sDesc, String sInjectionKey) {
             assert sPosix != null || sLinux != null;
             assert (sPosix == null || !sPosix.isEmpty()) && (sLinux == null || !sLinux.isEmpty());
             assert form != null;
 
-            m_sPosix = sPosix;
-            m_sLinux = sLinux;
-            m_form   = form;
-            m_fMulti = fMulti;
-            m_sDesc  = sDesc;
+            m_sPosix        = sPosix;
+            m_sLinux        = sLinux;
+            m_form          = form;
+            m_fMulti        = fMulti;
+            m_sDesc         = sDesc;
+            m_sInjectionKey = sInjectionKey;
         }
 
         public String posixName() {
@@ -1724,6 +1761,14 @@ public abstract class Launcher
             return m_sSyntax;
         }
 
+        public boolean isInjection() {
+            return m_sInjectionKey != null && !m_sInjectionKey.isBlank();
+        }
+
+        public String injectionKey() {
+            return m_sInjectionKey;
+        }
+
         @Override public String toString() {
             return syntax() + " : " + m_form + (m_fMulti ? "*" : "");
         }
@@ -1734,6 +1779,7 @@ public abstract class Launcher
         private final     Form    m_form;
         private final     boolean m_fMulti;
         private final     String  m_sDesc;
+        private final     String  m_sInjectionKey;
     }
 
     protected enum Stage {Init, Parsed, Named, Linked}
@@ -1766,7 +1812,7 @@ public abstract class Launcher
     /**
      * The command-line arguments.
      */
-    protected final String[] m_asArgs;
+    protected final List<String> m_listArgs;
 
     /**
      * The parsed options.

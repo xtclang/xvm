@@ -123,7 +123,7 @@ public class Compiler
      * @throws LauncherException if an unrecoverable exception occurs
      */
     public static int launch(String[] asArg) throws LauncherException {
-        return new Compiler(asArg).run();
+        return new Compiler(asArg, null).run();
     }
 
     /**
@@ -143,6 +143,16 @@ public class Compiler
      */
     public Compiler(String[] asArg, Console console) {
         super(asArg, console);
+    }
+
+    /**
+     * Compiler constructor.
+     *
+     * @param listArgs  command line arguments
+     * @param console   representation of the terminal within which this command is run
+     */
+    public Compiler(List<String> listArgs, Console console) {
+        super(listArgs, console);
     }
 
     @Override

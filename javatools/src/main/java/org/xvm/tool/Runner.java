@@ -6,7 +6,9 @@ import java.io.FileInputStream;
 import java.io.IOException;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -38,8 +40,9 @@ import static org.xvm.util.Handy.quotedString;
 
 /**
  * The "execute" command:
- *
+ * <pre>
  *  java org.xvm.tool.Runner [-L repo(s)] [-M method_name] app.xtc [argv]
+ * </pre>
  *
  * where the default method is "run" with no arguments.
  */
@@ -91,6 +94,16 @@ public class Runner
         super(asArg, console);
     }
 
+    /**
+     * Runner constructor.
+     *
+     * @param listArg  command line arguments
+     * @param console  representation of the terminal within which this command is run
+     */
+    public Runner(List<String> listArg, Console console) {
+        super(listArg, console);
+    }
+
     @Override
     protected int process() {
         // repository setup
@@ -118,7 +131,7 @@ public class Runner
         ModuleStructure module     = null;
         String          binLocDesc;
         if (isExplicitCompiledFile(filePath) && fileSpec.exists()
-                && (options().isCompileDisabled() || isPathed(filePath))) {
+                && (options.isCompileDisabled() || isPathed(filePath))) {
             // the caller has explicitly specified the exact .xtc file and/or
             fileBin    = fileSpec;
             binExists  = true;
@@ -131,7 +144,7 @@ public class Runner
             ModuleInfo info    = null;
             File       outFile = (File) options.values().get("o");
             try {
-                info = new ModuleInfo(fileSpec, options().deduce(), null, outFile);
+                info = new ModuleInfo(fileSpec, options.deduce(), null, outFile);
             } catch (RuntimeException e) {
                 log(Severity.ERROR, "Failed to identify the module for: " + fileSpec + " (" + e + ")");
             }
@@ -187,7 +200,7 @@ public class Runner
                 }
             }
 
-            if (binExists && !options().isCompileDisabled() && info.getSourceFile() != null
+            if (binExists && !options.isCompileDisabled() && info.getSourceFile() != null
                     && info.getSourceFile().exists() && !info.isUpToDate()) {
                 log(Severity.INFO, "The compiled module \"" + info.getQualifiedModuleName()
                         + "\" is out-of-date; recompiling ....");
@@ -222,7 +235,7 @@ public class Runner
 
                 new Compiler(compilerArgs.toArray(new String[0]), m_console).run();
 
-                info      = new ModuleInfo(fileSpec, options().deduce(), null, outFile);
+                info      = new ModuleInfo(fileSpec, options.deduce(), null, outFile);
                 fileBin   = info.getBinaryFile();
                 binExists = fileBin != null && fileBin.exists();
                 repo      = configureLibraryRepo(libPath);
@@ -260,7 +273,7 @@ public class Runner
             checkErrors();
         }
 
-        String sName = module.getName();
+        @SuppressWarnings("DataFlowIssue") String sName = module.getName();
         if (sName.equals(module.getSimpleName())) {
             // quote the "simpleName" to visually differentiate it (there is no qualified name)
             sName = quotedString(sName);
@@ -272,17 +285,12 @@ public class Runner
             out(sName + " version " + sVer);
         }
 
-        boolean fJit = options.isJit();
-
         log(Severity.INFO, "Executing " + sName + " from " + binLocDesc);
         try {
-            Connector connector = fJit ? new JitConnector(repo) : new Connector(repo);
-            connector.loadModule(module.getName());
-            connector.start(options.getInjections());
-
-            ConstantPool pool = connector.getConstantPool();
+            Connector    connector = createConnector(repo, module);
+            ConstantPool pool      = connector.getConstantPool();
             try (var ignore = ConstantPool.withPool(pool)) {
-                String               sMethod    = options().getMethodName();
+                String               sMethod    = options.getMethodName();
                 Set<MethodStructure> setMethods = connector.findMethods(sMethod);
                 if (setMethods.size() != 1) {
                     if (setMethods.isEmpty()) {
@@ -293,7 +301,7 @@ public class Runner
                     abort(true);
                 }
 
-                String[]        asArg       = options().getMethodArgs();
+                String[]        asArg       = options.getMethodArgs();
                 MethodStructure method      = setMethods.iterator().next();
                 TypeConstant    typeStrings = pool.ensureArrayType(pool.typeString());
 
@@ -344,6 +352,22 @@ public class Runner
         }
     }
 
+    /**
+     * Create the {@link Connector} to use to execute the module.
+     *
+     * @param repo    the module repository
+     * @param module  the module to execute
+     *
+     * @return the {@link Connector} to use to run the module
+     */
+    protected Connector createConnector(ModuleRepository repo, ModuleStructure module) {
+        Options options = options();
+        boolean fJit = options.isJit();
+        Connector connector = fJit ? new JitConnector(repo) : new Connector(repo);
+        connector.loadModule(module.getName());
+        connector.start(options.getInjections());
+        return connector;
+    }
 
     // ----- text output and error handling --------------------------------------------------------
 
@@ -403,6 +427,7 @@ public class Runner
         /**
          * @return the list of files in the module path (empty list if none specified)
          */
+        @SuppressWarnings("unchecked")
         public List<File> getModulePath() {
             return (List<File>) values().getOrDefault("L", Collections.emptyList());
         }
@@ -438,6 +463,7 @@ public class Runner
         /**
          * @return the method arguments as an array of String, or null if none specified
          */
+        @SuppressWarnings("unchecked")
         public String[] getMethodArgs() {
             List<String> listArgs = (List<String>) values().get(ArgV);
             return listArgs == null
@@ -448,8 +474,27 @@ public class Runner
         /**
          * @return the map of specified injection keys and values
          */
-        public Map<String, String> getInjections() {
-            return (Map<String, String>) values().getOrDefault("I", Collections.emptyMap());
+        @SuppressWarnings("unchecked")
+        public Map<String, Object> getInjections() {
+            Map<String, Object> values     = values();
+            Map<String, Object> injections = new HashMap<>((Map<String, Object>) values()
+                                                    .getOrDefault("I", Map.of()));
+
+            // Add any options that have an injection key defined
+            options().values()
+                    .stream()
+                    .filter(Option::isInjection)
+                    .forEach(o -> {
+                        Object value = values.get(o.posixName());
+                        if (value instanceof String sValue) {
+                            injections.put(o.injectionKey(), sValue);
+                        } else if (value instanceof Collection<?> col && !col.isEmpty()) {
+                            String[] asValue = col.stream().map(String::valueOf).toArray(String[]::new);
+                            injections.put(o.injectionKey(), asValue);
+                        }
+                    });
+
+            return injections;
         }
 
         @Override

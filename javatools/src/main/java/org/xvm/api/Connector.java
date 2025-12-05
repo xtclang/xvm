@@ -91,7 +91,7 @@ public class Connector {
     /**
      * Start the Runtime and the main Container.
      */
-    public void start(Map<String, String> mapInjections) {
+    public void start(Map<String, Object> mapInjections) {
         if (!m_fStarted) {
             f_runtime.start();
             m_fStarted = true;

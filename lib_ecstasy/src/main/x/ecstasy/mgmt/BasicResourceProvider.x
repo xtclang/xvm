@@ -1,3 +1,5 @@
+import ecstasy.annotations.Inject.Options;
+
 import ecstasy.reflect.Injector;
 
 /**
@@ -57,11 +59,18 @@ service BasicResourceProvider
             // if the type is Nullable, no need to complain; just return Null, otherwise
             // return a deferred exception (thrown only if the container actually asks for the
             // resource at run time)
-            return Nullable.as(Type).isA(type)
-                ? Null.as(Supplier)
-                : (Inject.Options opts) ->
-                    throw new Exception($|Unsupported resource: type="{type}", name="{name}"
-                                       );
+            @Inject Injector injector;
+            return (Options opts) -> {
+                Object o = injector.inject(type, name, opts);
+                if (o != Null) {
+                    return o;
+                }
+                return Nullable.as(Type).isA(type)
+                    ? Null.as(Supplier)
+                    : (Inject.Options opts) ->
+                        throw new Exception($|Unsupported resource: type="{type}", name="{name}"
+                                           );
+            };
         }
     }
 
