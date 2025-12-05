@@ -59,6 +59,7 @@ Each Gradle source set (`main`, `test`, etc.) gets:
 Key task types:
 - **XtcCompileTask**: Compiles XTC source files to `.xtc` modules
 - **XtcRunTask**: Executes XTC applications
+- **XtcTestTask**: Executes XUnit tests for a module
 - **XtcDisassembleTask**: Disassembles XTC modules for debugging
 - **XtcLauncherTask**: Abstract base for all launcher-based tasks
 
@@ -326,6 +327,23 @@ xtcRun {
     fork.set(false)  // In-process (default)
 }
 ```
+
+**Extension**: `XtcRunExtension`
+
+**Note**: In most cases, you don't need to configure the module path manually. The plugin automatically resolves:
+- All dependencies declared with `xtcModule(...)` in your build file
+- Compiled XTC modules from all project dependencies (including composite builds)
+- Build output directories from the current project and its dependencies
+
+**Minimal Configuration** (recommended for most projects):
+```kotlin
+xtcTest {
+    // Test module - this is usually all you need!
+    module.set("myapp.xtc")
+}
+```
+
+[//]: # ( ToDo - JK add more details)
 
 ### Launcher Configuration
 

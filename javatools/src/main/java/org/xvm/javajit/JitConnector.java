@@ -43,7 +43,7 @@ public class JitConnector
         }
 
     @Override
-    public void start(Map<String, String> mapInjections) {
+    public void start(Map<String, Object> mapInjections) {
         try {
             ClassLoader loader = xvm.nativeTypeSystem.loader;
             Class       clz    = loader.loadClass("org.xtclang._native.mgmt.nMainInjector");

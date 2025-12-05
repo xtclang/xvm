@@ -76,6 +76,8 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     private final Map<XtcRunModule, ExecResult> executedModules; // TODO we can cache output here to if we want.
     private final Property<@NotNull DefaultXtcRuntimeExtension> taskLocalModules;
 
+    private final String javaLauncherClassName;
+
     /**
      * Create an XTC run task, currently delegating instead of inheriting the plugin project
      * delegate. We are slowly getting rid of this delegate pattern, now that the intra-plugin
@@ -83,13 +85,18 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
      *
      * @param project  Project
      */
-    @SuppressWarnings({"ConstructorNotProtectedInAbstractClass", "this-escape"}) // Has to be public for code injection to work
     @Inject
     public XtcRunTask(final Project project) {
+        this(project, XTC_RUNNER_CLASS_NAME);
+    }
+
+    @SuppressWarnings({"ConstructorNotProtectedInAbstractClass", "this-escape"}) // Has to be public for code injection to work
+    protected XtcRunTask(final Project project, String javaLauncherClassName) {
         // TODO clean this up:
         super(project, XtcProjectDelegate.resolveXtcRuntimeExtension(project));
         this.executedModules = new LinkedHashMap<>();
         this.taskLocalModules = objects.property(DefaultXtcRuntimeExtension.class).convention(objects.newInstance(DefaultXtcRuntimeExtension.class));
+        this.javaLauncherClassName = javaLauncherClassName;
 
         // Run tasks have side effects and should never be UP-TO-DATE or cached
         // This matches the behavior of Gradle's JavaExec task
@@ -97,11 +104,10 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         getOutputs().cacheIf(_ -> false);
     }
 
-
     @Internal
     @Override
     public final String getJavaLauncherClassName() {
-        return XTC_RUNNER_CLASS_NAME;
+        return javaLauncherClassName;
     }
 
     @Override
@@ -236,7 +242,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
                 """);
         }
 
-        final var cmd = new CommandLine(XTC_RUNNER_CLASS_NAME, resolveJvmArgs());
+        final var cmd = new CommandLine(getJavaLauncherClassName(), resolveJvmArgs());
         cmd.addBoolean("--version", getShowVersion().get());
         cmd.addBoolean("--verbose", getVerbose().get());
         // When using the Gradle XTC plugin, having the 'xec' runtime decide to recompile stuff, is not supposed to be a thing.

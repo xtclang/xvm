@@ -63,6 +63,8 @@ xdk-webauth = { group = "org.xtclang", name = "lib-webauth" }
 xdk-webcli = { group = "org.xtclang", name = "lib-webcli" }
 xdk-xenia = { group = "org.xtclang", name = "lib-xenia" }
 xdk-xml = { group = "org.xtclang", name = "lib-xml" }
+xdk-xunit = { group = "org.xtclang", name = "lib-xunit" }
+xdk-xunit-engine = { group = "org.xtclang", name = "lib-xunit-engine" }
 
 javatools = { group = "org.xtclang", name = "javatools" }
 javatools-bridge = { group = "org.xtclang", name = "javatools-bridge" }
