@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.MethodConstant;
@@ -40,19 +41,37 @@ public class MainContainer
         if (m_mapInjections != null) {
             String sValue = m_mapInjections.get(sName);
             if (sValue != null) {
-                if (type.isNullable()) {
-                    type = type.removeNullable();
+                TypeConstant requiredType = type;
+                if (requiredType.isNullable()) {
+                    requiredType = requiredType.removeNullable();
                 }
-                if (type.equals(frame.poolContext().typeString())) {
+                ConstantPool pool = frame.poolContext();
+                if (requiredType.equals(pool.typeString())) {
                     return xString.makeHandle(sValue);
+                }
+
+                TypeConstant typeDestringable = pool.ensureEcstasyTypeConstant("text.Destringable");
+                if (requiredType.isA(typeDestringable)) {
+                    TypeComposition clz = requiredType.ensureClass(frame);
+                    ClassTemplate template = clz.getTemplate();
+                    MethodStructure ctor = template.getStructure()
+                            .findMethod("construct", 1, pool.typeString());
+
+                    ObjectHandle[] ahArgs = new ObjectHandle[]{xString.makeHandle(sValue)};
+                    int iResult = template.construct(frame, ctor, clz, null,
+                            ahArgs, Op.A_STACK);
+                    return frame.popResult(iResult);
                 }
             }
         }
 
         ObjectHandle hResource = f_parent.getInjectable(frame, sName, type, hOpts);
-        return hResource == null
-                ? new DeferredCallHandle(xException.makeHandle(frame, "Invalid resource: " + sName))
-                : maskInjection(frame, hResource, type);
+        if  (hResource == null) {
+            return type.isNullable()
+                    ? xNullable.NULL
+                    : new DeferredCallHandle(xException.makeHandle(frame, "Invalid resource: " + sName));
+        }
+        return maskInjection(frame, hResource, type);
     }
 
     /**
@@ -115,7 +134,7 @@ public class MainContainer
     /**
      * Start the main container.
      *
-     * @param (optional) a map of custom injections
+     * @param mapInjections (optional) a map of custom injections
      */
     public void start(Map<String, String> mapInjections) {
         if (m_contextMain != null) {

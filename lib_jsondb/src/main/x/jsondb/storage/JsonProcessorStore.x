@@ -601,10 +601,9 @@ service JsonProcessorStore<Message extends immutable Const>
         Int desired = txManager.lastCommitted;
         assert desired != NO_TX && desired > 0;
 
-        Int totalBytes = 0;
-        Int totalFiles = 0;
+        (Iterator<File> files, Int totalFiles, Int totalBytes) = findFiles();
 
-        for (File file : findFiles()) {
+        for (File file : files) {
             String  fileName   = file.name;
             Byte[]  bytes      = file.contents;
             String  jsonStr    = bytes.unpackUtf8();
@@ -618,9 +617,6 @@ service JsonProcessorStore<Message extends immutable Const>
             Map<Message, PidSet>     scheduledByMessage = new HashMap();
 
             SkiplistMap<Int, Message[]> messagesByTx = new SkiplistMap();
-
-            totalFiles++;
-            totalBytes += bytes.size;
 
             using (val arrayParser = fileParser.expectArray()) {
                 while (!arrayParser.eof) {
