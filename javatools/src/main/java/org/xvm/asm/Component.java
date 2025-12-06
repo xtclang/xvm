@@ -599,7 +599,7 @@ public abstract class Component
      *
      * @param contrib  the contribution to remove from the list
      */
-    protected void removeContribution(Contribution contrib) {
+    public void removeContribution(Contribution contrib) {
         List<Contribution> list = m_listContribs;
         if (list != null) {
             list.remove(contrib);
@@ -2399,8 +2399,8 @@ public abstract class Component
             return switch (this) {
                 case MODULE, PACKAGE, ENUM, ENUMVALUE -> true;
 
-                case INTERFACE, CLASS, CONST, ANNOTATION, MIXIN, SERVICE -> false;
-                case PROPERTY, MULTIMETHOD, METHOD, TYPEDEF -> false;
+                case INTERFACE, CLASS, CONST, ANNOTATION, MIXIN, SERVICE,
+                     PROPERTY, MULTIMETHOD, METHOD, TYPEDEF -> false;
 
                 default -> throw new IllegalStateException("unsupported format: " + this);
             };
@@ -2408,8 +2408,8 @@ public abstract class Component
 
         public boolean isAutoNarrowingAllowed() {
             return switch (this) {
-                case MODULE, PACKAGE, ENUM, ENUMVALUE -> false;
-                case PROPERTY, MULTIMETHOD, METHOD, TYPEDEF -> false;
+                case MODULE, PACKAGE, ENUM, ENUMVALUE,
+                     PROPERTY, MULTIMETHOD, METHOD, TYPEDEF -> false;
 
                 case ANNOTATION, MIXIN, INTERFACE, CLASS, CONST, SERVICE -> true;
 

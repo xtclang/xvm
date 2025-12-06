@@ -1,9 +1,13 @@
 module TestSimple {
     @Inject Console console;
 
-    void run() {
-        @Inject(resourceName="test") String value;
+    static ClassA a = new ClassA();
 
-        console.print($"{&value.assigned ? value : "not assigned"}");
+    void run() {
+        console.print(a);
+    }
+
+    @AutoFreezable
+    class ClassA { // this used to compile and fail at run-time
     }
 }
