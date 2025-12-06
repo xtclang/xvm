@@ -1859,6 +1859,10 @@ public abstract class TypeConstant
             // clear the TypeInfo for the PRIVATE type
             getConstantPool().ensureAccessTypeConstant(this, Access.PRIVATE).clearTypeInfo();
         }
+
+        if (m_mapRelations != null) {
+            m_mapRelations.clear();
+        }
     }
 
     /**
