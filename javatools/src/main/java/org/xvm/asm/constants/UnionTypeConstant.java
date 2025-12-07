@@ -4,6 +4,9 @@ package org.xvm.asm.constants;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.Label;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -25,11 +28,15 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
-
+import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.PropertyBody.Effect;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.Builder;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -38,6 +45,11 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xOrdered;
 
 import org.xvm.util.ListMap;
+
+import static org.xvm.javajit.Builder.CD_TypeConstant;
+import static org.xvm.javajit.Builder.CD_nObj;
+import static org.xvm.javajit.Builder.MD_TypeIsA;
+import static org.xvm.javajit.Builder.MD_xvmType;
 
 
 /**
@@ -849,6 +861,140 @@ public class UnionTypeConstant
                 : type.resolveTypedefs() instanceof UnionTypeConstant typeUnion
                     ? typeUnion.extractTuple()
                     : null;
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void buildCompare(BuildContext bctx, CodeBuilder code, int nOp,
+                             RegisterInfo reg1, RegisterInfo reg2,
+                             Label lblTrue,  Label lblEnd) {
+        assert !this.isNullable();
+
+        TypeConstant typeA = m_constType1;
+        TypeConstant typeB = m_constType2;
+
+        boolean fEq = switch (nOp) {
+            case Op.OP_IS_EQ,  Op.OP_JMP_EQ  -> true;
+            case Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> false;
+            default -> throw new UnsupportedOperationException("Ordering of Union types");
+        };
+
+        boolean fLocalTrue = lblTrue == null;
+        boolean fLocalEnd  = lblEnd == null;
+        if (fLocalTrue) {
+            lblTrue = code.newLabel();
+        }
+        if (fLocalEnd) {
+            lblEnd = code.newLabel();
+        }
+        Label lblFalse = code.newLabel();
+
+        if (typeA.isFormalType() || typeB.isFormalType()) {
+            throw new UnsupportedOperationException("TODO: formal types");
+        }
+
+        // if A and B are CLASS types, and !(A.is(B) || B.is(A)) then we know that o1 and o2
+        // are either both A or both B (or the result is False):
+        //
+        //        if (o1.is(A)) {
+        //          return o2.is(A) && A.equals(A, o1, o2);
+        //        } else { // o1.is(B)
+        //          return o2.is(B) && B.equals(B, o1, 02);
+        //        }
+        if (typeA.isClassType() && typeB.isClassType()) {
+            assert !typeA.isA(typeB) && !typeB.isA(typeA);
+
+            RegisterInfo reg1A, reg2A, reg1B, reg2B;
+
+            // first try to apply the compile-time types
+            if (reg1.type().isA(typeA)) {
+                if (reg2.type().isA(typeA)) {
+                    typeA.buildCompare(bctx, code, nOp, reg1, reg2, null, null);
+                    return;
+                } else {
+                    buildTypeCheck(bctx, code, reg2, typeA);
+                    code.ifeq(fEq ? lblFalse : lblTrue);
+                    reg2A = bctx.narrowRegister(code, reg2, typeA);
+                    typeA.buildCompare(bctx, code, nOp, reg1, reg2A, lblTrue, null);
+                }
+            } else if (reg1.type().isA(typeB)) {
+                if (reg2.type().isA(typeB)) {
+                    typeB.buildCompare(bctx, code, nOp, reg1, reg2, null, null);
+                    return;
+                } else {
+                    buildTypeCheck(bctx, code, reg2, typeA);
+                    code.ifeq(fEq ? lblFalse : lblTrue);
+                    reg2B = bctx.narrowRegister(code, reg2, typeB);
+                    typeB.buildCompare(bctx, code, nOp, reg1, reg2B, lblTrue, null);
+                }
+            } else if (reg2.type().isA(typeA)) {
+                // we know that !reg1.type().isA(typeA)
+                buildTypeCheck(bctx, code, reg1, typeA);
+                code.ifeq(fEq ? lblFalse : lblTrue);
+                reg1A = bctx.narrowRegister(code, reg1, typeA);
+                typeA.buildCompare(bctx, code, nOp, reg1A, reg2, lblTrue, null);
+            } else if (reg2.type().isA(typeB)) {
+                // we know that !reg1.type().isA(typeB)
+                buildTypeCheck(bctx, code, reg1, typeB);
+                code.ifeq(fEq ? lblFalse : lblTrue);
+                reg1B = bctx.narrowRegister(code, reg1, typeB);
+                typeB.buildCompare(bctx, code, nOp, reg1B, reg2, lblTrue, null);
+            } else {
+                // the compile types are not narrowed; perform the run-time type checks
+                Label lblO1IsB = code.newLabel();
+
+                buildTypeCheck(bctx, code, reg1, typeA);
+                code.ifeq(lblO1IsB);
+                reg1A = bctx.narrowRegister(code, reg1, typeA);
+
+                buildTypeCheck(bctx, code, reg2, typeA);
+                code.ifeq(fEq ? lblFalse : lblTrue);
+                reg2A = bctx.narrowRegister(code, reg2, typeA);
+
+                typeA.buildCompare(bctx, code, nOp, reg1A, reg2A, lblTrue, null);
+                code.goto_(lblFalse);
+
+                code.labelBinding(lblO1IsB);
+                reg1B = bctx.narrowRegister(code, reg1, typeB);
+
+                buildTypeCheck(bctx, code, reg2, typeB);
+                code.ifeq(fEq ? lblFalse : lblTrue);
+                reg2B = bctx.narrowRegister(code, reg2, typeB);
+
+                typeB.buildCompare(bctx, code, nOp, reg1B, reg2B, lblTrue, null);
+            }
+        } else {
+            throw new UnsupportedOperationException("TODO");
+        }
+
+        code.labelBinding(lblFalse);
+        if (fLocalTrue) {
+            code.iconst_0()
+                .goto_(lblEnd)
+                .labelBinding(lblTrue)
+                .iconst_1();
+        }
+        if (fLocalEnd) {
+            code.labelBinding(lblEnd);
+        } else {
+            code.goto_(lblEnd);
+        }
+    }
+
+    /**
+     * Assemble the runtime type check for the specified register.
+     *
+     * The result of "isA" is on the Java stack.
+     */
+    private void buildTypeCheck(BuildContext bctx, CodeBuilder code,
+                                RegisterInfo regTest, TypeConstant typeTest) {
+        // o1.$xvmType(ctx).isA(typeCompare)
+        code.aload(regTest.slot());
+        bctx.loadCtx(code);
+        code.invokevirtual(CD_nObj, "$xvmType", MD_xvmType);
+        Builder.loadTypeConstant(code, bctx.typeSystem, typeTest);
+        code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
     }
 
 

@@ -5,6 +5,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.Label;
+
 import java.lang.constant.ClassDesc;
 
 import java.util.ArrayList;
@@ -41,6 +44,7 @@ import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.MultiMethodStructure;
+import org.xvm.asm.Op;
 import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
@@ -54,9 +58,12 @@ import org.xvm.asm.constants.TypeInfo.Progress;
 
 import org.xvm.compiler.Compiler;
 
+import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.ModuleLoader;
+import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
 
 import org.xvm.runtime.ClassTemplate;
@@ -78,13 +85,14 @@ import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
 import org.xvm.util.TransientThreadLocal;
 
+
+import static org.xvm.javajit.Builder.OPT;
 import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
 import static org.xvm.javajit.JitFlavor.Specific;
 import static org.xvm.javajit.JitFlavor.Widened;
-
 import static org.xvm.javajit.TypeSystem.ID_NUM;
-import static org.xvm.javajit.TypeSystem.enumerationClass;
+
 
 /**
  * A base class for the various forms of Constants that will represent data types.
@@ -6513,7 +6521,7 @@ public abstract class TypeConstant
                     || (typeValue.isSingleUnderlyingClass(true)
                         && typeValue.getSingleUnderlyingClass(true).equals(pool.clzEnum()))
                     ? Builder.N_Enumeration
-                    : enumerationClass(typeValue.ensureJitClassName(ts));
+                    : TypeSystem.enumerationClass(typeValue.ensureJitClassName(ts));
         }
 
         if (id.equals(pool.clzFunction())) {
@@ -6572,6 +6580,204 @@ public abstract class TypeConstant
         return constResolved == constOriginal
                 ? this
                 : cloneSingle(getConstantPool(), constResolved);
+    }
+
+    /**
+     * Generate the code that compares the registers and either jumps to one of the specified labels
+     * or falls through.
+     *
+     * @param lblTrue    (optional) the label to go to in the case the positive result has been
+     *                   computed and the jump needs be generated; otherwise the result of the
+     *                   comparison should be placed on the Java stack
+     * @param lblEnd     (optional) the label to go to in the case a result has been computed
+     *                   (either positive or negative) and placed on Java stack
+     */
+    public void buildCompare(BuildContext bctx, CodeBuilder code, int nOp,
+                             RegisterInfo reg1, RegisterInfo reg2, Label lblTrue,  Label lblEnd) {
+        assert isSingleUnderlyingClass(true);
+        assert reg1.type().isA(this) && reg2.type().isA(this);
+
+        boolean fLocalEnd  = lblEnd == null;
+        boolean fLocalTrue = lblTrue == null;
+        if (fLocalEnd) {
+            lblEnd = code.newLabel();
+        }
+        if (fLocalTrue) {
+            lblTrue = code.newLabel();
+        }
+
+        if (isPrimitive()) {
+            ClassDesc cdCommon = JitTypeDesc.getPrimitiveClass(this);
+            String    desc     = cdCommon.descriptorString();
+
+            Builder.load(code, reg1);
+            Builder.load(code, reg2);
+
+            switch (desc) {
+            case "I", "S", "B", "C", "Z":
+                switch (nOp) {
+                    case Op.OP_CMP -> {
+                        code.isub();
+                        generateOrdered(bctx, code);
+                        return;
+                    }
+                    case Op.OP_IS_EQ,  Op.OP_JMP_EQ  -> code.if_icmpeq(lblTrue);
+                    case Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> code.if_icmpne(lblTrue);
+                    case Op.OP_IS_GT,  Op.OP_JMP_GT  -> code.if_icmpgt(lblTrue);
+                    case Op.OP_IS_GTE, Op.OP_JMP_GTE -> code.if_icmpge(lblTrue);
+                    case Op.OP_IS_LT,  Op.OP_JMP_LT  -> code.if_icmplt(lblTrue);
+                    case Op.OP_IS_LTE, Op.OP_JMP_LTE -> code.if_icmple(lblTrue);
+                    default           -> throw new IllegalStateException();
+                }
+                break;
+
+            case "J", "F", "D":
+                switch (desc) {
+                    case "J" -> code.lcmp();
+                    case "F" -> code.fcmpl(); // REVIEW CP: fcmpl vs fcmpg?
+                    case "D" -> code.dcmpl(); // REVIEW CP: ditto
+                }
+                switch (nOp) {
+                    case Op.OP_CMP -> {
+                        generateOrdered(bctx, code);
+                        return;
+                    }
+                    case Op.OP_IS_EQ,  Op.OP_JMP_EQ  -> code.ifeq(lblTrue);
+                    case Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> code.ifne(lblTrue);
+                    case Op.OP_IS_GT,  Op.OP_JMP_GT  -> code.ifgt(lblTrue);
+                    case Op.OP_IS_GTE, Op.OP_JMP_GTE -> code.ifge(lblTrue);
+                    case Op.OP_IS_LT,  Op.OP_JMP_LT  -> code.iflt(lblTrue);
+                    case Op.OP_IS_LTE, Op.OP_JMP_LTE -> code.ifle(lblTrue);
+                    default -> throw new IllegalStateException();
+                }
+                break;
+
+            default:
+                throw new IllegalStateException();
+            }
+        } else {
+            TypeSystem   ts   = bctx.typeSystem;
+            ConstantPool pool = ts.pool();
+            SignatureConstant sig = switch (nOp) {
+                case Op.OP_IS_EQ,  Op.OP_JMP_EQ,
+                     Op.OP_IS_NEQ, Op.OP_JMP_NEQ  -> pool.sigEquals();
+                case Op.OP_IS_GT,  Op.OP_JMP_GT,
+                     Op.OP_IS_GTE, Op.OP_JMP_GTE,
+                     Op.OP_IS_LT,  Op.OP_JMP_LT,
+                     Op.OP_IS_LTE, Op.OP_JMP_LTE  -> pool.sigCompare();
+                default -> throw new IllegalStateException();
+            };
+            MethodInfo    method   = ensureTypeInfo().getMethodBySignature(sig);
+            ClassDesc     cd       = method.getJitIdentity().getNamespace().ensureClassDesc(ts);
+            JitMethodDesc jmd      = method.getJitDesc(ts, this);
+            String        sJitName = method.ensureJitMethodName(ts);
+
+            bctx.loadCtx(code);
+            Builder.loadType(code, ts, this);
+            Builder.load(code, reg1);
+            Builder.load(code, reg2);
+
+            switch (nOp) {
+            case Op.OP_IS_EQ, Op.OP_JMP_EQ, Op.OP_IS_NEQ, Op.OP_JMP_NEQ:
+                assert jmd.isOptimized;
+                // Boolean equals(Ctx,xType,xObj,xObj)
+                code.invokestatic(cd, sJitName+OPT, jmd.optimizedMD);
+
+                if (fLocalTrue) {
+                    if (nOp == Op.OP_IS_NEQ) {
+                        code.iconst_1()
+                            .ixor();
+                    }
+                } else {
+                    if (nOp == Op.OP_IS_EQ) {
+                        code.ifne(lblTrue);
+                    } else {
+                        code.ifeq(lblTrue);
+                    }
+                }
+                if (!fLocalEnd) {
+                    code.goto_(lblEnd);
+                }
+                return;
+
+            case Op.OP_CMP, Op.OP_IS_GT, Op.OP_IS_GTE, Op.OP_IS_LT, Op.OP_IS_LTE:
+                // Ordered compare(Ctx,Type,xObj,xObj)
+                code.invokestatic(cd, sJitName, jmd.standardMD);
+
+                boolean fInverse;
+                switch (nOp) {
+                case Op.OP_CMP:
+                    // the result is on Java stack
+                    return;
+
+                case Op.OP_IS_GT:
+                    bctx.loadConstant(code, pool.valGreater());
+                    fInverse = false;
+                    break;
+
+                case Op.OP_IS_GTE:
+                    bctx.loadConstant(code, pool.valLesser());
+                    fInverse = true;
+                    break;
+
+                case Op.OP_IS_LT:
+                    bctx.loadConstant(code, pool.valLesser());
+                    fInverse = false;
+                    break;
+
+                case Op.OP_IS_LTE:
+                    bctx.loadConstant(code, pool.valGreater());
+                    fInverse = true;
+                    break;
+
+                default:
+                    throw new IllegalStateException();
+                }
+
+                if (fInverse) {
+                    code.if_acmpne(lblTrue);
+                } else {
+                    code.if_acmpeq(lblTrue);
+                }
+            }
+        }
+
+        if (fLocalTrue) {
+            code.iconst_0()
+                .goto_(lblEnd)
+                .labelBinding(lblTrue)
+                .iconst_1();
+        }
+        if (fLocalEnd) {
+            code.labelBinding(lblEnd);
+        } else {
+            code.goto_(lblEnd);
+        }
+    }
+
+    private void generateOrdered(BuildContext bctx, CodeBuilder code) {
+        ConstantPool pool = bctx.pool();
+
+        Label lblGt  = code.newLabel();
+        Label lblLt  = code.newLabel();
+        Label lblEnd = code.newLabel();
+
+        code.dup()
+            .iflt(lblLt)
+            .ifgt(lblGt);
+
+        bctx.loadConstant(code, pool.valEqual());
+        code.goto_(lblEnd);
+
+        code.labelBinding(lblLt)
+            .pop();
+        bctx.loadConstant(code, pool.valLesser());
+        code.goto_(lblEnd);
+
+        code.labelBinding(lblGt);
+        bctx.loadConstant(code, pool.valGreater());
+
+        code.labelBinding(lblEnd);
     }
 
     // ----- run-time support ----------------------------------------------------------------------

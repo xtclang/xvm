@@ -2,6 +2,7 @@ package org.xvm.javajit;
 
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.Label;
 import java.lang.classfile.TypeKind;
 
 import java.lang.constant.ClassDesc;
@@ -36,6 +37,7 @@ import org.xvm.javajit.TypeSystem.ClassfileShape;
 
 import static java.lang.constant.ConstantDescs.CD_MethodHandle;
 import static java.lang.constant.ConstantDescs.CD_boolean;
+import static java.lang.constant.ConstantDescs.CD_char;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
@@ -148,7 +150,7 @@ public abstract class Builder {
 
         case CharConstant ch:
             code.loadConstant(ch.getValue());
-            return new SingleSlot(constant.getConstantPool().typeChar(), CD_Char, "");
+            return new SingleSlot(constant.getConstantPool().typeChar(), CD_char, "");
 
         case NamedCondition cond:
             code.loadConstant(cond.getName());
@@ -402,6 +404,46 @@ public abstract class Builder {
     }
 
     /**
+     * Generate a "Null" check for the specified register.
+     *
+     * @param lblNotNull  the label to jump to if the register is "Null" .
+     */
+    public static void checkNull(CodeBuilder code, RegisterInfo reg, Label lblNull) {
+        if (reg instanceof DoubleSlot doubleSlot) {
+            assert reg.cd().isPrimitive();
+
+            code.iload(doubleSlot.extSlot())
+                .if_icmpne(lblNull);
+        } else {
+            assert !reg.cd().isPrimitive();
+
+            code.aload(reg.slot());
+            loadNull(code);
+            code.if_acmpeq(lblNull);
+        }
+    }
+
+    /**
+     * Generate a "not Null" check for the specified register.
+     *
+     * @param lblNotNull  the label to jump to if the register is "not Null".
+     */
+    public static void checkNotNull(CodeBuilder code, RegisterInfo reg, Label lblNotNull) {
+        if (reg instanceof DoubleSlot doubleSlot) {
+            assert reg.cd().isPrimitive();
+
+            code.iload(doubleSlot.extSlot())
+                .if_icmpeq(lblNotNull);
+        } else {
+            assert !reg.cd().isPrimitive();
+
+            code.aload(reg.slot());
+            loadNull(code);
+            code.if_acmpne(lblNotNull);
+        }
+    }
+
+    /**
      * Generate a "load" for the XTC `Null` value.
      */
     public static void loadNull(CodeBuilder code) {
@@ -420,7 +462,7 @@ public abstract class Builder {
     }
 
     /**
-     * Generate a "load" for an xType for the specified TypeConstant.
+     * Generate a "load" for an nType object for the specified TypeConstant.
      * Out: xType instance
      */
     public static void loadType(CodeBuilder code, TypeSystem ts, TypeConstant type) {
