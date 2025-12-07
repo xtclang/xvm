@@ -43,14 +43,10 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         this.valueMapping = valueMapping;
 
         // Model default sizes can be overridden by injectable configuration values
-        @Inject(ConfigSmallModelMaxBytes)
-        Int? smallModelBytesMax;
-        @Inject(ConfigSmallModelMaxFiles)
-        Int? smallModelFilesMax;
-        @Inject(ConfigMediumModelMaxBytes)
-        Int? mediumModelBytesMax;
-        @Inject(ConfigMediumModelMaxFiles)
-        Int? mediumModelFilesMax;
+        @Inject(ConfigSmallModelMaxBytes)  Int? smallModelBytesMax;
+        @Inject(ConfigSmallModelMaxFiles)  Int? smallModelFilesMax;
+        @Inject(ConfigMediumModelMaxBytes) Int? mediumModelBytesMax;
+        @Inject(ConfigMediumModelMaxFiles) Int? mediumModelFilesMax;
 
         this.smallModelBytesMax  = smallModelBytesMax  ?: DEFAULT_SMALL_MAX_BYTES;
         this.smallModelFilesMax  = smallModelFilesMax  ?: DEFAULT_SMALL_MAX_FILES;
@@ -262,8 +258,14 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
      * @throws IllegalArgument if the value is invalid
      */
     static void validateSmallModelBytesMax(Int value, Int mediumModelBytesMax) {
-        assert:arg value > 0 as $"Invalid smallModelBytesMax {value} JSON DB DBMap small model maximum bytes must be greater than zero. ";
-        assert:arg value < mediumModelBytesMax as $"Invalid smallModelBytesMax {value} JSON DB DBMap small model maximum bytes must be less than medium model maximum bytes {mediumModelBytesMax}.";
+        assert:arg value > 0 as
+            $|Invalid smallModelBytesMax {value} JSON DB DBMap small model maximum bytes must be \
+             |greater than zero.
+             ;
+        assert:arg value < mediumModelBytesMax as
+            $|Invalid smallModelBytesMax {value} JSON DB DBMap small model maximum bytes must be \
+             |less than medium model maximum bytes {mediumModelBytesMax}.
+             ;
     }
 
     /**
@@ -284,8 +286,14 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
      * @throws IllegalArgument if the value is invalid
      */
     static void validateSmallModelFilesMax(Int value, Int mediumModelFilesMax) {
-        assert:arg value > 0 as $"Invalid smallModelFilesMax {value} JSON DB DBMap small model maximum files must be greater than zero. ";
-        assert:arg value < mediumModelFilesMax as $"Invalid smallModelFilesMax {value} JSON DB DBMap small model maximum files must be less than medium model maximum files {mediumModelFilesMax}.";
+        assert:arg value > 0 as
+            $|Invalid smallModelFilesMax {value} JSON DB DBMap small model maximum files must be \
+             |greater than zero.
+             ;
+        assert:arg value < mediumModelFilesMax as
+            $|Invalid smallModelFilesMax {value} JSON DB DBMap small model maximum files must be \
+             |less than medium model maximum files {mediumModelFilesMax}.
+             ;
     }
 
     /**
@@ -293,7 +301,10 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
      * large model.
      */
     public/protected Int mediumModelBytesMax.set(Int value) {
-        assert:arg value > smallModelBytesMax as $"Invalid mediumModelBytesMax {value} JSON DB DBMap medium model maximum bytes must be greater than smallModelBytesMax {smallModelBytesMax}.";
+        assert:arg value > smallModelBytesMax as
+            $|Invalid mediumModelBytesMax {value} JSON DB DBMap medium model maximum bytes must be \
+             |greater than smallModelBytesMax {smallModelBytesMax}.
+             ;
         super(value);
     }
 
@@ -302,7 +313,10 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
      * model.
      */
     public/protected Int mediumModelFilesMax.set(Int value) {
-        assert:arg value > smallModelFilesMax as $"Invalid mediumModelFilesMax {value} JSON DB DBMap medium model maximum files must be greater than smallModelFilesMax {smallModelFilesMax}.";
+        assert:arg value > smallModelFilesMax as
+            $|Invalid mediumModelFilesMax {value} JSON DB DBMap medium model maximum files must be \
+             |greater than smallModelFilesMax {smallModelFilesMax}.
+             ;
         super(value);
     }
 
@@ -310,11 +324,6 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
      * The `StorageModel` last time clean-up executed.
      */
     public/protected StorageModel modelAtCleanup = Empty;
-
-    /**
-     * The latest transaction that caused the model size to transition.
-     */
-    public/protected Int lastModelTransitionTx = NO_TX;
 
     // ----- storage API exposed to the client -----------------------------------------------------
 
@@ -889,7 +898,6 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         StorageModel prevModel = model;
         if (newModel != prevModel && newModel != Small) {
             // The model size has changed and is not Small (there is nothing to do going from Empty to Small)
-            lastModelTransitionTx = lastCommit;
             model                 = newModel;
             if (newModel == Medium && prevModel <= Small) {
                 // The model has transitioned from Empty/Small to Medium so values in the history
