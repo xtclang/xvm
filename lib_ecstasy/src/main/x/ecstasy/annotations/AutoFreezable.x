@@ -9,10 +9,10 @@
  *
  *     @AutoFreezable(inPlace=False) class Message {...}
  */
-annotation AutoFreezable(Boolean inPlace=True)
+annotation AutoFreezable(Boolean inPlace = True)
         into Freezable {
     @Override
-    immutable AutoFreezable freeze(Boolean? inPlace=Null) {
+    immutable AutoFreezable freeze(Boolean? inPlace = Null) {
         return super(inPlace ?: this.inPlace);
     }
 }

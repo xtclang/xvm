@@ -2201,9 +2201,10 @@ public class TypeCompositionStatement
                         break;
                     }
                 }
+
                 if (!fCompatible) {
                     clzTarget.removeContribution(contribAnno);
-                    typeTarget.invalidateTypeInfo();
+                    typeTarget.invalidateTypeInfo(); // invalidate cached "isA" results
                     fCompatible = typeTarget.isA(typeInto);
                     clzTarget.addAnnotation(anno);
                 }

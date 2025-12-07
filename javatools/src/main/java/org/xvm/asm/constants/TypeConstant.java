@@ -3782,7 +3782,7 @@ public abstract class TypeConstant
                 if (methodContrib.isConstructor()) {
                     // not top-level or annotation constructors are not part of this type
                     // constructor call chains; however the annotation "validators" are
-                    if (!idContrib.isTopLevel()) {
+                    if (!idContrib.isTopLevel() || fAnnotation) {
                         continue;
                     }
 
