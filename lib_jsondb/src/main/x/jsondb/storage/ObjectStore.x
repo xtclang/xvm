@@ -147,11 +147,6 @@ service ObjectStore(Catalog catalog, DboInfo info)
     public/protected StorageModel model = Empty;
 
     /**
-     * A simple enum used to indicate a value that is stored on disc.
-     */
-    enum DiscStorage {OnDisc}
-
-    /**
      * Statistics: The last time that the storage was accessed. Null indicates no record of access.
      *
      * This property will only have a dependable value when the storage is not closed and/or has
