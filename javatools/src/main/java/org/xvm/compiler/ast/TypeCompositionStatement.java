@@ -2147,8 +2147,8 @@ public class TypeCompositionStatement
             ensureTypeInfo(typeThis, errs);
         }
 
-        if (validateAnnotations(component.collectAnnotations(false), typeThis, errs) &&
-            validateAnnotations(component.collectAnnotations(true),  typeClass, errs)) {
+        if (validateAnnotations(component.collectAnnotations(false), typeThis, component, errs) &&
+            validateAnnotations(component.collectAnnotations(true),  typeClass, null, errs)) {
             if (component.isParameterized()) {
                 resolveAnnotationTypes(component, errs);
             }
@@ -2160,11 +2160,13 @@ public class TypeCompositionStatement
      *
      * @param aAnno       the annotations
      * @param typeTarget  the annotation target type
+     * @param clzTarget   (optional) the target class structure
      * @param errs        the error listener
      *
      * @return false iff there is a validation error
      */
-    private boolean validateAnnotations(Annotation[] aAnno, TypeConstant typeTarget, ErrorListener errs) {
+    private boolean validateAnnotations(Annotation[] aAnno, TypeConstant typeTarget,
+                                        ClassStructure clzTarget, ErrorListener errs) {
         for (int i = 0, c = aAnno.length; i < c; i++) {
             Annotation   anno     = aAnno[i];
             TypeConstant typeAnno = anno.getAnnotationType();
@@ -2176,8 +2178,38 @@ public class TypeCompositionStatement
             }
 
             TypeConstant typeInto = typeAnno.getExplicitClassInto(true);
+            boolean      fCompatible;
 
-            if (!typeTarget.isA(typeInto)) {
+            if (clzTarget == null) {
+                fCompatible = typeTarget.isA(typeInto);
+            } else {
+                fCompatible = false;
+
+                // find the corresponding annotation contribution in the contribution list;
+                // if in the process we find a contribution that fits the "into" type, we are done;
+                // otherwise we need to temporarily remove the corresponding annotation from the
+                // target type in order to properly check the validity of the annotation
+                Contribution contribAnno = null;
+                for (Contribution contrib : clzTarget.getContributionsAsList()) {
+                    if (contrib.getComposition() == Composition.Annotation &&
+                            contrib.getAnnotation().equals(anno)) {
+                        contribAnno = contrib;
+                        continue;
+                    }
+                    if (contrib.getTypeConstant().isA(typeInto)) {
+                        fCompatible = true;
+                        break;
+                    }
+                }
+
+                if (!fCompatible) {
+                    clzTarget.removeContribution(contribAnno);
+                    typeTarget.invalidateTypeInfo(); // invalidate cached "isA" results
+                    fCompatible = typeTarget.isA(typeInto);
+                    clzTarget.addAnnotation(anno);
+                }
+            }
+            if (!fCompatible) {
                 findAnnotationExpression(anno, annotations).
                     log(errs, Severity.ERROR, org.xvm.compiler.Constants.VE_ANNOTATION_INCOMPATIBLE,
                         typeTarget.getValueString(), typeAnno.getValueString(), typeInto.getValueString());
