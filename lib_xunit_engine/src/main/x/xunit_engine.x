@@ -10,7 +10,10 @@ module xunit_engine.xtclang.org {
     package collections import collections.xtclang.org;
     package xunit       import xunit.xtclang.org;
 
-    import ecstasy.mgmt.*;
+    import ecstasy.mgmt.Container;
+    import ecstasy.mgmt.DirRepository;
+    import ecstasy.mgmt.LinkedRepository;
+    import ecstasy.mgmt.ModuleRepository;
 
     import ecstasy.reflect.ModuleTemplate;
 

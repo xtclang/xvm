@@ -1,18 +1,16 @@
 /**
  * Auto generated module to execute XUnit tests.
  */
-module %appName%_xunit%qualifier%
-    {
+module %appName%_xunit%qualifier% {
     package xunit     import xunit.xtclang.org;
     package engine    import xunit_engine.xtclang.org;
     package %appName% import %appName%%qualifier%;
 
     import engine.console.ConsoleRunner;
 
-    Boolean run(String[] args)
-        {
+    Boolean run(String[] args) {
         Module m = %appName%.as(Module);
         ConsoleRunner runner = new ConsoleRunner();
         return runner.run(m);
-        }
     }
+}
