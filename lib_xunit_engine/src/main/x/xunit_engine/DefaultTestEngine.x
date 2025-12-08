@@ -57,8 +57,9 @@ service DefaultTestEngine
     protected void execute(Model[] models) {
         ExecutionConfiguration executionConfig = configuration.executionConfig;
         for (Model model : models) {
-            TestExecutor executor = new TestExecutor(model, executionConfig);
-            EngineExecutionContext.Builder builder = modifyExecutionContext(EngineExecutionContext.builder(model));
+            TestExecutor                   executor = new TestExecutor(model, executionConfig);
+            EngineExecutionContext.Builder builder  = EngineExecutionContext.builder(model);
+            builder = modifyExecutionContext(builder);
             executor.execute(builder.build());
         }
     }

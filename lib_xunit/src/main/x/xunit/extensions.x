@@ -9,7 +9,7 @@ package extensions {
     interface TestExecutionPredicate
             extends Const {
         /**
-         * Returns whether a test should be skipped.
+         * Evaluate whether a test should be skipped.
          *
          * @return `True` if the test should be skipped, otherwise `False`
          * @return the reason the test should be skipped

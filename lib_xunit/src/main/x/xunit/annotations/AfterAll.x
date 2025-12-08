@@ -23,21 +23,19 @@ import extensions.FixedExtensionProvider;
  *   or any test failures.
  *
  * * Priority of annotated function execution is determined by the `order` property. Functions with
- *   a lower priority are executed first. Functions or functions with the default `Int.MaxValue`
- *   priority will be executed in order of super class annotated functions first.
+ *   a highest priority are executed first. Functions or functions with the default zero order will
+ *   in order of super class annotated functions first.
  *
- * * Whilst priority can be used to affect ordering, it is clearer and recommended to only have
+ * * Whilst order can be used to affect ordering, it is clearer and recommended to only have
  *   a single `@AfterAll` annotated function in a test class.
  *
  * @param order  applies an ordering to the execution of `AfterAll` annotated functions.
  */
-annotation AfterAll(Int order = Int.MaxValue)
+annotation AfterAll(Int order = 0)
         extends AbstractAll(order)
         implements ExtensionProviderProvider {
 
     /**
-     * Return the `AfterAll` annotated function as an `ExtensionProvider`.
-     *
      * @return the `AfterAll` annotated function as an `ExtensionProvider`
      */
     @Override

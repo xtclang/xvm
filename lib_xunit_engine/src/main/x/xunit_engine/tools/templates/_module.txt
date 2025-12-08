@@ -9,7 +9,7 @@ module %appName%_xunit%qualifier%
 
     import engine.console.ConsoleRunner;
 
-    Int run(String[] args)
+    Boolean run(String[] args)
         {
         Module m = %appName%.as(Module);
         ConsoleRunner runner = new ConsoleRunner();

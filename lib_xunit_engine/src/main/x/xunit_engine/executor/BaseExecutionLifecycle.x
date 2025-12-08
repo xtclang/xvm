@@ -16,8 +16,7 @@ import xunit.MethodOrFunction;
     // ----- helper methods ------------------------------------------------------------------------
 
 	/**
-	 * Returns the fixture to execute tests against, creating a new instance
-	 * if required.
+	 * Returns the fixture to execute tests against, creating a new instance if required.
 	 *
 	 * @param context     the current `EngineExecutionContext`
 	 * @param extensions  any test extensions
@@ -34,8 +33,7 @@ import xunit.MethodOrFunction;
 
 	    // ToDo: check extensions for any test fixture factory and use it if found
 
-	    MethodOrFunction? constructor = model.constructor;
-	    if (constructor.is(MethodOrFunction)) {
+	    if (MethodOrFunction constructor := model.constructor.is(MethodOrFunction)) {
 	        // ToDo: call pre/post fixture constructor extensions
 	        if (Object fixture := context.invokeSingleResult(constructor)) {
 	            return fixture;

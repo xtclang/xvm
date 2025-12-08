@@ -1,7 +1,6 @@
 package org.xvm.runtime;
 
 
-import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
@@ -46,30 +45,30 @@ public class MainContainer
                 TypeConstant typeDestringable = pool.ensureEcstasyTypeConstant("text.Destringable");
                 TypeConstant typeString       = pool.typeString();
                 TypeConstant typeStrings      = pool.ensureArrayType(typeString);
-                TypeConstant requiredType     = type;
+                TypeConstant typeRequired     = type;
 
-                if (requiredType.isNullable()) {
+                if (typeRequired.isNullable()) {
                     // strip nullable from the required type
-                    requiredType = requiredType.removeNullable();
+                    typeRequired = typeRequired.removeNullable();
                 }
 
                 if (oValue instanceof String sValue) {
-                    if (requiredType.equals(typeString)) {
+                    if (typeRequired.equals(typeString)) {
                         // require String and value is String
                         return xString.makeHandle(sValue);
-                    } else if (requiredType.equals(typeStrings)) {
+                    } else if (typeRequired.equals(typeStrings)) {
                         // require String[] and value is String
                         String[] asValue = {sValue};
                         return xString.makeArrayHandle(asValue);
-                    } else if (requiredType.isA(typeDestringable)) {
+                    } else if (typeRequired.isA(typeDestringable)) {
                         // require Destringable and value is String
-                        return toDestringable(frame, requiredType, sValue);
+                        return toDestringable(frame, typeRequired, sValue);
                     }
                 } else if (oValue instanceof String[] asValue && asValue.length > 0) {
-                    if (requiredType.equals(typeStrings)) {
+                    if (typeRequired.equals(typeStrings)) {
                         // require String[] and value is String[]
                         return xString.makeArrayHandle(asValue);
-                    } else if (requiredType.equals(typeString)) {
+                    } else if (typeRequired.equals(typeString)) {
                         // require String and value is String[] so return the last element
                         // from the array
                         return xString.makeHandle(asValue[asValue.length - 1]);
@@ -81,24 +80,20 @@ public class MainContainer
         // No matching injectable found, so if the required type is nullable return null, otherwise
         // return an exception
         ObjectHandle hResource = f_parent.getInjectable(frame, sName, type, hOpts);
-        if  (hResource == null) {
-            return type.isNullable()
-                    ? xNullable.NULL
-                    : new DeferredCallHandle(xException.makeHandle(frame, "Invalid resource: " + sName));
-        }
-        return maskInjection(frame, hResource, type);
+        return hResource == null
+                ? type.isNullable()
+                        ? xNullable.NULL
+                        : new DeferredCallHandle(xException.makeHandle(frame, "Invalid resource: " + sName))
+                : maskInjection(frame, hResource, type);
     }
 
     private ObjectHandle toDestringable(Frame frame, TypeConstant type, String sValue) {
         ConstantPool    pool     = frame.poolContext();
         TypeComposition clz      = type.ensureClass(frame);
         ClassTemplate   template = clz.getTemplate();
-        MethodStructure ctor = template.getStructure()
-                .findMethod("construct", 1, pool.typeString());
-
-        ObjectHandle[] ahArgs = new ObjectHandle[]{xString.makeHandle(sValue)};
-        int iResult = template.construct(frame, ctor, clz, null,
-                ahArgs, Op.A_STACK);
+        MethodStructure ctor     = template.getStructure().findMethod("construct", 1, pool.typeString());
+        ObjectHandle[]  ahArgs   = new ObjectHandle[]{xString.makeHandle(sValue)};
+        int             iResult  = template.construct(frame, ctor, clz, null, ahArgs, Op.A_STACK);
         return frame.popResult(iResult);
     }
 

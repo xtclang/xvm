@@ -10,7 +10,7 @@
  * a particular test phase.
  *
  * `Extension`s are `Orderable` by their `order`. `Extension`s with a higher `order` will
- * come before those with a lower order (i.e. the reverse of natural `Int` ordering).
+ * be executed before those with a lower order.
  *
  * ### Extension Execution Phases
  *
@@ -162,14 +162,16 @@ interface Extension
         if (clz.is(Test)) {
             return clz.order;
         }
-        return Int.MaxValue;
+        return 0;
     }
 
     @RO Boolean requiresTarget.get() = True;
 
     // ---- Orderable ------------------------------------------------------------------------------
 
-    // Highest lowest comes first
+    /**
+     * Extensions are ordered by the value of their `order` property.
+     */
     static <CompileType extends Extension> Ordered compare(CompileType value1, CompileType value2)
         = value1.order <=> value2.order;
 }

@@ -52,7 +52,10 @@ service ConsoleExecutionListener
 	        }
 	    } else {
 	        if (model.isContainer) {
-	            console.print($"Finished:  {model.displayName} {result.status} in {result.duration} (passed={result.succeeded} failed={result.failures} skipped={result.skipped} errors={result.errors})");
+                console.print($|Finished:  {model.displayName} {result.status} in {result.duration}\
+                               | (passed={result.succeeded} failed={result.failures}\
+                               | skipped={result.skipped} errors={result.errors})
+                               );
 	        } else {
 	            console.print($"Finished:  {model.displayName} {result.status} in {result.duration}");
 	        }

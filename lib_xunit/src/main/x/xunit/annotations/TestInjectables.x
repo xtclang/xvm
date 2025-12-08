@@ -1,3 +1,4 @@
+import extensions.AroundTestCallback;
 import extensions.ExecutionContext;
 import extensions.ExtensionProvider;
 import extensions.ExtensionProviderProvider;
@@ -17,8 +18,11 @@ annotation TestInjectables(Map<String, String> injectables)
     ExtensionProvider[] getExtensionProviders()
             = super() + new FixedExtensionProvider(name, new Callback(injectables));
 
+    /**
+     * The `AroundTestCallback` callback this annotation registers.`
+     */
     static const Callback(Map<String, String> injectables)
-            implements extensions.AroundTestCallback {
+            implements AroundTestCallback {
 
         @Override
         @RO Boolean requiresTarget.get() = True;

@@ -11,6 +11,8 @@ import xunit.MethodOrFunction;
 
 import xunit.extensions.ExecutionContext;
 
+import extensions.ResourceLookupExtension;
+
 /**
  * A `ResourceProvider` implementation that can provide resources to inject into tests.
  */
@@ -23,6 +25,8 @@ service TestResourceProvider(Directory curDir)
     @Lazy FileStore store.calc() = new DirectoryFileStore(curDir);
 
     private ExecutionContext? context = Null;
+
+    private ResourceLookupExtension[] lookups = new Array();
 
     @Override
     Supplier getResource(Type type, String name) {
@@ -56,7 +60,7 @@ service TestResourceProvider(Directory curDir)
                 return getTestDirectory;
 
             default:
-                throw new Exception($"Invalid Directory resource: \"{name}\"");
+                return super(type, name);
             }
 
         case (Console, _):
@@ -87,10 +91,29 @@ service TestResourceProvider(Directory curDir)
     private conditional Object contextLookup(Type type, String name, Options opts) {
         ExecutionContext? ctx = this.context;
         if (ctx.is(ExecutionContext)) {
-            return ctx.lookup(type, name, opts);
+            if (Object resource := ctx.lookup(type, name, opts)) {
+                return True, resource;
+            } else {
+                for (ResourceLookupExtension extension : lookups) {
+                    if (Object resource := extension.lookup(type, name, opts)) {
+                            return True, resource;
+                    }
+                }
+            }
         }
         return False;
     }
+
+    /**
+     * Adds a `ResourceLookupExtension` to provide additional resources.
+     */
+    void addResourceLookupExtension(ResourceLookupExtension extension) = lookups.add(extension);
+
+    /**
+     * Remove a previously added `ResourceLookupExtension`.
+     */
+    void removeResourceLookupExtension(ResourceLookupExtension extension)
+            = lookups.remove(extension);
 
     /**
      * Set the current ExecutionContext.

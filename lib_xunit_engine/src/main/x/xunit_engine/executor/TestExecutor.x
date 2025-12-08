@@ -40,8 +40,8 @@ const TestExecutor {
      * Execute the tests in this executor's `Model` including recursively
      * executing tests in any child `Model's.
      *
-     * @param parentContext  the parent `EngineExecutionContext` to use
-     *
+     * @param parentContext     the parent `EngineExecutionContext` to use
+     * @param parentExtensions  an optional parent `ExtensionRegistry` to use
      */
     void execute(EngineExecutionContext parentContext, ExtensionRegistry? parentExtensions = Null)
      {
@@ -134,12 +134,12 @@ const TestExecutor {
      * @param started     a flag to indicate whether test execution was started
      * @param duration    the duration the test took to execute
      */
-    private void reportCompletion(ExceptionCollector     collector,
-                                  EngineExecutionContext context,
-                                  ExtensionRegistry      extensions,
-                                  SkipResult             skipResult,
-                                  Boolean                started,
-                                  Duration               duration) {
+    private Result reportCompletion(ExceptionCollector     collector,
+                                    EngineExecutionContext context,
+                                    ExtensionRegistry      extensions,
+                                    SkipResult             skipResult,
+                                    Boolean                started,
+                                    Duration               duration) {
 
         @Inject TestResourceProvider provider;
         provider.setExecutionContext(context);
@@ -170,5 +170,6 @@ const TestExecutor {
             context.listener.onCompleted(model, result);
         }
         context.onCompleted(result);
+        return result;
     }
 }

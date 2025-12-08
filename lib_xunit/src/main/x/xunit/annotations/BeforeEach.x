@@ -17,25 +17,22 @@ import extensions.FixedExtensionProvider;
  * * If the annotated method throws an exception, no further "before" processing will be invoked,
  *   tests will not be invoked, any "after all" and "after each" processing will be invoked.
  *
- * * Priority of annotated method execution is determined by tge `priority` property. Where methods
- *   or functions with a lower priority are executed first. Methods or functions with the default
- *   `Int.MaxValue` priority will be executed in order of super class annotated methods or functions
- *   first.
+ * * Priority of annotated method execution is determined by tge `order` property. Where methods
+ *   or functions with a higher priority are executed first. Methods or functions with the default
+ *   zero priority will be executed in order of super class annotated methods or functions first.
  *
- * * Whilst priority can be used to affect ordering, it is clearer and recommended to only have a
- *   single `@BeforeEach` annotated method in a test class.
+ * * Whilst the order property can be used to affect ordering, it is clearer and recommended to only
+ *   have a single `@BeforeEach` annotated method in a test class.
  *
  * @param order  applies an ordering to the execution of `BeforeEach` annotated methods or
- *               functions.
+ *               functions
  */
-annotation BeforeEach(Int order = Int.MaxValue)
+annotation BeforeEach(Int order = 0)
         extends AbstractEach(order)
         implements ExtensionProviderProvider
         into MethodOrFunction {
 
     /**
-     * Return the `BeforeEach` annotated `MethodOrFunction` as an `ExtensionProvider`.
-     *
      * @return the `BeforeEach` annotated `MethodOrFunction` as an `ExtensionProvider`
      */
     @Override

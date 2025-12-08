@@ -55,8 +55,8 @@ class ExtensionRegistry
 
     /**
      * Return all the `Extension`s of a given type in order of priority, where a lower priority
-     * value comes first. For `Extension`s with the default `Int.MaxValue` priority, `Extension`s
-     * from the parent registry will be first.
+     * value comes first. For `Extension`s with the default zero priority, `Extension`s from the
+     * parent registry will be first.
      *
      * @param type        the type of `Extension` to return
      * @param fromParent  `True` to include the parent registries extensions
@@ -136,11 +136,11 @@ class ExtensionRegistry
                 .filter(holder -> holder.isType(type) && (predicate == Null || predicate(holder.extension.as(ExtensionType)))));
 
         Collection<ExtensionHolder> thisPriority
-                = thisMatches.filter(holder -> holder.priority != Int.MaxValue)
+                = thisMatches.filter(holder -> holder.priority != 0)
                              .sorted();
 
         Collection<ExtensionHolder> thisNonPriority
-                = thisMatches.filter(holder -> holder.priority == Int.MaxValue);
+                = thisMatches.filter(holder -> holder.priority == 0);
 
         ExtensionHolder[]  extensions = new Array();
         ExtensionRegistry? parent     = this.parent;
@@ -153,8 +153,8 @@ class ExtensionRegistry
             }
 
             ExtensionHolder[]           parentMatches     = parent.getByType(type, fromParent, parentFirst, predicate);
-            Collection<ExtensionHolder> parentPriority    = parentMatches.filter(holder -> holder.priority != Int.MaxValue);
-            Collection<ExtensionHolder> parentNonPriority = parentMatches.filter(holder -> holder.priority == Int.MaxValue);
+            Collection<ExtensionHolder> parentPriority    = parentMatches.filter(holder -> holder.priority != 0);
+            Collection<ExtensionHolder> parentNonPriority = parentMatches.filter(holder -> holder.priority == 0);
 
             Collection<ExtensionHolder> priority = new Array();
             priority.addAll(parentPriority);
@@ -179,7 +179,8 @@ class ExtensionRegistry
     /**
      * A holder of an `Extension` and its source.
      */
-    private static class ExtensionHolder<ExtensionType extends Extension>(ExtensionType extension, Object? source)
+    private static class ExtensionHolder<ExtensionType extends Extension>(ExtensionType extension,
+                                                                          Object?       source)
             implements Orderable {
         /**
          * The priority of the extension.
@@ -213,7 +214,7 @@ class ExtensionRegistry
          */
         static <CompileType extends ExtensionHolder> Ordered compare(CompileType value1, CompileType value2) {
             // Highest priority comes first (i.e. reverse natural Int order)
-            return value1.priority <=> value2.priority;
+            return value2.priority <=> value1.priority;
         }
     }
 }

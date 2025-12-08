@@ -4,7 +4,7 @@ import ecstasy.reflect.Annotation;
  * A `TestTemplate` indicates that the target defines a test that is executed zero or more times,
  * based on the provided `TestTemplateFactory` instances.
  */
-@Abstract annotation TestTemplate(String group = Test.Unit, Int order = Int.MaxValue)
+@Abstract annotation TestTemplate(String group = Test.Unit, Int order = 0)
         extends Test(group, order)
         into Class | Method | Function {
 

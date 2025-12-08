@@ -54,8 +54,7 @@ const ContainerExecutionLifecycle<ModelType extends ContainerModel>(ModelType mo
 	                              EngineExecutionContext context,
 	                              ExtensionRegistry      extensions) {
 
-	    Class testClass = model.testClass;
-	    if (testClass.is(TestFixture)) {
+	    if (Class testClass := model.testClass.is(TestFixture)) {
 	        if (testClass.lifecycle == Singleton) {
 	            Object fixture = ensureFixture(context, extensions, testClass);
 	            context = context.asBuilder(model).withTestFixture(fixture).build();
@@ -75,10 +74,10 @@ const ContainerExecutionLifecycle<ModelType extends ContainerModel>(ModelType mo
                EngineExecutionContext context,
                ExtensionRegistry      extensions) {
 
-        for (AfterAllCallback after : extensions.get(AfterAllCallback, False, False)) {
-            if (!collector.executeVoid(() -> after.afterAll(context))) {
-                // ToDo: do we need to stop - I don't think so, in which case the "if" can be removed
-            }
+        for (AfterAllCallback after : extensions.get(AfterAllCallback,
+                                                     fromParent=False,
+                                                     parentFirst=False)) {
+            collector.executeVoid(() -> after.afterAll(context));
         }
     }
 }

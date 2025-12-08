@@ -19,22 +19,20 @@ import extensions.FixedExtensionProvider;
  * * If the annotated function throws an exception, no further "before" processing will be invoked,
  *   tests will not be invoked, any "after all" processing will be invoked.
  *
- * * Priority of annotated function execution is determined by tge `priority` property. Where
- *   functions with a lower priority are executed first. Functions with the default `Int.MaxValue`
- *   priority will be executed in order of super class annotated functions first.
+ * * Priority of annotated function execution is determined by tge `order` property. Where functions
+ *   with a higher priority are executed first. Functions with the default zero order will be
+ *   executed in order of super class annotated functions first.
  *
- * * Whilst priority can be used to affect ordering, it is clearer and recommended to only have a
- *   single `@BeforeAll` annotated function in a test class.
+ * * Whilst the order property can be used to affect ordering, it is clearer and recommended to only
+ *   have a single `@BeforeAll` annotated function in a test class.
  *
  * @param order  applies an ordering to the execution of `BeforeAll` annotated functions.
  */
-annotation BeforeAll(Int order = Int.MaxValue)
+annotation BeforeAll(Int order = 0)
         extends AbstractAll(order)
         implements ExtensionProviderProvider {
 
     /**
-     * Return the `BeforeAll` annotated function as an `ExtensionProvider`.
-     *
      * @return the `BeforeAll` annotated function as an `ExtensionProvider`
      */
     @Override

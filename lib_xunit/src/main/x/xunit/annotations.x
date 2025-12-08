@@ -12,7 +12,8 @@ package annotations {
      * This annotation can only be added to functions as it is executed before the test target
      * instance is constructed.
      *
-     * @param order  applies an ordering to the execution of associate test extension.
+     * @param order  applies an ordering to the execution of associate test extension. Extensions
+     *               with the highest order value will be executed first.
      */
     @Abstract annotation AbstractAll(Int order)
             extends Test(group=Test.Omit, order=order)
@@ -30,10 +31,10 @@ package annotations {
      * * If the annotated method is declared at the `Class` level, the method is executed
      *   repeatedly before every test in that `Class`.
      *
-     * @param order  applies an ordering to the execution of `BeforeEach` annotated methods
-     *               that apply at the same level. Execution will be highest order first.
+     * @param order  applies an ordering to the execution of annotated methods. Extensions with the
+     *               highest order value are executed first.
      */
-    @Abstract annotation AbstractEach(Int order = Int.MaxValue)
+    @Abstract annotation AbstractEach(Int order = 0)
             extends Test(group=Test.Omit, order=order)
             implements Extension
             into MethodOrFunction;

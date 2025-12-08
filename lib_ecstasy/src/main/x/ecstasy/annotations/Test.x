@@ -35,9 +35,8 @@
  * * [order] - this assigns an ordering to execution of the annotated elements. Best practice is
  *   that unit tests should be agnostic of ordering, but other annotated elements, such as XUnit
  *   before test or after test methods, test extensions, etc. may require ordering to be specified.
- *   Annotated elements are ordered based the priority value, where a lower value has greater
- *   priority than a higher value. For example, `Int.MaxValue` is the lowest priority (i.e. natural
- *   Int order).
+ *   Annotated elements are ordered based the priority value, where a higher value has greater
+ *   priority than a lower value.
  *
  * The parameters are ignored when the annotation is used on classes and properties. Any usage other
  * than that specified above may result in a compile-time and/or load/link-time error.

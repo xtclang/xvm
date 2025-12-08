@@ -24,7 +24,7 @@ import templates.TestTemplateFactory;
  * @param order       this assigns an ordering to execution of the annotated resource
  *                    (see `Test.order`).
  */
-annotation RepeatedTest(Int iterations, String group = Test.Unit, Int priority = Int.MaxValue)
+annotation RepeatedTest(Int iterations, String group = Test.Unit, Int priority = 0)
         extends TestTemplate(group, priority)
         into MethodOrFunction {
 

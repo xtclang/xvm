@@ -95,7 +95,7 @@ module xunit_engine.xtclang.org {
             console.print($"XUnit: Created test module {template.qualifiedName} in {buildDir}");
             TestResourceProvider injector = new TestResourceProvider(curDir);
             Tuple t = new Container(template, Lightweight, repo, injector).invoke("run");
-            return t[0].as(Int);
+            return t[0].as(Boolean) ? 0 : 1;
         } else {
             log.add($"Error: Failed to create a host for: {moduleName}");
             throw new Exception(log.toString());

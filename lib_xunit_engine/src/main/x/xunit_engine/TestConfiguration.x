@@ -1,3 +1,6 @@
+import extensions.EngineExtension;
+import extensions.TestEngineExtender;
+
 /**
  * The configuration to control running a test suite.
  */
@@ -10,6 +13,7 @@ const TestConfiguration {
     private construct(Builder builder) {
         this.discoveryConfig = builder.discoveryConfig;
         this.executionConfig = builder.executionConfig;
+        this.extensions      = builder.extensions;
     }
 
     /**
@@ -21,6 +25,11 @@ const TestConfiguration {
      * The configuration to control execution of tests.
      */
     ExecutionConfiguration executionConfig;
+
+    /**
+     * The engine extensions.
+     */
+    EngineExtension[] extensions;
 
     /**
      * Return this `TestConfiguration` as a `Builder`.
@@ -58,6 +67,11 @@ const TestConfiguration {
         private ExecutionConfiguration executionConfig = ExecutionConfiguration.create();
 
         /**
+         * The engine extensions.
+         */
+        private EngineExtension[] extensions = new Array();
+
+        /**
          * Create a `Builder`.
          *
          * @param config  the `TestConfiguration` to use to create the builder
@@ -85,6 +99,51 @@ const TestConfiguration {
         Builder withExecutionConfig(ExecutionConfiguration config) {
             this.executionConfig = config;
             return this;
+        }
+
+        /**
+         * Add any engine extensions that test module or any of its dependencies provides.
+         *
+         * @param testModule  the test module
+         */
+        Builder discoverExtensions(Module testModule) {
+            Map<String, EngineExtension[]> extensionMap = new HashMap();
+            discoverExtensions(testModule, extensionMap);
+            for (EngineExtension[] extensions : extensionMap.values) {
+                this.extensions.addAll(extensions);
+            }
+            return this;
+        }
+
+        private void discoverExtensions(Module testModule, Map<String, EngineExtension[]> extensions) {
+            if (extensions.contains(testModule.qualifiedName)) {
+                return;
+            }
+
+            Class clz  = &testModule.class;
+            Type  type = &testModule.type;
+            if (clz.name == TypeSystem.MackPackage) {
+                return;
+            }
+
+            if (testModule.is(TestEngineExtender)) {
+                EngineExtension[] moduleExtensions = testModule.getTestEngineExtensions();
+                extensions.put(testModule.qualifiedName, moduleExtensions);
+            } else {
+                extensions.put(testModule.qualifiedName, []);
+            }
+
+            for (Type child : type.childTypes.values) {
+                if (child.is(Type<Package>)) {
+                    assert Class childClass := child.fromClass();
+                    if (Object o := childClass.isSingleton()) {
+                        Package pkg = o.as(Package);
+                        if (Module childModule := pkg.isModuleImport()) {
+                            discoverExtensions(childModule, extensions);
+                        }
+                    }
+                }
+            }
         }
 
         /**

@@ -3,7 +3,7 @@
  *
  * Extensions such as `AfterEachCallback` are typically executed in the order they are discovered.
  * Ordering can be determined by overriding the `Extension.order` property to specify an `Int`
- * order value. After extensions with the lower `order` will be first.
+ * order value. After extensions with the highest `order` will be first.
  */
 interface AfterEachCallback
         extends Extension {
