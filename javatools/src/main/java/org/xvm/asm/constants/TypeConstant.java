@@ -6586,22 +6586,16 @@ public abstract class TypeConstant
      * Generate the code that compares the registers and either jumps to one of the specified labels
      * or falls through.
      *
-     * @param lblTrue    (optional) the label to go to in the case the positive result has been
-     *                   computed and the jump needs be generated; otherwise the result of the
-     *                   comparison should be placed on the Java stack
-     * @param lblEnd     (optional) the label to go to in the case a result has been computed
-     *                   (either positive or negative) and placed on Java stack
+     * @param lblTrue (optional) the label to go to in the case the positive result has been
+     *                computed and the jump needs be generated; otherwise the result of the
+     *                comparison should be placed on the Java stack
      */
     public void buildCompare(BuildContext bctx, CodeBuilder code, int nOp,
-                             RegisterInfo reg1, RegisterInfo reg2, Label lblTrue,  Label lblEnd) {
+                             RegisterInfo reg1, RegisterInfo reg2, Label lblTrue) {
         assert isSingleUnderlyingClass(true);
         assert reg1.type().isA(this) && reg2.type().isA(this);
 
-        boolean fLocalEnd  = lblEnd == null;
         boolean fLocalTrue = lblTrue == null;
-        if (fLocalEnd) {
-            lblEnd = code.newLabel();
-        }
         if (fLocalTrue) {
             lblTrue = code.newLabel();
         }
@@ -6695,9 +6689,6 @@ public abstract class TypeConstant
                         code.ifeq(lblTrue);
                     }
                 }
-                if (!fLocalEnd) {
-                    code.goto_(lblEnd);
-                }
                 return;
 
             case Op.OP_CMP, Op.OP_IS_GT, Op.OP_IS_GTE, Op.OP_IS_LT, Op.OP_IS_LTE:
@@ -6742,17 +6733,14 @@ public abstract class TypeConstant
             }
         }
 
+        Label lblEnd = code.newLabel();
         if (fLocalTrue) {
             code.iconst_0()
                 .goto_(lblEnd)
                 .labelBinding(lblTrue)
                 .iconst_1();
         }
-        if (fLocalEnd) {
-            code.labelBinding(lblEnd);
-        } else {
-            code.goto_(lblEnd);
-        }
+        code.labelBinding(lblEnd);
     }
 
     private void generateOrdered(BuildContext bctx, CodeBuilder code) {

@@ -334,12 +334,18 @@ public abstract class OpCondJump
         Label        lblFalse = code.newLabel();
 
         if (type1.isNullable() || type2.isNullable()) {
-            assert nOp == OP_IS_EQ || nOp == OP_IS_NEQ;
-
-            if (nOp == Op.OP_IS_EQ) {
-                assembleNullCheck(code, reg1, reg2, lblTrue, lblFalse);
-            } else {
-                assembleNullCheck(code, reg1, reg2, lblFalse, lblTrue);
+            // we are comparing two Nullable arguments where at least one is known to be "Null";
+            // the only op for which comparison of the Null value with a non-Null can produce a True
+            // is NEQ, for all others, the result would be negative;
+            // the only ops, for which comparison of two Null values would produce a positive result
+            // are: EQ, GE, LE
+            switch (nOp) {
+                case OP_JMP_NEQ ->
+                    assembleNullCheck(code, reg1, reg2, lblFalse, lblTrue);
+                case OP_JMP_EQ, OP_JMP_LTE, OP_JMP_GTE ->
+                    assembleNullCheck(code, reg1, reg2, lblTrue, lblFalse);
+                default ->
+                    assembleNullCheck(code, reg1, reg2, lblFalse, lblFalse);
             }
 
             if (type1.isNullable()) {
@@ -357,7 +363,7 @@ public abstract class OpCondJump
         assert typeCmp.equals(
             selectCommonType(type1, type2, ErrorListener.BLACKHOLE).removeNullable());
 
-        typeCmp.buildCompare(bctx, code, nOp, reg1, reg2, lblTrue, null);
+        typeCmp.buildCompare(bctx, code, nOp, reg1, reg2, lblTrue);
 
         code.labelBinding(lblFalse);
     }

@@ -867,8 +867,7 @@ public class UnionTypeConstant
 
     @Override
     public void buildCompare(BuildContext bctx, CodeBuilder code, int nOp,
-                             RegisterInfo reg1, RegisterInfo reg2,
-                             Label lblTrue,  Label lblEnd) {
+                             RegisterInfo reg1, RegisterInfo reg2, Label lblTrue) {
         assert !this.isNullable();
 
         TypeConstant typeA = m_constType1;
@@ -881,12 +880,8 @@ public class UnionTypeConstant
         };
 
         boolean fLocalTrue = lblTrue == null;
-        boolean fLocalEnd  = lblEnd == null;
         if (fLocalTrue) {
             lblTrue = code.newLabel();
-        }
-        if (fLocalEnd) {
-            lblEnd = code.newLabel();
         }
         Label lblFalse = code.newLabel();
 
@@ -910,36 +905,36 @@ public class UnionTypeConstant
             // first try to apply the compile-time types
             if (reg1.type().isA(typeA)) {
                 if (reg2.type().isA(typeA)) {
-                    typeA.buildCompare(bctx, code, nOp, reg1, reg2, null, null);
+                    typeA.buildCompare(bctx, code, nOp, reg1, reg2, null);
                     return;
                 } else {
                     buildTypeCheck(bctx, code, reg2, typeA);
                     code.ifeq(fEq ? lblFalse : lblTrue);
                     reg2A = bctx.narrowRegister(code, reg2, typeA);
-                    typeA.buildCompare(bctx, code, nOp, reg1, reg2A, lblTrue, null);
+                    typeA.buildCompare(bctx, code, nOp, reg1, reg2A, lblTrue);
                 }
             } else if (reg1.type().isA(typeB)) {
                 if (reg2.type().isA(typeB)) {
-                    typeB.buildCompare(bctx, code, nOp, reg1, reg2, null, null);
+                    typeB.buildCompare(bctx, code, nOp, reg1, reg2, null);
                     return;
                 } else {
                     buildTypeCheck(bctx, code, reg2, typeA);
                     code.ifeq(fEq ? lblFalse : lblTrue);
                     reg2B = bctx.narrowRegister(code, reg2, typeB);
-                    typeB.buildCompare(bctx, code, nOp, reg1, reg2B, lblTrue, null);
+                    typeB.buildCompare(bctx, code, nOp, reg1, reg2B, lblTrue);
                 }
             } else if (reg2.type().isA(typeA)) {
                 // we know that !reg1.type().isA(typeA)
                 buildTypeCheck(bctx, code, reg1, typeA);
                 code.ifeq(fEq ? lblFalse : lblTrue);
                 reg1A = bctx.narrowRegister(code, reg1, typeA);
-                typeA.buildCompare(bctx, code, nOp, reg1A, reg2, lblTrue, null);
+                typeA.buildCompare(bctx, code, nOp, reg1A, reg2, lblTrue);
             } else if (reg2.type().isA(typeB)) {
                 // we know that !reg1.type().isA(typeB)
                 buildTypeCheck(bctx, code, reg1, typeB);
                 code.ifeq(fEq ? lblFalse : lblTrue);
                 reg1B = bctx.narrowRegister(code, reg1, typeB);
-                typeB.buildCompare(bctx, code, nOp, reg1B, reg2, lblTrue, null);
+                typeB.buildCompare(bctx, code, nOp, reg1B, reg2, lblTrue);
             } else {
                 // the compile types are not narrowed; perform the run-time type checks
                 Label lblO1IsB = code.newLabel();
@@ -952,7 +947,7 @@ public class UnionTypeConstant
                 code.ifeq(fEq ? lblFalse : lblTrue);
                 reg2A = bctx.narrowRegister(code, reg2, typeA);
 
-                typeA.buildCompare(bctx, code, nOp, reg1A, reg2A, lblTrue, null);
+                typeA.buildCompare(bctx, code, nOp, reg1A, reg2A, lblTrue);
                 code.goto_(lblFalse);
 
                 code.labelBinding(lblO1IsB);
@@ -962,11 +957,13 @@ public class UnionTypeConstant
                 code.ifeq(fEq ? lblFalse : lblTrue);
                 reg2B = bctx.narrowRegister(code, reg2, typeB);
 
-                typeB.buildCompare(bctx, code, nOp, reg1B, reg2B, lblTrue, null);
+                typeB.buildCompare(bctx, code, nOp, reg1B, reg2B, lblTrue);
             }
         } else {
             throw new UnsupportedOperationException("TODO");
         }
+
+        Label lblEnd = code.newLabel();
 
         code.labelBinding(lblFalse);
         if (fLocalTrue) {
@@ -975,11 +972,7 @@ public class UnionTypeConstant
                 .labelBinding(lblTrue)
                 .iconst_1();
         }
-        if (fLocalEnd) {
-            code.labelBinding(lblEnd);
-        } else {
-            code.goto_(lblEnd);
-        }
+        code.labelBinding(lblEnd);
     }
 
     /**

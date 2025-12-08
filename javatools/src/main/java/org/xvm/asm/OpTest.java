@@ -271,8 +271,6 @@ public abstract class OpTest
         Label        lblEnd  = code.newLabel();
 
         if (type1.isNullable() || type2.isNullable()) {
-            assert nOp == OP_IS_EQ || nOp == OP_IS_NEQ;
-
             assembleNullCheck(code, reg1, reg2, lblEnd);
 
             if (type1.isNullable()) {
@@ -290,7 +288,7 @@ public abstract class OpTest
         assert typeCmp.equals(
             selectCommonType(type1, type2, ErrorListener.BLACKHOLE).removeNullable());
 
-        typeCmp.buildCompare(bctx, code, nOp, reg1, reg2, /*lblTrue*/ null, null);
+        typeCmp.buildCompare(bctx, code, nOp, reg1, reg2, /*lblTrue*/ null);
 
         code.labelBinding(lblEnd);
         if (nOp == OP_CMP) {
@@ -341,19 +339,23 @@ public abstract class OpTest
             code.goto_(lblNotEq); // (reg1 != Null && reg2 == Null) - negative result
         }
 
+        // we are comparing two Nullable arguments where at least one is known to be "Null";
+        // the only op for which comparison of the Null value with a non-Null can produce a True
+        // is NEQ, for all others, the result would be negative;
+        // the only ops, for which comparison of two Null values would produce a positive result are:
+        // EQ, GE, LE
+
         code.labelBinding(lblNotEq);
-        if (getOpCode() == OP_IS_EQ) {
-            code.iconst_0();
-        } else {
-            code.iconst_1();
+        switch (getOpCode()) {
+            case OP_IS_NEQ -> code.iconst_1();
+            default        -> code.iconst_0();
         }
         code.goto_(lblEnd);
 
         code.labelBinding(lblEqual);
-        if (getOpCode() == OP_IS_EQ) {
-            code.iconst_1();
-        } else {
-            code.iconst_0();
+        switch (getOpCode()) {
+            case OP_IS_EQ, OP_IS_GTE, OP_IS_LTE -> code.iconst_1();
+            default                             -> code.iconst_0();
         }
         code.goto_w(lblEnd);
 
