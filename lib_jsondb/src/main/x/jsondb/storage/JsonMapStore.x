@@ -613,7 +613,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
         Boolean changed = False;
         Int     size    = sizeAt(prepareId-1);
         for ((Key key, MapValue value) : mods) {
-            // Determine the actual value to store in the history based on the current model
+            // determine the actual value to store in the history based on the current model
             MapValue storeValue = model <= Small ? value : OffHeap;
 
             if (History valueHistory := history.get(key)) {
@@ -893,16 +893,16 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
             inFlight.remove(writeId);
         }
 
-        // After a commit the model could have become larger.
+        // after a commit the model could have become larger.
         StorageModel newModel  = checkModelSize();
         StorageModel prevModel = model;
         if (newModel != prevModel && newModel != Small) {
-            // The model size has changed and is not Small (there is nothing to do going from Empty to Small)
-            model                 = newModel;
+            // the model size has changed and is not Small
+            model = newModel;
             if (newModel == Medium && prevModel <= Small) {
-                // The model has transitioned from Empty/Small to Medium so values in the history
-                // for this transaction can to be changed to OffHeap.
-                // Other entries in the history will be moved OffHeap during maintenance
+                // the model has transitioned from Empty/Small to Medium so values in the history
+                // for this transaction can to be changed to OffHeap
+                // other entries in the history will be moved OffHeap during maintenance
                 for ((Int txId, Array<Key> keys) : updatedKeysByTx) {
                     for (Key key : keys) {
                         if (History valueHistory := history.get(key)) {
@@ -984,7 +984,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                     }
                 }
             } else if (modelAtCleanup <= Medium && modelNow == Large) {
-                // The model has grown to Large, mark all history keys and values as OffHeap
+                // the model has grown to Large, mark all history keys and values as OffHeap
                 // ToDo we need to add logic for transition to Large after we add Large model support
             }
             modelAtCleanup = modelNow;
