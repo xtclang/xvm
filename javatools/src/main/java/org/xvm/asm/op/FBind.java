@@ -233,7 +233,6 @@ public class FBind
         TypeConstant typeFn = regFn.type();
 
         assert typeFn.isFunction() && regFn.cd().equals(CD_nFunction);
-        assert !bctx.isConstructor;
 
         JitMethodDesc jmdBefore = JitMethodDesc.of(
                 pool.extractFunctionParams(typeFn),
