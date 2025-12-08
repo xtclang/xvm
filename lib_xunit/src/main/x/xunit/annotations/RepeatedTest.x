@@ -21,11 +21,9 @@ import templates.TestTemplateFactory;
  * @param iterations  the number of repetitions; must be greater than zero
  * @param group       this assigns the test to a named group of tests, which allows specific groups
  *                    of tests to be selected for execution (see `Test.group`).
- * @param order       this assigns an ordering to execution of the annotated resource
- *                    (see `Test.order`).
  */
-annotation RepeatedTest(Int iterations, String group = Test.Unit, Int priority = 0)
-        extends TestTemplate(group, priority)
+annotation RepeatedTest(Int iterations, String group = Test.Unit)
+        extends TestTemplate(group)
         into MethodOrFunction {
 
     /**

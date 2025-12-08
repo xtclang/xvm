@@ -1,10 +1,6 @@
 /**
  * A callback that is invoked repeatedly directly after each test is invoked, but before any
  * `AfterEachCallback` extensions and before any `@AfterEach` annotated functions or methods.
- *
- * Extensions such as `AfterTestInvocationCallback` are typically executed in the order they are
- * discovered Ordering can be determined by overriding the `Extension.order` property to specify
- * an `Int` order value. After extensions with the higher `order` will be first.
  */
 interface AfterTestInvocationCallback
         extends Extension {

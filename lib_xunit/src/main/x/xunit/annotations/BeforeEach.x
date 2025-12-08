@@ -16,19 +16,9 @@ import extensions.FixedExtensionProvider;
  *   before every test in that class.
  * * If the annotated method throws an exception, no further "before" processing will be invoked,
  *   tests will not be invoked, any "after all" and "after each" processing will be invoked.
- *
- * * Priority of annotated method execution is determined by tge `order` property. Where methods
- *   or functions with a higher priority are executed first. Methods or functions with the default
- *   zero priority will be executed in order of super class annotated methods or functions first.
- *
- * * Whilst the order property can be used to affect ordering, it is clearer and recommended to only
- *   have a single `@BeforeEach` annotated method in a test class.
- *
- * @param order  applies an ordering to the execution of `BeforeEach` annotated methods or
- *               functions
  */
-annotation BeforeEach(Int order = 0)
-        extends AbstractEach(order)
+annotation BeforeEach
+        extends AbstractEach
         implements ExtensionProviderProvider
         into MethodOrFunction {
 
@@ -50,9 +40,6 @@ annotation BeforeEach(Int order = 0)
 
         @Override
         Boolean requiresTarget.get() = before.is(Method);
-
-        @Override
-        Int order.get() = before.order;
 
         @Override
         void beforeEach(ExecutionContext context) = context.invoke(before);

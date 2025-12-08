@@ -1,9 +1,5 @@
 /**
  * A callback that is invoked once in a test fixture before any test is invoked.
- *
- * Extensions such as `BeforeAllCallback` are typically executed in the order they are discovered.
- * Ordering can be determined by overriding the `Extension.order` property to specify an `Int`
- * order value. Before extensions with the higher `order` will be first.
  */
 interface BeforeAllCallback
         extends Extension {

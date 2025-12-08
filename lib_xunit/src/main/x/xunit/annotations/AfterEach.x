@@ -16,21 +16,9 @@ import extensions.FixedExtensionProvider;
  *   every test declared directly in that class.
  * * If the annotated method throws an exception, all remaining "after" processing will still be
  *   invoked.
- *
- * * Priority of annotated method execution is determined by tge `order` property. Where methods
- *   or functions with a higher priority are executed first. Methods or functions with the default
- *   zero priority will be executed in order of super class annotated methods or functions
- *   first.
- *
- * * Whilst order can be used to affect ordering, it is clearer and recommended to only have a
- *   single `@AfterEach` annotated method in a test class.
- *
- * @param order    applies an ordering to the execution of `AfterEach` annotated methods or
- *                 functions
- * @param matcher  a predicate used to filter
  */
-annotation AfterEach(Int order = 0)
-        extends AbstractEach(order)
+annotation AfterEach
+        extends AbstractEach
         implements ExtensionProviderProvider
         into MethodOrFunction {
 
@@ -52,9 +40,6 @@ annotation AfterEach(Int order = 0)
 
         @Override
         Boolean requiresTarget.get() = after.is(Method);
-
-        @Override
-        Int order.get() = after.order;
 
         @Override
         void afterEach(ExecutionContext context) = context.invoke(after);

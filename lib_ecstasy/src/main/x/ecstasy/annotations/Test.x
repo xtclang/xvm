@@ -32,18 +32,11 @@
  *   Other group names can be used; any other names are expected to be treated as normal unit tests
  *   unless the test runner (such as `xunit`) is configured otherwise.
  *
- * * [order] - this assigns an ordering to execution of the annotated elements. Best practice is
- *   that unit tests should be agnostic of ordering, but other annotated elements, such as XUnit
- *   before test or after test methods, test extensions, etc. may require ordering to be specified.
- *   Annotated elements are ordered based the priority value, where a higher value has greater
- *   priority than a lower value.
- *
  * The parameters are ignored when the annotation is used on classes and properties. Any usage other
  * than that specified above may result in a compile-time and/or load/link-time error.
  */
-annotation Test(String group = Unit, Int order = Int.MaxValue)
-        extends Iff("test".defined)
-        implements Orderable {
+annotation Test(String group = Unit)
+        extends Iff("test".defined) {
     /**
      * Use this [group] value to indicate a normal unit test. This is the default test group name.
      */
@@ -61,10 +54,4 @@ annotation Test(String group = Unit, Int order = Int.MaxValue)
      * Alternatively, just use `@Iff("test".defined)`.
      */
     static String Omit = "omit";
-
-    // ----- Orderable -----------------------------------------------------------------------------
-
-    static <CompileType extends Test> Ordered compare(CompileType value1, CompileType value2) {
-        return value1.order <=> value2.order;
-    }
 }

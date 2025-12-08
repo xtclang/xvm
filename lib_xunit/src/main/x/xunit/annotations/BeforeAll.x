@@ -18,18 +18,9 @@ import extensions.FixedExtensionProvider;
  *   before all test in that class.
  * * If the annotated function throws an exception, no further "before" processing will be invoked,
  *   tests will not be invoked, any "after all" processing will be invoked.
- *
- * * Priority of annotated function execution is determined by tge `order` property. Where functions
- *   with a higher priority are executed first. Functions with the default zero order will be
- *   executed in order of super class annotated functions first.
- *
- * * Whilst the order property can be used to affect ordering, it is clearer and recommended to only
- *   have a single `@BeforeAll` annotated function in a test class.
- *
- * @param order  applies an ordering to the execution of `BeforeAll` annotated functions.
  */
-annotation BeforeAll(Int order = 0)
-        extends AbstractAll(order)
+annotation BeforeAll
+        extends AbstractAll
         implements ExtensionProviderProvider {
 
     /**
@@ -47,9 +38,6 @@ annotation BeforeAll(Int order = 0)
      */
     static const BeforeAllFunction(BeforeAll before)
             implements BeforeAllCallback {
-
-        @Override
-        Int order.get() = before.order;
 
         @Override
         void beforeAll(ExecutionContext context) = context.invoke(before);

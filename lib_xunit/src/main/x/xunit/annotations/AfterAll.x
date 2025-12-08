@@ -21,18 +21,9 @@ import extensions.FixedExtensionProvider;
  *   invoked.
  * * `AfterAll` annotated methods will be executed regardless of any errors in "before" test methods
  *   or any test failures.
- *
- * * Priority of annotated function execution is determined by the `order` property. Functions with
- *   a highest priority are executed first. Functions or functions with the default zero order will
- *   in order of super class annotated functions first.
- *
- * * Whilst order can be used to affect ordering, it is clearer and recommended to only have
- *   a single `@AfterAll` annotated function in a test class.
- *
- * @param order  applies an ordering to the execution of `AfterAll` annotated functions.
  */
-annotation AfterAll(Int order = 0)
-        extends AbstractAll(order)
+annotation AfterAll
+        extends AbstractAll
         implements ExtensionProviderProvider {
 
     /**
@@ -50,9 +41,6 @@ annotation AfterAll(Int order = 0)
      */
     static const AfterAllFunction(AfterAll after)
             implements AfterAllCallback {
-
-        @Override
-        Int order.get() = after.order;
 
         @Override
         void afterAll(ExecutionContext context) = context.invoke(after);

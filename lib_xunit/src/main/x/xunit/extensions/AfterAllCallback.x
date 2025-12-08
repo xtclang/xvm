@@ -1,9 +1,5 @@
 /**
  * A callback that is invoked once in a test fixture after any test is invoked.
- *
- * Extensions such as `AfterAllCallback` are typically executed in the order they are discovered.
- * Ordering can be determined by overriding the `Extension.order` property to specify an `Int`
- * order value. After extensions with the higher `order` will be first.
  */
 interface AfterAllCallback
         extends Extension {

@@ -16,10 +16,9 @@ import templates.TestTemplateFactory;
  * @param parameters  the function to use to provide parameters for parameterized test methods
  *                    or parameterized test class constructors.
  * @param group       the test group to which this test belongs
- * @param order       the order of this test (see `Test.order`)
  */
-annotation ParameterizedTest(Function<Tuple, Tuple> parameters, String group=Test.Unit, Int order=0)
-        extends TestTemplate(group, order)
+annotation ParameterizedTest(Function<Tuple, Tuple> parameters, String group=Test.Unit)
+        extends TestTemplate(group)
         into MethodOrFunction {
 
     @Override

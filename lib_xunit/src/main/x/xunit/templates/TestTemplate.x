@@ -3,9 +3,11 @@ import ecstasy.reflect.Annotation;
 /**
  * A `TestTemplate` indicates that the target defines a test that is executed zero or more times,
  * based on the provided `TestTemplateFactory` instances.
+ *
+ *@param group  the group the test belongs to (see `Test.group`)
  */
-@Abstract annotation TestTemplate(String group = Test.Unit, Int order = 0)
-        extends Test(group, order)
+@Abstract annotation TestTemplate(String group = Test.Unit)
+        extends Test(group)
         into Class | Method | Function {
 
     /**

@@ -13,9 +13,9 @@ interface TestTemplateFactory<TemplateType extends TestTemplate> {
     /**
      * Return the `TestTemplateContext`s to use to execute the templated test.
      *
-     * The order of the `TestTemplateContext`s returned should ideally be deterministic, so that
-     * repeated calls return the same list. This allows test discovery `Selector`s to be used to run
-     * just one of, or a sub-set of, the test iterations.
+     * The order of the `TestTemplateContext`s returned should be deterministic, so that repeated
+     * calls return the same list. This allows test discovery `Selector`s to be used to run just one
+     * of, or a sub-set of, the test iterations.
      *
      * @param context  the current `ExecutionContext`
      *

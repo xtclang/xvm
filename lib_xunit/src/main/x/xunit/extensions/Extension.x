@@ -5,12 +5,7 @@
  * customize the execution of tests to suit their uses-cases. For example adding behaviour to
  * execute before or after tests, parameterized tests, intercepting fixture construction, etc.
  *
- * The `Extension` interface is basically a marker, that indicates that a type is an extension. An
- * `Extension` has an order, which is used to determine the order that extensions are executed in
- * a particular test phase.
- *
- * `Extension`s are `Orderable` by their `order`. `Extension`s with a higher `order` will
- * be executed before those with a lower order.
+ * The `Extension` interface is basically a marker, that indicates that a type is an extension.
  *
  * ### Extension Execution Phases
  *
@@ -150,28 +145,9 @@
  * * AfterAllCallback extensions throw an exception
  * ** All remaining AfterAllCallback extensions will execute.
  */
-interface Extension
-        extends Orderable {
-
+interface Extension {
     /**
-     * The order for this extension.
-     * Extensions with a lower order will execute first.
+     * @return `True` if this extension requires a target test fixture.
      */
-    @RO Int order.get() {
-        Class clz = &this.class;
-        if (clz.is(Test)) {
-            return clz.order;
-        }
-        return 0;
-    }
-
     @RO Boolean requiresTarget.get() = True;
-
-    // ---- Orderable ------------------------------------------------------------------------------
-
-    /**
-     * Extensions are ordered by the value of their `order` property.
-     */
-    static <CompileType extends Extension> Ordered compare(CompileType value1, CompileType value2)
-        = value1.order <=> value2.order;
 }

@@ -187,12 +187,9 @@ class ExtensionRegistry
          */
         @Lazy Int priority.calc() {
             Object? source = this.source;
-            if (source.is(Test)) {
-                if (source.order != 0) {
-                    return source.order;
-                }
-            }
-            return this.extension.order;
+            // ToDo if we ever support ordering of extensions on tests (maybe using something like
+            // an @Order annotation, this is where we would check the source's order and return that
+            return 0;
         }
 
         /**

@@ -1,9 +1,5 @@
 /**
  * An extension that allows registering resources.
- *
- * Extensions such as `ResourceRegistrationCallback` are typically executed in the order they are
- * discovered. Ordering can be determined by overriding the `Extension.order` property to specify an
- * `Int` order value. Extensions with the higher `order` will be first.
  */
 interface ResourceRegistrationCallback
         extends Extension {

@@ -1,10 +1,6 @@
 /**
  * A callback that is invoked repeatedly directly before each test is invoked, but after any
  * `BeforeEachCallback` extensions and after any `@BeforeEach` annotated methods.
- *
- * Extensions such as `BeforeTestInvocationCallback` are typically executed in the order they are
- * discovered Ordering can be determined by overriding the `Extension.order` property to specify
- * an `Int` order value. Before extensions with the higher `order` will be first.
  */
 interface BeforeTestInvocationCallback
         extends Extension {

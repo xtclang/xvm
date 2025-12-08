@@ -5,15 +5,9 @@ import extensions.PropertyExtensionProvider;
 /**
  * This annotation is used to indicate that a property of a test fixture should be registered as an
  * `Extension`.
- *
- * * Priority of annotated method execution is determined by the `order` property. Where extensions
- *   with a higher order are executed first. Extensions with the default zero order will be executed
- *   in order of super class extensions first.
- *
- * @param order  applies an ordering to the execution of `Extension`s
  */
-annotation RegisterExtension(Int order = 0)
-        extends Test(group=Test.Omit, order=order)
+annotation RegisterExtension
+        extends Test(group=Test.Omit)
         implements ExtensionProviderProvider
         into Property<Object, Object, Ref<Object>> {
 

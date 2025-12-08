@@ -1,9 +1,5 @@
 /**
  * A callback that is invoked repeatedly, before every test is invoked.
- *
- * Extensions such as `BeforeEachCallback` are typically executed in the order they are discovered.
- * Ordering can be determined by overriding the `Extension.order` property to specify an `Int`
- * order value. Before extensions with the higher `order` will be first.
  */
 interface BeforeEachCallback
         extends Extension {
