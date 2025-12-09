@@ -23,7 +23,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 
 import static java.util.Arrays.sort;
 
@@ -821,6 +824,14 @@ public final class Handy {
                 '\"').toString();
     }
 
+    public static String quoted(final Object o) {
+        return quotedString(Objects.toString(o));
+    }
+
+    public static String unquoted(final Object o) {
+        return unquotedString(Objects.toString(o));
+    }
+
     /**
      * Find the closing quote corresponding to the opening quote at the specified offset.
      *
@@ -1339,6 +1350,16 @@ public final class Handy {
     // ----- file I/O ------------------------------------------------------------------------------
 
     /**
+     * Get the parent of a file, wrapped in Optional to avoid null checks.
+     *
+     * @param file  a file (may be null)
+     * @return Optional containing the parent file, or empty if file is null or has no parent
+     */
+    public static Optional<File> parentOf(final File file) {
+        return Optional.ofNullable(file).map(File::getParentFile);
+    }
+
+    /**
      * Given a file (or directory) or null, produce a file (or directory) to use. Defaults to the
      * current working directory.
      *
@@ -1401,32 +1422,39 @@ public final class Handy {
     }
 
     /**
-     * @return an array of files in the specified directory ordered by case-insensitive name
+     * @return a list of files in the specified directory ordered by case-insensitive name
      */
-    public static File[] listFiles(final File dir) {
+    public static List<File> listFiles(final File dir) {
         if (dir == null || !dir.isDirectory()) {
-            return NO_FILES;
+            return List.of();
         }
 
-        File[] aFile = dir.listFiles();
-        assert aFile != null;
-        sort(aFile, Comparator.comparing(File::getName, String.CASE_INSENSITIVE_ORDER));
-        return aFile;
+        File[] files = dir.listFiles();
+        if (files == null || files.length == 0) {
+            return List.of();
+        }
+        List<File> list = new ArrayList<>(List.of(files));
+        list.sort(Comparator.comparing(File::getName, String.CASE_INSENSITIVE_ORDER));
+        return list;
     }
 
     /**
-     * Obtain an array of files (not including directories) from the specified directory that match
+     * Obtain a list of files (not including directories) from the specified directory that match
      * the specified case-insensitive extension.
      *
      * @param dir        the directory to search
      * @param extension  the extension to match; null will match files with no '.' in their name
      *
-     * @return an array of zero or more files that match the specified extension
+     * @return a list of zero or more files that match the specified extension
      */
-    public static File[] listFiles(final File dir, final String extension) {
-        return extension == null
+    public static List<File> listFiles(final File dir, final String extension) {
+        if (dir == null || !dir.isDirectory()) {
+            return List.of();
+        }
+        File[] files = extension == null
                 ? dir.listFiles(f -> !f.isDirectory() && getExtension(f.getName()) == null)
                 : dir.listFiles(f -> !f.isDirectory() && extension.equalsIgnoreCase(getExtension(f.getName())));
+        return files == null || files.length == 0 ? List.of() : List.of(files);
     }
 
     /**
@@ -2063,9 +2091,4 @@ public final class Handy {
      * A constant empty array of <tt>String</tt>.
      */
     public static final String[] NO_ARGS = new String[0];
-
-    /**
-     * A constant empty array of <tt>File</tt>.
-     */
-    public static final File[] NO_FILES = new File[0];
 }

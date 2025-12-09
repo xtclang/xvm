@@ -6,6 +6,7 @@ import java.io.File;
 import java.nio.file.attribute.FileTime;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -24,15 +25,15 @@ public class ResourceDir {
      *                     location to use as the entire resource path
      */
     public ResourceDir(File resourceLoc) {
-        this(new File[] {resourceLoc});
+        this(List.of(resourceLoc));
     }
 
     /**
-     * @param resourcePath  the non-null array of non-null File objects indicating the sequence
+     * @param resourcePath  the non-null list of non-null File objects indicating the sequence
      *                      of directory (or single file) locations to use as the resource path
      */
-    public ResourceDir(File[] resourcePath) {
-        this(null, "", resourcePath.clone());
+    public ResourceDir(List<File> resourcePath) {
+        this(null, "", new ArrayList<>(resourcePath));
 
         for (File file : resourcePath) {
             if (file == null) {
@@ -47,10 +48,10 @@ public class ResourceDir {
     }
 
     /**
-     * @param resourcePath  the non-null array of non-null File objects indicating the sequence
+     * @param resourcePath  the non-null list of non-null File objects indicating the sequence
      *                      of directory (or single file) locations to use as the resource path
      */
-    protected ResourceDir(ResourceDir parent, String name, File[] resourcePath) {
+    protected ResourceDir(ResourceDir parent, String name, List<File> resourcePath) {
         this.parent       = parent;
         this.name         = name;
         this.resourcePath = resourcePath;
@@ -75,7 +76,7 @@ public class ResourceDir {
             while (parentDir != null && parentDir.isDirectory()) {
                 File resDir = new File(parentDir, "resources");
                 if (resDir.isDirectory()) {
-                    return new ResourceDir(new File[] {srcDir, resDir});
+                    return new ResourceDir(List.of(srcDir, resDir));
                 }
 
                 // don't go "up" past the project directory
@@ -88,7 +89,7 @@ public class ResourceDir {
         }
 
         if (srcDir != null) {
-            return new ResourceDir(new File[] {srcDir});
+            return new ResourceDir(List.of(srcDir));
         }
 
         return NoResources;
@@ -152,11 +153,11 @@ public class ResourceDir {
     }
 
     /**
-     * @return an array of File objects, each of which represents a resource or a resource
+     * @return a list of File objects, each of which represents a resource or a resource
      *         directory
      */
-    public File[] getLocations() {
-        return resourcePath.clone();
+    public List<File> getLocations() {
+        return List.copyOf(resourcePath);
     }
 
     /**
@@ -209,7 +210,7 @@ public class ResourceDir {
 
         return subdirs == null
                 ? null
-                : new ResourceDir(this, name, subdirs.toArray(new File[0]));
+                : new ResourceDir(this, name, subdirs);
     }
 
     /**
@@ -263,11 +264,14 @@ public class ResourceDir {
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder().append("ResourceDir(");
-        for (int i = 0, c = resourcePath.length; i < c; ++i) {
-            if (i > 0) {
+        boolean first = true;
+        for (File file : resourcePath) {
+            if (first) {
+                first = false;
+            } else {
                 buf.append(", ");
             }
-            buf.append(resourcePath[i]);
+            buf.append(file);
         }
         return buf.append(')').toString();
     }
@@ -275,11 +279,11 @@ public class ResourceDir {
     /**
      * A ResourceDir that represents an empty set of resources.
      */
-    public static final ResourceDir NoResources = new ResourceDir(new File[0]);
+    public static final ResourceDir NoResources = new ResourceDir(List.of());
 
     private final ResourceDir parent;
 
     private final String name;
 
-    private final File[] resourcePath;
+    private final List<File> resourcePath;
 }

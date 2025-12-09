@@ -2,6 +2,7 @@ package org.xvm.api;
 
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -125,9 +126,21 @@ public class Connector {
      * Invoke an XTC method with a void return and specified arguments.
      *
      * @param method  the method structure
-     * @param asArg   arguments
+     * @param args    arguments as a list
+     */
+    public void invoke0(MethodStructure method, List<String> args) {
+        invoke0(method, args.toArray(new String[0]));
+    }
+
+    /**
+     * Invoke an XTC method with a void return and specified arguments.
+     *
+     * @param method  the method structure
+     * @param asArg   arguments (must not be null)
      */
     public void invoke0(MethodStructure method, String... asArg) {
+        assert asArg != null;
+
         if (!m_fStarted) {
             throw new IllegalStateException("The container has not been started");
         }
@@ -138,7 +151,7 @@ public class Connector {
 
         switch (method.getRequiredParamCount()) {
         case 0:
-            if (asArg != null) {
+            if (asArg.length > 0) {
                 assert method.getParamCount() > 0;
                 TypeConstant typeArg = method.getParam(0).getType();
 
@@ -151,10 +164,7 @@ public class Connector {
             TypeConstant typeArg = method.getParam(0).getType();
             assert typeStrings.isA(typeArg);
             // the method requires an array that we can supply
-            ahArg = new ObjectHandle[] {
-                asArg == null
-                    ? xString.ensureEmptyArray()
-                    : xString.makeArrayHandle(asArg)};
+            ahArg = new ObjectHandle[]{xString.makeArrayHandle(asArg)};
             break;
         }
         }
