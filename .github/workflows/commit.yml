@@ -217,7 +217,7 @@ jobs:
                 
                 echo "🧪 Running manual tests inline (cache still hot)..."
                 inspect_gradle_cache "before manual tests"
-                manual_task_main=$( [ "${{ env.run_manual_tests_parallel }}" = "true" ] && echo "runParallel" || echo "runAllTestTasks" )
+                manual_task_main=$( [ "${{ env.run_manual_tests_parallel }}" = "true" ] && echo "runAllTestTasksParallel" || echo "runAllTestTasks" )
                 echo "Running manual tests (main task: $manual_task_main)"
                 ./gradlew $GRADLE_OPTIONS manualTests:runXtc manualTests:runOne -PtestName=TestMisc manualTests:runTwoTestsInSequence "manualTests:$manual_task_main"        
                 inspect_gradle_cache "after manual tests"
