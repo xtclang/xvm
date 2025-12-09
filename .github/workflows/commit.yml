@@ -214,13 +214,22 @@ jobs:
                     echo "⏭️ Manual tests skipped (disabled)"
                     exit 0
                 fi
+                
                 echo "🧪 Running manual tests inline (cache still hot)..."
                 inspect_gradle_cache "before manual tests"
                 manual_task_main=$( [ "${{ env.run_manual_tests_parallel }}" = "true" ] && echo "runParallel" || echo "runAllTestTasks" )
                 echo "Running manual tests (main task: $manual_task_main)"
-                ./gradlew $GRADLE_OPTIONS manualTests:runXtc manualTests:runOne -PtestName=TestMisc manualTests:runTwoTestsInSequence "manualTests:$manual_task_main"
+                ./gradlew $GRADLE_OPTIONS manualTests:runXtc manualTests:runOne -PtestName=TestMisc manualTests:runTwoTestsInSequence "manualTests:$manual_task_main"        
                 inspect_gradle_cache "after manual tests"
                 echo "✅ Manual tests completed"
+
+            # TODO:
+            # name: XTC App Template Integration Test
+            #  if: success() && matrix.os == 'ubuntu-latest'
+            #  ## 1) Clone out xtc-app-template from github.com/xtclang/xtc-app-template or wharever it is.
+            #  ## 2) Run gradlew publishLocal on the xvm repo we are testing in this commit.yml file.
+            #  ## 3) cd into the xtc-app-template folder and run ./gradlew greet, which should work and not fail
+            #  uses: act
 
             - name: Upload XDK distribution artifact
               if: success() && matrix.os == 'ubuntu-latest'

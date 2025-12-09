@@ -1,127 +1,235 @@
 package org.xvm.tool;
 
-
-import java.io.File;
-import java.io.IOException;
-
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
-import org.xvm.asm.Constants;
+import org.xvm.asm.BuildInfo;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileRepository;
-import org.xvm.asm.FileStructure;
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
-
 import org.xvm.asm.constants.ModuleConstant;
-
 import org.xvm.compiler.BuildRepository;
-
+import org.xvm.tool.LauncherOptions.CompilerOptions;
+import org.xvm.tool.LauncherOptions.DisassemblerOptions;
+import org.xvm.tool.LauncherOptions.RunnerOptions;
 import org.xvm.tool.ModuleInfo.Node;
-
-import org.xvm.util.Handy;
-import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
-import static org.xvm.tool.ModuleInfo.isExplicitCompiledFile;
+import java.io.File;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Stream;
 
-import static org.xvm.util.Handy.parseDelimitedString;
-import static org.xvm.util.Handy.parseStringMap;
-import static org.xvm.util.Handy.quotedString;
-import static org.xvm.util.Handy.resolveFile;
-import static org.xvm.util.Handy.toPathString;
+import static org.xvm.asm.Constants.*;
+import static org.xvm.tool.ModuleInfo.isExplicitCompiledFile;
+import static org.xvm.util.Handy.*;
+import static org.xvm.util.Severity.*;
 
 
 /**
  * The "launcher" commands:
  *
- * <ul><li> <code>xcc</code> <i>("ecstasy")</i> routes to {@link Compiler}
- * </li><li> <code>xec</code> <i>("exec")</i> routes to {@link Runner}
+ * <ul><li> {@code xcc} <i>("ecstasy")</i> routes to {@link Compiler}
+ * </li><li> {@code xec} <i>("exec")</i> routes to {@link Runner}
  * </li></ul>
+ *
+ * @param <T> the Options type for this launcher
  */
-public abstract class Launcher
-        implements ErrorListener {
+public abstract class Launcher<T extends LauncherOptions> implements ErrorListener {
+
+    private static final Locale DEFAULT_LOCALE = Locale.getDefault();
+
+    private static final int JDK_VERSION_MIN = 21;
+
     /**
-     * Entry point from the OS.
-     *
-     * @param asArg  command line arguments
+     * Cached modules.
      */
-    public static void main(String[] asArg) {
+    protected final Map<File, ModuleInfo> moduleCache;
+
+    /**
+     * The parsed options.
+     */
+    protected T m_options;
+
+    /**
+     * A representation of the Console (e.g. terminal) that this tool is running in.
+     */
+    protected final Console m_console;
+
+    /**
+     * Optional ErrorListener that receives ALL errors (tool-level and compilation).
+     * When provided (not null), errors are forwarded for external programmatic access.
+     * Console displays errors, but m_errors provides structured access.
+     */
+    protected final ErrorListener m_errors;
+
+    /**
+     * The worst severity issue encountered thus far.
+     * Tracked in Launcher for control flow decisions (abort/continue).
+     */
+    protected Severity m_sevWorst = NONE;
+
+    /**
+     * The number of times that errors have been suspended without being resumed.
+     */
+    protected int m_cSuspended;
+
+    /**
+     * Constructor for programmatic invocation (uses pre-built Options).
+     *
+     * @param options the pre-configured Options
+     * @param console representation of the terminal within which this command is run (null = default)
+     * @param errors optional ErrorListener to receive all errors (null = BLACKHOLE)
+     */
+    protected Launcher(final T options, final Console console, final ErrorListener errors) {
+        m_console = console == null ? DEFAULT_CONSOLE : console;
+        m_errors = errors == null ? ErrorListener.BLACKHOLE : errors;
+        m_options = options;
+        moduleCache = new HashMap<>();
+    }
+
+    /**
+     * Entry point from the OS. The only thing main should do is turn any return values from processing
+     * into a {@code System.exit}, that terminates the process with a system exit code based on this status
+     *
+     * @param asArg  command line arguments (first arg is command name: xcc, xec, or xtc)
+     */
+    static void main(final String[] asArg) {
         try {
-            // use System.exit() to communicate the result of execution back to the caller
             System.exit(launch(asArg));
-        } catch (LauncherException e) {
-            System.exit(e.error ? 1 : 0);
+        } catch (final LauncherException e) {
+            System.exit(e.getExitCode());
         }
     }
 
     /**
      * Helper method for external launchers.
-
+     * Creates a CliConsole for command-line usage.
+     *
      * @param asArg  command line arguments
      *
      * @return the result of the corresponding tool "launch" call
      *
      * @throws LauncherException if an unrecoverable exception occurs
      */
-    public static int launch(String[] asArg) throws LauncherException {
-        int argc = asArg.length;
-        if (argc < 1) {
+    public static int launch(final String[] asArg) {
+        if (asArg.length < 1) {
             System.err.println("Command name is missing");
             return 1;
         }
 
-        String cmd = asArg[0];
+        final var console = new Console() {};
+        return launch(
+                stripDebugPrefix(asArg[0]),
+                Arrays.copyOfRange(asArg, 1, asArg.length),
+                console,
+                null);
+    }
 
-        --argc;
-        String[] argv = new String[argc];
-        System.arraycopy(asArg, 1, argv, 0, argc);
-
-        // if the command is prefixed with "debug", then strip that off
-        if (cmd.length() > 5 && cmd.toLowerCase().startsWith("debug")) {
-            cmd = cmd.substring("debug".length());
-            if (cmd.charAt(0) == '_') {
-                cmd = cmd.substring(1);
-            }
-        }
-
-        switch (cmd) {
-        case "xtc":
-            return Ecstasy.launch(argv);
-
-        case "xcc":
-            return Compiler.launch(argv);
-
-        case "xec":
-            return Runner.launch(argv);
-
-        default:
-            System.err.println("Command name \"" + cmd + "\" is not supported");
+    /**
+     * Executes a launcher command and returns an exit code.
+     * Use this when calling from a daemon or other long-running process.
+     *
+     * @param cmd command name (xcc or xec)
+     * @param args command line arguments (without the command name)
+     * @param console console for output (must not be null)
+     * @param errListener optional ErrorListener to receive errors, or null
+     * @return exit code (0 for success, non-zero for error)
+     */
+    public static int launch(final String cmd, final String[] args, final Console console, final ErrorListener errListener) {
+        try {
+            final LauncherOptions options = switch (cmd) {
+                case Compiler.COMMAND_NAME -> CompilerOptions.parse(args);
+                case Runner.COMMAND_NAME -> RunnerOptions.parse(args);
+                case Disassembler.COMMAND_NAME -> DisassemblerOptions.parse(args);
+                default -> {
+                    console.log(ERROR, "Command name {} is not supported", quoted(cmd));
+                    yield null;
+                }
+            };
+            return options != null ? launch(options, console, errListener) : 1;
+        } catch (final IllegalArgumentException e) {
+            console.log(ERROR, e.getMessage());
             return 1;
         }
     }
 
     /**
-     * @param asArgs  the Launcher's command-line arguments
+     * Launch a tool directly with pre-built options.
+     * This is the preferred API for programmatic invocation as it avoids the overhead
+     * of serializing options to command-line strings and parsing them back.
+     *
+     * @param options pre-built options (CompilerOptions, RunnerOptions, or DisassemblerOptions)
+     * @param console console for output (must not be null)
+     * @param errListener optional ErrorListener to receive errors, or null
+     * @return exit code (0 for success, non-zero for error)
      */
-    public Launcher(String[] asArgs, Console console) {
-        m_asArgs  = asArgs;
-        m_console = console == null ? DefaultConsole : console;
+    public static int launch(final LauncherOptions options, final Console console, final ErrorListener errListener) {
+        if (options == null) {
+            console.log(ERROR, "Options must not be null");
+            return 1;
+        }
+
+        final Launcher<?> launcher = switch (options) {
+            case final CompilerOptions opts -> new Compiler(opts, console, errListener);
+            case final RunnerOptions opts -> new Runner(opts, console, errListener);
+            case final DisassemblerOptions opts -> new Disassembler(opts, console, errListener);
+            default -> {
+                console.log(ERROR, "Unknown options type: {}", options.getClass().getName());
+                yield null;
+            }
+        };
+
+        if (launcher == null) {
+            return 1;
+        }
+
+        try {
+            return launcher.run();
+        } catch (final LauncherException e) {
+            if (e.isError()) {
+                console.log(ERROR, e.getMessage());
+            }
+            return e.getExitCode();
+        } catch (final Exception e) {
+            console.log(ERROR, "Unexpected error: {}", e.getMessage());
+            return 1;
+        }
+    }
+
+    /**
+     * Helper method to insert a command name at the beginning of an argument array.
+     * Used by subclass main() methods to delegate to Launcher.main().
+     *
+     * @param cmd the command name to insert
+     * @param args the existing arguments
+     * @return new array with command inserted at the beginning
+     */
+    protected static String[] insertCommand(final String cmd, final String[] args) {
+        return Stream.concat(Stream.of(cmd), Arrays.stream(args)).toArray(String[]::new);
+    }
+
+    /**
+     * Strips the debug prefix from a command name if present.
+     * Supports both "debug_xec" and "debugxec" formats.
+     *
+     * @param cmd the raw command name potentially with debug prefix
+     * @return the command name with debug prefix stripped, or the origensurenal if no prefix found
+     */
+    private static String stripDebugPrefix(final String cmd) {
+        String cmdLower = cmd.toLowerCase(DEFAULT_LOCALE);
+        return Arrays.stream(DEBUG_PREFIXES)
+                .filter(cmdLower::startsWith)
+                .findFirst()
+                .map(String::length)
+                .map(cmd::substring)
+                .orElse(cmd);
     }
 
     /**
@@ -129,34 +237,37 @@ public abstract class Launcher
      *
      * @return the result of the {@link #process} call.
      */
+    @SuppressWarnings({"AssertWithSideEffects", "ConstantValue"})
     public int run() {
-        Options opts = options();
+        final T opts = options();
 
-        boolean fHelp = opts.parse(m_asArgs);
-        if (Runtime.version().version().getFirst() < 21) {
-            log(Severity.INFO, "The suggested minimum JVM version is 21; this JVM version ("
-                    + Runtime.version() + ") appears to be older");
+        final Runtime.Version jdkVersion = Runtime.version();
+        if (jdkVersion.version().getFirst() < JDK_VERSION_MIN) {
+            log(INFO, "The suggested minimum JVM version is 21; this JVM version ({}) appears to be older", Runtime.version());
         } else {
-            log(Severity.INFO, "JVM version: " + Runtime.version());
+            log(INFO, "JVM version: {}", Runtime.version());
+            // TODO: Use a less warning prone way to determine if -ea is in use.
             boolean fAssertsEnabled = false;
             assert  fAssertsEnabled = true;
-            log(Severity.INFO, "Java assertions are " + (fAssertsEnabled ? "enabled" : "disabled"));
+            log(INFO, "Java assertions are {}", fAssertsEnabled ? "enabled" : "disabled");
         }
 
-        checkErrors(fHelp);
+        if (opts.showHelp()) {
+            displayHelp();
+            return 0;
+        }
 
-        if (opts.verbose()) {
+        if (opts.isVerbose()) {
             out();
-            out(opts);
+            out("Options: " + opts);
             out();
         }
 
-        opts.validate();
+        validateOptions();
         checkErrors();
 
-        int result = process();
-
-        if (opts.verbose()) {
+        final int result = process();
+        if (opts.isVerbose()) {
             out();
         }
         return result;
@@ -173,27 +284,52 @@ public abstract class Launcher
     // ----- text output and error handling --------------------------------------------------------
 
     /**
-     * Log a message of a specified severity.
+     * Log a tool-level message with template substitution (SLF4J-style).
+     * Use {} placeholders in the template for parameter substitution.
+     * <p>
+     * Tool-level logs (file not found, invalid options, etc.) are displayed via Console
+     * and tracked in Launcher for control flow, but NOT sent to ErrorListener.
+     * ErrorListener is only for compilation/runtime errors from compiler/runner.
+     * <p>
+     * If severity is FATAL, this method throws LauncherException immediately after logging.
      *
-     * @param sev   the severity (may indicate an error)
-     * @param sMsg  the message or error to display
+     * @param sev       the severity (may indicate an error)
+     * @param template  the message template with {} placeholders
+     * @param params    parameters to substitute into the template
      */
-    protected void log(Severity sev, String sMsg) {
+    protected void log(final Severity sev, final String template, final Object... params) {
+        log(sev, null, template, params);
+    }
+
+    /**
+     * Log an exception with an optional message template.
+     * Use {} placeholders in the template for parameter substitution.
+     * The exception message will be included in the Console
+     * <p>
+     * Tool-level exception logs are displayed via Console and tracked in Launcher,
+     * but NOT sent to ErrorListener.
+     * <p>
+     * If severity is FATAL, this method throws LauncherException immediately after logging.
+     *
+     * @param sev       the severity (may indicate an error)
+     * @param cause     the exception that caused this log entry
+     * @param template  optional message template with {} placeholders (if null, uses exception message)
+     * @param params    parameters to substitute into the template
+     */
+    protected void log(final Severity sev, final Throwable cause, final String template, final Object... params) {
         if (errorsSuspended()) {
             return;
         }
-
-        if (sev.compareTo(m_sevWorst) > 0) {
-            m_sevWorst = sev;
+        // 1) Track worst severity in Launcher
+        // 2) Filter and display on Console if bad enough to print
+        m_sevWorst = worstOf(m_sevWorst, sev);
+        if (isBadEnoughToPrint(sev)) {
+            m_console.log(sev, cause, template, params);
         }
-
-        Options opts = options();
-        if (opts.isBadEnoughToPrint(sev)) {
-            m_console.log(sev, sMsg);
-        }
-
-        if (sev == Severity.FATAL) {
-            abort(true);
+        // TODO: Slightly scary - we should probably do our own error handling.
+        // FATAL errors abort immediately
+        if (sev == FATAL) {
+            throw new LauncherException(true, Console.formatTemplate(template, params), cause);
         }
     }
 
@@ -202,10 +338,8 @@ public abstract class Launcher
      *
      * @param errs  the ErrorList
      */
-    protected void log(ErrorList errs) {
-        for (ErrorInfo err : errs.getErrors()) {
-            log(err.getSeverity(), err.toString());
-        }
+    protected void log(final ErrorList errs) {
+        errs.getErrors().forEach(err -> log(err.getSeverity(), err.toString()));
     }
 
     /**
@@ -218,7 +352,7 @@ public abstract class Launcher
     /**
      * Print the String value of some object to the terminal.
      */
-    public void out(Object o) {
+    public void out(final Object o) {
         m_console.out(o);
     }
 
@@ -232,13 +366,14 @@ public abstract class Launcher
     /**
      * Print the String value of some object to the terminal.
      */
-    public void err(Object o) {
+    public void err(final Object o) {
         m_console.err(o);
     }
 
     /**
      * Suspend error detection.
      */
+    @SuppressWarnings("unused")
     protected void suspendErrors() {
         ++m_cSuspended;
     }
@@ -253,109 +388,44 @@ public abstract class Launcher
     /**
      * Suspend error detection.
      */
+    @SuppressWarnings("unused")
     protected void resumeErrors() {
         if (m_cSuspended > 0) {
             --m_cSuspended;
         } else {
-            log(Severity.FATAL, "Attempt to resume errors when errors have not been suspended");
+            log(FATAL, "Attempt to resume errors when errors have not been suspended");
+            // log(FATAL) throws LauncherException immediately
         }
     }
 
     /**
      * Determine if a previously logged error should cause the program to exit, and if so, exit.
+     * Throws LauncherException if errors have accumulated that are severe enough to abort.
+     * <p>
+     * Checks BOTH Console (tool errors) AND ErrorListener delegate (compiler errors).
      */
     protected void checkErrors() {
-        if (options().isBadEnoughToAbort(m_sevWorst)) {
-            abort(true);
+        if (isAbortDesired()) {
+            throw new LauncherException(true, null, null);
         }
-    }
-
-    /**
-     * Determine if a previously logged error should cause the program to exit, and if so, exit.
-     *
-     * @param fHelp  true iff the help message should be displayed and the program should exit
-     */
-    protected void checkErrors(boolean fHelp) {
-        if (fHelp) {
-            displayHelp();
-        }
-
-        if (fHelp || options().isBadEnoughToAbort(m_sevWorst)) {
-            abort(options().isBadEnoughToAbort(m_sevWorst));
-        }
-    }
-
-    /**
-     * Abort the command line with or without an error status.
-     *
-     * @param fError  true to abort with an error status
-     */
-    protected void abort(boolean fError) {
-        throw new LauncherException(fError);
     }
 
     /**
      * Display a help message describing how to use this command-line tool.
+     * Delegates to the options class for help text generation.
      */
-    public void displayHelp() {
+    protected void displayHelp() {
         out();
         out(desc());
-        out();
-
-        Options             options   = options();
-        Map<String, Option> mapOpts   = options.options();
-        String[]            asName    = mapOpts.keySet().toArray(Handy.NO_ARGS);
-        int                 maxSyntax = Arrays.stream(asName).map(n ->
-                                mapOpts.get(n).syntax().length()).max(Integer::compareTo).get();
-        Arrays.sort(asName, (s1, s2) -> {
-            if (s1.equals(s2)) {
-                return 0;
-            }
-            if (s1.equals(ArgV)) {
-                return 1;
-            }
-            if (s2.equals(ArgV)) {
-                return -1;
-            }
-            if (s1.equals(Trailing)) {
-                return 1;
-            }
-            if (s2.equals(Trailing)) {
-                return -1;
-            }
-            int n = s1.compareToIgnoreCase(s2);
-            if (n == 0) {
-                n = s1.compareTo(s2);
-            }
-            return n;
-        });
-
-        out("Options:");
-        HashSet<String> alreadyDisplayed = new HashSet<>();
-        for (String sName : asName) {
-            Option opt = mapOpts.get(sName);
-            if (opt.posixName() != null && alreadyDisplayed.contains(opt.posixName()) ||
-                opt.linuxName() != null && alreadyDisplayed.contains(opt.linuxName())) {
-                continue;
-            }
-
-            String sMsg = sName.equals(Trailing) && !mapOpts.containsKey(ArgV)
-                    ? ArgV
-                    : opt.syntax();
-
-            StringBuilder sb = new StringBuilder();
-            sb.append("  ")
-              .append(sMsg);
-
-            for (int i = 0, c = maxSyntax - sMsg.length() + 4; i < c; ++i) {
-                sb.append(' ');
-            }
-
-            sb.append(options.descriptionFor(sName));
-            out(sb);
-            alreadyDisplayed.add(sName);
+        final var helpText = options().getHelpText();
+        if (!helpText.isEmpty()) {
+            out();
+            out(helpText);
+            out();
+            return;
         }
-
+        out();
+        out("Use --help for detailed options.");
         out();
     }
 
@@ -366,777 +436,97 @@ public abstract class Launcher
         return this.getClass().getSimpleName();
     }
 
+    // ----- ErrorListener implementation ----------------------------------------------------------
+
     /**
-     * Produce a string representation of the specified option value.
+     * Log a compilation error (ErrorInfo from AST nodes).
+     * Displays via Console and forwards to external ErrorListener if provided.
      *
-     * @param oVal  the value
-     * @param form  the form of the value
-     *
-     * @return a string representation of the value
+     * @param err the error information
+     * @return true if compilation should abort
      */
-    public static String stringFor(Object oVal, Form form) {
-        switch (form) {
-        case Name:
-        case Boolean:
-        case Int:
-        case AsIs:
-            return String.valueOf(oVal);
-
-        case String:
-            return quotedString((String) oVal);
-
-        case File:
-            return toPathString((File) oVal);
-
-        case Repo:
-            StringBuilder sb    = new StringBuilder();
-            boolean      first = true;
-            for (File file : (List<File>) oVal) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(':');
-                }
-                sb.append(toPathString(file));
-            }
-            return sb.toString();
-
-        default:
-            throw new IllegalStateException();
-        }
-    }
-
-
-    // ----- ErrorListener interface ---------------------------------------------------------------
-
-    @Override public boolean log(ErrorInfo err) {
+    @Override
+    public boolean log(final ErrorInfo err) {
+        m_sevWorst = worstOf(m_sevWorst, err.getSeverity());
         log(err.getSeverity(), err.toString());
+        m_errors.log(err);
         return isAbortDesired();
     }
 
-    @Override public boolean isAbortDesired() {
-        return options().isBadEnoughToAbort(m_sevWorst);
+    /**
+     * Check if compilation should abort based on severity of errors encountered.
+     *
+     * @return true if errors are bad enough to abort
+     */
+    @Override
+    public boolean isAbortDesired() {
+        // Check Launcher's tracked severity for control flow decision
+        return m_sevWorst.isAtLeast(ERROR);
     }
 
-    @Override public boolean hasSeriousErrors() {
-        return m_sevWorst.compareTo(Severity.ERROR) >= 0;
+    /**
+     * Check if any serious errors (ERROR or worse) have been logged.
+     *
+     * @return true if serious errors encountered
+     */
+    @Override
+    public boolean hasSeriousErrors() {
+        return m_sevWorst.isAtLeast(ERROR);
     }
 
-    @Override public boolean isSilent() {
+    /**
+     * Check if error logging is currently suspended.
+     *
+     * @return true if errors are suspended
+     */
+    @Override
+    public boolean isSilent() {
         return errorsSuspended();
     }
 
-
-    // ----- options -------------------------------------------------------------------------------
+    /**
+     * Validate the options. This is called after options have been parsed and set.
+     * Subclasses should implement validation logic that requires access to instance state
+     * (like error listeners, logging, etc.).
+     *
+     * <p>Options classes should remain pure data/configuration holders. All validation
+     * logic that requires business logic or instance state belongs here.
+     */
+     protected abstract void validateOptions();
 
     /**
-     * @return the Options for this Launcher
+     * Determine if a message should be printed based on severity and verbose settings.
+     * Subclasses can override for custom filtering (e.g., Compiler strictness levels).
+     *
+     * @param sev the severity to check
+     * @return true if the message should be printed
      */
-    public Options options() {
-        Options options = m_options;
-        if (options == null) {
-            m_options = options = instantiateOptions();
-        }
-        return options;
+    protected boolean isBadEnoughToPrint(final Severity sev) {
+        return options().isVerbose() || sev.isAtLeast(WARNING);
     }
 
     /**
-     * @return a new Options object
+     * Determine if a message or error of a particular severity should cause the program to exit.
+     * Subclasses can override this to implement custom abort behavior.
+     *
+     * @param sev the severity to evaluate
+     * @return true if an error of that severity should exit the program
      */
-    protected abstract Options instantiateOptions();
-
+    protected boolean isBadEnoughToAbort(final Severity sev) {
+        return sev.isAtLeast(ERROR);
+    }
     /**
-     * A collection point and validator for Launcher options.
+     * Get the parsed options for this launcher.
+     *
+     * @return the options instance
      */
-    public class Options {
-        /**
-         * Construct a holder for command-line options.
-         */
-        public Options() {
-            addOption(null, "help",    Form.Name, false, "Display this help message");
-            addOption("d",  "deduce",  Form.Name, false, "Automatically deduce locations when possible");
-            addOption("v",  "verbose", Form.Name, false, "Enable verbose logging and messages");
-            addOption(null, "version", Form.Name, false, "Display the Ecstasy runtime version");
-        }
-
-        /**
-         * Determine the options that are available for the Launcher.
-         *
-         * @return a Map containing the named options that are available, and the Form and other
-         *         info for each
-         */
-        public Map<String, Option> options() {
-            return m_mapOptions;
-        }
-
-        /**
-         * (Internal) Add meta-data for an option that is supported for this command line tool.
-         *
-         * @param posixName  the POSIX-like command line switch ("-X" would be passed as "X")
-         * @param linuxName  the Linux-like command line switch ("--test" would be passed as "test")
-         * @param form       the form of the data for the option (or {@link Form#Name} for a switch)
-         * @param multi      pass true if the option can appear multiple times on the command line
-         * @param desc       a human-readable description of the option, for the help display
-         */
-        protected void addOption(String posixName, String linuxName, Form form, boolean multi, String desc) {
-            assert posixName != null || linuxName != null;
-            assert posixName == null || posixName.length() == 1 || posixName.equals(ArgV) || posixName.equals(Trailing);
-            assert !Trailing.equals(posixName) || linuxName == null;
-            assert !ArgV    .equals(posixName) || linuxName == null;
-            assert form != null;
-
-            Option opt = new Option(posixName, linuxName, form, multi, desc);
-            if (posixName != null) {
-                var prev = options().put(posixName, opt);
-                assert prev == null;
-            }
-            if (linuxName != null && !linuxName.equals(posixName)) {
-                var prev = options().put(linuxName, opt);
-                assert prev == null;
-            }
-
-            assert ArgV.equals(posixName) == (form == Form.AsIs);
-            if (form == Form.AsIs) {
-                assert !m_fArgV;
-                assert multi;
-                m_fArgV = true;
-            }
-        }
-
-        /**
-         * Determine the form of the specified option.
-         *
-         * @param name  the name of the option
-         *
-         * @return the form of the option, or null if the option does not exist
-         */
-        public Form formOf(String name) {
-            Option opt = options().get(name);
-            return opt == null ? null : opt.form();
-        }
-
-        /**
-         * Determine the simplified form of the specified option name.
-         *
-         * @param name  the name of the option
-         *
-         * @return the simplest form of the option name, or null if the option does not exist
-         */
-        public String simplify(String name) {
-            Option opt = options().get(name);
-            return opt == null ? null : opt.simplestName();
-        }
-
-        /**
-         * Determine if the specified option can be specified more than once.
-         *
-         * @param name  the name of the option
-         *
-         * @return true iff the specified option can be specified more than once
-         */
-        public boolean allowMultiple(String name) {
-            Option opt = options().get(name);
-            return opt != null && opt.isMulti();
-        }
-
-        /**
-         * Determine the values of the various options for the Launcher.
-         *
-         * @return a Map containing the options that are set, and what the value is for each
-         */
-        public Map<String, Object> values() {
-            return m_mapValues;
-        }
-
-        /**
-         * Determine if an option has already specified.
-         *
-         * @param name  the name of the option
-         *
-         * @return true iff the option has already been specified
-         */
-        public boolean specified(String name) {
-            return values().containsKey(simplify(name));
-        }
-
-        /**
-         * Register that the specified option is specified.
-         *
-         * @param name  the name of the option
-         *
-         * @return true if the option is accepted; false if specifying the option is an error
-         */
-        public boolean specify(String name) {
-            name = simplify(name);
-            boolean fMulti;
-            if (formOf(name) == Form.Name &&
-                    ((fMulti = allowMultiple(name)) || !values().containsKey(name))) {
-                store(name, fMulti, "specified");
-                return true;
-            } else {
-                return false;
-            }
-        }
-
-        /**
-         * Register a value for the specified option.
-         *
-         * @param name   the name of the option
-         * @param value  the value for the option, a boolean
-         *
-         * @return true if the value is accepted; false if the value represents an error
-         */
-        public boolean specify(String name, boolean value) {
-            name = simplify(name);
-            boolean fMulti;
-            if (formOf(name) == Form.Boolean &&
-                    ((fMulti = allowMultiple(name)) || !values().containsKey(name))) {
-                store(name, fMulti, value);
-                return true;
-            } else {
-                return false;
-            }
-        }
-
-        /**
-         * Register a value for the specified option.
-         *
-         * @param name   the name of the option
-         * @param value  the value for the option, an int
-         *
-         * @return true if the value is accepted; false if the value represents an error
-         */
-        public boolean specify(String name, int value) {
-            name = simplify(name);
-            boolean multi;
-            if (formOf(name) == Form.Int &&
-                    ((multi = allowMultiple(name)) || !values().containsKey(name))) {
-                store(name, multi, value);
-                return true;
-            } else {
-                return false;
-            }
-        }
-
-        /**
-         * Register a value for the specified option.
-         *
-         * @param name   the name of the option
-         * @param value  the value for the option, a string
-         *
-         * @return true if the value is accepted; false if the value represents an error
-         */
-        public boolean specify(String name, String value) {
-            name = simplify(name);
-            boolean multi;
-            if (formOf(name) == Form.String &&
-                    ((multi = allowMultiple(name)) || !values().containsKey(name))) {
-                store(name, multi, value);
-                return true;
-            } else {
-                return false;
-            }
-        }
-
-        /**
-         * Register a value for the specified option.
-         *
-         * @param name  the name of the option
-         * @param file  the value for the option, a file
-         *
-         * @return true if the value is accepted; false if the value represents an error
-         */
-        public boolean specify(String name, File file) {
-            name = simplify(name);
-            boolean multi;
-            if (formOf(name) == Form.File &&
-                    ((multi = allowMultiple(name)) || !values().containsKey(name))) {
-                store(name, multi, file);
-                return true;
-            } else {
-                return false;
-            }
-        }
-
-        /**
-         * Register a value for the specified option.
-         *
-         * @param name   the name of the option
-         * @param files  the value for the option, a list of files
-         *
-         * @return true if the value is accepted; false if the value represents an error
-         */
-        public boolean specify(String name, List<File> files) {
-            name = simplify(name);
-            boolean multi;
-            if (formOf(name) == Form.Repo &&
-                    ((multi = allowMultiple(name)) || !values().containsKey(name))) {
-                store(name, multi, files);
-                return true;
-            } else {
-                return false;
-            }
-        }
-
-        /**
-         * Register a value for the specified option of the Pair Form (key/value).
-         *
-         * @param name  the name of the option
-         * @param pairs  the key/value pairs
-         *
-         * @return true if the value is accepted; false if the value represents an error
-         */
-        public boolean specify(String name, Map<String,String> pairs) {
-            name = simplify(name);
-            boolean multi;
-            if (formOf(name) == Form.Pair &&
-                    ((multi = allowMultiple(name)) || !values().containsKey(name) && pairs.size() <= 1)) {
-                if (!pairs.isEmpty()) {
-                    store(name, multi, pairs);
-                }
-                return true;
-            } else {
-                return false;
-            }
-        }
-
-        /**
-         * @return true iff the "show version" option was specified
-         */
-        boolean showVersion() {
-            return specified("version");
-        }
-
-        /**
-         * @return true iff the "deduce" option was specified
-         */
-        boolean deduce() {
-            return specified("deduce");
-        }
-
-        /**
-         * Parse the command line arguments into
-         *
-         * @param asArgs  the command line arguments to parse
-         *
-         * @return true iff help should be shown
-         */
-        public boolean parse(String[] asArgs) {
-            boolean fHelp = false;
-
-            if (asArgs == null) {
-                return fHelp;
-            }
-
-            String              sPrev    = null;
-            Map<String, Option> mapNames = options();
-
-            NextArg: for (int i = 0, c = asArgs.length; i < c; ++i) {
-                String sArg = asArgs[i];
-                assert sArg != null;
-                if (sArg.isEmpty()) {
-                    continue;
-                }
-
-                if (sPrev == null) {
-                    if (sArg.charAt(0) == '-') {
-                        // there are several possibilities:
-                        // 1) for any single "posix" argument:
-                        //    -arg                      // no value ("specified" for Name form)
-                        //    -arg=value                // '=' delimiter between arg and value
-                        //    -arg value                // value is in the next arg
-                        //    -arg key=value            // pair is the next arg (for Form=Pair)
-                        // 2) for any single "linux" argument:
-                        //    --arg                     // no value ("specified" for Name form)
-                        //    --arg=value               // '=' delimiter between arg and value
-                        //    --arg value               // value is in the next arg
-                        //    --arg key=value           // pair is the next arg (for Form=Pair)
-                        // 3) for multiple "posix" arguments (imagine that -A -B -C are all legal)
-                        //    -ABC                      // no value ("specified" for Name form)
-                        int     cch    = sArg.length();
-                        int     ofEq   = sArg.indexOf('=');
-                        boolean fEq    = ofEq >= 0;
-                        boolean fLinux = cch > 1 && sArg.charAt(1) == '-';
-                        boolean fPosix = !fLinux;
-                        String  sOpts  = sArg.substring(fPosix ? 1 : 2, fEq ? ofEq : cch);
-                        String  sOrig  = sOpts;
-                        String  sVal   = fEq ? sArg.substring(ofEq+1) : null;
-
-                        if (sOpts.isEmpty()) {
-                            log(Severity.FATAL, "Missing argument name. (Name is \"\".)");
-                        }
-
-                        if (fLinux && "help".equals(sOpts)) {
-                            fHelp = true;
-                            continue; // NextArg;
-                        }
-
-                        do {
-                            String sOpt;
-                            if (fPosix) {
-                                sOpt  = sOpts.substring(0,1);
-                                sOpts = sOpts.substring(1);
-                                if ("?".equals(sOpt)) {
-                                    fHelp = true;
-                                    continue;
-                                }
-                            } else {
-                                sOpt = sOpts;
-                            }
-
-                            Option opt = mapNames.get(sOpt);
-                            if (opt == null || !sOpt.equals(fPosix ? opt.posixName() : opt.linuxName())) {
-                                fHelp = true;
-                                if (opt == null && !mapNames.containsKey(sOrig)) {
-                                    log(Severity.ERROR, "Unknown argument: \"" + (fPosix ? "-" : "--") + sOpt + '\"');
-                                } else if (fPosix) {
-                                    log(Severity.ERROR, "Option \"-" + sOrig + "\" must use two preceding hyphens: \"--" + sOrig + "\"");
-                                } else {
-                                    log(Severity.ERROR, "Option \"--" + sOrig + "\" must use only one preceding hyphen: \"-" + sOrig + "\"");
-                                }
-                                continue NextArg;
-                            }
-
-                            Form   form  = opt.form();
-                            String sName = opt.simplestName();
-                            if (form == Form.Name) {
-                                // the name is either present or it is not
-                                if (specified(sName) && !allowMultiple(sName)) {
-                                    log(Severity.WARNING,
-                                            "Redundant option argument: \"-" + sOpt + '\"');
-                                } else {
-                                    specify(sName);
-                                }
-                            } else {
-                                if (sPrev != null) {
-                                    log(Severity.ERROR, "Options \"-" + sPrev + "\" and \"-" + sOpt
-                                            + "\" cannot appear in the same cluster, since they"
-                                            + " both require a trailing value");
-                                } else {
-                                    sPrev = sName;
-                                    sArg  = sVal;
-                                }
-                            }
-                        } while (fPosix && !sOpts.isEmpty());
-                    } else {
-                        Option optTrail = mapNames.get(Trailing);
-                        if (optTrail != null && (optTrail.isMulti() || !specified(Trailing))) {
-                            sPrev = Trailing;
-                        } else {
-                            Option optArgV = mapNames.get(ArgV);
-                            if (optArgV != null) {
-                                // take EVERYTHING, and take it AS IS
-                                List<String> listArgs = new ArrayList<>(c - i);
-                                listArgs.addAll(Arrays.asList(asArgs).subList(i, c));
-                                store(ArgV, true, listArgs);
-                                break;
-                            } else {
-                                log(Severity.ERROR,
-                                        "Unsupported argument: " + quotedString(sArg));
-                                fHelp = true;
-                            }
-                        }
-                    }
-                }
-
-                if (sPrev != null && sArg != null) {
-                    // this arg is an "option value" portion of some previous "option name"
-                    Form    form   = formOf(sPrev);
-                    boolean fMulti = allowMultiple(sPrev);
-                    Object  oVal   = null;
-                    assert form != null && form != Form.Name;
-                    switch (form) {
-                    case Boolean:
-                        if (sArg.length() == 1) {
-                            switch (sArg.charAt(0)) {
-                            case 'T': case 't':
-                            case 'Y': case 'y':
-                            case '1':
-                                oVal = true;
-                                break;
-
-                            case 'F': case 'f':
-                            case 'N': case 'n':
-                            case '0':
-                                oVal = false;
-                                break;
-                            }
-                        } else if ("true".equalsIgnoreCase(sArg) || "yes".equalsIgnoreCase(sArg)) {
-                            oVal = true;
-                        } else if ("false".equalsIgnoreCase(sArg) || "no".equalsIgnoreCase(sArg)) {
-                            oVal = true;
-                        }
-                        break;
-
-                    case Int:
-                        try {
-                            oVal = Integer.valueOf(sArg);
-                        } catch (NumberFormatException ignore) {}
-                        break;
-
-                    case String:
-                        if (sArg.isEmpty()) {
-                            oVal = "";
-                        } else if (sArg.charAt(0) == '\"') {
-                            if (sArg.length() >= 2 && sArg.charAt(sArg.length()-1) == '\"') {
-                                sArg = sArg.substring(1, sArg.length()-1);
-                            }
-                        } else {
-                            oVal = sArg;
-                        }
-                        break;
-
-                    case File:
-                        if (!sArg.isEmpty()) {
-                            List<File> listFiles;
-                            try {
-                                listFiles = resolvePath(sArg);
-                            } catch (IOException e) {
-                                log(Severity.ERROR, "Exception resolving path \"" + sArg + "\": " + e);
-                                break;
-                            }
-
-                            switch (listFiles.size()) {
-                            case 0:
-                                break;
-
-                            case 1:
-                                oVal = listFiles.getFirst();
-                                break;
-
-                            default:
-                                if (fMulti) {
-                                    oVal = listFiles;
-                                } else {
-                                    oVal = listFiles.getFirst();
-                                    log(Severity.ERROR, "Multiple (" + listFiles.size()
-                                            + ") files specified for \"" + sPrev
-                                            + "\", but only one file allowed");
-                                }
-                                break;
-                            }
-                        }
-                        break;
-
-                    case Repo:
-                        if (!sArg.isEmpty()) {
-                            List<File> repo = new ArrayList<>();
-                            for (String sPath : parseDelimitedString(sArg, File.pathSeparatorChar)) {
-                                List<File> files;
-                                try {
-                                    files = resolvePath(sPath);
-                                } catch (IOException e) {
-                                    log(Severity.ERROR, "Exception resolving path \""
-                                            + sPath + "\": " + e);
-                                    continue;
-                                }
-
-                                if (files.isEmpty()) {
-                                    log(Severity.ERROR, "Could not resolve: \"" + sPath + "\"");
-                                } else {
-                                    for (File file : files) {
-                                        if (file.canRead()) {
-                                            repo.add(file);
-                                        } else if (file.exists()) {
-                                            log(Severity.ERROR, (file.isDirectory() ? "Directory"
-                                                    : "File") + " not readable: " + file);
-                                        }
-                                    }
-                                }
-                            }
-                            oVal = repo;
-                        }
-                        break;
-
-                    case Pair:
-                        if (!sArg.isEmpty()) {
-                            oVal = parseStringMap(sArg);
-                        }
-                        break;
-                    }
-
-                    if (oVal == null) {
-                        log(Severity.ERROR, "Illegal " + form.name() + " value: \"" + sArg + '\"');
-                    } else {
-                        if (!specified(sPrev) || fMulti) {
-                            store(sPrev, fMulti, oVal);
-                        } else {
-                            log(Severity.ERROR, "A value for \"-" + sPrev
-                                    + "\" is specified more than once.");
-                        }
-                    }
-
-                    sPrev = null;
-                }
-            }
-
-            if (sPrev != null) {
-                // a trailing value was required
-                log(Severity.ERROR, "Missing value for \"" + sPrev + "\" option");
-            }
-
-            return fHelp;
-        }
-
-        /**
-         * Validate the options once the options have all been registered successfully.
-         */
-        public void validate() {
-        }
-
-        /**
-         * Obtain a description for the specified option.
-         *
-         * @param sName  the option name
-         *
-         * @return the option description
-         */
-        public String descriptionFor(String sName) {
-            Option opt = options().get(sName);
-            if (opt == null) {
-                return null;
-            }
-
-            String sDesc = opt.desc();
-            return sDesc == null
-                    ? opt.form().desc()
-                    : sDesc;
-        }
-
-        @Override
-        public String toString() {
-            StringBuilder sb = new StringBuilder("Options\n    {\n");
-            final String sIndent = "    ";
-            for (Entry<String, Object> entry : values().entrySet()) {
-                String  sName  = entry.getKey();
-                Object  oVal   = entry.getValue();
-                Form    form   = formOf(sName);
-                boolean fMulti = allowMultiple(sName);
-
-                if (sName.equals(Trailing)) {
-                    sb.append("    Target(s)");
-                } else {
-                    sb.append(sIndent)
-                      .append('-')
-                      .append(sName);
-                }
-
-                if (oVal instanceof Map) {
-                    sb.append(":\n");
-                    Map<String, String> map = (Map) oVal;
-                    for (Map.Entry<String, String> e : map.entrySet()) {
-                        sb.append(sIndent)
-                          .append("   ")
-                          .append(e.getKey())
-                          .append("=")
-                          .append(quotedString(String.valueOf(e.getValue())))
-                          .append('\n');
-                    }
-                } else if (fMulti || oVal instanceof List) {
-                    sb.append(":\n");
-                    List list = (List) oVal;
-                    int i = 0;
-                    for (Object oEach : list) {
-                        sb.append(sIndent)
-                          .append("   [")
-                          .append(i++)
-                          .append("]=")
-                          .append(stringFor(oEach, form == Form.Repo ? Form.File : form))
-                          .append('\n');
-                    }
-                } else if (form == Form.Name) {
-                    sb.append('\n');
-                } else {
-                    sb.append('=')
-                      .append(stringFor(oVal, form))
-                      .append('\n');
-                }
-            }
-            return sb.append("}").toString();
-        }
-
-        /**
-         * For options that are allowed to have multiple values, this will accumulate multiple
-         * values under a single name in an ArrayList.
-         *
-         * @param sName   the option name
-         * @param fMulti  true if the option can have multiple value
-         * @param value   the value to store, or append to the ArrayList for that option name
-         */
-        protected void store(String sName, boolean fMulti, Object value) {
-            if (value instanceof List) {
-                values().compute(sName, (k, v) -> {
-                    ArrayList list = v == null ? new ArrayList() : (ArrayList) v;
-                    list.addAll((List) value);
-                    return list;
-                });
-            } else if (value instanceof Map) {
-                values().compute(sName, (k, v) -> {
-                    Map map = v == null ? new ListMap() : (ListMap) v;
-                    map.putAll((Map) value);
-                    return map;
-                });
-            } else if (fMulti) {
-                values().compute(sName, (k, v) -> {
-                    ArrayList list = v == null ? new ArrayList() : (ArrayList) v;
-                    list.add(value);
-                    return list;
-                });
-            } else {
-                values().putIfAbsent(sName, value);
-            }
-        }
-
-        // ----- error handling ----------------------------------------------------------------
-
-        /**
-         * @return true if a verbose option has been specified
-         */
-        boolean verbose() {
-            return specified("verbose");
-        }
-
-        /**
-         * Determine if a message or error of a particular severity should be displayed.
-         *
-         * @param sev  the severity to evaluate
-         *
-         * @return true if an error of that severity should be displayed
-         */
-        boolean isBadEnoughToPrint(Severity sev) {
-            return verbose() || sev.compareTo(Severity.WARNING) >= 0;
-        }
-
-        /**
-         * Determine if a message or error of a particular severity should cause the program to
-         * exit.
-         *
-         * @param sev  the severity to evaluate
-         *
-         * @return true if an error of that severity should exit the program
-         */
-        boolean isBadEnoughToAbort(Severity sev) {
-            return sev.compareTo(Severity.ERROR) >= 0;
-        }
-
-        // ----- fields ------------------------------------------------------------------------
-
-        /**
-         * The configured map options.
-         */
-        private final Map<String, Option> m_mapOptions  = new HashMap<>();
-
-        /**
-         * The values of the various command line options.
-         */
-        private final ListMap<String, Object> m_mapValues = new ListMap<>();
-
-        /**
-         * Set to true if an "AsIs" option is present.
-         */
-        private boolean m_fArgV;
+    protected T options() {
+        return m_options;
     }
 
+    protected final Console console() {
+        return m_console;
+    }
 
     // ----- repository management -----------------------------------------------------------------
 
@@ -1150,7 +540,7 @@ public abstract class Launcher
      *
      * @return the library repository, including a build repository at the head of the repo
      */
-    protected ModuleRepository configureLibraryRepo(List<File> path) {
+    protected ModuleRepository configureLibraryRepo(final List<File> path) {
         if (path == null || path.isEmpty()) {
             // this is the easiest way to deliver an empty repository
             return makeBuildRepo();
@@ -1172,7 +562,7 @@ public abstract class Launcher
      *
      * @return a new BuildRepository
      */
-    protected BuildRepository makeBuildRepo() {
+    protected static BuildRepository makeBuildRepo() {
         return new BuildRepository();
     }
 
@@ -1183,11 +573,10 @@ public abstract class Launcher
      *
      * @return the BuildRepository
      */
-    protected BuildRepository extractBuildRepo(ModuleRepository repoLib) {
-        if (repoLib instanceof BuildRepository repoBuild) {
+    protected static BuildRepository extractBuildRepo(final ModuleRepository repoLib) {
+        if (repoLib instanceof final BuildRepository repoBuild) {
             return repoBuild;
         }
-
         LinkedRepository repoLinked = (LinkedRepository) repoLib;
         return (BuildRepository) repoLinked.asList().getFirst();
     }
@@ -1212,39 +601,29 @@ public abstract class Launcher
 
     /**
      * Force load and link whatever modules are required by the compiler.
-     *
+     * <p>
      * Note: This implementation assumes that the read-through option on LinkedRepository is being
      * used.
      *
-     * @param reposLib  the repository to use, as it would be returned from
-     *                  {@link #configureLibraryRepo}
+     * @param reposLib  the repository to use, as it would be returned from {@link #configureLibraryRepo}
      */
-    protected void prelinkSystemLibraries(ModuleRepository reposLib) {
-        ModuleStructure moduleEcstasy = reposLib.loadModule(Constants.ECSTASY_MODULE);
-        if (moduleEcstasy == null) {
-            log(Severity.FATAL, "Unable to load module: " + Constants.ECSTASY_MODULE);
-        }
-
-        FileStructure structEcstasy = moduleEcstasy.getFileStructure();
-        if (structEcstasy != null) {
-            ModuleConstant idMissing = structEcstasy.linkModules(reposLib, false);
-            if (idMissing != null) {
-                log(Severity.FATAL, "Unable to link module " + Constants.ECSTASY_MODULE
-                    + " due to missing module:" + idMissing.getName());
+    protected void prelinkSystemLibraries(final ModuleRepository reposLib) {
+        for (final String moduleName : List.of(ECSTASY_MODULE, TURTLE_MODULE)) {
+            ModuleStructure module = reposLib.loadModule(moduleName);
+            if (module == null) {
+                log(FATAL, "Unable to load module: {}", moduleName);
+                // log(FATAL) throws LauncherException immediately - never gets here
+                return;
             }
-        }
 
-        ModuleStructure moduleTurtle = reposLib.loadModule(Constants.TURTLE_MODULE);
-        if (moduleTurtle == null) {
-            log(Severity.FATAL, "Unable to load module: " + Constants.TURTLE_MODULE);
-        }
-
-        FileStructure structTurtle = moduleTurtle.getFileStructure();
-        if (structTurtle != null) {
-            ModuleConstant idMissing = structTurtle.linkModules(reposLib, false);
-            if (idMissing != null) {
-                log(Severity.FATAL, "Unable to link module " + Constants.TURTLE_MODULE
-                    + " due to missing module:" + idMissing.getName());
+            final var struct = Objects.requireNonNull(module).getFileStructure();
+            if (struct != null) {
+                ModuleConstant idMissing = struct.linkModules(reposLib, false);
+                if (idMissing != null) {
+                    log(FATAL, "Unable to link module {} due to missing module: {}", moduleName, idMissing.getName());
+                    // log(FATAL) throws LauncherException immediately - never gets here
+                    return;
+                }
             }
         }
     }
@@ -1254,29 +633,33 @@ public abstract class Launcher
      *
      * @param reposLib  the repository that contains the Ecstasy library
      */
-    protected void showSystemVersion(ModuleRepository reposLib) {
+    protected void showSystemVersion(final ModuleRepository reposLib) {
         String sVer = null;
         try {
-            sVer = reposLib.loadModule(Constants.ECSTASY_MODULE).getVersionString();
-        } catch (Exception ignore) {}
+            sVer = reposLib.loadModule(ECSTASY_MODULE).getVersionString();
+        } catch (final Exception ignore) {}
 
         // Use version from single source of truth if module version is not available
         if (sVer == null) {
-            sVer = org.xvm.asm.BuildInfo.getXdkVersion();
+            sVer = BuildInfo.getXdkVersion();
         }
 
         // Build version string with optional git information
-        StringBuilder version = new StringBuilder();
-        version.append("xdk version ").append(sVer)
-               .append(" (").append(Constants.VERSION_MAJOR_CUR).append(".").append(Constants.VERSION_MINOR_CUR).append(")");
+        final var version = new StringBuilder("xdk version ")
+            .append(sVer)
+            .append(" (")
+            .append(VERSION_MAJOR_CUR)
+            .append(".")
+            .append(VERSION_MINOR_CUR)
+            .append(")");
 
-        // Add git info if available
-        String gitCommit = org.xvm.asm.BuildInfo.getGitCommit();
-        String gitStatus = org.xvm.asm.BuildInfo.getGitStatus();
+        // Add Git info to be woven into the build, if available.
+        // NOTE: We use the full hash in code and CI for the commit
+        final var gitCommit = BuildInfo.getGitCommit();
         if (!gitCommit.isEmpty()) {
-            // Use full commit ID for better traceability
             version.append(" [").append(gitCommit).append("]");
         }
+        final var gitStatus = BuildInfo.getGitStatus();
         if (!gitStatus.isEmpty()) {
             version.append(" (").append(gitStatus).append(")");
         }
@@ -1299,47 +682,31 @@ public abstract class Launcher
      * @param binarySpec     (optional) the file or directory which represents the target of the
      *                       binary; as provided to the compiler using the "-o" command line switch
      */
-    public ModuleInfo ensureModuleInfo(File fileSpec, File[] resourceSpecs, File binarySpec) {
-        boolean fCache = (resourceSpecs == null || resourceSpecs.length == 0) && binarySpec == null;
-        if (fCache && moduleCache != null) {
-            ModuleInfo info = moduleCache.get(fileSpec);
-            if (info != null) {
-                return info;
-            }
+    public ModuleInfo ensureModuleInfo(final File fileSpec, final List<File> resourceSpecs, final File binarySpec) {
+        assert resourceSpecs != null;
+        final boolean deduce = options().mayDeduceLocations();
+        // Cache only when using defaults (no explicit resources or binary location)
+        // When fCache is true, binarySpec is null by definition, so we use null directly in the lambda
+        if (resourceSpecs.isEmpty() && binarySpec == null) {
+            return moduleCache.computeIfAbsent(fileSpec, _ -> new ModuleInfo(fileSpec, deduce, List.of(), null));
         }
-
-        ModuleInfo info = new ModuleInfo(fileSpec, options().deduce(), resourceSpecs, binarySpec);
-
-        if (fCache) {
-            if (moduleCache == null) {
-                moduleCache = new HashMap<>();
-            }
-            moduleCache.put(fileSpec, info);
-        }
-
-        return info;
+        return new ModuleInfo(fileSpec, deduce, resourceSpecs, binarySpec);
     }
 
     /**
      * Validate that the contents of the path are existent directories and/or .xtc files.
      *
-     * @param listPath
+     * @param modulePath a list of individual module paths.
      */
-    public void validateModulePath(List<File> listPath) throws LauncherException {
-        for (File file : listPath) {
-            String sMsg = "File or directory";
-            if (file.isDirectory()) {
-                sMsg = "Directory";
-            } else if (file.isFile()) {
-                sMsg = "File";
-            }
-
+    protected final void validateModulePath(final List<File> modulePath) {
+        for (final var file : modulePath) {
+            final var fileType = file.isDirectory() ? "Directory" : file.isFile() ? "File" : "File or directory";
             if (!file.exists()) {
-                log(Severity.ERROR, "File or directory \"" + file + "\" does not exist");
+                log(ERROR, "File or directory {} does not exist", quoted(file));
             } else if (!file.canRead()) {
-                log(Severity.ERROR, sMsg + " \"" + file + "\" does not exist");
+                log(ERROR, "{} {} is not readable", fileType, quoted(file));
             } else if (file.isFile() && !file.getName().endsWith(".xtc")) {
-                log(Severity.WARNING, "File \"" + file + "\" does not have the \".xtc\" extension");
+                log(WARNING, "File {} does not have the \".xtc\" extension", quoted(file));
             }
         }
     }
@@ -1351,22 +718,22 @@ public abstract class Launcher
      *
      * @return the validated file or directory to read source code from
      */
-    public File validateSourceInput(File file) {
+    public File validateSourceInput(final File file) {
         // this is expected to be the name of a file to compile
         if (!file.exists() || file.isDirectory()) {
             try {
-                ModuleInfo info = ensureModuleInfo(file, null, null);
+                ModuleInfo info = ensureModuleInfo(file, List.of(), null);
                 File srcFile = info == null ? null : info.getSourceFile();
                 if (srcFile == null || !srcFile.exists()) {
-                    log(Severity.ERROR, "Failed to locate the module source code for: " + file);
+                    log(ERROR, "Failed to locate the module source code for: {}", file);
                 }
-            } catch (RuntimeException e) {
-                log(Severity.ERROR, "Failed to identify the module for: " + file + " (" + e + ")");
+            } catch (final RuntimeException e) {
+                log(ERROR, "Failed to identify the module for: {} ({})", file, e);
             }
         } else if (!file.canRead()) {
-            log(Severity.ERROR, "File not readable: " + file);
+            log(ERROR, "File not readable: {}", quoted(file));
         } else if (!file.getName().endsWith(".x")) {
-            log(Severity.WARNING, "Source file does not have a \".x\" extension: " + file);
+            log(WARNING, "Source file does not have a \".x\" extension: {}", quoted(file));
         }
         return file;
     }
@@ -1379,21 +746,20 @@ public abstract class Launcher
      *                default)
      * @param fMulti  true indicates that multiple modules will be written
      */
-    public void validateModuleOutput(File file, boolean fMulti) {
+    public void validateModuleOutput(final File file, final boolean fMulti) {
         if (file == null) {
             return;
         }
 
         boolean fSingle = isExplicitCompiledFile(file.getName());
         if (fSingle && fMulti) {
-            log(Severity.ERROR, "The single file " + file
-                    + " is specified, but multiple modules are expected");
+            log(ERROR, "The single file {} is specified, but multiple modules are expected", file);
             return;
         }
 
-        File dir = fSingle ? file.getParentFile() : file;
+        File dir = fSingle ? parentOf(file).orElse(null) : file;
         if (dir != null && !dir.exists()) {
-            log(Severity.INFO, "Creating directory " + dir);
+            log(INFO, "Creating directory {}", dir);
             // ignore any errors here; errors would end up being reported further down
             //noinspection ResultOfMethodCallIgnored
             dir.mkdirs();
@@ -1402,52 +768,18 @@ public abstract class Launcher
         if (file.exists()) {
             if (!file.isDirectory()) {
                 if (!fSingle) {
-                    log(Severity.WARNING, "File " + file + " does not have the \".xtc\" extension");
+                    log(WARNING, "File {} does not have the \".xtc\" extension", file);
                 }
-
                 if (fMulti) {
-                    log(Severity.ERROR, "The single file " + file
-                            + " is specified, but multiple modules are expected");
+                    log(ERROR, "The single file {} is specified, but multiple modules are expected", file);
                 }
-
                 if (!file.canWrite()) {
-                    log(Severity.ERROR, "File " + file + " can not be written to");
+                    log(ERROR, "File {} can not be written to", file);
                 }
             }
         } else if (dir != null && !dir.exists()) {
-            log(Severity.ERROR, "Directory " + dir + " is missing");
+            log(ERROR, "Directory {} is missing", dir);
         }
-    }
-
-    /**
-     * Resolve the specified "path string" into a list of files.
-     *
-     * @param sPath   the path to resolve, which may be a file or directory name, and may include
-     *                wildcards, etc.
-     *
-     * @return a list of File objects
-     *
-     * @throws IOException
-     */
-    protected static List<File> resolvePath(String sPath)
-            throws IOException {
-        List<File> files = new ArrayList<>();
-
-        if (sPath.length() >= 2 && sPath.charAt(0) == '~'
-                && (sPath.charAt(1) == '/' || sPath.charAt(1) == File.separatorChar)) {
-            sPath = System.getProperty("user.home") + File.separatorChar + sPath.substring(2);
-        }
-
-        if (sPath.indexOf('*') >= 0 || sPath.indexOf('?') >= 0) {
-            // wildcard file names
-            try (DirectoryStream<Path> stream = Files.newDirectoryStream(Paths.get("."), sPath)) {
-                stream.forEach(path -> files.add(path.toFile()));
-            }
-        } else {
-            files.add(new File(sPath));
-        }
-
-        return files;
     }
 
     /**
@@ -1459,39 +791,29 @@ public abstract class Launcher
      *
      * @return a list of "module files", each representing a module's source code
      */
-    protected List<ModuleInfo> selectTargets(List<File> listSources, File[] resourceSpecs, File outputSpec) {
-        ListMap<File, ModuleInfo> mapResults = new ListMap<>();
+    protected List<ModuleInfo> selectTargets(final List<File> listSources, final List<File> resourceSpecs, final File outputSpec) {
+        final var mapResults = new java.util.LinkedHashMap<File, ModuleInfo>();
+        final var dups = new HashSet<File>();
 
-        Set<File> setDups = null;
-        for (File file : listSources) {
-            ModuleInfo info    = null;
-            File       srcFile = null;
+        for (final var file : listSources) {
             try {
-                info = ensureModuleInfo(file, resourceSpecs, outputSpec);
-                if (info != null) {
-                    srcFile = info.getSourceFile();
+                final var info = ensureModuleInfo(file, resourceSpecs, outputSpec);
+                final var srcFile = info != null ? info.getSourceFile() : null;
+                if (srcFile == null) {
+                    log(ERROR, "Unable to find module source for file: {}", file);
+                } else if (mapResults.containsKey(srcFile)) {
+                    if (dups.add(srcFile)) {
+                        log(WARNING, "Module source was specified multiple times: {}", srcFile);
+                    }
+                } else {
+                    mapResults.put(srcFile, info);
                 }
-            } catch (IllegalStateException | IllegalArgumentException e) {
-                String msg = e.getMessage();
-                log(Severity.ERROR, "Could not find module information for " + toPathString(file)
-                        + " (" + (msg == null ? "Reason unknown" : msg) + ")");
-            }
-            if (srcFile == null) {
-                log(Severity.ERROR, "Unable to find module source for file: " + file);
-            } else if (mapResults.containsKey(srcFile)) {
-                if (setDups == null) {
-                    setDups = new HashSet<>();
-                }
-                if (!setDups.contains(srcFile)) {
-                    log(Severity.WARNING, "Module source was specified multiple times: " + srcFile);
-                    setDups.add(srcFile);
-                }
-            } else {
-                mapResults.put(srcFile, info);
+            } catch (final IllegalStateException | IllegalArgumentException e) {
+                final var msg = e.getMessage();
+                log(ERROR, "Could not find module information for {} ({})", toPathString(file), msg != null ? msg : "Reason unknown");
             }
         }
-
-        return new ArrayList<>(mapResults.values());
+        return List.copyOf(mapResults.values());
     }
 
     /**
@@ -1499,9 +821,9 @@ public abstract class Launcher
      *
      * @param nodes  the nodes to flush
      */
-    protected void flushAndCheckErrors(Node[] nodes) {
+    protected void flushAndCheckErrors(final Node[] nodes) {
         if (nodes != null) {
-            for (Node node : nodes) {
+            for (final Node node : nodes) {
                 if (node != null) {
                     node.logErrors(this);
                 }
@@ -1511,233 +833,56 @@ public abstract class Launcher
     }
 
     /**
-     * Clean up any transient state
+     * Clean up any transient state.
+     * Resets severity tracking and clears module cache.
      */
     protected void reset() {
-        m_sevWorst   = Severity.NONE;
+        m_sevWorst = NONE;
         m_cSuspended = 0;
-        moduleCache  = null;
+        moduleCache.clear();
     }
 
 
     // ----- Console -------------------------------------------------------------------------------
 
     /**
-     * An interface representing this tool's interaction with the terminal.
-     */
-    public interface Console {
-        /**
-         * Print a blank line to the terminal.
-         */
-        default void out() {
-            out("");
-        }
-
-        /**
-         * Print the String value of some object to the terminal.
-         */
-        default void out(Object o) {
-            System.out.println(o);
-        }
-
-        /**
-         * Print a blank line to the terminal.
-         */
-        default void err() {
-            err("");
-        }
-
-        /**
-         * Print the String value of some object to the terminal.
-         */
-        default void err(Object o) {
-            System.err.println(o);
-        }
-
-        /**
-         * Log a message of a specified severity.
-         *
-         * @param sev   the severity (may indicate an error)
-         * @param sMsg  the message or error to display
-         */
-        default void log(Severity sev, String sMsg) {
-            out(sev.desc() + ": " + sMsg);
-        }
-    }
-
-    /**
      * RuntimeException thrown upon a launcher failure.
+     * TODO: Ideally this should not be a runtime exception. We can have throws declaration and do more processing
+     *   and recovery attempts if we explicitly declare how to handle LauncherException in subclasses in code.
      */
-    static public class LauncherException
-            extends RuntimeException {
-        /**
-         * @param error  true to abort with an error status
-         */
-        public LauncherException(final boolean error) {
-            this(error, null, null);
-        }
+    static public class LauncherException extends RuntimeException {
+        private final boolean error;
+        private final int exitCode;
 
         public LauncherException(final boolean error, final String msg) {
             this(error, msg, null);
         }
 
+        public LauncherException(final Throwable cause) {
+            this(true, cause == null ? null : cause.getMessage(), cause);
+        }
+
         public LauncherException(final boolean error, final String msg, final Throwable cause) {
             super(msg, cause);
             this.error = error;
+            this.exitCode = error ? 1 : 0;
+        }
+
+        public int getExitCode() {
+            return this.exitCode;
+        }
+
+        public boolean isError() {
+            return this.error;
         }
 
         @Override
         public String toString() {
-            return '[' + getClass().getSimpleName() + ": isError=" + error + ", msg=" + getMessage() + ']';
+            return '[' + getClass().getSimpleName() + ": isError=" + isError() + ", msg=" + getMessage() + ']';
         }
-
-        public final boolean error;
     }
 
     // ----- constants -----------------------------------------------------------------------------
-
-    /**
-     * The default Console implementation.
-     */
-    public static final Console DefaultConsole = new Console() {};
-
-    /**
-     * The various forms of command-line options can take:
-     *
-     * <ul><li><tt>Name</tt>      - either the option is specified or it is not;
-     *                              e.g. "{@code --verbose}"
-     * </li><li><tt>Boolean</tt>  - an explicitly boolean option;
-     *                              e.g. "{@code --suppressBeep=False}"
-     * </li><li><tt>Int</tt>      - an integer valued option;
-     *                              e.g. "{@code --limit=5}" or "{@code --limit 5}"
-     * </li><li><tt>String</tt>   - a String valued option (useful when no either form works);
-     *                              e.g. "{@code --name="Bob"}" or "{@code --name "Bob"}"
-     * </li><li><tt>File</tt>     - a File valued option;
-     *                              e.g. "{@code --src=./My.x}" or "{@code --src ./My.x}"
-     * </li><li><tt>Repo</tt>     - a colon-delimited search path valued option;
-     *                              e.g. "{@code -L ~/lib:./lib:./}" or "{@code -L~/lib:./}"
-     * </li><li><tt>Pair</tt>     - an equal-sign-delimited key/value pairing, comma-delimited for
-     *                              multi; e.g. "{@code -I x=0,y=1,s="'Hello, = World!'"} (and note
-     *                              that the use of spaces requires the value to be
-     *                              quoted, and the occurrence of ',' or '=' within a value requires
-     *                              the value to be quoted again using single quotes, because the
-     *                              Java command line removes the double quotes)
-     * </li><li><tt>AsIs</tt>     - an AsIs valued option is a String that is not modified, useful
-     *                              when being passed on to a further "argv-aware" program
-     *                              e.g. "{@code xec MyApp.xtc -o=7 -X="q"} -> {@code -o=7 -X="q"}"
-     * </li></ul>
-     */
-    public enum Form {
-        Name("Switch"),
-        Boolean,
-        Int,
-        String,
-        File,
-        Repo('\"' + java.io.File.pathSeparator + "\"-delimited File list"),
-        Pair("\"key=value\" Pair"),
-        AsIs;
-
-        Form() {
-            this(null);
-        }
-
-        Form(String desc) {
-            DESC = desc;
-        }
-
-        public String desc() {
-            return DESC == null ? name() : DESC;
-        }
-
-        private final String DESC;
-    }
-
-    /**
-     * This is the name used for an option that does not have a name. It is called "trailing"
-     * because it comes at the end of a sequence of options, such as the sequence of file names
-     * at the end of the command: "{@code xcc -o ../build --verbose MyApp.x MyTest.x}".
-     * <p/>
-     * If a Launcher supports trailing files, for example, then the {@link Options#options()} method
-     * should return a map containing an entry whose key is {@code Trailing} and whose value is
-     * {@link Form#File}, with {@code allowMultiple(Trailing)} returning {@code true}.
-     */
-    protected static final String Trailing = "<_>";
-
-    /**
-     * This is the name used for an option that represents "the remainder of the options".
-     * <p/>
-     * To use this option, the Launcher must support no "Trailing", or a single "Trailing", but not
-     * multiple "Trailing" values.
-     */
-    protected static final String ArgV = "...";
-
-    /**
-     * Represents a single available command line option.
-     */
-    public static class Option {
-        public Option(String sPosix, String sLinux, Form form, boolean fMulti, String sDesc) {
-            assert sPosix != null || sLinux != null;
-            assert (sPosix == null || !sPosix.isEmpty()) && (sLinux == null || !sLinux.isEmpty());
-            assert form != null;
-
-            m_sPosix = sPosix;
-            m_sLinux = sLinux;
-            m_form   = form;
-            m_fMulti = fMulti;
-            m_sDesc  = sDesc;
-        }
-
-        public String posixName() {
-            return m_sPosix;
-        }
-
-        public String linuxName() {
-            return m_sLinux;
-        }
-
-        public String simplestName() {
-            return m_sPosix == null ? m_sLinux : m_sPosix;
-        }
-
-        public Form form() {
-            return m_form;
-        }
-
-        public boolean isMulti() {
-            return m_fMulti;
-        }
-
-        public String desc() {
-            return m_sDesc;
-        }
-
-        public String syntax() {
-            if (m_sSyntax == null) {
-                if(Trailing.equals(m_sPosix) || ArgV.equals(m_sPosix)) {
-                    m_sSyntax = m_sPosix;
-                } else {
-                    m_sSyntax = (m_sPosix == null ? "" : "-" + m_sPosix)
-                            +   (m_sPosix == null || m_sLinux == null ? "" : " | ")
-                            +   (m_sLinux == null ? "" : "--" + m_sLinux);
-                }
-            }
-            return m_sSyntax;
-        }
-
-        @Override public String toString() {
-            return syntax() + " : " + m_form + (m_fMulti ? "*" : "");
-        }
-
-        private final     String  m_sPosix;
-        private final     String  m_sLinux;
-        private transient String  m_sSyntax;
-        private final     Form    m_form;
-        private final     boolean m_fMulti;
-        private final     String  m_sDesc;
-    }
-
-    protected enum Stage {Init, Parsed, Named, Linked}
-
     /**
      * Unknown fatal error. {0}
      */
@@ -1755,33 +900,19 @@ public abstract class Launcher
      */
     public static final String READ_FAILURE     = "LAUNCHER-04";
 
-
-    // ----- fields --------------------------------------------------------------------------------
+    /**
+     * Debug prefixes to strip from launcher command names.
+     * Checked in order, so "debug_" must come before "debug".
+     */
+    private static final String[] DEBUG_PREFIXES = {"debug_", "debug"};
 
     /**
-     * A representation of the Console (e.g. terminal) that this tool is running in.
+     * The default Console implementation.
      */
-    protected final Console m_console;
+    protected static final Console DEFAULT_CONSOLE = new Console() {};
 
     /**
-     * The command-line arguments.
+     * Enum representing the different Stages of launchers.
      */
-    protected final String[] m_asArgs;
-
-    /**
-     * The parsed options.
-     */
-    private Options m_options;
-
-    /**
-     * The worst severity issue encountered thus far.
-     */
-    protected Severity m_sevWorst = Severity.NONE;
-
-    /**
-     * The number of times that errors have been suspended without being resumed.
-     */
-    protected int m_cSuspended;
-
-    protected Map<File, ModuleInfo> moduleCache;
+    protected enum Stage {Init, Parsed, Named, Linked}
 }

@@ -1,5 +1,6 @@
 package org.xtclang.plugin;
 
+import static java.time.format.DateTimeFormatter.ofPattern;
 import static java.util.Objects.requireNonNull;
 
 import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_NAME_JAR;
@@ -13,23 +14,31 @@ import java.io.IOException;
 
 import java.nio.file.Files;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.text.MessageFormat;
+
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
-import java.util.jar.Manifest;
 
 import org.gradle.api.GradleException;
 
 /**
  * XTC Plugin Helper methods in a utility class.
  * <p>
- * TODO: Move the state independent/reentrant stuff from the ProjectDelegate and its subclasses to here.
+ * TODO: Move the state independent/reentrant stuff from XtcProjectDelegate to here.
  */
 public final class XtcPluginUtils {
+
+    public static final DateTimeFormatter TIMESTAMP_FORMAT = ofPattern("yyyyMMdd_HHmmss", Locale.ROOT);
+
     private XtcPluginUtils() {
     }
 
@@ -47,6 +56,68 @@ public final class XtcPluginUtils {
     }
 
     /**
+     * Create a GradleException with a formatted message using {} placeholders.
+     * This provides a cleaner alternative to string concatenation for error messages.
+     *
+     * <p>Example usage:
+     * <pre>
+     * throw failure("Failed to process file {} with size {}", file.getName(), size);
+     * </pre>
+     *
+     * @param template The message template with {} placeholders
+     * @param params   Parameters to substitute into the template
+     * @return A GradleException with the formatted message
+     */
+    public static GradleException failure(final String template, final Object... params) {
+        return failure(null, template, params);
+    }
+
+    /**
+     * Create a GradleException with a formatted message and a cause.
+     *
+     * @param cause    The underlying cause of the exception
+     * @param template The message template with {} placeholders
+     * @param params   Parameters to substitute into the template
+     * @return A GradleException with the formatted message and cause
+     */
+    public static GradleException failure(final Throwable cause, final String template, final Object... params) {
+        return new GradleException("[plugin] " + formatTemplate(template, params), cause);
+    }
+
+    /**
+     * Format a message template by replacing {} placeholders with provided parameters.
+     * This uses the same formatting logic as the Console in javatools.
+     *
+     * @param template The message template with {} placeholders
+     * @param params   Parameters to substitute into the template
+     * @return The formatted message
+     */
+    private static String formatTemplate(final String template, final Object... params) {
+        if (template == null || params == null || params.length == 0) {
+            return template;
+        }
+        final var numbered = new StringBuilder(template.length() + params.length * 3);
+        int paramIndex = 0;
+        int pos = 0;
+        while (pos < template.length()) {
+            int openBrace = template.indexOf('{', pos);
+            if (openBrace == -1) {
+                numbered.append(template.substring(pos));
+                break;
+            }
+            numbered.append(template, pos, openBrace);
+            if (openBrace + 1 < template.length() && template.charAt(openBrace + 1) == '}') {
+                numbered.append('{').append(paramIndex++).append('}');
+                pos = openBrace + 2;
+            } else {
+                numbered.append('{');
+                pos = openBrace + 1;
+            }
+        }
+        return MessageFormat.format(numbered.toString(), params);
+    }
+
+    /**
      * Expands %TIMESTAMP% placeholder in a file path pattern to yyyyMMddHHmmss format.
      * This format matches the timestamp used throughout the XTC plugin for log files.
      *
@@ -58,7 +129,7 @@ public final class XtcPluginUtils {
         if (!pathPattern.contains("%TIMESTAMP%")) {
             return pathPattern;
         }
-        final String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        final String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMAT);
         return pathPattern.replace("%TIMESTAMP%", timestamp);
     }
 
@@ -127,7 +198,7 @@ public final class XtcPluginUtils {
             } catch (final IOException e) {
                 // IOException when reading magic number must be logged and propagated
                 // This could happen due to file corruption, truncation, or permission issues
-                throw new GradleException("Failed to read magic number from potential XTC module file: " + file.getAbsolutePath(), e);
+                throw failure(e, "Failed to read magic number from potential XTC module file: {}", file.getAbsolutePath());
             }
         }
 
@@ -139,7 +210,7 @@ public final class XtcPluginUtils {
         @SuppressWarnings("SameParameterValue")
         private static File checkXtcModule(final File file, final boolean checkMagic) {
             if (!isValidXtcModule(file, checkMagic)) {
-                throw new GradleException("Processed '" + file.getAbsolutePath() + "' as an XTC module, but it is not.");
+                throw failure("Processed '{}' as an XTC module, but it is not.", file.getAbsolutePath());
             }
             return file;
         }
@@ -157,14 +228,14 @@ public final class XtcPluginUtils {
             final var path = file.getAbsolutePath();
             assert file.isFile();
             try (var jarFile = new JarFile(file)) {
-                final Manifest m = jarFile.getManifest();
+                final var m = jarFile.getManifest();
                 final var implVersion = m.getMainAttributes().get(Attributes.Name.IMPLEMENTATION_VERSION);
                 if (implVersion == null) {
-                    throw new GradleException("Invalid manifest entries found in '" + path + "'");
+                    throw failure("Invalid manifest entries found in '{}'", path);
                 }
                 return implVersion.toString();
             } catch (final IOException e) {
-                throw new GradleException("Not a valid '" + XDK_JAVATOOLS_NAME_JAR + "': '" + path + "'", e);
+                throw failure(e, "Not a valid '{}': '{}'", XDK_JAVATOOLS_NAME_JAR, path);
             }
         }
 
@@ -184,6 +255,47 @@ public final class XtcPluginUtils {
 
         public static boolean areIdenticalFiles(final File f1, final File f2) throws IOException {
             return Files.mismatch(requireNonNull(f1).toPath(), requireNonNull(f2).toPath()) == -1L;
+        }
+
+        /**
+         * Computes the MD5 hash of a file for verification purposes.
+         *
+         * @param file The file to compute MD5 hash for
+         * @return The MD5 hash as a hexadecimal string, or "ERROR" if computation fails
+         */
+        public static String computeMd5(final File file) {
+            try (final FileInputStream fis = new FileInputStream(file)) {
+                final MessageDigest md = MessageDigest.getInstance("MD5");
+                final byte[] buffer = new byte[8192];
+                int bytesRead;
+                while ((bytesRead = fis.read(buffer)) != -1) {
+                    md.update(buffer, 0, bytesRead);
+                }
+                final byte[] digest = md.digest();
+                final StringBuilder sb = new StringBuilder();
+                for (final byte b : digest) {
+                    sb.append(String.format("%02x", b));
+                }
+                return sb.toString();
+            } catch (final NoSuchAlgorithmException | IOException e) {
+                return "ERROR";
+            }
+        }
+
+        /**
+         * Creates a one-line log string with jar file metadata: path, last modified timestamp, size, and MD5 hash.
+         * Uses modern Java time types (java.time.Instant) instead of deprecated java.util.Date.
+         *
+         * @param file The jar file to log metadata for
+         * @return A formatted string containing: path, ISO-8601 timestamp, size in bytes, and MD5 hash
+         */
+        public static String formatJarMetadata(final File file) {
+            final String path = file.getAbsolutePath();
+            final Instant lastModified = Instant.ofEpochMilli(file.lastModified());
+            final String timestamp = DateTimeFormatter.ISO_INSTANT.format(lastModified);
+            final long size = file.length();
+            final String md5 = computeMd5(file);
+            return String.format("path=%s, modified=%s, size=%d bytes, md5=%s", path, timestamp, size, md5);
         }
     }
 }

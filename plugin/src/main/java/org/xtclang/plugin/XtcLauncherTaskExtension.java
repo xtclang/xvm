@@ -11,7 +11,8 @@ import org.gradle.api.provider.Provider;
 
 import org.jetbrains.annotations.NotNull;
 
-@SuppressWarnings("unused")
+import org.xtclang.plugin.launchers.ExecutionMode;
+
 public interface XtcLauncherTaskExtension extends Named {
     /**
      * Additional module path entries (files or directories) to add to the -L flag.
@@ -22,7 +23,13 @@ public interface XtcLauncherTaskExtension extends Named {
      */
     ConfigurableFileCollection getModulePath();
 
-    Property<@NotNull Boolean> getFork();
+    /**
+     * Execution mode for the launcher task.
+     * Default is ATTACHED (forked JVM with inherited I/O).
+     *
+     * @return the execution mode property
+     */
+    Property<@NotNull ExecutionMode> getExecutionMode();
 
     Property<@NotNull Boolean> getShowVersion();
 

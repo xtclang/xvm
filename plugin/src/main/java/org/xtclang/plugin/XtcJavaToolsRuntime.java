@@ -12,15 +12,16 @@ import org.xtclang.plugin.XtcPluginUtils.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.concurrent.Callable;
 import java.util.zip.ZipFile;
 
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_NAME_JAR;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_NAME_MANIFEST;
-import static org.xtclang.plugin.XtcPluginUtils.FileUtils.readXdkVersionFromJar;
+import static org.xtclang.plugin.XtcPluginUtils.FileUtils.*;
+import static org.xtclang.plugin.XtcPluginUtils.failure;
 
 /**
  * Runtime utility for accessing javatools classes throughout the plugin.
@@ -36,7 +37,7 @@ import static org.xtclang.plugin.XtcPluginUtils.FileUtils.readXdkVersionFromJar;
  *   <li>resolveJavaTools() finds javatools.jar from composite build for forked processes</li>
  * </ul>
  *
- * <p><b>Scenario 2: Published Plugin Users (using XDK as dependency)</b>
+ *
  * <ul>
  *   <li>Plugin has compileOnly dependency on javatools (type info only)</li>
  *   <li>User project has XDK distribution as dependency (contains javatools.jar)</li>
@@ -53,7 +54,7 @@ import static org.xtclang.plugin.XtcPluginUtils.FileUtils.readXdkVersionFromJar;
  * </ul>
  */
 public final class XtcJavaToolsRuntime {
-    private static volatile ClassLoader javaToolsClassLoader = null;
+    private static volatile ClassLoader javaToolsClassLoader;
 
     private XtcJavaToolsRuntime() {
         // Utility class
@@ -77,7 +78,7 @@ public final class XtcJavaToolsRuntime {
      * @param xdkFileTree The XDK file tree (from extracted distribution)
      * @param logger Logger for diagnostic output
      */
-    public static synchronized void ensureJavaToolsInClasspath(
+    public static synchronized boolean ensureJavaToolsInClasspath(
             @NotNull final Provider<@NotNull String> projectVersion,
             @NotNull final Provider<@NotNull FileCollection> javaToolsConfig,
             @NotNull final Provider<@NotNull FileTree> xdkFileTree,
@@ -85,7 +86,7 @@ public final class XtcJavaToolsRuntime {
 
         if (javaToolsClassLoader != null) {
             logger.debug("[plugin] javatools.jar already loaded into classpath");
-            return;
+            return false;
         }
 
         final File javaToolsJar = resolveJavaTools(projectVersion, javaToolsConfig, xdkFileTree, logger);
@@ -94,8 +95,9 @@ public final class XtcJavaToolsRuntime {
             // Create a shared classloader with javatools.jar and set as thread context classloader
             javaToolsClassLoader = createAndSetJavaToolsClassLoader(javaToolsJar, logger);
             logger.info("[plugin] ******* Loaded javatools.jar into plugin classpath: {}", javaToolsJar.getAbsolutePath());
+            return true;
         } catch (final Exception e) {
-            throw new GradleException("[plugin] Failed to load javatools.jar into classpath: " + javaToolsJar.getAbsolutePath(), e);
+            throw failure(e, "Failed to load javatools.jar into classpath: {}", javaToolsJar.getAbsolutePath());
         }
     }
 
@@ -121,97 +123,44 @@ public final class XtcJavaToolsRuntime {
             @NotNull final Provider<@NotNull FileTree> xdkFileTree,
             @NotNull final Logger logger) {
 
-        final String artifactVersion = projectVersion.get();
-        final var javaToolsFromConfig = javaToolsConfig.get().filter(file ->
-                FileUtils.isValidJavaToolsArtifact(file, artifactVersion));
-        final var javaToolsFromXdk = xdkFileTree.get().filter(file ->
-                FileUtils.isValidJavaToolsArtifact(file, artifactVersion));
-
-        logger.info("""
-                [plugin] [javatools_runtime] javaToolsFromConfig files: {}
-                [plugin] [javatools_runtime] javaToolsFromXdk files: {}
-                """.trim(), javaToolsFromConfig.getFiles(), javaToolsFromXdk.getFiles());
+        final var artifactVersion = projectVersion.get();
+        final var javaToolsFromConfig = javaToolsConfig.get().filter(file -> isValidJavaToolsArtifact(file, artifactVersion));
+        final var javaToolsFromXdk = xdkFileTree.get().filter(file -> isValidJavaToolsArtifact(file, artifactVersion));
 
         final File resolvedFromConfig = javaToolsFromConfig.isEmpty() ? null : javaToolsFromConfig.getSingleFile();
         final File resolvedFromXdk = javaToolsFromXdk.isEmpty() ? null : javaToolsFromXdk.getSingleFile();
 
         if (resolvedFromConfig == null && resolvedFromXdk == null) {
-            throw new GradleException("[plugin] ERROR: Failed to resolve '" + XDK_JAVATOOLS_NAME_JAR +
-                    "' from any configuration or dependency. " +
-                    "Ensure the XDK dependency is configured correctly.");
+            throw failure("ERROR: Failed to resolve '{}' from any configuration or dependency. Ensure the XDK dependency is configured correctly.", XDK_JAVATOOLS_NAME_JAR);
         }
-
         logger.info("""
                 [plugin] Check for '{}' in {} config and XDK (unpacked zip, or module collection) dependency, if present.
                 [plugin]     Resolved to: [xdkJavaTools: {}, xdkContents: {}]
                 """.trim(), XDK_JAVATOOLS_NAME_JAR, XDK_CONFIG_NAME_JAVATOOLS_INCOMING, resolvedFromConfig, resolvedFromXdk);
 
-        final String versionConfig = readXdkVersionFromJar(resolvedFromConfig);
-        final String versionXdk = readXdkVersionFromJar(resolvedFromXdk);
+        // Log detailed javatools.jar information
+        if (resolvedFromConfig != null) {
+            logger.info("[plugin]     javatools.jar: {}", formatJarMetadata(resolvedFromConfig));
+        }
+        if (resolvedFromXdk != null && !resolvedFromXdk.equals(resolvedFromConfig)) {
+            logger.info("[plugin]     XDK javatools.jar: {}", formatJarMetadata(resolvedFromXdk));
+        }
+
+        final var versionConfig = readXdkVersionFromJar(resolvedFromConfig);
+        final var versionXdk = readXdkVersionFromJar(resolvedFromXdk);
 
         if (resolvedFromConfig != null && resolvedFromXdk != null) {
             if (!versionConfig.equals(versionXdk) || !areIdenticalFiles(resolvedFromConfig, resolvedFromXdk)) {
-                logger.warn("[plugin] Different '{}' files resolved, preferring the non-XDK version: {}",
-                        XDK_JAVATOOLS_NAME_JAR, resolvedFromConfig.getAbsolutePath());
+                logger.warn("[plugin] Different '{}' files resolved, preferring the non-XDK version: {}", XDK_JAVATOOLS_NAME_JAR, resolvedFromConfig.getAbsolutePath());
                 return validateAndReturn(resolvedFromConfig);
             }
         }
-
         if (resolvedFromConfig != null) {
-            logger.info("[plugin] Resolved unique '{}' from config/artifacts/dependencies: {} (version: {})",
-                    XDK_JAVATOOLS_NAME_JAR, resolvedFromConfig.getAbsolutePath(), versionConfig);
+            logger.info("[plugin] Resolved unique '{}' from config/artifacts/dependencies: {} (version: {})", XDK_JAVATOOLS_NAME_JAR, resolvedFromConfig.getAbsolutePath(), versionConfig);
             return validateAndReturn(resolvedFromConfig);
         }
-
-        logger.info("[plugin] Resolved unique '{}' from XDK: {} (version: {})",
-                XDK_JAVATOOLS_NAME_JAR, resolvedFromXdk.getAbsolutePath(), versionXdk);
+        logger.info("[plugin] Resolved unique '{}' from XDK: {} (version: {})", XDK_JAVATOOLS_NAME_JAR, resolvedFromXdk.getAbsolutePath(), versionXdk);
         return validateAndReturn(resolvedFromXdk);
-    }
-
-    /**
-     * Executes code with javatools classes available on the thread context classloader.
-     * This is needed for in-process execution where javatools code may use Thread.currentThread().getContextClassLoader().
-     *
-     * <p>This method:
-     * <ol>
-     *   <li>Creates a URLClassLoader with javatools.jar</li>
-     *   <li>Sets it as the thread context classloader</li>
-     *   <li>Executes the provided callable</li>
-     *   <li>Restores the original classloader</li>
-     *   <li>Closes the URLClassLoader</li>
-     *   <li>Returns the result</li>
-     * </ol>
-     *
-     * <p><b>Example:</b>
-     * <pre>{@code
-     * ErrorList errors = XtcJavaToolsRuntime.withJavaTools(javaToolsJar, logger, () -> {
-     *     ErrorList errorList = new ErrorList(100);
-     *     // ... use javatools classes ...
-     *     return errorList;
-     * });
-     * }</pre>
-     *
-     * @param javaToolsJar The javatools.jar file
-     * @param logger Logger for diagnostic output
-     * @param callable The code to execute with javatools on classpath
-     * @param <T> The return type
-     * @return The result from the callable
-     * @throws Exception if the callable throws an exception
-     */
-    public static <T> T withJavaTools(
-            @NotNull final File javaToolsJar,
-            @NotNull final Logger logger,
-            @NotNull final Callable<T> callable) throws Exception {
-        final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
-        final URLClassLoader javaToolsClassLoader = createAndSetJavaToolsClassLoader(javaToolsJar, logger);
-        try (javaToolsClassLoader) {
-            logger.lifecycle("[plugin] ******* Added javatools.jar to runtime classpath: {}", javaToolsJar.getAbsolutePath());
-            logger.info("[plugin] Set thread context classloader to javatools classloader");
-            return callable.call();
-        } finally {
-            Thread.currentThread().setContextClassLoader(originalClassLoader);
-            logger.info("[plugin] Restored original thread context classloader");
-        }
     }
 
     /**
@@ -221,11 +170,9 @@ public final class XtcJavaToolsRuntime {
      * @param javaToolsJar The javatools.jar file
      * @param logger Logger for diagnostic output
      * @return The created URLClassLoader
-     * @throws Exception if URL conversion or reflection fails
+     * @throws MalformedURLException if URL conversion fails
      */
-    private static URLClassLoader createAndSetJavaToolsClassLoader(
-            @NotNull final File javaToolsJar,
-            @NotNull final Logger logger) throws Exception {
+    private static URLClassLoader createAndSetJavaToolsClassLoader(@NotNull final File javaToolsJar, @NotNull final Logger logger) throws MalformedURLException {
         final URL javaToolsUrl = javaToolsJar.toURI().toURL();
 
         // Get the plugin's classloader (the one that loaded this class)
@@ -237,15 +184,15 @@ public final class XtcJavaToolsRuntime {
                 final java.lang.reflect.Method addURL = java.net.URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
                 addURL.setAccessible(true);
                 addURL.invoke(pluginClassLoader, javaToolsUrl);
-                logger.lifecycle("[plugin] Injected javatools.jar into plugin classloader: {}", javaToolsUrl);
+                logger.info("[plugin] Injected javatools.jar into plugin classloader: {}", javaToolsUrl);
             } catch (final Exception e) {
                 logger.warn("[plugin] Failed to inject into plugin classloader, falling back to thread context classloader", e);
             }
         }
 
         // Also set thread context classloader for compatibility
-        final ClassLoader parentClassLoader = Thread.currentThread().getContextClassLoader();
-        final URLClassLoader javaToolsClassLoader = new URLClassLoader(new URL[]{javaToolsUrl}, parentClassLoader);
+        final var parentClassLoader = Thread.currentThread().getContextClassLoader();
+        final var javaToolsClassLoader = new URLClassLoader(new URL[]{javaToolsUrl}, parentClassLoader);
         Thread.currentThread().setContextClassLoader(javaToolsClassLoader);
         logger.debug("[plugin] Created URLClassLoader with javatools.jar: {}", javaToolsUrl);
         return javaToolsClassLoader;
@@ -255,23 +202,21 @@ public final class XtcJavaToolsRuntime {
         try {
             return FileUtils.areIdenticalFiles(f1, f2);
         } catch (final IOException e) {
-            throw new GradleException("[plugin] Resolved non-identical multiple '" + XDK_JAVATOOLS_NAME_JAR +
-                    "' ('" + f1.getAbsolutePath() + "' and '" + f2.getAbsolutePath() + "')");
+            throw failure(e, "Resolved non-identical multiple '{}' ('{}' and '{}')", XDK_JAVATOOLS_NAME_JAR, f1.getAbsolutePath(), f2.getAbsolutePath());
         }
     }
 
     private static File validateAndReturn(final File file) {
         if (!file.exists()) {
-            throw new GradleException("[plugin] Resolved javatools.jar does not exist: " + file.getAbsolutePath());
+            throw failure("Resolved javatools.jar does not exist: {}", file.getAbsolutePath());
         }
         try (var zip = new ZipFile(file)) {
             if (zip.getEntry(XDK_JAVATOOLS_NAME_MANIFEST) == null) {
-                throw new GradleException("[plugin] File is not a valid JAR: " + file.getAbsolutePath());
+                throw failure("File is not a valid JAR: {}", file.getAbsolutePath());
             }
         } catch (final IOException e) {
-            throw new GradleException("[plugin] Failed to validate javatools.jar: " + file.getAbsolutePath(), e);
+            throw failure(e, "Failed to validate javatools.jar: {}", file.getAbsolutePath());
         }
-
         return file;
     }
 }
