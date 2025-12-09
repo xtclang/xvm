@@ -5,9 +5,8 @@ import xunit.extensions.Extension;
 /**
  * A registry to hold `Extension` instances.
  *
- * If the parent `ExtensionRegistry` is not `Null` the parent's extensions
- * will be visible to callers of this registry but any additions will only
- * apply to this registry.
+ * If the parent `ExtensionRegistry` is not `Null` the parent's extensions will be visible to
+ * callers of this registry but any additions will only apply to this registry.
  *
  * @param parent  an optional parent `ExtensionRegistry`
  */
@@ -145,7 +144,8 @@ class ExtensionRegistry
 
         Array<ExtensionHolder> thisMatches = new Array();
         thisMatches.addAll(this.extensions
-                .filter(holder -> holder.isType(type) && (predicate == Null || predicate(holder.extension.as(ExtensionType)))));
+                .filter(holder -> holder.isType(type)
+                        && (predicate == Null || predicate(holder.extension.as(ExtensionType)))));
 
         Collection<ExtensionHolder> thisPriority
                 = thisMatches.filter(holder -> holder.priority != 0)
@@ -186,7 +186,7 @@ class ExtensionRegistry
         return extensions;
     }
 
-    // ----- inner class: ExtensionHolder -----------------------------------------------------------------------------
+    // ----- inner class: ExtensionHolder ----------------------------------------------------------
 
     /**
      * A holder of an `Extension` and its source.
