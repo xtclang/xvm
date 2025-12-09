@@ -13,6 +13,7 @@ import org.xvm.compiler.BuildRepository;
 import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.LauncherOptions.DisassemblerOptions;
 import org.xvm.tool.LauncherOptions.RunnerOptions;
+import org.xvm.tool.LauncherOptions.TestRunnerOptions;
 import org.xvm.tool.ModuleInfo.Node;
 import org.xvm.util.Severity;
 
@@ -147,7 +148,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * Executes a launcher command and returns an exit code.
      * Use this when calling from a daemon or other long-running process.
      *
-     * @param cmd command name (xcc or xec)
+     * @param cmd command name (xcc, xec, xtc, or test)
      * @param args command line arguments (without the command name)
      * @param console console for output (must not be null)
      * @param errListener optional ErrorListener to receive errors, or null
@@ -155,10 +156,16 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      */
     public static int launch(final String cmd, final String[] args, final Console console, final ErrorListener errListener) {
         try {
+            // Handle "xtc" unified command with subcommands
+            if (Ecstasy.COMMAND_NAME.equals(cmd)) {
+                return launchEcstasySubcommand(args, console, errListener);
+            }
+
             final LauncherOptions options = switch (cmd) {
                 case Compiler.COMMAND_NAME -> CompilerOptions.parse(args);
                 case Runner.COMMAND_NAME -> RunnerOptions.parse(args);
                 case Disassembler.COMMAND_NAME -> DisassemblerOptions.parse(args);
+                case TestRunner.COMMAND_NAME -> TestRunnerOptions.parse(args);
                 default -> {
                     console.log(ERROR, "Command name {} is not supported", quoted(cmd));
                     yield null;
@@ -169,6 +176,68 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
             console.log(ERROR, e.getMessage());
             return 1;
         }
+    }
+
+    /**
+     * Handle "xtc" unified command with subcommands (build, run, test).
+     */
+    private static int launchEcstasySubcommand(final String[] args, final Console console, final ErrorListener errListener) {
+        if (args.length == 0) {
+            showEcstasyHelp(console);
+            return 0;
+        }
+
+        final String subcommand = args[0];
+        final String[] subArgs = Arrays.copyOfRange(args, 1, args.length);
+
+        return switch (subcommand) {
+            case "build" -> launch(Compiler.COMMAND_NAME, subArgs, console, errListener);
+            case "run" -> launch(Runner.COMMAND_NAME, subArgs, console, errListener);
+            case TestRunner.COMMAND_NAME -> launch(TestRunner.COMMAND_NAME, subArgs, console, errListener);
+            case "--version", "-version" -> {
+                showVersion(console);
+                yield 0;
+            }
+            case "--help", "-h", "-help" -> {
+                showEcstasyHelp(console);
+                yield 0;
+            }
+            default -> {
+                console.log(ERROR, "Unknown subcommand: {}. Use 'build', 'run', or 'test'.", quoted(subcommand));
+                showEcstasyHelp(console);
+                yield 1;
+            }
+        };
+    }
+
+    /**
+     * Show help for the unified xtc command.
+     */
+    private static void showEcstasyHelp(final Console console) {
+        console.out("""
+            Ecstasy command-line tool
+
+            Usage:
+                xtc <command> [options] [arguments]
+
+            Commands:
+                build   Compile Ecstasy source files (alias for xcc)
+                run     Execute an Ecstasy module (alias for xec)
+                test    Run tests in an Ecstasy module using xunit
+
+            Options:
+                --version   Display the Ecstasy runtime version
+                --help      Display this help message
+
+            Use 'xtc <command> --help' for more information about a command.
+            """);
+    }
+
+    /**
+     * Show version information.
+     */
+    private static void showVersion(final Console console) {
+        console.out("Ecstasy " + VERSION_MAJOR_CUR + "." + VERSION_MINOR_CUR);
     }
 
     /**
@@ -189,6 +258,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
 
         final Launcher<?> launcher = switch (options) {
             case final CompilerOptions opts -> new Compiler(opts, console, errListener);
+            case final TestRunnerOptions opts -> new TestRunner(opts, console, errListener);
             case final RunnerOptions opts -> new Runner(opts, console, errListener);
             case final DisassemblerOptions opts -> new Disassembler(opts, console, errListener);
             default -> {

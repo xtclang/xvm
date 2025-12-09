@@ -94,9 +94,9 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
 
     @Override
     protected int process() {
-        var opts       = options();
-        var fileModule = opts.getTarget();
-        var sModule    = fileModule.getName();
+        final var opts       = options();
+        final var fileModule = opts.getTarget();
+        final var sModule    = fileModule.getName();
 
         Component component  = null;
 
@@ -111,7 +111,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         } else {
             // it's a module; set up the repository
             log(INFO, "Creating and pre-populating library and build repositories");
-            var repo = configureLibraryRepo(opts.getModulePath());
+            final var repo = configureLibraryRepo(opts.getModulePath());
             checkErrors();
 
             log(INFO, "Loading module: {}", sModule);

@@ -209,9 +209,7 @@ public class Runner extends Launcher<RunnerOptions> {
 
         log(INFO, "Executing {} from {}", sName, binLocDesc);
 
-        var connector = opts.isJit() ? new JitConnector(repo) : new Connector(repo);
-        connector.loadModule(module.getName());
-        connector.start(opts.getInjections());
+        var connector = createConnector(repo, module);
 
         var pool = connector.getConstantPool();
         try (var _ = ConstantPool.withPool(pool)) {
@@ -300,6 +298,36 @@ public class Runner extends Launcher<RunnerOptions> {
 
                 Also supports:
                     <filename>, <filename>.x, or <filename>.xtc""";
+    }
+
+    // ----- connector creation --------------------------------------------------------------------
+
+    /**
+     * Create the {@link Connector} to use to execute the module.
+     * Subclasses (like TestRunner) can override to customize connector setup.
+     *
+     * @param repo   the module repository
+     * @param module the module to execute
+     * @return the configured Connector ready for method invocation
+     */
+    protected Connector createConnector(final ModuleRepository repo, final ModuleStructure module) {
+        final RunnerOptions opts = options();
+        final Connector connector = createBaseConnector(repo, opts.isJit());
+        connector.loadModule(module.getName());
+        connector.start(opts.getInjections());
+        return connector;
+    }
+
+    /**
+     * Create the base Connector instance (with or without JIT).
+     * Helper method for subclasses that need to customize connector setup.
+     *
+     * @param repo  the module repository
+     * @param isJit true to use JIT connector, false for interpreted
+     * @return a new Connector (not yet started)
+     */
+    protected Connector createBaseConnector(final ModuleRepository repo, final boolean isJit) {
+        return isJit ? new JitConnector(repo) : new Connector(repo);
     }
 
     // ----- options -------------------------------------------------------------------------------
