@@ -16,7 +16,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.Directory;
@@ -111,7 +110,7 @@ public class ModulePathResolver {
         });
 
         // Check that we don't have name collisions with the same dependency declared in several places.
-        final var modulePathSet = modulePathList.stream().collect(Collectors.toUnmodifiableSet());
+        final var modulePathSet = Set.copyOf(modulePathList);
         final int modulePathListSize = modulePathList.size();
         final int modulePathSetSize = modulePathSet.size();
         if (modulePathListSize != modulePathSetSize) {

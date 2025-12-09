@@ -26,10 +26,21 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-import static org.xvm.asm.Constants.*;
+import static org.xvm.asm.Constants.ECSTASY_MODULE;
+import static org.xvm.asm.Constants.TURTLE_MODULE;
+import static org.xvm.asm.Constants.VERSION_MAJOR_CUR;
+import static org.xvm.asm.Constants.VERSION_MINOR_CUR;
 import static org.xvm.tool.ModuleInfo.isExplicitCompiledFile;
-import static org.xvm.util.Handy.*;
-import static org.xvm.util.Severity.*;
+import static org.xvm.util.Handy.parentOf;
+import static org.xvm.util.Handy.quoted;
+import static org.xvm.util.Handy.resolveFile;
+import static org.xvm.util.Handy.toPathString;
+import static org.xvm.util.Severity.ERROR;
+import static org.xvm.util.Severity.FATAL;
+import static org.xvm.util.Severity.INFO;
+import static org.xvm.util.Severity.NONE;
+import static org.xvm.util.Severity.WARNING;
+import static org.xvm.util.Severity.worstOf;
 
 
 /**
