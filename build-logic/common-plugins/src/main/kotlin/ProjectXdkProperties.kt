@@ -93,6 +93,7 @@ val Project.semanticVersion: String
 fun Task.doFirstTask(block: Task.() -> Unit) {
     doFirst(Action { block(this) })
 }
+
 fun Task.doLastTask(block: Task.() -> Unit) {
     doLast(Action { block(this) })
 }

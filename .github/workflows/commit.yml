@@ -226,7 +226,7 @@ jobs:
             # TODO:
             # name: XTC App Template Integration Test
             #  if: success() && matrix.os == 'ubuntu-latest'
-            #  ## 1) Clone out xtc-app-template from github.com/xtclang/xtc-app-template or wharever it is.
+            #  ## 1) Clone out xtc-app-template from github.com/xtclang/xtc-app-template or wherever it is.
             #  ## 2) Run gradlew publishLocal on the xvm repo we are testing in this commit.yml file.
             #  ## 3) cd into the xtc-app-template folder and run ./gradlew greet, which should work and not fail
             #  uses: act

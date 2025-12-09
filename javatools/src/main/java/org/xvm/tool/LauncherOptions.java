@@ -1138,6 +1138,53 @@ public abstract class LauncherOptions {
     }
 
 
+    // ----- TestRunnerOptions ---------------------------------------------------------------------
+
+    /**
+     * Test runner command-line options.
+     * Extends RunnerOptions since it uses the same option schema but with different
+     * execution behavior (runs xunit engine instead of the module directly).
+     */
+    public static class TestRunnerOptions extends RunnerOptions {
+
+        TestRunnerOptions(final CommandLine commandLine) {
+            super(commandLine);
+        }
+
+        /**
+         * Parse command-line arguments into TestRunnerOptions.
+         */
+        public static TestRunnerOptions parse(final String[] args) {
+            return new TestRunnerOptions(parseCommandLine(RUNNER_OPTIONS, args));
+        }
+
+        /**
+         * Create a builder for programmatically constructing TestRunnerOptions.
+         */
+        public static TestRunnerOptions.Builder builder() {
+            return new TestRunnerOptions.Builder();
+        }
+
+        @Override
+        protected String buildUsageLine(final String cmdName) {
+            return "xtc test [options] <module_or_file>";
+        }
+
+        /**
+         * Builder for constructing TestRunnerOptions programmatically.
+         */
+        public static class Builder extends RunnerOptions.Builder {
+            /**
+             * Build the TestRunnerOptions by parsing the accumulated arguments.
+             */
+            @Override
+            public TestRunnerOptions build() {
+                return TestRunnerOptions.parse(args.toArray(String[]::new));
+            }
+        }
+    }
+
+
     // ----- DisassemblerOptions -------------------------------------------------------------------
 
     /**
