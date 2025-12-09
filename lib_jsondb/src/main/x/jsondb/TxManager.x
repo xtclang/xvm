@@ -121,8 +121,12 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         FileStore store = root.store;
 
         this.sysDir     = store.dirFor (root.path + "sys");
-        this.logFile    = store.fileFor(root.path + "sys" + "txlog.json");
+        this.logFile    = store.fileFor(root.path + "sys" + LogFileName);
         this.statusFile = store.fileFor(root.path + "sys" + "txmgr.json");
+
+        // Configuration from injectables
+        this.maxLogSize       = configureMaxLogSize();
+        this.cleanupThreshold = configureCleanupThreshold();
 
         // build the quick lookup information for the optional transactional "modifiers"
         // (validators, rectifiers, and distributors)
@@ -165,6 +169,21 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
 
     // ----- properties ----------------------------------------------------------------------------
+
+    /**
+     * The injection name prefix for all JSON DB TxManager configuration.
+     */
+    static String ConfigTxManagerPrefix = jsondb.ConfigPrefix + ".txManager";
+
+    /**
+     * The name of the transaction log file.
+     */
+    static String LogFileName = "txlog.json";
+
+    /**
+     * The name of the transaction log file archive directory.
+     */
+    static String LogFileArchiveName = "txlog-archive";
 
     /**
      * The clock shared by all of the services in the database.
@@ -270,7 +289,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     }
 
     /**
-     * A JSON Mapping to use to serialize instances of LogFileInfo.
+     * A JSON Mapping to use to serialize LogFileInfo arrays.
      */
     @Lazy protected Mapping<LogFileInfo[]> logFileInfoArrayMapping.calc() {
         return internalJsonSchema.ensureMapping(LogFileInfo[]);
@@ -282,10 +301,19 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     protected/private LogFileInfo[] logInfos = new LogFileInfo[];
 
     /**
-     * The maximum size log to store in any one log file.
-     * TODO this setting should be configurable (need a "Prefs" API)
+     * The injection name for the TxManager maxLogSize configuration property.
      */
-    public/protected Int maxLogSize = 100K;
+    static String ConfigTxManagerMaxLogSize = ConfigTxManagerPrefix + ".maxLogSize";
+
+    /**
+     * The default maximum size log to store in any one log file.
+     */
+    static Int DefaultMaxLogSize = 100K;
+
+    /**
+     * The maximum size log to store in any one log file.
+     */
+    public/protected Int maxLogSize;
 
     /**
      * Previous modified date/time of the log.
@@ -357,6 +385,23 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * Used to determine idleness.
      */
     protected Time lastActivity = EPOCH;
+
+    /**
+     * The injection name for the TxManager cleanupThreshold configuration property.
+     */
+    static String ConfigTxManagerCleanupThreshold = ConfigTxManagerPrefix + ".cleanupThreshold";
+
+    /**
+     * The default value for the `cleanupThreshold`.
+     */
+    static Int DefaultCleanupThreshold = 10K;
+
+    /**
+     * Cleanup is triggered in the maintenance phase when the number of transactions since the last
+     * cleanup multiplied by the number of seconds passed since the last cleanup is greater than or
+     * equal to this value.
+     */
+    public/protected Int cleanupThreshold;
 
     /**
      * Used to determine when the next storage cleanup should occur.
@@ -3001,6 +3046,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                     lastCleanupTime = now;
                     lastCleanupTx   = lastCommitted;
                     cleanUpStorages();
+                    cleanupLogfiles();
                 }
             } catch (Exception e) {
                 log($"Exception occurred during background maintenance: {e}");
@@ -3043,6 +3089,36 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         }
     }
 
+    protected void cleanupLogfiles() {
+        if (logInfos.size <= 1) {
+            // there is only one log file so nothing to clean up
+            return;
+        }
+
+        // ensure the log file archive directory exists under the sys directory
+        Directory archiveDir = sysDir.dirFor(LogFileArchiveName).ensure();
+
+        ArrayOrderedSet<Int> txSet    = new ArrayOrderedSet<Int>(byReadId.keys.toArray(Constant));
+        if (Int oldestTx := txSet.first()) {
+            for (LogFileInfo info : logInfos) {
+                if (info.name != LogFileName && info.txIds.isBelow(oldestTx)) {
+                    File infoFile = sysDir.fileFor(info.name);
+                    if (infoFile.exists) {
+                        File archiveFile = archiveDir.fileFor(infoFile.name);
+                        if (archiveFile.exists) {
+                            // this should never happen
+                            archiveFile.delete();
+                        }
+                        assert infoFile.renameTo(archiveFile.name);
+                    }
+                } else {
+                    // logInfos is ordered by oldest first, so we can stop as soon as we find the first
+                    // log file that is not older than the oldest transaction in the log
+                    break;
+                }
+            }
+        }
+    }
 
     // ----- internal ------------------------------------------------------------------------------
 
@@ -3135,5 +3211,47 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     void recycleClient(Client<Schema> client) {
         return clientCache.reversed.add(client);
+    }
+
+    // ----- configuration -------------------------------------------------------------------------
+
+    /**
+     * Determines the value to use for the maximum log file size.
+     *
+     * If the value has been configured using an injectable the injected value is validated to be
+     * greater than zero.
+     *
+     * @return the configured maximum log file size or the default value if not configured
+     */
+    static Int configureMaxLogSize() {
+        @Inject(ConfigTxManagerMaxLogSize) Int? maxLogSize;
+        if (maxLogSize.is(Int)) {
+            assert maxLogSize > 0
+                    as $|invalid maxLogSize ({maxLogSize}) configured using \
+                        |"{ConfigTxManagerMaxLogSize}", value must be greater than zero
+                        ;
+            return maxLogSize;
+        }
+        return DefaultMaxLogSize;
+    }
+
+    /**
+     * Determines the value to use for the cleanup threshold.
+     *
+     * If the value has been configured using an injectable the injected value is validated to be
+     * greater than zero.
+     *
+     * @return the configured cleanup threshold. or the default value if not configured
+     */
+    static Int configureCleanupThreshold() {
+        @Inject(ConfigTxManagerCleanupThreshold) Int? cleanupThreshold;
+        if (cleanupThreshold.is(Int)) {
+            assert cleanupThreshold > 0
+                    as $|invalid cleanupThreshold ({cleanupThreshold}) configured using
+                        |"{ConfigTxManagerCleanupThreshold}", value must be greater than zero
+                        ;
+            return cleanupThreshold;
+        }
+        return DefaultCleanupThreshold;
     }
 }
