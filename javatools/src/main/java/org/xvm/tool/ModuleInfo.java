@@ -789,6 +789,7 @@ public class ModuleInfo {
         /**
          * @return a descriptive name for this node
          */
+        @SuppressWarnings("unused")
         public abstract String descriptiveName();
 
         /**
@@ -1095,6 +1096,7 @@ public class ModuleInfo {
         /**
          * @return the module, package, or class source file, or null if none
          */
+        @SuppressWarnings("unused")
         public File sourceFile() {
             return m_fileSrc;
         }

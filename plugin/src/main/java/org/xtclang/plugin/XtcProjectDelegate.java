@@ -771,6 +771,9 @@ public class XtcProjectDelegate {
             task.setDescription("Loads javatools.jar into the plugin classloader for ServiceLoader access");
             task.setGroup(null); // Hidden from task list
 
+            // loadJavaTools must wait for XDK to be extracted so javatools.jar is available
+            task.dependsOn(XDK_EXTRACT_TASK_NAME);
+
             // Configure properties at configuration time to avoid Project access at execution time
             task.getProjectVersion().set(project.provider(() -> project.getVersion().toString()));
             task.getJavaToolsConfiguration().set(project.provider(() ->
