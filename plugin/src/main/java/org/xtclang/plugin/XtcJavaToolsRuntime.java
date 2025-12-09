@@ -20,7 +20,9 @@ import java.util.zip.ZipFile;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_NAME_JAR;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_JAVATOOLS_NAME_MANIFEST;
-import static org.xtclang.plugin.XtcPluginUtils.FileUtils.*;
+import static org.xtclang.plugin.XtcPluginUtils.FileUtils.formatJarMetadata;
+import static org.xtclang.plugin.XtcPluginUtils.FileUtils.isValidJavaToolsArtifact;
+import static org.xtclang.plugin.XtcPluginUtils.FileUtils.readXdkVersionFromJar;
 import static org.xtclang.plugin.XtcPluginUtils.failure;
 
 /**

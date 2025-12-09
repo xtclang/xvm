@@ -8,7 +8,9 @@ import org.gradle.api.logging.Logger;
 
 import org.xtclang.plugin.tasks.XtcLauncherTask;
 
-import static org.xtclang.plugin.XtcPluginUtils.*;
+import static org.xtclang.plugin.XtcPluginUtils.TIMESTAMP_FORMAT;
+import static org.xtclang.plugin.XtcPluginUtils.expandTimestampPlaceholder;
+import static org.xtclang.plugin.XtcPluginUtils.failure;
 
 /**
  * Detached (background) execution strategy.

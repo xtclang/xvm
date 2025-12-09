@@ -913,7 +913,7 @@ public abstract class LauncherOptions {
                     injections.put(val.substring(0, idx), val.substring(idx + 1));
                 }
             }
-            return Collections.unmodifiableMap(injections);
+            return Map.copyOf(injections);
         }
 
         @Override

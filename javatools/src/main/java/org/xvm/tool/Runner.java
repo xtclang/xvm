@@ -189,8 +189,8 @@ public class Runner extends Launcher<RunnerOptions> {
 
         if (module == null) {
             log(ERROR, "Missing module for {}", fileSpec);
-            checkErrors();  // Throws LauncherException
-            return 1;  // Unreachable
+            checkErrors();  // ERROR level throws LauncherException
+            throw new AssertionError("Unreachable"); // Unreachable - log(FATAL) throws
         }
 
         try {
@@ -251,8 +251,8 @@ public class Runner extends Launcher<RunnerOptions> {
         // Only methods with 0 or 1 required parameters are supported
         if (requiredCount > 1) {
             log(ERROR, "Unsupported method arguments {}", quoted(method.getIdentityConstant().getSignature().getValueString()));
-            checkErrors();  // Throws LauncherException
-            return;
+            checkErrors();  // ERROR level throws LauncherException
+            throw new AssertionError("Unreachable");
         }
 
         // Warn if args provided but method takes no parameters
@@ -269,7 +269,8 @@ public class Runner extends Launcher<RunnerOptions> {
             var typeArg = method.getParam(0).getType();
             if (!typeStrings.isA(typeArg)) {
                 log(ERROR, "Unsupported argument type {} for method {}", quoted(typeArg.getValueString()), quoted(sMethod));
-                checkErrors();  // Throws LauncherException
+                checkErrors();  // ERROR level throws LauncherException
+                throw new AssertionError("Unreachable");
             }
         }
     }
