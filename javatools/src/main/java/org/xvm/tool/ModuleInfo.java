@@ -358,36 +358,33 @@ public class ModuleInfo {
      * @return the full module name, which may or may not be qualified
      */
     public String getQualifiedModuleName() {
-        UnknownModule:
-        if (moduleName == null) {
-            if (sourceStatus == Status.Exists && sourceContent != Content.Invalid) {
-                moduleName = extractModuleName(sourceFile);
-                if (moduleName == null) {
-                    sourceContent = Content.Invalid;
-                } else {
-                    sourceContent = Content.Module;
-                    break UnknownModule;
-                }
-            }
-
-            // try to get the module name from the compiled module file
-            if (getBinaryFile() != null && binaryContent != Content.Invalid) {
-                if (loadBinaryFile()) {
-                    break UnknownModule;
-                }
-            }
-
-            // guess at the module name based on the source file name, binary file name, or
-            // project dir name
-            if (sourceFile != null) {
-                moduleName = removeExtension(sourceFile.getName());
-            } else if (binaryFile != null) {
-                moduleName = removeExtension(binaryFile.getName());
-            } else {
-                moduleName = Objects.requireNonNullElseGet(fileName, () -> projectDir.getName());
-            }
+        if (moduleName != null) {
+            return moduleName;
         }
 
+        // Try to extract module name from source file
+        if (sourceStatus == Status.Exists && sourceContent != Content.Invalid) {
+            moduleName = extractModuleName(sourceFile);
+            if (moduleName != null) {
+                sourceContent = Content.Module;
+                return moduleName;
+            }
+            sourceContent = Content.Invalid;
+        }
+
+        // Try to get the module name from the compiled module file
+        if (getBinaryFile() != null && binaryContent != Content.Invalid && loadBinaryFile()) {
+            return moduleName;
+        }
+
+        // Fall back to guessing from file/directory names
+        if (sourceFile != null) {
+            moduleName = removeExtension(sourceFile.getName());
+        } else if (binaryFile != null) {
+            moduleName = removeExtension(binaryFile.getName());
+        } else {
+            moduleName = Objects.requireNonNullElseGet(fileName, () -> projectDir.getName());
+        }
         return moduleName;
     }
 
