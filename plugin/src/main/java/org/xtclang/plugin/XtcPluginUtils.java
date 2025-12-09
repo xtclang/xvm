@@ -96,17 +96,19 @@ public final class XtcPluginUtils {
         if (template == null || params == null || params.length == 0) {
             return template;
         }
-        final var numbered = new StringBuilder(template.length() + params.length * 3);
+        // First escape single quotes for MessageFormat (double them), then convert {} to {n}
+        final var escaped = template.replace("'", "''");
+        final var numbered = new StringBuilder(escaped.length() + params.length * 3);
         int paramIndex = 0;
         int pos = 0;
-        while (pos < template.length()) {
-            int openBrace = template.indexOf('{', pos);
+        while (pos < escaped.length()) {
+            int openBrace = escaped.indexOf('{', pos);
             if (openBrace == -1) {
-                numbered.append(template.substring(pos));
+                numbered.append(escaped.substring(pos));
                 break;
             }
-            numbered.append(template, pos, openBrace);
-            if (openBrace + 1 < template.length() && template.charAt(openBrace + 1) == '}') {
+            numbered.append(escaped, pos, openBrace);
+            if (openBrace + 1 < escaped.length() && escaped.charAt(openBrace + 1) == '}') {
                 numbered.append('{').append(paramIndex++).append('}');
                 pos = openBrace + 2;
             } else {
