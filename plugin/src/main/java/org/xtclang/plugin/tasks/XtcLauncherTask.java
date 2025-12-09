@@ -57,6 +57,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     final ListProperty<@NotNull String> jvmArgs;
     final Property<@NotNull Boolean> verbose;
     final Property<@NotNull Boolean> showVersion;
+    final Property<@NotNull ExecutionMode> executionMode;
 
     final E ext;
 
@@ -114,6 +115,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         this.verbose = objects.property(Boolean.class).convention(ext.getVerbose());
         this.showVersion = objects.property(Boolean.class).convention(ext.getShowVersion());
         this.jvmArgs = objects.listProperty(String.class).convention(ext.getJvmArgs());
+        this.executionMode = objects.property(ExecutionMode.class).convention(ext.getExecutionMode());
 
         // Assert that required configurations exist - they should always be created by this plugin
         final var configurations = project.getConfigurations();
@@ -277,7 +279,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @Input
     @Override
     public Property<@NotNull ExecutionMode> getExecutionMode() {
-        return ext.getExecutionMode();
+        return executionMode;
     }
 
     @Optional
