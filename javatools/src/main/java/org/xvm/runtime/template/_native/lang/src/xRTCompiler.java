@@ -2,29 +2,27 @@ package org.xvm.runtime.template._native.lang.src;
 
 
 import java.io.File;
-
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
+import org.xvm.asm.ErrorList;
 import org.xvm.asm.FileRepository;
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Op;
-import org.xvm.asm.Version;
+import org.xvm.asm.XvmStructure;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.BuildRepository;
-import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.InstantRepository;
 
 import org.xvm.runtime.CallChain;
@@ -54,10 +52,10 @@ import org.xvm.runtime.template._native.reflect.xRTComponentTemplate.ComponentTe
 import org.xvm.runtime.template._native.reflect.xRTFileTemplate;
 
 import org.xvm.tool.Compiler;
+import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.ModuleInfo;
 import org.xvm.tool.ModuleInfo.Node;
 
-import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 
@@ -94,8 +92,12 @@ public class xRTCompiler
     @Override
     public ServiceHandle createServiceHandle(ServiceContext context, ClassComposition clz,
                                              TypeConstant typeMask) {
+        CompilerOptions options = CompilerOptions.builder()
+                .forceRebuild()
+                .qualifyOutputNames()
+                .build();
         CompilerHandle hCompiler =
-                new CompilerHandle(clz.maskAs(typeMask), context, new CompilerAdapter());
+                new CompilerHandle(clz.maskAs(typeMask), context, new CompilerAdapter(options));
         context.setService(hCompiler);
         return hCompiler;
     }
@@ -225,7 +227,7 @@ public class xRTCompiler
     private int completeWithError(Frame frame, CompilerAdapter compiler, String
                                   sMissing, int[] aiReturn) {
         // org.xvm.compiler.Compiler.MODULE_MISSING
-        compiler.log(Severity.FATAL, "Module missing: \"" + sMissing + '"');
+        compiler.logError(Severity.FATAL, "MODULE_MISSING", new Object[] {sMissing});
         return completeCompilation(frame, compiler, null, aiReturn);
     }
 
@@ -304,10 +306,22 @@ public class xRTCompiler
     /**
      * Adapter into the native compiler.
      */
-    protected static class CompilerAdapter
-            extends Compiler {
-        protected CompilerAdapter() {
-            super(null);
+    protected static class CompilerAdapter extends Compiler {
+
+        private List<ModuleRepository> m_listRepos;
+        private List<File>             m_listSources;
+        private ModuleRepository       m_repoResults;
+
+        // re-entry support
+        private List<org.xvm.compiler.Compiler> m_compilers;
+        private ModuleRepository                m_repoOutput;
+        private Node[]                          m_allNodes;
+
+        // error collection
+        private final ErrorList m_errorList;
+
+        protected CompilerAdapter(CompilerOptions options) {
+            super(options, null, m_errorList = new ErrorList(100));
         }
 
         // ----- accessors -------------------------------------------------------------------------
@@ -320,24 +334,13 @@ public class xRTCompiler
             m_listRepos.add(new InstantRepository(module));
         }
 
-        protected List<File> getSourceLocations() {
-            return m_listSources;
-        }
-
         protected void setSourceLocations(List<File> listSources) {
             m_listSources = listSources;
         }
 
-        protected Version getVersion() {
-            return m_version;
-        }
-
-        protected void setVersion(Version version) {
-            m_version = version;
-        }
-
-        protected boolean isForcedRebuild() {
-            return true;
+        @Override
+        protected List<File> getInputLocations() {
+            return m_listSources != null ? m_listSources : List.of();
         }
 
         protected Severity getSeverity() {
@@ -345,11 +348,17 @@ public class xRTCompiler
         }
 
         protected List<String> getErrors() {
-            return m_log == null ? Collections.emptyList() : m_log;
+            return m_errorList.getErrors().stream()
+                    .map(err -> err.getSeverity().desc() + ": " + err.getMessage())
+                    .toList();
         }
 
         protected ModuleRepository getBuildRepository() {
             return m_repoResults;
+        }
+
+        protected void logError(Severity severity, String sCode, Object[] aoParam) {
+            m_errorList.log(severity, sCode, aoParam, (XvmStructure) null);
         }
 
         /**
@@ -361,10 +370,10 @@ public class xRTCompiler
          * @return a name of a missing module if any
          */
         protected String partialCompile(boolean fReenter) {
-            org.xvm.compiler.Compiler[] compilers;
-            ModuleRepository            repoLib;
-            ModuleRepository            repoOutput;
-            Node[]                      allNodes;
+            List<org.xvm.compiler.Compiler> compilers;
+            ModuleRepository                repoLib;
+            ModuleRepository                repoOutput;
+            Node[]                          allNodes;
 
             if (fReenter) {
                 compilers  = m_compilers;
@@ -372,17 +381,17 @@ public class xRTCompiler
                 repoOutput = m_repoOutput;
                 allNodes   = m_allNodes;
             } else {
-                File[]           resourceDirs = options().getResourceLocation();
-                File             fileOutput   = options().getOutputLocation();
-                List<ModuleInfo> listTargets  = selectTargets(options().getInputLocations(), resourceDirs, fileOutput);
-                boolean          fRebuild     = options().isForcedRebuild();
+                var              opts         = options();
+                List<File>       resourceDirs = opts.getResourceLocations();
+                File             fileOutput   = opts.getOutputLocation();
+                boolean          fRebuild     = opts.isForcedRebuild();
+                List<ModuleInfo> listTargets  = selectTargets(getInputLocations(), resourceDirs, fileOutput);
                 checkErrors();
 
-                Map<File, Node> mapTargets     = new ListMap<>(listTargets.size());
-                int             cSystemModules = 0;
+                var mapTargets     = new LinkedHashMap<File, Node>(listTargets.size());
+                int cSystemModules = 0;
                 for (ModuleInfo moduleInfo : listTargets) {
                     Node node = moduleInfo.getSourceTree(this);
-
                     // short-circuit the compilation of any up-to-date modules
                     if (fRebuild || !moduleInfo.isUpToDate()) {
                         mapTargets.put(moduleInfo.getSourceFile(), node);
@@ -401,7 +410,7 @@ public class xRTCompiler
                 flushAndCheckErrors(allNodes);
 
                 // repository setup
-                repoLib = configureLibraryRepo(options().getModulePath());
+                repoLib = configureLibraryRepo(opts.getModulePath());
                 checkErrors();
 
                 if (cSystemModules == 0) {
@@ -413,10 +422,9 @@ public class xRTCompiler
                 checkErrors();
 
                 // the code below could be extracted if necessary: compile(allNodes, repoLib, repoOutput);
-                Map<String, org.xvm.compiler.Compiler> mapCompilers = populateNamespace(allNodes, repoLib);
+                var mapCompilers = resolveCompilers(allNodes, repoLib);
                 flushAndCheckErrors(allNodes);
-
-                compilers = mapCompilers.values().toArray(NO_COMPILERS);
+                compilers = new ArrayList<>(mapCompilers.values());
             }
 
             // inline linkModules() implementation
@@ -459,7 +467,7 @@ public class xRTCompiler
             m_compilers   = null;
             m_repoOutput  = null;
             m_allNodes    = null;
-            m_log.clear();
+            m_errorList.clear();
         }
 
         // ----- Compiler API ----------------------------------------------------------------------
@@ -471,7 +479,7 @@ public class xRTCompiler
 
         @Override
         protected ModuleRepository configureResultRepo(File fileDest) {
-            return m_repoResults = makeBuildRepo();
+            return m_repoResults = new BuildRepository();
         }
 
         @Override
@@ -480,77 +488,10 @@ public class xRTCompiler
         }
 
         @Override
-        protected void linkModules(org.xvm.compiler.Compiler[] compilers, ModuleRepository repo) {
+        protected void linkModules(List<org.xvm.compiler.Compiler> compilers, ModuleRepository repo) {
             // inlined; should not be called
-            throw new IllegalStateException();
+            throw new IllegalStateException("xRTCompiler.linkModules");
         }
-
-        @Override
-        protected void log(Severity sev, String sMsg) {
-            List<String> log = m_log;
-            if (log == null) {
-                log = m_log = new ArrayList<>();
-            }
-
-            if (sev.compareTo(m_sevWorst) > 0) {
-                m_sevWorst = sev;
-            }
-
-            if (sev.compareTo(Severity.WARNING) >= 0) {
-                log.add(sev.desc() + ": " + sMsg);
-            }
-        }
-
-        @Override
-        protected void abort(boolean fError) {
-            throw new CompilerException("");
-        }
-
-        // ----- Options adapter -------------------------------------------------------------------
-
-        @Override
-        protected Compiler.Options instantiateOptions() {
-            return new Options();
-        }
-
-        /**
-         * A non-command-line Options implementation.
-         */
-        class Options
-                extends Compiler.Options {
-            @Override
-            public List<File> getInputLocations() {
-                return CompilerAdapter.this.getSourceLocations();
-            }
-
-            @Override
-            public Version getVersion() {
-                return CompilerAdapter.this.getVersion();
-            }
-
-            @Override
-            public boolean isOutputFilenameQualified() {
-                return true;
-            }
-
-            @Override
-            public boolean isForcedRebuild() {
-                return CompilerAdapter.this.isForcedRebuild();
-            }
-        }
-
-        // ----- fields ----------------------------------------------------------------------------
-
-        private List<ModuleRepository> m_listRepos;
-        private List<File>             m_listSources;
-        private ModuleRepository       m_repoResults;
-        private Version                m_version = new Version("CI");
-        private List<String>           m_log = new ArrayList<>();
-
-        // re-entry support
-        private org.xvm.compiler.Compiler[] m_compilers;
-        private ModuleRepository            m_repoOutput;
-        private Node[]                      m_allNodes;
     }
 
     // ----- constants -----------------------------------------------------------------------------

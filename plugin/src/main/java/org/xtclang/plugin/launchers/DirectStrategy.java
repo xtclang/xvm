@@ -28,7 +28,7 @@ public class DirectStrategy implements ExecutionStrategy {
     public DirectStrategy(final Logger logger) {
         this.logger = logger;
         this.console = createConsole(logger);
-        this.err = new ErrorList();
+        this.err = new ErrorList(100);
     }
 
     private static Console createConsole(final Logger logger) {
