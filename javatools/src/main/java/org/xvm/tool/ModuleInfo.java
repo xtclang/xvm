@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
@@ -450,14 +450,11 @@ public class ModuleInfo {
         if (fileSrc != null && fileSrc.exists() && sourceTimestamp == 0L) {
             sourceTimestamp = sourceFile.lastModified();
             if (sourceIsTree) {
-                synchronized (this) {
-                    File subDir = new File(sourceFile.getParentFile(), removeExtension(sourceFile.getName()));
-                    if (subDir.isDirectory()) {
-                        accumulator = sourceTimestamp;
-                        visitTree(subDir, "x", f -> accumulator = Math.max(accumulator, f.lastModified()));
-                        sourceTimestamp = accumulator;
-                        accumulator     = 0L;
-                    }
+                File subDir = new File(sourceFile.getParentFile(), removeExtension(sourceFile.getName()));
+                if (subDir.isDirectory()) {
+                    sourceTimestamp = collectFiles(subDir, "x")
+                            .mapToLong(File::lastModified)
+                            .reduce(sourceTimestamp, Math::max);
                 }
             }
         }
@@ -606,30 +603,27 @@ public class ModuleInfo {
     // ----- internal ------------------------------------------------------------------------------
 
     /**
-     * Visit all subdirectories (recursively) and files matching the optional extension within the
-     * specified directory, and do so in a stable, repeatable order.
+     * Recursively collect all files matching the optional extension within the specified directory,
+     * returning them as a stream in a stable, repeatable order.
      *
-     * @param dir      a directory
-     * @param ext      an optional extension to match; otherwise null
-     * @param visitor  the visitor to invoke with each matching non-directory file
+     * @param dir  a directory
+     * @param ext  an optional extension to match; otherwise null
+     *
+     * @return a stream of matching non-directory files
      */
-    private void visitTree(File dir, String ext, Consumer<File> visitor) {
-        TreeMap<String, File> children = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-        for (File child : dir.listFiles()) {
+    private Stream<File> collectFiles(File dir, String ext) {
+        final var children = new TreeMap<String, File>(String.CASE_INSENSITIVE_ORDER);
+        for (File child : listFiles(dir)) {
             String name = child.getName();
             if (ext == null || ext.equalsIgnoreCase(getExtension(name))) {
-                assert !children.containsKey(name);
                 children.put(name, child);
             }
         }
 
-        for (File child : children.values()) {
-            if (child.isDirectory()) {
-                visitTree(child, ext, visitor);
-            } else {
-                visitor.accept(child);
-            }
-        }
+        return children.values().stream()
+                .flatMap(child -> child.isDirectory()
+                        ? collectFiles(child, ext)
+                        : Stream.of(child));
     }
 
 
@@ -1796,8 +1790,6 @@ public class ModuleInfo {
 
     private enum Status  {Unknown, NotExists, Exists}
     private enum Content {Unknown, Invalid, Module}
-
-    transient long accumulator;
 
     private final File    fileSpec;       // original file spec that was used to create this info
     private final boolean deduce;         // use knowledge of common file layouts to find locations
