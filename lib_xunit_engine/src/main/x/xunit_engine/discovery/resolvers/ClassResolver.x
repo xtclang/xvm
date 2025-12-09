@@ -32,7 +32,16 @@ service ClassResolver
                 return False;
             }
 
-            return True, [ContainerModel.builder(testClass)], selectors.forChildren(testClass);
+            try {
+                Selector[] childSelectors = selectors.forChildren(testClass);
+                return True, [ContainerModel.builder(testClass)], childSelectors;
+            } catch (Exception e) {
+                @Inject Console console;
+                console.print($|WARNING: XUnit discovery, failed to obtain children of \
+                               |"{testClass}" due to "{e.text}"
+                               );
+                return True, [], [];
+            }
         }
         return False;
     }
