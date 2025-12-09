@@ -65,7 +65,7 @@ public class ModuleInfo {
      * @param fileSpec the file to analyze, which may or may not exist
      * @param deduce   pass true to enable the algorithm to deduce/search for likely locations
      */
-    public ModuleInfo(File fileSpec, boolean deduce) {
+    public ModuleInfo(final File fileSpec, final boolean deduce) {
         this(fileSpec, deduce, null, null);
     }
 
@@ -82,7 +82,7 @@ public class ModuleInfo {
      * @param binarySpec    the file or directory which represents the target of the binary; as
      *                      provided to the compiler using the "-o" command line switch
      */
-    public ModuleInfo(File fileSpec, boolean deduce, List<File> resourceSpecs, File binarySpec) {
+    public ModuleInfo(final File fileSpec, final boolean deduce, final List<File> resourceSpecs, File binarySpec) {
         if (fileSpec == null) {
             throw new IllegalArgumentException("A file specification is required for the module");
         }
@@ -103,7 +103,7 @@ public class ModuleInfo {
         }
         if (resolved.isDirectory()) {
             // it's possible that the module name was specified without the ".x" extension, which
-            // would match the name of the sub-directory containing the package and class files
+            // would match the name of the subdirectory containing the package and class files
             // within the module; this should be obvious because there will also be a source file
             if (dirSpec == null || fileName != null && !new File(dirSpec, fileName + ".x").exists()) {
                 // we don't know the file name specified, because the name was of a directory
@@ -322,6 +322,7 @@ public class ModuleInfo {
     /**
      * @return the file name (the short name without an extension) that the ModuleInfo is using
      */
+    @SuppressWarnings("unused")
     public String getFileName() {
         return fileName;
     }
@@ -348,6 +349,7 @@ public class ModuleInfo {
     /**
      * @return True if the module name uses a qualified format
      */
+    @SuppressWarnings("unused")
     public boolean isModuleNameQualified() {
         return getQualifiedModuleName().indexOf('.') >= 0;
     }
@@ -403,6 +405,7 @@ public class ModuleInfo {
     /**
      * @return the unqualified module name
      */
+    @SuppressWarnings("unused")
     public String getSimpleModuleName() {
         String moduleName = getQualifiedModuleName();
         int firstDot = moduleName.indexOf('.');
@@ -604,7 +607,7 @@ public class ModuleInfo {
      *
      * @return a stream of matching non-directory files
      */
-    private Stream<File> collectFiles(File dir, String ext) {
+    private Stream<File> collectFiles(final File dir, final String ext) {
         final var children = new TreeMap<String, File>(String.CASE_INSENSITIVE_ORDER);
         for (File child : listFiles(dir)) {
             String name = child.getName();
@@ -692,7 +695,7 @@ public class ModuleInfo {
          * @param parent  the parent node
          * @param file    the file that this node will represent
          */
-        protected Node(DirNode parent, File file) {
+        protected Node(final DirNode parent, final File file) {
             // at least one of the parameters is required
             assert parent != null || file != null;
 
@@ -750,12 +753,14 @@ public class ModuleInfo {
         /**
          * @return the ResourceDir for this node; never null
          */
+        @SuppressWarnings("unused")
         public abstract ResourceDir resourceDir();
 
         /**
          * @return the child directory name for this node's ResourceDir compared to its parent's,
          *         or null to indicate that the parent's ResourceDir should be used
          */
+        @SuppressWarnings("unused")
         protected String resourcePathPart() {
             return null;
         }
@@ -797,7 +802,7 @@ public class ModuleInfo {
         public abstract TypeCompositionStatement type();
 
         @Override
-        public boolean log(ErrorInfo err) {
+        public boolean log(final ErrorInfo err) {
             return errs().log(err);
         }
 
@@ -812,7 +817,7 @@ public class ModuleInfo {
         }
 
         @Override
-        public boolean hasError(String sCode) {
+        public boolean hasError(final String sCode) {
             return m_errs != null && m_errs.hasError(sCode);
         }
 
@@ -830,7 +835,7 @@ public class ModuleInfo {
         /**
          * Log any errors accumulated on (or under) this node
          */
-        public void logErrors(ErrorListener errs) {
+        public void logErrors(final ErrorListener errs) {
             ErrorList deferred = m_errs;
             if (deferred != null) {
                 for (ErrorInfo err : deferred.getErrors()) {
@@ -876,7 +881,7 @@ public class ModuleInfo {
          * @param dir      the directory that this node will represent
          * @param fileSrc  the file for the package.x file (or null if it does not exist)
          */
-        DirNode(DirNode parent, File dir, File fileSrc) {
+        DirNode(final DirNode parent, final File dir, final File fileSrc) {
             super(parent, dir);
             assert dir.isDirectory();
 
@@ -887,7 +892,7 @@ public class ModuleInfo {
         }
 
         /**
-         * Build a sub-tree of nodes that are contained within this node.
+         * Build a subtree of nodes that are contained within this node.
          */
         void buildSourceTree() {
             File thisDir = file();
@@ -905,7 +910,7 @@ public class ModuleInfo {
                     // a subtree
                     File subDir = new File(thisDir, removeExtension(name));
                     if (subDir.exists() && subDir.isDirectory()) {
-                        // create a sub-tree
+                        // create a subtree
                         DirNode child = new DirNode(this, subDir, file);
                         packageNodes().add(child);
                         child.buildSourceTree();
@@ -1503,6 +1508,7 @@ public class ModuleInfo {
      *
      * @return true iff the directory appears to be a project directory
      */
+    @SuppressWarnings("unused")
     public static boolean isProjectDir(File dir) {
         return dir != null && dir.isDirectory() &&
             (new File(dir, "src"   ).exists() && !new File(dir, "src.x"   ).exists() ||
