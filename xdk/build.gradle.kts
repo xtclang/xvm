@@ -412,6 +412,9 @@ tasks.withType<Tar>().configureEach {
     archiveExtension = "tar.gz"
 }
 
+// Resolve test stdout property at configuration time (acceptable - static test configuration)
+val showTestStdout = xdkProperties.booleanValue("org.xtclang.java.test.stdout", false)
+
 // Configure test task to run integration tests after XDK is fully built
 tasks.test {
     // Tests require the XDK to be fully installed with all XTC libraries
@@ -421,7 +424,7 @@ tasks.test {
 
     testLogging {
         events("passed", "skipped", "failed")
-        showStandardStreams = true
+        showStandardStreams = showTestStdout
     }
 
     // Set working directory for tests

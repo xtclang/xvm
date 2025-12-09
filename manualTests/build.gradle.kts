@@ -460,7 +460,13 @@ val runSequential by tasks.registering(XtcRunTask::class) {
 val runAllTestTasks by tasks.registering {
     group = "application"
     description = "Run all test tasks."
-    dependsOn(runTwoTestsInSequence, runParallel, runOne, runTestAllExecutionModes)
+    dependsOn(runOne, runTwoTestsInSequence, runParallel, runTestAllExecutionModes)
+}
+
+val runAllTestTasksParallel by tasks.registering {
+    group = "application"
+    description = "Run all test tasks."
+    dependsOn(runOne, runTwoTestsInSequence, runSequential, runTestAllExecutionModes)
 }
 
 fun resolveTestNameProperty(defaultTestName: String = "EchoTest"): String {
@@ -516,6 +522,3 @@ val printTestModules by tasks.registering {
         }
     }
 }
-
-// TODO: Runparallel and run all tests are note the same
-// profile EVERYTHING [plugin] Forked process command: /Users/marcus/.sdkman/candidates/java/25-amzn/bin/java -ea --enable-native-access=ALL-UNNAMED -cp /Users/marcus/src/xvm/javatools/build/libs/javatools-0.4.4-SNAPSHOT.jar org.xvm.tool.Compiler -L ../lib_aggregate/build/xtc/main/lib/aggregate.xtc -L ../lib_collections/build/xtc/main/lib/collections.xtc -L ../lib_ecstasy/build/xtc/main/lib/ecstasy.xtc -L ../lib_ecstasy/build/xtc/main/lib/javatools_turtle.xtc -L ../lib_json/build/xtc/main/lib/json.xtc -L build/xtc/main/lib -L ../lib_oodb/build/xtc/main/lib/oodb.xtc --rebuild -o build/xtc/main/lib --set-version 0.4.4+SNAPSHOT src/main/x/jsondb.x

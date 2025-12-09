@@ -263,7 +263,7 @@ public class ResourceDir {
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder().append("ResourceDir(");
+        final var buf = new StringBuilder().append("ResourceDir(");
         boolean first = true;
         for (File file : resourcePath) {
             if (first) {
@@ -279,7 +279,7 @@ public class ResourceDir {
     /**
      * A ResourceDir that represents an empty set of resources.
      */
-    public static final ResourceDir NoResources = new ResourceDir(List.of());
+    static final ResourceDir NoResources = new ResourceDir(List.of());
 
     private final ResourceDir parent;
 

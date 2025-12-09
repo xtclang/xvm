@@ -4,15 +4,11 @@ package org.xvm.tool;
 import java.io.File;
 import java.io.IOException;
 
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
 
 import java.util.stream.Stream;
@@ -23,7 +19,6 @@ import org.xvm.asm.FileStructure;
 import org.xvm.asm.Version;
 
 import org.xvm.compiler.CompilerException;
-import org.xvm.compiler.Constants;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
 
@@ -386,10 +381,8 @@ public class ModuleInfo {
                 moduleName = removeExtension(sourceFile.getName());
             } else if (binaryFile != null) {
                 moduleName = removeExtension(binaryFile.getName());
-            } else if (fileName != null) {
-                moduleName = fileName;
             } else {
-                moduleName = projectDir.getName();
+                moduleName = Objects.requireNonNullElseGet(fileName, () -> projectDir.getName());
             }
         }
 
@@ -449,7 +442,7 @@ public class ModuleInfo {
         File fileSrc = getSourceFile();
         if (fileSrc != null && fileSrc.exists() && sourceTimestamp == 0L) {
             sourceTimestamp = sourceFile.lastModified();
-            if (sourceIsTree) {
+            if (isSourceTree()) {
                 File subDir = new File(sourceFile.getParentFile(), removeExtension(sourceFile.getName()));
                 if (subDir.isDirectory()) {
                     sourceTimestamp = collectFiles(subDir, "x")
@@ -652,7 +645,7 @@ public class ModuleInfo {
             errs = new ErrorList(100);
         }
 
-        if (sourceIsTree) {
+        if (isSourceTree()) {
             assert fileName != null;
             File subDir = new File(srcDir, fileName);
             assert subDir.exists();
@@ -835,7 +828,7 @@ public class ModuleInfo {
         }
 
         /**
-         * @return log any errors accumulated on (or under) this node
+         * Log any errors accumulated on (or under) this node
          */
         public void logErrors(ErrorListener errs) {
             ErrorList deferred = m_errs;
@@ -938,9 +931,9 @@ public class ModuleInfo {
                 return "module " + name();
             }
 
-            StringBuilder sb = new StringBuilder();
-            sb.append("package ")
-              .append(name());
+            final var sb = new StringBuilder()
+                .append("package ")
+                .append(name());
 
             DirNode node = parent();
             while (node.parent() != null) {
@@ -1444,136 +1437,6 @@ public class ModuleInfo {
         }
 
         return null;
-    }
-
-    /**
-     * @return the version of the XVM code that is answering this question
-     */
-    public static Version getXvmVersion() {
-        return new Version(new int[] {Constants.VERSION_MAJOR_CUR, Constants.VERSION_MINOR_CUR},
-                           fileTimestampToBuildString(getJarFile()));
-    }
-
-    /**
-     * @param moduleFile  a File that contains a compiled Ecstasy module
-     *
-     * @return the version of the XVM that compiled the specified module
-     */
-    public static Version getXvmVersion(File moduleFile) {
-        if (moduleFile == null) {
-            throw new IllegalArgumentException("Compiled module file required");
-        }
-
-        if (!moduleFile.exists()) {
-            throw new IllegalArgumentException("Compiled module file (" + moduleFile + ") does not exist");
-        }
-
-        try {
-            FileStructure struct = new FileStructure(moduleFile);
-            return new Version(new int[] {struct.getFileMajorVersion(), struct.getFileMinorVersion()}, null);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to read module file: " + moduleFile);
-        }
-    }
-
-    /**
-     * @return the version of the XDK that is answering this question, or null if this running code
-     *         is not part of a well-formed XDK image
-     */
-    public static Version getXdkVersion() {
-        try {
-            return getModuleVersion(new File(getJarFile().getParentFile().getParentFile(), "lib/ecstasy.xtc"));
-        } catch (Exception ignore) {
-            return null;
-        }
-    }
-
-    /**
-     * @return the Version that was stamped onto the specified compiled module file
-     */
-    public static Version getModuleVersion(File moduleFile) {
-        if (moduleFile == null) {
-            throw new IllegalArgumentException("Compiled module file required");
-        }
-
-        if (!moduleFile.exists()) {
-            throw new IllegalArgumentException("Compiled module file (" + moduleFile + ") does not exist");
-        }
-
-        try {
-            return new FileStructure(moduleFile).getModule().getVersion();
-        } catch (Exception ignore) {
-            return null;
-        }
-    }
-
-    /**
-     * @return the version of the XDK that is answering this question, or null if this running code
-     *         is not part of a well-formed XDK image
-     */
-    private static File getJarFile() {
-        Class clz    = ModuleInfo.class;
-        URL   jarUrl = null;
-        try {
-            jarUrl = clz.getProtectionDomain().getCodeSource().getLocation();
-        } catch (SecurityException | NullPointerException ignore) {}
-
-        if (jarUrl == null) {
-            URL clzUrl = clz.getResource(clz.getSimpleName() + ".class");
-            if (clzUrl != null) {
-                String clzPath = clzUrl.toString();
-                String clzTail = clz.getCanonicalName().replace('.', '/') + ".class";
-                if (clzPath.endsWith(clzTail)) {
-                    try {
-                        jarUrl = new URI(clzPath.substring(0, clzPath.length() - clzTail.length())).
-                                    toURL();
-                    } catch (MalformedURLException | URISyntaxException ignore) {}
-                }
-            }
-        }
-
-        if (jarUrl == null) {
-            return null;
-        }
-
-        // possible "jar:" prefix (implies "!/" suffix)
-        String jarPath = jarUrl.toString();
-        if (jarPath.startsWith("jar:")) {
-            int dot = jarPath.indexOf("!/");
-            jarPath = dot < 0
-                    ? jarPath.substring(4)
-                    : jarPath.substring(4, dot);
-        }
-
-        File jarFile = null;
-        try {
-            if (jarPath.matches("file:[A-Za-z]:.*")) {
-                jarPath = "file:/" + jarPath.substring(5);
-            }
-            jarFile = new File(new URI(jarPath));
-        } catch (Exception ignore) {
-            if (jarPath.startsWith("file:")) {
-                jarFile = new File(jarPath.substring(5));
-            }
-        }
-        return jarFile;
-    }
-
-    /**
-     * @param file  the file to obtain the modification date from
-     *
-     * @return the modification date in the format "YYYY-MM-DD.HH-MM-SS", or null if it could not be
-     *         determined
-     */
-    private static String fileTimestampToBuildString(File file) {
-        try {
-            long timestamp = file.lastModified();
-            return timestamp == 0
-                    ? null
-                    : dateString(timestamp).replace(':', '-').replace(' ', '.');
-        } catch (RuntimeException ignore) {
-            return null;
-        }
     }
 
     /**
