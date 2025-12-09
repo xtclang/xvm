@@ -1,5 +1,6 @@
-import extensions.EngineExtension;
-import extensions.TestEngineExtender;
+import xunit.annotations.TestEngineExtender;
+
+import xunit.extensions.Extension;
 
 /**
  * The configuration to control running a test suite.
@@ -29,7 +30,7 @@ const TestConfiguration {
     /**
      * The engine extensions.
      */
-    EngineExtension[] extensions;
+    Extension[] extensions;
 
     /**
      * Return this `TestConfiguration` as a `Builder`.
@@ -69,7 +70,7 @@ const TestConfiguration {
         /**
          * The engine extensions.
          */
-        private EngineExtension[] extensions = new Array();
+        private Extension[] extensions = new Array();
 
         /**
          * Create a `Builder`.
@@ -107,15 +108,15 @@ const TestConfiguration {
          * @param testModule  the test module
          */
         Builder discoverExtensions(Module testModule) {
-            Map<String, EngineExtension[]> extensionMap = new HashMap();
+            Map<String, Extension[]> extensionMap = new HashMap();
             discoverExtensions(testModule, extensionMap);
-            for (EngineExtension[] extensions : extensionMap.values) {
+            for (Extension[] extensions : extensionMap.values) {
                 this.extensions.addAll(extensions);
             }
             return this;
         }
 
-        private void discoverExtensions(Module testModule, Map<String, EngineExtension[]> extensions) {
+        private void discoverExtensions(Module testModule, Map<String, Extension[]> extensions) {
             if (extensions.contains(testModule.qualifiedName)) {
                 return;
             }
@@ -127,7 +128,7 @@ const TestConfiguration {
             }
 
             if (testModule.is(TestEngineExtender)) {
-                EngineExtension[] moduleExtensions = testModule.getTestEngineExtensions();
+                Extension[] moduleExtensions = testModule.getTestEngineExtensions();
                 extensions.put(testModule.qualifiedName, moduleExtensions);
             } else {
                 extensions.put(testModule.qualifiedName, []);

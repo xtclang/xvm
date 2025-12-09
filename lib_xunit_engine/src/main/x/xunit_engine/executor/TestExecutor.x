@@ -4,6 +4,7 @@ import xunit.SkipResult;
 
 import xunit.extensions.Extension;
 import xunit.extensions.ExtensionProvider;
+import xunit.extensions.ResourceLookupCallback;
 
 /**
  * An executor of tests.
@@ -40,13 +41,16 @@ const TestExecutor {
      * Execute the tests in this executor's `Model` including recursively
      * executing tests in any child `Model's.
      *
-     * @param parentContext     the parent `EngineExecutionContext` to use
-     * @param parentExtensions  an optional parent `ExtensionRegistry` to use
+     * @param parentContext   the parent `EngineExecutionContext` to use
+     * @param parentRegistry  an optional parent `ExtensionRegistry` to use
+     * @param extensions      an optional array of `Extension`s to use
      */
-    void execute(EngineExecutionContext parentContext, ExtensionRegistry? parentExtensions = Null)
+    void execute(EngineExecutionContext parentContext,
+                 ExtensionRegistry?     parentRegistry = Null,
+                 Extension[]            extensions     = [])
      {
         @Inject Clock          clock;
-        ExtensionRegistry      extensions = new ExtensionRegistry(model, parentExtensions);
+        ExtensionRegistry      registry   = new ExtensionRegistry(model, parentRegistry);
         ExceptionCollector     collector  = new ExceptionCollector();
         SkipResult             skipResult = NotSkipped;
         Boolean                started    = False;
@@ -54,26 +58,26 @@ const TestExecutor {
         Duration               duration   = None;
         EngineExecutionContext context    = parentContext;
 
-        @Inject TestResourceProvider provider;
-        provider.setExecutionContext(context);
+        registry.addAll(extensions);
+        updateResourceProvider(context, registry);
 
-		if (context := collector.execute(() -> lifecycle.prepare(parentContext, extensions))) {
-            provider.setExecutionContext(context);
-            if (skipResult := collector.execute(() -> lifecycle.shouldBeSkipped(context, extensions))) {
+		if (context := collector.execute(() -> lifecycle.prepare(parentContext, registry))) {
+            updateResourceProvider(context, registry);
+            if (skipResult := collector.execute(() -> lifecycle.shouldBeSkipped(context, registry))) {
                 if (collector.empty && !skipResult.skipped) {
                     if (collector.executeVoid(() -> context.listener.onStarted(model))) {
                         started = True;
-                        if (context := executeRecursively(collector, context, extensions)) {
-                            provider.setExecutionContext(context);
-                            cleanUp(collector, context, extensions);
+                        if (context := executeRecursively(collector, context, registry)) {
+                            updateResourceProvider(context, registry);
+                            cleanUp(collector, context, registry);
                             duration = clock.now - start;
                         }
                     }
                 }
             }
         }
-        provider.setExecutionContext(context);
-        reportCompletion(collector, parentContext, extensions, skipResult, started, duration);
+        updateResourceProvider(context, registry);
+        reportCompletion(collector, parentContext, registry, skipResult, started, duration);
     }
 
     /**
@@ -81,28 +85,27 @@ const TestExecutor {
      *
      * @param collector   the `ExceptionCollector` to collect any exceptions
      * @param context     the current `EngineExecutionContext`
-     * @param extensions  the `ExtensionRegistry` containing any test extensions
+     * @param registry  the `ExtensionRegistry` containing any test extensions
      *
      * @return True iff test execution can continue
      * @return the `EngineExecutionContext` to use for further test executions
      */
     private conditional EngineExecutionContext executeRecursively(ExceptionCollector collector,
-            EngineExecutionContext context, ExtensionRegistry extensions) {
+            EngineExecutionContext context, ExtensionRegistry registry) {
 
         return collector.execute(() -> {
-            @Inject TestResourceProvider provider;
-            provider.setExecutionContext(context);
+            updateResourceProvider(context, registry);
 
-            EngineExecutionContext ctx = lifecycle.before(collector, context, extensions);
-            provider.setExecutionContext(ctx);
+            EngineExecutionContext ctx = lifecycle.before(collector, context, registry);
+            updateResourceProvider(ctx, registry);
             if (collector.empty) {
-                ctx = lifecycle.execute(collector, ctx, extensions);
-                provider.setExecutionContext(ctx);
+                ctx = lifecycle.execute(collector, ctx, registry);
+                updateResourceProvider(ctx, registry);
                 for (Model child : lifecycle.getChildren(ctx)) {
                     TestExecutor executor = new TestExecutor(child, configuration);
-                    executor.execute(ctx, extensions);
+                    executor.execute(ctx, registry);
                 }
-                collector.executeVoid(() -> lifecycle.after(collector, ctx, extensions));
+                collector.executeVoid(() -> lifecycle.after(collector, ctx, registry));
             }
             return ctx;
         });
@@ -113,15 +116,13 @@ const TestExecutor {
      *
      * @param collector   the `ExceptionCollector` to collect any exceptions
      * @param context     the current `EngineExecutionContext`
-     * @param extensions  the `ExtensionRegistry` containing any test extensions
+     * @param registry  the `ExtensionRegistry` containing any test extensions
      */
     private void cleanUp(ExceptionCollector     collector,
                          EngineExecutionContext context,
-                         ExtensionRegistry      extensions) {
-
-        @Inject TestResourceProvider provider;
-        provider.setExecutionContext(context);
-        collector.executeVoid(() -> lifecycle.cleanUp(collector, context, extensions));
+                         ExtensionRegistry      registry) {
+        updateResourceProvider(context, registry);
+        collector.executeVoid(() -> lifecycle.cleanUp(collector, context, registry));
     }
 
     /**
@@ -129,26 +130,25 @@ const TestExecutor {
      *
      * @param collector   the `ExceptionCollector` to collect any exceptions
      * @param context     the current `EngineExecutionContext`
-     * @param extensions  the `ExtensionRegistry` containing any test extensions
+     * @param registry  the `ExtensionRegistry` containing any test extensions
      * @param skipResult  an optional `SkipResult` if a test was skipped
      * @param started     a flag to indicate whether test execution was started
      * @param duration    the duration the test took to execute
      */
     private Result reportCompletion(ExceptionCollector     collector,
                                     EngineExecutionContext context,
-                                    ExtensionRegistry      extensions,
+                                    ExtensionRegistry      registry,
                                     SkipResult             skipResult,
                                     Boolean                started,
                                     Duration               duration) {
 
-        @Inject TestResourceProvider provider;
-        provider.setExecutionContext(context);
+        updateResourceProvider(context, registry);
 
         Result result;
         if (collector.empty && skipResult.skipped) {
             result = collector.result.withDuration(duration);
             try {
-                lifecycle.onSkipped(context, extensions, skipResult);
+                lifecycle.onSkipped(context, registry, skipResult);
             }
             catch (Exception e) {
                 @Inject Console console;
@@ -161,7 +161,7 @@ const TestExecutor {
             }
             result = collector.result.withDuration(duration);
             try {
-                lifecycle.onCompleted(context, extensions, result);
+                lifecycle.onCompleted(context, registry, result);
             }
             catch (Exception e) {
                 @Inject Console console;
@@ -171,5 +171,11 @@ const TestExecutor {
         }
         context.onCompleted(result);
         return result;
+    }
+
+    private void updateResourceProvider(EngineExecutionContext context, ExtensionRegistry registry) {
+        ResourceLookupCallback[]     callbacks = registry.get(ResourceLookupCallback, True);
+        @Inject TestResourceProvider provider;
+        provider.setExecutionContext(context, callbacks.freeze(True));
     }
 }

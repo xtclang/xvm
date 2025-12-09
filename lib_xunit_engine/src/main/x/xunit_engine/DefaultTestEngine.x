@@ -4,6 +4,8 @@ import executor.TestExecutor;
 
 import extensions.ExtensionRegistry;
 
+import xunit.extensions.Extension;
+
 /**
  * A default `TestEngine` implementation.
  */
@@ -56,11 +58,12 @@ service DefaultTestEngine
      */
     protected void execute(Model[] models) {
         ExecutionConfiguration executionConfig = configuration.executionConfig;
+        Extension[]            extensions      = configuration.extensions;
         for (Model model : models) {
             TestExecutor                   executor = new TestExecutor(model, executionConfig);
             EngineExecutionContext.Builder builder  = EngineExecutionContext.builder(model);
             builder = modifyExecutionContext(builder);
-            executor.execute(builder.build());
+            executor.execute(builder.build(), extensions=extensions);
         }
     }
 

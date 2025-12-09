@@ -7,11 +7,12 @@ import ecstasy.mgmt.*;
 
 import ecstasy.reflect.ModuleTemplate;
 
+import extensions.ExtensionRegistry;
+
 import xunit.MethodOrFunction;
 
 import xunit.extensions.ExecutionContext;
-
-import extensions.ResourceLookupExtension;
+import xunit.extensions.ResourceLookupCallback;
 
 /**
  * A `ResourceProvider` implementation that can provide resources to inject into tests.
@@ -24,9 +25,15 @@ service TestResourceProvider(Directory curDir)
      */
     @Lazy FileStore store.calc() = new DirectoryFileStore(curDir);
 
+    /**
+     * The current execution context.
+     */
     private ExecutionContext? context = Null;
 
-    private ResourceLookupExtension[] lookups = new Array();
+    /**
+     * The current lookup callbacks.
+     */
+    private ResourceLookupCallback[] lookupCallbacks = [];
 
     @Override
     Supplier getResource(Type type, String name) {
@@ -36,7 +43,7 @@ service TestResourceProvider(Directory curDir)
         case (TestResourceProvider, "provider"):
             return this;
 
-        case (ExecutionContext, "context"):
+        case (ExecutionContext, _):
             return getExecutionContext;
 
         case (FileStore, "storage"):
@@ -89,39 +96,31 @@ service TestResourceProvider(Directory curDir)
     }
 
     private conditional Object contextLookup(Type type, String name, Options opts) {
+        // try to lookup the resource in the current execution context
         ExecutionContext? ctx = this.context;
         if (ctx.is(ExecutionContext)) {
             if (Object resource := ctx.lookup(type, name, opts)) {
                 return True, resource;
-            } else {
-                for (ResourceLookupExtension extension : lookups) {
-                    if (Object resource := extension.lookup(type, name, opts)) {
-                            return True, resource;
-                    }
-                }
+            }
+        }
+
+        // the context did not have the resource, so try any ResourceLookupCallback extensions
+        for (ResourceLookupCallback callback : lookupCallbacks) {
+            if (Object resource := callback.lookup(type, name, opts)) {
+                return True, resource;
             }
         }
         return False;
     }
 
     /**
-     * Adds a `ResourceLookupExtension` to provide additional resources.
-     */
-    void addResourceLookupExtension(ResourceLookupExtension extension) = lookups.add(extension);
-
-    /**
-     * Remove a previously added `ResourceLookupExtension`.
-     */
-    void removeResourceLookupExtension(ResourceLookupExtension extension)
-            = lookups.remove(extension);
-
-    /**
      * Set the current ExecutionContext.
      *
      * @param context  the current ExecutionContext
      */
-    void setExecutionContext(ExecutionContext? context) {
-        this.context = context;
+    void setExecutionContext(ExecutionContext? context, ResourceLookupCallback[] callbacks) {
+        this.context         = context;
+        this.lookupCallbacks = callbacks;
     }
 
     /**

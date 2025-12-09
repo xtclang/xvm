@@ -87,9 +87,21 @@ class ExtensionRegistry
     }
 
     /**
+     * Add all the `Extension`s to this registry.
+     *
+     * @param extensions  the extensions to add
+     * @param source      the optional source of the extensions
+     */
+    <ExtensionType extends Extension> void addAll(ExtensionType[] extensions, Object? source=Null) {
+        for (ExtensionType extension : extensions) {
+            add(extension, source);
+        }
+    }
+
+    /**
      * Add an `Extension` to this registry.
      *
-     * @param extension  the extension type to add
+     * @param extension  the extension to add
      * @param source     the optional source of the extension
      */
     <ExtensionType extends Extension> void add(ExtensionType extension, Object? source = Null) {

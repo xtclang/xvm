@@ -1,5 +1,3 @@
-import extensions.EngineExtension;
-
 /**
  * A base type for test runners.
  */
@@ -20,11 +18,6 @@ import extensions.EngineExtension;
         ExecutionListener? runnerListener = createExecutionListener(testModule);
         if (runnerListener.is(ExecutionListener)) {
             listeners.add(runnerListener);
-        }
-
-        for (EngineExtension extension : testConfig.extensions) {
-            extension.init();
-            listeners.add(extension);
         }
 
         ExecutionListener listener = new CompositeExecutionListener(listeners.freeze(True));
