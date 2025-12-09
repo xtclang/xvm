@@ -10,6 +10,7 @@ import java.util.Set;
 import groovy.lang.Closure;
 
 import org.gradle.api.Project;
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.FileTree;
 import org.gradle.api.file.FileTreeElement;
@@ -35,10 +36,8 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
     private final PatternFilterable patternSet;
     private ConfigurableFileCollection sourceFiles;
 
-    @SuppressWarnings("this-escape")
-    protected XtcSourceTask(final Project project) {
-        super(project, XtcProjectDelegate.resolveXtcCompileExtension(project));
-        final var objects = getObjects();
+    protected XtcSourceTask(final ObjectFactory objects, final Project project) {
+        super(objects, project, XtcProjectDelegate.resolveXtcCompileExtension(project));
         this.patternSet = objects.newInstance(PatternSet.class);
         this.sourceFiles = objects.fileCollection();
     }
@@ -78,7 +77,7 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
      * @param source The source.
      */
     public void setSource(final Object source) {
-        sourceFiles = getObjects().fileCollection().from(source);
+        sourceFiles = objects.fileCollection().from(source);
     }
 
     /**
@@ -184,7 +183,6 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
     protected boolean isTopLevelSource(final SourceSet sourceSet, final File file) {
         assert file.isFile();
         final var topLevelSourceDirs = new java.util.HashSet<>(sourceSet.getAllSource().getSrcDirs());
-        final var logger = getLogger();
         final var dir = file.getParentFile();
         assert dir != null && dir.isDirectory();
         final var isTopLevelSrc = topLevelSourceDirs.contains(dir);

@@ -45,5 +45,4 @@ public class XtcPlugin implements Plugin<@NotNull Project> {
             new XtcProjectDelegate(project, xtcComponent).apply(project);
         }
     }
-
 }

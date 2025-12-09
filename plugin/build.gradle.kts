@@ -1,9 +1,5 @@
 import org.gradle.api.attributes.plugin.GradlePluginApiVersion
-import org.gradle.api.component.AdhocComponentWithVariants
-import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.tasks.compile.JavaCompile
-import org.gradle.plugin.devel.GradlePluginDevelopmentExtension
-import org.gradle.util.GradleVersion
 
 plugins {
     alias(libs.plugins.xdk.build.java)
@@ -11,6 +7,9 @@ plugins {
     alias(libs.plugins.xdk.build.publishing)
 }
 
+private val minimumGradleVersion = xdkProperties.stringValue(
+    "org.xtclang.plugin.minimum.gradle.version",
+    default = gradle.gradleVersion)
 private val defaultJvmArgs: Provider<List<String>> = extensions.getByName<Provider<List<String>>>("defaultJvmArgs")
 private val jdkVersionProvider = xdkProperties.int("org.xtclang.java.jdk")
 
@@ -19,14 +18,18 @@ val generatePluginResources by tasks.registering {
     val outputDir = layout.buildDirectory.dir("generated/resources")
     val buildInfoFile = outputDir.map { it.file("org/xtclang/build/internal/plugin-build-info.properties") }
     val xdkVersionProvider = provider { version.toString() }
-    inputs.property("defaultJvmArgs", defaultJvmArgs)
-    inputs.property("xdkVersion", xdkVersionProvider)
-    inputs.property("jdkVersion", jdkVersionProvider)
+    inputs.properties(mapOf(
+        "defaultJvmArgs" to defaultJvmArgs,
+        "xdkVersion" to xdkVersionProvider,
+        "jdkVersion" to jdkVersionProvider,
+        "minimumGradleVersion" to minimumGradleVersion
+    ))
     outputs.file(buildInfoFile)
     doLast {
         val jvmArgs = defaultJvmArgs.get()
         val xdkVersion = xdkVersionProvider.get()
         val jdkVersion = jdkVersionProvider.get()
+        logger.lifecycle("Generating build info [xdkVersion=$xdkVersion, minimumGradleVersion=${minimumGradleVersion}, jvmArgs=$jvmArgs]")
         // Generate buildInfo.properties with all build-time configuration
         buildInfoFile.get().asFile.apply {
             parentFile.mkdirs()
@@ -60,7 +63,6 @@ repositories {
 dependencies {
     // Compile-time only - javatools types available for compilation but loaded via custom classloader at runtime
     compileOnly(libs.javatools)
-
     testImplementation(libs.junit.jupiter)
 }
 
@@ -82,12 +84,13 @@ mavenPublishing {
 
 // Add Gradle plugin API version attribute to published variants for proper plugin resolution
 // This is required for Gradle to correctly resolve the plugin when consumed from Maven/Gradle repositories
+// Set to minimum supported Gradle version to ensure compatibility with consumers using older Gradle versions
 val pluginApiVersionAttribute = GradlePluginApiVersion.GRADLE_PLUGIN_API_VERSION_ATTRIBUTE
 
 configurations.all {
     if (name == "runtimeElements" || name == "apiElements") {
         attributes {
-            attribute(pluginApiVersionAttribute, objects.named(GradlePluginApiVersion::class.java, GradleVersion.current().version))
+            attribute(pluginApiVersionAttribute, objects.named(GradlePluginApiVersion::class.java, minimumGradleVersion))
         }
     }
 }
@@ -115,17 +118,16 @@ gradlePlugin {
     }
 }
 
-
 tasks.withType<Javadoc>().configureEach {
     enabled = false
     // TODO: Write JavaDocs for plugin.
 }
 
-// Enable lint warnings specifically for the plugin project
+// Enable overriding lint warnings specifically for the plugin project.
+// TODO: Should be global default, but javatools has many linting errors.
 tasks.withType<JavaCompile>().configureEach {
     options.compilerArgs.add("-Xlint:all")
 }
-
 
 tasks.withType<Jar>().configureEach {
     val taskName = name

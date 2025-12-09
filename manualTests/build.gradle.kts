@@ -1,3 +1,4 @@
+import org.xtclang.plugin.launchers.ExecutionMode
 import org.xtclang.plugin.tasks.XtcRunTask
 
 /**
@@ -176,13 +177,15 @@ sourceSets {
 // Defaults inherited and overridable by all xtcCompile tasks
 xtcCompile {
     /*
-     * Fork behavior can be controlled globally via gradle.properties:
-     *   org.xtclang.plugin.launcher.fork=false
+     * Execution mode controls how the compiler runs:
+     *   - DIRECT: In-process via ServiceLoader (fastest, shares JVM)
+     *   - ATTACHED: Forked JVM with inherited I/O (default, isolated)
+     *   - DETACHED: Not supported for compile tasks
      *
-     * Or overridden per-task here:
-     *   fork = false
+     * Override per-task:
+     *   executionMode = ExecutionMode.DIRECT
      *
-     * Default is true (fork to separate JVM). Set to false for in-process execution.
+     * Default is ATTACHED (forked JVM with console output).
      */
 
     /*
@@ -287,26 +290,29 @@ xtcRun {
 
     /*
      * ============================================================================
-     * STDOUT/STDERR REDIRECTION FOR RUN TASKS
+     * EXECUTION MODE AND STDOUT/STDERR REDIRECTION FOR RUN TASKS
      * ============================================================================
      *
-     * Same options as xtcCompile (see above), plus special defaults for detached mode:
+     * Execution modes:
+     *   - DIRECT: In-process via ServiceLoader
+     *   - ATTACHED: Forked JVM with inherited I/O (default)
+     *   - DETACHED: Forked JVM running in background with file redirects
      *
-     * NORMAL MODE (detach = false):
+     * ATTACHED MODE (default):
      *   Default: stdout/stderr inherit from console
      *   Override: Use any of the approaches shown in xtcCompile section
      *
-     * DETACHED MODE (detach = true):
+     * DETACHED MODE (executionMode = ExecutionMode.DETACHED):
      *   Default: stdout/stderr redirect to "{toolname}_pid_{timestamp}.log"
      *   Override: Specify custom paths to change the default
      *
      * Example for detached mode with simple string path:
-     *   detach = true
+     *   executionMode = ExecutionMode.DETACHED
      *   stdoutPath = "build/logs/server-%TIMESTAMP%.log"
      *   stderrPath = "build/logs/server-errors-%TIMESTAMP%.log"
      *
      * Example for detached mode using layout provider:
-     *   detach = true
+     *   executionMode = ExecutionMode.DETACHED
      *   stdoutPath.set(layout.buildDirectory.file("logs/server-%TIMESTAMP%.log")
      *       .map { it.asFile.absolutePath })
      *
@@ -329,13 +335,13 @@ xtcRun {
 }
 
 // This shows how to add a custom run task that overrides the global xtcRun config.
+//
+// To debug, use standard JDWP arguments:
+// jvmArgs("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005")
+// See plugin/README.md for more information on debugging.
+//
 val runTwoTestsInSequence by tasks.registering(XtcRunTask::class) {
     group = "application"
-
-    // To debug, use standard JDWP arguments:
-    // jvmArgs("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005")
-    // See plugin/README.md for more information on debugging.
-
     verbose = true // override a default from xtcRun
     module {
         moduleName = "EchoTest"
@@ -345,87 +351,125 @@ val runTwoTestsInSequence by tasks.registering(XtcRunTask::class) {
     moduleName("TestArray")
 }
 
-// Test task that explicitly uses fork=false to test in-process execution
-// NOTE: TestArray currently fails with fork=false due to an unrelated issue
-val runTestsInProcess by tasks.registering(XtcRunTask::class) {
-    group = "application"
-    fork = false
-    verbose = true
-    module {
-        moduleName = "EchoTest"
-        moduleArg("InProcess")
+// Generate map of execution modes to task names
+val executionModeTasks = ExecutionMode.entries.associateWith { mode ->
+    val taskName = "runTestWith${mode.name.lowercase().replaceFirstChar { it.uppercase() }}"
+    tasks.register<XtcRunTask>(taskName) {
+        group = "application"
+        executionMode = mode
+        verbose = true
+        if (mode == ExecutionMode.DETACHED) {
+            logger.lifecycle("Running $taskName (detached), will redirect output.")
+        }
+        module {
+            // TODO: We may want sugar for parallel flag and execution mode specialization in individual modules later.
+            moduleName = "EchoTest"
+            moduleArg("Testing Execution Mode:")
+            moduleArg("  $mode")
+        }
+        // TODO: POC and make this work
+        // TODO: commit.yml test for running the xtc-app-template
+        //val redirect = stdoutPath.getOrElse("stdout")
+        //println("REDIRECTED: $redirect")
+        //stdoutPath.set(layout.buildDirectory.file("logs/runOne-stdout-%TIMESTAMP%.log").map { it.asFile.absolutePath })
+        //stderrPath.set(layout.buildDirectory.file("logs/runOne-stderr-%TIMESTAMP%.log").map { it.asFile.absolutePath })
     }
 }
 
-// Test running TestArray alone with fork=false to debug the crash
-val runTestArrayInProcess by tasks.registering(XtcRunTask::class) {
+val runTestAllExecutionModes by tasks.registering {
     group = "application"
-    fork = false
-    verbose = true
-    moduleName("TestArray")
+    description = "Run EchoTest in all execution modes to verify that they work."
+    dependsOn(executionModeTasks.values)
+    doLastTask {
+        logger.lifecycle("Finished testing all execution modes.")
+    }
 }
 
 // This allows running a single test, e.g.: ./gradlew manualTests:runOne -PtestName="TestArray"
 val runOne by tasks.registering(XtcRunTask::class) {
     group = "application"
-    description = "Runs one test as given by the property 'testName', or a default test if not set."
-    // To debug, use: jvmArgs("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005")
+    description = """
+        Runs one test as given by the property 'testName' (has a hardcoded default test name)
+        Arguments are in 'testArgs'. (no arguments if property not defined)
+    """.trimIndent()
+
     module {
-        moduleName = resolveTestNameProperty() // this syntax also has the moduleName("...") shorthand
+        moduleName = resolveTestNameProperty() // NOTE: this syntax also has the moduleName("...") shorthand
+        moduleArgs(provider { resolveTestArgumentsProperty() })
+    }
+    doFirstTask {
+        logger.lifecycle("manualTests:runOne: $name")
     }
 }
 
+// Shared list of test module names for both parallel and sequential runners
+val testModuleNames = listOf(
+    "TestAnnotations",
+    "TestArray",
+    "TestCollections",
+    "TestDefAsn",
+    "TestFiles",
+    "TestGenerics",
+    "TestInnerOuter",
+    "TestIO",
+    "TestLambda",
+    "TestLiterals",
+    "TestLoops",
+    "TestMaps",
+    "TestMisc",
+    "TestNesting",
+    "TestNumbers",
+    "TestProps",
+    "TestQueues",
+    "TestReflection",
+    "TestRegularExpressions",
+    "TestServices",
+    "TestTry",
+    "TestTuples"
+)
+
 /**
- * The default behavior right now, is to run multiple tests in a sequence, one after each other.
- * This mostly has to do with Gradle assuming single thread-ness unless we add a worker API.
- * This task uses the Ecstasy Runner module, taking the module names as arguments.
+ * Run all tests in parallel using the Runner module, which spawns all test modules concurrently.
  */
 val runParallel by tasks.registering(XtcRunTask::class) {
     group = "application"
     description = "Run all known tests in parallel through the parallel test runner."
     module {
-        moduleName = "Runner"
         verbose = false
-
+        moduleName = "Runner"
         // TODO: If the runner took the file names instead of module names, we could just pass in
         //   exactly the outgoing source sets, and we wouldn't have to know their names, and could
-        //   have them compiled by xcc (for example calling moduleArgs(provideTestModules))
-        //   Now instead we have to explicitly specify the module names.
-        moduleArgs(
-            "TestAnnotations",
-            "TestArray",
-            "TestCollections",
-            "TestDefAsn",
-            "TestTry",
-            "TestGenerics",
-            "TestInnerOuter",
-            "TestFiles",
-            "TestIO",
-            "TestLambda",
-            "TestLiterals",
-            "TestLoops",
-            "TestNesting",
-            "TestNumbers",
-            "TestProps",
-            "TestMaps",
-            "TestMisc",
-            "TestQueues",
-            "TestServices",
-            "TestReflection",
-            "TestRegularExpressions",
-            "TestTuples"
-        )
+        //   have them compiled by xcc (for example calling moduleArgs(testModuleProvider))
+        //   Now instead we have to explicitly specify the module names. IMPLEMENT THIS!
+        //
+        // TODO: CI integration test  for third party xdk dependency
+        moduleArgs(testModuleNames)
     }
+}
+
+/**
+ * Run all tests sequentially, one after another. Each test module runs to completion before
+ * the next one starts. This is useful for debugging or when parallel execution causes issues.
+ */
+val runSequential by tasks.registering(XtcRunTask::class) {
+    group = "application"
+    description = "Run all known tests sequentially, one after another."
+    testModuleNames.forEach { moduleName(it) }
 }
 
 val runAllTestTasks by tasks.registering {
     group = "application"
     description = "Run all test tasks."
-    dependsOn(runTwoTestsInSequence, runParallel, runOne, tasks.runXtc)
+    dependsOn(runTwoTestsInSequence, runParallel, runOne, runTestAllExecutionModes)
 }
 
 fun resolveTestNameProperty(defaultTestName: String = "EchoTest"): String {
     return if (hasProperty("testName")) (properties["testName"] as String) else defaultTestName
+}
+
+fun resolveTestArgumentsProperty(defaultTestArguments: String = ""): List<String> {
+    val argsString = if (hasProperty("testArgs")) (properties["testArgs"] as String) else defaultTestArguments
+    return if (argsString.isEmpty()) emptyList() else argsString.split(",").map { it.trim() }
 }
 
 /**
@@ -448,7 +492,7 @@ fun resolveTestNameProperty(defaultTestName: String = "EchoTest"): String {
  * This is also brittle, because the runner may in turn trigger the compiler, after searching through
  * the directory space for something corresponding to the module name.
  */
-val provideTestModules: Provider<List<String>> = provider {
+val testModuleProvider: Provider<List<String>> = provider {
     // TODO: If we put JavaTools on the compile classpath for this project, as a one-line dependency, we could directly
     //   call the XTC FileRepresentation logic that determines both if an XTC binary is a valid such file, and the
     //   actual module name of this binary. This is potentially very powerful, the build use parts of its target.
@@ -456,9 +500,22 @@ val provideTestModules: Provider<List<String>> = provider {
     fun isValidXtcModule(file: File): Boolean {
         return file.extension == "xtc"
     }
-    logger.lifecycle("[manualTests] Resolving source set output, to use as arguments for the runParallel task. If you see this message at config time, something is wrong.")
-    val list: List<String> = sourceSets.main.get().output.asFileTree.filter { isValidXtcModule(it) }.map { it.absolutePath }.toList()
-    list.forEach { logger.lifecycle("[manualTests]     Resolved test module: $it") }
-    list
+    sourceSets.main.get().output.asFileTree.filter { isValidXtcModule(it) }.map { it.absolutePath }.toList()
 }
 
+val printTestModules by tasks.registering {
+    group = "help"
+    description = "Print the output of provideTestModules."
+    doLastTask {
+        val resolved = testModuleProvider.get()
+        if (resolved.isEmpty()) {
+            logger.lifecycle("No test modules found.")
+        } else {
+            logger.lifecycle("Test modules:")
+            resolved.forEach { logger.lifecycle("  $it") }
+        }
+    }
+}
+
+// TODO: Runparallel and run all tests are note the same
+// profile EVERYTHING [plugin] Forked process command: /Users/marcus/.sdkman/candidates/java/25-amzn/bin/java -ea --enable-native-access=ALL-UNNAMED -cp /Users/marcus/src/xvm/javatools/build/libs/javatools-0.4.4-SNAPSHOT.jar org.xvm.tool.Compiler -L ../lib_aggregate/build/xtc/main/lib/aggregate.xtc -L ../lib_collections/build/xtc/main/lib/collections.xtc -L ../lib_ecstasy/build/xtc/main/lib/ecstasy.xtc -L ../lib_ecstasy/build/xtc/main/lib/javatools_turtle.xtc -L ../lib_json/build/xtc/main/lib/json.xtc -L build/xtc/main/lib -L ../lib_oodb/build/xtc/main/lib/oodb.xtc --rebuild -o build/xtc/main/lib --set-version 0.4.4+SNAPSHOT src/main/x/jsondb.x

@@ -12,9 +12,11 @@
 # in a typesafe way, e.g. alias(libs.versions) for a plugin. Or
 # libs.versions.xdkVersion version number.
 #
+
 [versions]
-# Third party dependency versions
+apache-commons-cli = "1.11.0"
 download = "5.6.0"
+gson = "2.13.1"
 gradle-doctor = "0.12.1"
 gradle-portal-publish = "2.0.0"
 jakarta-activation = "2.1.4"
@@ -71,6 +73,9 @@ javatools-turtle = { group = "org.xtclang", name = "javatools-turtle" }
 javatools-unicode = { group = "org.xtclang", name = "javatools-unicode" }
 javatools-utils = { group = "org.xtclang", name = "javatools-utils" }
 
+# Third party
+apache-commons-cli = { module = "commons-cli:commons-cli", version.ref = "apache-commons-cli" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 jakarta-activation-api = { module = "jakarta.activation:jakarta.activation-api", version.ref = "jakarta-activation" }
 jakarta-xml-bind-api = { module = "jakarta.xml.bind:jakarta.xml.bind-api", version.ref = "jakarta-xml-bind-api" }
 jaxb-runtime = { module = "org.glassfish.jaxb:jaxb-runtime", version.ref = "jaxb-runtime" }
@@ -78,6 +83,7 @@ jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "j
 jline = { module = "org.jline:jline", version.ref = "jline" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version = "1.11.4" }
 
 [bundles]
 unicode = ["jakarta-activation-api", "jakarta-xml-bind-api", "jaxb-runtime"]

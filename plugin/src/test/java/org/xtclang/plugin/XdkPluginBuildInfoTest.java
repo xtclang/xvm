@@ -1,5 +1,6 @@
 package org.xtclang.plugin;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.xtclang.plugin.XtcPluginConstants.PLUGIN_BUILD_INFO_RESOURCE_PATH;
@@ -9,6 +10,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Properties;
+import java.util.regex.Pattern;
 
 import org.gradle.testkit.runner.GradleRunner;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,6 +33,8 @@ import org.junit.jupiter.api.io.TempDir;
 public class XdkPluginBuildInfoTest {
 
     private static final String[] GRADLE_FLAGS = {"--stacktrace", "--info", "--configuration-cache"};
+    private static final Pattern VERSION_PATTERN = Pattern.compile("\\d+\\.\\d+\\.\\d+(-SNAPSHOT)?");
+    private static final Pattern VERSION_NUMBER_PATTERN = Pattern.compile("\\d+");
 
     @TempDir
     Path testProjectDir;
@@ -101,14 +105,12 @@ public class XdkPluginBuildInfoTest {
         // Verify xdk.version is present and valid
         final var xdkVersion = props.getProperty("xdk.version");
         assertNotNull(xdkVersion, "xdk.version should be present in plugin-build-info.properties");
-        assertTrue(xdkVersion.matches("\\d+\\.\\d+\\.\\d+(-SNAPSHOT)?"),
-            "xdk.version should be a valid version string: " + xdkVersion);
+        assertTrue(VERSION_PATTERN.matcher(xdkVersion).matches(), "xdk.version should be a valid version string: " + xdkVersion);
 
         // Verify jdk.version is present and valid
         final var jdkVersion = props.getProperty("jdk.version");
         assertNotNull(jdkVersion, "jdk.version should be present in plugin-build-info.properties");
-        assertTrue(jdkVersion.matches("\\d+"),
-            "jdk.version should be a valid integer: " + jdkVersion);
+        assertTrue(VERSION_NUMBER_PATTERN.matcher(jdkVersion).matches(), "jdk.version should be a valid integer: " + jdkVersion);
 
         // Verify defaultJvmArgs is present and valid using shared validation logic
         final var defaultJvmArgs = props.getProperty("defaultJvmArgs");
@@ -166,7 +168,7 @@ public class XdkPluginBuildInfoTest {
             .filter(line -> line.contains("XTC_VERSION_TEST_OUTPUT:"))
             .toList();
 
-        assertTrue(!lines.isEmpty(), "Should have XTC_VERSION_TEST_OUTPUT in output");
+        assertFalse(lines.isEmpty(), "Should have XTC_VERSION_TEST_OUTPUT in output");
 
         final var isPresentLine = lines.stream()
             .filter(line -> line.contains("isPresent="))
