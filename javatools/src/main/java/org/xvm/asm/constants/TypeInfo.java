@@ -1821,29 +1821,66 @@ public class TypeInfo {
      * Obtain the matching op method for the specified name and/or the operator string, that
      * take the specified number of params.
      *
+     * Note: this method is quite similar to {@link org.xvm.runtime.ClassTemplate#findOpChain}
+     *
      * @param sName   the default op name, such as "add" (optional)
      * @param sOp     the operator string, such as "+" (optional)
      * @param cParams the number of parameters for the operator method, or -1 to match any
      *
-     * @return the matching method
      * @throws IllegalStateException if there is no matching or more than one matching methods
      */
-    public MethodInfo findOpMethod(String sName, String sOp, int cParams) {
-        Set<MethodConstant> setMethods = findOpMethods(sName, sOp, cParams);
+    public MethodInfo findOpMethod(String sName, String sOp, TypeConstant typeArg) {
+        Set<MethodConstant> setMethods = findOpMethods(sName, sOp, typeArg == null ? 0 : 1);
+        MethodConstant      idMatch    = null;
         switch (setMethods.size()) {
-        case 0:
+            case 0:
+                break;
+
+            case 1: {
+                idMatch = setMethods.iterator().next();
+                if (typeArg != null) {
+                    TypeConstant typeParam = idMatch.getSignature().getRawParams()[0];
+
+                    if (!typeArg.isA(typeParam)) {
+                        // soft assert
+                        throw new IllegalStateException("Invalid argument type \"" +
+                            typeArg.getValueString() + "\" for \"" + sName + "\" operation on " +
+                            getType().getValueString());
+                    }
+                }
+                break;
+            }
+
+            default: {
+                if (typeArg != null) {
+                    idMatch = null;
+                    for (MethodConstant idMethod : setMethods) {
+                        TypeConstant typeParam = idMethod.getSignature().getRawParams()[0];
+
+                        if (typeArg.isA(typeParam)) {
+                            if (typeParam.isA(typeArg)) {
+                                // we cannot do any better
+                                idMatch = idMethod;
+                                break;
+                            }
+                            if (idMatch != null) {
+                                // soft assert
+                                throw new IllegalStateException("Ambiguous \"" + sName +
+                                    "\" operation on " + getType().getValueString());
+                            }
+                            idMatch = idMethod;
+                        }
+                    }
+                }
+
+            }
+        }
+        if (idMatch == null) {
+            // soft assert
             throw new IllegalStateException("Missing operation " + sName +
                 " (" + sOp + ") on " + getType().getValueString());
-
-        case 1: {
-            MethodConstant idMethod = setMethods.iterator().next();
-            return getMethodById(idMethod);
         }
-
-        default:
-            throw new IllegalStateException("Ambiguous operation " + sName +
-                " (" + sOp + ") on " + getType().getValueString());
-        }
+        return getMethodById(idMatch);
     }
 
     /**

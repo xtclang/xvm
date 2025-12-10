@@ -285,6 +285,9 @@ public abstract class OpTest
         }
 
         // TODO: can we get rid of typeCompare?
+        if (typeCmp.isFormalType()) {
+            typeCmp = typeCmp.resolveConstraints();
+        }
         assert typeCmp.equals(
             selectCommonType(type1, type2, ErrorListener.BLACKHOLE).removeNullable());
 

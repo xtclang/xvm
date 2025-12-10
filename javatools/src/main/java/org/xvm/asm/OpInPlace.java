@@ -447,7 +447,7 @@ public abstract class OpInPlace
             }
 
         TypeConstant  type     = reg.type();
-        MethodInfo    method   = type.ensureTypeInfo().findOpMethod(sName, sOp, 0);
+        MethodInfo    method   = type.ensureTypeInfo().findOpMethod(sName, sOp, null);
         String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
         JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem, type);
 

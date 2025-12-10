@@ -360,6 +360,9 @@ public abstract class OpCondJump
         }
 
         // TODO: can we get rid of typeCompare?
+        if (typeCmp.isFormalType()) {
+            typeCmp = typeCmp.resolveConstraints();
+        }
         assert typeCmp.equals(
             selectCommonType(type1, type2, ErrorListener.BLACKHOLE).removeNullable());
 
@@ -411,8 +414,9 @@ public abstract class OpCondJump
 
 
     protected void buildUnary(BuildContext bctx, CodeBuilder code) {
-        Label lblJump = bctx.ensureLabel(code, getAddress() + m_ofJmp);
-        int   op      = getOpCode();
+        int   nAddrJump = getAddress() + m_ofJmp;
+        Label lblJump   = bctx.ensureLabel(code, nAddrJump);
+        int   op        = getOpCode();
 
         switch (op) {
         case OP_JMP_COND, OP_JMP_NCOND:
@@ -476,13 +480,16 @@ public abstract class OpCondJump
             }
         } else {
             switch (op) {
-            case OP_JMP_NULL, OP_JMP_NNULL:
+            case OP_JMP_NULL:
                 Builder.loadNull(code);
-                if (op == OP_JMP_NULL) {
-                    code.if_acmpeq(lblJump);
-                } else {
-                    code.if_acmpne(lblJump);
-                }
+                code.if_acmpeq(lblJump);
+                bctx.narrowRegister(code, reg, getAddress(), nAddrJump, reg.type().removeNullable());
+                break;
+
+            case OP_JMP_NNULL:
+                Builder.loadNull(code);
+                code.if_acmpne(lblJump);
+                bctx.narrowRegister(code, reg, nAddrJump, -1, reg.type().removeNullable());
                 break;
 
             default:

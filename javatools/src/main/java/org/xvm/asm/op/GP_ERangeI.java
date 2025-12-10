@@ -6,7 +6,6 @@ import java.io.IOException;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
-import org.xvm.asm.OpGeneral;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -16,7 +15,7 @@ import org.xvm.runtime.ObjectHandle;
  * GP_ERANGEI rvalue1, rvalue2, lvalue ; T >.. T -> Range<T>
  */
 public class GP_ERangeI
-        extends OpGeneral {
+        extends OpRange {
     /**
      * Construct a GP_ERANGEI op for the passed arguments.
      *

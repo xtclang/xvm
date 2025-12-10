@@ -499,13 +499,13 @@ public class BuildContext {
      * Get the type for the specified argument index.
      */
     public TypeConstant getType(int argId) {
-        return resolveType((TypeConstant) getConstant(argId)); // must exist
+        return (TypeConstant) getConstant(argId); // must exist
     }
 
     /**
-     * Resolve the specified type.
+     * TODO: Resolve the specified type.
      */
-    public TypeConstant resolveType(TypeConstant type) {
+    public TypeConstant resolveType(CodeBuilder code, TypeConstant type) {
         if (type.containsFormalType(true)) {
             // TODO: how to resolve?
             if (type.containsFormalType(true)) {
@@ -1110,7 +1110,7 @@ public class BuildContext {
 
     /**
      * Narrow the type of the specified register for the duration of the current op.
-
+     *
      * @param reg           the register to narrow
      * @param narrowedType  the narrowed type
      *

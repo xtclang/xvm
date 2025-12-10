@@ -378,7 +378,8 @@ public abstract class OpIndex
                 case OP_IIP_XOR  -> {sName = "xor";           sOp = "^";  }
                 default          -> throw new UnsupportedOperationException(toName(getOpCode()));
             }
-            MethodInfo    method   = type.ensureTypeInfo().findOpMethod(sName, sOp, 1);
+            TypeConstant  typeArg  = bctx.getArgumentType(m_nRetValue);
+            MethodInfo    method   = type.ensureTypeInfo().findOpMethod(sName, sOp, typeArg);
             String        sJitName = method.ensureJitMethodName(ts);
             throw new UnsupportedOperationException("TODO");
         }

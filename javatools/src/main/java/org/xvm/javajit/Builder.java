@@ -863,6 +863,7 @@ public abstract class Builder {
     public static final String N_nMethod      = "org.xtclang.ecstasy.nMethod";
     public static final String N_nModule      = "org.xtclang.ecstasy.nModule";
     public static final String N_nObj         = "org.xtclang.ecstasy.nObj";
+    public static final String N_nRangeInt64  = "org.xtclang.ecstasy.nRangeᐸInt64ᐳ";
     public static final String N_nService     = "org.xtclang.ecstasy.nService";
     public static final String N_nType        = "org.xtclang.ecstasy.nType";
 
@@ -884,6 +885,7 @@ public abstract class Builder {
     public static final ClassDesc CD_nFunction     = ClassDesc.of(N_nFunction);
     public static final ClassDesc CD_nMethod       = ClassDesc.of(N_nMethod);
     public static final ClassDesc CD_nModule       = ClassDesc.of(N_nModule);
+    public static final ClassDesc CD_nRangeInt64   = ClassDesc.of(N_nRangeInt64);
 
     public static final ClassDesc CD_nArrayChar    = ClassDesc.of(N_nArrayChar);
     public static final ClassDesc CD_nArrayObj     = ClassDesc.of(N_nArrayObj);
