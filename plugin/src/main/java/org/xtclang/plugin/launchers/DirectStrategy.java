@@ -75,22 +75,36 @@ public class DirectStrategy implements ExecutionStrategy {
 
     @Override
     public int execute(final XtcRunTask task, final XtcRunModule runConfig) {
-        final boolean isTest = task instanceof XtcTestTask;
-        logger.info("[plugin] Invoking {} directly in current thread (no fork)", isTest ? "test runner" : "runner");
+        logger.info("[plugin] Invoking runner directly in current thread (no fork)");
         try {
             final String moduleName = runConfig.getModuleName().get();
             final var moduleArgs = runConfig.getModuleArgs().get();
-            final var optBuilder = optionsBuilder();
-            // Instantiate the appropriate launcher based on task type
-            final Launcher<?> launcher = isTest
-                    ? new TestRunner(optBuilder.buildTestRunnerOptions(task, moduleName, moduleArgs), console, err)
-                    : new Runner(optBuilder.buildRunnerOptions(task, moduleName, moduleArgs), console, err);
+            final var options = optionsBuilder().buildRunnerOptions(task, moduleName, moduleArgs);
+            final var launcher = new Runner(options, console, err);
             return launcher.run();
         } catch (final Launcher.LauncherException e) {
-            logger.error("[plugin] Direct {} execution failed: {}", isTest ? "test runner" : "runner", e.getMessage());
+            logger.error("[plugin] Direct runner execution failed: {}", e.getMessage());
             return e.getExitCode();
         } catch (final Exception e) {
-            logger.error("[plugin] Direct {} execution failed", isTest ? "test runner" : "runner", e);
+            logger.error("[plugin] Direct runner execution failed", e);
+            return EXIT_CODE_ERROR;
+        }
+    }
+
+    @Override
+    public int execute(final XtcTestTask task, final XtcRunModule runConfig) {
+        logger.info("[plugin] Invoking test runner directly in current thread (no fork)");
+        try {
+            final String moduleName = runConfig.getModuleName().get();
+            final var moduleArgs = runConfig.getModuleArgs().get();
+            final var options = optionsBuilder().buildTestRunnerOptions(task, moduleName, moduleArgs);
+            final var launcher = new TestRunner(options, console, err);
+            return launcher.run();
+        } catch (final Launcher.LauncherException e) {
+            logger.error("[plugin] Direct test runner execution failed: {}", e.getMessage());
+            return e.getExitCode();
+        } catch (final Exception e) {
+            logger.error("[plugin] Direct test runner execution failed", e);
             return EXIT_CODE_ERROR;
         }
     }
