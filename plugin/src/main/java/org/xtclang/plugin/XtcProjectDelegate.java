@@ -26,7 +26,9 @@ import static org.xtclang.plugin.XtcPluginConstants.XTC_CONFIG_NAME_OUTGOING;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_DEFAULT_RUN_METHOD_NAME_PREFIX;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_EXTENSION_NAME_COMPILER;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_EXTENSION_NAME_RUNTIME;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_EXTENSION_NAME_TEST;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_LANGUAGE_NAME;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_TEST_TASK_NAME;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_SOURCE_FILE_EXTENSION;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_SOURCE_SET_DIRECTORY_ROOT_NAME;
 import static org.xtclang.plugin.XtcPluginUtils.capitalize;
@@ -58,6 +60,7 @@ import org.gradle.api.file.ProjectLayout;
 import org.gradle.api.internal.tasks.DefaultSourceSet;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.model.ObjectFactory;
+import org.gradle.language.base.plugins.LifecycleBasePlugin;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.provider.Provider;
@@ -76,11 +79,13 @@ import org.xtclang.plugin.internal.DefaultXtcCompilerExtension;
 import org.xtclang.plugin.internal.DefaultXtcExtension;
 import org.xtclang.plugin.internal.DefaultXtcRuntimeExtension;
 import org.xtclang.plugin.internal.DefaultXtcSourceDirectorySet;
+import org.xtclang.plugin.internal.DefaultXtcTestExtension;
 import org.xtclang.plugin.internal.GradlePhaseAssertions;
 import org.xtclang.plugin.tasks.XtcCompileTask;
 import org.xtclang.plugin.tasks.XtcExtractXdkTask;
 import org.xtclang.plugin.tasks.XtcLoadJavaToolsTask;
 import org.xtclang.plugin.tasks.XtcRunTask;
+import org.xtclang.plugin.tasks.XtcTestTask;
 import org.xtclang.plugin.tasks.XtcVersionTask;
 
 // Plugin TODO: Implement test task with java like semantics tied to life cycle check.
@@ -307,6 +312,7 @@ public class XtcProjectDelegate {
         // Ensure extensions for configuring the xtc and xec exist.
         resolveXtcCompileExtension(project);
         resolveXtcRuntimeExtension(project);
+        resolveXtcTestExtension(project);
 
         // This is all config phase. Warn if a project isn't versioned when the XTC plugin is applied, so that we
         // are sure no skew/version conflicts exist for inter-module dependencies and cross publication.
@@ -318,6 +324,7 @@ public class XtcProjectDelegate {
         createLoadJavaToolsTask(project);
 
         createDefaultRunTask(project);
+        createDefaultTestTask(project);
 
         // Configure task dependencies
         final TaskCollection<@NotNull XtcCompileTask> compileTasks = tasks.withType(XtcCompileTask.class);
@@ -352,6 +359,10 @@ public class XtcProjectDelegate {
         // TODO: Separate extensions for separate tasks, or just a global xtcRun applied to all?
         //  Decide later if we are per-sourceSet. It's not necessarily better or something we need.
         return ensureExtension(project, XTC_EXTENSION_NAME_RUNTIME, DefaultXtcRuntimeExtension.class);
+    }
+
+    public static XtcTestExtension resolveXtcTestExtension(final Project project) {
+        return ensureExtension(project, XTC_EXTENSION_NAME_TEST, DefaultXtcTestExtension.class);
     }
 
     private static String getXtcSourceDirectoryRootPath(final SourceSet sourceSet) {
@@ -484,9 +495,36 @@ public class XtcProjectDelegate {
         runTask.configure(task -> {
             task.setGroup(APPLICATION_GROUP);
             task.setDescription("Run an XTC program with a configuration supplying the module path(s).");
+            // Run tasks have side effects and should never be UP-TO-DATE or cached (like JavaExec)
+            task.considerNeverUpToDate();
             logger.info("[plugin] Configured, dependency to tasks: {} -> {}", XDK_EXTRACT_TASK_NAME, compileTaskNames);
         });
         logger.info("[plugin] Created task: '{}'", runTask.getName());
+    }
+
+    /**
+     * Create the XTC test task. This task runs xunit tests for XTC modules.
+     * The test task depends on compile tasks and is wired into the Gradle check lifecycle.
+     */
+    private void createDefaultTestTask(final Project project) {
+        final var compileTaskNames = getSourceSets(project).stream()
+            .map(sourceSet -> sourceSet.getCompileTaskName(XTC_LANGUAGE_NAME))
+            .toList();
+
+        final var testTask = tasks.register(XTC_TEST_TASK_NAME, XtcTestTask.class, project);
+        testTask.configure(task -> {
+            task.setGroup(LifecycleBasePlugin.VERIFICATION_GROUP);
+            task.setDescription("Run XTC xunit tests.");
+            task.getFailOnTestFailure().convention(true);
+            logger.info("[plugin] Configured test task with dependency on: {}", compileTaskNames);
+        });
+
+        // Wire testXtc into the check lifecycle
+        tasks.named(LifecycleBasePlugin.CHECK_TASK_NAME).configure(checkTask ->
+            checkTask.dependsOn(testTask)
+        );
+
+        logger.info("[plugin] Created task: '{}'", testTask.getName());
     }
 
     private void createVersioningTasks() {
@@ -785,6 +823,7 @@ public class XtcProjectDelegate {
         // Make all launcher tasks depend on this
         tasks.withType(XtcCompileTask.class).configureEach(task -> task.dependsOn(loadTask));
         tasks.withType(XtcRunTask.class).configureEach(task -> task.dependsOn(loadTask));
+        tasks.withType(XtcTestTask.class).configureEach(task -> task.dependsOn(loadTask));
 
         logger.info("[plugin] Created loadJavaTools task");
     }

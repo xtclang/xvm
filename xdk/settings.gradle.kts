@@ -33,6 +33,8 @@ listOf(
     "lib_webcli",
     "lib_xenia",
     "lib_xml",
+    "lib_xunit",
+    "lib_xunit_engine",
     "javatools_turtle",
     "javatools_launcher",
     "javatools_bridge"

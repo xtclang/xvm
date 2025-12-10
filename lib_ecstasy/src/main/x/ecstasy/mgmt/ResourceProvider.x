@@ -10,8 +10,9 @@ interface ResourceProvider
      * While we can only postulate that the compile-time type of a resource is Object, at run-time
      * it is known to be an immutable Const or a Service.
      */
-    typedef Object                                  as Resource;
-    typedef (Resource | function Resource(Options)) as Supplier;
+    typedef Object                        as Resource;
+    typedef function Resource(Options)    as ResourceSupplier;
+    typedef (Resource | ResourceSupplier) as Supplier;
 
     /**
      * Obtain a resource supplier for specified type and name. Most commonly, a failure of the

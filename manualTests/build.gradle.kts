@@ -1,5 +1,6 @@
 import org.xtclang.plugin.launchers.ExecutionMode
 import org.xtclang.plugin.tasks.XtcRunTask
+import org.xtclang.plugin.tasks.XtcTestTask
 
 /**
  * This is the manualTests project.
@@ -334,6 +335,40 @@ xtcRun {
     }
 }
 
+/**
+ * XTC TEST CONFIGURATION
+ *
+ * The xtcTest extension configures the default testXtc task and provides defaults
+ * for any custom XtcTestTask instances. XtcTestTask extends XtcRunTask, so all
+ * run configuration options are available, plus test-specific options.
+ *
+ * Test tasks are wired into the Gradle 'check' lifecycle, so running:
+ *   ./gradlew check
+ * will execute all configured tests.
+ */
+xtcTest {
+    /*
+     * Whether to fail the build if any test fails. Default is true.
+     * Set to false to continue the build even when tests fail.
+     */
+    failOnTestFailure = true
+
+    /*
+     * Verbose output for test execution
+     */
+    verbose = true
+
+    /*
+     * Test modules to run. Uses the same module { } DSL as xtcRun.
+     * If no modules are configured, the testXtc task will be a no-op.
+     */
+    // Example: Run xunit tests from a test module
+    // module {
+    //     moduleName = "MyTestModule"
+    //     moduleArgs("--verbose")
+    // }
+}
+
 // This shows how to add a custom run task that overrides the global xtcRun config.
 //
 // To debug, use standard JDWP arguments:
@@ -461,6 +496,27 @@ val runAllTestTasks by tasks.registering {
     group = "application"
     description = "Run all test tasks."
     dependsOn(runOne, runTwoTestsInSequence, runParallel, runTestAllExecutionModes)
+}
+
+/**
+ * Custom XtcTestTask example.
+ *
+ * This demonstrates creating a custom test task that overrides the default xtcTest configuration.
+ * Test tasks inherit from XtcRunTask, so all run configuration options are available.
+ */
+val runXunitTests by tasks.registering(XtcTestTask::class) {
+    group = "verification"
+    description = "Run xunit tests using the xunit framework."
+
+    // Override test-specific settings
+    failOnTestFailure = true
+    verbose = true
+
+    // Configure test modules (same DSL as XtcRunTask)
+    // module {
+    //     moduleName = "xunit_demo"
+    //     moduleArgs("--verbose")
+    // }
 }
 
 val runAllTestTasksParallel by tasks.registering {
