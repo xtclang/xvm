@@ -1,20 +1,36 @@
 package org.xtclang.ecstasy;
 
 import org.xtclang.ecstasy.numbers.Int64;
+
 import org.xvm.javajit.Ctx;
 
-public class RangeᐸInt64ᐳ
+public class nRangeᐸInt64ᐳ
     extends Range {
 
-    public RangeᐸInt64ᐳ(Ctx ctx) {
+    private nRangeᐸInt64ᐳ(Ctx ctx, long first, long last, boolean firstExclusive, boolean lastExclusive) {
         super(ctx);
+
+        if (first > last) {
+            $lowerBound     = last;
+            $lowerExclusive = lastExclusive;
+            $upperBound     = first;
+            $upperExclusive = firstExclusive;
+            $descending     = true;
+        } else {
+            $lowerBound     = first;
+            $lowerExclusive = firstExclusive;
+            $upperBound     = last;
+            $upperExclusive = lastExclusive;
+            $descending     = false;
+        }
     }
 
-    public long    $lowerBound;
-    public boolean $lowerExclusive;
-    public long    $upperBound;
-    public boolean $upperExclusive;
-    public boolean $descending;
+    public final long    $lowerBound;
+    public final boolean $lowerExclusive;
+    public final long    $upperBound;
+    public final boolean $upperExclusive;
+    public final boolean $descending;
+
 
     // ----- Range / Interval API ------------------------------------------------------------------
 

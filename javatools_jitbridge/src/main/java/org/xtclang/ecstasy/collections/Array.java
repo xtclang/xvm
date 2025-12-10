@@ -12,7 +12,7 @@ import org.xvm.javajit.Ctx;
 
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.Iterable;
-import org.xtclang.ecstasy.RangeᐸInt64ᐳ;
+import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 import org.xtclang.ecstasy.nException;
 import org.xtclang.ecstasy.nObj;
 import org.xtclang.ecstasy.reflect.Var;
@@ -208,7 +208,7 @@ public abstract class Array
      *
      * protected construct(ArrayDelegate<Element> delegate, Mutability mutability)
      */
-    public static Array $new$4(Ctx ctx, nObj delegate, Mutability mutability) {
+    public static Array $new$4(Ctx ctx, TypeConstant type, ArrayDelegate delegate, Mutability mutability) {
         throw new UnsupportedOperationException(); // must be implemented by subclasses
     }
 
@@ -325,6 +325,24 @@ public abstract class Array
     }
 
     /**
+     * Freeze:
+     *
+     *   immutable Array freeze(Boolean inPlace = False)
+     */
+    public Array freeze$p(Ctx ctx, boolean inPlace, boolean inPlace$dflt) {
+        throw new UnsupportedOperationException("TODO");
+    }
+
+    /**
+     * Make immutable:
+     *
+     *   immutable Array makeImmutable()
+     */
+    public Array makeImmutable(Ctx ctx) {
+        throw new UnsupportedOperationException("TODO");
+    }
+
+    /**
      * Add:
      *
      *   Array add(Element element)
@@ -338,8 +356,26 @@ public abstract class Array
      *   Array addAll(Iterable<Element> values)
      *   Array insert(Int index, Element value)
      *   Array insertAll(Int index, Iterable<Element> values)
+     *
+     */
+
+    /**
+     * Insert:
+     *
+     *   Array insert(Int index, Element value)
+     */
+    public Array insert$p(Ctx ctx, long index, nObj element) {
+        throw new UnsupportedOperationException("TODO");
+    }
+
+    /**
+     * Delete:
+     *
      *   Array delete(Int index)
      */
+    public Array delete$p(Ctx ctx, long index) {
+        throw new UnsupportedOperationException("TODO");
+    }
 
     /**
      * Delete multi:
@@ -368,7 +404,7 @@ public abstract class Array
      *
      * @return a reified array
      */
-    public Array reify(nObj mutability) {
+    public Array reify(Ctx ctx, nObj mutability) {
         throw new UnsupportedOperationException("TODO");
     }
 
@@ -380,7 +416,7 @@ public abstract class Array
      *
      * @return the specified array slice
      */
-    public Array slice(Ctx ctx, RangeᐸInt64ᐳ range) {
+    public Array slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
         if (range.$rangeTo128(ctx)) {
             return slice$p(ctx, ctx.i0, ctx.i1);
         } else {
@@ -399,6 +435,12 @@ public abstract class Array
      * @return the specified array slice
      */
     public Array slice$p(Ctx ctx, long n1, long n2) {
+        throw new UnsupportedOperationException("TODO");
+    }
+
+    // ----- TEMPORARY: SHOULD BE NATURAL ----------------------------------------------------------
+
+    public Array duplicate(Ctx ctx) {
         throw new UnsupportedOperationException("TODO");
     }
 
@@ -536,6 +578,9 @@ public abstract class Array
      * @param count  the number of elements to delete
      */
     protected abstract void $delete(Ctx ctx, long index, long count);
+
+    private static interface ArrayDelegate {
+    }
 
     // ----- exception helpers ---------------------------------------------------------------------
 
