@@ -62,7 +62,8 @@ env:
     ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
 
     skip_manual_tests: ${{ github.event.inputs.skip-tests == true || github.event.inputs.skip-tests == 'true' }}
-    run_manual_tests_parallel: ${{ github.event.inputs.parallel-test-mode == true || github.event.inputs.parallel-test-mode == 'true' }}
+    # Default to parallel mode (true) for push/PR events; for workflow_dispatch, use the input value
+    run_manual_tests_parallel: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.parallel-test-mode == true || github.event.inputs.parallel-test-mode == 'true' }}
     trigger_publishing: ${{ github.event.inputs.publish-snapshots == true || github.event.inputs.publish-snapshots == 'true' }}
 
     # Gradle cache inspection function
