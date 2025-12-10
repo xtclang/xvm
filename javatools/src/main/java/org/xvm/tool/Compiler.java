@@ -103,7 +103,7 @@ import static org.xvm.util.Severity.WARNING;
  */
 public class Compiler extends Launcher<CompilerOptions> {
 
-    protected static final String COMMAND_NAME = "xcc";
+    protected static final String COMMAND_NAME = "build";
 
     // ----- constants -----------------------------------------------------------------------------
 
@@ -221,7 +221,7 @@ public class Compiler extends Launcher<CompilerOptions> {
             } else {
                 parentOf(binFile)
                         .filter(dir -> !dir.isDirectory() && dir.exists())
-                        .ifPresent(dir -> log(ERROR,
+                        .ifPresent(_ -> log(ERROR,
                                 "The output file {} cannot be written because its parent directory cannot be created because a file already exists with the same name",
                                 binFile));
             }
@@ -533,6 +533,7 @@ public class Compiler extends Launcher<CompilerOptions> {
                 if (file == null) {
                     log(ERROR, "Unable to determine output location for module {} from file: {}", quoted(nodeModule.name()), nodeModule.file());
                     checkErrors();
+                    throw new AssertionError("Unreachable");
                 }
 
                 // at this point, we either have a directory or a file to put it in; resolve that to
@@ -553,6 +554,7 @@ public class Compiler extends Launcher<CompilerOptions> {
                     struct.writeTo(file);
                 } catch (final IOException e) {
                     log(FATAL, e, "Exception occurred while attempting to write module file {}", quoted(file.getAbsolutePath()));
+                    throw new AssertionError("Unreachable");
                 }
             }
         }
