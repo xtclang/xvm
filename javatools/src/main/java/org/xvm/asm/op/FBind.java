@@ -370,7 +370,7 @@ public class FBind
             .iconst_0();
         Builder.load(code, regArg);
         if (fBox) {
-            Builder.box(code, regArg.type(), regArg.cd());
+            Builder.box(code, regArg);
         } else if (regArg.cd().isPrimitive()) {
             Builder.boxJava(code, regArg.cd());
         }

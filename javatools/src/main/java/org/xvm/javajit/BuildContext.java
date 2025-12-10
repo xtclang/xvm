@@ -762,7 +762,7 @@ public class BuildContext {
                 code.labelBinding(endIf);
                 reg = new SingleSlot(targetDesc.type, targetDesc.cd, reg.name() + "?");
             } else {
-                Builder.box(code, reg.type(), reg.cd());
+                Builder.box(code, reg);
                 reg = new SingleSlot(targetDesc.type, targetDesc.cd, reg.name());
             }
         }
@@ -1293,7 +1293,7 @@ public class BuildContext {
             TypeConstant typeRet = pdRet.type;
             ClassDesc    cdRet   = pdRet.cd;
             int          regId   = anVar[i];
-            RegisterInfo reg     = ensureRegInfo(regId, typeRet, cdRet, "");
+            RegisterInfo regRet  = ensureRegInfo(regId, typeRet, cdRet, "");
 
             if (i == 0) {
                 switch (pdRet.flavor) {
@@ -1304,23 +1304,23 @@ public class BuildContext {
                     // if the value is `True`, then the return value is Ecstasy `Null`
                     Builder.loadFromContext(code, CD_boolean, pdExt.altIndex);
 
-                    if (reg.isSingle()) {
+                    if (regRet.isSingle()) {
                         Label ifTrue = code.newLabel();
                         Label endIf  = code.newLabel();
                         code.ifne(ifTrue);
-                        Builder.box(code, typeRet, cdRet);
+                        Builder.box(code, regRet);
                         code.goto_(endIf)
                             .labelBinding(ifTrue)
                             .pop();
                         Builder.loadNull(code);
                         code.labelBinding(endIf);
                     }
-                    storeValue(code, reg);
+                    storeValue(code, regRet);
                     break;
 
                 default:
                     // process the natural return
-                    storeValue(code, reg);
+                    storeValue(code, regRet);
                     break;
                 }
             } else {
@@ -1332,24 +1332,24 @@ public class BuildContext {
                     // if the value is `True`, then the return value is Ecstasy `Null`
                     Builder.loadFromContext(code, cdRet, pdExt.altIndex);
 
-                    if (reg.isSingle()) {
+                    if (regRet.isSingle()) {
                         Label ifTrue = code.newLabel();
                         Label endIf  = code.newLabel();
                         code.iconst_0()
                             .if_icmpeq(ifTrue);
-                        Builder.box(code, typeRet, cdRet);
+                        Builder.box(code, regRet);
                         code.goto_(endIf);
                         code.labelBinding(ifTrue)
                             .pop();
                         Builder.loadNull(code);
                         code.labelBinding(endIf);
                     }
-                    storeValue(code, reg);
+                    storeValue(code, regRet);
                     break;
 
                 default:
                     Builder.loadFromContext(code, cdRet, pdRet.altIndex);
-                    storeValue(code, reg);
+                    storeValue(code, regRet);
                     break;
                 }
             }

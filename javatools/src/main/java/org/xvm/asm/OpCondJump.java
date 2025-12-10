@@ -479,16 +479,19 @@ public abstract class OpCondJump
                 throw new IllegalStateException();
             }
         } else {
+            int nAddrThis = getAddress();
             switch (op) {
             case OP_JMP_NULL:
                 Builder.loadNull(code);
                 code.if_acmpeq(lblJump);
-                bctx.narrowRegister(code, reg, getAddress(), nAddrJump, reg.type().removeNullable());
+                bctx.narrowRegister(code, reg, nAddrThis, -1, reg.type().removeNullable());
+                bctx.narrowRegister(code, reg, nAddrJump, -1, bctx.pool().typeNullable());
                 break;
 
             case OP_JMP_NNULL:
                 Builder.loadNull(code);
                 code.if_acmpne(lblJump);
+                bctx.narrowRegister(code, reg, nAddrJump, -1, bctx.pool().typeNullable());
                 bctx.narrowRegister(code, reg, nAddrJump, -1, reg.type().removeNullable());
                 break;
 

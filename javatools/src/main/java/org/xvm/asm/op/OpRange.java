@@ -12,6 +12,8 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpGeneral;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.RegisterInfo;
@@ -44,47 +46,48 @@ public abstract class OpRange
     public void build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo regTarget = bctx.ensureRegister(code, m_nTarget);
 
-       if (!regTarget.isSingle()) {
+        if (!regTarget.isSingle()) {
             throw new UnsupportedOperationException("'+' operation on multi-slot");
         }
 
-        ClassDesc cdTarget = regTarget.cd();
+        ClassDesc    cdTarget   = regTarget.cd();
+        TypeConstant typeTarget = regTarget.type();
 
         if (cdTarget.isPrimitive()) {
             RegisterInfo regArg = bctx.ensureRegister(code, m_nArgValue);
 
             if (!regArg.cd().equals(cdTarget)) {
                 throw new UnsupportedOperationException("Convert " +
-                    regArg.type().getValueString() + " to " + regTarget.type().getValueString());
+                    regArg.type().getValueString() + " to " + typeTarget.getValueString());
             }
 
-            ClassDesc cd = CD_nRangeInt64;
-            switch (regTarget.cd().descriptorString()) {
+            ClassDesc cdRange = CD_nRangeInt64;
+            switch (cdTarget.descriptorString()) {
             case "J":
-                code.new_(cd)
+                code.new_(cdRange)
                     .dup();
                 bctx.loadCtx(code);
                 Builder.load(code, regTarget);
                 Builder.load(code, regArg);
                 switch (getOpCode()) {
                     case OP_GP_IRANGEI -> code.iconst_1().iconst_1();
-                    case OP_GP_ERANGEI -> code.iconst_0().iconst_0();
+                    case OP_GP_ERANGEI -> code.iconst_0().iconst_1();
                     case OP_GP_IRANGEE -> code.iconst_1().iconst_0();
                     case OP_GP_ERANGEE -> code.iconst_0().iconst_0();
                     default            -> throw new IllegalStateException();
                 }
 
-                code.invokespecial(cd, INIT_NAME,
+                code.invokespecial(cdRange, INIT_NAME,
                         MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, CD_long, CD_boolean, CD_boolean));
                 break;
 
             case "I", "S", "B", "C", "Z":
             default:
-                throw new IllegalStateException("Not implemented Range type " +
-                    regTarget.type().getValueString());
+                throw new IllegalStateException("Not implemented: Range< " +
+                    typeTarget.getValueString() + ">");
             }
 
-            bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, regTarget.type()));
+            bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget));
         } else {
             super.build(bctx, code);
         }

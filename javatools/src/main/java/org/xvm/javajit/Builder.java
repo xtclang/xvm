@@ -593,6 +593,18 @@ public abstract class Builder {
      *
      * In: an unboxed primitive value
      * Out: the boxed XVM reference
+     *
+     * @param reg  the RegisterInfo for the unboxed value
+     */
+    public static void box(CodeBuilder code, RegisterInfo reg) {
+        box(code, reg.type(), reg.cd());
+    }
+
+    /**
+     * Generate boxing opcodes for a primitive value of the specified primitive class on the stack.
+     *
+     * In: an unboxed primitive value
+     * Out: the boxed XVM reference
      */
     public static void box(CodeBuilder code, TypeConstant type, ClassDesc cd) {
         assert cd.isPrimitive() && type.isPrimitive();

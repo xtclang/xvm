@@ -203,7 +203,8 @@ public abstract class OpGeneral
             throw new UnsupportedOperationException("'+' operation on multi-slot");
         }
 
-        ClassDesc cdTarget = regTarget.cd();
+        ClassDesc    cdTarget   = regTarget.cd();
+        TypeConstant typeTarget = regTarget.type();
 
         if (isBinaryOp()) {
             if (cdTarget.isPrimitive()) {
@@ -211,7 +212,7 @@ public abstract class OpGeneral
 
                 if (!regArg.cd().equals(cdTarget)) {
                     throw new UnsupportedOperationException("Convert " +
-                        regArg.type().getValueString() + " to " + regTarget.type().getValueString());
+                        regArg.type().getValueString() + " to " + typeTarget.getValueString());
                 }
 
                 buildOptimizedBinary(bctx, code, regTarget);
@@ -240,7 +241,6 @@ public abstract class OpGeneral
                     default -> throw new UnsupportedOperationException(toName(getOpCode()));
             }
 
-            TypeConstant  typeTarget = regTarget.type();
             TypeConstant  typeArg    = bctx.getArgumentType(m_nArgValue);
             MethodInfo    method     = typeTarget.ensureTypeInfo().findOpMethod(sName, sOp, typeArg);
             String        sJitName   = method.ensureJitMethodName(bctx.typeSystem);
@@ -258,7 +258,7 @@ public abstract class OpGeneral
                 bctx.loadArgument(code, m_nArgValue);
                 code.invokevirtual(regTarget.cd(), sJitName, md);
             }
-            bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, regTarget.type()));
+            bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget));
         } else { // unary op
             if (cdTarget.isPrimitive()) {
                 buildOptimizedUnary(bctx, code, regTarget);
@@ -270,10 +270,9 @@ public abstract class OpGeneral
                     case OP_GP_COMPL -> {sName = "not"; sOp = "~"; }
                     default -> throw new UnsupportedOperationException(toName(getOpCode()));
                 }
-                TypeConstant  type     = regTarget.type();
-                MethodInfo    method   = type.ensureTypeInfo().findOpMethod(sName, sOp, null);
+                MethodInfo    method   = typeTarget.ensureTypeInfo().findOpMethod(sName, sOp, null);
                 String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
-                JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem, type);
+                JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem, typeTarget);
 
                 MethodTypeDesc md;
                 if (jmd.isOptimized) {
@@ -286,7 +285,7 @@ public abstract class OpGeneral
                 bctx.loadCtx(code);
                 code.invokevirtual(regTarget.cd(), sJitName, md);
             }
-            bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, regTarget.type()));
+            bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget));
         }
     }
 

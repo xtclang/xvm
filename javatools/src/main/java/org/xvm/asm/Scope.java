@@ -1,10 +1,6 @@
 package org.xvm.asm;
 
 
-import org.xvm.asm.op.Enter;
-import org.xvm.asm.op.Exit;
-
-
 /**
  * Represents a variable scope in the op-code stream.
  */
