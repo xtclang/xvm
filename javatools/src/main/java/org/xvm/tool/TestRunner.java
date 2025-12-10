@@ -61,9 +61,11 @@ public class TestRunner extends Runner {
      * @param console     representation of the terminal within which this command is run
      * @param errListener optional error listener for programmatic error access
      */
-    public TestRunner(final RunnerOptions options, final Console console, final ErrorListener errListener) {
+    public TestRunner(final TestRunnerOptions options, final Console console,
+                      final ErrorListener errListener) {
         super(options, console, errListener);
     }
+
 
     @Override
     protected Connector createConnector(final ModuleRepository repo, final ModuleStructure module) {
@@ -75,10 +77,11 @@ public class TestRunner extends Runner {
         connector.loadModule(XUNIT_MODULE);
 
         // Inject the test module information so xunit can discover and run tests
-        final var injections = new LinkedHashMap<>(options.getInjections());
+        final var injections    = new LinkedHashMap<>(options.getInjections());
+        final var moduleVersion = module.getVersionString();
         injections.putAll(Map.of(
             XUNIT_MODULE_ARG, List.of(module.getName()),
-            XUNIT_MODULE_VERSION_ARG, List.of(module.getVersionString())));
+            XUNIT_MODULE_VERSION_ARG, moduleVersion == null ? List.of() : List.of(moduleVersion)));
 
         connector.start(injections);
         return connector;
