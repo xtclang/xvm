@@ -7,34 +7,24 @@ const ExecutionConfiguration {
      *
      * @param builder  the `Builder` to create the config from
      */
-    private construct (Builder builder) {
+    construct (Builder builder) {
     }
 
     /**
      * Return this `ExecutionConfiguration` as a `Builder`.
      */
-    Builder asBuilder() {
-        return new Builder(this);
-    }
-
-    /**
-     * Create a default `ExecutionConfiguration`.
-     */
-    static ExecutionConfiguration create() {
-        return builder().build();
-    }
+    Builder asBuilder() = new Builder(this);
 
     /**
      * Create an `ExecutionConfiguration` builder.
      */
-    static Builder builder() {
-        return new Builder();
-    }
+    static Builder builder() = new Builder();
 
     /**
      * An `ExecutionConfiguration` builder.
      */
-    static class Builder {
+    static const Builder {
+
         /**
          * Create a `Builder`.
          */
@@ -42,7 +32,7 @@ const ExecutionConfiguration {
         }
 
         /**
-         * Create a `Builder`.
+         * Create a `Builder` from the specified execution configuration..
          *
          * @param config  the `ExecutionConfiguration` to use to create the builder
          */
@@ -54,8 +44,6 @@ const ExecutionConfiguration {
          *
          * @return an `ExecutionConfiguration` built from this `Builder`
          */
-        ExecutionConfiguration build() {
-            return new ExecutionConfiguration(this);
-        }
+        ExecutionConfiguration build() = new ExecutionConfiguration(this);
     }
 }

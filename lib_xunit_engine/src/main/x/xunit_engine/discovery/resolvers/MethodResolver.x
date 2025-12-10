@@ -10,8 +10,9 @@ import xunit.MethodOrFunction;
  *
  * This resolvers specifically handles `MethodSelector` instances.
  */
-service MethodResolver
+const MethodResolver
         implements SelectorResolver {
+
     @Override
     conditional (ModelBuilder[], Selector[]) resolve(DiscoveryConfiguration config, Selector selector) {
         if (selector.is(MethodSelector)) {

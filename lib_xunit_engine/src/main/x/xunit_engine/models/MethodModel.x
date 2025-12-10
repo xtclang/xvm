@@ -52,7 +52,7 @@ interface MethodModel
      * The exact type of model built will depend on the type of the underlying test method or
      * function.
      */
-    static service Builder
+    static const Builder
             implements ModelBuilder {
 
         construct(Class clz, MethodOrFunction testMethod) {
@@ -63,20 +63,20 @@ interface MethodModel
         }
 
         @Override
-        public/private UniqueId uniqueId;
+        UniqueId uniqueId;
 
         @Override
-        public/private Boolean isContainer;
+        Boolean isContainer;
 
         /**
          * The test `Class`.
          */
-        public/private Class clz;
+        Class clz;
 
         /**
          * The test `Method` or `Function`.
          */
-        public/private MethodOrFunction testMethod;
+        MethodOrFunction testMethod;
 
         @Override
         Model build(DiscoveryConfiguration configuration, Model[] children) {

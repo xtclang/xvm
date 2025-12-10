@@ -38,52 +38,71 @@ public class MainContainer
     @Override
     public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type, ObjectHandle hOpts) {
         // check the custom injections first
-        if (m_mapInjections != null) {
-            Object oValue = m_mapInjections.get(sName);
-            if (oValue != null) {
-                ConstantPool pool             = frame.poolContext();
-                TypeConstant typeDestringable = pool.ensureEcstasyTypeConstant("text.Destringable");
-                TypeConstant typeString       = pool.typeString();
-                TypeConstant typeStrings      = pool.ensureArrayType(typeString);
-                TypeConstant typeRequired     = type;
-
-                if (typeRequired.isNullable()) {
-                    // strip nullable from the required type
-                    typeRequired = typeRequired.removeNullable();
-                }
-
-                if (oValue instanceof String sValue) {
-                    if (typeRequired.equals(typeString)) {
-                        // require String and value is String
-                        return xString.makeHandle(sValue);
-                    } else if (typeRequired.equals(typeStrings)) {
-                        // require String[] and value is String
-                        String[] asValue = {sValue};
-                        return xString.makeArrayHandle(asValue);
-                    } else if (typeRequired.isA(typeDestringable)) {
-                        // require Destringable and value is String
-                        return toDestringable(frame, typeRequired, sValue);
-                    }
-                } else if (oValue instanceof String[] asValue && asValue.length > 0) {
-                    if (typeRequired.equals(typeStrings)) {
-                        // require String[] and value is String[]
-                        return xString.makeArrayHandle(asValue);
-                    } else if (typeRequired.equals(typeString)) {
-                        // require String and value is String[] so return the last element
-                        // from the array
-                        return xString.makeHandle(asValue[asValue.length - 1]);
-                    }
-                }
-            }
+        if (m_mapInjections == null) {
+            // there are no custom injections
+            return getParentInjectable(frame, sName, type, hOpts);
         }
 
-        // No matching injectable found, so if the required type is nullable return null, otherwise
+        Object oValue = m_mapInjections.get(sName);
+        if (oValue == null) {
+            // there is no matching custom injection
+            return getParentInjectable(frame, sName, type, hOpts);
+        }
+
+        ConstantPool pool             = frame.poolContext();
+        TypeConstant typeDestringable = pool.ensureEcstasyTypeConstant("text.Destringable");
+        TypeConstant typeString       = pool.typeString();
+        TypeConstant typeStrings      = pool.ensureArrayType(typeString);
+        TypeConstant typeRequired     = type;
+
+        if (typeRequired.isNullable()) {
+            // strip nullable from the required type
+            typeRequired = typeRequired.removeNullable();
+        }
+
+        return switch (oValue) {
+            case String sValue -> {
+                if (typeRequired.equals(typeString)) {
+                    // require String and value is String
+                    yield xString.makeHandle(sValue);
+                }
+                if (typeRequired.equals(typeStrings)) {
+                    // require String[] and value is String
+                    String[] asValue = {sValue};
+                    yield xString.makeArrayHandle(asValue);
+                }
+                if (typeRequired.isA(typeDestringable)) {
+                    // require Destringable and value is String
+                    yield toDestringable(frame, typeRequired, sValue);
+                }
+                yield getParentInjectable(frame, sName, type, hOpts);
+            }
+            case String[] asValue -> {
+                if (typeRequired.equals(typeStrings)) {
+                    // require String[] and value is String[]
+                    yield xString.makeArrayHandle(asValue);
+                }
+                if (typeRequired.equals(typeString)) {
+                    // require String and value is String[] so return the last element
+                    // from the array
+                    yield xString.makeHandle(asValue[asValue.length - 1]);
+                }
+                yield getParentInjectable(frame, sName, type, hOpts);
+            }
+            default -> getParentInjectable(frame, sName, type, hOpts);
+        };
+    }
+
+    private ObjectHandle getParentInjectable(Frame frame, String sName, TypeConstant type,
+                                             ObjectHandle hOpts) {
+
+        // If the required type is nullable return null, otherwise
         // return an exception
         ObjectHandle hResource = f_parent.getInjectable(frame, sName, type, hOpts);
         return hResource == null
                 ? type.isNullable()
-                        ? xNullable.NULL
-                        : new DeferredCallHandle(xException.makeHandle(frame, "Invalid resource: " + sName))
+                ? xNullable.NULL
+                : new DeferredCallHandle(xException.makeHandle(frame, "Invalid resource: " + sName))
                 : maskInjection(frame, hResource, type);
     }
 

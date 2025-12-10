@@ -69,7 +69,7 @@ const ContainerModel
     /**
      * A `ModelBuilder` that builds a `ContainerModel`.
      */
-    static service Builder
+    static const Builder
             implements ModelBuilder {
 
         /**

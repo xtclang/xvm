@@ -17,7 +17,7 @@ const DiscoveryConfiguration {
     /**
      * Create a DiscoveryConfiguration from a `Builder`.
      */
-    private construct(Builder builder) {
+    construct(Builder builder) {
         this.displayNameGenerator = builder.displayNameGenerator;
         this.selectors            = builder.selectors.freeze(False);
         this.verbose              = builder.verbose;
@@ -41,9 +41,7 @@ const DiscoveryConfiguration {
     /**
      * Return this `DiscoveryConfiguration` as a `Builder`.
      */
-    Builder asBuilder() {
-        return new Builder(this);
-    }
+    Builder asBuilder() = new Builder(this);
 
     /**
      * A convenience method to return the display name for a
@@ -53,9 +51,7 @@ const DiscoveryConfiguration {
      *
      * @return the human readable display name for the `Class`
      */
-    String displayNameFor(Class clz) {
-        return displayNameGenerator.nameForClass(clz);
-    }
+    String displayNameFor(Class clz) = displayNameGenerator.nameForClass(clz);
 
     /**
      * A convenience method to return the display name for a
@@ -66,23 +62,22 @@ const DiscoveryConfiguration {
      *
      * @return the human readable display name for the `Class`
      */
-    String displayNameFor(Class clz, MethodOrFunction method) {
-        return displayNameGenerator.nameForMethod(clz, method);
-    }
+    String displayNameFor(Class clz, MethodOrFunction method)
+            = displayNameGenerator.nameForMethod(clz, method);
 
     // ----- factory methods -----------------------------------------------------------------------
 
     /**
-     * Create a default `DiscoveryConfiguration`.
-     */
-    static DiscoveryConfiguration create() {
-        return builder().build();
-    }
-
-    /**
      * Create a `DiscoveryConfiguration` builder.
+     *
+     * @param testModule  the `Module` containing the tests to discover, or `Null` to create a
+     *                    default empty builder
      */
     static Builder builder(Module? testModule = Null) {
+        if (testModule.is(Module)) {
+            assert Selector selector := discovery.selectors.forModule(testModule);
+            return new Builder([selector]);
+        }
         return new Builder();
     }
 
@@ -90,14 +85,14 @@ const DiscoveryConfiguration {
 
     /**
      * A `DiscoveryConfiguration` builder.
+     *
+     * @param selectors             the `Selector`s to use to discover tests
+     * @param displayNameGenerator  the `DisplayNameGenerator` to use
+     * @param verbose               a flag indicating whether to enable verbose discovery logging
      */
-    static class Builder {
-        /**
-         * Create a `Builder`.
-         */
-        construct() {
-            selectors = new Array();
-        }
+    static const Builder(Selector[]           selectors            = [],
+                         DisplayNameGenerator displayNameGenerator = DisplayNameGenerator.Default,
+                         Boolean              verbose              = False) {
 
         /**
          * Create a `Builder`.
@@ -109,45 +104,30 @@ const DiscoveryConfiguration {
             this.verbose              = config.verbose;
             this.selectors            = new Array();
             this.selectors.addAll(config.selectors);
+            this.selectors.freeze(True);
         }
 
         /**
-         * The `DisplayNameGenerator` to use.
+         * Return a `Builder` that is a copy of this builder configured with default values.
+         *
+         * @param testModule  the `module containing the tests to discover
          */
-        private DisplayNameGenerator displayNameGenerator = DisplayNameGenerator.Default;
-
-        /**
-         * The `Selector`s to use to discover tests.
-         */
-        private Selector[] selectors;
-
-        /**
-         * A flag indicating whether to enable verbose discovery logging.
-         */
-        private Boolean verbose;
-
         Builder autoConfigure(Module testModule) {
             @Inject(discovery.ConfigDiscoveryTestPackage) String[]? testPackages;
             @Inject(discovery.ConfigDiscoveryTestClass)   String[]? testClasses;
             @Inject(discovery.ConfigDiscoveryTest)        String[]? tests;
             @Inject(discovery.ConfigDiscoveryGroup)       String[]? testGroups;
-            @Inject(discovery.ConfigDiscoveryVerbose)     String?   verbose;
+            @Inject(discovery.ConfigDiscoveryVerbose)     String?   verboseConfig;
 
-            Builder builder = this;
+            Boolean verbose = verboseConfig.is(String) && verboseConfig.toLowercase() == "true";
 
-            if (verbose.is(String), verbose.toLowercase() == "true") {
-                builder = builder.withVerboseLog(True);
-            }
-
-            Boolean selectorsFound = False;
-
+            Selector[] selectors = new Array();
             if (testPackages.is(String[])) {
                 for (String testPackage : testPackages) {
                     if (Class clz := findClass(testModule, testPackage)) {
                         assert:arg Selector selector := discovery.selectors.forPackage(clz)
                                 as $"Invalid test package specified {testPackage}";
-                        builder = builder.withSelector(selector);
-                        selectorsFound = True;
+                        selectors.add(selector);
                     } else {
                         throw new IllegalArgument($"Invalid test package specified {testPackage}");
                     }
@@ -159,8 +139,7 @@ const DiscoveryConfiguration {
                     if (Class clz := findClass(testModule, testClass)) {
                         assert:arg Selector selector := discovery.selectors.forClass(clz)
                                 as $"Invalid test class specified {testClass}";
-                        builder = builder.withSelector(selector);
-                        selectorsFound = True;
+                        selectors.add(selector);
                     } else {
                         throw new IllegalArgument($"Invalid test class specified {testClass}");
                     }
@@ -172,18 +151,17 @@ const DiscoveryConfiguration {
 // ToDo JK: Fix why specifying a method seems to hang somewhere
 //                    assert:arg Selector[] testSelectors := discovery.selectors.forMethod(clz, test)
 //                            as $"Invalid test method specified {testClass}.{test}";
-//                    builder.withSelectors(testSelectors);
-//                    selectorsFound = True;
+//                    selectors.add(selector);
                 }
             }
 
-            if (!selectorsFound) {
+            if (selectors.empty) {
                 // no custom selectors were specified so default to the whole module
                 assert Selector selector := discovery.selectors.forModule(testModule);
                 selectors.add(selector);
             }
 
-            return builder;
+            return new Builder(selectors, this.displayNameGenerator, verbose=verbose);
         }
 
         private conditional Class findClass(Module testModule, String className) {
@@ -203,10 +181,8 @@ const DiscoveryConfiguration {
          *
          * @param verbose  the `verbose` flag to use
          */
-        Builder withVerboseLog(Boolean verbose) {
-            this.verbose = verbose;
-            return this;
-        }
+        Builder withVerboseLog(Boolean verbose)
+                = new Builder(this.selectors, this.displayNameGenerator, verbose);
 
         /**
          * Set the `DisplayNameGenerator`.
@@ -215,10 +191,8 @@ const DiscoveryConfiguration {
          *
          * @return this `Builder`
          */
-        Builder withDisplayNameGenerator(DisplayNameGenerator generator) {
-            displayNameGenerator = generator;
-            return this;
-        }
+        Builder withDisplayNameGenerator(DisplayNameGenerator generator)
+                = new Builder(this.selectors, generator, this.verbose);
 
         /**
          * Add a `Selector`.
@@ -227,30 +201,23 @@ const DiscoveryConfiguration {
          *
          * @return this `Builder`
          */
-        Builder withSelectors(Selector[] selectors) {
-            selectors.addAll(selectors);
-            return this;
-        }
+        Builder withSelectors(Selector[] selectors)
+                = new Builder(this.selectors.addAll(selectors),
+                        this.displayNameGenerator, this.verbose);
 
         /**
-         * Add a `Selector`.
+         * Return a new builder that is a copy of this builder with the specified selector added.
          *
          * @param selector  the `Selector` to add
          *
-         * @return this `Builder`
+         * @return a new builder that is a copy of this builder with the specified selector added
          */
-        Builder withSelector(Selector selector) {
-            selectors.add(selector);
-            return this;
-        }
+        Builder withSelector(Selector selector)
+                = new Builder(this.selectors.add(selector), this.displayNameGenerator, this.verbose);
 
         /**
-         * Build the `DiscoveryConfiguration`.
-         *
          * @return a `DiscoveryConfiguration` built from this `Builder`
          */
-        DiscoveryConfiguration build() {
-            return new DiscoveryConfiguration(this);
-        }
+        DiscoveryConfiguration build() = new DiscoveryConfiguration(this);
     }
 }

@@ -50,9 +50,8 @@
      *
      * @return the new `TestEngine` instance
      */
-    TestEngine createTestEngine(TestConfiguration config, ExecutionListener listener) {
-        return new DefaultTestEngine(config, listener);
-    }
+    TestEngine createTestEngine(TestConfiguration config, ExecutionListener listener)
+            = new DefaultTestEngine(config, listener);
 
     /**
      * Apply any custom configuration to the `TestConfiguration.Builder`.
@@ -61,9 +60,7 @@
      *
      * @return the configured `TestConfiguration.Builder`
      */
-    TestConfiguration.Builder configureTestEngine(TestConfiguration.Builder builder) {
-        return builder;
-    }
+    TestConfiguration.Builder configureTestEngine(TestConfiguration.Builder builder) = builder;
 
     /**
      * Create an optional `ExecutionListener` instance.
@@ -72,9 +69,7 @@
      *
      * @return the new `ExecutionListener` instance, or `Null` if no listener is required
      */
-    ExecutionListener? createExecutionListener(Module testModule) {
-        return Null;
-    }
+    ExecutionListener? createExecutionListener(Module testModule) = Null;
 
     /**
      * Create a `DiscoveryConfiguration` instance.
@@ -83,11 +78,10 @@
      *
      * @return the new `DiscoveryConfiguration` instance
      */
-    DiscoveryConfiguration createDiscoveryConfiguration(Module testModule) {
-        return DiscoveryConfiguration.builder()
+    DiscoveryConfiguration createDiscoveryConfiguration(Module testModule)
+            = DiscoveryConfiguration.builder()
                 .autoConfigure(testModule)
                 .build();
-    }
 
     /**
      * Create an `ExecutionConfiguration` instance.
@@ -96,9 +90,8 @@
      *
      * @return the new `ExecutionConfiguration` instance
      */
-    ExecutionConfiguration createExecutionConfiguration(Module testModule) {
-        return ExecutionConfiguration.create();
-    }
+    ExecutionConfiguration createExecutionConfiguration(Module testModule)
+            = ExecutionConfiguration.builder().build();
 
     /**
      * A simple `ExecutionListener` that tracks the overall test status.

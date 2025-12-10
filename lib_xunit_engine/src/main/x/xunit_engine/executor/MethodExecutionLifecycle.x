@@ -43,8 +43,6 @@ const MethodExecutionLifecycle<ModelType extends MethodModel>(ModelType model)
             Object fixture = ensureFixture(context, extensions, model.testClass);
             builder.withTestFixture(fixture);
         }
-
-        prepare(builder, extensions);
 	    return super(builder.build(), extensions);
     }
 
@@ -150,17 +148,6 @@ const MethodExecutionLifecycle<ModelType extends MethodModel>(ModelType model)
         for (AroundTestCallback around : aroundTest) {
             collector.executeVoid(() -> around.afterTest(context));
         }
-
 		return context;
 	}
-
-    /**
-     * Can be overridden in sub-classes that want to modify the context builder.
-     *
-     * @param builder     the `EngineExecutionContext` builder that may be modified
-     * @param extensions  the `ExtensionRegistry` to add `Extensions` to
-     */
-    protected void prepare(EngineExecutionContext.Builder builder, ExtensionRegistry extensions)
-        {
-        }
 }

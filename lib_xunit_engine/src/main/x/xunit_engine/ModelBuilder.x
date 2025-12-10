@@ -2,7 +2,7 @@
  * A builder of `Model` instances.
  */
 interface ModelBuilder
-    extends Service
+    extends immutable Const
     extends Stringable {
 
     /**

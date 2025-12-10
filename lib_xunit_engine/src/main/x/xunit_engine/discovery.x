@@ -39,7 +39,7 @@ package discovery {
      * of a `Selector`, which will be processed by a `SelectorResolver`.
      */
     interface Selector
-            extends Const {
+            extends immutable Const {
     }
 
     /**
@@ -47,7 +47,7 @@ package discovery {
      * and additional test `Selector`s.
      */
     interface SelectorResolver
-            extends Service {
+            extends immutable Const {
         /**
          * Resolve a `Selector`.
          *

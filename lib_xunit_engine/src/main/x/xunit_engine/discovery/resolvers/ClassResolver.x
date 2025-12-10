@@ -7,7 +7,7 @@ import models.ContainerModel;
  *
  * This resolvers specifically handles `ClassSelector` instances.
  */
-service ClassResolver
+const ClassResolver
         implements SelectorResolver {
 
     @Override

@@ -4,12 +4,16 @@ import xunit.extensions.ExtensionProvider;
 
 /**
  * A model that wraps another model.
- *
- * @param delegate  the wrapped model
  */
 @Abstract const WrapperModel<ModelType extends Model>
         implements Model {
 
+    /**
+     * Constructs a new wrapper model.
+     *
+     * @param delegate  the wrapped model
+     * @param id        an optional unique identifier to override that of the delegate model
+     */
     construct(ModelType delegate, UniqueId? uniqueId = Null){
         this.delegate = delegate;
         if (uniqueId.is(UniqueId)) {

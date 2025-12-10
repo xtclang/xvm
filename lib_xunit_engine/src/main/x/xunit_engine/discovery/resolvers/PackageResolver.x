@@ -8,7 +8,7 @@ import models.ContainerModel;
  *
  * This resolvers specifically handles `PackageSelector` instances.
  */
-service PackageResolver
+const PackageResolver
         implements SelectorResolver {
     @Override
     conditional (ModelBuilder[], Selector[]) resolve(DiscoveryConfiguration config, Selector selector) {

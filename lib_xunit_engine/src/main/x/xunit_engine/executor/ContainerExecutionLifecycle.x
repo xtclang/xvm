@@ -54,19 +54,20 @@ const ContainerExecutionLifecycle<ModelType extends ContainerModel>(ModelType mo
 	                              EngineExecutionContext context,
 	                              ExtensionRegistry      extensions) {
 
-	    if (Class testClass := model.testClass.is(TestFixture)) {
-	        if (testClass.lifecycle == Singleton) {
-	            Object fixture = ensureFixture(context, extensions, testClass);
-	            context = context.asBuilder(model).withTestFixture(fixture).build();
-            }
+        EngineExecutionContext beforeContext;
+	    if (Class testClass := model.testClass.is(TestFixture), testClass.lifecycle == Singleton) {
+            Object fixture = ensureFixture(context, extensions, testClass);
+            beforeContext = context.asBuilder(model).withTestFixture(fixture).build();
+        } else {
+            beforeContext = context;
         }
 
         for (BeforeAllCallback before : extensions.get(BeforeAllCallback, False)) {
-            if (!collector.executeVoid(() -> before.beforeAll(context))) {
+            if (!collector.executeVoid(() -> before.beforeAll(beforeContext))) {
                 break;
             }
         }
-		return context;
+		return beforeContext;
     }
 
     @Override

@@ -14,7 +14,7 @@ import xunit.templates.TestTemplateFactory;
  *
  * This resolvers specifically handles `TemplateSelector` instances.
  */
-service TemplateResolver
+const TemplateResolver
         implements SelectorResolver {
     @Override
     conditional (ModelBuilder[], Selector[]) resolve(DiscoveryConfiguration config, Selector selector) {

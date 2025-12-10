@@ -11,7 +11,7 @@ import xunit.templates.TestTemplateFactory;
  * would be a `Class`, `Package` or `Module` that contains test fixtures.
  */
 interface Model
-        extends Const {
+        extends immutable Const {
 
     typedef function Object() as Constructor;
 

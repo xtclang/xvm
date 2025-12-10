@@ -52,13 +52,13 @@ const SimpleMethodModel
      * The test method's parent `Class`.
      */
     @Override
-    public/private Class testClass;
+    Class testClass;
 
     /**
      * The test method or function this model represents.
      */
     @Override
-    public/private MethodOrFunction testMethod;
+    MethodOrFunction testMethod;
 
     /**
      * The `SkipResult` indicating whether the method is skipped.
@@ -67,7 +67,7 @@ const SimpleMethodModel
      * be reported in any execution results.
      */
     @Override
-    public/private SkipResult skipResult;
+    SkipResult skipResult;
 
     /**
      * The lazily calculated string value for this model.

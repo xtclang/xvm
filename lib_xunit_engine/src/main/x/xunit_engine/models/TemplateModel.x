@@ -58,22 +58,22 @@ const TemplateModel
     /**
      * The test method's parent `Class`.
      */
-    public/private Class testClass;
+    Class testClass;
 
     /**
      * The test method or function this model represents.
      */
-    public/private MethodOrFunction? testMethod;
+    MethodOrFunction? testMethod;
 
     /**
      * The `TestTemplateFactory` used to create the models for this template.
      */
-    public/private TestTemplateFactory factory;
+    TestTemplateFactory factory;
 
     /**
      * The optional child `TemplateModel`.
      */
-    public/private TemplateModel? templateModel;
+    TemplateModel? templateModel;
 
     /**
      * The `SkipResult` indicating whether the method is skipped.
@@ -81,7 +81,7 @@ const TemplateModel
      * We still produce models for skipped test fixtures so that they will
      * be reported in any execution results.
      */
-    public/private SkipResult skipResult;
+    SkipResult skipResult;
 
     @Override
     ExecutionLifecycle createExecutionLifecycle() = throw new Unsupported();
@@ -120,7 +120,7 @@ const TemplateModel
     /**
      * A builder to build a `TemplateModel`.
      */
-    static service Builder(UniqueId            uniqueId,
+    static const Builder(UniqueId            uniqueId,
                            Class               testClass,
                            MethodOrFunction?   testMethod,
                            TestTemplateFactory factory,
