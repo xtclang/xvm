@@ -6,7 +6,6 @@ import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
 import org.xvm.asm.BuildInfo;
-import org.xvm.util.Severity;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -32,6 +31,7 @@ public class LauncherVersionTest {
             return "";
         }
 
+        @SuppressWarnings("unused")
         public List<String> getLines() {
             return lines;
         }

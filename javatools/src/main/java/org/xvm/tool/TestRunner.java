@@ -1,6 +1,7 @@
 package org.xvm.tool;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.xvm.api.Connector;
@@ -49,7 +50,7 @@ public class TestRunner extends Runner {
      *
      * @param args command line arguments
      */
-    public static void main(final String[] args) {
+    static void main(final String[] args) {
         Launcher.main(insertCommand(COMMAND_NAME, args));
     }
 
@@ -74,9 +75,10 @@ public class TestRunner extends Runner {
         connector.loadModule(XUNIT_MODULE);
 
         // Inject the test module information so xunit can discover and run tests
-        final Map<String, String> injections = new LinkedHashMap<>(options.getInjections());
-        injections.put(XUNIT_MODULE_ARG, module.getName());
-        injections.put(XUNIT_MODULE_VERSION_ARG, module.getVersionString());
+        final var injections = new LinkedHashMap<>(options.getInjections());
+        injections.putAll(Map.of(
+            XUNIT_MODULE_ARG, List.of(module.getName()),
+            XUNIT_MODULE_VERSION_ARG, List.of(module.getVersionString())));
 
         connector.start(injections);
         return connector;

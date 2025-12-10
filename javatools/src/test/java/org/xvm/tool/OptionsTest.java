@@ -34,7 +34,7 @@ class OptionsTest {
 
         final var modulePath = opts.getModulePath();
         assertEquals(1, modulePath.size());
-        assertEquals(new File("/lib1"), modulePath.get(0));
+        assertEquals(new File("/lib1"), modulePath.getFirst());
 
         final var sources = opts.getInputLocations();
         assertEquals(2, sources.size());
@@ -119,7 +119,7 @@ class OptionsTest {
         assertFalse(opts.isCompileDisabled());
         assertEquals(new File("MyModule.xtc"), opts.getTarget());
 
-        assertEquals(Map.of("key1", "value1", "key2", "value2"), opts.getInjections());
+        assertEquals(Map.of("key1", List.of("value1"), "key2", List.of("value2")), opts.getInjections());
         assertEquals(List.of("arg1", "arg2"), opts.getMethodArgs());
         assertEquals(List.of(new File("/lib1")), opts.getModulePath());
     }
@@ -201,7 +201,7 @@ class OptionsTest {
         final var opts = RunnerOptions.parse(args);
 
         // Options should be immutable - getInjections returns unmodifiable map
-        assertThrows(UnsupportedOperationException.class, () -> opts.getInjections().put("bad", "value"));
+        assertThrows(UnsupportedOperationException.class, () -> opts.getInjections().put("bad", List.of("value")));
     }
 
     @Test
@@ -230,21 +230,17 @@ class OptionsTest {
         // Test that --strict and --nowarn are mutually exclusive when parsing args
         final String[] args = {"--strict", "--nowarn", "foo.x"};
 
-        assertThrows(IllegalArgumentException.class, () -> {
-            CompilerOptions.parse(args);
-        });
+        assertThrows(IllegalArgumentException.class, () -> CompilerOptions.parse(args));
     }
 
     @Test
     void testStrictAndNoWarnMutualExclusionBuilder() {
         // Test that --strict and --nowarn are mutually exclusive when using builder
-        assertThrows(IllegalArgumentException.class, () -> {
-            new CompilerOptions.Builder()
-                    .enableStrictMode(true)
-                    .disableWarnings(true)
-                    .addInputFile(new File("foo.x"))
-                    .build();
-        });
+        assertThrows(IllegalArgumentException.class, () -> new CompilerOptions.Builder()
+                .enableStrictMode(true)
+                .disableWarnings(true)
+                .addInputFile(new File("foo.x"))
+                .build());
     }
 
     @Test
@@ -288,7 +284,7 @@ class OptionsTest {
         final var opts = CompilerOptions.parse(args);
         assertTrue(opts.isVerbose());
         assertEquals(1, opts.getInputLocations().size());
-        assertEquals(new File("foo.x"), opts.getInputLocations().get(0));
+        assertEquals(new File("foo.x"), opts.getInputLocations().getFirst());
     }
 
     @Test
@@ -339,9 +335,7 @@ class OptionsTest {
     void testUnknownOption() {
         final String[] args = {"--unknown", "foo.x"};
 
-        final var e = assertThrows(IllegalArgumentException.class, () -> {
-            CompilerOptions.parse(args);
-        });
+        final var e = assertThrows(IllegalArgumentException.class, () -> CompilerOptions.parse(args));
         assertTrue(e.getMessage().contains("Unrecognized option") || e.getMessage().contains("unknown"));
     }
 
@@ -349,9 +343,7 @@ class OptionsTest {
     void testMissingRequiredValue() {
         final String[] args = {"-o"}; // Missing value for -o
 
-        final var e = assertThrows(IllegalArgumentException.class, () -> {
-            CompilerOptions.parse(args);
-        });
+        final var e = assertThrows(IllegalArgumentException.class, () -> CompilerOptions.parse(args));
         assertTrue(e.getMessage().contains("Missing argument") || e.getMessage().contains("requires"));
     }
 
@@ -388,14 +380,25 @@ class OptionsTest {
 
         final var injections = opts.getInjections();
         assertEquals(3, injections.size());
-        assertEquals("value1", injections.get("key1"));
-        assertEquals("value2", injections.get("key2"));
-        assertEquals("value3", injections.get("key3"));
+        assertEquals(List.of("value1"), injections.get("key1"));
+        assertEquals(List.of("value2"), injections.get("key2"));
+        assertEquals(List.of("value3"), injections.get("key3"));
+    }
+
+    @Test
+    void testMultiValueInjections() {
+        // Test that multiple -I flags with the same key accumulate values
+        final String[] args = {"-I", "key=value1", "-I", "key=value2", "-I", "key=value3", "MyModule.xtc"};
+        final var opts = RunnerOptions.parse(args);
+
+        final var injections = opts.getInjections();
+        assertEquals(1, injections.size());
+        assertEquals(List.of("value1", "value2", "value3"), injections.get("key"));
     }
 
     @Test
     void testInvalidMapValue() {
-        // Apache Commons CLI doesn't validate format - we parse and it just won't have '='
+        // Apache Commons CLI doesn't validate format - we parse, and it just won't have '='
         // So the map will be empty or have incorrect parsing
         final String[] args = {"-I", "invalidpair", "MyModule.xtc"};
 
@@ -430,7 +433,7 @@ class OptionsTest {
 
     @Test
     void testHelpTextGeneration() {
-        // Test that help text can be generated for each options type
+        // Test that help text can be generated for each option type
         CompilerOptions compilerOpts = new CompilerOptions.Builder().build();
         final var compilerHelp = compilerOpts.getHelpText();
         assertNotNull(compilerHelp);
