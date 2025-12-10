@@ -9,6 +9,7 @@ import static org.xtclang.plugin.internal.DefaultXtcRunModule.DEFAULT_METHOD_NAM
 
 import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.LauncherOptions.RunnerOptions;
+import org.xvm.tool.LauncherOptions.TestRunnerOptions;
 
 import org.xtclang.plugin.tasks.XtcCompileTask;
 import org.xtclang.plugin.tasks.XtcRunTask;
@@ -91,6 +92,35 @@ public final class LauncherOptionsBuilder {
             .setMethodName(methodName)
             .setTarget(moduleName, moduleArgs)
             .noRecompile(); // --no-recompile, note there is confusion with --rebuild in the compiler and this
+
+        // Add module paths
+        for (final var modulePath : task.resolveFullModulePath()) {
+            builder.addModulePath(useAbsolutePaths() ? modulePath.getAbsolutePath() : projectDir.relativize(modulePath.toPath()).toString());
+        }
+        return builder.build();
+    }
+
+    /**
+     * Builds TestRunnerOptions from XtcRunTask (for test tasks).
+     * Used by ALL test strategies (Direct, Attached, Detached).
+     *
+     * @param task the run task (should be XtcTestTask)
+     * @param moduleName the module to test
+     * @param moduleArgs arguments to pass to the module
+     */
+    public TestRunnerOptions buildTestRunnerOptions(final XtcRunTask task, final String moduleName, final List<String> moduleArgs) {
+        final var projectDir = task.getProjectDirectory().get().getAsFile().toPath();
+        final var methodName = task.getMethodName().getOrElse(DEFAULT_METHOD_NAME);
+        assert !methodName.isEmpty();
+
+        // Set flags - same as runner options
+        // Use explicit type to ensure we get TestRunnerOptions.Builder
+        final TestRunnerOptions.Builder builder = TestRunnerOptions.builder();
+        builder.enableShowVersion(task.getShowVersion().get())
+            .enableVerbose(task.getVerbose().get())
+            .setMethodName(methodName)
+            .setTarget(moduleName, moduleArgs)
+            .noRecompile();
 
         // Add module paths
         for (final var modulePath : task.resolveFullModulePath()) {

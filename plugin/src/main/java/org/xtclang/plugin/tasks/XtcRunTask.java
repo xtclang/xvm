@@ -92,7 +92,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
 
     @Internal
     @Override
-    public final String getJavaLauncherClassName() {
+    public String getJavaLauncherClassName() {
         return XTC_RUNNER_CLASS_NAME;
     }
 

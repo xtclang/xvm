@@ -159,18 +159,18 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      */
     public static int launch(final String cmd, final String[] args, final Console console, final ErrorListener errListener) {
         try {
-            final LauncherOptions options = switch (cmd) {
-                case Compiler.COMMAND_NAME -> CompilerOptions.parse(args);
-                case Runner.COMMAND_NAME -> RunnerOptions.parse(args);
-                case TestRunner.COMMAND_NAME -> TestRunnerOptions.parse(args);
-                case Disassembler.COMMAND_NAME -> DisassemblerOptions.parse(args);
+            return switch (cmd) {
+                case Compiler.COMMAND_NAME -> launch(CompilerOptions.parse(args), console, errListener);
+                case Runner.COMMAND_NAME -> launch(RunnerOptions.parse(args), console, errListener);
+                case TestRunner.COMMAND_NAME -> launch(TestRunnerOptions.parse(args), console, errListener);
+                case Disassembler.COMMAND_NAME -> launch(DisassemblerOptions.parse(args), console, errListener);
                 case "--version", "-version" -> {
                     showVersion(console);
-                    yield null;
+                    yield 0;
                 }
                 case "--help", "-h", "-help" -> {
                     showHelp(console);
-                    yield null;
+                    yield 0;
                 }
                 default -> {
                     console.log(ERROR, "Unknown command: {}. Use {}, {}, {}, or {}.",
@@ -180,11 +180,9 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
                             TestRunner.COMMAND_NAME,
                             Disassembler.COMMAND_NAME);
                     showHelp(console);
-                    yield null;
+                    yield 1;
                 }
             };
-
-            return options != null ? launch(options, console, errListener) : 0;
         } catch (final IllegalArgumentException e) {
             console.log(ERROR, e.getMessage());
             return 1;

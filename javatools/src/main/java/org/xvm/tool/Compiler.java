@@ -103,7 +103,7 @@ import static org.xvm.util.Severity.WARNING;
  */
 public class Compiler extends Launcher<CompilerOptions> {
 
-    protected static final String COMMAND_NAME = "build";
+    public static final String COMMAND_NAME = "build";
 
     // ----- constants -----------------------------------------------------------------------------
 

@@ -20,6 +20,7 @@ import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.XtcRunModule;
 import org.xtclang.plugin.XtcTestExtension;
 
+import static org.xtclang.plugin.XtcPluginConstants.XTC_TEST_RUNNER_CLASS_NAME;
 import static org.xtclang.plugin.XtcPluginUtils.failure;
 
 /**
@@ -66,6 +67,12 @@ public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension
     @Override
     public ListProperty<@NotNull String> getExcludes() {
         return excludes;
+    }
+
+    @Internal
+    @Override
+    public final String getJavaLauncherClassName() {
+        return XTC_TEST_RUNNER_CLASS_NAME;
     }
 
     @TaskAction

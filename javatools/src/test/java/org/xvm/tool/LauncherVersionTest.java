@@ -47,8 +47,8 @@ public class LauncherVersionTest {
         final var console = new CaptureConsole();
         final var args = new String[]{"--version"};
 
-        // Run xcc --version command
-        Launcher.launch("xcc", args, console, null);
+        // Run build --version command
+        Launcher.launch(Compiler.COMMAND_NAME, args, console, null);
 
         final var output = console.getAllOutput().trim();
         assertFalse(output.isEmpty(), "Version output should not be empty");
@@ -88,30 +88,30 @@ public class LauncherVersionTest {
     }
 
     @Test
-    public void testXecVersionOutput() {
-        // Test that xec --version also works
+    public void testRunnerVersionOutput() {
+        // Test that run --version also works
         final var console = new CaptureConsole();
         final var args = new String[]{"--version"};
 
-        Launcher.launch("xec", args, console, null);
+        Launcher.launch(Runner.COMMAND_NAME, args, console, null);
 
         final var output = console.getAllOutput().trim();
-        assertFalse(output.isEmpty(), "XEC version output should not be empty");
+        assertFalse(output.isEmpty(), "Runner version output should not be empty");
         assertTrue(output.startsWith("xdk version"),
-                  "XEC version output should also start with 'xdk version'");
+                  "Runner version output should also start with 'xdk version'");
     }
 
     @Test
-    public void testXccVersionOutput() {
-        // Test that xcc --version also works
+    public void testCompilerVersionOutput() {
+        // Test that build --version also works
         final var console = new CaptureConsole();
         final var args = new String[]{"--version"};
 
-        Launcher.launch("xcc", args, console, null);
+        Launcher.launch(Compiler.COMMAND_NAME, args, console, null);
 
         final var output = console.getAllOutput().trim();
-        assertFalse(output.isEmpty(), "XCC version output should not be empty");
+        assertFalse(output.isEmpty(), "Compiler version output should not be empty");
         assertTrue(output.startsWith("xdk version"),
-                  "XCC version output should also start with 'xdk version'");
+                  "Compiler version output should also start with 'xdk version'");
     }
 }

@@ -28,7 +28,7 @@ public class TestRunner extends Runner {
     /**
      * Command name for dispatch.
      */
-    protected static final String COMMAND_NAME = "test";
+    public static final String COMMAND_NAME = "test";
 
     /**
      * The XUnit engine module name.
@@ -57,11 +57,11 @@ public class TestRunner extends Runner {
     /**
      * TestRunner constructor for programmatic invocation.
      *
-     * @param options     the test runner options
+     * @param options     the runner options (RunnerOptions or TestRunnerOptions)
      * @param console     representation of the terminal within which this command is run
      * @param errListener optional error listener for programmatic error access
      */
-    public TestRunner(final TestRunnerOptions options, final Console console, final ErrorListener errListener) {
+    public TestRunner(final RunnerOptions options, final Console console, final ErrorListener errListener) {
         super(options, console, errListener);
     }
 

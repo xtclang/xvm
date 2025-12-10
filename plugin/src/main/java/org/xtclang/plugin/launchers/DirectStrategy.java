@@ -6,11 +6,14 @@ import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.tool.Console;
 import org.xvm.tool.Launcher;
+import org.xvm.tool.Runner;
+import org.xvm.tool.TestRunner;
 import org.xvm.util.Severity;
 
 import org.xtclang.plugin.XtcRunModule;
 import org.xtclang.plugin.tasks.XtcCompileTask;
 import org.xtclang.plugin.tasks.XtcRunTask;
+import org.xtclang.plugin.tasks.XtcTestTask;
 
 import static org.xtclang.plugin.tasks.XtcLauncherTask.EXIT_CODE_ERROR;
 
@@ -72,14 +75,22 @@ public class DirectStrategy implements ExecutionStrategy {
 
     @Override
     public int execute(final XtcRunTask task, final XtcRunModule runConfig) {
-        logger.info("[plugin] Invoking runner directly in current thread (no fork)");
+        final boolean isTest = task instanceof XtcTestTask;
+        logger.info("[plugin] Invoking {} directly in current thread (no fork)", isTest ? "test runner" : "runner");
         try {
             final String moduleName = runConfig.getModuleName().get();
             final var moduleArgs = runConfig.getModuleArgs().get();
-            final var options = optionsBuilder().buildRunnerOptions(task, moduleName, moduleArgs);
-            return Launcher.launch(options, console, err);
+            final var optBuilder = optionsBuilder();
+            // Instantiate the appropriate launcher based on task type
+            final Launcher<?> launcher = isTest
+                    ? new TestRunner(optBuilder.buildTestRunnerOptions(task, moduleName, moduleArgs), console, err)
+                    : new Runner(optBuilder.buildRunnerOptions(task, moduleName, moduleArgs), console, err);
+            return launcher.run();
+        } catch (final Launcher.LauncherException e) {
+            logger.error("[plugin] Direct {} execution failed: {}", isTest ? "test runner" : "runner", e.getMessage());
+            return e.getExitCode();
         } catch (final Exception e) {
-            logger.error("[plugin] Direct runner execution failed", e);
+            logger.error("[plugin] Direct {} execution failed", isTest ? "test runner" : "runner", e);
             return EXIT_CODE_ERROR;
         }
     }

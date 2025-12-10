@@ -13,6 +13,7 @@ import org.xtclang.plugin.XtcRunModule;
 import org.xtclang.plugin.tasks.XtcCompileTask;
 import org.xtclang.plugin.tasks.XtcLauncherTask;
 import org.xtclang.plugin.tasks.XtcRunTask;
+import org.xtclang.plugin.tasks.XtcTestTask;
 
 import static org.xtclang.plugin.XtcPluginUtils.failure;
 import static org.xtclang.plugin.tasks.XtcLauncherTask.EXIT_CODE_ERROR;
@@ -88,7 +89,11 @@ public abstract class ForkedStrategy implements ExecutionStrategy {
             final var moduleName = runConfig.getModuleName().get();
             final var moduleArgs = runConfig.getModuleArgs().get();
             // Use relative paths for forked mode to preserve build caching
-            final var options = optionsBuilder().buildRunnerOptions(task, moduleName, moduleArgs);
+            // Use appropriate options type based on task type
+            final var optBuilder = optionsBuilder();
+            final var options = task instanceof XtcTestTask
+                    ? optBuilder.buildTestRunnerOptions(task, moduleName, moduleArgs)
+                    : optBuilder.buildRunnerOptions(task, moduleName, moduleArgs);
             final var pb = buildProcess(task, options.toCommandLine());
             final boolean shouldCopyStreams = configureIO(pb, task);
             final Process process = pb.start();
