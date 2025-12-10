@@ -64,17 +64,35 @@ public abstract class LauncherOptions {
             .desc("Specify the version to stamp onto the compiled module(s)").get()));
 
     /**
-     * Apache Commons CLI Options schema for the runner.
+     * Base Apache Commons CLI Options schema for the runners.
      */
-    private static final Options RUNNER_OPTIONS = copyOptions(COMMON_OPTIONS)
+    private static final Options BASE_RUNNER_OPTIONS = copyOptions(COMMON_OPTIONS)
         .addOption(builder("J").longOpt("jit").desc("Enable the JIT-to-Java back-end").get())
         .addOption(builder().longOpt("no-recompile").desc("Disable automatic compilation").get())
-        .addOption(builder("M").longOpt("method").argName("method").hasArg()
-            .desc("Method name; defaults to 'run'").get())
         .addOption(builder("o").argName("file").hasArg()
             .desc("If compilation is necessary, the file or directory to write compiler output to").get())
         .addOption(builder("I").longOpt("inject").argName("name=value").hasArg()
             .desc("Specifies name/value pairs for injection; format is 'name=value'").get());
+
+    /**
+     * Apache Commons CLI Options schema for the runner.
+     */
+    private static final Options RUNNER_OPTIONS = copyOptions(BASE_RUNNER_OPTIONS)
+        .addOption(builder("M").longOpt("method").argName("method").hasArg()
+            .desc("Method name; defaults to 'run'").get());
+
+    /**
+     * Apache Commons CLI Options schema for the test runner.
+     */
+    private static final Options TEST_RUNNER_OPTIONS = copyOptions(BASE_RUNNER_OPTIONS)
+        .addOption(builder("c").longOpt("test-class").argName("class").hasArg()
+            .desc("the fully qualified name of a class to execute tests in").get())
+        .addOption(builder("g").longOpt("test-group").argName("group").hasArg()
+            .desc("only execute tests with the specified @Test annotation group").get())
+        .addOption(builder("p").longOpt("test-package").argName("package").hasArg()
+            .desc("the name of a package to execute tests in").get())
+        .addOption(builder("t").longOpt("test-method").argName("method").hasArg()
+            .desc("the fully qualified name of a test method to execute").get());
 
     /**
      * Apache Commons CLI Options schema for the disassembler.
@@ -1166,7 +1184,7 @@ public abstract class LauncherOptions {
          * Parse command-line arguments into TestRunnerOptions.
          */
         public static TestRunnerOptions parse(final String[] args) {
-            return new TestRunnerOptions(parseCommandLine(RUNNER_OPTIONS, args));
+            return new TestRunnerOptions(parseCommandLine(TEST_RUNNER_OPTIONS, args));
         }
 
         /**
@@ -1175,6 +1193,34 @@ public abstract class LauncherOptions {
         public static TestRunnerOptions.Builder builder() {
             return new TestRunnerOptions.Builder();
         }
+
+        @Override
+        public Map<String, List<String>> getInjections() {
+            Map<String, List<String>> injections = new LinkedHashMap<>(super.getInjections());
+
+            String[] testClasses = commandLine.getOptionValues("c");
+            if (testClasses != null && testClasses.length > 0) {
+                injections.put(TestRunner.XUNIT_TEST_CLASSES_ARG, List.of(testClasses));
+            }
+
+            String[] testGroups = commandLine.getOptionValues("g");
+            if (testGroups != null && testGroups.length > 0) {
+                injections.put(TestRunner.XUNIT_TEST_GROUPS_ARG, List.of(testGroups));
+            }
+
+            String[] testPackages = commandLine.getOptionValues("p");
+            if (testPackages != null && testPackages.length > 0) {
+                injections.put(TestRunner.XUNIT_TEST_PACKAGES_ARG, List.of(testPackages));
+            }
+
+            String[] testMethods = commandLine.getOptionValues("t");
+            if (testMethods != null && testMethods.length > 0) {
+                injections.put(TestRunner.XUNIT_TEST_METHODS_ARG, List.of(testMethods));
+            }
+
+            return Map.copyOf(injections);
+        }
+
 
         @Override
         protected String buildUsageLine(final String cmdName) {

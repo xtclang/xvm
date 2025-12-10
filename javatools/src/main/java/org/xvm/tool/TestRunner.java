@@ -46,6 +46,26 @@ public class TestRunner extends Runner {
     public static final String XUNIT_MODULE_VERSION_ARG = "xvm.xunit.testModuleVersion";
 
     /**
+     * The name of the XUnit injectable key used to specify specific test classes to run.
+     */
+    public static final String XUNIT_TEST_CLASSES_ARG = "xvm.xunit.discovery.testClass";
+
+    /**
+     * The name of the XUnit injectable key used to specify specific test groups to run.
+     */
+    public static final String XUNIT_TEST_GROUPS_ARG = "xvm.xunit.discovery.testGroup";
+
+    /**
+     * The name of the XUnit injectable key used to specify specific test packages to run.
+     */
+    public static final String XUNIT_TEST_PACKAGES_ARG = "xvm.xunit.discovery.testPackage";
+
+    /**
+     * The name of the XUnit injectable key used to specify specific test methods to run.
+     */
+    public static final String XUNIT_TEST_METHODS_ARG = "xvm.xunit.discovery.test";
+
+    /**
      * Entry point from the OS.
      *
      * @param args command line arguments
