@@ -20,6 +20,8 @@ import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.XtcRunModule;
 import org.xtclang.plugin.XtcTestExtension;
 
+import static org.xtclang.plugin.XtcPluginUtils.failure;
+
 /**
  * Task that runs XTC xunit tests.
  * <p>
@@ -69,7 +71,7 @@ public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension
     @TaskAction
     @Override
     public void executeTask() {
-        logger.lifecycle("[plugin] Running XTC tests...");
+        logger.info("[plugin] Running XTC test task: {}", getName());
 
         // Run tests using parent's execution logic
         // The parent XtcRunTask already handles per-module exit codes and failures
@@ -78,9 +80,9 @@ public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension
             super.executeTask();
         } catch (final Exception e) {
             if (getFailOnTestFailure().get()) {
-                throw e;
+                throw failure("Test failure.", e);
             }
-            logger.warn("[plugin] Test execution failed but failOnTestFailure is false: {}", e.getMessage());
+            logger.warn("[plugin] Test execution failed but failOnTestFailure is false", e);
         }
     }
 
