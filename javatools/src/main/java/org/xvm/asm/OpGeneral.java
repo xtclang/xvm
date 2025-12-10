@@ -200,11 +200,11 @@ public abstract class OpGeneral
         RegisterInfo regTarget = bctx.loadArgument(code, m_nTarget);
 
         if (!regTarget.isSingle()) {
-            throw new UnsupportedOperationException("'+' operation on multi-slot");
+            throw new UnsupportedOperationException(toName(getOpCode()) + " operation on multi-slot");
         }
 
-        ClassDesc    cdTarget = regTarget.cd();
-        TypeConstant typeRet  = regTarget.type();
+        ClassDesc    cdTarget   = regTarget.cd();
+        TypeConstant typeTarget = regTarget.type();
 
         if (isBinaryOp()) {
             if (cdTarget.isPrimitive()) {
@@ -212,12 +212,11 @@ public abstract class OpGeneral
 
                 if (!regArg.cd().equals(cdTarget)) {
                     throw new UnsupportedOperationException("Convert " +
-                        regArg.type().getValueString() + " to " + regTarget.type().getValueString());
+                        regArg.type().getValueString() + " to " + typeTarget.getValueString());
                 }
 
                 buildOptimizedBinary(bctx, code, regTarget);
             } else {
-                // TODO: there could be multiple op methods; need to use the arg type
                 String sName;
                 String sOp;
                 switch (getOpCode()) {
@@ -239,11 +238,12 @@ public abstract class OpGeneral
                     case OP_GP_ERANGEE -> {sName = "exToEx";        sOp = ">..<";}
 
                     default -> throw new UnsupportedOperationException(toName(getOpCode()));
-                }
-                TypeConstant  type     = regTarget.type();
-                MethodInfo    method   = type.ensureTypeInfo().findOpMethod(sName, sOp, 1);
-                String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
-                JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem, type);
+            }
+
+            TypeConstant  typeArg  = bctx.getArgumentType(m_nArgValue);
+            MethodInfo    method   = typeTarget.ensureTypeInfo().findOpMethod(sName, sOp, typeArg);
+            String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
+            JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem, typeTarget);
 
                 MethodTypeDesc md;
                 if (jmd.isOptimized) {
@@ -257,7 +257,7 @@ public abstract class OpGeneral
                 bctx.loadArgument(code, m_nArgValue);
                 code.invokevirtual(regTarget.cd(), sJitName, md);
             }
-            bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeRet));
+            bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget));
         } else { // unary op
             if (cdTarget.isPrimitive()) {
                 buildOptimizedUnary(bctx, code, regTarget);
@@ -269,10 +269,9 @@ public abstract class OpGeneral
                     case OP_GP_COMPL -> {sName = "not"; sOp = "~"; }
                     default -> throw new UnsupportedOperationException(toName(getOpCode()));
                 }
-                TypeConstant  type     = regTarget.type();
-                MethodInfo    method   = type.ensureTypeInfo().findOpMethod(sName, sOp, 0);
+                MethodInfo    method   = typeTarget.ensureTypeInfo().findOpMethod(sName, sOp, null);
                 String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
-                JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem, type);
+                JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem, typeTarget);
 
                 MethodTypeDesc md;
                 if (jmd.isOptimized) {
@@ -285,13 +284,22 @@ public abstract class OpGeneral
                 bctx.loadCtx(code);
                 code.invokevirtual(regTarget.cd(), sJitName, md);
             }
-            bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeRet));
+            bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget));
         }
     }
 
+    /**
+     * Generate the bytecodes for the corresponding op. The primitive values for the target and
+     * the argument are already on the Java stack.
+     */
     protected void buildOptimizedUnary(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
         throw new UnsupportedOperationException();
     }
+
+    /**
+     * Generate the bytecodes for the corresponding op. The primitive value for the target is
+     * already on the Java stack.
+     */
     protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
         throw new UnsupportedOperationException();
     }

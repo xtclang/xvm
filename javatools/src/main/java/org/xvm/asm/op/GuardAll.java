@@ -89,7 +89,7 @@ public class GuardAll
     // ----- JIT support ---------------------------------------------------------------------------
 
     /**
-     * Store the information about the jump destination and whether or not return is reqiured.
+     * Store the information about the jump destination and whether or not return is required.
      */
     public void registerJumps(List<Integer> jumps, boolean fDoReturn) {
         m_jumps     = jumps;
@@ -101,7 +101,7 @@ public class GuardAll
         // the GuardAll introduces two scopes:
         //  - outer with synthetic vars: $rethrow, $contLoop, $breakLoop
         //  - inner loop that is guarded by "FinallyStart" op
-        org.xvm.javajit.Scope scopeOuter = bctx.enterScope(code);
+        org.xvm.javajit.Scope scopeOuter = bctx.enterScope(code, getAddress());
 
         // $rethrow = null;
         scopeOuter.allocateRethrow(code);
@@ -112,12 +112,10 @@ public class GuardAll
             JitMethodDesc jmd        = bctx.methodDesc;
             boolean       fOptimized = bctx.isOptimized;
             int           cRets      = jmd.standardReturns.length;
-
-            String sRet    = "$doReturn";
-            String sRetVal = "$ret";
+            String        sRetVal    = "$ret";
 
             // $retN = false;
-            int slotRet = scopeOuter.allocateSynthetic(sRet, TypeKind.BOOLEAN);
+            int slotRet = scopeOuter.allocateSynthetic("$doReturn", TypeKind.BOOLEAN);
             assert slotRet != -1;
             code.iconst_0()
                 .istore(slotRet);
@@ -142,7 +140,7 @@ public class GuardAll
             }
         }
 
-        bctx.enterScope(code); // guarded by FinallyStart
+        bctx.enterScope(code, getAddress()); // guarded by FinallyStart
     }
 
     // ----- fields --------------------------------------------------------------------------------

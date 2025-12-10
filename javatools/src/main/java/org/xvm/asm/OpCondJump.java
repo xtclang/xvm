@@ -19,7 +19,6 @@ import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.BuildContext.DoubleSlot;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitFlavor;
-import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
@@ -324,58 +323,100 @@ public abstract class OpCondJump
     }
 
     protected void buildBinary(BuildContext bctx, CodeBuilder code) {
-        RegisterInfo reg1       = bctx.loadArgument(code, m_nArg);
-        RegisterInfo reg2       = bctx.loadArgument(code, m_nArg2);
-        TypeConstant typeCommon = selectCommonType(reg1.type(), reg2.type(), ErrorListener.BLACKHOLE);
-        ClassDesc    cdCommon   = JitTypeDesc.getPrimitiveClass(typeCommon);
+        // this is very similar to OpTest logic
+        TypeConstant typeCmp  = bctx.getType(m_nType);
+        RegisterInfo reg1     = bctx.ensureRegister(code, m_nArg);
+        RegisterInfo reg2     = bctx.ensureRegister(code, m_nArg2);
+        TypeConstant type1    = reg1.type();
+        TypeConstant type2    = reg2.type();
+        int          nOp      = getOpCode();
+        Label        lblTrue  = bctx.ensureLabel(code, getAddress() + m_ofJmp);
+        Label        lblFalse = code.newLabel();
 
-        // TODO: remove the assert
-        assert ((TypeConstant) bctx.getConstant(m_nType)).removeAutoNarrowing().equals(typeCommon);
-
-        if (cdCommon.isPrimitive()) {
-            Label  lblJump = bctx.ensureLabel(code, getAddress() + m_ofJmp);
-            String desc    = cdCommon.descriptorString();
-            switch (desc) {
-            case "I", "S", "B", "C", "Z":
-                switch (getOpCode()) {
-                    case OP_JMP_EQ  -> code.if_icmpeq(lblJump);
-                    case OP_JMP_NEQ -> code.if_icmpne(lblJump);
-                    case OP_JMP_GT  -> code.if_icmpgt(lblJump);
-                    case OP_JMP_GTE -> code.if_icmpge(lblJump);
-                    case OP_JMP_LT  -> code.if_icmplt(lblJump);
-                    case OP_JMP_LTE -> code.if_icmple(lblJump);
-                    default         -> throw new IllegalStateException();
-                }
-                break;
-
-            case "J", "F", "D":
-                switch (desc) {
-                    case "J" -> code.lcmp();
-                    case "F" -> code.fcmpl(); // REVIEW CP: fcmpl vs fcmpg?
-                    case "D" -> code.dcmpl(); // REVIEW CP: ditto
-                }
-                switch (getOpCode()) {
-                    case OP_JMP_EQ  -> code.ifeq(lblJump);
-                    case OP_JMP_NEQ -> code.ifne(lblJump);
-                    case OP_JMP_GT  -> code.ifgt(lblJump);
-                    case OP_JMP_GTE -> code.ifge(lblJump);
-                    case OP_JMP_LT  -> code.iflt(lblJump);
-                    case OP_JMP_LTE -> code.ifle(lblJump);
-                    default -> throw new IllegalStateException();
-                }
-                break;
-
-            default:
-                throw new IllegalStateException();
+        if (type1.isNullable() || type2.isNullable()) {
+            // we are comparing two Nullable arguments where at least one is known to be "Null";
+            // the only op for which comparison of the Null value with a non-Null can produce a True
+            // is NEQ, for all others, the result would be negative;
+            // the only ops, for which comparison of two Null values would produce a positive result
+            // are: EQ, GE, LE
+            switch (nOp) {
+                case OP_JMP_NEQ ->
+                    assembleNullCheck(code, reg1, reg2, lblFalse, lblTrue);
+                case OP_JMP_EQ, OP_JMP_LTE, OP_JMP_GTE ->
+                    assembleNullCheck(code, reg1, reg2, lblTrue, lblFalse);
+                default ->
+                    assembleNullCheck(code, reg1, reg2, lblFalse, lblFalse);
             }
-        } else {
-            throw new UnsupportedOperationException("Non primitive " + toName(getOpCode()));
+
+            if (type1.isNullable()) {
+                type1 = type1.removeNullable();
+                reg1  = bctx.narrowRegister(code, reg1, type1);
+            }
+            if (type2.isNullable()) {
+                type2 = type2.removeNullable();
+                reg1  = bctx.narrowRegister(code, reg2, type2);
+            }
+            typeCmp = typeCmp.removeNullable();
         }
+
+        // TODO: can we get rid of typeCompare?
+        if (typeCmp.isFormalType()) {
+            typeCmp = typeCmp.resolveConstraints();
+        }
+        assert typeCmp.equals(
+            selectCommonType(type1, type2, ErrorListener.BLACKHOLE).removeNullable());
+
+        typeCmp.buildCompare(bctx, code, nOp, reg1, reg2, lblTrue);
+
+        code.labelBinding(lblFalse);
     }
 
+    /**
+     * Generate the code to check if specified registers are "Null" values. If the result of the
+     * comparison can be computed, go to the corresponding label; otherwise - fall through.
+     *
+     * @param lblEqual  the label to go to in the case the value are equal
+     * @param lblNotEq  the label to go to in the case values cannot possibly be equal
+     */
+    private void assembleNullCheck(CodeBuilder code, RegisterInfo reg1, RegisterInfo reg2,
+                                   Label lblEqual, Label lblNotEq) {
+        Label lblProceed = code.newLabel();
+
+        if (reg1.type().isNullable()) {
+            if (reg2.type().isNullable()) {
+                Label lblNull1 = code.newLabel();
+                Builder.checkNull(code, reg1, lblNull1);
+
+                // (reg1 != Null)
+                Builder.checkNotNull(code, reg2, lblProceed);  // (reg2 != Null) - proceed
+
+                // (reg1 != Null && reg2 == Null) - negative result
+                code.goto_(lblNotEq);
+
+                // (reg1 == Null)
+                code.labelBinding(lblNull1);
+                Builder.checkNotNull(code, reg2, lblNotEq); // (reg2 != Null) - negative result
+
+                // (reg1 == Null && reg2 == Null) - positive result
+                code.goto_(lblEqual);
+            } else {
+                Builder.checkNotNull(code, reg1, lblProceed);
+                code.goto_(lblNotEq); // (reg2 != Null && reg1 == Null) - negative result
+            }
+        } else { // (reg1 != Null)
+            assert reg2.type().isNullable();
+            Builder.checkNotNull(code, reg2, lblProceed);
+            code.goto_(lblNotEq); // (reg1 != Null && reg2 == Null) - negative result
+        }
+
+        code.labelBinding(lblProceed);
+    }
+
+
     protected void buildUnary(BuildContext bctx, CodeBuilder code) {
-        Label lblJump = bctx.ensureLabel(code, getAddress() + m_ofJmp);
-        int   op      = getOpCode();
+        int   nAddrJump = getAddress() + m_ofJmp;
+        Label lblJump   = bctx.ensureLabel(code, nAddrJump);
+        int   op        = getOpCode();
 
         switch (op) {
         case OP_JMP_COND, OP_JMP_NCOND:
@@ -438,14 +479,20 @@ public abstract class OpCondJump
                 throw new IllegalStateException();
             }
         } else {
+            int nAddrThis = getAddress();
             switch (op) {
-            case OP_JMP_NULL, OP_JMP_NNULL:
+            case OP_JMP_NULL:
                 Builder.loadNull(code);
-                if (op == OP_JMP_NULL) {
-                    code.if_acmpeq(lblJump);
-                } else {
-                    code.if_acmpne(lblJump);
-                }
+                code.if_acmpeq(lblJump);
+                bctx.narrowRegister(code, reg, nAddrThis, -1, reg.type().removeNullable());
+                bctx.narrowRegister(code, reg, nAddrJump, -1, bctx.pool().typeNullable());
+                break;
+
+            case OP_JMP_NNULL:
+                Builder.loadNull(code);
+                code.if_acmpne(lblJump);
+                bctx.narrowRegister(code, reg, nAddrJump, -1, bctx.pool().typeNullable());
+                bctx.narrowRegister(code, reg, nAddrJump, -1, reg.type().removeNullable());
                 break;
 
             default:
@@ -484,9 +531,9 @@ public abstract class OpCondJump
                 Builder.loadTypeConstant(code, bctx.typeSystem, typeTest);  // test type
             }
             if (getOpCode() == OP_JMP_TYPE) {
-                bctx.narrowTarget(code, m_nArg, nAddrJump, -1, typeTest);
+                bctx.narrowRegister(code, m_nArg, nAddrJump, -1, typeTest);
             } else {
-                bctx.narrowTarget(code, m_nArg, nAddrThis + 1, nAddrJump, typeTest);
+                bctx.narrowRegister(code, m_nArg, nAddrThis + 1, nAddrJump, typeTest);
             }
         } else {
             // dynamic types
@@ -497,9 +544,9 @@ public abstract class OpCondJump
 
         code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
 
-        if (getOpCode() == OP_IS_TYPE) {
+        if (getOpCode() == OP_JMP_TYPE) {
             code.ifne(lblJump);
-        } else { // OP_IS_NTYPE
+        } else { // OP_JMP_NTYPE
             code.ifeq(lblJump);
         }
     }

@@ -2,8 +2,8 @@ package org.xtclang.ecstasy.collections;
 
 import java.util.Arrays;
 
-import org.xtclang.ecstasy.RangeᐸInt64ᐳ;
 import org.xtclang.ecstasy.nObj;
+import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -164,13 +164,13 @@ public class nArrayᐸObjectᐳ
     @Override public nArrayᐸObjectᐳ slice$p(Ctx ctx, long n1, long n2) {
         // slice must be in-range
         // TODO check lower bound as well
-        long upper = RangeᐸInt64ᐳ.$effectiveUpperBound(ctx, n1, n2);
+        long upper = nRangeᐸInt64ᐳ.$effectiveUpperBound(ctx, n1, n2);
         if (size$get$p(ctx) > upper) {
             throw $oob(ctx, upper);
         }
 
         // optimized empty slice
-        if (RangeᐸInt64ᐳ.$empty(ctx, n1, n2)) {
+        if (nRangeᐸInt64ᐳ.$empty(ctx, n1, n2)) {
             // return TODO empty Array$Object
         }
 

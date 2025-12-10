@@ -14,6 +14,7 @@ import org.xvm.asm.OpMove;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -117,9 +118,9 @@ public class MoveCast
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        TypeConstant type = (TypeConstant) bctx.loadConstant(code, m_nToType);
+        RegisterInfo regType = bctx.loadConstant(code, m_nToType);
         bctx.loadArgument(code, m_nFromValue);
-        code.checkcast(type.ensureClassDesc(bctx.typeSystem));
+        code.checkcast(regType.type().ensureClassDesc(bctx.typeSystem));
     }
 
     // ----- fields --------------------------------------------------------------------------------

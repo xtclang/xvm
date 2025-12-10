@@ -319,7 +319,7 @@ public abstract class OpInvocable extends Op {
         MethodTypeDesc md;
 
         if (cdTarget.isPrimitive()) {
-            Builder.box(code, regTarget.type(), cdTarget);
+            Builder.box(code, regTarget);
             cdTarget = regTarget.type().ensureClassDesc(bctx.typeSystem);
         }
 

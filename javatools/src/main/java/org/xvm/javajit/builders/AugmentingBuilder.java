@@ -15,6 +15,9 @@ import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitCtorDesc;
+import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.TypeSystem;
 
 import static java.lang.constant.ConstantDescs.INIT_NAME;
@@ -65,7 +68,7 @@ public class AugmentingBuilder extends CommonBuilder {
     @Override
     protected void assembleInitializer(String className, ClassBuilder classBuilder,
                                        List<PropertyInfo> props) {
-        MethodModel mm = findMethod(INIT_NAME, MD_Initializer, false);
+        MethodModel mm = findMethod(INIT_NAME, MD_Initializer);
         if (mm == null) {
             super.assembleInitializer(className, classBuilder, props);
         }
@@ -83,12 +86,10 @@ public class AugmentingBuilder extends CommonBuilder {
     protected void assemblePropertyAccessor(String className, ClassBuilder classBuilder,
                                             PropertyInfo prop, String jitName, MethodTypeDesc md,
                                             boolean isOptimized, boolean isGetter) {
-        MethodModel mm = findMethod(jitName, md, isOptimized);
-        if (mm != null) {
-            if ((mm.flags().flagsMask() & ClassFile.ACC_ABSTRACT) == 0) {
-                // the property is already copied by the NativeTypeSystem
-                return;
-            }
+        MethodModel mm = findMethod(jitName, md);
+        if (mm != null && (mm.flags().flagsMask() & ClassFile.ACC_ABSTRACT) == 0) {
+            // the property is already copied by the NativeTypeSystem
+            return;
         }
 
         super.assemblePropertyAccessor(className, classBuilder, prop, jitName, md, isOptimized, isGetter);
@@ -96,14 +97,29 @@ public class AugmentingBuilder extends CommonBuilder {
 
     @Override
     protected void assembleMethod(String className, ClassBuilder classBuilder, MethodInfo method,
-                                  String jitName, MethodTypeDesc md, boolean isOptimized) {
-        MethodModel mm = findMethod(jitName, md, isOptimized);
-        if (mm != null) {
-            if ((mm.flags().flagsMask() & ClassFile.ACC_ABSTRACT) == 0 ||
-                    method.isAbstract() || method.isNative()) {
-                // the method is already copied by the NativeTypeSystem
+                                  String jitName, JitMethodDesc jmd) {
+        if (method.isConstructor()) {
+            String        newName = jitName.replace("construct", typeInfo.isSingleton() ? INIT : NEW);
+            JitMethodDesc newJmd  = Builder.convertConstructToNew(typeInfo, className, (JitCtorDesc) jmd);
+            MethodModel   newMM   = newJmd.isOptimized
+                    ? findMethod(newName+OPT, newJmd.optimizedMD)
+                    : findMethod(newName, newJmd.standardMD);
+            if (newMM != null) {
+                // the "new" method has been natively implemented; we should not attempt to generate
+                // the constructor
                 return;
             }
+        }
+
+        MethodModel mm = jmd.isOptimized
+                ? findMethod(jitName+OPT, jmd.optimizedMD)
+                : findMethod(jitName, jmd.standardMD);
+
+        if (mm != null &&
+                ((mm.flags().flagsMask() & ClassFile.ACC_ABSTRACT) == 0 ||
+                    method.isAbstract() || method.isNative())) {
+            // the method is already copied by the NativeTypeSystem
+            return;
         }
 
         if (method.getHead().isNative()) {
@@ -113,12 +129,12 @@ public class AugmentingBuilder extends CommonBuilder {
             return;
         }
 
-        super.assembleMethod(className, classBuilder, method, jitName, md, isOptimized);
+        super.assembleMethod(className, classBuilder, method, jitName, jmd);
     }
 
     @Override
     protected void assembleXvmType(String className, ClassBuilder classBuilder) {
-        MethodModel mm = findMethod("$xvmType", MD_xvmType, false);
+        MethodModel mm = findMethod("$xvmType", MD_xvmType);
         if (mm == null) {
             super.assembleXvmType(className, classBuilder);
         }
@@ -126,12 +142,15 @@ public class AugmentingBuilder extends CommonBuilder {
 
     @Override
     protected void assembleNew(String className, ClassBuilder classBuilder, MethodInfo constructor,
-                               String jitName, MethodTypeDesc md, boolean isOptimized) {
-        MethodModel mm = findMethod(jitName, md, isOptimized);
+                               String jitName, JitMethodDesc jmd) {
+        MethodModel mm = jmd.isOptimized
+                ? findMethod(jitName+OPT, jmd.optimizedMD)
+                : findMethod(jitName, jmd.standardMD);
+
         if (mm != null) {
             return;
         }
-        super.assembleNew(className, classBuilder, constructor, jitName, md, isOptimized);
+        super.assembleNew(className, classBuilder, constructor, jitName, jmd);
     }
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -151,7 +170,7 @@ public class AugmentingBuilder extends CommonBuilder {
     /**
      * Find a MethodModel for the specified method.
      */
-    protected MethodModel findMethod(String jitName, MethodTypeDesc md, boolean isOptimized) {
+    protected MethodModel findMethod(String jitName, MethodTypeDesc md) {
         for (MethodModel mm : model.methods()) {
             if (mm.methodName().equalsString(jitName) &&
                     mm.methodTypeSymbol().descriptorString().equals(md.descriptorString())) {

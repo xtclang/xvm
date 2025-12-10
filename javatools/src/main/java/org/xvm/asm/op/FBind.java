@@ -232,16 +232,14 @@ public class FBind
         RegisterInfo regFn  = bctx.ensureRegister(code, m_nFunctionId);
         TypeConstant typeFn = regFn.type();
 
-        assert typeFn.isFunction() && regFn.cd() == CD_nFunction;
-        assert !bctx.isConstructor;
+        assert typeFn.isFunction() && regFn.cd().equals(CD_nFunction);
 
         JitMethodDesc jmdBefore = JitMethodDesc.of(
                 pool.extractFunctionParams(typeFn),
                 pool.extractFunctionReturns(typeFn),
                 false, null, Integer.MAX_VALUE, ts);
 
-        MethodTypeDesc MD_Bind    = MethodTypeDesc.of(CD_MethodHandle, CD_int, CD_JavaObject);
-        boolean        fOptBefore = jmdBefore.isOptimized;
+        boolean fOptBefore = jmdBefore.isOptimized;
 
          // initialize slots for the resulting handles
         code.aload(regFn.slot())
@@ -260,7 +258,12 @@ public class FBind
         int   cArgs = anArg.length;
 
         for (int i = 0; i < cArgs; i++) {
-            typeFn = pool.bindFunctionParam(typeFn, i);
+            // we assume that the indexes are sorted in the ascending order;
+            // after every step, the resulting function accepts one less parameter, so it needs to
+            // compensate the absolute position
+            int nArgPos = m_anParamIx[i] - i;
+
+            typeFn = pool.bindFunctionParam(typeFn, nArgPos);
 
             JitMethodDesc jmdAfter = JitMethodDesc.of(
                     pool.extractFunctionParams(typeFn),
@@ -299,16 +302,18 @@ public class FBind
 
             */
 
-            // we assume that the indexes are sorted in the ascending order;
-            // after every step, the resulting function accepts one less parameter, so it needs to
-            // compensate the absolute position as long as Ctx argument
             RegisterInfo regArg = bctx.ensureRegister(code, anArg[i]);
-            int          nPos   = 1 + m_anParamIx[i] - i;
+            if (!regArg.isSingle()) {
+                throw new UnsupportedOperationException("Add support for multi-slot binding");
+            }
+
+            // compensate for the Ctx argument
+            int nJitPos = 1 + jmdBefore.optimizedParams[nArgPos].index;
 
             if (!fOptBefore) {
                 assert !fOptAfter && !regArg.cd().isPrimitive();
 
-                bindArgument(code, slotStd, nPos, regArg, false);
+                bindArgument(code, slotStd, nJitPos, regArg, false);
                 code.aconst_null()
                     .astore(slotOpt);
 
@@ -316,20 +321,20 @@ public class FBind
             } else if (!fOptAfter) {
                 assert regArg.cd().isPrimitive(); // transition from opt -> !opt
 
-                bindArgument(code, slotStd, nPos, regArg, false);
+                bindArgument(code, slotStd, nJitPos, regArg, false);
                 code.aconst_null()
                     .astore(slotOpt);
             } else if (regArg.cd().isPrimitive()) {
-                bindArgument(code, slotStd, nPos, regArg, true);
-                bindArgument(code, slotOpt, nPos, regArg, false);
+                bindArgument(code, slotStd, nJitPos, regArg, true);
+                bindArgument(code, slotOpt, nJitPos, regArg, false);
             } else if (!regArg.type().isPrimitive()) {
-                bindArgument(code, slotStd, nPos, regArg, false);
-                bindArgument(code, slotOpt, nPos, regArg, false);
+                bindArgument(code, slotStd, nJitPos, regArg, false);
+                bindArgument(code, slotOpt, nJitPos, regArg, false);
 
                 computeImmutable(code, slotImm, regArg);
             } else {
                 // the type is primitive, but the CD is not
-                bindArgument(code, slotStd, nPos, regArg, false);
+                bindArgument(code, slotStd, nJitPos, regArg, false);
                 code.aconst_null()
                     .astore(slotOpt);
             }
@@ -352,7 +357,8 @@ public class FBind
         bctx.storeValue(code, regRet);
     }
 
-    private static void bindArgument(CodeBuilder code, int slotMethod, int nPos, RegisterInfo regArg, boolean fBox) {
+    private static void bindArgument(CodeBuilder code, int slotMethod, int nPos,
+                                     RegisterInfo regArg, boolean fBox) {
         code.aload(slotMethod)
             .ldc(nPos);
 
@@ -362,9 +368,9 @@ public class FBind
             .anewarray(CD_JavaObject)
             .dup()
             .iconst_0();
-        Builder.load(code, regArg.cd(), regArg.slot());
+        Builder.load(code, regArg);
         if (fBox) {
-            Builder.box(code, regArg.type(), regArg.cd());
+            Builder.box(code, regArg);
         } else if (regArg.cd().isPrimitive()) {
             Builder.boxJava(code, regArg.cd());
         }
@@ -379,7 +385,7 @@ public class FBind
         Label labelEnd = code.newLabel();
         code.iload(slotImm)
             .ifeq(labelEnd);
-        Builder.load(code, regArg.cd(), regArg.slot());
+        Builder.load(code, regArg);
         code.invokevirtual(CD_nObj, "$isImmut", MethodTypeDesc.of(CD_boolean))
             .iand()
             .istore(slotImm)

@@ -16,6 +16,8 @@ public class NativeNames {
     static final Map<String, String> reservedMethodSuffix = new HashMap<>();
     static {
         reservedMethodSuffix.put("Appender/add/1", "add");
+        reservedMethodSuffix.put("collections.Collection/reify/0", "reify");
+        reservedMethodSuffix.put("collections.Array.ArrayDelegate/reify/1", "reify");
     }
 
     /**

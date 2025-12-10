@@ -13,10 +13,39 @@ module test2.examples.org {
         assert c != Green;
         assert c > Green;
 
+        assert !testRedOrNull(c);
+        assert !testRed(c);
+
         Boolean b = True;
         console.print(b);
         console.print(b.not());
         console.print(b.toInt64()); // this won't work correctly until we compile Boolean
+
+        Color|Int cint = Red;
+        assert testRed1(cint);
+        assert testRed2(cint);
+    }
+
+    Boolean testRedOrNull(Color? c) {
+        return c == Null || c == Red;
+    }
+
+    Boolean testRed(Color? c) {
+        return c == Red;
+    }
+
+    Boolean testRed1(Color|Int cint) {
+        if (Blue == cint) {
+            assert:debug;
+        }
+        return Red == cint;
+    }
+
+    Boolean testRed2(Color|Int cint) {
+        if (cint == 43) {
+            assert:debug;
+        }
+        return cint != 42;
     }
 
     enum Color(String text, Int rgb) {

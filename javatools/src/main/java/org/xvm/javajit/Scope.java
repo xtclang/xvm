@@ -21,27 +21,32 @@ public class Scope {
      * Construct the initial scope.
      */
     public Scope(BuildContext bctx, CodeBuilder code) {
-        this.bctx       = bctx;
-        this.code       = code;
-        this.startLocal = -1;
-        this.topLocal   = -1;
-        this.topReg     = 0;
-
-        startLabel = code.newLabel();
-        endLabel   = code.newLabel();
+        this(bctx, code, null, -1, -1, 0, 0, 0);
     }
 
     /**
      * Construct the child scope.
      */
-    private Scope(Scope parent) {
-        this(parent.bctx, parent.code);
+    private Scope(Scope parent, int startAddr) {
+        this(parent.bctx, parent.code, parent, parent.startLocal, parent.topLocal, parent.topReg,
+             parent.depth + 1, startAddr);
+    }
 
+    /**
+     * The main constructor.
+     */
+    private Scope(BuildContext bctx, CodeBuilder code, Scope parent,
+                  int startLocal, int topLocal, int topReg, int depth, int startAddr) {
+        this.bctx       = bctx;
+        this.code       = code;
         this.parent     = parent;
-        this.startLocal = parent.startLocal;
-        this.topLocal   = parent.topLocal;
-        this.topReg     = parent.topReg;
-        this.depth      = parent.depth + 1;
+        this.startLocal = startLocal;
+        this.topLocal   = topLocal;
+        this.topReg     = topReg;
+        this.depth      = depth;
+        this.startAddr  = startAddr;
+        this.startLabel = code.newLabel();
+        this.endLabel   = code.newLabel();
     }
 
     private final BuildContext bctx;
@@ -65,12 +70,12 @@ public class Scope {
     /**
      * The start index of the Java stack for this scope.
      */
-    public int startLocal;
+    private int startLocal;
 
     /**
      * The top index of the Java stack for this scope (exclusive).
      */
-    public int topLocal;
+    private int topLocal;
 
     /**
      * The top index of the XVM register for this scope (exclusive).
@@ -78,9 +83,14 @@ public class Scope {
     public int topReg;
 
     /**
-     * The depth of this scope.
+     * The depth of this scope. Used for debugging.
      */
-    public int depth;
+    public final int depth;
+
+    /**
+     * The address of the starting op for this scope. Used for debugging.
+     */
+    public final int startAddr;
 
     /**
      * The list of jumps addresses the "finally" block may need to conditionally jump to.
@@ -90,13 +100,15 @@ public class Scope {
     /**
      * A map of synthetic variables declared in this scope.
      */
-    public Map<String, Integer> synthetics;
+    private Map<String, Integer> synthetics;
 
     /**
      * Enter a new Scope.
+     *
+     * @param startAddr  the address of the corresponding op
      */
-    public Scope enter() {
-        return new Scope(this);
+    public Scope enter(int startAddr) {
+        return new Scope(this, startAddr);
     }
 
     /**

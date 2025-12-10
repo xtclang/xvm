@@ -681,11 +681,8 @@ public abstract class OpCallable extends Op {
     protected void buildNewG(BuildContext bctx, CodeBuilder code, int nTypeArg, int[] anArgValue) {
         TypeConstant typeTarget;
         if (nTypeArg <= CONSTANT_OFFSET) {
-            typeTarget = bctx.getType(nTypeArg);
-            if (typeTarget.containsFormalType(true)) {
-                // resolve the type against "this.$type()"
-                throw new UnsupportedOperationException("ToDo resolve formal type");
-            }
+            typeTarget = bctx.getType(nTypeArg).
+                resolveGenerics(bctx.pool(), bctx.typeInfo.getType());
         } else {
             assert nTypeArg >= 0;
             RegisterInfo regXType = bctx.loadArgument(code, nTypeArg);

@@ -8,36 +8,22 @@ import java.io.IOException;
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
 
-import java.lang.constant.ClassDesc;
-import java.lang.constant.MethodTypeDesc;
-
-import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.MethodInfo;
-import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitFlavor;
-import org.xvm.javajit.JitMethodDesc;
-import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.RegisterInfo;
-import org.xvm.javajit.TypeSystem;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
 
-import static java.lang.constant.ConstantDescs.CD_boolean;
-
-import static org.xvm.javajit.Builder.CD_Ctx;
-import static org.xvm.javajit.Builder.CD_Ordered;
-import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nType;
+import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.MD_TypeIsA;
 import static org.xvm.javajit.Builder.MD_xvmType;
-import static org.xvm.javajit.Builder.OPT;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -275,142 +261,108 @@ public abstract class OpTest
     }
 
     protected void buildBinary(BuildContext bctx, CodeBuilder code) {
-        TypeSystem   ts         = bctx.typeSystem;
-        TypeConstant type1      = bctx.getArgumentType(m_nValue1);
-        TypeConstant type2      = bctx.getArgumentType(m_nValue2);
-        TypeConstant typeCommon = selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
+        // this is very similar to OpCondJump logic
+        TypeConstant typeCmp = bctx.getType(m_nType);
+        RegisterInfo reg1    = bctx.ensureRegister(code, m_nValue1);
+        RegisterInfo reg2    = bctx.ensureRegister(code, m_nValue2);
+        TypeConstant type1   = reg1.type();
+        TypeConstant type2   = reg2.type();
+        int          nOp     = getOpCode();
+        Label        lblEnd  = code.newLabel();
 
-        // TODO: remove the assert and potentially get rid of m_nType
-        assert typeCommon.equals(bctx.getConstant(m_nType));
+        if (type1.isNullable() || type2.isNullable()) {
+            assembleNullCheck(code, reg1, reg2, lblEnd);
 
-        if (typeCommon.isPrimitive()) {
-            bctx.loadArgument(code, m_nValue1);
-            bctx.loadArgument(code, m_nValue2);
-
-            ClassDesc cdCommon = JitTypeDesc.getPrimitiveClass(typeCommon);
-            Label     lblTrue  = code.newLabel();
-            Label     lblEnd   = code.newLabel();
-            String    desc     = cdCommon.descriptorString();
-            switch (desc) {
-            case "I", "S", "B", "C", "Z":
-                switch (getOpCode()) {
-                    case OP_CMP -> {
-                        code.isub();
-                        bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeCommon));
-                        return;
-                    }
-                    case OP_IS_EQ  -> code.if_icmpeq(lblTrue);
-                    case OP_IS_NEQ -> code.if_icmpne(lblTrue);
-                    case OP_IS_GT  -> code.if_icmpgt(lblTrue);
-                    case OP_IS_GTE -> code.if_icmpge(lblTrue);
-                    case OP_IS_LT  -> code.if_icmplt(lblTrue);
-                    case OP_IS_LTE -> code.if_icmple(lblTrue);
-                    default        -> throw new IllegalStateException();
-                }
-                break;
-
-            case "J", "F", "D":
-                switch (desc) {
-                    case "J" -> code.lcmp();
-                    case "F" -> code.fcmpl(); // REVIEW CP: fcmpl vs fcmpg?
-                    case "D" -> code.dcmpl(); // REVIEW CP: ditto
-                }
-                switch (getOpCode()) {
-                    case OP_CMP -> {
-                        bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeCommon));
-                        return;
-                    }
-                    case OP_IS_EQ  -> code.ifeq(lblTrue);
-                    case OP_IS_NEQ -> code.ifne(lblTrue);
-                    case OP_IS_GT  -> code.ifgt(lblTrue);
-                    case OP_IS_GTE -> code.ifge(lblTrue);
-                    case OP_IS_LT  -> code.iflt(lblTrue);
-                    case OP_IS_LTE -> code.ifle(lblTrue);
-                    default        -> throw new IllegalStateException();
-                }
-                break;
-
-            default:
-                throw new IllegalStateException();
+            if (type1.isNullable()) {
+                type1 = type1.removeNullable();
+                reg1  = bctx.narrowRegister(code, reg1, type1);
             }
-
-            code.iconst_0()
-                .goto_(lblEnd)
-                .labelBinding(lblTrue)
-                .iconst_1()
-                .labelBinding(lblEnd);
-        } else {
-            ConstantPool pool = bctx.pool();
-            int          nOp  = getOpCode();
-            SignatureConstant sig = switch (nOp) {
-                case OP_IS_EQ, OP_IS_NEQ                      -> pool.sigEquals();
-                case OP_IS_GT, OP_IS_GTE, OP_IS_LT, OP_IS_LTE -> pool.sigCompare();
-                default                                       -> throw new IllegalStateException();
-            };
-            MethodInfo    method   = typeCommon.ensureTypeInfo().getMethodBySignature(sig);
-            ClassDesc     cd       = method.getJitIdentity().getNamespace().ensureClassDesc(ts);
-            JitMethodDesc jmd      = method.getJitDesc(ts, typeCommon);
-            String        sJitName = method.ensureJitMethodName(ts);
-
-            bctx.loadCtx(code);
-            switch (nOp) {
-            case OP_IS_EQ, OP_IS_NEQ:
-                assert jmd.isOptimized;
-                // Boolean equals(Ctx,xType,xObj,xObj)
-                Builder.loadType(code, ts, typeCommon);
-                bctx.loadArgument(code, m_nValue1);
-                bctx.loadArgument(code, m_nValue2);
-                code.invokestatic(cd, sJitName +OPT, MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_nType, cd, cd));
-                if (nOp == OP_IS_NEQ) {
-                    code.iconst_1()
-                        .ixor();
-                }
-                break;
-
-            case OP_IS_GT, OP_IS_GTE, OP_IS_LT, OP_IS_LTE:
-                // Ordered compare(Ctx,Type,xObj,xObj)
-                Builder.loadType(code, ts, typeCommon);
-                bctx.loadArgument(code, m_nValue1);
-                bctx.loadArgument(code, m_nValue2);
-                code.invokestatic(cd, sJitName, MethodTypeDesc.of(CD_Ordered, CD_Ctx, CD_nType, cd, cd));
-
-                boolean fInverse;
-                switch (nOp) {
-                case OP_IS_GT:
-                    bctx.loadConstant(code, pool.valGreater());
-                    fInverse = false;
-                    break;
-                case OP_IS_GTE:
-                    bctx.loadConstant(code, pool.valLesser());
-                    fInverse = true;
-                    break;
-                case OP_IS_LT:
-                    bctx.loadConstant(code, pool.valLesser());
-                    fInverse = false;
-                    break;
-                case OP_IS_LTE:
-                    bctx.loadConstant(code, pool.valGreater());
-                    fInverse = true;
-                    break;
-                default:
-                    throw new IllegalStateException();
-                }
-
-                Label labelTrue = code.newLabel();
-                if (fInverse) {
-                    code.if_acmpne(labelTrue);
-                } else {
-                    code.if_acmpeq(labelTrue);
-                }
-                Label labelEnd = code.newLabel();
-                code.iconst_0()
-                    .goto_(labelEnd)
-                    .labelBinding(labelTrue)
-                    .iconst_1()
-                    .labelBinding(labelEnd);
+            if (type2.isNullable()) {
+                type2 = type2.removeNullable();
+                reg1  = bctx.narrowRegister(code, reg2, type2);
             }
+            typeCmp = typeCmp.removeNullable();
         }
-        bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, bctx.pool().typeBoolean()));
+
+        // TODO: can we get rid of typeCompare?
+        if (typeCmp.isFormalType()) {
+            typeCmp = typeCmp.resolveConstraints();
+        }
+        assert typeCmp.equals(
+            selectCommonType(type1, type2, ErrorListener.BLACKHOLE).removeNullable());
+
+        typeCmp.buildCompare(bctx, code, nOp, reg1, reg2, /*lblTrue*/ null);
+
+        code.labelBinding(lblEnd);
+        if (nOp == OP_CMP) {
+            bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, bctx.pool().typeOrdered()));
+        } else {
+            bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, bctx.pool().typeBoolean()));
+        }
+    }
+
+    /**
+     * Generate the code to check if specified registers are "Null" values. If the result of this op
+     * can be computed, place the corresponding value on the Java stack and go to the specified
+     * label; otherwise - fall through.
+     *
+     * @param lblEnd  the label to go to in the case a result has been computed (either positive or
+     *                negative) and placed on Java stack
+     */
+    private void assembleNullCheck(CodeBuilder code, RegisterInfo reg1, RegisterInfo reg2,
+                                   Label lblEnd) {
+        Label lblEqual   = code.newLabel();
+        Label lblNotEq   = code.newLabel();
+        Label lblProceed = code.newLabel();
+
+        if (reg1.type().isNullable()) {
+            if (reg2.type().isNullable()) {
+                Label lblNull1 = code.newLabel();
+                Builder.checkNull(code, reg1, lblNull1);
+
+                // (reg1 != Null)
+                Builder.checkNotNull(code, reg2, lblProceed);  // (reg2 != Null) - proceed
+
+                // (reg1 != Null && reg2 == Null) - negative result
+                code.goto_(lblNotEq);
+
+                // (reg1 == Null)
+                code.labelBinding(lblNull1);
+                Builder.checkNotNull(code, reg2, lblNotEq); // (reg2 != Null) - negative result
+
+                // (reg1 == Null && reg2 == Null) - positive result
+                code.goto_(lblEqual);
+            } else {
+                Builder.checkNotNull(code, reg1, lblProceed);
+                code.goto_(lblNotEq); // (reg2 != Null && reg1 == Null) - negative result
+            }
+        } else { // (reg1 != Null)
+            assert reg2.type().isNullable();
+            Builder.checkNotNull(code, reg2, lblProceed);
+            code.goto_(lblNotEq); // (reg1 != Null && reg2 == Null) - negative result
+        }
+
+        // we are comparing two Nullable arguments where at least one is known to be "Null";
+        // the only op for which comparison of the Null value with a non-Null can produce a True
+        // is NEQ, for all others, the result would be negative;
+        // the only ops, for which comparison of two Null values would produce a positive result are:
+        // EQ, GE, LE
+
+        code.labelBinding(lblNotEq);
+        switch (getOpCode()) {
+            case OP_IS_NEQ -> code.iconst_1();
+            default        -> code.iconst_0();
+        }
+        code.goto_(lblEnd);
+
+        code.labelBinding(lblEqual);
+        switch (getOpCode()) {
+            case OP_IS_EQ, OP_IS_GTE, OP_IS_LTE -> code.iconst_1();
+            default                             -> code.iconst_0();
+        }
+        code.goto_w(lblEnd);
+
+        code.labelBinding(lblProceed);
     }
 
     protected void buildUnary(BuildContext bctx, CodeBuilder code) {

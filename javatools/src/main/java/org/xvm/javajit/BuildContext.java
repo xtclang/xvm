@@ -299,25 +299,26 @@ public class BuildContext {
         Deque<List<Integer>> jumpAddrStack = null;
         Deque<List<Integer>> jumpDestStack = null;
 
-        int            guard      = -1;
-        List<Integer>  jumpsAddr  = null; // the addresses of Jump ops
-        List<Integer>  jumpsDest  = null; // the addresses of jump destinations
-        boolean        doReturn   = false;
+        int            guardAddr = -1;     // the address of the last GuardAll op
+        int            finAddr   = -1;     // the address of the last FinallyEnd op
+        List<Integer>  jumpsAddr  = null;  // the addresses of Jump ops
+        List<Integer>  jumpsDest  = null;  // the addresses of jump destinations
+        boolean        doReturn   = false; // indicates whether FinallyEnd should generate returns
         for (int iPC = 0, c = ops.length; iPC < c; iPC++) {
             switch (ops[iPC]) {
             case GuardAll _:
-                if (guard < 0) {
+                if (guardAddr < 0) {
                     guardStack    = new ArrayDeque<>();
                     jumpAddrStack = new ArrayDeque<>();
                     jumpDestStack = new ArrayDeque<>();
                 } else {
-                    guardStack.push(guard);
+                    guardStack.push(guardAddr);
                     jumpAddrStack.push(jumpsAddr);
                     jumpDestStack.push(jumpsDest);
                 }
                 jumpsAddr = new ArrayList<>();
                 jumpsDest = new ArrayList<>();
-                guard     = iPC;
+                guardAddr = iPC;
                 break;
 
             case Jump jump:
@@ -352,22 +353,31 @@ public class BuildContext {
                         ? new ArrayList<>()
                         : jumpAddrStack.pop();
                 }
+
+                if (finAddr != -1) {
+                    // the previous "FinallyEnd" needs to jump here upon a return
+                    ((FinallyEnd) ops[finAddr]).registerJump(iPC);
+                }
                 break;
 
             case FinallyEnd finallyEnd:
-                GuardAll guardAll = (GuardAll) ops[guard];
-                guard = guardStack.isEmpty()
+                GuardAll guardAll = (GuardAll) ops[guardAddr];
+                guardAddr = guardStack.isEmpty()
                         ? -1
                         : guardStack.pop();
 
                 // only the very top GuardAll allocates the return values
-                guardAll.registerJumps(jumpsDest, doReturn && guard == -1);
+                guardAll.registerJumps(jumpsDest, doReturn && guardAddr == -1);
 
                 jumpsDest = jumpDestStack.isEmpty()
                         ? new ArrayList<>()
                         : jumpDestStack.pop();
-                if (guard == -1) {
+                if (guardAddr == -1) {
                     doReturn = false;
+                    finAddr  = -1;
+                } else {
+                    // the next FinallyEnd will tell us where to jump upon a return
+                    finAddr = iPC;
                 }
 
                 if (iPC == ops.length - 1 || !ops[iPC + 1].isReachable()) {
@@ -489,13 +499,13 @@ public class BuildContext {
      * Get the type for the specified argument index.
      */
     public TypeConstant getType(int argId) {
-        return resolveType((TypeConstant) getConstant(argId)); // must exist
+        return (TypeConstant) getConstant(argId); // must exist
     }
 
     /**
-     * Resolve the specified type.
+     * TODO: Resolve the specified type.
      */
-    public TypeConstant resolveType(TypeConstant type) {
+    public TypeConstant resolveType(CodeBuilder code, TypeConstant type) {
         if (type.containsFormalType(true)) {
             // TODO: how to resolve?
             if (type.containsFormalType(true)) {
@@ -527,10 +537,10 @@ public class BuildContext {
         TypeConstant thisType  = typeInfo.getType();
         ClassDesc    CD_this   = thisType.ensureClassDesc(typeSystem);
         if (isConstructor) {
-            registerInfos.put(Op.A_THIS, new SingleSlot(extraArgs-1, thisType.ensureAccess(Access.STRUCT),
-                CD_this, "thi$"));
+            registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, extraArgs-1,
+                    thisType.ensureAccess(Access.STRUCT), CD_this, "thi$"));
         } else if (!isFunction) {
-            registerInfos.put(Op.A_THIS, new SingleSlot(0, thisType, CD_this, "this$"));
+            registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, 0, thisType, CD_this, "this$"));
         }
 
         JitParamDesc[] params = isOptimized ? methodDesc.optimizedParams : methodDesc.standardParams;
@@ -547,14 +557,14 @@ public class BuildContext {
 
             switch (paramDesc.flavor) {
             case Specific, Widened, Primitive, SpecificWithDefault, WidenedWithDefault:
-                registerInfos.put(varIndex, new SingleSlot(slot, type, paramDesc.cd, name));
+                registerInfos.put(varIndex, new SingleSlot(varIndex, slot, type, paramDesc.cd, name));
                 break;
 
             case MultiSlotPrimitive, PrimitiveWithDefault:
                 int extSlot = code.parameterSlot(extraArgs + i + 1);
 
                 registerInfos.put(varIndex,
-                    new DoubleSlot(slot, extSlot, paramDesc.flavor, type, paramDesc.cd, name));
+                    new DoubleSlot(varIndex, slot, extSlot, paramDesc.flavor, type, paramDesc.cd, name));
                 i++; // already processed
                 break;
             }
@@ -571,8 +581,8 @@ public class BuildContext {
     /**
      * @return the newly entered scope
      */
-    public Scope enterScope(CodeBuilder code) {
-        scope = scope.enter();
+    public Scope enterScope(CodeBuilder code, int startAddr) {
+        scope = scope.enter(startAddr);
         code.labelBinding(scope.startLabel);
         return scope;
     }
@@ -630,13 +640,6 @@ public class BuildContext {
         else {
             throw new IllegalStateException("Only CatchStart can be guarded");
         }
-    }
-
-    /**
-     * @return ClassDesc for "super" class
-     */
-    public ClassDesc getSuperCD() {
-        return typeInfo.getExtends().ensureClassDesc(typeSystem);
     }
 
     /**
@@ -716,7 +719,7 @@ public class BuildContext {
                         .labelBinding(ifTrue);
                     builder.loadConstant(this, code, parameter.getDefaultValue());
                     code.labelBinding(endIf);
-                    return new SingleSlot(Op.A_STACK, reg.type(), cd, reg.name());
+                    return new SingleSlot(reg.type(), cd, reg.name());
 
                 case MultiSlotPrimitive:
                     code.loadLocal(Builder.toTypeKind(cd), doubleSlot.slot);
@@ -757,10 +760,10 @@ public class BuildContext {
                 Builder.pop(code, doubleSlot.cd);
                 Builder.loadNull(code);
                 code.labelBinding(endIf);
-                reg = new SingleSlot(Op.A_STACK, targetDesc.type, targetDesc.cd, reg.name() + "?");
+                reg = new SingleSlot(targetDesc.type, targetDesc.cd, reg.name() + "?");
             } else {
-                Builder.box(code, reg.type(), reg.cd());
-                reg = new SingleSlot(Op.A_STACK, targetDesc.type, targetDesc.cd, reg.name());
+                Builder.box(code, reg);
+                reg = new SingleSlot(targetDesc.type, targetDesc.cd, reg.name());
             }
         }
         return reg;
@@ -782,10 +785,10 @@ public class BuildContext {
             return reg; // Op.A_THIS;
         }
 
-        assert reg.isSingle() && reg.slot() < 0;
+        assert reg.isSingle() && reg.slot() == -1; // constant
 
         int slot = storeTempValue(code, reg.cd());
-        return new SingleSlot(slot, reg.type(), reg.cd(), reg.name());
+        return new SingleSlot(argId, slot, reg.type(), reg.cd(), reg.name());
     }
 
     /**
@@ -814,10 +817,7 @@ public class BuildContext {
         case Op.A_STACK:
             // this refers to a synthetic RegInfo created by the pushTempRegister() method
             RegisterInfo reg = tempRegStack.pop();
-            if (reg instanceof DoubleSlot doubleSlot) {
-                code.iload(doubleSlot.extSlot()); // load the boolean flag
-            }
-            Builder.load(code, reg.cd(), reg.slot());
+            Builder.load(code, reg);
             return reg;
 
         case Op.A_THIS:
@@ -889,21 +889,17 @@ public class BuildContext {
         code.iconst_1() // immutable = true
             .invokespecial(cd, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant,
                 CD_MethodHandle, CD_MethodHandle, CD_boolean));
-        return new SingleSlot(Op.A_STACK, fnType, cd, "");
+        return new SingleSlot(fnType, cd, "");
     }
 
     /**
      * Store one or two values at the Java stack into the Java slot for the specified register.
      */
     public void storeValue(CodeBuilder code, RegisterInfo reg) {
-        if (reg instanceof DoubleSlot doubleSlot) {
-            code.istore(doubleSlot.extSlot()); // store the boolean flag
-        }
-
         if (reg.isIgnore()) {
             Builder.pop(code, reg.cd());
         } else {
-            Builder.store(code, reg.cd(), reg.slot());
+            Builder.store(code, reg);
         }
 
         Label varStart = unassignedRegisters.remove(reg);
@@ -960,14 +956,14 @@ public class BuildContext {
             code.localVariable(slotPrime, name, cd, varStart, scope.endLabel);
             code.localVariable(slotExt,   name+EXT, CD_boolean, varStart, scope.endLabel);
 
-            reg = new DoubleSlot(slotPrime, slotExt, MultiSlotPrimitive, type, cd, name);
+            reg = new DoubleSlot(regId, slotPrime, slotExt, MultiSlotPrimitive, type, cd, name);
         } else {
             cd = JitParamDesc.getJitClass(typeSystem, type);
 
             int slotPrime = scope.allocateLocal(regId, cd);
             code.localVariable(slotPrime, name, cd, varStart, scope.endLabel);
 
-            reg = new SingleSlot(slotPrime, type, cd, name);
+            reg = new SingleSlot(regId, slotPrime, type, cd, name);
         }
 
         registerInfos.put(regId, reg);
@@ -1002,7 +998,7 @@ public class BuildContext {
                 Label        varStart   = code.newLabel();
                 ClassDesc    resourceCD = resourceType.ensureClassDesc(typeSystem);
                 int          slot       = scope.allocateLocal(regId, TypeKind.REFERENCE);
-                RegisterInfo reg        = new SingleSlot(slot, resourceType, resourceCD, name);
+                RegisterInfo reg        = new SingleSlot(regId, slot, resourceType, resourceCD, name);
                 code.localVariable(slot, name, resourceCD, varStart, scope.endLabel);
 
                 registerInfos.put(regId, reg);
@@ -1064,7 +1060,7 @@ public class BuildContext {
      */
     public RegisterInfo getRegisterInfo(int regId) {
         RegisterInfo reg = registerInfos.get(regId);
-        if (reg instanceof Narrowed narrowed && currOpAddr > narrowed.lastOp) {
+        if (reg instanceof Narrowed narrowed && currOpAddr >= narrowed.lastOp) {
             reg = resetRegister(regId, narrowed);
         }
         return reg;
@@ -1083,8 +1079,8 @@ public class BuildContext {
      */
     public RegisterInfo ensureRegInfo(int regId, TypeConstant type, ClassDesc cd, String name) {
         return regId == Op.A_IGNORE
-            ? new SingleSlot(regId, type, cd, name)
-            : registerInfos.computeIfAbsent(regId, ix -> new SingleSlot(
+            ? new SingleSlot(regId, -2, type, cd, name)
+            : registerInfos.computeIfAbsent(regId, ix -> new SingleSlot(regId,
                     scope.allocateLocal(ix, cd), type, cd, name));
     }
 
@@ -1101,17 +1097,53 @@ public class BuildContext {
      * @param toAddr        the address after which the narrowing should not apply (exclusive;
      *                      could be -1)
      * @param narrowedType  the narrowed type
+     *
+     * @return the narrowed register (if applied)
      */
-    public void narrowTarget(CodeBuilder code, int regId, int fromAddr, int toAddr,
-                             TypeConstant narrowedType) {
+    public RegisterInfo narrowRegister(CodeBuilder code, int regId,
+                                       int fromAddr, int toAddr, TypeConstant narrowedType) {
         RegisterInfo origReg = getRegisterInfo(regId);
         assert origReg != null;
 
+        return narrowRegister(code, origReg, fromAddr, toAddr, narrowedType);
+    }
+
+    /**
+     * Narrow the type of the specified register for the duration of the current op.
+     *
+     * @param reg           the register to narrow
+     * @param narrowedType  the narrowed type
+     *
+     * @return the narrowed register (if applied)
+     */
+    public RegisterInfo narrowRegister(CodeBuilder code, RegisterInfo origReg,
+                                       TypeConstant narrowedType) {
+        return narrowRegister(code, origReg, currOpAddr, currOpAddr + 1, narrowedType);
+    }
+
+    /**
+     * Narrow the type of the specified register in the code region between the "from" op address
+     * and the "to" address. If "addrTo" is -1, compute the "addrTo" address based on the
+     * corresponding scope exit.
+     *
+     * Note, that unlike the dead code elimination below, the narrowing could "stop" at any point
+     * an assignment is made to the register.
+     *
+     * @param origReg       the register to narrow
+     * @param fromAddr      the beginning address at which the narrowing should apply (inclusive)
+     * @param toAddr        the address after which the narrowing should not apply (exclusive;
+     *                      could be -1)
+     * @param narrowedType  the narrowed type
+     *
+     * @return the narrowed register (if applied)
+     */
+    public RegisterInfo narrowRegister(CodeBuilder code, RegisterInfo origReg,
+                                       int fromAddr, int toAddr, TypeConstant narrowedType) {
         if (toAddr == -1) {
             int endAddr = computeEndScopeAddr(fromAddr);
             if (endAddr == fromAddr) {
                 // there is nothing to apply narrowing to
-                return;
+                return origReg;
             }
             toAddr = endAddr;
         }
@@ -1119,20 +1151,27 @@ public class BuildContext {
         ClassDesc narrowedCD   = JitTypeDesc.getJitClass(typeSystem, narrowedType);
         int       narrowedSlot = scope.allocateJavaSlot(narrowedCD);
 
-        Narrowed narrowedReg = new Narrowed(narrowedSlot, narrowedType, narrowedCD,
-            origReg.name(), fromAddr, toAddr, origReg);
-        addAction(fromAddr, () -> {
-            registerInfos.put(regId, narrowedReg);
-            Builder.load(code, origReg.cd(), origReg.slot());
+        Narrowed narrowedReg = new Narrowed(origReg.regId(), narrowedSlot, narrowedType, narrowedCD,
+                origReg.name(), fromAddr, toAddr, origReg);
+        OpAction action = () -> {
+            registerInfos.put(narrowedReg.regId, narrowedReg);
+            Builder.load(code, origReg);
             if (narrowedCD.isPrimitive() && !origReg.cd().isPrimitive()) {
                 code.checkcast(narrowedType.ensureClassDesc(typeSystem)); // boxed
-                Builder.unbox(code, narrowedType, narrowedCD);
+                Builder.unbox(code, narrowedReg);
             } else {
                 code.checkcast(narrowedCD);
             }
-            Builder.store(code, narrowedCD, narrowedSlot);
+            Builder.store(code, narrowedReg);
             return -1;
-        });
+        };
+
+        if (fromAddr == currOpAddr) {
+            action.prepare();
+        } else {
+            addAction(fromAddr, action);
+        }
+        return narrowedReg;
     }
 
     /**
@@ -1254,7 +1293,7 @@ public class BuildContext {
             TypeConstant typeRet = pdRet.type;
             ClassDesc    cdRet   = pdRet.cd;
             int          regId   = anVar[i];
-            RegisterInfo reg     = ensureRegInfo(regId, typeRet, cdRet, "");
+            RegisterInfo regRet  = ensureRegInfo(regId, typeRet, cdRet, "");
 
             if (i == 0) {
                 switch (pdRet.flavor) {
@@ -1265,23 +1304,23 @@ public class BuildContext {
                     // if the value is `True`, then the return value is Ecstasy `Null`
                     Builder.loadFromContext(code, CD_boolean, pdExt.altIndex);
 
-                    if (reg.isSingle()) {
+                    if (regRet.isSingle()) {
                         Label ifTrue = code.newLabel();
                         Label endIf  = code.newLabel();
                         code.ifne(ifTrue);
-                        Builder.box(code, typeRet, cdRet);
+                        Builder.box(code, regRet);
                         code.goto_(endIf)
                             .labelBinding(ifTrue)
                             .pop();
                         Builder.loadNull(code);
                         code.labelBinding(endIf);
                     }
-                    storeValue(code, reg);
+                    storeValue(code, regRet);
                     break;
 
                 default:
                     // process the natural return
-                    storeValue(code, reg);
+                    storeValue(code, regRet);
                     break;
                 }
             } else {
@@ -1293,24 +1332,24 @@ public class BuildContext {
                     // if the value is `True`, then the return value is Ecstasy `Null`
                     Builder.loadFromContext(code, cdRet, pdExt.altIndex);
 
-                    if (reg.isSingle()) {
+                    if (regRet.isSingle()) {
                         Label ifTrue = code.newLabel();
                         Label endIf  = code.newLabel();
                         code.iconst_0()
                             .if_icmpeq(ifTrue);
-                        Builder.box(code, typeRet, cdRet);
+                        Builder.box(code, regRet);
                         code.goto_(endIf);
                         code.labelBinding(ifTrue)
                             .pop();
                         Builder.loadNull(code);
                         code.labelBinding(endIf);
                     }
-                    storeValue(code, reg);
+                    storeValue(code, regRet);
                     break;
 
                 default:
                     Builder.loadFromContext(code, cdRet, pdRet.altIndex);
-                    storeValue(code, reg);
+                    storeValue(code, regRet);
                     break;
                 }
             }
@@ -1374,7 +1413,7 @@ public class BuildContext {
      */
     public RegisterInfo pushTempRegister(TypeConstant type, ClassDesc cd) {
         int          tempSlot = scope.allocateJavaSlot(cd);
-        RegisterInfo tempReg  = new SingleSlot(tempSlot, type, cd, "");
+        RegisterInfo tempReg  = new SingleSlot(Op.A_THIS, tempSlot, type, cd, "");
         tempRegStack.push(tempReg);
         return tempReg;
     }
@@ -1431,14 +1470,25 @@ public class BuildContext {
 
     // ----- RegisterInfo implementations ----------------------------------------------------------
 
-    public record SingleSlot(int slot, TypeConstant type, ClassDesc cd, String name)
+    public record SingleSlot(int regId, int slot, TypeConstant type, ClassDesc cd, String name)
             implements RegisterInfo {
 
-        public SingleSlot(int slot, TypeConstant type, ClassDesc cd, String name) {
-            this.slot = slot;
-            this.type = type.getCanonicalJitType();
-            this.cd   = cd;
-            this.name = name;
+        /**
+         * Construct the SingleSlot representing a value placed on the Java stack.
+         */
+        public SingleSlot(TypeConstant type, ClassDesc cd, String name) {
+            this(Op.A_STACK, JAVA_STACK, type, cd, name);
+        }
+
+        /**
+         * Construct the SingleSlot.
+         */
+        public SingleSlot(int regId, int slot, TypeConstant type, ClassDesc cd, String name) {
+            this.regId = regId;
+            this.slot  = slot;
+            this.type  = type.getCanonicalJitType();
+            this.cd    = cd;
+            this.name  = name;
         }
 
         @Override
@@ -1447,12 +1497,13 @@ public class BuildContext {
         }
     }
 
-    public record DoubleSlot(int slot, int extSlot, JitFlavor flavor,
+    public record DoubleSlot(int regId, int slot, int extSlot, JitFlavor flavor,
                              TypeConstant type, ClassDesc cd, String name)
             implements RegisterInfo {
 
-        public DoubleSlot(int slot, int extSlot, JitFlavor flavor,
+        public DoubleSlot(int regId, int slot, int extSlot, JitFlavor flavor,
                              TypeConstant type, ClassDesc cd, String name) {
+            this.regId   = regId;
             this.slot    = slot;
             this.extSlot = extSlot;
             this.flavor  = flavor;
@@ -1467,7 +1518,7 @@ public class BuildContext {
         }
     }
 
-    public record Narrowed(int slot, TypeConstant type, ClassDesc cd, String name,
+    public record Narrowed(int regId, int slot, TypeConstant type, ClassDesc cd, String name,
                            int firstOp, int lastOp, RegisterInfo origReg)
             implements RegisterInfo {
 

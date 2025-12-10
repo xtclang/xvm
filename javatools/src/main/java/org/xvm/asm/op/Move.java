@@ -14,8 +14,6 @@ import org.xvm.asm.Op;
 import org.xvm.asm.OpMove;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.RegisterInfo;
@@ -87,33 +85,31 @@ public class Move
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        RegisterInfo regFrom  = bctx.loadArgument(code, m_nFromValue);
-        RegisterInfo regTo    = bctx.ensureRegInfo(m_nToValue, regFrom.type(), regFrom.cd(), "");
-        TypeConstant typeFrom = regFrom.type();
-        TypeConstant typeTo   = regTo.type();
-        ClassDesc    cdFrom   = regFrom.cd();
-        ClassDesc    cdTo     = regTo.cd();
+        RegisterInfo regFrom = bctx.loadArgument(code, m_nFromValue);
+        RegisterInfo regTo   = bctx.ensureRegInfo(m_nToValue, regFrom.type(), regFrom.cd(), "");
+        ClassDesc    cdFrom  = regFrom.cd();
+        ClassDesc    cdTo    = regTo.cd();
 
-        if (typeFrom.isA(typeTo)) {
+        if (regFrom.type().isA(regTo.type())) {
             if (cdFrom.isPrimitive() ^ cdTo.isPrimitive()) {
                 if (cdFrom.isPrimitive()) {
-                    Builder.box(code, typeFrom, cdFrom);
+                    Builder.box(code, regFrom);
                 } else {
-                    Builder.unbox(code, typeTo, cdTo);
+                    Builder.unbox(code, regTo);
                 }
             }
         } else {
             if (cdFrom.isPrimitive()) {
                 if (cdTo.isPrimitive()) {
                     throw new IllegalStateException("Unreconcilable types " +
-                        typeFrom.getValueString() + " -> " + typeTo.getValueString());
+                        regFrom.type().getValueString() + " -> " + regTo.type().getValueString());
                 }
-                Builder.box(code, typeFrom, cdFrom);
+                Builder.box(code, regFrom);
             }
             // TODO: generateCheckCast()
             code.checkcast(regTo.type().ensureClassDesc(bctx.typeSystem));
             if (cdTo.isPrimitive()) {
-                Builder.unbox(code, typeTo, cdTo);
+                Builder.unbox(code, regTo);
             }
         }
         bctx.storeValue(code, regTo);

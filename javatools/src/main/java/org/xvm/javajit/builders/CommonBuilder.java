@@ -839,24 +839,12 @@ public class CommonBuilder
             assembleRoutingMethod(className, classBuilder, method, targetMethod);
         } else {
             JitMethodDesc jmDesc = method.getJitDesc(typeSystem, typeInfo.getType());
-            if (jmDesc.isOptimized) {
-                assembleMethod(className, classBuilder, method, jitName+OPT, jmDesc.optimizedMD, true);
-                assembleMethodWrapper(className, classBuilder, jitName, jmDesc,
-                    method.isFunction(), method.isConstructor());
-            } else {
-                assembleMethod(className, classBuilder, method, jitName, jmDesc.standardMD, false);
-            }
+            assembleMethod(className, classBuilder, method, jitName, jmDesc);
 
             if (method.isConstructor()) {
                 String        newName = jitName.replace("construct", typeInfo.isSingleton() ? INIT : NEW);
                 JitMethodDesc newDesc = Builder.convertConstructToNew(typeInfo, className, (JitCtorDesc) jmDesc);
-                if (newDesc.isOptimized) {
-                    assembleNew(className, classBuilder, method, newName+OPT, newDesc.optimizedMD, true);
-                    assembleMethodWrapper(className, classBuilder, newName, newDesc, true, false);
-                }
-                else {
-                    assembleNew(className, classBuilder, method, newName, newDesc.standardMD, false);
-                }
+                assembleNew(className, classBuilder, method, newName, newDesc);
             }
         }
     }
@@ -926,7 +914,7 @@ public class CommonBuilder
                             .labelBinding(ifNotNull)
                             .aload(stdParamSlot);
                         unbox(code, stdParamType, optParamDesc.cd); // unwrapped primitive
-                        code.iconst_0();                                        // false
+                        code.iconst_0();                            // false
 
                         code.labelBinding(endIf);
                         i++; // skip over the next "that" parameter
@@ -953,7 +941,7 @@ public class CommonBuilder
                             .labelBinding(ifNotNull)
                             .aload(stdParamSlot);
                         unbox(code, primitiveType, optParamDesc.cd); // unboxed primitive
-                        code.iconst_0();                                         // false
+                        code.iconst_0();                             // false
 
                         code.labelBinding(endIf);
                         i++; // skip over the next "that" parameter
@@ -1194,7 +1182,7 @@ public class CommonBuilder
      * </pre></code>
      */
     protected void assembleNew(String className, ClassBuilder classBuilder, MethodInfo constructor,
-                               String jitName, MethodTypeDesc md, boolean isOptimized) {
+                               String jitName, JitMethodDesc jmd) {
         boolean   isSingleton = typeInfo.isSingleton();
         boolean   hasType     = typeInfo.hasGenericTypes();
         ClassDesc CD_this     = ClassDesc.of(className);
@@ -1204,6 +1192,15 @@ public class CommonBuilder
         int flags = ClassFile.ACC_PUBLIC;
         if (!isSingleton) {
             flags |= ClassFile.ACC_STATIC;
+        }
+
+        MethodTypeDesc md;
+        if (jmd.isOptimized) {
+            assembleMethodWrapper(className, classBuilder, jitName, jmd, true, false);
+            jitName += OPT;
+            md = jmd.optimizedMD;
+        } else {
+            md = jmd.standardMD;
         }
 
         classBuilder.withMethodBody(jitName, md, flags, code -> {
@@ -1269,11 +1266,11 @@ public class CommonBuilder
                 .aload(thisSlot);
 
             // if this "new$" is optimized, the underlying constructor is optimized and vice versa
-            assert isOptimized == ctorDesc.isOptimized;
+            assert jmd.isOptimized == ctorDesc.isOptimized;
 
             JitParamDesc[] ctorPds;
             MethodTypeDesc ctorMd;
-            if (isOptimized) {
+            if (jmd.isOptimized) {
                 ctorName += OPT;
                 ctorPds   = ctorDesc.optimizedParams;
                 ctorMd    = ctorDesc.optimizedMD;
@@ -1323,7 +1320,17 @@ public class CommonBuilder
      * Assemble the method (optimized if possible, standard otherwise).
      */
     protected void assembleMethod(String className, ClassBuilder classBuilder, MethodInfo method,
-                                  String jitName, MethodTypeDesc md, boolean isOptimized) {
+                                  String jitName, JitMethodDesc jmd) {
+        MethodTypeDesc md;
+        if (jmd.isOptimized) {
+            assembleMethodWrapper(className, classBuilder, jitName, jmd,
+                    method.isFunction(), method.isConstructor());
+            jitName += OPT;
+            md = jmd.optimizedMD;
+        } else {
+            md = jmd.standardMD;
+        }
+
         int flags = ClassFile.ACC_PUBLIC;
         if (method.isAbstract()) {
             flags |= ClassFile.ACC_ABSTRACT;

@@ -2,6 +2,7 @@ package org.xvm.javajit;
 
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.Label;
 import java.lang.classfile.TypeKind;
 
 import java.lang.constant.ClassDesc;
@@ -31,10 +32,12 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.javajit.BuildContext.SingleSlot;
+import org.xvm.javajit.BuildContext.DoubleSlot;
 import org.xvm.javajit.TypeSystem.ClassfileShape;
 
 import static java.lang.constant.ConstantDescs.CD_MethodHandle;
 import static java.lang.constant.ConstantDescs.CD_boolean;
+import static java.lang.constant.ConstantDescs.CD_char;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
@@ -96,15 +99,15 @@ public abstract class Builder {
         switch (constant) {
         case StringConstant stringConst:
             loadString(code, stringConst.getValue());
-            return new SingleSlot(Op.A_STACK, stringConst.getType(), CD_String, "");
+            return new SingleSlot(stringConst.getType(), CD_String, "");
 
         case IntConstant intConstant:// TODO: support all Int/UInt types
             code.ldc(intConstant.getValue().getLong());
-            return new SingleSlot(Op.A_STACK, constant.getType(), CD_long, "");
+            return new SingleSlot(constant.getType(), CD_long, "");
 
         case ByteConstant byteConstant:
             code.ldc(byteConstant.getValue().intValue());
-            return new SingleSlot(Op.A_STACK, constant.getType(), CD_int, "");
+            return new SingleSlot(constant.getType(), CD_int, "");
 
         case LiteralConstant litConstant:
             switch (litConstant.getFormat()) {
@@ -122,7 +125,7 @@ public abstract class Builder {
                 ConstantPool pool = constant.getConstantPool();
                 if (enumConstant.getType().isOnlyNullable()) {
                     Builder.loadNull(code);
-                    return new SingleSlot(Op.A_STACK, pool.typeNullable(), CD_Nullable, "");
+                    return new SingleSlot(pool.typeNullable(), CD_Nullable, "");
                 }
                 else if (enumConstant.getType().isA(pool.typeBoolean())) {
                     if (enumConstant.getIntValue().getInt() == 0) {
@@ -131,7 +134,7 @@ public abstract class Builder {
                     else {
                         code.iconst_1();
                     }
-                    return new SingleSlot(Op.A_STACK, pool.typeBoolean(), CD_boolean, "");
+                    return new SingleSlot(pool.typeBoolean(), CD_boolean, "");
                 }
             }
 
@@ -142,20 +145,20 @@ public abstract class Builder {
             // retrieve from Singleton.$INSTANCE (see CommonBuilder.assembleStaticInitializer)
             ClassDesc cd = jtd.cd;
             code.getstatic(cd, Instance, cd);
-            return new SingleSlot(Op.A_STACK, type, cd, "");
+            return new SingleSlot(type, cd, "");
         }
 
         case CharConstant ch:
             code.loadConstant(ch.getValue());
-            return new SingleSlot(Op.A_STACK, constant.getConstantPool().typeChar(), CD_Char, "");
+            return new SingleSlot(constant.getConstantPool().typeChar(), CD_char, "");
 
         case NamedCondition cond:
             code.loadConstant(cond.getName());
-            return new SingleSlot(Op.A_STACK, cond.getConstantPool().typeString(), CD_String, "");
+            return new SingleSlot(cond.getConstantPool().typeString(), CD_String, "");
 
         case TypeConstant type:
             Builder.loadTypeConstant(code, typeSystem, type);
-            return new SingleSlot(Op.A_STACK, type.getType(), CD_TypeConstant, "");
+            return new SingleSlot(type.getType(), CD_TypeConstant, "");
 
         case PropertyConstant propId: {
             // support for the "local property" mode
@@ -169,7 +172,7 @@ public abstract class Builder {
             if (jtd.flavor == MultiSlotPrimitive) {
                 throw new UnsupportedOperationException("TODO multislot property");
             }
-            return new SingleSlot(Op.A_STACK, type, jtd.cd, "");
+            return new SingleSlot(type, jtd.cd, "");
         }
 
         case MethodConstant methodId: {
@@ -233,7 +236,7 @@ public abstract class Builder {
                 code.iconst_1() // immutable = true
                     .invokespecial(cd, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant,
                         CD_MethodHandle, CD_MethodHandle, CD_boolean));
-                return new SingleSlot(Op.A_STACK, type, cd, "");
+                return new SingleSlot(type, cd, "");
             } else {
                 // 3) instantiate an nMethod object
                 //      new nMethod(ctx, type, stdHandle, optHandle);
@@ -253,7 +256,7 @@ public abstract class Builder {
                 }
                 code.invokespecial(cd, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant,
                         CD_MethodHandle, CD_MethodHandle));
-                return new SingleSlot(Op.A_STACK, type, cd, "");
+                return new SingleSlot(type, cd, "");
             }
         }
 
@@ -301,6 +304,17 @@ public abstract class Builder {
     }
 
     /**
+     * Generate a value "load" for the specified register. If the register is a {@link DoubleSlot},
+     * load the "extension" boolean flag first.
+     */
+    public static void load(CodeBuilder code, RegisterInfo reg) {
+        if (reg instanceof DoubleSlot doubleSlot) {
+            code.iload(doubleSlot.extSlot());
+        }
+        load(code, reg.cd(), reg.slot());
+    }
+
+    /**
      * Generate a value "load" for the specified Java class.
      */
     public static void load(CodeBuilder code, ClassDesc cd, int slot) {
@@ -324,6 +338,17 @@ public abstract class Builder {
         } else {
             code.aload(slot);
         }
+    }
+
+    /**
+     * Generate a value "store" for the specified register.  If the register is a {@link DoubleSlot},
+     * store the "extension" boolean flag first.
+     */
+    public static void store(CodeBuilder code, RegisterInfo reg) {
+        if (reg instanceof DoubleSlot doubleSlot) {
+            code.istore(doubleSlot.extSlot());
+        }
+        store(code, reg.cd(), reg.slot());
     }
 
     /**
@@ -379,6 +404,46 @@ public abstract class Builder {
     }
 
     /**
+     * Generate a "Null" check for the specified register.
+     *
+     * @param lblNotNull  the label to jump to if the register is "Null" .
+     */
+    public static void checkNull(CodeBuilder code, RegisterInfo reg, Label lblNull) {
+        if (reg instanceof DoubleSlot doubleSlot) {
+            assert reg.cd().isPrimitive();
+
+            code.iload(doubleSlot.extSlot())
+                .if_icmpne(lblNull);
+        } else {
+            assert !reg.cd().isPrimitive();
+
+            code.aload(reg.slot());
+            loadNull(code);
+            code.if_acmpeq(lblNull);
+        }
+    }
+
+    /**
+     * Generate a "not Null" check for the specified register.
+     *
+     * @param lblNotNull  the label to jump to if the register is "not Null".
+     */
+    public static void checkNotNull(CodeBuilder code, RegisterInfo reg, Label lblNotNull) {
+        if (reg instanceof DoubleSlot doubleSlot) {
+            assert reg.cd().isPrimitive();
+
+            code.iload(doubleSlot.extSlot())
+                .if_icmpeq(lblNotNull);
+        } else {
+            assert !reg.cd().isPrimitive();
+
+            code.aload(reg.slot());
+            loadNull(code);
+            code.if_acmpne(lblNotNull);
+        }
+    }
+
+    /**
      * Generate a "load" for the XTC `Null` value.
      */
     public static void loadNull(CodeBuilder code) {
@@ -397,7 +462,7 @@ public abstract class Builder {
     }
 
     /**
-     * Generate a "load" for an xType for the specified TypeConstant.
+     * Generate a "load" for an nType object for the specified TypeConstant.
      * Out: xType instance
      */
     public static void loadType(CodeBuilder code, TypeSystem ts, TypeConstant type) {
@@ -468,14 +533,25 @@ public abstract class Builder {
     }
 
     /**
-     * Generate unboxing opcodes for a wrapper reference on the stack and the specified primitive
-     * class.
+     * Generate unboxing opcodes for a wrapper reference on the Java stack.
      *
      * In: a boxed XVM reference
      * Out: the unboxed primitive value
      *
-     * @param type the primitive type
-     * @param cd   the corresponding ClassDesc
+     * @param reg  the RegisterInfo for the unboxed value
+     */
+    public static void unbox(CodeBuilder code, RegisterInfo reg) {
+        unbox(code, reg.type(), reg.cd());
+    }
+
+    /**
+     * Generate unboxing opcodes for a wrapper reference on the Java stack.
+     *
+     * In: a boxed XVM reference
+     * Out: the unboxed primitive value
+     *
+     * @param type  the primitive type for the boxed value
+     * @param cd    the corresponding ClassDesc to unbox to
      */
     public static void unbox(CodeBuilder code, TypeConstant type, ClassDesc cd) {
         assert cd.isPrimitive() && type.isPrimitive();
@@ -510,6 +586,18 @@ public abstract class Builder {
         default:
             throw new UnsupportedOperationException();
         }
+    }
+
+    /**
+     * Generate boxing opcodes for a primitive value of the specified primitive class on the stack.
+     *
+     * In: an unboxed primitive value
+     * Out: the boxed XVM reference
+     *
+     * @param reg  the RegisterInfo for the unboxed value
+     */
+    public static void box(CodeBuilder code, RegisterInfo reg) {
+        box(code, reg.type(), reg.cd());
     }
 
     /**
@@ -787,6 +875,7 @@ public abstract class Builder {
     public static final String N_nMethod      = "org.xtclang.ecstasy.nMethod";
     public static final String N_nModule      = "org.xtclang.ecstasy.nModule";
     public static final String N_nObj         = "org.xtclang.ecstasy.nObj";
+    public static final String N_nRangeInt64  = "org.xtclang.ecstasy.nRangeᐸInt64ᐳ";
     public static final String N_nService     = "org.xtclang.ecstasy.nService";
     public static final String N_nType        = "org.xtclang.ecstasy.nType";
 
@@ -808,6 +897,7 @@ public abstract class Builder {
     public static final ClassDesc CD_nFunction     = ClassDesc.of(N_nFunction);
     public static final ClassDesc CD_nMethod       = ClassDesc.of(N_nMethod);
     public static final ClassDesc CD_nModule       = ClassDesc.of(N_nModule);
+    public static final ClassDesc CD_nRangeInt64   = ClassDesc.of(N_nRangeInt64);
 
     public static final ClassDesc CD_nArrayChar    = ClassDesc.of(N_nArrayChar);
     public static final ClassDesc CD_nArrayObj     = ClassDesc.of(N_nArrayObj);

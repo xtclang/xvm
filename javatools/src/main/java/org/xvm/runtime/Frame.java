@@ -597,7 +597,7 @@ public class Frame
         case Op.A_SUPER:
             return f_hThis == null
                 ? makeDeferredException("Run-time error: no target")
-                : xRTFunction.makeHandle(this, m_chain, m_nChainDepth).bindTarget(this, f_hThis);
+                : xRTFunction.makeHandle(this, m_chain, m_nChainDepth + 1).bindTarget(this, f_hThis);
 
         case Op.A_THIS:
             return f_hThis == null
@@ -2304,7 +2304,7 @@ public class Frame
      */
     public abstract static class DeferredGuardAction {
         protected DeferredGuardAction(int ixGuard) {
-            this(ixGuard, 0);
+            this(ixGuard, -1);
         }
 
         protected DeferredGuardAction(int ixGuardStart, int ixGuardBase) {
