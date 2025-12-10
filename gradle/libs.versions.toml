@@ -2,7 +2,7 @@
 # The master version catalog for the XDK.
 #
 # The settings plugin makes sure we only need to declare it in one location (here),
-# for all included builds and and the aggregator will make sure all build scripts can use it.
+# for all included builds and the aggregator will make sure all build scripts can use it.
 #
 # To avoid version skew, we also access this version catalog from settings files and settings
 # plugins, using a more explicit hard-coded approach. The code for this lookup is in the
@@ -65,6 +65,8 @@ xdk-webauth = { group = "org.xtclang", name = "lib-webauth" }
 xdk-webcli = { group = "org.xtclang", name = "lib-webcli" }
 xdk-xenia = { group = "org.xtclang", name = "lib-xenia" }
 xdk-xml = { group = "org.xtclang", name = "lib-xml" }
+xdk-xunit = { group = "org.xtclang", name = "lib-xunit" }
+xdk-xunit-engine = { group = "org.xtclang", name = "lib-xunit-engine" }
 
 javatools = { group = "org.xtclang", name = "javatools" }
 javatools-bridge = { group = "org.xtclang", name = "javatools-bridge" }

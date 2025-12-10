@@ -73,7 +73,6 @@ import org.xtclang.plugin.launchers.ExecutionStrategy;
 public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> implements XtcRuntimeExtension {
     private final Map<XtcRunModule, Integer> executedModules; // Module -> exit code
     private final Property<@NotNull DefaultXtcRuntimeExtension> taskLocalModules;
-    private final String projectName; // Captured at construction for toString() - config cache safe
 
     /**
      * Create an XTC run task, currently delegating instead of inheriting the plugin project
@@ -85,14 +84,9 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     @SuppressWarnings({"ConstructorNotProtectedInAbstractClass", "this-escape"}) // Has to be public for code injection to work
     @Inject
     public XtcRunTask(final ObjectFactory objects, final Project project) {
-        // TODO clean this up:
         super(objects, project, XtcProjectDelegate.resolveXtcRuntimeExtension(project));
         this.executedModules = new LinkedHashMap<>();
-        this.projectName = project.getName(); // Capture at configuration time for config cache compatibility
         this.taskLocalModules = objects.property(DefaultXtcRuntimeExtension.class).convention(objects.newInstance(DefaultXtcRuntimeExtension.class));
-
-        // Run tasks have side effects and should never be UP-TO-DATE or cached
-        considerNeverUpToDate();
     }
 
 
@@ -128,7 +122,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
 
     // XTC modules needed to resolve module path (the ones in the output of the project source set, that the compileXtc tasks create)
     @Optional
-    @InputFiles // should really be enough with an "input directories" but that doesn't exist in gradle.
+    @InputFiles // should really be enough with an "input directories" but that doesn't exist in Gradle.
     @PathSensitive(PathSensitivity.RELATIVE)
     FileCollection getInputModulesCompiledByProject() {
         final var result = objects.fileCollection();
@@ -247,7 +241,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     protected List<XtcRunModule> resolveModulesToRunFromModulePath(final List<File> resolvedModulePath) {
         logger.info("[plugin] Resolving modules to run from module path: '{}'", resolvedModulePath);
         if (isEmpty()) {
-            logger.warn("[plugin] Task extension '{}' and/or local task configuration do not declare any modules to run for '{}'. Skipping task.", ext.getName(), getName());
+            logger.info("[plugin] Task extension '{}' and/or local task configuration do not declare any modules to run for '{}'. Skipping task.", ext.getName(), getName());
             return List.of();
         }
 
@@ -306,10 +300,5 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
             logger.log(level, "[plugin] {}   {} {}", index, config.getModuleName().get(), config.toString(true));
             logger.log(level, "[plugin] {}       {} (exit code: {})", index, success ? "SUCCESS" : "FAILURE", exitCode);
         }
-    }
-
-    @Override
-    public String toString() {
-        return projectName + ':' + getName() + " [class: " + getClass().getSimpleName() + ']';
     }
 }

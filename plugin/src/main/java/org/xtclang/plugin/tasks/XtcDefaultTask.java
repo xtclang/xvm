@@ -46,9 +46,9 @@ public abstract class XtcDefaultTask extends DefaultTask {
      * Useful for tasks with side effects like running executables.
      * <p>
      * This matches the behavior of Gradle's JavaExec task.
-     * Configuration cache safe - must be called during task construction.
+     * Can be called during task configuration.
      */
-    protected final void considerNeverUpToDate() {
+    public final void considerNeverUpToDate() {
         getOutputs().upToDateWhen(_ -> false);
         getOutputs().cacheIf(_ -> false);
         logger.info("[plugin] Task '{}' configured to always run (never UP-TO-DATE, never cached)", getName());
