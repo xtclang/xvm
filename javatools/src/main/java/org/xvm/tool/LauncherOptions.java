@@ -901,19 +901,31 @@ public abstract class LauncherOptions {
             return trailing.subList(1, trailing.size());
         }
 
-        public Map<String, String> getInjections() {
+        /**
+         * Get injections as a map where each key maps to a list of values.
+         * Multiple -I flags with the same key will accumulate values in the list.
+         * A single value becomes a single-element list.
+         *
+         * @return map of injection name to list of values
+         */
+        public Map<String, List<String>> getInjections() {
             String[] vals = commandLine.getOptionValues("I");
             if (vals == null) {
                 return Map.of();
             }
-            final var injections = new LinkedHashMap<String, String>();
+            final var injections = new LinkedHashMap<String, List<String>>();
             for (final String val : vals) {
                 final int idx = val.indexOf('=');
                 if (idx > 0) {
-                    injections.put(val.substring(0, idx), val.substring(idx + 1));
+                    final String key = val.substring(0, idx);
+                    final String value = val.substring(idx + 1);
+                    injections.computeIfAbsent(key, _ -> new ArrayList<>()).add(value);
                 }
             }
-            return Map.copyOf(injections);
+            // Return immutable copy with immutable lists
+            final var result = new LinkedHashMap<String, List<String>>();
+            injections.forEach((k, v) -> result.put(k, List.copyOf(v)));
+            return Map.copyOf(result);
         }
 
         @Override
@@ -943,10 +955,9 @@ public abstract class LauncherOptions {
                 args.addAll(List.of("-o", output.getPath()));
             }
 
-            // Add injections
-            getInjections().entrySet().stream()
-                .map(entry -> entry.getKey() + "=" + entry.getValue())
-                .forEach(injection -> args.addAll(List.of("-I", injection)));
+            // Add injections - each value in the list gets its own -I flag
+            getInjections().forEach((key, values) ->
+                values.forEach(value -> args.addAll(List.of("-I", key + "=" + value))));
 
             // Add target file and method args
             if (hasTarget()) {

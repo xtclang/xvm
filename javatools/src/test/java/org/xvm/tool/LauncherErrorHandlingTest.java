@@ -77,18 +77,22 @@ class LauncherErrorHandlingTest {
             return false; // Don't abort
         }
 
+        @SuppressWarnings("unused")
         public List<String> getErrors() {
             return errors;
         }
 
+        @SuppressWarnings("unused")
         public List<Severity> getSeverities() {
             return severities;
         }
 
+        @SuppressWarnings("unused")
         public Severity getWorstSeverity() {
             return worstSeverity;
         }
 
+        @SuppressWarnings("unused")
         public void clear() {
             errors.clear();
             severities.clear();

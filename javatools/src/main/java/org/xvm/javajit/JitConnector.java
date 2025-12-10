@@ -7,6 +7,7 @@ import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -43,7 +44,7 @@ public class JitConnector
         }
 
     @Override
-    public void start(Map<String, String> mapInjections) {
+    public void start(Map<String, List<String>> mapInjections) {
         try {
             ClassLoader loader = xvm.nativeTypeSystem.loader;
             Class       clz    = loader.loadClass("org.xtclang._native.mgmt.nMainInjector");

@@ -91,8 +91,10 @@ public class Connector {
 
     /**
      * Start the Runtime and the main Container.
+     *
+     * @param mapInjections a map of custom injections where each key maps to a list of values
      */
-    public void start(Map<String, String> mapInjections) {
+    public void start(Map<String, List<String>> mapInjections) {
         if (!m_fStarted) {
             f_runtime.start();
             m_fStarted = true;
