@@ -236,7 +236,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
             return 1;
         }
 
-        final Launcher<?> launcher = switch (options) {
+        final var launcher = switch (options) {
             case final CompilerOptions opts -> new Compiler(opts, console, errListener);
             case final TestRunnerOptions opts -> new TestRunner(opts, console, errListener);
             case final RunnerOptions opts -> new Runner(opts, console, errListener);

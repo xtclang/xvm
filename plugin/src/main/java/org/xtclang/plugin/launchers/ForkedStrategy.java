@@ -88,12 +88,7 @@ public abstract class ForkedStrategy implements ExecutionStrategy {
         try {
             final var moduleName = runConfig.getModuleName().get();
             final var moduleArgs = runConfig.getModuleArgs().get();
-            // Use relative paths for forked mode to preserve build caching
-            // Use appropriate options type based on task type
-            final var optBuilder = optionsBuilder();
-            final var options = task instanceof XtcTestTask
-                    ? optBuilder.buildTestRunnerOptions(task, moduleName, moduleArgs)
-                    : optBuilder.buildRunnerOptions(task, moduleName, moduleArgs);
+            final var options = optionsBuilder().buildRunnerOptions(task, moduleName, moduleArgs);
             final var pb = buildProcess(task, options.toCommandLine());
             final boolean shouldCopyStreams = configureIO(pb, task);
             final Process process = pb.start();
@@ -109,6 +104,34 @@ public abstract class ForkedStrategy implements ExecutionStrategy {
             return -1;
         } catch (final InterruptedException e) {
             logger.error("[plugin] Runner process was interrupted", e);
+            Thread.currentThread().interrupt();
+            return -1;
+        }
+    }
+
+    @Override
+    public int execute(final XtcTestTask task, final XtcRunModule runConfig) {
+        logger.info("[plugin] execute(XtcTestTask): {} (runConfig: {})", getDesc(), runConfig);
+
+        try {
+            final var moduleName = runConfig.getModuleName().get();
+            final var moduleArgs = runConfig.getModuleArgs().get();
+            final var options = optionsBuilder().buildTestRunnerOptions(task, moduleName, moduleArgs);
+            final var pb = buildProcess(task, options.toCommandLine());
+            final boolean shouldCopyStreams = configureIO(pb, task);
+            final Process process = pb.start();
+            // Copy streams if needed (when inheritIO doesn't work due to Gradle redirects)
+            final List<Thread> streamThreads = shouldCopyStreams ? copyProcessStreams(process) : List.of();
+            final int exitCode = waitForProcess(process);
+            for (final Thread thread : streamThreads) {
+                thread.join();
+            }
+            return exitCode;
+        } catch (final IOException e) {
+            logger.error("[plugin] Failed to start test runner process", e);
+            return -1;
+        } catch (final InterruptedException e) {
+            logger.error("[plugin] Test runner process was interrupted", e);
             Thread.currentThread().interrupt();
             return -1;
         }
