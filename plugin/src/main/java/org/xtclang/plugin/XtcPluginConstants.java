@@ -27,7 +27,7 @@ public final class XtcPluginConstants {
     // XTC Test constants:
     public static final String XTC_EXTENSION_NAME_TEST = "xtcTest";
     public static final String XTC_TEST_TASK_NAME = "testXtc";
-    public static final String XTC_DEFAULT_TEST_MODULE_NAME = "xunit.xtclang.org";
+    public static final String XTC_TEST_RUNNER_CLASS_NAME = "org.xvm.tool.TestRunner";
 
     // XDK Distribution constants:
     public static final String XDK_CONFIG_NAME_INCOMING = "xdk";

@@ -44,7 +44,7 @@ import static org.xvm.util.Severity.INFO;
  */
 public class Disassembler extends Launcher<DisassemblerOptions> {
 
-    protected static final String COMMAND_NAME = "disass";
+    public static final String COMMAND_NAME = "disass";
 
     @SuppressWarnings("unused")
     private static final byte FREE    = 0;
