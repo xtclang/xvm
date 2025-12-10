@@ -47,7 +47,7 @@ public abstract class OpRange
         RegisterInfo regTarget = bctx.ensureRegister(code, m_nTarget);
 
         if (!regTarget.isSingle()) {
-            throw new UnsupportedOperationException("'+' operation on multi-slot");
+            throw new UnsupportedOperationException("range operation on multi-slot");
         }
 
         ClassDesc    cdTarget   = regTarget.cd();

@@ -200,7 +200,7 @@ public abstract class OpGeneral
         RegisterInfo regTarget = bctx.loadArgument(code, m_nTarget);
 
         if (!regTarget.isSingle()) {
-            throw new UnsupportedOperationException("'+' operation on multi-slot");
+            throw new UnsupportedOperationException(toName(getOpCode()) + " operation on multi-slot");
         }
 
         ClassDesc    cdTarget   = regTarget.cd();
@@ -217,7 +217,6 @@ public abstract class OpGeneral
 
                 buildOptimizedBinary(bctx, code, regTarget);
             } else {
-                // TODO: there could be multiple op methods; need to use the arg type
                 String sName;
                 String sOp;
                 switch (getOpCode()) {
@@ -241,10 +240,10 @@ public abstract class OpGeneral
                     default -> throw new UnsupportedOperationException(toName(getOpCode()));
             }
 
-            TypeConstant  typeArg    = bctx.getArgumentType(m_nArgValue);
-            MethodInfo    method     = typeTarget.ensureTypeInfo().findOpMethod(sName, sOp, typeArg);
-            String        sJitName   = method.ensureJitMethodName(bctx.typeSystem);
-            JitMethodDesc jmd        = method.getJitDesc(bctx.typeSystem, typeTarget);
+            TypeConstant  typeArg  = bctx.getArgumentType(m_nArgValue);
+            MethodInfo    method   = typeTarget.ensureTypeInfo().findOpMethod(sName, sOp, typeArg);
+            String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
+            JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem, typeTarget);
 
                 MethodTypeDesc md;
                 if (jmd.isOptimized) {
