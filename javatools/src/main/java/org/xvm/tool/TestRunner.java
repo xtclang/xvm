@@ -28,7 +28,7 @@ public class TestRunner extends Runner {
     /**
      * Command name for dispatch.
      */
-    public static final String COMMAND_NAME = "test";
+    protected static final String COMMAND_NAME = "test";
 
     /**
      * The XUnit engine module name.
@@ -92,15 +92,7 @@ public class TestRunner extends Runner {
                 Executes the tests in an Ecstasy module using the xunit framework,
                 compiling the module first if necessary.
 
-            Usage:
-
-                xtc test <options> <moduleName> [<moduleVersion>]
-
-            Also supports any of:
-
-                xtc test <options> <filename>
-                xtc test <options> <filename>.x
-                xtc test <options> <filename>.xtc
-            """;
+                Also supports:
+                    <filename>, <filename>.x, or <filename>.xtc""";
     }
 }

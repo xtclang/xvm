@@ -113,7 +113,7 @@ application {
 // Configure the application plugin to generate scripts using custom templates
 // TODO: This should also use the java convention default jvm args.
 tasks.startScripts {
-    applicationName = "xec"
+    applicationName = "xtc"
     classpath = configurations.xdkJavaTools.get()
     // Configure default JVM options
     defaultJvmOpts = buildList {

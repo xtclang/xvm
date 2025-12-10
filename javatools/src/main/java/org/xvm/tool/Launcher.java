@@ -124,7 +124,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * Helper method for external launchers.
      * Creates a CliConsole for command-line usage.
      *
-     * @param asArg  command line arguments
+     * @param asArg  command line arguments (first arg is the command: build, run, or test)
      *
      * @return the result of the corresponding tool "launch" call
      *
@@ -132,7 +132,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      */
     public static int launch(final String[] asArg) {
         if (asArg.length < 1) {
-            System.err.println("Command name is missing");
+            System.err.println("Command name is missing. Use build, run, or test.");
             return 1;
         }
 
@@ -147,31 +147,44 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     /**
      * Executes a launcher command and returns an exit code.
      * Use this when calling from a daemon or other long-running process.
+     * <p>
+     * Supported commands: build, run, test (or --help, --version).
+     * Shell scripts call with the command directly (xcc calls with "build", xec with "run").
      *
-     * @param cmd command name (xcc, xec, xtc, or test)
-     * @param args command line arguments (without the command name)
+     * @param cmd command name: build, run, or test
+     * @param args command line arguments (options and files)
      * @param console console for output (must not be null)
      * @param errListener optional ErrorListener to receive errors, or null
      * @return exit code (0 for success, non-zero for error)
      */
     public static int launch(final String cmd, final String[] args, final Console console, final ErrorListener errListener) {
         try {
-            // Handle "xtc" unified command with subcommands
-            if (Ecstasy.COMMAND_NAME.equals(cmd)) {
-                return launchEcstasySubcommand(args, console, errListener);
-            }
-
             final LauncherOptions options = switch (cmd) {
                 case Compiler.COMMAND_NAME -> CompilerOptions.parse(args);
                 case Runner.COMMAND_NAME -> RunnerOptions.parse(args);
-                case Disassembler.COMMAND_NAME -> DisassemblerOptions.parse(args);
                 case TestRunner.COMMAND_NAME -> TestRunnerOptions.parse(args);
+                case Disassembler.COMMAND_NAME -> DisassemblerOptions.parse(args);
+                case "--version", "-version" -> {
+                    showVersion(console);
+                    yield null;
+                }
+                case "--help", "-h", "-help" -> {
+                    showHelp(console);
+                    yield null;
+                }
                 default -> {
-                    console.log(ERROR, "Command name {} is not supported", quoted(cmd));
+                    console.log(ERROR, "Unknown command: {}. Use {}, {}, {}, or {}.",
+                            quoted(cmd),
+                            Compiler.COMMAND_NAME,
+                            Runner.COMMAND_NAME,
+                            TestRunner.COMMAND_NAME,
+                            Disassembler.COMMAND_NAME);
+                    showHelp(console);
                     yield null;
                 }
             };
-            return options != null ? launch(options, console, errListener) : 1;
+
+            return options != null ? launch(options, console, errListener) : 0;
         } catch (final IllegalArgumentException e) {
             console.log(ERROR, e.getMessage());
             return 1;
@@ -179,41 +192,9 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     }
 
     /**
-     * Handle "xtc" unified command with subcommands (build, run, test).
-     */
-    private static int launchEcstasySubcommand(final String[] args, final Console console, final ErrorListener errListener) {
-        if (args.length == 0) {
-            showEcstasyHelp(console);
-            return 0;
-        }
-
-        final String subcommand = args[0];
-        final String[] subArgs = Arrays.copyOfRange(args, 1, args.length);
-
-        return switch (subcommand) {
-            case "build" -> launch(Compiler.COMMAND_NAME, subArgs, console, errListener);
-            case "run" -> launch(Runner.COMMAND_NAME, subArgs, console, errListener);
-            case TestRunner.COMMAND_NAME -> launch(TestRunner.COMMAND_NAME, subArgs, console, errListener);
-            case "--version", "-version" -> {
-                showVersion(console);
-                yield 0;
-            }
-            case "--help", "-h", "-help" -> {
-                showEcstasyHelp(console);
-                yield 0;
-            }
-            default -> {
-                console.log(ERROR, "Unknown subcommand: {}. Use 'build', 'run', or 'test'.", quoted(subcommand));
-                showEcstasyHelp(console);
-                yield 1;
-            }
-        };
-    }
-
-    /**
      * Show help for the unified xtc command.
      */
-    private static void showEcstasyHelp(final Console console) {
+    private static void showHelp(final Console console) {
         console.out("""
             Ecstasy command-line tool
 
@@ -221,9 +202,10 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
                 xtc <command> [options] [arguments]
 
             Commands:
-                build   Compile Ecstasy source files (alias for xcc)
-                run     Execute an Ecstasy module (alias for xec)
-                test    Run tests in an Ecstasy module using xunit
+                build    Compile Ecstasy source files (alias: xcc)
+                run      Execute an Ecstasy module (alias: xec)
+                test     Run tests in an Ecstasy module using xunit
+                disass   Disassemble a compiled Ecstasy module
 
             Options:
                 --version   Display the Ecstasy runtime version

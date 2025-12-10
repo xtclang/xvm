@@ -44,7 +44,7 @@ import static org.xvm.util.Severity.INFO;
  */
 public class Disassembler extends Launcher<DisassemblerOptions> {
 
-    protected static final String COMMAND_NAME = "xac";
+    protected static final String COMMAND_NAME = "disass";
 
     @SuppressWarnings("unused")
     private static final byte FREE    = 0;
@@ -436,8 +436,6 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         return """
             Ecstasy disassembler:
 
-                Examines a compiled Ecstasy module.
-
-                Note: The xam command will be removed, and replaced with an option on the xtc command.""";
+                Examines a compiled Ecstasy module.""";
     }
 }

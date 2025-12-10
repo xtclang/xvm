@@ -46,7 +46,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class Runner extends Launcher<RunnerOptions> {
 
-    protected static final String COMMAND_NAME = "xec";
+    protected static final String COMMAND_NAME = "run";
 
     /**
      * Runner constructor for programmatic use.
