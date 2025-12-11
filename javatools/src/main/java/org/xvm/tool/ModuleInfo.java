@@ -1340,8 +1340,8 @@ public class ModuleInfo {
                     }
                 } else {
                     Object resource = dir.getByName(segment);
-                    if (resource instanceof ResourceDir subdir) {
-                        dir = subdir;
+                    if (resource instanceof ResourceDir subDir) {
+                        dir = subDir;
                     } else {
                         return i == last && !fRequireDir ? resource : null;
                     }

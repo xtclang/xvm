@@ -264,9 +264,9 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
         }
 
         final var launcher = switch (options) {
-            case final CompilerOptions opts -> new Compiler(opts, console, errListener);
-            case final TestRunnerOptions opts -> new TestRunner(opts, console, errListener);
-            case final RunnerOptions opts -> new Runner(opts, console, errListener);
+            case final CompilerOptions opts     -> new Compiler(opts, console, errListener);
+            case final TestRunnerOptions opts   -> new TestRunner(opts, console, errListener);
+            case final RunnerOptions opts       -> new Runner(opts, console, errListener);
             case final DisassemblerOptions opts -> new Disassembler(opts, console, errListener);
             default -> {
                 console.log(ERROR, "Unknown options type: {}", options.getClass().getName());
@@ -282,11 +282,11 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
             return launcher.run();
         } catch (final LauncherException e) {
             if (e.isError()) {
-                console.log(ERROR, e.getMessage());
+                console.log(ERROR, e, e.getMessage());
             }
             return e.getExitCode();
-        } catch (final Exception e) {
-            console.log(ERROR, "Unexpected error: {}", e.getMessage());
+        } catch (final Throwable e) {
+            console.log(ERROR, e, "Unexpected exception or error: {}", e.getMessage());
             return 1;
         }
     }
@@ -603,6 +603,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     protected boolean isBadEnoughToAbort(final Severity sev) {
         return sev.isAtLeast(ERROR);
     }
+
     /**
      * Get the parsed options for this launcher.
      *
