@@ -5,6 +5,11 @@ import ecstasy.annotations.Inject.Options;
  */
 interface ExecutionContext {
     /**
+     * The `UniqueId` of the current test fixture.
+     */
+    @RO UniqueId uniqueId;
+
+    /**
      * The human readable name for the test.
      */
     @RO String displayName;

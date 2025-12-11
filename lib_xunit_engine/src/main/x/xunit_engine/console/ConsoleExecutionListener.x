@@ -1,13 +1,22 @@
-import xunit_engine.Model;
-import xunit_engine.UniqueId;
-
+/**
+ * An XUnit ExecutionListener that prints test execution results to the console.
+ */
 service ConsoleExecutionListener
         implements ExecutionListener {
 
+    /**
+     * The console to print results to.
+     */
     @Inject Console console;
 
+    /**
+     * A map of `UniqueId`s to `Result`s.
+     */
     private Map<UniqueId, Result> results = new HashMap();
 
+    /**
+     * Whether all tests have succeeded.
+     */
     Boolean success = True;
 
     /**

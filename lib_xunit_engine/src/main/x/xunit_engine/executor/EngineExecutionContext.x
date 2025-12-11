@@ -38,6 +38,7 @@ service EngineExecutionContext
     /**
      * The `UniqueId` of the current test fixture.
      */
+    @Override
     UniqueId uniqueId.get() {
         return model.uniqueId;
      }
