@@ -134,6 +134,7 @@ class LauncherErrorHandlingTest {
         public Severity testGetWorstSeverity() {
             return m_sevWorst;
         }
+
     }
 
     @Test
@@ -412,4 +413,5 @@ class LauncherErrorHandlingTest {
         compiler.testLog(ERROR, "Error 1");
         assertThrows(LauncherException.class, compiler::testCheckErrors);
     }
+
 }

@@ -31,8 +31,6 @@ import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.asm.Constants.TURTLE_MODULE;
 import static org.xvm.asm.Constants.VERSION_MAJOR_CUR;
 import static org.xvm.asm.Constants.VERSION_MINOR_CUR;
-import static org.xvm.tool.ModuleInfo.isExplicitCompiledFile;
-import static org.xvm.util.Handy.parentOf;
 import static org.xvm.util.Handy.quoted;
 import static org.xvm.util.Handy.resolveFile;
 import static org.xvm.util.Handy.toPathString;
@@ -54,6 +52,40 @@ import static org.xvm.util.Severity.worstOf;
  * @param <T> the Options type for this launcher
  */
 public abstract class Launcher<T extends LauncherOptions> implements ErrorListener {
+
+    // ----- command registry ----------------------------------------------------------------------
+
+    /**
+     * A command handler that knows how to parse args and launch the appropriate tool.
+     */
+    @FunctionalInterface
+    private interface CommandHandler {
+        int launch(String[] args, Console console, ErrorListener errListener);
+    }
+
+    /**
+     * Registry of available commands. Each entry maps a command name to a handler
+     * that parses the args and launches the appropriate tool.
+     * <p>
+     * Note: We use string literals here instead of calling subclass static methods
+     * (e.g., Compiler.getCommandName()) to avoid class loading deadlock - referencing
+     * subclass static methods from superclass static initialization can cause deadlock.
+     */
+    private static final Map<String, CommandHandler> COMMANDS = Map.of(
+            "build",  (args, console, err) -> launch(CompilerOptions.parse(args), console, err),
+            "run",    (args, console, err) -> launch(RunnerOptions.parse(args), console, err),
+            "test",   (args, console, err) -> launch(TestRunnerOptions.parse(args), console, err),
+            "disass", (args, console, err) -> launch(DisassemblerOptions.parse(args), console, err)
+    );
+
+    /**
+     * Get all registered command names.
+     */
+    private static String commandNames() {
+        return String.join(", ", COMMANDS.keySet());
+    }
+
+    // ----- constants -----------------------------------------------------------------------------
 
     private static final Locale DEFAULT_LOCALE = Locale.getDefault();
 
@@ -132,8 +164,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      */
     public static int launch(final String[] asArg) {
         if (asArg.length < 1) {
-            System.err.println("Command name is missing. Use build, run, or test.");
-            return 1;
+            throw new IllegalArgumentException("Command name is missing. Available commands: " + commandNames());
         }
 
         final var console = new Console() {};
@@ -159,11 +190,8 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      */
     public static int launch(final String cmd, final String[] args, final Console console, final ErrorListener errListener) {
         try {
+            // Check for global options first
             return switch (cmd) {
-                case Compiler.COMMAND_NAME -> launch(CompilerOptions.parse(args), console, errListener);
-                case Runner.COMMAND_NAME -> launch(RunnerOptions.parse(args), console, errListener);
-                case TestRunner.COMMAND_NAME -> launch(TestRunnerOptions.parse(args), console, errListener);
-                case Disassembler.COMMAND_NAME -> launch(DisassemblerOptions.parse(args), console, errListener);
                 case "--version", "-version" -> {
                     showVersion(console);
                     yield 0;
@@ -173,12 +201,11 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
                     yield 0;
                 }
                 default -> {
-                    console.log(ERROR, "Unknown command: {}. Use {}, {}, {}, or {}.",
-                            quoted(cmd),
-                            Compiler.COMMAND_NAME,
-                            Runner.COMMAND_NAME,
-                            TestRunner.COMMAND_NAME,
-                            Disassembler.COMMAND_NAME);
+                    final var handler = COMMANDS.get(cmd);
+                    if (handler != null) {
+                        yield handler.launch(args, console, errListener);
+                    }
+                    console.log(ERROR, "Unknown command: {}. Available commands: {}", quoted(cmd), commandNames());
                     showHelp(console);
                     yield 1;
                 }
@@ -381,7 +408,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
         if (errorsSuspended()) {
             return;
         }
-        // 1) Track worst severity in Launcher
+        // 1) Track the worst severity in Launcher
         // 2) Filter and display on Console if bad enough to print
         m_sevWorst = worstOf(m_sevWorst, sev);
         if (isBadEnoughToPrint(sev)) {
@@ -749,25 +776,22 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
         // Cache only when using defaults (no explicit resources or binary location)
         // When fCache is true, binarySpec is null by definition, so we use null directly in the lambda
         if (resourceSpecs.isEmpty() && binarySpec == null) {
-            return moduleCache.computeIfAbsent(fileSpec, _ -> new ModuleInfo(fileSpec, deduce, List.of(), null));
+            return moduleCache.computeIfAbsent(fileSpec, _ -> new ModuleInfo(fileSpec, deduce));
         }
         return new ModuleInfo(fileSpec, deduce, resourceSpecs, binarySpec);
     }
 
     /**
-     * Validate that the contents of the path are existent directories and/or .xtc files.
-     *
-     * @param modulePath a list of individual module paths.
+     * Validate that the module path entries (-L) are existent directories and/or .xtc files.
      */
-    protected final void validateModulePath(final List<File> modulePath) {
-        for (final var file : modulePath) {
-            final var fileType = file.isDirectory() ? "Directory" : file.isFile() ? "File" : "File or directory";
+    protected final void validateModulePath() {
+        for (final var file : options().getModulePath()) {
             if (!file.exists()) {
                 log(ERROR, "File or directory {} does not exist", quoted(file));
+            } else if (file.isFile()) {
+                validateReadableFile(file, ".xtc");
             } else if (!file.canRead()) {
-                log(ERROR, "{} {} is not readable", fileType, quoted(file));
-            } else if (file.isFile() && !file.getName().endsWith(".xtc")) {
-                log(WARNING, "File {} does not have the \".xtc\" extension", quoted(file));
+                log(ERROR, "Directory {} is not readable", quoted(file));
             }
         }
     }
@@ -780,66 +804,34 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * @return the validated file or directory to read source code from
      */
     public File validateSourceInput(final File file) {
-        // this is expected to be the name of a file to compile
         if (!file.exists() || file.isDirectory()) {
+            // Try to locate module source for non-existent or directory inputs
             try {
-                ModuleInfo info = ensureModuleInfo(file, List.of(), null);
-                File srcFile = info == null ? null : info.getSourceFile();
+                var info = ensureModuleInfo(file, List.of(), null);
+                var srcFile = info == null ? null : info.getSourceFile();
                 if (srcFile == null || !srcFile.exists()) {
                     log(ERROR, "Failed to locate the module source code for: {}", file);
                 }
             } catch (final RuntimeException e) {
                 log(ERROR, "Failed to identify the module for: {} ({})", file, e);
             }
-        } else if (!file.canRead()) {
-            log(ERROR, "File not readable: {}", quoted(file));
-        } else if (!file.getName().endsWith(".x")) {
-            log(WARNING, "Source file does not have a \".x\" extension: {}", quoted(file));
+        } else {
+            validateReadableFile(file, ".x");
         }
         return file;
     }
 
     /**
-     * Validate that the specified file can be used as a destination file or directory for
-     * .xtc file(s).
+     * Validate that a file is readable and optionally has the expected extension.
      *
-     * @param file    the file or directory to write module(s) to; may be null (which implies some
-     *                default)
-     * @param fMulti  true indicates that multiple modules will be written
+     * @param file              the file to validate
+     * @param expectedExtension the expected extension (e.g. ".x", ".xtc"), or null to skip extension check
      */
-    public void validateModuleOutput(final File file, final boolean fMulti) {
-        if (file == null) {
-            return;
-        }
-
-        boolean fSingle = isExplicitCompiledFile(file.getName());
-        if (fSingle && fMulti) {
-            log(ERROR, "The single file {} is specified, but multiple modules are expected", file);
-            return;
-        }
-
-        File dir = fSingle ? parentOf(file).orElse(null) : file;
-        if (dir != null && !dir.exists()) {
-            log(INFO, "Creating directory {}", dir);
-            // ignore any errors here; errors would end up being reported further down
-            //noinspection ResultOfMethodCallIgnored
-            dir.mkdirs();
-        }
-
-        if (file.exists()) {
-            if (!file.isDirectory()) {
-                if (!fSingle) {
-                    log(WARNING, "File {} does not have the \".xtc\" extension", file);
-                }
-                if (fMulti) {
-                    log(ERROR, "The single file {} is specified, but multiple modules are expected", file);
-                }
-                if (!file.canWrite()) {
-                    log(ERROR, "File {} can not be written to", file);
-                }
-            }
-        } else if (dir != null && !dir.exists()) {
-            log(ERROR, "Directory {} is missing", dir);
+    protected void validateReadableFile(final File file, final String expectedExtension) {
+        if (!file.canRead()) {
+            log(ERROR, "File not readable: {}", quoted(file));
+        } else if (expectedExtension != null && !file.getName().endsWith(expectedExtension)) {
+            log(WARNING, "File {} does not have the \"{}\" extension", quoted(file), expectedExtension);
         }
     }
 

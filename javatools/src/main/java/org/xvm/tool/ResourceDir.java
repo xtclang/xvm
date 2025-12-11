@@ -42,10 +42,8 @@ public class ResourceDir {
             if (file == null) {
                 throw new IllegalArgumentException("Resource location must not be null");
             }
-
             if (!file.exists()) {
-                throw new IllegalArgumentException(
-                        "Resource location \"" + file + "\" does not exist");
+                throw new IllegalArgumentException("Resource location \"" + file + "\" does not exist");
             }
         }
     }

@@ -15,6 +15,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -108,7 +109,7 @@ class XdkIntegrationTest {
 
         // Verify options were built correctly
         assertTrue(options.isVerbose(), "Verbose flag should be set");
-        assertEquals(outputDir, options.getOutputLocation());
+        assertEquals(Optional.of(outputDir), options.getOutputLocation());
         assertTrue(options.getModulePath().contains(xdkLibDir));
         assertTrue(options.getInputLocations().contains(sourceFile));
 
@@ -160,7 +161,7 @@ class XdkIntegrationTest {
 
         // Verify parsed options
         assertTrue(options.isVerbose());
-        assertEquals(outputDir, options.getOutputLocation());
+        assertEquals(Optional.of(outputDir), options.getOutputLocation());
         assertTrue(options.getModulePath().contains(xdkLibDir));
 
         ErrorList errors = new ErrorList(10);
@@ -263,7 +264,7 @@ class XdkIntegrationTest {
 
         // Verify runner options were built correctly
         assertEquals("run", runnerOptions.getMethodName());
-        assertEquals(moduleFile, runnerOptions.getTarget());
+        assertEquals(Optional.of(moduleFile), runnerOptions.getTarget());
         assertTrue(runnerOptions.getModulePath().contains(xdkLibDir));
         assertTrue(runnerOptions.getModulePath().contains(outputDir));
 
@@ -317,7 +318,7 @@ class XdkIntegrationTest {
 
         assertNotNull(runnerOptions, "Runner options should parse successfully");
         assertEquals("run", runnerOptions.getMethodName());
-        assertEquals(moduleFile, runnerOptions.getTarget());
+        assertEquals(Optional.of(moduleFile), runnerOptions.getTarget());
         assertTrue(runnerOptions.getModulePath().contains(xdkLibDir));
     }
 
@@ -339,7 +340,7 @@ class XdkIntegrationTest {
     @Test
     void testLauncherInvalidCompilerArgs() {
         // Test that launcher handles invalid compiler args gracefully
-        String[] args = {Compiler.COMMAND_NAME, "--invalid-flag", "Test.x"};
+        String[] args = {Compiler.getCommandName(), "--invalid-flag", "Test.x"};
 
         int result = Launcher.launch(args);
         assertEquals(1, result, "Invalid compiler args should return exit code 1");
@@ -348,7 +349,7 @@ class XdkIntegrationTest {
     @Test
     void testLauncherInvalidRunnerArgs() {
         // Test that launcher handles invalid runner args gracefully
-        String[] args = {Runner.COMMAND_NAME, "--bad-option", "Test.xtc"};
+        String[] args = {Runner.getCommandName(), "--bad-option", "Test.xtc"};
 
         int result = Launcher.launch(args);
         assertEquals(1, result, "Invalid runner args should return exit code 1");
@@ -357,7 +358,7 @@ class XdkIntegrationTest {
     @Test
     void testLauncherInvalidTestRunnerArgs() {
         // Test that launcher handles invalid test runner args gracefully
-        String[] args = {TestRunner.COMMAND_NAME, "--bad-option", "Test.xtc"};
+        String[] args = {TestRunner.getCommandName(), "--bad-option", "Test.xtc"};
 
         int result = Launcher.launch(args);
         assertEquals(1, result, "Invalid test runner args should return exit code 1");

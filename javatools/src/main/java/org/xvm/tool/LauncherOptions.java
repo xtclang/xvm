@@ -3,12 +3,13 @@ package org.xvm.tool;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Arrays;
-import java.util.Map;
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import org.xvm.asm.Version;
 
@@ -147,6 +148,41 @@ public abstract class LauncherOptions {
         return options.addOptionGroup(group);
     }
 
+    // ----- Protected Helpers for Apache CLI Access ---------------------------------------------
+
+    /**
+     * Get all values for an option as a list. Never returns null.
+     * Use this instead of commandLine.getOptionValues() directly.
+     *
+     * @param option the option name (short or long)
+     * @return list of values, empty if option not specified
+     */
+    protected List<String> optionValues(final String option) {
+        final var values = commandLine.getOptionValues(option);
+        return values == null ? List.of() : List.of(values);
+    }
+
+    /**
+     * Get a single option value as an Optional.
+     * Use this instead of commandLine.getOptionValue() directly.
+     *
+     * @param option the option name (short or long)
+     * @return Optional containing the value, or empty if not specified
+     */
+    protected Optional<String> optionValue(final String option) {
+        return Optional.ofNullable(commandLine.getOptionValue(option));
+    }
+
+    /**
+     * Check if an option is present.
+     *
+     * @param option the option name (short or long)
+     * @return true if the option was specified
+     */
+    protected boolean hasOption(final String option) {
+        return commandLine.hasOption(option);
+    }
+
     // ----- Common Getters ------------------------------------------------------------------------
 
     /**
@@ -168,11 +204,7 @@ public abstract class LauncherOptions {
      * @return list of File objects parsed from the option values
      */
     protected List<File> getPathList(final String optionName) {
-        final var vals = commandLine.getOptionValues(optionName);
-        if (vals == null) {
-            return List.of();
-        }
-        return Arrays.stream(vals)
+        return optionValues(optionName).stream()
                 .flatMap(val -> Arrays.stream(val.split(PSEP)))
                 .filter(path -> !path.isEmpty())
                 .map(File::new)
@@ -183,28 +215,28 @@ public abstract class LauncherOptions {
      * Check if verbose mode is enabled.
      */
     public boolean isVerbose() {
-        return commandLine.hasOption("v");
+        return hasOption("v");
     }
 
     /**
      * Check if deduce mode is enabled.
      */
     public boolean mayDeduceLocations() {
-        return commandLine.hasOption("d");
+        return hasOption("d");
     }
 
     /**
      * Check if help should be shown.
      */
     public boolean showHelp() {
-        return commandLine.hasOption("help");
+        return hasOption("help");
     }
 
     /**
      * Check if version should be shown.
      */
     public boolean showVersion() {
-        return commandLine.hasOption("version");
+        return hasOption("version");
     }
 
     /**
@@ -239,21 +271,19 @@ public abstract class LauncherOptions {
             final var key = schemaOpt.getLongOpt() != null ? schemaOpt.getLongOpt() : schemaOpt.getOpt();
             if (!schemaOpt.hasArg()) {
                 // Boolean flag - check if present
-                if (commandLine.hasOption(key)) {
+                if (hasOption(key)) {
                     json.addProperty(key, true);
                 }
                 continue;
             }
-            // Option with values - use getOptionValues to get ALL values (handles repeated options)
-            final var values = commandLine.getOptionValues(key);
-            if (values != null && values.length > 0) {
-                if (values.length == 1) {
-                    json.addProperty(key, values[0]);
+            // Option with values - use optionValues to get ALL values (handles repeated options)
+            final var values = optionValues(key);
+            if (!values.isEmpty()) {
+                if (values.size() == 1) {
+                    json.addProperty(key, values.getFirst());
                 } else {
                     final var arr = new JsonArray();
-                    for (final String val : values) {
-                        arr.add(val);
-                    }
+                    values.forEach(arr::add);
                     json.add(key, arr);
                 }
             }
@@ -553,7 +583,7 @@ public abstract class LauncherOptions {
     public static class CompilerOptions extends LauncherOptions {
 
         CompilerOptions(final CommandLine commandLine) {
-            super(commandLine, COMPILER_OPTIONS, Compiler.COMMAND_NAME);
+            super(commandLine, COMPILER_OPTIONS, Compiler.getCommandName());
         }
 
         /**
@@ -585,39 +615,31 @@ public abstract class LauncherOptions {
         }
 
         public boolean hasResourceLocation() {
-            return commandLine.hasOption("r");
+            return hasOption("r");
         }
 
-        public File getOutputLocation() {
-            return hasOutputLocation() ? new File(commandLine.getOptionValue("o")) : null;
+        public Optional<File> getOutputLocation() {
+            return optionValue("o").map(File::new);
         }
 
-        public boolean hasOutputLocation() {
-            return commandLine.hasOption("o");
-        }
-
-        public Version getVersion() {
-            return hasVersion() ? new Version(commandLine.getOptionValue("set-version")) : null;
-        }
-
-        public boolean hasVersion() {
-            return commandLine.hasOption("set-version");
+        public Optional<Version> getVersion() {
+            return optionValue("set-version").map(Version::new);
         }
 
         public boolean isForcedRebuild() {
-            return commandLine.hasOption("rebuild");
+            return hasOption("rebuild");
         }
 
         public boolean isStrict() {
-            return commandLine.hasOption("strict");
+            return hasOption("strict");
         }
 
         public boolean isNoWarn() {
-            return commandLine.hasOption("nowarn");
+            return hasOption("nowarn");
         }
 
         public boolean isOutputFilenameQualified() {
-            return commandLine.hasOption("qualify");
+            return hasOption("qualify");
         }
 
         @Override
@@ -639,14 +661,8 @@ public abstract class LauncherOptions {
                 args.add("--qualify");
             }
             getResourceLocations().stream().map(File::getPath).forEach(path -> args.addAll(List.of("-r", path)));
-            final File output = getOutputLocation();
-            if (output != null) {
-                args.addAll(List.of("-o", output.getPath()));
-            }
-            final Version version = getVersion();
-            if (version != null) {
-                args.addAll(List.of("--set-version", version.toString()));
-            }
+            getOutputLocation().ifPresent(output -> args.addAll(List.of("-o", output.getPath())));
+            getVersion().ifPresent(version -> args.addAll(List.of("--set-version", version.toString())));
             getInputLocations().stream().map(File::getPath).forEach(args::add);
             return args.toArray(String[]::new);
         }
@@ -855,7 +871,7 @@ public abstract class LauncherOptions {
     public static class RunnerOptions extends LauncherOptions {
 
         RunnerOptions(final CommandLine commandLine) {
-            super(commandLine, RUNNER_OPTIONS, Runner.COMMAND_NAME);
+            super(commandLine, RUNNER_OPTIONS, Runner.getCommandName());
         }
 
         /**
@@ -881,33 +897,25 @@ public abstract class LauncherOptions {
         // Typed getters for all runner-specific options
 
         public String getMethodName() {
-            return commandLine.getOptionValue("M", "run");
+            return optionValue("M").orElse("run");
         }
 
         public boolean isCompileDisabled() {
-            return commandLine.hasOption("no-recompile");
+            return hasOption("no-recompile");
         }
 
         public boolean isJit() {
-            return commandLine.hasOption("J");
+            return hasOption("J");
         }
 
-        public File getTarget() {
+        public Optional<File> getTarget() {
             // First trailing arg is the module/file to execute
             final var trailing = getTrailingArgs();
-            return trailing.isEmpty() ? null : new File(trailing.getFirst());
+            return trailing.isEmpty() ? Optional.empty() : Optional.of(new File(trailing.getFirst()));
         }
 
-        public boolean hasTarget() {
-            return !getTrailingArgs().isEmpty();
-        }
-
-        public File getOutputFile() {
-            return hasOutputFile() ? new File(commandLine.getOptionValue("o")) : null;
-        }
-
-        public boolean hasOutputFile() {
-            return commandLine.hasOption("o");
+        public Optional<File> getOutputFile() {
+            return optionValue("o").map(File::new);
         }
 
         public List<String> getMethodArgs() {
@@ -927,12 +935,8 @@ public abstract class LauncherOptions {
          * @return map of injection name to list of values
          */
         public Map<String, List<String>> getInjections() {
-            String[] vals = commandLine.getOptionValues("I");
-            if (vals == null) {
-                return Map.of();
-            }
             final var injections = new LinkedHashMap<String, List<String>>();
-            for (final String val : vals) {
+            for (final String val : optionValues("I")) {
                 final int idx = val.indexOf('=');
                 if (idx > 0) {
                     final String key = val.substring(0, idx);
@@ -968,19 +972,14 @@ public abstract class LauncherOptions {
             }
 
             // Add output file
-            final File output = getOutputFile();
-            if (output != null) {
-                args.addAll(List.of("-o", output.getPath()));
-            }
+            getOutputFile().ifPresent(output -> args.addAll(List.of("-o", output.getPath())));
 
             // Add injections - each value in the list gets its own -I flag
             getInjections().forEach((key, values) ->
                 values.forEach(value -> args.addAll(List.of("-I", key + "=" + value))));
 
             // Add target file and method args
-            if (hasTarget()) {
-                args.add(getTarget().getPath());
-            }
+            getTarget().ifPresent(target -> args.add(target.getPath()));
             args.addAll(getMethodArgs());
             return args.toArray(String[]::new);
         }
@@ -1196,26 +1195,26 @@ public abstract class LauncherOptions {
 
         @Override
         public Map<String, List<String>> getInjections() {
-            Map<String, List<String>> injections = new LinkedHashMap<>(super.getInjections());
+            final var injections = new LinkedHashMap<>(super.getInjections());
 
-            String[] testClasses = commandLine.getOptionValues("c");
-            if (testClasses != null && testClasses.length > 0) {
-                injections.put(TestRunner.XUNIT_TEST_CLASSES_ARG, List.of(testClasses));
+            final var testClasses = optionValues("c");
+            if (!testClasses.isEmpty()) {
+                injections.put(TestRunner.XUNIT_TEST_CLASSES_ARG, testClasses);
             }
 
-            String[] testGroups = commandLine.getOptionValues("g");
-            if (testGroups != null && testGroups.length > 0) {
-                injections.put(TestRunner.XUNIT_TEST_GROUPS_ARG, List.of(testGroups));
+            final var testGroups = optionValues("g");
+            if (!testGroups.isEmpty()) {
+                injections.put(TestRunner.XUNIT_TEST_GROUPS_ARG, testGroups);
             }
 
-            String[] testPackages = commandLine.getOptionValues("p");
-            if (testPackages != null && testPackages.length > 0) {
-                injections.put(TestRunner.XUNIT_TEST_PACKAGES_ARG, List.of(testPackages));
+            final var testPackages = optionValues("p");
+            if (!testPackages.isEmpty()) {
+                injections.put(TestRunner.XUNIT_TEST_PACKAGES_ARG, testPackages);
             }
 
-            String[] testMethods = commandLine.getOptionValues("t");
-            if (testMethods != null && testMethods.length > 0) {
-                injections.put(TestRunner.XUNIT_TEST_METHODS_ARG, List.of(testMethods));
+            final var testMethods = optionValues("t");
+            if (!testMethods.isEmpty()) {
+                injections.put(TestRunner.XUNIT_TEST_METHODS_ARG, testMethods);
             }
 
             return Map.copyOf(injections);
@@ -1250,7 +1249,7 @@ public abstract class LauncherOptions {
     public static class DisassemblerOptions extends LauncherOptions {
 
         DisassemblerOptions(final CommandLine commandLine) {
-            super(commandLine, DISASSEMBLER_OPTIONS, Disassembler.COMMAND_NAME);
+            super(commandLine, DISASSEMBLER_OPTIONS, Disassembler.getCommandName());
         }
 
         /**
@@ -1272,19 +1271,18 @@ public abstract class LauncherOptions {
             return cmdName + " [options] <module_file>";
         }
 
-        public File getTarget() {
+        public Optional<File> getTarget() {
             // First trailing arg is the module file to disassemble
             final var trailing = getTrailingArgs();
-            return trailing.isEmpty() ? null : new File(trailing.getFirst());
+            return trailing.isEmpty() ? Optional.empty() : Optional.of(new File(trailing.getFirst()));
         }
 
         public boolean isListFiles() {
-            return commandLine.hasOption("files");
+            return hasOption("files");
         }
 
-        public File getFindFile() {
-            String val = commandLine.getOptionValue("findfile");
-            return val != null ? new File(val) : null;
+        public Optional<File> getFindFile() {
+            return optionValue("findfile").map(File::new);
         }
 
         @Override
@@ -1294,14 +1292,8 @@ public abstract class LauncherOptions {
             if (isListFiles()) {
                 args.add("--files");
             }
-            final File findFile = getFindFile();
-            if (findFile != null) {
-                args.addAll(List.of("--findfile", findFile.getPath()));
-            }
-            final File target = getTarget();
-            if (target != null) {
-                args.add(target.getPath());
-            }
+            getFindFile().ifPresent(findFile -> args.addAll(List.of("--findfile", findFile.getPath())));
+            getTarget().ifPresent(target -> args.add(target.getPath()));
             return args.toArray(String[]::new);
         }
 

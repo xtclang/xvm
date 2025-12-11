@@ -3,6 +3,7 @@ package org.xvm.runtime;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import org.xvm.asm.ConstantPool;
@@ -39,13 +40,8 @@ public class MainContainer
     @Override
     public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type, ObjectHandle hOpts) {
         // check the custom injections first
-        if (m_mapInjections == null) {
-            // there are no custom injections
-            return getParentInjectable(frame, sName, type, hOpts);
-        }
-
         List<String> listValue = m_mapInjections.get(sName);
-        if (listValue == null || listValue.isEmpty()) {
+        if (listValue == null) {
             // there is no matching custom injection
             return getParentInjectable(frame, sName, type, hOpts);
         }
@@ -173,16 +169,15 @@ public class MainContainer
     /**
      * Start the main container.
      *
-     * @param mapInjections a map of custom injections where each key maps to a list of values
+     * @param mapInjections a map of custom injections where each key maps to a list of values;
+     *                      must not be null, but may be empty
      */
     public void start(Map<String, List<String>> mapInjections) {
         if (m_contextMain != null) {
             throw new IllegalStateException("Already started");
         }
 
-        if (mapInjections != null && !mapInjections.isEmpty()) {
-            m_mapInjections = mapInjections;
-        }
+        m_mapInjections = Objects.requireNonNull(mapInjections);
 
         ensureServiceContext();
     }

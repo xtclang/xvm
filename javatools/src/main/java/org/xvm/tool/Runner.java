@@ -46,7 +46,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class Runner extends Launcher<RunnerOptions> {
 
-    public static final String COMMAND_NAME = "run";
+    private static final String COMMAND_NAME = "run";
 
     /**
      * Runner constructor for programmatic use.
@@ -68,6 +68,13 @@ public class Runner extends Launcher<RunnerOptions> {
         Launcher.main(insertCommand(COMMAND_NAME, asArg));
     }
 
+    /**
+     * @return the command name for this launcher
+     */
+    public static String getCommandName() {
+        return COMMAND_NAME;
+    }
+
     // TODO: Also support process calls with an overriding options object as parameter.
     @Override
     protected int process() {
@@ -81,8 +88,8 @@ public class Runner extends Launcher<RunnerOptions> {
             showSystemVersion(repo);
         }
 
-        final File fileSpec = opts.getTarget();
-        if (fileSpec == null) {
+        final var optFileSpec = opts.getTarget();
+        if (optFileSpec.isEmpty()) {
             if (opts.showVersion()) {
                 return 0;
             }
@@ -90,7 +97,8 @@ public class Runner extends Launcher<RunnerOptions> {
             return 1;
         }
 
-        var             filePath   = fileSpec.getPath();
+        File            fileSpec = optFileSpec.get();
+        var             filePath = fileSpec.getPath();
         File            fileBin    = null;
         boolean         binExists  = false;
         ModuleStructure module     = null;
@@ -105,10 +113,10 @@ public class Runner extends Launcher<RunnerOptions> {
             // use the module we found in the repo
             binLocDesc = "the repository";
         } else {
-            File       outFile = opts.getOutputFile();
+            var        outFile = opts.getOutputFile();
             ModuleInfo info;
             try {
-                info = new ModuleInfo(fileSpec, opts.mayDeduceLocations(), List.of(), outFile);
+                info = new ModuleInfo(fileSpec, opts.mayDeduceLocations(), outFile.orElse(null));
             } catch (final RuntimeException e) {
                 log(ERROR, "Failed to identify the module for: {} ({})", fileSpec, e);
                 throw new AssertionError("Unreachable", e);
@@ -155,16 +163,14 @@ public class Runner extends Launcher<RunnerOptions> {
                 final var builder = CompilerOptions.builder()
                         .addInputFile(fileSpec)
                         .addModulePath(opts.getModulePath());
-                if (outFile != null) {
-                    builder.setOutputLocation(outFile);
-                }
+                outFile.ifPresent(builder::setOutputLocation);
                 final var exitCode = new Compiler(builder.build(), m_console, m_errors).run();
                 if (exitCode != 0) {
                     log(ERROR, "Runner invoked compilation failed with exit code {}", exitCode);
                     checkErrors();
                     throw new AssertionError("Unreachable");
                 }
-                info      = new ModuleInfo(fileSpec, opts.mayDeduceLocations(), List.of(), outFile);
+                info = new ModuleInfo(fileSpec, opts.mayDeduceLocations(), outFile.orElse(null));
                 fileBin   = info.getBinaryFile();
                 binExists = fileBin != null && fileBin.exists();
                 repo      = configureLibraryRepo(opts.getModulePath());
@@ -335,6 +341,6 @@ public class Runner extends Launcher<RunnerOptions> {
     @Override
     protected void validateOptions() {
         // Validate the -L path of file(s)/dir(s)
-        validateModulePath(options().getModulePath());
+        validateModulePath();
     }
 }

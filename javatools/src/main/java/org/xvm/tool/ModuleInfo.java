@@ -70,6 +70,18 @@ public class ModuleInfo {
     }
 
     /**
+     * Construct the module information from the specified file, with no resource path.
+     *
+     * @param fileSpec   the file or directory to analyze, which may or may not exist
+     * @param deduce     pass true to enable the algorithm to deduce/search for likely locations
+     * @param binarySpec the file or directory which represents the target of the binary; as
+     *                   provided to the compiler using the "-o" command line switch; may be null
+     */
+    public ModuleInfo(final File fileSpec, final boolean deduce, final File binarySpec) {
+        this(fileSpec, deduce, List.of(), binarySpec);
+    }
+
+    /**
      * Construct the module information from the specified file.
      *
      * @param fileSpec      the file or directory to analyze, which may or may not exist
@@ -82,7 +94,7 @@ public class ModuleInfo {
      * @param binarySpec    the file or directory which represents the target of the binary; as
      *                      provided to the compiler using the "-o" command line switch
      */
-    public ModuleInfo(final File fileSpec, final boolean deduce, final List<File> resourceSpecs, File binarySpec) {
+    public ModuleInfo(final File fileSpec, final boolean deduce, final List<File> resourceSpecs, final File binarySpec) {
         if (fileSpec == null) {
             throw new IllegalArgumentException("A file specification is required for the module");
         }
@@ -238,35 +250,35 @@ public class ModuleInfo {
 
         if (binarySpec != null) {
             // if it exists, it must either be an .xtc file or a directory
-            binarySpec = resolveFile(binarySpec);
-            if (binarySpec.exists()) {
-                if (binarySpec.isDirectory()) {
-                    binaryDir = binarySpec;
+            final var resolvedBinary = resolveFile(binarySpec);
+            if (resolvedBinary.exists()) {
+                if (resolvedBinary.isDirectory()) {
+                    binaryDir = resolvedBinary;
                 } else {
-                    String sExt = getExtension(binarySpec.getName());
+                    String sExt = getExtension(resolvedBinary.getName());
                     if ("xtc".equals(sExt)) {
-                        binaryFile   = binarySpec;
-                        binaryDir    = binarySpec.getParentFile();
+                        binaryFile   = resolvedBinary;
+                        binaryDir    = resolvedBinary.getParentFile();
                         binaryStatus = Status.Exists;
                     } else {
-                        throw new IllegalArgumentException("Target destination " + binarySpec
+                        throw new IllegalArgumentException("Target destination " + resolvedBinary
                                 + " must use an .xtc extension");
                     }
                 }
             } else {
                 // if it doesn't exist, it needs to be located somewhere under some directory
                 // that does exist
-                File fileParent = binarySpec.getParentFile();
+                File fileParent = resolvedBinary.getParentFile();
                 while (true) {
                     if (fileParent == null) {
-                        throw new IllegalArgumentException("Target destination " + binarySpec
+                        throw new IllegalArgumentException("Target destination " + resolvedBinary
                             + " is illegal because it does not exist and cannot be created");
                     }
 
                     if (fileParent.exists()) {
                         if (!fileParent.isDirectory()) {
                             throw new IllegalArgumentException("Target destination "
-                                    + binarySpec + " is illegal because parent file "
+                                    + resolvedBinary + " is illegal because parent file "
                                     + fileParent + " is not a directory");
                         }
 
@@ -276,13 +288,13 @@ public class ModuleInfo {
                     fileParent = fileParent.getParentFile();
                 }
 
-                String sExt = getExtension(binarySpec.getName());
+                String sExt = getExtension(resolvedBinary.getName());
                 if ("xtc".equals(sExt)) {
-                    binaryFile   = binarySpec;
-                    binaryDir    = binarySpec.getParentFile();
+                    binaryFile   = resolvedBinary;
+                    binaryDir    = resolvedBinary.getParentFile();
                     binaryStatus = Status.NotExists;
                 } else {
-                    binaryDir = binarySpec;
+                    binaryDir = resolvedBinary;
                 }
             }
         }
