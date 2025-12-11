@@ -1357,8 +1357,7 @@ public class ModuleInfo {
                 m_stmtAST = new Parser(source, this).parseSource();
             } catch (CompilerException e) {
                 if (!hasSeriousErrors()) {
-                    log(Severity.FATAL, Parser.FATAL_ERROR, null,
-                        source, source.getPosition(), source.getPosition());
+                    log(Severity.FATAL, Parser.FATAL_ERROR, null, source, source.getPosition(), source.getPosition());
                 }
             }
         }
@@ -1592,50 +1591,73 @@ public class ModuleInfo {
     public static File sourceDirFromPrjDir(File prjDir) {
         assert prjDir != null;
 
-        // locate the source directory, starting by assuming that the project directory could also
-        // be the source directory
+        // Locate the source directory by drilling down through conventional project structures.
+        // Tries paths like: prjDir/src/main/x/ or prjDir/source/main/ecstasy/ etc.
+        // Each level is optional; we stop when source files are found or no more subdirs match.
         File curDir = prjDir;
-        File srcDir = curDir;
-        FindSrcDir: for (int i = 0; i <= 3; ++i) {
-            final var srcFiles = sourceFiles(curDir);
-            if (srcFiles.isEmpty()) {
-                File subdir;
-                switch (i) {
-                case 0:
-                    if ((subdir = new File(curDir, "src")).isDirectory() ||
-                        (subdir = new File(curDir, "source")).isDirectory()) {
-                        curDir = subdir;
-                        continue;
-                    }
-                    ++i;
-                    // fall through
-                case 1:
-                    // note: we explicitly do NOT look for "test"
-                    if ((subdir = new File(curDir, "main")).isDirectory()) {
-                        curDir = subdir;
-                        continue;
-                    }
-                    ++i;
-                    // fall through
-                case 2:
-                    if ((subdir = new File(curDir, "x")).isDirectory() ||
-                        (subdir = new File(curDir, "xtc")).isDirectory() ||
-                        (subdir = new File(curDir, "ecstasy")).isDirectory()) {
-                        curDir = subdir;
-                        continue;
-                    }
-                    ++i;
-                    // fall through
-                default:
-                    break FindSrcDir;
-                }
-            } else {
-                srcDir = curDir;
-                break;
+
+        for (int level = 0; level <= 2; level++) {
+            if (!sourceFiles(curDir).isEmpty()) {
+                return curDir;
             }
+
+            // Try to find a subdirectory at any level from 'level' onward
+            File subDir = findSourceSubDir(curDir, level);
+            if (subDir == null) {
+                break;  // No matching subdirectory found at any remaining level
+            }
+            curDir = subDir;
         }
 
-        return srcDir;
+        // Check for source files in the final directory we descended to
+        if (!sourceFiles(curDir).isEmpty()) {
+            return curDir;
+        }
+
+        return prjDir;
+    }
+
+    /**
+     * Find a conventional source subdirectory starting from the given level.
+     * Levels represent the typical project structure:
+     * <ul>
+     *   <li>Level 0: "src" or "source"</li>
+     *   <li>Level 1: "main" (note: explicitly NOT "test")</li>
+     *   <li>Level 2: "x", "xtc", or "ecstasy"</li>
+     * </ul>
+     *
+     * @param dir   the directory to search in
+     * @param level the starting level (0-2)
+     * @return the first matching subdirectory, or null if none found
+     */
+    private static File findSourceSubDir(File dir, int level) {
+        for (int i = level; i <= 2; i++) {
+            File subDir = switch (i) {
+                case 0 -> firstDirectory(dir, "src", "source");
+                case 1 -> firstDirectory(dir, "main");
+                case 2 -> firstDirectory(dir, "x", "xtc", "ecstasy");
+                default -> null;
+            };
+            if (subDir != null) {
+                return subDir;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Return the first subdirectory that exists from the given list of names.
+     *
+     * @param parent the parent directory
+     * @param names  the subdirectory names to try
+     * @return the first existing subdirectory, or null if none exist
+     */
+    private static File firstDirectory(File parent, String... names) {
+        return Stream.of(names)
+                .map(name -> new File(parent, name))
+                .filter(File::isDirectory)
+                .findFirst()
+                .orElse(null);
     }
 
     /**
@@ -1649,10 +1671,10 @@ public class ModuleInfo {
     public static File binaryDirFromPrjDir(File prjDir) {
         assert prjDir != null;
 
-        File subdir;
-        if ((subdir = new File(prjDir, "build")).isDirectory() ||
-            (subdir = new File(prjDir, "target")).isDirectory()) {
-            return subdir;
+        File subDir;
+        if ((subDir = new File(prjDir, "build")).isDirectory() ||
+            (subDir = new File(prjDir, "target")).isDirectory()) {
+            return subDir;
         }
 
         if (!sourceFiles(prjDir).isEmpty() || !compiledFiles(prjDir).isEmpty()) {

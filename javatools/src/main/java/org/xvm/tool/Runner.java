@@ -82,7 +82,7 @@ public class Runner extends Launcher<RunnerOptions> {
         final var opts = options();
 
         var repo = configureLibraryRepo(opts.getModulePath());
-    	checkErrors();
+    	checkErrors("repository setup");
 	
         if (opts.showVersion()) {
             showSystemVersion(repo);
@@ -118,10 +118,10 @@ public class Runner extends Launcher<RunnerOptions> {
             try {
                 info = new ModuleInfo(fileSpec, opts.mayDeduceLocations(), outFile.orElse(null));
             } catch (final RuntimeException e) {
-                log(ERROR, "Failed to identify the module for: {} ({})", fileSpec, e);
-                throw new AssertionError("Unreachable", e);
+                log(ERROR, e, "Failed to identify the module for: {}", fileSpec);
+                return checkErrors("module identification");
             }
-            checkErrors();
+            checkErrors("module identification");
 
             fileBin   = requireNonNull(info).getBinaryFile();
             binExists = fileBin != null && fileBin.exists();
@@ -156,7 +156,7 @@ public class Runner extends Launcher<RunnerOptions> {
                 log(INFO, "The compiled module \"{}\" is out-of-date; recompiling ...", info.getQualifiedModuleName());
                 fCompile = true;
             }
-            checkErrors();
+            checkErrors("module location");
 
             if (fCompile) {
                 // Build CompilerOptions programmatically using fluent API
@@ -167,8 +167,7 @@ public class Runner extends Launcher<RunnerOptions> {
                 final var exitCode = new Compiler(builder.build(), m_console, m_errors).run();
                 if (exitCode != 0) {
                     log(ERROR, "Runner invoked compilation failed with exit code {}", exitCode);
-                    checkErrors();
-                    throw new AssertionError("Unreachable");
+                    return checkErrors("compilation");
                 }
                 info = new ModuleInfo(fileSpec, opts.mayDeduceLocations(), outFile.orElse(null));
                 fileBin   = info.getBinaryFile();
@@ -188,24 +187,23 @@ public class Runner extends Launcher<RunnerOptions> {
                     module = struct.getModule();
                 } catch (final IOException e) {
                     log(FATAL, e, "I/O exception reading module file: {}", fileBin);
-                    throw new AssertionError("Unreachable", e); // Unreachable - log(FATAL) throws
+                    return 1;  // Unreachable - log(FATAL) throws
                 }
             }
         }
 
         if (module == null) {
             log(ERROR, "Missing module for {}", fileSpec);
-            checkErrors();  // ERROR level throws LauncherException
-            throw new AssertionError("Unreachable"); // Unreachable - log(FATAL) throws
+            return checkErrors("module loading");
         }
 
         try {
             repo.storeModule(module);
         } catch (final IOException e) {
             log(FATAL, e, "I/O exception storing module file: {}", fileSpec);
-            throw new AssertionError("Unreachable", e); // Unreachable - log(FATAL) throws
+            return 1;  // Unreachable - log(FATAL) throws
         }
-        checkErrors();
+        checkErrors("module storage");
 
         var sName = requireNonNull(module).getName();
         if (sName.equals(module.getSimpleName())) {
@@ -223,60 +221,62 @@ public class Runner extends Launcher<RunnerOptions> {
             final var setMethods = connector.findMethods(sMethod);
             if (setMethods.size() != 1) {
                 log(ERROR, "{} method {} in module {}", setMethods.isEmpty() ? "Missing" : "Ambiguous", quoted(sMethod), sName);
-                checkErrors();  // Throws LauncherException
-                return 1;  // Unreachable
+                return checkErrors("method lookup");
             }
 
             var args = opts.getMethodArgs();
             var method = setMethods.iterator().next();
             var typeStrings = pool.ensureArrayType(pool.typeString());
-            validateMethodArgs(sMethod, method, args, typeStrings);
+            int validationResult = validateMethodArgs(sMethod, method, args, typeStrings);
+            if (validationResult != 0) {
+                return checkErrors("method argument validation");
+            }
             connector.invoke0(method, args);
             return connector.join();
-        } catch (final InterruptedException _) {
-            log(WARNING, "Interrupted while waiting for method {}", quoted(sName));
+        } catch (final InterruptedException e) {
+            log(WARNING, e, "Interrupted while waiting for method {}", quoted(sName));
             return 1;
         } catch (final LauncherException e) {
             throw e;
         } catch (final Exception e) {
             e.printStackTrace(System.err);
             log(FATAL, e, "Unexpected error");
-            throw new AssertionError("Unreachable", e); // Unreachable - log(FATAL) throws
+            return 1;  // Unreachable - log(FATAL) throws
         }
     }
 
     /**
      * Validate that the method arguments are compatible with the method signature.
+     *
+     * @return 0 if validation passed, 1 if errors were logged
      */
-    private void validateMethodArgs(final String sMethod, final MethodStructure method, final List<String> asArg, final TypeConstant typeStrings) {
+    private int validateMethodArgs(final String sMethod, final MethodStructure method, final List<String> asArg, final TypeConstant typeStrings) {
         final var requiredCount = method.getRequiredParamCount();
         final var totalCount    = method.getParamCount();
 
         // Only methods with 0 or 1 required parameters are supported
         if (requiredCount > 1) {
             log(ERROR, "Unsupported method arguments {}", quoted(method.getIdentityConstant().getSignature().getValueString()));
-            checkErrors();  // ERROR level throws LauncherException
-            throw new AssertionError("Unreachable");
+            return 1;
         }
 
         // Warn if args provided but method takes no parameters
         if (!asArg.isEmpty() && totalCount == 0) {
             log(WARNING, "Method {} does not take any parameters; ignoring the specified arguments", quoted(sMethod));
-            return;
         }
 
         // Validate parameter type when args will be passed:
         // - required param exists (requiredCount == 1), or
         // - args provided and method can accept them
-        boolean willPassArgs = requiredCount > 0 || (!asArg.isEmpty() && totalCount > 0);
+        final boolean willPassArgs = requiredCount > 0 || (!asArg.isEmpty() && totalCount > 0);
         if (willPassArgs) {
             var typeArg = method.getParam(0).getType();
             if (!typeStrings.isA(typeArg)) {
                 log(ERROR, "Unsupported argument type {} for method {}", quoted(typeArg.getValueString()), quoted(sMethod));
-                checkErrors();  // ERROR level throws LauncherException
-                throw new AssertionError("Unreachable");
+                return 1;
             }
         }
+        return 0;
     }
 
     // TODO: Does the order here matter, and if not,

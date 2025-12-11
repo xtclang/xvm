@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -105,7 +104,12 @@ class LauncherErrorHandlingTest {
      */
     private static final class TestCompiler extends Compiler {
         private TestCompiler(final CompilerOptions options, final Console console, final ErrorListener errListener) {
+            this(options, console, errListener, Strictness.Normal);
+        }
+
+        private TestCompiler(final CompilerOptions options, final Console console, final ErrorListener errListener, final Strictness strictness) {
             super(options, console, errListener);
+            this.strictLevel = strictness;
         }
 
         @Override
@@ -123,8 +127,12 @@ class LauncherErrorHandlingTest {
             log(sev, cause, template, params);
         }
 
-        public void testCheckErrors() {
-            checkErrors();
+        public int testCheckErrors() {
+            return checkErrors();
+        }
+
+        public int testCheckErrors(final String context) {
+            return checkErrors(context);
         }
 
         public void testReset() {
@@ -234,7 +242,7 @@ class LauncherErrorHandlingTest {
         compiler.testLog(INFO, "Info message");
 
         // Should not throw - INFO is not bad enough to abort
-        assertDoesNotThrow(compiler::testCheckErrors);
+        assertEquals(0, compiler.testCheckErrors());
     }
 
     @Test
@@ -247,8 +255,9 @@ class LauncherErrorHandlingTest {
 
         compiler.testLog(WARNING, "Warning message");
 
-        // Should not throw - WARNING is not bad enough to abort (in base Launcher)
-        assertDoesNotThrow(compiler::testCheckErrors);
+        // Should not throw - WARNING is not bad enough to abort (in Normal strictness)
+        // Returns 0 because WARNING is not considered a "serious error" (ERROR or worse)
+        assertEquals(0, compiler.testCheckErrors());
     }
 
     @Test
@@ -397,21 +406,190 @@ class LauncherErrorHandlingTest {
                 .build();
         final var compiler = new TestCompiler(opts, console, null);
 
-        // First checkpoint - should not throw
+        // First checkpoint - should not throw, return 0
         compiler.testLog(INFO, "Info 1");
-        assertDoesNotThrow(compiler::testCheckErrors);
+        assertEquals(0, compiler.testCheckErrors());
         compiler.testReset();
         console.clear();
 
-        // Second checkpoint - should not throw
+        // Second checkpoint - should not throw, return 0 (warning is not "serious" by hasSeriousErrors)
         compiler.testLog(WARNING, "Warning 1");
-        assertDoesNotThrow(compiler::testCheckErrors);
+        assertEquals(0, compiler.testCheckErrors());
         compiler.testReset();
         console.clear();
 
         // Third checkpoint - should throw
         compiler.testLog(ERROR, "Error 1");
         assertThrows(LauncherException.class, compiler::testCheckErrors);
+    }
+
+    // ----- Strictness level tests ----------------------------------------------------------------
+
+    @Test
+    void testNormalStrictnessWarningDoesNotAbort() {
+        final var console = new TestConsole();
+        // Normal strictness (default) - WARNING does not abort
+        final var opts = new CompilerOptions.Builder()
+                .addInputFile(new File("test.x"))
+                .build();
+        final var compiler = new TestCompiler(opts, console, null);
+
+        compiler.testLog(WARNING, "Warning message");
+
+        // Should NOT throw - WARNING is not bad enough to abort in Normal strictness
+        // Returns 0 because WARNING is not considered "serious" (ERROR or worse)
+        assertEquals(0, compiler.testCheckErrors());
+        assertFalse(compiler.isAbortDesired());
+    }
+
+    @Test
+    void testNormalStrictnessErrorAborts() {
+        final var console = new TestConsole();
+        // Normal strictness (default) - ERROR aborts
+        final var opts = new CompilerOptions.Builder()
+                .addInputFile(new File("test.x"))
+                .build();
+        final var compiler = new TestCompiler(opts, console, null);
+
+        compiler.testLog(ERROR, "Error message");
+
+        // Should throw - ERROR is bad enough to abort in Normal strictness
+        assertThrows(LauncherException.class, compiler::testCheckErrors);
+        assertTrue(compiler.isAbortDesired());
+    }
+
+    @Test
+    void testStrictModeWarningAborts() {
+        final var console = new TestConsole();
+        // --strict mode (Stickler) - WARNING should abort
+        final var opts = new CompilerOptions.Builder()
+                .addInputFile(new File("test.x"))
+                .enableStrictMode()
+                .build();
+        final var compiler = new TestCompiler(opts, console, null, Compiler.Strictness.Stickler);
+
+        compiler.testLog(WARNING, "Warning message");
+
+        // Should throw - WARNING is bad enough to abort in Stickler strictness
+        assertThrows(LauncherException.class, compiler::testCheckErrors);
+        assertTrue(compiler.isAbortDesired());
+    }
+
+    @Test
+    void testStrictModeErrorAborts() {
+        final var console = new TestConsole();
+        // --strict mode (Stickler) - ERROR should also abort
+        final var opts = new CompilerOptions.Builder()
+                .addInputFile(new File("test.x"))
+                .enableStrictMode()
+                .build();
+        final var compiler = new TestCompiler(opts, console, null, Compiler.Strictness.Stickler);
+
+        compiler.testLog(ERROR, "Error message");
+
+        // Should throw - ERROR is bad enough to abort in Stickler strictness
+        assertThrows(LauncherException.class, compiler::testCheckErrors);
+        assertTrue(compiler.isAbortDesired());
+    }
+
+    @Test
+    void testNoWarnModeWarningDoesNotAbort() {
+        final var console = new TestConsole();
+        // --nowarn mode (Suppressed) - WARNING does not abort
+        final var opts = new CompilerOptions.Builder()
+                .addInputFile(new File("test.x"))
+                .disableWarnings()
+                .build();
+        final var compiler = new TestCompiler(opts, console, null, Compiler.Strictness.Suppressed);
+
+        compiler.testLog(WARNING, "Warning message");
+
+        // Should NOT throw - WARNING is not bad enough to abort in Suppressed strictness
+        // Returns 0 because WARNING is not considered "serious" (ERROR or worse)
+        assertEquals(0, compiler.testCheckErrors());
+        assertFalse(compiler.isAbortDesired());
+    }
+
+    @Test
+    void testNoWarnModeErrorAborts() {
+        final var console = new TestConsole();
+        // --nowarn mode (Suppressed) - ERROR should still abort
+        final var opts = new CompilerOptions.Builder()
+                .addInputFile(new File("test.x"))
+                .disableWarnings()
+                .build();
+        final var compiler = new TestCompiler(opts, console, null, Compiler.Strictness.Suppressed);
+
+        compiler.testLog(ERROR, "Error message");
+
+        // Should throw - ERROR is bad enough to abort even in Suppressed strictness
+        assertThrows(LauncherException.class, compiler::testCheckErrors);
+        assertTrue(compiler.isAbortDesired());
+    }
+
+    @Test
+    void testCheckErrorsReturnsExitCode() {
+        final var console = new TestConsole();
+        final var opts = new CompilerOptions.Builder()
+                .addInputFile(new File("test.x"))
+                .build();
+        final var compiler = new TestCompiler(opts, console, null);
+
+        // No errors - should return 0
+        assertEquals(0, compiler.checkErrors());
+
+        // Log INFO - still no serious errors, should return 0
+        compiler.testLog(INFO, "Info message");
+        assertEquals(0, compiler.checkErrors());
+
+        compiler.testReset();
+
+        // Log WARNING - not "serious" by hasSeriousErrors (which uses ERROR threshold)
+        compiler.testLog(WARNING, "Warning message");
+        assertEquals(0, compiler.checkErrors()); // WARNING returns 0 (hasSeriousErrors checks for ERROR)
+
+        compiler.testReset();
+
+        // Log ERROR - should throw (not return)
+        compiler.testLog(ERROR, "Error message");
+        assertThrows(LauncherException.class, compiler::testCheckErrors);
+    }
+
+    @Test
+    void testCheckErrorsWithContextMessage() {
+        final var console = new TestConsole();
+        final var opts = new CompilerOptions.Builder()
+                .addInputFile(new File("test.x"))
+                .build();
+        final var compiler = new TestCompiler(opts, console, null);
+
+        compiler.testLog(ERROR, "Error message");
+
+        // checkErrors with context should include context in exception message
+        LauncherException ex = assertThrows(LauncherException.class,
+                () -> compiler.checkErrors("module loading"));
+        assertTrue(ex.getMessage().contains("module loading"));
+        assertTrue(ex.getMessage().contains("ERROR"));
+    }
+
+    @Test
+    void testErrorListenerReceivesErrors() {
+        final var console = new TestConsole();
+        final var errorListener = new TestErrorListener();
+        final var opts = new CompilerOptions.Builder()
+                .addInputFile(new File("test.x"))
+                .build();
+        final var compiler = new TestCompiler(opts, console, errorListener);
+
+        // Log messages - they should go to both console and error listener
+        compiler.testLog(WARNING, "Warning 1");
+        compiler.testLog(ERROR, "Error 1");
+
+        // Console should have the messages
+        assertEquals(2, console.getMessages().size());
+
+        // Worst severity tracked in compiler
+        assertEquals(ERROR, compiler.testGetWorstSeverity());
     }
 
 }
