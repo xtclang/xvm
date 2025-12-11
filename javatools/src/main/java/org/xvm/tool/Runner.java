@@ -139,11 +139,9 @@ public class Runner extends Launcher<RunnerOptions> {
                         var possibles = resolvePossibleTargets(qualName, repo);
                         if (possibles.isEmpty()) {
                             log(ERROR, "Failed to locate the module for: {}", fileSpec);
-                        } else if (possibles.size() == 1) {
-                            log(ERROR, "Unable to locate the module for {}; did you mean {}?", fileSpec, quoted(possibles.iterator().next()));
                         } else {
-                            final var names = possibles.stream().map(Handy::quoted).collect(Collectors.joining(", "));
-                            log(ERROR, "Unable to locate the module for {}; did you mean one of: {}?", fileSpec, names);
+                            var suggestions = possibles.stream().map(Handy::quoted).collect(Collectors.joining(", "));
+                            log(ERROR, "Unable to locate the module for {}; did you mean {}?", fileSpec, suggestions);
                         }
                     }
                 } else {
@@ -153,7 +151,7 @@ public class Runner extends Launcher<RunnerOptions> {
 
             if (binExists && !opts.isCompileDisabled() && info.getSourceFile() != null
                     && info.getSourceFile().exists() && !info.isUpToDate()) {
-                log(INFO, "The compiled module \"{}\" is out-of-date; recompiling ...", info.getQualifiedModuleName());
+                log(INFO, "The compiled module {} is out-of-date; recompiling ...", quoted(info.getQualifiedModuleName()));
                 fCompile = true;
             }
             checkErrors("module location");
@@ -224,9 +222,9 @@ public class Runner extends Launcher<RunnerOptions> {
                 return checkErrors("method lookup");
             }
 
-            var args = opts.getMethodArgs();
-            var method = setMethods.iterator().next();
-            var typeStrings = pool.ensureArrayType(pool.typeString());
+            var args             = opts.getMethodArgs();
+            var method           = setMethods.iterator().next();
+            var typeStrings      = pool.ensureArrayType(pool.typeString());
             int validationResult = validateMethodArgs(sMethod, method, args, typeStrings);
             if (validationResult != 0) {
                 return checkErrors("method argument validation");
@@ -279,20 +277,17 @@ public class Runner extends Launcher<RunnerOptions> {
         return 0;
     }
 
-    // TODO: Does the order here matter, and if not,
+    /**
+     * Find module names that could match an unqualified name.
+     * For example, if user types "MyApp", this finds "MyApp.example.com", "MyApp.other", etc.
+     */
     private static Set<String> resolvePossibleTargets(final String qualName, final ModuleRepository repo) {
-        final var possibles = new LinkedHashSet<String>();
-        if (qualName.indexOf('.') < 0) {
-            // the qualified name wasn't qualified; that may have been user input
-            // error; find all the names that they may have meant to type
-            for (final String name : repo.getModuleNames()) {
-                final int ofDot = name.indexOf('.');
-                if (ofDot > 0 && name.substring(0, ofDot).equals(qualName)) {
-                    possibles.add(name);
-                }
-            }
+        if (qualName.indexOf('.') >= 0) {
+            return Set.of();
         }
-        return possibles;
+        return repo.getModuleNames().stream()
+                .filter(name -> name.startsWith(qualName + '.'))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     @Override
@@ -335,8 +330,6 @@ public class Runner extends Launcher<RunnerOptions> {
     protected Connector createBaseConnector(final ModuleRepository repo, final boolean isJit) {
         return isJit ? new JitConnector(repo) : new Connector(repo);
     }
-
-    // ----- options -------------------------------------------------------------------------------
 
     @Override
     protected void validateOptions() {
