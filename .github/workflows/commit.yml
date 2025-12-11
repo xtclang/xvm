@@ -267,6 +267,69 @@ jobs:
                   fi
                   echo "✅ All builds completed successfully"                      
 
+    # Integration test: verify the XTC plugin works with external projects
+    # Clones xtc-app-template, publishes XDK locally, and runs the template app
+    integration-test:
+        name: Plugin integration test
+        needs: build-and-test
+        runs-on: ubuntu-latest
+        if: success()
+
+        steps:
+            - name: Checkout XVM
+              uses: actions/checkout@v6
+              with:
+                  fetch-depth: 1
+
+            - name: Setup XVM Project
+              id: versions
+              uses: ./.github/actions/setup-xvm-project
+              with:
+                  setup-build: true
+                  cache-read-only: true
+                  enable-debug: false
+
+            - name: Publish XDK to Maven Local
+              env:
+                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+              run: |
+                  echo "📦 Publishing XDK to Maven Local..."
+                  ./gradlew ${{ steps.versions.outputs.gradle-options }} publishLocal
+                  echo "✅ XDK published to Maven Local"
+
+            - name: Clone xtc-app-template
+              run: |
+                  echo "📥 Cloning xtc-app-template..."
+                  git clone --depth 1 https://github.com/xtclang/xtc-app-template.git ../xtc-app-template
+                  echo "✅ Template cloned"
+
+            - name: Update template to use current XDK version
+              run: |
+                  XDK_VERSION="${{ steps.versions.outputs.xdk-version }}"
+                  echo "🔧 Updating xtc-app-template to use XDK version: $XDK_VERSION"
+
+                  # Update the version in libs.versions.toml
+                  sed -i "s/^xtc = .*/xtc = \"$XDK_VERSION\"/" ../xtc-app-template/gradle/libs.versions.toml
+
+                  echo "📄 Updated libs.versions.toml:"
+                  cat ../xtc-app-template/gradle/libs.versions.toml
+
+            - name: Run xtc-app-template with local XDK
+              working-directory: ../xtc-app-template
+              run: |
+                  echo "🧪 Running xtc-app-template with locally published XDK..."
+                  ./gradlew greet -PlocalOnly=true --no-daemon
+                  echo "✅ Integration test passed - plugin works with external projects"
+
+            - name: Summary
+              if: success()
+              run: |
+                  echo "### ✅ Plugin Integration Test Passed" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "- **XDK Version:** ${{ steps.versions.outputs.xdk-version }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Template:** xtc-app-template" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Test:** \`./gradlew greet -PlocalOnly=true\`" >> $GITHUB_STEP_SUMMARY
+
     # Trigger publishing workflows for snapshots
     # Runs when:
     # 1. Push to master (automatic snapshot publishing) - BUT NOT for release merges or Dependabot merges
@@ -276,7 +339,7 @@ jobs:
     # Dependabot merges are skipped to avoid permission issues
     trigger-publishing:
         name: Trigger snapshot publishing workflows
-        needs: build-and-test
+        needs: [build-and-test, integration-test]
         runs-on: ubuntu-latest
         if: |
             success() &&
