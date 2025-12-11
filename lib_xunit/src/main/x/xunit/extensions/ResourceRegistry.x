@@ -327,7 +327,13 @@ interface ResourceRegistry
          */
         construct(Type<ResourceType> type, String? name = Null) {
             this.type = type;
-            this.name = name.is(String) ? name : type.toString();
+            if (name.is(String)) {
+                this.name = name;
+            } else if (String typeName := type.named()) {
+                this.name = typeName;
+            } else {
+                this.name = "unnamed";
+            }
         }
 
         /**

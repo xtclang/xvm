@@ -57,7 +57,8 @@ public class MainContainer
             typeRequired = typeRequired.removeNullable();
         }
 
-        if (listValue.size() == 1) {
+        int listSize = listValue.size();
+        if (listSize == 1) {
             // Single value case
             String sValue = listValue.getFirst();
             if (typeRequired.equals(typeString)) {
@@ -72,16 +73,16 @@ public class MainContainer
                 // require Destringable and value is String
                 return toDestringable(frame, typeRequired, sValue);
             }
-        } else {
+        } else if (listSize > 1){
             // Multiple values case
-            String[] asValue = listValue.toArray(String[]::new);
             if (typeRequired.equals(typeStrings)) {
                 // require String[] and value is List<String>
+                String[] asValue = listValue.toArray(String[]::new);
                 return xString.makeArrayHandle(asValue);
             }
             if (typeRequired.equals(typeString)) {
                 // require String and value is List<String> - return the last element
-                return xString.makeHandle(asValue[asValue.length - 1]);
+                return xString.makeHandle(listValue.getLast());
             }
         }
 
