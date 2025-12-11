@@ -1,3 +1,5 @@
+import xunit.extensions.Extension;
+
 /**
  * A base type for test runners.
  */
@@ -18,6 +20,12 @@
         ExecutionListener? runnerListener = createExecutionListener(testModule);
         if (runnerListener.is(ExecutionListener)) {
             listeners.add(runnerListener);
+        }
+
+        for (Extension extension : testConfig.extensions) {
+            if (extension.is(ExecutionListener)) {
+                listeners.add(extension);
+            }
         }
 
         ExecutionListener listener = new CompositeExecutionListener(listeners.freeze(True));

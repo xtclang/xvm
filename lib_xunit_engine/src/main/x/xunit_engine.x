@@ -22,6 +22,8 @@ module xunit_engine.xtclang.org {
 
     import tools.ModuleGenerator;
 
+    import xunit.UniqueId;
+
     import xunit.extensions.ResourceRegistry;
     import xunit.extensions.ResourceRegistry.RegistrationBehavior;
 

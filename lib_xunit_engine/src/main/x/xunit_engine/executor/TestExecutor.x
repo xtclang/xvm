@@ -4,6 +4,7 @@ import xunit.SkipResult;
 
 import xunit.extensions.Extension;
 import xunit.extensions.ExtensionProvider;
+import xunit.extensions.FixtureExecutionCallback;
 import xunit.extensions.ResourceLookupCallback;
 
 /**
@@ -25,17 +26,17 @@ const TestExecutor {
     /**
      * The `Model` that defines the tests to execute.
      */
-    public/private Model model;
+    Model model;
 
     /**
      * The `ExecutionConfiguration` to configure execution.
      */
-    public/private ExecutionConfiguration configuration;
+    ExecutionConfiguration configuration;
 
     /**
      * The current `ExecutionLifecycle`.
      */
-    public/private ExecutionLifecycle lifecycle;
+    ExecutionLifecycle lifecycle;
 
     /**
      * Execute the tests in this executor's `Model` including recursively
@@ -47,8 +48,7 @@ const TestExecutor {
      */
     void execute(EngineExecutionContext parentContext,
                  ExtensionRegistry?     parentRegistry = Null,
-                 Extension[]            extensions     = [])
-     {
+                 Extension[]            extensions     = []) {
         @Inject Clock          clock;
         ExtensionRegistry      registry   = new ExtensionRegistry(model, parentRegistry);
         ExceptionCollector     collector  = new ExceptionCollector();
@@ -60,6 +60,11 @@ const TestExecutor {
 
         registry.addAll(extensions);
         updateResourceProvider(context, registry);
+
+        FixtureExecutionCallback[] modelCallbacks = registry.get(FixtureExecutionCallback);
+	    for (FixtureExecutionCallback callback : modelCallbacks) {
+            callback.beforeFixtureExecution(context);
+	    }
 
 		if (context := collector.execute(() -> lifecycle.prepare(parentContext, registry))) {
             updateResourceProvider(context, registry);
@@ -77,6 +82,9 @@ const TestExecutor {
             }
         }
         updateResourceProvider(context, registry);
+	    for (FixtureExecutionCallback callback : modelCallbacks) {
+            callback.afterFixtureExecution(context);
+	    }
         reportCompletion(collector, parentContext, registry, skipResult, started, duration);
     }
 

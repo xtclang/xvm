@@ -1,5 +1,5 @@
 /**
- * A unique identifier for a test model.
+ * A unique identifier for a test container or actual test.
  *
  * * A `UniqueId` is made up of an array of segments, where a `Segment` has a type and a value.
  * * A `UniqueId` is part of a model hierarchy, so like a File path, the parent of a
