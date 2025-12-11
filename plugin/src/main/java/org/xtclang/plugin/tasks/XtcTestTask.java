@@ -18,6 +18,7 @@ import org.jetbrains.annotations.NotNull;
 
 import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.XtcRunModule;
+import org.xtclang.plugin.XtcRuntimeExtension;
 import org.xtclang.plugin.XtcTestExtension;
 
 import static org.xtclang.plugin.XtcPluginConstants.XTC_TEST_RUNNER_CLASS_NAME;
@@ -38,6 +39,7 @@ public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension
     private final Property<@NotNull Boolean> failOnTestFailure;
     private final ListProperty<@NotNull String> includes;
     private final ListProperty<@NotNull String> excludes;
+    private final XtcTestExtension testExtension;
 
     @SuppressWarnings({"ConstructorNotProtectedInAbstractClass", "this-escape"})
     @Inject
@@ -45,10 +47,19 @@ public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension
         super(objects, project);
 
         // Test-specific properties with conventions from extension
-        final var testExt = XtcProjectDelegate.resolveXtcTestExtension(project);
-        this.failOnTestFailure = objects.property(Boolean.class).convention(testExt.getFailOnTestFailure());
-        this.includes = objects.listProperty(String.class).convention(testExt.getIncludes());
-        this.excludes = objects.listProperty(String.class).convention(testExt.getExcludes());
+        this.testExtension = XtcProjectDelegate.resolveXtcTestExtension(project);
+        this.failOnTestFailure = objects.property(Boolean.class).convention(testExtension.getFailOnTestFailure());
+        this.includes = objects.listProperty(String.class).convention(testExtension.getIncludes());
+        this.excludes = objects.listProperty(String.class).convention(testExtension.getExcludes());
+    }
+
+    /**
+     * Override to return the xtcTest extension instead of xtcRun extension.
+     * This ensures that module configuration from xtcTest {} block is used.
+     */
+    @Override
+    protected XtcRuntimeExtension getExtension() {
+        return testExtension;
     }
 
     @Input
