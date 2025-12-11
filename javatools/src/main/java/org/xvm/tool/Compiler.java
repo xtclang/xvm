@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
@@ -103,9 +104,7 @@ import static org.xvm.util.Severity.WARNING;
  */
 public class Compiler extends Launcher<CompilerOptions> {
 
-    public static final String COMMAND_NAME = "build";
-
-    // ----- constants -----------------------------------------------------------------------------
+    private static final String COMMAND_NAME = "build";
 
     protected enum Strictness {
         None,
@@ -147,6 +146,13 @@ public class Compiler extends Launcher<CompilerOptions> {
     }
 
     /**
+     * @return the command name for this launcher
+     */
+    public static String getCommandName() {
+        return COMMAND_NAME;
+    }
+
+    /**
      * Get the input locations (source files) to compile.
      * Subclasses can override to provide dynamic sources.
      *
@@ -168,7 +174,7 @@ public class Compiler extends Launcher<CompilerOptions> {
         log(INFO, "Selecting compilation targets");
 
         List<File>   resourceDirs = opts.getResourceLocations();
-        File         outputLoc    = opts.getOutputLocation();
+        File         outputLoc    = opts.getOutputLocation().orElse(null);
         ModuleInfo[] aTarget      = selectTargets(opts.getInputLocations(), resourceDirs, outputLoc).toArray(new ModuleInfo[0]);
 
         prevModules = aTarget;
@@ -184,15 +190,6 @@ public class Compiler extends Launcher<CompilerOptions> {
 
         if (outputLoc != null) {
             outputLoc = resolveFile(outputLoc);
-            if (!outputLoc.exists() && isExplicitCompiledFile(outputLoc.getName())) {
-                final File outFile = outputLoc;
-                parentOf(outFile)
-                        .filter(File::exists)
-                        .filter(dir -> !dir.isDirectory())
-                        .ifPresent(_ -> log(ERROR,
-                                "The output file is {} but the parent directory cannot be created because a file already exists with the same name",
-                                outFile));
-            }
         }
 
         var infoByName = new LinkedHashMap<String, ModuleInfo>();
@@ -210,7 +207,7 @@ public class Compiler extends Launcher<CompilerOptions> {
             if (srcFile == null || !srcFile.exists()) {
                 log(ERROR, "Could not locate the source for the module {}", info.getFileSpec());
             }
-	    // TODO: Consider log(ERROR, ...) -> error(...) 
+	        // TODO: Consider log(ERROR, ...) -> error(...)
             if (sModule == null) {
                 log(ERROR, "Could not determine the module name for {}", info.getFileSpec());
             } else {
@@ -229,7 +226,7 @@ public class Compiler extends Launcher<CompilerOptions> {
         checkErrors();
 
         final boolean fRebuild = opts.isForcedRebuild();
-        final Version verStamp = opts.getVersion();
+        final Optional<Version> verStamp = opts.getVersion();
         log(INFO, "Output-path={}, force-rebuild={}", outputLoc, fRebuild);
 
         final var mapTargets = new LinkedHashMap<File, Node>();
@@ -243,10 +240,10 @@ public class Compiler extends Launcher<CompilerOptions> {
                 if (moduleInfo.isSystemModule()) {
                     ++cSystemModules;
                 }
-            } else if (verStamp != null && !verStamp.equals(moduleInfo.getModuleVersion())) {
+            } else if (verStamp.isPresent() && !verStamp.get().equals(moduleInfo.getModuleVersion())) {
                 // recompile is not required, but the version stamp needs to be added
-                log(INFO, "Stamping version {} onto module: {}", verStamp, moduleInfo.getQualifiedModuleName());
-                addVersion(moduleInfo, verStamp);
+                log(INFO, "Stamping version {} onto module: {}", verStamp.get(), moduleInfo.getQualifiedModuleName());
+                addVersion(moduleInfo, verStamp.get());
             }
         }
         checkErrors();
@@ -414,23 +411,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      * @param compilers  a module compiler for each module
      */
     protected static void resolveNames(final List<org.xvm.compiler.Compiler> compilers) {
-        int cTriesLeft = 0x3F;
-        do {
-            boolean fDone = true;
-            for (final var compiler : compilers) {
-                fDone &= compiler.resolveNames(cTriesLeft == 1);
-                if (compiler.isAbortDesired()) {
-                    return;
-                }
-            }
-            if (fDone) {
-                return;
-            }
-        } while (--cTriesLeft > 0);
-        // something couldn't get resolved; must be a bug in the compiler
-        for (final var compiler : compilers) {
-            compiler.logRemainingDeferredAsErrors();
-        }
+        runCompilerPhase(compilers, org.xvm.compiler.Compiler::resolveNames);
     }
 
     /**
@@ -439,12 +420,29 @@ public class Compiler extends Launcher<CompilerOptions> {
      * @param compilers  a module compiler for each module
      */
     protected static void validateExpressions(final List<org.xvm.compiler.Compiler> compilers) {
+        runCompilerPhase(compilers, org.xvm.compiler.Compiler::validateExpressions);
+    }
+
+    /**
+     * Functional interface for compiler phases that take an isLastAttempt flag and return isDone.
+     */
+    @FunctionalInterface
+    private interface CompilerPhase {
+        boolean run(org.xvm.compiler.Compiler compiler, boolean isLastAttempt);
+    }
+
+    /**
+     * Run a compiler phase that may require multiple iterations to complete.
+     *
+     * @param compilers  the list of compilers to process
+     * @param phase      the phase function to run on each compiler (takes compiler and isLastAttempt, returns isDone)
+     */
+    private static void runCompilerPhase(final List<org.xvm.compiler.Compiler> compilers, final CompilerPhase phase) {
         int cTriesLeft = 0x3F;
         do {
             boolean fDone = true;
             for (final var compiler : compilers) {
-                fDone &= compiler.validateExpressions(cTriesLeft == 1);
-
+                fDone &= phase.run(compiler, cTriesLeft == 1);
                 if (compiler.isAbortDesired()) {
                     return;
                 }
@@ -516,9 +514,7 @@ public class Compiler extends Launcher<CompilerOptions> {
             var module = (ModuleStructure) nodeModule.type().getComponent();
 
             assert !module.isFingerprint();
-            if (version != null) {
-                module.setVersion(version);
-            }
+            version.ifPresent(module::setVersion);
 
             if (repoOutput != null) {
                 try {
@@ -651,7 +647,7 @@ public class Compiler extends Launcher<CompilerOptions> {
         }
 
         // Validate the -L path of file(s)/dir(s)
-        validateModulePath(opts.getModulePath());
+        validateModulePath();
 
         // Validate the trailing file(s)/dir(s)
         var listInputs = opts.getInputLocations();
@@ -664,6 +660,52 @@ public class Compiler extends Launcher<CompilerOptions> {
         }
 
         // Validate the -o file/dir
-        validateModuleOutput(opts.getOutputLocation(), listInputs.size() > 1);
+        validateModuleOutput(listInputs.size());
+    }
+
+    /**
+     * Validate that the output location can be used as a destination for .xtc file(s).
+     * Uses the output location from options and the number of input modules to determine validity.
+     *
+     * @param numModules  the number of modules that will be written
+     */
+    private void validateModuleOutput(final int numModules) {
+        options().getOutputLocation().ifPresent(file -> {
+            boolean fSingle = isExplicitCompiledFile(file.getName());
+            if (fSingle && numModules > 1) {
+                log(ERROR, "The single file {} is specified, but multiple modules are expected", file);
+                return;
+            }
+
+            var optDir = fSingle ? parentOf(file) : Optional.of(file);
+
+            // Check if parent path exists as a file (can't create directory)
+            if (fSingle) {
+                optDir.filter(File::exists)
+                      .filter(dir -> !dir.isDirectory())
+                      .ifPresent(_ -> log(ERROR,
+                          "The output file is {} but the parent directory cannot be created because a file already exists with the same name",
+                          file));
+            }
+
+            // Create directory if it doesn't exist
+            optDir.filter(dir -> !dir.exists()).ifPresent(dir -> {
+                log(INFO, "Creating directory {}", dir);
+                //noinspection ResultOfMethodCallIgnored
+                dir.mkdirs();
+            });
+
+            if (file.exists() && !file.isDirectory()) {
+                if (!fSingle) {
+                    log(WARNING, "File {} does not have the \".xtc\" extension", file);
+                }
+                if (!file.canWrite()) {
+                    log(ERROR, "File {} can not be written to", file);
+                }
+            } else {
+                optDir.filter(dir -> !dir.exists()).ifPresent(dir ->
+                    log(ERROR, "Directory {} is missing", dir));
+            }
+        });
     }
 }

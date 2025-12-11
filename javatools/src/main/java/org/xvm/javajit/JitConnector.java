@@ -38,22 +38,19 @@ public class JitConnector
     }
 
     @Override
-    public ConstantPool getConstantPool()
-        {
+    public ConstantPool getConstantPool() {
         return module.getConstantPool();
-        }
+    }
 
     @Override
     public void start(Map<String, List<String>> mapInjections) {
         try {
-            ClassLoader loader = xvm.nativeTypeSystem.loader;
-            Class       clz    = loader.loadClass("org.xtclang._native.mgmt.nMainInjector");
-
-            Injector injector = (Injector) clz.getDeclaredConstructor(Xvm.class).newInstance(xvm);
+            var loader   = xvm.nativeTypeSystem.loader;
+            var clz      = loader.loadClass("org.xtclang._native.mgmt.nMainInjector").asSubclass(Injector.class);
+            var injector = clz.getDeclaredConstructor(Xvm.class).newInstance(xvm);
             try (var ignore = ConstantPool.withPool(xvm.nativeTypeSystem.pool())) {
                 clz.getMethod("addNativeResources").invoke(injector);
             }
-
             container = xvm.createContainer(ts, injector);
         } catch (ClassNotFoundException | NoClassDefFoundError e) {
             throw new RuntimeException("Failed to load nMainInjector", e);
@@ -78,9 +75,9 @@ public class JitConnector
 
         TypeSystemLoader loader = ts.loader;
         try {
-            Class  clz    = loader.loadClass(typeName);
-            Ctx    ctx    = Ctx.get();
-            Object module = clz.getDeclaredConstructor(Ctx.class).newInstance(ctx);
+            var clz    = loader.loadClass(typeName);
+            var ctx    = Ctx.get();
+            var module = clz.getDeclaredConstructor(Ctx.class).newInstance(ctx);
 
             Object result;
             if (asArg == null || asArg.length == 0) {
@@ -94,7 +91,7 @@ public class JitConnector
                 this.result = lr;
             }
         } catch (ClassNotFoundException | NoClassDefFoundError e) {
-            e.printStackTrace();
+            e.printStackTrace(System.err);
             throw new RuntimeException("Failed to load class \"" + typeName + '"', e);
         } catch (NoSuchMethodException e) {
             throw new RuntimeException("No \"run()\" method", e);
@@ -111,7 +108,7 @@ public class JitConnector
                         cause.getClass().getField("exception").get(cause));
                 } catch (Throwable ignore) {}
             } else {
-                e.printStackTrace();
+                e.printStackTrace(System.err);
                 throw new RuntimeException(cause);
             }
         } finally {

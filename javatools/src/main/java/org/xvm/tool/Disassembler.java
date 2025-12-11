@@ -44,7 +44,7 @@ import static org.xvm.util.Severity.INFO;
  */
 public class Disassembler extends Launcher<DisassemblerOptions> {
 
-    public static final String COMMAND_NAME = "disass";
+    private static final String COMMAND_NAME = "disass";
 
     @SuppressWarnings("unused")
     private static final byte FREE    = 0;
@@ -77,25 +77,30 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         Launcher.main(insertCommand(COMMAND_NAME, args));
     }
 
+    /**
+     * @return the command name for this launcher
+     */
+    public static String getCommandName() {
+        return COMMAND_NAME;
+    }
+
     @Override
     protected void validateOptions() {
-        final var opts = options();
-        final var fileModule = opts.getTarget();
-        if (fileModule == null) {
-            log(ERROR, "No module file specified");
-            return;
-        }
-        if (!fileModule.exists()) {
-            log(ERROR, "Module file does not exist: {}", fileModule);
-        }
-        // Validate the -L path of file(s)/dir(s)
-        validateModulePath(opts.getModulePath());
+        options().getTarget().ifPresentOrElse(
+            file -> {
+                if (!file.exists()) {
+                    log(ERROR, "Module file does not exist: {}", file);
+                }
+            },
+            () -> log(ERROR, "No module file specified")
+        );
+        validateModulePath();
     }
 
     @Override
     protected int process() {
         final var opts       = options();
-        final var fileModule = opts.getTarget();
+        final var fileModule = opts.getTarget().orElseThrow(); // validated above
         final var sModule    = fileModule.getName();
 
         Component component  = null;
@@ -124,11 +129,11 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         checkErrors();
 
         if (component != null) {
-            var findFile = opts.getFindFile();
+            var optFindFile = opts.getFindFile();
             if (opts.isListFiles()) {
                 dumpFiles(component);
-            } else if (findFile != null) {
-                findFile(component, findFile);
+            } else if (optFindFile.isPresent()) {
+                findFile(component, optFindFile.get());
             } else {
                 component.visitChildren(this::dump, false, true);
             }

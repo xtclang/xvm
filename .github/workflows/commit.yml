@@ -318,7 +318,7 @@ jobs:
               working-directory: ../xtc-app-template
               run: |
                   echo "🧪 Running xtc-app-template with locally published XDK..."
-                  ./gradlew greet -PlocalOnly=true --no-daemon
+                  ./gradlew greet -PlocalOnly=true --no-daemon --refresh-dependencies
                   echo "✅ Integration test passed - plugin works with external projects"
 
             - name: Summary

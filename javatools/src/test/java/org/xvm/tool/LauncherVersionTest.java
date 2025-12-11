@@ -48,7 +48,7 @@ public class LauncherVersionTest {
         final var args = new String[]{"--version"};
 
         // Run build --version command
-        Launcher.launch(Compiler.COMMAND_NAME, args, console, null);
+        Launcher.launch(Compiler.getCommandName(), args, console, null);
 
         final var output = console.getAllOutput().trim();
         assertFalse(output.isEmpty(), "Version output should not be empty");
@@ -93,7 +93,7 @@ public class LauncherVersionTest {
         final var console = new CaptureConsole();
         final var args = new String[]{"--version"};
 
-        Launcher.launch(Runner.COMMAND_NAME, args, console, null);
+        Launcher.launch(Runner.getCommandName(), args, console, null);
 
         final var output = console.getAllOutput().trim();
         assertFalse(output.isEmpty(), "Runner version output should not be empty");
@@ -107,7 +107,7 @@ public class LauncherVersionTest {
         final var console = new CaptureConsole();
         final var args = new String[]{"--version"};
 
-        Launcher.launch(Compiler.COMMAND_NAME, args, console, null);
+        Launcher.launch(Compiler.getCommandName(), args, console, null);
 
         final var output = console.getAllOutput().trim();
         assertFalse(output.isEmpty(), "Compiler version output should not be empty");

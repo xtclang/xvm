@@ -26,11 +26,6 @@ import org.xvm.tool.LauncherOptions.TestRunnerOptions;
 public class TestRunner extends Runner {
 
     /**
-     * Command name for dispatch.
-     */
-    public static final String COMMAND_NAME = "test";
-
-    /**
      * The XUnit engine module name.
      */
     public static final String XUNIT_MODULE = "xunit_engine.xtclang.org";
@@ -65,6 +60,8 @@ public class TestRunner extends Runner {
      */
     public static final String XUNIT_TEST_METHODS_ARG = "xvm.xunit.discovery.test";
 
+    private static final String COMMAND_NAME = "test";
+
     /**
      * Entry point from the OS.
      *
@@ -81,11 +78,16 @@ public class TestRunner extends Runner {
      * @param console     representation of the terminal within which this command is run
      * @param errListener optional error listener for programmatic error access
      */
-    public TestRunner(final TestRunnerOptions options, final Console console,
-                      final ErrorListener errListener) {
+    public TestRunner(final TestRunnerOptions options, final Console console, final ErrorListener errListener) {
         super(options, console, errListener);
     }
 
+    /**
+     * @return the command name for this launcher
+     */
+    public static String getCommandName() {
+        return COMMAND_NAME;
+    }
 
     @Override
     protected Connector createConnector(final ModuleRepository repo, final ModuleStructure module) {

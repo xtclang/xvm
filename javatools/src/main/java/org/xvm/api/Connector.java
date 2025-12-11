@@ -29,10 +29,10 @@ import org.xvm.runtime.template.text.xString;
 
 /**
  * The API between Java host environment and an XVM runtime.
- *
+ * <p>
  * For a given Connector there is one and only one Runtime and one and only one top level
  * Container. All underlying Containers will use the same Runtime.
- *
+ * <p>
  * Normally, the usage of the Connector follows these steps:
  * <ul>
  *   <li> instantiate a Connector
@@ -92,7 +92,8 @@ public class Connector {
     /**
      * Start the Runtime and the main Container.
      *
-     * @param mapInjections a map of custom injections where each key maps to a list of values
+     * @param mapInjections a map of custom injections where each key maps to a list of values;
+     *                      may be null or empty if there are no custom injections
      */
     public void start(Map<String, List<String>> mapInjections) {
         if (!m_fStarted) {
@@ -100,7 +101,7 @@ public class Connector {
             m_fStarted = true;
         }
 
-        m_containerMain.start(mapInjections);
+        m_containerMain.start(mapInjections == null ? Map.of() : mapInjections);
     }
 
     /**
@@ -180,6 +181,7 @@ public class Connector {
      * @return zero if the main method was void or the return type not an int-convertible; otherwise
      *              the return value
      */
+    @SuppressWarnings("BusyWait")
     public int join()
             throws InterruptedException {
         // extremely naive; replace

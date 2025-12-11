@@ -383,7 +383,7 @@ public class xRTCompiler
             } else {
                 var              opts         = options();
                 List<File>       resourceDirs = opts.getResourceLocations();
-                File             fileOutput   = opts.getOutputLocation();
+                File             fileOutput   = opts.getOutputLocation().orElse(null);
                 boolean          fRebuild     = opts.isForcedRebuild();
                 List<ModuleInfo> listTargets  = selectTargets(getInputLocations(), resourceDirs, fileOutput);
                 checkErrors();

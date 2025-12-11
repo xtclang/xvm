@@ -8,6 +8,7 @@ import org.xvm.tool.LauncherOptions.RunnerOptions;
 import java.io.File;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -30,7 +31,7 @@ class OptionsTest {
         assertTrue(opts.isForcedRebuild());
         assertTrue(opts.isStrict());
         assertFalse(opts.isNoWarn());
-        assertEquals(new File("/tmp/out"), opts.getOutputLocation());
+        assertEquals(Optional.of(new File("/tmp/out")), opts.getOutputLocation());
 
         final var modulePath = opts.getModulePath();
         assertEquals(1, modulePath.size());
@@ -57,8 +58,8 @@ class OptionsTest {
 
         assertTrue(opts.isForcedRebuild());
         assertTrue(opts.isStrict());
-        assertEquals(new File("/tmp/out"), opts.getOutputLocation());
-        assertEquals(new Version("1.2.3"), opts.getVersion());
+        assertEquals(Optional.of(new File("/tmp/out")), opts.getOutputLocation());
+        assertEquals(Optional.of(new Version("1.2.3")), opts.getVersion());
 
         final var modulePath = opts.getModulePath();
         assertEquals(2, modulePath.size());
@@ -117,7 +118,7 @@ class OptionsTest {
         assertTrue(opts.isJit());
         assertEquals("main", opts.getMethodName());
         assertFalse(opts.isCompileDisabled());
-        assertEquals(new File("MyModule.xtc"), opts.getTarget());
+        assertEquals(Optional.of(new File("MyModule.xtc")), opts.getTarget());
 
         assertEquals(Map.of("key1", List.of("value1"), "key2", List.of("value2")), opts.getInjections());
         assertEquals(List.of("arg1", "arg2"), opts.getMethodArgs());
@@ -130,7 +131,7 @@ class OptionsTest {
 
         assertFalse(opts.isJit());
         assertEquals("run", opts.getMethodName());
-        assertEquals(new File("MyModule.xtc"), opts.getTarget());
+        assertEquals(Optional.of(new File("MyModule.xtc")), opts.getTarget());
         assertTrue(opts.getMethodArgs().isEmpty());
         assertTrue(opts.getInjections().isEmpty());
     }
@@ -251,8 +252,8 @@ class OptionsTest {
 
         assertFalse(opts.isForcedRebuild());
         assertFalse(opts.isStrict());
-        assertNull(opts.getOutputLocation());
-        assertNull(opts.getVersion());
+        assertTrue(opts.getOutputLocation().isEmpty());
+        assertTrue(opts.getVersion().isEmpty());
         assertTrue(opts.getModulePath().isEmpty());
     }
 
@@ -316,7 +317,7 @@ class OptionsTest {
         final String[] args = {"-M", "main", "MyModule.xtc", "arg1", "arg2", "arg3"};
         final var opts = RunnerOptions.parse(args);
 
-        assertEquals(new File("MyModule.xtc"), opts.getTarget());
+        assertEquals(Optional.of(new File("MyModule.xtc")), opts.getTarget());
         assertEquals(List.of("arg1", "arg2", "arg3"), opts.getMethodArgs());
     }
 
@@ -427,8 +428,8 @@ class OptionsTest {
         final var opts = CompilerOptions.parse(args);
 
         final var version = opts.getVersion();
-        assertNotNull(version);
-        assertEquals("1.2.3", version.toString());
+        assertTrue(version.isPresent());
+        assertEquals("1.2.3", version.get().toString());
     }
 
     @Test
