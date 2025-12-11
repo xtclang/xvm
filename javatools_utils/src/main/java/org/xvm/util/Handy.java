@@ -21,10 +21,8 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -596,97 +594,6 @@ public final class Handy {
         while (of >= 0);
         list.add(s.substring(ofPrev));
         return list.toArray(NO_ARGS);
-    }
-
-    /**
-     * Parse a comma-delimited string containing "key=value" pairs. Key and or value strings can be
-     * quoted, and if quoted, can contain escape characters.
-     *
-     * @param s  the comma-delimited string containing "key=value" pairs
-     *
-     * @return null iff the passed string was not parseable; otherwise a map from string keys to
-     *         string values
-     */
-    @SuppressWarnings("fallthrough")
-    public static Map<String, String> parseStringMap(final String s) {
-        if (s == null || s.isEmpty()) {
-            return Collections.emptyMap();
-        }
-
-        ListMap<String, String> map = new ListMap<>();
-        int     of    = 0;
-        int     cch   = s.length();
-        boolean doKey = true;       // either "parsing key" or "parsing value"
-        String  key   = "";
-        String  val   = "";
-        while (of < cch) {
-            if (doKey) {
-                if (!key.isEmpty()) {
-                    // note: later pairs can override earlier pairs
-                    map.put(key, val);
-                } else if (!val.isEmpty()) {
-                    return null;
-                }
-                key = "";
-                val = "";
-            }
-
-            String cur;
-            switch (s.charAt(of)) {
-            case '\"':
-            case '\'':
-            case '`':
-                // appears to be a quoted string
-                int close = closingQuote(s, of);
-                if (close > of) {
-                    cur = unquotedString(s.substring(of, close+1));
-                    of = close + 1;
-                    break;
-                }
-                // fall through
-            default:
-                int next = s.indexOf(',', of);
-                if (next < 0) {
-                    next = cch;
-                }
-                if (doKey) {
-                    int ofVal = s.indexOf('=', of);
-                    if (ofVal >= 0 && ofVal < next) {
-                        next = ofVal;
-                    }
-                }
-                cur = s.substring(of, next);
-                of  = next;
-                break;
-            }
-
-            if (doKey) {
-                key = cur;
-            } else {
-                val = cur;
-            }
-
-            if (of < cch) {
-                char delim = s.charAt(of++);
-                if (doKey && delim == '=') {
-                    doKey = false;
-                } else if (delim == ',') {
-                    doKey = true;
-                } else {
-                    // garbage
-                    return null;
-                }
-            }
-        }
-
-        if (!key.isEmpty()) {
-            // note: later pairs can override earlier pairs
-            map.put(key, val);
-        } else if (!val.isEmpty()) {
-            return null;
-        }
-
-        return map;
     }
 
     /**
