@@ -642,7 +642,7 @@ public class ModuleInfo {
      * @return the root {@link Node} of the tree, or null if the ModuleInfo does not know the source
      *         location, or if serious errors occur loading the source tree
      */
-    public Node getSourceTree(ErrorListener errs) {
+    public Node getSourceTree(final ErrorListener errs) {
         if (sourceNode != null) {
             return sourceNode;
         }
@@ -652,11 +652,7 @@ public class ModuleInfo {
         if (srcDir == null || srcFile == null) {
             return null;
         }
-
-        if (errs == null) {
-            errs = new ErrorList(100);
-        }
-
+        
         if (isSourceTree()) {
             assert fileName != null;
             File subDir = new File(srcDir, fileName);
@@ -1034,7 +1030,7 @@ public class ModuleInfo {
          *              raised
          * @param node  the child node to register with the specified name
          */
-        public void registerName(String name, Node node) {
+        public void registerName(final String name, final Node node) {
             if (name != null) {
                 if (children().containsKey(name)) {
                     log(Severity.ERROR, DUP_NAME, new Object[] {name, descriptiveName()}, null);
@@ -1185,7 +1181,7 @@ public class ModuleInfo {
          * @param parent  the parent node
          * @param file    the file that this node will represent
          */
-        FileNode(DirNode parent, File file) {
+        FileNode(final DirNode parent, final File file) {
             super(parent, file);
         }
 
@@ -1194,7 +1190,7 @@ public class ModuleInfo {
          *
          * @param code  the source code
          */
-        public FileNode(DirNode parent, String code) {
+        public FileNode(final DirNode parent, final String code) {
             super(parent, null);
             m_text = code;
         }
@@ -1303,11 +1299,12 @@ public class ModuleInfo {
          *
          * @return a File, a ResourceDir, or null if unresolvable
          */
-        public Object resolveResource(String path) {
+        public Object resolveResource(final String path) {
+            String resPath = path;
             ResourceDir dir;
-            if (path.startsWith("/")) {
-                path = path.substring(1);
-                if (path.startsWith("/")) {
+            if (resPath.startsWith("/")) {
+                resPath = resPath.substring(1);
+                if (resPath.startsWith("/")) {
                     return null;
                 }
 
@@ -1316,19 +1313,19 @@ public class ModuleInfo {
                 dir = resourceDir();
             }
 
-            boolean fRequireDir = path.endsWith("/");
+            boolean fRequireDir = resPath.endsWith("/");
             if (fRequireDir) {
-                path = path.substring(0, path.length()-1);
-                if (path.endsWith("/")) {
+                resPath = resPath.substring(0, resPath.length()-1);
+                if (resPath.endsWith("/")) {
                     return null;
                 }
             }
 
-            if (dir == null || path.isEmpty()) {
+            if (dir == null || resPath.isEmpty()) {
                 return dir;
             }
 
-            String[] segments = parseDelimitedString(path, '/');
+            String[] segments = parseDelimitedString(resPath, '/');
             for (int i = 0, last = segments.length - 1; i <= last; ++i) {
                 String segment = segments[i];
                 if (segment.isEmpty() || ".".equals(segment)) {
@@ -1435,7 +1432,7 @@ public class ModuleInfo {
      *
      * @return the module's name if the file declares a module; null otherwise
      */
-    public static String extractModuleName(File file) {
+    public static String extractModuleName(final File file) {
         if (file.exists() && file.canRead()) {
             String name = file.getName();
             if (isExplicitSourceFile(name)) {
@@ -1462,7 +1459,7 @@ public class ModuleInfo {
      *
      * @return true iff the passed name is an explicit Ecstasy source or compiled module file name
      */
-    public static boolean isExplicitEcstasyFile(String sFile) {
+    public static boolean isExplicitEcstasyFile(final String sFile) {
         String sExt = getExtension(sFile);
         return "x".equalsIgnoreCase(sExt) || "xtc".equalsIgnoreCase(sExt);
     }
@@ -1474,7 +1471,7 @@ public class ModuleInfo {
      *
      * @return true iff the passed name is an explicit Ecstasy source or compiled module file name
      */
-    public static boolean isExplicitSourceFile(String sFile) {
+    public static boolean isExplicitSourceFile(final String sFile) {
         String sExt = getExtension(sFile);
         return "x".equalsIgnoreCase(sExt);
     }
@@ -1486,7 +1483,7 @@ public class ModuleInfo {
      *
      * @return a list of zero or more source files
      */
-    public static List<File> sourceFiles(File dir) {
+    public static List<File> sourceFiles(final File dir) {
         return listFiles(dir, "x");
     }
 
@@ -1497,7 +1494,7 @@ public class ModuleInfo {
      *
      * @return true iff the passed name is an explicit Ecstasy source or compiled module file name
      */
-    public static boolean isExplicitCompiledFile(String sFile) {
+    public static boolean isExplicitCompiledFile(final String sFile) {
         String sExt = getExtension(sFile);
         return "xtc".equalsIgnoreCase(sExt);
     }
@@ -1509,7 +1506,7 @@ public class ModuleInfo {
      *
      * @return a list of zero or more compiled module files
      */
-    public static List<File> compiledFiles(File dir) {
+    public static List<File> compiledFiles(final File dir) {
         return listFiles(dir, "xtc");
     }
 
@@ -1519,7 +1516,7 @@ public class ModuleInfo {
      * @return true iff the directory appears to be a project directory
      */
     @SuppressWarnings("unused")
-    public static boolean isProjectDir(File dir) {
+    public static boolean isProjectDir(final File dir) {
         return dir != null && dir.isDirectory() &&
             (new File(dir, "src"   ).exists() && !new File(dir, "src.x"   ).exists() ||
              new File(dir, "source").exists() && !new File(dir, "source.x").exists());
@@ -1532,50 +1529,51 @@ public class ModuleInfo {
      *
      * @return the best-guess project directory
      */
-    public static File projectDirFromSubDir(File dir) {
+    public static File projectDirFromSubDir(final File dir) {
         assert dir != null;
 
-        String name = dir.getName();
+        String name   = dir.getName();
+        File   curDir = dir;
         File   prjDir;
         if (   "build" .equalsIgnoreCase(name)
             || "target".equalsIgnoreCase(name)) {
-            prjDir = dir.getParentFile();
+            prjDir = curDir.getParentFile();
         } else {
-            prjDir = dir;
+            prjDir = curDir;
 
             if (   "x"      .equalsIgnoreCase(name)
                 || "xtc"    .equalsIgnoreCase(name)
                 || "ecstasy".equalsIgnoreCase(name)) {
-                dir = prjDir.getParentFile();
-                if (dir == null) {
+                curDir = prjDir.getParentFile();
+                if (curDir == null) {
                     return prjDir;
                 }
-                prjDir = dir;
-                name   = dir.getName();
+                prjDir = curDir;
+                name   = curDir.getName();
             }
 
             if (   "main".equalsIgnoreCase(name)
                 || "test".equalsIgnoreCase(name)) {
-                dir = prjDir.getParentFile();
-                if (dir == null) {
+                curDir = prjDir.getParentFile();
+                if (curDir == null) {
                     return prjDir;
                 }
-                prjDir = dir;
-                name   = dir.getName();
+                prjDir = curDir;
+                name   = curDir.getName();
             }
 
             if (   "src"   .equalsIgnoreCase(name)
                 || "source".equalsIgnoreCase(name)) {
-                dir = prjDir.getParentFile();
-                if (dir == null) {
+                curDir = prjDir.getParentFile();
+                if (curDir == null) {
                     return prjDir;
                 }
-                prjDir = dir;
+                prjDir = curDir;
             }
         }
 
         if (prjDir == null) {
-            prjDir = dir;
+            prjDir = curDir;
         }
 
         return prjDir;
@@ -1588,7 +1586,7 @@ public class ModuleInfo {
      *
      * @return the best guess at the location of the source directory
      */
-    public static File sourceDirFromPrjDir(File prjDir) {
+    public static File sourceDirFromPrjDir(final File prjDir) {
         assert prjDir != null;
 
         // Locate the source directory by drilling down through conventional project structures.
@@ -1630,7 +1628,7 @@ public class ModuleInfo {
      * @param level the starting level (0-2)
      * @return the first matching subdirectory, or null if none found
      */
-    private static File findSourceSubDir(File dir, int level) {
+    private static File findSourceSubDir(final File dir, final int level) {
         for (int i = level; i <= 2; i++) {
             File subDir = switch (i) {
                 case 0 -> firstDirectory(dir, "src", "source");
@@ -1652,7 +1650,7 @@ public class ModuleInfo {
      * @param names  the subdirectory names to try
      * @return the first existing subdirectory, or null if none exist
      */
-    private static File firstDirectory(File parent, String... names) {
+    private static File firstDirectory(final File parent, final String... names) {
         return Stream.of(names)
                 .map(name -> new File(parent, name))
                 .filter(File::isDirectory)
@@ -1668,7 +1666,7 @@ public class ModuleInfo {
      *
      * @return the best guess at the location of the binary directory
      */
-    public static File binaryDirFromPrjDir(File prjDir) {
+    public static File binaryDirFromPrjDir(final File prjDir) {
         assert prjDir != null;
 
         File subDir;
