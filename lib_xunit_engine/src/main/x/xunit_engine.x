@@ -46,6 +46,21 @@ module xunit_engine.xtclang.org {
     static String ConfigTestModuleVersion = ConfigPrefix + ".testModuleVersion";
 
     /**
+     * The injection name for the test build output directory.
+     */
+    static String ConfigTestBuildDir = ConfigPrefix + ".buildDir";
+
+    /**
+     * The default test build output directory located under the current directory.
+     */
+    static String DefaultTestBuildDir = "build";
+
+    /**
+     * The root test output directory located under the build directory.
+     */
+    static String TestOutputRootDir = "test-output";
+
+    /**
      * This is the entry point int the module to execute tests in another module.
      *
      * @params args  the arguments to execute tests. The first element in the array is the name of the
