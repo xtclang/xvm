@@ -308,8 +308,10 @@ jobs:
                   XDK_VERSION="${{ steps.versions.outputs.xdk-version }}"
                   echo "🔧 Updating xtc-app-template to use XDK version: $XDK_VERSION"
 
-                  # Update the version in libs.versions.toml
-                  sed -i "s/^xtc = .*/xtc = \"$XDK_VERSION\"/" ../xtc-app-template/gradle/libs.versions.toml
+                  # Update only the version in [versions] section, not the plugin definition
+                  # The pattern matches: xtc = "..." (quoted version string)
+                  # But not: xtc = { ... } (plugin definition with braces)
+                  sed -i 's/^xtc = "[^"]*"/xtc = "'"$XDK_VERSION"'"/' ../xtc-app-template/gradle/libs.versions.toml
 
                   echo "📄 Updated libs.versions.toml:"
                   cat ../xtc-app-template/gradle/libs.versions.toml
