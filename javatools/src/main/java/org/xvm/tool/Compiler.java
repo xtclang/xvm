@@ -223,7 +223,7 @@ public class Compiler extends Launcher<CompilerOptions> {
                                 binFile));
             }
         }
-        checkErrors();
+        checkErrors("target selection");
 
         final boolean fRebuild = opts.isForcedRebuild();
         final Optional<Version> verStamp = opts.getVersion();
@@ -246,7 +246,7 @@ public class Compiler extends Launcher<CompilerOptions> {
                 addVersion(moduleInfo, verStamp.get());
             }
         }
-        checkErrors();
+        checkErrors("source loading");
 
         if (mapTargets.isEmpty()) {
             log(INFO, "All modules are up to date; terminating compiler");
@@ -257,18 +257,18 @@ public class Compiler extends Launcher<CompilerOptions> {
 
         // repository setup
         ensureLibraryRepo();
-        checkErrors();
+        checkErrors("repository setup");
 
         if (cSystemModules == 0) {
             log(INFO, "Pre-loading and linking system libraries");
             prelinkSystemLibraries(repoLib);
         }
         prevLibs = repoLib;
-        checkErrors();
+        checkErrors("system library linking");
 
         final var repoOutput = new ModuleInfoRepository(infoByName, false);
         prevOutput = repoOutput;
-        checkErrors();
+        checkErrors("output repository setup");
 
         // the code below could be extracted if necessary: compile(allNodes, repoLib, repoOutput);
         log(INFO, "Creating empty modules and populating namespaces");
@@ -285,7 +285,7 @@ public class Compiler extends Launcher<CompilerOptions> {
         flushAndCheckErrors(allNodes);
 
         injectNativeTurtle(repoLib);
-        checkErrors();
+        checkErrors("native turtle injection");
 
         log(INFO, "Validating expressions");
         validateExpressions(compilers);
@@ -506,8 +506,10 @@ public class Compiler extends Launcher<CompilerOptions> {
 
     /**
      * Emit the results of compilation.
+     *
+     * @return 0 for success, non-zero exit code for failure
      */
-    protected void emitModules(final Node[] allNodes, final ModuleRepository repoOutput) {
+    protected int emitModules(final Node[] allNodes, final ModuleRepository repoOutput) {
         var opts = options();
         var version = opts.getVersion();
         for (final var nodeModule : allNodes) {
@@ -522,14 +524,16 @@ public class Compiler extends Launcher<CompilerOptions> {
                 } catch (final IOException e) {
                     log(FATAL, e, "I/O exception storing module: {}", module.getName());
                 }
-                checkErrors();
+                int exitCode = checkErrors("module storage");
+                if (exitCode != 0) {
+                    return exitCode;
+                }
             } else {
                 // figure out where to put the resulting module
                 var file = nodeModule.file().getParentFile();
                 if (file == null) {
                     log(ERROR, "Unable to determine output location for module {} from file: {}", quoted(nodeModule.name()), nodeModule.file());
-                    checkErrors();
-                    throw new AssertionError("Unreachable");
+                    return checkErrors("output location resolution");
                 }
 
                 // at this point, we either have a directory or a file to put it in; resolve that to
@@ -550,10 +554,11 @@ public class Compiler extends Launcher<CompilerOptions> {
                     struct.writeTo(file);
                 } catch (final IOException e) {
                     log(FATAL, e, "Exception occurred while attempting to write module file {}", quoted(file.getAbsolutePath()));
-                    throw new AssertionError("Unreachable");
+                    return 1;  // Unreachable - log(FATAL) throws
                 }
             }
         }
+        return 0;
     }
 
 

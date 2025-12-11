@@ -487,15 +487,32 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     }
 
     /**
-     * Determine if a previously logged error should cause the program to exit, and if so, exit.
-     * Throws LauncherException if errors have accumulated that are severe enough to abort.
+     * Check if errors warrant aborting. If so, throws LauncherException with context.
      * <p>
-     * Checks BOTH Console (tool errors) AND ErrorListener delegate (compiler errors).
+     * Checks BOTH Launcher's tracked severity (tool errors) AND ErrorListener delegate (compiler errors).
+     *
+     * @param context description of what operation was being performed (for error message)
+     * @return 1 if errors exist but not severe enough to abort, 0 if no errors
+     * @throws LauncherException if errors are severe enough to abort
      */
-    protected void checkErrors() {
+    protected int checkErrors(final String context) {
         if (isAbortDesired()) {
-            throw new LauncherException(true, null, null);
+            var message = context == null
+                    ? "Aborting due to errors (severity: " + m_sevWorst + ")"
+                    : "Aborting during " + context + " (severity: " + m_sevWorst + ")";
+            throw new LauncherException(true, message, null);
         }
+        return hasSeriousErrors() ? 1 : 0;
+    }
+
+    /**
+     * Check if errors warrant aborting. If so, throws LauncherException.
+     *
+     * @return 1 if errors exist but not severe enough to abort, 0 if no errors
+     * @throws LauncherException if errors are severe enough to abort
+     */
+    protected int checkErrors() {
+        return checkErrors(null);
     }
 
     /**
@@ -548,8 +565,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      */
     @Override
     public boolean isAbortDesired() {
-        // Check Launcher's tracked severity for control flow decision
-        return m_sevWorst.isAtLeast(ERROR);
+        return isBadEnoughToAbort(m_sevWorst);
     }
 
     /**
@@ -874,8 +890,10 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * Flush errors from the specified nodes, and then check for errors globally.
      *
      * @param nodes  the nodes to flush
+     * @return 0 if no serious errors, 1 if serious errors exist (but not fatal enough to throw)
+     * @throws LauncherException if errors are severe enough to abort
      */
-    protected void flushAndCheckErrors(final Node[] nodes) {
+    protected int flushAndCheckErrors(final Node[] nodes) {
         if (nodes != null) {
             for (final Node node : nodes) {
                 if (node != null) {
@@ -883,7 +901,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
                 }
             }
         }
-        checkErrors();
+        return checkErrors();
     }
 
     /**
