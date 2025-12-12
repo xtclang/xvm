@@ -172,17 +172,8 @@ service TestResourceProvider(Directory curDir)
     Directory testDirectoryUnder(Directory root) {
         Directory         dir = root;
         ExecutionContext? ctx = this.context;
-
         if (ctx.is(ExecutionContext)) {
-            Class? testClass = ctx.testClass;
-            if (testClass.is(Class)) {
-                String name = testClass.name;
-                dir = dir.dirFor(testClass.name);
-                MethodOrFunction? test = ctx.testMethod;
-                if (test.is(Test)) {
-                    dir = dir.dirFor(test.name);
-                }
-            }
+            dir = xunit.extensions.testDirectoryFor(dir, ctx.testClass, ctx.testMethod);
         }
         dir.ensure();
         return dir;
