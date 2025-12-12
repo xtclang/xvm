@@ -30,10 +30,17 @@ const ContainerExecutionLifecycle<ModelType extends ContainerModel>(ModelType mo
     	        extensions.add(extension, ep);
             }
         }
-	    return super(context.asBuilder(this.model)
+
+        EngineExecutionContext.Builder builder = context.asBuilder(this.model)
                 .withTestClass(model.testClass)
-                .withTestMethod(Null)
-                .build(), extensions);
+                .withTestMethod(Null);
+
+//        UniqueId id = model.uniqueId;
+//        if (id.type == Module) {
+//            builder.withModule(id.value);
+//        }
+
+	    return super(builder.build(), extensions);
 	    }
 
     @Override

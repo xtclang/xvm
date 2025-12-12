@@ -19,7 +19,7 @@ import templates.TestTemplateFactory;
  */
 annotation ParameterizedTest(Function<Tuple, Tuple> parameters, String group=Test.Unit)
         extends TestTemplate(group)
-        into MethodOrFunction {
+        into MethodOrFunction | Class {
 
     @Override
     TestTemplateFactory[] getTemplateFactories()
