@@ -351,7 +351,7 @@ public class DifferenceTypeConstant
             MethodInfo method1 = entry.getValue();
             MethodInfo method2 = info2.getMethodBySignature(sig);
 
-            if (method2 == null && !method1.isConstructor()) {
+            if (method2 == null && !method1.isCtorOrValidator()) {
                 // the method only exists in the first map; take it
                 map.put(method1.getIdentity(), method1);
             }

@@ -117,8 +117,8 @@ public class MethodInfo
 
         if (!this.getAccess().isAsAccessibleAs(Access.PROTECTED) ||
             !that.getAccess().isAsAccessibleAs(Access.PROTECTED) ||
-            (this.isConstructor() && !this.containsVirtualConstructor()) ||
-            (that.isConstructor() && !that.isVirtualConstructor())) {
+            (this.isCtorOrValidator() && !this.containsVirtualConstructor()) ||
+            (that.isCtorOrValidator() && !that.isVirtualConstructor())) {
             MethodConstant id = getIdentity();
             id.log(errs, Severity.ERROR, Constants.VE_METHOD_OVERRIDE_ILLEGAL,
                     that.getIdentity().getNamespace().getValueString(),
@@ -362,7 +362,7 @@ public class MethodInfo
                                  Set<IdentityConstant> setDefault) {
         // functions are, by definition, non-virtual, so they are not affected by yanking,
         // de-duping (they naturally de-dup by having a fixed identity), etc.
-        if (isFunction() || isConstructor()) {
+        if (isFunction() || isCtorOrValidator()) {
             return this;
         }
 
@@ -410,7 +410,7 @@ public class MethodInfo
         // param retained only to match PropertyInfo
         assert fNative;
 
-        if (isFunction() || isConstructor()) {
+        if (isFunction() || isCtorOrValidator()) {
             return this;
         }
 
@@ -476,7 +476,7 @@ public class MethodInfo
     public MethodInfo asInto() {
         // if the method is a function, constructor or a "cap", it stays as-is (unless it's a function
         // on the Object class); otherwise, it needs to be turned into a chain of implicit entries
-        if ((isFunction() || isConstructor() || isCapped()) &&
+        if ((isFunction() || isCtorOrValidator() || isCapped()) &&
                     !getIdentity().getNamespace().equals(pool().clzObject())) {
             return this;
         }
@@ -488,7 +488,7 @@ public class MethodInfo
      * @return the MethodInfo that marks this constructor as "implicit"
      */
     public MethodInfo markImplicitConstructor() {
-        assert isConstructor();
+        assert getHead().getMethodStructure().isConstructor();
 
         return markImplicit();
     }
@@ -614,7 +614,7 @@ public class MethodInfo
         for (MethodBody body : m_aBody) {
             switch (body.getImplementation()) {
             case Implicit:
-                if (isConstructor()) {
+                if (body.isCtorOrValidator()) {
                     // constructors can only be marked as implicit on virtual child classes
                     // by TypeConstant#layerOnMethods (see an extended explanation there)
                     return false;
@@ -674,9 +674,9 @@ public class MethodInfo
     /**
      * @return true iff this is a constructor (not a method or function)
      */
-    public boolean isConstructor() {
+    public boolean isCtorOrValidator() {
         // virtual constructor could be capped
-        return getTail().isConstructor();
+        return getTail().isCtorOrValidator();
     }
 
     /**
@@ -696,7 +696,7 @@ public class MethodInfo
 
         // it can only be virtual if it is non-private and non-function, and if it is not contained
         // within a method or a private property
-        if (isFunction() || isConstructor() || getAccess() == Access.PRIVATE) {
+        if (isFunction() || isCtorOrValidator() || getAccess() == Access.PRIVATE) {
             return false;
         }
 

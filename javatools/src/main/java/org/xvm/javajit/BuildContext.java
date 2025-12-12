@@ -86,7 +86,7 @@ public class BuildContext {
         this.methodDesc    = methodInfo.getJitDesc(typeSystem, typeInfo.getType());
         this.methodJitName = methodInfo.ensureJitMethodName(typeSystem);
         this.isFunction    = methodInfo.isFunction();
-        this.isConstructor = methodInfo.isConstructor();
+        this.isConstructor = methodInfo.isCtorOrValidator();
         this.isOptimized   = methodDesc.optimizedMD != null;
     }
 

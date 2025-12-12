@@ -644,12 +644,12 @@ public class UnionTypeConstant
             SignatureConstant sig     = entry.getKey();
             MethodInfo        method1 = entry.getValue();
 
-            if (method1.isConstructor()) {
+            if (method1.isCtorOrValidator()) {
                 continue;
             }
 
             MethodInfo method2 = info2.getMethodBySignature(sig);
-            if (method2 != null && !method2.isConstructor()) {
+            if (method2 != null && !method2.isCtorOrValidator()) {
                 // the method exists in both maps;
                 // check for a "common" structure and build a "subset" info
                 if (method1.equals(method2)) {

@@ -862,7 +862,7 @@ public class xRTType
         for (Map.Entry<MethodConstant, MethodInfo> entry : aMethods) {
             MethodConstant idMethod = entry.getKey();
             MethodInfo     info     = entry.getValue();
-            if (!info.isCapped() && !info.isFunction() && !info.isConstructor()
+            if (!info.isCapped() && !info.isFunction() && !info.isCtorOrValidator()
                     && idMethod.isTopLevel()) {
                 listHandles.add(xRTMethod.makeHandle(frame, typeTarget, info.getIdentity()));
             }

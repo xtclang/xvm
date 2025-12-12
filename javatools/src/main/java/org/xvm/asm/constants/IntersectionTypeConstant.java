@@ -487,7 +487,7 @@ public class IntersectionTypeConstant
             SignatureConstant sig     = entry.getKey();
             MethodInfo        method1 = entry.getValue();
 
-            if (method1.isConstructor() && !method1.containsVirtualConstructor()) {
+            if (method1.isCtorOrValidator() && !method1.containsVirtualConstructor()) {
                 continue;
             }
 
@@ -510,13 +510,13 @@ public class IntersectionTypeConstant
             SignatureConstant sig     = entry.getKey();
             MethodInfo        method2 = entry.getValue();
 
-            if (method2.isConstructor() && !method2.containsVirtualConstructor()) {
+            if (method2.isCtorOrValidator() && !method2.containsVirtualConstructor()) {
                 continue;
             }
 
             MethodInfo method1 = info1.getMethodBySignature(sig);
             if (method1 == null ||
-                    method1.isConstructor() && !method1.containsVirtualConstructor()) {
+                    method1.isCtorOrValidator() && !method1.containsVirtualConstructor()) {
                 // the method is only in the second map or a non-virtual constructor that has been
                 // explicitly excluded by the check in the first loop
                 map.put(method2.getIdentity(), method2);

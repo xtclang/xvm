@@ -2254,7 +2254,7 @@ public abstract class TypeConstant
 
         for (Map.Entry<MethodConstant, MethodInfo> entry : infoPri.getMethods().entrySet()) {
             MethodInfo method = entry.getValue();
-            if (method.isFunction() || method.isConstructor()) {
+            if (method.isFunction() || method.isCtorOrValidator()) {
                 mapMethods.put(entry.getKey(), method);
             }
         }
@@ -3787,10 +3787,11 @@ public abstract class TypeConstant
 
                 boolean fKeep      = true;
                 Object  nidContrib = idContrib.resolveNestedIdentity(pool, this);
-                if (methodContrib.isConstructor()) {
+                if (methodContrib.isCtorOrValidator()) {
                     // not top-level or annotation constructors are not part of this type
                     // constructor call chains; however the annotation "validators" are
-                    if (!idContrib.isTopLevel() || fAnnotation) {
+                    if (!idContrib.isTopLevel() ||
+                            fAnnotation && !methodContrib.isValidator()) {
                         continue;
                     }
 

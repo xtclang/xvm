@@ -841,7 +841,7 @@ public class CommonBuilder
             JitMethodDesc jmDesc = method.getJitDesc(typeSystem, typeInfo.getType());
             assembleMethod(className, classBuilder, method, jitName, jmDesc);
 
-            if (method.isConstructor()) {
+            if (method.isCtorOrValidator()) {
                 String        newName = jitName.replace("construct", typeInfo.isSingleton() ? INIT : NEW);
                 JitMethodDesc newDesc = Builder.convertConstructToNew(typeInfo, className, (JitCtorDesc) jmDesc);
                 assembleNew(className, classBuilder, method, newName, newDesc);
@@ -1324,7 +1324,7 @@ public class CommonBuilder
         MethodTypeDesc md;
         if (jmd.isOptimized) {
             assembleMethodWrapper(className, classBuilder, jitName, jmd,
-                    method.isFunction(), method.isConstructor());
+                    method.isFunction(), method.isCtorOrValidator());
             jitName += OPT;
             md = jmd.optimizedMD;
         } else {
@@ -1335,7 +1335,7 @@ public class CommonBuilder
         if (method.isAbstract()) {
             flags |= ClassFile.ACC_ABSTRACT;
         }
-        if (method.isFunction() || method.isConstructor()) {
+        if (method.isFunction() || method.isCtorOrValidator()) {
             if (classStruct.getFormat() == Format.INTERFACE) {
                 // this must be a funky interface method; just ignore
                 return;

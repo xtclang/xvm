@@ -209,7 +209,7 @@ public class MethodBody {
     /**
      * @return true iff this is a constructor or validator, and not a method or function
      */
-    public boolean isConstructor() {
+    public boolean isCtorOrValidator() {
         MethodStructure structMethod = getMethodStructure();
         return structMethod != null &&
             (structMethod.isConstructor() || structMethod.isValidator());
@@ -396,7 +396,7 @@ public class MethodBody {
      */
     public boolean isOp(String sName, String sOp, int cParams) {
         // must be a method (not a function)
-        if (isFunction() || isConstructor()) {
+        if (isFunction() || isCtorOrValidator()) {
             return false;
         }
 
@@ -552,14 +552,14 @@ public class MethodBody {
     public synchronized JitMethodDesc getJitDesc(TypeSystem ts, TypeConstant typeContainer) {
         JitMethodDesc jmd = m_jmd;
         if (jmd == null ||
-                isConstructor() && !typeContainer.removeAccess().equals(m_typeJmdContainer)) {
+                isCtorOrValidator() && !typeContainer.removeAccess().equals(m_typeJmdContainer)) {
             MethodStructure   method        = getMethodStructure();
             TypeConstant      typeCanonical = typeContainer.getCanonicalJitType().normalizeParameters();
             SignatureConstant sigActual     = getIdentity().getSignature().
                                                     resolveGenericTypes(ts.pool(), typeCanonical);
 
             m_jmd = jmd = JitMethodDesc.of(sigActual.getRawParams(), sigActual.getRawReturns(),
-                                isConstructor(), typeContainer.ensureClassDesc(ts),
+                                isCtorOrValidator(), typeContainer.ensureClassDesc(ts),
                                 method.getRequiredParamCount(), ts);
             m_typeJmdContainer = typeContainer;
         }

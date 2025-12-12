@@ -677,7 +677,7 @@ public class TypeInfo {
         }
 
         for (MethodInfo infoMethod : f_mapMethods.values()) {
-            if (infoMethod.isConstructor() && infoMethod.isUncoveredVirtualConstructor(this)) {
+            if (infoMethod.isCtorOrValidator() && infoMethod.isUncoveredVirtualConstructor(this)) {
                 type.log(errs, Severity.ERROR, Constants.VE_NEW_VIRTUAL_CONSTRUCT,
                     sTarget, infoMethod.getIdentity().getValueString());
                 return;
@@ -1293,11 +1293,11 @@ public class TypeInfo {
             }
 
             for (MethodBody body : methodTest.getChain()) {
-                TypeConstant typeCtx = methodTest.isFunction() || methodTest.isConstructor()
+                TypeConstant typeCtx = methodTest.isFunction() || methodTest.isCtorOrValidator()
                         ? null
                         : typeThis;
 
-                if (methodTest.isConstructor() && !methodTest.containsVirtualConstructor()) {
+                if (methodTest.isCtorOrValidator() && !methodTest.containsVirtualConstructor()) {
                     // if the "sig" represents a constructor, this method should be called *only*
                     // for virtual constructor chains, therefore it cannot not match a regular one
                     continue;
@@ -1593,7 +1593,7 @@ public class TypeInfo {
                     && id.getName().equals(sName)
                     && id.getRawParams() .length >= cArgs
                     && id.getRawReturns().length >= cRedundant
-                    && (info.isConstructor()
+                    && (info.isCtorOrValidator()
                             ? (!fMethod && !fFunction)
                             : info.isFunction() ? fFunction : fMethod)) {
                 SignatureConstant sig      = info.getSignature();
@@ -1905,7 +1905,7 @@ public class TypeInfo {
                     : null;
 
             sigResolved = sigMethod.resolveAutoNarrowing(pool, type, idCtx);
-            if (method.isConstructor()) {
+            if (method.isCtorOrValidator()) {
                 sigResolved = sigResolved.removeAutoNarrowing();
             }
         } else {
