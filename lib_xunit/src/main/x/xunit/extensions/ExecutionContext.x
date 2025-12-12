@@ -15,16 +15,6 @@ interface ExecutionContext {
     @RO String displayName;
 
     /**
-     * The `Module` associated to the current test fixture.
-     */
-    @RO Module? testModule;
-
-    /**
-     * The `Package` associated to the current test fixture.
-     */
-    @RO Package? testPackage;
-
-    /**
      * The `Class` associated to the current test fixture.
      */
     @RO Class? testClass;

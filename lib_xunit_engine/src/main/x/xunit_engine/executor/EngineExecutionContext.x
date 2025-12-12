@@ -19,8 +19,6 @@ service EngineExecutionContext
     private construct (Builder builder) {
         this.model          = builder.model;
         this.displayName    = builder.displayName;
-        this.testModule     = builder.testModule;
-        this.testPackage    = builder.testPackage;
         this.testClass      = builder.testClass;
         this.testMethod     = builder.testMethod;
         this.testFixture    = builder.testFixture;
@@ -48,18 +46,6 @@ service EngineExecutionContext
      */
     @Override
     String displayName;
-
-    /**
-     * The `Module` associated to the current test fixture.
-     */
-    @Override
-    Module? testModule;
-
-    /**
-     * The `Package` associated to the current test fixture.
-     */
-    @Override
-    Package? testPackage;
 
     /**
      * The `Class` associated to the current test fixture.
@@ -177,12 +163,6 @@ service EngineExecutionContext
 
             case (String, "displayName"):
                 return True, displayName;
-
-            case (Module?, "testModule"):
-                return True, testModule;
-
-            case (Package?, "testPackage"):
-                return True, testPackage;
         }
 
 
@@ -232,8 +212,6 @@ service EngineExecutionContext
         private construct (EngineExecutionContext ctx, Model model) {
             this.model          = model;
             this.displayName    = model.displayName;
-            this.testModule     = ctx.testModule;
-            this.testPackage    = ctx.testPackage;
             this.testClass      = ctx.testClass;
             this.testMethod     = ctx.testMethod;
             this.testFixture    = ctx.testFixture;

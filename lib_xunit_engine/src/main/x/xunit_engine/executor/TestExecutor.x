@@ -62,11 +62,11 @@ const TestExecutor {
         updateResourceProvider(context, registry);
 
         FixtureExecutionCallback[] modelCallbacks = registry.get(FixtureExecutionCallback);
-	    for (FixtureExecutionCallback callback : modelCallbacks) {
-            callback.beforeFixtureExecution(context);
-	    }
 
 		if (context := collector.execute(() -> lifecycle.prepare(parentContext, registry))) {
+            for (FixtureExecutionCallback callback : modelCallbacks) {
+                callback.beforeFixtureExecution(context);
+            }
             updateResourceProvider(context, registry);
             if (skipResult := collector.execute(() -> lifecycle.shouldBeSkipped(context, registry))) {
                 if (collector.empty && !skipResult.skipped) {

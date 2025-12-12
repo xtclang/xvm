@@ -99,6 +99,27 @@ const UniqueId
         return False;
     }
 
+    /**
+     * Returns `True` iff this `UniqueId` is a parent of the supplied `UniqueId`.
+     *
+     * @param other  the `UniqueId` to check
+     *
+     * @return `True` iff this `UniqueId` is a parent of the supplied `UniqueId`
+     */
+    Boolean isParentOf(UniqueId other) {
+        // to be a child of this id, the segment length must be longer than this id
+        if (other.segments.size > this.segments.size) {
+            // the other id segments must start with this id segments
+            for (Int i : 0 ..< this.segments.size) {
+                if (other.segments[i] != this.segments[i]) {
+                    return False;
+                }
+            }
+            return True;
+        }
+        return False;
+    }
+
     // ----- Comparable methods --------------------------------------------------------------------
 
     @Override
