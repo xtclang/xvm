@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -5784,7 +5785,7 @@ public abstract class TypeConstant
     /**
      * Check for any reserved types relations.
      *
-     * @return the calculated relation or null if no judgement can be made
+     * @return the calculated relation or null if no judgment can be made
      */
     protected static Relation checkReservedCompatibility(TypeConstant typeLeft, TypeConstant typeRight) {
         if (!typeLeft.isSingleUnderlyingClass(true) || !typeRight.isSingleUnderlyingClass(true) ||
@@ -6324,7 +6325,7 @@ public abstract class TypeConstant
             return 0x10;
 
         case "text.Char":
-            // unicode goes from 0 to 10FFFF
+            // Unicode goes from 0 to 10FFFF
             return 0x10FFFF + 1;
 
         case "numbers.Int8":
@@ -7114,7 +7115,7 @@ public abstract class TypeConstant
                         TypeConstant typePLeft  = typeLeft.getGenericParamType(sName, Collections.emptyList());
                         TypeConstant typePRight = typeRight.getGenericParamType(sName, Collections.emptyList());
 
-                        if (!typePRight.equals(typePLeft)) {
+                        if (!Objects.equals(typePRight, typePLeft)) {
                             return false;
                         }
                     }
