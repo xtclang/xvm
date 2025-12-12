@@ -583,25 +583,24 @@ public class ModuleInfo {
 
     @Override
     public String toString() {
-        return "Module(name="         + (moduleName == null ? "<unknown>" : moduleName)
+        return "Module(name="         + Objects.toString(moduleName, "<unknown>")
              + ", fileSpec="          + fileSpec
              + ", fileName="          + fileName
-             + ", moduleName="        + (moduleName == null ? "<unknown>" : moduleName)
              + ", projectDir="        + projectDir
              + ", sourceStatus="      + sourceStatus
              + ", sourceDir="         + sourceDir
              + ", sourceIsTree="      + sourceIsTree
              + ", sourceFile="        + sourceFile
              + ", sourceContent="     + sourceContent
-             + ", sourceTimestamp="   + (sourceTimestamp == 0 ? "<unknown>" : dateString(sourceTimestamp))
-             + ", resourceDir="       + resourceDir == null ? "<unknown>" : resourceDir
-             + ", resourceTimestamp=" + (resourceTimestamp == 0 ? "<unknown>" : dateString(resourceTimestamp))
+             + ", sourceTimestamp="   + dateString(sourceTimestamp, "<unknown>")
+             + ", resourceDir="       + Objects.toString(resourceDir, "<unknown>")
+             + ", resourceTimestamp=" + dateString(resourceTimestamp, "<unknown>")
              + ", binaryStatus="      + binaryStatus
-             + ", binaryDir="         + binaryDir == null ? "<unknown>" : binaryDir
-             + ", binaryFile="        + binaryFile == null ? "<unknown>" : binaryFile
-             + ", binaryVersion="     + binaryVersion == null ? "<unknown>" : binaryVersion
+             + ", binaryDir="         + Objects.toString(binaryDir, "<unknown>")
+             + ", binaryFile="        + Objects.toString(binaryFile, "<unknown>")
+             + ", binaryVersion="     + Objects.toString(binaryVersion, "<unknown>")
              + ", binaryContent="     + binaryContent
-             + ", binaryTimestamp="   + (binaryTimestamp == 0 ? "<unknown>" : dateString(binaryTimestamp));
+             + ", binaryTimestamp="   + dateString(binaryTimestamp, "<unknown>");
     }
 
 
@@ -1364,12 +1363,9 @@ public class ModuleInfo {
             // this can only happen if the errors were ignored
             Statement stmt = ast();
             if (stmt != null) {
-                if (stmt instanceof TypeCompositionStatement stmtType) {
-                    m_stmtType = stmtType;
-                } else {
-                    List<Statement> list = ((StatementBlock) stmt).getStatements();
-                    m_stmtType = (TypeCompositionStatement) list.getLast();
-                }
+                m_stmtType = (TypeCompositionStatement) (stmt instanceof StatementBlock sb
+                        ? sb.getStatements().getLast()
+                        : stmt);
             }
         }
 

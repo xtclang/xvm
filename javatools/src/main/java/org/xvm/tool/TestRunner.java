@@ -60,15 +60,13 @@ public class TestRunner extends Runner {
      */
     public static final String XUNIT_TEST_METHODS_ARG = "xvm.xunit.discovery.test";
 
-    private static final String COMMAND_NAME = "test";
-
     /**
      * Entry point from the OS.
      *
      * @param args command line arguments
      */
     static void main(final String[] args) {
-        Launcher.main(insertCommand(COMMAND_NAME, args));
+        Launcher.main(insertCommand(CMD_TEST, args));
     }
 
     /**
@@ -80,13 +78,6 @@ public class TestRunner extends Runner {
      */
     public TestRunner(final TestRunnerOptions options, final Console console, final ErrorListener errListener) {
         super(options, console, errListener);
-    }
-
-    /**
-     * @return the command name for this launcher
-     */
-    public static String getCommandName() {
-        return COMMAND_NAME;
     }
 
     @Override

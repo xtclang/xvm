@@ -9,7 +9,6 @@ import org.xvm.tool.Launcher;
 import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.LauncherOptions.RunnerOptions;
 import org.xvm.tool.Runner;
-import org.xvm.tool.TestRunner;
 
 import java.io.File;
 import java.io.IOException;
@@ -340,7 +339,7 @@ class XdkIntegrationTest {
     @Test
     void testLauncherInvalidCompilerArgs() {
         // Test that launcher handles invalid compiler args gracefully
-        String[] args = {Compiler.getCommandName(), "--invalid-flag", "Test.x"};
+        String[] args = {Launcher.CMD_BUILD, "--invalid-flag", "Test.x"};
 
         int result = Launcher.launch(args);
         assertEquals(1, result, "Invalid compiler args should return exit code 1");
@@ -349,7 +348,7 @@ class XdkIntegrationTest {
     @Test
     void testLauncherInvalidRunnerArgs() {
         // Test that launcher handles invalid runner args gracefully
-        String[] args = {Runner.getCommandName(), "--bad-option", "Test.xtc"};
+        String[] args = {Launcher.CMD_RUN, "--bad-option", "Test.xtc"};
 
         int result = Launcher.launch(args);
         assertEquals(1, result, "Invalid runner args should return exit code 1");
@@ -358,7 +357,7 @@ class XdkIntegrationTest {
     @Test
     void testLauncherInvalidTestRunnerArgs() {
         // Test that launcher handles invalid test runner args gracefully
-        String[] args = {TestRunner.getCommandName(), "--bad-option", "Test.xtc"};
+        String[] args = {Launcher.CMD_TEST, "--bad-option", "Test.xtc"};
 
         int result = Launcher.launch(args);
         assertEquals(1, result, "Invalid test runner args should return exit code 1");

@@ -87,6 +87,15 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
 
     // ----- constants -----------------------------------------------------------------------------
 
+    /**
+     * Command name constants. These are defined here (not in the subclasses) to avoid
+     * class loading deadlock when LauncherOptions references them during static initialization.
+     */
+    public static final String CMD_BUILD  = "build";
+    public static final String CMD_RUN    = "run";
+    public static final String CMD_TEST   = "test";
+    public static final String CMD_DISASS = "disass";
+
     private static final Locale DEFAULT_LOCALE = Locale.getDefault();
 
     private static final int JDK_VERSION_MIN = 21;

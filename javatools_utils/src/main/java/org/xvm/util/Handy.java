@@ -900,6 +900,17 @@ public final class Handy {
                 .format(DATE_TIME_FORMATTER);
     }
 
+    /**
+     * @param cMillis       date/time in millis
+     * @param defaultValue  the value to return if cMillis is 0
+     *
+     * @return date/time string in format "YYYY-MM-DD HH:MM:SS" format, or the default value if
+     *         cMillis is 0
+     */
+    public static String dateString(final long cMillis, final String defaultValue) {
+        return cMillis == 0L ? defaultValue : dateString(cMillis);
+    }
+
 
     // ----- packed integers -----------------------------------------------------------------------
 

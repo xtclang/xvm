@@ -44,8 +44,6 @@ import static org.xvm.util.Severity.INFO;
  */
 public class Disassembler extends Launcher<DisassemblerOptions> {
 
-    private static final String COMMAND_NAME = "disass";
-
     @SuppressWarnings("unused")
     private static final byte FREE    = 0;
     private static final byte DIR     = 1;
@@ -74,14 +72,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
      * @param args command line arguments
      */
     static void main(final String[] args) {
-        Launcher.main(insertCommand(COMMAND_NAME, args));
-    }
-
-    /**
-     * @return the command name for this launcher
-     */
-    public static String getCommandName() {
-        return COMMAND_NAME;
+        Launcher.main(insertCommand(CMD_DISASS, args));
     }
 
     @Override
