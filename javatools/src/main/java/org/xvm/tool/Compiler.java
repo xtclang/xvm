@@ -104,8 +104,6 @@ import static org.xvm.util.Severity.WARNING;
  */
 public class Compiler extends Launcher<CompilerOptions> {
 
-    private static final String COMMAND_NAME = "build";
-
     protected enum Strictness {
         None,
         Suppressed,
@@ -142,14 +140,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      * @param args command line arguments
      */
     static void main(final String[] args) {
-        Launcher.main(insertCommand(COMMAND_NAME, args));
-    }
-
-    /**
-     * @return the command name for this launcher
-     */
-    public static String getCommandName() {
-        return COMMAND_NAME;
+        Launcher.main(insertCommand(CMD_BUILD, args));
     }
 
     /**

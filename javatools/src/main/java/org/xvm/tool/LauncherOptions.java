@@ -583,7 +583,7 @@ public abstract class LauncherOptions {
     public static class CompilerOptions extends LauncherOptions {
 
         CompilerOptions(final CommandLine commandLine) {
-            super(commandLine, COMPILER_OPTIONS, Compiler.getCommandName());
+            super(commandLine, COMPILER_OPTIONS, "build");
         }
 
         /**
@@ -871,7 +871,7 @@ public abstract class LauncherOptions {
     public static class RunnerOptions extends LauncherOptions {
 
         RunnerOptions(final CommandLine commandLine) {
-            super(commandLine, RUNNER_OPTIONS, Runner.getCommandName());
+            super(commandLine, RUNNER_OPTIONS, "run");
         }
 
         /**
@@ -1249,7 +1249,7 @@ public abstract class LauncherOptions {
     public static class DisassemblerOptions extends LauncherOptions {
 
         DisassemblerOptions(final CommandLine commandLine) {
-            super(commandLine, DISASSEMBLER_OPTIONS, Disassembler.getCommandName());
+            super(commandLine, DISASSEMBLER_OPTIONS, "disass");
         }
 
         /**

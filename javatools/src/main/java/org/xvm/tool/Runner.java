@@ -46,8 +46,6 @@ import static java.util.Objects.requireNonNull;
  */
 public class Runner extends Launcher<RunnerOptions> {
 
-    private static final String COMMAND_NAME = "run";
-
     /**
      * Runner constructor for programmatic use.
      *
@@ -65,14 +63,7 @@ public class Runner extends Launcher<RunnerOptions> {
      * @param asArg command line arguments
      */
     static void main(final String[] asArg) {
-        Launcher.main(insertCommand(COMMAND_NAME, asArg));
-    }
-
-    /**
-     * @return the command name for this launcher
-     */
-    public static String getCommandName() {
-        return COMMAND_NAME;
+        Launcher.main(insertCommand(CMD_RUN, asArg));
     }
 
     // TODO: Also support process calls with an overriding options object as parameter.
