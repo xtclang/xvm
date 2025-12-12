@@ -26,4 +26,37 @@ package extensions {
          */
         ExtensionProvider[] getExtensionProviders() = [];
     }
+
+    /**
+     * Returns the directory to for any files specific for the current test.
+     *
+     * @param root  the root directory to place the test directory under
+     *
+     * @return the directory to for any files specific for the current test
+     */
+    static Directory testDirectoryFor(Directory         root,
+                                      Class?            testClass,
+                                      MethodOrFunction? test = Null) {
+        Directory dir = root;
+        if (testClass.is(Class)) {
+            String path = testClass.path;
+            Int    size = path.size;
+            if (path[size - 1] == ':') {
+                // this is a Module
+                dir = dir.dirFor(testClass.name);
+            } else {
+                assert Int colon := path.indexOf(':');
+                String packages   = path[colon >..< path.size];
+                for (String name : packages.split('.')) {
+                    dir = dir.dirFor(name);
+                }
+                if (test.is(Test)) {
+                    dir = dir.dirFor(test.name);
+                }
+            }
+        }
+        dir.ensure();
+        return dir;
+    }
+
 }
