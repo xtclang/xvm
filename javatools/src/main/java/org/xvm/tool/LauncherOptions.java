@@ -871,7 +871,11 @@ public abstract class LauncherOptions {
     public static class RunnerOptions extends LauncherOptions {
 
         RunnerOptions(final CommandLine commandLine) {
-            super(commandLine, RUNNER_OPTIONS, "run");
+            this(commandLine, RUNNER_OPTIONS);
+        }
+
+        RunnerOptions(final CommandLine commandLine, final Options schema) {
+            super(commandLine, schema, "run");
         }
 
         /**
@@ -1176,7 +1180,7 @@ public abstract class LauncherOptions {
     public static class TestRunnerOptions extends RunnerOptions {
 
         TestRunnerOptions(final CommandLine commandLine) {
-            super(commandLine);
+            super(commandLine, TEST_RUNNER_OPTIONS);
         }
 
         /**
