@@ -2,6 +2,7 @@ package org.xvm.api;
 
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -28,10 +29,10 @@ import org.xvm.runtime.template.text.xString;
 
 /**
  * The API between Java host environment and an XVM runtime.
- *
+ * <p>
  * For a given Connector there is one and only one Runtime and one and only one top level
  * Container. All underlying Containers will use the same Runtime.
- *
+ * <p>
  * Normally, the usage of the Connector follows these steps:
  * <ul>
  *   <li> instantiate a Connector
@@ -90,14 +91,17 @@ public class Connector {
 
     /**
      * Start the Runtime and the main Container.
+     *
+     * @param mapInjections a map of custom injections where each key maps to a list of values;
+     *                      may be null or empty if there are no custom injections
      */
-    public void start(Map<String, String> mapInjections) {
+    public void start(Map<String, List<String>> mapInjections) {
         if (!m_fStarted) {
             f_runtime.start();
             m_fStarted = true;
         }
 
-        m_containerMain.start(mapInjections);
+        m_containerMain.start(mapInjections == null ? Map.of() : mapInjections);
     }
 
     /**
@@ -125,9 +129,21 @@ public class Connector {
      * Invoke an XTC method with a void return and specified arguments.
      *
      * @param method  the method structure
-     * @param asArg   arguments
+     * @param args    arguments as a list
+     */
+    public void invoke0(MethodStructure method, List<String> args) {
+        invoke0(method, args.toArray(new String[0]));
+    }
+
+    /**
+     * Invoke an XTC method with a void return and specified arguments.
+     *
+     * @param method  the method structure
+     * @param asArg   arguments (must not be null)
      */
     public void invoke0(MethodStructure method, String... asArg) {
+        assert asArg != null;
+
         if (!m_fStarted) {
             throw new IllegalStateException("The container has not been started");
         }
@@ -138,7 +154,7 @@ public class Connector {
 
         switch (method.getRequiredParamCount()) {
         case 0:
-            if (asArg != null) {
+            if (asArg.length > 0) {
                 assert method.getParamCount() > 0;
                 TypeConstant typeArg = method.getParam(0).getType();
 
@@ -151,10 +167,7 @@ public class Connector {
             TypeConstant typeArg = method.getParam(0).getType();
             assert typeStrings.isA(typeArg);
             // the method requires an array that we can supply
-            ahArg = new ObjectHandle[] {
-                asArg == null
-                    ? xString.ensureEmptyArray()
-                    : xString.makeArrayHandle(asArg)};
+            ahArg = new ObjectHandle[]{xString.makeArrayHandle(asArg)};
             break;
         }
         }
@@ -168,6 +181,7 @@ public class Connector {
      * @return zero if the main method was void or the return type not an int-convertible; otherwise
      *              the return value
      */
+    @SuppressWarnings("BusyWait")
     public int join()
             throws InterruptedException {
         // extremely naive; replace

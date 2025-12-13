@@ -25,8 +25,12 @@ val xdkJavaToolsProvider by configurations.registering {
 }
 
 dependencies {
+    compileOnly(libs.jetbrains.annotations)
     implementation(libs.javatools.utils)
     implementation(libs.jline)
+    implementation(libs.apache.commons.cli)
+    implementation(libs.gson)
+    testCompileOnly(libs.jetbrains.annotations)
     testImplementation(libs.javatools.utils)
 }
 
@@ -164,7 +168,12 @@ val jar by tasks.existing(Jar::class) {
 
     // Build your fat-jar content lazily
     from(configurations.compileClasspath.map { cfg ->
-        cfg.filter { it.name.endsWith(".jar") }.map(::zipTree)
+        cfg.filter { it.name.endsWith(".jar") }.map { file ->
+            zipTree(file).matching {
+                // Exclude module-info files from dependencies - fat JARs should not be JPMS modules
+                exclude("module-info.class", "META-INF/versions/*/module-info.class")
+            }
+        }
     })
 
     archiveBaseName = "javatools"

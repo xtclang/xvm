@@ -184,7 +184,7 @@ public class SetTest {
     static void displayErr(final List<Op> listOps, final int iSet, final int iOp, final Throwable e) {
         out();
         out("Exception on set# " + iSet + " in step# " + iOp + ": " + e.getMessage());
-        e.printStackTrace(System.out);
+        e.printStackTrace(System.err);
         out();
         out("Test steps:");
         for (int i = 0, c = listOps.size(); i < c; ++i) {

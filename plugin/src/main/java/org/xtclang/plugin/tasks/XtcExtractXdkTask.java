@@ -9,9 +9,10 @@ import java.io.File;
 
 import javax.inject.Inject;
 
-import org.gradle.api.Project;
+import org.gradle.api.DefaultTask;
 import org.gradle.api.file.ArchiveOperations;
 import org.gradle.api.file.ConfigurableFileCollection;
+import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.FileSystemOperations;
 import org.gradle.api.file.RelativePath;
 import org.gradle.api.tasks.CacheableTask;
@@ -21,23 +22,23 @@ import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
 
+/**
+ * Task that extracts XTC modules and javatools.jar from an XDK distribution zip.
+ * This task extends DefaultTask directly - it doesn't need XtcDefaultTask functionality.
+ */
 @CacheableTask
-public abstract class XtcExtractXdkTask extends XtcDefaultTask {
+public abstract class XtcExtractXdkTask extends DefaultTask {
     private static final String XDK_ARCHIVE_DEFAULT_EXTENSION = "zip";
 
-    // Injected services for configuration cache compatibility
-    private final FileSystemOperations fileSystemOperations;
-    private final ArchiveOperations archiveOperations;
-
-    @SuppressWarnings("ConstructorNotProtectedInAbstractClass")
+    /**
+     * Injected services for configuration cache compatibility.
+     * These are accessed via abstract getters rather than stored as fields.
+     */
     @Inject
-    public XtcExtractXdkTask(final FileSystemOperations fileSystemOperations, final ArchiveOperations archiveOperations) {
-        super();
+    public abstract FileSystemOperations getFileSystemOperations();
 
-        // Store injected services
-        this.fileSystemOperations = fileSystemOperations;
-        this.archiveOperations = archiveOperations;
-    }
+    @Inject
+    public abstract ArchiveOperations getArchiveOperations();
 
     private static boolean isXdkArchive(final File file) {
         return XDK_ARCHIVE_DEFAULT_EXTENSION.equals(getFileExtension(file));
@@ -48,11 +49,11 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
     public abstract ConfigurableFileCollection getInputXdkArchive();
 
     @OutputDirectory
-    public abstract org.gradle.api.file.DirectoryProperty getOutputXtcModules();
+    public abstract DirectoryProperty getOutputXtcModules();
 
     @TaskAction
     public void extractXdk() {
-        executeTask();
+        final var logger = getLogger();
 
         // The task is configured at this point. We should indeed have found a zip archive from some xdkDistributionProvider somewhere.
         final var archives = getInputXdkArchive().filter(XtcExtractXdkTask::isXdkArchive);
@@ -63,11 +64,10 @@ public abstract class XtcExtractXdkTask extends XtcDefaultTask {
 
         // If there are no archives, we do not depend on the XDK.
         final var archiveFile = archives.getSingleFile();
-        // Remove prefix variable since we're using hardcoded [plugin]
 
-        fileSystemOperations.copy(config -> {
+        getFileSystemOperations().copy(config -> {
             logger.info("[plugin] CopySpec: XDK archive file dependency: {}", archiveFile);
-            config.from(archiveOperations.zipTree(archiveFile));
+            config.from(getArchiveOperations().zipTree(archiveFile));
             config.include(
                     "**/*." + XTC_MODULE_FILE_EXTENSION,
                     "**/" + XDK_JAVATOOLS_ARTIFACT_ID + '*' + XDK_JAVATOOLS_ARTIFACT_SUFFIX);

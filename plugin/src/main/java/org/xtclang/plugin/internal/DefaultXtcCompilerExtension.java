@@ -11,16 +11,13 @@ import org.gradle.api.provider.ProviderFactory;
 
 import org.jetbrains.annotations.NotNull;
 
-import org.xtclang.plugin.ProjectDelegate;
 import org.xtclang.plugin.XtcCompilerExtension;
+import org.xtclang.plugin.XtcProjectDelegate;
 
 public abstract class DefaultXtcCompilerExtension extends DefaultXtcLauncherTaskExtension implements XtcCompilerExtension {
-    private static final Logger logger = Logging.getLogger(DefaultXtcCompilerExtension.class);
+    private static final Logger LOGGER = Logging.getLogger(DefaultXtcCompilerExtension.class);
     private static final String REBUILD_FLAG_DEFAULT_PROPERTY = "xtcDefaultRebuild";
 
-    // Even though we have getters, these need to be protected for subclasses to be able to use them in the build DSL
-    // We still have to have getters, or the plugin validation fails, and we might as well put the input properties on
-    // those for readability.
     protected final Property<@NotNull Boolean> disableWarnings;
     protected final Property<@NotNull Boolean> strict;
     protected final Property<@NotNull Boolean> hasQualifiedOutputName;
@@ -29,21 +26,20 @@ public abstract class DefaultXtcCompilerExtension extends DefaultXtcLauncherTask
     protected final Property<@NotNull Boolean> rebuild;
 
     @Inject
-    @SuppressWarnings("this-escape") // Calling @Inject abstract method in constructor is safe
-    public DefaultXtcCompilerExtension() {
-        final ObjectFactory objects = getObjects();
-        final ProviderFactory providers = getProviders();
+    @SuppressWarnings("ConstructorNotProtectedInAbstractClass")
+    public DefaultXtcCompilerExtension(final ObjectFactory objects, final ProviderFactory providers) {
+        super(objects, providers);
         final Provider<@NotNull String> rebuildDefaultProperty = providers.gradleProperty(REBUILD_FLAG_DEFAULT_PROPERTY);
         final boolean rebuildDefaultValue = !rebuildDefaultProperty.isPresent() || Boolean.parseBoolean(rebuildDefaultProperty.get());
         if (!rebuildDefaultValue) {
-            logger.info("[plugin] Project has global override for default value of rebuild flag: false");
+            LOGGER.info("[plugin] Project has global override for default value of rebuild flag: false");
         }
         this.rebuild = objects.property(Boolean.class).convention(rebuildDefaultValue);
         this.disableWarnings = objects.property(Boolean.class).convention(false);
         this.strict = objects.property(Boolean.class).convention(false);
         this.hasQualifiedOutputName = objects.property(Boolean.class).convention(false);
         this.hasVersionedOutputName = objects.property(Boolean.class).convention(false);
-        this.stamp = objects.property(String.class).convention(ProjectDelegate.readXdkVersion());
+        this.stamp = objects.property(String.class).convention(XtcProjectDelegate.readXdkVersion());
     }
 
     @Override

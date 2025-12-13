@@ -5,6 +5,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import javax.inject.Inject;
 
@@ -19,7 +20,7 @@ import org.xtclang.plugin.XtcPluginUtils;
 import org.xtclang.plugin.XtcRunModule;
 
 public class DefaultXtcRunModule implements XtcRunModule {
-    private static final String DEFAULT_METHOD_NAME = "run";
+    public static final String DEFAULT_METHOD_NAME = "run";
 
     protected final Property<@NotNull String> moduleName;
     protected final Property<@NotNull String> methodName;
@@ -102,6 +103,16 @@ public class DefaultXtcRunModule implements XtcRunModule {
     @Override
     public int compareTo(final XtcRunModule other) {
         return getModuleName().get().compareTo(other.getModuleName().get());
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+        return o instanceof DefaultXtcRunModule && compareTo((DefaultXtcRunModule) o) == 0;
+    }
+
+    @Override
+    public int hashCode() {
+        return moduleName.hashCode() ^ methodName.hashCode();
     }
 
     @Override

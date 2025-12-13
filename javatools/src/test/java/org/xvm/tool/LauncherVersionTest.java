@@ -1,111 +1,117 @@
 package org.xvm.tool;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Test;
 import org.xvm.asm.BuildInfo;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * Integration test for launcher version display functionality.
  * Tests that the --version output contains expected git and API information.
  */
 public class LauncherVersionTest {
+    private static final Pattern PATTERN = Pattern.compile("xdk version .+ \\(\\d+\\.\\d+\\).*");
+
+    /**
+     * Test console that captures all output lines.
+     */
+    private static final class CaptureConsole implements Console {
+        private final List<String> lines = new ArrayList<>();
+
+        @Override
+        public String out(final Object o) {
+            if (o != null) {
+                lines.add(o.toString());
+            }
+            return "";
+        }
+
+        @SuppressWarnings("unused")
+        public List<String> getLines() {
+            return lines;
+        }
+
+        public String getAllOutput() {
+            return String.join("\n", lines);
+        }
+    }
+
     @Test
     public void testVersionOutputFormat() {
-        // Capture system output
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        PrintStream originalOut = System.out;
-        System.setOut(new PrintStream(outputStream));
+        // Capture output via console
+        final var console = new CaptureConsole();
+        final var args = new String[]{"--version"};
 
-        try {
-            // Run xcc --version command
-            String[] args = {"xcc", "--version"};
-            Launcher.launch(args);
+        // Run build --version command
+        Launcher.launch(Launcher.CMD_BUILD, args, console, null);
 
-            String output = outputStream.toString().trim();
-            assertNotNull(output, "Version output should not be null");
+        final var output = console.getAllOutput().trim();
+        assertFalse(output.isEmpty(), "Version output should not be empty");
 
-            // Test that output follows expected format: "xdk version X.Y.Z (major.minor) [commit] (status)"
-            assertTrue(output.startsWith("xdk version"),
-                      "Version output should start with 'xdk version'");
+        // Test that output follows expected format: "xdk version X.Y.Z (major.minor) [commit] (status)"
+        assertTrue(output.startsWith("xdk version"),
+                  "Version output should start with 'xdk version'");
 
-            // Test that XDK version is present
-            String xdkVersion = BuildInfo.getXdkVersion();
-            assertTrue(output.contains(xdkVersion),
-                      "Version output should contain XDK version: " + xdkVersion);
+        // Test that XDK version is present
+        final var xdkVersion = BuildInfo.getXdkVersion();
+        assertTrue(output.contains(xdkVersion),
+                  "Version output should contain XDK version: " + xdkVersion);
 
-            // Test that XVM version is present in (major.minor) format
-            String xvmVersion = BuildInfo.getXvmVersionMajor() + "." + BuildInfo.getXvmVersionMinor();
-            assertTrue(output.contains("(" + xvmVersion + ")"),
-                      "Version output should contain XVM version: (" + xvmVersion + ")");
+        // Test that XVM version is present in (major.minor) format
+        final var xvmVersion = BuildInfo.getXvmVersionMajor() + "." + BuildInfo.getXvmVersionMinor();
+        assertTrue(output.contains("(" + xvmVersion + ")"),
+                  "Version output should contain XVM version: (" + xvmVersion + ")");
 
-            // Test git information if available
-            String gitCommit = BuildInfo.getGitCommit();
-            String gitStatus = BuildInfo.getGitStatus();
+        // Test git information if available
+        final var gitCommit = BuildInfo.getGitCommit();
+        final var gitStatus = BuildInfo.getGitStatus();
 
-            if (!gitCommit.isEmpty()) {
-                // Expect full commit ID for better traceability
-                assertTrue(output.contains("[" + gitCommit + "]"),
-                          "Version output should contain full git commit: [" + gitCommit + "]");
-            }
-
-            if (!gitStatus.isEmpty()) {
-                assertTrue(output.contains("(" + gitStatus + ")"),
-                          "Version output should contain git status: (" + gitStatus + ")");
-            }
-
-            // Test overall format pattern
-            assertTrue(output.matches("xdk version .+ \\(\\d+\\.\\d+\\).*"),
-                      "Version output should match expected pattern");
-        } finally {
-            // Restore system output
-            System.setOut(originalOut);
+        if (!gitCommit.isEmpty()) {
+            // Expect full commit ID for better traceability
+            assertTrue(output.contains("[" + gitCommit + "]"),
+                      "Version output should contain full git commit: [" + gitCommit + "]");
         }
+
+        if (!gitStatus.isEmpty()) {
+            assertTrue(output.contains("(" + gitStatus + ")"),
+                      "Version output should contain git status: (" + gitStatus + ")");
+        }
+
+        // Test overall format pattern
+        assertTrue(PATTERN.matcher(output).matches(),
+                  "Version output should match expected pattern");
     }
 
     @Test
-    public void testXecVersionOutput() {
-        // Test that xec --version also works
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        PrintStream originalOut = System.out;
-        System.setOut(new PrintStream(outputStream));
+    public void testRunnerVersionOutput() {
+        // Test that run --version also works
+        final var console = new CaptureConsole();
+        final var args = new String[]{"--version"};
 
-        try {
-            // Run xec --version command
-            String[] args = {"xec", "--version"};
-            Launcher.launch(args);
+        Launcher.launch(Launcher.CMD_RUN, args, console, null);
 
-            String output = outputStream.toString().trim();
-            assertNotNull(output, "XEC version output should not be null");
-            assertTrue(output.startsWith("xdk version"),
-                      "XEC version output should also start with 'xdk version'");
-        } finally {
-            System.setOut(originalOut);
-        }
+        final var output = console.getAllOutput().trim();
+        assertFalse(output.isEmpty(), "Runner version output should not be empty");
+        assertTrue(output.startsWith("xdk version"),
+                  "Runner version output should also start with 'xdk version'");
     }
 
     @Test
-    public void testXtcVersionOutput() {
-        // Test that xtc --version also works
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        PrintStream originalOut = System.out;
-        System.setOut(new PrintStream(outputStream));
+    public void testCompilerVersionOutput() {
+        // Test that build --version also works
+        final var console = new CaptureConsole();
+        final var args = new String[]{"--version"};
 
-        try {
-            // Run xtc --version command
-            String[] args = {"xtc", "--version"};
-            Launcher.launch(args);
+        Launcher.launch(Launcher.CMD_BUILD, args, console, null);
 
-            String output = outputStream.toString().trim();
-            assertNotNull(output, "XTC version output should not be null");
-            assertTrue(output.startsWith("xdk version"),
-                      "XTC version output should also start with 'xdk version'");
-        } finally {
-            System.setOut(originalOut);
-        }
+        final var output = console.getAllOutput().trim();
+        assertFalse(output.isEmpty(), "Compiler version output should not be empty");
+        assertTrue(output.startsWith("xdk version"),
+                  "Compiler version output should also start with 'xdk version'");
     }
 }

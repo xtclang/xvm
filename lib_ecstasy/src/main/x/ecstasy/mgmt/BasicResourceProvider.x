@@ -53,6 +53,24 @@ service BasicResourceProvider
                 return random;
             };
 
+        case (String?, _):
+            // ToDo This will return ANY string injectable from the parent, we might want to think
+            // about this and maybe filter them in some way as we would not necessarily want to pass
+            // down some injected information that the child container should not be able to see
+            return (Inject.Options opts) -> {
+                @Inject(resourceName=name, opts=opts) String? value;
+                return value;
+            };
+
+        case (String[]?, _):
+            // ToDo This will return ANY string injectable from the parent, we might want to think
+            // about this and maybe filter them in some way as we would not necessarily want to pass
+            // down some injected information that the child container should not be able to see
+            return (Inject.Options opts) -> {
+                @Inject(resourceName=name, opts=opts) String[]? value;
+                return value;
+            };
+
         default:
             // if the type is Nullable, no need to complain; just return Null, otherwise
             // return a deferred exception (thrown only if the container actually asks for the

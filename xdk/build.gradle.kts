@@ -22,6 +22,7 @@ import java.io.File
 
 plugins {
     alias(libs.plugins.xdk.build.properties)  // Apply first to set group/version
+    alias(libs.plugins.xdk.build.java)  // Provides java plugin + test framework
     alias(libs.plugins.xtc)  // Apply after properties are set
     alias(libs.plugins.xdk.build.publishing)
     application
@@ -67,6 +68,8 @@ repositories {
 
 dependencies {
     xdkJavaTools(libs.javatools)
+    // Test dependencies for integration tests
+    testImplementation(libs.javatools)
     xdkJavaToolsJitBridge(libs.javatools.jitbridge)
     xtcModule(libs.xdk.ecstasy)
     xtcModule(libs.xdk.aggregate)
@@ -84,6 +87,8 @@ dependencies {
     xtcModule(libs.xdk.webcli)
     xtcModule(libs.xdk.xenia)
     xtcModule(libs.xdk.xml)
+    xtcModule(libs.xdk.xunit)
+    xtcModule(libs.xdk.xunit.engine)
     xtcModule(libs.javatools.bridge)
     xtcLauncherBinaries(project(path = ":javatools-launcher", configuration = "xtcLauncherBinaries"))
 }
@@ -108,7 +113,7 @@ application {
 // Configure the application plugin to generate scripts using custom templates
 // TODO: This should also use the java convention default jvm args.
 tasks.startScripts {
-    applicationName = "xec"
+    applicationName = "xtc"
     classpath = configurations.xdkJavaTools.get()
     // Configure default JVM options
     defaultJvmOpts = buildList {
@@ -409,10 +414,23 @@ tasks.withType<Tar>().configureEach {
     archiveExtension = "tar.gz"
 }
 
-val test by tasks.existing {
-    doLast {
-        TODO("Implement response to the check lifecycle, probably some kind of aggregate XUnit.")
+// Resolve test stdout property at configuration time (acceptable - static test configuration)
+val showTestStdout = xdkProperties.booleanValue("org.xtclang.java.test.stdout", false)
+
+// Configure test task to run integration tests after XDK is fully built
+tasks.test {
+    // Tests require the XDK to be fully installed with all XTC libraries
+    dependsOn(tasks.installDist)
+
+    useJUnitPlatform()
+
+    testLogging {
+        events("passed", "skipped", "failed")
+        showStandardStreams = showTestStdout
     }
+
+    // Set working directory for tests
+    workingDir = projectDir
 }
 
 val withNativeLaunchersDistZip by tasks.existing {

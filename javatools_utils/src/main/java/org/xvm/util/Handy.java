@@ -21,9 +21,10 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.Map;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 import static java.util.Arrays.sort;
 
@@ -596,97 +597,6 @@ public final class Handy {
     }
 
     /**
-     * Parse a comma-delimited string containing "key=value" pairs. Key and or value strings can be
-     * quoted, and if quoted, can contain escape characters.
-     *
-     * @param s  the comma-delimited string containing "key=value" pairs
-     *
-     * @return null iff the passed string was not parseable; otherwise a map from string keys to
-     *         string values
-     */
-    @SuppressWarnings("fallthrough")
-    public static Map<String, String> parseStringMap(final String s) {
-        if (s == null || s.isEmpty()) {
-            return Collections.emptyMap();
-        }
-
-        ListMap<String, String> map = new ListMap<>();
-        int     of    = 0;
-        int     cch   = s.length();
-        boolean doKey = true;       // either "parsing key" or "parsing value"
-        String  key   = "";
-        String  val   = "";
-        while (of < cch) {
-            if (doKey) {
-                if (!key.isEmpty()) {
-                    // note: later pairs can override earlier pairs
-                    map.put(key, val);
-                } else if (!val.isEmpty()) {
-                    return null;
-                }
-                key = "";
-                val = "";
-            }
-
-            String cur;
-            switch (s.charAt(of)) {
-            case '\"':
-            case '\'':
-            case '`':
-                // appears to be a quoted string
-                int close = closingQuote(s, of);
-                if (close > of) {
-                    cur = unquotedString(s.substring(of, close+1));
-                    of = close + 1;
-                    break;
-                }
-                // fall through
-            default:
-                int next = s.indexOf(',', of);
-                if (next < 0) {
-                    next = cch;
-                }
-                if (doKey) {
-                    int ofVal = s.indexOf('=', of);
-                    if (ofVal >= 0 && ofVal < next) {
-                        next = ofVal;
-                    }
-                }
-                cur = s.substring(of, next);
-                of  = next;
-                break;
-            }
-
-            if (doKey) {
-                key = cur;
-            } else {
-                val = cur;
-            }
-
-            if (of < cch) {
-                char delim = s.charAt(of++);
-                if (doKey && delim == '=') {
-                    doKey = false;
-                } else if (delim == ',') {
-                    doKey = true;
-                } else {
-                    // garbage
-                    return null;
-                }
-            }
-        }
-
-        if (!key.isEmpty()) {
-            // note: later pairs can override earlier pairs
-            map.put(key, val);
-        } else if (!val.isEmpty()) {
-            return null;
-        }
-
-        return map;
-    }
-
-    /**
      * Create a string containing the specified number of the specified character.
      *
      * @param ch   the character to duplicate
@@ -819,6 +729,14 @@ public final class Handy {
     public static String quotedString(final String s) {
         return appendString(new StringBuilder(s.length() + 2).append('\"'), s).append(
                 '\"').toString();
+    }
+
+    public static String quoted(final Object o) {
+        return quotedString(Objects.toString(o));
+    }
+
+    public static String unquoted(final Object o) {
+        return unquotedString(Objects.toString(o));
     }
 
     /**
@@ -980,6 +898,17 @@ public final class Handy {
         return Instant.ofEpochMilli(cMillis)
                 .atZone(ZoneId.systemDefault())
                 .format(DATE_TIME_FORMATTER);
+    }
+
+    /**
+     * @param cMillis       date/time in millis
+     * @param defaultValue  the value to return if cMillis is 0
+     *
+     * @return date/time string in format "YYYY-MM-DD HH:MM:SS" format, or the default value if
+     *         cMillis is 0
+     */
+    public static String dateString(final long cMillis, final String defaultValue) {
+        return cMillis == 0L ? defaultValue : dateString(cMillis);
     }
 
 
@@ -1339,6 +1268,16 @@ public final class Handy {
     // ----- file I/O ------------------------------------------------------------------------------
 
     /**
+     * Get the parent of a file, wrapped in Optional to avoid null checks.
+     *
+     * @param file  a file (may be null)
+     * @return Optional containing the parent file, or empty if file is null or has no parent
+     */
+    public static Optional<File> parentOf(final File file) {
+        return Optional.ofNullable(file).map(File::getParentFile);
+    }
+
+    /**
      * Given a file (or directory) or null, produce a file (or directory) to use. Defaults to the
      * current working directory.
      *
@@ -1401,32 +1340,39 @@ public final class Handy {
     }
 
     /**
-     * @return an array of files in the specified directory ordered by case-insensitive name
+     * @return a list of files in the specified directory ordered by case-insensitive name
      */
-    public static File[] listFiles(final File dir) {
+    public static List<File> listFiles(final File dir) {
         if (dir == null || !dir.isDirectory()) {
-            return NO_FILES;
+            return List.of();
         }
 
-        File[] aFile = dir.listFiles();
-        assert aFile != null;
-        sort(aFile, Comparator.comparing(File::getName, String.CASE_INSENSITIVE_ORDER));
-        return aFile;
+        File[] files = dir.listFiles();
+        if (files == null || files.length == 0) {
+            return List.of();
+        }
+        List<File> list = new ArrayList<>(List.of(files));
+        list.sort(Comparator.comparing(File::getName, String.CASE_INSENSITIVE_ORDER));
+        return list;
     }
 
     /**
-     * Obtain an array of files (not including directories) from the specified directory that match
+     * Obtain a list of files (not including directories) from the specified directory that match
      * the specified case-insensitive extension.
      *
      * @param dir        the directory to search
      * @param extension  the extension to match; null will match files with no '.' in their name
      *
-     * @return an array of zero or more files that match the specified extension
+     * @return a list of zero or more files that match the specified extension
      */
-    public static File[] listFiles(final File dir, final String extension) {
-        return extension == null
+    public static List<File> listFiles(final File dir, final String extension) {
+        if (dir == null || !dir.isDirectory()) {
+            return List.of();
+        }
+        File[] files = extension == null
                 ? dir.listFiles(f -> !f.isDirectory() && getExtension(f.getName()) == null)
                 : dir.listFiles(f -> !f.isDirectory() && extension.equalsIgnoreCase(getExtension(f.getName())));
+        return files == null || files.length == 0 ? List.of() : List.of(files);
     }
 
     /**
@@ -2063,9 +2009,4 @@ public final class Handy {
      * A constant empty array of <tt>String</tt>.
      */
     public static final String[] NO_ARGS = new String[0];
-
-    /**
-     * A constant empty array of <tt>File</tt>.
-     */
-    public static final File[] NO_FILES = new File[0];
 }

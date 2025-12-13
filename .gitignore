@@ -20,6 +20,10 @@
 # User specific tool settings
 *.swp
 
+# Eclipse
+.project
+.settings
+
 # Emacs
 \#*#
 \.#*
@@ -95,5 +99,7 @@ profile-out/
 # Any file named TODO
 TODO
 
-# Local config
+# Claude Code; Local config + temporary plan documents.
 .claude/settings.local.json
+.plan.md
+
