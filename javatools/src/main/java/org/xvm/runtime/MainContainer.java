@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.MethodConstant;
@@ -37,22 +38,82 @@ public class MainContainer
     @Override
     public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type, ObjectHandle hOpts) {
         // check the custom injections first
-        if (m_mapInjections != null) {
-            String sValue = m_mapInjections.get(sName);
-            if (sValue != null) {
-                if (type.isNullable()) {
-                    type = type.removeNullable();
-                }
-                if (type.equals(frame.poolContext().typeString())) {
-                    return xString.makeHandle(sValue);
-                }
-            }
+        if (m_mapInjections == null) {
+            // there are no custom injections
+            return getParentInjectable(frame, sName, type, hOpts);
         }
 
+        Object oValue = m_mapInjections.get(sName);
+        if (oValue == null) {
+            // there is no matching custom injection
+            return getParentInjectable(frame, sName, type, hOpts);
+        }
+
+        ConstantPool pool             = frame.poolContext();
+        TypeConstant typeDestringable = pool.ensureEcstasyTypeConstant("text.Destringable");
+        TypeConstant typeString       = pool.typeString();
+        TypeConstant typeStrings      = pool.ensureArrayType(typeString);
+        TypeConstant typeRequired     = type;
+
+        if (typeRequired.isNullable()) {
+            // strip nullable from the required type
+            typeRequired = typeRequired.removeNullable();
+        }
+
+        return switch (oValue) {
+            case String sValue -> {
+                if (typeRequired.equals(typeString)) {
+                    // require String and value is String
+                    yield xString.makeHandle(sValue);
+                }
+                if (typeRequired.equals(typeStrings)) {
+                    // require String[] and value is String
+                    String[] asValue = {sValue};
+                    yield xString.makeArrayHandle(asValue);
+                }
+                if (typeRequired.isA(typeDestringable)) {
+                    // require Destringable and value is String
+                    yield toDestringable(frame, typeRequired, sValue);
+                }
+                yield getParentInjectable(frame, sName, type, hOpts);
+            }
+            case String[] asValue -> {
+                if (typeRequired.equals(typeStrings)) {
+                    // require String[] and value is String[]
+                    yield xString.makeArrayHandle(asValue);
+                }
+                if (typeRequired.equals(typeString)) {
+                    // require String and value is String[] so return the last element
+                    // from the array
+                    yield xString.makeHandle(asValue[asValue.length - 1]);
+                }
+                yield getParentInjectable(frame, sName, type, hOpts);
+            }
+            default -> getParentInjectable(frame, sName, type, hOpts);
+        };
+    }
+
+    private ObjectHandle getParentInjectable(Frame frame, String sName, TypeConstant type,
+                                             ObjectHandle hOpts) {
+
+        // If the required type is nullable return null, otherwise
+        // return an exception
         ObjectHandle hResource = f_parent.getInjectable(frame, sName, type, hOpts);
         return hResource == null
-                ? new DeferredCallHandle(xException.makeHandle(frame, "Invalid resource: " + sName))
+                ? type.isNullable()
+                ? xNullable.NULL
+                : new DeferredCallHandle(xException.makeHandle(frame, "Invalid resource: " + sName))
                 : maskInjection(frame, hResource, type);
+    }
+
+    private ObjectHandle toDestringable(Frame frame, TypeConstant type, String sValue) {
+        ConstantPool    pool     = frame.poolContext();
+        TypeComposition clz      = type.ensureClass(frame);
+        ClassTemplate   template = clz.getTemplate();
+        MethodStructure ctor     = template.getStructure().findMethod("construct", 1, pool.typeString());
+        ObjectHandle[]  ahArgs   = new ObjectHandle[]{xString.makeHandle(sValue)};
+        int             iResult  = template.construct(frame, ctor, clz, null, ahArgs, Op.A_STACK);
+        return frame.popResult(iResult);
     }
 
     /**
@@ -115,9 +176,9 @@ public class MainContainer
     /**
      * Start the main container.
      *
-     * @param (optional) a map of custom injections
+     * @param mapInjections  (optional) a map of custom injections
      */
-    public void start(Map<String, String> mapInjections) {
+    public void start(Map<String, Object> mapInjections) {
         if (m_contextMain != null) {
             throw new IllegalStateException("Already started");
         }
@@ -201,7 +262,7 @@ public class MainContainer
     /**
      * Map of custom injections.
      */
-    private Map<String, String> m_mapInjections;
+    private Map<String, Object> m_mapInjections;
 
     /**
      * The return value from the "main" method. The value of "1" indicates that the method has

@@ -21,8 +21,10 @@ import static org.xtclang.plugin.XtcPluginConstants.XDK_VERSION_TASK_NAME;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_CONFIG_NAME_INCOMING;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_CONFIG_NAME_OUTGOING;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_DEFAULT_RUN_METHOD_NAME_PREFIX;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_DEFAULT_TEST_METHOD_NAME_PREFIX;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_EXTENSION_NAME_COMPILER;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_EXTENSION_NAME_RUNTIME;
+import static org.xtclang.plugin.XtcPluginConstants.XTC_EXTENSION_NAME_TEST;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_LANGUAGE_NAME;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_SOURCE_FILE_EXTENSION;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_SOURCE_SET_DIRECTORY_ROOT_NAME;
@@ -67,10 +69,12 @@ import org.xtclang.plugin.internal.DefaultXtcCompilerExtension;
 import org.xtclang.plugin.internal.DefaultXtcExtension;
 import org.xtclang.plugin.internal.DefaultXtcRuntimeExtension;
 import org.xtclang.plugin.internal.DefaultXtcSourceDirectorySet;
+import org.xtclang.plugin.internal.DefaultXtcTestExtension;
 import org.xtclang.plugin.internal.GradlePhaseAssertions;
 import org.xtclang.plugin.tasks.XtcCompileTask;
 import org.xtclang.plugin.tasks.XtcExtractXdkTask;
 import org.xtclang.plugin.tasks.XtcRunTask;
+import org.xtclang.plugin.tasks.XtcTestTask;
 import org.xtclang.plugin.tasks.XtcVersionTask;
 
 /**
@@ -165,6 +169,7 @@ public class XtcProjectDelegate extends ProjectDelegate<Project, Void> {
         // Ensure extensions for configuring the xtc and xec exist.
         resolveXtcCompileExtension(project);
         resolveXtcRuntimeExtension(project);
+        resolveXtcTestExtension(project);
 
         // This is all config phase. Warn if a project isn't versioned when the XTC plugin is applied, so that we
         // are sure no skew/version conflicts exist for inter-module dependencies and cross publication.
@@ -172,10 +177,12 @@ public class XtcProjectDelegate extends ProjectDelegate<Project, Void> {
         createDefaultSourceSets(project);
         createXtcDependencyConfigs(project);
         createDefaultRunTask(project);
+        createDefaultTestTask(project);
 
         // Configure task dependencies
         final TaskCollection<@NotNull XtcCompileTask> compileTasks = tasks.withType(XtcCompileTask.class);
         configureRunTaskDependencies(compileTasks);
+        configureTestTaskDependencies(compileTasks);
         configureCompileTaskResourceDependencies(compileTasks);
 
         createResolutionStrategy();
@@ -208,6 +215,12 @@ public class XtcProjectDelegate extends ProjectDelegate<Project, Void> {
         // TODO: Separate extensions for separate tasks, or just a global xtcRun applied to all?
         //  Decide later if we are per-sourceSet. It's not necessarily better or something we need.
         return ensureExtension(project, XTC_EXTENSION_NAME_RUNTIME, DefaultXtcRuntimeExtension.class);
+    }
+
+    public static XtcTestExtension resolveXtcTestExtension(final Project project) {
+        // TODO: Separate extensions for separate tasks, or just a global xtcTest applied to all?
+        //  Decide later if we are per-sourceSet. It's not necessarily better or something we need.
+        return ensureExtension(project, XTC_EXTENSION_NAME_TEST, DefaultXtcTestExtension.class);
     }
 
     private static String getXtcSourceDirectoryRootPath(final SourceSet sourceSet) {
@@ -256,6 +269,10 @@ public class XtcProjectDelegate extends ProjectDelegate<Project, Void> {
 
     public static String getRunTaskName() {
         return XTC_DEFAULT_RUN_METHOD_NAME_PREFIX + capitalize(XTC_LANGUAGE_NAME);
+    }
+
+    public static String getTestTaskName() {
+        return XTC_DEFAULT_TEST_METHOD_NAME_PREFIX + capitalize(XTC_LANGUAGE_NAME);
     }
 
     private static String getClassesTaskName(final SourceSet sourceSet) {
@@ -343,6 +360,24 @@ public class XtcProjectDelegate extends ProjectDelegate<Project, Void> {
             logger.info("[plugin] Configured, dependency to tasks: {} -> {}", XDK_EXTRACT_TASK_NAME, compileTaskNames);
         });
         logger.info("[plugin] Created task: '{}'", runTask.getName());
+    }
+
+    /**
+     * Create the XTC test task. If there are no explicit modules in the xtcTest config, we don't create it,
+     * or we log an error or something. The test task will depend on the compile task, and make sure an XTC
+     * module in the source set is compiled.
+     */
+    private void createDefaultTestTask(final Project project) {
+        final var testTaskName = getTestTaskName();
+        // The test task depends on all compile tasks, for all source sets these days.
+        final var compileTaskNames = getSourceSets(project).stream().map(sourceSet -> sourceSet.getCompileTaskName(XTC_LANGUAGE_NAME));
+        final var testTask = tasks.register(testTaskName, XtcTestTask.class, project);
+        testTask.configure(task -> {
+            task.setGroup(APPLICATION_GROUP);
+            task.setDescription("Test an XTC program with a configuration supplying the module path(s).");
+            logger.info("[plugin] Configured, dependency to tasks: {} -> {}", XDK_EXTRACT_TASK_NAME, compileTaskNames);
+        });
+        logger.info("[plugin] Created task: '{}'", testTask.getName());
     }
 
     private void createVersioningTasks() {
@@ -630,6 +665,21 @@ public class XtcProjectDelegate extends ProjectDelegate<Project, Void> {
             runTask.dependsOn(compileTasks);
             logger.info("[plugin] XtcRunTask named '{}': added dependency on: '{}' and '{}'",
                 runTask.getName(), XDK_EXTRACT_TASK_NAME, compileTasks.getNames());
+        });
+    }
+
+    /**
+     * Configures all XtcTestTask instances to depend on the XDK extract task and all compile tasks.
+     * This ensures that test tasks can only execute after the XDK is extracted and all sources are compiled.
+     *
+     * @param compileTasks the collection of all XtcCompileTask instances in the project
+     */
+    private void configureTestTaskDependencies(final TaskCollection<@NotNull XtcCompileTask> compileTasks) {
+        tasks.withType(XtcTestTask.class).configureEach(testTask -> {
+            testTask.dependsOn(XDK_EXTRACT_TASK_NAME);
+            testTask.dependsOn(compileTasks);
+            logger.info("[plugin] XtcTestTask named '{}': added dependency on: '{}' and '{}'",
+                testTask.getName(), XDK_EXTRACT_TASK_NAME, compileTasks.getNames());
         });
     }
 
