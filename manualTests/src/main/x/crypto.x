@@ -7,8 +7,8 @@ module TestCrypto {
     import crypto.*;
 
     void run(String[] args = ["password"]) {
-        @Inject Directory curDir;
-        File store = curDir.fileFor("test.p12");
+        @Inject Directory tmpDir;
+        File store = tmpDir.fileFor("test.p12");
 
         String password = args[0];
         String pairName = "test_pair";
@@ -35,7 +35,7 @@ module TestCrypto {
         testDecryptor(algorithms, "AES", symKey, BIG_TEXT);
 
         assert KeyGenerator desKeyGen := algorithms.keyGeneratorFor("DES");
-        CryptoKey tempKey = desKeyGen.generateSecretKey("test-temp");
+        CryptoKey tempKey = desKeyGen.generateSecretKey("test-des-key");
         testDecryptor(algorithms, "DES", tempKey, BIG_TEXT);
         testDecryptor(algorithms, "DES/ECB/PKCS5Padding", tempKey, BIG_TEXT);
 
@@ -53,10 +53,10 @@ module TestCrypto {
         CryptoKey publicKey  = keyPair.publicKey;
         CryptoKey privateKey = keyPair.privateKey;
 
-        assert Byte[] publicBytes := publicKey.isVisible();
-        PublicKey publicKeyM = new PublicKey("test-copy", "RSA", publicKey.size, publicBytes);
-        KeyPair keyPairM = new KeyPair("test-copy", publicKeyM, privateKey);
-        testDecryptor(algorithms, "RSA", keyPairM, SMALL_TEXT);
+        assert KeyGenerator macKeyGen := algorithms.keyGeneratorFor("HmacSHA256");
+        CryptoKey macKey = macKeyGen.generateSecretKey("test-mac-key");
+        testSigner(algorithms, "HmacSHA256", macKey, BIG_TEXT);
+        testSigner(algorithms, "HmacSHA512", macKey, BIG_TEXT);
 
         PrivateKey privateKeyM = new PrivateKey("test-copy", "DES", 8, random.bytes(8));
         testDecryptor(algorithms, "DES", privateKeyM, BIG_TEXT);
@@ -101,7 +101,7 @@ module TestCrypto {
 
             assert hasher.verify(hash, text.utf8());
         } else {
-            console.print($"Cannot find hasher for {name.quoted()}");
+            throw new Exception($"Cannot find the hasher for {name.quoted()}");
         }
     }
 
@@ -114,13 +114,15 @@ module TestCrypto {
 
             assert signer.verify(sig, text.utf8());
         } else {
-            console.print($"Cannot find signer for {name.quoted()}");
+            throw new Exception($|Cannot find the signer for "name" or the key form or size is not \
+                                 |acceptable
+                               );
         }
     }
 
     static String SMALL_TEXT =
             \|The RSA encryption is meant to be used only for small data chunks; \
-             |primary use - a symmetric key (less than 256 bytes)
+             |primary use - encrypting a symmetric key to send over an insecure channel
              ;
 
     static String BIG_TEXT = $./crypto.x;

@@ -2,13 +2,12 @@ import libcrypto.Algorithms;
 import libcrypto.Algorithm;
 import libcrypto.Algorithm.Category;
 import libcrypto.CryptoKey;
-import libcrypto.KeyForm;
 import libcrypto.KeyPair;
 import libcrypto.Signer;
 import libcrypto.Verifier;
 
 /**
- * The native [Signing] [Algorithm] implementation that requires a key.
+ * The native [Signing] [Algorithm] implementation that requires a public/private key.
  */
 service RTSigningAlgorithm(String name, Int blockSize, Int signatureSize)
         implements Algorithm {
@@ -71,8 +70,8 @@ service RTSigningAlgorithm(String name, Int blockSize, Int signatureSize)
 
     @Override
     String toString() {
-        return $|{name.quoted()} signing algorithm with {keySize} bytes key and \
-                |{signatureSize} bytes signature
+        return $|"{name}" signing algorithm with {keySize} bytes keys and {signatureSize} bytes \
+                |signature
                 ;
     }
 }
