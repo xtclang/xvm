@@ -3,6 +3,8 @@ import ecstasy.annotations.Inject.Options;
 import ecstasy.fs.DirectoryFileStore;
 import ecstasy.fs.FileNode;
 
+import ecstasy.lang.src.Compiler;
+
 import ecstasy.mgmt.*;
 
 import ecstasy.reflect.ModuleTemplate;
@@ -24,6 +26,16 @@ service TestResourceProvider(Directory curDir)
      * The `FileStore` to use to access files.
      */
     @Lazy FileStore store.calc() = new DirectoryFileStore(curDir);
+
+    /**
+     * The build output directory.
+     */
+    @Lazy Directory buildDir.calc() = curDir.dirFor(DefaultTestBuildDir);
+
+    /**
+     * The test output root directory directory.
+     */
+    @Lazy Directory testOutputRootDir.calc() = buildDir.dirFor(TestOutputRootDir);
 
     /**
      * The current execution context.
@@ -63,6 +75,12 @@ service TestResourceProvider(Directory curDir)
             case "tmpDir":
                 return tempDir;
 
+            case "buildDir":
+                return buildDir;
+
+            case "testOutputRoot":
+                return testOutputRootDir;
+
             case "testOutput":
                 return getTestDirectory;
 
@@ -73,6 +91,10 @@ service TestResourceProvider(Directory curDir)
         case (Console, _):
             @Inject Console console;
             return console;
+
+        case (Compiler, "compiler"):
+            @Inject Compiler compiler;
+            return compiler;
 
         case (Linker, "linker"):
             @Inject Linker linker;
@@ -136,7 +158,7 @@ service TestResourceProvider(Directory curDir)
      * Returns the directory to for any files specific for the current test.
      */
     Directory getTestDirectory(Options opts) {
-        Directory testDir = curDir.dirFor("build/test-output");
+        Directory testDir = buildDir.dirFor("test-output").ensure();
         return testDirectoryUnder(testDir);
     }
 
@@ -150,17 +172,8 @@ service TestResourceProvider(Directory curDir)
     Directory testDirectoryUnder(Directory root) {
         Directory         dir = root;
         ExecutionContext? ctx = this.context;
-
         if (ctx.is(ExecutionContext)) {
-            Class? testClass = ctx.testClass;
-            if (testClass.is(Class)) {
-                String name = testClass.name;
-                dir = dir.dirFor(testClass.name);
-                MethodOrFunction? test = ctx.testMethod;
-                if (test.is(Test)) {
-                    dir = dir.dirFor(test.name);
-                }
-            }
+            dir = xunit.extensions.testDirectoryFor(dir, ctx.testClass, ctx.testMethod);
         }
         dir.ensure();
         return dir;

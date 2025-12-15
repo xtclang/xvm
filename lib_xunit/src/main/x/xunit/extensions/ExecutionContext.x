@@ -5,19 +5,14 @@ import ecstasy.annotations.Inject.Options;
  */
 interface ExecutionContext {
     /**
+     * The `UniqueId` of the current test fixture.
+     */
+    @RO UniqueId uniqueId;
+
+    /**
      * The human readable name for the test.
      */
     @RO String displayName;
-
-    /**
-     * The `Module` associated to the current test fixture.
-     */
-    @RO Module? testModule;
-
-    /**
-     * The `Package` associated to the current test fixture.
-     */
-    @RO Package? testPackage;
 
     /**
      * The `Class` associated to the current test fixture.

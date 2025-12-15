@@ -1,5 +1,5 @@
 /**
- * A unique identifier for a test model.
+ * A unique identifier for a test container or actual test.
  *
  * * A `UniqueId` is made up of an array of segments, where a `Segment` has a type and a value.
  * * A `UniqueId` is part of a model hierarchy, so like a File path, the parent of a
@@ -95,6 +95,27 @@ const UniqueId
     conditional UniqueId! parent() {
         if (size > 1) {
             return True, new UniqueId(segments[0 ..< size - 1]);
+        }
+        return False;
+    }
+
+    /**
+     * Returns `True` iff this `UniqueId` is a parent of the supplied `UniqueId`.
+     *
+     * @param other  the `UniqueId` to check
+     *
+     * @return `True` iff this `UniqueId` is a parent of the supplied `UniqueId`
+     */
+    Boolean isParentOf(UniqueId other) {
+        // to be a child of this id, the segment length must be longer than this id
+        if (other.segments.size > this.segments.size) {
+            // the other id segments must start with this id segments
+            for (Int i : 0 ..< this.segments.size) {
+                if (other.segments[i] != this.segments[i]) {
+                    return False;
+                }
+            }
+            return True;
         }
         return False;
     }

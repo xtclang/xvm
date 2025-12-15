@@ -22,6 +22,8 @@ module xunit_engine.xtclang.org {
 
     import tools.ModuleGenerator;
 
+    import xunit.UniqueId;
+
     import xunit.extensions.ResourceRegistry;
     import xunit.extensions.ResourceRegistry.RegistrationBehavior;
 
@@ -44,6 +46,21 @@ module xunit_engine.xtclang.org {
      * The injection name for the test module version to execute.
      */
     static String ConfigTestModuleVersion = ConfigPrefix + ".testModuleVersion";
+
+    /**
+     * The injection name for the test build output directory.
+     */
+    static String ConfigTestBuildDir = ConfigPrefix + ".buildDir";
+
+    /**
+     * The default test build output directory located under the current directory.
+     */
+    static String DefaultTestBuildDir = "build";
+
+    /**
+     * The root test output directory located under the build directory.
+     */
+    static String TestOutputRootDir = "test-output";
 
     /**
      * This is the entry point int the module to execute tests in another module.
