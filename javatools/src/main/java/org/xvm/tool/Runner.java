@@ -53,7 +53,7 @@ public class Runner extends Launcher<RunnerOptions> {
      * @param console     representation of the terminal within which this command is run, or null
      * @param errListener optional ErrorListener to receive errors, or null for no delegation
      */
-    public Runner(final RunnerOptions options, final Console console, final ErrorListener errListener) {
+    public Runner(RunnerOptions options, Console console, ErrorListener errListener) {
         super(options, console, errListener);
     }
 
@@ -62,7 +62,7 @@ public class Runner extends Launcher<RunnerOptions> {
      *
      * @param asArg command line arguments
      */
-    static void main(final String[] asArg) {
+    static void main(String[] asArg) {
         Launcher.main(insertCommand(CMD_RUN, asArg));
     }
 
@@ -108,7 +108,7 @@ public class Runner extends Launcher<RunnerOptions> {
             ModuleInfo info;
             try {
                 info = new ModuleInfo(fileSpec, opts.mayDeduceLocations(), outFile.orElse(null));
-            } catch (final RuntimeException e) {
+            } catch (RuntimeException e) {
                 log(ERROR, e, "Failed to identify the module for: {}", fileSpec);
                 return checkErrors("module identification");
             }
@@ -174,7 +174,7 @@ public class Runner extends Launcher<RunnerOptions> {
                 try (var in = new FileInputStream(fileBin)) {
                     var struct = new FileStructure(in);
                     module = struct.getModule();
-                } catch (final IOException e) {
+                } catch (IOException e) {
                     log(FATAL, e, "I/O exception reading module file: {}", fileBin);
                     return 1;  // Unreachable - log(FATAL) throws
                 }
@@ -188,7 +188,7 @@ public class Runner extends Launcher<RunnerOptions> {
 
         try {
             repo.storeModule(module);
-        } catch (final IOException e) {
+        } catch (IOException e) {
             log(FATAL, e, "I/O exception storing module file: {}", fileSpec);
             return 1;  // Unreachable - log(FATAL) throws
         }
@@ -222,12 +222,12 @@ public class Runner extends Launcher<RunnerOptions> {
             }
             connector.invoke0(method, args);
             return connector.join();
-        } catch (final InterruptedException e) {
+        } catch (InterruptedException e) {
             log(WARNING, e, "Interrupted while waiting for method {}", quoted(sName));
             return 1;
-        } catch (final LauncherException e) {
+        } catch (LauncherException e) {
             throw e;
-        } catch (final Exception e) {
+        } catch (Exception e) {
             e.printStackTrace(System.err);
             log(FATAL, e, "Unexpected error");
             return 1;  // Unreachable - log(FATAL) throws
@@ -239,7 +239,7 @@ public class Runner extends Launcher<RunnerOptions> {
      *
      * @return 0 if validation passed, 1 if errors were logged
      */
-    private int validateMethodArgs(final String sMethod, final MethodStructure method, final List<String> asArg, final TypeConstant typeStrings) {
+    private int validateMethodArgs(String sMethod, MethodStructure method, List<String> asArg, TypeConstant typeStrings) {
         final var requiredCount = method.getRequiredParamCount();
         final var totalCount    = method.getParamCount();
 
@@ -272,7 +272,7 @@ public class Runner extends Launcher<RunnerOptions> {
      * Find module names that could match an unqualified name.
      * For example, if user types "MyApp", this finds "MyApp.example.com", "MyApp.other", etc.
      */
-    private static Set<String> resolvePossibleTargets(final String qualName, final ModuleRepository repo) {
+    private static Set<String> resolvePossibleTargets(String qualName, ModuleRepository repo) {
         if (qualName.indexOf('.') >= 0) {
             return Set.of();
         }
@@ -302,7 +302,7 @@ public class Runner extends Launcher<RunnerOptions> {
      * @param module the module to execute
      * @return the configured Connector ready for method invocation
      */
-    protected Connector createConnector(final ModuleRepository repo, final ModuleStructure module) {
+    protected Connector createConnector(ModuleRepository repo, ModuleStructure module) {
         final RunnerOptions opts = options();
         final Connector connector = createBaseConnector(repo, opts.isJit());
         connector.loadModule(module.getName());
@@ -318,7 +318,7 @@ public class Runner extends Launcher<RunnerOptions> {
      * @param isJit true to use JIT connector, false for interpreted
      * @return a new Connector (not yet started)
      */
-    protected Connector createBaseConnector(final ModuleRepository repo, final boolean isJit) {
+    protected Connector createBaseConnector(ModuleRepository repo, final boolean isJit) {
         return isJit ? new JitConnector(repo) : new Connector(repo);
     }
 

@@ -65,7 +65,7 @@ public class ModuleInfo {
      * @param fileSpec the file to analyze, which may or may not exist
      * @param deduce   pass true to enable the algorithm to deduce/search for likely locations
      */
-    public ModuleInfo(final File fileSpec, final boolean deduce) {
+    public ModuleInfo(File fileSpec, final boolean deduce) {
         this(fileSpec, deduce, null, null);
     }
 
@@ -77,7 +77,7 @@ public class ModuleInfo {
      * @param binarySpec the file or directory which represents the target of the binary; as
      *                   provided to the compiler using the "-o" command line switch; may be null
      */
-    public ModuleInfo(final File fileSpec, final boolean deduce, final File binarySpec) {
+    public ModuleInfo(File fileSpec, final boolean deduce, File binarySpec) {
         this(fileSpec, deduce, List.of(), binarySpec);
     }
 
@@ -94,7 +94,7 @@ public class ModuleInfo {
      * @param binarySpec    the file or directory which represents the target of the binary; as
      *                      provided to the compiler using the "-o" command line switch
      */
-    public ModuleInfo(final File fileSpec, final boolean deduce, final List<File> resourceSpecs, final File binarySpec) {
+    public ModuleInfo(File fileSpec, final boolean deduce, List<File> resourceSpecs, File binarySpec) {
         if (fileSpec == null) {
             throw new IllegalArgumentException("A file specification is required for the module");
         }
@@ -615,7 +615,7 @@ public class ModuleInfo {
      *
      * @return a stream of matching non-directory files
      */
-    private Stream<File> collectFiles(final File dir, final String ext) {
+    private Stream<File> collectFiles(File dir, String ext) {
         final var children = new TreeMap<String, File>(String.CASE_INSENSITIVE_ORDER);
         for (File child : listFiles(dir)) {
             String name = child.getName();
@@ -641,7 +641,7 @@ public class ModuleInfo {
      * @return the root {@link Node} of the tree, or null if the ModuleInfo does not know the source
      *         location, or if serious errors occur loading the source tree
      */
-    public Node getSourceTree(final ErrorListener errs) {
+    public Node getSourceTree(ErrorListener errs) {
         if (sourceNode != null) {
             return sourceNode;
         }
@@ -699,7 +699,7 @@ public class ModuleInfo {
          * @param parent  the parent node
          * @param file    the file that this node will represent
          */
-        protected Node(final DirNode parent, final File file) {
+        protected Node(DirNode parent, File file) {
             // at least one of the parameters is required
             assert parent != null || file != null;
 
@@ -807,7 +807,7 @@ public class ModuleInfo {
         public abstract TypeCompositionStatement type();
 
         @Override
-        public boolean log(final ErrorInfo err) {
+        public boolean log(ErrorInfo err) {
             return errs().log(err);
         }
 
@@ -822,7 +822,7 @@ public class ModuleInfo {
         }
 
         @Override
-        public boolean hasError(final String sCode) {
+        public boolean hasError(String sCode) {
             return m_errs != null && m_errs.hasError(sCode);
         }
 
@@ -840,7 +840,7 @@ public class ModuleInfo {
         /**
          * Log any errors accumulated on (or under) this node
          */
-        public void logErrors(final ErrorListener errs) {
+        public void logErrors(ErrorListener errs) {
             ErrorList deferred = m_errs;
             if (deferred != null) {
                 for (ErrorInfo err : deferred.getErrors()) {
@@ -886,7 +886,7 @@ public class ModuleInfo {
          * @param dir      the directory that this node will represent
          * @param fileSrc  the file for the package.x file (or null if it does not exist)
          */
-        DirNode(final DirNode parent, final File dir, final File fileSrc) {
+        DirNode(DirNode parent, File dir, File fileSrc) {
             super(parent, dir);
             assert dir.isDirectory();
 
@@ -1029,7 +1029,7 @@ public class ModuleInfo {
          *              raised
          * @param node  the child node to register with the specified name
          */
-        public void registerName(final String name, final Node node) {
+        public void registerName(String name, Node node) {
             if (name != null) {
                 if (children().containsKey(name)) {
                     log(Severity.ERROR, DUP_NAME, new Object[] {name, descriptiveName()}, null);
@@ -1180,7 +1180,7 @@ public class ModuleInfo {
          * @param parent  the parent node
          * @param file    the file that this node will represent
          */
-        FileNode(final DirNode parent, final File file) {
+        FileNode(DirNode parent, File file) {
             super(parent, file);
         }
 
@@ -1189,7 +1189,7 @@ public class ModuleInfo {
          *
          * @param code  the source code
          */
-        public FileNode(final DirNode parent, final String code) {
+        public FileNode(DirNode parent, String code) {
             super(parent, null);
             m_text = code;
         }
@@ -1298,7 +1298,7 @@ public class ModuleInfo {
          *
          * @return a File, a ResourceDir, or null if unresolvable
          */
-        public Object resolveResource(final String path) {
+        public Object resolveResource(String path) {
             String resPath = path;
             ResourceDir dir;
             if (resPath.startsWith("/")) {
@@ -1428,7 +1428,7 @@ public class ModuleInfo {
      *
      * @return the module's name if the file declares a module; null otherwise
      */
-    public static String extractModuleName(final File file) {
+    public static String extractModuleName(File file) {
         if (file.exists() && file.canRead()) {
             String name = file.getName();
             if (isExplicitSourceFile(name)) {
@@ -1455,7 +1455,7 @@ public class ModuleInfo {
      *
      * @return true iff the passed name is an explicit Ecstasy source or compiled module file name
      */
-    public static boolean isExplicitEcstasyFile(final String sFile) {
+    public static boolean isExplicitEcstasyFile(String sFile) {
         String sExt = getExtension(sFile);
         return "x".equalsIgnoreCase(sExt) || "xtc".equalsIgnoreCase(sExt);
     }
@@ -1467,7 +1467,7 @@ public class ModuleInfo {
      *
      * @return true iff the passed name is an explicit Ecstasy source or compiled module file name
      */
-    public static boolean isExplicitSourceFile(final String sFile) {
+    public static boolean isExplicitSourceFile(String sFile) {
         String sExt = getExtension(sFile);
         return "x".equalsIgnoreCase(sExt);
     }
@@ -1479,7 +1479,7 @@ public class ModuleInfo {
      *
      * @return a list of zero or more source files
      */
-    public static List<File> sourceFiles(final File dir) {
+    public static List<File> sourceFiles(File dir) {
         return listFiles(dir, "x");
     }
 
@@ -1490,7 +1490,7 @@ public class ModuleInfo {
      *
      * @return true iff the passed name is an explicit Ecstasy source or compiled module file name
      */
-    public static boolean isExplicitCompiledFile(final String sFile) {
+    public static boolean isExplicitCompiledFile(String sFile) {
         String sExt = getExtension(sFile);
         return "xtc".equalsIgnoreCase(sExt);
     }
@@ -1502,7 +1502,7 @@ public class ModuleInfo {
      *
      * @return a list of zero or more compiled module files
      */
-    public static List<File> compiledFiles(final File dir) {
+    public static List<File> compiledFiles(File dir) {
         return listFiles(dir, "xtc");
     }
 
@@ -1512,7 +1512,7 @@ public class ModuleInfo {
      * @return true iff the directory appears to be a project directory
      */
     @SuppressWarnings("unused")
-    public static boolean isProjectDir(final File dir) {
+    public static boolean isProjectDir(File dir) {
         return dir != null && dir.isDirectory() &&
             (new File(dir, "src"   ).exists() && !new File(dir, "src.x"   ).exists() ||
              new File(dir, "source").exists() && !new File(dir, "source.x").exists());
@@ -1525,7 +1525,7 @@ public class ModuleInfo {
      *
      * @return the best-guess project directory
      */
-    public static File projectDirFromSubDir(final File dir) {
+    public static File projectDirFromSubDir(File dir) {
         assert dir != null;
 
         String name   = dir.getName();
@@ -1582,7 +1582,7 @@ public class ModuleInfo {
      *
      * @return the best guess at the location of the source directory
      */
-    public static File sourceDirFromPrjDir(final File prjDir) {
+    public static File sourceDirFromPrjDir(File prjDir) {
         assert prjDir != null;
 
         // Locate the source directory by drilling down through conventional project structures.
@@ -1624,7 +1624,7 @@ public class ModuleInfo {
      * @param level the starting level (0-2)
      * @return the first matching subdirectory, or null if none found
      */
-    private static File findSourceSubDir(final File dir, final int level) {
+    private static File findSourceSubDir(File dir, final int level) {
         for (int i = level; i <= 2; i++) {
             File subDir = switch (i) {
                 case 0 -> firstDirectory(dir, "src", "source");
@@ -1646,7 +1646,7 @@ public class ModuleInfo {
      * @param names  the subdirectory names to try
      * @return the first existing subdirectory, or null if none exist
      */
-    private static File firstDirectory(final File parent, final String... names) {
+    private static File firstDirectory(File parent, String... names) {
         return Stream.of(names)
                 .map(name -> new File(parent, name))
                 .filter(File::isDirectory)
@@ -1662,7 +1662,7 @@ public class ModuleInfo {
      *
      * @return the best guess at the location of the binary directory
      */
-    public static File binaryDirFromPrjDir(final File prjDir) {
+    public static File binaryDirFromPrjDir(File prjDir) {
         assert prjDir != null;
 
         File subDir;

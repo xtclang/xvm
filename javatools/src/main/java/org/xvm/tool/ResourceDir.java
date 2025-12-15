@@ -27,7 +27,7 @@ public class ResourceDir {
      *                     location to use as the entire resource path
      */
     @SuppressWarnings("unused")
-    public ResourceDir(final File resourceLoc) {
+    public ResourceDir(File resourceLoc) {
         this(List.of(resourceLoc));
     }
 
@@ -35,10 +35,10 @@ public class ResourceDir {
      * @param resourcePath  the non-null list of non-null File objects indicating the sequence
      *                      of directory (or single file) locations to use as the resource path
      */
-    public ResourceDir(final List<File> resourcePath) {
+    public ResourceDir(List<File> resourcePath) {
         this(null, "", new ArrayList<>(resourcePath));
 
-        for (final File file : resourcePath) {
+        for (File file : resourcePath) {
             if (file == null) {
                 throw new IllegalArgumentException("Resource location must not be null");
             }
@@ -52,7 +52,7 @@ public class ResourceDir {
      * @param resourcePath  the non-null list of non-null File objects indicating the sequence
      *                      of directory (or single file) locations to use as the resource path
      */
-    protected ResourceDir(final ResourceDir parent, final String name, final List<File> resourcePath) {
+    protected ResourceDir(ResourceDir parent, String name, List<File> resourcePath) {
         this.parent       = parent;
         this.name         = name;
         this.resourcePath = resourcePath;
@@ -64,7 +64,7 @@ public class ResourceDir {
      * @param sourceFile the location of an Ecstasy module source file
      * @param deduce     pass true to enable the algorithm to search for a likely resource directory
      */
-    public static ResourceDir forSource(final File sourceFile, final boolean deduce) {
+    public static ResourceDir forSource(File sourceFile, final boolean deduce) {
         if (sourceFile == null) {
             return NoResources;
         }
@@ -124,7 +124,7 @@ public class ResourceDir {
         return getLatestTime(FileExpression::modifiedTime);
     }
 
-    private FileTime getLatestTime(final Function<File, FileTime> timeExtractor) {
+    private FileTime getLatestTime(Function<File, FileTime> timeExtractor) {
         return resourcePath.stream()
                 .filter(File::isDirectory)
                 .map(timeExtractor)
@@ -176,7 +176,7 @@ public class ResourceDir {
      * @return the specified ResourceDir or File object iff the name exists in this ResourceDir;
      *         otherwise null
      */
-    public Object getByName(final String name) {
+    public Object getByName(String name) {
         final var subDirs = new ArrayList<File>();
 
         for (File file : resourcePath) {
@@ -205,7 +205,7 @@ public class ResourceDir {
      * @return the specified ResourceDir, if it exists nested directly within this ResourceDir,
      *         otherwise null
      */
-    public ResourceDir getDirectory(final String name) {
+    public ResourceDir getDirectory(String name) {
         return getByName(name) instanceof ResourceDir dir ? dir : null;
     }
 
@@ -217,7 +217,7 @@ public class ResourceDir {
      * @return the specified file, if it exists in the ResourceDir, otherwise null
      */
     @SuppressWarnings("unused")
-    public File getFile(final String name) {
+    public File getFile(String name) {
         return getByName(name) instanceof File file ? file : null;
     }
 
@@ -233,7 +233,7 @@ public class ResourceDir {
         return timestamp;
     }
 
-    private long calcTimestamp(final File dirOrFile) {
+    private long calcTimestamp(File dirOrFile) {
         return listFiles(dirOrFile).stream()
                 .mapToLong(this::calcTimestamp)
                 .reduce(dirOrFile.lastModified(), Math::max);

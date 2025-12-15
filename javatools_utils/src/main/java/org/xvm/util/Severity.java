@@ -21,11 +21,11 @@ public enum Severity {
      *
      * @return true if this severity is at least as severe as the specified severity
      */
-    public boolean isAtLeast(final Severity sev) {
+    public boolean isAtLeast(Severity sev) {
         return compareTo(sev) >= 0;
     }
 
-    public boolean isWorseThan(final Severity sev) {
+    public boolean isWorseThan(Severity sev) {
         return compareTo(sev) > 0;
     }
 
@@ -34,7 +34,7 @@ public enum Severity {
      *
      * @return the updated worst severity
      */
-    public static Severity worstOf(final Severity oldSev, final Severity newSev) {
+    public static Severity worstOf(Severity oldSev, Severity newSev) {
         return oldSev.isWorseThan(newSev) ? oldSev : newSev;
     }
 }

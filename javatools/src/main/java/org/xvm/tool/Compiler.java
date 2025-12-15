@@ -118,7 +118,7 @@ public class Compiler extends Launcher<CompilerOptions> {
     protected ModuleRepository prevLibs;
     protected ModuleRepository prevOutput;
 
-    public Compiler(final CompilerOptions options) {
+    public Compiler(CompilerOptions options) {
         this(options, Launcher.DEFAULT_CONSOLE, null);
     }
 
@@ -129,7 +129,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      * @param console     representation of the terminal within which this command is run, or null
      * @param errListener optional ErrorListener to receive errors, or null for no delegation
      */
-    public Compiler(final CompilerOptions options, final Console console, final ErrorListener errListener) {
+    public Compiler(CompilerOptions options, Console console, ErrorListener errListener) {
         super(options, console, errListener);
     }
 
@@ -139,7 +139,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      *
      * @param args command line arguments
      */
-    static void main(final String[] args) {
+    static void main(String[] args) {
         Launcher.main(insertCommand(CMD_BUILD, args));
     }
 
@@ -222,7 +222,7 @@ public class Compiler extends Launcher<CompilerOptions> {
 
         final var mapTargets = new LinkedHashMap<File, Node>();
         var cSystemModules = 0;
-        for (final var moduleInfo : aTarget) {
+        for (var moduleInfo : aTarget) {
             log(INFO, "Loading and parsing sources for module: {}", moduleInfo.getQualifiedModuleName());
             var node = moduleInfo.getSourceTree(this);
             // short-circuit the compilation of any up-to-date modules
@@ -290,7 +290,7 @@ public class Compiler extends Launcher<CompilerOptions> {
             log(INFO, "Storing results of compilation: {}", allNodes[0].moduleInfo().getBinaryFile());
         } else {
             log(INFO, "Storing results of compilation:");
-            for (final var node : allNodes) {
+            for (var node : allNodes) {
                 var info = node.moduleInfo();
                 log(INFO, "  {} -> {}", info.getQualifiedModuleName(), info.getBinaryFile());
             }
@@ -308,7 +308,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      *
      * @param repoLib  the library repository being used for compilation
      */
-    protected void injectNativeTurtle(final ModuleRepository repoLib) {
+    protected void injectNativeTurtle(ModuleRepository repoLib) {
         var repoBuild    = extractBuildRepo(repoLib);
         var moduleTurtle = repoBuild.loadModule(Constants.TURTLE_MODULE);
         if (moduleTurtle != null) {
@@ -316,7 +316,7 @@ public class Compiler extends Launcher<CompilerOptions> {
                 var clzNakedRef = (ClassStructure) moduleTurtle.getChild("NakedRef");
                 var typeNakedRef = clzNakedRef.getFormalType();
 
-                for (final var sModule : repoBuild.getModuleNames()) {
+                for (var sModule : repoBuild.getModuleNames()) {
                     var module = repoBuild.loadModule(sModule);
                     module.getConstantPool().setNakedRefType(typeNakedRef);
                 }
@@ -333,10 +333,10 @@ public class Compiler extends Launcher<CompilerOptions> {
      *
      * @return a map from module name to compiler, one for each module being compiled
      */
-    protected Map<String, org.xvm.compiler.Compiler> resolveCompilers(final Node[] allNodes, final ModuleRepository repo) {
+    protected Map<String, org.xvm.compiler.Compiler> resolveCompilers(Node[] allNodes, ModuleRepository repo) {
         final var mapCompilers = new LinkedHashMap<String, org.xvm.compiler.Compiler>();
         final var repoBuild = extractBuildRepo(repo);
-        for (final var node : allNodes) {
+        for (var node : allNodes) {
             // Create a module/package/class structure for each dir/file node in the "module tree"
             if (node.type().getCategory().getId() != Id.MODULE) {
                 log(ERROR, "File {} doesn't contain a module statement", quoted(node));
@@ -359,7 +359,7 @@ public class Compiler extends Launcher<CompilerOptions> {
             try {
                 repo.storeModule(struct.getModule());
                 assert repoBuild.loadModule(name) != null;
-            } catch (final IOException e) {
+            } catch (IOException e) {
                 log(FATAL, e, "I/O exception storing module: {}", name);
                 // Error accumulates in m_sevWorst, flushAndCheckErrors() will abort if needed
             }
@@ -385,8 +385,8 @@ public class Compiler extends Launcher<CompilerOptions> {
      *
      * @param compilers  a module compiler for each module
      */
-    protected void linkModules(final List<org.xvm.compiler.Compiler> compilers, final ModuleRepository repo) {
-        for (final var compiler : compilers) {
+    protected void linkModules(List<org.xvm.compiler.Compiler> compilers, ModuleRepository repo) {
+        for (var compiler : compilers) {
             final var idMissing = compiler.linkModules(repo);
             if (idMissing != null) {
                 compiler.getErrorListener().log(FATAL, MODULE_MISSING, new String[]{idMissing.getName()}, null);
@@ -401,7 +401,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      *
      * @param compilers  a module compiler for each module
      */
-    protected static void resolveNames(final List<org.xvm.compiler.Compiler> compilers) {
+    protected static void resolveNames(List<org.xvm.compiler.Compiler> compilers) {
         runCompilerPhase(compilers, org.xvm.compiler.Compiler::resolveNames);
     }
 
@@ -410,7 +410,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      *
      * @param compilers  a module compiler for each module
      */
-    protected static void validateExpressions(final List<org.xvm.compiler.Compiler> compilers) {
+    protected static void validateExpressions(List<org.xvm.compiler.Compiler> compilers) {
         runCompilerPhase(compilers, org.xvm.compiler.Compiler::validateExpressions);
     }
 
@@ -428,11 +428,11 @@ public class Compiler extends Launcher<CompilerOptions> {
      * @param compilers  the list of compilers to process
      * @param phase      the phase function to run on each compiler (takes compiler and isLastAttempt, returns isDone)
      */
-    private static void runCompilerPhase(final List<org.xvm.compiler.Compiler> compilers, final CompilerPhase phase) {
+    private static void runCompilerPhase(List<org.xvm.compiler.Compiler> compilers, CompilerPhase phase) {
         int cTriesLeft = 0x3F;
         do {
             boolean fDone = true;
-            for (final var compiler : compilers) {
+            for (var compiler : compilers) {
                 fDone &= phase.run(compiler, cTriesLeft == 1);
                 if (compiler.isAbortDesired()) {
                     return;
@@ -444,7 +444,7 @@ public class Compiler extends Launcher<CompilerOptions> {
         } while (--cTriesLeft > 0);
 
         // something couldn't get resolved; must be a bug in the compiler
-        for (final var compiler : compilers) {
+        for (var compiler : compilers) {
             compiler.logRemainingDeferredAsErrors();
         }
     }
@@ -454,17 +454,17 @@ public class Compiler extends Launcher<CompilerOptions> {
      *
      * @param compilers  a module compiler for each module
      */
-    protected void generateCode(final List<org.xvm.compiler.Compiler> compilers) {
+    protected void generateCode(List<org.xvm.compiler.Compiler> compilers) {
         int cTriesLeft = 0x3F;
         do {
             boolean fDone = true;
-            for (final var compiler : compilers) {
+            for (var compiler : compilers) {
                 try {
                     fDone &= compiler.generateCode(cTriesLeft == 1);
                     if (compiler.isAbortDesired()) {
                         return;
                     }
-                } catch (final Throwable e) {
+                } catch (Throwable e) {
                     System.err.println("Failed to generate code for " + compiler);
                     e.printStackTrace(System.err);
                     log(ERROR, "Failed to generate code for {} due to exception: {}", compiler, e);
@@ -476,20 +476,20 @@ public class Compiler extends Launcher<CompilerOptions> {
         } while (--cTriesLeft > 0);
 
         // something couldn't get resolved; must be a bug in the compiler
-        for (final var compiler : compilers) {
+        for (var compiler : compilers) {
             compiler.logRemainingDeferredAsErrors();
         }
     }
 
     @SuppressWarnings("UnusedReturnValue")
-    private boolean addVersion(final ModuleInfo info, final Version ver) {
+    private boolean addVersion(ModuleInfo info, Version ver) {
         var fileBin = info.getBinaryFile();
         try {
             var struct = new FileStructure(fileBin);
             struct.getModule().setVersion(ver);
             struct.writeTo(fileBin);
             return true;
-        } catch (final IOException e) {
+        } catch (IOException e) {
             log(ERROR, "Failed to stamp version {} onto file {}", ver, fileBin);
             return false;
         }
@@ -500,10 +500,10 @@ public class Compiler extends Launcher<CompilerOptions> {
      *
      * @return 0 for success, non-zero exit code for failure
      */
-    protected int emitModules(final Node[] allNodes, final ModuleRepository repoOutput) {
+    protected int emitModules(Node[] allNodes, ModuleRepository repoOutput) {
         var opts = options();
         var version = opts.getVersion();
-        for (final var nodeModule : allNodes) {
+        for (var nodeModule : allNodes) {
             var module = (ModuleStructure) nodeModule.type().getComponent();
 
             assert !module.isFingerprint();
@@ -512,7 +512,7 @@ public class Compiler extends Launcher<CompilerOptions> {
             if (repoOutput != null) {
                 try {
                     repoOutput.storeModule(module);
-                } catch (final IOException e) {
+                } catch (IOException e) {
                     log(FATAL, e, "I/O exception storing module: {}", module.getName());
                 }
                 int exitCode = checkErrors("module storage");
@@ -543,7 +543,7 @@ public class Compiler extends Launcher<CompilerOptions> {
                 final var struct = module.getFileStructure();
                 try {
                     struct.writeTo(file);
-                } catch (final IOException e) {
+                } catch (IOException e) {
                     log(FATAL, e, "Exception occurred while attempting to write module file {}", quoted(file.getAbsolutePath()));
                     return 1;  // Unreachable - log(FATAL) throws
                 }
@@ -556,21 +556,21 @@ public class Compiler extends Launcher<CompilerOptions> {
     // ----- text output and error handling --------------------------------------------------------
 
     @Override
-    protected void log(final ErrorList errs) {
+    protected void log(ErrorList errs) {
         var listErrs = errs.getErrors();
         int cErrs    = listErrs.size();
 
         if (cErrs > 0) {
             // if there are any COMPILER errors, suppress all VERIFY errors except the first three
             boolean fSuppressVerify = false;
-            for (final var err : listErrs) {
+            for (var err : listErrs) {
                 if (err.getCode().startsWith("COMPILER")) {
                     fSuppressVerify = true;
                     break;
                 }
             }
             int cVerify = 0;
-            for (final var err : listErrs) {
+            for (var err : listErrs) {
                 if (fSuppressVerify && err.getCode().startsWith("VERIFY") && ++cVerify > 3) {
                     continue;
                 }
@@ -589,7 +589,7 @@ public class Compiler extends Launcher<CompilerOptions> {
 
 
     @Override
-    protected boolean isBadEnoughToPrint(final Severity sev) {
+    protected boolean isBadEnoughToPrint(Severity sev) {
         if (options().isVerbose()) {
             return true;
         }
@@ -600,7 +600,7 @@ public class Compiler extends Launcher<CompilerOptions> {
     }
 
     @Override
-    protected boolean isBadEnoughToAbort(final Severity sev) {
+    protected boolean isBadEnoughToAbort(Severity sev) {
         return sev.compareTo(strictLevel == Strictness.Stickler ? WARNING : ERROR) >= 0;
     }
 
