@@ -173,7 +173,7 @@ if [ "$CI_ONLY" = false ]; then
 
     echo -e "${YELLOW}Step 2/3: Check (tests)${NC}"
     ./gradlew $GRADLE_OPTIONS check \
-        -Porg.xtclang.java.lint=true \
+        -Porg.xtclang.java.lint=all \
         -Porg.xtclang.java.warningsAsErrors=false \
         -Porg.xtclang.java.test.stdout=true
 

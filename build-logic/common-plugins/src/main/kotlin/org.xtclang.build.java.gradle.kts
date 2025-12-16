@@ -21,8 +21,14 @@ private class DefaultJvmArgsProvider(
     override fun asArguments(): Iterable<String> = snapshot
 }
 
+/**
+ * Lint modes for Java compilation:
+ * - "all": Enable all lint warnings (-Xlint:all) - most extensive
+ * - "default": Show warnings javac hints about by default (-Xlint:unchecked)
+ * - "none": Disable all lint warnings (-Xlint:none)
+ */
 private class JavaCompilerArgsProvider(
-    private val lintProv: Provider<Boolean>,
+    private val lintModeProv: Provider<String>,
     private val enablePreviewProv: Provider<Boolean>,
     private val maxErrorsProv: Provider<Int>,
     private val maxWarningsProv: Provider<Int>,
@@ -30,7 +36,7 @@ private class JavaCompilerArgsProvider(
 ) : CommandLineArgumentProvider {
 
     @get:Input
-    val lintSnapshot: Boolean get() = lintProv.get()
+    val lintModeSnapshot: String get() = lintModeProv.get()
 
     @get:Input
     val previewSnapshot: Boolean get() = enablePreviewProv.get()
@@ -44,11 +50,22 @@ private class JavaCompilerArgsProvider(
     @get:Input
     val werrorSnapshot: Boolean get() = warningsAsErrorsProv.get()
 
+    private fun isLintAll(): Boolean = lintModeSnapshot.equals("all", ignoreCase = true)
+
+    private fun isLintNone(): Boolean = lintModeSnapshot.equals("none", ignoreCase = true)
+
+    private fun isLintDefault(): Boolean = lintModeSnapshot.equals("default", ignoreCase = true)
+
     override fun asArguments(): Iterable<String> = buildList {
-        add("-Xlint:${if (lintSnapshot) "all" else "none"}")
+        when {
+            isLintAll() -> add("-Xlint:all")
+            isLintNone() -> add("-Xlint:none")
+            isLintDefault() -> add("-Xlint:unchecked") // What javac suggests when it shows "Note: Recompile with -Xlint:unchecked"
+            else -> error("Unknown lint mode: '$lintModeSnapshot'. Valid values: all, default, none")
+        }
         if (previewSnapshot) {
             add("--enable-preview")
-            if (lintSnapshot) add("-Xlint:preview")
+            if (isLintAll() || isLintDefault()) add("-Xlint:preview")
         }
         if (maxErrorsSnapshot > 0) addAll(listOf("-Xmaxerrs", maxErrorsSnapshot.toString()))
         if (maxWarningsSnapshot > 0) addAll(listOf("-Xmaxwarns", maxWarningsSnapshot.toString()))
@@ -83,7 +100,8 @@ val pprefix = "org.xtclang.java"
 val jdkVersion         = xdkProperties.int("$pprefix.jdk")
 val enablePreview      = xdkProperties.boolean("$pprefix.enablePreview", false)
 val enableNativeAccess = xdkProperties.boolean("$pprefix.enableNativeAccess", false)
-val lint               = xdkProperties.boolean("$pprefix.lint", false)
+// Lint mode: "all" for extensive, "default" for javac defaults, "none" to disable
+val lintMode           = xdkProperties.string("$pprefix.lint", "none")
 val maxErrors          = xdkProperties.int("$pprefix.maxErrors", 0)
 val maxWarnings        = xdkProperties.int("$pprefix.maxWarnings", 0)
 val warningsAsErrors   = xdkProperties.boolean("$pprefix.warningsAsErrors", true)
@@ -140,7 +158,7 @@ tasks.withType<JavaExec>().configureEach {
 tasks.withType<JavaCompile>().configureEach {
     inputs.property("jdkVersion", jdkVersion)
     inputs.property("enablePreview", enablePreview)   // javac cares about preview, not just java
-    inputs.property("lint", lint)
+    inputs.property("lintMode", lintMode)
     inputs.property("maxErrors", maxErrors)
     inputs.property("maxWarnings", maxWarnings)
     inputs.property("warningsAsErrors", warningsAsErrors)
@@ -151,7 +169,7 @@ tasks.withType<JavaCompile>().configureEach {
     // all compile flags via provider-backed arg provider
     options.compilerArgumentProviders.add(
         JavaCompilerArgsProvider(
-            lint,
+            lintMode,
             enablePreview,
             maxErrors,
             maxWarnings,
