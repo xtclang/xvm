@@ -11,7 +11,8 @@ service RTSigner
         extends RTVerifier
         implements Signer {
 
-    construct(Algorithm algorithm, CryptoKey publicKey, CryptoKey privateKey, Int signatureSize, Object signer) {
+    construct(Algorithm algorithm, CryptoKey publicKey, CryptoKey privateKey,
+              Int signatureSize, Object signer) {
         construct RTVerifier(algorithm, publicKey, signatureSize, signer);
 
         assert privateKey.form == Secret;

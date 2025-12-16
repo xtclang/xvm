@@ -2,9 +2,13 @@ package org.xvm.runtime.template._native.crypto;
 
 
 import java.security.GeneralSecurityException;
+import java.security.Key;
+import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Signature;
+
+import javax.crypto.Mac;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
@@ -25,6 +29,7 @@ import org.xvm.runtime.template._native.collections.arrays.ByteBasedDelegate.Byt
 import org.xvm.runtime.template._native.collections.arrays.xRTUInt8Delegate;
 
 import org.xvm.runtime.template._native.crypto.xRTAlgorithms.KeyForm;
+import org.xvm.runtime.template._native.crypto.xRTAlgorithms.MacHandle;
 import org.xvm.runtime.template._native.crypto.xRTAlgorithms.SignatureHandle;
 
 
@@ -56,11 +61,11 @@ public class xRTSigner
                              ObjectHandle[] ahArg, int iReturn) {
         switch (method.getName()) {
         case "sign":
-            return invokeSign(frame, (SignatureHandle) ahArg[0], ahArg[1],
+            return invokeSign(frame, ahArg[0], ahArg[1],
                 (ByteArrayHandle) ((ArrayHandle) ahArg[2]).m_hDelegate, iReturn);
 
         case "verify":
-            return invokeVerify(frame, (SignatureHandle) ahArg[0], ahArg[1],
+            return invokeVerify(frame, ahArg[0], ahArg[1],
                 (ByteArrayHandle) ((ArrayHandle) ahArg[2]).m_hDelegate,
                 (ByteArrayHandle) ((ArrayHandle) ahArg[3]).m_hDelegate, iReturn);
         }
@@ -72,44 +77,70 @@ public class xRTSigner
      * Native implementation of
      *     "Byte[] sign(Object cipher, Object secret, Byte[] data)".
      */
-    private int invokeSign(Frame frame, SignatureHandle hSignature, ObjectHandle hKey,
+    private int invokeSign(Frame frame, ObjectHandle hCipher, ObjectHandle hKey,
                            ByteArrayHandle haData, int iReturn) {
-        Signature signature = hSignature.f_signature;
-        byte[]    abData     = xRTUInt8Delegate.getBytes(haData);
-
+        byte[] abSig;
         try {
-            PrivateKey privateKey = (PrivateKey) xRTAlgorithms.extractKey(frame, hKey,
-                                    signature.getAlgorithm(), KeyForm.Private);
-            signature.initSign(privateKey);
-            signature.update(abData);
-            byte[] abSig = signature.sign();
+            if (hCipher instanceof SignatureHandle hSignature) {
+                Signature signature = hSignature.f_signature;
+                byte[]    abData    = xRTUInt8Delegate.getBytes(haData);
 
-            return frame.assignValue(iReturn,
-                    xArray.makeByteArrayHandle(abSig, Mutability.Constant));
+                PrivateKey privateKey = (PrivateKey) xRTAlgorithms.extractKey(frame, hKey,
+                                        signature.getAlgorithm(), KeyForm.Private);
+                signature.initSign(privateKey);
+                signature.update(abData);
+                abSig = signature.sign();
+            } else if (hCipher instanceof MacHandle hMac) {
+                Mac     mac    = hMac.f_mac;
+                byte[]  abData = xRTUInt8Delegate.getBytes(haData);
+
+                Key privateKey = xRTAlgorithms.extractKey(frame, hKey,
+                                        mac.getAlgorithm(), KeyForm.Private);
+                mac.init(privateKey);
+                abSig = mac.doFinal(abData);
+            } else {
+                return frame.raiseException(xException.makeObscure(frame, "Invalid cipher"));
+            }
         } catch (GeneralSecurityException e) {
             return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
         }
+
+        return frame.assignValue(iReturn,
+                xArray.makeByteArrayHandle(abSig, Mutability.Constant));
     }
 
     /**
      * Native implementation of
      *     "Boolean verify(Object signer, Object secret, Byte[] signature, Byte[] data)".
      */
-    private int invokeVerify(Frame frame, SignatureHandle hSignature, ObjectHandle hKey,
+    private int invokeVerify(Frame frame, ObjectHandle hCipher, ObjectHandle hKey,
                            ByteArrayHandle haSignature, ByteArrayHandle haData, int iReturn) {
-        Signature signature = hSignature.f_signature;
-
-        byte[] abSig  = xRTUInt8Delegate.getBytes(haSignature);
         byte[] abData = xRTUInt8Delegate.getBytes(haData);
+        byte[] abSig  = xRTUInt8Delegate.getBytes(haSignature);
 
         try {
-            PublicKey publicKey = (PublicKey) xRTAlgorithms.extractKey(frame, hKey,
-                                    signature.getAlgorithm(), KeyForm.Public);
-            signature.initVerify(publicKey);
-            signature.update(abData);
+            if (hCipher instanceof SignatureHandle hSignature) {
+                Signature signature = hSignature.f_signature;
 
-            return frame.assignValue(iReturn,
-                    xBoolean.makeHandle(signature.verify(abSig)));
+                PublicKey publicKey = (PublicKey) xRTAlgorithms.extractKey(frame, hKey,
+                                        signature.getAlgorithm(), KeyForm.Public);
+                signature.initVerify(publicKey);
+                signature.update(abData);
+
+                return frame.assignValue(iReturn,
+                        xBoolean.makeHandle(signature.verify(abSig)));
+            } else if (hCipher instanceof MacHandle hMac) {
+                Mac mac        = hMac.f_mac;
+                Key privateKey = xRTAlgorithms.extractKey(frame, hKey,
+                                        mac.getAlgorithm(), KeyForm.Private);
+                mac.init(privateKey);
+                byte[] abSigActual = mac.doFinal(abData);
+
+                return frame.assignValue(iReturn,
+                        xBoolean.makeHandle(MessageDigest.isEqual(abSig, abSigActual)));
+            } else {
+                return frame.raiseException(xException.makeObscure(frame, "Invalid cipher"));
+            }
         } catch (GeneralSecurityException e) {
             return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
         }

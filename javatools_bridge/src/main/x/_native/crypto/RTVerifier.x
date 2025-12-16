@@ -11,7 +11,7 @@ service RTVerifier
         implements Verifier {
 
     construct(Algorithm algorithm, CryptoKey publicKey, Int signatureSize, Object signer) {
-        assert publicKey.form == Public;
+        assert publicKey.form == Public || publicKey.form == Secret;
 
         this.algorithm     = algorithm;
         this.publicKey     = publicKey;

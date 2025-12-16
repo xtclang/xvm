@@ -14,10 +14,12 @@ import java.util.List;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
+import javax.crypto.Mac;
 import javax.crypto.SecretKeyFactory;
 
 import javax.crypto.spec.DESKeySpec;
 import javax.crypto.spec.DESedeKeySpec;
+import javax.crypto.spec.SecretKeySpec;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.MethodStructure;
@@ -154,7 +156,15 @@ public class xRTAlgorithms
                 break;
             }
 
-            case 3: { // Signature
+            case 3: { // MAC (Symmetric Cryptography)
+                Mac mac = Mac.getInstance(sName);
+
+                nBlockSize = 0;
+                hImpl      = new MacHandle(mac);
+                break;
+            }
+
+            case 4: { // Signature (Asymmetric Cryptography)
                 Signature sig = Signature.getInstance(sName);
 
                 nBlockSize = 0;
@@ -162,7 +172,7 @@ public class xRTAlgorithms
                 break;
             }
 
-            case 4: { // KeyGenerator
+            case 5: { // KeyGenerator
                 KeyGenerator generator = KeyGenerator.getInstance(sName);
 
                 nBlockSize = 0;
@@ -232,8 +242,20 @@ public class xRTAlgorithms
                             generatePrivate(new X509EncodedKeySpec(abRaw));
                 };
 
+            case "HmacSHA1", "HmacSHA256", "HmacSHA512":
+                // fall through
             default:
-                throw new GeneralSecurityException("Cannot make a raw key for " +  sAlgorithm);
+                // unlike specific cases above, default implementation uses generic "SecretKeySpec"
+                return switch (keyForm) {
+                    case PublicOrSecret, PrivateOrSecret ->
+                        SecretKeyFactory.getInstance(sAlgorithm).
+                            generateSecret(new SecretKeySpec(abRaw, sAlgorithm));
+
+                    default ->
+                        throw new GeneralSecurityException(
+                            sAlgorithm + " algorithm only supports secret keys");
+                };
+
             }
         }
     }
@@ -292,6 +314,23 @@ public class xRTAlgorithms
          * The wrapped {@link Signature}.
          */
         public final Signature f_signature;
+    }
+
+    /**
+     * Native handle holding a Message Authentication Code (MAC).
+     */
+    public static class MacHandle
+            extends ObjectHandle {
+        protected MacHandle(Mac mac) {
+            super(xObject.INSTANCE.getCanonicalClass());
+
+            f_mac = mac;
+        }
+
+        /**
+         * The wrapped {@link Mac}.
+         */
+        public final Mac f_mac;
     }
 
     /**

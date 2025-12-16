@@ -72,7 +72,10 @@ const Algorithms {
      */
     conditional Signer signerFor(Specifier specifier, CryptoKey key) {
         if (key.is(KeyPair),
-            Algorithm algorithm := findAlgorithm(specifier, Signing, key.privateKey, True)) {
+                Algorithm algorithm := findAlgorithm(specifier, Signing, key.privateKey, True)) {
+            return True, algorithm.allocate(key).as(Signer);
+        } else if (key.is(PrivateKey),
+                Algorithm algorithm := findAlgorithm(specifier, Signing, key, True)) {
             return True, algorithm.allocate(key).as(Signer);
         }
 
