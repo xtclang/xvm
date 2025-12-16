@@ -672,7 +672,7 @@ public abstract class OpCallable extends Op {
         TypeConstant   typeTarget = idCtor.getNamespace().getType();
         ClassDesc      cdTarget   = bctx.buildNew(code, typeTarget, idCtor, anArgValue);
 
-        bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget, cdTarget, ""));
+        bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget, cdTarget, ""), typeTarget);
     }
 
     /**
@@ -693,7 +693,7 @@ public abstract class OpCallable extends Op {
         MethodConstant idCtor   = (MethodConstant) bctx.getConstant(m_nFunctionId);
         ClassDesc      cdTarget = bctx.buildNew(code, typeTarget, idCtor, anArgValue);
 
-        bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget, cdTarget, ""));
+        bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget, cdTarget, ""), typeTarget);
     }
 
     /**

@@ -783,7 +783,7 @@ public class BuildContext {
                 code.labelBinding(endIf);
                 reg = new SingleSlot(targetDesc.type, targetDesc.cd, reg.name() + "?");
             } else {
-                Builder.box(code, reg);
+                Builder.box(code, reg.type(), reg.cd());
                 reg = new SingleSlot(targetDesc.type, targetDesc.cd, reg.name());
             }
         }
@@ -917,6 +917,15 @@ public class BuildContext {
      * Store one or two values at the Java stack into the Java slot for the specified register.
      */
     public void storeValue(CodeBuilder code, RegisterInfo reg) {
+        storeValue(code, reg, null);
+    }
+
+    /**
+     * Store one or two values at the Java stack into the Java slot for the specified register.
+     *
+     * @param type  (optional) the known destination type
+     */
+    public void storeValue(CodeBuilder code, RegisterInfo reg, TypeConstant type) {
         if (reg.isIgnore()) {
             Builder.pop(code, reg.cd());
         } else {
@@ -926,6 +935,16 @@ public class BuildContext {
         Label varStart = unassignedRegisters.remove(reg);
         if (varStart != null) {
             code.labelBinding(varStart);
+        }
+
+        if (reg instanceof Narrowed narrowedReg) {
+            // if we are still within the covered range make sure the assumption holds
+            if (currOpAddr >= narrowedReg.lastOp || type == null) {
+                resetRegister(narrowedReg);
+            } else if (!type.isA(narrowedReg.type)) {
+                assert type.isA(narrowedReg.original().type());
+                narrowRegister(code, narrowedReg.original(), currOpAddr, narrowedReg.lastOp, type);
+            }
         }
     }
 
@@ -1314,7 +1333,7 @@ public class BuildContext {
             TypeConstant typeRet = pdRet.type;
             ClassDesc    cdRet   = pdRet.cd;
             int          regId   = anVar[i];
-            RegisterInfo regRet  = ensureRegInfo(regId, typeRet, cdRet, "");
+            RegisterInfo reg     = ensureRegInfo(regId, typeRet, cdRet, "");
 
             if (i == 0) {
                 switch (pdRet.flavor) {
@@ -1325,23 +1344,23 @@ public class BuildContext {
                     // if the value is `True`, then the return value is Ecstasy `Null`
                     Builder.loadFromContext(code, CD_boolean, pdExt.altIndex);
 
-                    if (regRet.isSingle()) {
+                    if (reg.isSingle()) {
                         Label ifTrue = code.newLabel();
                         Label endIf  = code.newLabel();
                         code.ifne(ifTrue);
-                        Builder.box(code, regRet);
+                        Builder.box(code, typeRet, cdRet);
                         code.goto_(endIf)
                             .labelBinding(ifTrue)
                             .pop();
                         Builder.loadNull(code);
                         code.labelBinding(endIf);
                     }
-                    storeValue(code, regRet);
+                    storeValue(code, reg, typeRet);
                     break;
 
                 default:
                     // process the natural return
-                    storeValue(code, regRet);
+                    storeValue(code, reg, typeRet);
                     break;
                 }
             } else {
@@ -1353,24 +1372,24 @@ public class BuildContext {
                     // if the value is `True`, then the return value is Ecstasy `Null`
                     Builder.loadFromContext(code, cdRet, pdExt.altIndex);
 
-                    if (regRet.isSingle()) {
+                    if (reg.isSingle()) {
                         Label ifTrue = code.newLabel();
                         Label endIf  = code.newLabel();
                         code.iconst_0()
                             .if_icmpeq(ifTrue);
-                        Builder.box(code, regRet);
+                        Builder.box(code, typeRet, cdRet);
                         code.goto_(endIf);
                         code.labelBinding(ifTrue)
                             .pop();
                         Builder.loadNull(code);
                         code.labelBinding(endIf);
                     }
-                    storeValue(code, regRet);
+                    storeValue(code, reg, typeRet);
                     break;
 
                 default:
                     Builder.loadFromContext(code, cdRet, pdRet.altIndex);
-                    storeValue(code, regRet);
+                    storeValue(code, reg, typeRet);
                     break;
                 }
             }
