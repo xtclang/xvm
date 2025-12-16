@@ -43,6 +43,13 @@ public interface RegisterInfo {
     boolean isSingle();
 
     /**
+     * @return the original register, which could be different from "this" for narrowed registers
+     */
+    default RegisterInfo original() {
+        return this;
+    }
+
+    /**
      * @return true iff the XTC register represents a value to be ignored
      */
     default boolean isIgnore() {
