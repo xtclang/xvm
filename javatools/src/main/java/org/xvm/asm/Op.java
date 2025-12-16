@@ -14,7 +14,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Stack;
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constants.Access;
@@ -745,7 +746,7 @@ public abstract class Op {
         public void init(RegisterAST[] params) {
             assert params != null && Arrays.stream(params).allMatch(Objects::nonNull);
             assert m_aregParams == BinaryAST.NO_REGS || m_aregParams.length == params.length;
-            assert m_stackScopes.empty();
+            assert m_stackScopes.isEmpty();
 
             m_aregParams = params;
             m_listRegs.clear();
@@ -996,7 +997,7 @@ public abstract class Op {
          * A Stack of scopes entered but not exited. Each value in the stack is the number of
          * registers that existed at the time the corresponding scope was entered.
          */
-        private final Stack<Integer> m_stackScopes = new Stack<>();
+        private final Deque<Integer> m_stackScopes = new ArrayDeque<>();
 
         /**
          * The parameter registers.

@@ -24,8 +24,10 @@ import java.security.interfaces.RSAPublicKey;
 
 import java.security.spec.ECParameterSpec;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
+
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -351,12 +353,11 @@ public class xRTKeyStore
     }
 
     private static void addDate(Date date, List<ObjectHandle> list) {
-        Calendar cal = Calendar.getInstance();
-        cal.setTime(date);
+        LocalDate localDate = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
 
-        list.add(xInt64.makeHandle(cal.get(Calendar.YEAR)));
-        list.add(xInt64.makeHandle(cal.get(Calendar.MONTH) + 1));
-        list.add(xInt64.makeHandle(cal.get(Calendar.DAY_OF_MONTH)));
+        list.add(xInt64.makeHandle(localDate.getYear()));
+        list.add(xInt64.makeHandle(localDate.getMonthValue()));
+        list.add(xInt64.makeHandle(localDate.getDayOfMonth()));
     }
 
     private static int getPublicKeyLength(PublicKey puk)

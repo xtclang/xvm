@@ -25,7 +25,7 @@ import java.security.PrivateKey;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 
-import java.util.Enumeration;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -354,8 +354,8 @@ public class xRTServer
             if (sTlsKey == null && router.mapRoutes.isEmpty()) {
                 // find a public/private key pair that could be used to encrypt tls communications
                 try {
-                    for (Enumeration<String> it = keystore.aliases(); it.hasMoreElements();) {
-                        String sName = it.nextElement();
+                    for (Iterator<String> it = keystore.aliases().asIterator(); it.hasNext();) {
+                        String sName = it.next();
                         if (isValidPair(hKeystore, sName)) {
                             sTlsKey = sName;
                             break;

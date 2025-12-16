@@ -24,9 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.Vector;
-
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.xvm.asm.Constant.Format;
 
@@ -2984,17 +2983,14 @@ public class ConstantPool
      */
     public void invalidateTypeInfos(IdentityConstant id) {
         assert id.isClass();
-        synchronized (f_listInvalidated) {
-            f_listInvalidated.add((IdentityConstant) register(id));
-            m_cInvalidated = f_listInvalidated.size();
-        }
+        f_listInvalidated.add((IdentityConstant) register(id));
     }
 
     /**
      * @return  the current TypeInfo invalidation count
      */
     public int getInvalidationCount() {
-        return m_cInvalidated;
+        return f_listInvalidated.size();
     }
 
     /**
@@ -3831,12 +3827,7 @@ public class ConstantPool
     /**
      * A list of classes that cause any derived TypeInfos to be invalidated.
      */
-    private final List<IdentityConstant> f_listInvalidated = new Vector<>();
-
-    /**
-     * Cached size of {@link #f_listInvalidated}.
-     */
-    private volatile int m_cInvalidated;
+    private final List<IdentityConstant> f_listInvalidated = new CopyOnWriteArrayList<>();
 
     /**
      * A cache of TypeInfo for parameterized NakedRef types.
