@@ -162,6 +162,6 @@ public class MBind
                     CD_MethodHandle, CD_MethodHandle, CD_boolean));
 
         RegisterInfo regRet = bctx.ensureRegInfo(m_nRetValue, typeFn, cdFn, "");
-        bctx.storeValue(code, regRet);
+        bctx.storeValue(code, regRet, typeFn);
     }
 }

@@ -14,6 +14,8 @@ import org.xvm.asm.Op;
 import org.xvm.asm.OpMove;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.RegisterInfo;
@@ -85,33 +87,45 @@ public class Move
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        RegisterInfo regFrom = bctx.loadArgument(code, m_nFromValue);
-        RegisterInfo regTo   = bctx.ensureRegInfo(m_nToValue, regFrom.type(), regFrom.cd(), "");
-        ClassDesc    cdFrom  = regFrom.cd();
-        ClassDesc    cdTo    = regTo.cd();
+        RegisterInfo regFrom  = bctx.loadArgument(code, m_nFromValue);
+        RegisterInfo regTo    = bctx.ensureRegInfo(m_nToValue, regFrom.type());
+        TypeConstant typeFrom = regFrom.type();
+        TypeConstant typeTo   = regTo.type();
+        ClassDesc    cdFrom   = regFrom.cd();
+        ClassDesc    cdTo     = regTo.cd();
 
-        if (regFrom.type().isA(regTo.type())) {
-            if (cdFrom.isPrimitive() ^ cdTo.isPrimitive()) {
-                if (cdFrom.isPrimitive()) {
-                    Builder.box(code, regFrom);
-                } else {
-                    Builder.unbox(code, regTo);
-                }
-            }
+        if (typeFrom.isA(typeTo)) {
+            buildMove(bctx, code, regFrom, regTo);
         } else {
-            if (cdFrom.isPrimitive()) {
-                if (cdTo.isPrimitive()) {
-                    throw new IllegalStateException("Unreconcilable types " +
-                        regFrom.type().getValueString() + " -> " + regTo.type().getValueString());
+            if (typeFrom.isA(regTo.original().type())) {
+                buildMove(bctx, code, regFrom, regTo);
+            } else {
+                if (cdFrom.isPrimitive()) {
+                    if (cdTo.isPrimitive()) {
+                        throw new IllegalStateException("Unreconcilable types " +
+                            typeFrom.getValueString() + " -> " + typeTo.getValueString());
+                    }
+                    Builder.box(code, typeFrom, cdFrom);
                 }
-                Builder.box(code, regFrom);
+                // TODO: generateCheckCast()
+                code.checkcast(typeTo.ensureClassDesc(bctx.typeSystem));
+                if (cdTo.isPrimitive()) {
+                    Builder.unbox(code, typeTo, cdTo);
+                }
+                bctx.storeValue(code, regTo, typeFrom);
             }
-            // TODO: generateCheckCast()
-            code.checkcast(regTo.type().ensureClassDesc(bctx.typeSystem));
-            if (cdTo.isPrimitive()) {
+        }
+    }
+
+    public void buildMove(BuildContext bctx, CodeBuilder code,
+                          RegisterInfo regFrom, RegisterInfo regTo) {
+        if (regFrom.cd().isPrimitive() ^ regTo.cd().isPrimitive()) {
+            if (regFrom.cd().isPrimitive()) {
+                Builder.box(code, regFrom);
+            } else {
                 Builder.unbox(code, regTo);
             }
         }
-        bctx.storeValue(code, regTo);
+        bctx.storeValue(code, regTo, regFrom.type());
     }
 }
