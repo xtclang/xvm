@@ -104,20 +104,6 @@ import static org.xvm.util.Severity.WARNING;
  */
 public class Compiler extends Launcher<CompilerOptions> {
 
-    protected enum Strictness {
-        None,
-        Suppressed,
-        Normal,
-        Stickler
-    }
-
-    protected Strictness strictLevel = Strictness.Normal;
-
-    protected ModuleRepository repoLib;
-    protected ModuleInfo[]     prevModules;
-    protected ModuleRepository prevLibs;
-    protected ModuleRepository prevOutput;
-
     public Compiler(CompilerOptions options) {
         this(options, Launcher.DEFAULT_CONSOLE, null);
     }
@@ -704,4 +690,18 @@ public class Compiler extends Launcher<CompilerOptions> {
             }
         });
     }
+
+    protected enum Strictness {
+        None,
+        Suppressed,
+        Normal,
+        Stickler
+    }
+
+    protected Strictness strictLevel = Strictness.Normal;
+
+    protected ModuleRepository repoLib;
+    protected ModuleInfo[]     prevModules;
+    protected ModuleRepository prevLibs;
+    protected ModuleRepository prevOutput;
 }

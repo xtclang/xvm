@@ -53,8 +53,6 @@ import static org.xvm.util.Severity.worstOf;
  */
 public abstract class Launcher<T extends LauncherOptions> implements ErrorListener {
 
-    // ----- command registry ----------------------------------------------------------------------
-
     /**
      * A command handler that knows how to parse args and launch the appropriate tool.
      */
@@ -340,7 +338,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
 
         final Runtime.Version jdkVersion = Runtime.version();
         if (jdkVersion.version().getFirst() < JDK_VERSION_MIN) {
-            log(INFO, "The suggested minimum JVM version is 21; this JVM version ({}) appears to be older", Runtime.version());
+            log(INFO, "The suggested minimum JVM version is {}; this JVM version ({}) appears to be older", JDK_VERSION_MIN, Runtime.version());
         } else {
             log(INFO, "JVM version: {}", Runtime.version());
             // TODO: Use a less warning prone way to determine if -ea is in use.
