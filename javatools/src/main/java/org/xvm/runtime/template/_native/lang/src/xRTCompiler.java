@@ -315,7 +315,7 @@ public class xRTCompiler
         // re-entry support
         private List<org.xvm.compiler.Compiler> m_compilers;
         private ModuleRepository                m_repoOutput;
-        private Node[]                          m_allNodes;
+        private List<Node>                      m_allNodes;
 
         // error collection
         private final ErrorList m_errorList;
@@ -373,7 +373,7 @@ public class xRTCompiler
             List<org.xvm.compiler.Compiler> compilers;
             ModuleRepository                repoLib;
             ModuleRepository                repoOutput;
-            Node[]                          allNodes;
+            List<Node>                      allNodes;
 
             if (fReenter) {
                 compilers  = m_compilers;
@@ -406,7 +406,7 @@ public class xRTCompiler
                     return null;
                 }
 
-                allNodes = mapTargets.values().toArray(new Node[0]);
+                allNodes = List.copyOf(mapTargets.values());
                 flushAndCheckErrors(allNodes);
 
                 // repository setup

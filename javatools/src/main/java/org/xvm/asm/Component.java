@@ -1526,6 +1526,19 @@ public abstract class Component
     }
 
     /**
+     * Get a child by name, cast to the specified type.
+     *
+     * @param sName  the child name
+     * @param clz    the expected type of the child
+     * @param <T>    the component type
+     *
+     * @return the child component cast to the specified type, or null if not found
+     */
+    public <T extends Component> T getChild(String sName, Class<T> clz) {
+        return clz.cast(getChild(sName));
+    }
+
+    /**
      * @return the number of children
      */
     public int getChildrenCount() {

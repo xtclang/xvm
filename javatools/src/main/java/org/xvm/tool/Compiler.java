@@ -150,13 +150,13 @@ public class Compiler extends Launcher<CompilerOptions> {
 
         log(INFO, "Selecting compilation targets");
 
-        List<File>   resourceDirs = opts.getResourceLocations();
-        File         outputLoc    = opts.getOutputLocation().orElse(null);
-        ModuleInfo[] aTarget      = selectTargets(opts.getInputLocations(), resourceDirs, outputLoc).toArray(new ModuleInfo[0]);
+        var resourceDirs = opts.getResourceLocations();
+        var outputLoc    = opts.getOutputLocation().orElse(null);
+        var targets      = selectTargets(opts.getInputLocations(), resourceDirs, outputLoc);
 
-        prevModules = aTarget;
+        prevModules = targets;
 
-        int cTargets = aTarget.length;
+        int cTargets = targets.size();
         if (cTargets == 0) {
             if (opts.showVersion()) {
                 return 0;
@@ -171,7 +171,7 @@ public class Compiler extends Launcher<CompilerOptions> {
 
         var infoByName = new LinkedHashMap<String, ModuleInfo>();
         for (int i = 0; i < cTargets; ++i) {
-            var info    = aTarget[i];
+            var info    = targets.get(i);
             var sModule = info.getQualifiedModuleName();
             var srcFile = info.getSourceFile();
             var binFile = info.getBinaryFile();
@@ -208,7 +208,7 @@ public class Compiler extends Launcher<CompilerOptions> {
 
         final var mapTargets = new LinkedHashMap<File, Node>();
         var cSystemModules = 0;
-        for (var moduleInfo : aTarget) {
+        for (var moduleInfo : targets) {
             log(INFO, "Loading and parsing sources for module: {}", moduleInfo.getQualifiedModuleName());
             var node = moduleInfo.getSourceTree(this);
             // short-circuit the compilation of any up-to-date modules
@@ -229,7 +229,7 @@ public class Compiler extends Launcher<CompilerOptions> {
             log(INFO, "All modules are up to date; terminating compiler");
             return 0;
         }
-        final var allNodes = mapTargets.values().toArray(new Node[0]);
+        final var allNodes = List.copyOf(mapTargets.values());
         flushAndCheckErrors(allNodes);
 
         // repository setup
@@ -272,8 +272,8 @@ public class Compiler extends Launcher<CompilerOptions> {
         generateCode(compilers);
         flushAndCheckErrors(allNodes);
 
-        if (allNodes.length == 1) {
-            log(INFO, "Storing results of compilation: {}", allNodes[0].moduleInfo().getBinaryFile());
+        if (allNodes.size() == 1) {
+            log(INFO, "Storing results of compilation: {}", allNodes.getFirst().moduleInfo().getBinaryFile());
         } else {
             log(INFO, "Storing results of compilation:");
             for (var node : allNodes) {
@@ -299,7 +299,7 @@ public class Compiler extends Launcher<CompilerOptions> {
         var moduleTurtle = repoBuild.loadModule(Constants.TURTLE_MODULE);
         if (moduleTurtle != null) {
             try (var ignore = ConstantPool.withPool(moduleTurtle.getConstantPool())) {
-                var clzNakedRef = (ClassStructure) moduleTurtle.getChild("NakedRef");
+                var clzNakedRef  = moduleTurtle.getChild("NakedRef", ClassStructure.class);
                 var typeNakedRef = clzNakedRef.getFormalType();
 
                 for (var sModule : repoBuild.getModuleNames()) {
@@ -314,12 +314,12 @@ public class Compiler extends Launcher<CompilerOptions> {
      * Link all the AST objects for each module into a single parse tree, and create the outline
      * of the finished FileStructure.
      *
-     * @param allNodes  the array of module sources being compiled
+     * @param allNodes  the list of module sources being compiled
      * @param repo      the library repository (with the build repository at the front)
      *
      * @return a map from module name to compiler, one for each module being compiled
      */
-    protected Map<String, org.xvm.compiler.Compiler> resolveCompilers(Node[] allNodes, ModuleRepository repo) {
+    protected Map<String, org.xvm.compiler.Compiler> resolveCompilers(List<Node> allNodes, ModuleRepository repo) {
         final var mapCompilers = new LinkedHashMap<String, org.xvm.compiler.Compiler>();
         final var repoBuild = extractBuildRepo(repo);
         for (var node : allNodes) {
@@ -486,7 +486,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      *
      * @return 0 for success, non-zero exit code for failure
      */
-    protected int emitModules(Node[] allNodes, ModuleRepository repoOutput) {
+    protected int emitModules(List<Node> allNodes, ModuleRepository repoOutput) {
         var opts = options();
         var version = opts.getVersion();
         for (var nodeModule : allNodes) {
@@ -600,7 +600,7 @@ public class Compiler extends Launcher<CompilerOptions> {
     // ----- accessors -----------------------------------------------------------------------------
 
     @SuppressWarnings("unused")
-    public ModuleInfo[] getModuleInfos() {
+    public List<ModuleInfo> getModuleInfos() {
         return prevModules;
     }
 
@@ -700,8 +700,8 @@ public class Compiler extends Launcher<CompilerOptions> {
 
     protected Strictness strictLevel = Strictness.Normal;
 
-    protected ModuleRepository repoLib;
-    protected ModuleInfo[]     prevModules;
-    protected ModuleRepository prevLibs;
+    protected ModuleRepository   repoLib;
+    protected List<ModuleInfo>   prevModules;
+    protected ModuleRepository   prevLibs;
     protected ModuleRepository prevOutput;
 }

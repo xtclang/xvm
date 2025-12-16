@@ -658,15 +658,14 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
             return makeBuildRepo();
         }
 
-        ModuleRepository[] repos = new ModuleRepository[path.size() + 1];
-        repos[0] = makeBuildRepo();
-        for (int i = 0, c = path.size(); i < c; ++i) {
-            File file = path.get(i);
-            repos[i + 1] = file.isDirectory()
+        var repos = new java.util.ArrayList<ModuleRepository>(path.size() + 1);
+        repos.add(makeBuildRepo());
+        for (File file : path) {
+            repos.add(file.isDirectory()
                 ? new DirRepository(file, true)
-                : new FileRepository(file, true);
+                : new FileRepository(file, true));
         }
-        return new LinkedRepository(true, repos);
+        return new LinkedRepository(true, repos.toArray(ModuleRepository[]::new));
     }
 
     /**
@@ -705,10 +704,10 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * @return a module repository that will store to the specified destination
      */
     protected ModuleRepository configureResultRepo(File fileDest) {
-        fileDest = resolveFile(fileDest);
-        return fileDest.isDirectory()
-                ? new DirRepository (fileDest, false)
-                : new FileRepository(fileDest, false);
+        var resolved = resolveFile(fileDest);
+        return resolved.isDirectory()
+                ? new DirRepository(resolved, false)
+                : new FileRepository(resolved, false);
     }
 
     /**
@@ -900,14 +899,12 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * @return 0 if no serious errors, 1 if serious errors exist (but not fatal enough to throw)
      * @throws LauncherException if errors are severe enough to abort
      */
-    protected int flushAndCheckErrors(Node[] nodes) {
-        if (nodes != null) {
-            for (Node node : nodes) {
-                if (node != null) {
-                    node.logErrors(this);
-                }
-            }
-        }
+    @SuppressWarnings("UnusedReturnValue")
+    protected int flushAndCheckErrors(List<Node> nodes) {
+        Objects.requireNonNullElse(nodes, List.<Node>of())
+               .stream()
+               .filter(Objects::nonNull)
+               .forEach(node -> node.logErrors(this));
         return checkErrors();
     }
 
