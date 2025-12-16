@@ -1082,7 +1082,7 @@ public class BuildContext {
     public RegisterInfo getRegisterInfo(int regId) {
         RegisterInfo reg = registerInfos.get(regId);
         if (reg instanceof Narrowed narrowed && currOpAddr >= narrowed.lastOp) {
-            reg = resetRegister(regId, narrowed);
+            reg = resetRegister(narrowed);
         }
         return reg;
     }
@@ -1196,11 +1196,11 @@ public class BuildContext {
     }
 
     /**
-     * Reset the narrowed register info for the specified register id.
+     * Reset the narrowed register info.
      */
-    public RegisterInfo resetRegister(int regId, Narrowed narrowedReg) {
+    protected RegisterInfo resetRegister(Narrowed narrowedReg) {
         RegisterInfo origReg = narrowedReg.origReg;
-        registerInfos.put(regId, origReg);
+        registerInfos.put(narrowedReg.regId, origReg);
         return origReg;
     }
 
@@ -1546,6 +1546,11 @@ public class BuildContext {
         @Override
         public boolean isSingle() {
             return true;
+        }
+
+        @Override
+        public RegisterInfo original() {
+            return origReg;
         }
     }
 
