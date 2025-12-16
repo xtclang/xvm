@@ -257,7 +257,7 @@ public abstract class OpGeneral
                 bctx.loadArgument(code, m_nArgValue);
                 code.invokevirtual(regTarget.cd(), sJitName, md);
             }
-            bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget));
+            bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget), typeTarget);
         } else { // unary op
             if (cdTarget.isPrimitive()) {
                 buildOptimizedUnary(bctx, code, regTarget);
@@ -284,7 +284,7 @@ public abstract class OpGeneral
                 bctx.loadCtx(code);
                 code.invokevirtual(regTarget.cd(), sJitName, md);
             }
-            bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget));
+            bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget), typeTarget);
         }
     }
 
