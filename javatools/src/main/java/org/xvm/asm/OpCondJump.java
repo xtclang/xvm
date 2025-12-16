@@ -484,15 +484,15 @@ public abstract class OpCondJump
             case OP_JMP_NULL:
                 Builder.loadNull(code);
                 code.if_acmpeq(lblJump);
-                bctx.narrowRegister(code, reg, nAddrThis, -1, reg.type().removeNullable());
-                bctx.narrowRegister(code, reg, nAddrJump, -1, bctx.pool().typeNullable());
+                bctx.narrowRegister(code, reg, nAddrThis + 1, -1, reg.type().removeNullable());
+                bctx.narrowRegister(code, reg, nAddrJump,     -1, bctx.pool().typeNullable());
                 break;
 
             case OP_JMP_NNULL:
                 Builder.loadNull(code);
                 code.if_acmpne(lblJump);
-                bctx.narrowRegister(code, reg, nAddrJump, -1, bctx.pool().typeNullable());
-                bctx.narrowRegister(code, reg, nAddrJump, -1, reg.type().removeNullable());
+                bctx.narrowRegister(code, reg, nAddrJump,     -1, bctx.pool().typeNullable());
+                bctx.narrowRegister(code, reg, nAddrThis + 1, -1, reg.type().removeNullable());
                 break;
 
             default:
@@ -524,16 +524,17 @@ public abstract class OpCondJump
                     bctx.markDeadCode(nAddrJump, -1);
                 }
                 return;
-            } else {
-                RegisterInfo regTarget = bctx.loadArgument(code, m_nArg);
-                bctx.loadCtx(code);
-                code.invokevirtual(regTarget.cd(), "$xvmType", MD_xvmType); // target type
-                Builder.loadTypeConstant(code, bctx.typeSystem, typeTest);  // test type
             }
+
+            RegisterInfo regTarget = bctx.loadArgument(code, m_nArg);
+            bctx.loadCtx(code);
+            code.invokevirtual(regTarget.cd(), "$xvmType", MD_xvmType); // target type
+            Builder.loadTypeConstant(code, bctx.typeSystem, typeTest);  // test type
+
             if (getOpCode() == OP_JMP_TYPE) {
-                bctx.narrowRegister(code, m_nArg, nAddrJump, -1, typeTest);
+                bctx.narrowRegister(code, regTarget, nAddrJump, -1, typeTest);
             } else {
-                bctx.narrowRegister(code, m_nArg, nAddrThis + 1, nAddrJump, typeTest);
+                bctx.narrowRegister(code, regTarget, nAddrThis + 1, nAddrJump, typeTest);
             }
         } else {
             // dynamic types
