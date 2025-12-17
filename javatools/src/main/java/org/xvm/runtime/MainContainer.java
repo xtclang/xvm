@@ -57,35 +57,21 @@ public class MainContainer
             typeRequired = typeRequired.removeNullable();
         }
 
-        int listSize = listValue.size();
-        if (listSize == 1) {
-            // Single value case
-            String sValue = listValue.getFirst();
+        if (!listValue.isEmpty()) {
             if (typeRequired.equals(typeString)) {
-                // require String and value is String
-                return xString.makeHandle(sValue);
+                // require String, return the last element
+                return xString.makeHandle(listValue.getLast());
             }
             if (typeRequired.equals(typeStrings)) {
-                // require String[] and value is single String - wrap in array
-                return xString.makeArrayHandle(new String[]{sValue});
-            }
-            if (typeRequired.isA(typeDestringable)) {
-                // require Destringable and value is String
-                return toDestringable(frame, typeRequired, sValue);
-            }
-        } else if (listSize > 1){
-            // Multiple values case
-            if (typeRequired.equals(typeStrings)) {
-                // require String[] and value is List<String>
+                // require String[], return the whole List<String> as an array
                 String[] asValue = listValue.toArray(String[]::new);
                 return xString.makeArrayHandle(asValue);
             }
-            if (typeRequired.equals(typeString)) {
-                // require String and value is List<String> - return the last element
-                return xString.makeHandle(listValue.getLast());
+            if (typeRequired.isA(typeDestringable)) {
+                // require Destringable, return the converted last String element
+                return toDestringable(frame, typeRequired, listValue.getLast());
             }
         }
-
         return getParentInjectable(frame, sName, type, hOpts);
     }
 
