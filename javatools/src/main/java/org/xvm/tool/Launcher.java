@@ -96,8 +96,6 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
 
     private static final Locale DEFAULT_LOCALE = Locale.getDefault();
 
-    private static final int JDK_VERSION_MIN = 21;
-
     /**
      * Cached modules.
      */
@@ -336,16 +334,13 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     public int run() {
         final T opts = options();
 
-        final Runtime.Version jdkVersion = Runtime.version();
-        if (jdkVersion.version().getFirst() < JDK_VERSION_MIN) {
-            log(INFO, "The suggested minimum JVM version is {}; this JVM version ({}) appears to be older", JDK_VERSION_MIN, Runtime.version());
-        } else {
-            log(INFO, "JVM version: {}", Runtime.version());
-            // TODO: Use a less warning prone way to determine if -ea is in use.
-            boolean fAssertsEnabled = false;
-            assert  fAssertsEnabled = true;
-            log(INFO, "Java assertions are {}", fAssertsEnabled ? "enabled" : "disabled");
-        }
+        log(INFO, "JVM version: {}", Runtime.version());
+
+        // TODO: Use a less warning prone way to determine if -ea is in use.
+        boolean fAssertsEnabled = false;
+        assert  fAssertsEnabled = true;
+        log(INFO, "Java assertions are {}", fAssertsEnabled ? "enabled" : "disabled");
+
 
         if (opts.showHelp()) {
             displayHelp();
