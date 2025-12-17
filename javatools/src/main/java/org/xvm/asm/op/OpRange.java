@@ -67,8 +67,8 @@ public abstract class OpRange
                 code.new_(cdRange)
                     .dup();
                 bctx.loadCtx(code);
-                Builder.load(code, regTarget);
-                Builder.load(code, regArg);
+                regTarget.load(code);
+                regArg.load(code);
                 switch (getOpCode()) {
                     case OP_GP_IRANGEI -> code.iconst_1().iconst_1();
                     case OP_GP_ERANGEI -> code.iconst_0().iconst_1();

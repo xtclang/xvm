@@ -983,7 +983,7 @@ public class UnionTypeConstant
     private void buildTypeCheck(BuildContext bctx, CodeBuilder code,
                                 RegisterInfo regTest, TypeConstant typeTest) {
         // o1.$xvmType(ctx).isA(typeCompare)
-        code.aload(regTest.slot());
+        regTest.load(code);
         bctx.loadCtx(code);
         code.invokevirtual(CD_nObj, "$xvmType", MD_xvmType);
         Builder.loadTypeConstant(code, bctx.typeSystem, typeTest);
