@@ -1,5 +1,6 @@
 package org.xvm.javajit;
 
+import java.lang.classfile.CodeBuilder;
 import java.lang.constant.ClassDesc;
 
 import org.xvm.asm.Op;
@@ -62,6 +63,36 @@ public interface RegisterInfo {
     default boolean isThis() {
         return regId() == Op.A_THIS;
     }
+
+    /**
+     * Load the value for this register on the Java stack.
+     *
+     * @param type  (optional) the type of the value; could be wider than a narrowed register type
+     */
+    default RegisterInfo load(CodeBuilder code) {
+        Builder.load(code, cd(), slot());
+        return this;
+    }
+
+    /**
+     * Store the value on the Java stack into the slot for this register.
+     *
+     * @param type  (optional) the type of the value; could be wider than a narrowed register type
+     */
+    default RegisterInfo store(BuildContext buildContext, CodeBuilder code, TypeConstant type) {
+        if (isIgnore()) {
+            Builder.pop(code, cd());
+        } else {
+            Builder.store(code, cd(), slot());
+        }
+        return this;
+    }
+
+    /**
+     * Mark this register as "changed". This may be used by implementations to ensure correct data
+     * transfer.
+     */
+    default void markChanged() {}
 
     /**
      * Used for the value of the {@link #slot()} to indicates that the value is on the Java stack.
