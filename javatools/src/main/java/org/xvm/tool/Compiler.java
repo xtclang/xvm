@@ -139,7 +139,8 @@ public class Compiler extends Launcher<CompilerOptions> {
         return options().getInputLocations();
     }
 
-    // TODO: Also support a process call with an optional options paramter (and likely run and stuff...)
+    // TODO: Also support a process call with an optional options parameter (and likely run and
+    //  stuff...)
     @Override
     protected int process() {
         final var opts = options();
@@ -176,10 +177,14 @@ public class Compiler extends Launcher<CompilerOptions> {
             var srcFile = info.getSourceFile();
             var binFile = info.getBinaryFile();
 
-            log(srcFile == null ? ERROR : INFO, "  [{}]={}", i, srcFile == null ? "<unknown>" : srcFile.getPath());
+            log(srcFile == null ? ERROR : INFO, "  [{}]={}", i,
+                    srcFile == null ? "<unknown>" : srcFile.getPath());
 
-            if (i == 1 && outputLoc != null && !outputLoc.isDirectory() && isExplicitCompiledFile(outputLoc.getName())) {
-                log(ERROR, "Multiple modules are being compiled, but only one output module file name ({}) was specified; specify a target directory instead", outputLoc);
+            if (i == 1 && outputLoc != null && !outputLoc.isDirectory() &&
+                    isExplicitCompiledFile(outputLoc.getName())) {
+                log(ERROR, "Multiple modules are being compiled, but only one output "
+                        + "module file name ({}) was specified; specify a target directory instead",
+                        outputLoc);
             }
             if (srcFile == null || !srcFile.exists()) {
                 log(ERROR, "Could not locate the source for the module {}", info.getFileSpec());
@@ -191,12 +196,16 @@ public class Compiler extends Launcher<CompilerOptions> {
                 infoByName.put(sModule, info);
             }
             if (binFile == null) {
-                log(ERROR, "Could not determine the target location for {}; the module project may be missing a \"build\" or \"target\" directory", info.getFileSpec());
+                log(ERROR, "Could not determine the target location for {}; the module "
+                        + "project may be missing a \"build\" or \"target\" directory",
+                        info.getFileSpec());
             } else {
                 parentOf(binFile)
                         .filter(dir -> !dir.isDirectory() && dir.exists())
                         .ifPresent(_ -> log(ERROR,
-                                "The output file {} cannot be written because its parent directory cannot be created because a file already exists with the same name",
+                                "The output file {} cannot be written because its parent"
+                                        + " directory cannot be created because a file already "
+                                        + "exists with the same name",
                                 binFile));
             }
         }
@@ -209,7 +218,8 @@ public class Compiler extends Launcher<CompilerOptions> {
         final var mapTargets     = new LinkedHashMap<File, Node>();
         var       cSystemModules = 0;
         for (var moduleInfo : targets) {
-            log(INFO, "Loading and parsing sources for module: {}", moduleInfo.getQualifiedModuleName());
+            log(INFO, "Loading and parsing sources for module: {}",
+                    moduleInfo.getQualifiedModuleName());
             var node = moduleInfo.getSourceTree(this);
             // short-circuit the compilation of any up-to-date modules
             if (fRebuild || !moduleInfo.isUpToDate()) {
@@ -219,7 +229,8 @@ public class Compiler extends Launcher<CompilerOptions> {
                 }
             } else if (verStamp.isPresent() && !verStamp.get().equals(moduleInfo.getModuleVersion())) {
                 // recompile is not required, but the version stamp needs to be added
-                log(INFO, "Stamping version {} onto module: {}", verStamp.get(), moduleInfo.getQualifiedModuleName());
+                log(INFO, "Stamping version {} onto module: {}", verStamp.get(),
+                        moduleInfo.getQualifiedModuleName());
                 addVersion(moduleInfo, verStamp.get());
             }
         }
@@ -273,7 +284,8 @@ public class Compiler extends Launcher<CompilerOptions> {
         flushAndCheckErrors(allNodes);
 
         if (allNodes.size() == 1) {
-            log(INFO, "Storing results of compilation: {}", allNodes.getFirst().moduleInfo().getBinaryFile());
+            log(INFO, "Storing results of compilation: {}",
+                    allNodes.getFirst().moduleInfo().getBinaryFile());
         } else {
             log(INFO, "Storing results of compilation:");
             for (var node : allNodes) {
@@ -319,7 +331,8 @@ public class Compiler extends Launcher<CompilerOptions> {
      *
      * @return a map from module name to compiler, one for each module being compiled
      */
-    protected Map<String, org.xvm.compiler.Compiler> resolveCompilers(List<Node> allNodes, ModuleRepository repo) {
+    protected Map<String, org.xvm.compiler.Compiler> resolveCompilers(List<Node>       allNodes,
+                                                                      ModuleRepository repo) {
         final var mapCompilers = new LinkedHashMap<String, org.xvm.compiler.Compiler>();
         final var repoBuild    = extractBuildRepo(repo);
         for (var node : allNodes) {
@@ -375,7 +388,8 @@ public class Compiler extends Launcher<CompilerOptions> {
         for (var compiler : compilers) {
             final var idMissing = compiler.linkModules(repo);
             if (idMissing != null) {
-                compiler.getErrorListener().log(FATAL, MODULE_MISSING, new String[]{idMissing.getName()}, null);
+                compiler.getErrorListener().log(FATAL, MODULE_MISSING,
+                        new String[]{idMissing.getName()}, null);
                 return;
             }
         }
@@ -412,9 +426,11 @@ public class Compiler extends Launcher<CompilerOptions> {
      * Run a compiler phase that may require multiple iterations to complete.
      *
      * @param compilers  the list of compilers to process
-     * @param phase      the phase function to run on each compiler (takes compiler and isLastAttempt, returns isDone)
+     * @param phase      the phase function to run on each compiler (takes compiler and
+     *                   isLastAttempt, returns isDone)
      */
-    private static void runCompilerPhase(List<org.xvm.compiler.Compiler> compilers, CompilerPhase phase) {
+    private static void runCompilerPhase(List<org.xvm.compiler.Compiler> compilers,
+                                         CompilerPhase                   phase) {
         int cTriesLeft = 0x3F;
         do {
             boolean fDone = true;
@@ -510,7 +526,8 @@ public class Compiler extends Launcher<CompilerOptions> {
                 // figure out where to put the resulting module
                 var file = nodeModule.file().getParentFile();
                 if (file == null) {
-                    log(ERROR, "Unable to determine output location for module {} from file: {}", quoted(nodeModule.name()), nodeModule.file());
+                    log(ERROR, "Unable to determine output location for module {} from file: {}",
+                            quoted(nodeModule.name()), nodeModule.file());
                     return checkErrors("output location resolution");
                 }
 
@@ -531,7 +548,8 @@ public class Compiler extends Launcher<CompilerOptions> {
                 try {
                     struct.writeTo(file);
                 } catch (IOException e) {
-                    log(FATAL, e, "Exception occurred while attempting to write module file {}", quoted(file.getAbsolutePath()));
+                    log(FATAL, e, "Exception occurred while attempting to write module file {}",
+                            quoted(file.getAbsolutePath()));
                     return 1;  // Unreachable - log(FATAL) throws
                 }
             }
@@ -595,7 +613,8 @@ public class Compiler extends Launcher<CompilerOptions> {
     public boolean isAbortDesired() {
         // Check BOTH Console (tool errors) AND ErrorListener delegate (compiler errors)
         // Use Compiler's strictness-aware abort threshold
-        return isBadEnoughToAbort(m_sevWorst) || (m_errors != ErrorListener.BLACKHOLE && m_errors.isAbortDesired());
+        return isBadEnoughToAbort(m_sevWorst) ||
+                (m_errors != ErrorListener.BLACKHOLE && m_errors.isAbortDesired());
     }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -620,9 +639,11 @@ public class Compiler extends Launcher<CompilerOptions> {
     protected void validateOptions() {
         var opts = options();
         // Set strictness level based on options
-        //   NOTE: --strict and --nowarn are mutually exclusive (enforced by OptionGroup in LauncherOptions), so we
-        //   do not need to check if nowarn and strict are both set and conflicting.
-        assert !(opts.isStrict() && opts.isNoWarn()): "Incompatible option groups should be checked already.";
+        //   NOTE: --strict and --nowarn are mutually exclusive (enforced by OptionGroup in
+        //   LauncherOptions), so we do not need to check if nowarn and strict are both set and
+        //   conflicting.
+        assert !(opts.isStrict() && opts.isNoWarn()) :
+                "Incompatible option groups should be checked already.";
         if (opts.isStrict()) {
             strictLevel = Strictness.Stickler;
         } else if (opts.isNoWarn()) {
@@ -667,8 +688,8 @@ public class Compiler extends Launcher<CompilerOptions> {
                 optDir.filter(File::exists)
                       .filter(dir -> !dir.isDirectory())
                       .ifPresent(_ -> log(ERROR,
-                          "The output file is {} but the parent directory cannot be created because a file already exists with the same name",
-                          file));
+                          "The output file is {} but the parent directory cannot be created"
+                                  + " because a file already exists with the same name", file));
             }
 
             // Create directory if it doesn't exist
@@ -701,8 +722,8 @@ public class Compiler extends Launcher<CompilerOptions> {
 
     protected Strictness strictLevel = Strictness.Normal;
 
-    protected ModuleRepository   repoLib;
-    protected List<ModuleInfo>   prevModules;
-    protected ModuleRepository   prevLibs;
+    protected ModuleRepository repoLib;
+    protected List<ModuleInfo> prevModules;
+    protected ModuleRepository prevLibs;
     protected ModuleRepository prevOutput;
 }
