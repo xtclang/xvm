@@ -472,6 +472,9 @@ public class BuildContext {
 
     /**
      * Prepare compiling the specified op address.
+     *
+     * @return -1 to proceed to the next op or a positive op address to eliminate all code up to
+     *         that address
      */
     public int prepareOp(CodeBuilder code, int opAddr) {
         OpAction currAct = actions.remove(currOpAddr = opAddr);
@@ -1571,8 +1574,8 @@ public class BuildContext {
         /**
          * Prepare for the compilation for a particular op.
          *
-         * @return -1 to proceed to the next op or positive number to eliminate all code up to the
-         *         specified address
+         * @return -1 to proceed to the next op or a positive op address to eliminate all code up to
+         *         that address
          */
         int prepare();
     }
