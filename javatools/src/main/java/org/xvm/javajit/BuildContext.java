@@ -254,7 +254,7 @@ public class BuildContext {
      *   }
      * </code></pre>
      * <p>
-     * we produce the bytecode that look like the following pseudo code:
+     * we produce the bytecode that look like the following pseudocode:
      *
      * <pre><code>
      *     Throwable $rethrow  = null;
@@ -687,7 +687,7 @@ public class BuildContext {
         assert isConstructor || !isFunction;
 
         RegisterInfo reg = getRegisterInfo(Op.A_THIS);
-        code.aload(reg.slot());
+        reg.load(code);
         return reg;
     }
 
@@ -793,7 +793,7 @@ public class BuildContext {
     /**
      * Check if the specified argument has been already assigned a Java slot. If the argument points
      * to a constant, create a temporary Java slot for it. In either case, the corresponding value
-     * is not loaded on the Java stack.
+     * is **not** loaded on the Java stack.
      */
     public RegisterInfo ensureRegister(CodeBuilder code, int argId) {
         if (argId >= 0) {
@@ -838,7 +838,7 @@ public class BuildContext {
         case Op.A_STACK:
             // this refers to a synthetic RegInfo created by the pushTempRegister() method
             RegisterInfo reg = tempRegStack.pop();
-            Builder.load(code, reg);
+            reg.load(code);
             return reg;
 
         case Op.A_THIS:
@@ -926,26 +926,12 @@ public class BuildContext {
      * @param type  (optional) the known destination type
      */
     public void storeValue(CodeBuilder code, RegisterInfo reg, TypeConstant type) {
-        if (reg.isIgnore()) {
-            Builder.pop(code, reg.cd());
-        } else {
-            Builder.store(code, reg);
-        }
-
         Label varStart = unassignedRegisters.remove(reg);
         if (varStart != null) {
             code.labelBinding(varStart);
         }
 
-        if (reg instanceof Narrowed narrowedReg) {
-            // if we are still within the covered range make sure the assumption holds
-            if (currOpAddr >= narrowedReg.lastOp || type == null) {
-                resetRegister(narrowedReg);
-            } else if (!type.isA(narrowedReg.type)) {
-                assert type.isA(narrowedReg.original().type());
-                narrowRegister(code, narrowedReg.original(), currOpAddr, narrowedReg.lastOp, type);
-            }
-        }
+        reg.store(this, code, type);
     }
 
     /**
@@ -1047,9 +1033,9 @@ public class BuildContext {
                 Builder.loadTypeConstant(code, typeSystem, resourceType);
                 code.ldc(resourceName)
                     .aconst_null() // opts
-                    .invokevirtual(CD_Ctx, "inject", Ctx.MD_inject)
-                    .astore(reg.slot())
-                    .labelBinding(varStart);
+                    .invokevirtual(CD_Ctx, "inject", Ctx.MD_inject);
+                storeValue(code, reg);
+                code.labelBinding(varStart);
                 return reg;
             }
         }
@@ -1125,30 +1111,6 @@ public class BuildContext {
     }
 
     /**
-     * Narrow the type of the specified register in the code region between the "from" op address
-     * and the "to" address. If "addrTo" is -1, compute the "addrTo" address based on the
-     * corresponding scope exit.
-     *
-     * Note, that unlike the dead code elimination below, the narrowing could "stop" at any point
-     * an assignment is made to the register.
-     *
-     * @param regId         the register id
-     * @param fromAddr      the beginning address at which the narrowing should apply (inclusive)
-     * @param toAddr        the address after which the narrowing should not apply (exclusive;
-     *                      could be -1)
-     * @param narrowedType  the narrowed type
-     *
-     * @return the narrowed register (if applied)
-     */
-    public RegisterInfo narrowRegister(CodeBuilder code, int regId,
-                                       int fromAddr, int toAddr, TypeConstant narrowedType) {
-        RegisterInfo origReg = getRegisterInfo(regId);
-        assert origReg != null;
-
-        return narrowRegister(code, origReg, fromAddr, toAddr, narrowedType);
-    }
-
-    /**
      * Narrow the type of the specified register for the duration of the current op.
      *
      * @param reg           the register to narrow
@@ -1195,14 +1157,14 @@ public class BuildContext {
                 origReg.name(), fromAddr, toAddr, origReg);
         OpAction action = () -> {
             registerInfos.put(narrowedReg.regId, narrowedReg);
-            Builder.load(code, origReg);
+            origReg.load(code);
             if (narrowedCD.isPrimitive() && !origReg.cd().isPrimitive()) {
                 code.checkcast(narrowedType.ensureClassDesc(typeSystem)); // boxed
                 Builder.unbox(code, narrowedReg);
             } else {
                 code.checkcast(narrowedCD);
             }
-            Builder.store(code, narrowedReg);
+            Builder.store(code, narrowedCD, narrowedSlot);
             return -1;
         };
 
@@ -1556,6 +1518,22 @@ public class BuildContext {
         public boolean isSingle() {
             return false;
         }
+
+        @Override
+        public RegisterInfo load(CodeBuilder code) {
+            // load the "extension" boolean flag first.
+            code.iload(extSlot());
+
+            return RegisterInfo.super.load(code);
+        }
+
+        @Override
+        public RegisterInfo store(BuildContext buildContext, CodeBuilder code, TypeConstant type) {
+            // store the "extension" boolean flag first
+            code.istore(extSlot());
+
+            return RegisterInfo.super.store(buildContext, code, type);
+        }
     }
 
     public record Narrowed(int regId, int slot, TypeConstant type, ClassDesc cd, String name,
@@ -1570,6 +1548,19 @@ public class BuildContext {
         @Override
         public RegisterInfo original() {
             return origReg;
+        }
+
+        @Override
+        public RegisterInfo store(BuildContext buildContext, CodeBuilder code, TypeConstant type) {
+            // if we are still within the covered range make sure the assumption holds
+            if (type == null) {
+                buildContext.resetRegister(this);
+            } else if (!type.isA(type())) {
+                assert type.isA(original().type());
+                buildContext.narrowRegister(code, original(), type);
+            }
+
+            return RegisterInfo.super.store(buildContext, code, type);
         }
     }
 

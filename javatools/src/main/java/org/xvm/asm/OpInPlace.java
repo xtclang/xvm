@@ -223,6 +223,8 @@ public abstract class OpInPlace
                 buildPrimitiveLocal(code, reg);
                 if (isAssignOp()) {
                     bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, reg.type()));
+                } else {
+                    reg.markChanged();
                 }
             } else {
                 // call the corresponding op method
@@ -453,7 +455,7 @@ public abstract class OpInPlace
 
         assert !jmd.isOptimized;
 
-        code.aload(reg.slot());
+        reg.load(code);
         bctx.loadCtx(code);
         code.invokevirtual(reg.cd(), sJitName, jmd.standardMD);
         return jmd;

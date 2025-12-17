@@ -6605,8 +6605,8 @@ public abstract class TypeConstant
             ClassDesc cdCommon = JitTypeDesc.getPrimitiveClass(this);
             String    desc     = cdCommon.descriptorString();
 
-            Builder.load(code, reg1);
-            Builder.load(code, reg2);
+            reg1.load(code);
+            reg2.load(code);
 
             switch (desc) {
             case "I", "S", "B", "C", "Z":
@@ -6669,8 +6669,8 @@ public abstract class TypeConstant
 
             bctx.loadCtx(code);
             Builder.loadType(code, ts, this);
-            Builder.load(code, reg1);
-            Builder.load(code, reg2);
+            reg1.load(code);
+            reg2.load(code);
 
             switch (nOp) {
             case Op.OP_IS_EQ, Op.OP_JMP_EQ, Op.OP_IS_NEQ, Op.OP_JMP_NEQ:

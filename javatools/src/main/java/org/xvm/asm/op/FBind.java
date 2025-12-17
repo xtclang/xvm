@@ -242,16 +242,16 @@ public class FBind
         boolean fOptBefore = jmdBefore.isOptimized;
 
          // initialize slots for the resulting handles
-        code.aload(regFn.slot())
-            .getfield(CD_nFunction, "stdMethod", CD_MethodHandle);
+        regFn.load(code);
+        code.getfield(CD_nFunction, "stdMethod", CD_MethodHandle);
         int slotStd = bctx.storeTempValue(code, CD_MethodHandle);
 
-        code.aload(regFn.slot())
-            .getfield(CD_nFunction, "optMethod", CD_MethodHandle);
+        regFn.load(code);
+        code.getfield(CD_nFunction, "optMethod", CD_MethodHandle);
         int slotOpt = bctx.storeTempValue(code, CD_MethodHandle);
 
-        code.aload(regFn.slot())
-            .getfield(CD_nFunction, "immutable", CD_boolean);
+        regFn.load(code);
+        code.getfield(CD_nFunction, "immutable", CD_boolean);
         int slotImm = bctx.storeTempValue(code, CD_boolean);
 
         int[] anArg = m_anParamValue;
@@ -368,7 +368,7 @@ public class FBind
             .anewarray(CD_JavaObject)
             .dup()
             .iconst_0();
-        Builder.load(code, regArg);
+        regArg.load(code);
         if (fBox) {
             Builder.box(code, regArg);
         } else if (regArg.cd().isPrimitive()) {
@@ -385,7 +385,7 @@ public class FBind
         Label labelEnd = code.newLabel();
         code.iload(slotImm)
             .ifeq(labelEnd);
-        Builder.load(code, regArg);
+        regArg.load(code);
         code.invokevirtual(CD_nObj, "$isImmut", MethodTypeDesc.of(CD_boolean))
             .iand()
             .istore(slotImm)
