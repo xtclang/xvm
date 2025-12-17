@@ -16,7 +16,6 @@
 [versions]
 apache-commons-cli = "1.11.0"
 download = "5.6.0"
-gson = "2.13.1"
 gradle-doctor = "0.12.1"
 gradle-portal-publish = "2.0.0"
 jakarta-activation = "2.1.4"
@@ -77,7 +76,6 @@ javatools-utils = { group = "org.xtclang", name = "javatools-utils" }
 
 # Third party
 apache-commons-cli = { module = "commons-cli:commons-cli", version.ref = "apache-commons-cli" }
-gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 jakarta-activation-api = { module = "jakarta.activation:jakarta.activation-api", version.ref = "jakarta-activation" }
 jakarta-xml-bind-api = { module = "jakarta.xml.bind:jakarta.xml.bind-api", version.ref = "jakarta-xml-bind-api" }
 jaxb-runtime = { module = "org.glassfish.jaxb:jaxb-runtime", version.ref = "jaxb-runtime" }

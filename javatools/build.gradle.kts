@@ -29,7 +29,6 @@ dependencies {
     implementation(libs.javatools.utils)
     implementation(libs.jline)
     implementation(libs.apache.commons.cli)
-    implementation(libs.gson)
     testCompileOnly(libs.jetbrains.annotations)
     testImplementation(libs.javatools.utils)
 }
