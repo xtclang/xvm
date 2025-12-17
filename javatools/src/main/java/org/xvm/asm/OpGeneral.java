@@ -179,7 +179,7 @@ public abstract class OpGeneral
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append(toName(getOpCode()))
           .append(' ')
           .append(Argument.toIdString(m_argTarget, m_nTarget));

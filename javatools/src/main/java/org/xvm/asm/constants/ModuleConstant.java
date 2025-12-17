@@ -285,8 +285,8 @@ public class ModuleConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constName    = (StringConstant)  pool.register(m_constName);
-        m_constVersion = (VersionConstant) pool.register(m_constVersion);
+        m_constName    = pool.register(m_constName);
+        m_constVersion = pool.register(m_constVersion);
     }
 
     @Override

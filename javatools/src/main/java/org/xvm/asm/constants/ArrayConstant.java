@@ -209,7 +209,7 @@ public class ArrayConstant
 
         return typeNew == typeOld && aconstNew == null
                 ? this
-                : (ArrayConstant) getConstantPool().register(
+                : getConstantPool().register(
                         new ArrayConstant(getConstantPool(), f_fmt, typeNew, aconstNew));
     }
 
@@ -280,7 +280,7 @@ public class ArrayConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constType = (TypeConstant) pool.register(m_constType);
+        m_constType = pool.register(m_constType);
         m_aconstVal = registerConstants(pool, m_aconstVal);
     }
 

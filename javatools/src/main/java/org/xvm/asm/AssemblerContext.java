@@ -244,7 +244,7 @@ public class AssemblerContext {
      */
     public void endIfSpecified(String sName) {
         ConditionalConstant condition = pop();
-        if (!(condition instanceof NamedCondition && sName.equals(((NamedCondition) condition).getName()))) {
+        if (!(condition instanceof NamedCondition condNamed && sName.equals(condNamed.getName()))) {
             throw new IllegalStateException("expected NamedCondition(\"" + sName + "\"); found: " + condition);
         }
     }
@@ -276,8 +276,8 @@ public class AssemblerContext {
     public void endIfVisible(Constant constId) {
         ConditionalConstant condition = pop();
 
-        if (!(condition instanceof PresentCondition
-                && constId.equals(((PresentCondition) condition).getPresentConstant()))) {
+        if (!(condition instanceof PresentCondition condPresent
+                && constId.equals(condPresent.getPresentConstant()))) {
             throw new IllegalStateException("expected PresentCondition(\"" + constId + "\"); found: " + condition);
         }
     }

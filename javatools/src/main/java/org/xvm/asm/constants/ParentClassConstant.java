@@ -63,7 +63,7 @@ public class ParentClassConstant
 
     @Override
     protected void resolveConstants() {
-        m_constChild = (PseudoConstant) getConstantPool().getConstant(m_iChild);
+        m_constChild = getConstantPool().getConstant(m_iChild, PseudoConstant.class);
     }
 
 
@@ -174,7 +174,7 @@ public class ParentClassConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constChild = (PseudoConstant) pool.register(m_constChild);
+        m_constChild = pool.register(m_constChild);
     }
 
     @Override

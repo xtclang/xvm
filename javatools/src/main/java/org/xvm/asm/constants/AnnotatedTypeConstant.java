@@ -663,8 +663,8 @@ public class AnnotatedTypeConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_annotation = (Annotation)   pool.register(m_annotation);
-        m_constType  = (TypeConstant) pool.register(m_constType);
+        m_annotation = pool.register(m_annotation);
+        m_constType  = pool.register(m_constType);
 
         // invalidate cached type
         m_typeAnno = null;

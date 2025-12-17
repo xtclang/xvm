@@ -116,7 +116,7 @@ public class VirtualChildTypeConstant
     protected void resolveConstants() {
         super.resolveConstants();
 
-        m_constName        = (StringConstant) getConstantPool().getConstant(m_iName);
+        m_constName        = getConstantPool().getConstant(m_iName, StringConstant.class);
         m_typeOriginParent = m_typeParent;
     }
 
@@ -318,8 +318,8 @@ public class VirtualChildTypeConstant
     protected void registerConstants(ConstantPool pool) {
         super.registerConstants(pool);
 
-        m_constName        = (StringConstant) pool.register(m_constName);
-        m_typeOriginParent = (TypeConstant)   pool.register(m_typeOriginParent);
+        m_constName        = pool.register(m_constName);
+        m_typeOriginParent = pool.register(m_typeOriginParent);
 
         // invalidate cached structure
         m_clzChild = null;

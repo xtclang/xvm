@@ -459,17 +459,17 @@ public class CmpExpression
             log(errs, Severity.WARNING, Compiler.TYPE_MATCHES_ALWAYS, exprTarget, typeNull, typeNull);
         }
 
-        switch (operator.getId()) {
-        case COMP_EQ:
-            typeTrue  = typeNull;
-            typeFalse = typeTarget.removeNullable();
-            break;
-
-        case COMP_NEQ:
-            typeTrue  = typeTarget.removeNullable();
-            typeFalse = typeNull;
-            break;
-        }
+        typeFalse = switch (operator.getId()) {
+            case COMP_EQ -> {
+                typeTrue = typeNull;
+                yield typeTarget.removeNullable();
+            }
+            case COMP_NEQ -> {
+                typeTrue = typeTarget.removeNullable();
+                yield typeNull;
+            }
+            default -> typeFalse;
+        };
 
         exprTarget.narrowType(ctx, Branch.WhenTrue,  typeTrue);
         exprTarget.narrowType(ctx, Branch.WhenFalse, typeFalse);

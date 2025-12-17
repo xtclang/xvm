@@ -20,14 +20,8 @@ public class LinkedIterator<E>
      * @param aIter  the Iterators containing the elements to iterate over
      */
     @SafeVarargs
-    @SuppressWarnings("varargs")
     public LinkedIterator(final Iterator<E>... aIter) {
-        f_aIter = aIter != null ? aIter : emptyIteratorArray();
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <E> Iterator<E>[] emptyIteratorArray() {
-        return (Iterator<E>[]) NO_ITERATORS;
+        f_aIter = aIter;
     }
 
 
@@ -151,8 +145,4 @@ public class LinkedIterator<E>
      */
     private int m_nState = NOT_READY;
 
-    /**
-     * Empty array of Iterators (to avoid unnecessary allocation).
-     */
-    private static final Iterator<?>[] NO_ITERATORS = new Iterator<?>[0];
 }

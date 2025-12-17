@@ -78,7 +78,7 @@ public class ModuleLoader
     protected Class<?> findClass(String name)
             throws ClassNotFoundException {
         if (name.startsWith(prefix)) {
-            Class clz = findLoadedClass(name);
+            Class<?> clz = findLoadedClass(name);
             if (clz != null) {
                 assert clz.getClassLoader() == this;
                 return clz;

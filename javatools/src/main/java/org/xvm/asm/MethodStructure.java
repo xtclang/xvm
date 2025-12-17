@@ -1865,10 +1865,10 @@ public class MethodStructure
     protected void registerConstants(ConstantPool pool) {
         super.registerConstants(pool);
 
-        m_aAnnotations = (Annotation[]) Constant.registerConstants(pool, m_aAnnotations);
+        m_aAnnotations = Constant.registerConstants(pool, m_aAnnotations);
 
         if (m_idFinally != null) {
-            m_idFinally = (MethodConstant) pool.register(m_idFinally);
+            m_idFinally = pool.register(m_idFinally);
         }
 
         for (Parameter param : m_aReturns) {
@@ -1880,7 +1880,7 @@ public class MethodStructure
         }
 
         if (m_idSuper != null) {
-            m_idSuper     = (MethodConstant) pool.register(m_idSuper);
+            m_idSuper     = pool.register(m_idSuper);
             m_aconstSuper = Constant.registerConstants(pool, m_aconstSuper);
         }
 
@@ -2908,7 +2908,7 @@ public class MethodStructure
         protected void registerConstants(ConstantPool pool) {
             normalize();
             if (m_aconstSrc != null) {
-                m_aconstSrc = (StringConstant[]) Constant.registerConstants(pool, m_aconstSrc);
+                m_aconstSrc = Constant.registerConstants(pool, m_aconstSrc);
             }
         }
 

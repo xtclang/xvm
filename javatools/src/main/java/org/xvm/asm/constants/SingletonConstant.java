@@ -73,7 +73,7 @@ public class SingletonConstant
 
     @Override
     protected void resolveConstants() {
-        m_constClass = (IdentityConstant) getConstantPool().getConstant(m_iClass);
+        m_constClass = getConstantPool().getConstant(m_iClass, IdentityConstant.class);
     }
 
 
@@ -161,7 +161,7 @@ public class SingletonConstant
         IdentityConstant constNew = (IdentityConstant) constOld.resolveTypedefs();
         return constNew == constOld
                 ? this
-                : (SingletonConstant) getConstantPool().register(
+                : getConstantPool().register(
                         new SingletonConstant(getConstantPool(), f_fmt, constNew));
     }
 
@@ -188,7 +188,7 @@ public class SingletonConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constClass = (IdentityConstant) pool.register(m_constClass);
+        m_constClass = pool.register(m_constClass);
     }
 
     @Override

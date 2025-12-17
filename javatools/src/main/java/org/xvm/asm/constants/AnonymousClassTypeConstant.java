@@ -109,7 +109,7 @@ public class AnonymousClassTypeConstant
     protected void resolveConstants() {
         super.resolveConstants();
 
-        m_idAnon = (ClassConstant) getConstantPool().getConstant(m_iAnon);
+        m_idAnon = getConstantPool().getConstant(m_iAnon, ClassConstant.class);
     }
 
     @Override
@@ -249,7 +249,7 @@ public class AnonymousClassTypeConstant
     protected void registerConstants(ConstantPool pool) {
         super.registerConstants(pool);
 
-        m_idAnon = (ClassConstant) pool.register(m_idAnon);
+        m_idAnon = pool.register(m_idAnon);
     }
 
     @Override

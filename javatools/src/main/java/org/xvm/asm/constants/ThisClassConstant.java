@@ -51,7 +51,7 @@ public class ThisClassConstant
 
     @Override
     protected void resolveConstants() {
-        m_constClass = (IdentityConstant) getConstantPool().getConstant(m_iClass);
+        m_constClass = getConstantPool().getConstant(m_iClass, IdentityConstant.class);
     }
 
 
@@ -124,7 +124,7 @@ public class ThisClassConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constClass = (IdentityConstant) pool.register(m_constClass);
+        m_constClass = pool.register(m_constClass);
     }
 
     @Override

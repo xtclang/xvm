@@ -155,7 +155,7 @@ public class LiteralConstant
 
     @Override
     protected void resolveConstants() {
-        m_constStr = (StringConstant) getConstantPool().getConstant(m_iStr);
+        m_constStr = getConstantPool().getConstant(m_iStr, StringConstant.class);
     }
 
 
@@ -1618,7 +1618,7 @@ public class LiteralConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constStr = (StringConstant) pool.register(m_constStr);
+        m_constStr = pool.register(m_constStr);
     }
 
     @Override

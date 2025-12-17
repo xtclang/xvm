@@ -726,8 +726,8 @@ public class ModuleStructure
             }
         }
 
-        m_constDir       = (LiteralConstant) getConstantPool().getConstant(readIndex(in));
-        m_constTimestamp = (LiteralConstant) getConstantPool().getConstant(readIndex(in));
+        m_constDir       = getConstantPool().getConstant(readIndex(in), LiteralConstant.class);
+        m_constTimestamp = getConstantPool().getConstant(readIndex(in), LiteralConstant.class);
     }
 
     @Override

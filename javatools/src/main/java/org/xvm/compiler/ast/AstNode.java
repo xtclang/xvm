@@ -1862,14 +1862,14 @@ public abstract class AstNode
      *
      * @return an array of fields corresponding to the specified names on the specified class
      */
-    protected static Field[] fieldsForNames(Class clz, String... names) {
+    protected static Field[] fieldsForNames(Class<? extends AstNode> clz, String... names) {
         if (names == null || names.length == 0) {
             return NO_FIELDS;
         }
 
         Field[] fields = new Field[names.length];
         NextField: for (int i = 0, c = fields.length; i < c; ++i) {
-            Class                clzTry = clz;
+            Class<?>             clzTry = clz;
             NoSuchFieldException eOrig  = null;
             while (clzTry != null) {
                 try {

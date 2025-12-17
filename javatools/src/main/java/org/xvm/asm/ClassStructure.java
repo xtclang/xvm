@@ -12,6 +12,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import java.util.function.Consumer;
@@ -2800,7 +2801,7 @@ public class ClassStructure
 
         // create a transient MethodStructure (without an intermediate MultiMethodStructure)
         MethodConstant idMethod = pool.ensureMethodConstant(
-                (IdentityConstant) pool.register(getIdentityConstant()),
+                pool.register(getIdentityConstant()),
                 "default", TypeConstant.NO_TYPES, TypeConstant.NO_TYPES);
 
         // use the module as a parent component without adding the method as a child
@@ -3303,7 +3304,7 @@ public class ClassStructure
 
         // read in the type parameters
         m_mapParams = disassembleTypeParams(in);
-        m_constPath = (LiteralConstant) getConstantPool().getConstant(readIndex(in));
+        m_constPath = getConstantPool().getConstant(readIndex(in), LiteralConstant.class);
     }
 
     @Override
@@ -3321,7 +3322,7 @@ public class ClassStructure
 
         // register the type parameters
         m_mapParams = registerTypeParams(m_mapParams);
-        m_constPath = (LiteralConstant) pool.register(m_constPath);
+        m_constPath = pool.register(m_constPath);
 
         // invalidate cached types
         m_typeCanonical = null;
@@ -3446,10 +3447,10 @@ public class ClassStructure
         ListMap<StringConstant, TypeConstant> mapNew = mapOld;
         for (Map.Entry<StringConstant, TypeConstant> entry : mapOld.entrySet()) {
             StringConstant constOldKey = entry.getKey();
-            StringConstant constNewKey = (StringConstant) pool.register(constOldKey);
+            StringConstant constNewKey = pool.register(constOldKey);
 
             TypeConstant   constOldVal = entry.getValue();
-            TypeConstant   constNewVal = (TypeConstant) pool.register(constOldVal);
+            TypeConstant   constNewVal = pool.register(constOldVal);
 
             if (mapNew != mapOld || constOldKey != constNewKey) {
                 if (mapNew == mapOld) {
@@ -3589,14 +3590,11 @@ public class ClassStructure
         }
 
         // type parameters
-        Map mapThisParams = this.m_mapParams;
-        Map mapThatParams = that.m_mapParams;
-        int cThisParams   = mapThisParams == null ? 0 : mapThisParams.size();
-        int cThatParams   = mapThatParams == null ? 0 : mapThatParams.size();
+        var mapThisParams = this.m_mapParams;
+        var mapThatParams = that.m_mapParams;
 
-        return cThisParams == cThatParams
-            && (cThisParams == 0 || mapThisParams.equals(mapThatParams))
-            && Handy.equals(this.m_constPath, that.m_constPath);
+        return Objects.equals(mapThisParams, mapThatParams)
+            && Objects.equals(this.m_constPath, that.m_constPath);
     }
 
     /**

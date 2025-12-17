@@ -47,7 +47,7 @@ public class Parameter
         int          cAnnos = readPackedInt(in);
         Annotation[] aAnnos = cAnnos == 0 ? Annotation.NO_ANNOTATIONS : new Annotation[cAnnos];
         for (int i = 0; i < cAnnos; ++i) {
-            aAnnos[i] = (Annotation) pool.getConstant(readMagnitude(in));
+            aAnnos[i] = pool.getConstant(readMagnitude(in));
         }
 
         int iType      = readMagnitude(in);
@@ -55,9 +55,9 @@ public class Parameter
         int iDefault   = readIndex(in);
 
         m_aAnnotations = aAnnos;
-        m_constType    = (TypeConstant)   pool.getConstant(iType   );
-        m_constName    = (StringConstant) pool.getConstant(iName   );
-        m_constDefault =                  pool.getConstant(iDefault);
+        m_constType    = pool.getConstant(iType   );
+        m_constName    = pool.getConstant(iName   );
+        m_constDefault = pool.getConstant(iDefault);
 
         f_iParam       = fReturn ? -1 - index : index;
         f_fOrdinary    = !fSpecial;
@@ -373,20 +373,20 @@ public class Parameter
     @Override
     protected void markModified() {
         // parameters are basically constants
-        throw new UnsupportedOperationException();
+        throw new UnsupportedOperationException("markModified");
     }
 
     @Override
     protected void disassemble(DataInput in) {
-        throw new IllegalStateException();
+        throw new IllegalStateException("disassemble");
     }
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_aAnnotations = (Annotation[])   Constant.registerConstants(pool, m_aAnnotations);
-        m_constType    = (TypeConstant)   pool.register(m_constType   );
-        m_constName    = (StringConstant) pool.register(m_constName   );
-        m_constDefault =                  pool.register(m_constDefault);
+        m_aAnnotations = Constant.registerConstants(pool, m_aAnnotations);
+        m_constType    = pool.register(m_constType);
+        m_constName    = pool.register(m_constName);
+        m_constDefault = pool.register(m_constDefault);
     }
 
     @Override
@@ -404,7 +404,7 @@ public class Parameter
 
     @Override
     public String getDescription() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.append(isParameter() ? "param" : "return")
           .append("-index=")

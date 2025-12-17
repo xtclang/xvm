@@ -139,8 +139,8 @@ public class AllCondition
             ConditionalConstant[] acondNew = acondOld.clone();
             acondNew[cConds-1] = condLast.removeVersion(ver);
             return new AllCondition(acondNew);
-        } else if (condLast instanceof VersionedCondition) {
-            assert ver.equals(((VersionedCondition) condLast).getVersion());
+        } else if (condLast instanceof VersionedCondition condVersioned) {
+            assert ver.equals(condVersioned.getVersion());
             switch (cConds) {
             case 0:
             case 1:
@@ -215,11 +215,12 @@ public class AllCondition
                 }
 
                 // collect the terminal VersionedConditions
-                if (cond instanceof VersionedCondition) {
-                    setVerConds.add((VersionedCondition) cond);
+                if (cond instanceof VersionedCondition condVersioned) {
+                    setVerConds.add(condVersioned);
                 } else {
-                    for (Iterator<ConditionalConstant> iterVerCond = ((AnyCondition) cond).flatIterator();
-                            iterVerCond.hasNext(); ) {
+                    var condAny = (AnyCondition) cond;
+                    for (Iterator<ConditionalConstant> iterVerCond = condAny.flatIterator();
+                         iterVerCond.hasNext(); ) {
                         setVerConds.add((VersionedCondition) iterVerCond.next());
                     }
                 }
@@ -242,14 +243,14 @@ public class AllCondition
             // there were version conditions
             if (setVers.isEmpty()) {
                 // the version conditions are impossible to meet; this condition is unsatisfiable
-                for (Map.Entry<ConditionalConstant, Influence> entry : influences.entrySet()) {
+                for (var entry : influences.entrySet()) {
                     entry.setValue(Influence.ALWAYS_F);
                 }
-                for (VersionedCondition cond : setVerConds) {
+                for (var cond : setVerConds) {
                     influences.put(cond, Influence.ALWAYS_F);
                 }
             } else {
-                for (VersionedCondition cond : setVerConds) {
+                for (var cond : setVerConds) {
                     // three cases: this version is impossible, in which case it should be ALWAYS_F;
                     // this version is the only version, in which case it should be AND; or this
                     // version is one of several versions, in which case it should be CONTRIB
@@ -305,9 +306,9 @@ public class AllCondition
         boolean fAnds   = false;
         int     cConds = 0;
         for (ConditionalConstant cond : aconstCond) {
-            if (cond instanceof AllCondition) {
+            if (cond instanceof AllCondition condAll) {
                 fAnds   = true;
-                cConds += mergeAnds(((AllCondition) cond).m_aconstCond).length;
+                cConds += mergeAnds(condAll.m_aconstCond).length;
             } else {
                 ++cConds;
             }
@@ -322,8 +323,8 @@ public class AllCondition
         ConditionalConstant[] aconstMerged = new ConditionalConstant[cConds];
         int ofNew = 0;
         for (ConditionalConstant cond : aconstCond) {
-            if (cond instanceof AllCondition) {
-                ConditionalConstant[] aconstCopy = mergeAnds(((AllCondition) cond).m_aconstCond);
+            if (cond instanceof AllCondition condAll) {
+                ConditionalConstant[] aconstCopy = mergeAnds(condAll.m_aconstCond);
                 int cCopy = aconstCopy.length;
                 System.arraycopy(aconstCopy, 0, aconstMerged, ofNew, cCopy);
                 ofNew += cCopy;

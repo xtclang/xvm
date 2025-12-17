@@ -38,12 +38,12 @@ public interface Argument {
      * @return a String useful for debugging purposes
      */
     static String toIdString(Argument arg, int nArg) {
-        if (arg instanceof Constant) {
-            return ((Constant) arg).getValueString();
+        if (arg instanceof Constant constant) {
+            return constant.getValueString();
         }
 
-        if (arg instanceof Register) {
-            return ((Register) arg).getIdString();
+        if (arg instanceof Register register) {
+            return register.getIdString();
         }
 
         try {

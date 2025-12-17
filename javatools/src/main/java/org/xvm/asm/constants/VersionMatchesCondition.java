@@ -173,8 +173,8 @@ public class VersionMatchesCondition
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constStruct = (ModuleConstant)  pool.register(m_constStruct);
-        m_constVer    = (VersionConstant) pool.register(m_constVer);
+        m_constStruct = pool.register(m_constStruct);
+        m_constVer    = pool.register(m_constVer);
     }
 
     @Override

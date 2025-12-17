@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Argument;
@@ -1228,16 +1229,15 @@ public class NewExpression
      *
      * @return a deeply cloned list
      */
-    private <T extends AstNode> List<T> clone(List<? extends AstNode> list) {
+    @SuppressWarnings("unchecked")
+    private <T extends AstNode> List<T> clone(List<T> list) {
         if (list == null || list.isEmpty()) {
-            return (List<T>) list;
+            return list;
         }
 
-        List listCopy = new ArrayList<>(list.size());
-        for (AstNode node : list) {
-            listCopy.add(node.clone());
-        }
-        return listCopy;
+        return list.stream()
+                .<T>map(node -> (T) node.clone())
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     /**

@@ -35,6 +35,7 @@ public class PackageStructure
      *
      * @return the PackageConstant representing the identity of this PackageStructure
      */
+    @SuppressWarnings("unused")
     public PackageConstant getPackageConstant() {
         return (PackageConstant) getIdentityConstant();
     }

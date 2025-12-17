@@ -76,12 +76,40 @@ public class ConstantPool
      * Obtain the Constant that is currently stored at the specified index. A runtime exception will
      * occur if the index is invalid.
      *
-     * @param i  the index, for example obtained during the disassembly process
+     * @param i    the index, for example obtained during the disassembly process
+     * @param <T>  the expected Constant subtype
      *
      * @return the Constant at that index
      */
-    public Constant getConstant(int i) {
-        return i == -1 ? null : m_listConst.get(i);
+    @SuppressWarnings("unchecked")
+    public <T extends Constant> T getConstant(int i) {
+        return i == -1 ? null : (T) m_listConst.get(i);
+    }
+
+    /**
+     * Obtain the Constant of the specified type at the given index, with runtime type verification.
+     * <p>
+     * This method is preferred over the unchecked {@link #getConstant(int)} because it verifies
+     * that the constant is of the expected type and provides a clear error message if not.
+     *
+     * @param i     the index, for example obtained during the disassembly process
+     * @param type  the expected Constant subclass
+     * @param <T>   the expected Constant subtype
+     *
+     * @return the Constant at that index, or null if i is -1
+     *
+     * @throws IllegalStateException if the constant at index i is not of the expected type
+     */
+    public <T extends Constant> T getConstant(int i, Class<T> type) {
+        if (i == -1) {
+            return null;
+        }
+        Constant constant = m_listConst.get(i);
+        if (!type.isInstance(constant)) {
+            throw new IllegalStateException("Expected " + type.getSimpleName() + " at index " + i +
+                    ", found " + (constant == null ? "null" : constant.getClass().getSimpleName()));
+        }
+        return type.cast(constant);
     }
 
     /**
@@ -131,12 +159,14 @@ public class ConstantPool
      * in.
      *
      * @param constant  the Constant to register
+     * @param <T>       the Constant subtype
      *
      * @return if the passed Constant was not previously registered, then it is returned; otherwise,
      *         the previously registered Constant (which should be used in lieu of the passed
      *         Constant) is returned
      */
-    public Constant register(Constant constant) {
+    @SuppressWarnings("unchecked")
+    public <T extends Constant> T register(T constant) {
         // to allow this method to be used blindly, i.e. for constants that may be optional within a
         // given structure, simply pass back null refs
         if (constant == null) {
@@ -148,11 +178,11 @@ public class ConstantPool
         // with the type constant that the typedef refers to, removing a level of indirection;
         // also it's imperative to avoid a recursive call from TypeConstant.equals() implementation,
         // which has a possibility of locking up the ConcurrentHashMap.get()
-        constant = constant.resolveTypedefs();
+        Constant resolved = constant.resolveTypedefs();
 
         // check if the Constant is already registered
-        Map<Constant, Constant> mapConstants = ensureConstantLookup(constant.getFormat());
-        Constant                constantOld  = mapConstants.get(constant);
+        Map<Constant, Constant> mapConstants = ensureConstantLookup(resolved.getFormat());
+        Constant                constantOld  = mapConstants.get(resolved);
 
         boolean fRegisterRecursively = false;
         if (constantOld == null) {
@@ -160,31 +190,31 @@ public class ConstantPool
             // registered; note that if m_fRecurseReg is true, we could be in a compile phase that has already
             // experienced one or more name resolution errors, and so there could still be unresolved
             // constants (just ignore them here; they should have been logged as errors already)
-            if (constant.containsUnresolved()) {
-                return constant;
+            if (resolved.containsUnresolved()) {
+                return (T) resolved;
             }
 
             // type constants that are "foreign" to this pool cannot be held by it
-            if (constant instanceof TypeConstant type && !type.isShared(this)) {
-                return constant;
+            if (resolved instanceof TypeConstant type && !type.isShared(this)) {
+                return (T) resolved;
             }
 
-            if (constant.getContaining() != this) {
-                constant = constant.adoptedBy(this);
+            if (resolved.getContaining() != this) {
+                resolved = resolved.adoptedBy(this);
             }
 
             synchronized (this) {
-                if (mapConstants.containsKey(constant)) {
+                if (mapConstants.containsKey(resolved)) {
                     // it was concurrently inserted
-                    return mapConstants.get(constant);
+                    return (T) mapConstants.get(resolved);
                 }
 
-                constant.setPosition(m_listConst.size());
-                m_listConst.add(constant);
-                mapConstants.put(constant, constant);
+                resolved.setPosition(m_listConst.size());
+                m_listConst.add(resolved);
+                mapConstants.put(resolved, resolved);
 
                 // also allow the constant to be looked up by a locator
-                Object oLocator = constant.getLocator();
+                Object oLocator = resolved.getLocator();
                 if (oLocator != null) {
                     if (oLocator instanceof Constant constLocator &&
                             constLocator.getContaining() != this) {
@@ -193,9 +223,9 @@ public class ConstantPool
                         oLocator = constLocator;
                     }
 
-                    Constant constOld = ensureLocatorLookup(constant.getFormat()).put(oLocator, constant);
-                    if (constOld != null && !constOld.equals(constant)) {
-                        throw new IllegalStateException("locator collision: old=" + constOld + ", new=" + constant);
+                    Constant constOld = ensureLocatorLookup(resolved.getFormat()).put(oLocator, resolved);
+                    if (constOld != null && !constOld.equals(resolved)) {
+                        throw new IllegalStateException("locator collision: old=" + constOld + ", new=" + resolved);
                     }
                 }
             }
@@ -204,7 +234,7 @@ public class ConstantPool
             // registered (and that they are aware of their being referenced)
             fRegisterRecursively = true;
         } else {
-            constant = constantOld;
+            resolved = constantOld;
         }
 
         if (m_fRecurseReg) {
@@ -213,20 +243,20 @@ public class ConstantPool
             // register any constants that it refers to, and each time the constant is registered
             // we tally that registration so that we can later order the constants from most to
             // least referenced
-            fRegisterRecursively = constant.addRef();
+            fRegisterRecursively = resolved.addRef();
         }
 
         if (fRegisterRecursively) {
-            constant.registerConstants(this);
+            resolved.registerConstants(this);
 
             // once all of the modules are linked together, we know all of the valid upstream
             // constant pools that we are allowed to refer to from this constant pool, so this
             // is an assertion to make sure that we don't accidentally refer to a constant pool
             // that isn't in that set of valid pools
-            constant.checkValidPools(m_setValidPools, new int[] {0});
+            resolved.checkValidPools(m_setValidPools, new int[] {0});
         }
 
-        return constant;
+        return (T) resolved;
     }
 
     /**
@@ -280,13 +310,13 @@ public class ConstantPool
     public CharConstant ensureCharConstant(int ch) {
         // check the cache
         if (ch <= 0x7F) {
-            CharConstant constant = (CharConstant) ensureLocatorLookup(Format.Char).get(Character.valueOf((char) ch));
+            CharConstant constant = (CharConstant) ensureLocatorLookup(Format.Char).get((char) ch);
             if (constant != null) {
                 return constant;
             }
         }
 
-        return (CharConstant) register(new CharConstant(this, ch));
+        return register(new CharConstant(this, ch));
     }
 
     /**
@@ -320,7 +350,7 @@ public class ConstantPool
         // check the pre-existing constants first
         StringConstant constant = (StringConstant) ensureLocatorLookup(Format.String).get(s);
         if (constant == null) {
-            constant = (StringConstant) register(new StringConstant(this, s));
+            constant = register(new StringConstant(this, s));
         }
         return constant;
     }

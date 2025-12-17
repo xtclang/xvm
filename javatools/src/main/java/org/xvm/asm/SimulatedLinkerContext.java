@@ -82,25 +82,25 @@ public class SimulatedLinkerContext
         for (Map.Entry<ConditionalConstant, Influence> entry : influences.entrySet()) {
             if (entry.getValue().isRequired()) {
                 ConditionalConstant condEach = entry.getKey();
-                if (condEach instanceof NamedCondition) {
+                if (condEach instanceof NamedCondition condNamed) {
                     if (names.isEmpty()) {
                         names = new HashSet<>();
                     }
-                    names.add(((NamedCondition) condEach).getName());
-                } else if (condEach instanceof PresentCondition) {
+                    names.add(condNamed.getName());
+                } else if (condEach instanceof PresentCondition condPresent) {
                     if (present.isEmpty()) {
                         present = new HashMap<>();
                     }
-                    present.put(((PresentCondition) condEach).getPresentConstant(), true);
+                    present.put(condPresent.getPresentConstant(), true);
                 } else if (condEach instanceof VersionMatchesCondition condModuleVer) {
                     if (modules.isEmpty()) {
                         modules = new HashMap<>();
                     }
                     modules.put(condModuleVer.getModuleConstant(),
                             condModuleVer.getVersionConstant().getVersion());
-                } else if (condEach instanceof VersionedCondition) {
+                } else if (condEach instanceof VersionedCondition condVersioned) {
                     assert version == null;
-                    version = ((VersionedCondition) condEach).getVersion();
+                    version = condVersioned.getVersion();
                 }
             }
         }

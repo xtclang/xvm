@@ -213,8 +213,8 @@ public class DynamicFormalConstant
     protected void registerConstants(ConstantPool pool) {
         super.registerConstants(pool);
 
-        m_typeReg     = (TypeConstant)   pool.register(m_typeReg);
-        m_constFormal = (FormalConstant) pool.register(m_constFormal);
+        m_typeReg     = pool.register(m_typeReg);
+        m_constFormal = pool.register(m_constFormal);
     }
 
     @Override

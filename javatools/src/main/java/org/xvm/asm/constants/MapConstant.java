@@ -249,7 +249,7 @@ public class MapConstant
 
         return typeNew == typeOld && aconstNewKey == null && aconstNewVal == null
                 ? this
-                : (MapConstant) getConstantPool().register(new MapConstant(
+                : getConstantPool().register(new MapConstant(
                         getConstantPool(), m_fmt, typeNew, aconstNewKey, aconstNewVal));
     }
 
@@ -309,7 +309,7 @@ public class MapConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constType = (TypeConstant) pool.register(m_constType);
+        m_constType = pool.register(m_constType);
         m_aconstKey = registerConstants(pool, m_aconstKey);
         m_aconstVal = registerConstants(pool, m_aconstVal);
     }

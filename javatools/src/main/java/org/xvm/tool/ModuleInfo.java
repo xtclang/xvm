@@ -1543,7 +1543,7 @@ public class ModuleInfo {
      *         is not part of a well-formed XDK image
      */
     private static File getJarFile() {
-        Class clz    = ModuleInfo.class;
+        var   clz    = ModuleInfo.class;
         URL   jarUrl = null;
         try {
             jarUrl = clz.getProtectionDomain().getCodeSource().getLocation();

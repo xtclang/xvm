@@ -665,8 +665,8 @@ public abstract class RelationalTypeConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constType1 = (TypeConstant) pool.register(m_constType1);
-        m_constType2 = (TypeConstant) pool.register(m_constType2);
+        m_constType1 = pool.register(m_constType1);
+        m_constType2 = pool.register(m_constType2);
     }
 
     @Override

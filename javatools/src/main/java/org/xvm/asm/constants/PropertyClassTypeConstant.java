@@ -99,7 +99,7 @@ public class PropertyClassTypeConstant
     protected void resolveConstants() {
         super.resolveConstants();
 
-        m_idProp = (PropertyConstant) getConstantPool().getConstant(m_iProp);
+        m_idProp = getConstantPool().getConstant(m_iProp, PropertyConstant.class);
     }
 
     /**
@@ -426,7 +426,7 @@ public class PropertyClassTypeConstant
     protected void registerConstants(ConstantPool pool) {
         super.registerConstants(pool);
 
-        m_idProp = (PropertyConstant) pool.register(m_idProp);
+        m_idProp = pool.register(m_idProp);
     }
 
     @Override
