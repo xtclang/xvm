@@ -96,7 +96,7 @@ public class Label
     }
 
     /**
-     * Ensure there is a Java label associated with this Prefix.
+     * Set or remove a Java label associated with this Prefix.
      */
     public void setLabel(java.lang.classfile.Label label) {
         m_label = label;
