@@ -19,6 +19,8 @@ import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Version;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.tool.LauncherOptions.CompilerOptions;
@@ -307,15 +309,15 @@ public class Compiler extends Launcher<CompilerOptions> {
      * @param repoLib  the library repository being used for compilation
      */
     protected void injectNativeTurtle(ModuleRepository repoLib) {
-        var repoBuild    = extractBuildRepo(repoLib);
-        var moduleTurtle = repoBuild.loadModule(Constants.TURTLE_MODULE);
+        ModuleRepository repoBuild    = extractBuildRepo(repoLib);
+        ModuleStructure  moduleTurtle = repoBuild.loadModule(Constants.TURTLE_MODULE);
         if (moduleTurtle != null) {
             try (var ignore = ConstantPool.withPool(moduleTurtle.getConstantPool())) {
-                var clzNakedRef  = moduleTurtle.getChild("NakedRef", ClassStructure.class);
-                var typeNakedRef = clzNakedRef.getFormalType();
+                ClassStructure clzNakedRef  = (ClassStructure) moduleTurtle.getChild("NakedRef");
+                TypeConstant   typeNakedRef = clzNakedRef.getFormalType();
 
-                for (var sModule : repoBuild.getModuleNames()) {
-                    var module = repoBuild.loadModule(sModule);
+                for (String sModule : repoBuild.getModuleNames()) {
+                    ModuleStructure module = repoBuild.loadModule(sModule);
                     module.getConstantPool().setNakedRefType(typeNakedRef);
                 }
             }
