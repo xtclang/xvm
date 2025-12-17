@@ -46,7 +46,8 @@ public class JitConnector
     public void start(Map<String, List<String>> mapInjections) {
         try {
             var loader   = xvm.nativeTypeSystem.loader;
-            var clz      = loader.loadClass("org.xtclang._native.mgmt.nMainInjector").asSubclass(Injector.class);
+            var clz      = loader.loadClass("org.xtclang._native.mgmt.nMainInjector")
+                                 .asSubclass(Injector.class);
             var injector = clz.getDeclaredConstructor(Xvm.class).newInstance(xvm);
             try (var ignore = ConstantPool.withPool(xvm.nativeTypeSystem.pool())) {
                 clz.getMethod("addNativeResources").invoke(injector);
