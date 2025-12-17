@@ -13,4 +13,4 @@ interface AfterTestInvocationCallback
      * @param context  the current `ExecutionContext`
      */
     void afterTest(ExecutionContext context);
-    }
+}

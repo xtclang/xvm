@@ -202,12 +202,12 @@ public class Compiler extends Launcher<CompilerOptions> {
         }
         checkErrors("target selection");
 
-        final boolean fRebuild = opts.isForcedRebuild();
+        final boolean           fRebuild = opts.isForcedRebuild();
         final Optional<Version> verStamp = opts.getVersion();
         log(INFO, "Output-path={}, force-rebuild={}", outputLoc, fRebuild);
 
-        final var mapTargets = new LinkedHashMap<File, Node>();
-        var cSystemModules = 0;
+        final var mapTargets     = new LinkedHashMap<File, Node>();
+        var       cSystemModules = 0;
         for (var moduleInfo : targets) {
             log(INFO, "Loading and parsing sources for module: {}", moduleInfo.getQualifiedModuleName());
             var node = moduleInfo.getSourceTree(this);
@@ -321,7 +321,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      */
     protected Map<String, org.xvm.compiler.Compiler> resolveCompilers(List<Node> allNodes, ModuleRepository repo) {
         final var mapCompilers = new LinkedHashMap<String, org.xvm.compiler.Compiler>();
-        final var repoBuild = extractBuildRepo(repo);
+        final var repoBuild    = extractBuildRepo(repo);
         for (var node : allNodes) {
             // Create a module/package/class structure for each dir/file node in the "module tree"
             if (node.type().getCategory().getId() != Id.MODULE) {
@@ -329,7 +329,7 @@ public class Compiler extends Launcher<CompilerOptions> {
                 continue;
             }
             final var compiler = new org.xvm.compiler.Compiler(node.type(), node.errs());
-            final var struct = compiler.generateInitialFileStructure();
+            final var struct   = compiler.generateInitialFileStructure();
             if (struct == null) {
                 continue;
             }
@@ -486,6 +486,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      *
      * @return 0 for success, non-zero exit code for failure
      */
+    @SuppressWarnings("UnusedReturnValue")
     protected int emitModules(List<Node> allNodes, ModuleRepository repoOutput) {
         var opts = options();
         var version = opts.getVersion();

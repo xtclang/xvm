@@ -31,4 +31,4 @@ const TemplatedMethodModel<ModelType extends MethodModel>
 
     @Override
     ModelType template.get() = delegate;
- }
+}

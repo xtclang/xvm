@@ -35,26 +35,18 @@ const ContainerExecutionLifecycle<ModelType extends ContainerModel>(ModelType mo
                 .withTestClass(model.testClass)
                 .withTestMethod(Null);
 
-//        UniqueId id = model.uniqueId;
-//        if (id.type == Module) {
-//            builder.withModule(id.value);
-//        }
-
 	    return super(builder.build(), extensions);
 	    }
 
     @Override
-	SkipResult shouldBeSkipped(EngineExecutionContext context, ExtensionRegistry extensions)
-	    {
-	    for (TestExecutionPredicate predicate : context.registry.getAll(TestExecutionPredicate))
-	        {
-	        if (String reason := predicate.shouldSkip(context))
-	            {
+	SkipResult shouldBeSkipped(EngineExecutionContext context, ExtensionRegistry extensions) {
+	    for (TestExecutionPredicate predicate : context.registry.getAll(TestExecutionPredicate)) {
+	        if (String reason := predicate.shouldSkip(context)) {
 	            return new SkipResult(True, reason);
-	            }
-	        }
+            }
+        }
 		return SkipResult.NotSkipped;
-	    }
+    }
 
     @Override
 	EngineExecutionContext before(ExceptionCollector     collector,

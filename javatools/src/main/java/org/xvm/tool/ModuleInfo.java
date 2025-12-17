@@ -52,9 +52,9 @@ import static org.xvm.util.Handy.resolveFile;
  * Information gleaned about a module from a single specified file. This is a lazily populated
  * structure, not a point-in-time snapshot; as a result, in the presence of realtime changes
  * occurring to the module source/resource files or compiled files after this object is
- * instantiated, this can not be depended upon to reflect either the snapshot state of the
- * module as it was when the ModuleInfo was instantiated, nor the snapshot state of the module
- * as it is right now.
+ * instantiated, this cannot be depended upon to reflect either the snapshot state of the module
+ * as it was when the ModuleInfo was instantiated, nor the snapshot state of the module as it is
+ * right now.
  */
 public class ModuleInfo {
     // ----- constructors --------------------------------------------------------------------------
@@ -72,10 +72,10 @@ public class ModuleInfo {
     /**
      * Construct the module information from the specified file, with no resource path.
      *
-     * @param fileSpec   the file or directory to analyze, which may or may not exist
-     * @param deduce     pass true to enable the algorithm to deduce/search for likely locations
-     * @param binarySpec the file or directory which represents the target of the binary; as
-     *                   provided to the compiler using the "-o" command line switch; may be null
+     * @param fileSpec    the file or directory to analyze, which may or may not exist
+     * @param deduce      pass true to enable the algorithm to deduce/search for likely locations
+     * @param binarySpec  the file or directory which represents the target of the binary as
+     *                    provided to the compiler using the "-o" command line switch; may be null
      */
     public ModuleInfo(File fileSpec, final boolean deduce, File binarySpec) {
         this(fileSpec, deduce, List.of(), binarySpec);
@@ -306,7 +306,8 @@ public class ModuleInfo {
                 }
 
                 if (!file.exists()) {
-                    throw new IllegalArgumentException("The resource location " + file + " does not exist");
+                    throw new IllegalArgumentException("The resource location " + file
+                            + " does not exist");
                 }
             }
 
@@ -348,7 +349,7 @@ public class ModuleInfo {
     }
 
     /**
-     * @return True if the module binary exists and is at least as up-to-date as the existent source
+     * @return True if the module binary exists and is at least as up to date as the existent source
      *         and resource files and directories
      */
     public boolean isUpToDate() {
@@ -374,7 +375,7 @@ public class ModuleInfo {
             return moduleName;
         }
 
-        // Try to extract module name from source file
+        // Try to extract the module name from the source file
         if (sourceStatus == Status.Exists && sourceContent != Content.Invalid) {
             moduleName = extractModuleName(sourceFile);
             if (moduleName != null) {
@@ -455,7 +456,8 @@ public class ModuleInfo {
         if (fileSrc != null && fileSrc.exists() && sourceTimestamp == 0L) {
             sourceTimestamp = sourceFile.lastModified();
             if (isSourceTree()) {
-                File subDir = new File(sourceFile.getParentFile(), removeExtension(sourceFile.getName()));
+                File parent = sourceFile.getParentFile();
+                File subDir = new File(parent, removeExtension(sourceFile.getName()));
                 if (subDir.isDirectory()) {
                     sourceTimestamp = collectFiles(subDir, "x")
                             .mapToLong(File::lastModified)
@@ -476,7 +478,9 @@ public class ModuleInfo {
     public ResourceDir getResourceDir() {
         if (resourceDir == null) {
             File sourceFile = getSourceFile();
-            resourceDir = sourceFile.exists() ? ResourceDir.forSource(sourceFile, deduce) : NoResources;
+            resourceDir = sourceFile.exists()
+                        ? ResourceDir.forSource(sourceFile, deduce)
+                        : NoResources;
         }
 
         return resourceDir;
@@ -511,7 +515,7 @@ public class ModuleInfo {
     }
 
     /**
-     * @return the directory that should contain the compiled form of the module, or null if there
+     * @return the directory which should contain the compiled form of the module, or null if there
      *         is no existent directory that should contain the binary, such as when the project
      *         "./build/" or "./target/" directory is missing
      */
@@ -538,8 +542,8 @@ public class ModuleInfo {
     }
 
     /**
-     * Attempt to read the compiled form of the module, extracting information from it including the
-     * module name and version.
+     * Attempt to read the compiled form of the module, extracting information from it, including
+     * the module name and version.
      *
      * @return true iff the file exists and was successfully loaded and parsed
      */
@@ -634,7 +638,8 @@ public class ModuleInfo {
     // ----- source tree ---------------------------------------------------------------------------
 
     /**
-     * When working with a source code tree, and given a "module file", produce a source tree of the desired processing stage.
+     * When working with a source code tree and given a "module file", produce a source tree of
+     * the desired processing stage.
      *
      * @param errs  an optional error listener
      *
@@ -722,7 +727,7 @@ public class ModuleInfo {
         }
 
         /**
-         * @return the node represent the module
+         * @return the node representing the module
          */
         public FileNode module() {
             Node rootNode = root();
@@ -869,7 +874,7 @@ public class ModuleInfo {
         protected ResourceDir m_resdir;
 
         /**
-         * The error list that buffers errors for the file node, if any.
+         * The error list which buffers errors for the file node, if any.
          */
         private ErrorList m_errs;
     }
@@ -1327,6 +1332,7 @@ public class ModuleInfo {
             String[] segments = parseDelimitedString(resPath, '/');
             for (int i = 0, last = segments.length - 1; i <= last; ++i) {
                 String segment = segments[i];
+                //noinspection StatementWithEmptyBody
                 if (segment.isEmpty() || ".".equals(segment)) {
                     // nothing to do
                 } else if ("..".equals(segment)) {
@@ -1353,7 +1359,8 @@ public class ModuleInfo {
                 m_stmtAST = new Parser(source, this).parseSource();
             } catch (CompilerException e) {
                 if (!hasSeriousErrors()) {
-                    log(Severity.FATAL, Parser.FATAL_ERROR, null, source, source.getPosition(), source.getPosition());
+                    log(Severity.FATAL, Parser.FATAL_ERROR, null, source,
+                            source.getPosition(), source.getPosition());
                 }
             }
         }
@@ -1412,7 +1419,7 @@ public class ModuleInfo {
         private Statement                m_stmtAST;
 
         /**
-         * The primary class (or other type) that the source file declares.
+         * The primary class (or another type) that the source file declares.
          */
         private TypeCompositionStatement m_stmtType;
     }
@@ -1421,8 +1428,8 @@ public class ModuleInfo {
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
-     * Check if the specified source or binary file contains a module and if so, return the module's
-     * name.
+     * Check if the specified source or binary file contains a module, and if so, return the
+     * module's name.
      *
      * @param file  the file (source or binary) to examine
      *

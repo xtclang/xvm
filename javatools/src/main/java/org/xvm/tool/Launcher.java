@@ -1,5 +1,17 @@
 package org.xvm.tool;
 
+import java.io.File;
+
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+
+import java.util.stream.Stream;
+
 import org.xvm.asm.BuildInfo;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
@@ -9,23 +21,16 @@ import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.constants.ModuleConstant;
+
 import org.xvm.compiler.BuildRepository;
+
 import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.LauncherOptions.DisassemblerOptions;
 import org.xvm.tool.LauncherOptions.RunnerOptions;
 import org.xvm.tool.LauncherOptions.TestRunnerOptions;
 import org.xvm.tool.ModuleInfo.Node;
-import org.xvm.util.Severity;
 
-import java.io.File;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Stream;
+import org.xvm.util.Severity;
 
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.asm.Constants.TURTLE_MODULE;
@@ -51,7 +56,8 @@ import static org.xvm.util.Severity.worstOf;
  *
  * @param <T> the Options type for this launcher
  */
-public abstract class Launcher<T extends LauncherOptions> implements ErrorListener {
+public abstract class Launcher<T extends LauncherOptions>
+        implements ErrorListener {
 
     /**
      * A command handler that knows how to parse args and launch the appropriate tool.
@@ -62,12 +68,12 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     }
 
     /**
-     * Registry of available commands. Each entry maps a command name to a handler
-     * that parses the args and launches the appropriate tool.
+     * Registry of available commands. Each entry maps a command name to a handler that parses
+     * the args and launches the appropriate tool.
      * <p>
-     * Note: We use string literals here instead of calling subclass static methods
-     * (e.g., Compiler.getCommandName()) to avoid class loading deadlock - referencing
-     * subclass static methods from superclass static initialization can cause deadlock.
+     * Note: We use string literals here instead of calling subclass static methods (e.g.,
+     * Compiler.getCommandName()) to avoid class loading deadlock - referencing subclass static
+     * methods from superclass static initialization can cause deadlock.
      */
     private static final Map<String, CommandHandler> COMMANDS = Map.of(
             "build",  (args, console, err) -> launch(CompilerOptions.parse(args), console, err),
@@ -86,8 +92,8 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     // ----- constants -----------------------------------------------------------------------------
 
     /**
-     * Command name constants. These are defined here (not in the subclasses) to avoid
-     * class loading deadlock when LauncherOptions references them during static initialization.
+     * Command name constants. These are defined here (not in the subclasses) to avoid class
+     * loading deadlock when LauncherOptions references them during static initialization.
      */
     public static final String CMD_BUILD  = "build";
     public static final String CMD_RUN    = "run";
@@ -112,9 +118,9 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     protected final Console m_console;
 
     /**
-     * Optional ErrorListener that receives ALL errors (tool-level and compilation).
-     * When provided (not null), errors are forwarded for external programmatic access.
-     * Console displays errors, but m_errors provides structured access.
+     * Optional ErrorListener that receives ALL errors (tool-level and compilation). When
+     * provided (not null), errors are forwarded for external programmatic access. Console
+     * displays errors, but m_errors provides structured access.
      */
     protected final ErrorListener m_errors;
 
@@ -132,9 +138,10 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     /**
      * Constructor for programmatic invocation (uses pre-built Options).
      *
-     * @param options the pre-configured Options
-     * @param console representation of the terminal within which this command is run (null = default)
-     * @param errors optional ErrorListener to receive all errors (null = BLACKHOLE)
+     * @param options  the pre-configured Options
+     * @param console  representation of the terminal within which this command is run (null =
+     *                 default)
+     * @param errors   optional ErrorListener to receive all errors (null = BLACKHOLE)
      */
     protected Launcher(T options, Console console, ErrorListener errors) {
         m_console = console == null ? DEFAULT_CONSOLE : console;
@@ -144,8 +151,9 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     }
 
     /**
-     * Entry point from the OS. The only thing main should do is turn any return values from processing
-     * into a {@code System.exit}, that terminates the process with a system exit code based on this status
+     * Entry point from the OS. The only thing main should do is turn any return values from
+     * processing into a {@code System.exit}, that terminates the process with a system exit code
+     * based on this status
      *
      * @param asArg  command line arguments (first arg is command name: xcc, xec, or xtc)
      */
@@ -187,10 +195,11 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * Supported commands: build, run, test (or --help, --version).
      * Shell scripts call with the command directly (xcc calls with "build", xec with "run").
      *
-     * @param cmd command name: build, run, or test
-     * @param args command line arguments (options and files)
-     * @param console console for output (must not be null)
-     * @param errListener optional ErrorListener to receive errors, or null
+     * @param cmd          command name: build, run, or test
+     * @param args         command line arguments (options and files)
+     * @param console      console for output (must not be null)
+     * @param errListener  optional ErrorListener to receive errors, or null
+     *
      * @return exit code (0 for success, non-zero for error)
      */
     public static int launch(String cmd, String[] args, Console console, ErrorListener errListener) {
@@ -210,7 +219,8 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
                     if (handler != null) {
                         yield handler.launch(args, console, errListener);
                     }
-                    console.log(ERROR, "Unknown command: {}. Available commands: {}", quoted(cmd), commandNames());
+                    console.log(ERROR, "Unknown command: {}. Available commands: {}",
+                            quoted(cmd), commandNames());
                     showHelp(console);
                     yield 1;
                 }
@@ -254,12 +264,14 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
 
     /**
      * Launch a tool directly with pre-built options.
-     * This is the preferred API for programmatic invocation as it avoids the overhead
-     * of serializing options to command-line strings and parsing them back.
+     * This is the preferred API for programmatic invocation as it avoids the overhead of
+     * serializing options to command-line strings and parsing them back.
      *
-     * @param options pre-built options (CompilerOptions, RunnerOptions, or DisassemblerOptions)
-     * @param console console for output (must not be null)
-     * @param errListener optional ErrorListener to receive errors, or null
+     * @param options      pre-built options (CompilerOptions, RunnerOptions, or
+     *                     DisassemblerOptions)
+     * @param console      console for output (must not be null)
+     * @param errListener  optional ErrorListener to receive errors, or null
+     *
      * @return exit code (0 for success, non-zero for error)
      */
     public static int launch(LauncherOptions options, Console console, ErrorListener errListener) {
@@ -300,8 +312,9 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * Helper method to insert a command name at the beginning of an argument array.
      * Used by subclass main() methods to delegate to Launcher.main().
      *
-     * @param cmd the command name to insert
-     * @param args the existing arguments
+     * @param cmd   the command name to insert
+     * @param args  the existing arguments
+     *
      * @return new array with command inserted at the beginning
      */
     protected static String[] insertCommand(String cmd, String[] args) {
@@ -313,6 +326,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * Supports both "debug_xec" and "debugxec" formats.
      *
      * @param cmd the raw command name potentially with debug prefix
+     *
      * @return the command name with debug prefix stripped, or the origensurenal if no prefix found
      */
     private static String stripDebugPrefix(String cmd) {
@@ -377,9 +391,9 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * Log a tool-level message with template substitution (SLF4J-style).
      * Use {} placeholders in the template for parameter substitution.
      * <p>
-     * Tool-level logs (file not found, invalid options, etc.) are displayed via Console
-     * and tracked in Launcher for control flow, but NOT sent to ErrorListener.
-     * ErrorListener is only for compilation/runtime errors from compiler/runner.
+     * Tool-level logs (file not found, invalid options, etc.) are displayed via Console and
+     * tracked in Launcher for control flow, but NOT sent to ErrorListener. ErrorListener is only
+     * for compilation/runtime errors from compiler/runner.
      * <p>
      * If severity is FATAL, this method throws LauncherException immediately after logging.
      *
@@ -392,18 +406,18 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     }
 
     /**
-     * Log an exception with an optional message template.
-     * Use {} placeholders in the template for parameter substitution.
-     * The exception message will be included in the Console
+     * Log an exception with an optional message template. Use {} placeholders in the template
+     * for parameter substitution. The exception message will be included in the Console
      * <p>
-     * Tool-level exception logs are displayed via Console and tracked in Launcher,
-     * but NOT sent to ErrorListener.
+     * Tool-level exception logs are displayed via Console and tracked in Launcher, but NOT sent
+     * to ErrorListener.
      * <p>
      * If severity is FATAL, this method throws LauncherException immediately after logging.
      *
      * @param sev       the severity (may indicate an error)
      * @param cause     the exception that caused this log entry
-     * @param template  optional message template with {} placeholders (if null, uses exception message)
+     * @param template  optional message template with {} placeholders (if null, uses the exception
+     *                  message)
      * @param params    parameters to substitute into the template
      */
     protected void log(Severity sev, Throwable cause, String template, Object... params) {
@@ -491,10 +505,13 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     /**
      * Check if errors warrant aborting. If so, throws LauncherException with context.
      * <p>
-     * Checks BOTH Launcher's tracked severity (tool errors) AND ErrorListener delegate (compiler errors).
+     * Checks BOTH Launcher's tracked severity (tool errors) AND ErrorListener delegate
+     * (compiler errors).
      *
-     * @param context description of what operation was being performed (for error message)
+     * @param context description of what operation was being performed (for the error message)
+     *
      * @return 1 if errors exist but not severe enough to abort, 0 if no errors
+     *
      * @throws LauncherException if errors are severe enough to abort
      */
     protected int checkErrors(String context) {
@@ -561,7 +578,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     }
 
     /**
-     * Check if compilation should abort based on severity of errors encountered.
+     * Check if compilation should abort based on the severity of errors encountered.
      *
      * @return true if errors are bad enough to abort
      */
@@ -591,12 +608,12 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     }
 
     /**
-     * Validate the options. This is called after options have been parsed and set.
-     * Subclasses should implement validation logic that requires access to instance state
-     * (like error listeners, logging, etc.).
-     *
-     * <p>Options classes should remain pure data/configuration holders. All validation
-     * logic that requires business logic or instance state belongs here.
+     * Validate the options. This is called after options have been parsed and set. Subclasses
+     * should implement validation logic that requires access to instance state (like error
+     * listeners, logging, etc.).
+     * <p>
+     * Options classes should remain pure data/configuration holders. All validation logic that
+     * requires business logic or instance state belongs here.
      */
      protected abstract void validateOptions();
 
@@ -605,6 +622,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * Subclasses can override for custom filtering (e.g., Compiler strictness levels).
      *
      * @param sev the severity to check
+     *
      * @return true if the message should be printed
      */
     protected boolean isBadEnoughToPrint(Severity sev) {
@@ -616,6 +634,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * Subclasses can override this to implement custom abort behavior.
      *
      * @param sev the severity to evaluate
+     *
      * @return true if an error of that severity should exit the program
      */
     protected boolean isBadEnoughToAbort(Severity sev) {
@@ -638,10 +657,10 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     // ----- repository management -----------------------------------------------------------------
 
     /**
-     * Configure the library repository that is used to load module dependencies without compiling
-     * them. The library repository is always writable, to allow the repository to cache modules
-     * as they are linked together; use {@link #extractBuildRepo(ModuleRepository)} to get the
-     * build repository from the library repository.
+     * Configure the library repository used to load module dependencies without compiling them.
+     * The library repository is always writable, to allow the repository to cache modules as
+     * they are linked together; use {@link #extractBuildRepo(ModuleRepository)} to get the build
+     * repository from the library repository.
      *
      * @param path  a previously validated path of module directories and/or files
      *
@@ -688,10 +707,10 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     }
 
     /**
-     * Configure the repository that is used to store modules  dependencies without compiling
-     * them. The library repository is always writable, to allow the repository to cache modules
-     * as they are linked together; use {@link #extractBuildRepo(ModuleRepository)} to get the
-     * build repository from the library repository.
+     * Configure the repository used to store modules  dependencies without compiling them. The
+     * library repository is always writable, to allow the repository to cache modules as they
+     * are linked together; use {@link #extractBuildRepo(ModuleRepository)} to get the build
+     * repository from the library repository.
      *
      * @param fileDest  a previously validated destination for the module(s), or null to use the
      *                  current directory
@@ -711,7 +730,8 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * Note: This implementation assumes that the read-through option on LinkedRepository is being
      * used.
      *
-     * @param reposLib  the repository to use, as it would be returned from {@link #configureLibraryRepo}
+     * @param reposLib  the repository to use, as it would be returned from
+     *                  {@link #configureLibraryRepo}
      */
     protected void prelinkSystemLibraries(ModuleRepository reposLib) {
         for (String moduleName : List.of(ECSTASY_MODULE, TURTLE_MODULE)) {
@@ -726,7 +746,8 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
             if (struct != null) {
                 ModuleConstant idMissing = struct.linkModules(reposLib, false);
                 if (idMissing != null) {
-                    log(FATAL, "Unable to link module {} due to missing module: {}", moduleName, idMissing.getName());
+                    log(FATAL, "Unable to link module {} due to missing module: {}",
+                            moduleName, idMissing.getName());
                     // log(FATAL) throws LauncherException immediately - never gets here
                     return;
                 }
@@ -745,7 +766,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
             sVer = reposLib.loadModule(ECSTASY_MODULE).getVersionString();
         } catch (Exception ignore) {}
 
-        // Use version from single source of truth if module version is not available
+        // Use version from a single source of truth if the module version is not available
         if (sVer == null) {
             sVer = BuildInfo.getXdkVersion();
         }
@@ -783,7 +804,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * @param resourceSpecs  (optional) an array of files and/or directories which represent (in
      *                       aggregate) the resource path; null indicates that the default resources
      *                       location should be used, while an empty array explicitly indicates
-     *                       that there is no resource path; as provided to the compiler using
+     *                       that there is no resource path as provided to the compiler using
      *                       the "-rp" command line switch
      * @param binarySpec     (optional) the file or directory which represents the target of the
      *                       binary; as provided to the compiler using the "-o" command line switch
@@ -823,7 +844,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      */
     public File validateSourceInput(File file) {
         if (!file.exists() || file.isDirectory()) {
-            // Try to locate module source for non-existent or directory inputs
+            // Try to locate the module source for non-existent or directory inputs
             try {
                 var info = ensureModuleInfo(file, List.of(), null);
                 var srcFile = info == null ? null : info.getSourceFile();
@@ -842,8 +863,9 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     /**
      * Validate that a file is readable and optionally has the expected extension.
      *
-     * @param file              the file to validate
-     * @param expectedExtension the expected extension (e.g. ".x", ".xtc"), or null to skip extension check
+     * @param file               the file to validate
+     * @param expectedExtension  the expected extension (e.g. ".x", ".xtc"), or null to skip
+     *                           extension check
      */
     protected void validateReadableFile(File file, String expectedExtension) {
         if (!file.canRead()) {
@@ -862,9 +884,11 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      *
      * @return a list of "module files", each representing a module's source code
      */
-    protected List<ModuleInfo> selectTargets(List<File> listSources, List<File> resourceSpecs, File outputSpec) {
+    protected List<ModuleInfo> selectTargets(List<File> listSources,
+                                             List<File> resourceSpecs,
+                                             File       outputSpec) {
         final var mapResults = new java.util.LinkedHashMap<File, ModuleInfo>();
-        final var dups = new HashSet<File>();
+        final var dups       = new HashSet<File>();
 
         for (var file : listSources) {
             try {
@@ -874,24 +898,28 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
                     log(ERROR, "Unable to find module source for file: {}", file);
                 } else if (mapResults.containsKey(srcFile)) {
                     if (dups.add(srcFile)) {
-                        log(WARNING, "Module source was specified multiple times: {}", srcFile);
+                        log(WARNING, "Module source was specified multiple times: {}",
+                                srcFile);
                     }
                 } else {
                     mapResults.put(srcFile, info);
                 }
             } catch (IllegalStateException | IllegalArgumentException e) {
                 final var msg = e.getMessage();
-                log(ERROR, "Could not find module information for {} ({})", toPathString(file), msg != null ? msg : "Reason unknown");
+                log(ERROR, "Could not find module information for {} ({})",
+                        toPathString(file), msg != null ? msg : "Reason unknown");
             }
         }
         return List.copyOf(mapResults.values());
     }
 
     /**
-     * Flush errors from the specified nodes, and then check for errors globally.
+     * Flush errors from the specified nodes and then check for errors globally.
      *
      * @param nodes  the nodes to flush
+     *
      * @return 0 if no serious errors, 1 if serious errors exist (but not fatal enough to throw)
+     *
      * @throws LauncherException if errors are severe enough to abort
      */
     @SuppressWarnings("UnusedReturnValue")
@@ -908,13 +936,13 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
      * Resets severity tracking and clears module cache.
      */
     protected void reset() {
-        m_sevWorst = NONE;
+        m_sevWorst   = NONE;
         m_cSuspended = 0;
         moduleCache.clear();
     }
 
 
-    // ----- Console -------------------------------------------------------------------------------
+    // ----- LauncherException ---------------------------------------------------------------------
 
     /**
      * RuntimeException thrown upon a launcher failure.
@@ -954,6 +982,7 @@ public abstract class Launcher<T extends LauncherOptions> implements ErrorListen
     }
 
     // ----- constants -----------------------------------------------------------------------------
+
     /**
      * Unknown fatal error. {0}
      */

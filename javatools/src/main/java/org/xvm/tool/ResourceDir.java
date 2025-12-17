@@ -12,8 +12,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Function;
 
-
 import org.xvm.compiler.ast.FileExpression;
+
 import static org.xvm.util.Handy.listFiles;
 
 
@@ -43,7 +43,8 @@ public class ResourceDir {
                 throw new IllegalArgumentException("Resource location must not be null");
             }
             if (!file.exists()) {
-                throw new IllegalArgumentException("Resource location \"" + file + "\" does not exist");
+                throw new IllegalArgumentException("Resource location \"" + file
+                        + "\" does not exist");
             }
         }
     }

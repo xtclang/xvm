@@ -7,8 +7,7 @@ import xunit.SkipResult;
  * various phases of a test lifecycle.
  */
 interface ExecutionLifecycle
-        extends Const
-    {
+        extends Const {
     /**
      * Return the child `Model`s.
      *
@@ -110,19 +109,17 @@ interface ExecutionLifecycle
 	 * @param extensions  the extensions specific to the current model
 	 * @param result      the result of the execution
 	 */
-	void onCompleted(EngineExecutionContext context, ExtensionRegistry extensions, Result result)
-	    {
-	    }
+	void onCompleted(EngineExecutionContext context, ExtensionRegistry extensions, Result result) {
+    }
 
     /**
      * A no-op instance of an `ExecutionLifecycle`.
      */
 	static const NoOp
-	        implements ExecutionLifecycle
-        {
+	        implements ExecutionLifecycle {
         /**
          * A singleton instance of NoOp.
          */
         static ExecutionLifecycle Instance = new NoOp();
-        }
     }
+}

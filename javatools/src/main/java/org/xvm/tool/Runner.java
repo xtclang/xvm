@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+
 import java.util.stream.Collectors;
 
 import org.xvm.api.Connector;
@@ -17,6 +18,7 @@ import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.JitConnector;
@@ -95,12 +97,14 @@ public class Runner extends Launcher<RunnerOptions> {
         ModuleStructure module     = null;
         String          binLocDesc;
 
-        if (isExplicitCompiledFile(filePath) && fileSpec.exists() && (opts.isCompileDisabled() || isPathed(filePath))) {
+        if (isExplicitCompiledFile(filePath) && fileSpec.exists() &&
+                (opts.isCompileDisabled() || isPathed(filePath))) {
             // the caller has explicitly specified the exact .xtc file and/or
             fileBin    = fileSpec;
             binExists  = true;
             binLocDesc = "the specified target " + filePath;
-        } else if (!isPathed(filePath) && !isExplicitEcstasyFile(filePath) && (module = repo.loadModule(filePath)) != null) {
+        } else if (!isPathed(filePath) && !isExplicitEcstasyFile(filePath) &&
+                (module = repo.loadModule(filePath)) != null) {
             // use the module we found in the repo
             binLocDesc = "the repository";
         } else {
@@ -124,15 +128,19 @@ public class Runner extends Launcher<RunnerOptions> {
                 if (module == null) {
                     var fileSrc = info.getSourceFile();
                     if (fileSrc != null && fileSrc.exists() && !opts.isCompileDisabled()) {
-                        log(INFO, "The compiled module {} is missing; attempting to compile it from {} ...", quoted(info.getQualifiedModuleName()), info.getSourceFile());
+                        log(INFO, "The compiled module {} is missing; attempting to compile it from {} ...",
+                                quoted(info.getQualifiedModuleName()), info.getSourceFile());
                         fCompile = true;
                     } else {
                         var possibles = resolvePossibleTargets(qualName, repo);
                         if (possibles.isEmpty()) {
                             log(ERROR, "Failed to locate the module for: {}", fileSpec);
                         } else {
-                            var suggestions = possibles.stream().map(Handy::quoted).collect(Collectors.joining(", "));
-                            log(ERROR, "Unable to locate the module for {}; did you mean {}?", fileSpec, suggestions);
+                            var suggestions = possibles.stream()
+                                    .map(Handy::quoted)
+                                    .collect(Collectors.joining(", "));
+                            log(ERROR, "Unable to locate the module for {}; did you mean {}?",
+                                    fileSpec, suggestions);
                         }
                     }
                 } else {
@@ -142,7 +150,8 @@ public class Runner extends Launcher<RunnerOptions> {
 
             if (binExists && !opts.isCompileDisabled() && info.getSourceFile() != null
                     && info.getSourceFile().exists() && !info.isUpToDate()) {
-                log(INFO, "The compiled module {} is out-of-date; recompiling ...", quoted(info.getQualifiedModuleName()));
+                log(INFO, "The compiled module {} is out-of-date; recompiling ...",
+                        quoted(info.getQualifiedModuleName()));
                 fCompile = true;
             }
             checkErrors("module location");
@@ -209,7 +218,8 @@ public class Runner extends Launcher<RunnerOptions> {
             final var sMethod    = opts.getMethodName();
             final var setMethods = connector.findMethods(sMethod);
             if (setMethods.size() != 1) {
-                log(ERROR, "{} method {} in module {}", setMethods.isEmpty() ? "Missing" : "Ambiguous", quoted(sMethod), sName);
+                log(ERROR, "{} method {} in module {}",
+                        setMethods.isEmpty() ? "Missing" : "Ambiguous", quoted(sMethod), sName);
                 return checkErrors("method lookup");
             }
 
@@ -239,19 +249,24 @@ public class Runner extends Launcher<RunnerOptions> {
      *
      * @return 0 if validation passed, 1 if errors were logged
      */
-    private int validateMethodArgs(String sMethod, MethodStructure method, List<String> asArg, TypeConstant typeStrings) {
+    private int validateMethodArgs(String          sMethod,
+                                   MethodStructure method,
+                                   List<String>    asArg,
+                                   TypeConstant    typeStrings) {
         final var requiredCount = method.getRequiredParamCount();
         final var totalCount    = method.getParamCount();
 
         // Only methods with 0 or 1 required parameters are supported
         if (requiredCount > 1) {
-            log(ERROR, "Unsupported method arguments {}", quoted(method.getIdentityConstant().getSignature().getValueString()));
+            log(ERROR, "Unsupported method arguments {}",
+                    quoted(method.getIdentityConstant().getSignature().getValueString()));
             return 1;
         }
 
         // Warn if args provided but method takes no parameters
         if (!asArg.isEmpty() && totalCount == 0) {
-            log(WARNING, "Method {} does not take any parameters; ignoring the specified arguments", quoted(sMethod));
+            log(WARNING, "Method {} does not take any parameters; ignoring the specified arguments",
+                    quoted(sMethod));
         }
 
         // Validate parameter type when args will be passed:
@@ -261,7 +276,8 @@ public class Runner extends Launcher<RunnerOptions> {
         if (willPassArgs) {
             var typeArg = method.getParam(0).getType();
             if (!typeStrings.isA(typeArg)) {
-                log(ERROR, "Unsupported argument type {} for method {}", quoted(typeArg.getValueString()), quoted(sMethod));
+                log(ERROR, "Unsupported argument type {} for method {}",
+                        quoted(typeArg.getValueString()), quoted(sMethod));
                 return 1;
             }
         }
@@ -270,7 +286,7 @@ public class Runner extends Launcher<RunnerOptions> {
 
     /**
      * Find module names that could match an unqualified name.
-     * For example, if user types "MyApp", this finds "MyApp.example.com", "MyApp.other", etc.
+     * For example, if the user types "MyApp", this finds "MyApp.example.com", "MyApp.other", etc.
      */
     private static Set<String> resolvePossibleTargets(String qualName, ModuleRepository repo) {
         if (qualName.indexOf('.') >= 0) {
