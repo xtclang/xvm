@@ -23,6 +23,12 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.help.HelpFormatter;
 import org.apache.commons.cli.help.TextHelpAppendable;
 
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
 import static org.apache.commons.cli.Option.builder;
 
 import org.jetbrains.annotations.NotNull;
@@ -251,6 +257,93 @@ public abstract class LauncherOptions {
             args.add("--version");
         }
         getModulePath().stream().map(File::getPath).forEach(path -> args.addAll(List.of("-L", path)));
+        return args.toArray(String[]::new);
+    }
+
+    /**
+     * Convert this options instance to JSON for configuration files or IPC.
+     * Automatically serializes all parsed options by introspecting the CommandLine.
+     *
+     * @return JSON string representation (pretty-printed with 2-space indent)
+     */
+    public String toJson() {
+        final var json = new JsonObject();
+        // Iterate through the schema to get ALL option values (handles repeated options like -L)
+        for (final var schemaOpt : schema.getOptions()) {
+            final var key = schemaOpt.getLongOpt() != null ? schemaOpt.getLongOpt() : schemaOpt.getOpt();
+            if (!schemaOpt.hasArg()) {
+                // Boolean flag - check if present
+                if (hasOption(key)) {
+                    json.addProperty(key, true);
+                }
+                continue;
+            }
+            // Option with values - use optionValues to get ALL values (handles repeated options)
+            final var values = optionValues(key);
+            if (!values.isEmpty()) {
+                if (values.size() == 1) {
+                    json.addProperty(key, values.getFirst());
+                } else {
+                    final var arr = new JsonArray();
+                    values.forEach(arr::add);
+                    json.add(key, arr);
+                }
+            }
+        }
+
+        // Add trailing args if present
+        final var trailingArgs = getTrailingArgs();
+        if (!trailingArgs.isEmpty()) {
+            final var arr = new JsonArray();
+            trailingArgs.forEach(arr::add);
+            json.add("args", arr);
+        }
+
+        return new GsonBuilder().setPrettyPrinting().create().toJson(json);
+    }
+
+    /**
+     * Convert JSON back to command-line arguments.
+     * Automatically reconstructs args from any JSON using the schema.
+     *
+     * @param jsonString the JSON configuration
+     * @param schema the Options schema
+     * @return array of command-line arguments
+     */
+    protected static String[] jsonToArgs(final String jsonString, final Options schema) {
+        final JsonObject json = JsonParser.parseString(jsonString).getAsJsonObject();
+        final List<String> args = new ArrayList<>();
+
+        // Process each option from schema
+        for (final var opt : schema.getOptions()) {
+            final var key = opt.getLongOpt() != null ? opt.getLongOpt() : opt.getOpt();
+            if (!json.has(key)) {
+                continue;
+            }
+
+            final var flag = (opt.getLongOpt() != null ? "--" : "-") + key;
+            final var value = json.get(key);
+
+            if (value.isJsonPrimitive() && value.getAsJsonPrimitive().isBoolean()) {
+                if (value.getAsBoolean()) args.add(flag);
+            } else if (value.isJsonArray()) {
+                for (final var elem : value.getAsJsonArray()) {
+                    args.add(flag);
+                    args.add(elem.getAsString());
+                }
+            } else {
+                args.add(flag);
+                args.add(value.getAsString());
+            }
+        }
+
+        // Add trailing args
+        if (json.has("args")) {
+            for (final JsonElement elem : json.getAsJsonArray("args")) {
+                args.add(elem.getAsString());
+            }
+        }
+
         return args.toArray(String[]::new);
     }
 
@@ -577,6 +670,16 @@ public abstract class LauncherOptions {
         }
 
         /**
+         * Create CompilerOptions from JSON string.
+         *
+         * @param jsonString the JSON configuration
+         * @return CompilerOptions instance
+         */
+        public static CompilerOptions fromJson(final String jsonString) {
+            return CompilerOptions.parse(jsonToArgs(jsonString, COMPILER_OPTIONS));
+        }
+
+        /**
          * Builder for programmatically constructing CompilerOptions.
          * Builds a synthetic command-line array and parses it.
          */
@@ -888,6 +991,16 @@ public abstract class LauncherOptions {
         }
 
         /**
+         * Create RunnerOptions from JSON string.
+         *
+         * @param jsonString the JSON configuration
+         * @return RunnerOptions instance
+         */
+        public static RunnerOptions fromJson(final String jsonString) {
+            return RunnerOptions.parse(jsonToArgs(jsonString, RUNNER_OPTIONS));
+        }
+
+        /**
          * Builder for constructing RunnerOptions programmatically.
          * Builds a synthetic command-line array and parses it.
          */
@@ -1188,6 +1301,16 @@ public abstract class LauncherOptions {
             getFindFile().ifPresent(findFile -> args.addAll(List.of("--findfile", findFile.getPath())));
             getTarget().ifPresent(target -> args.add(target.getPath()));
             return args.toArray(String[]::new);
+        }
+
+        /**
+         * Create DisassemblerOptions from JSON string.
+         *
+         * @param jsonString the JSON configuration
+         * @return DisassemblerOptions instance
+         */
+        public static DisassemblerOptions fromJson(final String jsonString) {
+            return DisassemblerOptions.parse(jsonToArgs(jsonString, DISASSEMBLER_OPTIONS));
         }
 
         /**
