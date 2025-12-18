@@ -81,8 +81,8 @@ public class ModuleConstant
     protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
-        m_constName    = (StringConstant)  pool.getConstant(m_iName);
-        m_constVersion = (VersionConstant) pool.getConstant(m_iVersion);
+        m_constName    = pool.getConstant(m_iName, StringConstant.class);
+        m_constVersion = pool.getConstant(m_iVersion, VersionConstant.class);
     }
 
 

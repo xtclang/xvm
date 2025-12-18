@@ -3303,7 +3303,7 @@ public class ClassStructure
 
         // read in the type parameters
         m_mapParams = disassembleTypeParams(in);
-        m_constPath = (LiteralConstant) getConstantPool().getConstant(readIndex(in));
+        m_constPath = getConstantPool().getConstant(readIndex(in), LiteralConstant.class);
     }
 
     @Override
@@ -3422,8 +3422,8 @@ public class ClassStructure
         ListMap<StringConstant, TypeConstant> map = new ListMap<>();
         ConstantPool pool = getConstantPool();
         for (int i = 0; i < c; ++i) {
-            StringConstant constName = (StringConstant) pool.getConstant(readIndex(in));
-            TypeConstant   constType = (TypeConstant)   pool.getConstant(readIndex(in));
+            StringConstant constName = pool.getConstant(readIndex(in), StringConstant.class);
+            TypeConstant   constType = pool.getConstant(readIndex(in), TypeConstant.class);
             assert !map.containsKey(constName);
             map.put(constName, constType);
         }

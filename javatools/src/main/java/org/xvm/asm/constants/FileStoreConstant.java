@@ -67,8 +67,8 @@ public class FileStoreConstant
     protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
-        m_constPath = (StringConstant) pool.getConstant(m_iPath);
-        m_constDir  = (FSNodeConstant) pool.getConstant(m_iDir);
+        m_constPath = pool.getConstant(m_iPath, StringConstant.class);
+        m_constDir  = pool.getConstant(m_iDir, FSNodeConstant.class);
     }
 
 

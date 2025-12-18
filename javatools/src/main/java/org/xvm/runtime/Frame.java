@@ -1342,10 +1342,30 @@ public class Frame
     }
 
     /**
+     * Obtain the Constant at the specified index, verifying it is of the expected type.
+     *
+     * @param iArg  the constant id
+     * @param type  the expected type of the constant
+     * @param <T>   the Constant type
+     *
+     * @return the constant, cast to the expected type
+     *
+     * @throws IllegalStateException if the constant is not of the expected type
+     */
+    public <T extends Constant> T getConstant(int iArg, Class<T> type) {
+        Constant constant = getConstant(iArg);
+        if (!type.isInstance(constant)) {
+            throw new IllegalStateException("Expected " + type.getSimpleName() +
+                    ", found " + (constant == null ? "null" : constant.getClass().getSimpleName()));
+        }
+        return type.cast(constant);
+    }
+
+    /**
      * @return a String value of the specified StringConstant
      */
     public String getString(int iArg) {
-        return ((StringConstant) getConstant(iArg)).getValue();
+        return getConstant(iArg, StringConstant.class).getValue();
     }
 
     /**
@@ -2529,7 +2549,7 @@ public class Frame
         public TypeConstant resolve(Frame frame, int nTargetReg, int iPropId) {
             ConstantPool pool = frame.poolContext();
 
-            PropertyConstant constProperty = (PropertyConstant) frame.getConstant(iPropId);
+            PropertyConstant constProperty = frame.getConstant(iPropId, PropertyConstant.class);
             TypeConstant     typeTarget    = nTargetReg >= 0
                 ? frame.f_ahVar[nTargetReg].getType()
                 : frame.getLocalType(nTargetReg, null);
@@ -2551,7 +2571,7 @@ public class Frame
             ConstantPool pool = frame.poolContext();
 
             MethodConstant idMethod = nTargetReg < 0
-                ? (MethodConstant) frame.getConstant(nTargetReg)
+                ? frame.getConstant(nTargetReg, MethodConstant.class)
                 : ((FunctionHandle) frame.f_ahVar[nTargetReg]).getMethodId();
 
             return frame.resolveType(iAuxId >= 0

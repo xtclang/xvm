@@ -181,7 +181,7 @@ public abstract class OpTest
     protected TypeConstant calculateCommonType(Frame frame) {
         TypeConstant typeCommon = m_typeCommon;
         if (typeCommon == null) {
-            m_typeCommon = typeCommon = (TypeConstant) frame.getConstant(m_nType);
+            m_typeCommon = typeCommon = frame.getConstant(m_nType, TypeConstant.class);
         }
         return frame.resolveType(typeCommon);
     }

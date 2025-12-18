@@ -61,7 +61,7 @@ public class IsExprAST
         super.readBody(in, res);
 
         if (readMagnitude(in) != 0) {
-            typeOfType = (TypeConstant) res.getConstant(readMagnitude(in));
+            typeOfType = res.getConstant(readMagnitude(in), TypeConstant.class);
         }
         booleanType = res.typeForName("Boolean");
     }

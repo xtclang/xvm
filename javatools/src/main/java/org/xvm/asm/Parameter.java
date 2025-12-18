@@ -47,7 +47,7 @@ public class Parameter
         int          cAnnos = readPackedInt(in);
         Annotation[] aAnnos = cAnnos == 0 ? Annotation.NO_ANNOTATIONS : new Annotation[cAnnos];
         for (int i = 0; i < cAnnos; ++i) {
-            aAnnos[i] = (Annotation) pool.getConstant(readMagnitude(in));
+            aAnnos[i] = pool.getConstant(readMagnitude(in), Annotation.class);
         }
 
         int iType      = readMagnitude(in);
@@ -55,9 +55,9 @@ public class Parameter
         int iDefault   = readIndex(in);
 
         m_aAnnotations = aAnnos;
-        m_constType    = (TypeConstant)   pool.getConstant(iType   );
-        m_constName    = (StringConstant) pool.getConstant(iName   );
-        m_constDefault =                  pool.getConstant(iDefault);
+        m_constType    = pool.getConstant(iType, TypeConstant.class);
+        m_constName    = pool.getConstant(iName, StringConstant.class);
+        m_constDefault = pool.getConstant(iDefault, Constant.class);
 
         f_iParam       = fReturn ? -1 - index : index;
         f_fOrdinary    = !fSpecial;

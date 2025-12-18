@@ -73,13 +73,13 @@ public class ArrayConstant
     protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
-        m_constType = (TypeConstant) pool.getConstant(m_iType);
+        m_constType = pool.getConstant(m_iType, TypeConstant.class);
 
         int[]      aiConst = m_aiVal;
         int        cConsts = aiConst.length;
         Constant[] aconst  = new Constant[cConsts];
         for (int i = 0; i < cConsts; ++i) {
-            aconst[i] = pool.getConstant(aiConst[i]);
+            aconst[i] = pool.getConstant(aiConst[i], Constant.class);
         }
         m_aconstVal = aconst;
     }

@@ -41,7 +41,7 @@ public abstract class UnaryExprAST
             throws IOException {
         super.readBody(in, res);
 
-        type = (TypeConstant) res.getConstant(readMagnitude(in));
+        type = res.getConstant(readMagnitude(in), TypeConstant.class);
     }
 
     @Override

@@ -60,7 +60,7 @@ public class MapExprAST
     @Override
     protected void readBody(DataInput in, ConstantResolver res)
             throws IOException {
-        type   = (TypeConstant) res.getConstant(readMagnitude(in));
+        type   = res.getConstant(readMagnitude(in), TypeConstant.class);
         keys   = readExprArray(in, res);
         values = readExprArray(in, res);
     }

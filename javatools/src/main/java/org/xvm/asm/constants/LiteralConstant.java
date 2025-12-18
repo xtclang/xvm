@@ -155,7 +155,7 @@ public class LiteralConstant
 
     @Override
     protected void resolveConstants() {
-        m_constStr = (StringConstant) getConstantPool().getConstant(m_iStr);
+        m_constStr = getConstantPool().getConstant(m_iStr, StringConstant.class);
     }
 
 

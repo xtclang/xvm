@@ -48,7 +48,7 @@ public class JumpCond
     @Override
     protected int processUnaryOp(Frame frame, int iPC) {
         if (m_cond == null) {
-            m_cond = (ConditionalConstant) frame.getConstant(m_nArg);
+            m_cond = frame.getConstant(m_nArg, ConditionalConstant.class);
         }
 
         LinkerContext ctx = frame.f_context.getLinkerContext();

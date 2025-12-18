@@ -143,10 +143,10 @@ public class FSNodeConstant
     protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
-        m_constName     = (StringConstant ) pool.getConstant(m_iName    );
-        m_constCreated  = (LiteralConstant) pool.getConstant(m_iCreated );
-        m_constModified = (LiteralConstant) pool.getConstant(m_iModified);
-        m_constData     =                   pool.getConstant(m_iData    );
+        m_constName     = pool.getConstant(m_iName, StringConstant.class);
+        m_constCreated  = pool.getConstant(m_iCreated, LiteralConstant.class);
+        m_constModified = pool.getConstant(m_iModified, LiteralConstant.class);
+        m_constData     = pool.getConstant(m_iData, Constant.class);
     }
 
 

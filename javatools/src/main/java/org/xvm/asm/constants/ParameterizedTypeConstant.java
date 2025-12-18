@@ -106,7 +106,7 @@ public class ParameterizedTypeConstant
     protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
-        m_constType = (TypeConstant) pool.getConstant(m_iType);
+        m_constType = pool.getConstant(m_iType, TypeConstant.class);
 
         if (m_aiTypeParams == null) {
             m_atypeParams = ConstantPool.NO_TYPES;
@@ -114,7 +114,7 @@ public class ParameterizedTypeConstant
             int            cParams     = m_aiTypeParams.length;
             TypeConstant[] atypeParams = new TypeConstant[cParams];
             for (int i = 0; i < cParams; ++i) {
-                atypeParams[i] = (TypeConstant) pool.getConstant(m_aiTypeParams[i]);
+                atypeParams[i] = pool.getConstant(m_aiTypeParams[i], TypeConstant.class);
             }
             m_atypeParams  = atypeParams;
             m_aiTypeParams = null;

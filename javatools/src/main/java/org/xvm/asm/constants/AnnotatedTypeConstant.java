@@ -116,8 +116,8 @@ public class AnnotatedTypeConstant
     protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
-        m_annotation = (Annotation) pool.getConstant(m_iAnno);
-        m_constType  = (TypeConstant) pool.getConstant(m_iType);
+        m_annotation = pool.getConstant(m_iAnno, Annotation.class);
+        m_constType  = pool.getConstant(m_iType, TypeConstant.class);
     }
 
 

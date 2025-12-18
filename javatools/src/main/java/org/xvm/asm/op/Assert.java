@@ -123,7 +123,7 @@ public class Assert
             return frame.f_context.getDebugger().activate(frame, iPC);
         }
 
-        MethodConstant   idConstruct = (MethodConstant) frame.getConstant(m_nConstructor);
+        MethodConstant   idConstruct = frame.getConstant(m_nConstructor, MethodConstant.class);
         MethodStructure  construct   = (MethodStructure) idConstruct.getComponent();
         ClassConstant    constClz    = (ClassConstant) idConstruct.getNamespace();
         ClassTemplate    template    = frame.ensureTemplate(constClz);
@@ -189,7 +189,7 @@ public class Assert
             code.loadConstant( "Debugger support for jit is not yet implemented");
             code.invokevirtual(CD_Ctx, "log", Ctx.MD_log);
         } else {
-            MethodConstant idCtor  = (MethodConstant) bctx.getConstant(m_nConstructor);
+            MethodConstant idCtor  = bctx.getConstant(m_nConstructor, MethodConstant.class);
             TypeConstant   typeEx  = idCtor.getNamespace().getType();
             int[]          anArgs  = new int[idCtor.getSignature().getParamCount()];
 

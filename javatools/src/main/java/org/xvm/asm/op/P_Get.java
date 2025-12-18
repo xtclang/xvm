@@ -82,7 +82,7 @@ public class P_Get
     public int process(Frame frame, int iPC) {
         try {
             ObjectHandle     hTarget       = frame.getArgument(m_nTarget);
-            PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
+            PropertyConstant constProperty = frame.getConstant(m_nPropId, PropertyConstant.class);
 
             if (frame.isNextRegister(m_nRetValue)) {
                 frame.introducePropertyVar(m_nRetValue, m_nTarget, m_nPropId);

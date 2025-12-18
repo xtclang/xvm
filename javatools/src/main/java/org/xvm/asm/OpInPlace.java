@@ -142,7 +142,7 @@ public abstract class OpInPlace
                     frame.introduceVarCopy(m_nRetValue, nTarget);
                 }
 
-                PropertyConstant idProp = (PropertyConstant) frame.getConstant(nTarget);
+                PropertyConstant idProp = frame.getConstant(nTarget, PropertyConstant.class);
 
                 return completeWithProperty(frame, idProp);
             }
@@ -233,7 +233,7 @@ public abstract class OpInPlace
             }
         } else {
             // operation on a local property
-            PropertyConstant idProp   = (PropertyConstant) bctx.getConstant(nTarget);
+            PropertyConstant idProp   = bctx.getConstant(nTarget, PropertyConstant.class);
             TypeConstant     typeProp = idProp.getType();
             if (typeProp.isPrimitive()) {
                 buildPrimitiveProperty(bctx, code, idProp);

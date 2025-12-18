@@ -62,7 +62,7 @@ public class MethodBindingConstant
 
     @Override
     protected void resolveConstants() {
-        m_idMethod = (MethodConstant) getConstantPool().getConstant(m_iMethod);
+        m_idMethod = getConstantPool().getConstant(m_iMethod, MethodConstant.class);
     }
 
 

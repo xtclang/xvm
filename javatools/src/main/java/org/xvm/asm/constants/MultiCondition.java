@@ -89,7 +89,7 @@ public abstract class MultiCondition
         if (c > 0) {
             ConstantPool pool = getConstantPool();
             for (int i = 0; i < c; ++i) {
-                aconstCond[i] = (ConditionalConstant) pool.getConstant(ai[i]);
+                aconstCond[i] = pool.getConstant(ai[i], ConditionalConstant.class);
             }
         }
 

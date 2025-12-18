@@ -489,17 +489,37 @@ public class BuildContext {
     }
 
     /**
+     * Obtain the Constant at the specified index, verifying it is of the expected type.
+     *
+     * @param argId  the argument id
+     * @param type   the expected type of the constant
+     * @param <T>    the Constant type
+     *
+     * @return the constant, cast to the expected type
+     *
+     * @throws IllegalStateException if the constant is not of the expected type
+     */
+    public <T extends Constant> T getConstant(int argId, Class<T> type) {
+        Constant constant = getConstant(argId);
+        if (!type.isInstance(constant)) {
+            throw new IllegalStateException("Expected " + type.getSimpleName() +
+                    ", found " + (constant == null ? "null" : constant.getClass().getSimpleName()));
+        }
+        return type.cast(constant);
+    }
+
+    /**
      * Get the String value for the specified argument index.
      */
     public String getString(int argId) {
-        return ((StringConstant) getConstant(argId)).getValue();
+        return getConstant(argId, StringConstant.class).getValue();
     }
 
     /**
      * Get the type for the specified argument index.
      */
     public TypeConstant getType(int argId) {
-        return (TypeConstant) getConstant(argId); // must exist
+        return getConstant(argId, TypeConstant.class);
     }
 
     /**
