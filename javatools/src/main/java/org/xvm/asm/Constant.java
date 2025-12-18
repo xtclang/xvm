@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.DeferredValueConstant;
 import org.xvm.asm.constants.IdentityConstant;

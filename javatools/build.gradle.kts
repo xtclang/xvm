@@ -25,8 +25,10 @@ val xdkJavaToolsProvider by configurations.registering {
 }
 
 dependencies {
+    compileOnly(libs.jetbrains.annotations)
     implementation(libs.javatools.utils)
     implementation(libs.jline)
+    testCompileOnly(libs.jetbrains.annotations)
     testImplementation(libs.javatools.utils)
 }
 

@@ -12,6 +12,9 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 
@@ -125,7 +128,7 @@ public abstract class XvmStructure
      *
      * @return the FileStructure
      */
-    public FileStructure getFileStructure() {
+    public @NotNull FileStructure getFileStructure() {
         return getContaining().getFileStructure();
     }
 
@@ -135,7 +138,7 @@ public abstract class XvmStructure
      *
      * @return  the ConstantPool
      */
-    public ConstantPool getConstantPool() {
+    public @NotNull ConstantPool getConstantPool() {
         return getContaining().getConstantPool();
     }
 
@@ -155,7 +158,7 @@ public abstract class XvmStructure
      *
      * @return an Iterable object representing all nested XVM structures
      */
-    public Iterator<? extends XvmStructure> getContained() {
+    public @NotNull Iterator<? extends XvmStructure> getContained() {
         return Collections.emptyIterator();
     }
 
@@ -292,7 +295,7 @@ public abstract class XvmStructure
      * @param condition a NamedCondition, a PresentCondition, or a VersionedCondition, or a
      *                  NotCondition of any of the above
      */
-    protected void purgeCondition(ConditionalConstant condition) {
+    protected void purgeCondition(@NotNull ConditionalConstant condition) {
         for (Iterator<? extends XvmStructure> iter = getContained(); iter.hasNext(); ) {
             iter.next().purgeCondition(condition);
         }
@@ -307,7 +310,7 @@ public abstract class XvmStructure
      *
      * @return true if this XVM Structure would be present given the specified context
      */
-    public boolean isPresent(LinkerContext ctx) {
+    public boolean isPresent(@NotNull LinkerContext ctx) {
         if (!m_xsParent.isPresent(ctx)) {
             return false;
         }
@@ -376,7 +379,7 @@ public abstract class XvmStructure
      * @param pool  the ConstantPool with which to register each constant referenced by the XVM
      *              structure
      */
-    protected void registerConstants(ConstantPool pool) {
+    protected void registerConstants(@NotNull ConstantPool pool) {
         for (Iterator<? extends XvmStructure> iter = getContained(); iter.hasNext(); ) {
             iter.next().registerConstants(pool);
         }
@@ -421,7 +424,8 @@ public abstract class XvmStructure
      * @param sCode    the error code
      * @param aoParam  the parameters of the error
      */
-    public boolean log(ErrorListener errs, Severity sev, String sCode, Object ... aoParam) {
+    public boolean log(@Nullable ErrorListener errs, @NotNull Severity sev,
+            @NotNull String sCode, Object ... aoParam) {
         // TODO need a way to log to compiler error list if we have compile-time info on the location in the source code
         return ensureErrorListener(errs).log(sev, sCode, aoParam, this);
     }
@@ -434,14 +438,14 @@ public abstract class XvmStructure
      * @return the error listener passed in, if it was not null, otherwise the previously specified
      *         error listener, otherwise the runtime error listener
      */
-    public ErrorListener ensureErrorListener(ErrorListener errs) {
+    public @NotNull ErrorListener ensureErrorListener(@Nullable ErrorListener errs) {
         return errs == null ? getErrorListener() : errs;
     }
 
     /**
      * @return the error listener, if provided, otherwise the runtime error listener
      */
-    public ErrorListener getErrorListener() {
+    public @NotNull ErrorListener getErrorListener() {
         return m_xsParent.getErrorListener();
     }
 
@@ -462,7 +466,7 @@ public abstract class XvmStructure
      *
      * @return a String description of the attributes of this XVM Structure
      */
-    public abstract String getDescription();
+    public abstract @NotNull String getDescription();
 
     /**
      * Obtain the output from a full dump of this XVM Structure as a String. This is particularly
@@ -471,7 +475,7 @@ public abstract class XvmStructure
      *
      * @return a String containing a dump of this XVM Structure
      */
-    public String toDebugString() {
+    public @NotNull String toDebugString() {
         StringWriter sw  = new StringWriter(1024);
         PrintWriter  out = new PrintWriter(sw);
         dump(out);
@@ -583,7 +587,7 @@ public abstract class XvmStructure
      *
      * @return the indentation to use for the next nested level
      */
-    protected String nextIndent(String sIndent) {
+    protected @NotNull String nextIndent(@NotNull String sIndent) {
         return sIndent + "  ";
     }
 

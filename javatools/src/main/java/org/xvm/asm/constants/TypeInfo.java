@@ -2,7 +2,6 @@ package org.xvm.asm.constants;
 
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -153,7 +152,7 @@ public class TypeInfo {
         f_cInvalidations      = cInvalidations;
         f_struct              = infoConstraint.f_struct;
         f_cDepth              = infoConstraint.f_cDepth;
-        f_mapTypeParams       = Collections.emptyMap();
+        f_mapTypeParams       = Map.of();
         f_aannoClass          = Annotation.NO_ANNOTATIONS;
         f_aannoMixin          = Annotation.NO_ANNOTATIONS;
         f_typeExtends         = infoConstraint.f_type;
@@ -178,6 +177,42 @@ public class TypeInfo {
         m_fImplicitAbstract = false;
 
         assert cInvalidations <= typeFormal.getConstantPool().getInvalidationCount();
+    }
+
+    /**
+     * Construct a placeholder TypeInfo that represents "this TypeInfo is currently being built".
+     * This constructor is designed to be used by {@link ConstantPool#infoPlaceholder()}.
+     *
+     * @param typeObject  the Object type constant
+     */
+    protected TypeInfo(TypeConstant typeObject) {
+        f_type                = typeObject;
+        f_cInvalidations      = 0;
+        f_struct              = null;
+        f_cDepth              = 0;
+        f_mapTypeParams       = Map.of();
+        f_aannoClass          = Annotation.NO_ANNOTATIONS;
+        f_aannoMixin          = Annotation.NO_ANNOTATIONS;
+        f_typeExtends         = typeObject;
+        f_typeRebases         = null;
+        f_typeInto            = typeObject;
+        f_listProcess         = List.of();
+        f_listmapClassChain   = new ListMap<>();
+        f_listmapDefaultChain = new ListMap<>();
+        f_mapProps            = Map.of();
+        f_mapVirtProps        = Map.of();
+        f_mapMethods          = Map.of();
+        f_mapVirtMethods      = Map.of();
+        f_mapChildren         = ListMap.EMPTY;
+        f_setDepends          = null;
+        f_progress            = Progress.Building;
+
+        f_cacheById    = new ConcurrentHashMap<>();
+        f_cacheByNid   = new ConcurrentHashMap<>();
+        f_fHasGenerics = false;
+
+        m_fExplicitAbstract = true;
+        m_fImplicitAbstract = false;
     }
 
     /**
@@ -737,6 +772,7 @@ public class TypeInfo {
     /**
      * @return true iff this class is an anonymous inner class
      */
+    @SuppressWarnings("unused")
     public boolean isAnonInnerClass() {
         return f_struct != null && f_struct.isAnonInnerClass();
     }
@@ -964,7 +1000,7 @@ public class TypeInfo {
         // a quick check to eliminate the full scan below for 99.9% of scenarios
         MethodStructure method = (MethodStructure) idMethod.getComponent();
         if (method != null && !method.hasChildren()) {
-            return Collections.emptyMap();
+            return Map.of();
         }
 
         Map<IdentityConstant, Map<String, PropertyInfo>> mapProps = m_mapNestedProperties;
@@ -972,24 +1008,16 @@ public class TypeInfo {
             m_mapNestedProperties = mapProps = new HashMap<>();
         }
 
-        Map<String, PropertyInfo> map = mapProps.get(idMethod);
-        if (map == null) {
+        return mapProps.computeIfAbsent(idMethod, id -> {
+            Map<String, PropertyInfo> map = new HashMap<>();
             for (PropertyInfo prop : f_mapProps.values()) {
                 // only include the properties nested under the specified method
-                if (prop.getParent().equals(idMethod)) {
-                    if (map == null) {
-                        map = new HashMap<>();
-                    }
+                if (prop.getParent().equals(id)) {
                     map.put(prop.getName(), prop);
                 }
             }
-            if (map == null) {
-                map = Collections.emptyMap();
-            }
-            mapProps.put(idMethod, map);
-        }
-
-        return map;
+            return map.isEmpty() ? Map.of() : map;
+        });
     }
 
     /**
@@ -1006,26 +1034,19 @@ public class TypeInfo {
             m_mapNestedProperties = mapProps = new HashMap<>();
         }
 
-        Map<String, PropertyInfo> map = mapProps.get(idProp);
-        if (map == null) {
+        return mapProps.computeIfAbsent(idProp, id -> {
+            Map<String, PropertyInfo> map = new HashMap<>();
             for (Map.Entry<PropertyConstant, PropertyInfo> entry : f_mapProps.entrySet()) {
                 PropertyConstant idTest = entry.getKey();
                 PropertyInfo     prop   = entry.getValue();
 
                 // only include the properties nested under the specified property
-                if (idTest.getParentConstant().equals(idProp)) {
-                    if (map == null) {
-                        map = new HashMap<>();
-                    }
+                if (idTest.getParentConstant().equals(id)) {
                     map.put(prop.getName(), prop);
                 }
             }
-            if (map == null) {
-                map = Collections.emptyMap();
-            }
-            mapProps.put(idProp, map);
-        }
-        return map;
+            return map.isEmpty() ? Map.of() : map;
+        });
     }
 
 
@@ -1768,7 +1789,7 @@ public class TypeInfo {
             }
 
             // cache the result
-            m_setOps = setOps = (setOps == null ? Collections.emptySet() : setOps);
+            m_setOps = setOps = (setOps == null ? Set.of() : setOps);
         }
 
         return setOps;
@@ -1810,7 +1831,7 @@ public class TypeInfo {
                 }
 
                 // cache the result
-                return set == null ? Collections.emptySet() : set;
+                return set == null ? Set.of() : set;
             });
         }
 
@@ -1825,7 +1846,7 @@ public class TypeInfo {
      *
      * @param sName   the default op name, such as "add" (optional)
      * @param sOp     the operator string, such as "+" (optional)
-     * @param cParams the number of parameters for the operator method, or -1 to match any
+     * @param typeArg type of the parameter
      *
      * @throws IllegalStateException if there is no matching or more than one matching methods
      */
@@ -1996,7 +2017,7 @@ public class TypeInfo {
 
             // cache the miss
             if (setMethods == null) {
-                mapMethods.put(sKey, setMethods = Collections.emptySet());
+                mapMethods.put(sKey, setMethods = Set.of());
             } else if (fAny && setMethods.size() == 1) {
                 // cache the result for the specific key for max parameter count; if more than one,
                 // or if cParams is less than cAllParams, we'd need to se-scan
@@ -2072,7 +2093,7 @@ public class TypeInfo {
 
             if (setMethods == null) {
                 // cache the miss
-                mapMethods.put(sKey, setMethods = Collections.emptySet());
+                mapMethods.put(sKey, setMethods = Set.of());
             } else if (fAny && setMethods.size() == 1) {
                 // cache the result for the specific key for max parameter count; if more than one,
                 // or if cParams is less than cAllParams, we'd need to se-scan
@@ -2123,7 +2144,7 @@ public class TypeInfo {
             }
 
             // cache the result
-            m_setAuto = setAuto = (setAuto == null ? Collections.emptySet() : setAuto);
+            m_setAuto = setAuto = (setAuto == null ? Set.of() : setAuto);
         }
 
         return setAuto;
@@ -2204,7 +2225,7 @@ public class TypeInfo {
      * @param fRuntime  if specified, optimize the method call chains
      */
     public String toString(boolean fRuntime) {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.append("TypeInfo: ")
           .append(f_type)
