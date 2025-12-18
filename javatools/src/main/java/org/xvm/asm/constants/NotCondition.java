@@ -174,7 +174,7 @@ public class NotCondition
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constCond = (ConditionalConstant) pool.register(m_constCond);
+        m_constCond = pool.register(m_constCond);
     }
 
     @Override

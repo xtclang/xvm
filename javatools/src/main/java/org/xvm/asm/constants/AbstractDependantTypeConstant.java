@@ -307,7 +307,7 @@ public abstract class AbstractDependantTypeConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_typeParent = (TypeConstant) pool.register(m_typeParent);
+        m_typeParent = pool.register(m_typeParent);
     }
 
     @Override

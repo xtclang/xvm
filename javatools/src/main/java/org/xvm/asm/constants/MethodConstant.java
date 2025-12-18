@@ -563,8 +563,7 @@ public class MethodConstant
         }
 
         ConstantPool pool = getConstantPool();
-        return (MethodConstant) pool.register(
-                new MethodConstant(pool, idNewParent, sigNew, m_iLambda));
+        return pool.register(new MethodConstant(pool, idNewParent, sigNew, m_iLambda));
     }
 
     @Override
@@ -605,8 +604,8 @@ public class MethodConstant
 
         // there is a possibility of creating a method for a lambda hosted by another lambda
         // while the containing lambda has not yet been injected with the signature
-        m_constParent = (MultiMethodConstant) pool.register(m_constParent);
-        m_constSig    = (SignatureConstant  ) pool.register(m_constSig   );
+        m_constParent = pool.register(m_constParent);
+        m_constSig    = pool.register(m_constSig);
     }
 
     @Override

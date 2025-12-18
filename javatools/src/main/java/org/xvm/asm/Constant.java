@@ -705,11 +705,12 @@ public abstract class Constant
      * @param pool    the ConstantPool
      * @param aconst  an array of constants
      */
-    protected static Constant[] registerConstants(ConstantPool pool, Constant[] aconst) {
-        Constant[] aconstNew = null;
+    @SuppressWarnings("unchecked")
+    protected static <T extends Constant> T[] registerConstants(ConstantPool pool, T[] aconst) {
+        T[] aconstNew = null;
         for (int i = 0, c = aconst.length; i < c; ++i) {
-            Constant constOld = aconst[i];
-            Constant constNew = pool.register(constOld);
+            T constOld = aconst[i];
+            T constNew = pool.register(constOld);
             if (constOld != constNew) {
                 if (aconstNew == null) {
                     aconstNew = aconst.clone();

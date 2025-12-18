@@ -274,7 +274,7 @@ public abstract class MultiCondition
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_aconstCond = (ConditionalConstant[]) registerConstants(pool, m_aconstCond);
+        m_aconstCond = registerConstants(pool, m_aconstCond);
     }
 
     @Override

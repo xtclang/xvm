@@ -74,7 +74,7 @@ public class TypedefStructure
     protected void registerConstants(ConstantPool pool) {
         super.registerConstants(pool);
 
-        m_type = (TypeConstant) pool.register(m_type);
+        m_type = pool.register(m_type);
     }
 
     @Override

@@ -124,7 +124,7 @@ public class ThisClassConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constClass = (IdentityConstant) pool.register(m_constClass);
+        m_constClass = pool.register(m_constClass);
     }
 
     @Override

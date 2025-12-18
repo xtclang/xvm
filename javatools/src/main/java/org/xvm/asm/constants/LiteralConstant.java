@@ -1618,7 +1618,7 @@ public class LiteralConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constStr = (StringConstant) pool.register(m_constStr);
+        m_constStr = pool.register(m_constStr);
     }
 
     @Override

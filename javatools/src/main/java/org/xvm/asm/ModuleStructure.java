@@ -743,11 +743,11 @@ public class ModuleStructure
                 pool.ensureVersionConstant(ver);
             }
         } else if (m_constVersion != null) {
-            m_constVersion = (VersionConstant) pool.register(m_constVersion);
+            m_constVersion = pool.register(m_constVersion);
         }
 
-        m_constDir       = (LiteralConstant) pool.register(m_constDir);
-        m_constTimestamp = (LiteralConstant) pool.register(m_constTimestamp);
+        m_constDir       = pool.register(m_constDir);
+        m_constTimestamp = pool.register(m_constTimestamp);
     }
 
     @Override

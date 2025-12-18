@@ -1641,7 +1641,7 @@ public abstract class TypeConstant
 
         // since we're producing a lot of information for the TypeInfo, there is no reason to do
         // it unless the type is registered (which resolves typedefs)
-        TypeConstant typeResolved = (TypeConstant) pool.register(this);
+        TypeConstant typeResolved = pool.register(this);
 
         // Additionally:
         // - resolve the auto-narrowing;
@@ -1704,7 +1704,7 @@ public abstract class TypeConstant
                 for (TypeConstant typeDeferred : listDeferred) {
                     if (typeDeferred != this) {
                         if (typeDeferred.getConstantPool() != pool) {
-                            typeDeferred = (TypeConstant) pool.register(typeDeferred);
+                            typeDeferred = pool.register(typeDeferred);
                         }
 
                         TypeInfo infoDeferred = typeDeferred.getTypeInfo();
@@ -2424,7 +2424,7 @@ public abstract class TypeConstant
             // to insert a layer of code between this class and the class being extended, such
             // as when a service (which is a Service format) extends Object (which is a Class
             // format)
-            typeRebase = (TypeConstant) pool.register(struct.getRebaseType());
+            typeRebase = pool.register(struct.getRebaseType());
 
             // next up, for any class type, there may be an "extends" contribution that
             // specifies a "super" class
@@ -2557,8 +2557,7 @@ public abstract class TypeConstant
             if (constId instanceof NativeRebaseConstant idNative) {
                 // for a native rebase, the interface becomes a class, and that class implements
                 // the original interface and Object
-                TypeConstant typeNatural = (TypeConstant) pool.register(
-                        idNative.getClassConstant().getType());
+                TypeConstant typeNatural = pool.register(idNative.getClassConstant().getType());
                 if (isParamsSpecified()) {
                     typeNatural = pool.ensureParameterizedTypeConstant(typeNatural, getParamTypesArray());
                 }
@@ -5304,10 +5303,10 @@ public abstract class TypeConstant
         // unless it's registered; also make sure the left type is registered to the same pool
         TypeConstant typeRight = this.getPosition() >= 0
                 ? this
-                : (TypeConstant) pool.register(this);
+                : pool.register(this);
         TypeConstant typeLeftResolved = poolLeft == pool && typeLeft.getPosition() >= 0
                 ? typeLeft
-                : (TypeConstant) pool.register(typeLeft);
+                : pool.register(typeLeft);
 
         if (typeRight != this || typeLeftResolved != typeLeft) {
             return typeRight.calculateRelation(typeLeftResolved);
@@ -7132,7 +7131,7 @@ public abstract class TypeConstant
      * Helper method for registering an array of TypeConstants.
      */
     protected static TypeConstant[] registerTypeConstants(ConstantPool pool, TypeConstant[] atype) {
-        atype = (TypeConstant[]) registerConstants(pool, atype);
+        atype = registerConstants(pool, atype);
 
         for (TypeConstant typeConstant : atype) {
             typeConstant.registerConstants(pool);

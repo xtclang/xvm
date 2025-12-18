@@ -149,7 +149,7 @@ public class InnerChildTypeConstant
     protected void registerConstants(ConstantPool pool) {
         super.registerConstants(pool);
 
-        m_idChild = (ClassConstant) pool.register(m_idChild);
+        m_idChild = pool.register(m_idChild);
     }
 
     @Override

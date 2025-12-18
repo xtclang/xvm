@@ -313,9 +313,9 @@ public class FSNodeConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constName     = (StringConstant ) pool.register(m_constName    );
-        m_constCreated  = (LiteralConstant) pool.register(m_constCreated );
-        m_constModified = (LiteralConstant) pool.register(m_constModified);
+        m_constName     = pool.register(m_constName);
+        m_constCreated  = pool.register(m_constCreated);
+        m_constModified = pool.register(m_constModified);
         m_constData     =                   pool.register(m_constData    );
     }
 

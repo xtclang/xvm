@@ -573,7 +573,7 @@ public class PropertyInfo
             if (parent == null) {
                 ConstantPool pool = ConstantPool.getCurrentPool();
                 if (idProp.isShared(pool)) {
-                    idProp = (PropertyConstant) pool.register(idProp);
+                    idProp = pool.register(idProp);
                     parent = idProp.getNamespace().getComponent();
                 }
             }
