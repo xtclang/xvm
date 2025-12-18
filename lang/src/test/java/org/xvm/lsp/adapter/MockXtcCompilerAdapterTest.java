@@ -220,9 +220,7 @@ class MockXtcCompilerAdapterTest {
 
             adapter.compile("file:///test.x", source);
             final var completions = adapter.getCompletions("file:///test.x", 3, 0);
-
-            assertThat(completions)
-                    .anyMatch(c -> c.label().equals("Person"));
+            assertThat(completions).anyMatch(c -> c.label().equals("Person"));
         }
     }
 
