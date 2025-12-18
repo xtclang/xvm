@@ -25,7 +25,10 @@ service TestResourceProvider(Directory curDir)
     /**
      * The `FileStore` to use to access files.
      */
-    @Lazy FileStore store.calc() = new DirectoryFileStore(curDir);
+    @Lazy FileStore store.calc() {
+        @Inject FileStore storage;
+        return storage;
+    }
 
     /**
      * The build output directory.
