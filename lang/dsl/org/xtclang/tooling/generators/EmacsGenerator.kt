@@ -78,6 +78,24 @@ class EmacsGenerator(private val model: LanguageModel) {
         appendLine("  \"Built-in types in ${model.name}.\")")
         appendLine()
 
+        // Boolean constants from model
+        val booleans = model.booleanLiterals
+        if (booleans.isNotEmpty()) {
+            appendLine("(defconst xtc-boolean-constants")
+            appendLine("  '(${booleans.joinToString(" ") { "\"$it\"" }})")
+            appendLine("  \"Boolean constants in ${model.name}.\")")
+            appendLine()
+        }
+
+        // Null constant from model
+        val nullLit = model.nullLiteral
+        if (nullLit != null) {
+            appendLine("(defconst xtc-null-constant")
+            appendLine("  '(\"$nullLit\")")
+            appendLine("  \"Null constant in ${model.name}.\")")
+            appendLine()
+        }
+
         // Font-lock keywords
         appendLine("(defconst xtc-font-lock-keywords")
         appendLine("  (list")
@@ -129,6 +147,18 @@ class EmacsGenerator(private val model: LanguageModel) {
         // Function definitions
         appendLine("   ;; Function definitions")
         appendLine("   '(\"\\\\b\\\\([a-z_][A-Za-z0-9_]*\\\\)\\\\s-*(\" 1 font-lock-function-name-face)")
+
+        // Boolean constants
+        if (booleans.isNotEmpty()) {
+            appendLine("   ;; Boolean constants")
+            appendLine("   `(,(regexp-opt xtc-boolean-constants 'words) . font-lock-constant-face)")
+        }
+
+        // Null constant
+        if (nullLit != null) {
+            appendLine("   ;; Null constant")
+            appendLine("   `(,(regexp-opt xtc-null-constant 'words) . font-lock-constant-face)")
+        }
 
         // Numbers
         appendLine("   ;; Numbers")

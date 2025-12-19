@@ -8,16 +8,16 @@ plugins {
 group = "org.xvm"
 version = "0.1.0-SNAPSHOT"
 
-// Use JDK 25 toolchain; target JVM 23 bytecode (Kotlin 2.1.0's max supported target)
-// This allows using JDK 25 features while maintaining Kotlin compatibility
+// Use JDK 24 toolchain for Kotlin (matches org.xtclang.kotlin.jdk in version.properties)
+// Target JVM 23 bytecode (Kotlin 2.1.0's max supported target)
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(25))
+        languageVersion.set(JavaLanguageVersion.of(24))
     }
 }
 
 kotlin {
-    jvmToolchain(25)
+    jvmToolchain(24)
     sourceSets {
         main {
             kotlin.srcDir("dsl")
@@ -104,6 +104,8 @@ val fatJar by tasks.registering(Jar::class) {
 // Language Model Tasks
 // =============================================================================
 
+val generatedDir = layout.buildDirectory.dir("generated")
+
 // Task to dump the XTC language model as JSON
 val dumpLanguageModel by tasks.registering(JavaExec::class) {
     group = "language-support"
@@ -119,8 +121,8 @@ val generateTextMate by tasks.registering(JavaExec::class) {
     description = "Generate TextMate grammar from the XTC language model"
     mainClass.set("org.xtclang.tooling.LanguageModelCliKt")
     classpath = sourceSets.main.get().runtimeClasspath
-    args = listOf("textmate")
-    outputs.file(layout.buildDirectory.file("generated/xtc.tmLanguage.json"))
+    args = listOf("textmate", generatedDir.get().file("xtc.tmLanguage.json").asFile.absolutePath)
+    outputs.file(generatedDir.map { it.file("xtc.tmLanguage.json") })
 }
 
 // Task to show language model statistics
@@ -145,7 +147,15 @@ val validateSources by tasks.registering(JavaExec::class) {
 // Editor-Specific Generators
 // =============================================================================
 
-val generatedDir = layout.buildDirectory.dir("generated")
+// Task to generate Sublime syntax file (for bat/Sublime Text)
+val generateSublime by tasks.registering(JavaExec::class) {
+    group = "language-support"
+    description = "Generate Sublime syntax file from the XTC language model (for bat/Sublime)"
+    mainClass.set("org.xtclang.tooling.LanguageModelCliKt")
+    classpath = sourceSets.main.get().runtimeClasspath
+    args = listOf("sublime", generatedDir.get().file("Ecstasy.sublime-syntax").asFile.absolutePath)
+    outputs.file(generatedDir.map { it.file("Ecstasy.sublime-syntax") })
+}
 
 // Task to generate Vim syntax file
 val generateVim by tasks.registering(JavaExec::class) {
@@ -194,5 +204,5 @@ val generateVSCodeConfig by tasks.registering(JavaExec::class) {
 val generateAllEditorSupport by tasks.registering {
     group = "language-support"
     description = "Generate all editor support files from the XTC language model"
-    dependsOn(generateTextMate, generateVim, generateEmacs, generateTreeSitter, generateVSCodeConfig)
+    dependsOn(generateTextMate, generateSublime, generateVim, generateEmacs, generateTreeSitter, generateVSCodeConfig)
 }

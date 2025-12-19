@@ -459,8 +459,15 @@ class TreeSitterGenerator(private val model: LanguageModel) {
         appendLine("    template_string_literal: $ => /\\$\"([^\"\\\\]|\\\\.)*\"/,")
         appendLine("    char_literal: $ => /'([^'\\\\]|\\\\.)'/,")
         appendLine()
-        appendLine("    boolean_literal: $ => choice('True', 'False'),")
-        appendLine("    null_literal: $ => 'Null',")
+        // Boolean and null literals from model
+        val booleans = model.booleanLiterals
+        if (booleans.isNotEmpty()) {
+            appendLine("    boolean_literal: \$ => choice(${booleans.joinToString(", ") { "'$it'" }}),")
+        }
+        val nullLit = model.nullLiteral
+        if (nullLit != null) {
+            appendLine("    null_literal: \$ => '$nullLit',")
+        }
         appendLine()
         appendLine("    list_literal: $ => seq('[', commaSep($._expression), ']'),")
         appendLine("    map_literal: $ => seq('[', commaSep($.map_entry), ']'),")
@@ -477,8 +484,11 @@ class TreeSitterGenerator(private val model: LanguageModel) {
         appendLine("    annotation: $ => seq('@', $.identifier, optional($.arguments)),")
         appendLine()
 
-        // Visibility
-        appendLine("    visibility_modifier: $ => choice('public', 'protected', 'private'),")
+        // Visibility modifiers from model
+        val visibilityModifiers = model.visibilityKeywords
+        if (visibilityModifiers.isNotEmpty()) {
+            appendLine("    visibility_modifier: \$ => choice(${visibilityModifiers.joinToString(", ") { "'$it'" }}),")
+        }
         appendLine()
 
         // Comments
@@ -557,10 +567,14 @@ class TreeSitterGenerator(private val model: LanguageModel) {
 
         // Modifier keywords from model
         val modifierKeywords = model.keywordsByCategory(KeywordCategory.MODIFIER)
+        val visibilityKeywords = model.visibilityKeywords
         if (modifierKeywords.isNotEmpty()) {
             appendLine("; Modifiers")
-            appendLine("(visibility_modifier) @keyword.modifier")
-            for (kw in modifierKeywords.filter { it !in listOf("public", "protected", "private") }) {
+            if (visibilityKeywords.isNotEmpty()) {
+                appendLine("(visibility_modifier) @keyword.modifier")
+            }
+            // Output non-visibility modifiers
+            for (kw in modifierKeywords.filter { it !in visibilityKeywords }) {
                 appendLine("\"$kw\" @keyword.modifier")
             }
             appendLine()

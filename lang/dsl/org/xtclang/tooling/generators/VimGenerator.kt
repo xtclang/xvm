@@ -96,6 +96,22 @@ class VimGenerator(private val model: LanguageModel) {
             appendLine()
         }
 
+        // Boolean constants from model
+        val booleans = model.booleanLiterals
+        if (booleans.isNotEmpty()) {
+            appendLine("\" Boolean constants")
+            appendLine("syn keyword xtcBoolean ${booleans.joinToString(" ")}")
+            appendLine()
+        }
+
+        // Null constant from model
+        val nullLit = model.nullLiteral
+        if (nullLit != null) {
+            appendLine("\" Null constant")
+            appendLine("syn keyword xtcNull $nullLit")
+            appendLine()
+        }
+
         // Numbers - patterns from token rules
         appendLine("\" Numbers")
         appendLine("syn match xtcNumber '\\<\\d[\\d_]*\\>'")
@@ -180,6 +196,8 @@ class VimGenerator(private val model: LanguageModel) {
         appendLine("hi def link xtcKeyword Keyword")
         appendLine("hi def link xtcType Type")
         appendLine("hi def link xtcTypeName Type")
+        appendLine("hi def link xtcBoolean Boolean")
+        appendLine("hi def link xtcNull Constant")
         appendLine("hi def link xtcNumber Number")
         appendLine("hi def link xtcFloat Float")
         appendLine("hi def link xtcString String")

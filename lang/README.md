@@ -1,9 +1,72 @@
-# XTC Language Server
+# XTC Language Support
 
-A Language Server Protocol (LSP) implementation for the Ecstasy/XTC programming language.
+Language tooling for the Ecstasy/XTC programming language, including:
+- **Language Server Protocol (LSP)** implementation for IDE features
+- **Syntax highlighting** for multiple editors (VS Code, Vim, Emacs, Sublime, bat, etc.)
+- **Kotlin DSL** for defining the language model (single source of truth)
 
-NOTE: This is quite experimental and it is more of a case study / analysis document combined with
-code in a state that is more or less mock-up for a while.
+## Current Status
+
+### Working Features
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| **Kotlin DSL** | ✅ Working | Single source of truth for language definition |
+| **TextMate Grammar** | ✅ Generated | `./gradlew generateTextMate` → VS Code, Sublime, etc. |
+| **Sublime Syntax** | ✅ Working | For `bat` command-line viewer |
+| **Vim Syntax** | ✅ Generated | `./gradlew generateVim` |
+| **Emacs Mode** | ✅ Generated | `./gradlew generateEmacs` |
+| **Tree-sitter** | ✅ Generated | `./gradlew generateTreeSitter` → Helix, Zed, GitHub |
+| **VS Code Config** | ✅ Generated | Bracket matching, auto-close pairs |
+| **LSP Server** | 🔶 Skeleton | Mock adapter - needs real compiler integration |
+| **DAP (Debugging)** | ❌ Not started | Interface designed in `XtcCompilerAdapterFull.java` |
+
+### Quick Start - Syntax Highlighting
+
+```bash
+# Generate all editor support files
+./gradlew generateAllEditorSupport
+
+# Files are written to build/generated/
+ls build/generated/
+# xtc.tmLanguage.json  - TextMate (VS Code, Sublime)
+# xtc.vim              - Vim/Neovim
+# xtc-mode.el          - Emacs
+# grammar.js           - Tree-sitter
+# highlights.scm       - Tree-sitter queries
+# language-configuration.json - VS Code config
+```
+
+### Testing Syntax Highlighting
+
+**With bat (command-line):**
+```bash
+# Install sublime-syntax (one-time setup)
+cp ~/.config/bat/syntaxes/Ecstasy.sublime-syntax  # Already installed if you ran setup
+bat cache --build
+bat /path/to/file.x
+```
+
+**With VS Code:**
+```bash
+cd vscode-xtc
+code .
+# Press F5 to launch Extension Development Host
+# Open any .x file to see highlighting
+```
+
+**With IntelliJ:**
+1. Settings → Editor → TextMate Bundles
+2. Add directory: `lang/vscode-xtc`
+3. Open any `.x` file
+
+### Language Model Statistics
+
+```bash
+./gradlew languageStats
+```
+
+Shows keyword counts, operator precedence levels, AST concept hierarchy, etc.
 
 ## Building
 
@@ -241,28 +304,110 @@ See `doc/3-lsp-solution/adapter-layer-design.md` for the full adapter pattern.
 ## Project Structure
 
 ```
-xtc-lsp/
-├── build.gradle.kts              # Build configuration
+lang/
+├── build.gradle.kts              # Build configuration with generator tasks
 ├── settings.gradle.kts           # Project settings
 ├── README.md                     # This file
-└── src/
-    ├── main/
-    │   ├── java/org/xvm/lsp/
-    │   │   ├── adapter/          # Compiler adapter interface and mocks
-    │   │   │   ├── XtcCompilerAdapter.java
-    │   │   │   └── MockXtcCompilerAdapter.java
-    │   │   ├── model/            # Immutable data model
-    │   │   │   ├── Location.java
-    │   │   │   ├── Diagnostic.java
-    │   │   │   ├── SymbolInfo.java
-    │   │   │   └── CompilationResult.java
-    │   │   └── server/           # LSP server implementation
-    │   │       ├── XtcLanguageServer.java
-    │   │       └── XtcLanguageServerLauncher.java
-    │   └── resources/
-    │       └── logback.xml       # Logging configuration
-    └── test/
-        ├── java/org/xvm/lsp/     # Unit and integration tests
-        └── resources/
-            └── sample.x          # Sample XTC file for testing
+├── dsl/                          # Kotlin DSL - SINGLE SOURCE OF TRUTH
+│   ├── XtcLanguage.kt            # Complete language definition (~1600 lines)
+│   └── org/xtclang/tooling/
+│       ├── LanguageModelCli.kt   # CLI for generators
+│       ├── model/
+│       │   └── LanguageModel.kt  # DSL framework and data classes
+│       └── generators/           # Output generators
+│           ├── TextMateGenerator.kt
+│           ├── VimGenerator.kt
+│           ├── EmacsGenerator.kt
+│           ├── TreeSitterGenerator.kt
+│           └── VSCodeConfigGenerator.kt
+├── src/
+│   └── main/java/org/xvm/lsp/
+│       ├── adapter/              # Compiler adapter interface
+│       │   ├── XtcCompilerAdapter.java
+│       │   ├── XtcCompilerAdapterFull.java  # Full API including DAP
+│       │   └── MockXtcCompilerAdapter.java
+│       ├── model/                # Immutable data model
+│       │   ├── Location.java
+│       │   ├── Diagnostic.java
+│       │   ├── SymbolInfo.java
+│       │   └── CompilationResult.java
+│       └── server/               # LSP server implementation
+│           ├── XtcLanguageServer.java
+│           └── XtcLanguageServerLauncher.java
+├── vscode-xtc/                   # VS Code extension (syntax highlighting only)
+│   ├── package.json
+│   ├── syntaxes/xtc.tmLanguage.json
+│   └── language-configuration.json
+└── build/generated/              # Generated output (not in git)
+    ├── xtc.tmLanguage.json
+    ├── xtc.vim
+    ├── xtc-mode.el
+    ├── grammar.js
+    ├── highlights.scm
+    └── language-configuration.json
 ```
+
+## Language Model DSL
+
+The language is defined once in `dsl/XtcLanguage.kt` using a Kotlin DSL:
+
+```kotlin
+val xtcLanguage = language(
+    name = "Ecstasy",
+    fileExtensions = listOf("x", "xtc"),
+    scopeName = "source.xtc"
+) {
+    // Keywords with categories
+    keywords(KeywordCategory.CONTROL, "if", "else", "for", "while", "return")
+    keywords(KeywordCategory.DECLARATION, "class", "interface", "module")
+    keywords(KeywordCategory.MODIFIER, "public", "private", "static")
+
+    // Operators with precedence and associativity
+    operator("+", precedence = 12, LEFT, ARITHMETIC)
+    operator("==", precedence = 5, NONE, COMPARISON)
+
+    // Scope mappings for each editor
+    scope("keyword") {
+        textMate = "keyword.control.xtc"
+        intellij = "KEYWORD"
+        vim = "Keyword"
+        emacs = "font-lock-keyword-face"
+        treeSitter = "@keyword"
+    }
+
+    // Built-in types
+    builtinTypes("Int", "String", "Boolean", "Array", "Map")
+}
+```
+
+This single definition generates syntax files for all supported editors.
+
+## Gradle Tasks
+
+```bash
+# Language model
+./gradlew languageStats          # Show statistics
+./gradlew dumpLanguageModel      # Export as JSON
+./gradlew validateSources        # Validate against lib_ecstasy
+
+# Editor support generation
+./gradlew generateTextMate       # VS Code, Sublime, etc.
+./gradlew generateVim            # Vim/Neovim
+./gradlew generateEmacs          # Emacs
+./gradlew generateTreeSitter     # Helix, Zed, GitHub
+./gradlew generateVSCodeConfig   # VS Code language config
+./gradlew generateAllEditorSupport  # All of the above
+
+# LSP server
+./gradlew build                  # Build everything
+./gradlew fatJar                 # Create distributable JAR
+./gradlew test                   # Run tests
+```
+
+## Next Steps
+
+1. **Add SublimeSyntaxGenerator** - Generate `.sublime-syntax` for bat/Sublime
+2. **Real Compiler Adapter** - Connect LSP to actual XTC compiler
+3. **DAP Implementation** - Debug Adapter Protocol for debugging
+4. **Semantic Tokens** - Rich highlighting beyond TextMate patterns
+5. **IntelliJ Plugin** - Native plugin using the language model

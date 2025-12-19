@@ -35,40 +35,38 @@ class VSCodeConfigGenerator(private val model: LanguageModel) {
 
     fun generate(): String {
         val config = buildJsonObject {
-            // Comments
+            // Comments from model
             putJsonObject("comments") {
-                put("lineComment", "//")
+                put("lineComment", model.comments.lineComment)
                 putJsonArray("blockComment") {
-                    add(JsonPrimitive("/*"))
-                    add(JsonPrimitive("*/"))
+                    add(JsonPrimitive(model.comments.blockCommentStart))
+                    add(JsonPrimitive(model.comments.blockCommentEnd))
                 }
             }
 
-            // Brackets
+            // Brackets from model punctuation
+            val bracketPairs = model.bracketPairs
             putJsonArray("brackets") {
-                addJsonArray { add(JsonPrimitive("[")); add(JsonPrimitive("]")) }
-                addJsonArray { add(JsonPrimitive("{")); add(JsonPrimitive("}")) }
-                addJsonArray { add(JsonPrimitive("(")); add(JsonPrimitive(")")) }
-                addJsonArray { add(JsonPrimitive("<")); add(JsonPrimitive(">")) }
+                for ((open, close) in bracketPairs) {
+                    addJsonArray { add(JsonPrimitive(open)); add(JsonPrimitive(close)) }
+                }
             }
 
-            // Auto-closing pairs
+            // Auto-closing pairs from model punctuation
             putJsonArray("autoClosingPairs") {
-                addJsonObject { put("open", "{"); put("close", "}") }
-                addJsonObject { put("open", "["); put("close", "]") }
-                addJsonObject { put("open", "("); put("close", ")") }
-                addJsonObject { put("open", "<"); put("close", ">") }
+                for ((open, close) in bracketPairs) {
+                    addJsonObject { put("open", open); put("close", close) }
+                }
                 addJsonObject { put("open", "\""); put("close", "\""); putJsonArray("notIn") { add(JsonPrimitive("string")) } }
                 addJsonObject { put("open", "'"); put("close", "'"); putJsonArray("notIn") { add(JsonPrimitive("string")) } }
-                addJsonObject { put("open", "/*"); put("close", " */") }
+                addJsonObject { put("open", model.comments.blockCommentStart); put("close", " ${model.comments.blockCommentEnd}") }
             }
 
-            // Surrounding pairs
+            // Surrounding pairs from model punctuation
             putJsonArray("surroundingPairs") {
-                addJsonArray { add(JsonPrimitive("{")); add(JsonPrimitive("}")) }
-                addJsonArray { add(JsonPrimitive("[")); add(JsonPrimitive("]")) }
-                addJsonArray { add(JsonPrimitive("(")); add(JsonPrimitive(")")) }
-                addJsonArray { add(JsonPrimitive("<")); add(JsonPrimitive(">")) }
+                for ((open, close) in bracketPairs) {
+                    addJsonArray { add(JsonPrimitive(open)); add(JsonPrimitive(close)) }
+                }
                 addJsonArray { add(JsonPrimitive("\"")); add(JsonPrimitive("\"")) }
                 addJsonArray { add(JsonPrimitive("'")); add(JsonPrimitive("'")) }
             }

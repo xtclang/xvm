@@ -36,9 +36,11 @@ class TextMateGenerator(private val model: LanguageModel) {
                             put("name", "comment.block.documentation.xtc")
                             put("begin", "/\\*\\*")
                             put("end", "\\*/")
-                            putJsonArray("beginCaptures") {}
-                            putJsonObject("patterns") {
-                                // TODO: Add @param, @return highlighting
+                            putJsonArray("patterns") {
+                                addJsonObject {
+                                    put("name", "keyword.other.documentation.xtc")
+                                    put("match", "@[a-zA-Z]+")
+                                }
                             }
                         }
                         // Block comments
@@ -54,22 +56,22 @@ class TextMateGenerator(private val model: LanguageModel) {
                         }
                     }
                 }
-                
-                // Keywords
+
+                // Keywords - must be array of patterns
                 putJsonObject("keywords") {
-                    putJsonObject("patterns") {
+                    putJsonArray("patterns") {
                         // Control flow keywords
-                        putJsonObject("control") {
+                        addJsonObject {
                             put("name", "keyword.control.xtc")
                             put("match", "\\b(${controlFlowKeywords().joinToString("|")})\\b")
                         }
                         // Declaration keywords
-                        putJsonObject("declaration") {
+                        addJsonObject {
                             put("name", "keyword.declaration.xtc")
                             put("match", "\\b(${declarationKeywords().joinToString("|")})\\b")
                         }
                         // Modifier keywords
-                        putJsonObject("modifier") {
+                        addJsonObject {
                             put("name", "storage.modifier.xtc")
                             put("match", "\\b(${modifierKeywords().joinToString("|")})\\b")
                         }
@@ -93,8 +95,8 @@ class TextMateGenerator(private val model: LanguageModel) {
                                     put("name", "variable.other.interpolated.xtc")
                                     put("begin", "\\{")
                                     put("end", "\\}")
-                                    putJsonObject("patterns") {
-                                        put("include", "#expression")
+                                    putJsonArray("patterns") {
+                                        addJsonObject { put("include", "#expression") }
                                     }
                                 }
                             }
@@ -174,16 +176,24 @@ class TextMateGenerator(private val model: LanguageModel) {
                     put("match", "@[a-zA-Z_][a-zA-Z0-9_]*")
                 }
                 
-                // Constants
+                // Constants - from model
                 putJsonObject("constants") {
                     putJsonArray("patterns") {
-                        addJsonObject {
-                            put("name", "constant.language.boolean.xtc")
-                            put("match", "\\b(True|False)\\b")
+                        // Boolean constants from model
+                        val booleans = model.booleanLiterals
+                        if (booleans.isNotEmpty()) {
+                            addJsonObject {
+                                put("name", "constant.language.boolean.xtc")
+                                put("match", "\\b(${booleans.joinToString("|")})\\b")
+                            }
                         }
-                        addJsonObject {
-                            put("name", "constant.language.null.xtc")
-                            put("match", "\\bNull\\b")
+                        // Null constant from model
+                        val nullLit = model.nullLiteral
+                        if (nullLit != null) {
+                            addJsonObject {
+                                put("name", "constant.language.null.xtc")
+                                put("match", "\\b$nullLit\\b")
+                            }
                         }
                     }
                 }

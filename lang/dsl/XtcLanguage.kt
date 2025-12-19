@@ -708,6 +708,33 @@ val xtcLanguage = language(
     punctuation("../", "DIR_PARENT")   // Parent directory path
     punctuation("$", "STR_FILE")       // String file inclusion
     punctuation("#", "BIN_FILE")       // Binary file inclusion
+    punctuation("<", "L_ANGLE")        // Generic type parameters
+    punctuation(">", "R_ANGLE")        // Generic type parameters
+
+    // =========================================================================
+    // Constants - Boolean and Null literals
+    // =========================================================================
+
+    booleanConstants("True", "False")
+    nullConstant("Null")
+
+    // =========================================================================
+    // Comment Syntax - Line, block, and doc comments
+    // =========================================================================
+
+    comments(
+        lineComment = "//",
+        blockCommentStart = "/*",
+        blockCommentEnd = "*/",
+        docCommentStart = "/**",
+        docCommentEnd = "*/"
+    )
+
+    // =========================================================================
+    // Visibility Keywords - Access control modifiers
+    // =========================================================================
+
+    visibilityKeywords("public", "protected", "private")
 
     // =========================================================================
     // AST Concepts - Derived from org.xvm.compiler.ast.* classes

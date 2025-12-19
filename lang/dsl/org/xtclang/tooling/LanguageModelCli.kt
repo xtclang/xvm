@@ -13,6 +13,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
 import org.xtclang.tooling.generators.EmacsGenerator
+import org.xtclang.tooling.generators.SublimeSyntaxGenerator
 import org.xtclang.tooling.generators.TextMateGenerator
 import org.xtclang.tooling.generators.TreeSitterGenerator
 import org.xtclang.tooling.generators.VimGenerator
@@ -35,6 +36,7 @@ fun main(args: Array<String>) {
     when (command) {
         "dump" -> dumpModel()
         "textmate" -> generateTextMate(args.getOrNull(1))
+        "sublime" -> generateSublimeSyntax(args.getOrNull(1))
         "vim" -> generateVim(args.getOrNull(1))
         "emacs" -> generateEmacs(args.getOrNull(1))
         "tree-sitter" -> generateTreeSitter(args.getOrNull(1))
@@ -67,6 +69,13 @@ private fun generateTextMate(outputPath: String?) {
     } else {
         println(grammar)
     }
+}
+
+private fun generateSublimeSyntax(outputPath: String?) {
+    logger.info("Generating Sublime syntax file")
+    val generator = SublimeSyntaxGenerator(xtcLanguage)
+    val syntax = generator.generate()
+    writeOutput(syntax, outputPath, "Sublime syntax")
 }
 
 private fun generateVim(outputPath: String?) {
@@ -214,6 +223,7 @@ private fun showHelp() {
         |  stats                  Show statistics about the language model (default)
         |  dump                   Dump the language model as JSON
         |  textmate [output]      Generate TextMate grammar (.tmLanguage.json)
+        |  sublime [output]       Generate Sublime syntax file (.sublime-syntax)
         |  vim [output]           Generate Vim syntax file (.vim)
         |  emacs [output]         Generate Emacs major mode (.el)
         |  tree-sitter [dir]      Generate Tree-sitter grammar and highlights
@@ -225,6 +235,7 @@ private fun showHelp() {
         |  ./gradlew languageStats        Show statistics
         |  ./gradlew dumpLanguageModel    Dump model as JSON
         |  ./gradlew generateTextMate     Generate TextMate grammar
+        |  ./gradlew generateSublime      Generate Sublime/bat syntax
         |  ./gradlew generateVim          Generate Vim syntax
         |  ./gradlew generateEmacs        Generate Emacs mode
         |  ./gradlew generateTreeSitter   Generate Tree-sitter grammar

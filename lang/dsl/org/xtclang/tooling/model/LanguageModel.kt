@@ -125,6 +125,9 @@ data class LanguageModel(
     val tokens: List<TokenRule>,
     val operators: List<OperatorDefinition>,
     val punctuation: List<PunctuationDefinition>,
+    val constants: List<ConstantDefinition>,
+    val comments: CommentSyntax,
+    val visibilityKeywords: List<String>,
     val concepts: List<ConceptDefinition>
 ) {
     /**
@@ -162,6 +165,37 @@ data class LanguageModel(
      */
     val operatorsByPrecedence: List<OperatorDefinition>
         get() = operators.sortedBy { it.precedence }
+
+    /**
+     * Get constants by category (e.g., "boolean", "null").
+     */
+    fun constantsByCategory(category: String): List<ConstantDefinition> =
+        constants.filter { it.category == category }
+
+    /**
+     * Get boolean constant literals (e.g., ["True", "False"]).
+     */
+    val booleanLiterals: List<String>
+        get() = constantsByCategory("boolean").map { it.literal }
+
+    /**
+     * Get null constant literal (e.g., "Null").
+     */
+    val nullLiteral: String?
+        get() = constantsByCategory("null").firstOrNull()?.literal
+
+    /**
+     * Get bracket pairs from punctuation (for editor config).
+     */
+    val bracketPairs: List<Pair<String, String>>
+        get() = listOf(
+            punctuation.find { it.name == "L_PAREN" }?.symbol to punctuation.find { it.name == "R_PAREN" }?.symbol,
+            punctuation.find { it.name == "L_SQUARE" }?.symbol to punctuation.find { it.name == "R_SQUARE" }?.symbol,
+            punctuation.find { it.name == "L_CURLY" }?.symbol to punctuation.find { it.name == "R_CURLY" }?.symbol,
+            punctuation.find { it.name == "L_ANGLE" }?.symbol to punctuation.find { it.name == "R_ANGLE" }?.symbol
+        ).filter { it.first != null && it.second != null }
+            .map { it.first!! to it.second!! }
+
 }
 
 /**
@@ -220,6 +254,35 @@ data class PunctuationDefinition(
     val symbol: String,
     /** Token name for generated code (e.g., "COLON", "L_PAREN") */
     val name: String
+)
+
+/**
+ * Language constant definition (boolean literals, null, etc.).
+ */
+@Serializable
+data class ConstantDefinition(
+    val name: String,
+    /** The literal text (e.g., "True", "False", "Null") */
+    val literal: String,
+    /** Category for grouping (e.g., "boolean", "null") */
+    val category: String
+)
+
+/**
+ * Comment syntax definition.
+ */
+@Serializable
+data class CommentSyntax(
+    /** Line comment prefix, e.g. "//" */
+    val lineComment: String,
+    /** Block comment opening delimiter, e.g. slash-star */
+    val blockCommentStart: String,
+    /** Block comment closing delimiter, e.g. star-slash */
+    val blockCommentEnd: String,
+    /** Doc comment opening delimiter, e.g. slash-star-star */
+    val docCommentStart: String,
+    /** Doc comment closing delimiter, e.g. star-slash */
+    val docCommentEnd: String
 )
 
 /**
@@ -400,6 +463,9 @@ class LanguageModelBuilder(
     private val tokens = mutableListOf<TokenRule>()
     private val operators = mutableListOf<OperatorDefinition>()
     private val punctuationList = mutableListOf<PunctuationDefinition>()
+    private val constantsList = mutableListOf<ConstantDefinition>()
+    private var commentSyntax: CommentSyntax = CommentSyntax("//", "/*", "*/", "/**", "*/")
+    private val visibilityKeywordsList = mutableListOf<String>()
     private val concepts = mutableListOf<ConceptDefinition>()
 
     /**
@@ -479,6 +545,49 @@ class LanguageModelBuilder(
     }
 
     /**
+     * Define a language constant (boolean, null, etc.).
+     */
+    fun constant(name: String, literal: String, category: String) {
+        constantsList.add(ConstantDefinition(name, literal, category))
+    }
+
+    /**
+     * Define boolean constants.
+     */
+    fun booleanConstants(trueLiteral: String, falseLiteral: String) {
+        constantsList.add(ConstantDefinition("TRUE", trueLiteral, "boolean"))
+        constantsList.add(ConstantDefinition("FALSE", falseLiteral, "boolean"))
+    }
+
+    /**
+     * Define the null constant.
+     */
+    fun nullConstant(literal: String) {
+        constantsList.add(ConstantDefinition("NULL", literal, "null"))
+    }
+
+    /**
+     * Define comment syntax.
+     */
+    fun comments(
+        lineComment: String = "//",
+        blockCommentStart: String = "/*",
+        blockCommentEnd: String = "*/",
+        docCommentStart: String = "/**",
+        docCommentEnd: String = "*/"
+    ) {
+        commentSyntax = CommentSyntax(lineComment, blockCommentStart, blockCommentEnd, docCommentStart, docCommentEnd)
+    }
+
+    /**
+     * Define visibility keywords (subset of modifiers that control access).
+     * These are typically "public", "protected", "private", "internal", etc.
+     */
+    fun visibilityKeywords(vararg keywords: String) {
+        visibilityKeywordsList.addAll(keywords)
+    }
+
+    /**
      * Define a concrete AST concept.
      */
     fun concept(name: String, block: ConceptBuilder.() -> Unit = {}) {
@@ -508,6 +617,9 @@ class LanguageModelBuilder(
         tokens = tokens.toList(),
         operators = operators.toList(),
         punctuation = punctuationList.toList(),
+        constants = constantsList.toList(),
+        comments = commentSyntax,
+        visibilityKeywords = visibilityKeywordsList.toList(),
         concepts = concepts.toList()
     )
 }
