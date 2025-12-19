@@ -88,6 +88,7 @@ dependencies {
     xtcModule(libs.xdk.xenia)
     xtcModule(libs.xdk.xml)
     xtcModule(libs.xdk.xunit)
+    xtcModule(libs.xdk.xunit.db)
     xtcModule(libs.xdk.xunit.engine)
     xtcModule(libs.javatools.bridge)
     xtcLauncherBinaries(project(path = ":javatools-launcher", configuration = "xtcLauncherBinaries"))

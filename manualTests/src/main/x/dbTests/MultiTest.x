@@ -1,30 +1,35 @@
 /**
- * A stand-alone test for multi level schema.
+ * A stand-alone test that uses XUnit and XUnit-DB to test a multi level schema.
  *
  * To run, from "./manualTests/" directory:
- *      xcc -L build/xtc/main/lib -o build/xtc/main/lib src/main/x/dbTests/MultiDB.x
- *      xec -L build/xtc/main/lib -o build/xtc/main/lib src/main/x/dbTests/MultiTest.x
+ *      xtc build -L build/xtc/main/lib -o build/xtc/main/lib src/main/x/dbTests/MultiDB.x
+ *      xtc test -L build/xtc/main/lib -o build/xtc/main/lib src/main/x/dbTests/MultiTest.x
  */
 module MultiTest {
-    package jsondb  import jsondb.xtclang.org;
+    package oodb   import oodb.xtclang.org;
     package multiDB import MultiDB;
+    package xunit   import xunit.xtclang.org;
+    package xunitdb import xunit_db.xtclang.org;
 
-    import multiDB.MainSchema;
+    import multiDB.Connection;
 
-    void run() {
-        @Inject Console   console;
-        @Inject Directory curDir;
-        assert curDir.fileFor("src/main/x/dbTests/MultiDB.x").exists
-                as "Not in \"manualTests\" directory";
+    @Inject Connection connection;
 
-        Directory buildDir = curDir.dirFor("build/xtc/main/lib");
-        assert buildDir.fileFor("MultiDB.xtc").exists
-                as "MultiDB must be compiled to the build/xtc/main/lib directory";
+    @Test
+    void shouldTickInMainSchema() {
+        Int current  = connection.counter.get();
+        Int previous = connection.counter.tick();
+        assert previous == current;
+        Int after = connection.counter.get();
+        assert after == current + 1;
+    }
 
-        Directory dataDir  = curDir.dirFor("data/multiDB").ensure();
-        using (MainSchema schema = jsondb.createConnection("MultiDB", dataDir, buildDir).as(MainSchema)) {
-            console.print($"{schema.counter.tick()=}");
-            console.print($"{schema.child.counter.tick()=}");
-        }
+    @Test
+    void shouldTickInChildSchema() {
+        Int current  = connection.child.counter.get();
+        Int previous = connection.child.counter.tick();
+        assert previous == current;
+        Int after = connection.child.counter.get();
+        assert after == current + 2;
     }
 }
