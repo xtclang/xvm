@@ -79,7 +79,7 @@ public class ArrayConstant
         int        cConsts = aiConst.length;
         Constant[] aconst  = new Constant[cConsts];
         for (int i = 0; i < cConsts; ++i) {
-            aconst[i] = pool.getConstant(aiConst[i], Constant.class);
+            aconst[i] = pool.getConstant(aiConst[i]);
         }
         m_aconstVal = aconst;
     }

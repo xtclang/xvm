@@ -241,9 +241,9 @@ public class FSNodeConstant
     public TypeConstant getType() {
         ConstantPool pool = getConstantPool();
         return switch (m_fmt) {
-            case FSDir -> pool.ensureEcstasyTypeConstant("fs.Directory");
+            case FSDir          -> pool.ensureEcstasyTypeConstant("fs.Directory");
             case FSFile, FSLink -> pool.ensureEcstasyTypeConstant("fs.File");
-            default -> throw new IllegalStateException();
+            default             -> throw new IllegalStateException();
         };
     }
 
@@ -301,10 +301,10 @@ public class FSNodeConstant
     @Override
     public String getValueString() {
         return switch (m_fmt) {
-            case FSDir -> "./" + m_constName.getValue() + "/";
+            case FSDir  -> "./" + m_constName.getValue() + "/";
             case FSFile -> "./" + m_constName.getValue();
             case FSLink -> "./" + m_constName.getValue() + " -> " + m_constData.getValueString();
-            default -> throw new IllegalStateException();
+            default     -> throw new IllegalStateException();
         };
     }
 
@@ -316,7 +316,7 @@ public class FSNodeConstant
         m_constName     = pool.register(m_constName);
         m_constCreated  = pool.register(m_constCreated);
         m_constModified = pool.register(m_constModified);
-        m_constData     =                   pool.register(m_constData    );
+        m_constData     = pool.register(m_constData);
     }
 
     @Override

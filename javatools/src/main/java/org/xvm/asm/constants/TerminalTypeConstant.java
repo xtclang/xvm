@@ -90,7 +90,7 @@ public class TerminalTypeConstant
 
     @Override
     protected void resolveConstants() {
-        m_constId = getConstantPool().getConstant(m_iDef, Constant.class);
+        m_constId = getConstantPool().getConstant(m_iDef);
     }
 
 

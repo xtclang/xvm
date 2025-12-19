@@ -144,8 +144,8 @@ public class MapConstant
         Constant[] aconstKey  = new Constant[cEntries];
         Constant[] aconstVal  = new Constant[cEntries];
         for (int i = 0; i < cEntries; ++i) {
-            aconstKey[i] = pool.getConstant(aiConstKey[i], Constant.class);
-            aconstVal[i] = pool.getConstant(aiConstVal[i], Constant.class);
+            aconstKey[i] = pool.getConstant(aiConstKey[i]);
+            aconstVal[i] = pool.getConstant(aiConstVal[i]);
         }
         m_aconstKey = aconstKey;
         m_aconstVal = aconstVal;

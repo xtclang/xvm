@@ -163,7 +163,7 @@ public class ConstantPool
     @SuppressWarnings("unchecked")
     public <T extends Constant> T register(T constant) {
         // to allow this method to be used blindly, i.e. for constants that may be optional within a
-        // given structure, simply pass back null refs (TODO: terrible idea)
+        // given structure, simply pass back null refs
         if (constant == null) {
             return null;
         }
@@ -1886,8 +1886,7 @@ public class ConstantPool
             constReg = (TypeParameterConstant) ensureLocatorLookup(Format.TypeParameter).get(constMethod);
         }
         if (constReg == null) {
-            constReg = register(
-                            new TypeParameterConstant(this, constMethod, sName, iReg));
+            constReg = register(new TypeParameterConstant(this, constMethod, sName, iReg));
         }
         return constReg;
     }

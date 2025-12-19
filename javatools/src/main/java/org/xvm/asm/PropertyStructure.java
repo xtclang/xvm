@@ -692,7 +692,7 @@ public class PropertyStructure
         m_type      = pool.getConstant(readIndex(in), TypeConstant.class);
         int nValue  = readIndex(in);
         if (nValue >= 0) {
-            m_constVal = pool.getConstant(nValue, Constant.class);
+            m_constVal = pool.getConstant(nValue);
         }
     }
 
