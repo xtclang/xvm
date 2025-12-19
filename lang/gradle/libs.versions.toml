@@ -1,0 +1,56 @@
+#
+# Version Catalog for XTC Language Support Project
+#
+# This file centralizes all dependency versions for easier maintenance.
+# Update versions here and they'll propagate to all build scripts.
+#
+
+[versions]
+# Kotlin
+kotlin = "2.1.0"
+kotlinx-serialization = "1.7.3"
+
+# LSP (Language Server Protocol)
+lsp4j = "0.23.1"
+
+# Annotations
+jspecify = "1.0.0"
+
+# Logging
+slf4j = "2.0.16"
+logback = "1.5.15"
+
+# Testing
+junit = "5.11.4"
+assertj = "3.27.3"
+mockito = "5.14.2"
+awaitility = "4.2.2"
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+
+[libraries]
+# Kotlin
+kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+
+# LSP4J
+lsp4j = { module = "org.eclipse.lsp4j:org.eclipse.lsp4j", version.ref = "lsp4j" }
+lsp4j-jsonrpc = { module = "org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc", version.ref = "lsp4j" }
+
+# Annotations
+jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
+
+# Logging
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+
+# Testing
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility" }
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }

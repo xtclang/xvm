@@ -1,1 +1,1 @@
-rootProject.name = "xtc-lsp"
+rootProject.name = "language-support"
