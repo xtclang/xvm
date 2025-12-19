@@ -96,6 +96,11 @@ public abstract class Expression
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
+    public List<AstNode> children() {
+        return List.of();
+    }
+
+    @Override
     protected boolean usesSuper() {
         for (AstNode node : children()) {
             if (!(node instanceof ComponentStatement) && node.usesSuper()) {

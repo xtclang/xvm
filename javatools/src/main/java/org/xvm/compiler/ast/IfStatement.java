@@ -1,8 +1,6 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -94,8 +92,13 @@ public class IfStatement
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public List<AstNode> children() {
+        List<AstNode> list = new ArrayList<>(conds);
+        list.add(stmtThen);
+        if (stmtElse != null) {
+            list.add(stmtElse);
+        }
+        return list;
     }
 
 
@@ -396,6 +399,4 @@ public class IfStatement
      * Generally null, unless there is a short-circuit that jumps to this statement's else label.
      */
     private transient List<Break> m_listShorts;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(IfStatement.class, "conds", "stmtThen", "stmtElse");
 }

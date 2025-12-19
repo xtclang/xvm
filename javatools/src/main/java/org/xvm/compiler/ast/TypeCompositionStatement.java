@@ -3,8 +3,6 @@ package org.xvm.compiler.ast;
 
 import java.io.File;
 
-import java.lang.reflect.Field;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -302,8 +300,33 @@ public class TypeCompositionStatement
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public List<AstNode> children() {
+        List<AstNode> list = new ArrayList<>();
+        if (condition != null) {
+            list.add(condition);
+        }
+        if (annotations != null) {
+            list.addAll(annotations);
+        }
+        if (typeParams != null) {
+            list.addAll(typeParams);
+        }
+        if (constructorParams != null) {
+            list.addAll(constructorParams);
+        }
+        if (typeArgs != null) {
+            list.addAll(typeArgs);
+        }
+        if (args != null) {
+            list.addAll(args);
+        }
+        if (compositions != null) {
+            list.addAll(compositions);
+        }
+        if (body != null) {
+            list.add(body);
+        }
+        return list;
     }
 
 
@@ -2968,7 +2991,7 @@ public class TypeCompositionStatement
     // ----- debugging assistance ------------------------------------------------------------------
 
     public String toSignatureString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         if (category.getId() == Token.Id.ENUM_VAL) {
             if (annotations != null) {
@@ -2981,31 +3004,15 @@ public class TypeCompositionStatement
             sb.append(name.getValue());
 
             if (typeParams != null) {
-                sb.append('<');
-                boolean first = true;
-                for (TypeExpression typeParam : typeArgs) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append(", ");
-                    }
-                    sb.append(typeParam);
-                }
-                sb.append('>');
+                sb.append('<')
+                  .append(typeArgs.stream().map(Object::toString).collect(Collectors.joining(", ")))
+                  .append('>');
             }
 
             if (args != null) {
-                sb.append('(');
-                boolean first = true;
-                for (Expression arg : args) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append(", ");
-                    }
-                    sb.append(arg);
-                }
-                sb.append(')');
+                sb.append('(')
+                  .append(args.stream().map(Object::toString).collect(Collectors.joining(", ")))
+                  .append(')');
             }
         } else {
             if (modifiers != null) {
@@ -3028,43 +3035,19 @@ public class TypeCompositionStatement
             if (qualified == null) {
                 sb.append(name.getValue());
             } else {
-                boolean first = true;
-                for (Token token : qualified) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append('.');
-                    }
-                    sb.append(token.getValue());
-                }
+                sb.append(qualified.stream().map(t -> String.valueOf(t.getValue())).collect(Collectors.joining(".")));
             }
 
             if (typeParams != null) {
-                sb.append('<');
-                boolean first = true;
-                for (Parameter param : typeParams) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append(", ");
-                    }
-                    sb.append(param.toTypeParamString());
-                }
-                sb.append('>');
+                sb.append('<')
+                  .append(typeParams.stream().map(Parameter::toTypeParamString).collect(Collectors.joining(", ")))
+                  .append('>');
             }
 
             if (constructorParams != null) {
-                sb.append('(');
-                boolean first = true;
-                for (Parameter param : constructorParams) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append(", ");
-                    }
-                    sb.append(param);
-                }
-                sb.append(')');
+                sb.append('(')
+                  .append(constructorParams.stream().map(Object::toString).collect(Collectors.joining(", ")))
+                  .append(')');
             }
         }
 
@@ -3179,8 +3162,4 @@ public class TypeCompositionStatement
      * True iff this is a virtual child class.
      */
     private boolean m_fVirtChild;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(TypeCompositionStatement.class,
-            "condition", "annotations", "typeParams", "constructorParams", "typeArgs", "args",
-            "compositions", "body");
 }

@@ -1,9 +1,12 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.Function;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
@@ -24,17 +27,17 @@ public class ArrayTypeExpression
     // ----- constructors --------------------------------------------------------------------------
 
     public ArrayTypeExpression(TypeExpression type, int dims, long lEndPos) {
-        this(type, dims, null, lEndPos);
+        this(type, dims, List.of(), lEndPos);
     }
 
-    public ArrayTypeExpression(TypeExpression type, List<Expression> indexes, long lEndPos) {
+    public ArrayTypeExpression(TypeExpression type, @NotNull List<Expression> indexes, long lEndPos) {
         this(type, indexes.size(), indexes, lEndPos);
     }
 
-    private ArrayTypeExpression(TypeExpression type, int dims, List<Expression> indexes, long lEndPos) {
+    private ArrayTypeExpression(TypeExpression type, int dims, @NotNull List<Expression> indexes, long lEndPos) {
         this.type    = type;
         this.dims    = dims;
-        this.indexes = indexes;
+        this.indexes = Objects.requireNonNull(indexes);
         this.lEndPos = lEndPos;
     }
 
@@ -64,8 +67,28 @@ public class ArrayTypeExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if ((result = visitor.apply(type)) != null) {
+            return result;
+        }
+        for (Expression index : indexes) {
+            if ((result = visitor.apply(index)) != null) {
+                return result;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public List<AstNode> children() {
+        if (indexes.isEmpty()) {
+            return List.of(type);
+        }
+        List<AstNode> list = new ArrayList<>(indexes.size() + 1);
+        list.add(type);
+        list.addAll(indexes);
+        return list;
     }
 
 
@@ -131,7 +154,7 @@ public class ArrayTypeExpression
                 sb.append(',');
             }
 
-            if (indexes == null) {
+            if (indexes.isEmpty()) {
                 sb.append('?');
             } else {
                 sb.append(indexes.get(i));
@@ -155,6 +178,4 @@ public class ArrayTypeExpression
     protected int              dims;
     protected List<Expression> indexes;
     protected long             lEndPos;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(ArrayTypeExpression.class, "type", "indexes");
 }

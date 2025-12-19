@@ -1,7 +1,8 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
+import java.util.List;
+import java.util.function.Function;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ConstantPool;
@@ -75,8 +76,20 @@ public class NotNullExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        return visitor.apply(expr);
+    }
+
+    @Override
+    public List<AstNode> children() {
+        return List.of(expr);
+    }
+
+    @Override
+    protected void replaceChild(AstNode oldChild, AstNode newChild) {
+        assertReplaced(
+            tryReplace(oldChild, newChild, expr, n -> expr = n),
+            oldChild);
     }
 
 
@@ -286,6 +299,4 @@ public class NotNullExpression
      */
     private transient boolean m_fCond;
     private transient Label   m_labelShort;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(NotNullExpression.class, "expr");
 }

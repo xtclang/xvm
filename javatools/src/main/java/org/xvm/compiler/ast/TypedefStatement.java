@@ -1,8 +1,11 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
+import org.jetbrains.annotations.NotNull;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
@@ -25,15 +28,14 @@ public class TypedefStatement
         extends ComponentStatement {
     // ----- constructors --------------------------------------------------------------------------
 
-    public TypedefStatement(Expression cond, Token keyword, TypeExpression type, Token alias) {
+    public TypedefStatement(@NotNull Expression cond, Token keyword, TypeExpression type, Token alias) {
         super(keyword.getStartPosition(), alias.getEndPosition());
 
-        this.cond     = cond;
-        this.modifier = keyword.getId() == Id.TYPEDEF ? null : keyword;
+        this.cond     = Objects.requireNonNull(cond);
+        this.modifier = keyword.getId() == Id.TYPEDEF ? Token.NONE : keyword;
         this.type     = type;
         this.alias    = alias;
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -54,8 +56,11 @@ public class TypedefStatement
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public List<AstNode> children() {
+        List<AstNode> list = new ArrayList<>(2);
+        list.add(cond);
+        list.add(type);
+        return list;
     }
 
 
@@ -93,30 +98,12 @@ public class TypedefStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var core = (!hasModifier() ? "typedef " : modifier + " ") + type + ' ' + alias.getValue() + ';';
+        return cond == null ? core : "if (" + cond + ") { " + core + " }";
+    }
 
-        if (cond != null) {
-            sb.append("if (")
-              .append(cond)
-              .append(") { ");
-        }
-
-        if (modifier != null) {
-            sb.append(modifier)
-              .append(' ');
-        }
-
-        sb.append("typedef ")
-          .append(type)
-          .append(' ')
-          .append(alias.getValue())
-          .append(';');
-
-        if (cond != null) {
-            sb.append(" }");
-        }
-
-        return sb.toString();
+    private boolean hasModifier() {
+        return modifier != Token.NONE;
     }
 
     @Override
@@ -127,10 +114,8 @@ public class TypedefStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Expression     cond;
-    protected Token          modifier;
-    protected Token          alias;
-    protected TypeExpression type;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(TypedefStatement.class, "cond", "type");
+    protected final Expression     cond;
+    protected final Token          modifier;
+    protected final Token          alias;
+    protected final TypeExpression type;
 }

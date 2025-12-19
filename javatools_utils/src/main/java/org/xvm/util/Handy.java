@@ -2,6 +2,8 @@
 package org.xvm.util;
 
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.File;
@@ -606,6 +608,34 @@ public final class Handy {
      */
     public static String dup(final char ch, final int cch) {
         return String.valueOf(ch).repeat(cch);
+    }
+
+    /**
+     * Truncate the string representation of an object to the specified maximum length, appending
+     * "..." if truncated.
+     *
+     * @param obj     the object whose string representation will be truncated
+     * @param maxLen  the maximum length of the result (including the "..." suffix)
+     *
+     * @return the string if shorter than maxLen, otherwise truncated with "..." appended
+     */
+    public static String truncate(final Object obj, final int maxLen) {
+        return truncate(obj, maxLen, "...");
+    }
+
+    /**
+     * Truncate the string representation of an object to the specified maximum length, appending
+     * the specified truncation indicator if truncated.
+     *
+     * @param obj         the object whose string representation will be truncated
+     * @param maxLen      the maximum length of the result (including the truncation suffix)
+     * @param truncation  the string to append when truncation occurs (e.g. "...")
+     *
+     * @return the string if shorter than maxLen, otherwise truncated with the truncation appended
+     */
+    public static String truncate(final Object obj, final int maxLen, final @NotNull String truncation) {
+        String s = String.valueOf(obj);
+        return s.length() <= maxLen ? s : s.substring(0, maxLen - truncation.length()) + truncation;
     }
 
     /**

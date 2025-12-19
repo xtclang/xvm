@@ -42,6 +42,9 @@ public class AccessTypeConstant
     public AccessTypeConstant(ConstantPool pool, TypeConstant constType, Access access) {
         super(pool);
 
+        // TODO: What gives - error listener is passed to some methods, but in lots of other places, seemingly
+        //   at random we don't have it. Instead we throw random runtime exception like in this constructor.
+        //
         if (constType == null) {
             throw new IllegalArgumentException("type is required");
         }

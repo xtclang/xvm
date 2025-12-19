@@ -1,11 +1,14 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -39,9 +42,9 @@ public class TupleExpression
         extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public TupleExpression(TypeExpression type, List<Expression> exprs, long lStartPos, long lEndPos) {
+    public TupleExpression(TypeExpression type, @NotNull List<Expression> exprs, long lStartPos, long lEndPos) {
         this.type        = type;
-        this.exprs       = exprs == null ? Collections.emptyList() : exprs;
+        this.exprs       = Objects.requireNonNull(exprs);
         this.m_lStartPos = lStartPos;
         this.m_lEndPos   = lEndPos;
     }
@@ -130,8 +133,28 @@ public class TupleExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if (type != null && (result = visitor.apply(type)) != null) {
+            return result;
+        }
+        for (Expression expr : exprs) {
+            if ((result = visitor.apply(expr)) != null) {
+                return result;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public List<AstNode> children() {
+        if (type == null) {
+            return List.copyOf(exprs);
+        }
+        List<AstNode> list = new ArrayList<>(exprs.size() + 1);
+        list.add(type);
+        list.addAll(exprs);
+        return list;
     }
 
 
@@ -218,7 +241,7 @@ public class TupleExpression
     protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs) {
         ConstantPool     pool           = pool();
         List<Expression> listFieldExprs = exprs;
-        int              cFields        = listFieldExprs == null ? 0 : listFieldExprs.size();
+        int              cFields        = listFieldExprs.size();
         TypeConstant[]   aSpecTypes     = TypeConstant.NO_TYPES;
         int              cSpecTypes     = 0;
         TypeConstant[]   aReqTypes      = TypeConstant.NO_TYPES;
@@ -480,25 +503,7 @@ public class TupleExpression
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append('(');
-
-        if (!exprs.isEmpty()) {
-            boolean first = true;
-            for (Expression expr : exprs) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(expr);
-            }
-        }
-
-        sb.append(')');
-
-        return sb.toString();
+        return "(" + exprs.stream().map(Object::toString).collect(Collectors.joining(", ")) + ")";
     }
 
     @Override
@@ -513,6 +518,4 @@ public class TupleExpression
     protected List<Expression> exprs;
     protected long             m_lStartPos;
     protected long             m_lEndPos;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(TupleExpression.class, "type", "exprs");
 }

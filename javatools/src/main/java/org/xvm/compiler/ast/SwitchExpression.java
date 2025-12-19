@@ -1,9 +1,9 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
+import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -57,8 +57,31 @@ public class SwitchExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if (cond != null) {
+            for (AstNode node : cond) {
+                if ((result = visitor.apply(node)) != null) {
+                    return result;
+                }
+            }
+        }
+        for (AstNode node : contents) {
+            if ((result = visitor.apply(node)) != null) {
+                return result;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public List<AstNode> children() {
+        List<AstNode> list = new ArrayList<>();
+        if (cond != null) {
+            list.addAll(cond);
+        }
+        list.addAll(contents);
+        return list;
     }
 
 
@@ -376,6 +399,4 @@ public class SwitchExpression
     private transient CaseManager<Expression> m_casemgr;
     private transient Constant[]              m_aconstCases;
     private transient ExprAST[]               m_abastBody;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchExpression.class, "cond", "contents");
 }

@@ -1,9 +1,9 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
+import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
@@ -65,8 +65,20 @@ public abstract class PrefixExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        return visitor.apply(expr);
+    }
+
+    @Override
+    public List<AstNode> children() {
+        return List.of(expr);
+    }
+
+    @Override
+    protected <T extends AstNode> void replaceChild(T oldChild, T newChild) {
+        assertReplaced(
+            tryReplace(oldChild, newChild, expr, n -> expr = n),
+            oldChild);
     }
 
 
@@ -236,6 +248,4 @@ public abstract class PrefixExpression
 
     protected Token      operator;
     protected Expression expr;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(PrefixExpression.class, "expr");
 }

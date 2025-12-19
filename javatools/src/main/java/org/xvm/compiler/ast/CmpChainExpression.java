@@ -1,12 +1,13 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 
+import org.jetbrains.annotations.NotNull;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -66,11 +67,10 @@ public class CmpChainExpression
         extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public CmpChainExpression(List<Expression> expressions, Token[] operators) {
-        this.expressions = expressions;
-        this.operators   = operators;
+    public CmpChainExpression(@NotNull List<Expression> expressions, @NotNull Token[] operators) {
+        this.expressions = Objects.requireNonNull(expressions);
+        this.operators   = Objects.requireNonNull(operators);
     }
-
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -99,8 +99,19 @@ public class CmpChainExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        for (Expression expression : expressions) {
+            if ((result = visitor.apply(expression)) != null) {
+                return result;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public List<AstNode> children() {
+        return List.copyOf(expressions);
     }
 
 
@@ -115,7 +126,7 @@ public class CmpChainExpression
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         boolean fValid = true;
 
-        // find the common type across all of the expressions, hopefully before having to validate
+        // find the common type across all the expressions, hopefully before having to validate
         // any of the expressions
         ConstantPool     pool      = ctx.pool();
         boolean          fOrdered  = !usesEquals();
@@ -588,6 +599,4 @@ public class CmpChainExpression
      * {@link ConstantPool#valNull()}.
      */
     private Constant m_constEq;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(CmpChainExpression.class, "expressions");
 }

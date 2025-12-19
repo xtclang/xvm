@@ -1,7 +1,7 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
+import java.util.List;
 
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
@@ -82,8 +82,8 @@ public class CatchStatement
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public List<AstNode> children() {
+        return List.of(target, block);
     }
 
 
@@ -156,6 +156,4 @@ public class CatchStatement
 
     private transient CatchStart m_opCatch;
     private transient Label      m_labelEndCatch;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(CatchStatement.class, "target", "block");
 }

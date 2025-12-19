@@ -7,7 +7,7 @@ import java.util.Properties;
 
 /**
  * Utility class to access build-time information from generated resources.
- *
+ * <p>
  * This class reads version and git information from build-info.properties,
  * which is generated at build time from version.properties and git commands.
  */

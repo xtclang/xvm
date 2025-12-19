@@ -1,12 +1,13 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
+import org.jetbrains.annotations.NotNull;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
@@ -37,7 +38,7 @@ public class ImportStatement
      * @param alias          the simple name that represents the qualified name
      * @param qualifiedName  the qualified name as a list of identifier tokens
      */
-    public ImportStatement(Expression cond, Token keyword, Token alias, List<Token> qualifiedName) {
+    public ImportStatement(@NotNull Expression cond, Token keyword, Token alias, List<Token> qualifiedName) {
         assert alias != null;
 
         this.cond          = cond;
@@ -112,17 +113,7 @@ public class ImportStatement
      * @return the imported name as a dot-delimited name
      */
     public String getQualifiedNameString() {
-        StringBuilder sb = new StringBuilder();
-        boolean first = true;
-        for (Token name : qualifiedName) {
-            if (first) {
-                first = false;
-            } else {
-                sb.append('.');
-            }
-            sb.append(name.getValueText());
-        }
-        return sb.toString();
+        return qualifiedName.stream().map(Token::getValueText).collect(Collectors.joining("."));
     }
 
     @Override
@@ -136,8 +127,8 @@ public class ImportStatement
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        return cond != null ? visitor.apply(cond) : null;
     }
 
 
@@ -237,21 +228,11 @@ public class ImportStatement
               .append(") { ");
         }
 
-        sb.append("import ");
+        sb.append("import ")
+          .append(getQualifiedNameString());
 
-        boolean first = true;
-        String last = null;
-        for (Token name : qualifiedName) {
-            if (first) {
-                first = false;
-            } else {
-                sb.append('.');
-            }
-            last = String.valueOf(name.getValue());
-            sb.append(last);
-        }
-
-        if (alias != null && !last.equals(alias.getValue())) {
+        String last = qualifiedName.isEmpty() ? null : qualifiedName.getLast().getValueText();
+        if (alias != null && !String.valueOf(alias.getValue()).equals(last)) {
             sb.append(" as ")
               .append(alias.getValue());
         } else if (star != null) {
@@ -278,6 +259,4 @@ public class ImportStatement
 
     private transient NameResolver m_resolver;
     private transient boolean      m_fImportRegistered;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(ImportStatement.class, "cond");
 }

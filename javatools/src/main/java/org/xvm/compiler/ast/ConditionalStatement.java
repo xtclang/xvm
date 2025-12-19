@@ -1,7 +1,7 @@
 package org.xvm.compiler.ast;
 
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.xvm.compiler.Token;
@@ -16,7 +16,7 @@ public abstract class ConditionalStatement
 
     public ConditionalStatement(Token keyword, List<AstNode> conds) {
         this.keyword = keyword;
-        this.conds   = conds  == null ? Collections.emptyList() : conds;
+        this.conds   = conds == null ? new ArrayList<>() : new ArrayList<>(conds);
     }
 
 
@@ -69,6 +69,21 @@ public abstract class ConditionalStatement
             m_nLabel = n = ++s_nLabelCounter;
         }
         return n;
+    }
+
+    @Override
+    public List<AstNode> children() {
+        return conds;
+    }
+
+    @Override
+    protected <T extends AstNode> void replaceChild(T oldChild, T newChild) {
+        int index = conds.indexOf(oldChild);
+        if (index >= 0) {
+            conds.set(index, newChild);
+        } else {
+            super.replaceChild(oldChild, newChild);
+        }
     }
 
 

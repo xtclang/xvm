@@ -1,8 +1,6 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -58,13 +56,12 @@ import static org.xvm.util.Handy.indentLines;
  * An "Iterable"-based "for" statement.
  */
 public class ForEachStatement
-        extends ConditionalStatement
+        extends ConditionalBlockStatement
         implements LabelAble {
     // ----- constructors --------------------------------------------------------------------------
 
     public ForEachStatement(Token keyword, AssignmentStatement cond, StatementBlock block) {
-        super(keyword, Collections.singletonList(cond));
-        this.block = block;
+        super(keyword, List.of(cond), block);
     }
 
 
@@ -196,11 +193,6 @@ public class ForEachStatement
     @Override
     public long getEndPosition() {
         return block.getEndPosition();
-    }
-
-    @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
     }
 
 
@@ -1358,8 +1350,6 @@ public class ForEachStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected StatementBlock           block;
-
     private transient Label            m_labelContinue;
     private transient Expression       m_exprLValue;
     private transient Expression       m_exprRValue;
@@ -1380,6 +1370,4 @@ public class ForEachStatement
      * Generally null, unless there is a "continue" that jumps to this statement.
      */
     private transient List<Break> m_listContinues;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(ForEachStatement.class, "conds", "block");
 }

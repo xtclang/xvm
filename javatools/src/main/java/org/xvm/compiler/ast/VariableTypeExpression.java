@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.function.Function;
+
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -42,6 +44,11 @@ public class VariableTypeExpression
     @Override
     public long getEndPosition() {
         return token.getEndPosition();
+    }
+
+    @Override
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        return null;  // no AST node children (token is a Token)
     }
 
 

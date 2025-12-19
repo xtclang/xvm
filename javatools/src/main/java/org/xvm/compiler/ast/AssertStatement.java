@@ -1,8 +1,6 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -184,8 +182,16 @@ public class AssertStatement
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public List<AstNode> children() {
+        List<AstNode> list = new ArrayList<>();
+        if (interval != null) {
+            list.add(interval);
+        }
+        list.addAll(conds);
+        if (message != null) {
+            list.add(message);
+        }
+        return list;
     }
 
 
@@ -662,6 +668,4 @@ public class AssertStatement
     protected long          lEndPos;
 
     private List<String> m_listTexts;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(AssertStatement.class, "interval", "conds", "message");
 }

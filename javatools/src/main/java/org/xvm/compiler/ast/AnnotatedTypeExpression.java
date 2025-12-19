@@ -1,10 +1,9 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
@@ -128,8 +127,20 @@ public class AnnotatedTypeExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if ((result = visitor.apply(annotation)) != null) {
+            return result;
+        }
+        if ((result = visitor.apply(type)) != null) {
+            return result;
+        }
+        return null;
+    }
+
+    @Override
+    public List<AstNode> children() {
+        return List.of(annotation, type);
     }
 
     @Override
@@ -396,7 +407,4 @@ public class AnnotatedTypeExpression
 
     // unresolved constant that may have been created by this expression
     private transient UnresolvedTypeConstant m_typeUnresolved;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(AnnotatedTypeExpression.class,
-            "annotation", "type");
 }

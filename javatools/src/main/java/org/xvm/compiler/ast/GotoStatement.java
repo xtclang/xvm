@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.function.Function;
+
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Token;
@@ -38,6 +40,11 @@ public abstract class GotoStatement
     @Override
     public long getEndPosition() {
         return name == null ? keyword.getEndPosition() : name.getEndPosition();
+    }
+
+    @Override
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        return null;  // no AST node children (keyword and name are tokens)
     }
 
     /**

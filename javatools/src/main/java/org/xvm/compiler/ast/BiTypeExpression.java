@@ -1,7 +1,8 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
+import java.util.List;
+import java.util.function.Function;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -48,8 +49,20 @@ public class BiTypeExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if ((result = visitor.apply(type1)) != null) {
+            return result;
+        }
+        if ((result = visitor.apply(type2)) != null) {
+            return result;
+        }
+        return null;
+    }
+
+    @Override
+    public List<AstNode> children() {
+        return List.of(type1, type2);
     }
 
 
@@ -134,6 +147,4 @@ public class BiTypeExpression
     protected TypeExpression type1;
     protected Token          operator;
     protected TypeExpression type2;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(BiTypeExpression.class, "type1", "type2");
 }

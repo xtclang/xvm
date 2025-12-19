@@ -1,9 +1,9 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
+import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -67,8 +67,27 @@ public class TemplateExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if (type != null && (result = visitor.apply(type)) != null) {
+            return result;
+        }
+        for (Expression expr : exprs) {
+            if ((result = visitor.apply(expr)) != null) {
+                return result;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public List<AstNode> children() {
+        List<AstNode> list = new ArrayList<>();
+        if (type != null) {
+            list.add(type);
+        }
+        list.addAll(exprs);
+        return list;
     }
 
 
@@ -311,6 +330,4 @@ public class TemplateExpression
     protected long             lEndPos;
 
     private Register m_reg$;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(TemplateExpression.class, "type", "exprs");
 }

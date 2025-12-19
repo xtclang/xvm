@@ -1,7 +1,8 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
+import java.util.List;
+import java.util.function.Function;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
@@ -49,8 +50,16 @@ public class NonBindingExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        if (type != null) {
+            return visitor.apply(type);
+        }
+        return null;
+    }
+
+    @Override
+    public List<AstNode> children() {
+        return type == null ? List.of() : List.of(type);
     }
 
 
@@ -140,6 +149,4 @@ public class NonBindingExpression
     protected long           lStartPos;
     protected long           lEndPos;
     protected TypeExpression type;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(NonBindingExpression.class, "type");
 }

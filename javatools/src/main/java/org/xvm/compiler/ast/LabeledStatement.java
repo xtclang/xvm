@@ -1,7 +1,7 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
+import java.util.function.Function;
 
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -48,8 +48,15 @@ public class LabeledStatement
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        return visitor.apply(stmt);
+    }
+
+    @Override
+    protected void replaceChild(AstNode oldChild, AstNode newChild) {
+        assertReplaced(
+            tryReplace(oldChild, newChild, stmt, n -> stmt = n),
+            oldChild);
     }
 
 
@@ -164,6 +171,4 @@ public class LabeledStatement
 
     protected Token     label;
     protected Statement stmt;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(LabeledStatement.class, "stmt");
 }

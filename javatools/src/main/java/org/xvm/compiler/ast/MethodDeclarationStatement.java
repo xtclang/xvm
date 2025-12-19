@@ -1,8 +1,7 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -233,8 +232,30 @@ public class MethodDeclarationStatement
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public List<AstNode> children() {
+        List<AstNode> list = new ArrayList<>();
+        if (condition != null) {
+            list.add(condition);
+        }
+        if (annotations != null) {
+            list.addAll(annotations);
+        }
+        if (typeParams != null) {
+            list.addAll(typeParams);
+        }
+        if (returns != null) {
+            list.addAll(returns);
+        }
+        if (redundant != null) {
+            list.addAll(redundant);
+        }
+        if (params != null) {
+            list.addAll(params);
+        }
+        if (body != null) {
+            list.add(body);
+        }
+        return list;
     }
 
     @Override
@@ -1285,7 +1306,4 @@ public class MethodDeclarationStatement
      * A unique counter with the context of this method.
      */
     static protected int m_counter;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(MethodDeclarationStatement.class,
-            "condition", "annotations", "typeParams", "returns", "redundant", "params", "body");
 }

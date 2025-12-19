@@ -1,10 +1,10 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
@@ -47,16 +47,16 @@ public class ReturnStatement
     // ----- constructors --------------------------------------------------------------------------
 
     public ReturnStatement(Token keyword) {
-        this(keyword, (List) null);
+        this(keyword, new ArrayList<>());
     }
 
     public ReturnStatement(Token keyword, Expression expr) {
-        this(keyword, Arrays.asList(expr)); // mutable list
+        this(keyword, new ArrayList<>(List.of(expr)));
     }
 
     public ReturnStatement(Token keyword, List<Expression> exprs) {
         this.keyword = keyword;
-        this.exprs   = exprs;
+        this.exprs   = exprs == null ? new ArrayList<>() : exprs;
     }
 
 
@@ -77,12 +77,12 @@ public class ReturnStatement
 
     @Override
     public long getEndPosition() {
-        return exprs == null ? keyword.getEndPosition() : exprs.get(exprs.size()-1).getEndPosition();
+        return exprs.isEmpty() ? keyword.getEndPosition() : exprs.getLast().getEndPosition();
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public List<AstNode> children() {
+        return List.copyOf(exprs);
     }
 
 
@@ -123,8 +123,7 @@ public class ReturnStatement
         TypeConstant[]   aRetTypes    = container.getReturnTypes();
         boolean          fConditional = container.isReturnConditional();
         int              cRets        = aRetTypes == null ? -1 : aRetTypes.length;
-        List<Expression> listExprs    = this.exprs;
-        int              cExprs       = listExprs == null ? 0 : listExprs.size();
+        int              cExprs       = exprs.size();
         TypeConstant[]   atypeActual  = null;
 
         // resolve auto-narrowing; don't mutate aRetTypes!
@@ -146,14 +145,14 @@ public class ReturnStatement
 
             if (cExprs > 0) {
                 // check the expressions anyhow (even though they can't be used)
-                atypeActual = validateExpressions(ctx, listExprs, null, errs);
+                atypeActual = validateExpressions(ctx, exprs, null, errs);
                 fValid      = atypeActual != null;
 
                 if (fValid) {
                     if (cExprs == 1) {
                         // allow the (strange) use of T0D0, the return of a void expression
                         // or an invocation that is not void
-                        Expression expr = listExprs.get(0);
+                        Expression expr = exprs.get(0);
                         if (expr.isCompletable() && !expr.isVoid() &&
                                 !(expr instanceof InvocationExpression)) {
                             // it is supposed to be a void return; allow a Future<Tuple>
@@ -182,7 +181,7 @@ public class ReturnStatement
             }
         } else if (cExprs > 1) {
             // validate each expression, telling it what return type is expected
-            atypeActual = validateExpressions(ctx, listExprs, aRetTypes, errs);
+            atypeActual = validateExpressions(ctx, exprs, aRetTypes, errs);
             fValid      = atypeActual != null;
 
             // make sure the arity is correct (the number of exprs has to match the number of returns)
@@ -190,7 +189,7 @@ public class ReturnStatement
                 log(errs, Severity.ERROR, Compiler.RETURN_WRONG_COUNT, cRets, cExprs);
             }
         } else { // cExprs == 1
-            Expression exprOld = listExprs.get(0);
+            Expression exprOld = exprs.get(0);
             Expression exprNew;
 
             TypeConstant typeRequired = cRets >= 1 ? aRetTypes[0] : null;
@@ -255,7 +254,7 @@ public class ReturnStatement
             if (exprNew != exprOld) {
                 fValid &= exprNew != null;
                 if (exprNew != null) {
-                    listExprs.set(0, exprNew);
+                    exprs.set(0, exprNew);
                 }
             }
 
@@ -289,7 +288,7 @@ public class ReturnStatement
             Assignable[] aLVal  = exprStmt.getAssignables();
             int          cLVals = aLVal.length;
             ExprAST[]    aAst   = new ExprAST[cLVals];
-            for (int i = 0, cExprs = exprs == null ? 0 : exprs.size(); i < cExprs; ++i) {
+            for (int i = 0, cExprs = exprs.size(); i < cExprs; ++i) {
                 Expression expr = exprs.get(i);
                 if (i < cLVals) {
                     expr.generateAssignment(ctx, code, aLVal[i], errs);
@@ -308,11 +307,10 @@ public class ReturnStatement
 
         // first determine what the method declaration indicates the return value is (none, one,
         // or multi)
-        ConstantPool     pool      = pool();
-        TypeConstant[]   atypeRets = container.getReturnTypes();
-        int              cRets     = atypeRets == null ? 0 : atypeRets.length;
-        List<Expression> listExprs = this.exprs;
-        int              cExprs    = listExprs == null ? 0 : listExprs.size();
+        ConstantPool   pool      = pool();
+        TypeConstant[] atypeRets = container.getReturnTypes();
+        int            cRets     = atypeRets == null ? 0 : atypeRets.length;
+        int            cExprs    = exprs.size();
         BinaryAST        astResult;
 
         if (m_fTupleReturn) {
@@ -320,7 +318,7 @@ public class ReturnStatement
 
             // the return statement has a single expression returning a tuple; the caller expects
             // multiple returns
-            Expression expr = listExprs.get(0);
+            Expression expr = exprs.get(0);
             Argument   arg  = expr.generateArgument(ctx, code, true, errs);
             code.add(new Return_T(arg));
 
@@ -328,7 +326,7 @@ public class ReturnStatement
                             new UnpackExprAST(expr.getExprAST(ctx),
                                 atypeRets == null ? TypeConstant.NO_TYPES : atypeRets)});
         } else if (m_fConditionalTernary) {
-            TernaryExpression exprTernary = (TernaryExpression) listExprs.get(0);
+            TernaryExpression exprTernary = (TernaryExpression) exprs.get(0);
             exprTernary.generateConditionalReturn(ctx, code, errs);
 
             astResult = new ReturnStmtAST(exprTernary.getExprAST(ctx));
@@ -344,7 +342,7 @@ public class ReturnStatement
             case 1: {
                 // we need to get all the arguments the expression can provide, but
                 // return only as many as the caller expects
-                Expression expr   = listExprs.get(0);
+                Expression expr   = exprs.get(0);
                 boolean    fCheck = fConditional && !expr.isConditionalResult();
                 Argument[] aArgs  = expr.generateArguments(ctx, code, true, errs);
                 int        cArgs  = aArgs.length;
@@ -413,9 +411,9 @@ public class ReturnStatement
                 Argument[] aArgs = new Argument[cRets];
                 ExprAST[]  aASTs = new ExprAST[cRets];
                 for (int i = 0; i < cRets; ++i) {
-                    Expression expr = listExprs.get(i);
+                    Expression expr = exprs.get(i);
                     Argument   arg  = expr.generateArgument(ctx, code, true, errs);
-                    aArgs[i] = expr.ensurePointInTime(code, arg, listExprs, i);
+                    aArgs[i] = expr.ensurePointInTime(code, arg, exprs, i);
                     aASTs[i] = expr.getExprAST(ctx);
                 }
 
@@ -453,7 +451,7 @@ public class ReturnStatement
     @Override
     public boolean isCompletable() {
         // example to consider: "return result?;"
-        return exprs != null && exprs.stream().anyMatch(Expression::isShortCircuiting);
+        return exprs.stream().anyMatch(Expression::isShortCircuiting);
     }
 
 
@@ -461,34 +459,8 @@ public class ReturnStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("return");
-        if(exprs != null) {
-            switch (exprs.size()) {
-            case 0:
-                break;
-
-            case 1:
-                sb.append(' ')
-                  .append(exprs.get(0));
-                break;
-
-            default:
-                boolean first = true;
-                for (Expression expr : exprs) {
-                    if (first) {
-                        first = false;
-                        sb.append(" ");
-                    } else {
-                        sb.append(", ");
-                    }
-                    sb.append(expr);
-                }
-                break;
-            }
-        }
-        sb.append(';');
-        return sb.toString();
+        return "return" + (exprs.isEmpty() ? "" :
+                " " + exprs.stream().map(Object::toString).collect(Collectors.joining(", "))) + ";";
     }
 
     @Override
@@ -505,6 +477,4 @@ public class ReturnStatement
     protected transient boolean m_fConditionalTernary;
     protected transient boolean m_fTupleReturn;
     protected transient boolean m_fFutureReturn;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(ReturnStatement.class, "exprs");
 }

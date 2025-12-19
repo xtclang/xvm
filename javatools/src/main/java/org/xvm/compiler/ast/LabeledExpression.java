@@ -3,8 +3,6 @@ package org.xvm.compiler.ast;
 
 import org.xvm.compiler.Token;
 
-import java.lang.reflect.Field;
-
 
 /**
  * Used for named arguments.
@@ -46,11 +44,6 @@ public class LabeledExpression
         return expr.getEndPosition();
     }
 
-    @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
-    }
-
 
     // ----- debugging assistance ------------------------------------------------------------------
 
@@ -63,6 +56,4 @@ public class LabeledExpression
     // ----- fields --------------------------------------------------------------------------------
 
     private final Token name;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(LabeledExpression.class, "expr");
 }

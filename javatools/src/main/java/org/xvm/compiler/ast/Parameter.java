@@ -1,9 +1,9 @@
 package org.xvm.compiler.ast;
 
 
-import org.xvm.compiler.Token;
+import java.util.function.Function;
 
-import java.lang.reflect.Field;
+import org.xvm.compiler.Token;
 
 
 /**
@@ -63,9 +63,17 @@ public class Parameter
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if (type != null && (result = visitor.apply(type)) != null) {
+            return result;
+        }
+        if (value != null && (result = visitor.apply(value)) != null) {
+            return result;
+        }
+        return null;
     }
+
 
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -105,6 +113,4 @@ public class Parameter
     protected TypeExpression type;
     protected Token          name;
     protected Expression     value;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(Parameter.class, "type", "value");
 }

@@ -282,6 +282,7 @@ public class VersionTree<V>
      *
      * @param that  the VersionTree of versions to retain; the values in the tree are ignored
      */
+    @SuppressWarnings("unused")
     public void retainAll(VersionTree<?> that) {
         // first, collect a list of versions to remove, so that removal (in the middle of our
         // iteration) does not cause instability in the iterator

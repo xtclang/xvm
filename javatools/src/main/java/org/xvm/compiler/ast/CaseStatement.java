@@ -3,8 +3,9 @@ package org.xvm.compiler.ast;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
-import java.lang.reflect.Field;
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
@@ -28,9 +29,13 @@ public class CaseStatement
         extends Statement {
     // ----- constructors --------------------------------------------------------------------------
 
-    public CaseStatement(Token keyword, List<Expression> exprs, Token tokColon) {
+    public CaseStatement(Token keyword, Token tokColon) {
+        this(keyword, List.of(), tokColon);
+    }
+
+    public CaseStatement(Token keyword, @NotNull List<Expression> exprs, Token tokColon) {
         this.keyword = keyword;
-        this.exprs   = exprs;
+        this.exprs   = Objects.requireNonNull(exprs);
         this.lEndPos = tokColon.getEndPosition();
     }
 
@@ -41,11 +46,11 @@ public class CaseStatement
      * @return true iff this is the "default:" case
      */
     public boolean isDefault() {
-        return exprs == null;
+        return exprs.isEmpty();
     }
 
     /**
-     * @return the expressions of the values of the case, or null if this is the "default:" case
+     * @return the expressions of the values of the case, or empty if this is the "default:" case
      */
     public List<Expression> getExpressions() {
         return exprs;
@@ -55,7 +60,7 @@ public class CaseStatement
      * @return the number of expressions
      */
     public int getExpressionCount() {
-        return exprs == null ? 0 : exprs.size();
+        return exprs.size();
     }
 
     /**
@@ -84,8 +89,8 @@ public class CaseStatement
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public List<AstNode> children() {
+        return List.copyOf(exprs);
     }
 
 
@@ -112,7 +117,7 @@ public class CaseStatement
      * @return the index past the last collected constant
      */
     protected int collectConstants(int iCase, Constant[] aconstCase) {
-        if (exprs == null) {
+        if (exprs.isEmpty()) {
             // this is the "default:" statement
             aconstCase[++iCase] = null;
         } else {
@@ -136,13 +141,13 @@ public class CaseStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.append(keyword.getId().TEXT);
 
-        if (exprs != null) {
+        if (!exprs.isEmpty()) {
             sb.append(' ')
-              .append(exprs.get(0));
+              .append(exprs.getFirst());
 
             for (int i = 1, c = exprs.size(); i < c; ++i) {
                 sb.append(", ")
@@ -168,6 +173,4 @@ public class CaseStatement
     protected long             lEndPos;
 
     private transient Label m_label;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(CaseStatement.class, "exprs");
 }

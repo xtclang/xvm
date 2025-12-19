@@ -1,10 +1,13 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import org.xvm.asm.Version;
 
@@ -34,10 +37,10 @@ public class VersionOverride
      * @param verb     the overriding verb ("allow", "avoid", or "prefer")
      * @param exprVer  denotes the version associated with the verb
      */
-    public VersionOverride(Token verb, LiteralExpression exprVer) {
-        assert exprVer != null && exprVer.literal.getId() == Id.LIT_VERSION;
+    public VersionOverride(@Nullable Token verb, @NotNull LiteralExpression exprVer) {
+        assert exprVer.literal.getId() == Id.LIT_VERSION;
         this.verb    = verb;
-        this.exprVer = exprVer;
+        this.exprVer = Objects.requireNonNull(exprVer);
     }
 
 
@@ -77,8 +80,16 @@ public class VersionOverride
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        return visitor.apply(exprVer);
+    }
+
+    @Override
+    protected void replaceChild(AstNode oldChild, AstNode newChild) {
+        if (tryReplace(oldChild, newChild, exprVer, n -> exprVer = n)) {
+            return;
+        }
+        throw new IllegalStateException("no such child \"" + oldChild + "\" on \"" + this + '\"');
     }
 
 
@@ -104,15 +115,11 @@ public class VersionOverride
 
     /**
      * A token representing "allow", "avoid", or "prefer".
-     *
-     * Note: may be null.
      */
-    protected Token verb;
+    protected @Nullable Token verb;
 
     /**
      * The version literal expression.
      */
-    protected LiteralExpression exprVer;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(VersionOverride.class, "exprVer");
-}
+    protected @NotNull LiteralExpression exprVer;
+ }

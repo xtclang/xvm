@@ -1,11 +1,12 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Argument;
@@ -105,8 +106,31 @@ public class AnnotationExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if (type != null && (result = visitor.apply(type)) != null) {
+            return result;
+        }
+        if (args != null) {
+            for (Expression arg : args) {
+                if ((result = visitor.apply(arg)) != null) {
+                    return result;
+                }
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public List<AstNode> children() {
+        List<AstNode> list = new ArrayList<>();
+        if (type != null) {
+            list.add(type);
+        }
+        if (args != null) {
+            list.addAll(args);
+        }
+        return list;
     }
 
     /**
@@ -430,28 +454,8 @@ public class AnnotationExpression
             return m_anno.getValueString();
         }
 
-        StringBuilder sb = new StringBuilder();
-
-        sb.append('@')
-          .append(type);
-
-        if (args != null) {
-            sb.append('(');
-
-            boolean first = true;
-            for (Expression expr : args) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(expr);
-            }
-
-            sb.append(')');
-        }
-
-        return sb.toString();
+        return "@" + type + (args == null || args.isEmpty() ? "" :
+                "(" + args.stream().map(Object::toString).collect(Collectors.joining(", ")) + ")");
     }
 
     @Override
@@ -581,6 +585,4 @@ public class AnnotationExpression
     private transient AstNode    m_node;
     private transient Annotation m_anno;
     private transient boolean    m_fConst;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(AnnotationExpression.class, "type", "args");
 }

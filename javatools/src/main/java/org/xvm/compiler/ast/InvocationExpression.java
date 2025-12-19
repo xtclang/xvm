@@ -1,14 +1,12 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
@@ -290,8 +288,22 @@ public class InvocationExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if ((result = visitor.apply(expr)) != null) {
+            return result;
+        }
+        for (Expression arg : args) {
+            if ((result = visitor.apply(arg)) != null) {
+                return result;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public List<AstNode> children() {
+        return childList(List.of(expr), args);
     }
 
 
@@ -338,7 +350,7 @@ public class InvocationExpression
      * @return an array of the types produced by the expression, or an empty array if the expression
      *         is void (or if its type cannot be determined)
      */
-    protected TypeConstant[] resolveReturnTypes(Context ctx, TypeConstant[] atypeRequired,
+    private TypeConstant[] resolveReturnTypes(Context ctx, TypeConstant[] atypeRequired,
                                                 boolean fExhaustive, ErrorListener errs) {
         if (isValidated()) {
             return getTypes();
@@ -2997,25 +3009,7 @@ public class InvocationExpression
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(expr);
-        if (async) {
-            sb.append('^');
-        }
-        sb.append('(');
-
-        boolean first = true;
-        for (Expression arg : args) {
-            if (first) {
-                first = false;
-            } else {
-                sb.append(", ");
-            }
-            sb.append(arg);
-        }
-
-        sb.append(')');
-        return sb.toString();
+        return expr + (async ? "^" : "") + "(" + args.stream().map(Object::toString).collect(Collectors.joining(", ")) + ")";
     }
 
     @Override
@@ -3091,5 +3085,4 @@ public class InvocationExpression
     private transient ExprAST m_astTarget;
     private transient ExprAST m_astInvoke;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(InvocationExpression.class, "expr", "args");
 }

@@ -1,7 +1,9 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
+import java.util.Arrays;
+import java.util.List;
+import java.util.function.Function;
 
 import org.xvm.asm.ast.BiExprAST.Operator;
 import org.xvm.asm.ast.CondOpExprAST;
@@ -92,8 +94,28 @@ public abstract class BiExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if ((result = visitor.apply(expr1)) != null) {
+            return result;
+        }
+        if ((result = visitor.apply(expr2)) != null) {
+            return result;
+        }
+        return null;
+    }
+
+    @Override
+    public List<AstNode> children() {
+        return Arrays.asList(expr1, expr2);
+    }
+
+    @Override
+    protected <T extends AstNode> void replaceChild(T oldChild, T newChild) {
+        assertReplaced(
+            tryReplace(oldChild, newChild, expr1, n -> expr1 = n)
+         || tryReplace(oldChild, newChild, expr2, n -> expr2 = n),
+            oldChild);
     }
 
 
@@ -206,6 +228,4 @@ public abstract class BiExpression
     protected Expression expr1;
     protected Token      operator;
     protected Expression expr2;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(BiExpression.class, "expr1", "expr2");
 }

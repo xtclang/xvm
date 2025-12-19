@@ -1,10 +1,12 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
 import java.util.List;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
+import org.jetbrains.annotations.NotNull;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -16,8 +18,8 @@ public class TupleTypeExpression
         extends TypeExpression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public TupleTypeExpression(List<TypeExpression> params, long lStartPos, long lEndPos) {
-        this.paramTypes   = params;
+    public TupleTypeExpression(@NotNull List<TypeExpression> params, long lStartPos, long lEndPos) {
+        this.paramTypes   = Objects.requireNonNull(params);
         this.lStartPos    = lStartPos;
         this.lEndPos      = lEndPos;
     }
@@ -40,8 +42,19 @@ public class TupleTypeExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        for (TypeExpression param : paramTypes) {
+            if ((result = visitor.apply(param)) != null) {
+                return result;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public List<AstNode> children() {
+        return List.copyOf(paramTypes);
     }
 
 
@@ -76,23 +89,7 @@ public class TupleTypeExpression
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append('<');
-
-        boolean first = true;
-        for (TypeExpression type : paramTypes) {
-            if (first) {
-                first = false;
-            } else {
-                sb.append(", ");
-            }
-            sb.append(type);
-        }
-
-        sb.append('>');
-
-        return sb.toString();
+        return "<" + paramTypes.stream().map(Object::toString).collect(Collectors.joining(", ")) + ">";
     }
 
     @Override
@@ -106,6 +103,4 @@ public class TupleTypeExpression
     protected List<TypeExpression> paramTypes;
     protected long                 lStartPos;
     protected long                 lEndPos;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(TupleTypeExpression.class, "paramTypes");
 }

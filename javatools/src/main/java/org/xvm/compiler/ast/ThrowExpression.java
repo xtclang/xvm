@@ -1,7 +1,11 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
+import java.util.Objects;
+import java.util.function.Function;
+
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -38,8 +42,9 @@ public class ThrowExpression
         this(keyword, expr, message, null);
     }
 
-    public ThrowExpression(Token keyword, Expression expr, Expression message, Token endToken) {
-        this.keyword = keyword;
+    public ThrowExpression(@NotNull Token keyword, @Nullable Expression expr,
+                           @Nullable Expression message, @Nullable Token endToken) {
+        this.keyword = Objects.requireNonNull(keyword);
         this.expr    = expr;
         this.message = message;
 
@@ -83,8 +88,23 @@ public class ThrowExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if (expr != null && (result = visitor.apply(expr)) != null) {
+            return result;
+        }
+        if (message != null && (result = visitor.apply(message)) != null) {
+            return result;
+        }
+        return null;
+    }
+
+    @Override
+    protected void replaceChild(AstNode oldChild, AstNode newChild) {
+        assertReplaced(
+            tryReplace(oldChild, newChild, expr,    n -> expr = n)
+         || tryReplace(oldChild, newChild, message, n -> message = n),
+            oldChild);
     }
 
     /**
@@ -420,10 +440,8 @@ public class ThrowExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Token      keyword;
-    protected Expression expr;
-    protected Expression message;
-    private final long   lEndPos;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(ThrowExpression.class, "expr", "message");
+    protected @NotNull Token keyword;
+    protected @Nullable Expression expr;
+    protected @Nullable Expression message;
+    private final long lEndPos;
 }

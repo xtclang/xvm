@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.function.Function;
+
 import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -45,6 +47,10 @@ public class KeywordTypeExpression
         return keyword.getEndPosition();
     }
 
+    @Override
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        return null;  // no AST node children (keyword is a Token)
+    }
 
     // ----- TypeExpression methods ----------------------------------------------------------------
 

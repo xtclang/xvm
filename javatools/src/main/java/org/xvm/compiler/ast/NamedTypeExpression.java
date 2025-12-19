@@ -1,12 +1,14 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import org.jetbrains.annotations.Nullable;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
@@ -54,15 +56,15 @@ public class NamedTypeExpression
     /**
      * Construct a NamedTypeExpression without a "left".
      */
-    public NamedTypeExpression(Token immutable, List<Token> names, Token access, Token nonnarrow,
+    public NamedTypeExpression(Token immutable, List<Token> names, Token access, Token nonArrow,
                                List<TypeExpression> params, long lEndPos) {
         this.left       = null;
         this.immutable  = immutable;
         this.names      = names;
         this.access     = access;
-        this.nonnarrow  = nonnarrow;
+        this.nonArraow  = nonArrow;
         this.paramTypes = params;
-        this.lStartPos  = immutable == null ? names.get(0).getStartPosition() : immutable.getStartPosition();
+        this.lStartPos  = immutable == null ? names.getFirst().getStartPosition() : immutable.getStartPosition();
         this.lEndPos    = lEndPos;
     }
 
@@ -75,7 +77,7 @@ public class NamedTypeExpression
         this.immutable  = null;
         this.names      = names;
         this.access     = null;
-        this.nonnarrow  = null;
+        this.nonArraow = null;
         this.paramTypes = params;
         this.lStartPos  = names.get(0).getStartPosition();
         this.lEndPos    = lEndPos;
@@ -88,7 +90,7 @@ public class NamedTypeExpression
         this.left       = null;
         this.immutable  = null;
         this.access     = null;
-        this.nonnarrow  = null;
+        this.nonArraow = null;
         this.paramTypes = null;
         this.lStartPos  = exprSource.getStartPosition();
         this.lEndPos    = exprSource.getEndPosition();
@@ -109,7 +111,7 @@ public class NamedTypeExpression
         this.immutable  = null;
         this.names      = names;
         this.access     = null;
-        this.nonnarrow  = null;
+        this.nonArraow = null;
         this.paramTypes = params;
         this.lStartPos  = (module == null ? names : module).get(0).getStartPosition();
         this.lEndPos    = lEndPos;
@@ -125,23 +127,8 @@ public class NamedTypeExpression
      * @return the dot-delimited name of the module, or null if no module is specified
      */
     public String getModule() {
-        if (module == null) {
-            return null;
-        }
-
-        StringBuilder sb = new StringBuilder();
-
-        boolean first = true;
-        for (Token name : module) {
-            if (first) {
-                first = false;
-            } else {
-                sb.append('.');
-            }
-            sb.append(name.getValueText());
-        }
-
-        return sb.toString();
+        return module == null ? null
+                : module.stream().map(Token::getValueText).collect(Collectors.joining("."));
     }
 
     /**
@@ -150,23 +137,8 @@ public class NamedTypeExpression
      * @return the dot-delimited name
      */
     public String getName() {
-        if (names == null) {
-            return "";
-        }
-
-        StringBuilder sb = new StringBuilder();
-
-        boolean first = true;
-        for (Token name : names) {
-            if (first) {
-                first = false;
-            } else {
-                sb.append('.');
-            }
-            sb.append(name.getValueText());
-        }
-
-        return sb.toString();
+        return names == null ? ""
+                : names.stream().map(Token::getValueText).collect(Collectors.joining("."));
     }
 
     public String[] getNames() {
@@ -215,7 +187,7 @@ public class NamedTypeExpression
      * @return true iff the type is explicitly non-auto-narrowing (the '!' post-operator)
      */
     public boolean isExplicitlyNonAutoNarrowing() {
-        return nonnarrow != null;
+        return nonArraow != null;
     }
 
     /**
@@ -340,8 +312,19 @@ public class NamedTypeExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if (left != null && (result = visitor.apply(left)) != null) {
+            return result;
+        }
+        if (paramTypes != null) {
+            for (TypeExpression param : paramTypes) {
+                if ((result = visitor.apply(param)) != null) {
+                    return result;
+                }
+            }
+        }
+        return null;
     }
 
 
@@ -1075,22 +1058,14 @@ public class NamedTypeExpression
               .append(access.getId().TEXT);
         }
 
-        if (nonnarrow != null) {
+        if (nonArraow != null) {
             sb.append('!');
         }
 
         if (paramTypes != null) {
-            sb.append('<');
-            boolean first = true;
-            for (TypeExpression type : paramTypes) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(type);
-            }
-            sb.append('>');
+            sb.append('<')
+              .append(paramTypes.stream().map(Object::toString).collect(Collectors.joining(", ")))
+              .append('>');
         }
 
         return sb.toString();
@@ -1104,15 +1079,15 @@ public class NamedTypeExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected List<Token>          module;
-    protected TypeExpression       left;
-    protected Token                immutable;
-    protected List<Token>          names;
-    protected Token                access;
-    protected Token                nonnarrow;
-    protected List<TypeExpression> paramTypes;
-    protected long                 lStartPos;
-    protected long                 lEndPos;
+    protected @Nullable List<Token>          module;
+    protected @Nullable TypeExpression       left;
+    protected @Nullable Token                immutable;
+    protected List<Token>                    names;
+    protected @Nullable Token                access;
+    protected @Nullable Token                nonArraow;
+    protected @Nullable List<TypeExpression> paramTypes;
+    protected long                           lStartPos;
+    protected long                           lEndPos;
 
     protected transient NameResolver   m_resolver;
     protected transient Constant       m_constId;
@@ -1123,6 +1098,4 @@ public class NamedTypeExpression
     // unresolved constant that may have been created by this statement
     protected transient UnresolvedNameConstant m_constUnresolved;
     protected transient UnresolvedTypeConstant m_typeUnresolved;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(NamedTypeExpression.class, "left", "paramTypes");
 }

@@ -1,13 +1,12 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -217,8 +216,8 @@ public class ForStatement
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public List<AstNode> children() {
+        return childList(init, conds, update, List.of(block));
     }
 
 
@@ -689,50 +688,12 @@ public class ForStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append("for (");
-
-        if (init != null) {
-            boolean first = true;
-            for (Statement stmt : init) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(stmt);
-            }
-        }
-
-        sb.append("; ");
-
-        if (conds != null && !conds.isEmpty()) {
-            sb.append(conds.get(0));
-            for (int i = 1, c = conds.size(); i < c; ++i) {
-                sb.append(", ")
-                  .append(conds.get(i));
-            }
-        }
-
-        sb.append("; ");
-
-        if (update != null) {
-            boolean first = true;
-            for (Statement stmt : update) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(stmt);
-            }
-        }
-
-        sb.append(")\n")
-          .append(indentLines(block.toString(), "    "));
-
-        return sb.toString();
+        return "for ("
+            + init.stream().map(Object::toString).collect(Collectors.joining(", ")) + "; "
+            + conds.stream().map(Object::toString).collect(Collectors.joining(", ")) + "; "
+            + update.stream().map(Object::toString).collect(Collectors.joining(", "))
+            + ")\n"
+             + indentLines(block.toString(), "    ");
     }
 
 
@@ -768,6 +729,4 @@ public class ForStatement
      * The short-circuit grounding label for each "update". (Array or elements may be null.)
      */
     private transient Label[] m_alabelUpdateGround;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(ForStatement.class, "init", "conds", "update", "block");
 }

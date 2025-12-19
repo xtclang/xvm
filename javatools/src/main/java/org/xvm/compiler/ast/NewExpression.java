@@ -1,12 +1,12 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Argument;
@@ -138,8 +138,39 @@ public class NewExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if (left != null && (result = visitor.apply(left)) != null) {
+            return result;
+        }
+        if (type != null && (result = visitor.apply(type)) != null) {
+            return result;
+        }
+        for (Expression arg : args) {
+            if ((result = visitor.apply(arg)) != null) {
+                return result;
+            }
+        }
+        if (anon != null && (result = visitor.apply(anon)) != null) {
+            return result;
+        }
+        return null;
+    }
+
+    @Override
+    public List<AstNode> children() {
+        List<AstNode> list = new ArrayList<>();
+        if (left != null) {
+            list.add(left);
+        }
+        if (type != null) {
+            list.add(type);
+        }
+        list.addAll(args);
+        if (anon != null) {
+            list.add(anon);
+        }
+        return list;
     }
 
 
@@ -1707,6 +1738,4 @@ public class NewExpression
      * Cached NewExprAST node.
      */
     private transient ExprAST m_astNew;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(NewExpression.class, "left", "type", "args", "anon");
 }

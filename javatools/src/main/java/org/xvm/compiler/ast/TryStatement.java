@@ -1,10 +1,10 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -87,8 +87,19 @@ public class TryStatement
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public List<AstNode> children() {
+        List<AstNode> list = new ArrayList<>();
+        if (resources != null) {
+            list.addAll(resources);
+        }
+        list.add(block);
+        if (catches != null) {
+            list.addAll(catches);
+        }
+        if (catchall != null) {
+            list.add(catchall);
+        }
+        return list;
     }
 
 
@@ -482,17 +493,9 @@ public class TryStatement
         sb.append(keyword.getId().TEXT);
 
         if (resources != null) {
-            sb.append(" (");
-            boolean first = true;
-            for (Statement resource : resources) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(resource);
-            }
-            sb.append(')');
+            sb.append(" (")
+              .append(resources.stream().map(Object::toString).collect(Collectors.joining(", ")))
+              .append(')');
         }
 
         sb.append('\n')
@@ -572,7 +575,4 @@ public class TryStatement
     private transient Context       m_ctxValidatingFinally;
     private transient ErrorListener m_errsValidatingFinally;
     private transient Register      m_regFinallyException;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(TryStatement.class,
-            "resources", "block", "catches", "catchall");
 }

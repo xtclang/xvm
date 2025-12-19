@@ -1,8 +1,7 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -11,6 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
@@ -83,13 +84,14 @@ public class LambdaExpression
      * @param body       the StatementBlock of the lambda
      * @param lStartPos  the expression's start position in the source code
      */
-    public LambdaExpression(List params, Token operator, StatementBlock body, long lStartPos) {
+    @SuppressWarnings("unchecked")
+    public LambdaExpression(List<? extends AstNode> params, Token operator, StatementBlock body, long lStartPos) {
         if (!params.isEmpty() && params.get(0) instanceof Expression) {
             assert params.stream().allMatch(Expression.class::isInstance);
-            this.paramNames = params;
+            this.paramNames = (List<Expression>) params;
         } else {
             assert params.stream().allMatch(Parameter.class::isInstance);
-            this.params = params;
+            this.params = (List<Parameter>) params;
         }
 
         this.operator  = operator;
@@ -187,8 +189,35 @@ public class LambdaExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if (params != null) {
+            for (Parameter param : params) {
+                if ((result = visitor.apply(param)) != null) {
+                    return result;
+                }
+            }
+        }
+        if (paramNames != null) {
+            for (Expression paramName : paramNames) {
+                if ((result = visitor.apply(paramName)) != null) {
+                    return result;
+                }
+            }
+        }
+        return visitor.apply(body);
+    }
+
+    @Override
+    public List<AstNode> children() {
+        if (params != null) {
+            return paramNames != null
+                    ? childList(params, paramNames, List.of(body))
+                    : childList(params, List.of(body));
+        }
+        return paramNames != null
+                ? childList(paramNames, List.of(body))
+                : List.of(body);
     }
 
 
@@ -1265,24 +1294,11 @@ public class LambdaExpression
     // ----- debugging assistance ------------------------------------------------------------------
 
     public String toSignatureString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append('(');
-        boolean first = true;
-        for (Object param : (params == null ? paramNames : params)) {
-            if (first) {
-                first = false;
-            } else {
-                sb.append(", ");
-            }
-            sb.append(param);
-        }
-
-        sb.append(')')
-          .append(' ')
-          .append(operator.getId().TEXT);
-
-        return sb.toString();
+        List<?> paramList = params == null ? paramNames : params;
+        return "("
+             + (paramList == null ? "" : paramList.stream().map(Object::toString).collect(Collectors.joining(", ")))
+             + ") "
+             + operator.getId().TEXT;
     }
 
     @Override
@@ -1551,7 +1567,4 @@ public class LambdaExpression
      * An array of ExprAST bindings computed by {@link #calculateBindings}.
      */
     private transient ExprAST[] m_aAstBind;
-
-    private static final Field[] CHILD_FIELDS =
-            fieldsForNames(LambdaExpression.class, "params", "paramNames", "body");
 }

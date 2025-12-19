@@ -1,12 +1,13 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
+import org.jetbrains.annotations.NotNull;
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.ConstantPool;
@@ -91,8 +92,15 @@ public abstract class CompositionNode
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if (condition != null && (result = visitor.apply(condition)) != null) {
+            return result;
+        }
+        if (type != null && (result = visitor.apply(type)) != null) {
+            return result;
+        }
+        return null;
     }
 
 
@@ -138,12 +146,13 @@ public abstract class CompositionNode
             extends CompositionNode {
         public Extends(Expression condition, Token keyword, TypeExpression type) {
             super(condition, keyword, type);
+            this.args = new ArrayList<>();
         }
 
         public Extends(Expression condition, Token keyword, TypeExpression type,
                        List<Expression> args, long lEndPos) {
             super(condition, keyword, type);
-            this.args    = args;
+            this.args    = args == null ? new ArrayList<>() : new ArrayList<>(args);
             this.lEndPos = lEndPos;
         }
 
@@ -153,39 +162,28 @@ public abstract class CompositionNode
         }
 
         @Override
-        protected Field[] getChildFields() {
-            return CHILD_FIELDS;
+        public <T> T forEachChild(Function<AstNode, T> visitor) {
+            T result = super.forEachChild(visitor);
+            if (result != null) {
+                return result;
+            }
+            for (Expression arg : args) {
+                if ((result = visitor.apply(arg)) != null) {
+                    return result;
+                }
+            }
+            return null;
         }
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder();
-
-            sb.append(toStartString());
-
-            if (args != null) {
-                sb.append('(');
-                boolean first = true;
-                for (Expression arg : args) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append(", ");
-                    }
-                    sb.append(arg);
-                }
-                  sb.append(')');
-            }
-
-            sb.append(toEndString());
-            return sb.toString();
+            return toStartString()
+                 + (args.isEmpty() ? "" : "(" + args.stream().map(Object::toString).collect(Collectors.joining(", ")) + ")")
+                 + toEndString();
         }
 
         protected List<Expression> args;
         protected long             lEndPos;
-
-        private static final Field[] CHILD_FIELDS = fieldsForNames(Extends.class,
-                "condition", "type", "args");
     }
 
 
@@ -212,46 +210,11 @@ public abstract class CompositionNode
         }
 
         @Override
-        protected Field[] getChildFields() {
-            return CHILD_FIELDS;
-        }
-
-        @Override
-        public String toString() {
-            StringBuilder sb = new StringBuilder();
-
-            if (condition != null) {
-                sb.append("if (")
-                  .append(condition)
-                  .append(") { ");
-            }
-
-            sb.append(keyword.getId().TEXT)
-              .append(' ')
-              .append(annotation.type);
-
-            if (annotation.args != null) {
-                sb.append('(');
-                boolean first = true;
-                for (Expression arg : annotation.args) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append(", ");
-                    }
-                    sb.append(arg);
-                }
-                sb.append(')');
-            }
-
-            sb.append(toEndString());
-            return sb.toString();
+        public <T> T forEachChild(Function<AstNode, T> visitor) {
+            return visitor.apply(annotation);
         }
 
         protected AnnotationExpression annotation;
-
-        private static final Field[] CHILD_FIELDS = fieldsForNames(Annotates.class,
-                "annotation");
     }
 
 
@@ -260,7 +223,7 @@ public abstract class CompositionNode
     public static class Incorporates
             extends CompositionNode {
         public Incorporates(Expression condition, Token keyword, TypeExpression type,
-                            List<Expression> args, List<Parameter> constraints) {
+                            @NotNull List<Expression> args, List<Parameter> constraints) {
             super(condition, keyword, type);
             this.args        = args;
             this.constraints = constraints;
@@ -283,73 +246,65 @@ public abstract class CompositionNode
 
         @Override
         public long getEndPosition() {
-            return condition == null && args != null && !args.isEmpty()
-                    ? args.get(args.size()-1).getEndPosition()
+            return condition == null && !args.isEmpty()
+                    ? args.getLast().getEndPosition()
                     : super.getEndPosition();
         }
 
         @Override
-        protected Field[] getChildFields() {
-            return CHILD_FIELDS;
+        public <T> T forEachChild(Function<AstNode, T> visitor) {
+            T result = super.forEachChild(visitor);
+            if (result != null) {
+                return result;
+            }
+            for (Expression arg : args) {
+                if ((result = visitor.apply(arg)) != null) {
+                    return result;
+                }
+            }
+            if (constraints != null) {
+                for (Parameter constraint : constraints) {
+                    if ((result = visitor.apply(constraint)) != null) {
+                        return result;
+                    }
+                }
+            }
+            return null;
         }
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
 
             if (condition != null) {
-                sb.append("if (")
-                  .append(condition)
-                  .append(") { ");
+                sb.append("if (").append(condition).append(") { ");
             }
 
             sb.append(keyword.getId().TEXT);
 
             if (isConditional()) {
                 // special handling for "incorporates conditional <T1 extends T2, ..>"
-                String sType = type.toString();
+                var sType = type.toString();
                 sb.append(" conditional ")
-                  .append(sType, 0, sType.indexOf('<'));
-
-                sb.append('<');
-                boolean first = true;
-                for (Parameter param : constraints) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append(", ");
-                    }
-                    sb.append(param.toTypeParamString());
-                }
-                sb.append('>');
+                  .append(sType, 0, sType.indexOf('<'))
+                  .append('<')
+                  .append(constraints.stream().map(Parameter::toTypeParamString).collect(Collectors.joining(", ")))
+                  .append('>');
             } else {
-                sb.append(' ')
-                  .append(type);
+                sb.append(' ').append(type);
             }
 
-            if (args != null) {
-                sb.append('(');
-                boolean first = true;
-                for (Expression arg : args) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append(", ");
-                    }
-                    sb.append(arg);
-                }
-                sb.append(')');
+            if (args != null && !args.isEmpty()) {
+                sb.append('(')
+                  .append(args.stream().map(Object::toString).collect(Collectors.joining(", ")))
+                  .append(')');
             }
 
-            sb.append(toEndString());
-            return sb.toString();
+            return sb.append(toEndString()).toString();
         }
 
         protected List<Expression> args;
         protected List<Parameter>  constraints;
-
-        private static final Field[] CHILD_FIELDS = fieldsForNames(Incorporates.class,
-                "condition", "type", "args", "constraints");
     }
 
 
@@ -398,8 +353,12 @@ public abstract class CompositionNode
         }
 
         @Override
-        protected Field[] getChildFields() {
-            return CHILD_FIELDS;
+        public <T> T forEachChild(Function<AstNode, T> visitor) {
+            T result = super.forEachChild(visitor);
+            if (result != null) {
+                return result;
+            }
+            return visitor.apply(delegatee);
         }
 
         @Override
@@ -411,9 +370,6 @@ public abstract class CompositionNode
         protected long       lEndPos;
 
         protected transient String name;
-
-        private static final Field[] CHILD_FIELDS =
-                fieldsForNames(Delegates.class, "condition", "type", "delegatee");
     }
 
 
@@ -519,62 +475,61 @@ public abstract class CompositionNode
         }
 
         @Override
-        protected Field[] getChildFields() {
-            return CHILD_FIELDS;
+        public <T> T forEachChild(Function<AstNode, T> visitor) {
+            T result = super.forEachChild(visitor);
+            if (result != null) {
+                return result;
+            }
+            if (vers != null) {
+                for (VersionOverride ver : vers) {
+                    if ((result = visitor.apply(ver)) != null) {
+                        return result;
+                    }
+                }
+            }
+            if (injects != null) {
+                for (Parameter inject : injects) {
+                    if ((result = visitor.apply(inject)) != null) {
+                        return result;
+                    }
+                }
+            }
+            if (injector != null && (result = visitor.apply(injector)) != null) {
+                return result;
+            }
+            return null;
         }
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder();
-
-            sb.append(keyword.getId().TEXT)
-              .append(' ');
+            var sb = new StringBuilder()
+                    .append(keyword.getId().TEXT)
+                    .append(' ');
 
             if (modifier != null) {
-                sb.append(modifier.getId().TEXT)
-                  .append(' ');
+                sb.append(modifier.getId().TEXT).append(' ');
             }
 
             sb.append(type);
 
-            if (vers != null) {
-                boolean first = true;
-                for (VersionOverride ver : vers) {
-                    if (first) {
-                        sb.append(' ');
-                        first = false;
-                    } else {
-                        sb.append("\n        ");
-                    }
-                    sb.append(ver);
-                }
+            if (vers != null && !vers.isEmpty()) {
+                sb.append(' ')
+                  .append(vers.stream().map(Object::toString).collect(Collectors.joining("\n        ")));
             }
 
-            if (injects != null) {
+            if (injects != null && !injects.isEmpty()) {
                 sb.append("\n        ")
                   .append(Token.Id.INJECT.TEXT)
-                  .append(' ')
-                  .append('(');
-
-                boolean first = true;
-                for (Parameter injection : injects) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append(", ");
-                    }
-                    sb.append(injection);
-                }
-
-                sb.append(')');
+                  .append(" (")
+                  .append(injects.stream().map(Object::toString).collect(Collectors.joining(", ")))
+                  .append(')');
             }
-
 
             if (injector != null) {
                 sb.append("\n        ")
-                    .append(Token.Id.USING.TEXT)
-                    .append(' ')
-                    .append(injector);
+                  .append(Token.Id.USING.TEXT)
+                  .append(' ')
+                  .append(injector);
             }
 
             return sb.toString();
@@ -601,9 +556,6 @@ public abstract class CompositionNode
         protected NamedTypeExpression injector;
 
         protected long lEndPos;
-
-        private static final Field[] CHILD_FIELDS =
-                fieldsForNames(Import.class, "condition", "type", "vers", "injects", "injector");
     }
 
 
@@ -630,8 +582,12 @@ public abstract class CompositionNode
         }
 
         @Override
-        protected Field[] getChildFields() {
-            return CHILD_FIELDS;
+        public <T> T forEachChild(Function<AstNode, T> visitor) {
+            T result;
+            if (condition != null && (result = visitor.apply(condition)) != null) {
+                return result;
+            }
+            return visitor.apply(expr);
         }
 
         @Override
@@ -641,8 +597,6 @@ public abstract class CompositionNode
 
         protected Expression expr;
         protected long       lEndPos;
-
-        private static final Field[] CHILD_FIELDS = fieldsForNames(Default.class, "condition", "expr");
     }
 
 
@@ -653,7 +607,4 @@ public abstract class CompositionNode
     protected TypeExpression type;
 
     private transient Contribution m_contribution;
-
-    private static final Field[] CHILD_FIELDS =
-            fieldsForNames(CompositionNode.class, "condition", "type");
 }

@@ -2,7 +2,6 @@ package org.xvm.compiler.ast;
 
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import java.util.function.Predicate;
@@ -14,8 +13,6 @@ import org.xvm.asm.constants.IdentityConstant;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
-
-import org.xvm.compiler.ast.AstNode.ChildIterator;
 
 import org.xvm.util.Severity;
 
@@ -36,7 +33,7 @@ public class StageMgr {
         assert node != null;
         assert stageTarget != null && stageTarget.isTargetable();
 
-        m_listRevisit = Collections.singletonList(node);
+        m_listRevisit = new ArrayList<>(List.of(node));
         m_target      = stageTarget;
         m_errs        = errs == null ? ErrorListener.BLACKHOLE : errs;
     }
@@ -53,7 +50,7 @@ public class StageMgr {
         assert list != null && !list.isEmpty();
         assert stageTarget != null && stageTarget.isTargetable();
 
-        m_listRevisit = list;
+        m_listRevisit = new ArrayList<>(list);
         m_target      = stageTarget;
         m_errs        = errs == null ? ErrorListener.BLACKHOLE : errs;
     }
@@ -64,7 +61,7 @@ public class StageMgr {
      */
     public boolean isComplete() {
         // complete if it isn't currently processing and there's nothing queued to process
-        return getErrorListener().isAbortDesired() || m_cur == null && m_listRevisit == null;
+        return getErrorListener().isAbortDesired() || m_cur == null && m_listRevisit.isEmpty();
     }
 
     /**
@@ -78,16 +75,14 @@ public class StageMgr {
             return false;
         }
 
-        if (m_listRevisit != null) {
-            for (AstNode node : takeRevisitList()) {
-                processInternal(node);
-                if (getErrorListener().isAbortDesired()) {
-                    return false;
-                }
+        for (AstNode node : takeRevisitList()) {
+            processInternal(node);
+            if (getErrorListener().isAbortDesired()) {
+                return false;
             }
         }
 
-        return m_listRevisit == null;
+        return m_listRevisit.isEmpty();
     }
 
     /**
@@ -98,15 +93,16 @@ public class StageMgr {
      * @return true iff the fast-forward was successful
      */
     public boolean fastForward(int cMaxIters) {
-        boolean       fDone      = false;
-        Stage         stageGoal  = m_target;
-        List<AstNode> listSingle = m_listRevisit;
-        assert listSingle.size() == 1;
+        assert m_listRevisit.size() == 1;
+        var       node      = m_listRevisit.getFirst();
+        var       stageGoal = m_target;
+        boolean   fDone     = false;
         try {
             int cIters = 0;
             m_target = Stage.Registered;
             while (!fDone && cIters <= cMaxIters) {
-                m_listRevisit = listSingle;
+                m_listRevisit.clear();
+                m_listRevisit.add(node);
                 while (!processComplete()) {
                     if (++cIters == cMaxIters) {
                         markLastAttempt();
@@ -249,36 +245,11 @@ public class StageMgr {
     }
 
     /**
-     * Replace the currently-being-processed node with another node.
-     */
-    public void replaceSelf(AstNode node) {
-        AstNode       nodePrev = ensureCurrentNode();
-        ChildIterator iterKids = m_iterKids;
-        if (iterKids == null) {
-            AstNode nodeParent = nodePrev.getParent();
-            if (nodeParent == null) {
-                throw new IllegalStateException("not a replaceable child: "
-                        + nodePrev.getDumpDesc());
-            }
-            nodeParent.replaceChild(nodePrev, node);
-        } else {
-            iterKids.replaceWith(node);
-        }
-    }
-
-    /**
      * Mark the current node as needing to be revisited.
      */
     public void requestRevisit() {
-        AstNode node = ensureCurrentNode();
         if (!isRevisitRequested()) {
-            List<AstNode> list = m_listRevisit;
-            if (list == null) {
-                list = new ArrayList<>();
-                m_listRevisit = list;
-            }
-
-            list.add(node);
+            m_listRevisit.add(ensureCurrentNode());
             m_nFlags = (byte) (m_nFlags | QUEUED_SELF);
         }
     }
@@ -310,25 +281,14 @@ public class StageMgr {
      */
     public boolean processChildrenExcept(Predicate<AstNode> exclude) {
         boolean fDone = true;
-        ChildIterator iterPrev = m_iterKids;
-        try {
-            AstNode node = ensureCurrentNode();
 
-            // create a child iterator
-            ChildIterator iter = node.children();
-            m_iterKids = iter;
+        // mark this as having visited its children
+        m_nFlags = (byte) (m_nFlags | VISITED_KIDS);
 
-            // mark this as having visited its children
-            m_nFlags = (byte) (m_nFlags | VISITED_KIDS);
-
-            while (iter.hasNext()) {
-                AstNode nodeChild = iter.next();
-                if (exclude == null || !exclude.test(nodeChild)) {
-                    fDone &= processInternal(nodeChild);
-                }
+        for (AstNode nodeChild : ensureCurrentNode().children()) {
+            if (exclude == null || !exclude.test(nodeChild)) {
+                fDone &= processInternal(nodeChild);
             }
-        } finally {
-            m_iterKids = iterPrev;
         }
         return fDone;
     }
@@ -404,11 +364,9 @@ public class StageMgr {
      * @return a list of nodes to revisit
      */
     private List<AstNode> takeRevisitList() {
-        List<AstNode> listPrevious = m_listRevisit;
-        m_listRevisit = null;
-        return listPrevious == null
-                ? Collections.emptyList()
-                : listPrevious;
+        var list = List.copyOf(m_listRevisit);
+        m_listRevisit.clear();
+        return list;
     }
 
 
@@ -422,7 +380,7 @@ public class StageMgr {
     /**
      * List of nodes that still require processing.
      */
-    private List<AstNode> m_listRevisit;
+    private final List<AstNode> m_listRevisit;
 
     /**
      * Last attempt flag.
@@ -443,12 +401,6 @@ public class StageMgr {
      * The processing flags associated with the currently processing node.
      */
     private byte m_nFlags;
-
-    /**
-     * The current ChildIterator, if processing is currently active and the node being processed is
-     * a child node.
-     */
-    private ChildIterator m_iterKids;
 
     private static final int QUEUED_SELF  = 0x1;
     private static final int VISITED_KIDS = 0x2;

@@ -1,8 +1,6 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
@@ -17,21 +15,17 @@ import org.xvm.util.Severity;
  * A nullable type expression is a type expression followed by a question mark.
  */
 public class NullableTypeExpression
-        extends TypeExpression {
+        extends UnaryTypeExpression {
     // ----- constructors --------------------------------------------------------------------------
 
     public NullableTypeExpression(TypeExpression type, long lEndPos) {
-        this.type    = type;
+        super(type);
+
         this.lEndPos = lEndPos;
     }
 
 
     // ----- accessors -----------------------------------------------------------------------------
-
-    @Override
-    protected boolean canResolveNames() {
-        return super.canResolveNames() || type.canResolveNames();
-    }
 
     @Override
     public long getStartPosition() {
@@ -41,11 +35,6 @@ public class NullableTypeExpression
     @Override
     public long getEndPosition() {
         return lEndPos;
-    }
-
-    @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
     }
 
 
@@ -97,8 +86,5 @@ public class NullableTypeExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected TypeExpression type;
-    protected long           lEndPos;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(NullableTypeExpression.class, "type");
+    protected long lEndPos;
 }

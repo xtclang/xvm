@@ -1,8 +1,6 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -141,11 +139,6 @@ public class ParenthesizedExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
-    }
-
-    @Override
     public TypeExpression toTypeExpression() {
         return expr.toTypeExpression();
     }
@@ -171,6 +164,4 @@ public class ParenthesizedExpression
      */
     private final long m_lStartPos;
     private final long m_lEndPos;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(ParenthesizedExpression.class, "expr");
 }

@@ -1,11 +1,15 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
@@ -49,9 +53,9 @@ public class ListExpression
         extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public ListExpression(TypeExpression type, List<Expression> exprs, long lStartPos, long lEndPos) {
+    public ListExpression(TypeExpression type, @NotNull List<Expression> exprs, long lStartPos, long lEndPos) {
         this.type      = type;
-        this.exprs     = exprs;
+        this.exprs     = Objects.requireNonNull(exprs);
         this.lStartPos = lStartPos;
         this.lEndPos   = lEndPos;
     }
@@ -74,8 +78,28 @@ public class ListExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if (type != null && (result = visitor.apply(type)) != null) {
+            return result;
+        }
+        for (Expression expr : exprs) {
+            if ((result = visitor.apply(expr)) != null) {
+                return result;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public List<AstNode> children() {
+        if (type == null) {
+            return List.copyOf(exprs);
+        }
+        List<AstNode> list = new ArrayList<>(exprs.size() + 1);
+        list.add(type);
+        list.addAll(exprs);
+        return list;
     }
 
 
@@ -401,23 +425,7 @@ public class ListExpression
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append('[');
-
-        boolean first = true;
-        for (Expression expr : exprs) {
-            if (first) {
-                first = false;
-            } else {
-                sb.append(", ");
-            }
-            sb.append(expr);
-        }
-
-        sb.append(']');
-
-        return sb.toString();
+        return "[" + exprs.stream().map(Object::toString).collect(Collectors.joining(", ")) + "]";
     }
 
     @Override
@@ -432,6 +440,4 @@ public class ListExpression
     protected List<Expression> exprs;
     protected long             lStartPos;
     protected long             lEndPos;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(ListExpression.class, "type", "exprs");
 }

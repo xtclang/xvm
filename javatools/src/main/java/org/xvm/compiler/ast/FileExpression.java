@@ -4,7 +4,8 @@ package org.xvm.compiler.ast;
 import java.io.File;
 import java.io.IOException;
 
-import java.lang.reflect.Field;
+import java.util.List;
+import java.util.function.Function;
 
 import java.nio.file.Files;
 
@@ -90,8 +91,13 @@ public class FileExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        return type == null ? null : visitor.apply(type);
+    }
+
+    @Override
+    public List<AstNode> children() {
+        return type == null ? List.of() : List.of(type);
     }
 
 
@@ -476,6 +482,4 @@ public class FileExpression
      * The ResourceDir that the path string was resolved to.
      */
     private ResourceDir m_dir;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(FileExpression.class, "type");
 }

@@ -2,6 +2,10 @@ package org.xvm.compiler.ast;
 
 
 import java.math.BigDecimal;
+import java.util.Objects;
+import java.util.function.Function;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
@@ -30,8 +34,8 @@ public class LiteralExpression
         extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public LiteralExpression(Token literal) {
-        this.literal = literal;
+    public LiteralExpression(@NotNull Token literal) {
+        this.literal = Objects.requireNonNull(literal);
     }
 
 
@@ -60,6 +64,11 @@ public class LiteralExpression
     @Override
     public long getEndPosition() {
         return literal.getEndPosition();
+    }
+
+    @Override
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        return null;  // leaf node - no children
     }
 
 
@@ -440,5 +449,5 @@ public class LiteralExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Token literal;
+    protected @NotNull Token literal;
 }

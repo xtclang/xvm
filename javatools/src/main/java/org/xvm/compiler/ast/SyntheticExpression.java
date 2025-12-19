@@ -1,7 +1,10 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
+import java.util.Objects;
+import java.util.function.Function;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
@@ -21,8 +24,8 @@ public abstract class SyntheticExpression
         extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public SyntheticExpression(Expression expr) {
-        this.expr = expr;
+    public SyntheticExpression(@NotNull Expression expr) {
+        this.expr = Objects.requireNonNull(expr);
 
         expr.getParent().adopt(this);
         this.adopt(expr);
@@ -58,8 +61,13 @@ public abstract class SyntheticExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        return visitor.apply(expr);
+    }
+
+    @Override
+    protected <T extends AstNode> void replaceChild(T oldChild, T newChild) {
+        assertReplaced(tryReplace(oldChild, newChild, expr, n -> expr = n), oldChild);
     }
 
 
@@ -128,7 +136,5 @@ public abstract class SyntheticExpression
     /**
      * The modified expression.
      */
-    protected Expression expr;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(SyntheticExpression.class, "expr");
+    protected @NotNull Expression expr;
 }

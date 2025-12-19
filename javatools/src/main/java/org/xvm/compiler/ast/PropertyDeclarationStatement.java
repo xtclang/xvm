@@ -1,8 +1,6 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -207,8 +205,28 @@ public class PropertyDeclarationStatement
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public List<AstNode> children() {
+        List<AstNode> list = new ArrayList<>();
+        if (condition != null) {
+            list.add(condition);
+        }
+        if (annotations != null) {
+            list.addAll(annotations);
+        }
+        list.add(type);
+        if (value != null) {
+            list.add(value);
+        }
+        if (body != null) {
+            list.add(body);
+        }
+        if (initializer != null) {
+            list.add(initializer);
+        }
+        if (assignment != null) {
+            list.add(assignment);
+        }
+        return list;
     }
 
     /**
@@ -852,7 +870,4 @@ public class PropertyDeclarationStatement
      * A unique counter with the context of this property.
      */
     protected transient int m_counter;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(PropertyDeclarationStatement.class,
-            "condition", "annotations", "type", "value", "body", "initializer", "assignment");
 }

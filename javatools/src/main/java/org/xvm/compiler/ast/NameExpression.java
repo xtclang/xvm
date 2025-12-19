@@ -1,15 +1,13 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.xvm.asm.Annotation;
@@ -100,7 +98,6 @@ import org.xvm.util.Severity;
  * suppression of the de-reference using the "&" symbol). The result of the name being resolved
  * will differ based on whether the name is implicitly de-referenced, or explicitly not
  * de-referenced.
- *
  * <p/>
  * The starting point for de-referencing is within a "method body", which is one of:
  * <ul>
@@ -451,8 +448,27 @@ public class NameExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if (left != null && (result = visitor.apply(left)) != null) {
+            return result;
+        }
+        if (params != null) {
+            for (TypeExpression param : params) {
+                if ((result = visitor.apply(param)) != null) {
+                    return result;
+                }
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public List<AstNode> children() {
+        if (left == null) {
+            return params == null ? List.of() : List.copyOf(params);
+        }
+        return params == null ? List.of(left) : childList(List.of(left), params);
     }
 
 
@@ -3249,7 +3265,7 @@ public class NameExpression
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         if (left != null) {
             if (left instanceof NameExpression) {
@@ -3267,17 +3283,9 @@ public class NameExpression
         sb.append(name.getValueText());
 
         if (params != null) {
-            sb.append('<');
-            boolean first = true;
-            for (Expression param : params) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(param);
-            }
-            sb.append('>');
+            sb.append('<')
+              .append(params.stream().map(Object::toString).collect(Collectors.joining(", ")))
+              .append('>');
         }
 
         return sb.toString();
@@ -3387,5 +3395,4 @@ public class NameExpression
      */
     private transient ExprAST m_astResult;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(NameExpression.class, "left", "params");
 }

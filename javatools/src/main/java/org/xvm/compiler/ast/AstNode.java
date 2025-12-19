@@ -18,9 +18,13 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import org.jetbrains.annotations.NotNull;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
 import org.xvm.asm.ComponentResolver;
@@ -95,10 +99,10 @@ public abstract class AstNode
      * itself as the parent of each node under it.
      */
     protected void introduceParentage() {
-        for (AstNode node : children()) {
+        forEachChild(node -> {
             node.setParent(this);
             node.introduceParentage();
-        }
+        });
     }
 
     /**
@@ -131,30 +135,138 @@ public abstract class AstNode
     }
 
     /**
-     * Return an Iterable/Iterator that represents all the child nodes of this node.
+     * Visit each child of this node by invoking the specified visitor on each child.
+     * This is the primitive operation that subclasses must implement directly to enumerate
+     * their child nodes.
+     * <p>
+     * The visitor returns {@code null} to continue iteration, or a non-null value to stop
+     * and return that value immediately. This enables both simple traversal (always return
+     * null) and search/find operations (return the found item to stop early).
      *
-     * @return an Iterable of child nodes (from whence an Iterator can be obtained)
+     * @param visitor  the function to invoke on each child node
+     * @param <T>      the type of result from the visitor
+     *
+     * @return the first non-null result from the visitor, or null if all children were
+     *         visited and all returned null
      */
-    public ChildIterator children() {
-        Field[] fields = getChildFields();
-        return fields.length == 0 ? ChildIterator.EMPTY : new ChildIteratorImpl(fields);
+    public abstract <T> T forEachChild(Function<AstNode, T> visitor);
+
+    /**
+     * Visit each child of this node for side effects only. This is a convenience method
+     * that wraps {@link #forEachChild(Function)} for simple traversal where no early exit
+     * is needed.
+     *
+     * @param visitor  the consumer to invoke on each child node
+     */
+    public void forEachChild(Consumer<AstNode> visitor) {
+        forEachChild(child -> {
+            visitor.accept(child);
+            return null;
+        });
     }
 
     /**
-     * Replace the specified child of this AstNode with a new child.
+     * Return all child nodes of this node as a list. The default implementation builds
+     * a list by calling {@link #forEachChild(Consumer)}.
+     * <p>
+     * Subclasses should NOT override this method - implement {@link #forEachChild(Function)}
+     * instead, and this method will work automatically.
+     *
+     * @return a list of child nodes (never null, but may be empty)
+     */
+    public List<AstNode> children() {
+        List<AstNode> list = new ArrayList<>();
+        forEachChild(child -> { list.add(child); });
+        return list;
+    }
+
+    /**
+     * Helper for building immutable child lists from multiple lists.
+     *
+     * @param lists  one or more lists of child nodes
+     *
+     * @return an unmodifiable list containing all elements from the input lists
+     */
+    @SafeVarargs
+    protected static List<AstNode> childList(List<? extends AstNode>... lists) {
+        List<AstNode> result = new ArrayList<>();
+        for (List<? extends AstNode> list : lists) {
+            result.addAll(list);
+        }
+        return result;
+    }
+
+    /**
+     * Replace the specified child of this AstNode with a new child. The default implementation
+     * throws since most node types never have children replaced. Only Expression subclasses that
+     * can contain traceable expressions need to override this.
      *
      * @param nodeOld  the child to replace
      * @param nodeNew  the new child
+     * @param <T>      the type of the child nodes, ensuring old and new are compatible types
+     *
+     * @throws IllegalStateException if nodeOld is not a child of this node
      */
-    public void replaceChild(AstNode nodeOld, AstNode nodeNew) {
-        ChildIterator children = children();
-        for (AstNode node : children) {
-            if (node == nodeOld) {
-                children.replaceWith(adopt(nodeNew));
-                return;
+    protected <T extends AstNode> void replaceChild(T nodeOld, T nodeNew) {
+        throw new IllegalStateException("no such child \"" + nodeOld + "\" on \"" + this + '\"');
+    }
+
+    /**
+     * Helper for implementing replaceChild. Checks if oldChild matches current, and if so,
+     * invokes the setter with newChild.
+     *
+     * @param oldChild  the child to find
+     * @param newChild  the replacement child
+     * @param current   the current value of a child field
+     * @param setter    a consumer that sets the child field
+     * @param <T>       the type of the child field
+     *
+     * @return true if the child was found and replaced
+     */
+    @SuppressWarnings("unchecked")
+    protected <T extends AstNode> boolean tryReplace(AstNode oldChild, AstNode newChild,
+                                                     T current, Consumer<T> setter) {
+        if (oldChild == current) {
+            setter.accept((T) newChild);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Helper for implementing replaceChild. Throws if the replacement was not successful.
+     *
+     * @param replaced  true if a replacement was made
+     * @param oldChild  the child that was supposed to be replaced (for error message)
+     *
+     * @throws IllegalStateException if replaced is false
+     */
+    protected void assertReplaced(boolean replaced, AstNode oldChild) {
+        if (!replaced) {
+            throw new IllegalStateException("no such child \"" + oldChild + "\" on \"" + this + '\"');
+        }
+    }
+
+    /**
+     * Helper for implementing replaceChild for list fields. Attempts to find and replace the
+     * old child in the given list.
+     *
+     * @param oldChild  the old child
+     * @param newChild  the new child
+     * @param list      the list that may contain the old child (may be null)
+     *
+     * @return true iff the replacement was made
+     */
+    @SuppressWarnings("unchecked")
+    protected <T extends AstNode> boolean tryReplaceInList(AstNode oldChild, AstNode newChild, List<T> list) {
+        if (list != null) {
+            int index = list.indexOf(oldChild);
+            if (index >= 0) {
+                list.set(index, (T) newChild);
+                return true;
             }
         }
-        throw new IllegalStateException("no such child \"" + nodeOld + "\" on \"" + this + '\"');
+        return false;
     }
 
     /**
@@ -188,9 +300,7 @@ public abstract class AstNode
     protected void discard(boolean fRecurse) {
         m_stage = Stage.Discarded;
         if (fRecurse) {
-            for (AstNode node : children()) {
-                node.discard(true);
-            }
+            forEachChild(node -> { node.discard(true); });
         }
     }
 
@@ -562,7 +672,7 @@ public abstract class AstNode
      *                  representations
      */
     protected void selectTraceableExpressions(Map<String, Expression> mapExprs) {
-        for (AstNode node : children()) {
+        forEachChild(node -> {
             if (node instanceof Expression expr) {
                 if (expr.isValidated() && expr.isTraceworthy()) {
                     String sExpr = expr.toString();
@@ -573,12 +683,12 @@ public abstract class AstNode
 
                 if (expr.isConstant()) {
                     // don't recurse constants
-                    continue;
+                    return;
                 }
             }
 
             node.selectTraceableExpressions(mapExprs);
-        }
+        });
     }
 
     /**
@@ -1909,7 +2019,7 @@ public abstract class AstNode
     public interface ChildIterator
             extends Iterable<AstNode>, Iterator<AstNode> {
         @Override
-        default Iterator<AstNode> iterator() {
+        default @NotNull Iterator<AstNode> iterator() {
             return this;
         }
 

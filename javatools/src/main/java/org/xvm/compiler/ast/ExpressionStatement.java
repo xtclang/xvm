@@ -1,7 +1,7 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
+import java.util.List;
 
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -50,8 +50,15 @@ public class ExpressionStatement
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public List<AstNode> children() {
+        return List.of(expr);
+    }
+
+    @Override
+    protected void replaceChild(AstNode oldChild, AstNode newChild) {
+        assertReplaced(
+            tryReplace(oldChild, newChild, expr, n -> expr = n),
+            oldChild);
     }
 
     @Override
@@ -129,6 +136,4 @@ public class ExpressionStatement
 
     protected Expression expr;
     protected boolean    term;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(ExpressionStatement.class, "expr");
 }

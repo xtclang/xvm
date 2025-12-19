@@ -463,7 +463,7 @@ public abstract class Component
     public List<Contribution> getContributionsAsList() {
         List<Contribution> list = m_listContribs;
         if (list == null) {
-            return Collections.emptyList();
+            return List.of();
         }
         assert (list = Collections.unmodifiableList(m_listContribs)) != null;
         return list;

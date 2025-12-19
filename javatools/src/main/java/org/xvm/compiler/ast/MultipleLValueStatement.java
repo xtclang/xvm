@@ -5,6 +5,8 @@ import java.lang.reflect.Field;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
@@ -52,6 +54,17 @@ public class MultipleLValueStatement
     @Override
     public long getEndPosition() {
         return LVals.get(LVals.size() - 1).getEndPosition();
+    }
+
+    @Override
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        for (AstNode node : LVals) {
+            if ((result = visitor.apply(node)) != null) {
+                return result;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -225,24 +238,7 @@ public class MultipleLValueStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append('(');
-
-        boolean first = true;
-        for (AstNode node : LVals) {
-            if (first) {
-                first = false;
-            } else {
-                sb.append(", ");
-            }
-
-            sb.append(node);
-        }
-
-        sb.append(')');
-
-        return sb.toString();
+        return "(" + LVals.stream().map(Object::toString).collect(Collectors.joining(", ")) + ")";
     }
 
     @Override
@@ -272,6 +268,12 @@ public class MultipleLValueStatement
         @Override
         public long getEndPosition() {
             return getParent().getEndPosition();
+        }
+
+        @Override
+        public <T> T forEachChild(Function<AstNode, T> visitor) {
+            // this inner class doesn't "own" children - it delegates to the outer class's LVals
+            return null;
         }
 
         @Override

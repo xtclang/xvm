@@ -1,7 +1,8 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
+import java.util.List;
+import java.util.function.Function;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
@@ -65,8 +66,13 @@ public class StatementExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        return visitor.apply(body);
+    }
+
+    @Override
+    public List<AstNode> children() {
+        return List.of(body);
     }
 
 
@@ -318,6 +324,4 @@ public class StatementExpression
     private transient TypeCollector  m_collector;
     private transient Assignable[]   m_aLVal;
     private transient BinaryAST      m_astBody;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(StatementExpression.class, "body");
 }

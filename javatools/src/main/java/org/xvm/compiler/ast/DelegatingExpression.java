@@ -1,6 +1,9 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.List;
+import java.util.function.Function;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -28,6 +31,21 @@ public abstract class DelegatingExpression
      */
     public Expression getUnderlyingExpression() {
         return expr;
+    }
+
+    @Override
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        return visitor.apply(expr);
+    }
+
+    @Override
+    public List<AstNode> children() {
+        return List.of(expr);
+    }
+
+    @Override
+    protected void replaceChild(AstNode oldChild, AstNode newChild) {
+        assertReplaced(tryReplace(oldChild, newChild, expr, n -> expr = n), oldChild);
     }
 
     @Override

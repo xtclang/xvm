@@ -1,9 +1,9 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -58,8 +58,24 @@ public class FunctionTypeExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        for (Parameter param : returnValues) {
+            if ((result = visitor.apply(param)) != null) {
+                return result;
+            }
+        }
+        for (TypeExpression param : paramTypes) {
+            if ((result = visitor.apply(param)) != null) {
+                return result;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public List<AstNode> children() {
+        return childList(returnValues, paramTypes);
     }
 
 
@@ -139,45 +155,14 @@ public class FunctionTypeExpression
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append("function ");
-
-        if (isConditional()) {
-            sb.append("conditional ");
-        }
-
-        if (returnValues.isEmpty()) {
-            sb.append("void");
-        } else if (returnValues.size() == 1) {
-            sb.append(returnValues.get(0));
-        } else {
-            boolean first = true;
-            for (Parameter param : returnValues) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(param);
-            }
-        }
-
-        sb.append(" (");
-
-        boolean first = true;
-        for (TypeExpression type : paramTypes) {
-            if (first) {
-                first = false;
-            } else {
-                sb.append(", ");
-            }
-            sb.append(type);
-        }
-
-        sb.append(')');
-
-        return sb.toString();
+        String retVals = returnValues.isEmpty() ? "void"
+                       : returnValues.stream().map(Object::toString).collect(Collectors.joining(", "));
+        return "function "
+             + (isConditional() ? "conditional " : "")
+             + retVals
+             + " ("
+             + paramTypes.stream().map(Object::toString).collect(Collectors.joining(", "))
+             + ")";
     }
 
     @Override
@@ -193,6 +178,4 @@ public class FunctionTypeExpression
     protected List<Parameter>      returnValues;
     protected List<TypeExpression> paramTypes;
     protected long                 lEndPos;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(FunctionTypeExpression.class, "returnValues", "paramTypes");
 }

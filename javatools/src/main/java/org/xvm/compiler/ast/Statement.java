@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -25,14 +26,19 @@ public abstract class Statement
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
-    protected boolean usesSuper() {
-        for (AstNode node : children()) {
-            if (!(node instanceof ComponentStatement) && node.usesSuper()) {
-                return true;
-            }
-        }
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        return null;  // no children by default
+    }
 
-        return false;
+    @Override
+    public List<AstNode> children() {
+        return List.of();
+    }
+
+    @Override
+    protected boolean usesSuper() {
+        return children().stream()
+                .anyMatch(node -> !(node instanceof ComponentStatement) && node.usesSuper());
     }
 
     /**

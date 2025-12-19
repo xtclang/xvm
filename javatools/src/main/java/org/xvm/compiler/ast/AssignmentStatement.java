@@ -1,8 +1,6 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -327,8 +325,14 @@ public class AssignmentStatement
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public List<AstNode> children() {
+        List<AstNode> list = new ArrayList<>();
+        list.add(lvalue);
+        if (lvalueExpr != null) {
+            list.add(lvalueExpr);
+        }
+        list.add(rvalue);
+        return list;
     }
 
 
@@ -1161,6 +1165,4 @@ public class AssignmentStatement
 
     private transient Label   m_labelCondFalse;
     private transient boolean m_fCondFalseLabelTaken; // used for verifying code-gen
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(AssignmentStatement.class, "lvalue", "lvalueExpr", "rvalue");
 }

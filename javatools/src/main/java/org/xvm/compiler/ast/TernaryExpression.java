@@ -1,7 +1,8 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
+import java.util.List;
+import java.util.function.Function;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ConstantPool;
@@ -47,8 +48,23 @@ public class TernaryExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if ((result = visitor.apply(cond)) != null) {
+            return result;
+        }
+        if ((result = visitor.apply(exprThen)) != null) {
+            return result;
+        }
+        if ((result = visitor.apply(exprElse)) != null) {
+            return result;
+        }
+        return null;
+    }
+
+    @Override
+    public List<AstNode> children() {
+        return List.of(cond, exprThen, exprElse);
     }
 
     @Override
@@ -650,6 +666,4 @@ public class TernaryExpression
     private transient Plan m_plan = Plan.Symmetrical;
 
     private enum Usage {Required, Any, Then, Else, Union}
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(TernaryExpression.class, "cond", "exprThen", "exprElse");
 }

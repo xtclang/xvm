@@ -1,14 +1,15 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
@@ -82,8 +83,25 @@ public class ArrayAccessExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if ((result = visitor.apply(expr)) != null) {
+            return result;
+        }
+        for (Expression index : indexes) {
+            if ((result = visitor.apply(index)) != null) {
+                return result;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public List<AstNode> children() {
+        List<AstNode> list = new ArrayList<>();
+        list.add(expr);
+        list.addAll(indexes);
+        return list;
     }
 
     /**
@@ -1280,24 +1298,7 @@ public class ArrayAccessExpression
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(expr)
-          .append('[');
-
-        boolean first = true;
-        for (Expression index : indexes) {
-            if (first) {
-                first = false;
-            } else {
-                sb.append(", ");
-            }
-            sb.append(index);
-        }
-
-        sb.append(tokClose.getId().TEXT);
-
-        return sb.toString();
+        return expr + "[" + indexes.stream().map(Object::toString).collect(Collectors.joining(", ")) + tokClose.getId().TEXT;
     }
 
     @Override
@@ -1315,6 +1316,4 @@ public class ArrayAccessExpression
     private transient MethodConstant m_idGet;
     private transient MethodConstant m_idSet;
     private transient boolean        m_fSlice;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(ArrayAccessExpression.class, "expr", "indexes");
 }

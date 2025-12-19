@@ -1,8 +1,6 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -16,21 +14,17 @@ import org.xvm.compiler.Token.Id;
  * of the type expression.
  */
 public class DecoratedTypeExpression
-        extends TypeExpression {
+        extends UnaryTypeExpression {
     // ----- constructors --------------------------------------------------------------------------
 
     public DecoratedTypeExpression(Token keyword, TypeExpression type) {
+        super(type);
+
         this.keyword = keyword;
-        this.type    = type;
     }
 
 
     // ----- accessors -----------------------------------------------------------------------------
-
-    @Override
-    protected boolean canResolveNames() {
-        return super.canResolveNames() || type.canResolveNames();
-    }
 
     @Override
     public long getStartPosition() {
@@ -40,11 +34,6 @@ public class DecoratedTypeExpression
     @Override
     public long getEndPosition() {
         return type.getEndPosition();
-    }
-
-    @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
     }
 
 
@@ -105,8 +94,5 @@ public class DecoratedTypeExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Token          keyword;
-    protected TypeExpression type;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(DecoratedTypeExpression.class, "type");
+    protected Token keyword;
 }

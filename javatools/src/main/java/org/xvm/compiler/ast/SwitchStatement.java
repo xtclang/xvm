@@ -1,8 +1,6 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -39,12 +37,11 @@ import static org.xvm.util.Handy.indentLines;
  * A "switch" statement.
  */
 public class SwitchStatement
-        extends ConditionalStatement {
+        extends ConditionalBlockStatement {
     // ----- constructors --------------------------------------------------------------------------
 
     public SwitchStatement(Token keyword, List<AstNode> conds, StatementBlock block) {
-        super(keyword, conds);
-        this.block   = block;
+        super(keyword, conds, block);
     }
 
 
@@ -88,12 +85,6 @@ public class SwitchStatement
     public long getEndPosition() {
         return block.getEndPosition();
     }
-
-    @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
-    }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -650,8 +641,6 @@ public class SwitchStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected StatementBlock block;
-
     /**
      * The manager that collects all of the case information.
      */
@@ -680,6 +669,4 @@ public class SwitchStatement
      * This collects the assignment information that comes from each "break" statement.
      */
     private final transient List<Map<String, Assignment>> m_listBreaks = new ArrayList<>();
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchStatement.class, "conds", "block");
 }

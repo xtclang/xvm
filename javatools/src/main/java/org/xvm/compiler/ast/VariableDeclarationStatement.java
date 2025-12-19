@@ -1,8 +1,6 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
 import java.util.List;
 
 import org.xvm.asm.Annotation;
@@ -101,8 +99,8 @@ public class VariableDeclarationStatement
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public List<AstNode> children() {
+        return List.of(type);
     }
 
 
@@ -307,17 +305,7 @@ public class VariableDeclarationStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(type)
-          .append(' ')
-          .append(getName());
-
-        if (term) {
-            sb.append(';');
-        }
-
-        return sb.toString();
+        return type + " " + getName() + (term ? ";" : "");
     }
 
     @Override
@@ -337,6 +325,4 @@ public class VariableDeclarationStatement
     private transient Register       m_reg;
     private transient NameExpression m_exprName;
     private transient boolean        m_fConstAnno;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(VariableDeclarationStatement.class, "type");
 }

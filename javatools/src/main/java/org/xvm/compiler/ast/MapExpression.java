@@ -1,10 +1,10 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
@@ -62,8 +62,31 @@ public class MapExpression
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if ((result = visitor.apply(type)) != null) {
+            return result;
+        }
+        for (Expression key : keys) {
+            if ((result = visitor.apply(key)) != null) {
+                return result;
+            }
+        }
+        for (Expression value : values) {
+            if ((result = visitor.apply(value)) != null) {
+                return result;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public List<AstNode> children() {
+        List<AstNode> list = new ArrayList<>();
+        list.add(type);
+        list.addAll(keys);
+        list.addAll(values);
+        return list;
     }
 
 
@@ -458,6 +481,4 @@ public class MapExpression
 
     private transient ExprAST[] m_aKeyAST;
     private transient ExprAST[] m_aValueAST;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(MapExpression.class, "type", "keys", "values");
 }

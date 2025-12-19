@@ -1,8 +1,6 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -50,7 +48,7 @@ import static org.xvm.util.Handy.indentLines;
  * A "while" or "do while" statement.
  */
 public class WhileStatement
-        extends ConditionalStatement
+        extends ConditionalBlockStatement
         implements LabelAble {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -59,8 +57,8 @@ public class WhileStatement
     }
 
     public WhileStatement(Token keyword, List<AstNode> conds, StatementBlock block, long lEndPos) {
-        super(keyword, conds);
-        this.block   = block;
+        super(keyword, conds, block);
+
         this.lEndPos = lEndPos;
     }
 
@@ -114,11 +112,6 @@ public class WhileStatement
     @Override
     public long getEndPosition() {
         return lEndPos;
-    }
-
-    @Override
-    protected Field[] getChildFields() {
-        return CHILD_FIELDS;
     }
 
 
@@ -754,8 +747,7 @@ public class WhileStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected StatementBlock block;
-    protected long           lEndPos;
+    protected long lEndPos;
 
     private transient Label         m_labelContinue;
     private transient Context       m_ctxLabelVars;
@@ -777,6 +769,4 @@ public class WhileStatement
      * An array of RegAllocAST produced by {@link #emitLabelVarCreation}.
      */
     private transient RegAllocAST[] m_aAllocSpecial;
-
-    private static final Field[] CHILD_FIELDS = fieldsForNames(WhileStatement.class, "conds", "block");
 }

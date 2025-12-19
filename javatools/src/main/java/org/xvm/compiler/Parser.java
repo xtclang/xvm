@@ -1893,7 +1893,7 @@ public class Parser {
                     log(Severity.ERROR, REPEAT_DEFAULT, tokDefault.getStartPosition(), tokDefault.getEndPosition());
                 }
 
-                stmts.add(new CaseStatement(tokDefault, null, expect(Id.COLON)));
+                stmts.add(new CaseStatement(tokDefault, expect(Id.COLON)));
                 fAnyLabels = true;
                 fDefault   = true;
                 break;
@@ -3884,7 +3884,7 @@ public class Parser {
                     log(Severity.ERROR, REPEAT_DEFAULT,
                             tokDefault.getStartPosition(), tokDefault.getEndPosition());
                 }
-                contents.add(new CaseStatement(tokDefault, null, expect(Id.COLON)));
+                contents.add(new CaseStatement(tokDefault, expect(Id.COLON)));
                 fDefault  = true;
                 fNeedExpr = true;
             }
