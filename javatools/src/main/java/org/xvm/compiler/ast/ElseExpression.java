@@ -209,8 +209,12 @@ public class ElseExpression
     // ----- fields --------------------------------------------------------------------------------
 
     private static    int                   s_nCounter;
-    private transient int                   m_nLabel;
-    private transient Label                 m_labelElse;
-    private transient Map<String, Argument> m_mapElse;
-    private transient boolean               m_fCondFalse;
+    @Derived
+    private int                   m_nLabel;
+    @Derived
+    private Label                 m_labelElse;
+    @Derived
+    private Map<String, Argument> m_mapElse;
+    @Derived
+    private boolean               m_fCondFalse;
 }

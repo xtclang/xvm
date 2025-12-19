@@ -232,33 +232,6 @@ public class MethodDeclarationStatement
     }
 
     @Override
-    public List<AstNode> children() {
-        List<AstNode> list = new ArrayList<>();
-        if (condition != null) {
-            list.add(condition);
-        }
-        if (annotations != null) {
-            list.addAll(annotations);
-        }
-        if (typeParams != null) {
-            list.addAll(typeParams);
-        }
-        if (returns != null) {
-            list.addAll(returns);
-        }
-        if (redundant != null) {
-            list.addAll(redundant);
-        }
-        if (params != null) {
-            list.addAll(params);
-        }
-        if (body != null) {
-            list.add(body);
-        }
-        return list;
-    }
-
-    @Override
     protected boolean usesSuper() {
         return body != null && body.usesSuper();
     }
@@ -1296,11 +1269,14 @@ public class MethodDeclarationStatement
     protected StatementBlock             body;
     protected Token                      doc;
 
-    private transient Token          m_tokFinally;
-    private transient StatementBlock m_bodyFinally;
+    @Derived
+    private Token          m_tokFinally;
+    @Derived
+    private StatementBlock m_bodyFinally;
 
     // complementary statement for the constructor points to the finalizer and vice versa
-    private transient MethodDeclarationStatement m_stmtComplement;
+    @Derived
+    private MethodDeclarationStatement m_stmtComplement;
 
     /**
      * A unique counter with the context of this method.

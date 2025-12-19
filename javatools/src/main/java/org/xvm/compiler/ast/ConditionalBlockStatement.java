@@ -30,10 +30,6 @@ public abstract class ConditionalBlockStatement
         return block;
     }
 
-    @Override
-    public List<AstNode> children() {
-        return Stream.concat(super.children().stream(), Stream.of(block)).toList();
-    }
 
     @Override
     protected void replaceChild(AstNode oldChild, AstNode newChild) {

@@ -138,10 +138,6 @@ public class AnnotatedTypeExpression
         return null;
     }
 
-    @Override
-    public List<AstNode> children() {
-        return List.of(annotation, type);
-    }
 
     @Override
     public boolean isIntroductoryType() {
@@ -399,12 +395,18 @@ public class AnnotatedTypeExpression
     protected AnnotationExpression annotation;
     protected TypeExpression       type;
 
-    private transient boolean m_fDisassociateRef;
-    private transient boolean m_fDisassociateClass;
-    private transient boolean m_fAnonInner;
-    private transient boolean m_fVar;
-    private transient boolean m_fInjected;
+    @Derived
+    private boolean m_fDisassociateRef;
+    @Derived
+    private boolean m_fDisassociateClass;
+    @Derived
+    private boolean m_fAnonInner;
+    @Derived
+    private boolean m_fVar;
+    @Derived
+    private boolean m_fInjected;
 
     // unresolved constant that may have been created by this expression
-    private transient UnresolvedTypeConstant m_typeUnresolved;
+    @Derived
+    private UnresolvedTypeConstant m_typeUnresolved;
 }

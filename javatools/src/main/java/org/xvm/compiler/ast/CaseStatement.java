@@ -88,10 +88,6 @@ public class CaseStatement
         return lEndPos;
     }
 
-    @Override
-    public List<AstNode> children() {
-        return List.copyOf(exprs);
-    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
@@ -172,5 +168,6 @@ public class CaseStatement
     protected List<Expression> exprs;
     protected long             lEndPos;
 
-    private transient Label m_label;
+    @Derived
+    private Label m_label;
 }

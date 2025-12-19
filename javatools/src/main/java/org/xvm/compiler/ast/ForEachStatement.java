@@ -1350,24 +1350,40 @@ public class ForEachStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private transient Label            m_labelContinue;
-    private transient Expression       m_exprLValue;
-    private transient Expression       m_exprRValue;
-    private transient Plan             m_plan;
-    private transient Context          m_ctxLabelVars;
-    private transient ErrorListener    m_errsLabelVars;
-    private transient Register         m_regFirst;
-    private transient Register         m_regLast;
-    private transient Register         m_regCount;
-    private transient Register         m_regEntry;
-    private transient Register         m_regKeyType;
-    private transient Register         m_regValType;
-    private transient boolean          m_fTupleLValue;
-    private transient MethodConstant[] m_aidConvKey;
-    private transient TypeConstant[]   m_atypeConv;
+    @Derived
+    private Label            m_labelContinue;
+    @Derived
+    private Expression       m_exprLValue;
+    @Derived
+    private Expression       m_exprRValue;
+    @Derived
+    private Plan             m_plan;
+    @Derived
+    private Context          m_ctxLabelVars;
+    @Derived
+    private ErrorListener    m_errsLabelVars;
+    @Derived
+    private Register         m_regFirst;
+    @Derived
+    private Register         m_regLast;
+    @Derived
+    private Register         m_regCount;
+    @Derived
+    private Register         m_regEntry;
+    @Derived
+    private Register         m_regKeyType;
+    @Derived
+    private Register         m_regValType;
+    @Derived
+    private boolean          m_fTupleLValue;
+    @Derived
+    private MethodConstant[] m_aidConvKey;
+    @Derived
+    private TypeConstant[]   m_atypeConv;
 
     /**
      * Generally null, unless there is a "continue" that jumps to this statement.
      */
-    private transient List<Break> m_listContinues;
+    @Derived
+    private List<Break> m_listContinues;
 }

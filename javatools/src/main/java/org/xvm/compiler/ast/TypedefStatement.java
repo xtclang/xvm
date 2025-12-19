@@ -55,13 +55,6 @@ public class TypedefStatement
         return super.getDefaultAccess();
     }
 
-    @Override
-    public List<AstNode> children() {
-        List<AstNode> list = new ArrayList<>(2);
-        list.add(cond);
-        list.add(type);
-        return list;
-    }
 
 
     // ----- compile phases ------------------------------------------------------------------------

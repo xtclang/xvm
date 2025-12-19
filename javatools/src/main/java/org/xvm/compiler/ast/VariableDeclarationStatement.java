@@ -98,10 +98,6 @@ public class VariableDeclarationStatement
         return name.getEndPosition();
     }
 
-    @Override
-    public List<AstNode> children() {
-        return List.of(type);
-    }
 
 
     // ----- LValue methods ------------------------------------------------------------------------
@@ -322,7 +318,10 @@ public class VariableDeclarationStatement
     protected Token          name;
     protected boolean        term;
 
-    private transient Register       m_reg;
-    private transient NameExpression m_exprName;
-    private transient boolean        m_fConstAnno;
+    @Derived
+    private Register       m_reg;
+    @Derived
+    private NameExpression m_exprName;
+    @Derived
+    private boolean        m_fConstAnno;
 }

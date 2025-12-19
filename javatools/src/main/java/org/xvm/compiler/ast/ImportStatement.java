@@ -257,6 +257,8 @@ public class ImportStatement
     protected List<Token> qualifiedName;
     protected Token       star;
 
-    private transient NameResolver m_resolver;
-    private transient boolean      m_fImportRegistered;
+    @Derived
+    private NameResolver m_resolver;
+    @Derived
+    private boolean      m_fImportRegistered;
 }

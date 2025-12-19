@@ -60,10 +60,6 @@ public class BiTypeExpression
         return null;
     }
 
-    @Override
-    public List<AstNode> children() {
-        return List.of(type1, type2);
-    }
 
 
     // ----- TypeConstant methods ------------------------------------------------------------------

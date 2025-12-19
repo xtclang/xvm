@@ -20,11 +20,13 @@ protected Field[] getChildFields() {
 
 | Use Case | What It Needs | Current Impl |
 |----------|---------------|--------------|
-| `children()` iteration | Just traversal | Partially converted to explicit |
-| `replaceChild()` | Find + write-back | Now explicit per-class |
-| `clone()` | Clone + write to clone | **Still uses reflection** |
+| `children()` iteration | Just traversal | ✅ Uses `forEachChild()` |
+| `replaceChild()` | Find + write-back | ✅ Now explicit per-class |
+| `copy()` (was `clone()`) | Deep copy of subtree | **Still uses reflection** |
 | `getDumpChildren()` | Field names for debug | **Still uses reflection** |
-ay ay 
+
+**Important**: We do NOT use Java's `Cloneable` interface or `clone()` method. That API is
+fundamentally broken (see Effective Java). We use `copy()` for deep copying nodes. 
 ### The ChildIterator Cursor Pattern
 
 The original `ChildIterator` is not just iteration - it's a **mutable cursor** that tracks:
@@ -557,7 +559,13 @@ protected abstract AstNode withChildren(List<AstNode> children);
    - Transform returns `Continue` for unchanged, `Replace` for changed
    - Only recompute types for new nodes
 
-4. **Time Travel**: Keep old trees around for undo, diff, incremental compilation.
+4. **Time Travel / Undo**: Since transforms return new trees and don't mutate,
+   you can keep references to old tree versions. This enables:
+   - **Undo/Redo**: Just swap which tree version is "current"
+   - **Diff**: Compare old and new trees structurally
+   - **Incremental compilation**: Only recompile changed subtrees
+   - **Debugging**: Step back through compilation stages
+   - **Speculative parsing**: Try a parse, discard if it fails, no cleanup needed
 
 5. **Thread Safety**: Pure functions, no mutation, parallel analysis is safe.
 
@@ -568,24 +576,86 @@ This is essentially the Roslyn pattern expressed through the visitor API:
 - Red tree = manufactured on-demand with parent refs (could be a thin wrapper)
 - Structural sharing = nodes returning `Continue` keep same identity
 
-### Phase 2: Explicit Clone
+### Phase 1c: @Derived Annotation for Non-Structural Fields
 
-Replace reflection-based clone with explicit copy:
+Currently, fields like `m_label`, `m_ctx`, `m_type` are marked with Java's `transient` keyword.
+This is wrong - `transient` is Java serialization baggage and doesn't convey our intent.
+
+**Add a semantic annotation:**
 
 ```java
-// Each class implements
-protected abstract AstNode cloneImpl();
+package org.xvm.compiler.ast;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+/**
+ * Marks a field as derived/computed rather than part of the AST structure.
+ * These fields are populated during compilation stages and should NOT be
+ * copied when creating a new node with different children.
+ *
+ * Examples: resolved types, jump labels, cached computations, validation context.
+ */
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.FIELD)
+public @interface Derived {}
+```
+
+**Usage:**
+
+```java
+// Before (wrong - Java serialization concept)
+protected transient Label m_label;
+
+// After (semantic - describes our intent)
+@Derived
+protected Label m_label;
+```
+
+**Benefits:**
+- Clear intent: "this field is computed, not structural"
+- No dependency on Java serialization semantics
+- Can be used for tooling, documentation, or runtime inspection if needed
+- Prepares for future where structural fields become `final`
+
+### Phase 2: Explicit Deep Copy
+
+**Important**: We do NOT use Java's `Cloneable` interface or `clone()` method.
+That API is fundamentally broken (see Effective Java, Item 13). Instead:
+
+1. Use `copy()` method name for deep copying
+2. Implement via `withChildren()` pattern for structural sharing
+
+```java
+// In AstNode base class
+public final AstNode copy() {
+    // Deep copy using withChildren - each child is recursively copied
+    List<AstNode> copiedChildren = new ArrayList<>();
+    forEachChild(child -> { copiedChildren.add(child.copy()); });
+    return copiedChildren.isEmpty() ? withChildren(List.of()) : withChildren(copiedChildren);
+}
+
+// Each class implements withChildren to create a new instance
+protected abstract AstNode withChildren(List<AstNode> children);
 
 // Example
 @Override
-protected BiExpression cloneImpl() {
+protected BiExpression withChildren(List<AstNode> children) {
     return new BiExpression(
-        expr1.clone(),
-        operator,
-        expr2.clone()
+        (Expression) children.get(0),
+        operator,  // Token is immutable, shared
+        (Expression) children.get(1)
     );
 }
 ```
+
+**Why withChildren() instead of copyImpl():**
+- Same method serves both `copy()` and `transform()`
+- Enables structural sharing in transforms
+- Single implementation point per class
+- Prepares for immutable nodes
 
 ### Phase 3: Transformation Support
 
@@ -620,6 +690,31 @@ public final class BiExpression extends Expression {
     }
 }
 ```
+
+**Time Travel and Persistence Benefits:**
+
+Copy-on-write with structural sharing is fundamentally a **persistent data structure** pattern.
+This unlocks powerful capabilities:
+
+1. **Undo/Redo Stack**: Each edit creates a new tree. Keep a list of tree roots.
+   Undo = pop to previous root. No "undo logic" needed - it's just pointer swapping.
+
+2. **Branching Edits**: Fork a tree, try multiple transformations in parallel,
+   pick the best result. Failed attempts are garbage collected automatically.
+
+3. **Incremental Recompilation**: When user edits line 50, only nodes on the
+   path from root to line 50 are recreated. Nodes for lines 1-49 and 51+ are
+   shared with the old tree. Semantic analysis can skip unchanged subtrees.
+
+4. **Debugger Time Travel**: Store tree snapshots at each compilation stage.
+   User can "step back" to see the AST before a transform was applied.
+
+5. **Speculative Parsing**: Try parsing an ambiguous construct one way.
+   If it fails, discard the new tree (GC handles cleanup) and try another way.
+   No explicit "rollback" code needed.
+
+6. **Diff/Delta Compression**: Two trees that share structure can be diffed
+   efficiently - only walk paths where nodes differ.
 
 **Considerations:**
 - Stage information would need to move outside nodes (compilation context)
@@ -671,12 +766,18 @@ class ParameterList extends AstNode {
 
 ## Next Steps
 
-1. [ ] Implement `forEachChild(Consumer<AstNode>)` pattern across all AST nodes
-2. [ ] Keep `children()` as a convenience method built on `forEachChild`
-3. [ ] Convert `clone()` to explicit per-class implementation
-4. [ ] Remove `getChildFields()` and reflection machinery
-5. [ ] Add `transformChildren()` for future copy-on-write support
-6. [ ] Consider virtual list nodes for cleaner structure
+1. [x] Implement `forEachChild(Function<AstNode, T>)` across all AST nodes
+2. [x] Keep `children()` as convenience method built on `forEachChild`
+3. [x] Implement `replaceChild()` explicitly per class
+4. [ ] Add `@Derived` annotation for non-structural fields
+5. [ ] Replace `transient` keyword with `@Derived` on computed fields
+6. [ ] Implement `withChildren(List<AstNode>)` on each node class
+7. [ ] Add `copy()` method in base class using `withChildren()`
+8. [ ] Remove old reflection-based `clone()` method from AstNode
+9. [ ] Remove `getChildFields()`, `fieldsForNames()`, `ChildIterator`, `ChildIteratorImpl`
+10. [ ] Update `getDumpChildren()` to use explicit field access or remove
+11. [ ] Add `transform()` method with `VisitResult` pattern
+12. [ ] Consider virtual list nodes for cleaner structure
 
 ---
 

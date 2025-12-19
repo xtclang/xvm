@@ -95,10 +95,6 @@ public abstract class Expression
         extends AstNode {
     // ----- accessors -----------------------------------------------------------------------------
 
-    @Override
-    public List<AstNode> children() {
-        return List.of();
-    }
 
     @Override
     protected boolean usesSuper() {
@@ -3110,5 +3106,6 @@ public abstract class Expression
     /**
      * Various temporary flags.
      */
-    private transient int m_nFlags;
+    @Derived
+    private int m_nFlags;
 }

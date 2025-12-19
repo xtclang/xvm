@@ -59,10 +59,6 @@ public class BadTypeExpression
         return visitor.apply(nonType);
     }
 
-    @Override
-    public List<AstNode> children() {
-        return List.of(nonType);
-    }
 
 
     // ----- compile phases ------------------------------------------------------------------------

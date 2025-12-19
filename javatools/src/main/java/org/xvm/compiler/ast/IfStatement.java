@@ -91,16 +91,6 @@ public class IfStatement
         return label;
     }
 
-    @Override
-    public List<AstNode> children() {
-        List<AstNode> list = new ArrayList<>(conds);
-        list.add(stmtThen);
-        if (stmtElse != null) {
-            list.add(stmtElse);
-        }
-        return list;
-    }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -393,10 +383,12 @@ public class IfStatement
     /**
      * The "else" label.
      */
-    private transient Label m_labelElse;
+    @Derived
+    private Label m_labelElse;
 
     /**
      * Generally null, unless there is a short-circuit that jumps to this statement's else label.
      */
-    private transient List<Break> m_listShorts;
+    @Derived
+    private List<Break> m_listShorts;
 }

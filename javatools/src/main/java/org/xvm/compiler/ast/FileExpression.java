@@ -95,10 +95,6 @@ public class FileExpression
         return type == null ? null : visitor.apply(type);
     }
 
-    @Override
-    public List<AstNode> children() {
-        return type == null ? List.of() : List.of(type);
-    }
 
 
     // ----- compilation ---------------------------------------------------------------------------

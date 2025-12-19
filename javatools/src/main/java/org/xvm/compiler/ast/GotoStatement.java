@@ -184,5 +184,6 @@ public abstract class GotoStatement
     protected Token keyword;
     protected Token name;
 
-    protected transient Label m_label;
+    @Derived
+    protected Label m_label;
 }

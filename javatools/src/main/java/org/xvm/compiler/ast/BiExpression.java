@@ -105,10 +105,6 @@ public abstract class BiExpression
         return null;
     }
 
-    @Override
-    public List<AstNode> children() {
-        return Arrays.asList(expr1, expr2);
-    }
 
     @Override
     protected <T extends AstNode> void replaceChild(T oldChild, T newChild) {

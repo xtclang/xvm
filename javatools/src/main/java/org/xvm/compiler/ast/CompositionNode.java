@@ -369,7 +369,8 @@ public abstract class CompositionNode
         protected Expression delegatee;
         protected long       lEndPos;
 
-        protected transient String name;
+        @Derived
+    protected String name;
     }
 
 
@@ -606,5 +607,6 @@ public abstract class CompositionNode
     protected Token          keyword;
     protected TypeExpression type;
 
-    private transient Contribution m_contribution;
+    @Derived
+    private Contribution m_contribution;
 }

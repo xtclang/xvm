@@ -86,22 +86,6 @@ public class TryStatement
                 : catchall.getEndPosition();
     }
 
-    @Override
-    public List<AstNode> children() {
-        List<AstNode> list = new ArrayList<>();
-        if (resources != null) {
-            list.addAll(resources);
-        }
-        list.add(block);
-        if (catches != null) {
-            list.addAll(catches);
-        }
-        if (catchall != null) {
-            list.add(catchall);
-        }
-        return list;
-    }
-
 
     // ----- LabelAble methods ---------------------------------------------------------------------
 
@@ -572,7 +556,10 @@ public class TryStatement
     protected List<CatchStatement>      catches;
     protected StatementBlock            catchall;
 
-    private transient Context       m_ctxValidatingFinally;
-    private transient ErrorListener m_errsValidatingFinally;
-    private transient Register      m_regFinallyException;
+    @Derived
+    private Context       m_ctxValidatingFinally;
+    @Derived
+    private ErrorListener m_errsValidatingFinally;
+    @Derived
+    private Register      m_regFinallyException;
 }

@@ -559,12 +559,14 @@ public class MultipleLValueStatement
     /**
      * Grounding labels for LValue expressions that can short-circuit.
      */
-    protected transient Label[] aGroundLabels;
+    @Derived
+    protected Label[] aGroundLabels;
 
     /**
      * Lazily instantiated expression that represents the multiple underlying LValue expressions.
      */
-    protected transient MultipleLValueExpression expr;
+    @Derived
+    protected MultipleLValueExpression expr;
 
     private static final Field[] STMT_FIELDS = fieldsForNames(MultipleLValueStatement.class, "LVals");
     private static final Field[] EXPR_FIELDS = fieldsForNames(MultipleLValueExpression.class, "exprs");

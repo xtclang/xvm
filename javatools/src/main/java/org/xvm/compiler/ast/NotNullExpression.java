@@ -80,10 +80,6 @@ public class NotNullExpression
         return visitor.apply(expr);
     }
 
-    @Override
-    public List<AstNode> children() {
-        return List.of(expr);
-    }
 
     @Override
     protected void replaceChild(AstNode oldChild, AstNode newChild) {
@@ -297,6 +293,8 @@ public class NotNullExpression
     /**
      * True iff the short-circuit operator is used to convert a "(Boolean, T)" into a "T".
      */
-    private transient boolean m_fCond;
-    private transient Label   m_labelShort;
+    @Derived
+    private boolean m_fCond;
+    @Derived
+    private Label   m_labelShort;
 }

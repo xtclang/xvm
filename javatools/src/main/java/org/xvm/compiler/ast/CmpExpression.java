@@ -700,12 +700,16 @@ public class CmpExpression
     /**
      * The common type used for the comparison.
      */
-    protected transient TypeConstant m_typeCommon;
+    @Derived
+    protected TypeConstant m_typeCommon;
     /**
      * The method used for the comparison.
      */
-    protected transient MethodConstant m_idCmp;
+    @Derived
+    protected MethodConstant m_idCmp;
 
-    private transient boolean m_fArg1Null; // is the first arg equal to "Null"
-    private transient boolean m_fArg2Null; // is the second arg equal to "Null"
+    @Derived
+    private boolean m_fArg1Null; // is the first arg equal to "Null"
+    @Derived
+    private boolean m_fArg2Null; // is the second arg equal to "Null"
 }

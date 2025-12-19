@@ -146,17 +146,6 @@ public class TupleExpression
         return null;
     }
 
-    @Override
-    public List<AstNode> children() {
-        if (type == null) {
-            return List.copyOf(exprs);
-        }
-        List<AstNode> list = new ArrayList<>(exprs.size() + 1);
-        list.add(type);
-        list.addAll(exprs);
-        return list;
-    }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 

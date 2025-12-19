@@ -1089,13 +1089,20 @@ public class NamedTypeExpression
     protected long                           lStartPos;
     protected long                           lEndPos;
 
-    protected transient NameResolver   m_resolver;
-    protected transient Constant       m_constId;
-    protected transient boolean        m_fVirtualChild;
-    protected transient boolean        m_fExternalTypedef;
-    private   transient NameExpression m_exprDynamic;
+    @Derived
+    protected NameResolver   m_resolver;
+    @Derived
+    protected Constant       m_constId;
+    @Derived
+    protected boolean        m_fVirtualChild;
+    @Derived
+    protected boolean        m_fExternalTypedef;
+    @Derived
+    private   NameExpression m_exprDynamic;
 
     // unresolved constant that may have been created by this statement
-    protected transient UnresolvedNameConstant m_constUnresolved;
-    protected transient UnresolvedTypeConstant m_typeUnresolved;
+    @Derived
+    protected UnresolvedNameConstant m_constUnresolved;
+    @Derived
+    protected UnresolvedTypeConstant m_typeUnresolved;
 }

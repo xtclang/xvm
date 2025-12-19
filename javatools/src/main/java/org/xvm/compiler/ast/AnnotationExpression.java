@@ -121,18 +121,6 @@ public class AnnotationExpression
         return null;
     }
 
-    @Override
-    public List<AstNode> children() {
-        List<AstNode> list = new ArrayList<>();
-        if (type != null) {
-            list.add(type);
-        }
-        if (args != null) {
-            list.addAll(args);
-        }
-        return list;
-    }
-
     /**
      * Build an XVM Annotation that corresponds to the information that this AST Annotation has
      * available.
@@ -582,7 +570,10 @@ public class AnnotationExpression
 
     // these fields allow us to pretend to be an Annotation by generating a type on the fly, if
     // necessary
-    private transient AstNode    m_node;
-    private transient Annotation m_anno;
-    private transient boolean    m_fConst;
+    @Derived
+    private AstNode    m_node;
+    @Derived
+    private Annotation m_anno;
+    @Derived
+    private boolean    m_fConst;
 }

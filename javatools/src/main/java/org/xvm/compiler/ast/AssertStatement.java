@@ -181,19 +181,6 @@ public class AssertStatement
         return interval;
     }
 
-    @Override
-    public List<AstNode> children() {
-        List<AstNode> list = new ArrayList<>();
-        if (interval != null) {
-            list.add(interval);
-        }
-        list.addAll(conds);
-        if (message != null) {
-            list.add(message);
-        }
-        return list;
-    }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 

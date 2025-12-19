@@ -1083,5 +1083,6 @@ public class RelOpExpression
     /**
      * The method used for the operation.
      */
-    protected transient MethodConstant m_idOp;
+    @Derived
+    protected MethodConstant m_idOp;
 }

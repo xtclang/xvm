@@ -80,14 +80,6 @@ public class MapExpression
         return null;
     }
 
-    @Override
-    public List<AstNode> children() {
-        List<AstNode> list = new ArrayList<>();
-        list.add(type);
-        list.addAll(keys);
-        list.addAll(values);
-        return list;
-    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
@@ -479,6 +471,8 @@ public class MapExpression
     protected List<Expression> values;
     protected long             lEndPos;
 
-    private transient ExprAST[] m_aKeyAST;
-    private transient ExprAST[] m_aValueAST;
+    @Derived
+    private ExprAST[] m_aKeyAST;
+    @Derived
+    private ExprAST[] m_aValueAST;
 }

@@ -95,7 +95,7 @@ import org.xvm.util.Severity;
  * there is a "this" or not.
  * <p/>
  * A name resolution also has an implicit de-reference, or an explicit non-dereference (a
- * suppression of the de-reference using the "&" symbol). The result of the name being resolved
+ * suppression of the de-reference using t1he "&" symbol). The result of the name being resolved
  * will differ based on whether the name is implicitly de-referenced, or explicitly not
  * de-referenced.
  * <p/>
@@ -462,15 +462,6 @@ public class NameExpression
         }
         return null;
     }
-
-    @Override
-    public List<AstNode> children() {
-        if (left == null) {
-            return params == null ? List.of() : List.copyOf(params);
-        }
-        return params == null ? List.of(left) : childList(List.of(left), params);
-    }
-
 
     // ----- LValue methods ------------------------------------------------------------------------
 
@@ -3331,23 +3322,27 @@ public class NameExpression
      * Cached validation info: The optional TargetInfo that provides context for the initial name,
      * if the initial name is related to "this".
      */
-    private transient TargetInfo m_targetInfo;
+    @Derived
+    private TargetInfo m_targetInfo;
 
     /**
      * Cached validation info: The raw argument that the name refers to.
      */
-    private transient Argument m_arg;
+    @Derived
+    private Argument m_arg;
 
     /**
      * Cached validation info: What has to be done with either the "R Value" or "L Value" in order
      * to implement the behavior implied by the name.
      */
-    private transient Plan m_plan = Plan.None;
+    @Derived
+    private Plan m_plan = Plan.None;
 
     /**
      * If the plan is {@link Plan#BjarneLambda}, the corresponding lambda id.
      */
-    private transient MethodConstant m_idBjarnLambda;
+    @Derived
+    private MethodConstant m_idBjarnLambda;
 
     /**
      * There are three possible scenarios getting to a property represented by this expression:
@@ -3366,33 +3361,39 @@ public class NameExpression
     /**
      * The chosen property access plan.
      */
-    private transient PropertyAccess m_propAccessPlan;
+    @Derived
+    private PropertyAccess m_propAccessPlan;
 
     /**
      * If the property access plan is {@link PropertyAccess#SingletonParent}, the identity of the
      * parent.
      */
-    private transient IdentityConstant m_idSingletonParent;
+    @Derived
+    private IdentityConstant m_idSingletonParent;
 
     /**
      * If true, indicates that the argument refers to a property or method for a class of Class
      * specified by the "left" expression.
      */
-    private transient boolean m_fClassAttribute;
+    @Derived
+    private boolean m_fClassAttribute;
 
     /**
      * Cached validation info: Can the name be used as an "L value"?
      */
-    private transient boolean m_fAssignable;
+    @Derived
+    private boolean m_fAssignable;
 
     /**
      * A cached ExprAST node for the result of {@link #generateRefTarget}.
      */
-    private transient ExprAST m_astRefTarget;
+    @Derived
+    private ExprAST m_astRefTarget;
 
     /**
      * A cached ExprAST node for this expression.
      */
-    private transient ExprAST m_astResult;
+    @Derived
+    private ExprAST m_astResult;
 
 }

@@ -208,18 +208,6 @@ public class LambdaExpression
         return visitor.apply(body);
     }
 
-    @Override
-    public List<AstNode> children() {
-        if (params != null) {
-            return paramNames != null
-                    ? childList(params, paramNames, List.of(body))
-                    : childList(params, List.of(body));
-        }
-        return paramNames != null
-                ? childList(paramNames, List.of(body))
-                : List.of(body);
-    }
-
 
     // ----- code container methods ----------------------------------------------------------------
 
@@ -1536,35 +1524,43 @@ public class LambdaExpression
     /**
      * Set to true after the expression prepares.
      */
-    private transient boolean m_fPrepared;
+    @Derived
+    private boolean m_fPrepared;
     /**
      * The required type (stored here so that it can be picked up by other nodes below this node in
      * the AST).
      */
-    private transient TypeConstant m_typeRequired;
+    @Derived
+    private TypeConstant m_typeRequired;
     /**
      * A list of types from various return statements (collected here from information provided by
      * other nodes below this node in the AST).
      */
-    private transient TypeCollector m_collector;
+    @Derived
+    private TypeCollector m_collector;
     /**
      * The lambda structure itself.
      */
-    private transient MethodStructure m_lambda;
+    @Derived
+    private MethodStructure m_lambda;
     /**
      * The LambdaContext that collected all the necessary information during validation.
      */
-    private transient LambdaContext m_ctxLambda;
+    @Derived
+    private LambdaContext m_ctxLambda;
     /**
      * A cached array of bound arguments. Private to calculateBindings().
      */
-    private transient Argument[] m_aBindArgs = NO_RVALUES;
+    @Derived
+    private Argument[] m_aBindArgs = NO_RVALUES;
     /**
      * The ExprAST node for the lambda.
      */
-    private transient ExprAST m_astLambda;
+    @Derived
+    private ExprAST m_astLambda;
     /**
      * An array of ExprAST bindings computed by {@link #calculateBindings}.
      */
-    private transient ExprAST[] m_aAstBind;
+    @Derived
+    private ExprAST[] m_aAstBind;
 }

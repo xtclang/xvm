@@ -30,10 +30,6 @@ public abstract class Statement
         return null;  // no children by default
     }
 
-    @Override
-    public List<AstNode> children() {
-        return List.of();
-    }
 
     @Override
     protected boolean usesSuper() {
@@ -281,10 +277,12 @@ public abstract class Statement
     /**
      * The Context that contains this statement temporarily during validation.
      */
-    private transient Context m_ctx;
+    @Derived
+    private Context m_ctx;
 
     /**
      * Generally null, unless there is a break that jumps to this statement's exit label.
      */
-    private transient List<Break> m_listBreaks;
+    @Derived
+    private List<Break> m_listBreaks;
 }

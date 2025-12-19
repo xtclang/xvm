@@ -57,10 +57,6 @@ public class NonBindingExpression
         return null;
     }
 
-    @Override
-    public List<AstNode> children() {
-        return type == null ? List.of() : List.of(type);
-    }
 
 
     // ----- compilation ---------------------------------------------------------------------------

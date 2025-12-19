@@ -96,13 +96,6 @@ public class ArrayAccessExpression
         return null;
     }
 
-    @Override
-    public List<AstNode> children() {
-        List<AstNode> list = new ArrayList<>();
-        list.add(expr);
-        list.addAll(indexes);
-        return list;
-    }
 
     /**
      * @return true iff the array indexes indicate a slice operation
@@ -1313,7 +1306,10 @@ public class ArrayAccessExpression
     protected List<Expression> indexes;
     protected Token            tokClose;
 
-    private transient MethodConstant m_idGet;
-    private transient MethodConstant m_idSet;
-    private transient boolean        m_fSlice;
+    @Derived
+    private MethodConstant m_idGet;
+    @Derived
+    private MethodConstant m_idSet;
+    @Derived
+    private boolean        m_fSlice;
 }

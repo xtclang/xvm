@@ -38,10 +38,6 @@ public abstract class DelegatingExpression
         return visitor.apply(expr);
     }
 
-    @Override
-    public List<AstNode> children() {
-        return List.of(expr);
-    }
 
     @Override
     protected void replaceChild(AstNode oldChild, AstNode newChild) {

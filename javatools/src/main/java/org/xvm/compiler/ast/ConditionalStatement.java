@@ -71,10 +71,6 @@ public abstract class ConditionalStatement
         return n;
     }
 
-    @Override
-    public List<AstNode> children() {
-        return conds;
-    }
 
     @Override
     protected <T extends AstNode> void replaceChild(T oldChild, T newChild) {
@@ -93,5 +89,6 @@ public abstract class ConditionalStatement
     protected List<AstNode> conds;
 
     private static    int   s_nLabelCounter;
-    private transient int   m_nLabel;
+    @Derived
+    private int   m_nLabel;
 }

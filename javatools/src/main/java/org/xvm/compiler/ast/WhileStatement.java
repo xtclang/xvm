@@ -749,24 +749,32 @@ public class WhileStatement
 
     protected long lEndPos;
 
-    private transient Label         m_labelContinue;
-    private transient Context       m_ctxLabelVars;
-    private transient ErrorListener m_errsLabelVars;
-    private transient Register      m_regFirst;
-    private transient Register      m_regCount;
+    @Derived
+    private Label         m_labelContinue;
+    @Derived
+    private Context       m_ctxLabelVars;
+    @Derived
+    private ErrorListener m_errsLabelVars;
+    @Derived
+    private Register      m_regFirst;
+    @Derived
+    private Register      m_regCount;
 
     /**
      * Generally null, unless there is a "continue" that jumps to this statement.
      */
-    private transient List<Break> m_listContinues;
+    @Derived
+    private List<Break> m_listContinues;
 
     /**
      * ExprAST produced by {@link #emitConditionTest}.
      */
-    private transient ExprAST m_astCond;
+    @Derived
+    private ExprAST m_astCond;
 
     /**
      * An array of RegAllocAST produced by {@link #emitLabelVarCreation}.
      */
-    private transient RegAllocAST[] m_aAllocSpecial;
+    @Derived
+    private RegAllocAST[] m_aAllocSpecial;
 }

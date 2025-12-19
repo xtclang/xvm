@@ -188,5 +188,6 @@ public class SequentialAssignExpression
 
     private final boolean m_fPre;
 
-    private transient Assignable m_LValTarget;
+    @Derived
+    private Assignable m_LValTarget;
 }

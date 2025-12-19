@@ -69,10 +69,6 @@ public abstract class PrefixExpression
         return visitor.apply(expr);
     }
 
-    @Override
-    public List<AstNode> children() {
-        return List.of(expr);
-    }
 
     @Override
     protected <T extends AstNode> void replaceChild(T oldChild, T newChild) {

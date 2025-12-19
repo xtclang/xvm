@@ -327,7 +327,9 @@ public class ElvisExpression
     /**
      * True iff the short-circuit operator is used to convert a "(Boolean, T)" into a "T".
      */
-    private transient boolean m_fCond;
+    @Derived
+    private boolean m_fCond;
 
-    private transient Label m_labelEnd;
+    @Derived
+    private Label m_labelEnd;
 }

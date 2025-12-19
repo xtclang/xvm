@@ -644,29 +644,34 @@ public class SwitchStatement
     /**
      * The manager that collects all of the case information.
      */
-    private transient CaseManager<CaseGroup> m_casemgr;
+    @Derived
+    private CaseManager<CaseGroup> m_casemgr;
 
     /**
      * Information about each group that begins with one or more CaseStatements and is followed by
      * other statements.
      */
-    private transient List<CaseGroup> m_listGroups;
+    @Derived
+    private List<CaseGroup> m_listGroups;
 
     /**
      * For a given case group, this is the label that each "continue" statement within that group
      * will jump to; it's null until the first continue statement is encountered in the group.
      */
-    private transient Label m_labelContinue;
+    @Derived
+    private Label m_labelContinue;
 
     /**
      * For a given case group, this collects the assignment information that comes from each
      * "continue" statement within that group; it's null until the first continue statement is
      * encountered in the group.
      */
-    private transient List<Break> m_listContinues;
+    @Derived
+    private List<Break> m_listContinues;
 
     /**
      * This collects the assignment information that comes from each "break" statement.
      */
-    private final transient List<Map<String, Assignment>> m_listBreaks = new ArrayList<>();
+    @Derived
+    private final List<Map<String, Assignment>> m_listBreaks = new ArrayList<>();
 }

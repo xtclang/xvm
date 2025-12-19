@@ -62,10 +62,6 @@ public class TernaryExpression
         return null;
     }
 
-    @Override
-    public List<AstNode> children() {
-        return List.of(cond, exprThen, exprElse);
-    }
 
     @Override
     public void markConditional() {
@@ -660,10 +656,12 @@ public class TernaryExpression
     protected Expression exprThen;
     protected Expression exprElse;
 
-    private transient boolean m_fConditional;
+    @Derived
+    private boolean m_fConditional;
 
     public enum Plan {Symmetrical, ThenIsFalse, ElseIsFalse}
-    private transient Plan m_plan = Plan.Symmetrical;
+    @Derived
+    private Plan m_plan = Plan.Symmetrical;
 
     private enum Usage {Required, Any, Then, Else, Union}
 }

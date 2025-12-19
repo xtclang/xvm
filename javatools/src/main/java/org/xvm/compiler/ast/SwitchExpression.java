@@ -74,16 +74,6 @@ public class SwitchExpression
         return null;
     }
 
-    @Override
-    public List<AstNode> children() {
-        List<AstNode> list = new ArrayList<>();
-        if (cond != null) {
-            list.addAll(cond);
-        }
-        list.addAll(contents);
-        return list;
-    }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -396,7 +386,10 @@ public class SwitchExpression
     protected List<AstNode> contents;
     protected long          lEndPos;
 
-    private transient CaseManager<Expression> m_casemgr;
-    private transient Constant[]              m_aconstCases;
-    private transient ExprAST[]               m_abastBody;
+    @Derived
+    private CaseManager<Expression> m_casemgr;
+    @Derived
+    private Constant[]              m_aconstCases;
+    @Derived
+    private ExprAST[]               m_abastBody;
 }

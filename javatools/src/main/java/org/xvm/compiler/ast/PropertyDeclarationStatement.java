@@ -204,31 +204,6 @@ public class PropertyDeclarationStatement
                 : m_counter++;
     }
 
-    @Override
-    public List<AstNode> children() {
-        List<AstNode> list = new ArrayList<>();
-        if (condition != null) {
-            list.add(condition);
-        }
-        if (annotations != null) {
-            list.addAll(annotations);
-        }
-        list.add(type);
-        if (value != null) {
-            list.add(value);
-        }
-        if (body != null) {
-            list.add(body);
-        }
-        if (initializer != null) {
-            list.add(initializer);
-        }
-        if (assignment != null) {
-            list.add(assignment);
-        }
-        return list;
-    }
-
     /**
      * Mark this property declaration as "synthetic".
      */
@@ -858,16 +833,20 @@ public class PropertyDeclarationStatement
     protected StatementBlock             body;
     protected Token                      doc;
 
-    protected transient MethodDeclarationStatement initializer;
-    protected transient AssignmentStatement        assignment;
+    @Derived
+    protected MethodDeclarationStatement initializer;
+    @Derived
+    protected AssignmentStatement        assignment;
 
     /**
      * Indicates that this property declaration is "synthetic".
      */
-    protected transient boolean m_fSynthetic;
+    @Derived
+    protected boolean m_fSynthetic;
 
     /**
      * A unique counter with the context of this property.
      */
-    protected transient int m_counter;
+    @Derived
+    protected int m_counter;
 }

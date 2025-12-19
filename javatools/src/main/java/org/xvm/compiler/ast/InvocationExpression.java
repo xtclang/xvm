@@ -301,10 +301,6 @@ public class InvocationExpression
         return null;
     }
 
-    @Override
-    public List<AstNode> children() {
-        return childList(List.of(expr), args);
-    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
@@ -3048,17 +3044,26 @@ public class InvocationExpression
     protected List<Expression> args;
     protected long             lEndPos;
 
-    private transient boolean         m_fBindTarget;     // do we require a target
-    private transient boolean         m_fBindParams;     // do we need to bind any parameters
-    private transient boolean         m_fCall;           // do we need to call/invoke
-    private transient boolean         m_fTupleArg;       // indicates that arguments come from a tuple
+    @Derived
+    private boolean         m_fBindTarget;     // do we require a target
+    @Derived
+    private boolean         m_fBindParams;     // do we need to bind any parameters
+    @Derived
+    private boolean         m_fCall;           // do we need to call/invoke
+    @Derived
+    private boolean         m_fTupleArg;       // indicates that arguments come from a tuple
                                                          // (currently not supported)
-    private transient boolean         m_fNamedArgs;      // are there named arguments
-    private transient TargetInfo      m_targetInfo;      // for left==null with prop or method name
-    private transient Argument        m_argMethod;
-    private transient MethodStructure m_method;          // if m_argMethod is a MethodConstant,
+    @Derived
+    private boolean         m_fNamedArgs;      // are there named arguments
+    @Derived
+    private TargetInfo      m_targetInfo;      // for left==null with prop or method name
+    @Derived
+    private Argument        m_argMethod;
+    @Derived
+    private MethodStructure m_method;          // if m_argMethod is a MethodConstant,
                                                          // this holds the corresponding structure
-    private transient TypeConstant    m_typeTarget;      // if m_argMethod is a PropertyConstant,
+    @Derived
+    private TypeConstant    m_typeTarget;      // if m_argMethod is a PropertyConstant,
                                                          // referring to a function and the target
                                                          // is not "this context", it holds the
                                                          // target type;
@@ -3066,23 +3071,32 @@ public class InvocationExpression
                                                          // a function, then it holds an explicitly
                                                          // specified target type to be used by
                                                          // formal type parameters resolution
-    private transient boolean         m_fCondResult;     // indicates that the invocation expression
+    @Derived
+    private boolean         m_fCondResult;     // indicates that the invocation expression
                                                          // produces a conditional result
-    private transient boolean         m_fBjarne;         // indicates that the invocation expression
+    @Derived
+    private boolean         m_fBjarne;         // indicates that the invocation expression
                                                          // was Bjarne-transformed from x.f() to X.f(x)
-    private transient boolean         m_fPack;           // indicates that invocation return(s) should
+    @Derived
+    private boolean         m_fPack;           // indicates that invocation return(s) should
                                                          // be "packed" into a Tuple
-    private transient FormalConstant  m_idFormal;        // if not null, indicates that the invocation
+    @Derived
+    private FormalConstant  m_idFormal;        // if not null, indicates that the invocation
                                                          // expression applies to a function on a formal
                                                          // type (e.g. Value.hashCode(value))
-    private transient Argument[]      m_aargTypeParams;  // "hidden" type parameters
-    private transient MethodConstant  m_idConvert;       // conversion method
-    private transient boolean         m_fAutoFuture;     // implicit Future
+    @Derived
+    private Argument[]      m_aargTypeParams;  // "hidden" type parameters
+    @Derived
+    private MethodConstant  m_idConvert;       // conversion method
+    @Derived
+    private boolean         m_fAutoFuture;     // implicit Future
 
     /**
      * Cached ExprAST nodes for the target and the invocation.
      */
-    private transient ExprAST m_astTarget;
-    private transient ExprAST m_astInvoke;
+    @Derived
+    private ExprAST m_astTarget;
+    @Derived
+    private ExprAST m_astInvoke;
 
 }

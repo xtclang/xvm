@@ -80,10 +80,6 @@ public class ReturnStatement
         return exprs.isEmpty() ? keyword.getEndPosition() : exprs.getLast().getEndPosition();
     }
 
-    @Override
-    public List<AstNode> children() {
-        return List.copyOf(exprs);
-    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
@@ -474,7 +470,10 @@ public class ReturnStatement
     protected Token             keyword;
     protected List<Expression>  exprs;
 
-    protected transient boolean m_fConditionalTernary;
-    protected transient boolean m_fTupleReturn;
-    protected transient boolean m_fFutureReturn;
+    @Derived
+    protected boolean m_fConditionalTernary;
+    @Derived
+    protected boolean m_fTupleReturn;
+    @Derived
+    protected boolean m_fFutureReturn;
 }

@@ -157,22 +157,6 @@ public class NewExpression
         return null;
     }
 
-    @Override
-    public List<AstNode> children() {
-        List<AstNode> list = new ArrayList<>();
-        if (left != null) {
-            list.add(left);
-        }
-        if (type != null) {
-            list.add(type);
-        }
-        list.addAll(args);
-        if (anon != null) {
-            list.add(anon);
-        }
-        return list;
-    }
-
 
     // ----- AstNode methods -----------------------------------------------------------------------
 
@@ -1678,27 +1662,35 @@ public class NewExpression
     protected TypeCompositionStatement anon;        // synthetic, added as a child
     protected long                     lEndPos;
 
-    private transient MethodStructure m_constructor;
-    private transient boolean         m_fTupleArg;  // indicates that arguments come from a tuple
+    @Derived
+    private MethodStructure m_constructor;
+    @Derived
+    private boolean         m_fTupleArg;  // indicates that arguments come from a tuple
                                                     // (currently not implemented)
 
-    private transient AnonPurpose              m_purposeCurrent = AnonPurpose.None;
-    private transient TypeCompositionStatement m_anonActualBackup;
-    private transient ClassStructure           m_clzActualBackup;
+    @Derived
+    private AnonPurpose              m_purposeCurrent = AnonPurpose.None;
+    @Derived
+    private TypeCompositionStatement m_anonActualBackup;
+    @Derived
+    private ClassStructure           m_clzActualBackup;
 
     /**
      * The capture context, while it is active.
      */
-    private transient AnonInnerClassContext m_ctxCapture;
+    @Derived
+    private AnonInnerClassContext m_ctxCapture;
     /**
      * The variables captured by the anonymous inner class, with an associated "true" flag if the
      * inner class needs to capture the variable in a read/write mode.
      */
-    private transient Map<String, Boolean>  m_mapCapture;
+    @Derived
+    private Map<String, Boolean>  m_mapCapture;
     /**
      * A map from variable name to register, built by the anonymous inner class context.
      */
-    private transient Map<String, Register> m_mapRegisters;
+    @Derived
+    private Map<String, Register> m_mapRegisters;
 
     /**
      * The construction plan:
@@ -1708,34 +1700,42 @@ public class NewExpression
      *  - Formal  - formal type constructor; use NEWV_* op-codes
      */
     enum Plan{Regular, Child, Virtual, Formal}
-    private transient Plan m_plan;
+    @Derived
+    private Plan m_plan;
 
     /**
      * In the case of "m_plan == Plan.Child" and "left == null", steps to the child's parent.
      */
-    private transient int m_nParentSteps;
+    @Derived
+    private int m_nParentSteps;
     /**
      * In the case of "m_plan == Plan.Formal" and the formal type is generic, the formal property id.
      */
-    private transient PropertyConstant m_idFormal;
+    @Derived
+    private PropertyConstant m_idFormal;
     /**
      * In the case of "m_plan == Plan.Formal" and the formal type is parameter, the corresponding register.
      */
-    private transient Register m_regFormal;
+    @Derived
+    private Register m_regFormal;
     /**
      * True if the class is a fixed size array to be filled with the corresponding default value.
      */
-    private transient boolean m_fFixedSizeArray;
+    @Derived
+    private boolean m_fFixedSizeArray;
     /**
      * True if the inner class captures "this" (i.e. not static).
      */
-    private transient boolean m_fInstanceChild;
+    @Derived
+    private boolean m_fInstanceChild;
     /**
      * True if the newable type has non-constant annotation parameters.
      */
-    private transient boolean m_fDynamicAnno;
+    @Derived
+    private boolean m_fDynamicAnno;
     /**
      * Cached NewExprAST node.
      */
-    private transient ExprAST m_astNew;
+    @Derived
+    private ExprAST m_astNew;
 }

@@ -70,10 +70,6 @@ public class StatementExpression
         return visitor.apply(body);
     }
 
-    @Override
-    public List<AstNode> children() {
-        return List.of(body);
-    }
 
 
     // ----- code container methods ----------------------------------------------------------------
@@ -320,8 +316,12 @@ public class StatementExpression
 
     protected StatementBlock body;
 
-    private transient TypeConstant[] m_atypeRequired;
-    private transient TypeCollector  m_collector;
-    private transient Assignable[]   m_aLVal;
-    private transient BinaryAST      m_astBody;
+    @Derived
+    private TypeConstant[] m_atypeRequired;
+    @Derived
+    private TypeCollector  m_collector;
+    @Derived
+    private Assignable[]   m_aLVal;
+    @Derived
+    private BinaryAST      m_astBody;
 }

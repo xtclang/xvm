@@ -299,36 +299,6 @@ public class TypeCompositionStatement
         }
     }
 
-    @Override
-    public List<AstNode> children() {
-        List<AstNode> list = new ArrayList<>();
-        if (condition != null) {
-            list.add(condition);
-        }
-        if (annotations != null) {
-            list.addAll(annotations);
-        }
-        if (typeParams != null) {
-            list.addAll(typeParams);
-        }
-        if (constructorParams != null) {
-            list.addAll(constructorParams);
-        }
-        if (typeArgs != null) {
-            list.addAll(typeArgs);
-        }
-        if (args != null) {
-            list.addAll(args);
-        }
-        if (compositions != null) {
-            list.addAll(compositions);
-        }
-        if (body != null) {
-            list.add(body);
-        }
-        return list;
-    }
-
 
     // ---- AstNode methods ------------------------------------------------------------------------
 
@@ -400,7 +370,8 @@ public class TypeCompositionStatement
      * Vast majority of classes don't incorporate, so this map holds just one Extends contribution;
      * 99% of the rest have just one Incorporates, so initial size of two seems reasonable.
      */
-    private final transient Map<Contribution, List<Expression>> m_mapContribArgs = new ListMap<>(2);
+    @Derived
+    private final Map<Contribution, List<Expression>> m_mapContribArgs = new ListMap<>(2);
 
     @Override
     protected void registerStructures(StageMgr mgr, ErrorListener errs) {

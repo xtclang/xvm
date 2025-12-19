@@ -80,16 +80,6 @@ public class TemplateExpression
         return null;
     }
 
-    @Override
-    public List<AstNode> children() {
-        List<AstNode> list = new ArrayList<>();
-        if (type != null) {
-            list.add(type);
-        }
-        list.addAll(exprs);
-        return list;
-    }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 

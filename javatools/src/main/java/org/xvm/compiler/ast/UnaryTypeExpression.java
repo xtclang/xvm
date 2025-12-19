@@ -39,10 +39,6 @@ public abstract class UnaryTypeExpression
         return visitor.apply(type);
     }
 
-    @Override
-    public List<AstNode> children() {
-        return List.of(type);
-    }
 
     @Override
     protected void replaceChild(AstNode oldChild, AstNode newChild) {

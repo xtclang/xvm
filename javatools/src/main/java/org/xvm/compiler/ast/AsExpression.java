@@ -146,5 +146,6 @@ public class AsExpression
 
     protected long lEndPos;
 
-    private transient boolean m_fCastRequired = true;
+    @Derived
+    private boolean m_fCastRequired = true;
 }

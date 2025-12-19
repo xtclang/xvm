@@ -324,17 +324,6 @@ public class AssignmentStatement
             : endNegate;
     }
 
-    @Override
-    public List<AstNode> children() {
-        List<AstNode> list = new ArrayList<>();
-        list.add(lvalue);
-        if (lvalueExpr != null) {
-            list.add(lvalueExpr);
-        }
-        list.add(rvalue);
-        return list;
-    }
-
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -1161,8 +1150,11 @@ public class AssignmentStatement
     protected Token      tokNegate;
     protected long       endNegate;
 
-    private transient VariableDeclarationStatement[] m_decls;
+    @Derived
+    private VariableDeclarationStatement[] m_decls;
 
-    private transient Label   m_labelCondFalse;
-    private transient boolean m_fCondFalseLabelTaken; // used for verifying code-gen
+    @Derived
+    private Label   m_labelCondFalse;
+    @Derived
+    private boolean m_fCondFalseLabelTaken; // used for verifying code-gen
 }

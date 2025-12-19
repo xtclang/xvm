@@ -81,10 +81,6 @@ public class CatchStatement
         return block.getEndPosition();
     }
 
-    @Override
-    public List<AstNode> children() {
-        return List.of(target, block);
-    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
@@ -154,6 +150,8 @@ public class CatchStatement
     protected StatementBlock               block;
     protected long                         lStartPos;
 
-    private transient CatchStart m_opCatch;
-    private transient Label      m_labelEndCatch;
+    @Derived
+    private CatchStart m_opCatch;
+    @Derived
+    private Label      m_labelEndCatch;
 }

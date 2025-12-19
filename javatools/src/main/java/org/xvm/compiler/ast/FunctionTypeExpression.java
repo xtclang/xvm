@@ -73,10 +73,6 @@ public class FunctionTypeExpression
         return null;
     }
 
-    @Override
-    public List<AstNode> children() {
-        return childList(returnValues, paramTypes);
-    }
 
 
     // ----- TypeConstant methods ------------------------------------------------------------------

@@ -52,10 +52,6 @@ public class TupleTypeExpression
         return null;
     }
 
-    @Override
-    public List<AstNode> children() {
-        return List.copyOf(paramTypes);
-    }
 
 
     // ----- TypeConstant methods ------------------------------------------------------------------

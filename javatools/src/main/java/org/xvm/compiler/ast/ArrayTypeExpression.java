@@ -80,17 +80,6 @@ public class ArrayTypeExpression
         return null;
     }
 
-    @Override
-    public List<AstNode> children() {
-        if (indexes.isEmpty()) {
-            return List.of(type);
-        }
-        List<AstNode> list = new ArrayList<>(indexes.size() + 1);
-        list.add(type);
-        list.addAll(indexes);
-        return list;
-    }
-
 
     // ----- compile phases ------------------------------------------------------------------------
 

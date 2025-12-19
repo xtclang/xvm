@@ -109,10 +109,6 @@ public class CmpChainExpression
         return null;
     }
 
-    @Override
-    public List<AstNode> children() {
-        return List.copyOf(expressions);
-    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
@@ -592,7 +588,8 @@ public class CmpChainExpression
     /**
      * The method used for the comparison.
      */
-    protected transient MethodConstant m_idCmp;
+    @Derived
+    protected MethodConstant m_idCmp;
 
     /**
      * The constant value that all other expressions are compared to for equality; often

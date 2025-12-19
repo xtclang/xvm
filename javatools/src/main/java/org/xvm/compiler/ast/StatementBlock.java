@@ -1688,6 +1688,8 @@ public class StatementBlock
     protected Map<String, ImportStatement> imports;
     protected List<ImportStatement>        importsWild;
 
-    private transient boolean m_fSuppressScope;
-    private transient boolean m_fTerminatedAbnormally;
+    @Derived
+    private boolean m_fSuppressScope;
+    @Derived
+    private boolean m_fTerminatedAbnormally;
 }
