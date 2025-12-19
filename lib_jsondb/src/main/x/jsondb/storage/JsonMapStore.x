@@ -592,6 +592,9 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                         MapValue prev;
                         if (Int prevTx := valueHistory.floor(readId)) {
                             assert prev := valueHistory.get(prevTx);
+                            if (prev == OffHeap) {
+                                assert prev := loadValueFromOffHeap(prevTx, key);
+                            }
                         } else {
                             // the key did not exist in the readId transaction
                             prev = Deleted;
@@ -901,7 +904,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
             model = newModel;
             if (newModel == Medium && prevModel <= Small) {
                 // the model has transitioned from Empty/Small to Medium so values in the history
-                // for this transaction can to be changed to OffHeap
+                // for this transaction can be changed to OffHeap
                 // other entries in the history will be moved OffHeap during maintenance
                 for ((Int txId, Array<Key> keys) : updatedKeysByTx) {
                     for (Key key : keys) {
@@ -1090,7 +1093,7 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
                         objectParser.expectKey("k");
                         objectParser.skipDoc();
                         if (objectParser.matchKey("v")) {
-                            using (ObjectInputStream stream =new ObjectInputStream(jsonSchema, objectParser)) {
+                            using (var stream = new ObjectInputStream(jsonSchema, objectParser)) {
                                 Value value = valueMapping.read(stream.ensureElementInput());
                                 return True, value;
                             }
@@ -1419,16 +1422,31 @@ service JsonMapStore<Key extends immutable Const, Value extends immutable Const>
     /**
      * Returns a model size based on the specified number of files and number of bytes.
      *
-     * @param totalFiles  the number of files to use to calculate to model size
-     * @param totalBytes  the number of bytes to use to calculate to model size
+     * The scenarios are
+     * totalFiles                 totalBytes                 Model
+     * 0                          >=0 && <=SmallMax          Small
+     * 0                          >SmallMax && <=MediumMax   Medium
+     * 0                          >MediumMax                 Large
+     * >=0 && <=SmallMax          >=0 && <=SmallMax          Small
+     * >=0 && <=SmallMax          >SmallMax && <=MediumMax   Medium
+     * >=0 && <=SmallMax          >MediumMax                 Large
+     * >SmallMax && <=MediumMax   >=0 && <=SmallMax          Medium
+     * >SmallMax && <=MediumMax   >SmallMax && <=MediumMax   Medium
+     * >SmallMax && <=MediumMax   >MediumMax                 Large
+     * >MediumMax                 >=0 && <=SmallMax          Large
+     * >MediumMax                 >SmallMax && <=MediumMax   Large
+     * >MediumMax                 >MediumMax                 Large
+     *
+     * @param totalFiles  the number of files to use to calculate the model size
+     * @param totalBytes  the number of bytes to use to calculate the model size
      */
     protected StorageModel checkModelSize(Int totalFiles, Int totalBytes) {
         StorageModel quantity;
         if (totalFiles <= smallModelFilesMax) {
             quantity = Small;
-        } else if (totalFiles <= mediumModelBytesMax) {
+        } else if (totalFiles <= mediumModelFilesMax) {
             quantity = Medium;
-        } else if (totalFiles > mediumModelBytesMax) {
+        } else if (totalFiles > mediumModelFilesMax) {
 //            quantity = Large; // ToDo Large model support not yet implemented
             quantity = Medium;
         } else {

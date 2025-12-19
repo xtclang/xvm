@@ -129,6 +129,109 @@ class JsonMapStoreTest {
     }
 
     @Test
+    @TestInjectables(Map:[JsonMapStore.ConfigSmallModelMaxFiles="100",
+                          JsonMapStore.ConfigMediumModelMaxFiles="200",
+                          JsonMapStore.ConfigSmallModelMaxBytes="5000",
+                          JsonMapStore.ConfigMediumModelMaxBytes="15000"])
+    void shouldCalculateCorrectModelSizeWhenFilesLessThanBytes() {
+        assertModelSizes();
+    }
+
+    @Test
+    @TestInjectables(Map:[JsonMapStore.ConfigSmallModelMaxFiles="5000",
+                          JsonMapStore.ConfigMediumModelMaxFiles="15000",
+                          JsonMapStore.ConfigSmallModelMaxBytes="100",
+                          JsonMapStore.ConfigMediumModelMaxBytes="200"])
+    void shouldCalculateCorrectModelSizeWhenFilesGreaterThanThanBytes() {
+        assertModelSizes();
+    }
+
+    /**
+     * Tests the model size calculation. The scenarios are:
+     *
+     * totalFiles                 totalBytes                 Model
+     * 0                          >=0 && <=SmallMax          Small
+     * 0                          >SmallMax && <=MediumMax   Medium
+     * 0                          >MediumMax                 Large
+     * >=0 && <=SmallMax          >=0 && <=SmallMax          Small
+     * >=0 && <=SmallMax          >SmallMax && <=MediumMax   Medium
+     * >=0 && <=SmallMax          >MediumMax                 Large
+     * >SmallMax && <=MediumMax   >=0 && <=SmallMax          Medium
+     * >SmallMax && <=MediumMax   >SmallMax && <=MediumMax   Medium
+     * >SmallMax && <=MediumMax   >MediumMax                 Large
+     * >MediumMax                 >=0 && <=SmallMax          Large
+     * >MediumMax                 >SmallMax && <=MediumMax   Large
+     * >MediumMax                 >MediumMax                 Large
+     */
+    private void assertModelSizes() {
+        assert TestClient client := clientProvider.getClient();
+
+        TestSchema                schema = client.testSchema;
+        JsonMapStore<Int, Person> store  = schema.getPeopleStore()
+                                                 .as(protected JsonMapStore<Int, Person>);
+
+        // totalFiles = 0 and totalBytes = 0 == Small
+        assert store.checkModelSize(0, 0) == Small;
+        // totalFiles = 0 and totalBytes = ConfigSmallModelMaxBytes == Small
+        assert store.checkModelSize(0, store.smallModelBytesMax) == Small;
+        // totalFiles = 0 and totalBytes > ConfigSmallModelMaxBytes == Medium
+        assert store.checkModelSize(0, store.smallModelBytesMax + 1) == Medium;
+        // totalFiles = 0 and totalBytes = ConfigMediumModelMaxBytes == Medium
+        assert store.checkModelSize(0, store.mediumModelBytesMax) == Medium;
+        // totalFiles = 0 and totalBytes > ConfigMediumModelMaxBytes == Large
+        // ToDo change assertions to Large when we add Large model support
+        assert store.checkModelSize(0, store.mediumModelBytesMax + 1) == Medium;
+
+        // totalFiles = ConfigSmallModelMaxFiles and totalBytes = 0 == Small
+        assert store.checkModelSize(store.smallModelFilesMax, 0) == Small;
+        // totalFiles = ConfigSmallModelMaxFiles and totalBytes = ConfigSmallModelMaxBytes == Small
+        assert store.checkModelSize(store.smallModelFilesMax, store.smallModelBytesMax) == Small;
+        // totalFiles = ConfigSmallModelMaxFiles and totalBytes > ConfigSmallModelMaxBytes == Medium
+        assert store.checkModelSize(store.smallModelFilesMax, store.smallModelBytesMax + 1) == Medium;
+        // totalFiles = ConfigSmallModelMaxFiles and totalBytes = ConfigMediumModelMaxBytes == Medium
+        assert store.checkModelSize(store.smallModelFilesMax, store.mediumModelBytesMax) == Medium;
+        // totalFiles = ConfigSmallModelMaxFiles and totalBytes > ConfigMediumModelMaxBytes == Large
+        // ToDo change assertions to Large when we add Large model support
+        assert store.checkModelSize(store.smallModelFilesMax, store.mediumModelBytesMax + 1) == Medium;
+
+        // totalFiles > ConfigSmallModelMaxFiles and totalBytes = 0 == Medium
+        assert store.checkModelSize(store.smallModelFilesMax + 1, 0) == Medium;
+        // totalFiles > ConfigSmallModelMaxFiles and totalBytes = ConfigSmallModelMaxBytes == Medium
+        assert store.checkModelSize(store.smallModelFilesMax + 1, store.smallModelBytesMax) == Medium;
+        // totalFiles > ConfigSmallModelMaxFiles and totalBytes > ConfigSmallModelMaxBytes == Medium
+        assert store.checkModelSize(store.smallModelFilesMax + 1, store.smallModelBytesMax + 1) == Medium;
+        // totalFiles > ConfigSmallModelMaxFiles and totalBytes = ConfigMediumModelMaxBytes == Medium
+        assert store.checkModelSize(store.smallModelFilesMax + 1, store.mediumModelBytesMax) == Medium;
+        // totalFiles > ConfigSmallModelMaxFiles and totalBytes > ConfigMediumModelMaxBytes == Large
+        // ToDo change assertions to Large when we add Large model support
+        assert store.checkModelSize(store.smallModelFilesMax + 1, store.mediumModelBytesMax + 1) == Medium;
+
+        // totalFiles = ConfigMediumModelMaxFiles and totalBytes = 0 == Medium
+        assert store.checkModelSize(store.mediumModelFilesMax, 0) == Medium;
+        // totalFiles = ConfigMediumModelMaxFiles and totalBytes = ConfigSmallModelMaxBytes == Medium
+        assert store.checkModelSize(store.mediumModelFilesMax, store.smallModelBytesMax) == Medium;
+        // totalFiles = ConfigMediumModelMaxFiles and totalBytes > ConfigSmallModelMaxBytes == Medium
+        assert store.checkModelSize(store.mediumModelFilesMax, store.smallModelBytesMax + 1) == Medium;
+        // totalFiles = ConfigMediumModelMaxFiles and totalBytes = ConfigMediumModelMaxBytes == Medium
+        assert store.checkModelSize(store.mediumModelFilesMax, store.mediumModelBytesMax) == Medium;
+        // totalFiles = ConfigMediumModelMaxFiles and totalBytes > ConfigMediumModelMaxBytes == Large
+        // ToDo change assertions to Large when we add Large model support
+        assert store.checkModelSize(store.mediumModelFilesMax, store.mediumModelBytesMax + 1) == Medium;
+
+        // totalFiles > ConfigMediumModelMaxFiles and totalBytes = 0 == Large
+        // ToDo change all assertions to Large when we add Large model support
+        assert store.checkModelSize(store.mediumModelFilesMax + 1, 0) == Medium;
+        // totalFiles > ConfigMediumModelMaxFiles and totalBytes = ConfigSmallModelMaxBytes == Large
+        assert store.checkModelSize(store.mediumModelFilesMax + 1, store.smallModelBytesMax) == Medium;
+        // totalFiles > ConfigMediumModelMaxFiles and totalBytes > ConfigSmallModelMaxBytes == Large
+        assert store.checkModelSize(store.mediumModelFilesMax + 1, store.smallModelBytesMax + 1) == Medium;
+        // totalFiles > ConfigMediumModelMaxFiles and totalBytes = ConfigMediumModelMaxBytes == Large
+        assert store.checkModelSize(store.mediumModelFilesMax + 1, store.mediumModelBytesMax) == Medium;
+        // totalFiles > ConfigMediumModelMaxFiles and totalBytes > ConfigMediumModelMaxBytes == Large
+        assert store.checkModelSize(store.mediumModelFilesMax + 1, store.mediumModelBytesMax + 1) == Medium;
+    }
+
+    @Test
     void shouldStoreValueOffHeapForMediumModel() {
         assert TestClient client := clientProvider.getClient();
 

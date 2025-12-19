@@ -3,13 +3,13 @@ import jsondb.Catalog;
 import oodb.Connection;
 import oodb.model.User;
 
-import xunit.ExecutionContext;
 import xunit.MethodOrFunction;
 
 import xunit.extensions.AfterAllCallback;
 import xunit.extensions.AfterEachCallback;
 import xunit.extensions.BeforeAllCallback;
 import xunit.extensions.BeforeEachCallback;
+import xunit.extensions.ExecutionContext;
 
 /**
  * An XUnit extension that can create a test database that is then available for tests.
@@ -29,7 +29,7 @@ import xunit.extensions.BeforeEachCallback;
  * * The `ForClass` scope will create a unique `TestClient` once for the test class before any tests
  *   are executed. The database client is closed after all the tests in the class have executed.
  *
- * The database files for each client will be stored under a directory named `db/` which itsself is
+ * The database files for each client will be stored under a directory named `db/` which itself is
  * stored under the XUnit injected `testOutput` directory.
  *
  * @param scope  the `Scope` value that determines the scope of the database client that this
@@ -64,7 +64,7 @@ service TestClientProvider(Scope scope = ForTest)
 
     @Override
     void afterAll(ExecutionContext context) {
-        if (scope == ForTest) {
+        if (scope == ForClass) {
             closeClient(context);
         }
     }
