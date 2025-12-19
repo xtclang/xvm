@@ -3042,7 +3042,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 // period, or after so many transactions have gone through, or some combination
                 Int seconds = (now - lastCleanupTime).seconds;
                 Int txCount = lastCommitted - lastCleanupTx;
-                if (seconds * txCount > 10k) {
+                if (seconds * txCount > cleanupThreshold) {
                     lastCleanupTime = now;
                     lastCleanupTx   = lastCommitted;
                     cleanUpStorages();
@@ -3091,17 +3091,20 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
     protected void cleanupLogfiles() {
         if (logInfos.size <= 1) {
-            // there is only one log file so nothing to clean up
+            // there is at most one log file, so nothing to clean up
             return;
         }
 
         // ensure the log file archive directory exists under the sys directory
         Directory archiveDir = sysDir.dirFor(LogFileArchiveName).ensure();
+        Set<Int>  txSet      = new ArrayOrderedSet<Int>(byReadId.keys.toArray(Constant));
+        Boolean   archived   = False;
 
-        ArrayOrderedSet<Int> txSet    = new ArrayOrderedSet<Int>(byReadId.keys.toArray(Constant));
         if (Int oldestTx := txSet.first()) {
-            for (LogFileInfo info : logInfos) {
+            for (Int i : 0 ..< logInfos.size) {
+                LogFileInfo info = logInfos[i];
                 if (info.name != LogFileName && info.txIds.isBelow(oldestTx)) {
+                    archived = True;
                     File infoFile = sysDir.fileFor(info.name);
                     if (infoFile.exists) {
                         File archiveFile = archiveDir.fileFor(infoFile.name);
@@ -3109,11 +3112,16 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                             // this should never happen
                             archiveFile.delete();
                         }
-                        assert infoFile.renameTo(archiveFile.name);
+                        infoFile.store.move(infoFile.path, archiveFile.path);
                     }
                 } else {
-                    // logInfos is ordered by oldest first, so we can stop as soon as we find the first
-                    // log file that is not older than the oldest transaction in the log
+                    // the logInfos array is ordered by oldest first, so we can stop as soon as we
+                    // find the first log file that is not older than the oldest transaction
+                    if (archived) {
+                        // some files were archived, so remove all the moved files from logInfos
+                        logInfos.deleteAll(0 ..< i);
+                        writeStatus();
+                    }
                     break;
                 }
             }
@@ -3253,5 +3261,26 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             return cleanupThreshold;
         }
         return DefaultCleanupThreshold;
+    }
+
+    // ----- testing -------------------------------------------------------------------------------
+
+    /**
+     * @return a copy of the current LogFileInfo array.
+     */
+    @Test(Test.Omit)
+    protected LogFileInfo[] getLogFileInfos() {
+        return logInfos.freeze(False);
+    }
+
+    /**
+     * @return a copy of the current status file contents.
+     */
+    @Test(Test.Omit)
+    protected LogFileInfo[] getStatusFileContent() {
+        if (LogFileInfo[] infos := readStatus()) {
+            return infos.freeze(False);
+        }
+        return [];
     }
 }
