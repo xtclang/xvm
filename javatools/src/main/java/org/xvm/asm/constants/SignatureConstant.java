@@ -749,7 +749,7 @@ public class SignatureConstant
         if (sJitName == null) {
             // get the master instance of the signature constant
             ConstantPool      pool = ts.findOwnerPool(this);
-            SignatureConstant sig  = (SignatureConstant) pool.register(this);
+            SignatureConstant sig  = pool.register(this);
 
             synchronized (sig) {
                 sJitName = sig.m_sJitName;
@@ -767,7 +767,7 @@ public class SignatureConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constName     = (StringConstant) pool.register(m_constName);
+        m_constName     = pool.register(m_constName);
         m_aconstParams  = TypeConstant.registerTypeConstants(pool, m_aconstParams);
         m_aconstReturns = TypeConstant.registerTypeConstants(pool, m_aconstReturns);
 

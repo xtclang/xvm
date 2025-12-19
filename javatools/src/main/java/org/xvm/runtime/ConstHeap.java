@@ -61,7 +61,7 @@ public class ConstHeap {
                 Container containerThis = frame.f_context.f_container;
                 Container containerOrig = containerThis.getOriginContainer(constSingle);
 
-                constSingle = (SingletonConstant) containerOrig.getConstantPool().register(constSingle);
+                constSingle = containerOrig.getConstantPool().register(constSingle);
                 hValue      = constSingle.getHandle();
                 if (hValue != null) {
                     return saveConstHandle(constSingle, hValue);
@@ -77,7 +77,7 @@ public class ConstHeap {
 
             ConstantPool pooThis = frame.poolContext();
             if (idProp.getConstantPool() != pooThis) {
-                idProp = (PropertyConstant) pooThis.register(idProp);
+                idProp = pooThis.register(idProp);
             }
 
             return saveConstHandle(constValue, new DeferredPropertyHandle(idProp));
@@ -159,8 +159,8 @@ public class ConstHeap {
      * needs to be cached by someone non-related to this container, we need to relocate such a
      * constant to a lower container to avoid a leak (preventing this container to be GC'd).
      *
-     * @param hConst  the constant handle to relocate
-     * @param const   the constant for the handle
+     * @param hConst   the constant handle to relocate
+     * @param constant the constant for the handle
      *
      * @return the relocated handle or null if cannot be relocated
      */

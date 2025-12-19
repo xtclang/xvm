@@ -176,7 +176,7 @@ public class VersionedCondition
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constVer = (VersionConstant) pool.register(m_constVer);
+        m_constVer = pool.register(m_constVer);
     }
 
     @Override

@@ -694,7 +694,7 @@ public class FileStructure
         ModuleStructure module = getModule();
         ModuleConstant  idOld  = module.getIdentityConstant();
 
-        idNew = (ModuleConstant) m_pool.register(idNew);
+        idNew = m_pool.register(idNew);
 
         module.replaceThisIdentityConstant(idNew);
 

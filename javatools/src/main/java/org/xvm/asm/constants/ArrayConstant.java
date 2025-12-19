@@ -280,7 +280,7 @@ public class ArrayConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constType = (TypeConstant) pool.register(m_constType);
+        m_constType = pool.register(m_constType);
         m_aconstVal = registerConstants(pool, m_aconstVal);
     }
 

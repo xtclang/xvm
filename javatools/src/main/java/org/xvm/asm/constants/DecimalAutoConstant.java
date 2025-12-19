@@ -147,7 +147,7 @@ public class DecimalAutoConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_dec = (DecimalConstant) pool.register(m_dec);
+        m_dec = pool.register(m_dec);
     }
 
     @Override

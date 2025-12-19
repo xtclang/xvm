@@ -132,7 +132,7 @@ public class NamedCondition
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_constName = (StringConstant) pool.register(m_constName);
+        m_constName = pool.register(m_constName);
     }
 
     @Override

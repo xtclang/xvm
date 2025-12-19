@@ -2177,8 +2177,8 @@ public abstract class Component
     protected void registerConstants(ConstantPool pool) {
         assert getContaining() == null || getContaining() instanceof Component;
 
-        m_constId = (IdentityConstant   ) pool.register(m_constId);
-        m_cond    = (ConditionalConstant) pool.register(m_cond);
+        m_constId = pool.register(m_constId);
+        m_cond    = pool.register(m_cond);
 
         // register the contributions
         List<Contribution> listContribs = m_listContribs;
@@ -3029,12 +3029,12 @@ public abstract class Component
          * @see XvmStructure#registerConstants(ConstantPool)
          */
         protected void registerConstants(ConstantPool pool) {
-            m_typeContrib  = (TypeConstant)     pool.register(m_typeContrib);
-            m_constProp    = (PropertyConstant) pool.register(m_constProp);
+            m_typeContrib = pool.register(m_typeContrib);
+            m_constProp   = pool.register(m_constProp);
 
             if (m_annotation != null) {
                 assert !m_annotation.containsUnresolved();
-                m_annotation = (Annotation) pool.register(m_annotation);
+                m_annotation = pool.register(m_annotation);
             }
 
             ListMap<StringConstant, TypeConstant> mapOld = m_mapParams;
@@ -3044,14 +3044,14 @@ public abstract class Component
                     StringConstant constName = entry.getKey();
                     TypeConstant   type      = entry.getValue();
 
-                    mapNew.put((StringConstant) pool.register(constName),
-                               (TypeConstant) (type == null ? null : pool.register(type)));
+                    mapNew.put(pool.register(constName),
+                               type == null ? null : pool.register(type));
                 }
                 m_mapParams = mapNew;
             }
 
             if (m_constInjector != null) {
-                m_constInjector = (SingletonConstant) pool.register(m_constInjector);
+                m_constInjector = pool.register(m_constInjector);
 
                 List<Injection> listInject = m_listInject;
                 if (listInject != null) {
@@ -3059,8 +3059,8 @@ public abstract class Component
                         Injection      oldInject = listInject.get(i);
                         TypeConstant   oldType   = oldInject.getType();
                         StringConstant oldName   = oldInject.getNameConstant();
-                        TypeConstant   newType   = (TypeConstant)   pool.register(oldType);
-                        StringConstant newName   = (StringConstant) pool.register(oldName);
+                        TypeConstant   newType   = pool.register(oldType);
+                        StringConstant newName   = pool.register(oldName);
                         if (newType != oldType || newName != oldName) {
                             listInject.set(i, new Injection(newType, newName));
                         }

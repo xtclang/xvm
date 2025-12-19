@@ -383,10 +383,10 @@ public class Parameter
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_aAnnotations = (Annotation[])   Constant.registerConstants(pool, m_aAnnotations);
-        m_constType    = (TypeConstant)   pool.register(m_constType   );
-        m_constName    = (StringConstant) pool.register(m_constName   );
-        m_constDefault =                  pool.register(m_constDefault);
+        m_aAnnotations = Constant.registerConstants(pool, m_aAnnotations);
+        m_constType    = pool.register(m_constType);
+        m_constName    = pool.register(m_constName);
+        m_constDefault = pool.register(m_constDefault);
     }
 
     @Override
