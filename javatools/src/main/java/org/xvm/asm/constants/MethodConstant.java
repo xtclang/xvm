@@ -121,8 +121,8 @@ public class MethodConstant
     protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
-        m_constParent = (MultiMethodConstant) pool.getConstant(m_iParent);
-        m_constSig    = (SignatureConstant  ) pool.getConstant(m_iSig   );
+        m_constParent = pool.getConstant(m_iParent, MultiMethodConstant.class);
+        m_constSig    = pool.getConstant(m_iSig, SignatureConstant.class);
     }
 
 

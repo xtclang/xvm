@@ -44,7 +44,7 @@ public class RelOpExprAST
             throws IOException {
         super.readBody(in, res);
 
-        type = (TypeConstant) res.getConstant(readMagnitude(in));
+        type = res.getConstant(readMagnitude(in), TypeConstant.class);
     }
 
     @Override

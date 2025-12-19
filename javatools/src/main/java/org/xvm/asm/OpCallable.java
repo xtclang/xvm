@@ -319,7 +319,7 @@ public abstract class OpCallable extends Op {
 
         ConstantPool        pool       = frame.poolContext();
         GenericTypeResolver resolver   = frame.getGenericsResolver(false);
-        MethodConstant      idCtor     = (MethodConstant) frame.getConstant(m_nFunctionId);
+        MethodConstant      idCtor     = frame.getConstant(m_nFunctionId, MethodConstant.class);
         IdentityConstant    idTarget   = idCtor.getNamespace();
         TypeConstant        typeTarget = idTarget.getFormalType().resolveGenerics(pool, resolver);
 
@@ -376,7 +376,7 @@ public abstract class OpCallable extends Op {
      */
     protected MethodStructure getMethodStructure(Frame frame) {
         ServiceContext   context    = frame.f_context;
-        MethodConstant   idFunction = (MethodConstant) frame.getConstant(m_nFunctionId);
+        MethodConstant   idFunction = frame.getConstant(m_nFunctionId, MethodConstant.class);
         MethodStructure  function   = (MethodStructure) context.getOpInfo(this, Category.Function);
         IdentityConstant idTarget   = idFunction.getNamespace();
 
@@ -599,7 +599,7 @@ public abstract class OpCallable extends Op {
             fSpecial = true;
             code.aload(0); // super() can only be on "this"
         } else if (m_nFunctionId <= CONSTANT_OFFSET) {
-            MethodConstant   idMethod   = (MethodConstant) bctx.getConstant(m_nFunctionId);
+            MethodConstant   idMethod   = bctx.getConstant(m_nFunctionId, MethodConstant.class);
             IdentityConstant idTarget   = idMethod.getClassIdentity();
             TypeConstant     typeTarget = idTarget.getType();
             MethodInfo       infoMethod = typeTarget.ensureTypeInfo().getMethodById(idMethod);
@@ -668,7 +668,7 @@ public abstract class OpCallable extends Op {
      * Support for NEW_ ops.
      */
     protected void buildNew(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
-        MethodConstant idCtor     = (MethodConstant) bctx.getConstant(m_nFunctionId);
+        MethodConstant idCtor     = bctx.getConstant(m_nFunctionId, MethodConstant.class);
         TypeConstant   typeTarget = idCtor.getNamespace().getType();
         ClassDesc      cdTarget   = bctx.buildNew(code, typeTarget, idCtor, anArgValue);
 

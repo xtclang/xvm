@@ -66,7 +66,7 @@ public class NotCondition
 
     @Override
     protected void resolveConstants() {
-        m_constCond = (ConditionalConstant) getConstantPool().getConstant(m_iCond);
+        m_constCond = getConstantPool().getConstant(m_iCond, ConditionalConstant.class);
     }
 
 

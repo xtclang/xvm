@@ -56,7 +56,7 @@ public class NamedCondition
 
     @Override
     protected void resolveConstants() {
-        m_constName = (StringConstant) getConstantPool().getConstant(m_iName);
+        m_constName = getConstantPool().getConstant(m_iName, StringConstant.class);
     }
 
 

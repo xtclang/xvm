@@ -83,7 +83,7 @@ public class InnerChildTypeConstant
     protected void resolveConstants() {
         super.resolveConstants();
 
-        m_idChild = (ClassConstant) getConstantPool().getConstant(m_iChild);
+        m_idChild = getConstantPool().getConstant(m_iChild, ClassConstant.class);
     }
 
     @Override

@@ -444,7 +444,7 @@ public abstract class BinaryAST {
 
         TypeConstant[] types = new TypeConstant[count];
         for (int i = 0; i < count; ++i) {
-            types[i] = (TypeConstant) res.getConstant(readMagnitude(in));
+            types[i] = res.getConstant(readMagnitude(in), TypeConstant.class);
         }
         return types;
     }
@@ -546,6 +546,26 @@ public abstract class BinaryAST {
          * @return the constant from the constant pool
          */
         Constant getConstant(int id);
+
+        /**
+         * Obtain the Constant at the specified index, verifying it is of the expected type.
+         *
+         * @param id    constant pool index
+         * @param type  the expected type of the constant
+         * @param <T>   the Constant type
+         *
+         * @return the constant from the constant pool, cast to the expected type
+         *
+         * @throws IllegalStateException if the constant is not of the expected type
+         */
+        default <T extends Constant> T getConstant(int id, Class<T> type) {
+            Constant constant = getConstant(id);
+            if (constant != null && !type.isInstance(constant)) {
+                throw new IllegalStateException("Expected " + type.getSimpleName() +
+                        ", found " + constant.getClass().getSimpleName());
+            }
+            return type.cast(constant);
+        }
 
         /**
          * @param name  the type name

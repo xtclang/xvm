@@ -64,7 +64,7 @@ public class BindMethodAST
             throws IOException {
         target = readExprAST(in, res);
         method = res.getConstant(readMagnitude(in));
-        type   = (TypeConstant) res.getConstant(readMagnitude(in));
+        type   = res.getConstant(readMagnitude(in), TypeConstant.class);
     }
 
     @Override

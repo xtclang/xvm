@@ -78,8 +78,8 @@ public abstract class RelationalTypeConstant
     protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
-        m_constType1 = (TypeConstant) pool.getConstant(m_iType1);
-        m_constType2 = (TypeConstant) pool.getConstant(m_iType2);
+        m_constType1 = pool.getConstant(m_iType1, TypeConstant.class);
+        m_constType2 = pool.getConstant(m_iType2, TypeConstant.class);
     }
 
     // ----- type specific methods -----------------------------------------------------------------

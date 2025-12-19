@@ -136,7 +136,7 @@ public class MapConstant
     protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
-        m_constType = (TypeConstant) pool.getConstant(m_iType);
+        m_constType = pool.getConstant(m_iType, TypeConstant.class);
 
         int[]      aiConstKey = m_aiKeys;
         int[]      aiConstVal = m_aiVals;
@@ -144,8 +144,8 @@ public class MapConstant
         Constant[] aconstKey  = new Constant[cEntries];
         Constant[] aconstVal  = new Constant[cEntries];
         for (int i = 0; i < cEntries; ++i) {
-            aconstKey[i] = pool.getConstant(aiConstKey[i]);
-            aconstVal[i] = pool.getConstant(aiConstVal[i]);
+            aconstKey[i] = pool.getConstant(aiConstKey[i], Constant.class);
+            aconstVal[i] = pool.getConstant(aiConstVal[i], Constant.class);
         }
         m_aconstKey = aconstKey;
         m_aconstVal = aconstVal;

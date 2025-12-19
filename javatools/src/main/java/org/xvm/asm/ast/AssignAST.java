@@ -147,7 +147,7 @@ public class AssignAST
         int methodId = readPackedInt(in);
         method = methodId < 0
             ? null
-            : (MethodConstant) res.getConstant(methodId);
+            : res.getConstant(methodId, MethodConstant.class);
     }
 
     @Override

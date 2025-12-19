@@ -97,12 +97,12 @@ public class RegAllocAST
             throws IOException {
         TypeConstant refType = null;
         if (nodeType == AnnoRegAlloc || nodeType == AnnoNamedRegAlloc) {
-            refType = (TypeConstant) res.getConstant(readPackedInt(in));
+            refType = res.getConstant(readPackedInt(in), TypeConstant.class);
         }
-        TypeConstant   type = (TypeConstant) res.getConstant(readPackedInt(in));
+        TypeConstant   type = res.getConstant(readPackedInt(in), TypeConstant.class);
         StringConstant name = null;
         if (nodeType == NamedRegAlloc || nodeType == AnnoNamedRegAlloc) {
-            name = (StringConstant) res.getConstant(readPackedInt(in));
+            name = res.getConstant(readPackedInt(in), StringConstant.class);
         }
 
         reg = refType == null

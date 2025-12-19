@@ -116,7 +116,7 @@ public class VirtualChildTypeConstant
     protected void resolveConstants() {
         super.resolveConstants();
 
-        m_constName        = (StringConstant) getConstantPool().getConstant(m_iName);
+        m_constName        = getConstantPool().getConstant(m_iName, StringConstant.class);
         m_typeOriginParent = m_typeParent;
     }
 

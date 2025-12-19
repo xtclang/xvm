@@ -73,7 +73,7 @@ public class SingletonConstant
 
     @Override
     protected void resolveConstants() {
-        m_constClass = (IdentityConstant) getConstantPool().getConstant(m_iClass);
+        m_constClass = getConstantPool().getConstant(m_iClass, IdentityConstant.class);
     }
 
 

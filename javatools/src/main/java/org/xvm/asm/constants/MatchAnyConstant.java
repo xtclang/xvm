@@ -56,7 +56,7 @@ public class MatchAnyConstant
 
     @Override
     protected void resolveConstants() {
-        m_constType = (TypeConstant) getConstantPool().getConstant(m_iType);
+        m_constType = getConstantPool().getConstant(m_iType, TypeConstant.class);
     }
 
 

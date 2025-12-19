@@ -1772,10 +1772,10 @@ public class MethodStructure
         int          cAnnos = readMagnitude(in);
         Annotation[] aAnnos = cAnnos == 0 ? Annotation.NO_ANNOTATIONS : new Annotation[cAnnos];
         for (int i = 0; i < cAnnos; ++i) {
-            aAnnos[i] = (Annotation) pool.getConstant(readMagnitude(in));
+            aAnnos[i] = pool.getConstant(readMagnitude(in), Annotation.class);
         }
 
-        m_idFinally = (MethodConstant) pool.getConstant(readIndex(in));
+        m_idFinally = pool.getConstant(readIndex(in), MethodConstant.class);
 
         int         cReturns = aconstReturnTypes.length;
         Parameter[] aReturns = new Parameter[cReturns];
@@ -1800,7 +1800,7 @@ public class MethodStructure
             aParams[i] = param;
         }
 
-        m_idSuper = (MethodConstant) pool.getConstant(readIndex(in));
+        m_idSuper = pool.getConstant(readIndex(in), MethodConstant.class);
 
         Constant[] aconstSuper;
         if (m_idSuper == null) {
@@ -2897,7 +2897,7 @@ public class MethodStructure
                 ConstantPool pool = getConstantPool();
                 for (int i = 0; i < cLines; ++i) {
                     anIndents[i] = readPackedInt(in);
-                    aconstSrc[i] = (StringConstant) pool.getConstant(readIndex(in));
+                    aconstSrc[i] = pool.getConstant(readIndex(in), StringConstant.class);
                 }
 
                 m_aconstSrc = aconstSrc;

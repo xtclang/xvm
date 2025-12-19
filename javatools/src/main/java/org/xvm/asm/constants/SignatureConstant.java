@@ -134,7 +134,7 @@ public class SignatureConstant
     protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
-        m_constName     = (StringConstant) pool.getConstant(m_iName);
+        m_constName     = pool.getConstant(m_iName, StringConstant.class);
         m_aconstParams  = lookupTypes(pool, m_aiParams);
         m_aconstReturns = lookupTypes(pool, m_aiReturns);
 
@@ -841,7 +841,7 @@ public class SignatureConstant
         int c = an.length;
         TypeConstant[] aconst = new TypeConstant[c];
         for (int i = 0; i < c; ++i) {
-            aconst[i] = (TypeConstant) pool.getConstant(an[i]);
+            aconst[i] = pool.getConstant(an[i], TypeConstant.class);
         }
         return aconst;
     }

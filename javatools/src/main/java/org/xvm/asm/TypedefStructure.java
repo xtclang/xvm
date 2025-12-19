@@ -67,7 +67,7 @@ public class TypedefStructure
     throws IOException {
         super.disassemble(in);
 
-        m_type = (TypeConstant) getConstantPool().getConstant(readIndex(in));
+        m_type = getConstantPool().getConstant(readIndex(in), TypeConstant.class);
     }
 
     @Override

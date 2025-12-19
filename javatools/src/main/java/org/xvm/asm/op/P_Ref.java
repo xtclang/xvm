@@ -87,7 +87,7 @@ public class P_Ref
     }
 
     protected int complete(Frame frame, ObjectHandle hTarget) {
-        PropertyConstant constProperty = (PropertyConstant) frame.getConstant(m_nPropId);
+        PropertyConstant constProperty = frame.getConstant(m_nPropId, PropertyConstant.class);
 
         if (frame.isNextRegister(m_nRetValue)) {
             frame.introduceResolvedVar(m_nRetValue, constProperty.getRefType(null));

@@ -85,6 +85,29 @@ public class ConstantPool
     }
 
     /**
+     * Obtain the Constant at the specified index, verifying it is of the expected type.
+     *
+     * @param i     the index, for example obtained during the disassembly process (-1 returns null)
+     * @param type  the expected type of the constant
+     * @param <T>   the Constant type
+     *
+     * @return the Constant at that index, cast to the expected type
+     *
+     * @throws IllegalStateException if the constant is not of the expected type
+     */
+    public <T extends Constant> T getConstant(int i, Class<T> type) {
+        if (i == -1) {
+            return null;
+        }
+        Constant constant = m_listConst.get(i);
+        if (!type.isInstance(constant)) {
+            throw new IllegalStateException("Expected " + type.getSimpleName() + " at index " + i +
+                    ", found " + (constant == null ? "null" : constant.getClass().getSimpleName()));
+        }
+        return type.cast(constant);
+    }
+
+    /**
      * Determine the current number of constants in the pool.
      *
      * @return the count of constants in the pool
@@ -140,7 +163,7 @@ public class ConstantPool
     @SuppressWarnings("unchecked")
     public <T extends Constant> T register(T constant) {
         // to allow this method to be used blindly, i.e. for constants that may be optional within a
-        // given structure, simply pass back null refs
+        // given structure, simply pass back null refs (TODO: terrible idea)
         if (constant == null) {
             return null;
         }
