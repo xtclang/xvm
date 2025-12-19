@@ -59,6 +59,7 @@ Each Gradle source set (`main`, `test`, etc.) gets:
 Key task types:
 - **XtcCompileTask**: Compiles XTC source files to `.xtc` modules
 - **XtcRunTask**: Executes XTC applications
+- **XtcTestTask**: Executes XUnit tests for a module
 - **XtcDisassembleTask**: Disassembles XTC modules for debugging
 - **XtcLauncherTask**: Abstract base for all launcher-based tasks
 
@@ -324,6 +325,23 @@ xtcRun {
 
     // Execution mode
     fork.set(false)  // In-process (default)
+}
+```
+
+### Test Configuration
+
+**Extension**: `XtcTestExtension`
+
+**Note**: In most cases, you don't need to configure the module path manually. The plugin automatically resolves:
+- All dependencies declared with `xtcModule(...)` in your build file
+- Compiled XTC modules from all project dependencies (including composite builds)
+- Build output directories from the current project and its dependencies
+
+**Minimal Configuration** (recommended for most projects):
+```kotlin
+xtcTest {
+    // Test module - this is usually all you need!
+    module.set("myapp.xtc")
 }
 ```
 
@@ -645,6 +663,184 @@ When modifying the plugin, follow these guidelines:
 3. Test all launcher types
 4. Verify multi-module scenarios
 
+### Profiling
+
+When profiling XTC compilation or execution, you have several options ranging from simple to advanced. These techniques are particularly useful for understanding where time is spent during the first compilation of large modules like lib-ecstasy.
+
+#### 1. Gradle Build Scans (Recommended for Quick Analysis)
+
+Build scans provide a cloud-hosted timeline view of your build with task timing, dependency resolution, and performance insights.
+
+**Usage:**
+```bash
+./gradlew build --scan
+```
+
+After the build completes, you'll receive a URL to view the detailed scan online. This shows:
+- Task execution times
+- Dependency resolution performance
+- Configuration phase timing
+- Build cache effectiveness
+
+**Best for**: Quick overview of build performance, identifying slow tasks, sharing results with team.
+
+#### 2. Gradle Built-in Profiler
+
+Gradle includes a local profiler that generates an HTML report with detailed timing information.
+
+**Usage:**
+```bash
+./gradlew build --profile
+```
+
+**Output**: `build/reports/profile/profile-<timestamp>.html`
+
+The report includes:
+- Task execution breakdown
+- Dependency resolution timing
+- Configuration vs. execution time
+- Project-level performance metrics
+
+**Best for**: Local analysis, CI/CD integration, offline viewing.
+
+#### 3. Java Flight Recorder (JFR) - Production-Grade Profiling
+
+JFR is built into the JVM and provides low-overhead (typically <1%) method-level profiling with rich data about:
+- CPU usage by method
+- Memory allocations
+- Thread activity
+- I/O operations
+- JVM internals (GC, JIT compilation)
+
+**Usage:**
+```bash
+./gradlew build \
+  -Dorg.gradle.jvmargs="-XX:StartFlightRecording=filename=recording.jfr,dumponexit=true,settings=profile"
+```
+
+**Analyzing Results:**
+
+Option A: Command-line (basic text output):
+```bash
+# Print summary
+java -version  # Requires JDK 9+
+jdk.jfr.tool.Main print recording.jfr
+
+# Or with JDK 11+:
+jfr print recording.jfr
+```
+
+Option B: JDK Mission Control (GUI - recommended):
+```bash
+# Download JMC from https://jdk.java.net/jmc/
+# Then open the .jfr file
+jmc
+```
+
+**Advanced Options:**
+```bash
+# Custom duration limit (60 seconds)
+-XX:StartFlightRecording=filename=recording.jfr,duration=60s,settings=profile
+
+# Maximum size limit (100MB)
+-XX:StartFlightRecording=filename=recording.jfr,maxsize=100m,settings=profile
+
+# Custom settings (default or profile)
+# 'default' = ~1% overhead, 'profile' = ~2% overhead with more detail
+-XX:StartFlightRecording=filename=recording.jfr,settings=default
+```
+
+**Best for**: Deep method-level analysis, production environments, finding hot paths, memory allocation analysis.
+
+#### 4. Async-Profiler - Advanced CPU/Memory Profiling
+
+Async-profiler is a low-overhead sampling profiler that generates flame graphs showing where time is spent. It supports:
+- CPU profiling (method execution time)
+- Allocation profiling (heap allocations)
+- Lock profiling (contention analysis)
+- Native code profiling (JNI calls)
+
+**Setup:**
+```bash
+# Download from https://github.com/async-profiler/async-profiler/releases
+# Extract to a location, e.g., ~/tools/async-profiler
+
+# macOS example:
+wget https://github.com/async-profiler/async-profiler/releases/latest/download/async-profiler-2.9-macos.zip
+unzip async-profiler-2.9-macos.zip -d ~/tools/
+```
+
+**Usage:**
+
+CPU Profiling (generates interactive HTML flame graph):
+```bash
+./gradlew build \
+  -Dorg.gradle.jvmargs="-agentpath:$HOME/tools/async-profiler-2.9-macos/lib/libasyncProfiler.so=start,event=cpu,file=profile.html"
+```
+
+Allocation Profiling (track heap allocations):
+```bash
+./gradlew build \
+  -Dorg.gradle.jvmargs="-agentpath:$HOME/tools/async-profiler-2.9-macos/lib/libasyncProfiler.so=start,event=alloc,file=alloc-profile.html"
+```
+
+**Advanced Options:**
+```bash
+# Customize sampling interval (default 10ms)
+-agentpath:/path/to/libasyncProfiler.so=start,event=cpu,interval=1ms,file=profile.html
+
+# Generate both flame graph and collapsed stacks
+-agentpath:/path/to/libasyncProfiler.so=start,event=cpu,file=profile.html,collapsed
+
+# Profile specific Java packages only
+-agentpath:/path/to/libasyncProfiler.so=start,event=cpu,file=profile.html,include='org/xvm/*'
+```
+
+**Reading Flame Graphs:**
+- X-axis: Proportion of samples (wider = more time spent)
+- Y-axis: Call stack depth (bottom = entry point, top = leaf methods)
+- Colors: Different packages/classes
+- Click to zoom into specific code paths
+
+**Best for**: Finding CPU hotspots, memory allocation patterns, visual analysis, performance optimization.
+
+#### 5. GC Profiling
+
+If you suspect garbage collection is impacting build time, enable GC logging:
+
+**Java 9+ (Unified Logging):**  
+```bash
+./gradlew build \
+  -Dorg.gradle.jvmargs="-Xlog:gc*:file=gc.log:time,level,tags"
+```
+
+**Analysis:**
+```bash
+# View GC events
+cat gc.log
+
+# Summary statistics
+grep "Pause" gc.log | awk '{sum+=$NF; count++} END {print "Average GC pause:", sum/count "ms"}'
+```
+
+**Best for**: Diagnosing memory issues, tuning GC parameters, identifying excessive allocations.
+
+#### Choosing the Right Tool
+
+| Tool | Setup Effort | Detail Level | Best Use Case |
+|------|--------------|--------------|---------------|
+| Build Scan | None | Task-level | Quick overview, team sharing |
+| `--profile` | None | Task-level | Local analysis, CI reports |
+| JFR | Minimal | Method-level | Production profiling, comprehensive analysis |
+| Async-profiler | Download | Method-level | Performance optimization, flame graphs |
+| GC Logging | Minimal | GC events | Memory/GC tuning |
+
+**Recommended Workflow:**
+1. Start with `--profile` or `--scan` to identify slow tasks
+2. Use JFR for detailed method-level analysis of slow tasks
+3. Use async-profiler when optimizing specific hot paths
+4. Enable GC logging if memory pressure is suspected
+
 ### Documentation
 
 Update this README when:
@@ -652,10 +848,3 @@ Update this README when:
 - Introducing new launcher types
 - Changing module path resolution
 - Adding performance optimizations
-
----
-
-**Plugin Version**: 1.0.0-SNAPSHOT
-**XDK Version**: See `libs.versions.toml`
-**Gradle Version**: 9.1.0+
-**Java Version**: 25+

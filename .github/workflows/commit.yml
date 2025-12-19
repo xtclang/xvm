@@ -62,7 +62,8 @@ env:
     ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
 
     skip_manual_tests: ${{ github.event.inputs.skip-tests == true || github.event.inputs.skip-tests == 'true' }}
-    run_manual_tests_parallel: ${{ github.event.inputs.parallel-test-mode == true || github.event.inputs.parallel-test-mode == 'true' }}
+    # Default to parallel mode (true) for push/PR events; for workflow_dispatch, use the input value
+    run_manual_tests_parallel: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.parallel-test-mode == true || github.event.inputs.parallel-test-mode == 'true' }}
     trigger_publishing: ${{ github.event.inputs.publish-snapshots == true || github.event.inputs.publish-snapshots == 'true' }}
 
     # Gradle cache inspection function
@@ -214,13 +215,22 @@ jobs:
                     echo "⏭️ Manual tests skipped (disabled)"
                     exit 0
                 fi
+                
                 echo "🧪 Running manual tests inline (cache still hot)..."
                 inspect_gradle_cache "before manual tests"
-                manual_task_main=$( [ "${{ env.run_manual_tests_parallel }}" = "true" ] && echo "runParallel" || echo "runAllTestTasks" )
+                manual_task_main=$( [ "${{ env.run_manual_tests_parallel }}" = "true" ] && echo "runAllTestTasksParallel" || echo "runAllTestTasks" )
                 echo "Running manual tests (main task: $manual_task_main)"
-                ./gradlew $GRADLE_OPTIONS manualTests:runXtc manualTests:runOne -PtestName=TestMisc manualTests:runTwoTestsInSequence "manualTests:$manual_task_main"
+                ./gradlew $GRADLE_OPTIONS manualTests:runXtc manualTests:runOne -PtestName=TestMisc manualTests:runTwoTestsInSequence "manualTests:$manual_task_main"        
                 inspect_gradle_cache "after manual tests"
                 echo "✅ Manual tests completed"
+
+            # TODO:
+            # name: XTC App Template Integration Test
+            #  if: success() && matrix.os == 'ubuntu-latest'
+            #  ## 1) Clone out xtc-app-template from github.com/xtclang/xtc-app-template or wherever it is.
+            #  ## 2) Run gradlew publishLocal on the xvm repo we are testing in this commit.yml file.
+            #  ## 3) cd into the xtc-app-template folder and run ./gradlew greet, which should work and not fail
+            #  uses: act
 
             - name: Upload XDK distribution artifact
               if: success() && matrix.os == 'ubuntu-latest'
@@ -257,6 +267,71 @@ jobs:
                   fi
                   echo "✅ All builds completed successfully"                      
 
+    # Integration test: verify the XTC plugin works with external projects
+    # Clones xtc-app-template, publishes XDK locally, and runs the template app
+    integration-test:
+        name: Plugin integration test
+        needs: build-and-test
+        runs-on: ubuntu-latest
+        if: success()
+
+        steps:
+            - name: Checkout XVM
+              uses: actions/checkout@v6
+              with:
+                  fetch-depth: 1
+
+            - name: Setup XVM Project
+              id: versions
+              uses: ./.github/actions/setup-xvm-project
+              with:
+                  setup-build: true
+                  cache-read-only: true
+                  enable-debug: false
+
+            - name: Publish XDK to Maven Local
+              env:
+                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+              run: |
+                  echo "📦 Publishing XDK to Maven Local..."
+                  ./gradlew ${{ steps.versions.outputs.gradle-options }} publishLocal
+                  echo "✅ XDK published to Maven Local"
+
+            - name: Clone xtc-app-template
+              run: |
+                  echo "📥 Cloning xtc-app-template..."
+                  git clone --depth 1 https://github.com/xtclang/xtc-app-template.git ../xtc-app-template
+                  echo "✅ Template cloned"
+
+            - name: Update template to use current XDK version
+              run: |
+                  XDK_VERSION="${{ steps.versions.outputs.xdk-version }}"
+                  echo "🔧 Updating xtc-app-template to use XDK version: $XDK_VERSION"
+
+                  # Update only the version in [versions] section, not the plugin definition
+                  # The pattern matches: xtc = "..." (quoted version string)
+                  # But not: xtc = { ... } (plugin definition with braces)
+                  sed -i 's/^xtc = "[^"]*"/xtc = "'"$XDK_VERSION"'"/' ../xtc-app-template/gradle/libs.versions.toml
+
+                  echo "📄 Updated libs.versions.toml:"
+                  cat ../xtc-app-template/gradle/libs.versions.toml
+
+            - name: Run xtc-app-template with local XDK
+              working-directory: ../xtc-app-template
+              run: |
+                  echo "🧪 Running xtc-app-template with locally published XDK..."
+                  ./gradlew greet -PlocalOnly=true --no-daemon --refresh-dependencies
+                  echo "✅ Integration test passed - plugin works with external projects"
+
+            - name: Summary
+              if: success()
+              run: |
+                  echo "### ✅ Plugin Integration Test Passed" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "- **XDK Version:** ${{ steps.versions.outputs.xdk-version }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Template:** xtc-app-template" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Test:** \`./gradlew greet -PlocalOnly=true\`" >> $GITHUB_STEP_SUMMARY
+
     # Trigger publishing workflows for snapshots
     # Runs when:
     # 1. Push to master (automatic snapshot publishing) - BUT NOT for release merges or Dependabot merges
@@ -266,7 +341,7 @@ jobs:
     # Dependabot merges are skipped to avoid permission issues
     trigger-publishing:
         name: Trigger snapshot publishing workflows
-        needs: build-and-test
+        needs: [build-and-test, integration-test]
         runs-on: ubuntu-latest
         if: |
             success() &&

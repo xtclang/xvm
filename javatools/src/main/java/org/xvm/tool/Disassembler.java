@@ -1,128 +1,141 @@
 package org.xvm.tool;
 
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 
 import java.time.format.TextStyle;
 
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 import java.util.Locale;
 
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
-import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.ModuleRepository;
 
 import org.xvm.asm.constants.FSNodeConstant;
-import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.UInt8ArrayConstant;
 
+import org.xvm.tool.LauncherOptions.DisassemblerOptions;
+
 import org.xvm.util.Handy;
-import org.xvm.util.Severity;
 
-
+import static java.time.ZoneOffset.UTC;
+import static java.util.Objects.requireNonNull;
 import static org.xvm.compiler.ast.FileExpression.createdTime;
 import static org.xvm.compiler.ast.FileExpression.modifiedTime;
-
 import static org.xvm.util.Handy.readFileBytes;
 import static org.xvm.util.Handy.readFileChars;
-
+import static org.xvm.util.Severity.ERROR;
+import static org.xvm.util.Severity.INFO;
 
 /**
  * The "disassemble" command:
- *
+ * <p>
  *  java org.xvm.tool.Disassembler xtc_path
+ *
  */
-public class Disassembler
-        extends Launcher {
+public class Disassembler extends Launcher<DisassemblerOptions> {
+
+    @SuppressWarnings("unused")
+    private static final byte FREE    = 0;
+    private static final byte DIR     = 1;
+    private static final byte FILE    = 2;
+    private static final byte EXISTS  = DIR | FILE;
+    private static final byte CLAIMED = 4;
+
+    private static final LocalDateTime NOW    = LocalDateTime.now();
+    private static final LocalDateTime SOON   = NOW.plusDays(1);
+    private static final LocalDateTime RECENT = NOW.minusMonths(6);
+
     /**
-     * Entry point from the OS.
+     * Disassembler constructor for programmatic use.
      *
-     * @param asArg command line arguments
+     * @param options     pre-configured disassembler options
+     * @param console     representation of the terminal within which this command is run, or null
+     * @param errListener optional ErrorListener to receive errors, or null for no delegation
      */
-    public static void main(String[] asArg) {
-        try {
-            System.exit(new Disassembler(asArg).run());
-        } catch (LauncherException e) {
-            System.exit(e.error ? 1 : 0);
-        }
+    public Disassembler(DisassemblerOptions options, Console console, ErrorListener errListener) {
+        super(options, console, errListener);
     }
 
     /**
-     * Disassembler constructor.
+     * Entry point from the OS. Delegates to Launcher.
      *
-     * @param asArg command line arguments
+     * @param args command line arguments
      */
-    public Disassembler(String[] asArg) {
-        this(asArg, null);
+    static void main(String[] args) {
+        Launcher.main(insertCommand(CMD_DISASS, args));
     }
 
-    /**
-     * Disassembler constructor.
-     *
-     * @param asArg    command line arguments
-     * @param console  representation of the terminal within which this command is run
-     */
-    public Disassembler (String[] asArg, Console console) {
-        super(asArg, console);
+    @Override
+    protected void validateOptions() {
+        options().getTarget().ifPresentOrElse(
+            file -> {
+                if (!file.exists()) {
+                    log(ERROR, "Module file does not exist: {}", file);
+                }
+            },
+            () -> log(ERROR, "No module file specified")
+        );
+        validateModulePath();
     }
 
     @Override
     protected int process() {
-        File      fileModule = options().getTarget();
-        String    sModule    = fileModule.getName();
+        final var opts       = options();
+        final var fileModule = opts.getTarget().orElseThrow(); // validated above
+        final var sModule    = fileModule.getName();
+
         Component component  = null;
+
         if (sModule.endsWith(".xtc")) {
             // it's a file
-            log(Severity.INFO, "Loading module file: " + sModule);
-            try {
-                try (FileInputStream in = new FileInputStream(fileModule)) {
-                    component = new FileStructure(in);
-                }
+            log(INFO, "Loading module file: {}", sModule);
+            try (var in = new FileInputStream(fileModule)) {
+                component = new FileStructure(in);
             } catch (IOException e) {
-                log(Severity.ERROR, "I/O exception (" + e + ") reading module file: " + fileModule);
+                log(ERROR, "I/O exception ({}) reading module file: {}", e, fileModule);
             }
         } else {
             // it's a module; set up the repository
-            log(Severity.INFO, "Creating and pre-populating library and build repositories");
-            ModuleRepository repo = configureLibraryRepo(options().getModulePath());
+            log(INFO, "Creating and pre-populating library and build repositories");
+            final var repo = configureLibraryRepo(opts.getModulePath());
             checkErrors();
 
-            log(Severity.INFO, "Loading module: " + sModule);
+            log(INFO, "Loading module: {}", sModule);
             component = repo.loadModule(sModule);
         }
 
         if (component == null) {
-            log(Severity.ERROR, "Unable to load module: " + fileModule);
+            log(ERROR, "Unable to load module: {}", fileModule);
         }
         checkErrors();
 
-        if (options().specified("files")) {
-            dumpFiles(component);
-        } else if (options().specified("findfile")) {
-            findFile(component, (File) options().values().get("findfile"));
-        } else {
-            component.visitChildren(this::dump, false, true);
+        if (component != null) {
+            var optFindFile = opts.getFindFile();
+            if (opts.isListFiles()) {
+                dumpFiles(component);
+            } else if (optFindFile.isPresent()) {
+                findFile(component, optFindFile.get());
+            } else {
+                component.visitChildren(this::dump, false, true);
+            }
+            component.getConstantPool();
         }
         return hasSeriousErrors() ? 1 : 0;
     }
 
     public void dump(Component component) {
-        if (component instanceof MethodStructure method) {
-            MethodConstant id = method.getIdentityConstant();
-
+        if (component instanceof final MethodStructure method) {
+            final var id = method.getIdentityConstant();
             if (method.hasCode() && method.ensureCode() != null && !method.isNative()) {
                 out("** code for " + id);
                 out(method.ensureCode().toString());
@@ -133,14 +146,6 @@ public class Disassembler
             }
         }
     }
-
-    private static final byte FREE    = 0;
-    private static final byte DIR     = 1;
-    private static final byte FILE    = 2;
-    private static final byte EXISTS  = DIR | FILE;
-    private static final byte CLAIMED = 4;
-    private static final LocalDateTime SOON   = LocalDateTime.now().plusDays(1);
-    private static final LocalDateTime RECENT = LocalDateTime.now().minusMonths(6);
 
     public void dumpFiles(Component component) {
         Constant[] aconst  = component.getConstantPool().getConstants();
@@ -153,8 +158,8 @@ public class Disassembler
 
         // first, identify all filing system nodes
         for (int i = 0; i < cConsts; ++i) {
-            Constant constant = aconst[i];
-            if (constant instanceof FSNodeConstant fsNode) {
+            var constant = aconst[i];
+            if (constant instanceof final FSNodeConstant fsNode) {
                 if (i > maxId) {
                     maxId = i;
                 }
@@ -162,7 +167,7 @@ public class Disassembler
                 switch (constant.getFormat()) {
                 case FSDir:
                     aflags[i] |= DIR;
-                    for (FSNodeConstant fsChildNode : fsNode.getDirectoryContents()) {
+                    for (var fsChildNode : fsNode.getDirectoryContents()) {
                         claimNode(fsChildNode, aflags);
                     }
                     ++cDirs;
@@ -193,23 +198,24 @@ public class Disassembler
             boolean[] visited = new boolean[cConsts];
             for (int i = 0; i < cConsts; ++i) {
                 if ((aflags[i] & EXISTS) != 0 && (aflags[i] & CLAIMED) == 0) {
-                    FSNodeConstant fsNode = (FSNodeConstant) aconst[i];
+                    var fsNode = (FSNodeConstant) aconst[i];
                     printNode(fsNode, "", false, false, visited,
-                              String.valueOf(maxId).length(), String.valueOf(maxSize).length());
+                            String.valueOf(maxId).length(), String.valueOf(maxSize).length());
                 }
             }
-        } else {
-            out("Module contains no files.");
+            return;
         }
+
+        out("Module contains no files.");
     }
 
-    private void claimNode(FSNodeConstant fsNode, byte[] aflags) {
+    private static void claimNode(FSNodeConstant fsNode, final byte[] aflags) {
         int i = fsNode.getPosition();
         if ((aflags[i] & CLAIMED) == 0) {
             aflags[i] |= CLAIMED;
             switch (fsNode.getFormat()) {
             case FSDir:
-                for (FSNodeConstant fsChildNode : fsNode.getDirectoryContents()) {
+                for (var fsChildNode : fsNode.getDirectoryContents()) {
                     claimNode(fsChildNode, aflags);
                 }
                 break;
@@ -222,13 +228,13 @@ public class Disassembler
     }
 
     private void printNode(FSNodeConstant fsNode,
-                           String         indent,
-                           boolean        last,
-                           boolean        linked,
-                           boolean[]      visited,
-                           int            idLen,
-                           int            sizeLen) {
-        StringBuilder buf = new StringBuilder();
+                           final String         indent,
+                           final boolean        last,
+                           final boolean        linked,
+                           final boolean[]      visited,
+                           final int            idLen,
+                           final int            sizeLen) {
+        var buf = new StringBuilder();
 
         // constant id
         int    id     = fsNode.getPosition();
@@ -294,16 +300,15 @@ public class Disassembler
         // name
         buf.append(' ');
         if (linked) {
-            if (indent.length() > 0) {
-                buf.append(indent.substring(0, indent.length()-4))
-                   .append(" |  ");
+            if (!indent.isEmpty()) {
+                buf.append(indent, 0, indent.length() - 4).append(" |  ");
             }
             buf.append("-> ");
         } else {
             buf.append(indent);
         }
-        String name = fsNode.getName();
-        if (name.length() == 0) {
+        var name = fsNode.getName();
+        if (name.isEmpty()) {
             buf.append('/');
         } else {
             Handy.appendString(buf, name);
@@ -318,10 +323,10 @@ public class Disassembler
                 out(buf);
             } else {
                 out(buf);
-                FSNodeConstant[] aKidNodes  = fsNode.getDirectoryContents();
-                int              cKidNodes  = aKidNodes.length;
-                String           nextIndent = " |- ";
-                if (indent.length() > 0) {
+                var      aKidNodes  = fsNode.getDirectoryContents();
+                int      cKidNodes  = aKidNodes.length;
+                String   nextIndent = " |- ";
+                if (!indent.isEmpty()) {
                     nextIndent = indent.substring(0, indent.length()-4)
                                + (last ? "    " : " |  ")
                                + nextIndent;
@@ -374,18 +379,18 @@ public class Disassembler
         } catch (IOException ignore) {}
 
         // load the file metadata
-        String   findName     = target.getName();
-        String   findCreated  = createdTime(target).toInstant().atOffset(ZoneOffset.UTC).toString();
-        String   findModified = modifiedTime(target).toInstant().atOffset(ZoneOffset.UTC).toString();
-        int      findSize     = findBytes.length;
+        var    findName     = target.getName();
+        var    findCreated  = requireNonNull(createdTime(target)).toInstant().atOffset(UTC).toString();
+        var    findModified = requireNonNull(modifiedTime(target)).toInstant().atOffset(UTC).toString();
+        int    findSize     = findBytes.length;
 
-        ConstantPool pool = component.getConstantPool();
+        var pool = component.getConstantPool();
         int matches = 0;
         for (int i = 0, c = pool.size(); i < c; ++i) {
-            Constant constant = pool.getConstant(i);
+            var constant = pool.getConstant(i);
             switch (constant.getFormat()) {
             case FSFile -> {
-                FSNodeConstant fsnode = (FSNodeConstant) constant;
+                var fsnode = (FSNodeConstant) constant;
                 if (fsnode.getName().equals(findName) && Arrays.equals(fsnode.getFileBytes(), findBytes)) {
                     out("File constant [" + constant.getPosition() + "] matches file name and contents");
                     if (!fsnode.getCreated().equals(findCreated)) {
@@ -398,7 +403,7 @@ public class Disassembler
                 }
             }
             case String -> {
-                if (findString != null && ((StringConstant) constant).getValue().equals(findString)) {
+                if (((StringConstant) constant).getValue().equals(findString)) {
                     out("String constant [" + constant.getPosition() + "] matches file contents");
                     ++matches;
                 }
@@ -427,80 +432,6 @@ public class Disassembler
         return """
             Ecstasy disassembler:
 
-            Examines a compiled Ecstasy module.
-            
-            Note: The xam command will be removed, and replaced with an option on the xtc command.
-
-            Usage:
-
-                xam <options> <modulename>
-            or:
-                xam <options> <filename>.xtc
-            """;
-    }
-
-
-    // ----- options -------------------------------------------------------------------------------
-
-    @Override
-    public Options options() {
-        return (Options) super.options();
-    }
-
-    @Override
-    protected Options instantiateOptions() {
-        return new Options();
-    }
-
-    /**
-     * Disassembler command-line options implementation.
-     */
-    public class Options
-        extends Launcher.Options {
-        /**
-         * Construct the Disassembler Options.
-         */
-        public Options() {
-            super();
-
-            addOption("L" ,     null,      Form.Repo, true,  "Module path; a \"" + File.pathSeparator + "\"-delimited list of file and/or directory names");
-            addOption(null,     "files",    Form.Name, false, "List all files embedded in the module");
-            addOption(null,     "findfile",  Form.File, false, "File to search for in the module");
-            addOption(Trailing, null,      Form.File, false, "Module file name (.xtc) to disassemble");
-        }
-
-        /**
-         * @return the list of files in the module path (empty list if none specified)
-         */
-        public List<File> getModulePath() {
-            return (List<File>) values().getOrDefault("L", Collections.emptyList());
-        }
-
-        /**
-         * @return the file to execute
-         */
-        public File getTarget() {
-            return (File) values().get(Trailing);
-        }
-
-        @Override
-        public void validate() {
-            super.validate();
-
-            // validate the trailing file (to execute)
-            File fileModule = getTarget();
-            if (fileModule == null || fileModule.length() == 0) {
-                log(Severity.ERROR, "Module file required");
-            } else if (fileModule.getName().endsWith(".xtc")) {
-                if (!fileModule.exists()) {
-                    log(Severity.ERROR, "Specified module file does not exist");
-                } else if (!fileModule.isFile()) {
-                    log(Severity.ERROR, "Specified module file is not a file");
-                } else if (!fileModule.canRead()) {
-                    log(Severity.ERROR, "Specified module file cannot be read");
-                }
-            }
-        }
+                Examines a compiled Ecstasy module.""";
     }
 }
-

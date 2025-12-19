@@ -1,17 +1,21 @@
 package org.xtclang.plugin.tasks;
 
+import static org.xtclang.plugin.XtcJavaToolsRuntime.ensureJavaToolsInClasspath;
+import static org.xtclang.plugin.XtcPluginConstants.PROPERTY_VERBOSE_LOGGING_OVERRIDE;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
 import static org.xtclang.plugin.XtcPluginUtils.argumentArrayToList;
+import static org.xtclang.plugin.internal.GradlePhaseAssertions.validateConfigurationTimeCapture;
 
 import java.io.File;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.gradle.api.Project;
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileCollection;
@@ -27,23 +31,24 @@ import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SourceSet;
-import org.gradle.process.ExecResult;
 
 import org.jetbrains.annotations.NotNull;
 
+import org.xtclang.plugin.XtcJavaToolsRuntime;
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.internal.GradlePhaseAssertions;
-import org.xtclang.plugin.launchers.JavaClasspathLauncher;
-import org.xtclang.plugin.launchers.LauncherContext;
+import org.xtclang.plugin.launchers.ExecutionMode;
 import org.xtclang.plugin.launchers.ModulePathResolver;
-import org.xtclang.plugin.launchers.XtcLauncher;
+import org.gradle.api.plugins.JavaPluginExtension;
+import org.gradle.jvm.toolchain.JavaToolchainService;
 
 /**
  * Abstract class that represents and XTC Launcher execution (i.e. Compiler, Runner, Disassembler etc.),
  * anything that goes through the XTC Launcher to spawn or call different processes
  */
 public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extends XtcDefaultTask implements XtcLauncherTaskExtension {
+    public static final int EXIT_CODE_ERROR = 1;
 
     // All inherited from launcher task extension and turned into input
     final ConfigurableFileCollection modulePath;
@@ -52,11 +57,13 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     final ListProperty<@NotNull String> jvmArgs;
     final Property<@NotNull Boolean> verbose;
     final Property<@NotNull Boolean> showVersion;
+    final Property<@NotNull ExecutionMode> executionMode;
 
     final E ext;
 
     // Captured at configuration time for configuration cache compatibility
     final Provider<@NotNull Directory> projectDirectory;
+    final Provider<@NotNull Directory> buildDirectory;
     final Provider<@NotNull Directory> xdkContentsDir;
     final Provider<@NotNull FileTree> xdkFileTree;
     final Map<String, Provider<@NotNull Directory>> sourceSetOutputDirs;
@@ -70,23 +77,22 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected final Provider<@NotNull String> toolchainExecutable;
     protected final Provider<@NotNull String> projectVersion;
 
-    @SuppressWarnings("this-escape") // Suppressed because launchers need task reference in constructor
-    protected XtcLauncherTask(final Project project, final E ext) {
-        // Parent XtcDefaultTask initializes objects, providers, logger fields
-        super();
+    // Captured at configuration time to support xtcPluginOverrideVerboseLogging property
+    private final boolean overrideVerboseLogging;
+
+    protected XtcLauncherTask(final ObjectFactory objects, final Project project, final E ext) {
+        super(objects);
 
         // Assert that we're in configuration phase during task construction
         GradlePhaseAssertions.assertProjectAccessDuringConfiguration(project, "XtcLauncherTask construction");
         this.ext = ext;
+        this.overrideVerboseLogging = Boolean.parseBoolean(String.valueOf(project.findProperty(PROPERTY_VERBOSE_LOGGING_OVERRIDE)));
 
         // Capture at configuration time
         this.projectDirectory = objects.directoryProperty().value(project.getLayout().getProjectDirectory());
+        this.buildDirectory = objects.directoryProperty().value(project.getLayout().getBuildDirectory());
         this.xdkContentsDir = XtcProjectDelegate.getXdkContentsDir(project);
-        this.xdkFileTree = xdkContentsDir.map(dir -> {
-            final var tree = objects.fileTree();
-            tree.setDir(dir);
-            return tree;
-        });
+        this.xdkFileTree = xdkContentsDir.map(dir -> objects.fileTree().setDir(dir));
 
         final var sourceSets = XtcProjectDelegate.getSourceSets(project);
         this.sourceSetNames = sourceSets.stream().map(SourceSet::getName).toList();
@@ -95,11 +101,8 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
                 sourceSet -> XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, sourceSet)
             ));
 
-        this.modulePath = objects.fileCollection().from(ext.getModulePath());
-
         this.stdoutPath = objects.property(String.class);
         this.stderrPath = objects.property(String.class);
-
         if (ext.getStdoutPath().isPresent()) {
             stdoutPath.set(ext.getStdoutPath());
         }
@@ -107,10 +110,12 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
             stderrPath.set(ext.getStderrPath());
         }
 
-        this.jvmArgs = objects.listProperty(String.class).convention(ext.getJvmArgs());
+        this.modulePath = objects.fileCollection().from(ext.getModulePath());
 
         this.verbose = objects.property(Boolean.class).convention(ext.getVerbose());
         this.showVersion = objects.property(Boolean.class).convention(ext.getShowVersion());
+        this.jvmArgs = objects.listProperty(String.class).convention(ext.getJvmArgs());
+        this.executionMode = objects.property(ExecutionMode.class).convention(ext.getExecutionMode());
 
         // Assert that required configurations exist - they should always be created by this plugin
         final var configurations = project.getConfigurations();
@@ -121,21 +126,23 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
         // Build XTC module dependencies from all source sets - assert they exist too
         this.xtcModuleDependencies = project.provider(() -> {
-            FileCollection xtcModuleDeps = objects.fileCollection();
-            for (final String sourceSetName : sourceSetNames) {
-                final String configName = XtcProjectDelegate.incomingXtcModuleDependencies(sourceSetName);
-                assert configurations.findByName(configName) != null :
-                    "Configuration '" + configName + "' must exist for sourceSet '" + sourceSetName + "' - it should be created by XTC plugin during source set configuration";
-                xtcModuleDeps = xtcModuleDeps.plus(objects.fileCollection().from(configurations.getByName(configName)));
-            }
-            return xtcModuleDeps;
+            final var result = objects.fileCollection();
+            sourceSetNames.stream()
+                .map(sourceSetName -> {
+                    final String configName = XtcProjectDelegate.incomingXtcModuleDependencies(sourceSetName);
+                    Objects.requireNonNull(configName, "Incoming configuration not found: " + configName + " (source set: " + sourceSetName + ")");
+                    return configurations.getByName(configName);
+                })
+                .forEach(result::from);
+            return result;
         });
         
         // Capture JavaExecLauncher configuration at configuration time
         this.toolchainExecutable = project.provider(() -> {
-            final var javaExtension = project.getExtensions().findByType(org.gradle.api.plugins.JavaPluginExtension.class);
+            final var exts = project.getExtensions();
+            final var javaExtension = exts.findByType(JavaPluginExtension.class);
             if (javaExtension != null) {
-                final var toolchains = project.getExtensions().getByType(org.gradle.jvm.toolchain.JavaToolchainService.class);
+                final var toolchains = exts.getByType(JavaToolchainService.class);
                 final var launcher = toolchains.launcherFor(javaExtension.getToolchain());
                 return launcher.get().getExecutablePath().toString();
             }
@@ -144,24 +151,52 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         this.projectVersion = project.provider(() -> project.getVersion().toString());
         
         // Validate configuration-time captures for configuration cache compatibility
-        GradlePhaseAssertions.validateConfigurationTimeCapture(this.xdkContentsDir, "XDK contents directory");
-        GradlePhaseAssertions.validateConfigurationTimeCapture(this.sourceSetNames, "source set names");
-        GradlePhaseAssertions.validateConfigurationTimeCapture(this.sourceSetOutputDirs, "source set output directories");
+        validateConfigurationTimeCapture(this.xdkContentsDir, "XDK contents directory");
+        validateConfigurationTimeCapture(this.sourceSetNames, "source set names");
+        validateConfigurationTimeCapture(this.sourceSetOutputDirs, "source set output directories");
     }
 
     //@Inject
     //public abstract ExecOperations getExecOperations();
 
-    @Override
-    public void executeTask() {
+    /**
+     * Hook called at start of launcher task execution.
+     * Ensures phase assertions and javatools loading before task execution.
+     */
+    protected void executeTask() {
         // Assert that we're in execution phase during task execution
         GradlePhaseAssertions.assertExecutionPhase(this, "XtcLauncherTask execution");
-        super.executeTask();
+
+        // Ensure javatools.jar is loaded into the plugin classloader before any task uses LauncherOptions types
+        // This is critical for published plugin users who have XDK as a dependency
+        ensureJavaToolsInClasspath(
+                getProjectVersion(),
+                getJavaToolsConfiguration(),
+                getXdkFileTree(),
+                logger
+        );
     }
 
-    @Override
+    /**
+     * Check if verbose logging is enabled for launcher tasks.
+     * Checks (in order):
+     * <ol>
+     *   <li>Gradle --info/--debug flags (logger level)</li>
+     *   <li>Project property: xtcPluginOverrideVerboseLogging=true</li>
+     *   <li>Task/extension configuration: verbose = true</li>
+     * </ol>
+     */
     public boolean hasVerboseLogging() {
-        return super.hasVerboseLogging() || verbose.get();
+        // Gradle log levels take precedence
+        if (logger.isInfoEnabled() || logger.isDebugEnabled()) {
+            return true;
+        }
+        // Check global override property (captured at configuration time)
+        if (overrideVerboseLogging) {
+            return true;
+        }
+        // Check task-specific verbose setting
+        return verbose.get();
     }
 
     @Internal
@@ -202,8 +237,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     @Override
     public void jvmArg(final Provider<? extends @NotNull String> arg) {
-        // Use objects factory instead of Project to create provider
-        jvmArgs(getObjects().listProperty(String.class).value(arg.map(Collections::singletonList)));
+        jvmArgs(objects.listProperty(String.class).value(arg.map(Collections::singletonList)));
     }
 
     @Override
@@ -244,8 +278,8 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
 
     @Input
     @Override
-    public Property<@NotNull Boolean> getFork() {
-        return ext.getFork();
+    public Property<@NotNull ExecutionMode> getExecutionMode() {
+        return executionMode;
     }
 
     @Optional
@@ -266,49 +300,38 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @Internal
     public abstract String getJavaLauncherClassName();
 
-    protected <R extends ExecResult> R handleExecResult(final R result) {
-        final int exitValue = result.getExitValue();
-        if (exitValue != 0) {
-            final String taskName = getName();
-            final String launcherType = "JavaClasspath (fork=" + ext.getFork().get() + ")";
-            getLogger().error("""
-
-                [plugin] ==============================================================================
-                [plugin] XTC Compilation Failed
-                [plugin] ==============================================================================
-                [plugin] Task:        {}
-                [plugin] Launcher:    {}
-                [plugin] Exit Code:   {}
-                [plugin] ------------------------------------------------------------------------------
-                [plugin] The XTC compiler process terminated with a non-zero exit code ({}).
-                [plugin] This typically indicates compilation errors in your XTC source files.
-                [plugin] Review the compiler output above for specific error messages.
-                [plugin] ==============================================================================
-                """, taskName, launcherType, exitValue, exitValue);
-        }
-        result.rethrowFailure();
-        result.assertNormalExitValue();
-        return result;
+    @Internal
+    public Provider<@NotNull Directory> getProjectDirectory() {
+        return projectDirectory;
     }
 
-    protected XtcLauncher<E, ? extends XtcLauncherTask<E>> createLauncher() {
-        final var logger = getLogger();
-        final boolean fork = ext.getFork().get();
-        logger.info("[plugin] Using JavaClasspathLauncher with fork={} ({})", fork, fork ? "separate process" : "in-process execution");
+    @Internal
+    public Provider<@NotNull Directory> getBuildDirectory() {
+        return buildDirectory;
+    }
 
-        final var context = new LauncherContext(
-            projectVersion,
-            xdkFileTree,
-            javaToolsConfig,
-            toolchainExecutable,
-            projectDirectory.get().getAsFile()
+    public File resolveJavaTools() {
+        // NOTE: To our utmost satisfaction we note that when building the XDK we bootstrap using the
+        // "javatools-<semanticversion>.jar" artifact in the javatools outputs as javatools jar.
+        // When we are running manualTests, which have an "xdk" dependency, we correctly grab it
+        // from the distribution instead, e.g.: $HOME/src/xvm/manualTests/build/xtc/xdk/lib/javatools.jar
+        return XtcJavaToolsRuntime.resolveJavaTools(
+                getProjectVersion(),
+                getJavaToolsConfiguration(),
+                getXdkFileTree(),
+                logger
         );
-
-        return new JavaClasspathLauncher<>(this, logger, context, fork);
     }
 
-    protected List<File> resolveFullModulePath() {
-        return new ModulePathResolver(this).resolveFullModulePath();
+    public List<File> resolveFullModulePath() {
+        return new ModulePathResolver(
+                logger,
+                objects,
+                xdkContentsDir,
+                sourceSetOutputDirs,
+                modulePath,
+                xtcModuleDependencies
+        ).resolveFullModulePath();
     }
 
     @InputDirectory
@@ -324,6 +347,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         return xtcModuleDependencies.get();
     }
 
+    /*
     @Internal
     public Provider<@NotNull FileCollection> getXtcModuleDependenciesProvider() {
         return xtcModuleDependencies;
@@ -332,6 +356,21 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @Internal
     public Map<String, Provider<@NotNull Directory>> getSourceSetOutputDirs() {
         return sourceSetOutputDirs;
+    }*/
+
+    @Internal
+    protected Provider<@NotNull String> getProjectVersion() {
+        return projectVersion;
+    }
+
+    @Internal
+    protected Provider<@NotNull FileCollection> getJavaToolsConfiguration() {
+        return javaToolsConfig;
+    }
+
+    @Internal
+    protected Provider<@NotNull FileTree> getXdkFileTree() {
+        return xdkFileTree;
     }
 
     @Optional
@@ -349,11 +388,11 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         throw new UnsupportedOperationException("getDependentSourceSets() should not be called at execution time for configuration cache compatibility. Use sourceSetNames instead.");
     }
 
+    /*
     protected final List<String> resolveJvmArgs() {
         final var list = new ArrayList<>(getJvmArgs().get());
         // Debug arguments are now specified via jvmArgs() - use standard JDWP format:
         // jvmArgs("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005")
         return Collections.unmodifiableList(list);
-    }
-
+    }*/
 }

@@ -4,19 +4,14 @@ package org.xvm.tool;
 import java.io.File;
 import java.io.IOException;
 
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
 
-import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
@@ -24,7 +19,6 @@ import org.xvm.asm.FileStructure;
 import org.xvm.asm.Version;
 
 import org.xvm.compiler.CompilerException;
-import org.xvm.compiler.Constants;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
 
@@ -58,9 +52,9 @@ import static org.xvm.util.Handy.resolveFile;
  * Information gleaned about a module from a single specified file. This is a lazily populated
  * structure, not a point-in-time snapshot; as a result, in the presence of realtime changes
  * occurring to the module source/resource files or compiled files after this object is
- * instantiated, this can not be depended upon to reflect either the snapshot state of the
- * module as it was when the ModuleInfo was instantiated, nor the snapshot state of the module
- * as it is right now.
+ * instantiated, this cannot be depended upon to reflect either the snapshot state of the module
+ * as it was when the ModuleInfo was instantiated, nor the snapshot state of the module as it is
+ * right now.
  */
 public class ModuleInfo {
     // ----- constructors --------------------------------------------------------------------------
@@ -71,8 +65,20 @@ public class ModuleInfo {
      * @param fileSpec the file to analyze, which may or may not exist
      * @param deduce   pass true to enable the algorithm to deduce/search for likely locations
      */
-    public ModuleInfo(File fileSpec, boolean deduce) {
+    public ModuleInfo(File fileSpec, final boolean deduce) {
         this(fileSpec, deduce, null, null);
+    }
+
+    /**
+     * Construct the module information from the specified file, with no resource path.
+     *
+     * @param fileSpec    the file or directory to analyze, which may or may not exist
+     * @param deduce      pass true to enable the algorithm to deduce/search for likely locations
+     * @param binarySpec  the file or directory which represents the target of the binary as
+     *                    provided to the compiler using the "-o" command line switch; may be null
+     */
+    public ModuleInfo(File fileSpec, final boolean deduce, File binarySpec) {
+        this(fileSpec, deduce, List.of(), binarySpec);
     }
 
     /**
@@ -80,15 +86,15 @@ public class ModuleInfo {
      *
      * @param fileSpec      the file or directory to analyze, which may or may not exist
      * @param deduce        pass true to enable the algorithm to deduce/search for likely locations
-     * @param resourceSpecs an array of files and/or directories which represent (in aggregate)
+     * @param resourceSpecs a list of files and/or directories which represent (in aggregate)
      *                      the resource path; null indicates that the default resources
-     *                      location should be used, while an empty array explicitly indicates
+     *                      location should be used, while an empty list explicitly indicates
      *                      that there is no resource path; as provided to the compiler using
      *                      the "-rp" command line switch
      * @param binarySpec    the file or directory which represents the target of the binary; as
      *                      provided to the compiler using the "-o" command line switch
      */
-    public ModuleInfo(File fileSpec, boolean deduce, File[] resourceSpecs, File binarySpec) {
+    public ModuleInfo(File fileSpec, final boolean deduce, List<File> resourceSpecs, File binarySpec) {
         if (fileSpec == null) {
             throw new IllegalArgumentException("A file specification is required for the module");
         }
@@ -109,7 +115,7 @@ public class ModuleInfo {
         }
         if (resolved.isDirectory()) {
             // it's possible that the module name was specified without the ".x" extension, which
-            // would match the name of the sub-directory containing the package and class files
+            // would match the name of the subdirectory containing the package and class files
             // within the module; this should be obvious because there will also be a source file
             if (dirSpec == null || fileName != null && !new File(dirSpec, fileName + ".x").exists()) {
                 // we don't know the file name specified, because the name was of a directory
@@ -145,28 +151,24 @@ public class ModuleInfo {
         // search, but the main thing we're looking for here is the project directory
         File curDir = null;     // no project dir identified, but begin looking from here
         do {
-            File[] srcFiles = sourceFiles(dirSpec);
-            File[] binFiles = compiledFiles(dirSpec);
-            int    srcCount = srcFiles.length;
-            int    binCount = binFiles.length;
-            if (srcCount > 0 && binCount > 0) {
+            var srcFiles = sourceFiles(dirSpec);
+            var binFiles = compiledFiles(dirSpec);
+            if (!srcFiles.isEmpty() && !binFiles.isEmpty()) {
                 // we're in a directory with both source and compiled files; assume that this is
                 // where we'll find everything that we need
                 projectDir = binaryDir = sourceDir = dirSpec;
                 break;
             }
 
-            if (srcCount == 0 && binCount > 0) {
+            if (srcFiles.isEmpty() && !binFiles.isEmpty()) {
                 // we're in a directory with compiled files; it's probably a "build" directory under
                 // the project directory
                 binaryDir = dirSpec;
                 break;
             }
 
-            assert binCount == 0;
-            if (srcCount == 0) {
-                // no source files, no binary files, so start looking for the project directory from
-                // this point
+            if (srcFiles.isEmpty()) {
+                // no source files, no binary files, so start looking for the project directory from this point
                 curDir = dirSpec;
             } else {
                 File   searchDir = dirSpec;
@@ -175,8 +177,8 @@ public class ModuleInfo {
                 do {
                     sourceDir = searchDir;
                     if (srcName == null) {
-                        if (srcCount == 1) {
-                            File file = srcFiles[0];
+                        if (srcFiles.size() == 1) {
+                            File file = srcFiles.getFirst();
                             moduleName = extractModuleName(file);
                             if (moduleName != null) {
                                 // we found "the" module
@@ -187,7 +189,7 @@ public class ModuleInfo {
                             }
                         }
                     } else {
-                        if (Arrays.stream(srcFiles).anyMatch(f -> !f.isDirectory()
+                        if (srcFiles.stream().anyMatch(f -> !f.isDirectory()
                                 && (f.getName().equals(srcName) || f.getName().equals(srcName2)))) {
                             break;
                         }
@@ -199,8 +201,7 @@ public class ModuleInfo {
                     }
 
                     srcFiles = sourceFiles(searchDir);
-                    srcCount = srcFiles.length;
-                } while (deduce && srcCount > 0);
+                } while (deduce && !srcFiles.isEmpty());
             }
         } while (false);
 
@@ -209,11 +210,8 @@ public class ModuleInfo {
                 projectDir = deduce ? projectDirFromSubDir(sourceDir) : sourceDir;
             } else if (binaryDir != null) {
                 projectDir = deduce ? projectDirFromSubDir(binaryDir) : binaryDir;
-            } else if (curDir != null) {
-                projectDir = deduce ? projectDirFromSubDir(curDir) : curDir;
             } else {
-                throw new IllegalArgumentException(
-                        "Unable to identify a module project directory for " + fileSpec);
+                projectDir = deduce ? projectDirFromSubDir(curDir) : curDir;
             }
         }
 
@@ -226,9 +224,9 @@ public class ModuleInfo {
 
             if (sourceDir != null) {
                 if (fileName == null) {
-                    File[] files = sourceFiles(sourceDir);
-                    if (files.length == 1) {
-                        fileName = removeExtension(files[0].getName());
+                    final var files = sourceFiles(sourceDir);
+                    if (files.size() == 1) {
+                        fileName = removeExtension(files.getFirst().getName());
                     }
                 }
 
@@ -252,35 +250,35 @@ public class ModuleInfo {
 
         if (binarySpec != null) {
             // if it exists, it must either be an .xtc file or a directory
-            binarySpec = resolveFile(binarySpec);
-            if (binarySpec.exists()) {
-                if (binarySpec.isDirectory()) {
-                    binaryDir = binarySpec;
+            final var resolvedBinary = resolveFile(binarySpec);
+            if (resolvedBinary.exists()) {
+                if (resolvedBinary.isDirectory()) {
+                    binaryDir = resolvedBinary;
                 } else {
-                    String sExt = getExtension(binarySpec.getName());
+                    String sExt = getExtension(resolvedBinary.getName());
                     if ("xtc".equals(sExt)) {
-                        binaryFile   = binarySpec;
-                        binaryDir    = binarySpec.getParentFile();
+                        binaryFile   = resolvedBinary;
+                        binaryDir    = resolvedBinary.getParentFile();
                         binaryStatus = Status.Exists;
                     } else {
-                        throw new IllegalArgumentException("Target destination " + binarySpec
+                        throw new IllegalArgumentException("Target destination " + resolvedBinary
                                 + " must use an .xtc extension");
                     }
                 }
             } else {
                 // if it doesn't exist, it needs to be located somewhere under some directory
                 // that does exist
-                File fileParent = binarySpec.getParentFile();
+                File fileParent = resolvedBinary.getParentFile();
                 while (true) {
                     if (fileParent == null) {
-                        throw new IllegalArgumentException("Target destination " + binarySpec
+                        throw new IllegalArgumentException("Target destination " + resolvedBinary
                             + " is illegal because it does not exist and cannot be created");
                     }
 
                     if (fileParent.exists()) {
                         if (!fileParent.isDirectory()) {
                             throw new IllegalArgumentException("Target destination "
-                                    + binarySpec + " is illegal because parent file "
+                                    + resolvedBinary + " is illegal because parent file "
                                     + fileParent + " is not a directory");
                         }
 
@@ -290,18 +288,18 @@ public class ModuleInfo {
                     fileParent = fileParent.getParentFile();
                 }
 
-                String sExt = getExtension(binarySpec.getName());
+                String sExt = getExtension(resolvedBinary.getName());
                 if ("xtc".equals(sExt)) {
-                    binaryFile   = binarySpec;
-                    binaryDir    = binarySpec.getParentFile();
+                    binaryFile   = resolvedBinary;
+                    binaryDir    = resolvedBinary.getParentFile();
                     binaryStatus = Status.NotExists;
                 } else {
-                    binaryDir = binarySpec;
+                    binaryDir = resolvedBinary;
                 }
             }
         }
 
-        if (resourceSpecs != null && resourceSpecs.length > 0) {
+        if (resourceSpecs != null && !resourceSpecs.isEmpty()) {
             for (File file : resourceSpecs) {
                 if (file == null) {
                     throw new IllegalArgumentException("A resource location is specified as null");
@@ -314,17 +312,13 @@ public class ModuleInfo {
             }
 
             // merge the resource directory lists, with the specified ones having priority
-            File[] dftResDirs = getResourceDir().getLocations();
-            int    cDfts      = dftResDirs.length;
-            if (cDfts > 0) {
-                int    cSpecs = resourceSpecs.length;
-                File[] allResDirs = new File[cSpecs + cDfts];
-                System.arraycopy(resourceSpecs, 0, allResDirs, 0, cSpecs);
-                System.arraycopy(dftResDirs, 0, allResDirs, cSpecs, cDfts);
-                resourceSpecs = allResDirs;
+            final var dftResDirs = getResourceDir().getLocations();
+            final var allResDirs = new ArrayList<>(resourceSpecs);
+            if (!dftResDirs.isEmpty()) {
+                allResDirs.addAll(dftResDirs);
             }
 
-            resourceDir = new ResourceDir(resourceSpecs);
+            resourceDir = new ResourceDir(allResDirs);
         }
     }
 
@@ -341,6 +335,7 @@ public class ModuleInfo {
     /**
      * @return the file name (the short name without an extension) that the ModuleInfo is using
      */
+    @SuppressWarnings("unused")
     public String getFileName() {
         return fileName;
     }
@@ -354,7 +349,7 @@ public class ModuleInfo {
     }
 
     /**
-     * @return True if the module binary exists and is at least as up-to-date as the existent source
+     * @return True if the module binary exists and is at least as up to date as the existent source
      *         and resource files and directories
      */
     public boolean isUpToDate() {
@@ -367,6 +362,7 @@ public class ModuleInfo {
     /**
      * @return True if the module name uses a qualified format
      */
+    @SuppressWarnings("unused")
     public boolean isModuleNameQualified() {
         return getQualifiedModuleName().indexOf('.') >= 0;
     }
@@ -375,38 +371,33 @@ public class ModuleInfo {
      * @return the full module name, which may or may not be qualified
      */
     public String getQualifiedModuleName() {
-        UnknownModule:
-        if (moduleName == null) {
-            if (sourceStatus == Status.Exists && sourceContent != Content.Invalid) {
-                moduleName = extractModuleName(sourceFile);
-                if (moduleName == null) {
-                    sourceContent = Content.Invalid;
-                } else {
-                    sourceContent = Content.Module;
-                    break UnknownModule;
-                }
-            }
-
-            // try to get the module name from the compiled module file
-            if (getBinaryFile() != null && binaryContent != Content.Invalid) {
-                if (loadBinaryFile()) {
-                    break UnknownModule;
-                }
-            }
-
-            // guess at the module name based on the source file name, binary file name, or
-            // project dir name
-            if (sourceFile != null) {
-                moduleName = removeExtension(sourceFile.getName());
-            } else if (binaryFile != null) {
-                moduleName = removeExtension(binaryFile.getName());
-            } else if (fileName != null) {
-                moduleName = fileName;
-            } else {
-                moduleName = projectDir.getName();
-            }
+        if (moduleName != null) {
+            return moduleName;
         }
 
+        // Try to extract the module name from the source file
+        if (sourceStatus == Status.Exists && sourceContent != Content.Invalid) {
+            moduleName = extractModuleName(sourceFile);
+            if (moduleName != null) {
+                sourceContent = Content.Module;
+                return moduleName;
+            }
+            sourceContent = Content.Invalid;
+        }
+
+        // Try to get the module name from the compiled module file
+        if (getBinaryFile() != null && binaryContent != Content.Invalid && loadBinaryFile()) {
+            return moduleName;
+        }
+
+        // Fall back to guessing from file/directory names
+        if (sourceFile != null) {
+            moduleName = removeExtension(sourceFile.getName());
+        } else if (binaryFile != null) {
+            moduleName = removeExtension(binaryFile.getName());
+        } else {
+            moduleName = Objects.requireNonNullElseGet(fileName, () -> projectDir.getName());
+        }
         return moduleName;
     }
 
@@ -424,6 +415,7 @@ public class ModuleInfo {
     /**
      * @return the unqualified module name
      */
+    @SuppressWarnings("unused")
     public String getSimpleModuleName() {
         String moduleName = getQualifiedModuleName();
         int firstDot = moduleName.indexOf('.');
@@ -463,15 +455,13 @@ public class ModuleInfo {
         File fileSrc = getSourceFile();
         if (fileSrc != null && fileSrc.exists() && sourceTimestamp == 0L) {
             sourceTimestamp = sourceFile.lastModified();
-            if (sourceIsTree) {
-                synchronized (this) {
-                    File subDir = new File(sourceFile.getParentFile(), removeExtension(sourceFile.getName()));
-                    if (subDir.isDirectory()) {
-                        accumulator = sourceTimestamp;
-                        visitTree(subDir, "x", f -> accumulator = Math.max(accumulator, f.lastModified()));
-                        sourceTimestamp = accumulator;
-                        accumulator     = 0L;
-                    }
+            if (isSourceTree()) {
+                File parent = sourceFile.getParentFile();
+                File subDir = new File(parent, removeExtension(sourceFile.getName()));
+                if (subDir.isDirectory()) {
+                    sourceTimestamp = collectFiles(subDir, "x")
+                            .mapToLong(File::lastModified)
+                            .reduce(sourceTimestamp, Math::max);
                 }
             }
         }
@@ -488,7 +478,9 @@ public class ModuleInfo {
     public ResourceDir getResourceDir() {
         if (resourceDir == null) {
             File sourceFile = getSourceFile();
-            resourceDir = sourceFile.exists() ? ResourceDir.forSource(sourceFile, deduce) : NoResources;
+            resourceDir = sourceFile.exists()
+                        ? ResourceDir.forSource(sourceFile, deduce)
+                        : NoResources;
         }
 
         return resourceDir;
@@ -523,7 +515,7 @@ public class ModuleInfo {
     }
 
     /**
-     * @return the directory that should contain the compiled form of the module, or null if there
+     * @return the directory which should contain the compiled form of the module, or null if there
      *         is no existent directory that should contain the binary, such as when the project
      *         "./build/" or "./target/" directory is missing
      */
@@ -550,8 +542,8 @@ public class ModuleInfo {
     }
 
     /**
-     * Attempt to read the compiled form of the module, extracting information from it including the
-     * module name and version.
+     * Attempt to read the compiled form of the module, extracting information from it, including
+     * the module name and version.
      *
      * @return true iff the file exists and was successfully loaded and parsed
      */
@@ -590,78 +582,64 @@ public class ModuleInfo {
         return binaryTimestamp;
     }
 
-    /**
-     * @param dir  a file, directory, or null
-     *
-     * @return an array of 0 or more compiled module files; never null
-     */
-    private File[] getBinaryFiles(File dir) {
-        return dir == null || !dir.isDirectory()
-                ? NO_FILES
-                : dir.listFiles(f -> !f.isDirectory() && "xtc".equalsIgnoreCase(getExtension(f.getName())));
-    }
-
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public String toString() {
-        return "Module(name="         + (moduleName == null ? "<unknown>" : moduleName)
+        return "Module(name="         + Objects.toString(moduleName, "<unknown>")
              + ", fileSpec="          + fileSpec
              + ", fileName="          + fileName
-             + ", moduleName="        + (moduleName == null ? "<unknown>" : moduleName)
              + ", projectDir="        + projectDir
              + ", sourceStatus="      + sourceStatus
              + ", sourceDir="         + sourceDir
              + ", sourceIsTree="      + sourceIsTree
              + ", sourceFile="        + sourceFile
              + ", sourceContent="     + sourceContent
-             + ", sourceTimestamp="   + (sourceTimestamp == 0 ? "<unknown>" : dateString(sourceTimestamp))
-             + ", resourceDir="       + resourceDir == null ? "<unknown>" : resourceDir
-             + ", resourceTimestamp=" + (resourceTimestamp == 0 ? "<unknown>" : dateString(resourceTimestamp))
+             + ", sourceTimestamp="   + dateString(sourceTimestamp, "<unknown>")
+             + ", resourceDir="       + Objects.toString(resourceDir, "<unknown>")
+             + ", resourceTimestamp=" + dateString(resourceTimestamp, "<unknown>")
              + ", binaryStatus="      + binaryStatus
-             + ", binaryDir="         + binaryDir == null ? "<unknown>" : binaryDir
-             + ", binaryFile="        + binaryFile == null ? "<unknown>" : binaryFile
-             + ", binaryVersion="     + binaryVersion == null ? "<unknown>" : binaryVersion
+             + ", binaryDir="         + Objects.toString(binaryDir, "<unknown>")
+             + ", binaryFile="        + Objects.toString(binaryFile, "<unknown>")
+             + ", binaryVersion="     + Objects.toString(binaryVersion, "<unknown>")
              + ", binaryContent="     + binaryContent
-             + ", binaryTimestamp="   + (binaryTimestamp == 0 ? "<unknown>" : dateString(binaryTimestamp));
+             + ", binaryTimestamp="   + dateString(binaryTimestamp, "<unknown>");
     }
 
 
     // ----- internal ------------------------------------------------------------------------------
 
     /**
-     * Visit all subdirectories (recursively) and files matching the optional extension within the
-     * specified directory, and do so in a stable, repeatable order.
+     * Recursively collect all files matching the optional extension within the specified directory,
+     * returning them as a stream in a stable, repeatable order.
      *
-     * @param dir      a directory
-     * @param ext      an optional extension to match; otherwise null
-     * @param visitor  the visitor to invoke with each matching non-directory file
+     * @param dir  a directory
+     * @param ext  an optional extension to match; otherwise null
+     *
+     * @return a stream of matching non-directory files
      */
-    private void visitTree(File dir, String ext, Consumer<File> visitor) {
-        TreeMap<String, File> children = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-        for (File child : dir.listFiles()) {
+    private Stream<File> collectFiles(File dir, String ext) {
+        final var children = new TreeMap<String, File>(String.CASE_INSENSITIVE_ORDER);
+        for (File child : listFiles(dir)) {
             String name = child.getName();
             if (ext == null || ext.equalsIgnoreCase(getExtension(name))) {
-                assert !children.containsKey(name);
                 children.put(name, child);
             }
         }
 
-        for (File child : children.values()) {
-            if (child.isDirectory()) {
-                visitTree(child, ext, visitor);
-            } else {
-                visitor.accept(child);
-            }
-        }
+        return children.values().stream()
+                .flatMap(child -> child.isDirectory()
+                        ? collectFiles(child, ext)
+                        : Stream.of(child));
     }
 
 
     // ----- source tree ---------------------------------------------------------------------------
 
     /**
-     * When working with a source code tree, and given a "module file", produce a source tree of the desired processing stage.
+     * When working with a source code tree and given a "module file", produce a source tree of
+     * the desired processing stage.
      *
      * @param errs  an optional error listener
      *
@@ -678,12 +656,8 @@ public class ModuleInfo {
         if (srcDir == null || srcFile == null) {
             return null;
         }
-
-        if (errs == null) {
-            errs = new ErrorList(100);
-        }
-
-        if (sourceIsTree) {
+        
+        if (isSourceTree()) {
             assert fileName != null;
             File subDir = new File(srcDir, fileName);
             assert subDir.exists();
@@ -753,7 +727,7 @@ public class ModuleInfo {
         }
 
         /**
-         * @return the node represent the module
+         * @return the node representing the module
          */
         public FileNode module() {
             Node rootNode = root();
@@ -788,12 +762,14 @@ public class ModuleInfo {
         /**
          * @return the ResourceDir for this node; never null
          */
+        @SuppressWarnings("unused")
         public abstract ResourceDir resourceDir();
 
         /**
          * @return the child directory name for this node's ResourceDir compared to its parent's,
          *         or null to indicate that the parent's ResourceDir should be used
          */
+        @SuppressWarnings("unused")
         protected String resourcePathPart() {
             return null;
         }
@@ -822,6 +798,7 @@ public class ModuleInfo {
         /**
          * @return a descriptive name for this node
          */
+        @SuppressWarnings("unused")
         public abstract String descriptiveName();
 
         /**
@@ -866,7 +843,7 @@ public class ModuleInfo {
         }
 
         /**
-         * @return log any errors accumulated on (or under) this node
+         * Log any errors accumulated on (or under) this node
          */
         public void logErrors(ErrorListener errs) {
             ErrorList deferred = m_errs;
@@ -897,7 +874,7 @@ public class ModuleInfo {
         protected ResourceDir m_resdir;
 
         /**
-         * The error list that buffers errors for the file node, if any.
+         * The error list which buffers errors for the file node, if any.
          */
         private ErrorList m_errs;
     }
@@ -925,7 +902,7 @@ public class ModuleInfo {
         }
 
         /**
-         * Build a sub-tree of nodes that are contained within this node.
+         * Build a subtree of nodes that are contained within this node.
          */
         void buildSourceTree() {
             File thisDir = file();
@@ -943,7 +920,7 @@ public class ModuleInfo {
                     // a subtree
                     File subDir = new File(thisDir, removeExtension(name));
                     if (subDir.exists() && subDir.isDirectory()) {
-                        // create a sub-tree
+                        // create a subtree
                         DirNode child = new DirNode(this, subDir, file);
                         packageNodes().add(child);
                         child.buildSourceTree();
@@ -969,9 +946,9 @@ public class ModuleInfo {
                 return "module " + name();
             }
 
-            StringBuilder sb = new StringBuilder();
-            sb.append("package ")
-              .append(name());
+            final var sb = new StringBuilder()
+                .append("package ")
+                .append(name());
 
             DirNode node = parent();
             while (node.parent() != null) {
@@ -1128,6 +1105,7 @@ public class ModuleInfo {
         /**
          * @return the module, package, or class source file, or null if none
          */
+        @SuppressWarnings("unused")
         public File sourceFile() {
             return m_fileSrc;
         }
@@ -1326,10 +1304,11 @@ public class ModuleInfo {
          * @return a File, a ResourceDir, or null if unresolvable
          */
         public Object resolveResource(String path) {
+            String resPath = path;
             ResourceDir dir;
-            if (path.startsWith("/")) {
-                path = path.substring(1);
-                if (path.startsWith("/")) {
+            if (resPath.startsWith("/")) {
+                resPath = resPath.substring(1);
+                if (resPath.startsWith("/")) {
                     return null;
                 }
 
@@ -1338,21 +1317,22 @@ public class ModuleInfo {
                 dir = resourceDir();
             }
 
-            boolean fRequireDir = path.endsWith("/");
+            boolean fRequireDir = resPath.endsWith("/");
             if (fRequireDir) {
-                path = path.substring(0, path.length()-1);
-                if (path.endsWith("/")) {
+                resPath = resPath.substring(0, resPath.length()-1);
+                if (resPath.endsWith("/")) {
                     return null;
                 }
             }
 
-            if (dir == null || path.isEmpty()) {
+            if (dir == null || resPath.isEmpty()) {
                 return dir;
             }
 
-            String[] segments = parseDelimitedString(path, '/');
+            String[] segments = parseDelimitedString(resPath, '/');
             for (int i = 0, last = segments.length - 1; i <= last; ++i) {
                 String segment = segments[i];
+                //noinspection StatementWithEmptyBody
                 if (segment.isEmpty() || ".".equals(segment)) {
                     // nothing to do
                 } else if ("..".equals(segment)) {
@@ -1362,8 +1342,8 @@ public class ModuleInfo {
                     }
                 } else {
                     Object resource = dir.getByName(segment);
-                    if (resource instanceof ResourceDir subdir) {
-                        dir = subdir;
+                    if (resource instanceof ResourceDir subDir) {
+                        dir = subDir;
                     } else {
                         return i == last && !fRequireDir ? resource : null;
                     }
@@ -1379,8 +1359,8 @@ public class ModuleInfo {
                 m_stmtAST = new Parser(source, this).parseSource();
             } catch (CompilerException e) {
                 if (!hasSeriousErrors()) {
-                    log(Severity.FATAL, Parser.FATAL_ERROR, null,
-                        source, source.getPosition(), source.getPosition());
+                    log(Severity.FATAL, Parser.FATAL_ERROR, null, source,
+                            source.getPosition(), source.getPosition());
                 }
             }
         }
@@ -1390,12 +1370,9 @@ public class ModuleInfo {
             // this can only happen if the errors were ignored
             Statement stmt = ast();
             if (stmt != null) {
-                if (stmt instanceof TypeCompositionStatement stmtType) {
-                    m_stmtType = stmtType;
-                } else {
-                    List<Statement> list = ((StatementBlock) stmt).getStatements();
-                    m_stmtType = (TypeCompositionStatement) list.getLast();
-                }
+                m_stmtType = (TypeCompositionStatement) (stmt instanceof StatementBlock sb
+                        ? sb.getStatements().getLast()
+                        : stmt);
             }
         }
 
@@ -1442,7 +1419,7 @@ public class ModuleInfo {
         private Statement                m_stmtAST;
 
         /**
-         * The primary class (or other type) that the source file declares.
+         * The primary class (or another type) that the source file declares.
          */
         private TypeCompositionStatement m_stmtType;
     }
@@ -1451,8 +1428,8 @@ public class ModuleInfo {
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
-     * Check if the specified source or binary file contains a module and if so, return the module's
-     * name.
+     * Check if the specified source or binary file contains a module, and if so, return the
+     * module's name.
      *
      * @param file  the file (source or binary) to examine
      *
@@ -1475,136 +1452,6 @@ public class ModuleInfo {
         }
 
         return null;
-    }
-
-    /**
-     * @return the version of the XVM code that is answering this question
-     */
-    public static Version getXvmVersion() {
-        return new Version(new int[] {Constants.VERSION_MAJOR_CUR, Constants.VERSION_MINOR_CUR},
-                           fileTimestampToBuildString(getJarFile()));
-    }
-
-    /**
-     * @param moduleFile  a File that contains a compiled Ecstasy module
-     *
-     * @return the version of the XVM that compiled the specified module
-     */
-    public static Version getXvmVersion(File moduleFile) {
-        if (moduleFile == null) {
-            throw new IllegalArgumentException("Compiled module file required");
-        }
-
-        if (!moduleFile.exists()) {
-            throw new IllegalArgumentException("Compiled module file (" + moduleFile + ") does not exist");
-        }
-
-        try {
-            FileStructure struct = new FileStructure(moduleFile);
-            return new Version(new int[] {struct.getFileMajorVersion(), struct.getFileMinorVersion()}, null);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to read module file: " + moduleFile);
-        }
-    }
-
-    /**
-     * @return the version of the XDK that is answering this question, or null if this running code
-     *         is not part of a well-formed XDK image
-     */
-    public static Version getXdkVersion() {
-        try {
-            return getModuleVersion(new File(getJarFile().getParentFile().getParentFile(), "lib/ecstasy.xtc"));
-        } catch (Exception ignore) {
-            return null;
-        }
-    }
-
-    /**
-     * @return the Version that was stamped onto the specified compiled module file
-     */
-    public static Version getModuleVersion(File moduleFile) {
-        if (moduleFile == null) {
-            throw new IllegalArgumentException("Compiled module file required");
-        }
-
-        if (!moduleFile.exists()) {
-            throw new IllegalArgumentException("Compiled module file (" + moduleFile + ") does not exist");
-        }
-
-        try {
-            return new FileStructure(moduleFile).getModule().getVersion();
-        } catch (Exception ignore) {
-            return null;
-        }
-    }
-
-    /**
-     * @return the version of the XDK that is answering this question, or null if this running code
-     *         is not part of a well-formed XDK image
-     */
-    private static File getJarFile() {
-        Class clz    = ModuleInfo.class;
-        URL   jarUrl = null;
-        try {
-            jarUrl = clz.getProtectionDomain().getCodeSource().getLocation();
-        } catch (SecurityException | NullPointerException ignore) {}
-
-        if (jarUrl == null) {
-            URL clzUrl = clz.getResource(clz.getSimpleName() + ".class");
-            if (clzUrl != null) {
-                String clzPath = clzUrl.toString();
-                String clzTail = clz.getCanonicalName().replace('.', '/') + ".class";
-                if (clzPath.endsWith(clzTail)) {
-                    try {
-                        jarUrl = new URI(clzPath.substring(0, clzPath.length() - clzTail.length())).
-                                    toURL();
-                    } catch (MalformedURLException | URISyntaxException ignore) {}
-                }
-            }
-        }
-
-        if (jarUrl == null) {
-            return null;
-        }
-
-        // possible "jar:" prefix (implies "!/" suffix)
-        String jarPath = jarUrl.toString();
-        if (jarPath.startsWith("jar:")) {
-            int dot = jarPath.indexOf("!/");
-            jarPath = dot < 0
-                    ? jarPath.substring(4)
-                    : jarPath.substring(4, dot);
-        }
-
-        File jarFile = null;
-        try {
-            if (jarPath.matches("file:[A-Za-z]:.*")) {
-                jarPath = "file:/" + jarPath.substring(5);
-            }
-            jarFile = new File(new URI(jarPath));
-        } catch (Exception ignore) {
-            if (jarPath.startsWith("file:")) {
-                jarFile = new File(jarPath.substring(5));
-            }
-        }
-        return jarFile;
-    }
-
-    /**
-     * @param file  the file to obtain the modification date from
-     *
-     * @return the modification date in the format "YYYY-MM-DD.HH-MM-SS", or null if it could not be
-     *         determined
-     */
-    private static String fileTimestampToBuildString(File file) {
-        try {
-            long timestamp = file.lastModified();
-            return timestamp == 0
-                    ? null
-                    : dateString(timestamp).replace(':', '-').replace(' ', '.');
-        } catch (RuntimeException ignore) {
-            return null;
-        }
     }
 
     /**
@@ -1637,9 +1484,9 @@ public class ModuleInfo {
      *
      * @param dir  a directory that may contain Ecstasy source files
      *
-     * @return an array of zero or more source files
+     * @return a list of zero or more source files
      */
-    public static File[] sourceFiles(File dir) {
+    public static List<File> sourceFiles(File dir) {
         return listFiles(dir, "x");
     }
 
@@ -1656,13 +1503,13 @@ public class ModuleInfo {
     }
 
     /**
-     * Obtain an array of files from the specified directory that are Ecstasy compiled module files.
+     * Obtain a list of files from the specified directory that are Ecstasy compiled module files.
      *
      * @param dir  a directory that may contain Ecstasy compiled module files
      *
-     * @return an array of zero or more compiled module files
+     * @return a list of zero or more compiled module files
      */
-    public static File[] compiledFiles(File dir) {
+    public static List<File> compiledFiles(File dir) {
         return listFiles(dir, "xtc");
     }
 
@@ -1671,6 +1518,7 @@ public class ModuleInfo {
      *
      * @return true iff the directory appears to be a project directory
      */
+    @SuppressWarnings("unused")
     public static boolean isProjectDir(File dir) {
         return dir != null && dir.isDirectory() &&
             (new File(dir, "src"   ).exists() && !new File(dir, "src.x"   ).exists() ||
@@ -1687,47 +1535,48 @@ public class ModuleInfo {
     public static File projectDirFromSubDir(File dir) {
         assert dir != null;
 
-        String name = dir.getName();
+        String name   = dir.getName();
+        File   curDir = dir;
         File   prjDir;
         if (   "build" .equalsIgnoreCase(name)
             || "target".equalsIgnoreCase(name)) {
-            prjDir = dir.getParentFile();
+            prjDir = curDir.getParentFile();
         } else {
-            prjDir = dir;
+            prjDir = curDir;
 
             if (   "x"      .equalsIgnoreCase(name)
                 || "xtc"    .equalsIgnoreCase(name)
                 || "ecstasy".equalsIgnoreCase(name)) {
-                dir = prjDir.getParentFile();
-                if (dir == null) {
+                curDir = prjDir.getParentFile();
+                if (curDir == null) {
                     return prjDir;
                 }
-                prjDir = dir;
-                name   = dir.getName();
+                prjDir = curDir;
+                name   = curDir.getName();
             }
 
             if (   "main".equalsIgnoreCase(name)
                 || "test".equalsIgnoreCase(name)) {
-                dir = prjDir.getParentFile();
-                if (dir == null) {
+                curDir = prjDir.getParentFile();
+                if (curDir == null) {
                     return prjDir;
                 }
-                prjDir = dir;
-                name   = dir.getName();
+                prjDir = curDir;
+                name   = curDir.getName();
             }
 
             if (   "src"   .equalsIgnoreCase(name)
                 || "source".equalsIgnoreCase(name)) {
-                dir = prjDir.getParentFile();
-                if (dir == null) {
+                curDir = prjDir.getParentFile();
+                if (curDir == null) {
                     return prjDir;
                 }
-                prjDir = dir;
+                prjDir = curDir;
             }
         }
 
         if (prjDir == null) {
-            prjDir = dir;
+            prjDir = curDir;
         }
 
         return prjDir;
@@ -1743,50 +1592,73 @@ public class ModuleInfo {
     public static File sourceDirFromPrjDir(File prjDir) {
         assert prjDir != null;
 
-        // locate the source directory, starting by assuming that the project directory could also
-        // be the source directory
+        // Locate the source directory by drilling down through conventional project structures.
+        // Tries paths like: prjDir/src/main/x/ or prjDir/source/main/ecstasy/ etc.
+        // Each level is optional; we stop when source files are found or no more subdirs match.
         File curDir = prjDir;
-        File srcDir = curDir;
-        FindSrcDir: for (int i = 0; i <= 3; ++i) {
-            File[] srcFiles = sourceFiles(curDir);
-            if (srcFiles.length == 0) {
-                File subdir;
-                switch (i) {
-                case 0:
-                    if ((subdir = new File(curDir, "src")).isDirectory() ||
-                        (subdir = new File(curDir, "source")).isDirectory()) {
-                        curDir = subdir;
-                        continue;
-                    }
-                    ++i;
-                    // fall through
-                case 1:
-                    // note: we explicitly do NOT look for "test"
-                    if ((subdir = new File(curDir, "main")).isDirectory()) {
-                        curDir = subdir;
-                        continue;
-                    }
-                    ++i;
-                    // fall through
-                case 2:
-                    if ((subdir = new File(curDir, "x")).isDirectory() ||
-                        (subdir = new File(curDir, "xtc")).isDirectory() ||
-                        (subdir = new File(curDir, "ecstasy")).isDirectory()) {
-                        curDir = subdir;
-                        continue;
-                    }
-                    ++i;
-                    // fall through
-                default:
-                    break FindSrcDir;
-                }
-            } else {
-                srcDir = curDir;
-                break;
+
+        for (int level = 0; level <= 2; level++) {
+            if (!sourceFiles(curDir).isEmpty()) {
+                return curDir;
             }
+
+            // Try to find a subdirectory at any level from 'level' onward
+            File subDir = findSourceSubDir(curDir, level);
+            if (subDir == null) {
+                break;  // No matching subdirectory found at any remaining level
+            }
+            curDir = subDir;
         }
 
-        return srcDir;
+        // Check for source files in the final directory we descended to
+        if (!sourceFiles(curDir).isEmpty()) {
+            return curDir;
+        }
+
+        return prjDir;
+    }
+
+    /**
+     * Find a conventional source subdirectory starting from the given level.
+     * Levels represent the typical project structure:
+     * <ul>
+     *   <li>Level 0: "src" or "source"</li>
+     *   <li>Level 1: "main" (note: explicitly NOT "test")</li>
+     *   <li>Level 2: "x", "xtc", or "ecstasy"</li>
+     * </ul>
+     *
+     * @param dir   the directory to search in
+     * @param level the starting level (0-2)
+     * @return the first matching subdirectory, or null if none found
+     */
+    private static File findSourceSubDir(File dir, final int level) {
+        for (int i = level; i <= 2; i++) {
+            File subDir = switch (i) {
+                case 0 -> firstDirectory(dir, "src", "source");
+                case 1 -> firstDirectory(dir, "main");
+                case 2 -> firstDirectory(dir, "x", "xtc", "ecstasy");
+                default -> null;
+            };
+            if (subDir != null) {
+                return subDir;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Return the first subdirectory that exists from the given list of names.
+     *
+     * @param parent the parent directory
+     * @param names  the subdirectory names to try
+     * @return the first existing subdirectory, or null if none exist
+     */
+    private static File firstDirectory(File parent, String... names) {
+        return Stream.of(names)
+                .map(name -> new File(parent, name))
+                .filter(File::isDirectory)
+                .findFirst()
+                .orElse(null);
     }
 
     /**
@@ -1800,13 +1672,13 @@ public class ModuleInfo {
     public static File binaryDirFromPrjDir(File prjDir) {
         assert prjDir != null;
 
-        File subdir;
-        if ((subdir = new File(prjDir, "build")).isDirectory() ||
-            (subdir = new File(prjDir, "target")).isDirectory()) {
-            return subdir;
+        File subDir;
+        if ((subDir = new File(prjDir, "build")).isDirectory() ||
+            (subDir = new File(prjDir, "target")).isDirectory()) {
+            return subDir;
         }
 
-        if (sourceFiles(prjDir).length > 0 || compiledFiles(prjDir).length > 0) {
+        if (!sourceFiles(prjDir).isEmpty() || !compiledFiles(prjDir).isEmpty()) {
             return prjDir;
         }
 
@@ -1821,10 +1693,6 @@ public class ModuleInfo {
 
     private enum Status  {Unknown, NotExists, Exists}
     private enum Content {Unknown, Invalid, Module}
-
-    public static final File[] NO_FILES = new File[0];
-
-    transient long accumulator;
 
     private final File    fileSpec;       // original file spec that was used to create this info
     private final boolean deduce;         // use knowledge of common file layouts to find locations

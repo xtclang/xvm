@@ -32,14 +32,10 @@
  *   Other group names can be used; any other names are expected to be treated as normal unit tests
  *   unless the test runner (such as `xunit`) is configured otherwise.
  *
- * * [expectedException] - if this is non-Null, it indicates that the unit test must throw the
- *   specified type of exception, otherwise the test will be considered a failure. This option is
- *   useful for a test that is expected to always fail with an exception.
- *
  * The parameters are ignored when the annotation is used on classes and properties. Any usage other
  * than that specified above may result in a compile-time and/or load/link-time error.
  */
-annotation Test(String group = Unit, Type<Exception>? expectedException = Null)
+annotation Test(String group = Unit)
         extends Iff("test".defined) {
     /**
      * Use this [group] value to indicate a normal unit test. This is the default test group name.

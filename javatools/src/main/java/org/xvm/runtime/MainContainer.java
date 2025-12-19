@@ -1,10 +1,13 @@
 package org.xvm.runtime;
 
 
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.MethodConstant;
@@ -37,22 +40,60 @@ public class MainContainer
     @Override
     public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type, ObjectHandle hOpts) {
         // check the custom injections first
-        if (m_mapInjections != null) {
-            String sValue = m_mapInjections.get(sName);
-            if (sValue != null) {
-                if (type.isNullable()) {
-                    type = type.removeNullable();
-                }
-                if (type.equals(frame.poolContext().typeString())) {
-                    return xString.makeHandle(sValue);
-                }
-            }
+        List<String> listValue = m_mapInjections.get(sName);
+        if (listValue == null) {
+            // there is no matching custom injection
+            return getParentInjectable(frame, sName, type, hOpts);
         }
 
+        ConstantPool pool             = frame.poolContext();
+        TypeConstant typeDestringable = pool.ensureEcstasyTypeConstant("text.Destringable");
+        TypeConstant typeString       = pool.typeString();
+        TypeConstant typeStrings      = pool.ensureArrayType(typeString);
+        TypeConstant typeRequired     = type;
+
+        if (typeRequired.isNullable()) {
+            // strip nullable from the required type
+            typeRequired = typeRequired.removeNullable();
+        }
+
+        if (!listValue.isEmpty()) {
+            if (typeRequired.equals(typeString)) {
+                // require String, return the last element
+                return xString.makeHandle(listValue.getLast());
+            }
+            if (typeRequired.equals(typeStrings)) {
+                // require String[], return the whole List<String> as an array
+                String[] asValue = listValue.toArray(String[]::new);
+                return xString.makeArrayHandle(asValue);
+            }
+            if (typeRequired.isA(typeDestringable)) {
+                // require Destringable, return the converted last String element
+                return toDestringable(frame, typeRequired, listValue.getLast());
+            }
+        }
+        return getParentInjectable(frame, sName, type, hOpts);
+    }
+
+    private ObjectHandle getParentInjectable(Frame frame, String sName, TypeConstant type,
+                                             ObjectHandle hOpts) {
+        // If the required type is nullable return null, otherwise return an exception
         ObjectHandle hResource = f_parent.getInjectable(frame, sName, type, hOpts);
         return hResource == null
-                ? new DeferredCallHandle(xException.makeHandle(frame, "Invalid resource: " + sName))
+                ? type.isNullable()
+                    ? xNullable.NULL
+                    : new DeferredCallHandle(xException.makeHandle(frame, "Invalid resource: " + sName))
                 : maskInjection(frame, hResource, type);
+    }
+
+    private ObjectHandle toDestringable(Frame frame, TypeConstant type, String sValue) {
+        ConstantPool    pool     = frame.poolContext();
+        TypeComposition clz      = type.ensureClass(frame);
+        ClassTemplate   template = clz.getTemplate();
+        MethodStructure ctor     = template.getStructure().findMethod("construct", 1, pool.typeString());
+        ObjectHandle[]  ahArgs   = new ObjectHandle[]{xString.makeHandle(sValue)};
+        int             iResult  = template.construct(frame, ctor, clz, null, ahArgs, Op.A_STACK);
+        return frame.popResult(iResult);
     }
 
     /**
@@ -115,16 +156,15 @@ public class MainContainer
     /**
      * Start the main container.
      *
-     * @param (optional) a map of custom injections
+     * @param mapInjections a map of custom injections where each key maps to a list of values;
+     *                      must not be null, but may be empty
      */
-    public void start(Map<String, String> mapInjections) {
+    public void start(Map<String, List<String>> mapInjections) {
         if (m_contextMain != null) {
             throw new IllegalStateException("Already started");
         }
 
-        if (mapInjections != null && !mapInjections.isEmpty()) {
-            m_mapInjections = mapInjections;
-        }
+        m_mapInjections = Objects.requireNonNull(mapInjections);
 
         ensureServiceContext();
     }
@@ -199,9 +239,9 @@ public class MainContainer
     }
 
     /**
-     * Map of custom injections.
+     * Map of custom injections where each key maps to a list of string values.
      */
-    private Map<String, String> m_mapInjections;
+    private Map<String, List<String>> m_mapInjections;
 
     /**
      * The return value from the "main" method. The value of "1" indicates that the method has

@@ -1,6 +1,7 @@
 package org.xtclang.plugin;
 
 import org.gradle.api.Project;
+import org.xtclang.plugin.launchers.ExecutionMode;
 
 public final class XtcPluginConstants {
     // XTC Language and dependency constants:
@@ -10,6 +11,7 @@ public final class XtcPluginConstants {
     public static final String XTC_SOURCE_FILE_EXTENSION = "x";
     public static final String XTC_SOURCE_SET_DIRECTORY_ROOT_NAME = "x";
     public static final String XTC_CONFIG_NAME_INCOMING = "xtcModule";
+    @SuppressWarnings("StringConcatenationMissingWhitespace")
     public static final String XTC_CONFIG_NAME_OUTGOING = XTC_CONFIG_NAME_INCOMING + "Provider";
     public static final String XTC_CONFIG_NAME_MODULE_DEPENDENCY = "xtcModuleDeps";
 
@@ -21,6 +23,11 @@ public final class XtcPluginConstants {
     public static final String XTC_EXTENSION_NAME_RUNTIME = "xtcRun";
     public static final String XTC_DEFAULT_RUN_METHOD_NAME_PREFIX = "run";
     public static final String XTC_RUNNER_CLASS_NAME = "org.xvm.tool.Runner";
+
+    // XTC Test constants:
+    public static final String XTC_EXTENSION_NAME_TEST = "xtcTest";
+    public static final String XTC_TEST_TASK_NAME = "testXtc";
+    public static final String XTC_TEST_RUNNER_CLASS_NAME = "org.xvm.tool.TestRunner";
 
     // XDK Distribution constants:
     public static final String XDK_CONFIG_NAME_INCOMING = "xdk";
@@ -36,6 +43,7 @@ public final class XtcPluginConstants {
     public static final String XDK_JAVATOOLS_ARTIFACT_ID = "javatools";
     public static final String XDK_JAVATOOLS_ARTIFACT_SUFFIX = "jar";
     public static final String XDK_CONFIG_NAME_JAVATOOLS_INCOMING = "xdkJavaTools";
+    @SuppressWarnings("StringConcatenationMissingWhitespace")
     public static final String XDK_CONFIG_NAME_JAVATOOLS_OUTGOING = XDK_CONFIG_NAME_JAVATOOLS_INCOMING + "Provider";
     public static final String XDK_JAVATOOLS_NAME_MANIFEST = "META-INF/MANIFEST.MF";
     public static final String XDK_JAVATOOLS_NAME_JAR = XDK_JAVATOOLS_ARTIFACT_ID + '.' + XDK_JAVATOOLS_ARTIFACT_SUFFIX;
@@ -54,11 +62,10 @@ public final class XtcPluginConstants {
 
     // Project property names
     public static final String PROPERTY_VERBOSE_LOGGING_OVERRIDE = "xtcPluginOverrideVerboseLogging";
-    public static final String PROPERTY_LAUNCHER_FORK = "xtcPluginOverrideFork";
+    public static final ExecutionMode DEFAULT_EXECUTION_MODE = ExecutionMode.ATTACHED;
 
     public static final String UNSPECIFIED = Project.DEFAULT_VERSION;
 
     private XtcPluginConstants() {
     }
 }
-

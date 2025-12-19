@@ -1,5 +1,7 @@
 module tck.xtclang.org {
 
+    package xunit import xunit.xtclang.org;
+
     /**
      * This is temporary, for manual testing only; will be replaced by the xUint framework.
      */

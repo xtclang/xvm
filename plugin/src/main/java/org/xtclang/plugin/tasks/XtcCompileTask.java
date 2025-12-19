@@ -2,20 +2,20 @@ package org.xtclang.plugin.tasks;
 
 import static org.xtclang.plugin.XtcPluginConstants.XTC_COMPILER_CLASS_NAME;
 import static org.xtclang.plugin.XtcPluginUtils.FileUtils.isValidXtcModuleSafe;
+import static org.xtclang.plugin.XtcPluginUtils.failure;
 
 import java.io.File;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Consumer;
 
 import javax.inject.Inject;
 
 import kotlin.Pair;
 
-import org.gradle.api.GradleException;
 import org.gradle.api.Project;
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileTree;
 import org.gradle.api.provider.ListProperty;
@@ -36,7 +36,10 @@ import org.jetbrains.annotations.NotNull;
 
 import org.xtclang.plugin.XtcCompilerExtension;
 import org.xtclang.plugin.XtcProjectDelegate;
-import org.xtclang.plugin.launchers.CommandLine;
+import org.xtclang.plugin.launchers.AttachedStrategy;
+import org.xtclang.plugin.launchers.DirectStrategy;
+import org.xtclang.plugin.launchers.ExecutionMode;
+import org.xtclang.plugin.launchers.ExecutionStrategy;
 
 @CacheableTask
 public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtension {
@@ -52,11 +55,11 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     private final ListProperty<@NotNull String> outputFilenames;
     
     // Configuration-time captured data to avoid Project references during execution
-    private final Provider<@NotNull Directory> projectDirectory;
-    private final String cachedCompileSourceSetName;
-    private final Directory cachedResourceDirectory;
-    private final Directory cachedOutputDirectory;
-    private final Set<File> cachedSourceDirectories;
+    //private final Provider<@NotNull Directory> projectDir;
+    private final String sourceSetName;
+    private final Directory resourceDir;
+    private final Directory outputDir;
+    private final Set<File> sourceSetDirs;
 
     /**
      * Create an XTC Compile task. This goes through the Gradle build script, and task creation through
@@ -68,26 +71,24 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
      * so that Gradle will correctly instantiate the task with build script reference (which is what happens
      * when you instantiate it from the ObjectFactory in a project):
      */
-    @SuppressWarnings({"ConstructorNotProtectedInAbstractClass", "this-escape"})
+    @SuppressWarnings("ConstructorNotProtectedInAbstractClass")
     @Inject
-    public XtcCompileTask(final Project project, final SourceSet sourceSet) {
+    public XtcCompileTask(final ObjectFactory objects, final Project project, final SourceSet sourceSet) {
         // the compile task name should be determined by its source set
         // a runtime task can by default depend on all source sets, it's fine. even a test task.
-        super(project);
-
-        final var objects = getObjects();
+        super(objects, project);
 
         // The outputFilenames property only exists in the compile task, not in the compile configuration.
         this.outputFilenames = objects.listProperty(String.class).value(new ArrayList<>());
 
         // Capture all necessary data at configuration time to avoid Project references during execution
-        this.projectDirectory = objects.directoryProperty().value(project.getLayout().getProjectDirectory());
+        // this.projectDir = objects.directoryProperty().value(project.getLayout().getProjectDirectory());
 
         // Capture source set data at configuration time to avoid Project references during execution
-        this.cachedCompileSourceSetName = sourceSet.getName();
-        this.cachedResourceDirectory = XtcProjectDelegate.getXtcResourceOutputDirectory(project, sourceSet).get();
-        this.cachedOutputDirectory = XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, sourceSet).get();
-        this.cachedSourceDirectories = sourceSet.getAllSource().getSrcDirs();
+        this.sourceSetName = sourceSet.getName();
+        this.resourceDir = XtcProjectDelegate.getXtcResourceOutputDirectory(project, sourceSet).get();
+        this.outputDir = XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, sourceSet).get();
+        this.sourceSetDirs = sourceSet.getAllSource().getSrcDirs();
 
         // Conventions inherited from extension; can be reset on a per-task basis, of course.
         this.disableWarnings = objects.property(Boolean.class).convention(ext.getDisableWarnings());
@@ -98,12 +99,41 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         this.xtcVersion = objects.property(String.class).convention(ext.getXtcVersion());
     }
 
-    private String getCompileSourceSetName() {
-        return cachedCompileSourceSetName;
+    @Internal
+    public String getCompileSourceSetName() {
+        return sourceSetName;
     }
 
     private boolean isMainSourceSetCompileTask() {
         return SourceSet.MAIN_SOURCE_SET_NAME.equals(getCompileSourceSetName());
+    }
+
+    // TODO Why do we even have these internals?
+    @Internal
+    public Directory getOutputDirectoryInternal() {
+        return outputDir;
+    }
+
+    @Internal
+    public Directory getResourceDirectoryInternal() {
+        return resourceDir;
+    }
+
+    public String resolveXtcVersion() {
+        if (getXtcVersion().isPresent()) {
+            return getXtcVersion().get();
+        }
+        throw failure("resolveXtcVersion returned null, no XTC version configured.");
+    }
+
+    public static String semanticVersion(final String version) {
+        return version.endsWith("-SNAPSHOT") ? version.replace("-SNAPSHOT", "+SNAPSHOT") : version;
+    }
+
+    public Set<File> resolveXtcSourceFiles() {
+        final var resolvedSources = getSource().filter(this::isTopLevelXtcSourceFile).getFiles();
+        logger.info("[plugin] Resolved top level sources (should be module definitions, or XTC will fail later): {}", resolvedSources);
+        return resolvedSources;
     }
 
     // There is one source set to compile, but there other may be needed for the module path.
@@ -186,21 +216,13 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     Provider<@NotNull Directory> getResourceDirectory() {
         // TODO: This is wrong. The compile task should not be the one depending on resources src, but resources build.
         //   But that is java behavior, so make sure at least we get the resource input dependency.
-        return getObjects().directoryProperty().value(getResourceDirectoryInternal());
-    }
-
-    private Directory getResourceDirectoryInternal() {
-        return cachedResourceDirectory;
+        return objects.directoryProperty().value(getResourceDirectoryInternal());
     }
 
     @OutputDirectory
     Provider<@NotNull Directory> getOutputDirectory() {
         // TODO We can make this configurable later.
-        return getObjects().directoryProperty().value(getOutputDirectoryInternal());
-    }
-    
-    private Directory getOutputDirectoryInternal() {
-        return cachedOutputDirectory;
+        return objects.directoryProperty().value(getOutputDirectoryInternal());
     }
 
     /**
@@ -222,62 +244,30 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     public void executeTask() {
         super.executeTask();
 
-        final var logger = getLogger();
-        final var sourceSetName = getCompileSourceSetName();
-        final var args = new CommandLine(XTC_COMPILER_CLASS_NAME, resolveJvmArgs());
-
-        final File outputDir = getOutputDirectoryInternal().getAsFile();
-        args.add("-o", projectDirectory.get().getAsFile().toPath().relativize(outputDir.toPath()).toString());
-
-        logger.info("[plugin] Output directory for {} is : {}", sourceSetName, outputDir);
-        final var processedResourcesDir = getResourceDirectoryInternal().getAsFile();
-        logger.info("[plugin] Resolving resource dir (build): '{}'.", processedResourcesDir);
-        if (processedResourcesDir.exists()) {
-            logger.info("[plugin] '{}' Added as resource directory for '{}'.", processedResourcesDir.getAbsolutePath(), getName());
-            args.add("-r", projectDirectory.get().getAsFile().toPath().relativize(processedResourcesDir.toPath()).toString());
+        // Create and execute the compile strategy (builds CompilerOptions internally after javatools is loaded)
+        final var strategy = createCompileStrategy();
+        final int exitCode = strategy.execute(this);
+        if (exitCode != 0) {
+            throw failure("Compilation failed with exit code: {}", exitCode);
         }
-
-        args.addBoolean("--version", getShowVersion().get());
-        args.addBoolean("--rebuild", getRebuild().get());
-        args.addBoolean("--nowarn", getDisableWarnings().get());
-        args.addBoolean("--verbose", getVerbose().get());
-        args.addBoolean("--strict", getStrict().get());
-        args.addBoolean("--qualify", getQualifiedOutputName().get());
-
-        // If xtcVersion is set, we stamp that, otherwise we ignore it for now. It may be that we should stamp as xcc version used to compile if not given?
-        final String moduleVersion = resolveModuleVersion();
-        if (moduleVersion != null) {
-            if (hasVerboseLogging()) {
-                logger.lifecycle("[plugin] Stamping XTC module with version: '{}'", moduleVersion);
-            }
-            args.add("--set-version", semanticVersion(moduleVersion));
-        }
-        args.addRepeatedRelative("-L", resolveFullModulePath(), projectDirectory.get().getAsFile());
-        final var sourceFiles = resolveXtcSourceFiles().stream()
-                .map(file -> projectDirectory.get().getAsFile().toPath().relativize(file.toPath()).toString())
-                .sorted().toList();
-        if (sourceFiles.isEmpty()) {
-            logger.warn("[plugin] No source file found for source set: '{}'", sourceSetName);
-        }
-        sourceFiles.forEach(args::addRaw);
-
-        final var launcher = createLauncher();
-        handleExecResult(launcher.apply(args));
         finalizeOutputs();
     }
 
-    private static String semanticVersion(final String version) {
-        return version.endsWith("-SNAPSHOT") ? version.replace("-SNAPSHOT", "+SNAPSHOT") : version;
+    private ExecutionStrategy createCompileStrategy() {
+        final ExecutionMode mode = getExecutionMode().get();
+        return switch (mode) {
+            case DIRECT -> new DirectStrategy(logger);
+            case ATTACHED -> new AttachedStrategy<>(logger, resolveJavaExecutable());
+            case DETACHED -> throw new UnsupportedOperationException("DETACHED mode not supported for compile tasks");
+        };
     }
 
-    private String resolveModuleVersion() {
-        // TODO: We need to tell the plugin, when we build it, which version it has from the catalog.
-        //    This is actually the XTC artifact that needs to be asked its version. The launcher? the xdk dependency? Figure this one out.
-        if (getXtcVersion().isPresent()) {
-            return getXtcVersion().get();
+    private String resolveJavaExecutable() {
+        final String executable = toolchainExecutable.getOrNull();
+        if (executable == null) {
+            throw failure("Java toolchain not configured - cannot resolve java executable for forked compilation");
         }
-        logger.warn("[plugin] WARNING: No XTC version was resolved. Module will not be versioned.");
-        return null;
+        return executable;
     }
 
     /**
@@ -285,7 +275,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
      * in the DSL for the compile task (the outputFilenames property with its value pairs).
      */
     private void finalizeOutputs() {
-        getObjects().fileTree().from(getOutputDirectory()).filter(f -> isValidXtcModuleSafe(f, getLogger())).getFiles().forEach(this::renameOutput);
+        objects.fileTree().from(getOutputDirectory()).filter(f -> isValidXtcModuleSafe(f, logger)).getFiles().forEach(this::renameOutput);
     }
 
     private void renameOutput(final File oldFile) {
@@ -298,19 +288,12 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         final File path = oldFile.getParentFile();
         final File newFile = new File(path, newName);
         if ((!newFile.exists() || newFile.delete()) && oldFile.renameTo(newFile)) {
-            logger.info("[plugin] Renamed and finalized compiler output XTC filename: '{}' to '{}' (path: '{}')",
-                    oldName, newName, path.getAbsolutePath());
+            logger.info("[plugin] Renamed and finalized compiler output XTC filename: '{}' to '{}' (path: '{}')", oldName, newName, path.getAbsolutePath());
             return;
         }
-        throw new GradleException("Failed to rename '" + oldFile + "' to '" + newFile + "'. Output file already exists and could not be deleted: '" + newFile.getAbsoluteFile() + "'");
+        throw failure("Failed to rename '{}' to '{}'. Output file already exists and could not be deleted: '{}'", oldFile, newFile, newFile.getAbsoluteFile());
     }
 
-    private Set<File> resolveXtcSourceFiles() {
-        final var resolvedSources = getSource().filter(this::isTopLevelXtcSourceFile).getFiles();
-        logger.info("[plugin] Resolved top level sources (should be module definitions, or XTC will fail later): {}", resolvedSources);
-        return resolvedSources;
-    }
-    
     private boolean isTopLevelXtcSourceFile(final File file) {
         return !file.isDirectory() && isXtcSourceFile(file) && isTopLevelSource(file);
     }
@@ -330,7 +313,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     }
     
     private Set<File> getSourceDirectoriesInternal() {
-        return cachedSourceDirectories;
+        return sourceSetDirs;
     }
 
     private String resolveOutputFilename(final String from) {
