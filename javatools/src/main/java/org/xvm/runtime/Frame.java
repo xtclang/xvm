@@ -1354,11 +1354,12 @@ public class Frame
      */
     public <T extends Constant> T getConstant(int iArg, Class<T> type) {
         Constant constant = getConstant(iArg);
-        if (!type.isInstance(constant)) {
+        try {
+            return type.cast(constant);
+        } catch (ClassCastException e) {
             throw new IllegalStateException("Expected " + type.getSimpleName() +
-                    ", found " + (constant == null ? "null" : constant.getClass().getSimpleName()));
+                ", found " + (constant == null ? "null" : constant.getClass().getSimpleName()), e);
         }
-        return type.cast(constant);
     }
 
     /**

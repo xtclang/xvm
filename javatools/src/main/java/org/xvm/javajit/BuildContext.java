@@ -501,11 +501,12 @@ public class BuildContext {
      */
     public <T extends Constant> T getConstant(int argId, Class<T> type) {
         Constant constant = getConstant(argId);
-        if (!type.isInstance(constant)) {
+        try {
+            return type.cast(constant);
+        } catch (ClassCastException e) {
             throw new IllegalStateException("Expected " + type.getSimpleName() +
-                    ", found " + (constant == null ? "null" : constant.getClass().getSimpleName()));
+                ", found " + (constant == null ? "null" : constant.getClass().getSimpleName()), e);
         }
-        return type.cast(constant);
     }
 
     /**
