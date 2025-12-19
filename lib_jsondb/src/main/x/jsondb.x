@@ -195,6 +195,10 @@ module jsondb.xtclang.org {
     package aggregate   import aggregate.xtclang.org;
     package collections import collections.xtclang.org;
 
+    /**
+     * The injection name prefix for all JSON DB configuration values.
+     */
+    static String ConfigPrefix = "xvm.jsondb";
 
     // ----- temporary helpers ---------------------------------------------------------------------
 

@@ -195,6 +195,9 @@ service JsonValueStore<Value extends immutable Const>
         tx.readId   = prepareId;
         tx.prepared = True;
         tx.modified = False;
+        if (model == Empty) {
+            model = Small;
+        }
         return Prepared;
     }
 
@@ -485,12 +488,23 @@ service JsonValueStore<Value extends immutable Const>
         storageLayout.put(closest, txLoc);
         storageOffset = jsonStr.size - 2; // append position is before the closing "\n]"
         lastCommit    = closest;
+        bytesUsed     = bytes.size;
     }
 
     @Override
-    Iterator<File> findFiles() {
-        File file = dataFile;
-        return (file.exists ? [file] : []).iterator();
+    Boolean quickScan() {
+        if (super() && model != Empty) {
+//            TODO: uncomment when the Medium model is implemented
+//            model = bytesUsed <= maxSmallBytes ? Small : Medium;
+            model = Small;
+        }
+        return True;
+    }
+
+    @Override
+    (Iterator<File>, Int, Int) findFiles() {
+        return dataFile.exists ? ([dataFile].iterator(), 1, dataFile.size)
+                : (Array<File>:[].iterator(), 0, 0);
     }
 
     @Override
