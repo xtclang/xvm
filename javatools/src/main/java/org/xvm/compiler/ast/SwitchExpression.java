@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
 
@@ -72,6 +73,23 @@ public class SwitchExpression
             }
         }
         return null;
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        int index = 0;
+        List<AstNode> newCond = null;
+        if (cond != null) {
+            newCond = new ArrayList<>(cond.size());
+            for (int i = 0; i < cond.size(); i++) {
+                newCond.add(children.get(index++));
+            }
+        }
+        List<AstNode> newContents = new ArrayList<>(contents.size());
+        for (int i = 0; i < contents.size(); i++) {
+            newContents.add(children.get(index++));
+        }
+        return new SwitchExpression(keyword, newCond, newContents, lEndPos);
     }
 
 
@@ -184,7 +202,7 @@ public class SwitchExpression
                 if (fValid && mgr.hasTypeConditions() && cCases == 1 &&
                         mgr.addTypeInference(ctxScope, stmtPrev, errs)) {
                     if (atypeReqScoped != null && atypeReqScoped.length > 0) {
-                        atypeReqScoped = atypeReqScoped.clone();
+                        atypeReqScoped = Arrays.copyOf(atypeReqScoped, atypeReqScoped.length);
 
                         for (int i = 0, c = atypeReqScoped.length; i < c; i++) {
                             atypeReqScoped[i] = ctxScope.resolveFormalType(atypeReqScoped[i]);

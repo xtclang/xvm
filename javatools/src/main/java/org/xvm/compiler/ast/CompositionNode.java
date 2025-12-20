@@ -176,6 +176,18 @@ public abstract class CompositionNode
         }
 
         @Override
+        protected AstNode withChildren(List<AstNode> children) {
+            int index = 0;
+            Expression condition = this.condition == null ? null : (Expression) children.get(index++);
+            TypeExpression type = (TypeExpression) children.get(index++);
+            List<Expression> args = new ArrayList<>();
+            while (index < children.size()) {
+                args.add((Expression) children.get(index++));
+            }
+            return new Extends(condition, keyword, type, args, lEndPos);
+        }
+
+        @Override
         public String toString() {
             return toStartString()
                  + (args.isEmpty() ? "" : "(" + args.stream().map(Object::toString).collect(Collectors.joining(", ")) + ")")
@@ -212,6 +224,11 @@ public abstract class CompositionNode
         @Override
         public <T> T forEachChild(Function<AstNode, T> visitor) {
             return visitor.apply(annotation);
+        }
+
+        @Override
+        protected AstNode withChildren(List<AstNode> children) {
+            return new Annotates((AnnotationExpression) children.get(0));
         }
 
         protected AnnotationExpression annotation;
@@ -273,6 +290,26 @@ public abstract class CompositionNode
         }
 
         @Override
+        protected AstNode withChildren(List<AstNode> children) {
+            int index = 0;
+            Expression condition = this.condition == null ? null : (Expression) children.get(index++);
+            TypeExpression type = (TypeExpression) children.get(index++);
+            List<Expression> args = new ArrayList<>();
+            int argsCount = this.args.size();
+            for (int i = 0; i < argsCount; i++) {
+                args.add((Expression) children.get(index++));
+            }
+            List<Parameter> constraints = null;
+            if (this.constraints != null) {
+                constraints = new ArrayList<>();
+                while (index < children.size()) {
+                    constraints.add((Parameter) children.get(index++));
+                }
+            }
+            return new Incorporates(condition, keyword, type, args, constraints);
+        }
+
+        @Override
         public String toString() {
             var sb = new StringBuilder();
 
@@ -314,6 +351,14 @@ public abstract class CompositionNode
             extends CompositionNode {
         public Implements(Expression condition, Token keyword, TypeExpression type) {
             super(condition, keyword, type);
+        }
+
+        @Override
+        protected AstNode withChildren(List<AstNode> children) {
+            int index = 0;
+            Expression condition = this.condition == null ? null : (Expression) children.get(index++);
+            TypeExpression type = (TypeExpression) children.get(index++);
+            return new Implements(condition, keyword, type);
         }
     }
 
@@ -362,6 +407,15 @@ public abstract class CompositionNode
         }
 
         @Override
+        protected AstNode withChildren(List<AstNode> children) {
+            int index = 0;
+            Expression condition = this.condition == null ? null : (Expression) children.get(index++);
+            TypeExpression type = (TypeExpression) children.get(index++);
+            Expression delegatee = (Expression) children.get(index++);
+            return new Delegates(condition, keyword, type, delegatee, lEndPos);
+        }
+
+        @Override
         public String toString() {
             return toStartString() + '(' + delegatee + ')' + toEndString();
         }
@@ -380,6 +434,14 @@ public abstract class CompositionNode
             extends CompositionNode {
         public Into(Expression condition, Token keyword, TypeExpression type) {
             super(condition, keyword, type);
+        }
+
+        @Override
+        protected AstNode withChildren(List<AstNode> children) {
+            int index = 0;
+            Expression condition = this.condition == null ? null : (Expression) children.get(index++);
+            TypeExpression type = (TypeExpression) children.get(index++);
+            return new Into(condition, keyword, type);
         }
     }
 
@@ -502,6 +564,29 @@ public abstract class CompositionNode
         }
 
         @Override
+        protected AstNode withChildren(List<AstNode> children) {
+            int index = 0;
+            Expression condition = this.condition == null ? null : (Expression) children.get(index++);
+            NamedTypeExpression type = (NamedTypeExpression) children.get(index++);
+            List<VersionOverride> vers = null;
+            if (this.vers != null) {
+                vers = new ArrayList<>();
+                for (int i = 0; i < this.vers.size(); i++) {
+                    vers.add((VersionOverride) children.get(index++));
+                }
+            }
+            List<Parameter> injects = null;
+            if (this.injects != null) {
+                injects = new ArrayList<>();
+                for (int i = 0; i < this.injects.size(); i++) {
+                    injects.add((Parameter) children.get(index++));
+                }
+            }
+            NamedTypeExpression injector = this.injector == null ? null : (NamedTypeExpression) children.get(index++);
+            return new Import(condition, keyword, modifier, type, vers, injects, injector, lEndPos);
+        }
+
+        @Override
         public String toString() {
             var sb = new StringBuilder()
                     .append(keyword.getId().TEXT)
@@ -589,6 +674,14 @@ public abstract class CompositionNode
                 return result;
             }
             return visitor.apply(expr);
+        }
+
+        @Override
+        protected AstNode withChildren(List<AstNode> children) {
+            int index = 0;
+            Expression condition = this.condition == null ? null : (Expression) children.get(index++);
+            Expression expr = (Expression) children.get(index++);
+            return new Default(condition, keyword, expr, lEndPos);
         }
 
         @Override

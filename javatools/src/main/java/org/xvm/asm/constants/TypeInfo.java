@@ -204,7 +204,7 @@ public class TypeInfo {
 
         Map<PropertyConstant, PropertyInfo> mapProps     = new HashMap<>();
         Map<Object          , PropertyInfo> mapVirtProps = new HashMap<>();
-        for (Entry<PropertyConstant, PropertyInfo> entry : f_mapProps.entrySet()) {
+        for (var entry : f_mapProps.entrySet()) {
             // ask the Property itself to reduce its capabilities based on the new access level
             PropertyConstant id   = entry.getKey();
             PropertyInfo     prop = entry.getValue().limitAccess(access);
@@ -385,7 +385,7 @@ public class TypeInfo {
         Origin originFalse = f_type.new Origin(false);
         if (composition != Composition.Implements && composition != Composition.Delegates) {
             boolean fAnnotation = composition == Composition.Annotation;
-            for (Entry<IdentityConstant, Origin> entry : f_listmapClassChain.entrySet()) {
+            for (var entry : f_listmapClassChain.entrySet()) {
                 IdentityConstant constId      = entry.getKey();
                 Origin           originThis   = entry.getValue();
                 Origin           originResult = originThis.isAnchored() & fAnnotation

@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -50,6 +51,39 @@ public class IfStatement
     @Override
     public long getEndPosition() {
         return stmtElse == null ? stmtThen.getEndPosition() : stmtElse.getEndPosition();
+    }
+
+    @Override
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        for (AstNode cond : conds) {
+            T result = visitor.apply(cond);
+            if (result != null) {
+                return result;
+            }
+        }
+        T result = visitor.apply(stmtThen);
+        if (result != null) {
+            return result;
+        }
+        if (stmtElse != null) {
+            result = visitor.apply(stmtElse);
+            if (result != null) {
+                return result;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        int condCount = conds.size();
+        List<AstNode> newConds = new ArrayList<>(condCount);
+        for (int i = 0; i < condCount; i++) {
+            newConds.add(children.get(i));
+        }
+        StatementBlock newStmtThen = (StatementBlock) children.get(condCount);
+        Statement newStmtElse = stmtElse == null ? null : (Statement) children.get(condCount + 1);
+        return new IfStatement(keyword, newConds, newStmtThen, newStmtElse);
     }
 
     /**

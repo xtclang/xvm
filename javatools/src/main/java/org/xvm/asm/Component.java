@@ -1494,6 +1494,7 @@ public abstract class Component
      *
      * @return the child component
      */
+    @Deprecated
     public Component getChild(String sName) {
         // there are five cases:
         // 1) no child by that name - return null

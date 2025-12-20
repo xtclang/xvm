@@ -131,6 +131,16 @@ public class ImportStatement
         return cond != null ? visitor.apply(cond) : null;
     }
 
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        Expression newCond = cond != null ? (Expression) children.get(0) : null;
+        if (star != null) {
+            return new ImportStatement(newCond, keyword, qualifiedName, star);
+        } else {
+            return new ImportStatement(newCond, keyword, alias, qualifiedName);
+        }
+    }
+
 
     // ----- NameResolving interface ---------------------------------------------------------------
 

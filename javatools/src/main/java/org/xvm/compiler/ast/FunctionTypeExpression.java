@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -71,6 +72,20 @@ public class FunctionTypeExpression
             }
         }
         return null;
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        int index = 0;
+        List<Parameter> newReturnValues = new ArrayList<>(returnValues.size());
+        for (int i = 0; i < returnValues.size(); i++) {
+            newReturnValues.add((Parameter) children.get(index++));
+        }
+        List<TypeExpression> newParamTypes = new ArrayList<>(paramTypes.size());
+        for (int i = 0; i < paramTypes.size(); i++) {
+            newParamTypes.add((TypeExpression) children.get(index++));
+        }
+        return new FunctionTypeExpression(function, conditional, newReturnValues, newParamTypes, lEndPos);
     }
 
 

@@ -275,13 +275,22 @@ public class StatementBlock
 
     @Override
     public <T> T forEachChild(Function<AstNode, T> visitor) {
-        for (Statement stmt : stmts) {
-            T result = visitor.apply(stmt);
+        for (var stmt : stmts) {
+            var result = visitor.apply(stmt);
             if (result != null) {
                 return result;
             }
         }
         return null;
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        return new StatementBlock(
+                children.stream().map(n -> (Statement) n).toList(),
+                source,
+                lStartPos,
+                lEndPos);
     }
 
     @Override
@@ -1680,8 +1689,8 @@ public class StatementBlock
 
     protected Source          source;
     protected List<Statement> stmts;
-    protected long            lStartPos;
-    protected long            lEndPos;
+    protected final long            lStartPos;
+    protected final long            lEndPos;
     protected boolean         boundary;
     protected boolean         containsEnclosed;
 

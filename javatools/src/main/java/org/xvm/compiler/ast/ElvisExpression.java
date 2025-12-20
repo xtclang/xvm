@@ -19,6 +19,8 @@ import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
 
+import java.util.List;
+
 
 /**
  * The "Elvis" expression, which is used to optionally substitute the value of the second expression
@@ -317,6 +319,17 @@ public class ElvisExpression
             m_labelEnd = labelEnd = new Label("end_?:_" + (++s_nCounter));
         }
         return labelEnd;
+    }
+
+
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        return new ElvisExpression(
+            (Expression) children.get(0),
+            operator,
+            (Expression) children.get(1));
     }
 
 

@@ -1229,11 +1229,10 @@ public class ConstantPool
      * @return the Component for the specified name, or null if the name is not implicitly imported
      */
     public Component getImplicitlyImportedComponent(String sName) {
-        IdentityConstant constId = getImplicitlyImportedIdentity(sName);
+        var constId = getImplicitlyImportedIdentity(sName);
         if (constId == null) {
             return null;
         }
-
         return constId.getComponent();
     }
 

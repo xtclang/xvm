@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
 
@@ -551,7 +552,7 @@ public class TernaryExpression
                  : typeElse.isAssignableTo(typeThen) ? atypeThen
                                                      : atypeRequired;
         } else {
-            TypeConstant[] atypeResult = atypeRequired.clone();
+            TypeConstant[] atypeResult = Arrays.copyOf(atypeRequired, atypeRequired.length);
 
             for (int i = 0; i < cRequired; i++) {
                 TypeConstant typeReq  = atypeRequired[i];
@@ -647,6 +648,17 @@ public class TernaryExpression
     @Override
     public String toString() {
         return cond + " ? " + exprThen + " : " + exprElse;
+    }
+
+
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        return new TernaryExpression(
+            (Expression) children.get(0),
+            (Expression) children.get(1),
+            (Expression) children.get(2));
     }
 
 

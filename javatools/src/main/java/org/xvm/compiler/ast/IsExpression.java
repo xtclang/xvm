@@ -26,6 +26,8 @@ import org.xvm.compiler.ast.Context.Branch;
 
 import org.xvm.util.Severity;
 
+import java.util.List;
+
 
 /**
  * Expression for "expression.is(expression)".
@@ -251,6 +253,16 @@ public class IsExpression
     @Override
     public String toString() {
         return String.valueOf(expr1) + '.' + operator.getId().TEXT + '(' + expr2 + ')';
+    }
+
+
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        var c = new ChildList(children);
+        // Note: We create a synthetic Token for the closing paren since we don't store it
+        return new IsExpression(c.next(), operator, c.next(), new Token(lEndPos, lEndPos, Token.Id.R_PAREN));
     }
 
 

@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 
@@ -69,6 +70,12 @@ public class LiteralExpression
     @Override
     public <T> T forEachChild(Function<AstNode, T> visitor) {
         return null;  // leaf node - no children
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        // Leaf node - return a clone with no children
+        return new LiteralExpression(literal);
     }
 
 

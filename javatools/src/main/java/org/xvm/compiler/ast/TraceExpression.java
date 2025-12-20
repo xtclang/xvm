@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.List;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -42,6 +44,12 @@ public class TraceExpression
     public Argument[] getArguments() {
         assert m_aArgs != null;
         return m_aArgs;
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        Expression newExpr = (Expression) children.get(0);
+        return new TraceExpression(newExpr);
     }
 
 

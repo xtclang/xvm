@@ -327,6 +327,29 @@ public class NamedTypeExpression
         return null;
     }
 
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        int index = 0;
+        TypeExpression newLeft = null;
+        List<TypeExpression> newParamTypes = null;
+
+        if (left != null) {
+            newLeft = (TypeExpression) children.get(index++);
+        }
+        if (paramTypes != null) {
+            newParamTypes = new ArrayList<>(paramTypes.size());
+            for (int i = 0; i < paramTypes.size(); i++) {
+                newParamTypes.add((TypeExpression) children.get(index++));
+            }
+        }
+
+        if (newLeft != null) {
+            return new NamedTypeExpression(newLeft, names, newParamTypes, lEndPos);
+        } else {
+            return new NamedTypeExpression(immutable, names, access, nonArraow, newParamTypes, lEndPos);
+        }
+    }
+
 
     // ----- NameResolving methods -----------------------------------------------------------------
 
@@ -981,16 +1004,6 @@ public class NamedTypeExpression
 
 
     // ----- AstNode methods -----------------------------------------------------------------------
-
-    @Override
-    public AstNode clone() {
-        NamedTypeExpression that = (NamedTypeExpression) super.clone();
-        // the "m_exprDynamic" is not a child and has to be handled manually
-        if (m_exprDynamic != null) {
-            that.m_exprDynamic = (NameExpression) m_exprDynamic.clone();
-        }
-        return that;
-    }
 
     @Override
     protected void discard(boolean fRecurse) {

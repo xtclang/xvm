@@ -7,7 +7,9 @@ import java.io.InputStream;
 
 import java.util.Arrays;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 
+import org.jetbrains.annotations.NotNull;
 import org.xvm.tool.ModuleInfo.FileNode;
 
 import static org.xvm.compiler.Lexer.isLineTerminator;
@@ -24,8 +26,7 @@ import static org.xvm.util.Handy.readFileChars;
  * A representation of an Ecstasy source code file, handling the first two phases of lexical analysis
  * (line termination, location and Unicode escapes).
  */
-public class Source
-        implements Constants, Cloneable {
+public class Source implements Constants {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -82,7 +83,7 @@ public class Source
      */
     private static char[] fromInputStream(InputStream stream) {
         try {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             int n;
             while ((n = stream.read()) >= 0) {
                 sb.append((char) n);
@@ -100,10 +101,22 @@ public class Source
      *
      * @param ach  the Ecstasy source code, as a character array
      */
-    Source(char[] ach) {
-        assert ach != null;
-        m_ach = ach;
+    Source(char @NotNull [] ach) {
+        m_ach = Arrays.copyOf(Objects.requireNonNull(ach), ach.length);
         m_cch = ach.length;
+    }
+
+    /**
+     * Private copy constructor for copy().
+     */
+    private Source(Source that) {
+        m_ach  = that.m_ach;  // char array is not modified, safe to share
+        m_cch  = that.m_cch;
+        m_node = that.m_node;
+        m_file = that.m_file;
+        // position fields (m_of, m_iLine, m_iLineOffset) default to 0
+        // m_sFile computed lazily from m_file
+        // m_fEscapesEncountered starts false
     }
 
 
@@ -455,17 +468,12 @@ public class Source
     }
 
     /**
-     * @return a clone of this Source, but with the position reset to the beginning of the source
-     *         code
+     * Create a copy of this Source with the position reset to the beginning.
+     *
+     * @return a new Source with the same content but position reset to the start
      */
-    public Source clone() {
-        try {
-            Source that = (Source) super.clone();
-            that.reset();
-            return that;
-        } catch (CloneNotSupportedException e) {
-            throw new RuntimeException(e);
-        }
+    public Source copy() {
+        return new Source(this);
     }
 
     /**

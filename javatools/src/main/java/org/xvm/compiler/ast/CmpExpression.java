@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.List;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
@@ -606,6 +608,14 @@ public class CmpExpression
         }
 
         super.generateConditionalJump(ctx, code, label, fWhenTrue, errs);
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        return new CmpExpression(
+            (Expression) children.get(0),
+            operator,
+            (Expression) children.get(1));
     }
 
     @Override

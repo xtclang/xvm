@@ -80,6 +80,19 @@ public class ArrayTypeExpression
         return null;
     }
 
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        if (children.isEmpty()) {
+            return new ArrayTypeExpression(type, dims, List.of(), lEndPos);
+        }
+        TypeExpression newType = (TypeExpression) children.get(0);
+        List<Expression> newIndexes = new ArrayList<>();
+        for (int i = 1; i < children.size(); i++) {
+            newIndexes.add((Expression) children.get(i));
+        }
+        return new ArrayTypeExpression(newType, newIndexes, lEndPos);
+    }
+
 
     // ----- compile phases ------------------------------------------------------------------------
 

@@ -305,7 +305,7 @@ public abstract class Expression
      */
     protected TypeFit testFitMultiExhaustive(Context ctx, TypeConstant[] atypeRequired,
                                              ErrorListener errs) {
-        Expression exprTemp = (Expression) clone();
+        Expression exprTemp = copy();
         Context    ctxTemp  = ctx.enter();
         Expression exprNew  = exprTemp.validateMulti(ctxTemp, atypeRequired,
                                         errs == null ? ErrorListener.BLACKHOLE : errs);
@@ -639,7 +639,7 @@ public abstract class Expression
                     TypeConstant typeInferred = inferTypeFromRequired(atypeActual[i], atypeRequired[i]);
                     if (typeInferred != null) {
                         if (atypeInferred == atypeActual) {
-                            atypeInferred = atypeInferred.clone();
+                            atypeInferred = Arrays.copyOf(atypeInferred, atypeInferred.length);
                         }
                         atypeInferred[i] = typeInferred;
                     }
@@ -777,7 +777,7 @@ public abstract class Expression
 
                 if (!typeActual.equals(typeImm)) {
                     if (fCloneActual) {
-                        atypeActual  = atypeActual.clone();
+                        atypeActual  = Arrays.copyOf(atypeActual, atypeActual.length);
                         fCloneActual = false;
                     }
                     atypeActual[i] = typeImm;
@@ -812,7 +812,7 @@ public abstract class Expression
                             System.err.println("No conversion found for " + constVal);
                         } else {
                             if (fCloneActual) {
-                                atypeActual  = atypeActual.clone();
+                                atypeActual  = Arrays.copyOf(atypeActual, atypeActual.length);
                                 fCloneActual = false;
                             }
                             atypeActual[i] = constConv.getType().freeze();

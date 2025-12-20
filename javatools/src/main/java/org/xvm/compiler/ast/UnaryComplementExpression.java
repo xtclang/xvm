@@ -13,6 +13,8 @@ import org.xvm.asm.op.GP_Compl;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
+import java.util.List;
+
 
 /**
  * The "~" that precedes a value (or "!" for a Boolean).
@@ -82,5 +84,13 @@ public class UnaryComplementExpression
         } else {
             super.generateAssignment(ctx, code, LVal, errs);
         }
+    }
+
+
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        return new UnaryComplementExpression(operator, (Expression) children.get(0));
     }
 }

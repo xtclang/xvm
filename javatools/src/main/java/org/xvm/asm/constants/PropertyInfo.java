@@ -40,6 +40,7 @@ import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
 import static org.xvm.javajit.JitFlavor.Specific;
 import static org.xvm.javajit.JitFlavor.Widened;
+import static org.xvm.util.Severity.*;
 
 
 /**
@@ -101,15 +102,13 @@ public class PropertyInfo
         assert idProp.getName().equals(that.getName());
 
         if (this.isFormalType() ^ that.isFormalType()) {
-            idProp.log(errs, Severity.ERROR, VE_PROPERTY_ILLEGAL,
-                    that.getIdentity().getValueString());
+            idProp.log(errs, ERROR, VE_PROPERTY_ILLEGAL, that.getIdentity().getValueString());
             return this;
         }
 
         // it is illegal to combine anything with a constant
         if (this.isConstant() || that.isConstant()) {
-            idProp.log(errs, Severity.ERROR, VE_CONST_INCOMPATIBLE,
-                    that.getIdentity().getValueString());
+            idProp.log(errs, ERROR, VE_CONST_INCOMPATIBLE, that.getIdentity().getValueString());
             return this;
         }
 
@@ -119,7 +118,7 @@ public class PropertyInfo
         TypeConstant typeThat       = that.getType();
         boolean      fAllowWidening = fMixin || !fSelf;
         if (!(typeThat.isA(typeThis) || fAllowWidening && typeThis.isA(typeThat))) {
-            idProp.log(errs, Severity.ERROR, VE_PROPERTY_TYPES_INCOMPATIBLE,
+            idProp.log(errs, ERROR, VE_PROPERTY_TYPES_INCOMPATIBLE,
                     that.getIdentity().getPathString(),
                     typeThis.getValueString(), typeThat.getValueString());
             return this;
@@ -180,7 +179,7 @@ public class PropertyInfo
             PropertyBody bodyAdd = aAdd[0];
             if (!bodyAdd.isExplicitOverride() && !this.containsBody(bodyAdd.getIdentity())
                     && !bodyAdd.isSynthetic()) { // synthetic might not be marked
-                idProp.log(errs, Severity.ERROR, VE_PROPERTY_OVERRIDE_REQUIRED,
+                idProp.log(errs, ERROR, VE_PROPERTY_OVERRIDE_REQUIRED,
                         bodyAdd.getIdentity().getValueString(),
                         aBase[0].getIdentity().getValueString());
             }
@@ -206,7 +205,7 @@ public class PropertyInfo
                 else if (!(bodyAdd.isRO() && typeResult.isA(typeAdd))
                         && !bodyAdd.isSynthetic() // synthetic might not be marked
                         && !fMixin) {
-                    idProp.log(errs, Severity.ERROR, VE_PROPERTY_TYPES_INCOMPATIBLE,
+                    idProp.log(errs, ERROR, VE_PROPERTY_TYPES_INCOMPATIBLE,
                             bodyAdd.getIdentity().getValueString(),
                             typeAdd.getValueString(),
                             typeResult.getValueString());
@@ -256,7 +255,7 @@ public class PropertyInfo
                     for (Annotation annotation : aAnnoBase) {
                         TypeConstant typeAnnoBase = annotation.getAnnotationType();
                         if (typeAnnoAdd.equals(typeAnnoBase)) {
-                            idProp.log(errs, Severity.WARNING, VE_DUP_ANNOTATION_IGNORED,
+                            idProp.log(errs, WARNING, VE_DUP_ANNOTATION_IGNORED,
                                 that.getIdentity().getParentConstant().getValueString(),
                                 getName(),
                                 annoAdd.getAnnotationClass().getValueString());
@@ -264,7 +263,7 @@ public class PropertyInfo
                         }
 
                         if (typeAnnoAdd.isA(typeAnnoBase)) {
-                            idProp.log(errs, Severity.WARNING, VE_SUP_ANNOTATION_IGNORED,
+                            idProp.log(errs, WARNING, VE_SUP_ANNOTATION_IGNORED,
                                 that.getIdentity().getParentConstant().getValueString(),
                                 getName(),
                                 typeAnnoAdd.getValueString(),
@@ -288,7 +287,7 @@ public class PropertyInfo
         // since they i) created too early in the cycle to know what access to specify; ii) will
         // adjust the access at a later point
         if (this.isSetterUnreachable() && that.isVar() && !that.getHead().isSynthetic()) {
-            idProp.log(errs, Severity.ERROR, VE_PROPERTY_SET_PRIVATE_SUPER,
+            idProp.log(errs, ERROR, VE_PROPERTY_SET_PRIVATE_SUPER,
                     that.getIdentity().getParentConstant().getValueString(),
                     getName());
         }
@@ -299,7 +298,7 @@ public class PropertyInfo
         if (that.getRefAccess().isLessAccessibleThan(this.getRefAccess()) ||
                 (accessThisVar != null && accessThatVar != null &&
                         accessThatVar.isLessAccessibleThan(accessThisVar))) {
-            idProp.log(errs, Severity.ERROR, VE_PROPERTY_ACCESS_LESSENED,
+            idProp.log(errs, ERROR, VE_PROPERTY_ACCESS_LESSENED,
                     that.getIdentity().getParentConstant().getValueString(),
                     getName());
         }
@@ -375,30 +374,19 @@ public class PropertyInfo
         for (int i = 0, c = aBody.length; i < c; ++i) {
             PropertyBody     body     = aBody[i];
             IdentityConstant constClz = idProp.getClassIdentity();
-            boolean fRetain;
-            switch (body.getImplementation()) {
-            case Implicit:      // "into" isn't in the call chain
-            case Default:       // interface type - allow multiple copies to survive
-            case Declared:      // interface type - allow multiple copies to survive
-                fRetain = true;
-                break;
-
-            case Native:
-                // generic type parameters can come from either the concrete contributions, or
-                // from an interface
-                fRetain = setClass.contains(constClz) || setDefault.contains(constClz);
-                break;
-
-            case SansCode:
-            case Delegating:
-            case Explicit:
-                // concrete type
-                fRetain = setClass.contains(constClz);
-                break;
-
-            default:
-                throw new IllegalStateException();
-            }
+            boolean fRetain = switch (body.getImplementation()) {      // "into" isn't in the call chain
+                // interface type - allow multiple copies to survive
+                case Implicit, Default, Declared ->      // interface type - allow multiple copies to survive
+                        true;
+                case Native ->
+                    // generic type parameters can come from either the concrete contributions, or
+                    // from an interface
+                        setClass.contains(constClz) || setDefault.contains(constClz);
+                case SansCode, Delegating, Explicit ->
+                    // concrete type
+                        setClass.contains(constClz);
+                default -> throw new IllegalStateException();
+            };
             if (fRetain) {
                 if (list != null) {
                     list.add(body);
@@ -1180,11 +1168,10 @@ public class PropertyInfo
      * @return true if the property is annotated by "@Inject"
      */
     public boolean isInjected() {
-        Boolean FInjected = m_FInjected;
-        if (FInjected == null) {
-            m_FInjected = FInjected = getHead().isInjected();
+        if (m_FInjected == null) {
+            m_FInjected = getHead().isInjected();
         }
-        return FInjected.booleanValue();
+        return m_FInjected;
     }
 
     /**

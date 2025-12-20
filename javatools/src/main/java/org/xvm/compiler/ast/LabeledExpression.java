@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.List;
+
 import org.xvm.compiler.Token;
 
 
@@ -42,6 +44,11 @@ public class LabeledExpression
     @Override
     public long getEndPosition() {
         return expr.getEndPosition();
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        return new LabeledExpression(name, (Expression) children.get(0));
     }
 
 

@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
@@ -405,8 +406,8 @@ public class PropertyDeclarationStatement
                     // clear the "has initial value" setting
                     prop.setInitialValue(null);
                 } else {
-                    // create a clone of ourselves
-                    PropertyDeclarationStatement stmtClone = (PropertyDeclarationStatement) clone();
+                    // create a copy of ourselves
+                    PropertyDeclarationStatement stmtClone = copy();
 
                     // create an initializer function
                     MethodStructure            methodInit = stmtClone.createInitializer();
@@ -717,10 +718,63 @@ public class PropertyDeclarationStatement
         return fCompletes;
     }
 
-        @Override
-        protected boolean canResolveNames() {
-            return super.canResolveNames() || type.canResolveNames();
+    @Override
+    protected boolean canResolveNames() {
+        return super.canResolveNames() || type.canResolveNames();
+    }
+
+    @Override
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if (condition != null && (result = visitor.apply(condition)) != null) {
+            return result;
         }
+        if (annotations != null) {
+            for (AnnotationExpression annotation : annotations) {
+                if ((result = visitor.apply(annotation)) != null) {
+                    return result;
+                }
+            }
+        }
+        if (type != null && (result = visitor.apply(type)) != null) {
+            return result;
+        }
+        if (value != null && (result = visitor.apply(value)) != null) {
+            return result;
+        }
+        if (body != null && (result = visitor.apply(body)) != null) {
+            return result;
+        }
+        return null;
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        int i = 0;
+        Expression newCondition = condition == null ? null : (Expression) children.get(i++);
+        List<AnnotationExpression> newAnnotations = null;
+        if (annotations != null) {
+            newAnnotations = children.subList(i, i + annotations.size())
+                .stream().map(n -> (AnnotationExpression) n).toList();
+            i += annotations.size();
+        }
+        TypeExpression newType = type == null ? null : (TypeExpression) children.get(i++);
+        Expression newValue = value == null ? null : (Expression) children.get(i++);
+        StatementBlock newBody = body == null ? null : (StatementBlock) children.get(i++);
+
+        return new PropertyDeclarationStatement(
+            getStartPosition(),
+            getEndPosition(),
+            newCondition,
+            modifiers,
+            newAnnotations,
+            newType,
+            name,
+            tokAsn,
+            newValue,
+            newBody,
+            doc);
+    }
 
 
     // ----- helpers -------------------------------------------------------------------------------

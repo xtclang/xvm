@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 
 import java.util.List;
+import java.util.function.Function;
 
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
@@ -81,6 +82,24 @@ public class CatchStatement
         return block.getEndPosition();
     }
 
+    @Override
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if ((result = visitor.apply(target)) != null) {
+            return result;
+        }
+        if ((result = visitor.apply(block)) != null) {
+            return result;
+        }
+        return null;
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        VariableDeclarationStatement newTarget = (VariableDeclarationStatement) children.get(0);
+        StatementBlock newBlock = (StatementBlock) children.get(1);
+        return new CatchStatement(newTarget, newBlock, lStartPos);
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------

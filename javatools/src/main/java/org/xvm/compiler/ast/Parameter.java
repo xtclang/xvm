@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.List;
 import java.util.function.Function;
 
 import org.xvm.compiler.Token;
@@ -72,6 +73,14 @@ public class Parameter
             return result;
         }
         return null;
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        int index = 0;
+        TypeExpression newType = type != null ? (TypeExpression) children.get(index++) : null;
+        Expression newValue = value != null ? (Expression) children.get(index) : null;
+        return new Parameter(newType, name, newValue);
     }
 
 

@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 
 import java.util.List;
+import java.util.function.Function;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
@@ -39,6 +40,17 @@ public class UnpackExpression
 
 
     // ----- Expression compilation ----------------------------------------------------------------
+
+    @Override
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        return visitor.apply(expr);
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        Expression newExpr = (Expression) children.get(0);
+        return new UnpackExpression(newExpr, null);
+    }
 
     @Override
     protected boolean hasSingleValueImpl() {

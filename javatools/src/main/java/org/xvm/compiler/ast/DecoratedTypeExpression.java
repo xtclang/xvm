@@ -1,6 +1,9 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.List;
+import java.util.function.Function;
+
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -14,17 +17,32 @@ import org.xvm.compiler.Token.Id;
  * of the type expression.
  */
 public class DecoratedTypeExpression
-        extends UnaryTypeExpression {
+        extends TypeExpression {
     // ----- constructors --------------------------------------------------------------------------
 
     public DecoratedTypeExpression(Token keyword, TypeExpression type) {
-        super(type);
-
         this.keyword = keyword;
+        this.type    = type;
     }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    protected boolean canResolveNames() {
+        return super.canResolveNames() || type.canResolveNames();
+    }
+
+    @Override
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        return visitor.apply(type);
+    }
+
+    @Override
+    protected void replaceChild(AstNode oldChild, AstNode newChild) {
+        assertReplaced(tryReplace(oldChild, newChild, type, n -> type = n), oldChild);
+    }
+
 
     @Override
     public long getStartPosition() {
@@ -91,8 +109,14 @@ public class DecoratedTypeExpression
         return toString();
     }
 
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        return new DecoratedTypeExpression(keyword, (TypeExpression) children.get(0));
+    }
+
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Token keyword;
+    protected Token          keyword;
+    protected TypeExpression type;
 }

@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
@@ -105,7 +106,7 @@ public class MethodDeclarationStatement
         Token fakeReturn = new Token(expr.getStartPosition(), expr.getStartPosition(), Id.RETURN);
         ReturnStatement stmt = new ReturnStatement(fakeReturn, expr);
         stmt.adopt(expr);
-        body = new StatementBlock(Collections.singletonList(stmt), expr.getStartPosition(), expr.getEndPosition());
+        body = new StatementBlock(List.of(stmt), expr.getStartPosition(), expr.getEndPosition());
         body.adopt(stmt);
 
         adopt(body);
@@ -1252,6 +1253,110 @@ public class MethodDeclarationStatement
     @Override
     public String getDumpDesc() {
         return toSignatureString();
+    }
+
+
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if (condition != null && (result = visitor.apply(condition)) != null) {
+            return result;
+        }
+        if (annotations != null) {
+            for (AnnotationExpression annotation : annotations) {
+                if ((result = visitor.apply(annotation)) != null) {
+                    return result;
+                }
+            }
+        }
+        if (typeParams != null) {
+            for (Parameter typeParam : typeParams) {
+                if ((result = visitor.apply(typeParam)) != null) {
+                    return result;
+                }
+            }
+        }
+        if (returns != null) {
+            for (Parameter returnParam : returns) {
+                if ((result = visitor.apply(returnParam)) != null) {
+                    return result;
+                }
+            }
+        }
+        if (redundant != null) {
+            for (TypeExpression redundantType : redundant) {
+                if ((result = visitor.apply(redundantType)) != null) {
+                    return result;
+                }
+            }
+        }
+        if (params != null) {
+            for (Parameter param : params) {
+                if ((result = visitor.apply(param)) != null) {
+                    return result;
+                }
+            }
+        }
+        if (body != null && (result = visitor.apply(body)) != null) {
+            return result;
+        }
+        return null;
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        int i = 0;
+        Expression newCondition = condition == null ? null : (Expression) children.get(i++);
+        List<AnnotationExpression> newAnnotations = null;
+        if (annotations != null) {
+            newAnnotations = children.subList(i, i + annotations.size())
+                .stream().map(n -> (AnnotationExpression) n).toList();
+            i += annotations.size();
+        }
+        List<Parameter> newTypeParams = null;
+        if (typeParams != null) {
+            newTypeParams = children.subList(i, i + typeParams.size())
+                .stream().map(n -> (Parameter) n).toList();
+            i += typeParams.size();
+        }
+        List<Parameter> newReturns = null;
+        if (returns != null) {
+            newReturns = children.subList(i, i + returns.size())
+                .stream().map(n -> (Parameter) n).toList();
+            i += returns.size();
+        }
+        List<TypeExpression> newRedundant = null;
+        if (redundant != null) {
+            newRedundant = children.subList(i, i + redundant.size())
+                .stream().map(n -> (TypeExpression) n).toList();
+            i += redundant.size();
+        }
+        List<Parameter> newParams = null;
+        if (params != null) {
+            newParams = children.subList(i, i + params.size())
+                .stream().map(n -> (Parameter) n).toList();
+            i += params.size();
+        }
+        StatementBlock newBody = body == null ? null : (StatementBlock) children.get(i++);
+
+        return new MethodDeclarationStatement(
+            getStartPosition(),
+            getEndPosition(),
+            newCondition,
+            modifiers,
+            newAnnotations,
+            newTypeParams,
+            conditional,
+            newReturns,
+            name,
+            newRedundant,
+            newParams,
+            newBody,
+            m_tokFinally,
+            m_bodyFinally,
+            doc);
     }
 
 

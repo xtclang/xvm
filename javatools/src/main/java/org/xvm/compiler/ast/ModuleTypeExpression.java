@@ -30,4 +30,12 @@ public class ModuleTypeExpression
     @Override
     public void resolveNames(StageMgr mgr, ErrorListener errs) {
     }
+
+
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        return new ModuleTypeExpression(names);
+    }
 }

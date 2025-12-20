@@ -5343,9 +5343,9 @@ public abstract class TypeConstant
             // Quite naturally, a similar recursion may occur with recursive types.
             if (!typeLeft.isInterfaceType() &&
                     !typeLeft.containsRecursiveType() && !typeRight.containsRecursiveType()) {
-                String sRecursion = "left=" + typeLeft.getValueString()
-                                  + "; right=" + typeRight.getValueString();
+                String sRecursion = "left=" + typeLeft.getValueString() + "; right=" + typeRight.getValueString();
                 if (s_setRecursions.add(sRecursion)) {
+                    // TOOD: WTF? LOgging? WarningP Error condition s?
                     System.err.println("rejecting isA() due to a recursion: " + sRecursion);
                 }
             }

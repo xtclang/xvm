@@ -312,12 +312,24 @@ public class TemplateExpression
     }
 
 
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        var c = new ChildList(children);
+        TypeExpression newType = type != null ? c.next() : null;
+        var result = new TemplateExpression(c.nextList(exprs.size()), lStartPos, lEndPos);
+        result.type = newType;
+        return result;
+    }
+
+
     // ----- fields --------------------------------------------------------------------------------
 
     protected TypeExpression   type;
     protected List<Expression> exprs;
-    protected long             lStartPos;
-    protected long             lEndPos;
+    protected final long       lStartPos;
+    protected final long       lEndPos;
 
     private Register m_reg$;
 }

@@ -1300,6 +1300,15 @@ public class ArrayAccessExpression
     }
 
 
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        var c = new ChildList(children);
+        return new ArrayAccessExpression(c.next(), c.nextList(indexes.size()), tokClose);
+    }
+
+
     // ----- fields --------------------------------------------------------------------------------
 
     protected Expression       expr;

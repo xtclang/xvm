@@ -48,6 +48,8 @@ import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Severity;
 
+import java.util.List;
+
 
 /**
  * Relational operator expression (with @Op support) for something that follows the pattern
@@ -431,7 +433,7 @@ public class RelOpExpression
         if (type1Req == null) {
             // since we couldn't figure out the required type,
             // create a backup copy just in case we need to re-validate
-            expr1Copy = (Expression) expr1.clone();
+            expr1Copy = expr1.copy();
         }
 
         boolean      fValid   = true;
@@ -1065,6 +1067,15 @@ public class RelOpExpression
         return f_tokBefore == null || f_tokAfter == null
                 ? super.toString()
                 : f_tokBefore.getId().TEXT + super.toString() + f_tokAfter.getId().TEXT;
+    }
+
+
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        var c = new ChildList(children);
+        return new RelOpExpression(f_tokBefore, c.next(), operator, c.next(), f_tokAfter);
     }
 
 

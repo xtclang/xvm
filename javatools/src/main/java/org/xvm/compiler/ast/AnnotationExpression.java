@@ -121,6 +121,18 @@ public class AnnotationExpression
         return null;
     }
 
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        int index = 0;
+        NamedTypeExpression newType = type != null ? (NamedTypeExpression) children.get(index++) : null;
+        List<Expression> newArgs = null;
+        if (args != null) {
+            newArgs = children.subList(index, children.size())
+                    .stream().map(n -> (Expression) n).toList();
+        }
+        return new AnnotationExpression(newType, newArgs, lStartPos, lEndPos);
+    }
+
     /**
      * Build an XVM Annotation that corresponds to the information that this AST Annotation has
      * available.

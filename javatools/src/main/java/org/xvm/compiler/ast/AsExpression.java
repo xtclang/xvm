@@ -18,6 +18,8 @@ import org.xvm.asm.op.MoveCast;
 
 import org.xvm.compiler.Token;
 
+import java.util.List;
+
 
 /**
  * Expression for "expression as type".
@@ -142,9 +144,24 @@ public class AsExpression
     }
 
 
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        // Note: We create a synthetic Token for the closing paren since we don't store it
+        // The lEndPos is preserved via the constructor
+        AsExpression result = new AsExpression(
+            (Expression) children.get(0),
+            operator,
+            (TypeExpression) children.get(1),
+            new Token(lEndPos, lEndPos, Token.Id.R_PAREN));
+        return result;
+    }
+
+
     // ----- fields --------------------------------------------------------------------------------
 
-    protected long lEndPos;
+    protected final long lEndPos;
 
     @Derived
     private boolean m_fCastRequired = true;

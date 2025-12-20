@@ -140,9 +140,19 @@ public class NonBindingExpression
     }
 
 
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        var c = new ChildList(children);
+        TypeExpression newType = type != null ? c.next() : null;
+        return new NonBindingExpression(lStartPos, lEndPos, newType);
+    }
+
+
     // ----- fields --------------------------------------------------------------------------------
 
-    protected long           lStartPos;
-    protected long           lEndPos;
+    protected final long     lStartPos;
+    protected final long     lEndPos;
     protected TypeExpression type;
 }

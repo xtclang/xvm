@@ -2,11 +2,12 @@ package org.xvm.compiler.ast;
 
 
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -56,16 +57,34 @@ import static org.xvm.util.Handy.indentLines;
  * An "Iterable"-based "for" statement.
  */
 public class ForEachStatement
-        extends ConditionalBlockStatement
+        extends ConditionalStatement
         implements LabelAble {
     // ----- constructors --------------------------------------------------------------------------
 
     public ForEachStatement(Token keyword, AssignmentStatement cond, StatementBlock block) {
-        super(keyword, List.of(cond), block);
+        super(keyword, List.of(cond));
+
+        this.block = block;
     }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    /**
+     * @return the statement block
+     */
+    public StatementBlock getBlock() {
+        return block;
+    }
+
+    @Override
+    protected <T extends AstNode> void replaceChild(T oldChild, T newChild) {
+        if (tryReplace(oldChild, newChild, block, n -> block = n)) {
+            return;
+        }
+        super.replaceChild(oldChild, newChild);
+    }
+
 
     public AssignmentStatement getCondition() {
         return (AssignmentStatement) conds.getFirst();
@@ -286,9 +305,9 @@ public class ForEachStatement
         while (true) {
             boolean fValid = true;
 
-            // clone the condition(s) and the body
-            conds = Collections.singletonList(condOrig.clone());
-            block = (StatementBlock) blockOrig.clone();
+            // copy the condition(s) and the body
+            conds = List.of(condOrig.copy());
+            block = blockOrig.copy();
 
             // create a temporary error list
             errs = errsOrig.branch(this);
@@ -466,7 +485,7 @@ public class ForEachStatement
                         assert atypeRVals.length >= cLVals;
 
                         if (fConvert) {
-                            atypeRVals = atypeRVals.clone();
+                            atypeRVals = Arrays.copyOf(atypeRVals, atypeRVals.length);
                             for (int i = 0; i < cLVals; i++) {
                                 TypeConstant typeR = atypeRVals[i];
                                 TypeConstant typeL = atypeLVals[i];
@@ -1320,6 +1339,24 @@ public class ForEachStatement
             ")\n" +
             indentLines(block.toString(), "    ");
     }
+    @Override
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if ((result = visitor.apply(conds.get(0))) != null) {
+            return result;
+        }
+        if ((result = visitor.apply(block)) != null) {
+            return result;
+        }
+        return null;
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        AssignmentStatement newCond = (AssignmentStatement) children.get(0);
+        StatementBlock newBlock = (StatementBlock) children.get(1);
+        return new ForEachStatement(keyword, newCond, newBlock);
+    }
 
 
     // ----- inner class: Plan ---------------------------------------------------------------------
@@ -1349,6 +1386,8 @@ public class ForEachStatement
 
 
     // ----- fields --------------------------------------------------------------------------------
+
+    protected StatementBlock block;
 
     @Derived
     private Label            m_labelContinue;

@@ -82,6 +82,14 @@ public class BadTypeExpression
     }
 
 
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        return new BadTypeExpression((Expression) children.get(0));
+    }
+
+
     // ----- fields --------------------------------------------------------------------------------
 
     protected Expression nonType;

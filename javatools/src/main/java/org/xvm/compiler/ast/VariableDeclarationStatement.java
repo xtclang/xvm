@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 
 import java.util.List;
+import java.util.function.Function;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Argument;
@@ -98,6 +99,20 @@ public class VariableDeclarationStatement
         return name.getEndPosition();
     }
 
+    @Override
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if ((result = visitor.apply(type)) != null) {
+            return result;
+        }
+        return null;
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        TypeExpression newType = (TypeExpression) children.get(0);
+        return new VariableDeclarationStatement(newType, name, term);
+    }
 
 
     // ----- LValue methods ------------------------------------------------------------------------

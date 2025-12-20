@@ -221,7 +221,7 @@ public abstract class BiExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Expression expr1;
-    protected Token      operator;
-    protected Expression expr2;
+    protected Expression       expr1;
+    protected final Token      operator;
+    protected Expression       expr2;
 }

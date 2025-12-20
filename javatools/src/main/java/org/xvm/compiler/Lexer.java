@@ -239,8 +239,7 @@ public class Lexer
         boolean fWhitespaceBefore = m_fWhitespace;
         Token token = eatToken();
         boolean fWhitespaceAfter = eatWhitespace();
-        token.noteWhitespace(fWhitespaceBefore, fWhitespaceAfter);
-        return token;
+        return token.withWhitespace(fWhitespaceBefore, fWhitespaceAfter);
     }
 
     /**

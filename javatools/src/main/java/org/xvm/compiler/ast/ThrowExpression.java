@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 
@@ -97,6 +98,14 @@ public class ThrowExpression
             return result;
         }
         return null;
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        int i = 0;
+        Expression newExpr = expr == null ? null : (Expression) children.get(i++);
+        Expression newMessage = message == null ? null : (Expression) children.get(i++);
+        return new ThrowExpression(keyword, newExpr, newMessage, null);
     }
 
     @Override

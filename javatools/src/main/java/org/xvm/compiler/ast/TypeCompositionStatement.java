@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import java.util.stream.Collectors;
 
@@ -2956,6 +2957,126 @@ public class TypeCompositionStatement
         }
 
         return sb.toString();
+    }
+
+
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if (condition != null && (result = visitor.apply(condition)) != null) {
+            return result;
+        }
+        if (annotations != null) {
+            for (AnnotationExpression annotation : annotations) {
+                if ((result = visitor.apply(annotation)) != null) {
+                    return result;
+                }
+            }
+        }
+        if (typeParams != null) {
+            for (Parameter typeParam : typeParams) {
+                if ((result = visitor.apply(typeParam)) != null) {
+                    return result;
+                }
+            }
+        }
+        if (constructorParams != null) {
+            for (Parameter constructorParam : constructorParams) {
+                if ((result = visitor.apply(constructorParam)) != null) {
+                    return result;
+                }
+            }
+        }
+        if (typeArgs != null) {
+            for (TypeExpression typeArg : typeArgs) {
+                if ((result = visitor.apply(typeArg)) != null) {
+                    return result;
+                }
+            }
+        }
+        if (args != null) {
+            for (Expression arg : args) {
+                if ((result = visitor.apply(arg)) != null) {
+                    return result;
+                }
+            }
+        }
+        if (compositions != null) {
+            for (CompositionNode composition : compositions) {
+                if ((result = visitor.apply(composition)) != null) {
+                    return result;
+                }
+            }
+        }
+        if (body != null && (result = visitor.apply(body)) != null) {
+            return result;
+        }
+        if (enclosed != null && (result = visitor.apply(enclosed)) != null) {
+            return result;
+        }
+        return null;
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        int i = 0;
+        Expression newCondition = condition == null ? null : (Expression) children.get(i++);
+        List<AnnotationExpression> newAnnotations = null;
+        if (annotations != null) {
+            newAnnotations = children.subList(i, i + annotations.size())
+                .stream().map(n -> (AnnotationExpression) n).toList();
+            i += annotations.size();
+        }
+        List<Parameter> newTypeParams = null;
+        if (typeParams != null) {
+            newTypeParams = children.subList(i, i + typeParams.size())
+                .stream().map(n -> (Parameter) n).toList();
+            i += typeParams.size();
+        }
+        List<Parameter> newConstructorParams = null;
+        if (constructorParams != null) {
+            newConstructorParams = children.subList(i, i + constructorParams.size())
+                .stream().map(n -> (Parameter) n).toList();
+            i += constructorParams.size();
+        }
+        List<TypeExpression> newTypeArgs = null;
+        if (typeArgs != null) {
+            newTypeArgs = children.subList(i, i + typeArgs.size())
+                .stream().map(n -> (TypeExpression) n).toList();
+            i += typeArgs.size();
+        }
+        List<Expression> newArgs = null;
+        if (args != null) {
+            newArgs = children.subList(i, i + args.size())
+                .stream().map(n -> (Expression) n).toList();
+            i += args.size();
+        }
+        List<CompositionNode> newCompositions = null;
+        if (compositions != null) {
+            newCompositions = children.subList(i, i + compositions.size())
+                .stream().map(n -> (CompositionNode) n).toList();
+            i += compositions.size();
+        }
+        StatementBlock newBody = body == null ? null : (StatementBlock) children.get(i++);
+        StatementBlock newEnclosed = enclosed == null ? null : (StatementBlock) children.get(i++);
+
+        return new TypeCompositionStatement(
+            source,
+            getStartPosition(),
+            getEndPosition(),
+            newCondition,
+            modifiers,
+            newAnnotations,
+            category,
+            name,
+            qualified,
+            newTypeParams,
+            newConstructorParams,
+            newCompositions,
+            newBody,
+            doc);
     }
 
 

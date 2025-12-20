@@ -1,8 +1,6 @@
 package org.xvm.compiler.ast;
 
 
-import java.lang.reflect.Field;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
@@ -68,8 +66,8 @@ public class MultipleLValueStatement
     }
 
     @Override
-    protected Field[] getChildFields() {
-        return STMT_FIELDS;
+    protected AstNode withChildren(List<AstNode> children) {
+        return new MultipleLValueStatement(children);
     }
 
     /**
@@ -277,8 +275,9 @@ public class MultipleLValueStatement
         }
 
         @Override
-        protected Field[] getChildFields() {
-            return EXPR_FIELDS;
+        protected AstNode withChildren(List<AstNode> children) {
+            // this inner class doesn't "own" children - it delegates to the outer class
+            return this;
         }
 
         @Override
@@ -545,6 +544,11 @@ public class MultipleLValueStatement
             return getParent().toString();
         }
 
+        /**
+         * Lazily computed cache of LValue expressions, derived from the outer class's LVals.
+         * This is a transient/derived field - the actual children are owned by the outer class.
+         */
+        @Derived
         protected List<Expression> exprs;
     }
 
@@ -567,7 +571,4 @@ public class MultipleLValueStatement
      */
     @Derived
     protected MultipleLValueExpression expr;
-
-    private static final Field[] STMT_FIELDS = fieldsForNames(MultipleLValueStatement.class, "LVals");
-    private static final Field[] EXPR_FIELDS = fieldsForNames(MultipleLValueExpression.class, "exprs");
 }

@@ -22,7 +22,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.jetbrains.annotations.NotNull;
 import org.xvm.asm.Argument;
@@ -71,8 +70,7 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * Common base class for all statements and expressions.
  */
-public abstract class AstNode
-        implements Cloneable {
+public abstract class AstNode {
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
@@ -181,6 +179,105 @@ public abstract class AstNode
     }
 
     /**
+     * Create a new node of the same type with the specified children. This is the foundation
+     * for copy-on-write tree transformations.
+     * <p>
+     * The children list must contain nodes in the same order as {@link #forEachChild(Function)}
+     * provides them. Implementations extract children by index and cast to appropriate types.
+     * <p>
+     * Non-child fields (tokens, positions, etc.) are copied from this node. Fields marked
+     * with {@link Derived} are NOT copied - they will be recomputed on the new node.
+     *
+     * @param children  the children for the new node, in forEachChild order
+     *
+     * @return a new node with the specified children
+     */
+    protected abstract AstNode withChildren(List<AstNode> children);
+
+    /**
+     * A helper class for extracting typed children from the children list in {@link #withChildren}.
+     * Encapsulates the casting and provides clean, type-inferred access.
+     * <p>
+     * Usage:
+     * <pre>{@code
+     * @Override
+     * protected AstNode withChildren(List<AstNode> children) {
+     *     var c = new ChildList(children);
+     *     return new BinaryExpression(c.next(), operator, c.next());
+     * }
+     * }</pre>
+     */
+    protected static final class ChildList {
+        private final List<AstNode> children;
+        private int index = 0;
+
+        public ChildList(List<AstNode> children) {
+            this.children = children;
+        }
+
+        /**
+         * Get the next child, cast to the inferred type.
+         *
+         * @param <T>  the expected type of the child
+         *
+         * @return the next child
+         */
+        @SuppressWarnings("unchecked")
+        public <T extends AstNode> T next() {
+            return (T) children.get(index++);
+        }
+
+        /**
+         * Extract a sublist of children as a typed list.
+         *
+         * @param count  the number of children to extract
+         * @param <T>    the expected type of the children
+         *
+         * @return an unmodifiable list of the next {@code count} children
+         */
+        @SuppressWarnings("unchecked")
+        public <T extends AstNode> List<T> nextList(int count) {
+            var result = children.subList(index, index + count).stream()
+                    .map(node -> (T) node)
+                    .toList();
+            index += count;
+            return result;
+        }
+
+        /**
+         * @return the remaining number of children
+         */
+        public int remaining() {
+            return children.size() - index;
+        }
+    }
+
+    /**
+     * Create a deep copy of this node and its entire subtree.
+     * <p>
+     * Uses {@link #withChildren} to construct new nodes, recursively copying all children.
+     * Fields marked with {@link Derived} are NOT copied.
+     * <p>
+     * The copy properly sets parent relationships via {@link #adopt}.
+     *
+     * @param <T>  the type of this node (for type-safe returns)
+     *
+     * @return a deep copy of this node
+     */
+    @SuppressWarnings("unchecked")
+    public <T extends AstNode> T copy() {
+        List<AstNode> copiedChildren = new ArrayList<>();
+        forEachChild(child -> {
+            copiedChildren.add(child.copy());
+            return null;
+        });
+
+        AstNode copy = withChildren(copiedChildren);
+        copy.adopt(copiedChildren);
+        return (T) copy;
+    }
+
+    /**
      * Helper for building immutable child lists from multiple lists.
      *
      * @param lists  one or more lists of child nodes
@@ -248,28 +345,6 @@ public abstract class AstNode
     }
 
     /**
-     * Helper for implementing replaceChild for list fields. Attempts to find and replace the
-     * old child in the given list.
-     *
-     * @param oldChild  the old child
-     * @param newChild  the new child
-     * @param list      the list that may contain the old child (may be null)
-     *
-     * @return true iff the replacement was made
-     */
-    @SuppressWarnings("unchecked")
-    protected <T extends AstNode> boolean tryReplaceInList(AstNode oldChild, AstNode newChild, List<T> list) {
-        if (list != null) {
-            int index = list.indexOf(oldChild);
-            if (index >= 0) {
-                list.set(index, (T) newChild);
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
      * For a node contained somewhere in the AST tree under this node, find the immediate child of
      * this node that is or contains the specified node.
      *
@@ -309,62 +384,6 @@ public abstract class AstNode
      */
     protected boolean isDiscarded() {
         return m_stage == Stage.Discarded;
-    }
-
-    /**
-     * @return an array of fields on this AstNode that contain references to child AstNodes
-     */
-    protected Field[] getChildFields() {
-        return NO_FIELDS;
-    }
-
-    @Override
-    public AstNode clone() {
-        AstNode that;
-        try {
-            that = (AstNode) super.clone();
-        } catch (CloneNotSupportedException e) {
-            throw new IllegalStateException(e);
-        }
-
-        for (Field field : getChildFields()) {
-            Object oVal;
-            try {
-                oVal = field.get(this);
-            } catch (NullPointerException e) {
-                throw new IllegalStateException("class=" + this.getClass().getSimpleName(), e);
-            } catch (IllegalAccessException e) {
-                throw new IllegalStateException(e);
-            }
-
-            if (oVal != null) {
-                if (oVal instanceof AstNode node) {
-                    AstNode nodeNew = node.clone();
-
-                    that.adopt(nodeNew);
-                    oVal = nodeNew;
-                } else if (oVal instanceof List list) {
-                    ArrayList<AstNode> listNew = new ArrayList<>();
-                    for (AstNode node : (List<AstNode>) list) {
-                        listNew.add(node.clone());
-                    }
-
-                    that.adopt(listNew);
-                    oVal = listNew;
-                } else {
-                    throw new IllegalStateException(
-                            "unsupported container type: " + oVal.getClass().getSimpleName());
-                }
-
-                try {
-                    field.set(that, oVal);
-                } catch (IllegalAccessException e) {
-                    throw new IllegalStateException(e);
-                }
-            }
-        }
-
-        return that;
     }
 
     /**
@@ -1922,20 +1941,11 @@ public abstract class AstNode
      * @return a map containing all the child information to dump
      */
     public Map<String, Object> getDumpChildren() {
-        Field[] fields = getChildFields();
-        if (fields.length == 0) {
+        List<AstNode> kids = children();
+        if (kids.isEmpty()) {
             return Collections.emptyMap();
         }
-
-        Map<String, Object> map = new ListMap<>();
-        for (Field field : fields) {
-            try {
-                map.put(field.getName(), field.get(this));
-            } catch (IllegalAccessException e) {
-                throw new IllegalStateException(e);
-            }
-        }
-        return map;
+        return Map.of("children", kids);
     }
 
 

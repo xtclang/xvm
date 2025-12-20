@@ -25,6 +25,8 @@ import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Handy;
 
+import java.util.List;
+
 
 /**
  * Conditional operator expressions "||" and "&&".
@@ -331,4 +333,13 @@ public class CondOpExpression
     static final int UandF = ('?' << 16) | ('&' << 8) | '0';
     static final int UandT = ('?' << 16) | ('&' << 8) | '1';
     static final int UandU = ('?' << 16) | ('&' << 8) | '?';
+
+
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        var c = new ChildList(children);
+        return new CondOpExpression(c.next(), operator, c.next());
+    }
 }

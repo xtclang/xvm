@@ -85,6 +85,7 @@ public abstract class IdentityConstant
     /**
      * @return the number of elements in the identity constant path
      */
+    @SuppressWarnings("unused")
     public int getPathElementCount() {
         int c = 0;
         IdentityConstant id = this;
@@ -97,6 +98,25 @@ public abstract class IdentityConstant
 
     /**
      * @return a List of IdentityConstants that makes up the path to this IdentityConstant
+     *
+     * TODO: THIS IS TERRIFYNG!
+     *
+     * What’s wrong here
+     * 	1.	Aliasing / shared mutable state
+     * 	 	You don’t own the list you’re mutating
+     * 	 	You are modifying someone else’s list
+     * 	2.	Hidden side effects
+     * 	 	Calling getPath() mutates the parent’s path
+     * 	 	Call order now matters (!!)
+     * 	3.	Violates getter expectations
+     * 	 	A method named getPath() should not mutate anything
+     * 	4.	Breaks referential transparency
+     * 	    a.getPath() == b.getPath()   // maybe?!
+     * 	5.	Thread-hostile
+     * 	 	Zero safety
+     * 	 	Impossible to reason about
+     *
+     * This is the kind of bug that survives for years and explodes during refactors.
      */
     public List<IdentityConstant> getPath() {
         List<IdentityConstant> list = getParentConstant().getPath();
@@ -210,13 +230,11 @@ public abstract class IdentityConstant
      *         IdentityConstant's path; a member nested immediately within a class is at depth 1
      */
     public int getNestedDepth() {
-        int              c  = 0;
-        IdentityConstant id = this;
-        while (id.isNested()) {
-            id = id.getParentConstant();
-            ++c;
+        int depth = 0;
+        for (IdentityConstant c = this; c.isNested(); c = c.getParentConstant()) {
+            depth++;
         }
-        return c;
+        return depth;
     }
 
     /**

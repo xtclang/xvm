@@ -80,6 +80,14 @@ public class ReturnStatement
         return exprs.isEmpty() ? keyword.getEndPosition() : exprs.getLast().getEndPosition();
     }
 
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        List<Expression> newExprs = new ArrayList<>(children.size());
+        for (AstNode child : children) {
+            newExprs.add((Expression) child);
+        }
+        return new ReturnStatement(keyword, newExprs);
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------
@@ -128,7 +136,7 @@ public class ReturnStatement
             TypeConstant typeRet = aRetTypes[i];
             if (typeRet.containsAutoNarrowing(false)) {
                 if (fClone) {
-                    aRetTypes = aRetTypes.clone();
+                    aRetTypes = Arrays.copyOf(aRetTypes, aRetTypes.length);
                     fClone    = false;
                 }
                 aRetTypes[i] = typeRet.resolveAutoNarrowing(pool, false, ctx.getThisType(), null);

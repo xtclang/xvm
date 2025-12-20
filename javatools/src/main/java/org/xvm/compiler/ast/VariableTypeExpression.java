@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.List;
 import java.util.function.Function;
 
 import org.xvm.asm.ErrorListener;
@@ -49,6 +50,11 @@ public class VariableTypeExpression
     @Override
     public <T> T forEachChild(Function<AstNode, T> visitor) {
         return null;  // no AST node children (token is a Token)
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        return new VariableTypeExpression(token);
     }
 
 

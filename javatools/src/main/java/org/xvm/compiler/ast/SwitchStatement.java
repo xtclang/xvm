@@ -32,20 +32,40 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
 
+import java.util.function.Function;
+
 
 /**
  * A "switch" statement.
  */
 public class SwitchStatement
-        extends ConditionalBlockStatement {
+        extends ConditionalStatement {
     // ----- constructors --------------------------------------------------------------------------
 
     public SwitchStatement(Token keyword, List<AstNode> conds, StatementBlock block) {
-        super(keyword, conds, block);
+        super(keyword, conds);
+
+        this.block = block;
     }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    /**
+     * @return the statement block
+     */
+    public StatementBlock getBlock() {
+        return block;
+    }
+
+    @Override
+    protected <T extends AstNode> void replaceChild(T oldChild, T newChild) {
+        if (tryReplace(oldChild, newChild, block, n -> block = n)) {
+            return;
+        }
+        super.replaceChild(oldChild, newChild);
+    }
+
 
     @Override
     public boolean isNaturalGotoStatementTarget() {
@@ -639,7 +659,34 @@ public class SwitchStatement
     }
 
 
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        for (AstNode cond : conds) {
+            T result = visitor.apply(cond);
+            if (result != null) {
+                return result;
+            }
+        }
+        return visitor.apply(block);
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        int condCount = conds.size();
+        List<AstNode> newConds = new ArrayList<>(condCount);
+        for (int i = 0; i < condCount; i++) {
+            newConds.add(children.get(i));
+        }
+        StatementBlock newBlock = (StatementBlock) children.get(condCount);
+        return new SwitchStatement(keyword, newConds, newBlock);
+    }
+
+
     // ----- fields --------------------------------------------------------------------------------
+
+    protected StatementBlock block;
 
     /**
      * The manager that collects all of the case information.

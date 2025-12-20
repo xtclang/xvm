@@ -80,6 +80,10 @@ public class NotNullExpression
         return visitor.apply(expr);
     }
 
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        return new NotNullExpression((Expression) children.get(0), operator);
+    }
 
     @Override
     protected void replaceChild(AstNode oldChild, AstNode newChild) {

@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.List;
+
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
@@ -23,6 +25,11 @@ public class ContinueStatement
 
     public ContinueStatement(Token keyword, Token name) {
         super(keyword, name);
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        return new ContinueStatement(keyword, name);
     }
 
 

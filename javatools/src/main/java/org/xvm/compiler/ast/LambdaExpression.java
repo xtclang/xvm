@@ -722,7 +722,7 @@ public class LambdaExpression
     private LambdaContext createContext(Context ctx, TypeConstant typeRequired,
                                         TypeConstant[] atypeParams, String[] asParams,
                                         ErrorListener errs) {
-        StatementBlock blockTemp = (StatementBlock) body.clone();
+        StatementBlock blockTemp = body.copy();
         if (!new StageMgr(blockTemp, Stage.Validated, errs).fastForward(20)) {
             blockTemp.discard(true);
             return null;
@@ -744,7 +744,7 @@ public class LambdaExpression
             boolean fValid = true;
 
             // clone the condition(s) and the body
-            blockTemp = (StatementBlock) blockOrig.clone();
+            blockTemp = blockOrig.copy();
 
             // create a temporary error list
             ErrorListener errsTemp = errs.branch(this);
@@ -870,14 +870,6 @@ public class LambdaExpression
             m_lambda.getParent().removeChild(m_lambda);
             m_lambda = null;
         }
-    }
-
-    @Override
-    public AstNode clone() {
-        // the reference to the lambda's method structure should not be a part of the cloned state
-        LambdaExpression that = (LambdaExpression) super.clone();
-        that.m_lambda = null;
-        return that;
     }
 
     @Override
@@ -1270,7 +1262,7 @@ public class LambdaExpression
             }
             if (typeNew != typeOld) {
                 if (atypeRets == atype) {
-                    atypeRets = atype.clone();
+                    atypeRets = Arrays.copyOf(atype, atype.length);
                 }
                 atypeRets[i] = typeNew;
             }
@@ -1517,9 +1509,34 @@ public class LambdaExpression
 
     protected List<Parameter>  params;
     protected List<Expression> paramNames;
-    protected Token            operator;
-    protected StatementBlock   body;
-    protected long             lStartPos;
+    protected final Token            operator;
+    protected StatementBlock         body;
+    protected final long             lStartPos;
+
+
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        int index = 0;
+        List<AstNode> newParams;
+        if (params != null) {
+            newParams = new ArrayList<>(params.size());
+            for (int i = 0; i < params.size(); i++) {
+                newParams.add(children.get(index++));
+            }
+        } else if (paramNames != null) {
+            newParams = new ArrayList<>(paramNames.size());
+            for (int i = 0; i < paramNames.size(); i++) {
+                newParams.add(children.get(index++));
+            }
+        } else {
+            newParams = List.of();
+        }
+        StatementBlock newBody = (StatementBlock) children.get(index);
+        return new LambdaExpression(newParams, operator, newBody, lStartPos);
+    }
+
 
     /**
      * Set to true after the expression prepares.

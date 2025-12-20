@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.xvm.asm.Argument;
@@ -75,7 +76,8 @@ public class ConvertExpression
             finishValidation(null, null, type, expr.getTypeFit().addConversion(), val, errs);
         } else {
             Constant[]     aVal  = null;
-            TypeConstant[] aType = expr.getTypes().clone();
+            TypeConstant[] aTypes = expr.getTypes();
+            TypeConstant[] aType = Arrays.copyOf(aTypes, aTypes.length);
             for (int i = 0, c = aidConv.length; i < c; i++) {
                 MethodConstant idConv = aidConv[i];
                 if (idConv != null) {
@@ -84,7 +86,8 @@ public class ConvertExpression
             }
 
             if (expr.isConstant()) {
-                aVal = expr.toConstants().clone();
+                Constant[] aConsts = expr.toConstants();
+                aVal = Arrays.copyOf(aConsts, aConsts.length);
                 for (int i = 0, c = aType.length; i < c; i++) {
                     MethodConstant idConv = aidConv[i];
                     if (idConv != null) {
@@ -177,7 +180,7 @@ public class ConvertExpression
         MethodConstant[] aidConv   = m_aidConv;
         int              cConvs    = aidConv.length;
         Expression       expr      = getUnderlyingExpression();
-        Assignable[]     aLValTemp = aLVal.clone();
+        Assignable[]     aLValTemp = Arrays.copyOf(aLVal, aLVal.length);
 
         // create a temporary to hold the Boolean result for a conditional call, if necessary
         boolean  fCond   = isConditionalResult();
@@ -351,6 +354,15 @@ public class ConvertExpression
             }
             return sb.append(')').toString();
         }
+    }
+
+
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        // ConvertExpression is a synthetic expression - pass null for errs since validation already done
+        return new ConvertExpression((Expression) children.get(0), m_aidConv, null);
     }
 
 

@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.Argument;
@@ -64,6 +65,14 @@ public class SequentialAssignExpression
         return isInc()
                 ? isPre() ? Sequential.PreInc : Sequential.PostInc
                 : isPre() ? Sequential.PreDec : Sequential.PostDec;
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        Expression newExpr = (Expression) children.get(0);
+        return isPre()
+                ? new SequentialAssignExpression(operator, newExpr)
+                : new SequentialAssignExpression(newExpr, operator);
     }
 
 

@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -573,6 +574,15 @@ public class CmpChainExpression
     @Override
     public String getDumpDesc() {
         return toString();
+    }
+
+
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        var c = new ChildList(children);
+        return new CmpChainExpression(c.nextList(expressions.size()), operators);
     }
 
 

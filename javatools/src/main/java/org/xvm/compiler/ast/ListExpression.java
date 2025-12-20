@@ -423,10 +423,24 @@ public class ListExpression
     }
 
 
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        int index = 0;
+        TypeExpression newType = type == null ? null : (TypeExpression) children.get(index++);
+        List<Expression> newExprs = new ArrayList<>(exprs.size());
+        for (int i = 0; i < exprs.size(); i++) {
+            newExprs.add((Expression) children.get(index++));
+        }
+        return new ListExpression(newType, newExprs, lStartPos, lEndPos);
+    }
+
+
     // ----- fields --------------------------------------------------------------------------------
 
     protected TypeExpression   type;
     protected List<Expression> exprs;
-    protected long             lStartPos;
-    protected long             lEndPos;
+    protected final long       lStartPos;
+    protected final long       lEndPos;
 }

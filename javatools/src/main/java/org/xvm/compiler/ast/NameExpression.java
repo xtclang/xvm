@@ -463,6 +463,25 @@ public class NameExpression
         return null;
     }
 
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        int index = 0;
+        Expression newLeft = null;
+        List<TypeExpression> newParams = null;
+
+        if (left != null) {
+            newLeft = (Expression) children.get(index++);
+        }
+        if (params != null) {
+            newParams = new ArrayList<>(params.size());
+            for (int i = 0; i < params.size(); i++) {
+                newParams.add((TypeExpression) children.get(index++));
+            }
+        }
+
+        return new NameExpression(newLeft, amp, name, newParams, lEndPos);
+    }
+
     // ----- LValue methods ------------------------------------------------------------------------
 
     @Override
@@ -755,6 +774,7 @@ public class NameExpression
                 break;
 
             case Property: {
+                assert argRaw instanceof PropertyConstant;
                 PropertyConstant idProp = (PropertyConstant) argRaw;
 
                 if (idProp.isFormalType()) {

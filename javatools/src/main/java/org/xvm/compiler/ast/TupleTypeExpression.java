@@ -94,9 +94,18 @@ public class TupleTypeExpression
     }
 
 
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        var c = new ChildList(children);
+        return new TupleTypeExpression(c.nextList(paramTypes.size()), lStartPos, lEndPos);
+    }
+
+
     // ----- fields --------------------------------------------------------------------------------
 
     protected List<TypeExpression> paramTypes;
-    protected long                 lStartPos;
-    protected long                 lEndPos;
+    protected final long           lStartPos;
+    protected final long           lEndPos;
 }

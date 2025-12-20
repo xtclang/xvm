@@ -501,10 +501,24 @@ public class TupleExpression
     }
 
 
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        int index = 0;
+        TypeExpression newType = type == null ? null : (TypeExpression) children.get(index++);
+        List<Expression> newExprs = new ArrayList<>(exprs.size());
+        for (int i = 0; i < exprs.size(); i++) {
+            newExprs.add((Expression) children.get(index++));
+        }
+        return new TupleExpression(newType, newExprs, m_lStartPos, m_lEndPos);
+    }
+
+
     // ----- fields --------------------------------------------------------------------------------
 
     protected TypeExpression   type;
     protected List<Expression> exprs;
-    protected long             m_lStartPos;
-    protected long             m_lEndPos;
+    protected final long       m_lStartPos;
+    protected final long       m_lEndPos;
 }

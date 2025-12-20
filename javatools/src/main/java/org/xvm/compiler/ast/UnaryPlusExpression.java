@@ -10,6 +10,8 @@ import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
 
+import java.util.List;
+
 
 /**
  * The "+" that precedes a number.
@@ -57,5 +59,13 @@ public class UnaryPlusExpression
         }
 
         return replaceThisWith(exprRight);
+    }
+
+
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        return new UnaryPlusExpression(operator, (Expression) children.get(0));
     }
 }

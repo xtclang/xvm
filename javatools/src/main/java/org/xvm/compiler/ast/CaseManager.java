@@ -478,7 +478,7 @@ public class CaseManager<CookieType> {
                             lRange |= 1L << i;
 
                             if (atypeAlt == null) {
-                                atypeAlt = m_atypeCond.clone();
+                                atypeAlt = Arrays.copyOf(m_atypeCond, m_atypeCond.length);
                             }
                             atypeAlt[i] = typeRange;
                         }

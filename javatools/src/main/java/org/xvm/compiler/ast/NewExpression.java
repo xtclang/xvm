@@ -151,26 +151,44 @@ public class NewExpression
                 return result;
             }
         }
-        if (anon != null && (result = visitor.apply(anon)) != null) {
+        // Note: when anon is present, body is anon.body (same reference), so we only visit anon.
+        // When anon is null but body is not null, body is a standalone child that we must visit.
+        if (anon != null) {
+            if ((result = visitor.apply(anon)) != null) {
+                return result;
+            }
+        } else if (body != null && (result = visitor.apply(body)) != null) {
             return result;
         }
         return null;
     }
 
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        var c = new ChildList(children);
+
+        Expression               newLeft = left != null ? c.next() : null;
+        TypeExpression           newType = type != null ? c.next() : null;
+        List<Expression>         newArgs = c.nextList(args.size());
+        TypeCompositionStatement newAnon = null;
+        StatementBlock           newBody = null;
+
+        // Note: when anon is present, body is anon.body (same reference), so we only process anon.
+        // When anon is null but body is not null, body is a standalone child that we must process.
+        if (anon != null) {
+            newAnon = c.next();
+            newBody = newAnon.body;
+        } else if (body != null) {
+            newBody = c.next();
+        }
+
+        NewExpression result = new NewExpression(newLeft, operator, newType, newArgs, dims, newBody, lEndPos);
+        result.anon = newAnon;
+        return result;
+    }
+
 
     // ----- AstNode methods -----------------------------------------------------------------------
-
-    @Override
-    public AstNode clone() {
-        NewExpression that = (NewExpression) super.clone();
-        // the "body" is not a child and has to be handled manually
-        if (body != null) {
-            that.body = anon == null
-                    ? (StatementBlock) body.clone()
-                    : that.anon.body;
-        }
-        return that;
-    }
 
     @Override
     protected void discard(boolean fRecurse) {
@@ -385,7 +403,7 @@ public class NewExpression
                     // now try to use the NameTypeExpression validation logic for a fully qualified
                     // type scenario, such as:
                     //      parent.new [@Mixin] Parent.Child<...>(...)
-                    TypeExpression exprTest = (TypeExpression) type.clone();
+                    TypeExpression exprTest = type.copy();
                     Context        ctxTest  = ctx.enter();
                     boolean        fValid   = true;
                     if (exprTest.validate(ctxTest, pool.typeType(), errs) == null) {
@@ -1140,13 +1158,13 @@ public class NewExpression
             assert m_purposeCurrent == AnonPurpose.None;
             anon = adopt(new TypeCompositionStatement(
                     this,
-                    clone(inner.getAnnotations()),
+                    copyList(inner.getAnnotations()),
                     inner.getCategory(),
                     tokName,
                     null,
-                    clone(inner.getCompositions()),
-                    clone(args),
-                    (StatementBlock) body.clone(),
+                    copyList(inner.getCompositions()),
+                    copyList(args),
+                    body.copy(),
                     type.getStartPosition(),
                     body.getEndPosition()));
             break;
@@ -1170,7 +1188,9 @@ public class NewExpression
         case CaptureAnalysis:
             // the current inner class composition statement MUST be the "actual" one
             assert m_purposeCurrent == AnonPurpose.Actual;
-            anon = (TypeCompositionStatement) adopt(anon.clone());
+            TypeCompositionStatement anonCopy = anon.copy();
+            adopt(anonCopy);
+            anon = anonCopy;
             anon.setComponent(m_clzActualBackup.replaceWithTemporary());
             break;
         }
@@ -1237,20 +1257,21 @@ public class NewExpression
     }
 
     /**
-     * Helper to clone a list of AST nodes.
+     * Helper to copy a list of AST nodes.
      *
      * @param list  the list of AST nodes (may be null)
      *
-     * @return a deeply cloned list
+     * @return a deeply copied list
      */
-    private <T extends AstNode> List<T> clone(List<? extends AstNode> list) {
+    @SuppressWarnings("unchecked")
+    private <T extends AstNode> List<T> copyList(List<? extends AstNode> list) {
         if (list == null || list.isEmpty()) {
             return (List<T>) list;
         }
 
-        List listCopy = new ArrayList<>(list.size());
+        List<T> listCopy = new ArrayList<>(list.size());
         for (AstNode node : list) {
-            listCopy.add(node.clone());
+            listCopy.add(node.copy());
         }
         return listCopy;
     }

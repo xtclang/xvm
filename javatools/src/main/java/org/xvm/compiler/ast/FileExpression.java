@@ -95,6 +95,13 @@ public class FileExpression
         return type == null ? null : visitor.apply(type);
     }
 
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        TypeExpression newType = children.isEmpty() ? null : (TypeExpression) children.get(0);
+        Object resource = m_dir != null ? m_dir : m_file;
+        return new FileExpression(newType, path, resource);
+    }
+
 
 
     // ----- compilation ---------------------------------------------------------------------------

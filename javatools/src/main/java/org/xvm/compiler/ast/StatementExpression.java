@@ -116,7 +116,7 @@ public class StatementExpression
         }
 
         // clone the body (to avoid damaging the original) and validate it to calculate its type
-        StatementBlock blockTempOld = (StatementBlock) body.clone();
+        StatementBlock blockTempOld = body.copy();
         blockTempOld.suppressScope();
         ctx = enterStatementContext(ctx);
 
@@ -163,7 +163,7 @@ public class StatementExpression
         m_atypeRequired = atypeRequired;
 
         // clone the body and validate it using the requested type to test if that type will work
-        StatementBlock blockTempOld = (StatementBlock) body.clone();
+        StatementBlock blockTempOld = body.copy();
         blockTempOld.suppressScope();
         ctx = enterStatementContext(ctx);
 
@@ -309,6 +309,15 @@ public class StatementExpression
     @Override
     public String toDumpString() {
         return body.toDumpString();
+    }
+
+
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        var c = new ChildList(children);
+        return new StatementExpression(c.next());
     }
 
 

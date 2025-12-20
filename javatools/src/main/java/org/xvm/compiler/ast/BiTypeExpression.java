@@ -60,6 +60,12 @@ public class BiTypeExpression
         return null;
     }
 
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        TypeExpression newType1 = (TypeExpression) children.get(0);
+        TypeExpression newType2 = (TypeExpression) children.get(1);
+        return new BiTypeExpression(newType1, operator, newType2);
+    }
 
 
     // ----- TypeConstant methods ------------------------------------------------------------------

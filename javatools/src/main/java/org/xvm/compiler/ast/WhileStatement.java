@@ -43,12 +43,14 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
 
+import java.util.function.Function;
+
 
 /**
  * A "while" or "do while" statement.
  */
 public class WhileStatement
-        extends ConditionalBlockStatement
+        extends ConditionalStatement
         implements LabelAble {
     // ----- constructors --------------------------------------------------------------------------
 
@@ -57,13 +59,30 @@ public class WhileStatement
     }
 
     public WhileStatement(Token keyword, List<AstNode> conds, StatementBlock block, long lEndPos) {
-        super(keyword, conds, block);
+        super(keyword, conds);
 
+        this.block   = block;
         this.lEndPos = lEndPos;
     }
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    /**
+     * @return the statement block
+     */
+    public StatementBlock getBlock() {
+        return block;
+    }
+
+    @Override
+    protected <T extends AstNode> void replaceChild(T oldChild, T newChild) {
+        if (tryReplace(oldChild, newChild, block, n -> block = n)) {
+            return;
+        }
+        super.replaceChild(oldChild, newChild);
+    }
+
 
     /**
      * @return true iff this is a do-while loop, and not just a while loop
@@ -222,12 +241,12 @@ public class WhileStatement
             boolean fValid  = true;
             boolean fRepeat = false;
 
-            // clone the condition(s) and the body
+            // copy the condition(s) and the body
             conds = new ArrayList<>(cConds);
             for (AstNode cond : condsOrig) {
-                conds.add(cond.clone());
+                conds.add(cond.copy());
             }
-            block = (StatementBlock) blockOrig.clone();
+            block = blockOrig.copy();
 
             // create a temporary error list
             errs = errsOrig.branch(this);
@@ -745,9 +764,35 @@ public class WhileStatement
     }
 
 
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        for (AstNode cond : conds) {
+            T result = visitor.apply(cond);
+            if (result != null) {
+                return result;
+            }
+        }
+        return visitor.apply(block);
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        int condCount = conds.size();
+        List<AstNode> newConds = new ArrayList<>(condCount);
+        for (int i = 0; i < condCount; i++) {
+            newConds.add(children.get(i));
+        }
+        StatementBlock newBlock = (StatementBlock) children.get(condCount);
+        return new WhileStatement(keyword, newConds, newBlock, lEndPos);
+    }
+
+
     // ----- fields --------------------------------------------------------------------------------
 
-    protected long lEndPos;
+    protected StatementBlock block;
+    protected final long     lEndPos;
 
     @Derived
     private Label         m_labelContinue;

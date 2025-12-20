@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.List;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
@@ -142,6 +144,12 @@ public class ToIntExpression
             // converted by extract "numbers.Bit", "numbers.Nibble", "text.Char"
             default                -> pool.ensureIntConstant(pint);
         };
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        Expression newExpr = (Expression) children.get(0);
+        return new ToIntExpression(newExpr, m_pintOffset, ErrorListener.BLACKHOLE);
     }
 
     /**

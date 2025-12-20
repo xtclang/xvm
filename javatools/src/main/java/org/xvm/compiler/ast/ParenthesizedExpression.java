@@ -157,6 +157,14 @@ public class ParenthesizedExpression
     }
 
 
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        return new ParenthesizedExpression((Expression) children.get(0), m_lStartPos, m_lEndPos);
+    }
+
+
     // ----- fields --------------------------------------------------------------------------------
 
     /**

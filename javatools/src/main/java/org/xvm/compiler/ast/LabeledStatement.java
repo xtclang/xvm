@@ -1,6 +1,7 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.List;
 import java.util.function.Function;
 
 import org.xvm.asm.ErrorListener;
@@ -50,6 +51,12 @@ public class LabeledStatement
     @Override
     public <T> T forEachChild(Function<AstNode, T> visitor) {
         return visitor.apply(stmt);
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        Statement newStmt = (Statement) children.get(0);
+        return new LabeledStatement(label, newStmt);
     }
 
     @Override

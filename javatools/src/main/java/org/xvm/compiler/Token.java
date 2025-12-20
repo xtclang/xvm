@@ -3,9 +3,11 @@ package org.xvm.compiler;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import org.xvm.asm.ErrorListener;
 
+import org.xvm.util.Immutable;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.appendChar;
@@ -16,8 +18,8 @@ import static org.xvm.util.Handy.truncate;
 /**
  * Representation of a language token.
  */
-public class Token
-        implements Cloneable {
+@Immutable
+public class Token {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -40,28 +42,41 @@ public class Token
      * @param oValue     value of the token (if it is a literal)
      */
     public Token(long lStartPos, long lEndPos, Id id, Object oValue) {
-        m_lStartPos = lStartPos;
-        m_lEndPos   = lEndPos;
-        m_id        = id;
-        m_oValue    = oValue;
+        this(lStartPos, lEndPos, id, oValue, false, false);
+    }
+
+    /**
+     * Private constructor for creating a Token with all fields specified.
+     */
+    private Token(long lStartPos, long lEndPos, Id id, Object oValue,
+                  boolean fLeadingWhitespace, boolean fTrailingWhitespace) {
+        m_lStartPos            = lStartPos;
+        m_lEndPos              = lEndPos;
+        m_id                   = id;
+        m_oValue               = oValue;
+        m_fLeadingWhitespace   = fLeadingWhitespace;
+        m_fTrailingWhitespace  = fTrailingWhitespace;
     }
 
     /**
      * Create a token that is structurally identical to this token, but with a different value.
      */
     public Token withValue(Object oValue) {
-        return new Token(m_lStartPos, m_lEndPos, m_id, oValue);
+        return new Token(m_lStartPos, m_lEndPos, m_id, oValue,
+                m_fLeadingWhitespace, m_fTrailingWhitespace);
     }
 
     /**
-     * Record whitespace information onto the token.
+     * Create a new token with the specified whitespace information.
      *
-     * @param fWhitespaceBefore
-     * @param fWhitespaceAfter
+     * @param fWhitespaceBefore  true if there is whitespace before this token
+     * @param fWhitespaceAfter   true if there is whitespace after this token
+     *
+     * @return a new Token with the specified whitespace settings
      */
-    public void noteWhitespace(boolean fWhitespaceBefore, boolean fWhitespaceAfter) {
-        m_fLeadingWhitespace  = fWhitespaceBefore;
-        m_fTrailingWhitespace = fWhitespaceAfter;
+    public Token withWhitespace(boolean fWhitespaceBefore, boolean fWhitespaceAfter) {
+        return new Token(m_lStartPos, m_lEndPos, m_id, m_oValue,
+                fWhitespaceBefore, fWhitespaceAfter);
     }
 
 
@@ -189,26 +204,30 @@ public class Token
     }
 
     /**
-     * Refine the token identity to a more specific identity.
+     * Return a new token with a refined identity.
      *
      * @param id  the refined identity
+     *
+     * @return a new Token with the refined identity, or this if the identity is unchanged
      */
     Token refine(Id id) {
-        m_id = id;
-        return this;
+        return id == m_id
+                ? this
+                : new Token(m_lStartPos, m_lEndPos, id, m_oValue,
+                        m_fLeadingWhitespace, m_fTrailingWhitespace);
     }
 
     /**
-     * Allow a token to be "peeled off" the front of this token, if possible. This mutates this
-     * token, such that it is what remains after the returned token was peeled off.
+     * Allow a token to be "peeled off" the front of this token, if possible. Returns both the
+     * peeled token and the remainder as new immutable Token instances.
      *
      * @param id      the token to peel off of this token
      * @param source  the source from which this token was created, which is necessary in order to
      *                calculate the exact position between any peeled-off token and this token
      *
-     * @return the requested token that was peeled off of this token, if possible, otherwise null
+     * @return a PeelResult containing the peeled token and remainder, or null if peeling isn't possible
      */
-    public Token peel(Id id, Source source) {
+    public PeelResult peel(Id id, Source source) {
         Id newId = null;
 
         if (id == Id.COMP_GT) {
@@ -261,7 +280,7 @@ public class Token
         }
 
         // get the location of "this" token
-        long start  = m_lStartPos;
+        long start = m_lStartPos;
 
         // get the location of the end of the new peeled token / start of this token (adjusted)
         long current = source.getPosition();
@@ -270,16 +289,20 @@ public class Token
         long middle = source.getPosition();
         source.setPosition(current);
 
-        // adjust this token
-        m_lStartPos = middle;
-        m_id        = newId;
+        // create the peeled token and the remainder
+        var peeled    = new Token(start, middle, id, null, hasLeadingWhitespace(), false);
+        var remainder = new Token(middle, m_lEndPos, newId, m_oValue, false, hasTrailingWhitespace());
 
-        // return the new token
-        Token peeled = new Token(start, middle, id);
-        peeled.noteWhitespace(hasLeadingWhitespace(), false);
-        this.noteWhitespace(false, hasTrailingWhitespace());
-        return peeled;
+        return new PeelResult(peeled, remainder);
     }
+
+    /**
+     * Result of a peel operation containing both the peeled token and the remainder.
+     *
+     * @param peeled     the token that was peeled off the front
+     * @param remainder  the remaining token after peeling
+     */
+    public record PeelResult(Token peeled, Token remainder) {}
 
     /**
      * Allow a token to be "un-peeled off" from the front of that following token, if possible.
@@ -408,11 +431,11 @@ public class Token
             break;
 
         case ENC_COMMENT:
-            appendString(sb.append("/*"), truncate((String) m_oValue, 47)).append("*/");
+            appendString(sb.append("/*"), truncate(m_oValue, 47)).append("*/");
             break;
 
         case EOL_COMMENT:
-            appendString(sb.append("//"), truncate((String) m_oValue, 50));
+            appendString(sb.append("//"), truncate(m_oValue, 50));
             break;
 
         default:
@@ -423,12 +446,30 @@ public class Token
         return sb.toString();
     }
 
-    public Token clone() {
-        try {
-            return (Token) super.clone();
-        } catch (CloneNotSupportedException e) {
-            throw new IllegalStateException(e);
-        }
+    /**
+     * Return this token. Since Token is immutable, no actual copy is needed - immutable
+     * objects can be safely shared.
+     *
+     * @return this token
+     */
+    public Token copy() {
+        return this;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(m_lStartPos, m_lEndPos, m_id, m_oValue);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return this == obj || obj instanceof Token that
+                && m_lStartPos == that.m_lStartPos
+                && m_lEndPos == that.m_lEndPos
+                && m_id == that.m_id
+                && Objects.equals(m_oValue, that.m_oValue)
+                && m_fLeadingWhitespace == that.m_fLeadingWhitespace
+                && m_fTrailingWhitespace == that.m_fTrailingWhitespace;
     }
 
 
@@ -778,7 +819,7 @@ public class Token
     /**
      * Starting position (inclusive) in the source of this token.
      */
-    private long m_lStartPos;
+    private final long m_lStartPos;
 
     /**
      * Ending position (exclusive) in the source of this token.
@@ -788,7 +829,7 @@ public class Token
     /**
      * Identifier of the token.
      */
-    private Id m_id;
+    private final Id m_id;
 
     /**
      * Value of the Token (if it is a literal).
@@ -798,10 +839,10 @@ public class Token
     /**
      * Each token knows if it follows whitespace.
      */
-    private boolean m_fLeadingWhitespace;
+    private final boolean m_fLeadingWhitespace;
 
     /**
      * Each token knows if it has whitespace following.
      */
-    private boolean m_fTrailingWhitespace;
+    private final boolean m_fTrailingWhitespace;
 }

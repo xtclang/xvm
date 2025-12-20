@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
@@ -548,9 +549,48 @@ public class TryStatement
     }
 
 
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if (resources != null) {
+            for (AssignmentStatement res : resources) {
+                if ((result = visitor.apply(res)) != null) {
+                    return result;
+                }
+            }
+        }
+        if ((result = visitor.apply(block)) != null) {
+            return result;
+        }
+        if (catches != null) {
+            for (CatchStatement catchStmt : catches) {
+                if ((result = visitor.apply(catchStmt)) != null) {
+                    return result;
+                }
+            }
+        }
+        if (catchall != null) {
+            return visitor.apply(catchall);
+        }
+        return null;
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        var c = new ChildList(children);
+        List<AssignmentStatement> newResources = resources != null ? c.nextList(resources.size()) : null;
+        StatementBlock newBlock = c.next();
+        List<CatchStatement> newCatches = catches != null ? c.nextList(catches.size()) : null;
+        StatementBlock newCatchall = catchall != null ? c.next() : null;
+        return new TryStatement(keyword, newResources, newBlock, newCatches, newCatchall);
+    }
+
+
     // ----- fields --------------------------------------------------------------------------------
 
-    protected Token                     keyword;
+    protected final Token               keyword;
     protected List<AssignmentStatement> resources;
     protected StatementBlock            block;
     protected List<CatchStatement>      catches;

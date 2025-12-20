@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
@@ -316,16 +317,16 @@ public class ForStatement
         while (true) {
             boolean fValid = true;
 
-            // clone the condition(s), updates and the body
+            // copy the condition(s), updates and the body
             conds = new ArrayList<>(cConds);
             for (AstNode cond : condsOrig) {
-                conds.add(cond.clone());
+                conds.add(cond.copy());
             }
             update = new ArrayList<>(cUpdates);
             for (Statement stmt : updateOrig) {
-                update.add((Statement) stmt.clone());
+                update.add(stmt.copy());
             }
-            block = (StatementBlock) blockOrig.clone();
+            block = blockOrig.copy();
 
             // create a temporary error list
             errs = errsOrig.branch(this);
@@ -690,6 +691,41 @@ public class ForStatement
             + update.stream().map(Object::toString).collect(Collectors.joining(", "))
             + ")\n"
              + indentLines(block.toString(), "    ");
+    }
+
+
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        for (Statement stmt : init) {
+            if ((result = visitor.apply(stmt)) != null) {
+                return result;
+            }
+        }
+        for (AstNode cond : conds) {
+            if ((result = visitor.apply(cond)) != null) {
+                return result;
+            }
+        }
+        for (Statement stmt : update) {
+            if ((result = visitor.apply(stmt)) != null) {
+                return result;
+            }
+        }
+        return visitor.apply(block);
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        var c = new ChildList(children);
+        return new ForStatement(
+            keyword,
+            c.nextList(init.size()),
+            c.nextList(conds.size()),
+            c.nextList(update.size()),
+            c.next());
     }
 
 

@@ -464,12 +464,21 @@ public class MapExpression
     }
 
 
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        var c = new ChildList(children);
+        return new MapExpression(c.next(), c.nextList(keys.size()), c.nextList(values.size()), lEndPos);
+    }
+
+
     // ----- fields --------------------------------------------------------------------------------
 
     protected TypeExpression   type;
     protected List<Expression> keys;
     protected List<Expression> values;
-    protected long             lEndPos;
+    protected final long       lEndPos;
 
     @Derived
     private ExprAST[] m_aKeyAST;

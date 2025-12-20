@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -88,6 +89,24 @@ public class CaseStatement
         return lEndPos;
     }
 
+    @Override
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        for (Expression expr : exprs) {
+            T result = visitor.apply(expr);
+            if (result != null) {
+                return result;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        List<Expression> newExprs = children.stream()
+                .map(n -> (Expression) n)
+                .toList();
+        return new CaseStatement(keyword, newExprs, new Token(lEndPos, lEndPos, Token.Id.COLON));
+    }
 
 
     // ----- compilation ---------------------------------------------------------------------------

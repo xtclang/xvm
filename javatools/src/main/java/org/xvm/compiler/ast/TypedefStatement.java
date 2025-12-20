@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 
 import org.jetbrains.annotations.NotNull;
 import org.xvm.asm.Component;
@@ -28,10 +29,10 @@ public class TypedefStatement
         extends ComponentStatement {
     // ----- constructors --------------------------------------------------------------------------
 
-    public TypedefStatement(@NotNull Expression cond, Token keyword, TypeExpression type, Token alias) {
+    public TypedefStatement(Expression cond, Token keyword, TypeExpression type, Token alias) {
         super(keyword.getStartPosition(), alias.getEndPosition());
 
-        this.cond     = Objects.requireNonNull(cond);
+        this.cond     = cond;
         this.modifier = keyword.getId() == Id.TYPEDEF ? Token.NONE : keyword;
         this.type     = type;
         this.alias    = alias;
@@ -75,6 +76,26 @@ public class TypedefStatement
                 log(errs, Severity.ERROR, Compiler.TYPEDEF_UNEXPECTED, sName, container);
             }
         }
+    }
+
+    @Override
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if (cond != null && (result = visitor.apply(cond)) != null) {
+            return result;
+        }
+        if (type != null && (result = visitor.apply(type)) != null) {
+            return result;
+        }
+        return null;
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        int i = 0;
+        Expression newCond = cond == null ? null : (Expression) children.get(i++);
+        TypeExpression newType = type == null ? null : (TypeExpression) children.get(i++);
+        return new TypedefStatement(newCond, modifier, newType, alias);
     }
 
     @Override

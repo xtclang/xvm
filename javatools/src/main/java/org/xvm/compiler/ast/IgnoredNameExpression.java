@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.Argument;
@@ -102,5 +103,13 @@ public class IgnoredNameExpression
     @Override
     public Map<String, Object> getDumpChildren() {
         return Collections.emptyMap();
+    }
+
+
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        return new IgnoredNameExpression(name);
     }
 }

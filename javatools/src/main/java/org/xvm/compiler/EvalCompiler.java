@@ -389,17 +389,10 @@ public class EvalCompiler {
             return true;
         }
 
-        @Override
-        protected Field[] getChildFields() {
-            return CHILD_FIELDS;
-        }
-
-
         // ----- ComponentResolver methods ---------------------------------------------------------
 
         @Override
-        public ResolutionResult resolveName(String sName, Constants.Access access,
-                                            ResolutionCollector collector) {
+        public ResolutionResult resolveName(String sName, Constants.Access access, ResolutionCollector collector) {
             Component component = pool().getImplicitlyImportedComponent(sName);
             return component == null
                     ? ResolutionResult.ERROR

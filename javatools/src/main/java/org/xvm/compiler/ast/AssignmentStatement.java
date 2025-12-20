@@ -2,9 +2,11 @@ package org.xvm.compiler.ast;
 
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -324,6 +326,25 @@ public class AssignmentStatement
             : endNegate;
     }
 
+    @Override
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if ((result = visitor.apply(lvalue)) != null) {
+            return result;
+        }
+        if ((result = visitor.apply(rvalue)) != null) {
+            return result;
+        }
+        return null;
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        AstNode newLValue = children.get(0);
+        Expression newRValue = (Expression) children.get(1);
+        return new AssignmentStatement(newLValue, op, newRValue, term);
+    }
+
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -354,7 +375,7 @@ public class AssignmentStatement
                 return null;
             }
 
-            exprLeftCopy = (Expression) nodeLeft.getLValueExpression().clone();
+            exprLeftCopy = nodeLeft.getLValueExpression().copy();
             break;
         }
 
@@ -965,7 +986,7 @@ public class AssignmentStatement
             if (aAstLVal[i] == BinaryAST.POISON) {
                 if (!fReplaced) {
                     fReplaced = true;
-                    aAstLVal  = aAstLVal.clone();
+                    aAstLVal  = Arrays.copyOf(aAstLVal, aAstLVal.length);
                 }
                 aAstLVal[i] = aAstLValExpr[i];
             }

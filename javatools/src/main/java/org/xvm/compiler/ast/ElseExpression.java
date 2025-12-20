@@ -18,6 +18,8 @@ import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
 
+import java.util.List;
+
 
 /**
  * The trailing "else" expression for any short-circuited expressions that precede it:
@@ -203,6 +205,17 @@ public class ElseExpression
             }
             code.add(labelEnd);
         }
+    }
+
+
+    // ----- AstNode methods -----------------------------------------------------------------------
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        return new ElseExpression(
+            (Expression) children.get(0),
+            operator,
+            (Expression) children.get(1));
     }
 
 

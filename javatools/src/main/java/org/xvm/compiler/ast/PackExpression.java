@@ -1,6 +1,8 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.List;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -35,6 +37,12 @@ public class PackExpression
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        Expression newExpr = (Expression) children.get(0);
+        return new PackExpression(newExpr, ErrorListener.BLACKHOLE);
+    }
 
 
     // ----- Expression compilation ----------------------------------------------------------------

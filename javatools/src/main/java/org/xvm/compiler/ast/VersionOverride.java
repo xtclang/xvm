@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
@@ -82,6 +83,12 @@ public class VersionOverride
     @Override
     public <T> T forEachChild(Function<AstNode, T> visitor) {
         return visitor.apply(exprVer);
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        LiteralExpression newExprVer = (LiteralExpression) children.get(0);
+        return new VersionOverride(verb, newExprVer);
     }
 
     @Override

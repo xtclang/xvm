@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -179,6 +180,27 @@ public class AssertStatement
      */
     public Expression getSampleInterval() {
         return interval;
+    }
+
+    @Override
+    public <T> T forEachChild(Function<AstNode, T> visitor) {
+        T result;
+        if (interval != null) {
+            if ((result = visitor.apply(interval)) != null) {
+                return result;
+            }
+        }
+        for (AstNode cond : conds) {
+            if ((result = visitor.apply(cond)) != null) {
+                return result;
+            }
+        }
+        if (message != null) {
+            if ((result = visitor.apply(message)) != null) {
+                return result;
+            }
+        }
+        return null;
     }
 
 
@@ -554,7 +576,7 @@ public class AssertStatement
             Expression exprSub = exprNot.expr;
             if (exprSub instanceof BiExpression exprOr
                     && exprOr.operator.getId() == Id.COND_OR) {
-                UnaryComplementExpression exprNot2 = (UnaryComplementExpression) exprNot.clone();
+                UnaryComplementExpression exprNot2 = exprNot.copy();
 
                 exprNot .expr = exprOr.expr1;
                 exprNot2.expr = exprOr.expr2;
@@ -643,6 +665,27 @@ public class AssertStatement
     @Override
     public String getDumpDesc() {
         return toString();
+    }
+
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        int i = 0;
+        Expression newInterval = null;
+        if (interval != null) {
+            newInterval = (Expression) children.get(i++);
+        }
+
+        List<AstNode> newConds = new ArrayList<>();
+        for (int j = 0; j < conds.size(); j++) {
+            newConds.add(children.get(i++));
+        }
+
+        Expression newMessage = null;
+        if (message != null) {
+            newMessage = (Expression) children.get(i++);
+        }
+
+        return new AssertStatement(keyword, newInterval, newConds, newMessage, lEndPos);
     }
 
 

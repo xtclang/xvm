@@ -138,6 +138,13 @@ public class AnnotatedTypeExpression
         return null;
     }
 
+    @Override
+    protected AstNode withChildren(List<AstNode> children) {
+        AnnotationExpression newAnnotation = (AnnotationExpression) children.get(0);
+        TypeExpression newType = (TypeExpression) children.get(1);
+        return new AnnotatedTypeExpression(newAnnotation, newType);
+    }
+
 
     @Override
     public boolean isIntroductoryType() {
