@@ -169,6 +169,17 @@ jobs:
                   github-token: ${{ secrets.GITHUB_TOKEN }}
                   release-type: snapshot
 
+            - name: Trigger Homebrew formula update
+              if: success() && steps.commit.outputs.has-artifact == 'true'
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  echo "🍺 Triggering Homebrew formula update..."
+                  gh workflow run homebrew-update.yml \
+                      --field ci-run-id="${{ steps.commit.outputs.run-id }}" \
+                      --field xdk-version="${{ steps.versions.outputs.xdk-version }}"
+                  echo "✅ Homebrew update workflow triggered"
+
             - name: Summary
               if: success()
               shell: bash
@@ -183,8 +194,10 @@ jobs:
                   echo "- ✅ Maven Central Snapshots" >> $GITHUB_STEP_SUMMARY
                   if [ "${{ steps.commit.outputs.has-artifact }}" = "true" ]; then
                       echo "- ✅ GitHub Releases (xdk-snapshots)" >> $GITHUB_STEP_SUMMARY
+                      echo "- ✅ Homebrew formula update (triggered)" >> $GITHUB_STEP_SUMMARY
                   else
                       echo "- ⏭️ GitHub Releases (skipped - manual trigger)" >> $GITHUB_STEP_SUMMARY
+                      echo "- ⏭️ Homebrew formula update (skipped - manual trigger)" >> $GITHUB_STEP_SUMMARY
                   fi
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "**Maven artifacts:**" >> $GITHUB_STEP_SUMMARY
