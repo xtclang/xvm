@@ -158,9 +158,15 @@ public class Runner extends Launcher<RunnerOptions> {
 
             if (fCompile) {
                 // Build CompilerOptions programmatically using fluent API
+                // TODO: NOTE that we can only forward compiler options from the runner command line, i.e.
+                //   options shared by both. This means that we put deduce and verbose in there, but if the
+                //   old compile was done with e.g. strict, we have no way to pass that, even though that would
+                //   be consistent. This feels a bit brittle.
                 final var builder = CompilerOptions.builder()
                         .addInputFile(fileSpec)
-                        .addModulePath(opts.getModulePath());
+                        .addModulePath(opts.getModulePath())
+                        .enableDeduction(opts.mayDeduceLocations())
+                        .enableVerbose(opts.isVerbose());
                 outFile.ifPresent(builder::setOutputLocation);
                 final var exitCode = new Compiler(builder.build(), m_console, m_errors).run();
                 if (exitCode != 0) {

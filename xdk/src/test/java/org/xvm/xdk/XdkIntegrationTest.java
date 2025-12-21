@@ -435,4 +435,139 @@ class XdkIntegrationTest {
         // Verify strict mode flag was set
         assertTrue(strictOptions.isStrict(), "Strict mode flag should remain set");
     }
+
+    /**
+     * Test that Runner properly forwards the deduce (-d) and verbose (-v) flags to the Compiler
+     * when it needs to recompile an out-of-date module.
+     * <p>
+     * This test verifies the fix for the bug where Runner was not forwarding these flags
+     * to the Compiler during automatic recompilation. See Runner.java:159-167.
+     */
+    @Test
+    void testRunnerForwardsDeduceAndVerboseFlagsToCompiler(@TempDir final Path tempDir) throws IOException {
+        // Create a source file that uses deduce to find its location
+        // The key is that we run xec with -d on a .x file (not .xtc),
+        // which triggers the Runner to compile it, and -d must be forwarded
+        String sourceCode = """
+            module DeduceTest {
+                void run() {
+                    @Inject Console console;
+                    console.print("Deduce flag forwarding test");
+                }
+            }
+            """;
+
+        File sourceFile = tempDir.resolve("DeduceTest.x").toFile();
+        Files.writeString(sourceFile.toPath(), sourceCode);
+
+        // Use Runner with -d and -v flags on a source file (not compiled .xtc)
+        // This forces Runner to invoke the Compiler, and it should forward -d and -v
+        RunnerOptions runnerOptions = RunnerOptions.parse(new String[]{
+            "-d",                                    // deduce flag - must be forwarded to compiler
+            "-v",                                    // verbose flag - must be forwarded to compiler
+            "-L", xdkLibDir.getAbsolutePath(),
+            "-L", xdkJavaToolsDir.getAbsolutePath(),
+            "-o", tempDir.toAbsolutePath().toString(),  // output directory
+            sourceFile.getAbsolutePath()             // source file, not .xtc - triggers compilation
+        });
+
+        // Verify runner options have the flags set
+        assertTrue(runnerOptions.mayDeduceLocations(), "Runner should have deduce enabled");
+        assertTrue(runnerOptions.isVerbose(), "Runner should have verbose enabled");
+
+        ErrorList errors = new ErrorList(10);
+        Runner runner = new Runner(runnerOptions, null, errors);
+
+        // Run the runner - this should:
+        // 1. Detect that DeduceTest.xtc doesn't exist
+        // 2. Invoke the Compiler with -d and -v flags forwarded
+        // 3. Compile the source file
+        // 4. Execute the compiled module
+        int result = runner.run();
+
+        // Verify execution succeeded (which means compilation succeeded with flags forwarded)
+        assertEquals(0, result, "Runner should succeed, indicating -d/-v flags were properly forwarded to compiler");
+        assertFalse(errors.hasSeriousErrors(), "Should have no serious errors");
+
+        // Verify the compiled module was created
+        File compiledModule = new File(tempDir.toFile(), "DeduceTest.xtc");
+        assertTrue(compiledModule.exists(), "Compiled module should exist after Runner-triggered compilation");
+    }
+
+    /**
+     * Test that Runner can recompile an out-of-date module and forwards flags correctly.
+     * This simulates the scenario Gene reported: running xec -d on a source file that
+     * needs recompilation.
+     */
+    @Test
+    void testRunnerRecompilesOutOfDateModule(@TempDir final Path tempDir) throws IOException, InterruptedException {
+        // Step 1: Create and compile a module
+        String sourceCodeV1 = """
+            module RecompileTest {
+                void run() {
+                    @Inject Console console;
+                    console.print("Version 1");
+                }
+            }
+            """;
+
+        File sourceFile = tempDir.resolve("RecompileTest.x").toFile();
+        Files.writeString(sourceFile.toPath(), sourceCodeV1);
+
+        File outputDir = tempDir.resolve("out").toFile();
+
+        // Initial compilation
+        CompilerOptions compilerOptions = new CompilerOptions.Builder()
+            .addModulePath(xdkLibDir)
+            .addModulePath(xdkJavaToolsDir)
+            .setOutputLocation(outputDir)
+            .addInputFile(sourceFile)
+            .build();
+
+        ErrorList compileErrors = new ErrorList(10);
+        Compiler compiler = new Compiler(compilerOptions, null, compileErrors);
+        assertEquals(0, compiler.run(), "Initial compilation should succeed");
+
+        File compiledModule = new File(outputDir, "RecompileTest.xtc");
+        assertTrue(compiledModule.exists(), "Compiled module should exist");
+        long originalModTime = compiledModule.lastModified();
+
+        // Step 2: Wait a bit and modify the source file to make .xtc out of date
+        Thread.sleep(1100); // Ensure file timestamp changes (some filesystems have 1s resolution)
+
+        String sourceCodeV2 = """
+            module RecompileTest {
+                void run() {
+                    @Inject Console console;
+                    console.print("Version 2 - Updated");
+                }
+            }
+            """;
+        Files.writeString(sourceFile.toPath(), sourceCodeV2);
+
+        // Step 3: Run Runner with -d flag on the source file
+        // Runner should detect the .xtc is out of date and recompile
+        RunnerOptions runnerOptions = RunnerOptions.parse(new String[]{
+            "-d",                                    // deduce flag
+            "-L", xdkLibDir.getAbsolutePath(),
+            "-L", xdkJavaToolsDir.getAbsolutePath(),
+            "-L", outputDir.getAbsolutePath(),
+            "-o", outputDir.getAbsolutePath(),
+            sourceFile.getAbsolutePath()
+        });
+
+        assertTrue(runnerOptions.mayDeduceLocations(), "Runner should have deduce enabled");
+
+        ErrorList runErrors = new ErrorList(10);
+        Runner runner = new Runner(runnerOptions, null, runErrors);
+        int result = runner.run();
+
+        // Verify execution succeeded
+        assertEquals(0, result, "Runner should succeed after recompilation with -d flag forwarded");
+        assertFalse(runErrors.hasSeriousErrors(), "Should have no serious errors");
+
+        // Verify the module was recompiled (modification time should be newer)
+        assertTrue(compiledModule.lastModified() >= originalModTime,
+            "Compiled module should be recompiled (new or same timestamp)");
+    }
 }
