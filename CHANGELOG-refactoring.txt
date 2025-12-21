@@ -1,0 +1,480 @@
+AST Refactoring Changelog
+=========================
+
+This file documents changes made during the AST refactoring effort on the
+lagergren/reflect branch.
+
+================================================================================
+Session 1: Copyable and PoolTransferable Implementation
+================================================================================
+
+1. COPYABLE INTERFACE FOR AST NODES
+-----------------------------------
+File: javatools/src/main/java/org/xvm/compiler/ast/AstNode.java
+
+- Made AstNode implement Copyable<AstNode>
+- Added copy() method that returns AstNode (not generic <T extends AstNode>)
+- copy() creates deep copy of AST subtree using forEachChild() and withChildren()
+
+Problem encountered: Signature mismatch between Copyable<AstNode>.copy() returning
+AstNode and the desired <T extends AstNode> T copy() for type-safe copies.
+
+Solution: Use covariant return types in intermediate classes.
+
+
+2. COVARIANT COPY() OVERRIDES
+-----------------------------
+Added @Override copy() methods returning the specific type to these classes:
+
+- Expression.java: public Expression copy() { return (Expression) super.copy(); }
+- Statement.java: public Statement copy() { return (Statement) super.copy(); }
+- StatementBlock.java: public StatementBlock copy() { ... }
+- TypeExpression.java: public TypeExpression copy() { ... }
+- TypeCompositionStatement.java: public TypeCompositionStatement copy() { ... }
+- PropertyDeclarationStatement.java: public PropertyDeclarationStatement copy() { ... }
+- UnaryComplementExpression.java: public UnaryComplementExpression copy() { ... }
+
+This allows type-safe copies without casts at most call sites:
+  Expression exprCopy = someExpr.copy();  // No cast needed
+
+
+3. POOLTRANSFERABLE INTERFACE FOR CONSTANTS
+-------------------------------------------
+File: javatools/src/main/java/org/xvm/asm/Constant.java
+
+- Made Constant implement PoolTransferable<Constant>
+- Removed Cloneable interface (we're replacing clone() with explicit copy/transfer)
+- Added copy() that returns this (constants are immutable, no copy needed)
+- Added transferTo(ConstantPool) that throws UnsupportedOperationException
+  (requires subclass override)
+- Changed adoptedBy() to throw UnsupportedOperationException
+  (deprecated in favor of transferTo())
+
+
+4. TRANSFERTO() IMPLEMENTATIONS
+-------------------------------
+File: javatools/src/main/java/org/xvm/asm/constants/IntConstant.java
+
+@Override
+public IntConstant transferTo(ConstantPool pool) {
+    if (pool == getConstantPool()) {
+        return this;
+    }
+    return pool.register(new IntConstant(pool, m_fmt, m_pint));
+}
+
+File: javatools/src/main/java/org/xvm/asm/constants/StringConstant.java
+
+@Override
+public StringConstant transferTo(ConstantPool pool) {
+    if (pool == getConstantPool()) {
+        return this;
+    }
+    return pool.register(new StringConstant(pool, m_sVal));
+}
+
+
+5. CONSTANTPOOL.REGISTER() UPDATED
+----------------------------------
+File: javatools/src/main/java/org/xvm/asm/ConstantPool.java
+
+Changed register() to use transferTo() instead of adoptedBy():
+
+if (constant.getContaining() != this) {
+    // Transfer the constant to this pool - transferTo() handles registration
+    return (T) constant.transferTo(this);
+}
+
+// And for locators:
+if (oLocator instanceof Constant constLocator && constLocator.getContaining() != this) {
+    constLocator = constLocator.transferTo(this);
+    oLocator = constLocator;
+}
+
+
+6. POOLTRANSFERABLE.TRANSFERARRAY() FIXED
+-----------------------------------------
+File: javatools/src/main/java/org/xvm/asm/PoolTransferable.java
+
+Fixed generic bounds conflict. Changed from:
+  <C extends Constant & PoolTransferable<C>> C[] transferArray(...)
+
+To:
+  <C extends Constant> C[] transferArray(...)
+
+With internal cast since Constant now implements PoolTransferable<Constant>.
+
+
+7. TEST UPDATES
+---------------
+File: javatools/src/test/java/org/xvm/asm/ConstantPoolTest.java
+
+- Updated tests from adoptedBy() to transferTo()
+- Changed test method names: testAdoptedBy_* -> testTransferTo_*
+
+
+8. PLAN DOCUMENT: LOCATOR REFACTORING
+-------------------------------------
+File: docs/ast-refactoring-plan.md
+
+Added comprehensive "ConstantPool Locator Refactoring" section documenting:
+- Current locator types by constant class
+- Three refactoring options (Locatable interface, Type-Keyed Maps, Sealed Hierarchy)
+- Recommended approach: Locatable<L> interface
+- Migration path
+
+
+================================================================================
+Session 2: Typed Locator Maps and Lazy Evaluation
+================================================================================
+
+9. TYPED LOCATOR MAPS ADDED
+---------------------------
+File: javatools/src/main/java/org/xvm/asm/ConstantPool.java (lines 3910-3940)
+
+Added typed maps to replace untyped Map<Object, Constant>:
+
+private final Map<String, StringConstant> m_mapStrings = new ConcurrentHashMap<>();
+private final EnumMap<Format, Map<String, LiteralConstant>> m_mapLiterals = new EnumMap<>(Format.class);
+private final EnumMap<Format, Map<PackedInteger, IntConstant>> m_mapInts = new EnumMap<>(Format.class);
+private final EnumMap<Format, Map<Decimal, DecimalConstant>> m_mapDecimals = new EnumMap<>(Format.class);
+private final Map<Integer, CharConstant> m_mapChars = new ConcurrentHashMap<>();
+private final Map<String, NamedCondition> m_mapNamedConditions = new ConcurrentHashMap<>();
+
+
+10. ENSURE* METHODS UPDATED TO USE TYPED MAPS
+---------------------------------------------
+File: javatools/src/main/java/org/xvm/asm/ConstantPool.java
+
+ensureStringConstant (line 314-320):
+  public StringConstant ensureStringConstant(String s) {
+      StringConstant constant = m_mapStrings.get(s);
+      if (constant == null) {
+          constant = register(new StringConstant(this, s));
+      }
+      return constant;
+  }
+
+ensureIntConstant (line 478-489):
+  public IntConstant ensureIntConstant(PackedInteger pint, Format format) {
+      return switch (format) {
+          case Int16, Int32, Int64, Int128, IntN, UInt16, UInt32, UInt64, UInt128, UIntN ->
+              ensureIntMap(format).computeIfAbsent(pint, k -> register(new IntConstant(this, format, k)));
+          default ->
+              throw new IllegalStateException("unsupported format: " + format);
+      };
+  }
+
+Added helper methods:
+  private Map<PackedInteger, IntConstant> ensureIntMap(Format format)
+  private Map<Decimal, DecimalConstant> ensureDecimalMap(Format format)
+  private Map<String, LiteralConstant> ensureLiteralMap(Format format)
+
+
+11. RECURSIVE INITIALIZATION FIX
+--------------------------------
+Problem: ConcurrentHashMap.computeIfAbsent() doesn't allow recursive calls.
+During constant registration, creating a StringConstant would trigger type
+resolution which eventually called back to ensureStringConstant().
+
+Stack trace:
+  ensureStringConstant("foo")
+  -> computeIfAbsent -> register() -> registerConstants()
+  -> getType() -> typeString() -> ... -> ensureStringConstant("ecstasy.xtclang.org")
+  -> computeIfAbsent -> DEADLOCK (recursive update)
+
+Root cause: ValueConstant.registerConstants() was eagerly registering the type:
+  @Override
+  protected void registerConstants(ConstantPool pool) {
+      pool.register(getType());  // Triggers recursive constant creation
+  }
+
+File: javatools/src/main/java/org/xvm/asm/constants/ValueConstant.java (lines 43-46)
+
+Solution: Removed the registerConstants() override entirely. For value constants
+(StringConstant, IntConstant, etc.), the type is implicit from the format and
+doesn't need eager registration. It's computed lazily when getType() is called.
+
+Before:
+  @Override
+  protected void registerConstants(ConstantPool pool) {
+      pool.register(getType());
+  }
+
+After:
+  // Note: Subclasses that have explicit type fields (like ArrayConstant, MapConstant)
+  // must override registerConstants() to register their type. For most value constants,
+  // the type is implicit from the format and doesn't need registration here.
+  // Registering the type eagerly causes circular dependencies during pool initialization.
+
+Note: ArrayConstant, MapConstant, MatchAnyConstant already override registerConstants()
+to register their explicit m_constType field, so they continue to work correctly.
+
+
+12. PLAN DOCUMENT: LAZY EVALUATION ARCHITECTURE
+-----------------------------------------------
+File: docs/ast-refactoring-plan.md (lines 4885-5160)
+
+Added "Lazy Evaluation and Immutability Architecture" section covering:
+
+Core Principles:
+- Immutable by default, copy-on-write transforms
+- Lazy evaluation with memoization
+- External caches vs embedded state
+
+Avoiding Recursive Initialization:
+- Separate creation from registration
+- Lazy type resolution
+- Safe patterns for ConcurrentHashMap
+
+Stateless Stage Processing:
+- Pure function transformations
+- Benefits for LSP integration
+
+Cache Hierarchy for LSP:
+- Parse cache (per file)
+- Type cache (global)
+- Semantic cache
+- Invalidation strategies
+
+Migration Path (5 phases):
+1. Fix immediate issues (done: ValueConstant, typed maps)
+2. Introduce Lazy patterns (Lazy<T> utility)
+3. Copy-on-Write AST (withX() methods)
+4. External caches (TypeInfoCache extraction)
+5. Stateless stages (visitor refactoring)
+
+
+13. PLAN DOCUMENT: CONSTANTPOOL CLEANUP
+---------------------------------------
+File: docs/ast-refactoring-plan.md (lines 5164-5380)
+
+Added "ConstantPool Cleanup: From 4000 Lines to Clarity" section covering:
+
+Analysis:
+- 191 ensure* methods with repeated patterns
+- ~4000 lines of similar code
+
+Proposed Refactoring:
+1. Typed ensure pattern - generic helper method
+2. Null handling at boundaries - Objects.requireNonNull
+3. Separate concerns with private helpers
+4. Builder pattern for complex type construction
+5. Group related methods logically
+6. Consider extracting factories
+
+Migration Strategy:
+- Don't refactor all 191 methods at once
+- Start with most-used methods
+- Add typed maps incrementally
+- Extract helpers first, keep API stable
+- Add tests before each refactoring
+
+Code Size Goals:
+| Current     | Goal        | Reduction |
+|-------------|-------------|-----------|
+| ~4000 lines | ~1500 lines | 60%       |
+| 0 typed maps| ~20 maps    | Type safe |
+| ~50 null checks | ~10     | Clarity   |
+
+
+================================================================================
+Files Modified (Summary)
+================================================================================
+
+javatools/src/main/java/org/xvm/asm/Constant.java
+  - Implements PoolTransferable<Constant>
+  - Removed Cloneable
+  - Added copy(), transferTo(), deprecated adoptedBy()
+
+javatools/src/main/java/org/xvm/asm/ConstantPool.java
+  - Added 6 typed locator maps
+  - Updated ensure* methods to use typed maps
+  - Added ensureIntMap/DecimalMap/LiteralMap helpers
+  - Updated register() to use transferTo()
+
+javatools/src/main/java/org/xvm/asm/PoolTransferable.java
+  - Fixed transferArray() generic bounds
+
+javatools/src/main/java/org/xvm/asm/constants/ValueConstant.java
+  - Removed registerConstants() override (lazy type resolution)
+
+javatools/src/main/java/org/xvm/asm/constants/IntConstant.java
+  - Added transferTo() implementation
+
+javatools/src/main/java/org/xvm/asm/constants/StringConstant.java
+  - Added transferTo() implementation
+
+javatools/src/main/java/org/xvm/compiler/ast/AstNode.java
+  - Implements Copyable<AstNode>
+  - Added copy() method
+
+javatools/src/main/java/org/xvm/compiler/ast/Expression.java
+javatools/src/main/java/org/xvm/compiler/ast/Statement.java
+javatools/src/main/java/org/xvm/compiler/ast/StatementBlock.java
+javatools/src/main/java/org/xvm/compiler/ast/TypeExpression.java
+javatools/src/main/java/org/xvm/compiler/ast/TypeCompositionStatement.java
+javatools/src/main/java/org/xvm/compiler/ast/PropertyDeclarationStatement.java
+javatools/src/main/java/org/xvm/compiler/ast/UnaryComplementExpression.java
+  - Added covariant copy() overrides
+
+javatools/src/test/java/org/xvm/asm/ConstantPoolTest.java
+  - Updated tests for transferTo()
+
+docs/ast-refactoring-plan.md
+  - Added Locator Refactoring section
+  - Added Lazy Evaluation and Immutability Architecture section
+  - Added ConstantPool Cleanup section
+
+
+14. PLAN DOCUMENT: LEXER, PARSER, COMPILER CLEANUP
+--------------------------------------------------
+File: docs/ast-refactoring-plan.md (lines 5383-5713)
+
+Added comprehensive "Lexer, Parser, and Compiler Cleanup" section covering:
+
+Overview Statistics:
+| File           | Lines | Methods | Avg Lines/Method | Null Checks |
+|----------------|-------|---------|------------------|-------------|
+| Lexer.java     | 2,859 | ~50     | ~57              | 18          |
+| Parser.java    | 5,772 | 40      | ~144             | 268         |
+| Compiler.java  | 1,373 | ~30     | ~46              | ~20         |
+
+Lexer Analysis:
+- Giant switch in eatToken() (~620 lines)
+- Proposed dispatch table + handler methods pattern
+- LSP considerations (incremental lexing, error recovery)
+
+Parser Analysis:
+- God method: parseClassExpression() (~1,650 lines!)
+- 268 null checks scattered throughout
+- Mutable state prevents caching/parallelism
+- Proposed Pratt parser with precedence table
+- LSP-friendly IncrementalParser interface
+
+Compiler Analysis:
+- Current state machine architecture (12 stages)
+- Issues: stateful transitions, single-module coupling
+- Proposed stateless CompilationPhase<I,O> pipeline
+- LSPCompilationCache for incremental compilation
+
+Cross-Cutting Concerns:
+1. God Classes Problem - Split by Single Responsibility
+2. Input Sanitization Layer - Validation at API boundaries
+3. Immutability for LSP - withX() methods, persistent maps
+4. Performance Opportunities:
+   - Parallel module compilation (2-4x gain)
+   - Incremental parsing (10-100x for edits)
+   - External TypeInfo caching
+   - Typed constant maps
+
+Migration Priority:
+- High: Parser error recovery, stateless phases, immutable AST
+- Medium: Split god classes, extract handlers, validation layer
+- Lower: Parallel compilation, incremental parsing, cache optimization
+
+
+================================================================================
+Session 3: Additional transferTo() Implementations
+================================================================================
+
+15. TRANSFERTO() FOR VALUE CONSTANTS
+------------------------------------
+Implemented transferTo() for the following Constant subclasses:
+
+DecimalConstant (lines 82-87):
+  @Override
+  public DecimalConstant transferTo(ConstantPool pool) {
+      if (pool == getConstantPool()) {
+          return this;
+      }
+      return pool.ensureDecConstant(m_dec);
+  }
+
+CharConstant (lines 60-66):
+  @Override
+  public CharConstant transferTo(ConstantPool pool) {
+      if (pool == getConstantPool()) {
+          return this;
+      }
+      return pool.ensureCharConstant(m_chVal);
+  }
+
+LiteralConstant (lines 164-170):
+  @Override
+  public LiteralConstant transferTo(ConstantPool pool) {
+      if (pool == getConstantPool()) {
+          return this;
+      }
+      return pool.ensureLiteralConstant(m_fmt, getValue());
+  }
+
+ByteConstant (lines 96-102):
+  @Override
+  public ByteConstant transferTo(ConstantPool pool) {
+      if (pool == getConstantPool()) {
+          return this;
+      }
+      return pool.ensureByteConstant(m_format, m_nVal);
+  }
+
+
+16. TRANSFERTO() FOR FLOAT CONSTANTS
+------------------------------------
+All binary floating point constants now have transferTo():
+
+Float32Constant:   pool.ensureFloat32Constant(m_flVal)
+Float64Constant:   pool.ensureFloat64Constant(m_dflVal)
+Float16Constant:   pool.ensureFloat16Constant(m_flVal)
+Float128Constant:  pool.ensureFloat128Constant(m_abVal)
+Float8e4Constant:  pool.ensureFloat8e4Constant(toFloat(m_nBits))
+Float8e5Constant:  pool.ensureFloat8e5Constant(toFloat(m_nBits))
+BFloat16Constant:  pool.ensureBFloat16Constant(m_flVal)
+
+
+================================================================================
+Files Modified (Session 3)
+================================================================================
+
+javatools/src/main/java/org/xvm/asm/constants/DecimalConstant.java
+  - Added transferTo() implementation
+
+javatools/src/main/java/org/xvm/asm/constants/CharConstant.java
+  - Added transferTo() implementation
+
+javatools/src/main/java/org/xvm/asm/constants/LiteralConstant.java
+  - Added transferTo() implementation
+
+javatools/src/main/java/org/xvm/asm/constants/ByteConstant.java
+  - Added transferTo() implementation
+
+javatools/src/main/java/org/xvm/asm/constants/Float32Constant.java
+  - Added transferTo() implementation
+
+javatools/src/main/java/org/xvm/asm/constants/Float64Constant.java
+  - Added transferTo() implementation
+
+javatools/src/main/java/org/xvm/asm/constants/Float16Constant.java
+  - Added transferTo() implementation
+
+javatools/src/main/java/org/xvm/asm/constants/Float128Constant.java
+  - Added transferTo() implementation
+
+javatools/src/main/java/org/xvm/asm/constants/Float8e4Constant.java
+  - Added transferTo() implementation
+
+javatools/src/main/java/org/xvm/asm/constants/Float8e5Constant.java
+  - Added transferTo() implementation
+
+javatools/src/main/java/org/xvm/asm/constants/BFloat16Constant.java
+  - Added transferTo() implementation
+
+
+================================================================================
+Test Status
+================================================================================
+
+All javatools tests pass after these changes.
+
+Command: ./gradlew javatools:test
+Result: BUILD SUCCESSFUL

@@ -192,20 +192,15 @@ public abstract class Utils {
             ? chain.invoke(frame, hValue, Op.A_STACK)
             : chain.invoke(frame, hValue, xBoolean.makeHandle(FInPlace), Op.A_STACK);
 
-        switch (iResult) {
-        case Op.R_NEXT:
-            return continuation.proceed(frame);
-
-        case Op.R_CALL:
-            frame.m_frameNext.addContinuation(continuation);
-            return Op.R_CALL;
-
-        case Op.R_EXCEPTION:
-            return Op.R_EXCEPTION;
-
-        default:
-            throw new IllegalStateException();
-        }
+        return switch (iResult) {
+            case Op.R_NEXT -> continuation.proceed(frame);
+            case Op.R_CALL -> {
+                frame.m_frameNext.addContinuation(continuation);
+                yield Op.R_CALL;
+            }
+            case Op.R_EXCEPTION -> Op.R_EXCEPTION;
+            default -> throw new IllegalStateException();
+        };
     }
     /**
      * An adapter method that assigns the result of a natural execution to a calling frame

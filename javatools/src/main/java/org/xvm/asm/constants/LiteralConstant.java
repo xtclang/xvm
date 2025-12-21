@@ -159,6 +159,17 @@ public class LiteralConstant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    @Override
+    public LiteralConstant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+        return pool.ensureLiteralConstant(m_fmt, getValue());
+    }
+
+
     // ----- type-specific functionality -----------------------------------------------------------
 
 

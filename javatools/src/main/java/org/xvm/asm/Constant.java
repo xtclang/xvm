@@ -70,7 +70,40 @@ import org.xvm.util.PackedInteger;
  */
 public abstract class Constant
         extends XvmStructure
-        implements Comparable<Constant>, Cloneable, Argument {
+        implements Comparable<Constant>, Argument, PoolTransferable<Constant> {
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Constants are immutable and interned within their pool, so copy() returns {@code this}.
+     */
+    @Override
+    public Constant copy() {
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Transfers this constant to a different pool. If already in the target pool, returns
+     * {@code this}. Otherwise creates a new constant in the target pool and registers it.
+     * <p>
+     * Subclasses must override this method to provide proper transfer implementation.
+     *
+     * @throws UnsupportedOperationException if the subclass has not overridden this method
+     */
+    @Override
+    public Constant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+        throw new UnsupportedOperationException(
+            getClass().getSimpleName() + " must override transferTo(ConstantPool)");
+    }
+
+
+
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -304,21 +337,20 @@ public abstract class Constant
 
     /**
      * Create a clone of this Constant so that it can be adopted by a different ConstantPool.
+     * <p>
+     * <b>Deprecated:</b> Subclasses should override {@link #transferTo(ConstantPool)} instead.
+     * This method exists only to support gradual migration away from {@code clone()}.
      *
      * @param pool  the pool that will hold the clone of this Constant
      *
      * @return the new Constant
+     *
+     * @throws UnsupportedOperationException if the subclass has not overridden this method
+     *         or {@link #transferTo(ConstantPool)}
      */
     protected Constant adoptedBy(ConstantPool pool) {
-        Constant that;
-        try {
-            that = (Constant) super.clone();
-        } catch (CloneNotSupportedException e) {
-            throw new IllegalStateException(e);
-        }
-        that.setContaining(pool);
-        that.resetRefs();
-        return that;
+        throw new UnsupportedOperationException(
+            getClass().getSimpleName() + " must override transferTo(ConstantPool)");
     }
 
     /**

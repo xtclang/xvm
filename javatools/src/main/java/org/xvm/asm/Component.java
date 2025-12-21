@@ -41,6 +41,7 @@ import org.xvm.asm.MethodStructure.ConcurrencySafety;
 
 import org.xvm.compiler.Constants;
 
+import org.xvm.util.Copyable;
 import org.xvm.util.Handy;
 import org.xvm.util.Hash;
 import org.xvm.util.ListMap;
@@ -100,7 +101,7 @@ import static org.xvm.util.Handy.writePackedLong;
  */
 public abstract class Component
         extends XvmStructure
-        implements Documentable, Cloneable, ComponentResolver {
+        implements Documentable, ComponentResolver, Copyable<Component> {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -158,6 +159,34 @@ public abstract class Component
         super(parent);
         // TODO this constructor is not currently used, but there are fields that need to be copied
         //      in order for it to be correct
+    }
+
+    /**
+     * Copy constructor. Creates a structural copy of the given component.
+     * Subclasses must call this from their own copy constructors.
+     * <p>
+     * Note: siblings and children are NOT copied - the copy is independent.
+     *
+     * @param that     the component to copy
+     * @param fCopy    always pass true; this is a marker to distinguish from the CompositeComponent constructor
+     */
+    protected Component(Component that, boolean fCopy) {
+        super(that.getContaining());
+        assert fCopy;
+
+        // Copy identity and structural fields
+        this.m_constId = that.m_constId;
+        this.m_cond    = that.m_cond;
+        this.m_nFlags  = that.m_nFlags;
+        this.m_sDoc    = that.m_sDoc;
+
+        // Deep copy the contributions into the already-initialized list
+        that.m_listContribs.stream()
+                .map(Contribution::copy)
+                .forEach(this.m_listContribs::add);
+
+        // Derived/cached fields are NOT copied - left as defaults
+        // m_sibling, m_childByName, m_abChildren, m_fModified, m_FVisited
     }
 
 
@@ -473,9 +502,7 @@ public abstract class Component
      * @return false iff all of the contributions have fully resolved types
      */
     public boolean containsUnresolvedContribution() {
-        return m_listContribs != null && m_listContribs
-                .stream()
-                .anyMatch(Contribution::containsUnresolved);
+        return m_listContribs.stream().anyMatch(Contribution::containsUnresolved);
     }
 
     /**
@@ -574,10 +601,8 @@ public abstract class Component
      */
     protected Contribution addContribution(Contribution contrib) {
         List<Contribution> list = m_listContribs;
-        if (list == null) {
-            m_listContribs = list = new ArrayList<>();
-        } else if (!list.isEmpty() && (contrib.getComposition() == Composition.Into ||
-                                     contrib.getComposition() == Composition.Extends)) {
+        if (!list.isEmpty() && (contrib.getComposition() == Composition.Into ||
+                               contrib.getComposition() == Composition.Extends)) {
             // order is "into" and then "extends" and then everything else
             for (ListIterator<Contribution> listIterator = list.listIterator(); listIterator.hasNext(); ) {
                 Contribution contribNext = listIterator.next();
@@ -1818,11 +1843,11 @@ public abstract class Component
         }
 
         Component parent = (Component) this.getContaining();
-        Component that   = this.cloneBody();
+        Component that   = this.copy();
         assert that.getContaining() == parent;
 
         if (this.hasChildren()) {
-            that.cloneChildren(this.children());
+            that.copyChildren(this.children());
         }
 
         parent.replaceChild(this, that);
@@ -1960,75 +1985,46 @@ public abstract class Component
     }
 
     /**
-     * Clone this component's body, but not its siblings nor its children.
+     * Create a structural copy of this component's body (not its siblings nor children).
+     * Each concrete subclass must implement this using its copy constructor.
      *
-     * @return a clone of this component, sans siblings and sans children
+     * @return a copy of this component, sans siblings and sans children
      */
-    protected Component cloneBody() {
-        Component that;
-        try {
-            that = (Component) super.clone();
-        } catch (CloneNotSupportedException e) {
-            throw new IllegalStateException(e);
-        }
+    @Override
+    public abstract Component copy();
 
-        // deep clone the contributions
-        List<Contribution> listContribs = m_listContribs;
-        if (listContribs != null) {
-            List<Contribution> listClone = new ArrayList<>(listContribs.size());
-
-            for (Contribution listContrib : listContribs) {
-                listClone.add((Contribution) listContrib.clone());
-            }
-            that.m_listContribs = listClone;
-        }
-
-        that.m_sibling     = null;
-        that.m_childByName = null;
-        that.m_abChildren  = null;
-
-        return that;
+    /**
+     * Copy the passed collection of child components onto this component.
+     *
+     * @param collThat  a collection of child components to copy
+     */
+    protected void copyChildren(Collection<? extends Component> collThat) {
+        collThat.forEach(child -> this.addChild(this.copyChild(child)));
     }
 
     /**
-     * Clone the passed collection child components onto this component.
+     * Copy the passed child AND all of its siblings, adding those copies to this component,
+     * and then recursively for the various children of those siblings.
      *
-     * @param collThat  a collection of child components to clone
+     * @param childThat  the eldest sibling of the siblings to recursively copy
      */
-    protected void cloneChildren(Collection<? extends Component> collThat) {
-        for (Component childThat : collThat) {
-            this.addChild(this.cloneChild(childThat));
-        }
-    }
-
-    /**
-     * Clone the passed child AND all of its siblings, adding those clones to this component, and
-     * then recursively for the various children of those siblings.
-     *
-     * @param childThat  the eldest sibling of the siblings to recursively clone
-     */
-    private Component cloneChild(Component childThat) {
-        // clone the child ...
-        Component childThis = childThat.cloneBody();
+    private Component copyChild(Component childThat) {
+        // copy the child ...
+        Component childThis = childThat.copy();
         childThis.setContaining(this);
 
         // ... and the rest of the siblings
         Component childThisPrev = childThis;
-        Component childThatPrev = childThat;
-        Component childThatNext = childThatPrev.getNextSibling();
-        while (childThatNext != null) {
-            Component childThisNext = childThatNext.cloneBody();
-            childThisNext.setContaining(this);
-            childThisPrev.setNextSibling(childThisNext);
-
-            childThisPrev = childThisNext;
-            childThatPrev = childThatNext;
-            childThatNext = childThatPrev.getNextSibling();
+        for (Component sibling = childThat.getNextSibling(); sibling != null; sibling = sibling.getNextSibling()) {
+            Component siblingCopy = sibling.copy();
+            siblingCopy.setContaining(this);
+            childThisPrev.setNextSibling(siblingCopy);
+            childThisPrev = siblingCopy;
         }
 
-        // clone the grand-children nested under these siblings
+        // copy the grand-children nested under these siblings
         if (childThat.hasChildren()) {
-            childThis.cloneChildren(childThat.children());
+            childThis.copyChildren(childThat.children());
         }
 
         return childThis;
@@ -2157,12 +2153,10 @@ public abstract class Component
         // read in the "contributions"
         int c = readMagnitude(in);
         if (c > 0) {
-            ConstantPool       pool = getConstantPool();
-            List<Contribution> list = new ArrayList<>();
+            ConstantPool pool = getConstantPool();
             for (int i = 0; i < c; ++i) {
-                list.add(new Contribution(in, pool));
+                m_listContribs.add(new Contribution(in, pool));
             }
-            m_listContribs = list;
         }
     }
 
@@ -2182,11 +2176,8 @@ public abstract class Component
         m_cond    = pool.register(m_cond);
 
         // register the contributions
-        List<Contribution> listContribs = m_listContribs;
-        if (listContribs != null  && !listContribs.isEmpty()) {
-            for (Contribution contribution : listContribs) {
-                contribution.registerConstants(pool);
-            }
+        for (Contribution contribution : m_listContribs) {
+            contribution.registerConstants(pool);
         }
     }
 
@@ -2207,13 +2198,9 @@ public abstract class Component
         writePackedLong(out, m_constId.getPosition());
 
         // write out the contributions
-        List<Contribution> listContribs = m_listContribs;
-        int                cContribs    = listContribs == null ? 0 : listContribs.size();
-        writePackedLong(out, cContribs);
-        if (cContribs > 0) {
-            for (Contribution contribution : listContribs) {
-                contribution.assemble(out);
-            }
+        writePackedLong(out, m_listContribs.size());
+        for (Contribution contribution : m_listContribs) {
+            contribution.assemble(out);
         }
     }
 
@@ -2241,15 +2228,10 @@ public abstract class Component
         out.print(sIndent);
         out.println(this);
 
-        sIndent = nextIndent(sIndent);
+        String sNextIndent = nextIndent(sIndent);
 
-        List<Contribution> listContribs = m_listContribs;
-        int                cContribs    = listContribs == null ? 0 : listContribs.size();
-        if (cContribs > 0) {
-            for (int i = 0; i < cContribs; ++i) {
-                out.println(sIndent + '[' + i + "]=" + listContribs.get(i));
-            }
-        }
+        var idx = new int[]{0};
+        m_listContribs.forEach(c -> out.println(sNextIndent + '[' + (idx[0]++) + "]=" + c));
     }
 
     /**
@@ -2546,7 +2528,7 @@ public abstract class Component
      * of any number of contributing components.
      */
     public class Contribution
-            implements Cloneable {
+            implements Copyable<Contribution> {
         /**
          * @see XvmStructure#disassemble(DataInput)
          */
@@ -3121,12 +3103,16 @@ public abstract class Component
         }
 
         @Override
-        protected Object clone() {
-            try {
-                return super.clone();
-            } catch (CloneNotSupportedException e) {
-                throw new IllegalStateException(e);
-            }
+        public Contribution copy() {
+            // Most fields are immutable constants - safe to share references
+            Contribution that = new Contribution(m_composition, m_typeContrib);
+            that.m_constProp    = this.m_constProp;
+            that.m_annotation   = this.m_annotation;
+            that.m_constInjector = this.m_constInjector;
+            // Deep copy mutable collections
+            that.m_mapParams = this.m_mapParams == null ? null : new ListMap<>(this.m_mapParams);
+            that.m_listInject = this.m_listInject == null ? null : List.copyOf(this.m_listInject);
+            return that;
         }
 
         @Override
@@ -3474,9 +3460,9 @@ public abstract class Component
     private short m_nFlags;
 
     /**
-     * The contributions that make up this class.
+     * The contributions that make up this class. Never null.
      */
-    private List<Contribution> m_listContribs;
+    private final List<Contribution> m_listContribs = new ArrayList<>();
 
     /**
      * The documentation.

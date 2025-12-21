@@ -39,6 +39,1221 @@ This is **not replaceable with flatMap/streams** because streams lose location c
 
 ---
 
+## Driving Goals (Cut Through Everything)
+
+Every change in this refactoring must serve these core objectives:
+
+### 1. LSP/Incremental Compilation Support
+**Problem**: Current compiler is monolithic - compile everything or nothing.
+**Goal**: Enable partial compilation where only affected nodes are reprocessed.
+**Requires**:
+- Immutable AST nodes (copy-on-write transformation)
+- External caches keyed by node identity (not stored on nodes)
+- Deterministic stage processing (no hidden state)
+
+### 2. Thread Safety and Parallelism
+**Problem**: Current code has zero synchronization - single-threaded only.
+**Goal**: Safe parallel compilation of independent modules.
+**Requires**:
+- Immutable data structures (no defensive copying needed)
+- Lock-free caching (ConcurrentHashMap.computeIfAbsent)
+- No shared mutable state between compilation units
+
+### 3. Speed and Stability
+**Problem**: TypeInfo is a thread-choking bottleneck; fixpoint iteration is slow.
+**Goal**: 2-4x faster parallel compilation; predictable performance.
+**Requires**:
+- Structural sharing for TypeInfo variants
+- External TypeInfoCache with lock-free access
+- Reduced memory churn (fewer temporary objects)
+
+### 4. Testability at Class Level
+**Problem**: No unit tests for AST transformations or ConstantPool operations.
+**Goal**: Every class change has corresponding unit test coverage.
+**Requires**:
+- Test infrastructure created BEFORE refactoring
+- Tests must pass on master, continue passing after changes
+- Granular tests that isolate specific behaviors
+
+---
+
+## Safe Migration Policy
+
+### Principle: Test First, Then Migrate
+
+**NEVER change production code without corresponding test coverage.**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  For each refactoring step:                                 │
+│                                                             │
+│  1. Write unit tests on MASTER that verify current behavior │
+│  2. Ensure tests pass (baseline)                            │
+│  3. Make the refactoring change                             │
+│  4. Verify tests still pass (no regression)                 │
+│  5. Add new tests for new capabilities                      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Test Categories Required
+
+#### A. AST Node Tests (per class)
+
+```java
+// Example: BiExpressionTest.java
+@Test void testForEachChild_visitsLeftAndRight();
+@Test void testWithChildren_createsNewInstance();
+@Test void testWithChildren_preservesOperator();
+@Test void testCopy_deepCopiesChildren();
+@Test void testCopy_doesNotCopyDerivedFields();
+@Test void testAdopt_setsParentOnChildren();
+```
+
+**Coverage for each AST node class:**
+- [ ] forEachChild() visits all structural children in order
+- [ ] withChildren() creates new instance with new children
+- [ ] withChildren() preserves non-child fields (tokens, operators)
+- [ ] copy() deep copies entire subtree
+- [ ] @Derived fields are NOT copied
+- [ ] adopt() properly links parent references
+
+#### B. ConstantPool Tests
+
+```java
+// Example: ConstantPoolTransferTest.java
+@Test void testTransferTo_samePool_returnsSame();
+@Test void testTransferTo_differentPool_createsNew();
+@Test void testTransferTo_registersInTargetPool();
+@Test void testTransferTo_handlesCircularReferences();
+@Test void testIsShared_upstreamPoolsAreShared();
+```
+
+**Coverage:**
+- [ ] transferTo() same pool returns `this`
+- [ ] transferTo() different pool creates new instance
+- [ ] transferTo() recursively transfers child constants
+- [ ] Circular constant references don't cause infinite loops
+- [ ] isShared() correctly identifies shareable constants
+
+#### C. TypeInfo Tests
+
+```java
+// Example: TypeInfoCacheTest.java
+@Test void testEnsureTypeInfo_cachesResult();
+@Test void testEnsureTypeInfo_threadSafe();
+@Test void testLimitAccess_sharesBaseData();
+@Test void testAsInto_sharesBaseData();
+@Test void testPropertyLookup_cachesResults();
+```
+
+**Coverage:**
+- [ ] TypeInfo is computed once and cached
+- [ ] Concurrent access doesn't corrupt state
+- [ ] Variant TypeInfo (public/private/into) shares base data
+- [ ] Property/method lookups are cached
+- [ ] Cache invalidation works correctly
+
+#### D. Stage Processing Tests
+
+```java
+// Example: StageMgrTest.java
+@Test void testFixpointIteration_resolvesCircularDeps();
+@Test void testRequestRevisit_schedulesReprocessing();
+@Test void testStageProgression_enforcesOrder();
+```
+
+**Coverage:**
+- [ ] Fixpoint iteration terminates
+- [ ] requestRevisit() causes reprocessing
+- [ ] Stage prerequisites are enforced
+- [ ] Error handling doesn't corrupt state
+
+### Granularity Strategy
+
+**Small, Isolated Changes:**
+```
+BAD:  "Refactor all 94 AST classes to use withChildren()"
+GOOD: "Add withChildren() to BiExpression, with tests"
+      "Add withChildren() to IfStatement, with tests"
+      ... (one class at a time)
+```
+
+**Each PR should:**
+1. Touch minimal files (ideally 1-3 production files)
+2. Include corresponding test files
+3. Be independently reviewable
+4. Not break existing tests
+
+### Rollback Points
+
+Establish clear rollback points:
+- After AST reflection removal (Phase 1-4) ✅ DONE
+- After Copyable interface introduction (Phase 2)
+- After ConstantPool transferTo() migration (Phase 5)
+- After TypeInfo immutability (Phase 5.5)
+- After external cache introduction
+
+Each rollback point should have:
+- All tests passing
+- No performance regression (benchmark)
+- Clean git tag for easy revert
+
+### Test Infrastructure Setup (Do First)
+
+Before ANY production changes:
+
+```
+1. Create test directory structure:
+   javatools/src/test/java/org/xvm/compiler/ast/
+   javatools/src/test/java/org/xvm/asm/constants/
+
+2. Create base test utilities:
+   - AstTestUtils.java (create test AST nodes)
+   - ConstantPoolTestUtils.java (create test pools)
+   - TypeInfoTestUtils.java (create test type info)
+
+3. Create baseline tests on master:
+   - Run and verify they pass
+   - These are the regression safety net
+```
+
+### Three-Tier Testing Strategy
+
+The XTC compiler has a bootstrapping challenge: to fully compile XTC code, you need the
+Ecstasy library modules (ecstasy.xtc, etc.) which are themselves compiled XTC code. This
+creates a chicken-and-egg problem for unit testing that requires name resolution or type checking.
+
+**Solution: Three tiers of testing with increasing dependencies:**
+
+#### Tier 1: Pure Structural Tests (No Dependencies)
+
+These tests don't require any compiled XTC modules. They test the structural aspects of
+AST nodes, ConstantPool operations, and internal algorithms.
+
+**What can be tested:**
+
+```java
+// AST structural tests - no compilation needed
+@Test void testBiExpression_forEachChild_visitsLeftAndRight() {
+    Token plus = new Token(Token.Id.ADD, ...);
+    LiteralExpression left = new LiteralExpression(Token.literal(1L));
+    LiteralExpression right = new LiteralExpression(Token.literal(2L));
+    BiExpression expr = new BiExpression(left, plus, right);
+
+    List<AstNode> children = new ArrayList<>();
+    expr.forEachChild((Consumer<AstNode>) children::add);
+
+    assertEquals(2, children.size());
+    assertSame(left, children.get(0));
+    assertSame(right, children.get(1));
+}
+
+@Test void testBiExpression_withChildren_createsNewInstance() {
+    BiExpression original = createBiExpression();
+    LiteralExpression newLeft = new LiteralExpression(Token.literal(99L));
+
+    BiExpression replaced = (BiExpression) original.withChildren(
+        List.of(newLeft, original.getExpr2()));
+
+    assertNotSame(original, replaced);
+    assertSame(newLeft, replaced.getExpr1());
+    assertSame(original.getExpr2(), replaced.getExpr2());
+    assertSame(original.getOperator(), replaced.getOperator());
+}
+
+@Test void testAstNode_copy_deepCopiesChildren() {
+    BiExpression original = createNestedExpression();
+    BiExpression copy = (BiExpression) original.copy();
+
+    assertNotSame(original, copy);
+    assertNotSame(original.getExpr1(), copy.getExpr1());
+    assertEquals(original.toString(), copy.toString());  // Structurally equal
+}
+
+@Test void testAstNode_adopt_setsParentReferences() {
+    BiExpression parent = new BiExpression(
+        new LiteralExpression(...),
+        plusToken,
+        new LiteralExpression(...)
+    );
+    parent.introduceParentage();
+
+    assertSame(parent, parent.getExpr1().getParent());
+    assertSame(parent, parent.getExpr2().getParent());
+}
+```
+
+**ConstantPool tests (isolated):**
+
+```java
+@Test void testConstantPool_registerIntConstant_returnsSameForDuplicate() {
+    ConstantPool pool = new ConstantPool();
+    IntConstant c1 = pool.ensureIntConstant(42);
+    IntConstant c2 = pool.ensureIntConstant(42);
+
+    assertSame(c1, c2);  // Interning works
+}
+
+@Test void testConstant_transferTo_differentPool_createsNew() {
+    ConstantPool poolA = new ConstantPool();
+    ConstantPool poolB = new ConstantPool();
+    IntConstant inA = poolA.ensureIntConstant(123);
+
+    IntConstant inB = inA.transferTo(poolB);
+
+    assertNotSame(inA, inB);
+    assertEquals(inA.getValue(), inB.getValue());
+    assertSame(poolB, inB.getConstantPool());
+}
+
+@Test void testConstant_transferTo_samePool_returnsSame() {
+    ConstantPool pool = new ConstantPool();
+    IntConstant c = pool.ensureIntConstant(456);
+
+    assertSame(c, c.transferTo(pool));
+}
+```
+
+**StageMgr/fixpoint tests (with mock nodes):**
+
+```java
+@Test void testStageMgr_requestRevisit_addsToRevisitList() {
+    MockAstNode node = new MockAstNode() {
+        @Override
+        public void resolveNames(StageMgr mgr, ErrorListener errs) {
+            if (firstVisit) {
+                mgr.requestRevisit();
+                firstVisit = false;
+            } else {
+                // Complete on second visit
+            }
+        }
+    };
+
+    StageMgr mgr = new StageMgr(node, Stage.Resolved, new ErrorList(10));
+
+    assertFalse(mgr.processComplete());  // First pass - requested revisit
+    assertTrue(mgr.processComplete());   // Second pass - completed
+}
+
+@Test void testStageMgr_processComplete_terminatesAfterMaxIterations() {
+    MockAstNode infiniteLoop = new MockAstNode() {
+        @Override
+        public void resolveNames(StageMgr mgr, ErrorListener errs) {
+            mgr.requestRevisit();  // Always request revisit
+        }
+    };
+
+    StageMgr mgr = new StageMgr(infiniteLoop, Stage.Resolved, new ErrorList(10));
+    mgr.fastForward(10);  // Max 10 iterations
+
+    assertTrue(mgr.isLastAttempt());  // Should have hit limit
+}
+```
+
+**Utility class for creating test nodes:**
+
+```java
+public class AstTestUtils {
+    public static Token plusToken() {
+        return new Token(0, 0, Token.Id.ADD, null);
+    }
+
+    public static LiteralExpression intLiteral(long value) {
+        return new LiteralExpression(Token.literal(value));
+    }
+
+    public static BiExpression addExpr(Expression left, Expression right) {
+        return new BiExpression(left, plusToken(), right);
+    }
+
+    // Mock node for testing stage processing
+    public static class MockAstNode extends AstNode {
+        private boolean firstVisit = true;
+
+        @Override
+        public <T> T forEachChild(Function<AstNode, T> visitor) {
+            return null;  // No children
+        }
+
+        @Override
+        protected AstNode withChildren(List<AstNode> children) {
+            return this;  // No children to replace
+        }
+
+        // Override stage methods for testing
+        @Override
+        public void resolveNames(StageMgr mgr, ErrorListener errs) {
+            // Default: complete immediately
+        }
+    }
+}
+```
+
+#### Tier 2: Parser-Level Tests (Syntax Only)
+
+These tests parse XTC source code and verify the resulting AST structure without
+performing name resolution or type checking.
+
+```java
+@Test void testParser_simpleClass_createsCorrectStructure() {
+    String source = "class Foo { Int x; void bar() {} }";
+    Source src = new Source(source);
+    ErrorList errs = new ErrorList(10);
+    Parser parser = new Parser(src, errs);
+
+    Statement stmt = parser.parseSource();
+
+    assertTrue(stmt instanceof StatementBlock);
+    // Verify structure without name resolution
+}
+
+@Test void testParser_nestedExpression_preservesParentheses() {
+    String source = "module T { void f() { return (1 + 2) * 3; } }";
+    // Parse and verify the AST structure
+}
+
+@Test void testAstNode_toString_roundTripsForParsedCode() {
+    String original = "if (x > 0) { return x; } else { return -x; }";
+    Source src = new Source("module T { void f(Int x) { " + original + " } }");
+    // Parse, get the if statement, verify toString matches
+}
+```
+
+#### Tier 3: Integration Tests (Full XDK Required)
+
+These tests require the pre-compiled XDK (ecstasy.xtc and friends). They run after
+`./gradlew installDist` and test the full compilation pipeline.
+
+**Located in:** `xdk/src/test/java/org/xvm/xdk/`
+
+```java
+@Test void testCompile_simpleModule_resolvesNames() {
+    String source = """
+        module Test {
+            void run() {
+                Int x = 42;
+                @Inject Console console;
+                console.print(x.toString());
+            }
+        }
+        """;
+
+    FileStructure struct = compileWithXdk(source);
+
+    // Verify that names resolved correctly
+    assertNotNull(struct.getModule());
+    // Can access type info because ecstasy.xtc is available
+}
+
+@Test void testTypeInfo_intType_hasExpectedMethods() {
+    // This test needs the compiled Ecstasy library
+    TypeConstant intType = getIntTypeFromXdk();
+    TypeInfo info = intType.ensureTypeInfo();
+
+    assertNotNull(info.findMethod("add"));
+    assertNotNull(info.findMethod("toString"));
+}
+```
+
+### Benchmarking Strategy
+
+**Goal:** Prove that immutability and caching improvements make the compiler faster,
+not just cleaner code.
+
+#### Baseline Measurements (Before Refactoring)
+
+Create benchmarks that measure current performance:
+
+```java
+@Benchmark
+public void compileEcstasyModule(Blackhole bh) {
+    // Measure time to compile a significant XTC module
+    FileStructure struct = compileModule("path/to/test/module.x");
+    bh.consume(struct);
+}
+
+@Benchmark
+public void typeInfoBuilding(Blackhole bh) {
+    // Measure TypeInfo construction time
+    TypeConstant type = getComplexGenericType();
+    type.invalidateTypeInfo();  // Clear cache
+    TypeInfo info = type.ensureTypeInfo();
+    bh.consume(info);
+}
+
+@Benchmark
+public void constantPoolTransfer(Blackhole bh) {
+    // Measure constant transfer between pools
+    ConstantPool source = createPoolWithManyConstants();
+    ConstantPool target = new ConstantPool();
+    for (Constant c : source.getConstants()) {
+        bh.consume(c.transferTo(target));
+    }
+}
+
+@Benchmark
+public void astCopyDeep(Blackhole bh) {
+    // Measure deep copy performance
+    AstNode tree = parseComplexModule();
+    bh.consume(tree.copy());
+}
+```
+
+#### Metrics to Track
+
+| Metric | Why It Matters | Target Improvement |
+|--------|----------------|-------------------|
+| Full module compile time | Overall performance | ≥10% faster |
+| TypeInfo build time | Major bottleneck | ≥50% reduction in lock contention |
+| Memory per compilation | Cache efficiency | No increase, ideally 10-20% decrease |
+| Parallel compilation speedup | Thread safety | Near-linear with core count |
+| AST copy time | Copy-on-write foundation | Baseline for structural sharing |
+
+#### Benchmark Infrastructure
+
+```java
+// javatools/src/test/java/org/xvm/benchmark/
+public class CompilerBenchmarkHarness {
+    private static File xdkLib;
+    private static File testModules;
+
+    @BeforeAll
+    static void setupXdk() {
+        // Same setup as XdkIntegrationTest
+        xdkLib = new File("build/install/xdk/lib");
+    }
+
+    public FileStructure compileModule(String path) {
+        CompilerOptions opts = new CompilerOptions.Builder()
+            .addModulePath(xdkLib)
+            .addInputFile(new File(path))
+            .build();
+        return new Compiler(opts, null, new ErrorList(10)).compile();
+    }
+
+    // JMH-style annotations for microbenchmarks
+    @Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    @OutputTimeUnit(TimeUnit.MILLISECONDS)
+    public void benchmarkName() { ... }
+}
+```
+
+#### Continuous Performance Tracking
+
+1. **Run benchmarks on each PR** that touches core compiler code
+2. **Store results** in a simple JSON/CSV file for trend tracking
+3. **Alert on regressions** > 5% in any key metric
+4. **Celebrate improvements** with concrete numbers in commit messages
+
+**Example performance tracking entry:**
+```json
+{
+  "commit": "abc123",
+  "date": "2025-01-15",
+  "metrics": {
+    "compileEcstasyModule_ms": 1234,
+    "typeInfoBuild_ms": 45,
+    "astCopyDeep_ms": 12,
+    "memoryMB": 256
+  }
+}
+```
+
+#### Performance Goals by Phase
+
+| Phase | Expected Performance Impact |
+|-------|----------------------------|
+| Phase 1 (forEachChild) | Slight overhead from Function calls, <5% |
+| Phase 2 (Copyable) | Neutral - just explicit what was implicit |
+| Phase 3-4 (Copy-on-Write) | +10-20% for incremental edits, slight overhead for full compile |
+| Phase 5 (Constants) | +5% from reduced cloning |
+| Phase 5.5 (TypeInfo) | **+50-100% parallel speedup** due to lock contention removal |
+| Phase 6-8 (Cleanup) | Neutral to slight improvement |
+
+### ConstantPool and Component Testing Strategy
+
+The ConstantPool and Component hierarchies are critical infrastructure that the entire
+compiler depends on. They currently have:
+- No @NotNull/@Nullable annotations
+- Mutable arrays exposed through public APIs
+- Implicit null handling buried in control flow
+- Limited unit test coverage
+
+**There are almost certainly bugs hiding here.**
+
+#### Testing ConstantPool Edge Cases
+
+```java
+// Test null handling (currently implicit, should be explicit)
+@Test void testConstantPool_registerNull_throwsNPE() {
+    ConstantPool pool = new ConstantPool();
+    assertThrows(NullPointerException.class, () -> pool.register(null));
+}
+
+@Test void testConstantPool_ensureStringConstant_nullValue() {
+    ConstantPool pool = new ConstantPool();
+    // What happens? NPE? Null constant? Error?
+    // This should be documented and tested
+}
+
+// Test circular references
+@Test void testConstantPool_circularTypeReference_doesNotStackOverflow() {
+    // Create: class Foo<T extends Foo<T>>
+    ConstantPool pool = new ConstantPool();
+    // Should terminate, not infinite loop
+}
+
+// Test pool isolation
+@Test void testConstantPool_constantsFromDifferentPools_cannotMix() {
+    ConstantPool pool1 = new ConstantPool();
+    ConstantPool pool2 = new ConstantPool();
+    IntConstant c1 = pool1.ensureIntConstant(42);
+
+    // What happens if you try to use c1 directly in pool2?
+    // Should require explicit transfer
+}
+
+// Test interning consistency
+@Test void testConstantPool_sameValueDifferentPath_sameConstant() {
+    ConstantPool pool = new ConstantPool();
+    // Create "Int" type via two different code paths
+    TypeConstant t1 = pool.ensureEcstasyTypeConstant("Int");
+    TypeConstant t2 = /* different code path that also creates Int */;
+
+    assertSame(t1, t2);  // Must be interned
+}
+```
+
+#### Testing Component Hierarchy
+
+```java
+// Test parent-child invariants
+@Test void testComponent_childAdded_parentIsSet() {
+    ClassStructure parent = createTestClass();
+    MethodStructure child = parent.createMethod(...);
+
+    assertSame(parent, child.getParent());
+}
+
+@Test void testComponent_removeChild_parentIsCleared() {
+    ClassStructure parent = createTestClass();
+    MethodStructure child = parent.createMethod(...);
+    parent.removeChild(child);
+
+    assertNull(child.getParent());  // Or throws?
+}
+
+// Test immutability violations (find the bugs!)
+@Test void testComponent_getChildren_returnsDefensiveCopy() {
+    ClassStructure clz = createTestClass();
+    List<Component> children = clz.children();
+    int originalSize = children.size();
+
+    try {
+        children.add(new MethodStructure(...));  // Modify returned list
+        fail("Should throw UnsupportedOperationException");
+    } catch (UnsupportedOperationException e) {
+        // Good - list is properly protected
+    }
+
+    // Verify original wasn't modified
+    assertEquals(originalSize, clz.children().size());
+}
+
+// Test conditional compilation
+@Test void testComponent_bifurcation_createsIndependentCopy() {
+    ClassStructure original = createTestClass();
+    ConditionalConstant condition = createTestCondition();
+
+    ClassStructure bifurcated = original.copyForCondition(condition);
+
+    assertNotSame(original, bifurcated);
+    // Changes to bifurcated should not affect original
+}
+```
+
+#### Null Safety Enforcement
+
+**Every public method should have explicit null contracts.**
+
+```java
+// CURRENT (dangerous - nullability unclear):
+public TypeConstant getType() {
+    return m_type;  // Can this be null? Who knows!
+}
+
+// REQUIRED (explicit contract):
+public @NotNull TypeConstant getType() {
+    return Objects.requireNonNull(m_type, "Type not resolved");
+}
+
+// Or if null is valid:
+public @Nullable TypeConstant getTypeIfResolved() {
+    return m_type;
+}
+```
+
+**Testing null contracts:**
+
+```java
+// Find every method that can return null but doesn't say so
+@Test void testTypeConstant_allPublicMethods_documentNullability() {
+    // Use reflection to find all public methods
+    // For each method that returns an object:
+    // - Either @NotNull or @Nullable annotation must be present
+    // This is a meta-test for code quality
+}
+
+// Test null parameter handling
+@ParameterizedTest
+@MethodSource("provideNullSensitiveMethods")
+void testMethod_nullParameter_throwsOrHandles(Method method, Object[] args) {
+    // For each method that doesn't accept null, verify it throws NPE
+    // For each method that does accept null, verify it handles correctly
+}
+```
+
+#### Parameter Hygiene and Validation
+
+**Current antipattern:**
+```java
+// Found all over the codebase
+public void setChildren(TypeConstant[] types) {
+    m_types = types;  // Caller can modify after setting!
+}
+```
+
+**Required pattern:**
+```java
+public void setChildren(@NotNull List<TypeConstant> types) {
+    Objects.requireNonNull(types, "types cannot be null");
+    if (types.stream().anyMatch(Objects::isNull)) {
+        throw new IllegalArgumentException("types cannot contain null");
+    }
+    this.types = List.copyOf(types);  // Defensive copy, immutable
+}
+```
+
+**Tests for parameter hygiene:**
+
+```java
+@Test void testSetChildren_arrayModifiedAfterSet_noEffectOnComponent() {
+    ClassStructure clz = new ClassStructure();
+    TypeConstant[] original = { type1, type2 };
+    clz.setTypeParams(original);
+
+    original[0] = null;  // Modify original array
+
+    // Component should be unaffected
+    assertNotNull(clz.getTypeParams().get(0));
+}
+
+@Test void testConstructor_allFieldsInitialized_noNullFields() {
+    ClassStructure clz = new ClassStructure("Test", ...);
+
+    // Every field that should be non-null must be initialized
+    assertNotNull(clz.getName());
+    assertNotNull(clz.getAccess());
+    // etc.
+}
+```
+
+#### Final Fields Are Best
+
+**Every field that can be final, should be final.**
+
+```java
+// CURRENT (mutable - bugs can hide):
+private TypeConstant m_type;
+
+public void setType(TypeConstant type) {
+    m_type = type;  // Can be set multiple times? When? By whom?
+}
+
+// BETTER (immutable - no hidden mutation):
+private final TypeConstant type;
+
+public Component(TypeConstant type, ...) {
+    this.type = Objects.requireNonNull(type);
+}
+
+// If you need to change it, create a new instance:
+public Component withType(TypeConstant newType) {
+    return new Component(newType, this.other, this.fields);
+}
+```
+
+**Testing immutability:**
+
+```java
+@Test void testClassStructure_allFieldsAreFinal() {
+    Class<ClassStructure> clz = ClassStructure.class;
+    for (Field field : clz.getDeclaredFields()) {
+        if (!Modifier.isStatic(field.getModifiers())) {
+            assertTrue(Modifier.isFinal(field.getModifiers()),
+                "Field " + field.getName() + " should be final");
+        }
+    }
+}
+```
+
+#### The Lazy<T> Class - Final Fields with Lazy Initialization
+
+The `org.xvm.util.Lazy<T>` class enables the "final + lazy" pattern: fields can be
+`final` (immutable once set) while still being computed on first access.
+
+**Location:** `javatools_utils/src/main/java/org/xvm/util/Lazy.java`
+
+**Three Variants for Different Use Cases:**
+
+| Variant | Factory Method | Thread-Safe? | Use Case |
+|---------|---------------|--------------|----------|
+| `ThreadSafeLazy` | `Lazy.of(supplier)` | ✅ Yes | Default for shared state |
+| `UnsafeLazy` | `Lazy.ofUnsafe(supplier)` | ❌ No | Single-threaded paths |
+| `Initialized` | `Lazy.ofValue(value)` | ✅ Yes | Testing, pre-computed values |
+
+**Converting Lazy Null-Check Patterns:**
+
+```java
+// BEFORE: The classic antipattern
+// Problems:
+// 1. Field is mutable (can't be final)
+// 2. Not thread-safe (racing threads may compute twice)
+// 3. Unclear if null means "not computed" or "no value"
+// 4. Computation can happen multiple times if not synchronized
+
+private TypeInfo m_typeInfo;  // Mutable, nullable
+
+public TypeInfo getTypeInfo() {
+    if (m_typeInfo == null) {
+        m_typeInfo = computeTypeInfo();  // Race condition!
+    }
+    return m_typeInfo;
+}
+
+// AFTER: Final field with Lazy
+// Benefits:
+// 1. Field is final (immutable)
+// 2. Thread-safe (computation happens exactly once)
+// 3. Clear intent (Lazy = "computed on first access")
+// 4. Supplier is released after computation (GC-friendly)
+
+private final Lazy<TypeInfo> typeInfo = Lazy.of(this::computeTypeInfo);
+
+public TypeInfo getTypeInfo() {
+    return typeInfo.get();
+}
+```
+
+**When to Use Each Variant:**
+
+**1. `Lazy.of()` - Thread-Safe (Default)**
+
+Use when the lazy value might be accessed from multiple threads:
+
+```java
+// TypeConstant - accessed during parallel type resolution
+private final Lazy<TypeInfo> typeInfo = Lazy.of(this::buildTypeInfo);
+
+// Component - may be queried from multiple compilation threads
+private final Lazy<List<MethodStructure>> methods = Lazy.of(this::collectMethods);
+```
+
+Implementation uses double-checked locking with volatile:
+- First check: non-synchronized, fast path for initialized values
+- Second check: synchronized, ensures exactly-once computation
+- Releases supplier after computation for GC
+
+**2. `Lazy.ofUnsafe()` - Single-Threaded**
+
+Use when you're sure only one thread accesses the value (avoids sync overhead):
+
+```java
+// Parser is single-threaded
+private final Lazy<Token> peekToken = Lazy.ofUnsafe(this::scanNextToken);
+
+// AstNode during initial construction (before shared)
+private final Lazy<String> sourceText = Lazy.ofUnsafe(() ->
+    source.substring(startPos, endPos));
+```
+
+Implementation is simpler with no synchronization:
+- Just null-check and compute
+- Smaller memory footprint (no volatile)
+- ~2x faster than thread-safe version
+
+**3. `Lazy.ofValue()` - Pre-Initialized**
+
+Use for testing or when value is known at construction:
+
+```java
+// In tests - avoid computing, provide known value
+TypeInfo mockInfo = createMockTypeInfo();
+typeConstant.setTypeInfoForTest(Lazy.ofValue(mockInfo));
+
+// When value is sometimes known upfront
+private final Lazy<TypeInfo> typeInfo;
+
+public TypeConstant(TypeInfo knownInfo) {
+    this.typeInfo = Lazy.ofValue(knownInfo);  // Pre-initialized
+}
+
+public TypeConstant() {
+    this.typeInfo = Lazy.of(this::buildTypeInfo);  // Lazy
+}
+```
+
+**Checking Initialization State:**
+
+```java
+// Check without triggering computation
+if (!typeInfo.isInitialized()) {
+    // Still lazy - hasn't been accessed yet
+}
+
+// Useful for debugging, cache statistics, etc.
+```
+
+**Common Migration Patterns in XVM:**
+
+```java
+// 1. TypeConstant.m_typeinfo → Lazy<TypeInfo>
+// BEFORE:
+private transient volatile TypeInfo m_typeinfo;
+public TypeInfo ensureTypeInfo() {
+    TypeInfo info = m_typeinfo;
+    if (info == null || info != m_typeinfo) {  // Complex racy check!
+        synchronized (this) {
+            // Build it...
+        }
+    }
+    return m_typeinfo;
+}
+
+// AFTER:
+private final Lazy<TypeInfo> typeInfo = Lazy.of(this::buildTypeInfo);
+public TypeInfo ensureTypeInfo() {
+    return typeInfo.get();  // That's it!
+}
+
+// 2. TypeInfo lazy caches → Lazy<Map<...>>
+// BEFORE:
+private transient Map<String, PropertyInfo> m_mapPropertiesByName;
+public PropertyInfo findProperty(String name) {
+    if (m_mapPropertiesByName == null) {
+        m_mapPropertiesByName = buildPropertyMap();
+    }
+    return m_mapPropertiesByName.get(name);
+}
+
+// AFTER:
+private final Lazy<Map<String, PropertyInfo>> propsByName =
+    Lazy.of(this::buildPropertyMap);
+public PropertyInfo findProperty(String name) {
+    return propsByName.get().get(name);
+}
+
+// 3. AstNode.m_aLabels (lazily allocated array) → Lazy<List<Label>>
+// BEFORE:
+protected transient Label[] m_aLabels;
+protected Label[] getLabels() {
+    if (m_aLabels == null) {
+        m_aLabels = allocateLabels();
+    }
+    return m_aLabels;
+}
+
+// AFTER:
+protected final Lazy<List<Label>> labels = Lazy.ofUnsafe(this::allocateLabels);
+protected List<Label> getLabels() {
+    return labels.get();
+}
+```
+
+**Finding Candidates for Lazy Migration:**
+
+```bash
+# Find "if null then compute" patterns
+grep -rn "if.*== null\)" --include="*.java" | grep -v "// " | head -50
+
+# Find mutable fields with transient (often lazy caches)
+grep -rn "transient.*m_" --include="*.java" | grep -v "@Derived"
+
+# Find synchronized lazy init
+grep -rn "synchronized.*{" --include="*.java" -A 3 | grep "if.*null"
+```
+
+**Classes with Significant Lazy Initialization (Candidates for Lazy<T>):**
+
+| Class | Lazy Patterns | Priority | Notes |
+|-------|---------------|----------|-------|
+| `ConstantPool.java` | **156** | HIGH | Biggest win - all type/class accessors |
+| `MethodStructure.java` | 30 | HIGH | Method body compilation caches |
+| `InvocationExpression.java` | 14 | MEDIUM | Method resolution caches |
+| `CaseManager.java` | 11 | LOW | Switch statement handling |
+| `LambdaExpression.java` | 9 | MEDIUM | Lambda capture computation |
+| `Component.java` | 9 | HIGH | Base class for all structures |
+| `ForEachStatement.java` | 8 | LOW | Iteration caches |
+| `Scope.java` | 8 | MEDIUM | Variable scope tracking |
+| `NameExpression.java` | 7 | MEDIUM | Name resolution caches |
+| `Context.java` | 7 | HIGH | Validation context |
+| `PropertyBody.java` | 6 | MEDIUM | Property implementation |
+| `TypeCollector.java` | 5 | MEDIUM | Type parameter collection |
+| `Register.java` | 4 | LOW | Register allocation |
+
+**ConstantPool is the #1 target - 156 patterns like this:**
+
+```java
+// Current: 156 repetitive lazy patterns in ConstantPool.java
+public ClassConstant clzObject() {
+    ClassConstant c = m_clzObject;
+    if (c == null) {
+        m_clzObject = c = (ClassConstant) getImplicitlyImportedIdentity("Object");
+    }
+    return c;
+}
+
+// With Lazy<T>: Single field declaration + simple getter
+private final Lazy<ClassConstant> clzObject =
+    Lazy.of(() -> (ClassConstant) getImplicitlyImportedIdentity("Object"));
+
+public ClassConstant clzObject() {
+    return clzObject.get();
+}
+```
+
+**Benefits of Lazy<T> migration in ConstantPool:**
+- 156 mutable fields → 156 final fields
+- 156 patterns of "check-then-assign" → 156 simple `.get()` calls
+- Thread-safe by default (ConstantPool is shared between modules)
+- Clear intent: "lazy-computed well-known constant"
+
+**Migration order:**
+1. **ConstantPool** - biggest win, most patterns, shared state
+2. **Component/MethodStructure** - core infrastructure
+3. **TypeInfo** - move caches external first (Phase 5.5)
+4. **AST nodes** - lower priority, often single-threaded anyway
+
+**Future: Resettable Lazy (for Cache Invalidation)**
+
+For cases where the cached value might need to be recomputed:
+
+```java
+public abstract class ResettableLazy<T> extends Lazy<T> {
+    public abstract void reset();  // Force recomputation on next get()
+}
+
+// Usage:
+private final ResettableLazy<TypeInfo> typeInfo = ResettableLazy.of(this::build);
+
+public void invalidateTypeInfo() {
+    typeInfo.reset();  // Next get() will recompute
+}
+```
+
+**Future: Weak/Soft Reference Lazy (for Memory-Sensitive Caches)**
+
+For caches that can be discarded under memory pressure:
+
+```java
+public abstract class SoftLazy<T> extends Lazy<T> {
+    // Value held via SoftReference - can be GC'd and recomputed
+}
+
+// Usage for large cached data:
+private final SoftLazy<List<MethodInfo>> allMethods =
+    SoftLazy.of(this::collectAllMethods);  // Can be reclaimed
+```
+
+#### Coverage Analysis for Hidden Bugs
+
+**Use coverage tools to find untested paths:**
+
+1. **JaCoCo integration** - add to Gradle build
+2. **Identify low-coverage areas** - especially null-handling branches
+3. **Focus tests on edge cases**:
+   - Empty collections
+   - Single-element collections
+   - Null values (where allowed)
+   - Maximum size inputs
+   - Circular references
+
+```java
+// Test generator for exhaustive edge cases
+@ParameterizedTest
+@CsvSource({
+    "0, 0",           // empty
+    "1, 1",           // single
+    "1000, 1000",     // large
+    "-1, exception",  // invalid
+})
+void testMethodWithBoundaries(int input, String expected) {
+    // Test boundary conditions systematically
+}
+```
+
+#### The "Null-or-Single-or-Many" Antipattern
+
+**PROBLEM:** The codebase uses three different representations for the same concept:
+
+```java
+// Found throughout the codebase - 4 different states to handle:
+private Object m_value;  // Could be:
+                         // 1. null (no values)
+                         // 2. Single object (one value)
+                         // 3. Object[] (many values)
+                         // 4. List<Object> (also many values, sometimes)
+
+// Caller code becomes a nightmare:
+if (m_value == null) {
+    // handle zero case
+} else if (m_value instanceof SomeType single) {
+    // handle one case
+} else if (m_value instanceof SomeType[] array) {
+    for (SomeType item : array) {
+        // handle each
+    }
+} else if (m_value instanceof List<?> list) {
+    for (Object item : list) {
+        // handle each (with cast!)
+    }
+}
+```
+
+**SOLUTION:** Always use collections. Period.
+
+```java
+// BEFORE (antipattern):
+private TypeConstant m_typeReturn;       // Single return? Or null?
+private TypeConstant[] m_atypeReturns;   // Multiple returns?
+
+// This leads to:
+TypeConstant[] returns = m_atypeReturns != null
+    ? m_atypeReturns
+    : m_typeReturn != null
+        ? new TypeConstant[] { m_typeReturn }
+        : TypeConstant.NO_TYPES;
+
+// AFTER (clean):
+private final List<TypeConstant> returns;  // Always a list. Always non-null.
+
+// Usage is trivial:
+if (returns.isEmpty()) { ... }
+if (returns.size() == 1) { TypeConstant single = returns.get(0); }
+for (TypeConstant ret : returns) { ... }
+```
+
+**Why this matters:**
+
+| Representation | Problems |
+|----------------|----------|
+| `null` = empty | Forces null checks everywhere, NPE risk |
+| `single` = 1 | Type branching (`instanceof`), can't use loops |
+| `array` = many | Mutable, no type safety, different API than List |
+| `List` = many | Finally correct, but now you have 4 cases! |
+
+**Migration pattern:**
+
+```java
+// Step 1: Change field to final List
+private final List<TypeConstant> returns;
+
+// Step 2: Constructor normalizes input
+public MethodInfo(TypeConstant[] returnTypes) {
+    this.returns = returnTypes == null || returnTypes.length == 0
+        ? List.of()                    // Empty, not null
+        : List.of(returnTypes);        // Defensive copy
+}
+
+// Step 3: Single accessor, always returns List
+public @NotNull @Unmodifiable List<TypeConstant> getReturns() {
+    return returns;
+}
+
+// Step 4: Remove all the variant accessors
+// DELETE: public TypeConstant getReturn()
+// DELETE: public TypeConstant[] getReturnArray()
+// DELETE: public boolean hasReturns()  // Use !getReturns().isEmpty()
+```
+
+**Finding the antipattern:**
+
+```bash
+# Find fields that store "single or null"
+grep -r "private.*TypeConstant m_" --include="*.java" | grep -v "private.*TypeConstant\[\]"
+
+# Find "null or array" patterns
+grep -r "!= null \? .* : NO_TYPES" --include="*.java"
+
+# Find instanceof checks for array vs single
+grep -r "instanceof.*\[\]" --include="*.java"
+```
+
+**Tests to enforce the pattern:**
+
+```java
+@Test void testMethodInfo_emptyReturns_isEmptyList() {
+    MethodInfo info = new MethodInfo(/* no returns */);
+
+    List<TypeConstant> returns = info.getReturns();
+
+    assertNotNull(returns);           // Never null
+    assertTrue(returns.isEmpty());    // Empty, not null
+    assertThrows(UnsupportedOperationException.class,
+        () -> returns.add(null));     // Immutable
+}
+
+@Test void testMethodInfo_singleReturn_isSingletonList() {
+    TypeConstant intType = ...;
+    MethodInfo info = new MethodInfo(new TypeConstant[] { intType });
+
+    List<TypeConstant> returns = info.getReturns();
+
+    assertEquals(1, returns.size());
+    assertSame(intType, returns.get(0));
+}
+
+@Test void testMethodInfo_nullReturnsParam_becomesEmptyList() {
+    MethodInfo info = new MethodInfo((TypeConstant[]) null);
+
+    assertNotNull(info.getReturns());
+    assertTrue(info.getReturns().isEmpty());
+}
+```
+
+#### Continuous Null Safety Analysis
+
+**Add to CI/CD pipeline:**
+
+1. **SpotBugs/FindBugs** - catches many null-related bugs
+2. **Error Prone** - Google's static analysis
+3. **NullAway** - annotation-based null analysis
+4. **IntelliJ inspections** - can export as warnings
+
+**Example Gradle configuration:**
+```kotlin
+plugins {
+    id("com.github.spotbugs") version "6.0.0"
+}
+
+spotbugs {
+    effort.set(com.github.spotbugs.snom.Effort.MAX)
+    reportLevel.set(com.github.spotbugs.snom.Confidence.MEDIUM)
+    // Focus on null-related bugs
+    includeFilterConfig.set(resources.text.fromString("""
+        <FindBugsFilter>
+            <Match>
+                <Bug pattern="NP_*"/>  <!-- All null pointer patterns -->
+            </Match>
+        </FindBugsFilter>
+    """))
+}
+```
+
+---
+
 ## Modern Compiler AST Patterns
 
 ### Roslyn (C#) - Red-Green Trees
@@ -325,6 +1540,286 @@ public final class BiExpression extends Expression {
 3. **Incremental updates** - only recompute changed parts
 4. **Clear data flow** - each stage produces distinct output
 5. **Testable stages** - can test each stage in isolation
+
+---
+
+## Why adopt(), introduceParentage(), and transferTo() Exist
+
+Understanding these patterns is essential for designing the copy-on-write architecture.
+
+### Parent References in AST Nodes
+
+**What it does:**
+```java
+// introduceParentage() - called after parsing
+protected void introduceParentage() {
+    forEachChild(node -> {
+        node.setParent(this);          // Set parent reference
+        node.introduceParentage();      // Recurse
+    });
+}
+
+// adopt() - shorthand for setting parent on children
+protected void adopt(Iterable<? extends AstNode> children) {
+    for (AstNode child : children) {
+        child.setParent(this);
+    }
+}
+```
+
+**Why it's needed - Navigation up the tree:**
+```java
+// Finding the enclosing method
+AstNode node = this;
+while (node != null && !(node instanceof MethodDeclarationStatement)) {
+    node = node.getParent();
+}
+
+// Getting the containing class's type
+Component container = getParent().getComponent();
+TypeConstant typeContainer = container.getIdentityConstant().getType();
+
+// Checking context for code generation
+if (getParent() instanceof ReturnStatement) {
+    // Direct return - can optimize
+}
+```
+
+**Why parent is reassigned during compilation:**
+```java
+// SyntheticExpression inserts BETWEEN a node and its parent
+public SyntheticExpression(Expression expr) {
+    expr.getParent().adopt(this);  // Synthetic becomes child of expr's old parent
+    this.adopt(expr);              // expr becomes child of Synthetic
+}
+
+// Before: parent -> expr
+// After:  parent -> Synthetic -> expr
+```
+
+This is **AST mutation** - the tree structure changes during validation. Other examples:
+- `TraceExpression` wrapping for debugging
+- `TupleExpression` adoption during validation
+- `NameExpression` → `NamedTypeExpression` conversion
+
+### Constant Pool Transfers (adoptedBy / transferTo)
+
+**What it does:**
+```java
+// When a Constant from one module's pool is used in another module
+protected Constant adoptedBy(ConstantPool pool) {
+    Constant that = (Constant) super.clone();  // Shallow copy
+    that.setContaining(pool);                   // Set new pool
+    that.resetRefs();                           // Clear derived state
+    return that;
+}
+```
+
+**Why it's needed - Module isolation:**
+```java
+// Module A defines class Foo
+// Module B imports and uses Foo
+
+// Module B's pool needs its OWN reference to Foo's type
+// Can't share directly - each pool tracks its own constants
+
+ConstantPool poolA = moduleA.getConstantPool();
+ConstantPool poolB = moduleB.getConstantPool();
+
+TypeConstant typeFooInA = poolA.ensureClassType(fooClass);
+TypeConstant typeFooInB = typeFooInA.adoptedBy(poolB);  // New constant in poolB
+
+// typeFooInA.getConstantPool() == poolA
+// typeFooInB.getConstantPool() == poolB
+```
+
+**Why pools are separate:**
+1. **Serialization** - Each .xtc file has its own pool
+2. **Incremental compilation** - Modify module A without touching module B's pool
+3. **Reference counting** - Track which constants are used in each module
+4. **Interning** - Each pool interns its own constants
+
+### Component Cloning (cloneBody)
+
+**What it does:**
+```java
+// For conditional compilation (bifurcation)
+protected Component cloneBody() {
+    Component that = (Component) super.clone();
+    // Deep clone contributions
+    that.m_listContribs = deepClone(m_listContribs);
+    that.m_sibling = null;     // Clear sibling chain
+    that.m_childByName = null; // Clear child map
+    return that;
+}
+```
+
+**Why it's needed - Conditional variants:**
+```java
+// if (DEBUG) { class Foo { void debug() {...} } }
+// else       { class Foo { } }
+
+// Creates TWO versions of Foo:
+Component fooDebug = foo.cloneBody();
+fooDebug.setCondition(debugCondition);
+
+Component fooRelease = foo.cloneBody();
+fooRelease.setCondition(notDebugCondition);
+```
+
+### Can Components Be Immutable?
+
+**Current mutations during compilation:**
+
+| Stage | Mutations to Component |
+|-------|----------------------|
+| Register | Add type parameters, create child structures |
+| Resolve | Resolve name references, add contributions |
+| Validate | Mark as abstract, set property flags |
+| Emit | Generate code, finalize structure |
+
+**The fundamental problem:**
+```java
+// Components are BUILT incrementally
+ClassStructure clz = parent.createClass("Foo", access);  // Basic shell
+clz.addTypeParam("T");                                   // Add type param
+clz.addContribution(mixin);                               // Add mixin
+clz.createMethod("bar", ...);                             // Add method
+// ... many more mutations during various stages
+```
+
+**Options for immutable Components:**
+
+**Option A: Builder Pattern (Two-Phase)**
+```java
+ClassStructureBuilder builder = ClassStructure.builder();
+builder.addTypeParam("T");
+builder.addMethod(...);
+ClassStructure clz = builder.build();  // Immutable after build
+```
+
+**Pros**: Clear separation of construction vs usage
+**Cons**: Requires redesigning all Component creation; still mutable during build
+
+**Option B: Copy-on-Write Components**
+```java
+ClassStructure clz1 = new ClassStructure("Foo", ...);
+ClassStructure clz2 = clz1.withTypeParam("T");     // Returns new ClassStructure
+ClassStructure clz3 = clz2.withMethod(method);      // Returns new ClassStructure
+```
+
+**Pros**: True immutability, enables structural sharing
+**Cons**: Many intermediate objects, need to track "current" version
+
+**Option C: Mutable Construction, Frozen After**
+```java
+ClassStructure clz = new ClassStructure("Foo", ...);
+clz.addTypeParam("T");      // OK during construction
+clz.addMethod(method);      // OK during construction
+clz.freeze();               // Now immutable
+
+clz.addMethod(other);       // Throws IllegalStateException
+```
+
+**Pros**: Minimal API change, clear transition point
+**Cons**: Runtime checks, easy to forget freeze()
+
+**Recommendation for Phase 5:**
+
+Start with **Option C (Freeze after construction)** because:
+1. Minimal disruption to existing code
+2. Clearly identifies where mutations happen
+3. Can evolve toward Option B later
+
+The flow would be:
+```
+Parse → Create mutable Components → Validate → FREEZE → Emit
+```
+
+After freeze, any attempt to mutate throws. This catches bugs immediately.
+
+### How adopt() Changes in Copy-on-Write World
+
+**Current (Mutating):**
+```java
+// Parser creates bottom-up
+Expression expr = new BiExpression(left, op, right);
+// expr.getParent() == null
+
+// Later, parent is set
+parent.adopt(expr);
+// expr.getParent() == parent (mutation!)
+```
+
+**Copy-on-Write Option A: Parent in Constructor**
+```java
+// Can't set parent after construction
+Expression expr = new BiExpression(parent, left, op, right);
+// expr.getParent() == parent from birth
+```
+
+**Problem**: When copying, must recreate entire parent chain up to root.
+
+**Copy-on-Write Option B: No Stored Parent (Roslyn Green Tree)**
+```java
+// Green nodes have no parent
+Expression expr = new BiExpression(left, op, right);
+// expr.getParent() throws - no parent reference
+
+// Red tree manufactures parent on demand
+RedNode red = redRoot.findNode(expr);
+AstNode parent = red.getParent();  // Computed, not stored
+```
+
+**Problem**: Significant architecture change. Need wrapper layer.
+
+**Copy-on-Write Option C: External Parent Map**
+```java
+// Parent stored in CompilationContext, not on node
+Map<AstNode, AstNode> parents = context.getParentMap();
+
+Expression expr = new BiExpression(left, op, right);
+parents.put(left, expr);
+parents.put(right, expr);
+
+// Lookup
+AstNode parent = context.getParent(expr);
+```
+
+**This is the most pragmatic approach for incremental adoption.**
+
+### How transferTo() Changes
+
+**Current (Using clone()):**
+```java
+Constant adoptedBy(ConstantPool pool) {
+    Constant that = (Constant) super.clone();  // Shallow copy
+    that.setContaining(pool);
+    return that;
+}
+```
+
+**Explicit transferTo():**
+```java
+public IntConstant transferTo(ConstantPool pool) {
+    if (pool == getConstantPool()) return this;
+    return pool.register(new IntConstant(pool, getFormat(), m_value));
+}
+
+public ParameterizedTypeConstant transferTo(ConstantPool pool) {
+    if (pool == getConstantPool()) return this;
+    return pool.register(new ParameterizedTypeConstant(
+        pool,
+        m_type.transferTo(pool),               // Transfer child
+        transferArrayTo(pool, m_params)));     // Transfer array
+}
+```
+
+**Benefits:**
+- Explicit about what gets copied
+- No hidden clone() magic
+- Each constant knows its own structure
+- Can optimize (return `this` if already in pool)
 
 ---
 
@@ -655,19 +2150,59 @@ All three major hierarchies (AstNode, Constant, Component) share a common copyin
 
 ```java
 /**
- * Marker interface for structures that support explicit copying.
- * All implementations must:
+ * Interface for structures that support explicit copying.
+ *
+ * Two types of copy operations exist:
+ * 1. copy() - Structural copy within same context (AST deep copy, Constant in same pool)
+ * 2. transferTo() - Pool transfer for Constants (replaces adoptedBy())
+ *
+ * Implementations must:
  * 1. Only copy STRUCTURAL fields (not @Derived)
- * 2. Return a new instance, never mutate
- * 3. Handle child copying explicitly
+ * 2. Return a new instance (or 'this' for immutable objects)
+ * 3. Handle children explicitly, not via reflection
  */
 public interface Copyable<T> {
     /**
      * Create a structural copy. @Derived fields are NOT copied.
+     * For immutable objects, may return 'this'.
      */
     T copy();
 }
+
+/**
+ * Extended interface for Constants that can transfer between pools.
+ * This replaces the old adoptedBy() pattern.
+ */
+public interface PoolTransferable<T extends Constant> extends Copyable<T> {
+    /**
+     * Transfer to a different ConstantPool.
+     * Returns 'this' if already in target pool.
+     * Returns new instance registered in target pool otherwise.
+     *
+     * @param pool the target pool
+     * @return constant belonging to target pool
+     */
+    T transferTo(ConstantPool pool);
+
+    /**
+     * Check if this constant can be shared with the given pool
+     * without requiring a transfer (copy).
+     */
+    default boolean isSharedWith(ConstantPool pool) {
+        return getConstantPool() == pool;
+    }
+}
 ```
+
+**Why separate copy() from transferTo()?**
+
+| Operation | copy() | transferTo(pool) |
+|-----------|--------|------------------|
+| **Use case** | Deep clone for transformation | Cross-module constant reference |
+| **Children** | Recursively copied | Recursively transferred to pool |
+| **Pool** | Same as original | Target pool |
+| **Caches** | Not copied (@Derived) | Not copied (recomputed in new pool) |
+| **When used** | AST copy-on-write | Module linking, ConstantPool.register() |
 
 #### 2.2: AstNode Copying
 
@@ -700,36 +2235,55 @@ protected BiExpression withChildren(List<AstNode> children) {
 #### 2.3: Constant Copying (with Pool Transfer)
 
 ```java
-public abstract class Constant implements Copyable<Constant> {
+public abstract class Constant implements PoolTransferable<Constant> {
 
-    // Simple copy (same pool)
+    // Simple copy (same pool) - for immutable constants, returns 'this'
     @Override
-    public final Constant copy() {
-        return copyTo(getConstantPool());
+    public Constant copy() {
+        return this;  // Constants are value-immutable, safe to share
     }
 
     /**
-     * Copy to a different pool. This replaces adoptedBy().
+     * Transfer to a different pool. This replaces adoptedBy().
      * Each subclass implements explicitly - no reflection.
      */
-    public abstract Constant copyTo(ConstantPool pool);
+    @Override
+    public abstract Constant transferTo(ConstantPool pool);
+
+    @Override
+    public boolean isSharedWith(ConstantPool pool) {
+        return getConstantPool() == pool || isShared(pool);
+    }
 }
 
-// Example implementation
+// Example: Simple constant
 @Override
-public IntConstant copyTo(ConstantPool pool) {
+public IntConstant transferTo(ConstantPool pool) {
     return pool == getConstantPool()
         ? this
-        : new IntConstant(pool, getFormat(), m_pint);
+        : pool.register(new IntConstant(pool, getFormat(), m_pint));
 }
 
-// Composite example
+// Example: Composite constant with children
 @Override
-public ParameterizedTypeConstant copyTo(ConstantPool pool) {
+public ParameterizedTypeConstant transferTo(ConstantPool pool) {
     if (pool == getConstantPool()) return this;
-    TypeConstant   typeCopied   = m_constType.copyTo(pool);
-    TypeConstant[] paramsCopied = copyArrayTo(pool, m_atypeParams);
-    return new ParameterizedTypeConstant(pool, typeCopied, paramsCopied);
+
+    // Transfer children first
+    TypeConstant   typeTransferred   = m_constType.transferTo(pool);
+    TypeConstant[] paramsTransferred = transferArrayTo(pool, m_atypeParams);
+
+    return pool.register(new ParameterizedTypeConstant(pool, typeTransferred, paramsTransferred));
+}
+
+// Helper for array transfer
+protected static TypeConstant[] transferArrayTo(ConstantPool pool, TypeConstant[] atype) {
+    if (atype == null || atype.length == 0) return atype;
+    TypeConstant[] result = new TypeConstant[atype.length];
+    for (int i = 0; i < atype.length; i++) {
+        result[i] = atype[i].transferTo(pool);
+    }
+    return result;
 }
 ```
 
@@ -1037,6 +2591,155 @@ AST Node (e.g., NamedTypeExpression)
 - Sharing types across compilation units
 - Invalidating only affected type info on edits
 - Parallel analysis without lock contention
+
+### Phase 5.5: TypeInfo Performance and Immutability
+
+**The Problem:** TypeInfo is a major thread contention bottleneck during compilation.
+
+#### 5.5.1: Current Issues (Investigation Findings)
+
+**Synchronization Bottlenecks:**
+1. `TypeConstant.ensureTypeInfo()` - synchronized method holds lock across entire build
+2. The deferred TypeInfo building loop (multiple recursive calls) under single lock
+3. `TypeInfo.getOpMethodInfos()`, `findConversion()` - synchronized methods
+4. `ensureCaches()` synchronizes on shared ConcurrentHashMap
+
+**Mutable State After Construction:**
+```java
+// TypeInfo fields mutated after construction:
+private boolean m_fImplicitAbstract;           // set in ensureCaches()
+private boolean m_fCacheReady;                 // set in ensureCaches()
+private transient Map<String, PropertyInfo> m_mapPropertiesByName;  // lazy
+private transient Map<SignatureConstant, MethodInfo> m_mapMethodsBySignature;
+private transient TypeInfo m_into, m_delegates;  // lazy variants
+private transient Set<MethodInfo> m_setAuto, m_setOps;
+private transient volatile Map<String, Set<MethodConstant>> m_mapOps;
+```
+
+**Memory Churn:**
+- `limitAccess()`, `asInto()`, `asDelegates()` create full copies of all maps
+- No structural sharing between TypeInfo variants for same type
+- Each variant has own f_mapProps, f_mapMethods (duplicated data)
+
+**Redundant Computation:**
+- `selectVisible()` walks class/interface chains for EACH conflicting property
+- `getMethodBySignature()` iterates ALL methods for complex matching
+- Triple signature comparison per method in lookup
+
+#### 5.5.2: Proposed Improvements
+
+**A. True Immutability for TypeInfo Core:**
+
+```java
+@Immutable
+public final class TypeInfo {
+    // ALL structural data computed in constructor
+    private final Map<PropertyConstant, PropertyInfo> f_mapProps;
+    private final Map<MethodConstant, MethodInfo> f_mapMethods;
+    private final List<Map<...>> f_listmapClassChain;
+    // NO mutable fields - caches moved to external TypeInfoCache
+}
+```
+
+**B. External TypeInfoCache:**
+
+```java
+/**
+ * Separate cache storage, keyed by (TypeConstant, AccessLevel, Variant).
+ * Lives on CompilationContext, not on TypeConstant.
+ */
+public class TypeInfoCache {
+    // ConcurrentHashMap with computeIfAbsent for lock-free lazy init
+    private final ConcurrentHashMap<CacheKey, TypeInfo> cache;
+
+    // Variant caches (public, private, into, delegates) share base data
+    private final ConcurrentHashMap<TypeInfo, TypeInfo> intoCache;
+    private final ConcurrentHashMap<TypeInfo, TypeInfo> delegatesCache;
+
+    // Lookup caches (not stored on TypeInfo)
+    private final ConcurrentHashMap<TypeInfo, Map<String, PropertyInfo>> propsByName;
+    private final ConcurrentHashMap<TypeInfo, Map<SignatureConstant, MethodInfo>> methodsBySig;
+}
+```
+
+**C. Structural Sharing for Variants:**
+
+```java
+public final class TypeInfo {
+    // Base TypeInfo that variants share
+    private final TypeInfo f_base;  // null for full TypeInfo, non-null for variants
+
+    // Variant-specific filtered views (computed, not copied)
+    private final Predicate<PropertyInfo> f_propFilter;  // e.g., access level filter
+    private final Predicate<MethodInfo> f_methodFilter;
+
+    // Methods use filter if present
+    public Map<PropertyConstant, PropertyInfo> getProperties() {
+        if (f_base == null) return f_mapProps;
+        return f_base.f_mapProps.entrySet().stream()
+            .filter(e -> f_propFilter.test(e.getValue()))
+            .collect(...);  // cached in external cache
+    }
+}
+```
+
+**D. Lock-Free Building Pattern:**
+
+```java
+// In TypeConstant - replace synchronized ensureTypeInfo()
+public TypeInfo ensureTypeInfo() {
+    TypeInfo info = m_typeinfo;  // volatile read
+    if (info != null && info.isUpToDate()) {
+        return info;
+    }
+
+    // Use CompilationContext cache with computeIfAbsent
+    CompilationContext ctx = getCompilationContext();
+    return ctx.getTypeInfoCache().computeIfAbsent(this, TypeInfo::build);
+}
+```
+
+**E. Incremental TypeInfo for LSP:**
+
+For partial compilation, TypeInfo can be:
+1. **Lazily computed** - Only build what's needed for current operation
+2. **Incrementally updated** - Change only affected parts on edit
+3. **Externally invalidated** - CompilationContext tracks what needs rebuild
+
+```java
+public class IncrementalTypeInfo {
+    private final TypeConstant type;
+    private final CompilationContext ctx;
+
+    // Lazy property lookup - only computes what's requested
+    public PropertyInfo getProperty(String name) {
+        return ctx.getPropertyCache().computeIfAbsent(
+            new PropKey(type, name),
+            k -> computeProperty(k.name())
+        );
+    }
+}
+```
+
+#### 5.5.3: Migration Steps
+
+1. [ ] Create TypeInfoCache class in org.xvm.asm.constants
+2. [ ] Move lazy caches from TypeInfo fields to TypeInfoCache
+3. [ ] Add TypeInfoCache to ConstantPool or CompilationContext
+4. [ ] Make TypeInfo fields truly final (compute all in constructor)
+5. [ ] Implement structural sharing for TypeInfo variants
+6. [ ] Replace synchronized methods with ConcurrentHashMap.computeIfAbsent
+7. [ ] Benchmark: measure lock contention reduction
+8. [ ] Add IncrementalTypeInfo for LSP use case
+
+#### 5.5.4: Expected Benefits
+
+| Improvement | Standalone Compiler | LSP/IDE |
+|-------------|---------------------|---------|
+| Lock-free caching | 2-4x faster parallel compilation | Responsive type queries |
+| Structural sharing | 30-50% less memory for variants | Faster access checks |
+| External cache | Easier cache invalidation | Incremental rebuilds |
+| True immutability | Safe sharing, no defensive copies | Concurrent edits |
 
 ### Phase 6: Array to List Migration
 
@@ -1743,12 +3446,12 @@ class ParameterList extends AstNode {
 2. [x] Keep `children()` as convenience method built on `forEachChild`
 3. [x] Implement `replaceChild()` explicitly per class
 4. [x] Add `@Derived` annotation for non-structural fields
-5. [~] Implement `withChildren(List<AstNode>)` on each node class (in progress)
+5. [x] Implement `withChildren(List<AstNode>)` on each node class
 6. [x] Add `copy()` method in base class using `withChildren()`
-7. [ ] Replace `transient` keyword with `@Derived` on computed fields in AST
-8. [ ] Remove old reflection-based `clone()` method from AstNode
-9. [ ] Remove `getChildFields()`, `fieldsForNames()`, `ChildIterator`, `ChildIteratorImpl`
-10. [ ] Update `getDumpChildren()` to use explicit field access or remove
+7. [x] Replace `transient` keyword with `@Derived` on computed fields in AST
+8. [x] Remove old reflection-based `clone()` method from AstNode
+9. [x] Remove `getChildFields()`, `fieldsForNames()`, `ChildIterator`, `ChildIteratorImpl`
+10. [x] Update `getDumpChildren()` to use explicit field access (uses forEachChild now)
 11. [ ] Add `transform()` method with `VisitResult` pattern
 12. [ ] Consider virtual list nodes for cleaner structure
 
@@ -2855,6 +4558,1166 @@ public class BastCompiler {
 - BAST provides everything needed
 - Simpler architecture
 - Smaller `.xtc` files (potentially)
+
+---
+
+## ConstantPool Locator Refactoring
+
+### The Problem: Untyped Locators
+
+The ConstantPool uses "locators" for fast constant lookup. Instead of creating a full Constant
+just to check if one exists, constants provide a lightweight lookup key:
+
+```java
+// Current API - returns Object!
+protected Object getLocator() {
+    return null;  // Default: no locator
+}
+
+// In StringConstant:
+@Override
+public Object getLocator() {
+    return m_sVal;  // Returns the String value
+}
+
+// In IntConstant:
+@Override
+public Object getLocator() {
+    return m_pint;  // Returns PackedInteger
+}
+
+// In TerminalTypeConstant:
+@Override
+protected Object getLocator() {
+    return constId;  // Returns another Constant!
+}
+```
+
+**Why this is broken:**
+- No type safety - locator can be String, Integer, Constant, Format enum, etc.
+- The map is `Map<Object, Constant>` with heterogeneous keys
+- Relationship between constant type and locator type is implicit
+- Impossible to statically verify correctness
+- Runtime `ClassCastException` waiting to happen
+
+### Current Locator Types by Constant Class
+
+| Constant Class | Locator Type | Notes |
+|----------------|--------------|-------|
+| **Primitive Values** | | |
+| `StringConstant` | `String` | The string value itself |
+| `CharConstant` | `Character` | Only for ASCII ≤ 0x7F |
+| `IntConstant` | `PackedInteger` | The integer value |
+| `ByteConstant` | `Integer` | Uses Integer cache |
+| `DecimalConstant` | `Decimal` | Decimal32/64/128 |
+| `Float*Constant` | `Float`/`Double` | Boxed primitives |
+| `LiteralConstant` | `String` | The literal text |
+| `RegExConstant` | `String` | The regex pattern |
+| **Type References** | | |
+| `TerminalTypeConstant` | `Constant` | The underlying identity constant |
+| `AccessTypeConstant` | `TypeConstant` | Only for PUBLIC access |
+| `ImmutableTypeConstant` | `TypeConstant` | The wrapped type |
+| `ServiceTypeConstant` | `TypeConstant` | The wrapped type |
+| `ParameterizedTypeConstant` | `TypeConstant` | Only if no type params |
+| `DecoratedClassConstant` | `TypeConstant` | The type being decorated |
+| **Pseudo Constants** | | |
+| `ThisClassConstant` | `IdentityConstant` | The class identity |
+| `ParentClassConstant` | `IdentityConstant` | The child identity |
+| `SingletonConstant` | `IdentityConstant` | The class constant |
+| **Conditions** | | |
+| `NamedCondition` | `String` | The condition name |
+| `PresentCondition` | `Constant` | The identity constant |
+| `VersionedCondition` | `VersionConstant` | The version constant |
+| `NotCondition` | `ConditionalConstant` | The negated condition |
+| **Special** | | |
+| `KeywordConstant` | `Format` | Enum singleton |
+| `MatchAnyConstant` | `TypeConstant` | The matched type |
+| Most others | `null` | No locator optimization |
+
+### Proposed Refactoring
+
+#### Option 1: Generic Interface per Constant (Recommended)
+
+```java
+/**
+ * Interface for constants that support fast lookup by a locator key.
+ *
+ * @param <L> the locator type (e.g., String for StringConstant)
+ */
+public interface Locatable<L> {
+    /**
+     * Get the locator key for fast lookup.
+     *
+     * @return the locator, or null if this constant doesn't support locator lookup
+     */
+    @Nullable L getLocator();
+}
+
+// StringConstant becomes:
+public class StringConstant extends ValueConstant implements Locatable<String> {
+    @Override
+    public String getLocator() {
+        return m_sVal;
+    }
+}
+
+// IntConstant becomes:
+public class IntConstant extends ValueConstant implements Locatable<PackedInteger> {
+    @Override
+    public PackedInteger getLocator() {
+        return m_pint;
+    }
+}
+
+// TerminalTypeConstant - locator is another Constant:
+public class TerminalTypeConstant extends TypeConstant implements Locatable<Constant> {
+    @Override
+    public Constant getLocator() {
+        Constant constId = ensureResolvedConstant();
+        return constId.getFormat() == Format.UnresolvedName ? null : constId;
+    }
+}
+```
+
+**Pros:**
+- Type-safe at compile time
+- Each constant class declares its locator type
+- IDE can show what type of locator each constant uses
+
+**Cons:**
+- Can't enforce at `Map` level since locator types vary
+- Need instanceof checks when processing heterogeneous locators
+
+#### Option 2: Type-Keyed Lookup Maps
+
+```java
+// Instead of one Map<Object, Constant>, use typed maps:
+public class ConstantPool {
+    private final Map<String, StringConstant> stringLocators = new ConcurrentHashMap<>();
+    private final Map<PackedInteger, IntConstant> intLocators = new ConcurrentHashMap<>();
+    private final Map<Constant, TypeConstant> typeLocators = new ConcurrentHashMap<>();
+    // ... one per locator type
+
+    public StringConstant lookupString(String value) {
+        return stringLocators.get(value);
+    }
+
+    public IntConstant lookupInt(PackedInteger value) {
+        return intLocators.get(value);
+    }
+
+    // etc.
+}
+```
+
+**Pros:**
+- Fully type-safe maps
+- No casts needed
+- Clear separation of concerns
+
+**Cons:**
+- Many maps to manage
+- Register must know which map to update
+- Doesn't fit the current Format-keyed structure
+
+#### Option 3: Sealed Locator Hierarchy (Most Type-Safe)
+
+```java
+/**
+ * Sealed hierarchy of locator types.
+ */
+public sealed interface ConstantLocator<C extends Constant>
+    permits ValueLocator, ConstantRefLocator, FormatLocator {
+
+    C lookupIn(ConstantPool pool);
+}
+
+public record ValueLocator<V, C extends Constant>(V value, Format format)
+    implements ConstantLocator<C> {
+
+    @Override
+    public C lookupIn(ConstantPool pool) {
+        return pool.lookupByValue(format, value);
+    }
+}
+
+public record StringLocator(String value) extends ValueLocator<String, StringConstant> {
+    public StringLocator(String value) {
+        super(value, Format.String);
+    }
+}
+
+public record IntLocator(PackedInteger value, Format format)
+    extends ValueLocator<PackedInteger, IntConstant> {}
+
+public record ConstantRefLocator<C extends Constant>(Constant ref, Format format)
+    implements ConstantLocator<C> {
+
+    @Override
+    public C lookupIn(ConstantPool pool) {
+        return pool.lookupByConstantRef(format, ref);
+    }
+}
+```
+
+**Pros:**
+- Pattern matching with sealed types
+- Each locator knows how to look itself up
+- Very type-safe
+
+**Cons:**
+- More complex object model
+- Allocates locator objects (though could be cached)
+- Significant refactoring effort
+
+### Recommended Migration Path
+
+**Phase 1: Add Locatable Interface (Non-breaking)**
+```java
+// Add interface without changing existing code
+public interface Locatable<L> {
+    @Nullable L getLocator();
+}
+
+// Make each constant implement it with its specific type
+// Old getLocator() still works, new typed version available
+```
+
+**Phase 2: Add Typed Lookup Methods to ConstantPool**
+```java
+public class ConstantPool {
+    // Keep old method for compatibility
+    @Deprecated
+    private Map<Object, Constant> ensureLocatorLookup(Format format) { ... }
+
+    // Add new typed methods
+    public <L, C extends Constant & Locatable<L>> C lookupByLocator(
+            Format format, L locator) {
+        @SuppressWarnings("unchecked")
+        C result = (C) ensureLocatorLookup(format).get(locator);
+        return result;
+    }
+
+    // Specific typed lookups for common cases
+    public StringConstant lookupString(String value) {
+        return (StringConstant) ensureLocatorLookup(Format.String).get(value);
+    }
+
+    public IntConstant lookupInt(Format format, PackedInteger value) {
+        return (IntConstant) ensureLocatorLookup(format).get(value);
+    }
+}
+```
+
+**Phase 3: Migrate ensure* Methods**
+```java
+// BEFORE:
+public StringConstant ensureStringConstant(String s) {
+    StringConstant constant = (StringConstant) ensureLocatorLookup(Format.String).get(s);
+    if (constant == null) {
+        constant = register(new StringConstant(this, s));
+    }
+    return constant;
+}
+
+// AFTER:
+public StringConstant ensureStringConstant(String s) {
+    StringConstant constant = lookupString(s);
+    if (constant == null) {
+        constant = register(new StringConstant(this, s));
+    }
+    return constant;
+}
+```
+
+**Phase 4: Split the Locator Map (Optional, for full type safety)**
+```java
+// Replace single Map<Object, Constant> with typed maps
+private final Map<String, StringConstant> stringLocators;
+private final Map<PackedInteger, IntConstant> int16Locators;
+private final Map<PackedInteger, IntConstant> int32Locators;
+// etc.
+```
+
+### Testing the Refactoring
+
+```java
+@Test void testLocatable_stringConstant_returnsString() {
+    StringConstant sc = pool.ensureStringConstant("hello");
+    assertInstanceOf(String.class, sc.getLocator());
+    assertEquals("hello", sc.getLocator());
+}
+
+@Test void testLocatable_intConstant_returnsPackedInteger() {
+    IntConstant ic = pool.ensureIntConstant(42);
+    assertInstanceOf(PackedInteger.class, ic.getLocator());
+    assertEquals(PackedInteger.valueOf(42), ic.getLocator());
+}
+
+@Test void testLookupString_existingConstant_returnsSame() {
+    StringConstant sc1 = pool.ensureStringConstant("test");
+    StringConstant sc2 = pool.lookupString("test");
+    assertSame(sc1, sc2);
+}
+
+@Test void testLookupString_nonExistent_returnsNull() {
+    assertNull(pool.lookupString("does not exist"));
+}
+
+// Verify all constants that have locators implement Locatable
+@Test void testAllLocatableConstants_implementInterface() {
+    // Use reflection to find all Constant subclasses
+    // For each one that overrides getLocator() returning non-null:
+    // Verify it implements Locatable<SomeType>
+}
+```
+
+### Priority
+
+**Medium-High** - This is a type safety improvement that:
+1. Makes the code more self-documenting
+2. Enables IDE type checking
+3. Reduces runtime ClassCastException risk
+4. Should be done alongside the `transferTo()` migration
+
+---
+
+## Lazy Evaluation and Immutability Architecture
+
+This section describes the architectural patterns for lazy/eager evaluation, immutability, and
+stateless compilation that enable LSP integration, parallel compilation, and reduced complexity.
+
+### Core Principles
+
+#### 1. Immutable by Default, Copy-on-Write Transforms
+
+All AST nodes, constants, and type information should be treated as immutable after construction.
+Transformations produce new objects rather than mutating existing ones:
+
+```java
+// Instead of:
+node.setType(resolvedType);  // ❌ Mutation
+
+// Use:
+Node newNode = node.withType(resolvedType);  // ✅ Copy-on-write
+```
+
+**Benefits**:
+- Thread-safe without locks
+- Safe structural sharing (multiple references to same subtree)
+- Predictable debugging (state doesn't change under you)
+- Natural undo/redo and incremental compilation
+
+#### 2. Lazy Evaluation with Memoization
+
+Expensive computations should be deferred until needed and cached:
+
+```java
+// Pattern: Lazy field with thread-safe initialization
+private volatile TypeConstant m_typeResolved;  // null = not computed
+
+public TypeConstant getResolvedType() {
+    TypeConstant type = m_typeResolved;
+    if (type == null) {
+        m_typeResolved = type = computeType();  // Safe double-check
+    }
+    return type;
+}
+```
+
+**When to use lazy evaluation**:
+- Type resolution (may not be needed for all code paths)
+- TypeInfo building (expensive, cache-worthy)
+- Constant pool lookups for derived types
+- Any computation that depends on external state that may not be available
+
+**When to use eager evaluation**:
+- Simple field access
+- Format-derived properties (constant time)
+- Anything needed for serialization
+
+#### 3. External Caches vs Embedded State
+
+Caches should be external to the cached objects:
+
+```java
+// Instead of embedding cache in the object:
+class TypeConstant {
+    private TypeInfo m_cachedInfo;  // ❌ Embedded cache
+}
+
+// Use external cache:
+class TypeInfoCache {
+    private final Map<TypeConstant, TypeInfo> cache = new ConcurrentHashMap<>();
+
+    public TypeInfo getInfo(TypeConstant type) {
+        return cache.computeIfAbsent(type, this::compute);  // ✅ External
+    }
+}
+```
+
+**Benefits**:
+- Cache lifetime independent of object lifetime
+- Multiple cache strategies (LRU, weak refs, etc.)
+- Easy cache invalidation
+- LSP can maintain separate caches per edit session
+
+### Avoiding Recursive Initialization
+
+**Problem**: During constant pool initialization, creating one constant may recursively
+require creating other constants. This causes issues with:
+- `ConcurrentHashMap.computeIfAbsent()` (doesn't allow recursive calls)
+- Circular dependencies (A needs B needs A)
+- Stack overflow in deeply nested cases
+
+**Solution**: Separate creation from registration with lazy binding:
+
+```java
+// Phase 1: Create structural constants (no type resolution)
+StringConstant strConst = new StringConstant(pool, "hello");
+
+// Phase 2: Register (may recursively register dependencies)
+strConst = pool.register(strConst);
+
+// Phase 3: Lazy type resolution (deferred until actually needed)
+TypeConstant type = strConst.getType();  // Computed on first access
+```
+
+**Key insight**: For value constants (StringConstant, IntConstant, etc.), the type is
+implicit from the format. Don't register the type during `registerConstants()` - it will
+be resolved lazily when `getType()` is called.
+
+### Stateless Stage Processing
+
+Compilation stages should be pure functions:
+
+```java
+// Instead of stateful visitor:
+class TypeResolver extends Visitor {
+    private Context currentContext;  // ❌ Mutable state
+
+    void visit(Expression e) {
+        e.setType(resolve(e, currentContext));  // ❌ Mutation
+    }
+}
+
+// Use stateless transformation:
+class TypeResolver {
+    // Pure function: (AST, Context) -> AST
+    static Expression resolve(Expression e, Context ctx) {
+        TypeConstant type = computeType(e, ctx);
+        return e.withType(type);  // ✅ New immutable node
+    }
+}
+```
+
+**Benefits for LSP**:
+- Can re-run any stage with new input
+- Results are cacheable by input hash
+- Easy to test in isolation
+- No "which stage are we in" confusion
+
+### Cache Hierarchy for LSP
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        LSP Server                                │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐           │
+│  │ Parse Cache │   │ Type Cache  │   │ Semantic    │           │
+│  │ (per file)  │   │ (global)    │   │ Cache       │           │
+│  └─────────────┘   └─────────────┘   └─────────────┘           │
+│         │                 │                 │                   │
+│         ▼                 ▼                 ▼                   │
+│  ┌─────────────────────────────────────────────────┐           │
+│  │           Immutable Constant Pool                │           │
+│  │  (shared across all compilation contexts)        │           │
+│  └─────────────────────────────────────────────────┘           │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Cache invalidation strategy**:
+- Parse cache: Invalidate on file change (cheap to rebuild)
+- Type cache: Invalidate on signature change, keep on body-only edits
+- Semantic cache: Fingerprint-based invalidation
+- Constant pool: Never invalidate (immutable), may grow
+
+### Implications for Current Codebase
+
+#### ConstantPool Changes
+
+1. **Typed ensure methods should not use computeIfAbsent with register()**:
+   ```java
+   // ❌ Causes recursive update exception
+   m_mapStrings.computeIfAbsent(s, k -> register(new StringConstant(this, k)));
+
+   // ✅ Safe pattern - check then create
+   StringConstant c = m_mapStrings.get(s);
+   if (c == null) {
+       c = register(new StringConstant(this, s));
+   }
+   return c;
+   ```
+
+2. **Type registration should be lazy**:
+   - `ValueConstant.registerConstants()` should NOT register the type
+   - Type is derived from format, computed on first `getType()` call
+   - Breaks circular dependency: string → type → class → module → string
+
+#### AST Node Changes
+
+1. **All setters should become `withX()` methods**:
+   ```java
+   // Transform: setType(t) → withType(t)
+   public Expression withType(TypeConstant type) {
+       return this == type ? this : copy().setTypeInternal(type);
+   }
+   ```
+
+2. **Computed properties should be memoized**:
+   ```java
+   private transient volatile Boolean m_fConst;
+
+   public boolean isConstant() {
+       Boolean f = m_fConst;
+       if (f == null) {
+           m_fConst = f = computeConstant();
+       }
+       return f;
+   }
+   ```
+
+#### TypeInfo Changes
+
+1. **External TypeInfoCache**:
+   - Move cache from TypeConstant into standalone cache
+   - Enable multiple cache instances (per-LSP-session)
+   - Support weak references for memory management
+
+2. **Incremental TypeInfo building**:
+   - Base TypeInfo is immutable
+   - Derived info (with contributions) creates new instance
+   - Structural sharing for unchanged portions
+
+### Migration Path
+
+**Phase 1: Fix Immediate Issues**
+- Remove eager type registration from ValueConstant ✓
+- Fix computeIfAbsent recursion in ensure methods
+- Add typed locator maps to ConstantPool ✓
+
+**Phase 2: Introduce Lazy Patterns**
+- Add `Lazy<T>` utility class for memoization
+- Convert expensive getters to lazy initialization
+- Add `@LazyInit` annotation for documentation
+
+**Phase 3: Copy-on-Write AST**
+- Convert setters to `withX()` methods
+- Implement structural sharing
+- Add immutability annotations
+
+**Phase 4: External Caches**
+- Extract TypeInfoCache from TypeConstant
+- Create cache hierarchy for LSP
+- Add cache invalidation hooks
+
+**Phase 5: Stateless Stages**
+- Refactor visitors to return new trees
+- Add stage result caching
+- Enable incremental compilation
+
+### Testing Lazy Evaluation
+
+```java
+@Test void testLazyType_notComputedUntilNeeded() {
+    // Create constant - type should NOT be computed yet
+    StringConstant sc = new StringConstant(pool, "test");
+
+    // Verify no recursive type creation occurred
+    // (Implementation detail: track type creation count)
+
+    // Now access type - should compute lazily
+    TypeConstant type = sc.getType();
+    assertNotNull(type);
+}
+
+@Test void testLazyType_cachedAfterFirstAccess() {
+    StringConstant sc = new StringConstant(pool, "test");
+
+    TypeConstant type1 = sc.getType();
+    TypeConstant type2 = sc.getType();
+
+    assertSame(type1, type2, "Type should be cached");
+}
+```
+
+### Priority
+
+**Critical** - This architectural pattern is foundational for:
+1. Fixing the current recursion issues in ConstantPool
+2. Enabling LSP integration
+3. Supporting parallel compilation
+4. Reducing debugging complexity
+
+---
+
+## ConstantPool Cleanup: From 4000 Lines to Clarity
+
+The `ConstantPool` class has 191 `ensure*` methods totaling ~4000 lines with repeated patterns:
+
+```java
+// Current pattern (repeated 191 times with variations):
+public TypeConstant ensureFoo(Bar bar, Baz baz) {
+    if (bar == null) bar = DEFAULT;           // 1. Null normalization
+    if (already.has(bar, baz)) return it;     // 2. Early return
+    TypeConstant c = locator.get(key);        // 3. Locator lookup
+    if (c == null) {
+        c = register(new FooConstant(...));   // 4. Creation
+    }
+    return c;
+}
+```
+
+### Proposed Refactoring
+
+#### 1. Typed Ensure Pattern
+
+Extract the common pattern into a generic helper:
+
+```java
+// Generic ensure pattern - lookup, create if absent, register
+private <C extends Constant, K> C ensure(
+        Map<K, C> cache,
+        K key,
+        Supplier<C> factory) {
+    C existing = cache.get(key);
+    if (existing != null) {
+        return existing;
+    }
+    C created = register(factory.get());
+    cache.putIfAbsent(key, created);
+    return created;
+}
+
+// Usage becomes one-liner:
+public StringConstant ensureStringConstant(String s) {
+    return ensure(m_mapStrings, s, () -> new StringConstant(this, s));
+}
+
+public IntConstant ensureIntConstant(PackedInteger pint, Format format) {
+    return ensure(ensureIntMap(format), pint, () -> new IntConstant(this, format, pint));
+}
+```
+
+#### 2. Null Handling at Boundaries
+
+Move null checks to method entry with `Objects.requireNonNull` or explicit defaults:
+
+```java
+// Instead of scattered null checks:
+public TypeConstant ensureAccessTypeConstant(TypeConstant constType, Access access) {
+    if (access == null) access = Access.PUBLIC;  // ❌ Buried null handling
+    ...
+}
+
+// Explicit at API boundary:
+public TypeConstant ensureAccessTypeConstant(TypeConstant constType, Access access) {
+    Objects.requireNonNull(constType, "constType");
+    access = access != null ? access : Access.PUBLIC;
+    return ensureAccessTypeConstantImpl(constType, access);  // ✅ Clean impl
+}
+
+// Or use @NonNull annotations and let IDE/compiler check
+public TypeConstant ensureAccessTypeConstant(
+        @NonNull TypeConstant constType,
+        @NonNull Access access) { ... }
+```
+
+#### 3. Separate Concerns with Private Helpers
+
+Split validation, normalization, and caching:
+
+```java
+// Current monolithic method:
+public TypeConstant ensureAccessTypeConstant(TypeConstant constType, Access access) {
+    // 40 lines mixing validation, recursion, caching, creation
+}
+
+// Cleaner separation:
+public TypeConstant ensureAccessTypeConstant(TypeConstant constType, Access access) {
+    // 1. Normalize
+    access = normalizeAccess(access);
+
+    // 2. Short-circuit if already correct
+    if (hasAccess(constType, access)) {
+        return constType;
+    }
+
+    // 3. Unwrap if necessary
+    constType = unwrapExistingAccess(constType);
+
+    // 4. Wrap with new access
+    return wrapWithAccess(constType, access);
+}
+
+private Access normalizeAccess(Access access) {
+    return access != null ? access : Access.PUBLIC;
+}
+
+private boolean hasAccess(TypeConstant type, Access access) {
+    return type.isAccessSpecified() && type.getAccess() == access;
+}
+
+private TypeConstant unwrapExistingAccess(TypeConstant type) {
+    return type instanceof AccessTypeConstant atc ? atc.getUnderlyingType() : type;
+}
+
+private TypeConstant wrapWithAccess(TypeConstant type, Access access) {
+    return access == Access.PUBLIC
+        ? ensure(m_mapAccessTypes, type, () -> new AccessTypeConstant(this, type, access))
+        : register(new AccessTypeConstant(this, type, access));
+}
+```
+
+#### 4. Builder Pattern for Complex Type Construction
+
+For methods that chain multiple ensure calls:
+
+```java
+// Current chaining:
+public TypeConstant ensureClassTypeConstant(Constant constClass,
+                                            Access access, TypeConstant... params) {
+    TypeConstant t = ensureTerminalType(constClass);
+    if (params != null) t = ensureParameterized(t, params);
+    if (access != null && access != PUBLIC) t = ensureAccess(t, access);
+    return t;
+}
+
+// Builder pattern:
+public TypeConstant ensureClassTypeConstant(Constant constClass,
+                                            Access access, TypeConstant... params) {
+    return TypeBuilder.from(this, constClass)
+        .withParams(params)
+        .withAccess(access)
+        .build();
+}
+
+// Or fluent methods on TypeConstant itself:
+public TypeConstant parameterizedWith(TypeConstant... params) {
+    return getConstantPool().ensureParameterizedTypeConstant(this, params);
+}
+
+public TypeConstant withAccess(Access access) {
+    return getConstantPool().ensureAccessTypeConstant(this, access);
+}
+```
+
+#### 5. Group Related Methods
+
+Organize the 191 methods into logical groups:
+
+```java
+public class ConstantPool {
+
+    // ===== Primitive Value Constants =====
+    public StringConstant ensureStringConstant(String s) { ... }
+    public IntConstant ensureIntConstant(long n) { ... }
+    public CharConstant ensureCharConstant(int ch) { ... }
+    // ...
+
+    // ===== Type Constants =====
+    public TypeConstant ensureTerminalTypeConstant(Constant id) { ... }
+    public TypeConstant ensureAccessTypeConstant(TypeConstant type, Access access) { ... }
+    public TypeConstant ensureParameterizedTypeConstant(TypeConstant type, TypeConstant... params) { ... }
+    // ...
+
+    // ===== Identity Constants =====
+    public ModuleConstant ensureModuleConstant(String name) { ... }
+    public ClassConstant ensureClassConstant(IdentityConstant parent, String name) { ... }
+    // ...
+
+    // ===== Conditional Constants =====
+    public NamedCondition ensureNamedCondition(String name) { ... }
+    public VersionedCondition ensureVersionedCondition(VersionConstant ver) { ... }
+    // ...
+}
+```
+
+#### 6. Consider Extracting Factories
+
+Move constant creation logic to dedicated factory classes:
+
+```java
+// Instead of 191 ensure methods in ConstantPool:
+public class ConstantPool {
+    public final ValueConstantFactory values = new ValueConstantFactory(this);
+    public final TypeConstantFactory types = new TypeConstantFactory(this);
+    public final IdentityConstantFactory identities = new IdentityConstantFactory(this);
+}
+
+// Usage:
+pool.values.string("hello");
+pool.types.access(baseType, Access.PRIVATE);
+pool.identities.module("ecstasy.xtclang.org");
+```
+
+### Migration Strategy
+
+1. **Don't refactor all 191 methods at once** - High risk
+2. **Start with most-used methods** - StringConstant, IntConstant, TypeConstants
+3. **Add typed maps incrementally** - Already started with m_mapStrings, m_mapInts
+4. **Extract helper methods first** - Keep public API stable
+5. **Add tests before each refactoring** - Ensure behavior preservation
+
+### Code Size Goals
+
+| Current | Goal | Reduction |
+|---------|------|-----------|
+| ~4000 lines | ~1500 lines | 60% |
+| 191 methods | 191 methods | Same API surface |
+| 0 typed maps | ~20 typed maps | Type safety |
+| ~50 inline null checks | ~10 boundary checks | Clarity |
+
+---
+
+## Lexer, Parser, and Compiler Cleanup
+
+### Overview
+
+| File | Lines | Methods | Avg Lines/Method | Null Checks |
+|------|-------|---------|------------------|-------------|
+| Lexer.java | 2,859 | ~50 | ~57 | 18 |
+| Parser.java | 5,772 | 40 | ~144 | 268 |
+| Compiler.java | 1,373 | ~30 | ~46 | ~20 |
+
+### Lexer Analysis (2,859 lines)
+
+#### Current Issues
+
+1. **Giant switch statement in `eatToken()`** (~620 lines):
+   - Single method handling all token types
+   - Deep nesting (switch within switch within if)
+   - Repeated `source.hasNext()` / `source.rewind()` patterns
+
+2. **Scattered string literal handling**:
+   - `eatStringLiteral()`, `eatMultilineLiteral()`, `eatTemplateLiteral()`
+   - Similar logic with subtle differences
+   - Could share common infrastructure
+
+3. **Date/time parsing complexity**:
+   - `eatDate()`, `eatTimeOfDay()`, `eatTime()`, `eatTimeZone()`, `eatDuration()`
+   - Each method ~50-100 lines
+   - Complex state management for partial matches
+
+#### Refactoring Opportunities
+
+```java
+// Current: monolithic switch
+protected Token eatToken() {
+    switch (chInit) {
+    case '{': return new Token(..., Id.L_CURLY);
+    case '}': return new Token(..., Id.R_CURLY);
+    case '.':
+        if (source.hasNext()) {
+            switch (nextChar()) {
+            case '.':
+                if (source.hasNext()) {
+                    switch (nextChar()) {
+                    // ... 600 more lines
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Proposed: dispatch table + handler methods
+private static final Map<Character, TokenHandler> HANDLERS = Map.of(
+    '{', (lexer, pos) -> new Token(pos, lexer.pos(), Id.L_CURLY),
+    '}', (lexer, pos) -> new Token(pos, lexer.pos(), Id.R_CURLY),
+    '.', Lexer::eatDotSequence,
+    '$', Lexer::eatDollarSequence,
+    // ...
+);
+
+protected Token eatToken() {
+    long pos = source.getPosition();
+    char ch = nextChar();
+    TokenHandler handler = HANDLERS.get(ch);
+    return handler != null ? handler.handle(this, pos) : eatIdentifier(pos, ch);
+}
+```
+
+#### LSP Considerations
+
+- **Token positions must be immutable**: Already good - tokens store start/end positions
+- **Incremental lexing**: Could add `lexFrom(position)` for partial re-lexing
+- **Error recovery**: Add synchronization points for continuing after errors
+
+### Parser Analysis (5,772 lines)
+
+#### Critical Issues
+
+1. **God method: `parseClassExpression()`** (~1,650 lines!):
+   - From line 215 to line 1870
+   - Single method parsing all expression types
+   - Impossible to unit test individual constructs
+
+2. **268 null checks scattered throughout**:
+   - Defensive programming gone wrong
+   - Mix of "valid null" and "error null" semantics
+   - Example: `if (expr != null && expr.isConstant())`
+
+3. **Mutable state during parsing**:
+   - `m_token`, `m_tokenPrev` - current/previous tokens
+   - `m_fDone` - completion flag
+   - Makes it impossible to parse in parallel or cache results
+
+4. **Mixed concerns**:
+   - Parsing, validation, and error recovery interleaved
+   - Hard to distinguish syntax errors from semantic errors
+
+#### Refactoring Opportunities
+
+```java
+// Current: 1650-line method
+private Expression parseClassExpression() {
+    // ... 1650 lines handling every expression type
+}
+
+// Proposed: Pratt parser with precedence table
+//
+// Pratt parsing (Vaughan Pratt, 1973) is a top-down operator precedence technique where:
+// - Each token has a "binding power" (precedence level)
+// - Tokens have "nud" (null denotation) - how to parse as prefix (e.g., -x, !x)
+// - Tokens have "led" (left denotation) - how to parse as infix (e.g., x + y)
+// Benefits: Simple, elegant, easy to add new operators, naturally handles precedence
+// See: https://journal.stuffwithstuff.com/2011/03/19/pratt-parsers-expression-parsing-made-easy/
+
+private Expression parseExpression(int minPrecedence) {
+    Expression left = parsePrefix();
+    while (precedenceOf(peek()) >= minPrecedence) {
+        left = parseInfix(left);
+    }
+    return left;
+}
+
+private Expression parsePrefix() {
+    return switch (peek().getId()) {
+        case LIT_INT -> parseLiteral();
+        case IDENTIFIER -> parseNameExpression();
+        case L_PAREN -> parseParenthesized();
+        case NEW -> parseNewExpression();
+        // Each case is a separate 20-50 line method
+        default -> throw syntaxError("Expected expression");
+    };
+}
+```
+
+#### Null Safety Improvements
+
+```java
+// Current: nullable returns with checks everywhere
+Expression expr = parseExpression();
+if (expr != null && expr.isConstant()) { ... }
+
+// Proposed: Optional or Result types
+Optional<Expression> expr = tryParseExpression();
+expr.filter(Expression::isConstant).ifPresent(e -> ...);
+
+// Or: Never-null with explicit error handling
+record ParseResult<T>(T value, List<ParseError> errors) {}
+ParseResult<Expression> result = parseExpression();
+```
+
+#### LSP Integration
+
+For LSP, the parser needs to:
+
+1. **Continue after errors**: Current parser often gives up too early
+2. **Provide partial ASTs**: Return what was parsed even if incomplete
+3. **Track edit positions**: Map source changes to AST nodes
+4. **Support incremental parsing**: Only re-parse changed portions
+
+```java
+// LSP-friendly parser interface
+public interface IncrementalParser {
+    // Parse with error recovery
+    ParseResult parseWithRecovery(Source source, CancellationToken cancel);
+
+    // Re-parse after edit
+    ParseResult reparse(ParseResult previous, TextEdit edit);
+
+    // Get AST node at position
+    Optional<AstNode> nodeAt(ParseResult result, long position);
+}
+```
+
+### Compiler Analysis (1,373 lines)
+
+#### Current Architecture
+
+The Compiler is a state machine with stages:
+```
+Initial → Registering → Registered → Loading → Loaded →
+Resolving → Resolved → Validating → Validated → Emitting → Emitted
+```
+
+#### Issues
+
+1. **Stateful stage transitions**:
+   - Each stage mutates the AST nodes
+   - Hard to re-run stages or cache results
+   - No way to partially compile
+
+2. **Coupled to single module**:
+   - One Compiler per module
+   - Cross-module dependencies require coordination
+   - No parallel compilation support
+
+3. **Error handling mixed with compilation**:
+   - Errors accumulate in `ErrorList`
+   - Hard to distinguish which stage produced which errors
+   - Recovery is all-or-nothing
+
+#### Proposed Architecture for LSP
+
+```java
+// Stateless compilation phases
+interface CompilationPhase<I, O> {
+    O process(I input, CompilationContext ctx);
+}
+
+class ParsePhase implements CompilationPhase<Source, StatementBlock> { ... }
+class RegisterPhase implements CompilationPhase<StatementBlock, RegisteredAST> { ... }
+class ResolvePhase implements CompilationPhase<RegisteredAST, ResolvedAST> { ... }
+class ValidatePhase implements CompilationPhase<ResolvedAST, ValidatedAST> { ... }
+class EmitPhase implements CompilationPhase<ValidatedAST, FileStructure> { ... }
+
+// Compilation as pipeline
+class CompilationPipeline {
+    FileStructure compile(Source source) {
+        return source
+            .pipe(parsePhase)
+            .pipe(registerPhase)
+            .pipe(resolvePhase)
+            .pipe(validatePhase)
+            .pipe(emitPhase)
+            .result();
+    }
+}
+
+// LSP can cache intermediate results
+class LSPCompilationCache {
+    Map<Source, StatementBlock> parsedCache;
+    Map<StatementBlock, ResolvedAST> resolvedCache;
+
+    // Only re-run phases after edit point
+    FileStructure recompile(Source source, TextEdit edit) {
+        // ... incremental compilation
+    }
+}
+```
+
+### Cross-Cutting Concerns
+
+#### 1. God Classes Problem
+
+| Class | Lines | Responsibility |
+|-------|-------|----------------|
+| ConstantPool | ~4,000 | Constant interning, type creation, caching |
+| Parser | ~5,700 | Lexing coordination, all parsing, error recovery |
+| TypeConstant | ~2,500 | Type representation, subtyping, TypeInfo |
+| TypeInfo | ~3,000 | Type metadata, method/property info |
+
+**Solution**: Apply Single Responsibility Principle
+- Extract ConstantFactory from ConstantPool
+- Split Parser into ExpressionParser, StatementParser, TypeParser
+- Extract TypeRelations from TypeConstant
+- Extract TypeInfoBuilder from TypeInfo
+
+#### 2. Input Sanitization Layer
+
+Current: Validation scattered throughout
+```java
+public Foo createFoo(Bar bar, Baz baz) {
+    if (bar == null) throw new IAE("bar required");  // Here
+    if (baz == null) baz = DEFAULT;                   // Here
+    if (!bar.isValid()) throw new IAE("invalid bar"); // Here
+    // ... actual logic
+}
+```
+
+Proposed: Validation at API boundaries only
+```java
+// Public API - validates
+public Foo createFoo(@NonNull Bar bar, @Nullable Baz baz) {
+    requireNonNull(bar, "bar");
+    return createFooImpl(bar, baz != null ? baz : DEFAULT);
+}
+
+// Internal - trusts callers
+private Foo createFooImpl(Bar bar, Baz baz) {
+    // ... actual logic, no validation
+}
+```
+
+#### 3. Immutability for LSP
+
+**Current mutable patterns**:
+```java
+class AstNode {
+    private TypeConstant m_type;  // Set during resolve phase
+    public void setType(TypeConstant type) { m_type = type; }
+}
+```
+
+**Proposed immutable patterns**:
+```java
+class AstNode {
+    private final TypeConstant m_type;  // Set at construction
+
+    public AstNode withType(TypeConstant type) {
+        return new AstNode(this, type);  // Copy-on-write
+    }
+}
+
+// Or use persistent data structures
+class ResolvedAST {
+    private final PersistentMap<AstNode, TypeConstant> types;
+
+    public TypeConstant getType(AstNode node) {
+        return types.get(node);
+    }
+}
+```
+
+#### 4. Performance Opportunities
+
+| Opportunity | Current | Proposed | Expected Gain |
+|-------------|---------|----------|---------------|
+| Parallel module compilation | Single-threaded | Parallel phases | 2-4x on multi-core |
+| Incremental parsing | Full re-parse | Tree-sitter style | 10-100x for edits |
+| TypeInfo caching | Embedded in TypeConstant | External cache | Memory reduction |
+| Constant interning | HashMap lookup | Typed maps | Better cache locality |
+| String interning | Per-pool | Global weak cache | Memory reduction |
+
+### Migration Priority
+
+1. **High Priority (LSP blockers)**:
+   - Parser error recovery
+   - Stateless compilation phases
+   - Immutable AST nodes
+
+2. **Medium Priority (Code quality)**:
+   - Split god classes
+   - Extract eatToken() handlers in Lexer
+   - Add input validation layer
+
+3. **Lower Priority (Performance)**:
+   - Parallel compilation
+   - Incremental parsing
+   - Cache optimizations
 
 ---
 

@@ -48,6 +48,17 @@ public class BFloat16Constant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    @Override
+    public BFloat16Constant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+        return pool.ensureBFloat16Constant(m_flVal);
+    }
+
+
     // ----- type-specific methods -----------------------------------------------------------------
 
     /**

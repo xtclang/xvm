@@ -25,8 +25,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * invocation parameter, and a return value.
  */
 public class Parameter
-        extends XvmStructure
-        implements Cloneable {
+        extends XvmStructure {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -350,21 +349,29 @@ public class Parameter
     }
 
     /**
-     * Clone this Parameter.
+     * Copy this Parameter.
      *
-     * @return a clone of this Parameter
+     * @return a copy of this Parameter
      */
-    protected Parameter cloneBody() {
-        Parameter that;
-        try {
-            that = (Parameter) super.clone();
-        } catch (CloneNotSupportedException e) {
-            throw new IllegalStateException(e);
-        }
+    public Parameter copy() {
+        return new Parameter(this);
+    }
 
-        m_fImplicitDeref = false;
-        m_regDeref       = null;
-        return that;
+    /**
+     * Copy constructor.
+     *
+     * @param that  the Parameter to copy
+     */
+    protected Parameter(Parameter that) {
+        super(that.getContaining());
+
+        this.m_aAnnotations = that.m_aAnnotations;
+        this.m_constType    = that.m_constType;
+        this.m_constName    = that.m_constName;
+        this.m_constDefault = that.m_constDefault;
+        this.f_iParam       = that.f_iParam;
+        this.f_fOrdinary    = that.f_fOrdinary;
+        // transient fields are not copied
     }
 
 

@@ -70,6 +70,24 @@ public class PropertyStructure
         }
     }
 
+    /**
+     * Copy constructor.
+     *
+     * @param that  the PropertyStructure to copy
+     */
+    protected PropertyStructure(PropertyStructure that) {
+        super(that, true);
+
+        this.m_accessVar = that.m_accessVar;
+        this.m_type      = that.m_type;
+        this.m_constVal  = that.m_constVal;
+    }
+
+    @Override
+    public PropertyStructure copy() {
+        return new PropertyStructure(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 

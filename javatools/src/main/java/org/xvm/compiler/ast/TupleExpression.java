@@ -3,12 +3,12 @@ package org.xvm.compiler.ast;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -42,9 +42,9 @@ public class TupleExpression
         extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public TupleExpression(TypeExpression type, @NotNull List<Expression> exprs, long lStartPos, long lEndPos) {
+    public TupleExpression(TypeExpression type, @Nullable List<Expression> exprs, long lStartPos, long lEndPos) {
         this.type        = type;
-        this.exprs       = Objects.requireNonNull(exprs);
+        this.exprs       = exprs == null ? Collections.emptyList() : exprs;
         this.m_lStartPos = lStartPos;
         this.m_lEndPos   = lEndPos;
     }

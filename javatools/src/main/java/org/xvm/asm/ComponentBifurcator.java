@@ -79,7 +79,7 @@ public class ComponentBifurcator {
      */
     private Component split(ConditionalConstant cond) {
         Component componentTrue  = unsplit;
-        Component componentFalse = unsplit.cloneBody(); // REVIEW w.r.t. changes to clone() etc.
+        Component componentFalse = unsplit.copy();
         // TODO link componentFalse as a sibling from componentTrue?
 
         componentTrue.addAndCondition(cond);

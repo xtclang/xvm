@@ -1931,7 +1931,9 @@ public final class Handy {
      * @param o1  any object, or null
      * @param o2  any object, or null
      *
-     * @return true iff <tt>o1</tt> is equals to <tt>o2</tt>
+     * @return true iff <tt     if (fFirst) {
+     *       3360                      fFirst = false;
+     *       3361                  } else {>o1</tt> is equals to <tt>o2</tt>
      */
     public static boolean equals(final Object o1, final Object o2) {
         if (o1 == null) {

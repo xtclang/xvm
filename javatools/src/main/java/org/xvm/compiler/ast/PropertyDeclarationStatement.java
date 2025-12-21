@@ -52,6 +52,14 @@ import static org.xvm.util.Handy.indentLines;
  */
 public class PropertyDeclarationStatement
         extends ComponentStatement {
+    // ----- Copyable ------------------------------------------------------------------------------
+
+    @Override
+    public PropertyDeclarationStatement copy() {
+        return (PropertyDeclarationStatement) super.copy();
+    }
+
+
     // ----- constructors --------------------------------------------------------------------------
 
     public PropertyDeclarationStatement(long                       lStartPos,

@@ -145,6 +145,13 @@ public class FileStructure
         }
     }
 
+    @Override
+    public FileStructure copy() {
+        // FileStructure is a top-level container, not meant to be copied directly;
+        // use the FileStructure(ModuleStructure, boolean) constructor to copy a module
+        throw new UnsupportedOperationException();
+    }
+
     /**
      * Copy constructor.
      *
@@ -171,11 +178,11 @@ public class FileStructure
      * @param fTakeFile    if true, merge the os-file info as well
      */
     public void merge(ModuleStructure module, boolean fSynthesize, boolean fTakeFile) {
-        ModuleStructure moduleClone = module.cloneBody();
+        ModuleStructure moduleClone = module.copy();
         moduleClone.setContaining(this);
 
         addChild(moduleClone);
-        moduleClone.cloneChildren(module.children());
+        moduleClone.copyChildren(module.children());
 
         ConstantPool pool = m_pool;
 
@@ -183,7 +190,7 @@ public class FileStructure
             // add fingerprints
             for (ModuleStructure moduleChild : module.getFileStructure().children()) {
                 if (moduleChild.isFingerprint() && getModule(moduleChild.getIdentityConstant()) == null) {
-                    ModuleStructure moduleChildClone = moduleChild.cloneBody();
+                    ModuleStructure moduleChildClone = moduleChild.copy();
                     moduleChildClone.setContaining(this);
                     addChild(moduleChildClone);
                     moduleChildClone.registerConstants(pool);
@@ -533,10 +540,10 @@ public class FileStructure
     public void replace(List<ModuleStructure> listUnlinked) {
         List<ModuleStructure> listLinked = new ArrayList<>();
         for (ModuleStructure moduleUnlinked : listUnlinked) {
-            ModuleStructure moduleLinked = moduleUnlinked.cloneBody();
+            ModuleStructure moduleLinked = moduleUnlinked.copy();
 
             moduleLinked.setContaining(this);
-            moduleLinked.cloneChildren(moduleUnlinked.children());
+            moduleLinked.copyChildren(moduleUnlinked.children());
 
             replaceChild(getModule(moduleLinked.getIdentityConstant()), moduleLinked);
 

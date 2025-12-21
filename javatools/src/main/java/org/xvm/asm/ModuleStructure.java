@@ -13,6 +13,7 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -25,7 +26,6 @@ import org.xvm.asm.constants.NamedCondition;
 import org.xvm.asm.constants.VersionConstant;
 
 import org.xvm.util.Handy;
-import org.xvm.util.ListMap;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
@@ -66,9 +66,7 @@ public class ModuleStructure
         // this module is being created to act as a fingerprint
         ModuleConstant idPrimary = xsParent.getFileStructure().getModuleId();
         if (idPrimary != null && !idPrimary.equals(constId)) {
-            m_moduletype           = ModuleType.Optional;
-            m_vtreeImportAllowVers = new VersionTree<>();
-            m_listImportPreferVers = new ArrayList<>();
+            m_moduletype = ModuleType.Optional;
         }
     }
 
@@ -166,7 +164,7 @@ public class ModuleStructure
      * An implementation for {@link #getDependencies()}
      */
     protected Map<ModuleConstant, Boolean> collectModuleDependencies() {
-        Map<ModuleConstant, Boolean> map = new ListMap<>();
+        Map<ModuleConstant, Boolean> map = new LinkedHashMap<>();
         for (Map.Entry<ModuleConstant, ModuleType> entry : getDependencyTypes().entrySet()) {
             map.put(entry.getKey(),
                 switch (entry.getValue()) {
@@ -651,21 +649,25 @@ public class ModuleStructure
                 : m_moduleActual.resolveName(sName, access, collector);
     }
 
+    /**
+     * Copy constructor.
+     *
+     * @param that  the ModuleStructure to copy
+     */
+    protected ModuleStructure(ModuleStructure that) {
+        super(that);
+
+        this.m_constDir       = that.m_constDir;
+        this.m_constTimestamp = that.m_constTimestamp;
+        this.m_moduletype     = that.m_moduletype;
+        this.m_constVersion   = that.m_constVersion;
+        this.m_vtreeImportAllowVers.putAll(that.m_vtreeImportAllowVers);
+        this.m_listImportPreferVers.addAll(that.m_listImportPreferVers);
+    }
+
     @Override
-    protected ModuleStructure cloneBody() {
-        ModuleStructure that = (ModuleStructure) super.cloneBody();
-
-        if (this.m_vtreeImportAllowVers != null) {
-            that.m_vtreeImportAllowVers = new VersionTree<>();
-            that.m_vtreeImportAllowVers.putAll(this.m_vtreeImportAllowVers);
-        }
-
-        if (this.m_listImportPreferVers != null) {
-            that.m_listImportPreferVers = new ArrayList<>();
-            that.m_listImportPreferVers.addAll(this.m_listImportPreferVers);
-        }
-
-        return that;
+    public ModuleStructure copy() {
+        return new ModuleStructure(this);
     }
 
     @Override
@@ -703,23 +705,18 @@ public class ModuleStructure
 
         ConstantPool pool = getConstantPool();
         if (isFingerprint()) {
-            VersionTree<Boolean> vtreeAllow = new VersionTree<>();
             for (int i = 0, c = readMagnitude(in); i < c; ++i) {
                 VersionConstant constVer = (VersionConstant) pool.getConstant(readMagnitude(in));
-                vtreeAllow.put(constVer.getVersion(), in.readBoolean());
+                m_vtreeImportAllowVers.put(constVer.getVersion(), in.readBoolean());
             }
 
-            List<Version> listPrefer = new ArrayList<>();
             for (int i = 0, c = readMagnitude(in); i < c; ++i) {
                 VersionConstant constVer = (VersionConstant) pool.getConstant(readMagnitude(in));
                 Version         ver      = constVer.getVersion();
-                if (!listPrefer.contains(ver)) {
-                    listPrefer.add(ver);
+                if (!m_listImportPreferVers.contains(ver)) {
+                    m_listImportPreferVers.add(ver);
                 }
             }
-
-            m_vtreeImportAllowVers = vtreeAllow;
-            m_listImportPreferVers = listPrefer;
         } else {
             if (in.readBoolean()) {
                 m_constVersion = (VersionConstant) pool.getConstant(readMagnitude(in));
@@ -855,9 +852,9 @@ public class ModuleStructure
 
         // compare versions
         return this.m_moduletype == that.m_moduletype
-                && Handy.equals(this.m_vtreeImportAllowVers, that.m_vtreeImportAllowVers)
-                && Handy.equals(this.m_listImportPreferVers, that.m_listImportPreferVers)
-                && Handy.equals(this.m_constVersion,         that.m_constVersion)
+                && this.m_vtreeImportAllowVers.equals(that.m_vtreeImportAllowVers)
+                && this.m_listImportPreferVers.equals(that.m_listImportPreferVers)
+                && Handy.equals(this.m_constVersion, that.m_constVersion)
                 && Handy.equals(this.m_constDir, that.m_constDir);
     }
 
@@ -930,16 +927,16 @@ public class ModuleStructure
     private VersionConstant m_constVersion;
 
     /**
-     * If this is a fingerprint, then this will be a non-null version tree (but potentially empty)
-     * specifying which versions are allowed (via a TRUE value) and avoided (via a FALSE value).
+     * Version tree specifying which versions are allowed (via a TRUE value) and avoided (via a
+     * FALSE value). Only populated for fingerprint modules; empty for primary modules.
      */
-    private VersionTree<Boolean> m_vtreeImportAllowVers;
+    private final VersionTree<Boolean> m_vtreeImportAllowVers = new VersionTree<>();
 
     /**
-     * If this is a fingerprint, then this will be a non-null (but potentially empty) list of
-     * versions that are specified as preferred, in their order of preference.
+     * List of versions that are specified as preferred, in their order of preference.
+     * Only populated for fingerprint modules; empty for primary modules.
      */
-    private List<Version> m_listImportPreferVers;
+    private final List<Version> m_listImportPreferVers = new ArrayList<>();
 
     /**
      * If this is a fingerprint, during compilation this will hold the actual module from which the

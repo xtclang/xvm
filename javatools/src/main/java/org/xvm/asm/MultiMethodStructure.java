@@ -230,13 +230,19 @@ public class MultiMethodStructure
         return null;
     }
 
+    /**
+     * Copy constructor.
+     *
+     * @param that  the MultiMethodStructure to copy
+     */
+    protected MultiMethodStructure(MultiMethodStructure that) {
+        super(that, true);
+        // m_methodByConstant is populated lazily
+    }
+
     @Override
-    protected Component cloneBody() {
-        MultiMethodStructure that = (MultiMethodStructure) super.cloneBody();
-
-        that.m_methodByConstant = null;
-
-        return that;
+    public MultiMethodStructure copy() {
+        return new MultiMethodStructure(this);
     }
 
 

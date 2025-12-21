@@ -93,6 +93,14 @@ import static org.xvm.util.Handy.checkElementsNonNull;
  */
 public abstract class Expression
         extends AstNode {
+    // ----- Copyable ------------------------------------------------------------------------------
+
+    @Override
+    public Expression copy() {
+        return (Expression) super.copy();
+    }
+
+
     // ----- accessors -----------------------------------------------------------------------------
 
 

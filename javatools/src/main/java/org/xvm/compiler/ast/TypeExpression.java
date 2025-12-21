@@ -27,6 +27,14 @@ import org.xvm.util.Severity;
  */
 public abstract class TypeExpression
         extends Expression {
+    // ----- Copyable ------------------------------------------------------------------------------
+
+    @Override
+    public TypeExpression copy() {
+        return (TypeExpression) super.copy();
+    }
+
+
     // ----- type specific functionality -----------------------------------------------------------
 
     @Override

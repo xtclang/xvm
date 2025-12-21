@@ -4,7 +4,6 @@ package org.xvm.compiler.ast;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
-import java.lang.reflect.Field;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -49,6 +48,8 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+
+import org.xvm.util.Copyable;
 import org.xvm.asm.constants.TypeInfo.MethodKind;
 
 import org.xvm.asm.op.Label;
@@ -70,7 +71,8 @@ import static org.xvm.util.Handy.indentLines;
 /**
  * Common base class for all statements and expressions.
  */
-public abstract class AstNode {
+public abstract class AstNode
+        implements Copyable<AstNode> {
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
@@ -209,7 +211,7 @@ public abstract class AstNode {
      */
     protected static final class ChildList {
         private final List<AstNode> children;
-        private int index = 0;
+        private int index;
 
         public ChildList(List<AstNode> children) {
             this.children = children;
@@ -256,16 +258,19 @@ public abstract class AstNode {
      * Create a deep copy of this node and its entire subtree.
      * <p>
      * Uses {@link #withChildren} to construct new nodes, recursively copying all children.
-     * Fields marked with {@link Derived} are NOT copied.
+     * Fields marked with {@link org.xvm.util.Derived @Derived} are NOT copied.
      * <p>
      * The copy properly sets parent relationships via {@link #adopt}.
-     *
-     * @param <T>  the type of this node (for type-safe returns)
+     * <p>
+     * This implements {@link Copyable#copy()} for the AST hierarchy. The base class
+     * implementation works automatically for all subclasses because it uses the
+     * {@link #forEachChild} and {@link #withChildren} primitives that each concrete
+     * class implements.
      *
      * @return a deep copy of this node
      */
-    @SuppressWarnings("unchecked")
-    public <T extends AstNode> T copy() {
+    @Override
+    public AstNode copy() {
         List<AstNode> copiedChildren = new ArrayList<>();
         forEachChild(child -> {
             copiedChildren.add(child.copy());
@@ -274,7 +279,7 @@ public abstract class AstNode {
 
         AstNode copy = withChildren(copiedChildren);
         copy.adopt(copiedChildren);
-        return (T) copy;
+        return copy;
     }
 
     /**
@@ -1974,226 +1979,7 @@ public abstract class AstNode {
                 : new ArrayList<>(list);
     }
 
-    /**
-     * Collect fields by name.
-     *
-     * @param clz    the class on which the fields exist
-     * @param names  the field names
-     *
-     * @return an array of fields corresponding to the specified names on the specified class
-     */
-    protected static Field[] fieldsForNames(Class clz, String... names) {
-        if (names == null || names.length == 0) {
-            return NO_FIELDS;
-        }
-
-        Field[] fields = new Field[names.length];
-        NextField: for (int i = 0, c = fields.length; i < c; ++i) {
-            Class                clzTry = clz;
-            NoSuchFieldException eOrig  = null;
-            while (clzTry != null) {
-                try {
-                    Field field = clzTry.getDeclaredField(names[i]);
-                    assert field != null;
-                    if (!field.getType().isInstance(AstNode.class) && field.getType().isInstance(List.class)) {
-                        throw new IllegalStateException("unsupported field type "
-                                + field.getType().getSimpleName() + " on field "
-                                + clzTry.getSimpleName() + '.' + names[i]);
-                    }
-                    fields[i] = field;
-                    continue NextField;
-                } catch (NoSuchFieldException e) {
-                    if (eOrig == null) {
-                        eOrig = e;
-                    }
-
-                    clzTry = clzTry.getSuperclass();
-                    if (clz == null) {
-                        throw new IllegalStateException(eOrig);
-                    }
-                } catch (SecurityException e) {
-                    throw new IllegalStateException(e);
-                }
-            }
-        }
-
-        return fields;
-    }
-
-
-    // ----- inner class: ChildIterator ------------------------------------------------------------
-
-    /**
-     * Represents an Iterator that can also replace the most recently iterated element.
-     */
-    public interface ChildIterator
-            extends Iterable<AstNode>, Iterator<AstNode> {
-        @Override
-        default @NotNull Iterator<AstNode> iterator() {
-            return this;
-        }
-
-        /**
-         * Replace the most recently returned node with the specified new node.
-         *
-         * @param nodeNew  the node to use as a replacement for the node most recently returned from
-         *                 the {@link #next()} method
-         */
-        default void replaceWith(AstNode nodeNew) {
-            throw new IllegalStateException();
-        }
-
-        ChildIterator EMPTY = new ChildIterator() {
-            @Override
-            public boolean hasNext() {
-                return false;
-            }
-
-            @Override
-            public AstNode next() {
-                throw new NoSuchElementException();
-            }
-        };
-    }
-
-    protected final class ChildIteratorImpl
-            implements ChildIterator {
-        /**
-         * Construct a ChildIterator that will iterate all the children that are held in the
-         * specified fields, which are either AstNodes themselves, or are container types thereof.
-         *
-         * @param fields  an array of fields of the AstNode
-         */
-        private ChildIteratorImpl(Field[] fields) {
-            this.fields = fields;
-        }
-
-        public boolean hasNext() {
-            return state == HAS_NEXT || prepareNextElement();
-        }
-
-        public AstNode next() {
-            if (state == HAS_NEXT || prepareNextElement()) {
-                state = HAS_PREV;
-                if (value instanceof AstNode node) {
-                    return node;
-                } else {
-                    return (AstNode) ((Iterator) value).next();
-                }
-            }
-
-            throw new NoSuchElementException();
-        }
-
-        private boolean prepareNextElement() {
-            if (value instanceof Iterator iter && iter.hasNext()) {
-                state = HAS_NEXT;
-                return true;
-            }
-
-            boolean prepped = prepareNextField();
-            state = prepped ? HAS_NEXT : NOT_PREP;
-            return prepped;
-        }
-
-        private boolean prepareNextField() {
-            while (++iField < fields.length) {
-                Object next;
-                try {
-                    next = fields[iField].get(AstNode.this);
-                } catch (NullPointerException e) {
-                    throw new IllegalStateException(
-                            "class=" + AstNode.this.getClass().getSimpleName()
-                                    + ", field=" + iField);
-                } catch (IllegalAccessException e) {
-                    throw new IllegalStateException(e);
-                }
-
-                if (next != null) {
-                    if (next instanceof List list) {
-                        if (!list.isEmpty()) {
-                            value = list.listIterator();
-                            return true;
-                        }
-                    } else if (next instanceof Collection coll) {
-                        if (!coll.isEmpty()) {
-                            value = coll.iterator();
-                            return true;
-                        }
-                    } else {
-                        assert next instanceof AstNode;
-                        value = next;
-                        return true;
-                    }
-                }
-            }
-
-            value = null;
-            return false;
-        }
-
-        public void remove() {
-            if (state == HAS_PREV) {
-                if (value instanceof AstNode) {
-                    // null out the field
-                    try {
-                        fields[iField].set(AstNode.this, null);
-                    } catch (IllegalAccessException e) {
-                        throw new IllegalStateException(e);
-                    }
-                    state = NOT_PREP;
-                    return;
-                }
-
-                if (value instanceof Iterator iter) {
-                    // tell the underlying iterator to remove the value
-                    iter.remove();
-                    state = NOT_PREP;
-                    return;
-                }
-            }
-
-            throw new IllegalStateException();
-        }
-
-        public void replaceWith(AstNode newChild) {
-            if (state == HAS_PREV) {
-                if (value instanceof AstNode) {
-                    // the field holds a single node; store the new value
-                    try {
-                        fields[iField].set(AstNode.this, newChild);
-                    } catch (IllegalAccessException e) {
-                        throw new IllegalStateException(e);
-                    }
-                    return;
-                }
-
-                if (value instanceof ListIterator iter) {
-                    iter.set(newChild);
-                    return;
-                }
-            }
-
-            throw new IllegalStateException();
-        }
-
-        private static final int NOT_PREP = 0;
-        private static final int HAS_NEXT = 1;
-        private static final int HAS_PREV = 2;
-
-        private final Field[] fields;
-        private int iField = -1;
-        private Object value;
-        private int state = NOT_PREP;
-    }
-
-
     // ----- fields --------------------------------------------------------------------------------
-
-    /**
-     * Constant empty array  of fields.
-     */
-    protected static final Field[] NO_FIELDS = new Field[0];
 
     /**
      * The stage of compilation.

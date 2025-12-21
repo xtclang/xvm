@@ -112,6 +112,14 @@ import static org.xvm.util.Handy.indentLines;
  */
 public class TypeCompositionStatement
         extends ComponentStatement {
+    // ----- Copyable ------------------------------------------------------------------------------
+
+    @Override
+    public TypeCompositionStatement copy() {
+        return (TypeCompositionStatement) super.copy();
+    }
+
+
     // ----- constructors --------------------------------------------------------------------------
 
     public TypeCompositionStatement(

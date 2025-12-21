@@ -158,10 +158,10 @@ public abstract class ClassTemplate
 
     /**
      * Obtain the inception ClassConstant that is represented by this {@link ClassTemplate}.
-     *
+     * <p>
      * Most of the time the inception class is the same as the structure's class, except
      * for a number of native rebased interfaces (Ref, Var, Const, Enum).
-     *
+     * <p>
      * Note: the following should always hold true:
      *      getInceptionClass().asTypeConstant().getOpSupport() == this;
      */
@@ -190,7 +190,7 @@ public abstract class ClassTemplate
 
     /**
      * Obtain the canonical ClassComposition for this template at template's pool.
-     *
+     * <p>
      * This method should be used with care since it may be placing the ClassComposition *not*
      * in the current ConstantPool (used mostly by the native container injections).
      */
@@ -264,7 +264,7 @@ public abstract class ClassTemplate
     /**
      * Produce a ClassComposition for this type using the specified actual (inception) type
      * and the revealed (mask) type.
-     *
+     * <p>
      * Note: the passed inception and mask types should be fully resolved and normalized
      *       (all formal parameters resolved)
      * Note2: the following should always hold true: typeInception.getOpSupport() == this;
@@ -320,7 +320,7 @@ public abstract class ClassTemplate
 
     /**
      * Construct an {@link ObjectHandle} of the specified class with the specified constructor.
-     *
+     * <p>
      * The following steps are to be performed:
      * <ul>
      *   <li>Invoke the auto-generated initializer for the "inception" type;
@@ -867,7 +867,7 @@ public abstract class ClassTemplate
 
     /**
      * Get the injected property value.
-     *
+     * <p>
      * Strictly speaking we would need to create an InjectedHandle, but for now just keep the
      * value itself.
      */
@@ -1547,7 +1547,7 @@ public abstract class ClassTemplate
 
     /**
      * Compare for identity equality two object handles that both associated with this template.
-     *
+     * <p>
      * As documented at Ref.x equals() function:
      * <pre><quote>
      *   Specifically, two references are equal if they reference the same runtime object.

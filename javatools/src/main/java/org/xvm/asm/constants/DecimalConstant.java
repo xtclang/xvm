@@ -76,6 +76,17 @@ public class DecimalConstant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    @Override
+    public DecimalConstant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+        return pool.ensureDecConstant(m_dec);
+    }
+
+
     // ----- type-specific methods -----------------------------------------------------------------
 
     /**

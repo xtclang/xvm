@@ -21,6 +21,14 @@ import java.util.List;
  */
 public class UnaryComplementExpression
         extends PrefixExpression {
+    // ----- Copyable ------------------------------------------------------------------------------
+
+    @Override
+    public UnaryComplementExpression copy() {
+        return (UnaryComplementExpression) super.copy();
+    }
+
+
     // ----- constructors --------------------------------------------------------------------------
 
     public UnaryComplementExpression(Token operator, Expression expr) {

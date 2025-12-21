@@ -10,12 +10,15 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.ConstantExprAST;
@@ -41,9 +44,7 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
-import org.xvm.util.Handy;
 import org.xvm.util.LinkedIterator;
-import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.readIndex;
@@ -534,10 +535,7 @@ public class ClassStructure
      * @return the number of type parameters for this class
      */
     public int getTypeParamCount() {
-        Map<StringConstant, TypeConstant> mapThis = m_mapParams;
-        return mapThis == null
-                ? 0
-                : mapThis.size();
+        return m_mapParams.size();
     }
 
     /**
@@ -546,11 +544,8 @@ public class ClassStructure
      *
      * @return a read-only map of type parameter name to type
      */
-    public ListMap<StringConstant, TypeConstant> getTypeParams() {
-        ListMap<StringConstant, TypeConstant> mapThis = m_mapParams;
-        return mapThis == null
-                ? ListMap.EMPTY
-                : mapThis;
+    public Map<StringConstant, TypeConstant> getTypeParams() {
+        return m_mapParams;
     }
 
     /**
@@ -559,10 +554,7 @@ public class ClassStructure
      * @return a read-only list of map entries from type parameter name to type
      */
     public List<Map.Entry<StringConstant, TypeConstant>> getTypeParamsAsList() {
-        ListMap<StringConstant, TypeConstant> mapThis = m_mapParams;
-        return mapThis == null
-                ? Collections.emptyList()
-                : mapThis.asList();
+        return new ArrayList<>(m_mapParams.entrySet());
     }
 
     /**
@@ -574,11 +566,6 @@ public class ClassStructure
      * @return a newly created PropertyStructure that represents the generic type parameter
      */
     public PropertyStructure addTypeParam(String sName, TypeConstant typeConstraint) {
-        ListMap<StringConstant, TypeConstant> map = m_mapParams;
-        if (map == null) {
-            m_mapParams = map = new ListMap<>();
-        }
-
         ConstantPool pool = getConstantPool();
 
         // check for turtles, for example: "ElementTypes extends Tuple<ElementTypes>"
@@ -587,7 +574,7 @@ public class ClassStructure
                 typeConstraint.getParamType(0).getValueString().equals(sName)) {
             typeConstraint = pool.ensureTypeSequenceTypeConstant();
         }
-        map.put(pool.ensureStringConstant(sName), typeConstraint);
+        m_mapParams.put(pool.ensureStringConstant(sName), typeConstraint);
 
         // each type parameter also has a synthetic property of the same name,
         // whose type is of type "Type<constraint-type>"
@@ -623,15 +610,12 @@ public class ClassStructure
      * @param typeConstraint  the new constraint type
      */
     public void updateConstraint(String sName, TypeConstant typeConstraint) {
-        ListMap<StringConstant, TypeConstant> map = m_mapParams;
-        assert map != null;
-
         ConstantPool pool = getConstantPool();
 
         TypeConstant typeConstraintType = pool.ensureClassTypeConstant(
             pool.clzType(), null, typeConstraint);
 
-        map.put(pool.ensureStringConstant(sName), typeConstraint);
+        m_mapParams.put(pool.ensureStringConstant(sName), typeConstraint);
 
         PropertyStructure prop = (PropertyStructure) getChild(sName);
         prop.setType(typeConstraintType);
@@ -643,7 +627,7 @@ public class ClassStructure
      * @return true if this class is parameterized (generic)
      */
     public boolean isParameterized() {
-        return m_mapParams != null;
+        return !m_mapParams.isEmpty();
     }
 
     /**
@@ -1004,19 +988,20 @@ public class ClassStructure
         return result;
     }
 
+    /**
+     * Copy constructor.
+     *
+     * @param that  the ClassStructure to copy
+     */
+    protected ClassStructure(ClassStructure that) {
+        super(that, true);
+        this.m_mapParams.putAll(that.m_mapParams);
+        this.m_constPath = that.m_constPath;
+    }
+
     @Override
-    protected ClassStructure cloneBody() {
-        ClassStructure that = (ClassStructure) super.cloneBody();
-
-        // deep-clone the parameter list information (since the structure is mutable)
-        if (this.m_mapParams != null) {
-            ListMap<StringConstant, TypeConstant> mapThis = this.m_mapParams;
-            ListMap<StringConstant, TypeConstant> mapThat = new ListMap<>();
-            mapThat.putAll(mapThis);
-            that.m_mapParams = mapThat;
-        }
-
-        return that;
+    public ClassStructure copy() {
+        return new ClassStructure(this);
     }
 
     /**
@@ -3302,7 +3287,7 @@ public class ClassStructure
         super.disassemble(in);
 
         // read in the type parameters
-        m_mapParams = disassembleTypeParams(in);
+        disassembleTypeParams(in);
         m_constPath = (LiteralConstant) getConstantPool().getConstant(readIndex(in));
     }
 
@@ -3320,7 +3305,7 @@ public class ClassStructure
         super.registerConstants(pool);
 
         // register the type parameters
-        m_mapParams = registerTypeParams(m_mapParams);
+        registerTypeParams(pool);
         m_constPath = pool.register(m_constPath);
 
         // invalidate cached types
@@ -3361,117 +3346,73 @@ public class ClassStructure
 
     @Override
     public String getDescription() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(super.getDescription())
-          .append(", type-params=");
+        String typeParams = m_mapParams.isEmpty()
+                ? "none"
+                : m_mapParams.entrySet().stream()
+                        .map(e -> {
+                            String name = e.getKey().getValue();
+                            TypeConstant type = e.getValue();
+                            // if type is unresolved, we cannot call type.isEcstasy("Object")
+                            return "ecstasy:Object".equals(type.getValueString())
+                                    ? name
+                                    : name + " extends " + type;
+                        })
+                        .collect(Collectors.joining(", ", "<", ">"));
 
-        final ListMap<StringConstant, TypeConstant> map = m_mapParams;
-        if (map == null || map.isEmpty()) {
-            sb.append("none");
-        } else {
-            sb.append('<');
-            boolean fFirst = true;
-            for (Map.Entry<StringConstant, TypeConstant> entry : map.entrySet()) {
-                if (fFirst) {
-                    fFirst = false;
-                } else {
-                    sb.append(", ");
-                }
+        String sourcePath = m_constPath == null ? "none" : m_constPath.getValueString();
 
-                sb.append(entry.getKey().getValue());
-
-                TypeConstant constType = entry.getValue();
-
-                // if constType is unresolved, we cannot call constType.isEcstasy("Object")
-                if (!"ecstasy:Object".equals(constType.getValueString())) {
-                    sb.append(" extends ")
-                      .append(constType);
-                }
-            }
-            sb.append('>');
-        }
-
-        sb.append(", source-path=")
-          .append(m_constPath == null ? "none" : m_constPath.getValueString());
-
-        return sb.toString();
+        return super.getDescription() + ", type-params=" + typeParams + ", source-path=" + sourcePath;
     }
 
 
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
-     * Helper method to read a collection of type parameters.
+     * Helper method to read a collection of type parameters into {@link #m_mapParams}.
      *
      * @param in  the DataInput containing the type parameters
-     *
-     * @return null if there are no type parameters, otherwise a map from CharStringConstant to the
-     *         type constraint for each parameter
      *
      * @throws IOException  if an I/O exception occurs during disassembly from the provided
      *                      DataInput stream, or if there is invalid data in the stream
      */
-    protected ListMap<StringConstant, TypeConstant> disassembleTypeParams(DataInput in)
-        throws IOException {
+    protected void disassembleTypeParams(DataInput in)
+            throws IOException {
         int c = readMagnitude(in);
         if (c <= 0) {
             assert c == 0;
-            return null;
+            return;
         }
 
-        ListMap<StringConstant, TypeConstant> map = new ListMap<>();
         ConstantPool pool = getConstantPool();
         for (int i = 0; i < c; ++i) {
             StringConstant constName = (StringConstant) pool.getConstant(readIndex(in));
             TypeConstant   constType = (TypeConstant)   pool.getConstant(readIndex(in));
-            assert !map.containsKey(constName);
-            map.put(constName, constType);
+            assert !m_mapParams.containsKey(constName);
+            m_mapParams.put(constName, constType);
         }
-        return map;
     }
 
     /**
-     * Register all the constants associated with a list of type parameters.
+     * Register all the constants in {@link #m_mapParams} with the specified pool.
      *
-     * @param mapOld  the map containing the type parameters
-     *
-     * @return the map of registered type parameters (might be different from the map passed in)
+     * @param pool  the constant pool to register with
      */
-    protected ListMap<StringConstant, TypeConstant> registerTypeParams(ListMap<StringConstant, TypeConstant> mapOld) {
-        if (mapOld == null || mapOld.isEmpty()) {
-            return mapOld;
+    protected void registerTypeParams(ConstantPool pool) {
+        if (m_mapParams.isEmpty()) {
+            return;
         }
 
-        ConstantPool                          pool   = getConstantPool();
-        ListMap<StringConstant, TypeConstant> mapNew = mapOld;
-        for (Map.Entry<StringConstant, TypeConstant> entry : mapOld.entrySet()) {
-            StringConstant constOldKey = entry.getKey();
-            StringConstant constNewKey = pool.register(constOldKey);
-
-            TypeConstant   constOldVal = entry.getValue();
-            TypeConstant   constNewVal = pool.register(constOldVal);
-
-            if (mapNew != mapOld || constOldKey != constNewKey) {
-                if (mapNew == mapOld) {
-                    // up to this point, we've been using the old map, but now we need to change a
-                    // key (which map does not support), so create a new map, and copy the old map
-                    // to the new map, but only up to (but not including!) the current entry
-                    mapNew = new ListMap<>();
-                    for (Map.Entry<StringConstant, TypeConstant> entryCopy : mapOld.entrySet()) {
-                        if (entryCopy.getKey() == constOldKey) {
-                            break;
-                        }
-
-                        mapNew.put(entryCopy.getKey(), entryCopy.getValue());
-                    }
-                }
-
-                mapNew.put(constNewKey, constNewVal);
-            } else if (constOldVal != constNewVal) {
-                entry.setValue(constNewVal);
-            }
+        // Build a new map with registered keys and values
+        Map<StringConstant, TypeConstant> mapNew = new LinkedHashMap<>();
+        for (Map.Entry<StringConstant, TypeConstant> entry : m_mapParams.entrySet()) {
+            StringConstant constNewKey = pool.register(entry.getKey());
+            TypeConstant   constNewVal = pool.register(entry.getValue());
+            mapNew.put(constNewKey, constNewVal);
         }
-        return mapNew;
+
+        // Replace contents
+        m_mapParams.clear();
+        m_mapParams.putAll(mapNew);
     }
 
     /**
@@ -3483,9 +3424,9 @@ public class ClassStructure
      * @throws IOException  if an I/O exception occurs during assembly to the provided DataOutput
      *                      stream
      */
-    protected void assembleTypeParams(ListMap<StringConstant, TypeConstant> map, DataOutput out)
-        throws IOException {
-        int c = map == null ? 0 : map.size();
+    protected void assembleTypeParams(Map<StringConstant, TypeConstant> map, DataOutput out)
+            throws IOException {
+        int c = map.size();
         writePackedLong(out, c);
 
         if (c == 0) {
@@ -3589,14 +3530,8 @@ public class ClassStructure
         }
 
         // type parameters
-        Map mapThisParams = this.m_mapParams;
-        Map mapThatParams = that.m_mapParams;
-        int cThisParams   = mapThisParams == null ? 0 : mapThisParams.size();
-        int cThatParams   = mapThatParams == null ? 0 : mapThatParams.size();
-
-        return cThisParams == cThatParams
-            && (cThisParams == 0 || mapThisParams.equals(mapThatParams))
-            && Handy.equals(this.m_constPath, that.m_constPath);
+        return this.m_mapParams.equals(that.m_mapParams)
+            && Objects.equals(this.m_constPath, that.m_constPath);
     }
 
     /**
@@ -3609,7 +3544,7 @@ public class ClassStructure
     public void addImplicitTypeParameters(ConstantPool pool, ErrorListener errs) {
         assert getFormat() == Format.MIXIN || getFormat() == Format.ANNOTATION;
 
-        ListMap<String, TypeConstant> mapTypeParams = null;
+        Map<String, TypeConstant> mapTypeParams = new LinkedHashMap<>();
         for (Contribution contrib : getContributionsAsList()) {
             switch (contrib.getComposition()) {
             case Extends:
@@ -3652,10 +3587,6 @@ public class ClassStructure
                 }
             }
 
-            if (mapTypeParams == null) {
-                mapTypeParams = new ListMap<>();
-            }
-
             // collect the formal types and verify that there are no collisions
             for (TypeConstant typeParam : atypeGeneric) {
                 assert typeParam.isGenericType();
@@ -3680,12 +3611,8 @@ public class ClassStructure
             contrib.narrowType(typeContrib.adoptParameters(pool, atypeGeneric));
         }
 
-        if (mapTypeParams != null) {
-            for (Map.Entry<String, TypeConstant> entry : mapTypeParams.entrySet()) {
-                addTypeParam(entry.getKey(), entry.getValue())
-                         .setSynthetic(true);
-            }
-        }
+        mapTypeParams.forEach((name, type) ->
+                addTypeParam(name, type).setSynthetic(true));
     }
 
 
@@ -3773,9 +3700,9 @@ public class ClassStructure
 
     /**
      * The name-to-type information for type parameters. The type constant is used to specify a
-     * type constraint for the parameter.
+     * type constraint for the parameter. Never null.
      */
-    private ListMap<StringConstant, TypeConstant> m_mapParams;
+    private final Map<StringConstant, TypeConstant> m_mapParams = new LinkedHashMap<>();
 
     /**
      * The file name that indicates the location from which this class was compiled. This file name

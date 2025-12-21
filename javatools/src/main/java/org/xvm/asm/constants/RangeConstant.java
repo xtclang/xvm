@@ -98,6 +98,19 @@ public class RangeConstant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    @Override
+    public RangeConstant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+        return pool.ensureRangeConstant(
+                m_const1.transferTo(pool), m_fExclude1,
+                m_const2.transferTo(pool), m_fExclude2);
+    }
+
+
     // ----- type-specific methods -----------------------------------------------------------------
 
     /**

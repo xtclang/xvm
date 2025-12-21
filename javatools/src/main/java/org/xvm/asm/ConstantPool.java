@@ -172,7 +172,8 @@ public class ConstantPool
             }
 
             if (constant.getContaining() != this) {
-                constant = (T) constant.adoptedBy(this);
+                // Transfer the constant to this pool - transferTo() handles registration
+                return (T) constant.transferTo(this);
             }
 
             synchronized (this) {
@@ -189,8 +190,7 @@ public class ConstantPool
                 Object oLocator = constant.getLocator();
                 if (oLocator != null) {
                     if (oLocator instanceof Constant constLocator && constLocator.getContaining() != this) {
-                        constLocator = constLocator.adoptedBy(this);
-                        constLocator.registerConstants(this);
+                        constLocator = constLocator.transferTo(this);
                         oLocator = constLocator;
                     }
 
@@ -245,11 +245,11 @@ public class ConstantPool
      */
     private void contributeToValidPoolSet(Set<ConstantPool> set) {
         if (set.add(this)) {
-            FileStructure file = getFileStructure();
-            for (ModuleConstant idModule : file.moduleIds()) {
-                ModuleStructure moduleFingerprint = file.getModule(idModule);
+            var file = getFileStructure();
+            for (var idModule : file.moduleIds()) {
+                var moduleFingerprint = file.getModule(idModule);
                 if (moduleFingerprint.isFingerprint()) {
-                    ModuleStructure moduleUpstream = moduleFingerprint.getFingerprintOrigin();
+                    var moduleUpstream = moduleFingerprint.getFingerprintOrigin();
                     // if the module is not there, TypeCompositionStatement will report it
                     if (moduleUpstream != null) {
                         moduleUpstream.getConstantPool().contributeToValidPoolSet(set);
@@ -278,14 +278,9 @@ public class ConstantPool
      * @return a CharConstant for the passed character value
      */
     public CharConstant ensureCharConstant(int ch) {
-        // check the cache
         if (ch <= 0x7F) {
-            CharConstant constant = (CharConstant) ensureLocatorLookup(Format.Char).get((char) ch);
-            if (constant != null) {
-                return constant;
-            }
+            return m_mapChars.computeIfAbsent(ch, k -> register(new CharConstant(this, k)));
         }
-
         return register(new CharConstant(this, ch));
     }
 
@@ -317,8 +312,7 @@ public class ConstantPool
      * @return a CharStringConstant for the passed String value
      */
     public StringConstant ensureStringConstant(String s) {
-        // check the pre-existing constants first
-        StringConstant constant = (StringConstant) ensureLocatorLookup(Format.String).get(s);
+        StringConstant constant = m_mapStrings.get(s);
         if (constant == null) {
             constant = register(new StringConstant(this, s));
         }
@@ -338,13 +332,9 @@ public class ConstantPool
         case Time:
         case Duration:
         case Path:
-        case RegEx: {
-            LiteralConstant constant = (LiteralConstant) ensureLocatorLookup(format).get(s);
-            if (constant == null) {
-                constant = register(new LiteralConstant(this, format, s, oValue));
-            }
-            return constant;
-        }
+        case RegEx:
+            return ensureLiteralMap(format).computeIfAbsent(s,
+                    k -> register(new LiteralConstant(this, format, k, oValue)));
 
         case Dec32:
         case Dec64:
@@ -358,10 +348,8 @@ public class ConstantPool
         case Float64:
         case Float128:
         case FloatN: {
-            LiteralConstant constant = (LiteralConstant) ensureLocatorLookup(Format.FPLiteral).get(s);
-            if (constant == null) {
-                constant = new LiteralConstant(this, Format.FPLiteral, s, oValue);
-            }
+            LiteralConstant constant = ensureLiteralMap(Format.FPLiteral).computeIfAbsent(s,
+                    k -> new LiteralConstant(this, Format.FPLiteral, k, oValue));
             return switch (format) {
                 case Dec32, Dec64, Dec128 -> constant.toDecimalConstant(format);
                 case DecN                 -> constant.toDecNConstant();
@@ -481,27 +469,16 @@ public class ConstantPool
      * @return an IntConstant for the passed PackedInteger value
      */
     public IntConstant ensureIntConstant(PackedInteger pint, Format format) {
-        switch (format) {
-        case Int16:
-        case Int32:
-        case Int64:
-        case Int128:
-        case IntN:
-        case UInt16:
-        case UInt32:
-        case UInt64:
-        case UInt128:
-        case UIntN:
-            // check the pre-existing constants first
-            IntConstant constant = (IntConstant) ensureLocatorLookup(format).get(pint);
-            if (constant == null) {
-                constant = register(new IntConstant(this, format, pint));
-            }
-            return constant;
+        return switch (format) {
+            case Int16, Int32, Int64, Int128, IntN, UInt16, UInt32, UInt64, UInt128, UIntN ->
+                ensureIntMap(format).computeIfAbsent(pint, k -> register(new IntConstant(this, format, k)));
+            default ->
+                throw new IllegalStateException("unsupported format: " + format);
+        };
+    }
 
-        default:
-            throw new IllegalStateException("unsupported format: " + format);
-        }
+    private Map<PackedInteger, IntConstant> ensureIntMap(Format format) {
+        return m_mapInts.computeIfAbsent(format, f -> new ConcurrentHashMap<>());
     }
 
     /**
@@ -519,12 +496,15 @@ public class ConstantPool
             default  -> throw new IllegalArgumentException(
                             "unsupported decimal type: " + dec.getClass().getSimpleName());
         };
+        return ensureDecimalMap(format).computeIfAbsent(dec, k -> register(new DecimalConstant(this, k)));
+    }
 
-        DecimalConstant constant = (DecimalConstant) ensureLocatorLookup(format).get(dec);
-        if (constant == null) {
-            constant = register(new DecimalConstant(this, dec));
-        }
-        return constant;
+    private Map<Decimal, DecimalConstant> ensureDecimalMap(Format format) {
+        return m_mapDecimals.computeIfAbsent(format, f -> new ConcurrentHashMap<>());
+    }
+
+    private Map<String, LiteralConstant> ensureLiteralMap(Format format) {
+        return m_mapLiterals.computeIfAbsent(format, f -> new ConcurrentHashMap<>());
     }
 
     /**
@@ -871,11 +851,8 @@ public class ConstantPool
      * @return a NamedCondition
      */
     public NamedCondition ensureNamedCondition(String sName) {
-        NamedCondition cond = (NamedCondition) ensureLocatorLookup(Format.ConditionNamed).get(sName);
-        if (cond == null) {
-            cond = register(new NamedCondition(this, ensureStringConstant(sName)));
-        }
-        return cond;
+        return m_mapNamedConditions.computeIfAbsent(sName,
+                k -> register(new NamedCondition(this, ensureStringConstant(k))));
     }
 
     /**
@@ -1051,8 +1028,7 @@ public class ConstantPool
      */
     public ClassConstant ensureClassConstant(IdentityConstant constParent, String sClass) {
         return switch (constParent.getFormat()) {
-            case Module, Package, Class, Method, Property ->
-                    register(new ClassConstant(this, constParent, sClass));
+            case Module, Package, Class, Method, Property -> register(new ClassConstant(this, constParent, sClass));
             default -> throw new IllegalArgumentException("constant " + constParent.getFormat() + " is not a valid parent");
         };
     }
@@ -2933,7 +2909,6 @@ public class ConstantPool
         return map;
     }
 
-
     // ----- TypeInfo helpers ----------------------------------------------------------------------
 
     /**
@@ -3802,6 +3777,38 @@ public class ConstantPool
      * This map is not thread-safe and safety is provided via copy-on-write
      */
     private volatile EnumMap<Format, Map<Object, Constant>> m_mapLocators = new EnumMap<>(Format.class);
+
+    // ----- typed locator maps (replacing untyped Object-keyed maps) ------------------------------
+
+    /**
+     * Typed lookup for StringConstant by string value.
+     */
+    private final Map<String, StringConstant> m_mapStrings = new ConcurrentHashMap<>();
+
+    /**
+     * Typed lookup for LiteralConstant by format and string value.
+     */
+    private final EnumMap<Format, Map<String, LiteralConstant>> m_mapLiterals = new EnumMap<>(Format.class);
+
+    /**
+     * Typed lookup for IntConstant by format and packed integer value.
+     */
+    private final EnumMap<Format, Map<PackedInteger, IntConstant>> m_mapInts = new EnumMap<>(Format.class);
+
+    /**
+     * Typed lookup for DecimalConstant by format and decimal value.
+     */
+    private final EnumMap<Format, Map<Decimal, DecimalConstant>> m_mapDecimals = new EnumMap<>(Format.class);
+
+    /**
+     * Typed lookup for CharConstant by character value (for cached range).
+     */
+    private final Map<Integer, CharConstant> m_mapChars = new ConcurrentHashMap<>();
+
+    /**
+     * Typed lookup for NamedCondition by name.
+     */
+    private final Map<String, NamedCondition> m_mapNamedConditions = new ConcurrentHashMap<>();
 
     /**
      * Set of references to ConstantPool instances, defining the only ConstantPool references that

@@ -105,6 +105,14 @@ public class StatementBlock
     }
 
 
+    // ----- Copyable ------------------------------------------------------------------------------
+
+    @Override
+    public StatementBlock copy() {
+        return (StatementBlock) super.copy();
+    }
+
+
     // ----- accessors -----------------------------------------------------------------------------
 
     public List<Statement> getStatements() {

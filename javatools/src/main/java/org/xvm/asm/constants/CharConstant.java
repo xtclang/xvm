@@ -55,6 +55,17 @@ public class CharConstant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    @Override
+    public CharConstant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+        return pool.ensureCharConstant(m_chVal);
+    }
+
+
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**

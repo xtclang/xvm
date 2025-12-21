@@ -46,6 +46,17 @@ public class Float8e5Constant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    @Override
+    public Float8e5Constant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+        return pool.ensureFloat8e5Constant(toFloat(m_nBits));
+    }
+
+
     // ----- ValueConstant methods -----------------------------------------------------------------
 
     /**

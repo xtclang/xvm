@@ -1271,7 +1271,7 @@ public class NewExpression
 
         List<T> listCopy = new ArrayList<>(list.size());
         for (AstNode node : list) {
-            listCopy.add(node.copy());
+            listCopy.add((T) node.copy());
         }
         return listCopy;
     }

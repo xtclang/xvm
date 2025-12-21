@@ -34,6 +34,21 @@ public class TypedefStructure
         super(xsParent, nFlags, constId, condition);
     }
 
+    /**
+     * Copy constructor.
+     *
+     * @param that  the TypedefStructure to copy
+     */
+    protected TypedefStructure(TypedefStructure that) {
+        super(that, true);
+        this.m_type = that.m_type;
+    }
+
+    @Override
+    public TypedefStructure copy() {
+        return new TypedefStructure(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 

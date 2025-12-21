@@ -53,6 +53,17 @@ public class StringConstant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    @Override
+    public StringConstant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+        return pool.register(new StringConstant(pool, m_sVal));
+    }
+
+
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**

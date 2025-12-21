@@ -23,6 +23,14 @@ import org.xvm.asm.op.Label;
  */
 public abstract class Statement
         extends AstNode {
+    // ----- Copyable ------------------------------------------------------------------------------
+
+    @Override
+    public Statement copy() {
+        return (Statement) super.copy();
+    }
+
+
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override

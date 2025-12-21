@@ -45,6 +45,17 @@ public class Float32Constant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    @Override
+    public Float32Constant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+        return pool.ensureFloat32Constant(m_flVal);
+    }
+
+
     // ----- type-specific methods -----------------------------------------------------------------
 
     /**

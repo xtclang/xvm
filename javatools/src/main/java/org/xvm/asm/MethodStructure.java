@@ -1665,54 +1665,60 @@ public class MethodStructure
         return super.resolveName(sName, access, collector);
     }
 
-    @Override
-    protected MethodStructure cloneBody() {
-        MethodStructure that = (MethodStructure) super.cloneBody();
+    /**
+     * Copy constructor.
+     *
+     * @param that  the MethodStructure to copy
+     */
+    protected MethodStructure(MethodStructure that) {
+        super(that, true);
 
-        int cReturns = getReturnCount();
+        int cReturns = that.getReturnCount();
         if (cReturns > 0) {
             Parameter[] aReturns = new Parameter[cReturns];
             for (int i = 0; i < cReturns; i++) {
-                Parameter param = this.m_aReturns[i].cloneBody();
+                Parameter param = that.m_aReturns[i].copy();
                 param.setContaining(this);
                 aReturns[i] = param;
             }
-            that.m_aReturns = aReturns;
+            this.m_aReturns = aReturns;
         }
 
-        int cParams = getParamCount();
+        int cParams = that.getParamCount();
         if (cParams > 0) {
             Parameter[] aParams = new Parameter[cParams];
             for (int i = 0; i < cParams; i++) {
-                Parameter param = this.m_aParams[i].cloneBody();
+                Parameter param = that.m_aParams[i].copy();
                 param.setContaining(this);
                 aParams[i] = param;
             }
-            that.m_aParams = aParams;
+            this.m_aParams = aParams;
         }
 
-        if (this.m_abOps == null && this.m_code != null) {
+        if (that.m_abOps == null && that.m_code != null) {
             // m_code is a mutable object, and tied back to the MethodStructure, so explicitly clone it
-            that.m_code = this.m_code.cloneOnto(that);
+            this.m_code = that.m_code.cloneOnto(this);
         } else {
-            that.m_code = null;
+            this.m_code = null;
         }
 
         // REVIEW is it necessary to explicitly clone the AST? we treat it as immutable data, but it
         //        will hold references to Constants from the pool -- does that matter?
 
-        if (this.m_aconstLocal != null) {
-            that.m_aconstLocal = this.m_aconstLocal.clone();
+        if (that.m_aconstLocal != null) {
+            this.m_aconstLocal = that.m_aconstLocal.clone();
         }
 
-        // force the reloading of the m_structFinally
-        that.m_structFinally = null;
+        // m_structFinally is populated lazily
 
-        if (this.m_source != null) {
-            that.m_source = this.m_source.clone();
+        if (that.m_source != null) {
+            this.m_source = that.m_source.copy();
         }
+    }
 
-        return that;
+    @Override
+    public MethodStructure copy() {
+        return new MethodStructure(this);
     }
 
     @Override
@@ -2685,8 +2691,7 @@ public class MethodStructure
     /**
      * The Source class represents the source code that was used to compile the method code.
      */
-    protected class Source
-            implements Cloneable {
+    protected class Source {
         // ----- constructors -----------------------------------------------------------------
 
         /**
@@ -2704,6 +2709,18 @@ public class MethodStructure
         protected Source(int iLine, String sSrc) {
             m_iFirstLine = iLine;
             m_sSrc       = sSrc;
+        }
+
+        /**
+         * Copy constructor.
+         *
+         * @param that  the Source to copy
+         */
+        protected Source(Source that) {
+            this.m_iFirstLine = that.m_iFirstLine;
+            this.m_sSrc       = that.m_sSrc;
+            this.m_aconstSrc  = that.m_aconstSrc;
+            this.m_anIndents  = that.m_anIndents;
         }
 
         // ----- fields -----------------------------------------------------------------------
@@ -2873,16 +2890,12 @@ public class MethodStructure
         }
 
         /**
-         * Create a clone of this source.
+         * Create a copy of this source.
          *
-         * @return the new Source clone
+         * @return the new Source copy
          */
-        protected Source clone() {
-            try {
-                return (Source) super.clone();
-            } catch (CloneNotSupportedException e) {
-                throw new IllegalStateException();
-            }
+        protected Source copy() {
+            return new Source(this);
         }
 
         protected void disassemble(DataInput in)

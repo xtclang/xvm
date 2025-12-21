@@ -3,10 +3,9 @@ package org.xvm.compiler.ast;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Function;
 
-import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
@@ -29,7 +28,7 @@ public class TypedefStatement
         extends ComponentStatement {
     // ----- constructors --------------------------------------------------------------------------
 
-    public TypedefStatement(Expression cond, Token keyword, TypeExpression type, Token alias) {
+    public TypedefStatement(@Nullable Expression cond, Token keyword, TypeExpression type, Token alias) {
         super(keyword.getStartPosition(), alias.getEndPosition());
 
         this.cond     = cond;

@@ -1,6 +1,5 @@
 package org.xvm.compiler;
 
-import java.lang.reflect.Field;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -406,7 +405,5 @@ public class EvalCompiler {
 
         private final Frame       f_frame;
         private final EvalContext f_ctx;
-
-        private static final Field[] CHILD_FIELDS = fieldsForNames(MethodDeclarationStatement.class, "body");
     }
 }

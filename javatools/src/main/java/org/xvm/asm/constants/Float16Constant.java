@@ -52,6 +52,17 @@ public class Float16Constant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    @Override
+    public Float16Constant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+        return pool.ensureFloat16Constant(m_flVal);
+    }
+
+
     // ----- type-specific methods -----------------------------------------------------------------
 
     /**

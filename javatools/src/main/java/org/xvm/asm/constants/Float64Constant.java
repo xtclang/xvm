@@ -45,6 +45,17 @@ public class Float64Constant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    @Override
+    public Float64Constant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+        return pool.ensureFloat64Constant(m_dflVal);
+    }
+
+
     // ----- type-specific methods -----------------------------------------------------------------
 
     /**

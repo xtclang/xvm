@@ -53,6 +53,17 @@ public class Float128Constant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    @Override
+    public Float128Constant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+        return pool.ensureFloat128Constant(m_abVal);
+    }
+
+
     // ----- type-specific methods -----------------------------------------------------------------
 
     /**

@@ -383,9 +383,9 @@ public class CompositeComponent
     }
 
     @Override
-    protected Component cloneBody() {
+    public Component copy() {
         // this can be implemented, but it's not immediately clear what would be explicitly shared
-        // vs. not shared as the result of the clone
+        // vs. not shared as the result of the copy
         throw new UnsupportedOperationException();
     }
 

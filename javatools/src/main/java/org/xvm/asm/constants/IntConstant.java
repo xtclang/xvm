@@ -129,6 +129,17 @@ public class IntConstant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    @Override
+    public IntConstant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+        return pool.register(new IntConstant(pool, m_fmt, m_pint));
+    }
+
+
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**

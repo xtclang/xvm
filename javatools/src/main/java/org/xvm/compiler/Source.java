@@ -518,7 +518,7 @@ public class Source implements Constants {
         String sPre = toString(lPre, lCur);
         String sPost = toString(lCur, lPost);
 
-        StringBuilder sb = new StringBuilder(sIntro);
+        var sb = new StringBuilder(sIntro);
         appendString(sb, sPre);
         char[] achIndent = new char[sb.length()];
         Arrays.fill(achIndent, ' ');

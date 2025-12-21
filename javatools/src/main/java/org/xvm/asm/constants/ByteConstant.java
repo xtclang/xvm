@@ -91,6 +91,17 @@ public class ByteConstant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    @Override
+    public ByteConstant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+        return pool.ensureByteConstant(m_format, m_nVal);
+    }
+
+
     // ----- type-specific methods -----------------------------------------------------------------
 
     /**

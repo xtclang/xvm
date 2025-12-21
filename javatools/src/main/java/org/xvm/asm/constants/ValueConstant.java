@@ -40,13 +40,8 @@ public abstract class ValueConstant
 
     // ----- XvmStructure operations ---------------------------------------------------------------
 
-    /**
-     * {@inheritDoc}
-     * <p/>
-     * This method must be overridden by constant types which reference other constants.
-     */
-    @Override
-    protected void registerConstants(ConstantPool pool) {
-        pool.register(getType());
-    }
+    // Note: Subclasses that have explicit type fields (like ArrayConstant, MapConstant)
+    // must override registerConstants() to register their type. For most value constants,
+    // the type is implicit from the format and doesn't need registration here.
+    // Registering the type eagerly causes circular dependencies during pool initialization.
 }
