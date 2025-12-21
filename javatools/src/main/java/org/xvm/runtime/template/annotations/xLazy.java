@@ -94,6 +94,7 @@ public class xLazy
                         frame, hLazy.getName(), hLazy.getField(frame, GenericHandle.OUTER).getType()));
             } else {
                 hLazy.setReferent(hValue); // this is exactly what the super.invokeNative1() call does
+                hLazy.makeImmutable();
                 return Op.R_NEXT;
             }
         }

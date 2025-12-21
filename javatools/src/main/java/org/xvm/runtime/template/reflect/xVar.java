@@ -114,7 +114,8 @@ public class xVar
 
     protected int setReferentImpl(Frame frame, RefHandle hRef, boolean fNative, ObjectHandle hValue) {
         if (!hRef.isMutable()) {
-            return frame.raiseException(xException.readOnly(frame, "Immutable Var"));
+            return frame.raiseException(
+                xException.readOnly(frame, "attempt to change a referent for an immutable Var"));
         }
 
         switch (hRef.m_iVar) {
