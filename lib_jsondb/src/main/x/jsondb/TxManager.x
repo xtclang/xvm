@@ -3090,41 +3090,54 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     }
 
     protected void cleanupLogfiles() {
-        if (logInfos.size <= 1) {
-            // there is at most one log file, so nothing to clean up
+        if (logInfos.size <= 1 || byReadId.empty) {
+            // there is at most one log file, which must be the current log file,
+            // or there are no transactions, so nothing to clean up
             return;
         }
 
+        // determine the oldest transaction id
+        Set<Int>   txSet    =  new ArrayOrderedSet<Int>(byReadId.keys.toArray(Constant));
+        assert Int oldestTx := txSet.first(); // already checked that byReadId is not empty
+
         // ensure the log file archive directory exists under the sys directory
         Directory archiveDir = sysDir.dirFor(LogFileArchiveName).ensure();
-        Set<Int>  txSet      = new ArrayOrderedSet<Int>(byReadId.keys.toArray(Constant));
-        Boolean   archived   = False;
 
-        if (Int oldestTx := txSet.first()) {
-            for (Int i : 0 ..< logInfos.size) {
-                LogFileInfo info = logInfos[i];
-                if (info.name != LogFileName && info.txIds.isBelow(oldestTx)) {
-                    archived = True;
-                    File infoFile = sysDir.fileFor(info.name);
-                    if (infoFile.exists) {
-                        File archiveFile = archiveDir.fileFor(infoFile.name);
-                        if (archiveFile.exists) {
-                            // this should never happen
-                            archiveFile.delete();
-                        }
-                        infoFile.store.move(infoFile.path, archiveFile.path);
-                    }
-                } else {
-                    // the logInfos array is ordered by oldest first, so we can stop as soon as we
-                    // find the first log file that is not older than the oldest transaction
-                    if (archived) {
-                        // some files were archived, so remove all the moved files from logInfos
-                        logInfos.deleteAll(0 ..< i);
-                        writeStatus();
-                    }
-                    break;
-                }
+        // the last element in logInfos is the current log which is never archived.
+        Int count = logInfos.size - 1;
+        Int index;
+        for (index : 0 ..< count) {
+            LogFileInfo info = logInfos[index];
+            if (!info.txIds.isBelow(oldestTx)) {
+                // the logInfos array is ordered by oldest tx first, so we can stop as soon as we
+                // find the first LogFileInfo that is not older than the oldest transaction
+                break;
             }
+            archiveLogfile(info, archiveDir);
+        }
+
+        if (index > 0) {
+            // some files were archived, so remove all the archived logInfos
+            logInfos.deleteAll(0 ..< index);
+            writeStatus();
+        }
+    }
+
+    /**
+     * Move a transaction log file to the archive directory.
+     *
+     * @param info        the `LogFileInfo` to archive
+     * @param archiveDir  the directory to archive the log file to
+     */
+    private void archiveLogfile(LogFileInfo info, Directory archiveDir) {
+        File infoFile = sysDir.fileFor(info.name);
+        if (infoFile.exists) {
+            File archiveFile = archiveDir.fileFor(infoFile.name);
+            if (archiveFile.exists) {
+                // this should never happen
+                archiveFile.delete();
+            }
+            infoFile.store.move(infoFile.path, archiveFile.path);
         }
     }
 
