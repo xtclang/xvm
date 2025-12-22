@@ -7,9 +7,8 @@ import org.xvm.util.Severity;
 /**
  * An interface representing the launcher tool's interaction with output streams.
  * <p>
- * Console provides simple output methods for displaying messages.
- * It does NOT track severity state or perform filtering - that is the responsibility
- * of the Launcher.
+ * Console provides simple output methods for displaying messages. It does NOT track severity state
+ * or perform filtering - that is the responsibility of the {@link Launcher}.
  */
 public interface Console {
     /**
@@ -22,10 +21,10 @@ public interface Console {
     /**
      * Print the String value of some object.
      *
-     * @param o the object to print
+     * @param o  the object to print
      */
-    default String out(final Object o) {
-        final var str = String.valueOf(o);
+    default String out(Object o) {
+        var str = String.valueOf(o);
         System.out.println(o);
         return str;
     }
@@ -40,40 +39,44 @@ public interface Console {
     /**
      * Print the String value of some object to error stream.
      *
-     * @param o the object to print to error stream
+     * @param o  the object to print to error stream
      */
-    default String err(final Object o) {
-        final var str = String.valueOf(o);
+    default String err(Object o) {
+        var str = String.valueOf(o);
         System.err.println(str);
         return str;
     }
 
     /**
-     * Log a message of a specified severity.
-     * Default implementation formats as "{severity}: {message}".
+     * Log a message of a specified severity. Default implementation formats as
+     * "{severity}: {message}".
      */
-    default String log(final Severity sev, final String template, final Object... params) {
+    default String log(Severity sev, String template, Object... params) {
         return log(sev, null, template, params);
     }
 
     /**
-     * Log a message with template substitution (SLF4J-style).
-     * Use {} placeholders in the template for parameter substitution.
+     * Log a message with template substitution (SLF4J-style). Use {} placeholders in the template
+     * for parameter substitution.
      *
      * @param sev       the severity level
+     * @param cause     the cause exception; can be null
      * @param template  the message template with {} placeholders
      * @param params    parameters to substitute into the template
      */
-    default String log(final Severity sev, final Throwable cause, final String template, final Object... params) {
-        final var sb = new StringBuilder(sev.desc())
+    default String log(Severity sev, Throwable cause, String template, Object... params) {
+        var sb = new StringBuilder(sev.desc())
             .append(": ")
             .append(formatTemplate(template, params));
+
         if (cause != null) {
-            sb.append(" [")
-                .append(cause.getClass().getSimpleName())
-                .append(": ")
-                .append(cause.getMessage())
-                .append(']');
+            sb.append("\n[")
+              .append(cause.getClass().getSimpleName());
+            if (cause.getMessage() != null) {
+              sb.append(": ")
+                .append(cause.getMessage());
+            }
+            sb.append(']');
         }
         return out(sb.toString());
     }
@@ -85,10 +88,11 @@ public interface Console {
      *
      * @param template  the template string with {} or {n} placeholders
      * @param params    parameters to substitute
+     *
      * @return formatted message
      */
-    static String formatTemplate(final String template, final Object... params) {
-        if (template == null || params == null || params.length == 0) {
+    static String formatTemplate(String template, Object... params) {
+        if (template == null || params == null || params.length == 0 || params[0] == null) {
             return template;
         }
 
@@ -98,16 +102,16 @@ public interface Console {
         }
 
         // Convert SLF4J-style {} to MessageFormat-style {0}, {1}, etc.
-        final var sb = new StringBuilder(template.length() + params.length * 3);
+        var sb = new StringBuilder(template.length() + params.length * 3);
         int paramIndex = 0;
         for (int pos = 0; pos < template.length(); pos++) {
-            final int openBrace = template.indexOf('{', pos);
+            int openBrace = template.indexOf('{', pos);
             if (openBrace == -1) {
                 sb.append(template.substring(pos));
                 break;
             }
             sb.append(template, pos, openBrace);
-            final boolean isPlaceholder = openBrace + 1 < template.length() && template.charAt(openBrace + 1) == '}';
+            boolean isPlaceholder = openBrace + 1 < template.length() && template.charAt(openBrace + 1) == '}';
             if (isPlaceholder) {
                 sb.append('{').append(paramIndex++).append('}');
                 pos = openBrace + 1;

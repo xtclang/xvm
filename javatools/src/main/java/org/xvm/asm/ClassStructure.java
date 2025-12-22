@@ -1094,7 +1094,7 @@ public class ClassStructure
      * @return a contribution for this class that has a cyclical dependency; null otherwise
      */
     public Contribution hasCyclicalContribution() {
-        return findContributionImpl(getIdentityConstant(), false);
+        return findContributionImpl(getIdentityConstant(), false, null);
     }
 
     /**
@@ -1114,7 +1114,7 @@ public class ClassStructure
             return true;
         }
 
-        return findContributionImpl(idClass, true) != null;
+        return findContributionImpl(idClass, true, null) != null;
     }
 
     /**
@@ -1130,7 +1130,7 @@ public class ClassStructure
             return new Contribution(Composition.Equal, getFormalType());
         }
 
-        return findContributionImpl(idContrib, true);
+        return findContributionImpl(idContrib, true, null);
     }
 
     /**
@@ -1138,11 +1138,17 @@ public class ClassStructure
      *
      * @param idContrib   the contribution identity (must mot be this class's id)
      * @param fAllowInto  if false, ignore the Into contributions
+     * @param setVisited  (optional) a set of all identities already visited (recursively)
      *
      * @return a first (if more than one) contribution matching the specified identity
      *         or null if none found
      */
-    private Contribution findContributionImpl(IdentityConstant idContrib, boolean fAllowInto) {
+    private Contribution findContributionImpl(IdentityConstant idContrib, boolean fAllowInto,
+                                              Set<IdentityConstant> setVisited) {
+        if (setVisited == null) {
+            setVisited = new HashSet<>();
+        }
+
         for (Contribution contrib : getContributionsAsList()) {
             TypeConstant typeContrib  = contrib.getTypeConstant();
             Contribution contribMatch = null;
@@ -1174,12 +1180,13 @@ public class ClassStructure
                 }
 
                 if (fCheck) {
-                    contribMatch = checkContribution(contrib, typeContrib, idContrib);
+                    contribMatch = checkContribution(contrib, typeContrib, idContrib, setVisited);
                 }
             } else if (typeContrib instanceof IntersectionTypeConstant typeIntersection) {
                 // the only relational type contributions we can process further are the
                 // intersection types
-                contribMatch = checkIntersectionContribution(contrib, typeIntersection, idContrib);
+                contribMatch =
+                    checkIntersectionContribution(contrib, typeIntersection, idContrib, setVisited);
             }
 
             if (contribMatch != null) {
@@ -1197,18 +1204,24 @@ public class ClassStructure
      * @param typeContrib  the type of the contribution or one of its composing types (in the case
      *                     of an intersection type)
      * @param idTest       the identity to test with
+     * @param setVisited   a set of all identities already visited (recursively)
      *
      * @return the contribution that matches the specified identity
      */
-    private Contribution checkContribution(Contribution contrib,
-                                           TypeConstant typeContrib, IdentityConstant idTest) {
+    private Contribution checkContribution(Contribution contrib, TypeConstant typeContrib,
+                                           IdentityConstant idTest, Set<IdentityConstant> setVisited) {
         IdentityConstant idContrib = typeContrib.getSingleUnderlyingClass(true);
         if (idContrib.equals(idTest)) {
             return contrib;
         }
 
+        if (!setVisited.add(idContrib)) {
+            // already visited
+            return null;
+        }
+
         ClassStructure clzContrib = (ClassStructure) idContrib.getComponent();
-        return clzContrib.findContributionImpl(idTest, false);
+        return clzContrib.findContributionImpl(idTest, false, setVisited);
     }
 
     /**
@@ -1223,12 +1236,13 @@ public class ClassStructure
      */
     private Contribution checkIntersectionContribution(Contribution             contrib,
                                                        IntersectionTypeConstant typeContrib,
-                                                       IdentityConstant         idTest) {
+                                                       IdentityConstant         idTest,
+                                                       Set<IdentityConstant>    setVisited) {
         TypeConstant type1    = typeContrib.getUnderlyingType();
         Contribution contrib1 = type1.isExplicitClassIdentity(true)
-                ? checkContribution(contrib, type1, idTest)
+                ? checkContribution(contrib, type1, idTest, setVisited)
                 : type1 instanceof IntersectionTypeConstant typeIntersection1
-                        ? checkIntersectionContribution(contrib, typeIntersection1, idTest)
+                        ? checkIntersectionContribution(contrib, typeIntersection1, idTest, setVisited)
                         : null;
         if (contrib1 != null) {
             return contrib1;
@@ -1236,9 +1250,9 @@ public class ClassStructure
 
         TypeConstant type2 = typeContrib.getUnderlyingType2();
         return type2.isExplicitClassIdentity(true)
-                ? checkContribution(contrib, type2, idTest)
+                ? checkContribution(contrib, type2, idTest, setVisited)
                 : type2 instanceof IntersectionTypeConstant typeIntersection2
-                        ? checkIntersectionContribution(contrib, typeIntersection2, idTest)
+                        ? checkIntersectionContribution(contrib, typeIntersection2, idTest, setVisited)
                         : null;
     }
 

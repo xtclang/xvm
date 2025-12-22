@@ -31,7 +31,7 @@ public interface Constants {
      *
      * By convention, major version "0" is the pre-production version: The language and tool-chain
      * are still in development, and each minor version change should be assumed to be a breaking
-     * change. See: https://dev.to/malykhinvi/semver-0-x-x-46e7
+     * change. See: <a href="https://dev.to/malykhinvi/semver-0-x-x-46e7">SemVer: Magic version 0</a>
      *
      * The "single source of truth" for this value is the "version.properties" file.
      */
@@ -253,7 +253,7 @@ public interface Constants {
      */
     String VE_EXTENDS_NOT_CLASS                   = "VERIFY-10";
     /**
-     * Class {0} contains a cyclical {1} contribution.
+     * The declaration for {0} contains a contribution ({1}) that forms a cycle.
      */
     String VE_CYCLICAL_CONTRIBUTION               = "VERIFY-11";
     /**
