@@ -1490,15 +1490,21 @@ public class TypeCompositionStatement
         // check for cyclical contributions and validate contribution types
         Contribution contribCyclical = component.hasCyclicalContribution();
         if (contribCyclical != null) {
+            long lStartPos = compositions.getFirst().getStartPosition();
+            long lEndPos   = compositions.getLast().getEndPosition();
+
+            if (lStartPos > lEndPos) {
+                // annotation composition precedes the class
+                lStartPos = compositions.getLast().getStartPosition();
+                lEndPos   = compositions.getFirst().getEndPosition();
+            }
+
             errs.log(Severity.FATAL, Constants.VE_CYCLICAL_CONTRIBUTION,
                     new Object[] {
                         contribCyclical.getComponent().getIdentityConstant().getValueString(),
-                        contribCyclical.toString()
+                        contribCyclical.getTypeConstant().getValueString()
                     },
-                    getSource(),
-                    compositions.get(0).getStartPosition(),
-                    compositions.get(compositions.size() - 1).getEndPosition()
-                    );
+                    getSource(), lStartPos, lEndPos);
             return;
         }
 

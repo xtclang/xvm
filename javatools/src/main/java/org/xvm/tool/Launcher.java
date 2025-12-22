@@ -5,6 +5,7 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -36,6 +37,7 @@ import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.asm.Constants.TURTLE_MODULE;
 import static org.xvm.asm.Constants.VERSION_MAJOR_CUR;
 import static org.xvm.asm.Constants.VERSION_MINOR_CUR;
+
 import static org.xvm.util.Handy.quoted;
 import static org.xvm.util.Handy.resolveFile;
 import static org.xvm.util.Handy.toPathString;
@@ -68,21 +70,6 @@ public abstract class Launcher<T extends LauncherOptions>
     }
 
     /**
-     * Registry of available commands. Each entry maps a command name to a handler that parses
-     * the args and launches the appropriate tool.
-     * <p>
-     * Note: We use string literals here instead of calling subclass static methods (e.g.,
-     * Compiler.getCommandName()) to avoid class loading deadlock - referencing subclass static
-     * methods from superclass static initialization can cause deadlock.
-     */
-    private static final Map<String, CommandHandler> COMMANDS = Map.of(
-            "build",  (args, console, err) -> launch(CompilerOptions.parse(args), console, err),
-            "run",    (args, console, err) -> launch(RunnerOptions.parse(args), console, err),
-            "test",   (args, console, err) -> launch(TestRunnerOptions.parse(args), console, err),
-            "disass", (args, console, err) -> launch(DisassemblerOptions.parse(args), console, err)
-    );
-
-    /**
      * Get all registered command names.
      */
     private static String commandNames() {
@@ -99,6 +86,21 @@ public abstract class Launcher<T extends LauncherOptions>
     public static final String CMD_RUN    = "run";
     public static final String CMD_TEST   = "test";
     public static final String CMD_DISASS = "disass";
+
+    /**
+     * Registry of available commands. Each entry maps a command name to a handler that parses
+     * the args and launches the appropriate tool.
+     * <p>
+     * Note: We use string literals here instead of calling subclass static methods (e.g.,
+     * Compiler.getCommandName()) to avoid class loading deadlock - referencing subclass static
+     * methods from superclass static initialization can cause deadlock.
+     */
+    private static final Map<String, CommandHandler> COMMANDS = Map.of(
+            CMD_BUILD,  (args, console, err) -> launch(CompilerOptions.parse(args), console, err),
+            CMD_RUN,    (args, console, err) -> launch(RunnerOptions.parse(args), console, err),
+            CMD_TEST,   (args, console, err) -> launch(TestRunnerOptions.parse(args), console, err),
+            CMD_DISASS, (args, console, err) -> launch(DisassemblerOptions.parse(args), console, err)
+    );
 
     private static final Locale DEFAULT_LOCALE = Locale.getDefault();
 
@@ -299,7 +301,7 @@ public abstract class Launcher<T extends LauncherOptions>
             return launcher.run();
         } catch (LauncherException e) {
             if (e.isError()) {
-                console.log(ERROR, e, e.getMessage());
+                console.log(ERROR, e.getMessage());
             }
             return e.getExitCode();
         } catch (Throwable e) {
@@ -327,7 +329,7 @@ public abstract class Launcher<T extends LauncherOptions>
      *
      * @param cmd the raw command name potentially with debug prefix
      *
-     * @return the command name with debug prefix stripped, or the origensurenal if no prefix found
+     * @return the command name with debug prefix stripped, or the original if no prefix found
      */
     private static String stripDebugPrefix(String cmd) {
         String cmdLower = cmd.toLowerCase(DEFAULT_LOCALE);
@@ -424,16 +426,17 @@ public abstract class Launcher<T extends LauncherOptions>
         if (errorsSuspended()) {
             return;
         }
+
+        // FATAL errors abort immediately
+        if (sev == FATAL) {
+            throw new LauncherException(true, Console.formatTemplate(template, params), cause);
+        }
+
         // 1) Track the worst severity in Launcher
         // 2) Filter and display on Console if bad enough to print
         m_sevWorst = worstOf(m_sevWorst, sev);
         if (isBadEnoughToPrint(sev)) {
             m_console.log(sev, cause, template, params);
-        }
-        // TODO: Slightly scary - we should probably do our own error handling.
-        // FATAL errors abort immediately
-        if (sev == FATAL) {
-            throw new LauncherException(true, Console.formatTemplate(template, params), cause);
         }
     }
 
@@ -541,7 +544,7 @@ public abstract class Launcher<T extends LauncherOptions>
     protected void displayHelp() {
         out();
         out(desc());
-        final var helpText = options().getHelpText();
+        var helpText = options().getHelpText();
         if (!helpText.isEmpty()) {
             out();
             out(helpText);
@@ -650,7 +653,7 @@ public abstract class Launcher<T extends LauncherOptions>
         return m_options;
     }
 
-    protected final Console console() {
+    protected Console console() {
         return m_console;
     }
 
@@ -699,7 +702,7 @@ public abstract class Launcher<T extends LauncherOptions>
      * @return the BuildRepository
      */
     protected static BuildRepository extractBuildRepo(ModuleRepository repoLib) {
-        if (repoLib instanceof final BuildRepository repoBuild) {
+        if (repoLib instanceof BuildRepository repoBuild) {
             return repoBuild;
         }
         LinkedRepository repoLinked = (LinkedRepository) repoLib;
@@ -742,7 +745,7 @@ public abstract class Launcher<T extends LauncherOptions>
                 return;
             }
 
-            final var struct = Objects.requireNonNull(module).getFileStructure();
+            var struct = Objects.requireNonNull(module).getFileStructure();
             if (struct != null) {
                 ModuleConstant idMissing = struct.linkModules(reposLib, false);
                 if (idMissing != null) {
@@ -772,7 +775,7 @@ public abstract class Launcher<T extends LauncherOptions>
         }
 
         // Build version string with optional git information
-        final var version = new StringBuilder("xdk version ")
+        var version = new StringBuilder("xdk version ")
             .append(sVer)
             .append(" (")
             .append(VERSION_MAJOR_CUR)
@@ -782,11 +785,11 @@ public abstract class Launcher<T extends LauncherOptions>
 
         // Add Git info to be woven into the build, if available.
         // NOTE: We use the full hash in code and CI for the commit
-        final var gitCommit = BuildInfo.getGitCommit();
+        var gitCommit = BuildInfo.getGitCommit();
         if (!gitCommit.isEmpty()) {
             version.append(" [").append(gitCommit).append("]");
         }
-        final var gitStatus = BuildInfo.getGitStatus();
+        var gitStatus = BuildInfo.getGitStatus();
         if (!gitStatus.isEmpty()) {
             version.append(" (").append(gitStatus).append(")");
         }
@@ -811,7 +814,7 @@ public abstract class Launcher<T extends LauncherOptions>
      */
     public ModuleInfo ensureModuleInfo(File fileSpec, List<File> resourceSpecs, File binarySpec) {
         assert resourceSpecs != null;
-        final boolean deduce = options().mayDeduceLocations();
+        boolean deduce = options().mayDeduceLocations();
         // Cache only when using defaults (no explicit resources or binary location)
         // When fCache is true, binarySpec is null by definition, so we use null directly in the lambda
         if (resourceSpecs.isEmpty() && binarySpec == null) {
@@ -823,7 +826,7 @@ public abstract class Launcher<T extends LauncherOptions>
     /**
      * Validate that the module path entries (-L) are existent directories and/or .xtc files.
      */
-    protected final void validateModulePath() {
+    protected void validateModulePath() {
         for (var file : options().getModulePath()) {
             if (!file.exists()) {
                 log(ERROR, "File or directory {} does not exist", quoted(file));
@@ -887,13 +890,13 @@ public abstract class Launcher<T extends LauncherOptions>
     protected List<ModuleInfo> selectTargets(List<File> listSources,
                                              List<File> resourceSpecs,
                                              File       outputSpec) {
-        final var mapResults = new java.util.LinkedHashMap<File, ModuleInfo>();
-        final var dups       = new HashSet<File>();
+        var mapResults = new LinkedHashMap<File, ModuleInfo>();
+        var dups       = new HashSet<File>();
 
         for (var file : listSources) {
             try {
-                final var info = ensureModuleInfo(file, resourceSpecs, outputSpec);
-                final var srcFile = info != null ? info.getSourceFile() : null;
+                var info    = ensureModuleInfo(file, resourceSpecs, outputSpec);
+                var srcFile = info == null ? null : info.getSourceFile();
                 if (srcFile == null) {
                     log(ERROR, "Unable to find module source for file: {}", file);
                 } else if (mapResults.containsKey(srcFile)) {
@@ -905,9 +908,9 @@ public abstract class Launcher<T extends LauncherOptions>
                     mapResults.put(srcFile, info);
                 }
             } catch (IllegalStateException | IllegalArgumentException e) {
-                final var msg = e.getMessage();
+                var msg = e.getMessage();
                 log(ERROR, "Could not find module information for {} ({})",
-                        toPathString(file), msg != null ? msg : "Reason unknown");
+                        toPathString(file), msg == null ? "Reason unknown" : msg);
             }
         }
         return List.copyOf(mapResults.values());
@@ -953,7 +956,7 @@ public abstract class Launcher<T extends LauncherOptions>
         private final boolean error;
         private final int exitCode;
 
-        public LauncherException(final boolean error, String msg) {
+        public LauncherException(boolean error, String msg) {
             this(error, msg, null);
         }
 
@@ -961,7 +964,7 @@ public abstract class Launcher<T extends LauncherOptions>
             this(true, cause == null ? null : cause.getMessage(), cause);
         }
 
-        public LauncherException(final boolean error, String msg, Throwable cause) {
+        public LauncherException(boolean error, String msg, Throwable cause) {
             super(msg, cause);
             this.error = error;
             this.exitCode = error ? 1 : 0;

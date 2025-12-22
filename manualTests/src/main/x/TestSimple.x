@@ -1,13 +1,28 @@
 module TestSimple {
     @Inject Console console;
 
-    static ClassA a = new ClassA();
-
     void run() {
-        console.print(a);
     }
 
-    @AutoFreezable
-    class ClassA { // this used to compile and fail at run-time
+    @MixinC
+    class ClassA {
+    }
+
+    annotation MixinA {
+    }
+
+    @MixinB
+    class ClassB extends ClassA {
+    }
+
+    @MixinC
+    annotation MixinB extends MixinA { // used to blow up the compiler; a fatal error now
+    }
+
+    @MixinA
+    class ClassC extends ClassB {
+    }
+
+    annotation MixinC extends MixinB {
     }
 }
