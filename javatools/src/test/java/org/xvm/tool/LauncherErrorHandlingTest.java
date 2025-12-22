@@ -197,13 +197,12 @@ class LauncherErrorHandlingTest {
                 .addInputFile(new File("test.x"))
                 .build();
         final var compiler = new TestCompiler(opts, console, null);
-        // FATAL now throws LauncherException immediately
-        assertThrows(LauncherException.class, () -> compiler.testLog(FATAL, "Fatal error occurred"));
-        // Message was logged before exception was thrown
-        assertEquals(1, console.getMessages().size());
-        assertTrue(console.getMessages().getFirst().contains("Fatal error occurred"));
-        assertEquals(FATAL, console.getSeverities().getFirst());
-        assertEquals(FATAL, compiler.testGetWorstSeverity());
+
+        // FATAL error for now throws LauncherException immediately and the exception carries the
+        // actual message to avoid double-dipping
+        var msg = "Fatal error occurred";
+        var ex  = assertThrows(LauncherException.class, () -> compiler.testLog(FATAL, msg));
+        assertTrue(ex.getMessage() != null && ex.getMessage().contains(msg));
     }
 
     @Test
