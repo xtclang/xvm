@@ -134,29 +134,29 @@ const Range<Element extends Orderable>
     }
 
     /**
-     * Determine if this `Range` is above the specified.
+     * Determine if this `Range` is entirely above the specified value.
      *
-     * @return True iff the specified value is below this range's lower bound, or if the specified
-     *         value is equal to this range's lower bound and the lower bound is exclusive.
+     * @return True iff the specified value is below this range's lower bound, or this range's lower
+     * bound is exclusive and the value is equal to the lower bound.
      */
     Boolean isAbove(Element value) {
         return switch (value <=> lowerBound) {
-            case (Lesser): True;           // below lower bound
-            case (Equal ): lowerExclusive; // at lower bound
+            case Lesser: True;           // below lower bound
+            case Equal : lowerExclusive; // at lower bound and exclusive
             default: False;
         };
     }
 
     /**
-     * Determine if this `Range` is below the specified value.
+     * Determine if this `Range` is entirely below the specified value.
      *
-     * @return True iff the specified value is above this range's upper bound, or if the specified
-     *         value is equal to this range's upper bound and the upper bound is exclusive.
+     * @return True iff the specified value is above this range's upper bound, or this range's upper
+     * bound is exclusive and the value is equal to the upper bound.
      */
     Boolean isBelow(Element value) {
         return switch (value <=> upperBound) {
-            case (Greater): True;           // above upper bound
-            case (Equal  ): upperExclusive; // at upper bound
+            case Greater: True;           // above upper bound
+            case Equal  : upperExclusive; // at upper bound and exclusive
             default: False;
         };
     }
