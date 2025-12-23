@@ -97,7 +97,7 @@ public class Var_DN
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        bctx.introduceRef(code, bctx.getString(m_nNameId), bctx.getType(m_nType), m_nVar);
+        bctx.introduceRef(code, bctx.getString(m_nNameId), bctx.getTypeConstant(m_nType), m_nVar);
     }
 
     // ----- fields --------------------------------------------------------------------------------
