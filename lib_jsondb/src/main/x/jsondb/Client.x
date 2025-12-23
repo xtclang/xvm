@@ -822,10 +822,7 @@ service Client<Schema extends RootSchema> {
         /**
          * Holds a deferred function in a linked list of deferred functions for this DBObjectImpl.
          */
-        class Deferred_(
-                DBObjectImpl                     dbo,
-                function Boolean(DBObjectImpl!)? adjust,
-                ) {
+        class Deferred_(function Boolean(DBObject!)? adjust) {
             /**
              * The next deferred for the same transaction.
              */
@@ -928,9 +925,9 @@ service Client<Schema extends RootSchema> {
         }
 
         @Override
-        void defer(function Boolean(DBObjectImpl) adjust) {
+        void defer(function Boolean(DBObject) adjust) {
             Transaction tx = requireTransaction_("defer()");
-            Deferred_ deferred = new Deferred_(this, adjust);
+            Deferred_ deferred = new Deferred_(adjust);
             tx.root_.txAddDeferred_(deferred);
             dboAddDeferred_(deferred);
         }
@@ -957,7 +954,7 @@ service Client<Schema extends RootSchema> {
             while (Deferred_ deferred ?= dboFirstDeferred_) {
                 dboFirstDeferred_ = deferred.dboNextDeferred;
 
-                if (function Boolean(DBObjectImpl) adjust ?= deferred.adjust) {
+                if (function Boolean(DBObject) adjust ?= deferred.adjust) {
                     // wipe out the deferred work (so it doesn't accidentally get re-run in the
                     // future)
                     deferred.adjust = Null;
@@ -1529,7 +1526,7 @@ service Client<Schema extends RootSchema> {
             while (Deferred_ deferred ?= txFirstDeferred_) {
                 txFirstDeferred_ = deferred.txNextDeferred;
 
-                DBObjectImpl dbo = deferred.dbo;
+                DBObjectImpl dbo = deferred.outer;
                 if (dbo != prevDbo) {
                     dbo.dboResetDeferred_();
                     prevDbo = dbo;
@@ -1576,7 +1573,7 @@ service Client<Schema extends RootSchema> {
                 do {
                     // minor optimization: if there are a bunch of deferred adjustments in a row for
                     // the same DBObject, then only call reset once
-                    DBObjectImpl dbo = deferred.dbo;
+                    DBObjectImpl dbo = deferred.outer;
                     if (dbo != prevDbo) {
                         dbo.dboResetDeferred_();
                         prevDbo = dbo;
