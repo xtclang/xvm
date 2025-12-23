@@ -522,7 +522,7 @@ public class BuildContext {
     /**
      * Get the type for the specified argument index.
      */
-    public TypeConstant getType(int argId) {
+    public TypeConstant getTypeConstant(int argId) {
         return getConstant(argId, TypeConstant.class);
     }
 
@@ -713,8 +713,8 @@ public class BuildContext {
         }
 
         return switch (argId) {
-            case Op.A_THIS  -> getRegisterInfo(Op.A_THIS).type();
-            default         -> throw new UnsupportedOperationException("id=" + argId);
+            case Op.A_THIS -> getRegisterInfo(Op.A_THIS).type();
+            default        -> throw new UnsupportedOperationException("id=" + argId);
         };
     }
 
