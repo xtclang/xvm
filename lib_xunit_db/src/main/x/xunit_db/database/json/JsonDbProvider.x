@@ -4,6 +4,9 @@ import xunit.UniqueId;
 
 /**
  * Provides a connection to a JSON database, creating the database if necessary.
+ *
+ * @param type      the type of the database schema this provider manages
+ * @param dbModule  the module containing the database schema
  */
 service JsonDbProvider<Schema extends RootSchema>(Type<Schema> type, Module dbModule)
         implements Closeable {
@@ -62,9 +65,9 @@ service JsonDbProvider<Schema extends RootSchema>(Type<Schema> type, Module dbMo
             dataDir.deleteRecursively();
         }
 
-        Directory? templateDir = config.templateDir;
-        if (templateDir.is(Directory)) {
-            copy(templateDir, dataDir);
+        Directory? initDataDir = config.dataDir;
+        if (initDataDir.is(Directory)) {
+            copy(initDataDir, dataDir);
         }
 
         dataDir.ensure();

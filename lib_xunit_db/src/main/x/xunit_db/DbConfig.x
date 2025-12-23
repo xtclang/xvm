@@ -3,20 +3,25 @@ import oodb.RootSchema;
 /**
  * The configuration for a test database schema.
  *
- * @param Schema       the schema type for the database.
- * @param scope        the scope of the database.
- * @param templateDir  the directory of files to copy to initialize the test database data
+ * @param scope    the scope of the database.
+ * @param dataDir  the directory of files to copy to initialize the test database data
  */
-const DbConfig(Scope      scope       = Shared,
-               Directory? templateDir = Null) {
+const DbConfig(Scope      scope   = Shared,
+               Directory? dataDir = Null) {
     /**
      * A flag indicating whether the database should be shared between tests.
      */
     @Lazy Boolean shared.calc() = scope == Shared;
 
-    DbConfig withScope(Scope scope) = new DbConfig(scope, this.templateDir);
+    /**
+     * @return a copy of this `DbConfig` with the specified scope.
+     */
+    DbConfig withScope(Scope scope) = new DbConfig(scope, this.dataDir);
 
-    DbConfig withTemplateDir(Directory? templateDir) = new DbConfig(this.scope, templateDir);
+    /**
+     * @return a copy of this `DbConfig` with the specified data directory.
+     */
+    DbConfig withDataDir(Directory? dataDir) = new DbConfig(this.scope, dataDir);
 
     /**
      * An enum representing the scope of a test database.
