@@ -1,3 +1,5 @@
+import ecstasy.mgmt.ResourceProvider;
+
 import oodb.RootSchema;
 
 import xunit.UniqueId;
@@ -54,8 +56,9 @@ service JsonDbProvider<Schema extends RootSchema>(Type<Schema> type, Module dbMo
      * @param parentDir  the parent directory to put the database directory into
      */
     private Connection createConnection(DbConfig config, Directory parentDir) {
-        @Inject Directory testOutputRoot;
-        @Inject Directory testOutput;
+        @Inject ResourceProvider provider;
+        @Inject Directory        testOutputRoot;
+        @Inject Directory        testOutput;
 
         String     dbName   = dbModule.simpleName;
         Directory  buildDir = testOutputRoot.dirFor(dbName).ensure();
@@ -71,7 +74,7 @@ service JsonDbProvider<Schema extends RootSchema>(Type<Schema> type, Module dbMo
         }
 
         dataDir.ensure();
-        return jsondb.createConnection(dbModule.simpleName, dataDir, buildDir).as(Connection);
+        return jsondb.createConnection(dbName, dataDir, buildDir, resources=provider).as(Connection);
     }
 
     /**

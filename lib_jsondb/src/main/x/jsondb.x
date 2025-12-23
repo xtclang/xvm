@@ -292,7 +292,8 @@ module jsondb.xtclang.org {
      * TODO
      */
     static oodb.Connection createConnection(String dbModuleName, Directory dataDir, Directory buildDir,
-                                            oodb.DBUser? user = Null, Version? version = Null) {
+                                            oodb.DBUser? user = Null, Version? version = Null,
+                                            ecstasy.mgmt.ResourceProvider? resources = Null) {
         import ecstasy.lang.src.Compiler;
 
         import ecstasy.mgmt.BasicResourceProvider;
@@ -301,6 +302,7 @@ module jsondb.xtclang.org {
         import ecstasy.mgmt.DirRepository;
         import ecstasy.mgmt.LinkedRepository;
         import ecstasy.mgmt.ModuleRepository;
+        import ecstasy.mgmt.ResourceProvider;
 
         import ecstasy.reflect.ModuleTemplate;
 
@@ -321,7 +323,8 @@ module jsondb.xtclang.org {
             throw new Exception(log.toString());
         }
 
-        Container container = new Container(dbTemplate, Lightweight, repo, new Injector(dataDir));
+        Injector  injector  = new Injector(dataDir, resources);
+        Container container = new Container(dbTemplate, Lightweight, repo, injector);
 
         CatalogMetadata meta    = container.innerTypeSystem.primaryModule.as(CatalogMetadata);
         Catalog         catalog = meta.createCatalog(dataDir);
@@ -336,7 +339,7 @@ module jsondb.xtclang.org {
          * The Injector service that provides a minimum set of resources for Database modules and
          * maps all `FileStore` resources as relative to the specified home directory.
          */
-        service Injector(Directory homeDir)
+        service Injector(Directory homeDir, ResourceProvider? fallback = Null)
                 extends BasicResourceProvider {
 
             @Lazy FileStore store.calc() {
@@ -370,6 +373,9 @@ module jsondb.xtclang.org {
                         return &temp.maskAs(Directory);
 
                     default:
+                        if (fallback.is(ResourceProvider)) {
+                            return fallback.as(ResourceProvider).getResource(type, name);
+                        }
                         throw new Exception($"Invalid Directory resource: \"{name}\"");
                     }
 

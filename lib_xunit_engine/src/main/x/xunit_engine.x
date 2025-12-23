@@ -99,18 +99,24 @@ module xunit_engine.xtclang.org {
     }
 
     Int runTests(String moduleName, String? moduleVersion) {
-        @Inject("repository") ModuleRepository coreRepo;
-        @Inject               Directory        curDir;
-        @Inject               Console          console;
+        @Inject(ConfigTestBuildDir) String?          buildDirName;
+        @Inject("repository")       ModuleRepository coreRepo;
+        @Inject                     Directory        curDir;
+        @Inject                     Console          console;
 
-        Version?        version    = moduleVersion.is(String) ? new Version(moduleVersion) : Null;
-        ModuleGenerator gen        = new ModuleGenerator(moduleName, version);
-        Directory        buildDir  = curDir.dirFor("build/xtc/main/lib");
+        Directory buildDir = buildDirName.is(String)
+                                   ? curDir.dirFor(buildDirName)
+                                   : curDir.dirFor(DefaultTestBuildDir);
+
+        buildDir.ensure();
+
+        Version?         version   = moduleVersion.is(String) ? new Version(moduleVersion) : Null;
         DirRepository    buildRepo = new DirRepository(buildDir);
         ModuleRepository repo      = new LinkedRepository([buildRepo, coreRepo].freeze(True));
         Log              log       = new SimpleLog();
 
         console.print($"XUnit: Creating test module for {moduleName} in {buildDir}");
+        ModuleGenerator gen = new ModuleGenerator(moduleName, version);
         if (ModuleTemplate template := gen.ensureModule(repo, buildDir, log)) {
             console.print($"XUnit: Created test module {template.qualifiedName} in {buildDir}");
             TestResourceProvider injector = new TestResourceProvider(curDir);

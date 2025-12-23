@@ -1,6 +1,17 @@
+/**
+ * A simple database of people.
+ *
+ * This database also includes a simple test suite that will use XUnit DB to create instances of
+ * this database for the tests to use.
+ * The tests can be executed from a command line inside the manualTests directory:
+ *
+ *    xtc test -L build/xtc/main/lib -o build/xtc/main/lib src/main/x/dbTests/PeopleDB.x
+ *
+ */
 @Database
 module PeopleDB {
-    package oodb import oodb.xtclang.org;
+    package oodb    import oodb.xtclang.org;
+    package xunitdb import xunit_db.xtclang.org;
 
     import oodb.*;
 
@@ -100,6 +111,35 @@ module PeopleDB {
                 s = $"{s}\n    email: {email}";
             }
             return s;
+        }
+    }
+
+    // ----- testing -------------------------------------------------------------------------------
+
+    /**
+     * Simple tests for the Contacts schema using XUnit DB.
+     */
+    class AddPersonTests {
+
+        typedef (oodb.Connection<Contacts>  + Contacts) as Connection;
+
+        @Inject Connection conn;
+
+        @Test
+        void shouldAddPerson() {
+            Person person = new Person("Foo", "One", "Two", "Three");
+            Int    id     = conn.people.add(person);
+            assert Person fromDb := conn.people.get(id);
+            assert fromDb == person;
+        }
+
+        @Test
+        void shouldUseCounterForPersonKey() {
+            DBCounter counter = conn.personKey;
+            Int       before  = counter.get();
+            Int       id      = conn.people.add(new Person("Foo", "One", "Two", "Three"));
+            assert id == before;
+            assert counter.get() == before + 1;
         }
     }
 }
