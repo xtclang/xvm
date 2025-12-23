@@ -61,6 +61,11 @@ public class TestRunner extends Runner {
     public static final String XUNIT_TEST_METHODS_ARG = "xvm.xunit.discovery.test";
 
     /**
+     * The name of the XUnit injectable key used to specify the XUnit build directory.
+     */
+    public static final String XUNIT_TEST_BUILD_DIR = "xvm.xunit.buildDir";
+
+    /**
      * Entry point from the OS.
      *
      * @param args command line arguments
@@ -95,6 +100,9 @@ public class TestRunner extends Runner {
         injections.putAll(Map.of(
             XUNIT_MODULE_ARG, List.of(module.getName()),
             XUNIT_MODULE_VERSION_ARG, moduleVersion == null ? List.of() : List.of(moduleVersion)));
+
+        options.getOutputFile().ifPresent(out ->
+                injections.put(XUNIT_TEST_BUILD_DIR, List.of(out.getPath())));
 
         connector.start(injections);
         return connector;

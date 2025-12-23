@@ -11,6 +11,7 @@ module MultiTest {
     package xunit   import xunit.xtclang.org;
     package xunitdb import xunit_db.xtclang.org;
 
+    import multiDB.ChildSchema;
     import multiDB.Connection;
 
     @Inject Connection connection;
@@ -25,11 +26,33 @@ module MultiTest {
     }
 
     @Test
+    void shouldRollbackTickInMainSchema() {
+        Int before = connection.counter.get();
+        using (var tx = connection.createTransaction()) {
+            connection.counter.tick();
+            tx.rollback();
+        }
+        assert connection.counter.get() == before;
+    }
+
+    @Test
     void shouldTickInChildSchema() {
-        Int current  = connection.child.counter.get();
-        Int previous = connection.child.counter.tick();
+        ChildSchema child    = connection.child;
+        Int         current  = child.counter.get();
+        Int         previous = child.counter.tick();
         assert previous == current;
-        Int after = connection.child.counter.get();
+        Int after = child.counter.get();
         assert after == current + 2;
+    }
+
+    @Test
+    void shouldRollbackTickInChildSchema() {
+        ChildSchema child  = connection.child;
+        Int         before = child.counter.get();
+        using (var tx = connection.createTransaction()) {
+            child.counter.tick();
+            tx.rollback();
+        }
+        assert child.counter.get() == before;
     }
 }

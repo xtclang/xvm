@@ -55,8 +55,11 @@ service TestResourceProvider(Directory curDir)
         import Container.Linker;
 
         switch (type, name) {
-        case (TestResourceProvider, "provider"):
+        case (TestResourceProvider, _):
             return this;
+
+        case (ResourceProvider, _):
+            return &this.maskAs(ResourceProvider);
 
         case (ExecutionContext, _):
             return getExecutionContext;
