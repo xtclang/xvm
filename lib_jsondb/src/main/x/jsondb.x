@@ -195,6 +195,8 @@ module jsondb.xtclang.org {
     package aggregate   import aggregate.xtclang.org;
     package collections import collections.xtclang.org;
 
+    import ecstasy.mgmt.ResourceProvider;
+
     /**
      * The injection name prefix for all JSON DB configuration values.
      */
@@ -289,11 +291,30 @@ module jsondb.xtclang.org {
      * @param moduleSpec  the name of the database module or the ModuleTemplate
      * @param dataDir     the directory to use for the database data
      * @param buildDir    the directory to use for the auto-generated classes and modules
-     * TODO
+     * @param version     (optional) the version of the database module to use
+     * @param resources   (optional) a resource provider to use for the database module
      */
     static oodb.Connection createConnection(String dbModuleName, Directory dataDir, Directory buildDir,
                                             oodb.DBUser? user = Null, Version? version = Null,
-                                            ecstasy.mgmt.ResourceProvider? resources = Null) {
+                                            ResourceProvider? resources = Null) {
+
+        Catalog catalog = createCatalog(dbModuleName, dataDir, buildDir, version, resources);
+
+        user ?:= new oodb.model.User(1, "admin");
+        return catalog.createClient(user, autoShutdown=True).conn ?: assert;
+    }
+
+    /**
+     * Create a `Catalog` for the specified database module.
+     *
+     * @param moduleSpec  the name of the database module or the ModuleTemplate
+     * @param dataDir     the directory to use for the database data
+     * @param buildDir    the directory to use for the auto-generated classes and modules
+     * @param version     (optional) the version of the database module to use
+     * @param resources   (optional) a resource provider to use for the database module
+     */
+    static Catalog createCatalog(String dbModuleName, Directory dataDir, Directory buildDir,
+                                 Version? version = Null, ResourceProvider? resources = Null) {
         import ecstasy.lang.src.Compiler;
 
         import ecstasy.mgmt.BasicResourceProvider;
@@ -302,7 +323,6 @@ module jsondb.xtclang.org {
         import ecstasy.mgmt.DirRepository;
         import ecstasy.mgmt.LinkedRepository;
         import ecstasy.mgmt.ModuleRepository;
-        import ecstasy.mgmt.ResourceProvider;
 
         import ecstasy.reflect.ModuleTemplate;
 
@@ -331,9 +351,7 @@ module jsondb.xtclang.org {
 
         catalog.ensureOpenDB(dbModuleName);
 
-        user ?:= new oodb.model.User(1, "admin");
-
-        return catalog.createClient(user, autoShutdown=True).conn ?: assert;
+        return catalog;
 
         /**
          * The Injector service that provides a minimum set of resources for Database modules and
