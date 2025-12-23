@@ -36,6 +36,9 @@ service DbInjector
     @Override
     conditional Object lookup(Type type, String name, Options opts = Null) {
         if (type.is(Type<RootSchema>)) {
+            @Inject ExecutionContext context;
+            @Inject Directory        testOutput;
+
             assert Type schemaType := type.resolveFormalType("Schema");
             assert schemaType.is(Type<RootSchema>);
 
