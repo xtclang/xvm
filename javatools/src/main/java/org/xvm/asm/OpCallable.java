@@ -681,7 +681,7 @@ public abstract class OpCallable extends Op {
     protected void buildNewG(BuildContext bctx, CodeBuilder code, int nTypeArg, int[] anArgValue) {
         TypeConstant typeTarget;
         if (nTypeArg <= CONSTANT_OFFSET) {
-            typeTarget = bctx.getType(nTypeArg).
+            typeTarget = bctx.getTypeConstant(nTypeArg).
                 resolveGenerics(bctx.pool(), bctx.typeInfo.getType());
         } else {
             assert nTypeArg >= 0;

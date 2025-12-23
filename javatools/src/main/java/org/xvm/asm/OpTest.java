@@ -262,7 +262,7 @@ public abstract class OpTest
 
     protected void buildBinary(BuildContext bctx, CodeBuilder code) {
         // this is very similar to OpCondJump logic
-        TypeConstant typeCmp = bctx.getType(m_nType);
+        TypeConstant typeCmp = bctx.getTypeConstant(m_nType);
         RegisterInfo reg1    = bctx.ensureRegister(code, m_nValue1);
         RegisterInfo reg2    = bctx.ensureRegister(code, m_nValue2);
         TypeConstant type1   = reg1.type();
