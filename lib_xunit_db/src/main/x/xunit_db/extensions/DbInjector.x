@@ -1,5 +1,7 @@
 import ecstasy.annotations.Inject.Options;
 
+import jsondb.Catalog;
+
 import oodb.Connection;
 import oodb.RootSchema;
 
@@ -34,9 +36,6 @@ service DbInjector
     @Override
     conditional Object lookup(Type type, String name, Options opts = Null) {
         if (type.is(Type<RootSchema>)) {
-            @Inject ExecutionContext context;
-            @Inject Directory        testOutput;
-
             assert Type schemaType := type.resolveFormalType("Schema");
             assert schemaType.is(Type<RootSchema>);
 
@@ -108,7 +107,6 @@ service DbInjector
             this.configHolder = holder.parent;
         }
     }
-
 
     /**
      * Creates a new database provider for the given schema type.
