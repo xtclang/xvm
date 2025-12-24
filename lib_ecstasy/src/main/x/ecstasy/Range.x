@@ -134,6 +134,34 @@ const Range<Element extends Orderable>
     }
 
     /**
+     * Determine if this `Range` is entirely above the specified value.
+     *
+     * @return True iff the specified value is below this range's lower bound, or this range's lower
+     * bound is exclusive and the value is equal to the lower bound.
+     */
+    Boolean isAbove(Element value) {
+        return switch (value <=> lowerBound) {
+            case Lesser: True;           // below lower bound
+            case Equal : lowerExclusive; // at lower bound and exclusive
+            default: False;
+        };
+    }
+
+    /**
+     * Determine if this `Range` is entirely below the specified value.
+     *
+     * @return True iff the specified value is above this range's upper bound, or this range's upper
+     * bound is exclusive and the value is equal to the upper bound.
+     */
+    Boolean isBelow(Element value) {
+        return switch (value <=> upperBound) {
+            case Greater: True;           // above upper bound
+            case Equal  : upperExclusive; // at upper bound and exclusive
+            default: False;
+        };
+    }
+
+    /**
      * This range contains that range iff every value within that range is also in this range.
      */
     Boolean covers(Range that) {

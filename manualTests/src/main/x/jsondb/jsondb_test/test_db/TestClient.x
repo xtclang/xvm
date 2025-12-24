@@ -28,6 +28,15 @@ service TestClient
     @Lazy TestSchema testSchema.calc() = conn.as(TestSchema);
 
     /**
+     * @return the underlying connection, ensuring that it is not null.
+     */
+    Connection ensureConnection() {
+        Connection? conn = this.conn;
+        assert conn.is(Connection);
+        return conn;
+    }
+
+    /**
      * The `TestSchema` implementation.
      */
     @Override
