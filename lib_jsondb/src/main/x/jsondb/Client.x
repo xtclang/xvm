@@ -822,10 +822,7 @@ service Client<Schema extends RootSchema> {
         /**
          * Holds a deferred function in a linked list of deferred functions for this DBObjectImpl.
          */
-        class Deferred_(
-                DBObjectImpl                     dbo,
-                function Boolean(DBObjectImpl!)? adjust,
-                ) {
+        class Deferred_(function Boolean(DBObjectImpl)? adjust) {
             /**
              * The next deferred for the same transaction.
              */
@@ -930,7 +927,7 @@ service Client<Schema extends RootSchema> {
         @Override
         void defer(function Boolean(DBObjectImpl) adjust) {
             Transaction tx = requireTransaction_("defer()");
-            Deferred_ deferred = new Deferred_(this, adjust);
+            Deferred_ deferred = new Deferred_(adjust);
             tx.root_.txAddDeferred_(deferred);
             dboAddDeferred_(deferred);
         }
@@ -1488,13 +1485,13 @@ service Client<Schema extends RootSchema> {
 
             Transaction? that = outer.rootTx;
             if (&this == &that) {
-                txResetDeferred_();
                 try {
                     // this needs to eventually make its way to the implementation of close() on the
                     // Transaction interface itself, which will decide to either commit or to roll
                     // back the transaction, in the case that the transaction is still open
                     super(e);
                 } finally {
+                    txResetDeferred_();
                     outer.rootTx = Null;
                 }
             }
@@ -1529,7 +1526,7 @@ service Client<Schema extends RootSchema> {
             while (Deferred_ deferred ?= txFirstDeferred_) {
                 txFirstDeferred_ = deferred.txNextDeferred;
 
-                DBObjectImpl dbo = deferred.dbo;
+                DBObjectImpl dbo = deferred.outer;
                 if (dbo != prevDbo) {
                     dbo.dboResetDeferred_();
                     prevDbo = dbo;
@@ -1576,7 +1573,7 @@ service Client<Schema extends RootSchema> {
                 do {
                     // minor optimization: if there are a bunch of deferred adjustments in a row for
                     // the same DBObject, then only call reset once
-                    DBObjectImpl dbo = deferred.dbo;
+                    DBObjectImpl dbo = deferred.outer;
                     if (dbo != prevDbo) {
                         dbo.dboResetDeferred_();
                         prevDbo = dbo;
