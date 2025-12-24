@@ -29,12 +29,19 @@ module DeferTest {
             Account account = new Account(1, 1000);
             schema.accounts.put(1, account);
 
-            using(schema.createTransaction()) {
-                schema.depositOrWithdraw(1, 100);
-            }
+            // auto-commit
+            schema.depositOrWithdraw(1, 100);
 
             assert Account fromDB := schema.accounts.get(1);
             assert fromDB.balance == 1100;
+
+            // explicit transaction
+            using (schema.createTransaction()) {
+                schema.depositOrWithdraw(1, 100);
+            }
+
+            assert fromDB := schema.accounts.get(1);
+            assert fromDB.balance == 1200;
         }
     }
 }

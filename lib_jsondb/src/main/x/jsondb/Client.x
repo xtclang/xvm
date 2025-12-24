@@ -1485,13 +1485,13 @@ service Client<Schema extends RootSchema> {
 
             Transaction? that = outer.rootTx;
             if (&this == &that) {
-                txResetDeferred_();
                 try {
                     // this needs to eventually make its way to the implementation of close() on the
                     // Transaction interface itself, which will decide to either commit or to roll
                     // back the transaction, in the case that the transaction is still open
                     super(e);
                 } finally {
+                    txResetDeferred_();
                     outer.rootTx = Null;
                 }
             }
