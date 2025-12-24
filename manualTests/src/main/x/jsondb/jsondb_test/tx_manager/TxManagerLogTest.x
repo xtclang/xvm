@@ -18,11 +18,8 @@ class TxManagerLogTest {
 
     @Test
     void shouldHaveTxLogAfterCommit() {
-        assert TestClient client := clientProvider.getClient();
-        TestSchema        schema =  client.testSchema;
-
-        assert TxManager<TestSchema> manager := client.&txManager
-                .revealAs((protected TxManager<TestSchema>));
+        TestSchema            schema  = getSchema();
+        TxManager<TestSchema> manager = getTxManager();
 
         // put some data in to make sure we have some Tx log entries
         schema.mapData.put("key1", "value1");
@@ -35,13 +32,10 @@ class TxManagerLogTest {
 
     @Test
     // inject a small max log file size to force logs to roll
-    @TestInjectables(Map:[TxManager.ConfigTxManagerMaxLogSize="300"])
+    @TestInjectables(Map:[TxManager.ConfigMaxLogSize="300"])
     void shouldRollTransactionLogs() {
-        assert TestClient     client := clientProvider.getClient();
-        TestSchema            schema =  client.testSchema;
-
-        assert TxManager<TestSchema> manager := client.&txManager
-                .revealAs((protected TxManager<TestSchema>));
+        TestSchema            schema  = getSchema();
+        TxManager<TestSchema> manager = getTxManager();
 
         // put some data in to make sure we have some Tx log entries
         schema.mapData.put("key1", "value1");
@@ -59,13 +53,13 @@ class TxManagerLogTest {
 
     @Test
     // inject a very small max log file size to force logs to roll every transaction
-    @TestInjectables(Map:[TxManager.ConfigTxManagerMaxLogSize="10"])
+    @TestInjectables(Map:[TxManager.ConfigMaxLogSize="10"])
     void shouldNotArchiveInUseTransactionLogs() {
-        assert TestClient     client := clientProvider.getClient();
-        TestSchema            schema =  client.testSchema;
+        assert TestClient     client  := clientProvider.getClient();
+        TestSchema            schema  =  getSchema();
+        TxManager<TestSchema> manager =  getTxManager();
 
-        assert TxManager<TestSchema> manager := client.&txManager
-                .revealAs((protected TxManager<TestSchema>));
+        assert manager := &manager.revealAs((protected TxManager<TestSchema>));
 
         // put some data in to make sure we have some Tx log entries
         Int txCount = 10;
@@ -113,11 +107,100 @@ class TxManagerLogTest {
         assert statusInfos.size == 2;
     }
 
+    @Test
+    // inject a very small max log file size to force logs to roll every transaction
+    @TestInjectables(Map:[TxManager.ConfigMaxLogSize="10"])
+    void shouldDeleteOldArchivedFiles() {
+        assert TestClient     client  := clientProvider.getClient();
+        TestSchema            schema  =  getSchema();
+        TxManager<TestSchema> manager =  getTxManager();
+
+        assert manager := &manager.revealAs((protected TxManager<TestSchema>));
+
+        // put some data in to make sure we have some Tx log entries
+        Int txCount = 10;
+        for (Int i : 0 ..< txCount) {
+            schema.mapData.put("key1", $"value-{i}");
+            // we pause to give the tx files a bit of a gap between modified times
+            pause(Duration.Millisec * 500);
+        }
+
+        // trigger log file cleanup to create some archived files
+        // we need to have a current transaction to trigger cleanup
+        Connection<TestSchema> conn = client.ensureConnection();
+        using (conn.createTransaction()) {
+            schema.mapData.get("key1"); // this will create a readId in TxManager
+            manager.cleanupLogfiles();
+        }
+
+        // work out the creation times of the archived files
+        Directory  archiveDir = manager.sysDir.dirFor(TxManager.LogFileArchiveName);
+        File[]     oldFiles   = new Array();
+        Time       deleteTime = Time.EPOCH;
+        for (File file : archiveDir.files().sorted(TxManagerLogTest.fileOrderer)) {
+            oldFiles.add(file);
+            deleteTime = file.modified;
+            if (oldFiles.size == 3) {
+                break;
+            }
+        }
+
+        // set the max age to be before the oldest archived file
+        manager.maxLogArchiveAge = manager.clock.now - deleteTime;
+
+        // put some more data and trigger log file cleanup again
+        for (Int i : 0 ..< txCount) {
+            schema.mapData.put("key1", $"value-{i}");
+        }
+        using (conn.createTransaction()) {
+            schema.mapData.get("key1"); // this will create a readId in TxManager
+            manager.cleanupLogfiles();
+        }
+
+        // The files in oldFiles should have been deleted
+        for (File file : oldFiles) {
+            assert !file.exists as $"Archived tx log file {file.name} should have been deleted";
+        }
+    }
+
+    /**
+     * @return the protected view of the TxManager
+     */
+    TxManager<TestSchema> getTxManager() {
+        assert TestClient            client  := clientProvider.getClient();
+        assert TxManager<TestSchema> manager := client.&txManager
+                .revealAs((protected TxManager<TestSchema>));
+        return manager;
+    }
+
+    TestSchema getSchema() {
+        assert TestClient client := clientProvider.getClient();
+        return client.testSchema;
+    }
+
+    /**
+     * Verify that the specified transaction logs exist.
+     *
+     * @param logInfos   the log file infos to check
+     * @param dir        the directory the log files should be in
+     */
     void assertLogsExist(LogFileInfo[] logInfos, Directory dir) {
         for (LogFileInfo logInfo : logInfos) {
             File logFile = dir.fileFor(logInfo.name);
             assert logFile.exists as $"Tx log file {logFile.name} does not exist";
         }
+    }
+
+    static Ordered fileOrderer(File file1, File file2) {
+        return file1.modified <=> file2.modified;
+    }
+
+    static void pause(Duration duration) {
+        @Inject Timer timer;
+        @Future Tuple done;
+        timer.start();
+        timer.schedule(duration, () -> {done = ();});
+        return done;
     }
 
 }

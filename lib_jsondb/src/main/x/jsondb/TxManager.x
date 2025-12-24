@@ -125,8 +125,17 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         this.statusFile = store.fileFor(root.path + "sys" + "txmgr.json");
 
         // Configuration from injectables
-        this.maxLogSize       = configureMaxLogSize();
-        this.cleanupThreshold = configureCleanupThreshold();
+        @Inject(ConfigMaxLogSize)       Int?      maxLogSize;
+        @Inject(ConfigCleanupThreshold) Int?      cleanupThreshold;
+        @Inject(ConfigMaxLogArchiveAge) Duration? maxLogArchiveAge;
+
+        this.maxLogSize       = maxLogSize       ?: DefaultMaxLogSize;
+        this.cleanupThreshold = cleanupThreshold ?: DefaultCleanupThreshold;
+        this.maxLogArchiveAge = maxLogArchiveAge ?: DefaultMaxLogArchiveAge;
+
+        validateMaxLogSize(this.maxLogSize);
+        validateCleanupThreshold(this.cleanupThreshold);
+        validateMaxLogArchiveAge(this.maxLogArchiveAge);
 
         // build the quick lookup information for the optional transactional "modifiers"
         // (validators, rectifiers, and distributors)
@@ -173,7 +182,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     /**
      * The injection name prefix for all JSON DB TxManager configuration.
      */
-    static String ConfigTxManagerPrefix = jsondb.ConfigPrefix + ".txManager";
+    static String ConfigPrefix = jsondb.ConfigPrefix + ".txManager";
 
     /**
      * The name of the transaction log file.
@@ -303,7 +312,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     /**
      * The injection name for the TxManager maxLogSize configuration property.
      */
-    static String ConfigTxManagerMaxLogSize = ConfigTxManagerPrefix + ".maxLogSize";
+    static String ConfigMaxLogSize = ConfigPrefix + ".maxLogSize";
 
     /**
      * The default maximum size log to store in any one log file.
@@ -313,7 +322,28 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     /**
      * The maximum size log to store in any one log file.
      */
-    public/protected Int maxLogSize;
+    public/protected Int maxLogSize.set(Int value) {
+        validateMaxLogSize(value);
+        super(value);
+    }
+
+    /**
+     * The injection name for the TxManager maxLogArchiveAge configuration property.
+     */
+    static String ConfigMaxLogArchiveAge = ConfigPrefix + ".maxLogArchiveAge";
+
+    /**
+     * The default maximum duration to keep archived transaction log files.
+     */
+    static Duration DefaultMaxLogArchiveAge = Duration.Day * 30;
+
+    /**
+     * The maximum duration to keep archived transaction log files.
+     */
+    public/protected Duration maxLogArchiveAge.set(Duration value) {
+        validateMaxLogArchiveAge(value);
+        super(value);
+    }
 
     /**
      * Previous modified date/time of the log.
@@ -389,7 +419,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     /**
      * The injection name for the TxManager cleanupThreshold configuration property.
      */
-    static String ConfigTxManagerCleanupThreshold = ConfigTxManagerPrefix + ".cleanupThreshold";
+    static String ConfigCleanupThreshold = ConfigPrefix + ".cleanupThreshold";
 
     /**
      * The default value for the `cleanupThreshold`.
@@ -401,7 +431,10 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * cleanup multiplied by the number of seconds passed since the last cleanup is greater than or
      * equal to this value.
      */
-    public/protected Int cleanupThreshold;
+    public/protected Int cleanupThreshold.set(Int value) {
+        validateCleanupThreshold(value);
+        super(value);
+    }
 
     /**
      * Used to determine when the next storage cleanup should occur.
@@ -3120,6 +3153,14 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
             // some files were archived, so remove all the archived logInfos
             logInfos.deleteAll(0 ..< index);
             writeStatus();
+            // delete previously archived files that are older than the configured maximum age
+            Time now              = clock.now;
+            Time oldestCreateTime = now - maxLogArchiveAge;
+            for (File file : archiveDir.files()) {
+                if (file.modified < oldestCreateTime) {
+                    file.delete();
+                }
+            }
         }
     }
 
@@ -3234,46 +3275,45 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         return clientCache.reversed.add(client);
     }
 
-    // ----- configuration -------------------------------------------------------------------------
+    // ----- validation ----------------------------------------------------------------------------
 
     /**
-     * Determines the value to use for the maximum log file size.
+     * Validate a value can be used to set the maximum log file size.
      *
-     * If the value has been configured using an injectable the injected value is validated to be
-     * greater than zero.
+     * @param value  the value to validate
      *
-     * @return the configured maximum log file size or the default value if not configured
+     * @throws IllegalArgument if the value is invalid
      */
-    static Int configureMaxLogSize() {
-        @Inject(ConfigTxManagerMaxLogSize) Int? maxLogSize;
-        if (maxLogSize.is(Int)) {
-            assert maxLogSize > 0
-                    as $|invalid maxLogSize ({maxLogSize}) configured using \
-                        |"{ConfigTxManagerMaxLogSize}", value must be greater than zero
-                        ;
-            return maxLogSize;
-        }
-        return DefaultMaxLogSize;
+    static void validateMaxLogSize(Int value) {
+        assert:arg value > 0 as $|invalid maxLogSize ({value}) configured using \
+                                 |"{ConfigMaxLogSize}", value must be greater than zero
+                                 ;
     }
 
     /**
-     * Determines the value to use for the cleanup threshold.
+     * Validate a value can be used to set the maximum log file archive age.
      *
-     * If the value has been configured using an injectable the injected value is validated to be
-     * greater than zero.
+     * @param value  the value to validate
      *
-     * @return the configured cleanup threshold. or the default value if not configured
+     * @throws IllegalArgument if the value is invalid
      */
-    static Int configureCleanupThreshold() {
-        @Inject(ConfigTxManagerCleanupThreshold) Int? cleanupThreshold;
-        if (cleanupThreshold.is(Int)) {
-            assert cleanupThreshold > 0
-                    as $|invalid cleanupThreshold ({cleanupThreshold}) configured using
-                        |"{ConfigTxManagerCleanupThreshold}", value must be greater than zero
-                        ;
-            return cleanupThreshold;
-        }
-        return DefaultCleanupThreshold;
+    static void validateMaxLogArchiveAge(Duration value) {
+        assert:arg value > Duration.None as $|invalid maxLogArchiveAge ({value}) configured using \
+                                         |"{ConfigMaxLogArchiveAge}", value must be greater than zero
+                                         ;
+    }
+
+    /**
+     * Validate a value can be used to set the cleanup threshold.
+     *
+     * @param value  the value to validate
+     *
+     * @throws IllegalArgument if the value is invalid
+     */
+    static void validateCleanupThreshold(Int value) {
+        assert:arg value > 0 as $|invalid cleanupThreshold ({value}) configured using \
+                             |"{ConfigCleanupThreshold}", value must be greater than zero
+                             ;
     }
 
     // ----- testing -------------------------------------------------------------------------------
@@ -3282,7 +3322,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * @return a copy of the current LogFileInfo array.
      */
     @Test(Test.Omit)
-    protected LogFileInfo[] getLogFileInfos() {
+    LogFileInfo[] getLogFileInfos() {
         return logInfos.freeze(False);
     }
 
@@ -3290,7 +3330,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * @return a copy of the current status file contents.
      */
     @Test(Test.Omit)
-    protected LogFileInfo[] getStatusFileContent() {
+    LogFileInfo[] getStatusFileContent() {
         if (LogFileInfo[] infos := readStatus()) {
             return infos.freeze(False);
         }
