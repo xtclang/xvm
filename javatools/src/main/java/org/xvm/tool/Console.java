@@ -1,5 +1,8 @@
 package org.xvm.tool;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
+
 import java.text.MessageFormat;
 
 import org.xvm.util.Severity;
@@ -70,13 +73,11 @@ public interface Console {
             .append(formatTemplate(template, params));
 
         if (cause != null) {
-            sb.append("\n[")
-              .append(cause.getClass().getSimpleName());
-            if (cause.getMessage() != null) {
-              sb.append(": ")
-                .append(cause.getMessage());
-            }
-            sb.append(']');
+            sb.append("\n");
+
+            StringWriter sw = new StringWriter();
+            cause.printStackTrace(new PrintWriter(sw));
+            sb.append(sw);
         }
         return out(sb.toString());
     }
