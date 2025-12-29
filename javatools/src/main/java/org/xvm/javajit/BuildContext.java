@@ -605,8 +605,8 @@ public class BuildContext {
     /**
      * @return the newly entered scope
      */
-    public Scope enterScope(CodeBuilder code, int startAddr) {
-        scope = scope.enter(startAddr);
+    public Scope enterScope(CodeBuilder code) {
+        scope = scope.enter(currOpAddr);
         code.labelBinding(scope.startLabel);
         return scope;
     }
