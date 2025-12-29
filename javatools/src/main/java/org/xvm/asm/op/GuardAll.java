@@ -101,7 +101,7 @@ public class GuardAll
         // the GuardAll introduces two scopes:
         //  - outer with synthetic vars: $rethrow, $contLoop, $breakLoop
         //  - inner loop that is guarded by "FinallyStart" op
-        org.xvm.javajit.Scope scopeOuter = bctx.enterScope(code, getAddress());
+        org.xvm.javajit.Scope scopeOuter = bctx.enterScope(code);
 
         // $rethrow = null;
         scopeOuter.allocateRethrow(code);
@@ -140,7 +140,7 @@ public class GuardAll
             }
         }
 
-        bctx.enterScope(code, getAddress()); // guarded by FinallyStart
+        bctx.enterScope(code); // guarded by FinallyStart
     }
 
     // ----- fields --------------------------------------------------------------------------------
