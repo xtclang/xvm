@@ -6,6 +6,7 @@ import java.util.List;
 import javax.inject.Inject;
 
 import org.gradle.api.Project;
+import org.gradle.api.file.Directory;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
@@ -20,6 +21,7 @@ import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.XtcRunModule;
 import org.xtclang.plugin.XtcRuntimeExtension;
 import org.xtclang.plugin.XtcTestExtension;
+import org.xtclang.plugin.launchers.ExecutionStrategy;
 
 import static org.xtclang.plugin.XtcPluginConstants.XTC_TEST_RUNNER_CLASS_NAME;
 import static org.xtclang.plugin.XtcPluginUtils.failure;
@@ -40,6 +42,7 @@ public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension
     private final ListProperty<@NotNull String> includes;
     private final ListProperty<@NotNull String> excludes;
     private final XtcTestExtension testExtension;
+    private final Directory outputDir;
 
     @SuppressWarnings({"ConstructorNotProtectedInAbstractClass", "this-escape"})
     @Inject
@@ -48,6 +51,7 @@ public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension
 
         // Test-specific properties with conventions from extension
         this.testExtension = XtcProjectDelegate.resolveXtcTestExtension(project);
+        this.outputDir = project.getLayout().getBuildDirectory().get().dir("xunit");
         this.failOnTestFailure = objects.property(Boolean.class).convention(testExtension.getFailOnTestFailure());
         this.includes = objects.listProperty(String.class).convention(testExtension.getIncludes());
         this.excludes = objects.listProperty(String.class).convention(testExtension.getExcludes());
@@ -86,6 +90,11 @@ public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension
         return XTC_TEST_RUNNER_CLASS_NAME;
     }
 
+    @Internal
+    public Directory getOutputDirectory() {
+        return outputDir;
+    }
+
     @TaskAction
     @Override
     public void executeTask() {
@@ -102,6 +111,11 @@ public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension
             }
             logger.warn("[plugin] Test execution failed but failOnTestFailure is false", e);
         }
+    }
+
+    @Override
+    protected int executeStrategy(final XtcRunModule runConfig, final ExecutionStrategy strategy) {
+        return strategy.execute(this, runConfig);
     }
 
     @Override

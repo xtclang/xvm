@@ -18,8 +18,11 @@ import xunit.extensions.ResourceLookupCallback;
 
 /**
  * A `ResourceProvider` implementation that can provide resources to inject into tests.
+ *
+ * @param curDir  the current working directory
+ * @param outDir  the XUnit root test output directory
  */
-service TestResourceProvider(Directory curDir)
+service TestResourceProvider(Directory curDir, Directory outDir)
         extends BasicResourceProvider {
 
     /**
@@ -33,12 +36,12 @@ service TestResourceProvider(Directory curDir)
     /**
      * The build output directory.
      */
-    @Lazy Directory buildDir.calc() = curDir.dirFor(DefaultTestBuildDir);
+    @Lazy Directory buildDir.calc() = curDir.dirFor(DefaultXUnitDir);
 
     /**
      * The test output root directory directory.
      */
-    @Lazy Directory testOutputRootDir.calc() = buildDir.dirFor(TestOutputRootDir);
+    @Lazy Directory testOutputRootDir.calc() = outDir.dirFor(TestOutputRootDir);
 
     /**
      * The current execution context.
@@ -164,7 +167,7 @@ service TestResourceProvider(Directory curDir)
      * Returns the directory to for any files specific for the current test.
      */
     Directory getTestDirectory(Options opts) {
-        Directory testDir = buildDir.dirFor("test-output").ensure();
+        Directory testDir = testOutputRootDir.ensure();
         return testDirectoryUnder(testDir);
     }
 

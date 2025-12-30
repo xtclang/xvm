@@ -45,6 +45,9 @@ public abstract class LauncherOptions {
 
     private static final String PSEP = File.pathSeparator;
 
+    public static final String OPTION_XUNIT_OUT = "xunit-out";
+    public static final String ARG_XUNIT_OUT = "--" + OPTION_XUNIT_OUT;
+
     private static final Options COMMON_OPTIONS = new Options()
         .addOption(builder("d").longOpt("deduce").desc("Automatically deduce locations when possible").get())
         .addOption(builder("h").longOpt("help").desc("Display this help message").get())
@@ -95,7 +98,9 @@ public abstract class LauncherOptions {
         .addOption(builder("p").longOpt("test-package").argName("package").hasArg()
             .desc("the name of a package to execute tests in").get())
         .addOption(builder("t").longOpt("test-method").argName("method").hasArg()
-            .desc("the fully qualified name of a test method to execute").get());
+            .desc("the fully qualified name of a test method to execute").get())
+        .addOption(builder(OPTION_XUNIT_OUT).longOpt(OPTION_XUNIT_OUT).hasArg()
+            .desc("The directory that XUnit will write any test output to").get());
 
     /**
      * Apache Commons CLI Options schema for the disassembler.
@@ -971,11 +976,7 @@ public abstract class LauncherOptions {
                 args.add("--no-recompile");
             }
 
-            // Add method name
-            String method = getMethodName();
-            if (!"run".equals(method)) {
-                args.addAll(List.of("-M", method));
-            }
+            args.addAll(additionalRunnerCommandLine());
 
             // Add output file
             getOutputFile().ifPresent(output -> args.addAll(List.of("-o", output.getPath())));
@@ -988,6 +989,19 @@ public abstract class LauncherOptions {
             getTarget().ifPresent(target -> args.add(target.getPath()));
             args.addAll(getMethodArgs());
             return args.toArray(String[]::new);
+        }
+
+        /**
+         * @return additional command line arguments specific to these options.
+         */
+        protected List<String> additionalRunnerCommandLine() {
+            List<String> args = new ArrayList<>();
+            // Add method name
+            String method = getMethodName();
+            if (!"run".equals(method)) {
+                args.addAll(List.of("-M", method));
+            }
+            return args;
         }
 
         /**
@@ -1192,6 +1206,16 @@ public abstract class LauncherOptions {
             return new TestRunnerOptions(parseCommandLine(TEST_RUNNER_OPTIONS, args));
         }
 
+        @Override
+        protected List<String> additionalRunnerCommandLine() {
+            List<String> args = new ArrayList<>();
+            // Add XUnit output
+            optionValue(LauncherOptions.OPTION_XUNIT_OUT).map(File::new).ifPresent(dir ->
+                    args.addAll(List.of(ARG_XUNIT_OUT, dir.getPath())));
+
+            return args;
+        }
+
         /**
          * Create a builder for programmatically constructing TestRunnerOptions.
          */
@@ -1236,6 +1260,17 @@ public abstract class LauncherOptions {
          * Builder for constructing TestRunnerOptions programmatically.
          */
         public static class Builder extends RunnerOptions.Builder {
+            /**
+             * Set the XUnit output directory.
+             *
+             * @param dir the directory name
+             */
+            public Builder setXUnitOutputDirectory(final String dir) {
+                removeeArgsAndValues(ARG_XUNIT_OUT);
+                args.addAll(List.of(ARG_XUNIT_OUT, dir));
+                return this;
+            }
+
             /**
              * Build the TestRunnerOptions by parsing the accumulated arguments.
              */

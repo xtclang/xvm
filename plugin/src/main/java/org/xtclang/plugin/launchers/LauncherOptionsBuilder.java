@@ -7,6 +7,7 @@ import java.util.List;
 import static java.nio.file.Files.isDirectory;
 import static org.xtclang.plugin.internal.DefaultXtcRunModule.DEFAULT_METHOD_NAME;
 
+import org.xtclang.plugin.tasks.XtcTestTask;
 import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.LauncherOptions.RunnerOptions;
 import org.xvm.tool.LauncherOptions.TestRunnerOptions;
@@ -108,17 +109,19 @@ public final class LauncherOptionsBuilder {
      * @param moduleName the module to test
      * @param moduleArgs arguments to pass to the module
      */
-    public TestRunnerOptions buildTestRunnerOptions(final XtcRunTask task, final String moduleName, final List<String> moduleArgs) {
+    public TestRunnerOptions buildTestRunnerOptions(final XtcTestTask task, final String moduleName,
+                                                    final List<String> moduleArgs) {
         final var projectDir = task.getProjectDirectory().get().getAsFile().toPath();
+        final var outputDir  = task.getOutputDirectory();
         final var methodName = task.getMethodName().getOrElse(DEFAULT_METHOD_NAME);
         assert !methodName.isEmpty();
 
         // Set flags - same as runner options
         // Use explicit type to ensure we get TestRunnerOptions.Builder
-        final TestRunnerOptions.Builder builder = TestRunnerOptions.builder();
+        final TestRunnerOptions.Builder builder = TestRunnerOptions.builder()
+                .setXUnitOutputDirectory(outputDir.getAsFile().getAbsolutePath());
         builder.enableShowVersion(task.getShowVersion().get())
             .enableVerbose(task.getVerbose().get())
-            .setMethodName(methodName)
             .setTarget(moduleName, moduleArgs)
             .noRecompile();
 
