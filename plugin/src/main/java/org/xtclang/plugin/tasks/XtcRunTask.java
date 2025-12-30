@@ -71,7 +71,7 @@ import org.xtclang.plugin.launchers.ExecutionStrategy;
 //   Any task with zero defined outputs is not cacheable, which should be enough for all run tasks.
 // TODO: Make the module path/set pattern filterable for the module DSL.
 public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> implements XtcRuntimeExtension {
-    private final Map<XtcRunModule, Integer> executedModules; // Module -> exit code
+    protected final Map<XtcRunModule, Integer> executedModules; // Module -> exit code
     private final Property<@NotNull DefaultXtcRuntimeExtension> taskLocalModules;
 
     /**
@@ -274,17 +274,21 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     }
 
     @SuppressWarnings("UnusedReturnValue")
-    private int runSingleModule(final XtcRunModule runConfig, final ExecutionStrategy strategy) {
+    protected int runSingleModule(final XtcRunModule runConfig, final ExecutionStrategy strategy) {
         // TODO: Maybe make this inheritable + add a runMultipleModules, so that we can customize even better
         //  (e.g. XUnit, and a less hacky way of executing the XTC parallel test runner, for example)
         logger.info("[plugin] Executing resolved xtcRuntime module closure: {}", runConfig);
-        final int exitCode = strategy.execute(this, runConfig);
+        final int exitCode = executeStrategy(runConfig, strategy);
         executedModules.put(runConfig, exitCode);
         logger.info("[plugin]    Finished executing: {}", runConfig.getModuleName().get());
         if (exitCode != 0) {
             throw failure("Module execution failed with exit code: {}", exitCode);
         }
         return exitCode;
+    }
+
+    protected int executeStrategy(final XtcRunModule runConfig, final ExecutionStrategy strategy) {
+        return strategy.execute(this, runConfig);
     }
 
     private void logFinishedRuns() {

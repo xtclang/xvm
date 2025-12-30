@@ -48,14 +48,19 @@ module xunit_engine.xtclang.org {
     static String ConfigTestModuleVersion = ConfigPrefix + ".testModuleVersion";
 
     /**
-     * The injection name for the test build output directory.
+     * The injection name for the test build directory.
      */
     static String ConfigTestBuildDir = ConfigPrefix + ".buildDir";
 
     /**
-     * The default test build output directory located under the current directory.
+     * The injection name for the test build directory.
      */
-    static String DefaultTestBuildDir = "build";
+    static String ConfigTestOutputDir = ConfigPrefix + ".outputDir";
+
+    /**
+     * The default XUnit output directory located under the current directory.
+     */
+    static String DefaultXUnitDir = "xunit";
 
     /**
      * The root test output directory located under the build directory.
@@ -99,22 +104,36 @@ module xunit_engine.xtclang.org {
     }
 
     Int runTests(String moduleName, String? moduleVersion) {
-        @Inject("repository") ModuleRepository coreRepo;
-        @Inject               Directory        curDir;
-        @Inject               Console          console;
+        @Inject(ConfigTestBuildDir)  String?          buildDirName;
+        @Inject(ConfigTestOutputDir) String?          outDirName;
+        @Inject("repository")        ModuleRepository coreRepo;
+        @Inject                      Directory        curDir;
+        @Inject                      Console          console;
 
-        Version?        version    = moduleVersion.is(String) ? new Version(moduleVersion) : Null;
-        ModuleGenerator gen        = new ModuleGenerator(moduleName, version);
-        Directory        buildDir  = curDir.dirFor("build/xtc/main/lib");
+        Directory outDir   = outDirName.is(String)
+                                    ? curDir.dirFor(outDirName)
+                                    : curDir.dirFor(DefaultXUnitDir);
+
+        Directory buildDir = buildDirName.is(String)
+                                    ? curDir.dirFor(buildDirName)
+                                    : outDir;
+
+        outDir.ensure();
+        buildDir.ensure();
+
+        Version?         version   = moduleVersion.is(String) ? new Version(moduleVersion) : Null;
         DirRepository    buildRepo = new DirRepository(buildDir);
         ModuleRepository repo      = new LinkedRepository([buildRepo, coreRepo].freeze(True));
         Log              log       = new SimpleLog();
 
         console.print($"XUnit: Creating test module for {moduleName} in {buildDir}");
+        ModuleGenerator gen = new ModuleGenerator(moduleName, version);
         if (ModuleTemplate template := gen.ensureModule(repo, buildDir, log)) {
             console.print($"XUnit: Created test module {template.qualifiedName} in {buildDir}");
-            TestResourceProvider injector = new TestResourceProvider(curDir);
+            TestResourceProvider injector = new TestResourceProvider(curDir, outDir);
             Tuple t = new Container(template, Lightweight, repo, injector).invoke("run");
+            // the run method in the test module returns True if the tests pass, otherwise false.
+            // we then turn this into an exit code, 0 for success, or 1 for failure.
             return t[0].as(Boolean) ? 0 : 1;
         } else {
             log.add($"Error: Failed to create a host for: {moduleName}");

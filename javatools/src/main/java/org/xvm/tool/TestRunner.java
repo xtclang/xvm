@@ -1,5 +1,7 @@
 package org.xvm.tool;
 
+import java.io.File;
+import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,6 +63,16 @@ public class TestRunner extends Runner {
     public static final String XUNIT_TEST_METHODS_ARG = "xvm.xunit.discovery.test";
 
     /**
+     * The name of the XUnit injectable key used to specify the XUnit build directory.
+     */
+    public static final String XUNIT_TEST_BUILD_DIR = "xvm.xunit.buildDir";
+
+    /**
+     * The name of the XUnit injectable key used to specify the XUnit output directory.
+     */
+    public static final String XUNIT_TEST_OUTPUT_DIR = "xvm.xunit.outputDir";
+
+    /**
      * Entry point from the OS.
      *
      * @param args command line arguments
@@ -96,6 +108,17 @@ public class TestRunner extends Runner {
             XUNIT_MODULE_ARG, List.of(module.getName()),
             XUNIT_MODULE_VERSION_ARG, moduleVersion == null ? List.of() : List.of(moduleVersion)));
 
+        // the XUnit build and output directory must be relative paths to the current directory
+        Path wd = new File("").getAbsoluteFile().toPath();
+        options.getOutputFile().ifPresent(out ->
+                injections.put(XUNIT_TEST_BUILD_DIR,
+                        List.of(wd.relativize(out.toPath()).toString())));
+
+        options.optionValue(LauncherOptions.OPTION_XUNIT_OUT).map(File::new).ifPresent(dir -> {
+                    injections.put(XUNIT_TEST_OUTPUT_DIR,
+                            List.of(wd.relativize(dir.toPath()).toString()));
+
+                });
         connector.start(injections);
         return connector;
     }

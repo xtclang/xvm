@@ -359,6 +359,9 @@ xtcTest {
      */
     verbose = true
 
+    module {
+        moduleName = "xunit_demo"
+    }
     /*
      * Test modules to run. Uses the same module { } DSL as xtcRun.
      * If no modules are configured, the testXtc task will be a no-op.

@@ -34,6 +34,7 @@ listOf(
     "lib_xenia",
     "lib_xml",
     "lib_xunit",
+    "lib_xunit_db",
     "lib_xunit_engine",
     "javatools_turtle",
     "javatools_launcher",

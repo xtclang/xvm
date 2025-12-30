@@ -50,9 +50,9 @@ package extensions {
                 for (String name : packages.split('.')) {
                     dir = dir.dirFor(name);
                 }
-                if (test.is(Test)) {
-                    dir = dir.dirFor(test.name);
-                }
+            }
+            if (test.is(Test)) {
+                dir = dir.dirFor(test.name);
             }
         }
         dir.ensure();

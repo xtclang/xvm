@@ -35,6 +35,10 @@ module xunit_demo {
         console.print(">>>> In Module BeforeAll");
         @Inject ExecutionContext context;
         console.print($">>>> In Module BeforeAll {context.testClass} {context.testMethod}");
+        @Inject("buildDir") Directory buildDir;
+        @Inject("testOutputRoot") Directory testOutputRoot;
+        @Inject("testOutput") Directory testOutput;
+        console.print($">>>> In Module BeforeAll buildDir={buildDir}/{buildDir.exists} testOutputRoot={testOutputRoot}/{testOutputRoot.exists} testOutput={testOutput}/{testOutput.exists}");
     }
 
     /**
@@ -56,6 +60,10 @@ module xunit_demo {
         console.print($"  >>>> In Module BeforeEach static");
         @Inject ExecutionContext context;
         console.print($"  >>>> In Module BeforeEach static {context.testClass} {context.testMethod}");
+        @Inject("buildDir") Directory buildDir;
+        @Inject("testOutputRoot") Directory testOutputRoot;
+        @Inject("testOutput") Directory testOutput;
+        console.print($">>>> In Module BeforeEach static buildDir={buildDir}/{buildDir.exists} testOutputRoot={testOutputRoot}/{testOutputRoot.exists} testOutput={testOutput}/{testOutput.exists}");
     }
 
     /**
