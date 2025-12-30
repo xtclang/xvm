@@ -17,6 +17,7 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.BuildContext.Narrowed;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.RegisterInfo;
 
@@ -96,9 +97,12 @@ public class Move
 
         if (typeFrom.isA(typeTo)) {
             buildMove(bctx, code, regFrom, regTo);
+            typeTo = typeFrom;
         } else {
             if (typeFrom.isA(regTo.original().type())) {
+                regTo = bctx.resetRegister((Narrowed) regTo);
                 buildMove(bctx, code, regFrom, regTo);
+                typeTo = typeFrom;
             } else {
                 if (cdFrom.isPrimitive()) {
                     if (cdTo.isPrimitive()) {
@@ -112,9 +116,10 @@ public class Move
                 if (cdTo.isPrimitive()) {
                     Builder.unbox(code, typeTo, cdTo);
                 }
-                bctx.storeValue(code, regTo, typeFrom);
+                typeTo = typeTo.combine(bctx.pool(), typeFrom);
             }
         }
+        bctx.storeValue(code, regTo, typeTo);
     }
 
     public void buildMove(BuildContext bctx, CodeBuilder code,
@@ -126,6 +131,5 @@ public class Move
                 Builder.unbox(code, regTo);
             }
         }
-        bctx.storeValue(code, regTo, regFrom.type());
     }
 }

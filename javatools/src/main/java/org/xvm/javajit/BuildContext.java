@@ -88,6 +88,7 @@ public class BuildContext {
         this.isFunction    = methodInfo.isFunction();
         this.isConstructor = methodInfo.isCtorOrValidator();
         this.isOptimized   = methodDesc.optimizedMD != null;
+        this.typeMatrix    = new TypeMatrix(this);
     }
 
     /**
@@ -113,6 +114,7 @@ public class BuildContext {
         this.isFunction    = propInfo.isConstant();
         this.isConstructor = false;
         this.isOptimized   = methodDesc.optimizedMD != null;
+        this.typeMatrix    = new TypeMatrix(this);
     }
 
     /**
@@ -133,6 +135,7 @@ public class BuildContext {
         this.isFunction    = bctx.isFunction;
         this.isConstructor = bctx.isConstructor;
         this.isOptimized   = methodDesc.optimizedMD != null;
+        this.typeMatrix    = new TypeMatrix(this);
     }
 
     /**
@@ -151,6 +154,7 @@ public class BuildContext {
         this.isFunction    = bctx.isFunction;
         this.isConstructor = bctx.isConstructor;
         this.isOptimized   = methodDesc.optimizedMD != null;
+        this.typeMatrix    = new TypeMatrix(this);
     }
 
     public final Builder         builder;
@@ -170,6 +174,11 @@ public class BuildContext {
      * The map of {@link RegisterInfo}s indexed by the register id.
      */
     public final Map<Integer, RegisterInfo> registerInfos = new HashMap<>();
+
+    /**
+     * The {@link TypeMatrix} for this method.
+     */
+    public final TypeMatrix typeMatrix;
 
     /**
      * The current line number.
@@ -561,11 +570,12 @@ public class BuildContext {
         TypeConstant thisType  = typeInfo.getType();
         ClassDesc    CD_this   = thisType.ensureClassDesc(typeSystem);
         if (isConstructor) {
-            registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, extraArgs-1,
-                    thisType.ensureAccess(Access.STRUCT), CD_this, "thi$"));
+            thisType = thisType.ensureAccess(Access.STRUCT);
+            registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, extraArgs-1, thisType, CD_this, "thi$"));
         } else if (!isFunction) {
             registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, 0, thisType, CD_this, "this$"));
         }
+        typeMatrix.declare(-1, Op.A_THIS, thisType);
 
         JitParamDesc[] params = isOptimized ? methodDesc.optimizedParams : methodDesc.standardParams;
         for (int i = 0, c = params.length; i < c; i++) {
@@ -592,6 +602,7 @@ public class BuildContext {
                 i++; // already processed
                 break;
             }
+        typeMatrix.declare(-1, varIndex, type);
         }
     }
 
@@ -1114,7 +1125,8 @@ public class BuildContext {
     }
 
     /**
-     * Narrow the type of the specified register for the duration of the current op.
+     * Narrow the type of the specified register for the duration of the current op. This may
+     * cause moving data between Java slots.
      *
      * @param reg           the register to narrow
      * @param narrowedType  the narrowed type
@@ -1127,12 +1139,12 @@ public class BuildContext {
     }
 
     /**
-     * Narrow the type of the specified register in the code region between the "from" op address
-     * and the "to" address. If "addrTo" is -1, compute the "addrTo" address based on the
-     * corresponding scope exit.
-     *
-     * Note, that unlike the dead code elimination below, the narrowing could "stop" at any point
-     * an assignment is made to the register.
+     * Narrow the type of the specified register in the code starting at the "from" op address.
+     * Note, that passing the current address **does not** put the narrowed register into the
+     * registry.
+     * <p>
+     * Note, that unlike the dead code elimination below, the narrowing could "stop" at any point an
+     * assignment is made to the register.
      *
      * @param origReg       the register to narrow
      * @param fromAddr      the beginning address at which the narrowing should apply (inclusive)
@@ -1182,7 +1194,7 @@ public class BuildContext {
     /**
      * Reset the narrowed register info.
      */
-    protected RegisterInfo resetRegister(Narrowed narrowedReg) {
+    public RegisterInfo resetRegister(Narrowed narrowedReg) {
         RegisterInfo origReg = narrowedReg.origReg;
         registerInfos.put(narrowedReg.regId, origReg);
         return origReg;
@@ -1213,7 +1225,7 @@ public class BuildContext {
             throw new UnsupportedOperationException("Multislot P_Get");
         }
 
-        PropertyConstant propId = (PropertyConstant) getConstant(propIdIndex);
+        PropertyConstant propId = getConstant(propIdIndex, PropertyConstant.class);
         JitMethodDesc    jmdGet = builder.loadProperty(code, targetSlot.type(), propId);
 
         assignReturns(code, jmdGet, 1, new int[] {retId});
@@ -1226,7 +1238,7 @@ public class BuildContext {
         if (!targetSlot.isSingle()) {
             throw new UnsupportedOperationException("Multislot P_Set");
         }
-        PropertyConstant propId     = (PropertyConstant) getConstant(propIdIndex);
+        PropertyConstant propId     = getConstant(propIdIndex, PropertyConstant.class);
         PropertyInfo     propInfo   = propId.getPropertyInfo(targetSlot.type());
         JitMethodDesc    jmd        = propInfo.getSetterJitDesc(typeSystem);
         String           setterName = propInfo.ensureSetterJitMethodName(typeSystem);
@@ -1531,11 +1543,11 @@ public class BuildContext {
         }
 
         @Override
-        public RegisterInfo store(BuildContext buildContext, CodeBuilder code, TypeConstant type) {
+        public RegisterInfo store(BuildContext bctx, CodeBuilder code, TypeConstant type) {
             // store the "extension" boolean flag first
             code.istore(extSlot());
 
-            return RegisterInfo.super.store(buildContext, code, type);
+            return RegisterInfo.super.store(bctx, code, type);
         }
     }
 
@@ -1554,16 +1566,64 @@ public class BuildContext {
         }
 
         @Override
-        public RegisterInfo store(BuildContext buildContext, CodeBuilder code, TypeConstant type) {
-            // if we are still within the covered range make sure the assumption holds
+        public RegisterInfo store(BuildContext bctx, CodeBuilder code, TypeConstant type) {
             if (type == null) {
-                buildContext.resetRegister(this);
-            } else if (!type.isA(type())) {
-                assert type.isA(original().type());
-                buildContext.narrowRegister(code, original(), type);
+                RegisterInfo origReg = bctx.resetRegister(this);
+
+                if (this.slot() != origReg.slot()) {
+                    if (cd().isPrimitive()) {
+                        if (origReg.cd().isPrimitive()) {
+                            assert origReg instanceof DoubleSlot;
+                            code.iconst_0() // false
+                                .istore(((DoubleSlot) origReg).extSlot);
+                        } else {
+                            Builder.box(code, type(), cd());
+                        }
+                    }
+                }
+
+                origReg.store(bctx, code, null);
+                return origReg;
             }
 
-            return RegisterInfo.super.store(buildContext, code, type);
+            if (!type.isA(this.type())) {
+                assert type.isA(original().type());
+                return bctx.narrowRegister(code, original(), type).store(bctx, code, type);
+            }
+
+            return RegisterInfo.super.store(bctx, code, type);
+        }
+
+        /**
+         * Widen this register to the specified type. This may require data transfer between Java
+         * slots.
+         */
+        public RegisterInfo widen(BuildContext bctx, CodeBuilder code, TypeConstant wideType) {
+            TypeConstant prevType = type();
+            RegisterInfo origReg  = original();
+            TypeConstant origType = origReg.type();
+
+            assert !prevType.equals(wideType) && wideType.isA(origType);
+
+            if (this.slot() != origReg.slot()) {
+                load(code);
+
+                if (cd().isPrimitive()) {
+                    if (origReg.cd().isPrimitive()) {
+                        assert origReg instanceof DoubleSlot;
+                        code.iconst_0() // false
+                            .istore(((DoubleSlot) origReg).extSlot);
+                    } else {
+                        Builder.box(code, prevType, cd());
+                    }
+                }
+                origReg.store(bctx, code, null);
+            }
+
+            if (!wideType.equals(origType)) {
+                return bctx.narrowRegister(code, origReg, wideType).store(bctx, code, wideType);
+            }
+            return origReg;
         }
     }
 

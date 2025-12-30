@@ -79,7 +79,7 @@ public interface RegisterInfo {
      *
      * @param type  (optional) the type of the value; could be wider than a narrowed register type
      */
-    default RegisterInfo store(BuildContext buildContext, CodeBuilder code, TypeConstant type) {
+    default RegisterInfo store(BuildContext bctx, CodeBuilder code, TypeConstant type) {
         if (isIgnore()) {
             Builder.pop(code, cd());
         } else {

@@ -207,6 +207,7 @@ public abstract class OpGeneral
         TypeConstant typeTarget = regTarget.type();
 
         if (isBinaryOp()) {
+            TypeConstant typeResult = typeTarget;
             if (cdTarget.isPrimitive()) {
                 RegisterInfo regArg = bctx.loadArgument(code, m_nArgValue);
 
@@ -217,33 +218,9 @@ public abstract class OpGeneral
 
                 buildOptimizedBinary(bctx, code, regTarget);
             } else {
-                String sName;
-                String sOp;
-                switch (getOpCode()) {
-                    case OP_GP_ADD     -> {sName = "add";           sOp = "+";   }
-                    case OP_GP_SUB     -> {sName = "sub";           sOp = "-";   }
-                    case OP_GP_MUL     -> {sName = "mul";           sOp = "*";   }
-                    case OP_GP_DIV     -> {sName = "div";           sOp = "/";   }
-                    case OP_GP_MOD     -> {sName = "mod";           sOp = "%";   }
-                    case OP_GP_SHL     -> {sName = "shiftLeft";     sOp = "<<";  }
-                    case OP_GP_SHR     -> {sName = "shiftRight";    sOp = ">>";  }
-                    case OP_GP_USHR    -> {sName = "shiftAllRight"; sOp = ">>";  }
-                    case OP_GP_AND     -> {sName = "and";           sOp = "&";   }
-                    case OP_GP_OR      -> {sName = "or";            sOp = "|";   }
-                    case OP_GP_XOR     -> {sName = "xor";           sOp = "^";   }
-                    case OP_GP_DIVREM  -> {sName = "divrem";        sOp = "/%";  }
-                    case OP_GP_IRANGEI -> {sName = "to";            sOp = "..";  }
-                    case OP_GP_ERANGEI -> {sName = "exTo";          sOp = ">.."; }
-                    case OP_GP_IRANGEE -> {sName = "toEx";          sOp = "..<"; }
-                    case OP_GP_ERANGEE -> {sName = "exToEx";        sOp = ">..<";}
-
-                    default -> throw new UnsupportedOperationException(toName(getOpCode()));
-            }
-
-            TypeConstant  typeArg  = bctx.getArgumentType(m_nArgValue);
-            MethodInfo    method   = typeTarget.ensureTypeInfo().findOpMethod(sName, sOp, typeArg);
-            String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
-            JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem, typeTarget);
+                MethodInfo    method   = findOpMethod(bctx, typeTarget);
+                String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
+                JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem, typeTarget);
 
                 MethodTypeDesc md;
                 if (jmd.isOptimized) {
@@ -256,8 +233,10 @@ public abstract class OpGeneral
                 bctx.loadCtx(code);
                 bctx.loadArgument(code, m_nArgValue);
                 code.invokevirtual(regTarget.cd(), sJitName, md);
+
+                typeResult = method.getSignature().getRawReturns()[0]; // could differ from target
             }
-            bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget), typeTarget);
+            bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeResult), typeResult);
         } else { // unary op
             if (cdTarget.isPrimitive()) {
                 buildOptimizedUnary(bctx, code, regTarget);
@@ -286,6 +265,38 @@ public abstract class OpGeneral
             }
             bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget), typeTarget);
         }
+    }
+
+    /**
+     * Find the op method.
+     */
+    private MethodInfo findOpMethod(BuildContext bctx, TypeConstant typeTarget) {
+        String sName;
+        String sOp;
+        switch (getOpCode()) {
+            case OP_GP_ADD     -> {sName = "add";           sOp = "+";   }
+            case OP_GP_SUB     -> {sName = "sub";           sOp = "-";   }
+            case OP_GP_MUL     -> {sName = "mul";           sOp = "*";   }
+            case OP_GP_DIV     -> {sName = "div";           sOp = "/";   }
+            case OP_GP_MOD     -> {sName = "mod";           sOp = "%";   }
+            case OP_GP_SHL     -> {sName = "shiftLeft";     sOp = "<<";  }
+            case OP_GP_SHR     -> {sName = "shiftRight";    sOp = ">>";  }
+            case OP_GP_USHR    -> {sName = "shiftAllRight"; sOp = ">>";  }
+            case OP_GP_AND     -> {sName = "and";           sOp = "&";   }
+            case OP_GP_OR      -> {sName = "or";            sOp = "|";   }
+            case OP_GP_XOR     -> {sName = "xor";           sOp = "^";   }
+            case OP_GP_DIVREM  -> {sName = "divrem";        sOp = "/%";  }
+            case OP_GP_IRANGEI -> {sName = "to";            sOp = "..";  }
+            case OP_GP_ERANGEI -> {sName = "exTo";          sOp = ">.."; }
+            case OP_GP_IRANGEE -> {sName = "toEx";          sOp = "..<"; }
+            case OP_GP_ERANGEE -> {sName = "exToEx";        sOp = ">..<";}
+
+            default -> throw new UnsupportedOperationException(toName(getOpCode()));
+        }
+
+        TypeConstant  typeArg  = bctx.getArgumentType(m_nArgValue);
+        MethodInfo    method   = typeTarget.ensureTypeInfo().findOpMethod(sName, sOp, typeArg);
+        return method;
     }
 
     /**
