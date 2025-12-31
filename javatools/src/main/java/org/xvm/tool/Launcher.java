@@ -110,6 +110,9 @@ public abstract class Launcher
         case "xec":
             return Runner.launch(argv);
 
+        case "init":
+            return Initializer.launch(argv);
+
         default:
             System.err.println("Command name \"" + cmd + "\" is not supported");
             return 1;
