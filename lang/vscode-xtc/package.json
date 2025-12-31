@@ -1,0 +1,23 @@
+{
+  "name": "xtc-language",
+  "displayName": "Ecstasy (XTC) Language",
+  "description": "Syntax highlighting for the Ecstasy programming language",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": ["Programming Languages"],
+  "contributes": {
+    "languages": [{
+      "id": "xtc",
+      "aliases": ["Ecstasy", "XTC", "xtc"],
+      "extensions": [".x", ".xtc"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "xtc",
+      "scopeName": "source.xtc",
+      "path": "./syntaxes/xtc.tmLanguage.json"
+    }]
+  }
+}

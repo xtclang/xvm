@@ -35,14 +35,14 @@ The fat JAR will be created at `build/libs/xtc-lsp-0.1.0-SNAPSHOT-all.jar`.
 │  └────────┬────────┘ └─────────────────┘ └─────────────────┘    │
 │           │                                                     │
 │  ┌────────▼────────────────────────────────────────────────┐    │
-│  │               XtcCompilerAdapter                         │   │
-│  │  (Interface - swap mock for real implementation)         │   │
-│  └────────┬────────────────────────────────────────────────┘   │
+│  │               XtcCompilerAdapter                        │    │
+│  │  (Interface - swap mock for real implementation)        │    │
+│  └────────┬────────────────────────────────────────────────┘    │
 │           │                                                     │
-│  ┌────────▼────────┐  ┌────────────────────┐                   │
-│  │  MockAdapter    │  │  RealAdapter       │                   │
-│  │  (for testing)  │  │  (uses XTC compiler)│                  │
-│  └─────────────────┘  └────────────────────┘                   │
+│  ┌────────▼────────┐  ┌──────────────────────┐                  │
+│  │  MockAdapter    │  │  RealAdapter         │                  │
+│  │  (for testing)  │  │  (uses XTC compiler) │                  │
+│  └─────────────────┘  └──────────────────────┘                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 

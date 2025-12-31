@@ -53,6 +53,24 @@ val xvmBuilds = listOf(
 
 xvmBuilds.forEach(::includeBuild)
 
+/**
+ * Include lang (LSP server + IntelliJ plugin) if enabled.
+ * Similar to manualTests - can be included for IDE visibility but not attached to root lifecycle.
+ */
+private fun includeLang(): Boolean {
+    val shouldInclude = providers.gradleProperty("includeBuildLang")
+        .orElse("true")
+        .get()
+        .toBoolean()
+
+    logger.info("[xvm] Build aggregator includeBuild(\"lang\"): $shouldInclude")
+    return shouldInclude
+}
+
+if (includeLang()) {
+    includeBuild("lang")
+}
+
 // Disable problematic test distribution websocket check task
 gradle.taskGraph.whenReady {
     allTasks.find { it.name == "testDistributionWebSocketCheck" }?.enabled = false

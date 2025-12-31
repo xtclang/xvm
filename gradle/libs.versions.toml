@@ -15,6 +15,11 @@
 
 [versions]
 apache-commons-cli = "1.11.0"
+# Third party dependency versions
+assertj = "3.24.2"
+awaitility = "4.2.0"
+kotlin = "2.2.0"
+kotlinx-serialization = "1.7.3"
 download = "5.6.0"
 gson = "2.13.2"
 gradle-doctor = "0.12.1"
@@ -24,9 +29,13 @@ jakarta-xml-bind-api = "4.0.4"
 jaxb-runtime = "4.0.6"
 jetbrains-annotations = "26.0.2-1"
 jline = "3.30.6"
+jspecify = "1.0.0"
 junit = "6.0.2"
 ktlint = "13.1.0"
+logback = "1.5.13"
+mockito = "5.8.0"
 palantir-git-version = "4.0.0"
+slf4j = "2.0.9"
 vanniktech-maven-publish = "0.34.0"
 
 [plugins]
@@ -39,6 +48,8 @@ xdk-build-properties = { id = "org.xtclang.build.xdk.properties" }
 xdk-build-publishing = { id = "org.xtclang.build.publishing" }
 
 # Third-party published plugins - with versions
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 download = { id = "de.undercouch.download", version.ref = "download" }
 gradle-doctor = { id = "com.osacky.doctor", version.ref = "gradle-doctor" }
 gradle-portal-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-portal-publish" }
@@ -87,6 +98,21 @@ jline = { module = "org.jline:jline", version.ref = "jline" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version = "1.11.4" }
+
+# Testing utilities
+assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility" }
+mockito = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+
+# Logging
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+
+# Annotations
+jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
+
+# Kotlin
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 
 [bundles]
 unicode = ["jakarta-activation-api", "jakarta-xml-bind-api", "jaxb-runtime"]

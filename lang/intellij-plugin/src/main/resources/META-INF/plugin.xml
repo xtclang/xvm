@@ -1,0 +1,73 @@
+<idea-plugin>
+    <id>org.xtclang.idea</id>
+    <name>XTC Language Support</name>
+    <vendor email="info@xtclang.org" url="https://xtclang.org">XTC Language</vendor>
+
+    <description><![CDATA[
+        XTC (Ecstasy) language support for IntelliJ IDEA.
+
+        Features:
+        <ul>
+            <li>New Project wizard for XTC projects</li>
+            <li>Run configurations for XTC applications</li>
+            <li>Syntax highlighting for .x files</li>
+            <li>Language features via LSP (hover, completion, go-to-definition)</li>
+        </ul>
+
+        Requirements:
+        <ul>
+            <li>XDK installed with XDK_HOME environment variable set, OR</li>
+            <li>The LSP server JAR bundled with the plugin</li>
+        </ul>
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.gradle</depends>
+    <!-- LSP4IJ provides LSP support for Community Edition -->
+    <depends>com.redhat.devtools.lsp4ij</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Project Generator for New Project wizard -->
+        <directoryProjectGenerator
+            implementation="org.xtclang.idea.project.XtcProjectGenerator"/>
+
+        <!-- Run Configuration -->
+        <configurationType
+            implementation="org.xtclang.idea.run.XtcRunConfigurationType"/>
+
+        <!-- File Type for .x files -->
+        <fileType
+            name="XTC Source"
+            implementationClass="org.xtclang.idea.XtcFileType"
+            fieldName="INSTANCE"
+            language="XTC"
+            extensions="x"/>
+    </extensions>
+
+    <!-- LSP4IJ Language Server registration -->
+    <extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">
+        <server id="xtcLanguageServer"
+                name="XTC Language Server"
+                factoryClass="org.xtclang.idea.lsp.XtcLanguageServerFactory">
+            <description><![CDATA[
+                Provides language features for XTC (Ecstasy) files via LSP.
+                Requires XDK_HOME to be set or the LSP server JAR to be bundled.
+            ]]></description>
+        </server>
+        <languageMapping language="XTC"
+                         serverId="xtcLanguageServer"/>
+    </extensions>
+
+    <!-- TextMate grammar for syntax highlighting (via tm4e bundled with LSP4IJ) -->
+    <extensions defaultExtensionNs="org.eclipse.tm4e.registry">
+        <grammar path="textmate/xtc.tmLanguage.json"
+                 scopeName="source.xtc"/>
+        <scopeNameContentTypeBinding scopeName="source.xtc"
+                                     contentTypeId="XTC"/>
+    </extensions>
+
+    <extensions defaultExtensionNs="org.eclipse.tm4e.languageconfiguration">
+        <languageConfiguration path="textmate/language-configuration.json"
+                               contentTypeId="XTC"/>
+    </extensions>
+</idea-plugin>
