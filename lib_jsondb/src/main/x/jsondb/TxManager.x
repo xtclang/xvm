@@ -121,8 +121,21 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         FileStore store = root.store;
 
         this.sysDir     = store.dirFor (root.path + "sys");
-        this.logFile    = store.fileFor(root.path + "sys" + "txlog.json");
+        this.logFile    = store.fileFor(root.path + "sys" + LogFileName);
         this.statusFile = store.fileFor(root.path + "sys" + "txmgr.json");
+
+        // Configuration from injectables
+        @Inject(ConfigMaxLogSize)       Int?      maxLogSize;
+        @Inject(ConfigCleanupThreshold) Int?      cleanupThreshold;
+        @Inject(ConfigMaxLogArchiveAge) Duration? maxLogArchiveAge;
+
+        this.maxLogSize       = maxLogSize       ?: DefaultMaxLogSize;
+        this.cleanupThreshold = cleanupThreshold ?: DefaultCleanupThreshold;
+        this.maxLogArchiveAge = maxLogArchiveAge ?: DefaultMaxLogArchiveAge;
+
+        validateMaxLogSize(this.maxLogSize);
+        validateCleanupThreshold(this.cleanupThreshold);
+        validateMaxLogArchiveAge(this.maxLogArchiveAge);
 
         // build the quick lookup information for the optional transactional "modifiers"
         // (validators, rectifiers, and distributors)
@@ -165,6 +178,21 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
 
 
     // ----- properties ----------------------------------------------------------------------------
+
+    /**
+     * The injection name prefix for all JSON DB TxManager configuration.
+     */
+    static String ConfigPrefix = jsondb.ConfigPrefix + ".txManager";
+
+    /**
+     * The name of the transaction log file.
+     */
+    static String LogFileName = "txlog.json";
+
+    /**
+     * The name of the transaction log file archive directory.
+     */
+    static String LogFileArchiveName = "txlog-archive";
 
     /**
      * The clock shared by all of the services in the database.
@@ -270,7 +298,7 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     }
 
     /**
-     * A JSON Mapping to use to serialize instances of LogFileInfo.
+     * A JSON Mapping to use to serialize LogFileInfo arrays.
      */
     @Lazy protected Mapping<LogFileInfo[]> logFileInfoArrayMapping.calc() {
         return internalJsonSchema.ensureMapping(LogFileInfo[]);
@@ -282,10 +310,40 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
     protected/private LogFileInfo[] logInfos = new LogFileInfo[];
 
     /**
-     * The maximum size log to store in any one log file.
-     * TODO this setting should be configurable (need a "Prefs" API)
+     * The injection name for the TxManager maxLogSize configuration property.
      */
-    public/protected Int maxLogSize = 100K;
+    static String ConfigMaxLogSize = ConfigPrefix + ".maxLogSize";
+
+    /**
+     * The default maximum size log to store in any one log file.
+     */
+    static Int DefaultMaxLogSize = 100K;
+
+    /**
+     * The maximum size log to store in any one log file.
+     */
+    public/protected Int maxLogSize.set(Int value) {
+        validateMaxLogSize(value);
+        super(value);
+    }
+
+    /**
+     * The injection name for the TxManager maxLogArchiveAge configuration property.
+     */
+    static String ConfigMaxLogArchiveAge = ConfigPrefix + ".maxLogArchiveAge";
+
+    /**
+     * The default maximum duration to keep archived transaction log files.
+     */
+    static Duration DefaultMaxLogArchiveAge = Duration.Day * 30;
+
+    /**
+     * The maximum duration to keep archived transaction log files.
+     */
+    public/protected Duration maxLogArchiveAge.set(Duration value) {
+        validateMaxLogArchiveAge(value);
+        super(value);
+    }
 
     /**
      * Previous modified date/time of the log.
@@ -357,6 +415,26 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      * Used to determine idleness.
      */
     protected Time lastActivity = EPOCH;
+
+    /**
+     * The injection name for the TxManager cleanupThreshold configuration property.
+     */
+    static String ConfigCleanupThreshold = ConfigPrefix + ".cleanupThreshold";
+
+    /**
+     * The default value for the `cleanupThreshold`.
+     */
+    static Int DefaultCleanupThreshold = 10K;
+
+    /**
+     * Cleanup is triggered in the maintenance phase when the number of transactions since the last
+     * cleanup multiplied by the number of seconds passed since the last cleanup is greater than or
+     * equal to this value.
+     */
+    public/protected Int cleanupThreshold.set(Int value) {
+        validateCleanupThreshold(value);
+        super(value);
+    }
 
     /**
      * Used to determine when the next storage cleanup should occur.
@@ -2997,10 +3075,11 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
                 // period, or after so many transactions have gone through, or some combination
                 Int seconds = (now - lastCleanupTime).seconds;
                 Int txCount = lastCommitted - lastCleanupTx;
-                if (seconds * txCount > 10k) {
+                if (seconds * txCount > cleanupThreshold) {
                     lastCleanupTime = now;
                     lastCleanupTx   = lastCommitted;
                     cleanUpStorages();
+                    cleanupLogfiles();
                 }
             } catch (Exception e) {
                 log($"Exception occurred during background maintenance: {e}");
@@ -3043,6 +3122,65 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
         }
     }
 
+    protected void cleanupLogfiles() {
+        if (logInfos.size <= 1 || byReadId.empty) {
+            // there is at most one log file, which must be the current log file,
+            // or there are no transactions, so nothing to clean up
+            return;
+        }
+
+        // determine the oldest transaction id
+        Set<Int>   txSet    =  new ArrayOrderedSet<Int>(byReadId.keys.toArray(Constant));
+        assert Int oldestTx := txSet.first(); // already checked that byReadId is not empty
+
+        // ensure the log file archive directory exists under the sys directory
+        Directory archiveDir = sysDir.dirFor(LogFileArchiveName).ensure();
+
+        // the last element in logInfos is the current log which is never archived.
+        Int count = logInfos.size - 1;
+        Int index;
+        for (index : 0 ..< count) {
+            LogFileInfo info = logInfos[index];
+            if (!info.txIds.isBelow(oldestTx)) {
+                // the logInfos array is ordered by oldest tx first, so we can stop as soon as we
+                // find the first LogFileInfo that is not older than the oldest transaction
+                break;
+            }
+            archiveLogfile(info, archiveDir);
+        }
+
+        if (index > 0) {
+            // some files were archived, so remove all the archived logInfos
+            logInfos.deleteAll(0 ..< index);
+            writeStatus();
+            // delete previously archived files that are older than the configured maximum age
+            Time now              = clock.now;
+            Time oldestCreateTime = now - maxLogArchiveAge;
+            for (File file : archiveDir.files()) {
+                if (file.modified < oldestCreateTime) {
+                    file.delete();
+                }
+            }
+        }
+    }
+
+    /**
+     * Move a transaction log file to the archive directory.
+     *
+     * @param info        the `LogFileInfo` to archive
+     * @param archiveDir  the directory to archive the log file to
+     */
+    private void archiveLogfile(LogFileInfo info, Directory archiveDir) {
+        File infoFile = sysDir.fileFor(info.name);
+        if (infoFile.exists) {
+            File archiveFile = archiveDir.fileFor(infoFile.name);
+            if (archiveFile.exists) {
+                // this should never happen
+                archiveFile.delete();
+            }
+            infoFile.store.move(infoFile.path, archiveFile.path);
+        }
+    }
 
     // ----- internal ------------------------------------------------------------------------------
 
@@ -3135,5 +3273,67 @@ service TxManager<Schema extends RootSchema>(Catalog<Schema> catalog)
      */
     void recycleClient(Client<Schema> client) {
         return clientCache.reversed.add(client);
+    }
+
+    // ----- validation ----------------------------------------------------------------------------
+
+    /**
+     * Validate a value can be used to set the maximum log file size.
+     *
+     * @param value  the value to validate
+     *
+     * @throws IllegalArgument if the value is invalid
+     */
+    static void validateMaxLogSize(Int value) {
+        assert:arg value > 0 as $|invalid maxLogSize ({value}) configured using \
+                                 |"{ConfigMaxLogSize}", value must be greater than zero
+                                 ;
+    }
+
+    /**
+     * Validate a value can be used to set the maximum log file archive age.
+     *
+     * @param value  the value to validate
+     *
+     * @throws IllegalArgument if the value is invalid
+     */
+    static void validateMaxLogArchiveAge(Duration value) {
+        assert:arg value > Duration.None as $|invalid maxLogArchiveAge ({value}) configured using \
+                                         |"{ConfigMaxLogArchiveAge}", value must be greater than zero
+                                         ;
+    }
+
+    /**
+     * Validate a value can be used to set the cleanup threshold.
+     *
+     * @param value  the value to validate
+     *
+     * @throws IllegalArgument if the value is invalid
+     */
+    static void validateCleanupThreshold(Int value) {
+        assert:arg value > 0 as $|invalid cleanupThreshold ({value}) configured using \
+                             |"{ConfigCleanupThreshold}", value must be greater than zero
+                             ;
+    }
+
+    // ----- testing -------------------------------------------------------------------------------
+
+    /**
+     * @return a copy of the current LogFileInfo array.
+     */
+    @Test(Test.Omit)
+    LogFileInfo[] getLogFileInfos() {
+        return logInfos.freeze(False);
+    }
+
+    /**
+     * @return a copy of the current status file contents.
+     */
+    @Test(Test.Omit)
+    LogFileInfo[] getStatusFileContent() {
+        if (LogFileInfo[] infos := readStatus()) {
+            return infos.freeze(False);
+        }
+        return [];
     }
 }
