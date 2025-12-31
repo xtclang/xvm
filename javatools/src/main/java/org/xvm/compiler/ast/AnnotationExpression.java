@@ -280,11 +280,11 @@ public class AnnotationExpression
 
             // validate the argument expressions and fix up all the constants used as arguments to
             // construct the annotation
-            TypeConstant[] atypeParams = idConstruct.getRawParams();
-            int            cAll        = constructor.getParamCount();
-            int            cRequired   = constructor.getRequiredParamCount();
-            Constant[]     aconstArgs  = new Constant[cAll];
-            boolean        fDefaults   = cArgs < cAll;
+            List<TypeConstant> listParams = idConstruct.getParams();
+            int                cAll       = constructor.getParamCount();
+            int                cRequired  = constructor.getRequiredParamCount();
+            Constant[]         aconstArgs = new Constant[cAll];
+            boolean            fDefaults  = cArgs < cAll;
 
             assert cArgs <= cAll && cArgs >= cRequired;
 
@@ -294,7 +294,7 @@ public class AnnotationExpression
                                         ? constructor.getParam(exprLbl.getName()).getIndex()
                                         : iArg;
 
-                Expression exprNew = exprOld.validate(ctx, atypeParams[iParam], errs);
+                Expression exprNew = exprOld.validate(ctx, listParams.get(iParam), errs);
                 if (exprNew != null) {
                     if (exprNew != exprOld) {
                         listArgs.set(iArg, exprNew);
@@ -406,15 +406,15 @@ public class AnnotationExpression
         }
 
         // validate the arguments
-        TypeConstant[] atypeParam = idConstruct.getRawParams();
-        boolean        fValid     = true;
-        boolean        fConst     = true;
+        List<TypeConstant> listParams = idConstruct.getParams();
+        boolean            fValid     = true;
+        boolean            fConst     = true;
 
-        assert atypeParam.length >= cArgs;
+        assert listParams.size() >= cArgs;
 
         for (int iArg = 0; iArg < cArgs; ++iArg) {
             Expression exprArgOld = listArgs.get(iArg);
-            Expression exprArgNew = exprArgOld.validate(ctx, atypeParam[iArg], errs);
+            Expression exprArgNew = exprArgOld.validate(ctx, listParams.get(iArg), errs);
 
             if (exprArgNew == null) {
                 fValid = false;

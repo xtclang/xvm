@@ -560,13 +560,13 @@ public class MethodDeclarationStatement
                 mgr.requestRevisit();
             } else if (method.isFunction()) {
                 // make sure functions don't use any generic types
-                for (TypeConstant type : method.getIdentityConstant().getRawParams()) {
+                for (TypeConstant type : method.getIdentityConstant().getParams()) {
                     if (type.containsGenericType(true)) {
                         log(errs, Severity.ERROR, Compiler.GENERIC_FUNCTION_TYPE_NOT_ALLOWED,
                                 method.getName(), type.getValueString());
                     }
                 }
-                for (TypeConstant type : method.getIdentityConstant().getRawReturns()) {
+                for (TypeConstant type : method.getIdentityConstant().getReturns()) {
                     if (type.containsGenericType(true)) {
                         log(errs, Severity.ERROR, Compiler.GENERIC_FUNCTION_TYPE_NOT_ALLOWED,
                                 method.getName(), type.getValueString());

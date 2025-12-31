@@ -671,7 +671,7 @@ public class xRTType
                 MethodInfo      infoMethod  = infoTarget.getMethodById(idConstr, true);
                 MethodStructure constructor = infoMethod.getTopmostMethodStructure(infoTarget);
                 Parameter[]     aParams     = constructor.getParamArray();
-                TypeConstant[]  atypeParams = infoMethod.getSignature().getRawParams();
+                TypeConstant[]  atypeParams = infoMethod.getSignature().getParams().toArray(TypeConstant[]::new);
 
                 // each constructor function will be of a certain type, which differs only in the
                 // additional parameters that each constructor has; for a virtual child, all of the

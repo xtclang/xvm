@@ -5,12 +5,17 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import java.util.concurrent.locks.StampedLock;
 
 import java.util.function.Consumer;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -71,6 +76,16 @@ public class SignatureConstant
     // ----- constructors --------------------------------------------------------------------------
 
     /**
+     * Construct a constant whose value is a method signature identifier with no params or returns.
+     *
+     * @param pool   the ConstantPool that will contain this Constant
+     * @param sName  the name of the method
+     */
+    public SignatureConstant(ConstantPool pool, @NotNull String sName) {
+        this(pool, sName, List.of(), List.of());
+    }
+
+    /**
      * Construct a constant whose value is a method signature identifier.
      *
      * @param pool     the ConstantPool that will contain this Constant
@@ -78,16 +93,13 @@ public class SignatureConstant
      * @param params   the param types
      * @param returns  the return types
      */
-    public SignatureConstant(ConstantPool pool, String sName, TypeConstant[] params, TypeConstant[] returns) {
+    public SignatureConstant(ConstantPool pool, @NotNull String sName,
+                             @NotNull List<TypeConstant> params, @NotNull List<TypeConstant> returns) {
         super(pool);
 
-        if (sName == null) {
-            throw new IllegalArgumentException("name required");
-        }
-
-        m_constName     = pool.ensureStringConstant(sName);
-        m_aconstParams  = validateTypes(params);
-        m_aconstReturns = validateTypes(returns);
+        m_constName         = pool.ensureStringConstant(Objects.requireNonNull(sName, "name required"));
+        m_listConstParams   = List.copyOf(Objects.requireNonNull(params, "params required"));
+        m_listConstReturns  = List.copyOf(Objects.requireNonNull(returns, "returns required"));
     }
 
     /**
@@ -106,10 +118,10 @@ public class SignatureConstant
             throw new IllegalArgumentException("property required");
         }
 
-        m_constName     = pool.ensureStringConstant(constProperty.getName());
-        m_aconstParams  = ConstantPool.NO_TYPES;
-        m_aconstReturns = new TypeConstant[] {constProperty.getType()};
-        m_fProperty     = true;
+        m_constName         = pool.ensureStringConstant(constProperty.getName());
+        m_listConstParams   = List.of();
+        m_listConstReturns  = List.of(constProperty.getType());
+        m_fProperty         = true;
     }
 
     /**
@@ -134,12 +146,31 @@ public class SignatureConstant
     protected void resolveConstants() {
         ConstantPool pool = getConstantPool();
 
-        m_constName     = (StringConstant) pool.getConstant(m_iName);
-        m_aconstParams  = lookupTypes(pool, m_aiParams);
-        m_aconstReturns = lookupTypes(pool, m_aiReturns);
+        m_constName         = pool.getConstant(m_iName, StringConstant.class);
+        m_listConstParams   = lookupTypes(pool, m_aiParams);
+        m_listConstReturns  = lookupTypes(pool, m_aiReturns);
 
         m_aiParams  = null;
         m_aiReturns = null;
+    }
+
+
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    @Override
+    public SignatureConstant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+
+        List<TypeConstant> listParams  = m_listConstParams.stream()
+                .map(type -> (TypeConstant) type.transferTo(pool))
+                .toList();
+        List<TypeConstant> listReturns = m_listConstReturns.stream()
+                .map(type -> (TypeConstant) type.transferTo(pool))
+                .toList();
+
+        return pool.ensureSignatureConstant(getName(), listParams, listReturns);
     }
 
 
@@ -156,42 +187,28 @@ public class SignatureConstant
      * @return the method's parameter count
      */
     public int getParamCount() {
-        return m_aconstParams.length;
-    }
-
-    /**
-     * @return the method's parameter types
-     */
-    public TypeConstant[] getRawParams() {
-        return m_aconstParams;
+        return m_listConstParams.size();
     }
 
     /**
      * @return the method's parameter types
      */
     public List<TypeConstant> getParams() {
-        return Arrays.asList(m_aconstParams.clone());
+        return m_listConstParams;
     }
 
     /**
      * @return the method's return count
      */
     public int getReturnCount() {
-        return m_aconstReturns.length;
-    }
-
-    /**
-     * @return the method's return types
-     */
-    public TypeConstant[] getRawReturns() {
-        return m_aconstReturns;
+        return m_listConstReturns.size();
     }
 
     /**
      * @return the method's return types
      */
     public List<TypeConstant> getReturns() {
-        return Arrays.asList(m_aconstReturns);
+        return m_listConstReturns;
     }
 
     /**
@@ -205,13 +222,13 @@ public class SignatureConstant
      * @return true iff this signature contains any generic types
      */
     public boolean containsGenericTypes() {
-        for (TypeConstant type : m_aconstParams) {
+        for (TypeConstant type : m_listConstParams) {
             if (type.containsGenericType(true)) {
                 return true;
             }
         }
 
-        for (TypeConstant type : m_aconstReturns) {
+        for (TypeConstant type : m_listConstReturns) {
             if (type.containsGenericType(true)) {
                 return true;
             }
@@ -223,13 +240,13 @@ public class SignatureConstant
      * @return true iff this signature contains any formal type parameters
      */
     public boolean containsTypeParameters() {
-        for (TypeConstant type : m_aconstParams) {
+        for (TypeConstant type : m_listConstParams) {
             if (type.containsTypeParameter(true)) {
                 return true;
             }
         }
 
-        for (TypeConstant type : m_aconstReturns) {
+        for (TypeConstant type : m_listConstReturns) {
             if (type.containsTypeParameter(true)) {
                 return true;
             }
@@ -250,38 +267,36 @@ public class SignatureConstant
             return this;
         }
 
-        TypeConstant[] aconstParamOriginal = m_aconstParams;
-        TypeConstant[] aconstParamResolved = aconstParamOriginal;
-        boolean        fDiff               = false;
-        for (int i = 0, c = aconstParamOriginal.length; i < c; ++i) {
-            TypeConstant constOriginal = aconstParamOriginal[i];
+        List<TypeConstant> listParams  = m_listConstParams;
+        List<TypeConstant> listReturns = m_listConstReturns;
+        boolean            fDiff       = false;
+
+        for (int i = 0, c = listParams.size(); i < c; ++i) {
+            TypeConstant constOriginal = listParams.get(i);
             TypeConstant constResolved = constOriginal.resolveGenerics(pool, resolver);
             if (constOriginal != constResolved) {
-                if (aconstParamResolved == aconstParamOriginal) {
-                    aconstParamResolved = aconstParamOriginal.clone();
-                    fDiff               = true;
+                if (!fDiff) {
+                    listParams = new ArrayList<>(m_listConstParams);
+                    fDiff      = true;
                 }
-                aconstParamResolved[i] = constResolved;
+                listParams.set(i, constResolved);
             }
         }
 
-        TypeConstant[] aconstReturnOriginal = m_aconstReturns;
-        TypeConstant[] aconstReturnResolved = aconstReturnOriginal;
-        for (int i = 0, c = aconstReturnOriginal.length; i < c; ++i) {
-            TypeConstant constOriginal = aconstReturnOriginal[i];
+        for (int i = 0, c = listReturns.size(); i < c; ++i) {
+            TypeConstant constOriginal = listReturns.get(i);
             TypeConstant constResolved = constOriginal.resolveGenerics(pool, resolver);
             if (constOriginal != constResolved) {
-                if (aconstReturnResolved == aconstReturnOriginal) {
-                    aconstReturnResolved = aconstReturnOriginal.clone();
-                    fDiff                = true;
+                if (listReturns == m_listConstReturns) {
+                    listReturns = new ArrayList<>(m_listConstReturns);
+                    fDiff       = true;
                 }
-                aconstReturnResolved[i] = constResolved;
+                listReturns.set(i, constResolved);
             }
         }
 
         if (fDiff) {
-            SignatureConstant that = pool.ensureSignatureConstant(
-                    getName(), aconstParamResolved, aconstReturnResolved);
+            SignatureConstant that = pool.ensureSignatureConstant(getName(), listParams, listReturns);
             that.m_fProperty = this.m_fProperty;
             return that;
         }
@@ -298,13 +313,13 @@ public class SignatureConstant
      * @return true iff any portion of this TypeConstant represents an auto-narrowing type
      */
     public boolean containsAutoNarrowing(boolean fAllowVirtChild) {
-        for (TypeConstant typeParam : m_aconstParams) {
+        for (TypeConstant typeParam : m_listConstParams) {
             if (typeParam.containsAutoNarrowing(fAllowVirtChild)) {
                 return true;
             }
         }
 
-        for (TypeConstant typeReturn : m_aconstReturns) {
+        for (TypeConstant typeReturn : m_listConstReturns) {
             if (typeReturn.containsAutoNarrowing(fAllowVirtChild)) {
                 return true;
             }
@@ -327,38 +342,41 @@ public class SignatureConstant
      */
     public SignatureConstant resolveAutoNarrowing(ConstantPool pool, TypeConstant typeTarget,
                                                   IdentityConstant idCtx) {
-        TypeConstant[] aconstParamOriginal = m_aconstParams;
-        TypeConstant[] aconstParamResolved = aconstParamOriginal;
-        boolean        fDiff               = false;
-        for (int i = 0, c = aconstParamOriginal.length; i < c; ++i) {
-            TypeConstant constOriginal = aconstParamOriginal[i];
+        List<TypeConstant> listParams  = m_listConstParams;
+        List<TypeConstant> listReturns = m_listConstReturns;
+        boolean            fDiff       = false;
+
+        for (int i = 0, c = listParams.size(); i < c; ++i) {
+            TypeConstant constOriginal = listParams.get(i);
             TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, false, typeTarget, idCtx);
             if (constOriginal != constResolved) {
-                if (aconstParamResolved == aconstParamOriginal) {
-                    aconstParamResolved = aconstParamOriginal.clone();
-                    fDiff               = true;
+                if (!fDiff) {
+                    listParams = new ArrayList<>(m_listConstParams);
+                    fDiff      = true;
                 }
-                aconstParamResolved[i] = constResolved;
+                listParams.set(i, constResolved);
             }
         }
 
-        TypeConstant[] aconstReturnOriginal = m_aconstReturns;
-        TypeConstant[] aconstReturnResolved = aconstReturnOriginal;
-        for (int i = 0, c = aconstReturnOriginal.length; i < c; ++i) {
-            TypeConstant constOriginal = aconstReturnOriginal[i];
+        for (int i = 0, c = listReturns.size(); i < c; ++i) {
+            TypeConstant constOriginal = listReturns.get(i);
             TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, false, typeTarget, idCtx);
             if (constOriginal != constResolved) {
-                if (aconstReturnResolved == aconstReturnOriginal) {
-                    aconstReturnResolved = aconstReturnOriginal.clone();
-                    fDiff                = true;
+                if (listReturns == m_listConstReturns) {
+                    listReturns = new ArrayList<>(m_listConstReturns);
+                    fDiff       = true;
                 }
-                aconstReturnResolved[i] = constResolved;
+                listReturns.set(i, constResolved);
             }
         }
 
-        return fDiff
-                ? pool.ensureSignatureConstant(getName(), aconstParamResolved, aconstReturnResolved)
-                : this;
+        if (fDiff) {
+            SignatureConstant that = pool.ensureSignatureConstant(getName(), listParams, listReturns);
+            that.m_fProperty = this.m_fProperty;
+            return that;
+        }
+
+        return this;
     }
 
     /**
@@ -418,18 +436,18 @@ public class SignatureConstant
             return false;
         }
 
-        TypeConstant[] aR1 = that.getRawReturns();
-        TypeConstant[] aR2 = this.getRawReturns();
+        List<TypeConstant> listR1 = that.getReturns();
+        List<TypeConstant> listR2 = this.getReturns();
         for (int i = 0, c = Math.min(cR1, cR2); i < c; i++) {
-            if (!aR2[i].isCovariantReturn(aR1[i], typeCtx)) {
+            if (!listR2.get(i).isCovariantReturn(listR1.get(i), typeCtx)) {
                 return false;
             }
         }
 
-        TypeConstant[] aP1 = that.getRawParams();
-        TypeConstant[] aP2 = this.getRawParams();
+        List<TypeConstant> listP1 = that.getParams();
+        List<TypeConstant> listP2 = this.getParams();
         for (int i = 0; i < cP1; i++) {
-            if (!aP2[i].isContravariantParameter(aP1[i], typeCtx)) {
+            if (!listP2.get(i).isContravariantParameter(listP1.get(i), typeCtx)) {
                 return false;
             }
         }
@@ -462,18 +480,18 @@ public class SignatureConstant
             return false;
         }
 
-        TypeConstant[] aR1 = that.getRawReturns();
-        TypeConstant[] aR2 = this.getRawReturns();
+        List<TypeConstant> listR1 = that.getReturns();
+        List<TypeConstant> listR2 = this.getReturns();
         for (int i = 0, c = Math.min(cR1, cR2); i < c; i++) {
-            if (!aR2[i].isA(aR1[i]) && !aR1[i].isA(aR2[i])) {
+            if (!listR2.get(i).isA(listR1.get(i)) && !listR1.get(i).isA(listR2.get(i))) {
                 return false;
             }
         }
 
-        TypeConstant[] aP1 = that.getRawParams();
-        TypeConstant[] aP2 = this.getRawParams();
+        List<TypeConstant> listP1 = that.getParams();
+        List<TypeConstant> listP2 = this.getParams();
         for (int i = 0; i < cP1; i++) {
-            if (!aP1[i].isA(aP2[i]) && !aP2[i].isA(aP1[i])) {
+            if (!listP1.get(i).isA(listP2.get(i)) && !listP2.get(i).isA(listP1.get(i))) {
                 return false;
             }
         }
@@ -491,13 +509,13 @@ public class SignatureConstant
      */
     public boolean isShared(ConstantPool poolOther) {
         if (poolOther != getConstantPool()) {
-            for (TypeConstant type : m_aconstParams) {
+            for (TypeConstant type : m_listConstParams) {
                 if (!type.isShared(poolOther)) {
                     return false;
                 }
             }
 
-            for (TypeConstant type : m_aconstReturns) {
+            for (TypeConstant type : m_listConstReturns) {
                 if (!type.isShared(poolOther)) {
                     return false;
                 }
@@ -511,7 +529,7 @@ public class SignatureConstant
      * @return the type of the function that corresponds to this SignatureConstant
      */
     public TypeConstant asFunctionType() {
-        return getConstantPool().buildFunctionType(m_aconstParams, m_aconstReturns);
+        return getConstantPool().buildFunctionType(m_listConstParams, m_listConstReturns);
     }
 
     /**
@@ -519,14 +537,10 @@ public class SignatureConstant
      *         (at index zero) parameter accepting the specified target type
      */
     public TypeConstant asBjarneLambdaType(ConstantPool pool, TypeConstant typeTarget) {
-        TypeConstant[] aconstParamsOld = m_aconstParams;
-        int            cParams         = aconstParamsOld.length;
-        TypeConstant[] aconstParamsNew = new TypeConstant[cParams + 1];
-
-        aconstParamsNew[0] = typeTarget;
-        System.arraycopy(aconstParamsOld, 0, aconstParamsNew, 1, cParams);
-
-        return pool.buildFunctionType(aconstParamsNew, m_aconstReturns);
+        List<TypeConstant> listParamsNew = new ArrayList<>(m_listConstParams.size() + 1);
+        listParamsNew.add(typeTarget);
+        listParamsNew.addAll(m_listConstParams);
+        return pool.buildFunctionType(listParamsNew, m_listConstReturns);
     }
 
     /**
@@ -534,15 +548,15 @@ public class SignatureConstant
      *         target type
      */
     public TypeConstant asMethodType(ConstantPool pool, TypeConstant typeTarget) {
-        return pool.buildMethodType(typeTarget, m_aconstParams, m_aconstReturns);
+        return pool.buildMethodType(typeTarget, m_listConstParams, m_listConstReturns);
     }
 
     /**
      * @return the type of the function that corresponds to this SignatureConstant as a constructor
      */
     public TypeConstant asConstructorType(ConstantPool pool, TypeConstant typeTarget) {
-        assert getName().equals("construct") && m_aconstReturns.length == 0;
-        return pool.buildFunctionType(m_aconstParams, typeTarget);
+        assert getName().equals("construct") && m_listConstReturns.isEmpty();
+        return pool.buildFunctionType(m_listConstParams, List.of(typeTarget));
     }
 
     /**
@@ -556,14 +570,14 @@ public class SignatureConstant
      */
     public SignatureConstant truncateParams(int ofStart, int cParams) {
         if (cParams < 0) {
-            cParams = m_aconstParams.length - ofStart;
+            cParams = m_listConstParams.size() - ofStart;
         }
 
         assert ofStart >= 0;
-        assert ofStart + cParams <= m_aconstParams.length;
+        assert ofStart + cParams <= m_listConstParams.size();
 
         return getConstantPool().ensureSignatureConstant(getName(),
-                Arrays.copyOfRange(m_aconstParams, ofStart, ofStart + cParams), m_aconstReturns);
+                m_listConstParams.subList(ofStart, ofStart + cParams), m_listConstReturns);
     }
 
 
@@ -584,13 +598,13 @@ public class SignatureConstant
             return true;
         }
 
-        for (TypeConstant constant : m_aconstParams) {
+        for (TypeConstant constant : m_listConstParams) {
             if (constant.containsUnresolved()) {
                 return true;
             }
         }
 
-        for (TypeConstant constant : m_aconstReturns) {
+        for (TypeConstant constant : m_listConstReturns) {
             if (constant.containsUnresolved()) {
                 return true;
             }
@@ -602,50 +616,48 @@ public class SignatureConstant
     @Override
     public void forEachUnderlying(Consumer<Constant> visitor) {
         visitor.accept(m_constName);
-        for (TypeConstant constant : m_aconstParams) {
+        for (TypeConstant constant : m_listConstParams) {
             visitor.accept(constant);
         }
-        for (TypeConstant constant : m_aconstReturns) {
+        for (TypeConstant constant : m_listConstReturns) {
             visitor.accept(constant);
         }
     }
 
     @Override
     public SignatureConstant resolveTypedefs() {
-        // params
-        TypeConstant[] atypeOldParams = m_aconstParams;
-        TypeConstant[] atypeNewParams = atypeOldParams;
-        boolean        fDiff          = false;
-        for (int i = 0, c = atypeOldParams.length; i < c; ++i) {
-            TypeConstant constOld = atypeOldParams[i];
+        List<TypeConstant> listParams  = m_listConstParams;
+        List<TypeConstant> listReturns = m_listConstReturns;
+        boolean            fDiff       = false;
+
+        for (int i = 0, c = listParams.size(); i < c; ++i) {
+            TypeConstant constOld = listParams.get(i);
             TypeConstant constNew = constOld.resolveTypedefs();
             if (constNew != constOld) {
-                if (atypeNewParams == atypeOldParams) {
-                    atypeNewParams = atypeOldParams.clone();
-                    fDiff          = true;
+                if (!fDiff) {
+                    listParams = new ArrayList<>(m_listConstParams);
+                    fDiff      = true;
                 }
-                atypeNewParams[i] = constNew;
+                listParams.set(i, constNew);
             }
         }
 
-        // returns
-        TypeConstant[] atypeOldReturns = m_aconstReturns;
-        TypeConstant[] atypeNewReturns = atypeOldReturns;
-        for (int i = 0, c = atypeOldReturns.length; i < c; ++i) {
-            TypeConstant constOld = atypeOldReturns[i];
+        for (int i = 0, c = listReturns.size(); i < c; ++i) {
+            TypeConstant constOld = listReturns.get(i);
             TypeConstant constNew = constOld.resolveTypedefs();
             if (constNew != constOld) {
-                if (atypeNewReturns == atypeOldReturns) {
-                    atypeNewReturns = atypeOldReturns.clone();
-                    fDiff           = true;
+                if (listReturns == m_listConstReturns) {
+                    listReturns = new ArrayList<>(m_listConstReturns);
+                    fDiff       = true;
                 }
-                atypeNewReturns[i] = constNew;
+                listReturns.set(i, constNew);
             }
         }
 
-        return fDiff
-                ? getConstantPool().ensureSignatureConstant(getName(), atypeNewParams, atypeNewReturns)
-                : this;
+        if (fDiff) {
+            return getConstantPool().ensureSignatureConstant(getName(), listParams, listReturns);
+        }
+        return this;
     }
 
     @Override
@@ -665,9 +677,9 @@ public class SignatureConstant
         boolean fCache = this.getConstantPool() == that.getConstantPool() && !containsUnresolved();
         int     n      = this.m_constName.compareTo(that.m_constName);
         if (n == 0) {
-            n = compareTypes(this.m_aconstParams, that.m_aconstParams);
+            n = compareTypes(this.m_listConstParams, that.m_listConstParams);
             if (n == 0) {
-                n = compareTypes(this.m_aconstReturns, that.m_aconstReturns);
+                n = compareTypes(this.m_listConstReturns, that.m_listConstReturns);
                 if (n == 0) {
                     n = (this.m_fProperty ? 1 : 0) - (that.m_fProperty ? 1 : 0);
                 }
@@ -692,19 +704,19 @@ public class SignatureConstant
     public String getValueString() {
         StringBuilder sb = new StringBuilder();
 
-        switch (m_aconstReturns.length) {
+        switch (m_listConstReturns.size()) {
         case 0:
             sb.append("void");
             break;
 
         case 1:
-            sb.append(m_aconstReturns[0].getValueString());
+            sb.append(m_listConstReturns.getFirst().getValueString());
             break;
 
         default:
             sb.append('(');
             boolean first = true;
-            for (TypeConstant type : m_aconstReturns) {
+            for (TypeConstant type : m_listConstReturns) {
                 if (first) {
                     first = false;
                 } else {
@@ -723,7 +735,7 @@ public class SignatureConstant
             sb.append('(');
 
             boolean first = true;
-            for (TypeConstant type : m_aconstParams) {
+            for (TypeConstant type : m_listConstParams) {
                 if (first) {
                     first = false;
                 } else {
@@ -768,8 +780,8 @@ public class SignatureConstant
     @Override
     protected void registerConstants(ConstantPool pool) {
         m_constName     = pool.register(m_constName);
-        m_aconstParams  = TypeConstant.registerTypeConstants(pool, m_aconstParams);
-        m_aconstReturns = TypeConstant.registerTypeConstants(pool, m_aconstReturns);
+        m_listConstParams  = TypeConstant.registerTypeConstants(pool, m_listConstParams);
+        m_listConstReturns = TypeConstant.registerTypeConstants(pool, m_listConstReturns);
 
         // clear the cache
         long stamp = m_lockPrev.writeLock();
@@ -786,15 +798,15 @@ public class SignatureConstant
 
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, m_constName.getPosition());
-        writeTypes(out, m_aconstParams);
-        writeTypes(out, m_aconstReturns);
+        writeTypes(out, m_listConstParams);
+        writeTypes(out, m_listConstReturns);
     }
 
     @Override
     public String getDescription() {
         return "name=" + getName()
-                + ", params=" + formatTypes(m_aconstParams)
-                + ", returns=" + formatTypes(m_aconstReturns);
+                + ", params=" + formatTypes(m_listConstParams)
+                + ", returns=" + formatTypes(m_listConstReturns);
     }
 
 
@@ -802,8 +814,8 @@ public class SignatureConstant
 
     @Override
     protected int computeHashCode() {
-        return Hash.of(m_aconstParams,
-               Hash.of(m_aconstReturns,
+        return Hash.of(m_listConstParams,
+               Hash.of(m_listConstReturns,
                Hash.of(m_constName)));
     }
 
@@ -830,75 +842,76 @@ public class SignatureConstant
     }
 
     /**
-     * Convert the passed array of constant indexes into an array of type constants.
+     * Convert the passed array of constant indexes into a list of type constants.
      *
      * @param pool  the ConstantPool
      * @param an    an array of constant indexes
      *
-     * @return an array of type constants
+     * @return an immutable list of type constants
      */
-    protected static TypeConstant[] lookupTypes(ConstantPool pool, int[] an) {
-        int c = an.length;
-        TypeConstant[] aconst = new TypeConstant[c];
-        for (int i = 0; i < c; ++i) {
-            aconst[i] = (TypeConstant) pool.getConstant(an[i]);
+    protected static List<TypeConstant> lookupTypes(ConstantPool pool, int[] an) {
+        if (an.length == 0) {
+            return List.of();
         }
-        return aconst;
+        return Arrays.stream(an)
+                .mapToObj(i -> pool.getConstant(i, TypeConstant.class))
+                .toList();
     }
 
     /**
      * Write a length-encoded series of type constants to the specified stream.
      *
-     * @param out     a DataOutput stream
-     * @param aconst  an array of constants
+     * @param out        a DataOutput stream
+     * @param listConst  a list of constants
      *
      * @throws IOException  if an error occurs while writing the type constants
      */
-    protected static void writeTypes(DataOutput out, TypeConstant[] aconst)
+    protected static void writeTypes(DataOutput out, List<TypeConstant> listConst)
             throws IOException {
-        writePackedLong(out, aconst.length);
+        writePackedLong(out, listConst.size());
 
-        for (TypeConstant typeConstant : aconst) {
+        for (TypeConstant typeConstant : listConst) {
             writePackedLong(out, typeConstant.getPosition());
         }
     }
 
     /**
-     * Internal helper to scan a type array for nulls.
+     * Internal helper to validate a list of types for nulls.
      *
-     * @param aconst  an array of TypeConstant; may be null
+     * @param listConst  a list of TypeConstant; may be null
      *
-     * @return a non-null array of TypeConstant, each element of which is non-null
+     * @return an immutable non-null list of TypeConstant, each element of which is non-null
      */
-    protected static TypeConstant[] validateTypes(TypeConstant[] aconst) {
-        if (aconst == null) {
-            return ConstantPool.NO_TYPES;
+    protected static List<TypeConstant> validateTypes(List<TypeConstant> listConst) {
+        if (listConst == null || listConst.isEmpty()) {
+            return List.of();
         }
 
-        for (TypeConstant constant : aconst) {
+        for (TypeConstant constant : listConst) {
             if (constant == null) {
                 throw new IllegalArgumentException("type required");
             }
         }
 
-        return aconst;
+        // Return immutable copy
+        return List.copyOf(listConst);
     }
 
     /**
-     * Compare two arrays of type constants for order, as per the rules described by
+     * Compare two lists of type constants for order, as per the rules described by
      * {@link Comparable}.
      *
-     * @param aconstThis  the first array of type constants
-     * @param aconstThat  the second array of type constants
+     * @param listThis  the first list of type constants
+     * @param listThat  the second list of type constants
      *
-     * @return a negative, zero, or a positive integer, depending on if the first array is less
-     *         than, equal to, or greater than the second array for purposes of ordering
+     * @return a negative, zero, or a positive integer, depending on if the first list is less
+     *         than, equal to, or greater than the second list for purposes of ordering
      */
-    protected static int compareTypes(TypeConstant[] aconstThis, TypeConstant[] aconstThat) {
-        int cThis = aconstThis.length;
-        int cThat = aconstThat.length;
+    protected static int compareTypes(List<TypeConstant> listThis, List<TypeConstant> listThat) {
+        int cThis = listThis.size();
+        int cThat = listThat.size();
         for (int i = 0, c = Math.min(cThis, cThat); i < c; ++i) {
-            int n = aconstThis[i].compareTo(aconstThat[i]);
+            int n = listThis.get(i).compareTo(listThat.get(i));
             if (n != 0) {
                 return n;
             }
@@ -907,23 +920,16 @@ public class SignatureConstant
     }
 
     /**
-     * Render an array of TypeConstant objects as a comma-delimited string containing those types.
+     * Render a list of TypeConstant objects as a comma-delimited string containing those types.
      *
-     * @param aconst  the array of type constants
+     * @param listConst  the list of type constants
      *
      * @return a parenthesized, comma-delimited string of types
      */
-    protected static String formatTypes(TypeConstant[] aconst) {
-        StringBuilder sb = new StringBuilder();
-        sb.append('(');
-        for (int i = 0, c = aconst.length; i < c; ++i) {
-            if (i > 0) {
-                sb.append(", ");
-            }
-            sb.append(aconst[i].getValueString());
-        }
-        sb.append(')');
-        return sb.toString();
+    protected static String formatTypes(List<TypeConstant> listConst) {
+        return listConst.stream()
+                .map(TypeConstant::getValueString)
+                .collect(Collectors.joining(", ", "(", ")"));
     }
 
 
@@ -953,12 +959,12 @@ public class SignatureConstant
     /**
      * The invocation parameters of the method.
      */
-    private TypeConstant[] m_aconstParams;
+    private List<TypeConstant> m_listConstParams;
 
     /**
      * The return values from the method.
      */
-    private TypeConstant[] m_aconstReturns;
+    private List<TypeConstant> m_listConstReturns;
 
     /**
      * An indicator that this signature refers to a property.

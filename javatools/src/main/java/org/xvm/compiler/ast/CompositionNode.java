@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -242,7 +243,7 @@ public abstract class CompositionNode
         public Incorporates(Expression condition, Token keyword, TypeExpression type,
                             @NotNull List<Expression> args, List<Parameter> constraints) {
             super(condition, keyword, type);
-            this.args        = args;
+            this.args        = Objects.requireNonNull(args, "args cannot be null");
             this.constraints = constraints;
         }
 

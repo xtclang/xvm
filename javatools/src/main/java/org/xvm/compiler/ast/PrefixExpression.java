@@ -110,7 +110,7 @@ public abstract class PrefixExpression
             boolean             fAmbiguous = false;
             for (MethodConstant idMethod : setOps) {
                 if (typeRequired != null &&
-                        !isAssignable(ctx, idMethod.getSignature().getRawReturns()[0], typeRequired)) {
+                        !isAssignable(ctx, idMethod.getSignature().getReturns().getFirst(), typeRequired)) {
                     continue;
                 }
 
@@ -150,7 +150,7 @@ public abstract class PrefixExpression
                             operator.getValueText(), typeRight.getValueString());
                 }
             } else {
-                return idBest.getSignature().getRawReturns()[0].removeAutoNarrowing();
+                return idBest.getSignature().getReturns().getFirst().removeAutoNarrowing();
             }
         }
 

@@ -279,6 +279,12 @@ public abstract class AstNode
 
         AstNode copy = withChildren(copiedChildren);
         copy.adopt(copiedChildren);
+
+        // preserve the parent and stage from the original - this allows the copy to be
+        // used in the same compilation context (e.g., for test compilation)
+        copy.m_parent = this.m_parent;
+        copy.m_stage  = this.m_stage;
+
         return copy;
     }
 
@@ -456,11 +462,22 @@ public abstract class AstNode
      * @param method  the MethodStructure to donate the source code to
      */
     void donateSource(MethodStructure method) {
-        if (method != null) {
+        donateSource(method, getSource());
+    }
+
+    /**
+     * Populate the MethodStructure with the source code from this AST node using the specified
+     * source reference.
+     *
+     * @param method  the MethodStructure to donate the source code to
+     * @param source  the Source to use (may be different from this node's source for copied nodes)
+     */
+    void donateSource(MethodStructure method, Source source) {
+        if (method != null && source != null) {
             long   lStart = getStartPosition();
             long   lEnd   = getEndPosition();
             int    iLine  = Source.calculateLine(lStart);
-            String sSrc   = getSource().toString(lStart, lEnd);
+            String sSrc   = source.toString(lStart, lEnd);
 
             if (sSrc.startsWith("{") && sSrc.endsWith("}")) {
                 sSrc = sSrc.substring(1, sSrc.length()-1);
@@ -968,15 +985,15 @@ public abstract class AstNode
      *
      * @param ctx            the compiler context
      * @param listExpr       the list of expressions (can be modified)
-     * @param atypeRequired  the required types array
+     * @param listRequired   the required types (may be null)
      * @param errs           the error listener
      *
      * @return an array of TypeConstants describing the actual expression types or null
      *         if the validation fails, in which case an error has been reported
      */
     protected TypeConstant[] validateExpressions(Context ctx, List<Expression> listExpr,
-                                                 TypeConstant[] atypeRequired, ErrorListener errs) {
-        int            cReq   = atypeRequired == null ? 0 : atypeRequired.length;
+                                                 List<TypeConstant> listRequired, ErrorListener errs) {
+        int            cReq   = listRequired == null ? 0 : listRequired.size();
         int            cExprs = listExpr.size();
         TypeConstant[] atype  = new TypeConstant[cExprs];
         boolean        fValid = true;
@@ -987,7 +1004,7 @@ public abstract class AstNode
                 continue;
             }
 
-            TypeConstant typeRequired = i < cReq ? atypeRequired[i] : null;
+            TypeConstant typeRequired = i < cReq ? listRequired.get(i) : null;
             if (typeRequired != null) {
                 ctx = ctx.enterInferring(typeRequired);
             }
@@ -1301,12 +1318,12 @@ public abstract class AstNode
                 sigMethod = sigMethod.resolveGenericTypes(pool, GenericTypeResolver.of(mapTypeParams));
             }
 
-            TypeConstant[] atypeParam = sigMethod.getRawParams();
-            TypeFit        fit        = TypeFit.Fit;
-            boolean        fExact     = true;
+            List<TypeConstant> listParams = sigMethod.getParams();
+            TypeFit            fit        = TypeFit.Fit;
+            boolean            fExact     = true;
             for (int i = 0; i < cArgs; ++i) {
                 Expression   exprArg   = listArgs.get(i);
-                TypeConstant typeParam = atypeParam[cTypeParams + i];
+                TypeConstant typeParam = listParams.get(cTypeParams + i);
                 TypeConstant typeArg   = atypeArgs[i];
 
                 // check if the method's parameter type fits the argument expression
@@ -1570,8 +1587,8 @@ public abstract class AstNode
                     if (!fOldBetter && !fNewBetter) {
                         // choose the one that is narrower for every argument
                         for (int i = 0; i < cParamsOld; i++) {
-                            TypeConstant typeOld = sigOld.getRawParams()[i];
-                            TypeConstant typeNew = sigNew.getRawParams()[i];
+                            TypeConstant typeOld = sigOld.getParams().get(i);
+                            TypeConstant typeNew = sigNew.getParams().get(i);
 
                             if (typeOld.isA(typeNew) && !typeNew.isA(typeOld)) {
                                 fOldBetter = true;
@@ -1635,8 +1652,8 @@ public abstract class AstNode
     protected TypeFit calculateReturnFit(SignatureConstant sigMethod, boolean fCall,
                                          TypeConstant[] atypeReturn, TypeConstant typeCtx,
                                          ErrorListener errs) {
-        return calculateReturnFit(sigMethod.getRawReturns(), sigMethod.getValueString(), fCall,
-                                    atypeReturn, typeCtx, errs);
+        return calculateReturnFit(sigMethod.getReturns().toArray(TypeConstant[]::new),
+                                    sigMethod.getValueString(), fCall, atypeReturn, typeCtx, errs);
     }
 
     /**

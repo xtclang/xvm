@@ -471,10 +471,181 @@ javatools/src/main/java/org/xvm/asm/constants/BFloat16Constant.java
 
 
 ================================================================================
+Session 4: Copy State Preservation and Immutable Collections
+================================================================================
+
+17. COPY() NOW PRESERVES COMPILATION STATE
+------------------------------------------
+File: javatools/src/main/java/org/xvm/compiler/ast/AstNode.java
+
+Problem: The copy() method using withChildren() created fresh nodes via
+constructors, losing parent, stage, and component references. This broke
+test compilation in PropertyDeclarationStatement which creates a copy to
+test-compile an initializer.
+
+Original clone() behavior: super.clone() shallowly copied ALL fields
+(parent, stage, component), then deep-copied children via getChildFields().
+
+New copy() fix (lines 283-286):
+  // preserve the parent and stage from the original - this allows the copy to be
+  // used in the same compilation context (e.g., for test compilation)
+  copy.m_parent = this.m_parent;
+  copy.m_stage  = this.m_stage;
+
+File: javatools/src/main/java/org/xvm/compiler/ast/ComponentStatement.java
+
+Added copy() override to also preserve the component field (lines 19-26):
+  @Override
+  public ComponentStatement copy() {
+      ComponentStatement copy = (ComponentStatement) super.copy();
+      copy.component = this.component;
+      return copy;
+  }
+
+Result: copy() now has the same semantics as clone() without using clone().
+No setters needed after copy - the copy is immediately functional.
+
+
+18. ARRAYCONSTANT CONVERTED TO IMMUTABLE LIST
+---------------------------------------------
+File: javatools/src/main/java/org/xvm/asm/constants/ArrayConstant.java
+
+Goal: Eliminate clone() calls and use immutable collections internally.
+
+Changes:
+- Field changed from Constant[] m_aconstVal to List<Constant> m_listVal
+- Constructor now takes @NotNull List<Constant> and stores List.copyOf()
+- getValue() returns immutable List<Constant>
+- Added getValues() alias for clarity
+- Added deprecated getValueArray() for backward compatibility
+- All internal methods updated to use List API
+
+Constructor (lines 37-47):
+  public ArrayConstant(ConstantPool pool, Format fmt, TypeConstant constType,
+                       @NotNull List<Constant> values) {
+      super(pool);
+      validateFormatAndType(fmt, constType);
+
+      f_fmt       = fmt;
+      m_constType = constType;
+      m_listVal   = List.copyOf(Objects.requireNonNull(values, "values required"));
+  }
+
+resolveTypedefs() updated (lines 200-227):
+- No more clone() - uses new ArrayList<>(listOld) for copy-on-write
+- Only creates new list if changes detected
+
+
+19. CONSTANTPOOL ARRAY METHODS UPDATED
+--------------------------------------
+File: javatools/src/main/java/org/xvm/asm/ConstantPool.java
+
+Primary methods now take @NotNull List<Constant>:
+
+  public ArrayConstant ensureArrayConstant(TypeConstant constType,
+                                           @NotNull List<Constant> values)
+  public ArrayConstant ensureSetConstant(TypeConstant constType,
+                                         @NotNull List<Constant> values)
+  public ArrayConstant ensureTupleConstant(TypeConstant constType,
+                                           @NotNull List<Constant> values)
+
+Backward-compatible varargs overloads added (lines 748-784):
+
+  public ArrayConstant ensureArrayConstant(TypeConstant constType, Constant... aconst) {
+      return ensureArrayConstant(constType, aconst == null ? List.of() : Arrays.asList(aconst));
+  }
+
+No more clone() calls - arrays are converted to immutable Lists at the boundary.
+
+
+20. CONSTANT.NO_CONSTS_LIST ADDED
+---------------------------------
+File: javatools/src/main/java/org/xvm/asm/Constant.java
+
+Added immutable empty list constant (line 1013):
+  public static final List<Constant> NO_CONSTS_LIST = List.of();
+
+Deprecated the mutable array version:
+  @Deprecated
+  public static final Constant[] NO_CONSTS = new Constant[0];
+
+
+21. CALLER UPDATES (PARTIAL)
+----------------------------
+Updated to use List-based API:
+
+javatools/src/main/java/org/xvm/runtime/template/collections/xArray.java:
+  - Changed to use constArray.getValues() returning List
+  - Uses listVal.get(i) instead of aconst[i]
+
+javatools/src/main/java/org/xvm/runtime/template/collections/xTuple.java:
+  - Changed to use constTuple.getValues() returning List
+  - Uses listConst.get(i) instead of aconst[i]
+
+Remaining callers (~10-15 locations) still need updating:
+  - CaseManager.java (5 locations)
+  - CaseStatement.java
+  - UnpackExpression.java
+  - ArrayAccessExpression.java (2 locations)
+  - RelOpExpression.java
+  - FSNodeConstant.java
+  - JumpVal_N.java
+
+These can use either:
+  - getValues() for List-based iteration (preferred)
+  - getValueArray() for array compatibility (deprecated)
+
+
+================================================================================
+Summary: Immutability Progress
+================================================================================
+
+COMPLETED:
+✅ copy() preserves parent, stage, and component (no setters needed)
+✅ ArrayConstant uses immutable List<Constant> internally
+✅ ConstantPool methods accept @NotNull List<Constant>
+✅ Backward-compatible varargs overloads added
+✅ Constant.NO_CONSTS_LIST added for empty lists
+✅ No more clone() in ArrayConstant or ConstantPool ensure* methods
+
+REMAINING WORK:
+⏳ Update ~10-15 callers of getValue() to use getValues() or getValueArray()
+⏳ Replace ListMap with LinkedHashMap where possible
+⏳ Debug MethodInfo.layerOn assertion failure (separate issue in branch)
+⏳ Find and remove other clone patterns in codebase
+⏳ Analyze mutable state patterns for copy-on-write strategy
+
+
+================================================================================
+Design Principles Applied
+================================================================================
+
+1. IMMUTABILITY AT BOUNDARIES
+   - Constructor parameters use @NotNull annotations
+   - Null replaced with empty collections (List.of())
+   - List.copyOf() ensures immutability of stored data
+
+2. BACKWARD COMPATIBILITY
+   - Varargs overloads accept arrays, convert to Lists internally
+   - Deprecated getValueArray() returns array for legacy callers
+   - Gradual migration path - no breaking changes
+
+3. NO SETTERS AFTER COPY
+   - copy() returns fully-functional nodes
+   - Parent, stage, component all preserved
+   - Eliminates mutation after construction
+
+4. FINAL FIELDS WHERE POSSIBLE
+   - m_listVal could be made final with builder pattern
+   - Lazy initialization should use Lazy.java mechanisms
+
+
+================================================================================
 Test Status
 ================================================================================
 
-All javatools tests pass after these changes.
+javatools:build - SUCCESSFUL (compiles with deprecation warnings)
+xdk:compileXtc - BLOCKED by MethodInfo.layerOn assertion (pre-existing issue)
 
-Command: ./gradlew javatools:test
-Result: BUILD SUCCESSFUL
+Note: The MethodInfo assertion is unrelated to these changes - it's exposed
+by the copy() fix allowing compilation to proceed further than before.

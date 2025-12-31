@@ -441,7 +441,8 @@ public class Parser {
                     }
 
                     List<Expression> args = parseArgumentList(false, false, false);
-                    compositions.add(new CompositionNode.Incorporates(null, keyword, type, args, constraints));
+                    compositions.add(new CompositionNode.Incorporates(null, keyword, type,
+                            args == null ? List.of() : args, constraints));
                 } while (match(Id.COMMA) != null);
             } else if ((keyword = match(Id.INTO)) != null) {
                 compositions.add(new CompositionNode.Into(null, keyword, parseExtendedTypeExpression()));

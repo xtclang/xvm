@@ -185,7 +185,7 @@ public class ReturnStatement
             }
         } else if (cExprs > 1) {
             // validate each expression, telling it what return type is expected
-            atypeActual = validateExpressions(ctx, exprs, aRetTypes, errs);
+            atypeActual = validateExpressions(ctx, exprs, Arrays.asList(aRetTypes), errs);
             fValid      = atypeActual != null;
 
             // make sure the arity is correct (the number of exprs has to match the number of returns)

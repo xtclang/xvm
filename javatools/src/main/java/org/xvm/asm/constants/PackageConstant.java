@@ -47,6 +47,18 @@ public class PackageConstant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    @Override
+    public PackageConstant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+
+        return pool.ensurePackageConstant(getParentConstant().transferTo(pool), getName());
+    }
+
+
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override

@@ -2634,8 +2634,8 @@ public class TypeCompositionStatement
                 }
             }
 
-            boolean        fValid      = true;
-            TypeConstant[] atypeArgs   = idSuper.getRawParams();
+            boolean            fValid     = true;
+            List<TypeConstant> listParams = idSuper.getParams();
             for (int i = 0, c = listSuperArgs.size(); i < c; i++) {
                 Expression exprOld = listSuperArgs.get(i);
                 if (exprOld.isValidated()) {
@@ -2643,7 +2643,7 @@ public class TypeCompositionStatement
                     // have been validated by NewExpression or a "revisit" after a partial failure
                     continue;
                 }
-                Expression exprNew = exprOld.validate(ctx, atypeArgs[i], errs);
+                Expression exprNew = exprOld.validate(ctx, listParams.get(i), errs);
                 if (exprNew == null) {
                     fValid = false;
                     continue;

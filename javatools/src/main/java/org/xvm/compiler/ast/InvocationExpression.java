@@ -391,8 +391,8 @@ public class InvocationExpression
                 // has two sub-types, the first of which is its "params" and the second of which is
                 // its "returns", and the returns is a tuple type parameterized by the types of the
                 // return values from the function
-                TypeConstant[] atypeConvRets = m_idConvert.getRawReturns();
-                TypeConstant   typeFn        = atypeConvRets[0];
+                List<TypeConstant> listConvRets = m_idConvert.getReturns();
+                TypeConstant       typeFn       = listConvRets.getFirst();
 
                 assert typeFn.isFunction();
                 if (m_fCall) {
@@ -430,7 +430,7 @@ public class InvocationExpression
                     }
 
                     if (method.isFunction() || method.isConstructor()) {
-                        return resolveTypes(resolver, idMethod.getSignature().getRawReturns());
+                        return resolveTypes(resolver, idMethod.getSignature().getReturns().toArray(TypeConstant[]::new));
                     }
                     if (typeLeft == null) {
                         typeLeft = m_targetInfo == null
@@ -440,7 +440,7 @@ public class InvocationExpression
                     SignatureConstant sigMethod = idMethod.getSignature();
 
                     return resolveTypes(resolver,
-                            sigMethod.resolveAutoNarrowing(pool, typeLeft, null).getRawReturns());
+                            sigMethod.resolveAutoNarrowing(pool, typeLeft, null).getReturns().toArray(TypeConstant[]::new));
                 }
 
                 TypeConstant typeFn = m_fBindTarget
@@ -747,8 +747,8 @@ public class InvocationExpression
                 // has two sub-types, the first of which is its "params" and the second of which is
                 // its "returns", and the returns is a tuple type parameterized by the types of the
                 // return values from the function
-                TypeConstant[] atypeConvRets = m_idConvert.getRawReturns();
-                TypeConstant   typeFn        = atypeConvRets[0];
+                List<TypeConstant> listConvRets = m_idConvert.getReturns();
+                TypeConstant       typeFn       = listConvRets.getFirst();
 
                 assert typeFn.isFunction();
 
@@ -766,7 +766,7 @@ public class InvocationExpression
             // handle method or function
             if (argMethod instanceof MethodConstant idMethod) {
                 MethodStructure method      = m_method;
-                TypeConstant[]  atypeParams = idMethod.getRawParams();
+                TypeConstant[]  atypeParams = idMethod.getParams().toArray(TypeConstant[]::new);
                 int             cTypeParams = method.getTypeParamCount();
                 int             cParams     = method.getVisibleParamCount();
                 int             cReturns    = atypeReturn == null ? 0 : atypeReturn.length;
@@ -816,7 +816,7 @@ public class InvocationExpression
                             : m_targetInfo.getTargetType();
                 }
 
-                TypeConstant[] atypeArgs = validateExpressions(ctx, listArgs, atypeParams, errs);
+                TypeConstant[] atypeArgs = validateExpressions(ctx, listArgs, Arrays.asList(atypeParams), errs);
                 if (atypeArgs == null) {
                     return null;
                 }
@@ -851,7 +851,7 @@ public class InvocationExpression
                             continue;
                         }
 
-                        TypeConstant typeConstraint = idMethod.getRawParams()[iArg].getParamType(0);
+                        TypeConstant typeConstraint = idMethod.getParams().get(iArg).getParamType(0);
 
                         // there's a possibility that type parameter constraints refer to
                         // previous type parameters, for example:
@@ -885,7 +885,7 @@ public class InvocationExpression
                         sigMethod = sigMethod.resolveGenericTypes(pool,
                                         GenericTypeResolver.of(mapTypeParams));
                     }
-                    atypeResult = sigMethod.getRawReturns();
+                    atypeResult = sigMethod.getReturns().toArray(TypeConstant[]::new);
 
                     if (fCondReturn) {
                         if (getParent().allowsConditional(this)) {
@@ -1300,7 +1300,7 @@ public class InvocationExpression
 
                             // it's a method, and we need to generate the necessary code that calls it;
                             // generate the arguments
-                            int        cAll      = idMethod.getRawParams().length;
+                            int        cAll      = idMethod.getParams().size();
                             int        cDefaults = cAll - cTypeParams - cArgs;
                             Argument   arg0      = null;
                             Argument[] aArgs     = null;
@@ -1324,7 +1324,7 @@ public class InvocationExpression
                                     aAsts = new ExprAST[] {toTypeParameterAst(ctx, arg0)};
                                 } else { // (cDefaults == 1)
                                     arg0 = Register.DEFAULT;
-                                    aAsts = new ExprAST[] {RegisterAST.defaultReg(idMethod.getRawParams()[0])};
+                                    aAsts = new ExprAST[] {RegisterAST.defaultReg(idMethod.getParams().getFirst())};
                                 }
                             } else {
                                 chArgs = 'N';
@@ -1349,7 +1349,7 @@ public class InvocationExpression
                                 for (int i = 0; i < cDefaults; ++i) {
                                     int iArg = cTypeParams + cArgs + i;
                                     aArgs[iArg] = Register.DEFAULT;
-                                    aAsts[iArg] = RegisterAST.defaultReg(idMethod.getRawParams()[cArgs + i]);
+                                    aAsts[iArg] = RegisterAST.defaultReg(idMethod.getParams().get(cArgs + i));
                                 }
                             }
 
@@ -1528,7 +1528,7 @@ public class InvocationExpression
             }
         } else {
             // argFn isn't a function; convert whatever-it-is into the desired function
-            typeFn = idConv.getRawReturns()[0];
+            typeFn = idConv.getReturns().getFirst();
             Register regFn = code.createRegister(typeFn);
             code.add(new Invoke_01(argFn, idConv, regFn));
             argFn = regFn;
@@ -2711,7 +2711,7 @@ public class InvocationExpression
                     log(errs, Severity.ERROR, Compiler.WRONG_TYPE, "Function", typeFn.getValueString());
                     return null;
                 } else {
-                    typeFn = idConvert.getRawReturns()[0];
+                    typeFn = idConvert.getReturns().getFirst();
                 }
             }
         }
@@ -2821,7 +2821,7 @@ public class InvocationExpression
             atypeParams = Arrays.copyOfRange(atypeParams, cTypeParams, cAllParams);
         }
 
-        if (validateExpressions(ctx, args, atypeParams, errs) == null) {
+        if (validateExpressions(ctx, args, Arrays.asList(atypeParams), errs) == null) {
             return null;
         }
 

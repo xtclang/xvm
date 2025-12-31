@@ -63,7 +63,7 @@ public abstract class xNumber
                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn) {
         SignatureConstant sig = constructor.getIdentityConstant().getSignature();
         if (sig.getParamCount() == 1) {
-            TypeConstant typeParam = sig.getRawParams()[0];
+            TypeConstant typeParam = sig.getParams().getFirst();
             if (typeParam.equals(pool().typeString())) {
                 StringHandle hText = (StringHandle) ahVar[0];
                 return constructFromString(frame, hText.getStringValue(), iReturn);

@@ -86,6 +86,18 @@ public class ModuleConstant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    @Override
+    public ModuleConstant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+
+        return pool.ensureModuleConstant(getName(), getVersion());
+    }
+
+
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**

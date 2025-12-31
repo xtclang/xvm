@@ -1,6 +1,7 @@
 package org.xvm.asm;
 
 
+import org.jetbrains.annotations.NotNull;
 import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.NarrowedExprAST;
 import org.xvm.asm.ast.RegAllocAST;
@@ -8,6 +9,9 @@ import org.xvm.asm.ast.RegisterAST;
 
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
+
+import java.util.List;
+import java.util.Objects;
 
 
 /**
@@ -41,32 +45,42 @@ public class Register
     /**
      * Construct a Register of the specified type.
      *
-     * @param type   the TypeConstant specifying the Register type
+     * @param type   the TypeConstant specifying the Register type (must not be null)
      * @param sName  the name given to the register, if any; otherwise null
      * @param iArg   the argument index, which is either a pre-defined argument index, or a
      *               register ID
      */
     public Register(TypeConstant type, String sName, int iArg) {
-        if (type == null) {
-            switch (iArg) {
-            case Op.A_DEFAULT:
-            case Op.A_IGNORE:
-            case Op.A_IGNORE_ASYNC:
-                break;
-            default:
-                throw new IllegalArgumentException("type required");
-            }
-        } else {
-            type = type.resolveTypedefs();
-        }
+        this(Objects.requireNonNull(type, "type required").resolveTypedefs(), sName, iArg, iArg);
+    }
 
+    /**
+     * Private constructor for creating special predefined registers with null type.
+     *
+     * @param iArg  the special argument index (A_DEFAULT, A_IGNORE, or A_IGNORE_ASYNC)
+     */
+    private Register(int iArg) {
+        assert iArg == Op.A_DEFAULT || iArg == Op.A_IGNORE || iArg == Op.A_IGNORE_ASYNC;
+        validateIndex(iArg);
+
+        m_fRO        = isPredefinedReadonly(iArg);
+        m_type       = null;
+        m_sName      = null;
+        m_iArg       = iArg;
+        f_nOrigIndex = iArg;
+    }
+
+    /**
+     * Private common constructor.
+     */
+    private Register(TypeConstant type, String sName, int iArg, int nOrigIndex) {
         validateIndex(iArg);
 
         m_fRO        = isPredefinedReadonly(iArg);
         m_type       = type;
         m_sName      = sName;
         m_iArg       = iArg;
-        f_nOrigIndex = iArg;
+        f_nOrigIndex = nOrigIndex;
     }
 
     /**
@@ -196,8 +210,7 @@ public class Register
         if (typeReg != null) {
             if (typeReg.isAnnotated() && !typeNarrowed.equals(m_type)) {
                 ConstantPool pool = typeReg.getConstantPool();
-                TypeConstant typeNarrowedReg = pool.ensureParameterizedTypeConstant(
-                        isVar() ? pool.typeVar() : pool.typeRef(), typeNarrowed);
+                var typeNarrowedReg = pool.ensureParameterizedTypeConstant(isVar() ? pool.typeVar() : pool.typeRef(), List.of(typeNarrowed));
                 typeReg = typeNarrowedReg.adoptAnnotations(pool, typeReg);
             }
             regShadow.specifyRegType(typeReg);
@@ -501,28 +514,16 @@ public class Register
      * @return true iff the index specifies a pre-defined argument
      */
     protected static boolean isPredefinedRegister(int iArg) {
-        switch (iArg) {
-        case Op.A_IGNORE:
-        case Op.A_IGNORE_ASYNC:
-        case Op.A_DEFAULT:
-        case Op.A_PUBLIC:
-        case Op.A_PROTECTED:
-        case Op.A_PRIVATE:
-        case Op.A_THIS:
-        case Op.A_TARGET:
-        case Op.A_STRUCT:
-        case Op.A_CLASS:
-        case Op.A_SERVICE:
-        case Op.A_SUPER:
-        case Op.A_LABEL:
-            return true;
-
-        default:
-            if (iArg < 0) {
-                throw new IllegalArgumentException("illegal argument index: " + iArg);
+        return switch (iArg) {
+            case Op.A_IGNORE, Op.A_IGNORE_ASYNC, Op.A_DEFAULT, Op.A_PUBLIC, Op.A_PROTECTED, Op.A_PRIVATE, Op.A_THIS,
+                 Op.A_TARGET, Op.A_STRUCT, Op.A_CLASS, Op.A_SERVICE, Op.A_SUPER, Op.A_LABEL -> true;
+            default -> {
+                if (iArg < 0) {
+                    throw new IllegalArgumentException("illegal argument index: " + iArg);
+                }
+                yield false;
             }
-            return false;
-        }
+        };
     }
 
     /**
@@ -533,53 +534,23 @@ public class Register
      * @return an identity String, for debugging purposes
      */
     public static String getIdString(int nReg) {
-        switch (nReg) {
-        case Op.A_STACK:
-            return "this:stack";
-
-        case Op.A_IGNORE:
-        case Op.A_IGNORE_ASYNC:
-            return "_";
-
-        case Op.A_DEFAULT:
-            return "<default>";
-
-        case Op.A_THIS:
-            return "this";
-
-        case Op.A_TARGET:
-            return "this:target";
-
-        case Op.A_PUBLIC:
-            return "this:public";
-
-        case Op.A_PROTECTED:
-            return "this:protected";
-
-        case Op.A_PRIVATE:
-            return "this:private";
-
-        case Op.A_STRUCT:
-            return "this:struct";
-
-        case Op.A_CLASS:
-            return "this:class";
-
-        case Op.A_SERVICE:
-            return "this:service";
-
-        case Op.A_SUPER:
-            return "super";
-
-        case Op.A_LABEL:
-            return "<label>";
-
-        default:
-            return nReg < UNKNOWN
-                    ? "#" + nReg
-                    : "#???"; // this can happen *only* during the compilation, before the registers
-                              // get assigned
-        }
+        return switch (nReg) {
+            case Op.A_STACK -> "this:stack";
+            case Op.A_IGNORE, Op.A_IGNORE_ASYNC -> "_";
+            case Op.A_DEFAULT -> "<default>";
+            case Op.A_THIS -> "this";
+            case Op.A_TARGET -> "this:target";
+            case Op.A_PUBLIC -> "this:public";
+            case Op.A_PROTECTED -> "this:protected";
+            case Op.A_PRIVATE -> "this:private";
+            case Op.A_STRUCT -> "this:struct";
+            case Op.A_CLASS -> "this:class";
+            case Op.A_SERVICE -> "this:service";
+            case Op.A_SUPER -> "super";
+            case Op.A_LABEL -> "<label>";
+            // this can happen *only* during the compilation, before the registers get assigned
+            default -> nReg < UNKNOWN ? "#" + nReg : "#???";
+        };
     }
 
 
@@ -741,7 +712,7 @@ public class Register
                 return Register.this.getRegAllocAST();
             }
             // shadow doens't have an "alloc" register
-            throw new IllegalStateException();
+            throw new IllegalStateException("getRegAllocAST");
         }
 
         @Override
@@ -797,12 +768,12 @@ public class Register
     /**
      * Register representing a default method argument.
      */
-    public static final Register DEFAULT = new Register(null, null, Op.A_DEFAULT);
+    public static final Register DEFAULT = new Register(Op.A_DEFAULT);
 
     /**
      * Register representing an "async ignore" return.
      */
-    public static final Register ASYNC = new Register(null, null, Op.A_IGNORE_ASYNC);
+    public static final Register ASYNC = new Register(Op.A_IGNORE_ASYNC);
 
     /**
      * An index threshold that represents an unknown or otherwise unassigned registers. Any index
@@ -818,7 +789,7 @@ public class Register
     /**
      * The optional name of the register.
      */
-    private String m_sName;
+    private final String m_sName;
 
     /**
      * The type of the register itself (typically null).

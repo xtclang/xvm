@@ -281,8 +281,7 @@ public class LambdaExpression
         if (getParentBlock().isTerminatedAbnormally()) {
             if (method.getIdentityConstant().isNascent()) {
                 // stub out the lambda structure
-                configureLambda(TypeConstant.NO_TYPES, Handy.NO_ARGS, 0,
-                        new boolean[0], TypeConstant.NO_TYPES, false);
+                configureLambda();
             }
 
             mgr.deferChildren();
@@ -591,7 +590,8 @@ public class LambdaExpression
                 ctxLambda.getFormalMap().isEmpty() &&
                 !ctxLambda.isLambdaMethod()) {
                 // there are no bindings, so the lambda is a constant i.e. the function is the value
-                configureLambda(atypeParams, asParams, 0, null, atypeRets, fCond);
+                configureLambda(Arrays.asList(atypeParams), Arrays.asList(asParams), 0, null,
+                        Arrays.asList(atypeRets), fCond);
                 constVal = m_lambda.getIdentityConstant();
             }
         }
@@ -1182,34 +1182,42 @@ public class LambdaExpression
             m_aAstBind  = aAstBind;
 
             // store the resulting signature for the lambda
-            configureLambda(atypeParams, asParams, cTypeParams, afImplicitDeref, atypeReturns, fCondReturn);
+            configureLambda(Arrays.asList(atypeParams), Arrays.asList(asParams), cTypeParams,
+                    afImplicitDeref, Arrays.asList(atypeReturns), fCondReturn);
         }
 
         return m_aBindArgs;
     }
 
     /**
+     * Configure an empty lambda with no parameters and no returns.
+     */
+    protected void configureLambda() {
+        configureLambda(List.of(), List.of(), 0, null, List.of(), false);
+    }
+
+    /**
      * Configure the lambda's parameters, and fill in the lambda's signature information.
      *
-     * @param atypeParams     the type of each lambda parameter
-     * @param asParams        the name of each lambda parameter
+     * @param listParams      the type of each lambda parameter
+     * @param listNames       the name of each lambda parameter
      * @param cFormal         the number of formal type parameters
      * @param afImpliedDeref  indicates whether each lambda parameter needs an implicit de-reference
-     * @param atypeRets       the type of each lambda return value
+     * @param listReturns     the type of each lambda return value
      * @param fCondReturn     if true, lambda has a conditional return value
      */
-    protected void configureLambda(TypeConstant[] atypeParams, String[] asParams, int cFormal,
-            boolean[] afImpliedDeref, TypeConstant[] atypeRets, boolean fCondReturn) {
+    protected void configureLambda(List<TypeConstant> listParams, List<String> listNames, int cFormal,
+            boolean[] afImpliedDeref, List<TypeConstant> listReturns, boolean fCondReturn) {
         MethodStructure   lambda = m_lambda;
         ConstantPool      pool   = pool();
-        SignatureConstant sig    = pool.ensureSignatureConstant(METHOD_NAME, atypeParams, atypeRets);
+        SignatureConstant sig    = pool.ensureSignatureConstant(METHOD_NAME, listParams, listReturns);
 
-        int cParams = atypeParams.length;
-        int cNames  = asParams.length;
+        int cParams = listParams.size();
+        int cNames  = listNames.size();
         org.xvm.asm.Parameter[] aparamParams = new org.xvm.asm.Parameter[cParams];
         for (int i = 0; i < cParams; ++i) {
-            String       sName = i < cNames ? asParams[i] : null;
-            TypeConstant type  = atypeParams[i];
+            String       sName = i < cNames ? listNames.get(i) : null;
+            TypeConstant type  = listParams.get(i);
             assert !type.containsUnresolved();
 
             aparamParams[i] = new org.xvm.asm.Parameter(pool, type, sName, null, false, i, i < cFormal);
@@ -1220,10 +1228,10 @@ public class LambdaExpression
             }
         }
 
-        int cRets = atypeRets.length;
+        int cRets = listReturns.size();
         org.xvm.asm.Parameter[] aparamRets = new org.xvm.asm.Parameter[cRets];
         for (int i = 0; i < cRets; ++i) {
-            TypeConstant type = atypeRets[i];
+            TypeConstant type = listReturns.get(i);
             assert !type.containsUnresolved();
 
             aparamRets[i] = new org.xvm.asm.Parameter(pool, type, null, null, true, i, false);

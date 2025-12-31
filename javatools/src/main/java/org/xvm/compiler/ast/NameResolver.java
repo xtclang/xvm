@@ -291,7 +291,7 @@ public class NameResolver
                     int             nRegister = constTypeParam.getRegister();
                     MethodStructure method    = (MethodStructure) idMethod.getComponent();
                     TypeConstant    typeParam = method == null
-                            ? idMethod.getRawParams()[nRegister]
+                            ? idMethod.getParams().get(nRegister)
                             : method.getParam(nRegister).getType();
                     assert typeParam.isTypeOfType();
 

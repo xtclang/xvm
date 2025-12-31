@@ -1001,8 +1001,16 @@ public abstract class Constant
 
     /**
      * An empty array of constants.
+     *
+     * @deprecated Use {@link #NO_CONSTS_LIST} instead for immutability.
      */
+    @Deprecated
     public static final Constant[] NO_CONSTS = new Constant[0];
+
+    /**
+     * An empty immutable list of constants.
+     */
+    public static final List<Constant> NO_CONSTS_LIST = List.of();
 
     /**
      * Cached hashCode or {@code 0}

@@ -1,6 +1,8 @@
 package org.xvm.runtime;
 
 
+import java.util.List;
+
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
@@ -610,10 +612,10 @@ public class CallChain {
                 f_typeCtor    = null;
             } else {
                 MethodStructure constructor = infoCtor.getTopmostMethodStructure(infoTarget);
-                TypeConstant[]  atypeParam  = constructor.getIdentityConstant().getSignature().
-                                                resolveGenericTypes(pool, typeTarget).getRawParams();
+                List<TypeConstant> listParams = constructor.getIdentityConstant().getSignature().
+                                                resolveGenericTypes(pool, typeTarget).getParams();
                 f_constructor = constructor;
-                f_typeCtor    = pool.buildFunctionType(atypeParam, typeTarget);
+                f_typeCtor    = pool.buildFunctionType(listParams, List.of(typeTarget));
             }
         }
 

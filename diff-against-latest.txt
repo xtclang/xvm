@@ -1,0 +1,4190 @@
+diff --git a/CHANGELOG-refactoring.txt b/CHANGELOG-refactoring.txt
+index ef7437cf4..7ab935f2f 100644
+--- a/CHANGELOG-refactoring.txt
++++ b/CHANGELOG-refactoring.txt
+@@ -470,11 +470,182 @@ javatools/src/main/java/org/xvm/asm/constants/BFloat16Constant.java
+   - Added transferTo() implementation
+ 
+ 
++================================================================================
++Session 4: Copy State Preservation and Immutable Collections
++================================================================================
++
++17. COPY() NOW PRESERVES COMPILATION STATE
++------------------------------------------
++File: javatools/src/main/java/org/xvm/compiler/ast/AstNode.java
++
++Problem: The copy() method using withChildren() created fresh nodes via
++constructors, losing parent, stage, and component references. This broke
++test compilation in PropertyDeclarationStatement which creates a copy to
++test-compile an initializer.
++
++Original clone() behavior: super.clone() shallowly copied ALL fields
++(parent, stage, component), then deep-copied children via getChildFields().
++
++New copy() fix (lines 283-286):
++  // preserve the parent and stage from the original - this allows the copy to be
++  // used in the same compilation context (e.g., for test compilation)
++  copy.m_parent = this.m_parent;
++  copy.m_stage  = this.m_stage;
++
++File: javatools/src/main/java/org/xvm/compiler/ast/ComponentStatement.java
++
++Added copy() override to also preserve the component field (lines 19-26):
++  @Override
++  public ComponentStatement copy() {
++      ComponentStatement copy = (ComponentStatement) super.copy();
++      copy.component = this.component;
++      return copy;
++  }
++
++Result: copy() now has the same semantics as clone() without using clone().
++No setters needed after copy - the copy is immediately functional.
++
++
++18. ARRAYCONSTANT CONVERTED TO IMMUTABLE LIST
++---------------------------------------------
++File: javatools/src/main/java/org/xvm/asm/constants/ArrayConstant.java
++
++Goal: Eliminate clone() calls and use immutable collections internally.
++
++Changes:
++- Field changed from Constant[] m_aconstVal to List<Constant> m_listVal
++- Constructor now takes @NotNull List<Constant> and stores List.copyOf()
++- getValue() returns immutable List<Constant>
++- Added getValues() alias for clarity
++- Added deprecated getValueArray() for backward compatibility
++- All internal methods updated to use List API
++
++Constructor (lines 37-47):
++  public ArrayConstant(ConstantPool pool, Format fmt, TypeConstant constType,
++                       @NotNull List<Constant> values) {
++      super(pool);
++      validateFormatAndType(fmt, constType);
++
++      f_fmt       = fmt;
++      m_constType = constType;
++      m_listVal   = List.copyOf(Objects.requireNonNull(values, "values required"));
++  }
++
++resolveTypedefs() updated (lines 200-227):
++- No more clone() - uses new ArrayList<>(listOld) for copy-on-write
++- Only creates new list if changes detected
++
++
++19. CONSTANTPOOL ARRAY METHODS UPDATED
++--------------------------------------
++File: javatools/src/main/java/org/xvm/asm/ConstantPool.java
++
++Primary methods now take @NotNull List<Constant>:
++
++  public ArrayConstant ensureArrayConstant(TypeConstant constType,
++                                           @NotNull List<Constant> values)
++  public ArrayConstant ensureSetConstant(TypeConstant constType,
++                                         @NotNull List<Constant> values)
++  public ArrayConstant ensureTupleConstant(TypeConstant constType,
++                                           @NotNull List<Constant> values)
++
++Backward-compatible varargs overloads added (lines 748-784):
++
++  public ArrayConstant ensureArrayConstant(TypeConstant constType, Constant... aconst) {
++      return ensureArrayConstant(constType, aconst == null ? List.of() : Arrays.asList(aconst));
++  }
++
++No more clone() calls - arrays are converted to immutable Lists at the boundary.
++
++
++20. CONSTANT.NO_CONSTS_LIST ADDED
++---------------------------------
++File: javatools/src/main/java/org/xvm/asm/Constant.java
++
++Added immutable empty list constant (line 1013):
++  public static final List<Constant> NO_CONSTS_LIST = List.of();
++
++Deprecated the mutable array version:
++  @Deprecated
++  public static final Constant[] NO_CONSTS = new Constant[0];
++
++
++21. CALLER UPDATES (PARTIAL)
++----------------------------
++Updated to use List-based API:
++
++javatools/src/main/java/org/xvm/runtime/template/collections/xArray.java:
++  - Changed to use constArray.getValues() returning List
++  - Uses listVal.get(i) instead of aconst[i]
++
++javatools/src/main/java/org/xvm/runtime/template/collections/xTuple.java:
++  - Changed to use constTuple.getValues() returning List
++  - Uses listConst.get(i) instead of aconst[i]
++
++Remaining callers (~10-15 locations) still need updating:
++  - CaseManager.java (5 locations)
++  - CaseStatement.java
++  - UnpackExpression.java
++  - ArrayAccessExpression.java (2 locations)
++  - RelOpExpression.java
++  - FSNodeConstant.java
++  - JumpVal_N.java
++
++These can use either:
++  - getValues() for List-based iteration (preferred)
++  - getValueArray() for array compatibility (deprecated)
++
++
++================================================================================
++Summary: Immutability Progress
++================================================================================
++
++COMPLETED:
++✅ copy() preserves parent, stage, and component (no setters needed)
++✅ ArrayConstant uses immutable List<Constant> internally
++✅ ConstantPool methods accept @NotNull List<Constant>
++✅ Backward-compatible varargs overloads added
++✅ Constant.NO_CONSTS_LIST added for empty lists
++✅ No more clone() in ArrayConstant or ConstantPool ensure* methods
++
++REMAINING WORK:
++⏳ Update ~10-15 callers of getValue() to use getValues() or getValueArray()
++⏳ Replace ListMap with LinkedHashMap where possible
++⏳ Debug MethodInfo.layerOn assertion failure (separate issue in branch)
++⏳ Find and remove other clone patterns in codebase
++⏳ Analyze mutable state patterns for copy-on-write strategy
++
++
++================================================================================
++Design Principles Applied
++================================================================================
++
++1. IMMUTABILITY AT BOUNDARIES
++   - Constructor parameters use @NotNull annotations
++   - Null replaced with empty collections (List.of())
++   - List.copyOf() ensures immutability of stored data
++
++2. BACKWARD COMPATIBILITY
++   - Varargs overloads accept arrays, convert to Lists internally
++   - Deprecated getValueArray() returns array for legacy callers
++   - Gradual migration path - no breaking changes
++
++3. NO SETTERS AFTER COPY
++   - copy() returns fully-functional nodes
++   - Parent, stage, component all preserved
++   - Eliminates mutation after construction
++
++4. FINAL FIELDS WHERE POSSIBLE
++   - m_listVal could be made final with builder pattern
++   - Lazy initialization should use Lazy.java mechanisms
++
++
+ ================================================================================
+ Test Status
+ ================================================================================
+ 
+-All javatools tests pass after these changes.
++javatools:build - SUCCESSFUL (compiles with deprecation warnings)
++xdk:compileXtc - BLOCKED by MethodInfo.layerOn assertion (pre-existing issue)
+ 
+-Command: ./gradlew javatools:test
+-Result: BUILD SUCCESSFUL
++Note: The MethodInfo assertion is unrelated to these changes - it's exposed
++by the copy() fix allowing compilation to proceed further than before.
+diff --git a/javatools/src/main/java/org/xvm/asm/ClassStructure.java b/javatools/src/main/java/org/xvm/asm/ClassStructure.java
+index 53a0cfbcc..c547f05b9 100644
+--- a/javatools/src/main/java/org/xvm/asm/ClassStructure.java
++++ b/javatools/src/main/java/org/xvm/asm/ClassStructure.java
+@@ -3180,14 +3180,14 @@ public class ClassStructure
+             fnThis.markTransient();
+ 
+             // 3) resolve the identity
+-            MethodConstant idMethod    = fnThis.getIdentityConstant();
+-            TypeConstant[] atypeParams = idMethod.getRawParams();
++            MethodConstant       idMethod   = fnThis.getIdentityConstant();
++            List<TypeConstant>   listParams = idMethod.getParams();
+ 
+             TypeParameterConstant constParam = pool.ensureRegisterConstant(idMethod, 0, "CompileType");
+             TypeConstant          typeFormal = constParam.getType();
+ 
+-            for (int i = 1, c = atypeParams.length; i < c; i++) {
+-                ((UnresolvedTypeConstant) atypeParams[i]).resolve(typeFormal);
++            for (int i = 1, c = listParams.size(); i < c; i++) {
++                ((UnresolvedTypeConstant) listParams.get(i)).resolve(typeFormal);
+             }
+ 
+             // 4) get rid of the unresolved constants
+@@ -3476,20 +3476,20 @@ public class ClassStructure
+ 
+         MethodStructure method = findMethod(sig);
+         if (method == null) {
+-            ConstantPool   pool        = getConstantPool();
+-            TypeConstant[] atypeParam  = sig.getRawParams();
+-            TypeConstant[] atypeReturn = sig.getRawReturns();
+-            int            cParams     = atypeParam.length;
+-            int            cReturns    = atypeReturn.length;
++            ConstantPool       pool        = getConstantPool();
++            List<TypeConstant> listParams  = sig.getParams();
++            List<TypeConstant> listReturns = sig.getReturns();
++            int                cParams     = listParams.size();
++            int                cReturns    = listReturns.size();
+ 
+             Parameter[] aParam = new Parameter[cParams];
+             for (int i = 0; i < cParams; i++) {
+-                aParam[i] = new Parameter(pool, atypeParam[i], "p"+i, null, false, i, false);
++                aParam[i] = new Parameter(pool, listParams.get(i), "p"+i, null, false, i, false);
+             }
+ 
+             Parameter[] aReturn = new Parameter[cReturns];
+             for (int i = 0; i < cReturns; i++) {
+-                aReturn[i] = new Parameter(pool, atypeReturn[i], null, null, true, i, false);
++                aReturn[i] = new Parameter(pool, listReturns.get(i), null, null, true, i, false);
+             }
+             method = createMethod(/*function*/ false, Access.PUBLIC, null, aReturn,
+                             sig.getName(), aParam, /*hasCode*/ false, /*usesSuper*/ false);
+diff --git a/javatools/src/main/java/org/xvm/asm/Component.java b/javatools/src/main/java/org/xvm/asm/Component.java
+index e5bc11b55..9fea7785b 100644
+--- a/javatools/src/main/java/org/xvm/asm/Component.java
++++ b/javatools/src/main/java/org/xvm/asm/Component.java
+@@ -19,6 +19,7 @@ import java.util.ListIterator;
+ import java.util.Map;
+ import java.util.NoSuchElementException;
+ import java.util.Set;
++import java.util.StringJoiner;
+ 
+ import java.util.function.Consumer;
+ 
+@@ -3154,81 +3155,44 @@ public abstract class Component
+ 
+         @Override
+         public String toString() {
+-            StringBuilder sb = new StringBuilder();
+-
+-            switch (m_composition) {
+-            case Annotation:
+-                sb.append('@');
+-                break;
+-
+-            case Equal:
+-                sb.append(m_composition)
+-                  .append(' ');
+-                break;
+-
+-            default:
+-                sb.append(m_composition.toString().toLowerCase())
+-                  .append(' ');
+-                break;
+-            }
++            String prefix = switch (m_composition) {
++                case Annotation -> "@";
++                case Equal      -> m_composition + " ";
++                default         -> m_composition.toString().toLowerCase() + " ";
++            };
+ 
+             if (m_composition == Composition.Incorporates && m_mapParams != null) {
+-                TypeConstant constMixin = m_typeContrib;
+-                sb.append("conditional ")
+-                  .append(constMixin.getDefiningConstant())
+-                  .append('<');
+-
+-                boolean fFirst = true;
+-                for (TypeConstant constParam : constMixin.getParamTypesArray()) {
+-                    if (fFirst) {
+-                        fFirst = false;
+-                    } else {
+-                        sb.append(", ");
+-                    }
+-
+-                    sb.append(constParam.getValueString());
+-
+-                    // extract the type name from the type param
++                StringJoiner joiner = new StringJoiner(", ", "<", ">");
++                for (TypeConstant constParam : m_typeContrib.getParamTypesArray()) {
++                    String paramStr = constParam.getValueString();
+                     if (constParam.isSingleDefiningConstant()
+                             && constParam.getDefiningConstant() instanceof PropertyConstant idProp) {
+-                        StringConstant constName       = idProp.getNameConstant();
+-                        TypeConstant   constConstraint = m_mapParams.get(constName);
+-                        if (constConstraint != null) {
+-                            sb.append(" extends ")
+-                              .append(constConstraint.getValueString());
++                        TypeConstant constraint = m_mapParams.get(idProp.getNameConstant());
++                        if (constraint != null) {
++                            paramStr += " extends " + constraint.getValueString();
+                         }
+                     }
++                    joiner.add(paramStr);
+                 }
++                return prefix + "conditional " + m_typeContrib.getDefiningConstant() + joiner;
++            }
+ 
+-                sb.append('>');
+-            } else {
+-                if (m_typeContrib != null) {
+-                    sb.append(m_typeContrib.resolveTypedefs().getDescription());
+-                }
+-
+-                if (m_composition == Composition.Annotation && m_annotation != null) {
+-                    Constant[] aconstArgs = m_annotation.getParams();
+-                    if (aconstArgs.length > 0) {
+-                        sb.append('(');
+-
+-                        boolean fFirst = true;
+-                        for (Constant constParam : aconstArgs) {
+-                            if (fFirst) {
+-                                fFirst = false;
+-                            } else {
+-                                sb.append(", ");
+-                            }
+-
+-                            sb.append(constParam.getValueString());
+-                        }
++            StringBuilder sb = new StringBuilder(prefix);
++            if (m_typeContrib != null) {
++                sb.append(m_typeContrib.resolveTypedefs().getDescription());
++            }
+ 
+-                        sb.append(')');
++            if (m_composition == Composition.Annotation && m_annotation != null) {
++                Constant[] params = m_annotation.getParams();
++                if (params.length > 0) {
++                    StringJoiner joiner = new StringJoiner(", ", "(", ")");
++                    for (Constant param : params) {
++                        joiner.add(param.getValueString());
+                     }
+-                } else if (m_composition == Composition.Delegates) {
+-                    sb.append('(')
+-                      .append(m_constProp.getDescription())
+-                      .append(')');
++                    sb.append(joiner);
+                 }
++            } else if (m_composition == Composition.Delegates) {
++                sb.append('(').append(m_constProp.getDescription()).append(')');
+             }
+ 
+             return sb.toString();
+@@ -3495,6 +3459,7 @@ public abstract class Component
+     private boolean m_fModified;
+ 
+     /**
++     * TODO: We can't have this. Pass a level argument or somethibng
+      * Recursion check for {@link #resolveContributedName}. Not thread-safe.
+      */
+     private transient Boolean m_FVisited;
+diff --git a/javatools/src/main/java/org/xvm/asm/Constant.java b/javatools/src/main/java/org/xvm/asm/Constant.java
+index 63691d82a..e2178f202 100755
+--- a/javatools/src/main/java/org/xvm/asm/Constant.java
++++ b/javatools/src/main/java/org/xvm/asm/Constant.java
+@@ -1001,9 +1001,17 @@ public abstract class Constant
+ 
+     /**
+      * An empty array of constants.
++     *
++     * @deprecated Use {@link #NO_CONSTS_LIST} instead for immutability.
+      */
++    @Deprecated
+     public static final Constant[] NO_CONSTS = new Constant[0];
+ 
++    /**
++     * An empty immutable list of constants.
++     */
++    public static final List<Constant> NO_CONSTS_LIST = List.of();
++
+     /**
+      * Cached hashCode or {@code 0}
+      */
+diff --git a/javatools/src/main/java/org/xvm/asm/ConstantPool.java b/javatools/src/main/java/org/xvm/asm/ConstantPool.java
+index eaecf2553..284e11b4a 100755
+--- a/javatools/src/main/java/org/xvm/asm/ConstantPool.java
++++ b/javatools/src/main/java/org/xvm/asm/ConstantPool.java
+@@ -28,6 +28,7 @@ import java.util.Vector;
+ 
+ import java.util.concurrent.ConcurrentHashMap;
+ 
++import org.jetbrains.annotations.NotNull;
+ import org.xvm.asm.Constant.Format;
+ 
+ import org.xvm.asm.constants.*;
+@@ -84,6 +85,19 @@ public class ConstantPool
+         return i == -1 ? null : m_listConst.get(i);
+     }
+ 
++    /**
++     * Obtain the Constant at the specified index, cast to the expected type.
++     *
++     * @param i      the index, for example obtained during the disassembly process (-1 returns null)
++     * @param clazz  the expected type of the constant
++     * @param <T>    the Constant type
++     *
++     * @return the Constant at that index, cast to the expected type
++     */
++    public <T extends Constant> T getConstant(int i, Class<T> clazz) {
++        return clazz.cast(i == -1 ? null : m_listConst.get(i));
++    }
++
+     /**
+      * Determine the current number of constants in the pool.
+      *
+@@ -699,42 +713,74 @@ public class ConstantPool
+      * Create an array constant value.
+      *
+      * @param constType  the type of the array
+-     * @param aconst     an array of constant values
++     * @param values     the constant values (not null)
+      *
+      * @return a constant representing the Array value
+      */
+-    public ArrayConstant ensureArrayConstant(TypeConstant constType, Constant[] aconst) {
+-        checkElementsNonNull(aconst);
+-
+-        return register(new ArrayConstant(this, Format.Array, constType, aconst.clone()));
++    public ArrayConstant ensureArrayConstant(TypeConstant constType, @NotNull List<Constant> values) {
++        return register(new ArrayConstant(this, Format.Array, constType, values));
+     }
+ 
+     /**
+      * Create a set constant value.
+      *
+      * @param constType  the type of the set
+-     * @param aconst     an array of constant values
++     * @param values     the constant values (not null)
+      *
+      * @return a constant representing the Set value
+      */
+-    public ArrayConstant ensureSetConstant(TypeConstant constType, Constant[] aconst) {
+-        checkElementsNonNull(aconst);
+-
+-        return register(new ArrayConstant(this, Format.Set, constType, aconst.clone()));
++    public ArrayConstant ensureSetConstant(TypeConstant constType, @NotNull List<Constant> values) {
++        return register(new ArrayConstant(this, Format.Set, constType, values));
+     }
+ 
+     /**
+      * Create a tuple constant value.
+      *
+      * @param constType  the type of the tuple
++     * @param values     the constant values (not null)
++     *
++     * @return a constant representing the tuple value
++     */
++    public ArrayConstant ensureTupleConstant(TypeConstant constType, @NotNull List<Constant> values) {
++        return register(new ArrayConstant(this, Format.Tuple, constType, values));
++    }
++
++    // --- Backward-compatible array-accepting overloads (convert to List internally) ---
++
++    /**
++     * Create an array constant value from an array.
++     *
++     * @param constType  the type of the array
++     * @param aconst     an array of constant values
++     *
++     * @return a constant representing the Array value
++     */
++    public ArrayConstant ensureArrayConstant(TypeConstant constType, Constant... aconst) {
++        return ensureArrayConstant(constType, aconst == null ? List.of() : Arrays.asList(aconst));
++    }
++
++    /**
++     * Create a set constant value from an array.
++     *
++     * @param constType  the type of the set
++     * @param aconst     an array of constant values
++     *
++     * @return a constant representing the Set value
++     */
++    public ArrayConstant ensureSetConstant(TypeConstant constType, Constant... aconst) {
++        return ensureSetConstant(constType, aconst == null ? List.of() : Arrays.asList(aconst));
++    }
++
++    /**
++     * Create a tuple constant value from an array.
++     *
++     * @param constType  the type of the tuple
+      * @param aconst     an array of constant values
+      *
+      * @return a constant representing the tuple value
+      */
+     public ArrayConstant ensureTupleConstant(TypeConstant constType, Constant... aconst) {
+-        checkElementsNonNull(aconst);
+-
+-        return register(new ArrayConstant(this, Format.Tuple, constType, aconst.clone()));
++        return ensureTupleConstant(constType, aconst == null ? List.of() : Arrays.asList(aconst));
+     }
+ 
+     /**
+@@ -1204,7 +1250,7 @@ public class ConstantPool
+      *
+      * @return the Component for the specified name, or null if the name is not implicitly imported
+      */
+-    public Component getImplicitlyImportedComponent(String sName) {
++    public Component getImplicitlyImportedComponent(@NotNull String sName) {
+         var constId = getImplicitlyImportedIdentity(sName);
+         if (constId == null) {
+             return null;
+@@ -1318,16 +1364,15 @@ public class ConstantPool
+     /**
+      * Obtain a constant that represents a method signature.
+      *
+-     * @param sName          the method name
+-     * @param aconstParams   the parameter types
+-     * @param aconstReturns  the return value types
++     * @param sName         the method name
++     * @param listParams    the parameter types
++     * @param listReturns   the return value types
+      *
+      * @return the SignatureConstant
+      */
+-    public SignatureConstant ensureSignatureConstant(String sName, TypeConstant[] aconstParams,
+-            TypeConstant[] aconstReturns) {
+-        return register(new SignatureConstant(this, sName, aconstParams,
+-                aconstReturns));
++    public SignatureConstant ensureSignatureConstant(String sName, List<TypeConstant> listParams,
++            List<TypeConstant> listReturns) {
++        return register(new SignatureConstant(this, sName, listParams, listReturns));
+     }
+ 
+     /**
+@@ -1404,13 +1449,29 @@ public class ConstantPool
+      *
+      * @return a type constant with the specified type parameter types
+      */
++    /**
++     * @deprecated use {@link #ensureParameterizedTypeConstant(TypeConstant, List)} instead
++     */
++    @Deprecated
+     public TypeConstant ensureParameterizedTypeConstant(TypeConstant constType, TypeConstant... constTypes) {
++        return ensureParameterizedTypeConstant(constType, Arrays.asList(constTypes));
++    }
++
++    /**
++     * Obtain a TypeConstant for a parameterized type.
++     *
++     * @param constType   the parameterized type
++     * @param listTypes   the types of the parameters of the parameterized type
++     *
++     * @return a type constant with the specified type parameter types
++     */
++    public TypeConstant ensureParameterizedTypeConstant(TypeConstant constType, List<TypeConstant> listTypes) {
+         if (constType.isParamsSpecified()) {
+-            TypeConstant[] atypeParam = constType.getParamTypesArray();
+-            int c = atypeParam.length;
+-            CheckTypes: if (c == constTypes.length) {
++            List<TypeConstant> listParam = constType.getParamTypes();
++            int c = listParam.size();
++            CheckTypes: if (c == listTypes.size()) {
+                 for (int i = 0; i < c; ++i) {
+-                    if (!constTypes[i].equals(atypeParam[i])) {
++                    if (!listTypes.get(i).equals(listParam.get(i))) {
+                         break CheckTypes;
+                     }
+                 }
+@@ -1423,9 +1484,14 @@ public class ConstantPool
+             throw new IllegalArgumentException("type already has parameters specified");
+         }
+ 
+-        checkElementsNonNull(constTypes);
++        for (TypeConstant type : listTypes) {
++            if (type == null) {
++                throw new IllegalArgumentException("null type parameter");
++            }
++        }
+ 
+-        return register(new ParameterizedTypeConstant(this, constType, constTypes));
++        // TODO: ParameterizedTypeConstant should be converted to use List internally
++        return register(new ParameterizedTypeConstant(this, constType, listTypes.toArray(TypeConstant[]::new)));
+     }
+ 
+     /**
+@@ -1495,6 +1561,17 @@ public class ConstantPool
+         return ensureParameterizedTypeConstant(typeTuple(), atypeParams);
+     }
+ 
++    /**
++     * Obtain a TypeConstant for a parameterized Tuple.
++     *
++     * @param listParams  the parameter types of the Tuple
++     *
++     * @return the Tuple type
++     */
++    public TypeConstant ensureTupleType(List<TypeConstant> listParams) {
++        return ensureParameterizedTypeConstant(typeTuple(), listParams);
++    }
++
+     /**
+      * Given the specified type, obtain a TypeConstant that represents the explicitly immutable form
+      * of that type.
+@@ -1503,15 +1580,15 @@ public class ConstantPool
+      *
+      * @return the explicitly immutable form of the passed TypeConstant
+      */
+-    public TypeConstant ensureImmutableTypeConstant(TypeConstant constType) {
++    public ImmutableTypeConstant ensureImmutableTypeConstant(TypeConstant constType) {
+         if (constType.isImmutabilitySpecified()) {
+             throw new IllegalArgumentException("type already has the immutability specified");
+         }
+ 
+-        TypeConstant constant = (TypeConstant) ensureLocatorLookup(Format.ImmutableType).get(constType);
++        ImmutableTypeConstant constant = (ImmutableTypeConstant) ensureLocatorLookup(Format.ImmutableType).get(constType);
+         return constant == null
+                 ? register(new ImmutableTypeConstant(this, constType))
+-                :  constant;
++                : constant;
+     }
+ 
+     /**
+@@ -1864,11 +1941,11 @@ public class ConstantPool
+      *
+      * @return the TerminalTypeConstant corresponding to the specified identity
+      */
+-    public TypeConstant ensureTerminalTypeConstant(Constant constId) {
++    public TerminalTypeConstant ensureTerminalTypeConstant(Constant constId) {
+         assert constId != null && !(constId instanceof TypeConstant);
+ 
+         // the TerminalClassConstant's locator is the underlying constId
+-        TypeConstant constType = (TerminalTypeConstant)
++        TerminalTypeConstant constType = (TerminalTypeConstant)
+                 ensureLocatorLookup(Format.TerminalType).get(constId);
+         if (constType == null) {
+             constType = register(new TerminalTypeConstant(this, constId));
+@@ -2182,7 +2259,7 @@ public class ConstantPool
+     public SignatureConstant sigEquals()         {SignatureConstant c = m_sigEquals;         if (c == null) {m_sigEquals         = c = getSignature("Object",    "equals",    3)                        ;} return c;}
+     public SignatureConstant sigCompare()        {SignatureConstant c = m_sigCompare;        if (c == null) {m_sigCompare        = c = getSignature("Orderable", "compare",   3)                        ;} return c;}
+     public SignatureConstant sigClose()          {SignatureConstant c = m_sigClose;          if (c == null) {m_sigClose          = c = getSignature("Closeable", "close",     1)                        ;} return c;}
+-    public SignatureConstant sigValidator()      {SignatureConstant c = m_sigValidator;      if (c == null) {m_sigValidator      = c = ensureSignatureConstant("assert", NO_TYPES, NO_TYPES)            ;} return c;}
++    public SignatureConstant sigValidator()      {SignatureConstant c = m_sigValidator;      if (c == null) {m_sigValidator      = c = ensureSignatureConstant("assert", List.of(), List.of())         ;} return c;}
+ 
+ 
+     // ---- internal class helpers -----------------------------------------------------------------
+@@ -3212,29 +3289,46 @@ public class ConstantPool
+     /**
+      * Build a TypeConstant for a function.
+      *
+-     * @param atypeParams   the parameter types of the function
+-     * @param atypeReturns  the return types of the function
++     * @param listParams   the parameter types of the function
++     * @param listReturns  the return types of the function
+      *
+      * @return the function type
+      */
+-    public TypeConstant buildFunctionType(TypeConstant[] atypeParams, TypeConstant... atypeReturns) {
++    public TypeConstant buildFunctionType(List<TypeConstant> listParams, List<TypeConstant> listReturns) {
+         return ensureParameterizedTypeConstant(
+-                typeFunction(), ensureTupleType(atypeParams), ensureTupleType(atypeReturns));
++                typeFunction(), ensureTupleType(listParams), ensureTupleType(listReturns));
++    }
++
++    /**
++     * @deprecated use {@link #buildFunctionType(List, List)} instead
++     */
++    @Deprecated
++    public TypeConstant buildFunctionType(TypeConstant[] atypeParams, TypeConstant... atypeReturns) {
++        return buildFunctionType(Arrays.asList(atypeParams), Arrays.asList(atypeReturns));
+     }
+ 
+     /**
+      * Build a TypeConstant for a Method.
+      *
+-     * @param typeTarget    the targete type
+-     * @param atypeParams   the parameter types of the method
+-     * @param atypeReturns  the return types of the method
++     * @param typeTarget   the target type
++     * @param listParams   the parameter types of the method
++     * @param listReturns  the return types of the method
+      *
+      * @return the method type
+      */
+     public TypeConstant buildMethodType(TypeConstant typeTarget,
+-                                        TypeConstant[] atypeParams, TypeConstant... atypeReturns) {
++                                        List<TypeConstant> listParams, List<TypeConstant> listReturns) {
+         return ensureParameterizedTypeConstant(
+-                typeMethod(), typeTarget, ensureTupleType(atypeParams), ensureTupleType(atypeReturns));
++                typeMethod(), typeTarget, ensureTupleType(listParams), ensureTupleType(listReturns));
++    }
++
++    /**
++     * @deprecated use {@link #buildMethodType(TypeConstant, List, List)} instead
++     */
++    @Deprecated
++    public TypeConstant buildMethodType(TypeConstant typeTarget,
++                                        TypeConstant[] atypeParams, TypeConstant... atypeReturns) {
++        return buildMethodType(typeTarget, Arrays.asList(atypeParams), Arrays.asList(atypeReturns));
+     }
+ 
+     /**
+diff --git a/javatools/src/main/java/org/xvm/asm/MethodStructure.java b/javatools/src/main/java/org/xvm/asm/MethodStructure.java
+index 92eba3c90..2f7811555 100644
+--- a/javatools/src/main/java/org/xvm/asm/MethodStructure.java
++++ b/javatools/src/main/java/org/xvm/asm/MethodStructure.java
+@@ -1770,10 +1770,10 @@ public class MethodStructure
+             throws IOException {
+         super.disassemble(in);
+ 
+-        ConstantPool   pool              = getConstantPool();
+-        MethodConstant constMethod       = getIdentityConstant();
+-        TypeConstant[] aconstReturnTypes = constMethod.getRawReturns();
+-        TypeConstant[] aconstParamTypes  = constMethod.getRawParams();
++        ConstantPool       pool             = getConstantPool();
++        MethodConstant     constMethod      = getIdentityConstant();
++        List<TypeConstant> listReturnTypes  = constMethod.getReturns();
++        List<TypeConstant> listParamTypes   = constMethod.getParams();
+ 
+         int          cAnnos = readMagnitude(in);
+         Annotation[] aAnnos = cAnnos == 0 ? Annotation.NO_ANNOTATIONS : new Annotation[cAnnos];
+@@ -1783,12 +1783,12 @@ public class MethodStructure
+ 
+         m_idFinally = (MethodConstant) pool.getConstant(readIndex(in));
+ 
+-        int         cReturns = aconstReturnTypes.length;
++        int         cReturns = listReturnTypes.size();
+         Parameter[] aReturns = new Parameter[cReturns];
+         boolean     fCond    = isConditionalReturn();
+         for (int i = 0; i < cReturns; ++i) {
+             Parameter param = new Parameter(pool, in, true, i, i==0 && fCond);
+-            if (!param.getType().equals(aconstReturnTypes[i])) {
++            if (!param.getType().equals(listReturnTypes.get(i))) {
+                 throw new IOException("type mismatch between method constant and return " + i + " value type");
+             }
+             aReturns[i] = param;
+@@ -1796,11 +1796,11 @@ public class MethodStructure
+ 
+         int         cTypeParams    = readMagnitude(in);
+         int         cDefaultParams = readMagnitude(in);
+-        int         cParams        = aconstParamTypes.length;
++        int         cParams        = listParamTypes.size();
+         Parameter[] aParams        = new Parameter[cParams];
+         for (int i = 0; i < cParams; ++i) {
+             Parameter param = new Parameter(pool, in, false, i, i < cTypeParams);
+-            if (!param.getType().equals(aconstParamTypes[i])) {
++            if (!param.getType().equals(listParamTypes.get(i))) {
+                 throw new IOException("type mismatch between method constant and param " + i + " value type");
+             }
+             aParams[i] = param;
+diff --git a/javatools/src/main/java/org/xvm/asm/OpInvocable.java b/javatools/src/main/java/org/xvm/asm/OpInvocable.java
+index 4d8596e9c..8c89730d0 100644
+--- a/javatools/src/main/java/org/xvm/asm/OpInvocable.java
++++ b/javatools/src/main/java/org/xvm/asm/OpInvocable.java
+@@ -242,11 +242,11 @@ public abstract class OpInvocable extends Op {
+             SignatureConstant sig    = idMethod.getSignature();
+             String            sName  = sig.getName();
+ 
+-            if ("get".equals(sName) && sig.getRawReturns()[0].isA(idProp.getType())) {
++            if ("get".equals(sName) && sig.getReturns().getFirst().isA(idProp.getType())) {
+                 return idProp;
+             }
+ 
+-            if ("set".equals(sName) && sig.getRawParams()[0].isA(idProp.getType())) {
++            if ("set".equals(sName) && sig.getParams().getFirst().isA(idProp.getType())) {
+                 return idProp;
+             }
+         }
+diff --git a/javatools/src/main/java/org/xvm/asm/Register.java b/javatools/src/main/java/org/xvm/asm/Register.java
+index ed34e3a74..6c38f26e0 100644
+--- a/javatools/src/main/java/org/xvm/asm/Register.java
++++ b/javatools/src/main/java/org/xvm/asm/Register.java
+@@ -1,6 +1,7 @@
+ package org.xvm.asm;
+ 
+ 
++import org.jetbrains.annotations.NotNull;
+ import org.xvm.asm.ast.ExprAST;
+ import org.xvm.asm.ast.NarrowedExprAST;
+ import org.xvm.asm.ast.RegAllocAST;
+@@ -9,6 +10,9 @@ import org.xvm.asm.ast.RegisterAST;
+ import org.xvm.asm.constants.StringConstant;
+ import org.xvm.asm.constants.TypeConstant;
+ 
++import java.util.List;
++import java.util.Objects;
++
+ 
+ /**
+  * A Register represents a specific, typed, machine register of the XVM.
+@@ -41,32 +45,42 @@ public class Register
+     /**
+      * Construct a Register of the specified type.
+      *
+-     * @param type   the TypeConstant specifying the Register type
++     * @param type   the TypeConstant specifying the Register type (must not be null)
+      * @param sName  the name given to the register, if any; otherwise null
+      * @param iArg   the argument index, which is either a pre-defined argument index, or a
+      *               register ID
+      */
+     public Register(TypeConstant type, String sName, int iArg) {
+-        if (type == null) {
+-            switch (iArg) {
+-            case Op.A_DEFAULT:
+-            case Op.A_IGNORE:
+-            case Op.A_IGNORE_ASYNC:
+-                break;
+-            default:
+-                throw new IllegalArgumentException("type required");
+-            }
+-        } else {
+-            type = type.resolveTypedefs();
+-        }
++        this(Objects.requireNonNull(type, "type required").resolveTypedefs(), sName, iArg, iArg);
++    }
+ 
++    /**
++     * Private constructor for creating special predefined registers with null type.
++     *
++     * @param iArg  the special argument index (A_DEFAULT, A_IGNORE, or A_IGNORE_ASYNC)
++     */
++    private Register(int iArg) {
++        assert iArg == Op.A_DEFAULT || iArg == Op.A_IGNORE || iArg == Op.A_IGNORE_ASYNC;
++        validateIndex(iArg);
++
++        m_fRO        = isPredefinedReadonly(iArg);
++        m_type       = null;
++        m_sName      = null;
++        m_iArg       = iArg;
++        f_nOrigIndex = iArg;
++    }
++
++    /**
++     * Private common constructor.
++     */
++    private Register(TypeConstant type, String sName, int iArg, int nOrigIndex) {
+         validateIndex(iArg);
+ 
+         m_fRO        = isPredefinedReadonly(iArg);
+         m_type       = type;
+         m_sName      = sName;
+         m_iArg       = iArg;
+-        f_nOrigIndex = iArg;
++        f_nOrigIndex = nOrigIndex;
+     }
+ 
+     /**
+@@ -196,8 +210,7 @@ public class Register
+         if (typeReg != null) {
+             if (typeReg.isAnnotated() && !typeNarrowed.equals(m_type)) {
+                 ConstantPool pool = typeReg.getConstantPool();
+-                TypeConstant typeNarrowedReg = pool.ensureParameterizedTypeConstant(
+-                        isVar() ? pool.typeVar() : pool.typeRef(), typeNarrowed);
++                var typeNarrowedReg = pool.ensureParameterizedTypeConstant(isVar() ? pool.typeVar() : pool.typeRef(), List.of(typeNarrowed));
+                 typeReg = typeNarrowedReg.adoptAnnotations(pool, typeReg);
+             }
+             regShadow.specifyRegType(typeReg);
+@@ -501,28 +514,16 @@ public class Register
+      * @return true iff the index specifies a pre-defined argument
+      */
+     protected static boolean isPredefinedRegister(int iArg) {
+-        switch (iArg) {
+-        case Op.A_IGNORE:
+-        case Op.A_IGNORE_ASYNC:
+-        case Op.A_DEFAULT:
+-        case Op.A_PUBLIC:
+-        case Op.A_PROTECTED:
+-        case Op.A_PRIVATE:
+-        case Op.A_THIS:
+-        case Op.A_TARGET:
+-        case Op.A_STRUCT:
+-        case Op.A_CLASS:
+-        case Op.A_SERVICE:
+-        case Op.A_SUPER:
+-        case Op.A_LABEL:
+-            return true;
+-
+-        default:
+-            if (iArg < 0) {
+-                throw new IllegalArgumentException("illegal argument index: " + iArg);
++        return switch (iArg) {
++            case Op.A_IGNORE, Op.A_IGNORE_ASYNC, Op.A_DEFAULT, Op.A_PUBLIC, Op.A_PROTECTED, Op.A_PRIVATE, Op.A_THIS,
++                 Op.A_TARGET, Op.A_STRUCT, Op.A_CLASS, Op.A_SERVICE, Op.A_SUPER, Op.A_LABEL -> true;
++            default -> {
++                if (iArg < 0) {
++                    throw new IllegalArgumentException("illegal argument index: " + iArg);
++                }
++                yield false;
+             }
+-            return false;
+-        }
++        };
+     }
+ 
+     /**
+@@ -533,53 +534,23 @@ public class Register
+      * @return an identity String, for debugging purposes
+      */
+     public static String getIdString(int nReg) {
+-        switch (nReg) {
+-        case Op.A_STACK:
+-            return "this:stack";
+-
+-        case Op.A_IGNORE:
+-        case Op.A_IGNORE_ASYNC:
+-            return "_";
+-
+-        case Op.A_DEFAULT:
+-            return "<default>";
+-
+-        case Op.A_THIS:
+-            return "this";
+-
+-        case Op.A_TARGET:
+-            return "this:target";
+-
+-        case Op.A_PUBLIC:
+-            return "this:public";
+-
+-        case Op.A_PROTECTED:
+-            return "this:protected";
+-
+-        case Op.A_PRIVATE:
+-            return "this:private";
+-
+-        case Op.A_STRUCT:
+-            return "this:struct";
+-
+-        case Op.A_CLASS:
+-            return "this:class";
+-
+-        case Op.A_SERVICE:
+-            return "this:service";
+-
+-        case Op.A_SUPER:
+-            return "super";
+-
+-        case Op.A_LABEL:
+-            return "<label>";
+-
+-        default:
+-            return nReg < UNKNOWN
+-                    ? "#" + nReg
+-                    : "#???"; // this can happen *only* during the compilation, before the registers
+-                              // get assigned
+-        }
++        return switch (nReg) {
++            case Op.A_STACK -> "this:stack";
++            case Op.A_IGNORE, Op.A_IGNORE_ASYNC -> "_";
++            case Op.A_DEFAULT -> "<default>";
++            case Op.A_THIS -> "this";
++            case Op.A_TARGET -> "this:target";
++            case Op.A_PUBLIC -> "this:public";
++            case Op.A_PROTECTED -> "this:protected";
++            case Op.A_PRIVATE -> "this:private";
++            case Op.A_STRUCT -> "this:struct";
++            case Op.A_CLASS -> "this:class";
++            case Op.A_SERVICE -> "this:service";
++            case Op.A_SUPER -> "super";
++            case Op.A_LABEL -> "<label>";
++            // this can happen *only* during the compilation, before the registers get assigned
++            default -> nReg < UNKNOWN ? "#" + nReg : "#???";
++        };
+     }
+ 
+ 
+@@ -741,7 +712,7 @@ public class Register
+                 return Register.this.getRegAllocAST();
+             }
+             // shadow doens't have an "alloc" register
+-            throw new IllegalStateException();
++            throw new IllegalStateException("getRegAllocAST");
+         }
+ 
+         @Override
+@@ -797,12 +768,12 @@ public class Register
+     /**
+      * Register representing a default method argument.
+      */
+-    public static final Register DEFAULT = new Register(null, null, Op.A_DEFAULT);
++    public static final Register DEFAULT = new Register(Op.A_DEFAULT);
+ 
+     /**
+      * Register representing an "async ignore" return.
+      */
+-    public static final Register ASYNC = new Register(null, null, Op.A_IGNORE_ASYNC);
++    public static final Register ASYNC = new Register(Op.A_IGNORE_ASYNC);
+ 
+     /**
+      * An index threshold that represents an unknown or otherwise unassigned registers. Any index
+@@ -818,7 +789,7 @@ public class Register
+     /**
+      * The optional name of the register.
+      */
+-    private String m_sName;
++    private final String m_sName;
+ 
+     /**
+      * The type of the register itself (typically null).
+diff --git a/javatools/src/main/java/org/xvm/asm/constants/ArrayConstant.java b/javatools/src/main/java/org/xvm/asm/constants/ArrayConstant.java
+index acab3d81d..da06c66da 100644
+--- a/javatools/src/main/java/org/xvm/asm/constants/ArrayConstant.java
++++ b/javatools/src/main/java/org/xvm/asm/constants/ArrayConstant.java
+@@ -1,12 +1,17 @@
+ package org.xvm.asm.constants;
+ 
+ 
+-import java.util.function.Consumer;
+-
+ import java.io.DataInput;
+ import java.io.DataOutput;
+ import java.io.IOException;
+ 
++import java.util.ArrayList;
++import java.util.List;
++import java.util.Objects;
++import java.util.function.Consumer;
++
++import org.jetbrains.annotations.NotNull;
++
+ import org.xvm.asm.Constant;
+ import org.xvm.asm.ConstantPool;
+ import org.xvm.util.Hash;
+@@ -29,19 +34,16 @@ public class ArrayConstant
+      * @param pool       the ConstantPool that will contain this Constant
+      * @param fmt        the format of the constant
+      * @param constType  the data type of the constant
+-     * @param aconstVal  the value of the constant
++     * @param values     the values of the constant (never null, use empty list)
+      */
+-    public ArrayConstant(ConstantPool pool, Format fmt, TypeConstant constType, Constant... aconstVal) {
++    public ArrayConstant(ConstantPool pool, Format fmt, TypeConstant constType,
++                         @NotNull List<Constant> values) {
+         super(pool);
+         validateFormatAndType(fmt, constType);
+ 
+-        if (aconstVal == null) {
+-            throw new IllegalArgumentException("value required");
+-        }
+-
+         f_fmt       = fmt;
+         m_constType = constType;
+-        m_aconstVal = aconstVal;
++        m_listVal   = List.copyOf(Objects.requireNonNull(values, "values required"));
+     }
+ 
+     /**
+@@ -75,13 +77,13 @@ public class ArrayConstant
+ 
+         m_constType = (TypeConstant) pool.getConstant(m_iType);
+ 
+-        int[]      aiConst = m_aiVal;
+-        int        cConsts = aiConst.length;
+-        Constant[] aconst  = new Constant[cConsts];
++        int[]          aiConst = m_aiVal;
++        int            cConsts = aiConst.length;
++        List<Constant> list    = new ArrayList<>(cConsts);
+         for (int i = 0; i < cConsts; ++i) {
+-            aconst[i] = pool.getConstant(aiConst[i]);
++            list.add(pool.getConstant(aiConst[i]));
+         }
+-        m_aconstVal = aconst;
++        m_listVal = List.copyOf(list);
+     }
+ 
+     private void validateFormatAndType(Format fmt, TypeConstant constType) {
+@@ -114,18 +116,18 @@ public class ArrayConstant
+             if (typeOut.getDefiningConstant().equals(pool.clzArray())) {
+                 TypeConstant typeEl = typeOut.getParamType(0);
+ 
+-                Constant[] aconstIn  = getValue();
+-                int        cValues   = aconstIn.length;
+-                Constant[] aconstOut = new Constant[cValues];
++                List<Constant> listIn  = getValues();
++                int            cValues = listIn.size();
++                List<Constant> listOut = new ArrayList<>(cValues);
+ 
+-                for (int i = 0; i < cValues; i++) {
+-                    Constant constEl = aconstIn[i].convertTo(typeEl);
++                for (Constant constIn : listIn) {
++                    Constant constEl = constIn.convertTo(typeEl);
+                     if (constEl == null) {
+                         return null;
+                     }
+-                    aconstOut[i] = constEl;
++                    listOut.add(constEl);
+                 }
+-                return pool.ensureArrayConstant(typeOut, aconstOut);
++                return pool.ensureArrayConstant(typeOut, listOut);
+             }
+         }
+         return null;
+@@ -141,11 +143,29 @@ public class ArrayConstant
+ 
+     /**
+      * {@inheritDoc}
+-     * @return  the constant's contents as an array of constants
++     * @return  the constant's contents as an immutable list of constants
+      */
+     @Override
+-    public Constant[] getValue() {
+-        return m_aconstVal;
++    public List<Constant> getValue() {
++        return m_listVal;
++    }
++
++    /**
++     * @return the constant's contents as an immutable list of constants
++     */
++    public List<Constant> getValues() {
++        return m_listVal;
++    }
++
++    /**
++     * Get the values as an array for backward compatibility.
++     *
++     * @return the constant's contents as an array (creates a new array each call)
++     * @deprecated Use {@link #getValues()} instead for immutability.
++     */
++    @Deprecated
++    public Constant[] getValueArray() {
++        return m_listVal.toArray(Constant[]::new);
+     }
+ 
+ 
+@@ -171,7 +191,7 @@ public class ArrayConstant
+             return true;
+         }
+ 
+-        for (Constant constant : m_aconstVal) {
++        for (Constant constant : m_listVal) {
+             if (constant.containsUnresolved()) {
+                 return true;
+             }
+@@ -183,7 +203,7 @@ public class ArrayConstant
+     @Override
+     public void forEachUnderlying(Consumer<Constant> visitor) {
+         visitor.accept(m_constType);
+-        for (Constant constant : m_aconstVal) {
++        for (Constant constant : m_listVal) {
+             visitor.accept(constant);
+         }
+     }
+@@ -194,41 +214,45 @@ public class ArrayConstant
+         TypeConstant typeNew = typeOld.resolveTypedefs();
+ 
+         // check values
+-        Constant[] aconstOld = m_aconstVal;
+-        Constant[] aconstNew = null;
+-        for (int i = 0, c = aconstOld.length; i < c; ++i) {
+-            Constant constOld = aconstOld[i];
++        List<Constant> listOld     = m_listVal;
++        List<Constant> listNew     = null;
++        boolean        fAnyChanged = false;
++
++        for (int i = 0, c = listOld.size(); i < c; ++i) {
++            Constant constOld = listOld.get(i);
+             Constant constNew = constOld.resolveTypedefs();
+             if (constNew != constOld) {
+-                if (aconstNew == null) {
+-                    aconstNew = aconstOld.clone();
++                if (!fAnyChanged) {
++                    listNew     = new ArrayList<>(listOld);
++                    fAnyChanged = true;
+                 }
+-                aconstNew[i] = constNew;
++                listNew.set(i, constNew);
+             }
+         }
+ 
+-        return typeNew == typeOld && aconstNew == null
++        return typeNew == typeOld && !fAnyChanged
+                 ? this
+                 : (ArrayConstant) getConstantPool().register(
+-                        new ArrayConstant(getConstantPool(), f_fmt, typeNew, aconstNew));
++                        new ArrayConstant(getConstantPool(), f_fmt, typeNew,
++                                fAnyChanged ? listNew : listOld));
+     }
+ 
+     @Override
+     protected int compareDetails(Constant that) {
+-        if (!(that instanceof ArrayConstant)) {
++        if (!(that instanceof ArrayConstant thatArray)) {
+             return -1;
+         }
+-        int nResult = this.m_constType.compareTo(((ArrayConstant) that).m_constType);
++        int nResult = this.m_constType.compareTo(thatArray.m_constType);
+         if (nResult != 0) {
+             return nResult;
+         }
+ 
+-        Constant[] aconstThis = this.m_aconstVal;
+-        Constant[] aconstThat = ((ArrayConstant) that).m_aconstVal;
+-        int cThis = aconstThis.length;
+-        int cThat = aconstThat.length;
++        List<Constant> listThis = this.m_listVal;
++        List<Constant> listThat = thatArray.m_listVal;
++        int cThis = listThis.size();
++        int cThat = listThat.size();
+         for (int i = 0, c = Math.min(cThis, cThat); i < c; ++i) {
+-            nResult = aconstThis[i].compareTo(aconstThat[i]);
++            nResult = listThis.get(i).compareTo(listThat.get(i));
+             if (nResult != 0) {
+                 return nResult;
+             }
+@@ -238,8 +262,8 @@ public class ArrayConstant
+ 
+     @Override
+     public String getValueString() {
+-        Constant[] aconst  = m_aconstVal;
+-        int        cConsts = aconst.length;
++        List<Constant> list    = m_listVal;
++        int            cConsts = list.size();
+ 
+         String sStart;
+         String sEnd;
+@@ -268,7 +292,7 @@ public class ArrayConstant
+                 sb.append(", ");
+             }
+ 
+-            sb.append(aconst[i]);
++            sb.append(list.get(i));
+         }
+ 
+         sb.append(sEnd);
+@@ -281,7 +305,13 @@ public class ArrayConstant
+     @Override
+     protected void registerConstants(ConstantPool pool) {
+         m_constType = pool.register(m_constType);
+-        m_aconstVal = registerConstants(pool, m_aconstVal);
++
++        List<Constant> listOld = m_listVal;
++        List<Constant> listNew = new ArrayList<>(listOld.size());
++        for (Constant constant : listOld) {
++            listNew.add(pool.register(constant));
++        }
++        m_listVal = List.copyOf(listNew);
+     }
+ 
+     @Override
+@@ -289,16 +319,16 @@ public class ArrayConstant
+             throws IOException {
+         out.writeByte(getFormat().ordinal());
+         writePackedLong(out, m_constType.getPosition());
+-        Constant[] aconst  = m_aconstVal;
+-        writePackedLong(out, aconst.length);
+-        for (Constant constant : aconst) {
++        List<Constant> list = m_listVal;
++        writePackedLong(out, list.size());
++        for (Constant constant : list) {
+             writePackedLong(out, constant.getPosition());
+         }
+     }
+ 
+     @Override
+     public String getDescription() {
+-        return "array-length=" + m_aconstVal.length;
++        return "array-length=" + m_listVal.size();
+     }
+ 
+ 
+@@ -307,7 +337,7 @@ public class ArrayConstant
+     @Override
+     public int computeHashCode() {
+         return Hash.of(m_constType,
+-               Hash.of(m_aconstVal));
++               Hash.of(m_listVal));
+     }
+ 
+ 
+@@ -335,8 +365,9 @@ public class ArrayConstant
+     private TypeConstant m_constType;
+ 
+     /**
+-     * The values in the array, tuple, or set.
++     * The values in the array, tuple, or set (immutable list).
+      */
+-    private Constant[] m_aconstVal;
++    private List<Constant> m_listVal;
+ }
+ 
++
+diff --git a/javatools/src/main/java/org/xvm/asm/constants/ClassConstant.java b/javatools/src/main/java/org/xvm/asm/constants/ClassConstant.java
+index a1c43e95e..681945081 100644
+--- a/javatools/src/main/java/org/xvm/asm/constants/ClassConstant.java
++++ b/javatools/src/main/java/org/xvm/asm/constants/ClassConstant.java
+@@ -54,6 +54,18 @@ public class ClassConstant
+     }
+ 
+ 
++    // ----- PoolTransferable ----------------------------------------------------------------------
++
++    @Override
++    public ClassConstant transferTo(ConstantPool pool) {
++        if (pool == getConstantPool()) {
++            return this;
++        }
++
++        return pool.ensureClassConstant(getParentConstant().transferTo(pool), getName());
++    }
++
++
+     // ----- ClassConstant methods -----------------------------------------------------------------
+ 
+     /**
+diff --git a/javatools/src/main/java/org/xvm/asm/constants/IdentityConstant.java b/javatools/src/main/java/org/xvm/asm/constants/IdentityConstant.java
+index 6c5997563..ea5366b38 100644
+--- a/javatools/src/main/java/org/xvm/asm/constants/IdentityConstant.java
++++ b/javatools/src/main/java/org/xvm/asm/constants/IdentityConstant.java
+@@ -40,6 +40,25 @@ public abstract class IdentityConstant
+     }
+ 
+ 
++    // ----- PoolTransferable ----------------------------------------------------------------------
++
++    /**
++     * Transfers this IdentityConstant to a different pool.
++     *
++     * @param pool  the target ConstantPool
++     *
++     * @return the equivalent IdentityConstant in the target pool
++     */
++    @Override
++    public IdentityConstant transferTo(ConstantPool pool) {
++        if (pool == getConstantPool()) {
++            return this;
++        }
++        throw new UnsupportedOperationException(
++            getClass().getSimpleName() + " must override transferTo(ConstantPool)");
++    }
++
++
+     // ----- IdentityConstant methods --------------------------------------------------------------
+ 
+     /**
+diff --git a/javatools/src/main/java/org/xvm/asm/constants/ImmutableTypeConstant.java b/javatools/src/main/java/org/xvm/asm/constants/ImmutableTypeConstant.java
+index aceafc4f4..dcbde9e3b 100644
+--- a/javatools/src/main/java/org/xvm/asm/constants/ImmutableTypeConstant.java
++++ b/javatools/src/main/java/org/xvm/asm/constants/ImmutableTypeConstant.java
+@@ -70,6 +70,18 @@ public class ImmutableTypeConstant
+     }
+ 
+ 
++    // ----- PoolTransferable ----------------------------------------------------------------------
++
++    @Override
++    public ImmutableTypeConstant transferTo(ConstantPool pool) {
++        if (pool == getConstantPool()) {
++            return this;
++        }
++
++        return pool.ensureImmutableTypeConstant(m_constType.transferTo(pool));
++    }
++
++
+     // ----- TypeConstant methods ------------------------------------------------------------------
+ 
+     @Override
+diff --git a/javatools/src/main/java/org/xvm/asm/constants/MethodBody.java b/javatools/src/main/java/org/xvm/asm/constants/MethodBody.java
+index 7a622bbd0..6530b3ff3 100644
+--- a/javatools/src/main/java/org/xvm/asm/constants/MethodBody.java
++++ b/javatools/src/main/java/org/xvm/asm/constants/MethodBody.java
+@@ -558,7 +558,9 @@ public class MethodBody {
+             SignatureConstant sigActual     = getIdentity().getSignature().
+                                                     resolveGenericTypes(ts.pool(), typeCanonical);
+ 
+-            m_jmd = jmd = JitMethodDesc.of(sigActual.getRawParams(), sigActual.getRawReturns(),
++            m_jmd = jmd = JitMethodDesc.of(
++                                sigActual.getParams().toArray(TypeConstant[]::new),
++                                sigActual.getReturns().toArray(TypeConstant[]::new),
+                                 isCtorOrValidator(), typeContainer.ensureClassDesc(ts),
+                                 method.getRequiredParamCount(), ts);
+             m_typeJmdContainer = typeContainer;
+diff --git a/javatools/src/main/java/org/xvm/asm/constants/MethodConstant.java b/javatools/src/main/java/org/xvm/asm/constants/MethodConstant.java
+index b698f94a1..a58ce4c4f 100644
+--- a/javatools/src/main/java/org/xvm/asm/constants/MethodConstant.java
++++ b/javatools/src/main/java/org/xvm/asm/constants/MethodConstant.java
+@@ -5,6 +5,7 @@ import java.io.DataInput;
+ import java.io.DataOutput;
+ import java.io.IOException;
+ 
++import java.util.Arrays;
+ import java.util.List;
+ 
+ import java.util.function.Consumer;
+@@ -56,7 +57,8 @@ public class MethodConstant
+      */
+     public MethodConstant(ConstantPool pool, MultiMethodConstant constParent,
+                           TypeConstant[] params, TypeConstant[] returns) {
+-        this(pool, constParent, pool.ensureSignatureConstant(constParent.getName(), params, returns), 0);
++        this(pool, constParent, pool.ensureSignatureConstant(constParent.getName(),
++                Arrays.asList(params), Arrays.asList(returns)), 0);
+     }
+ 
+     /**
+@@ -174,13 +176,6 @@ public class MethodConstant
+         m_constSig = sig;
+     }
+ 
+-    /**
+-     * @return the method's parameter types
+-     */
+-    public TypeConstant[] getRawParams() {
+-        return getSignature().getRawParams();
+-    }
+-
+     /**
+      * @return the method's parameter types
+      */
+@@ -188,13 +183,6 @@ public class MethodConstant
+         return getSignature().getParams();
+     }
+ 
+-    /**
+-     * @return the method's return types
+-     */
+-    public TypeConstant[] getRawReturns() {
+-        return getSignature().getRawReturns();
+-    }
+-
+     /**
+      * @return the method's return types
+      */
+@@ -206,7 +194,7 @@ public class MethodConstant
+      * @return the method's return types as a Tuple
+      */
+     public TypeConstant getReturnsAsTuple() {
+-        return getConstantPool().ensureTupleType(getRawReturns());
++        return getConstantPool().ensureTupleType(getReturns());
+     }
+ 
+     /**
+@@ -303,7 +291,7 @@ public class MethodConstant
+                     SignatureConstant sigJit = getSignature();
+                     if (!prefix.isEmpty()) {
+                         sigJit  = sigJit.getConstantPool().ensureSignatureConstant(
+-                            prefix + sigJit.getName(), sigJit.getRawParams(), sigJit.getRawReturns());
++                            prefix + sigJit.getName(), sigJit.getParams(), sigJit.getReturns());
+                     }
+                     sJitName = sigJit.ensureJitMethodName(ts);
+                 } else {
+@@ -406,13 +394,12 @@ public class MethodConstant
+               .append(']');
+         } else {
+             sb.append('(');
+-            TypeConstant[] aParamType = getRawParams();
+-            for (int i = 0, c = aParamType.length; i < c; i++) {
+-                TypeConstant typeParam = aParamType[i];
++            List<TypeConstant> listParams = getParams();
++            for (int i = 0, c = listParams.size(); i < c; i++) {
+                 if (i > 0) {
+                     sb.append(", ");
+                 }
+-                sb.append(typeParam.getValueString());
++                sb.append(listParams.get(i).getValueString());
+             }
+             sb.append(')');
+         }
+diff --git a/javatools/src/main/java/org/xvm/asm/constants/ModuleConstant.java b/javatools/src/main/java/org/xvm/asm/constants/ModuleConstant.java
+index dd1a86250..e20431469 100644
+--- a/javatools/src/main/java/org/xvm/asm/constants/ModuleConstant.java
++++ b/javatools/src/main/java/org/xvm/asm/constants/ModuleConstant.java
+@@ -86,6 +86,18 @@ public class ModuleConstant
+     }
+ 
+ 
++    // ----- PoolTransferable ----------------------------------------------------------------------
++
++    @Override
++    public ModuleConstant transferTo(ConstantPool pool) {
++        if (pool == getConstantPool()) {
++            return this;
++        }
++
++        return pool.ensureModuleConstant(getName(), getVersion());
++    }
++
++
+     // ----- type-specific functionality -----------------------------------------------------------
+ 
+     /**
+diff --git a/javatools/src/main/java/org/xvm/asm/constants/PackageConstant.java b/javatools/src/main/java/org/xvm/asm/constants/PackageConstant.java
+index 225bc538b..4870ed59c 100644
+--- a/javatools/src/main/java/org/xvm/asm/constants/PackageConstant.java
++++ b/javatools/src/main/java/org/xvm/asm/constants/PackageConstant.java
+@@ -47,6 +47,18 @@ public class PackageConstant
+     }
+ 
+ 
++    // ----- PoolTransferable ----------------------------------------------------------------------
++
++    @Override
++    public PackageConstant transferTo(ConstantPool pool) {
++        if (pool == getConstantPool()) {
++            return this;
++        }
++
++        return pool.ensurePackageConstant(getParentConstant().transferTo(pool), getName());
++    }
++
++
+     // ----- IdentityConstant methods --------------------------------------------------------------
+ 
+     @Override
+diff --git a/javatools/src/main/java/org/xvm/asm/constants/SignatureConstant.java b/javatools/src/main/java/org/xvm/asm/constants/SignatureConstant.java
+index b7f7e11ff..993ee8481 100644
+--- a/javatools/src/main/java/org/xvm/asm/constants/SignatureConstant.java
++++ b/javatools/src/main/java/org/xvm/asm/constants/SignatureConstant.java
+@@ -5,13 +5,18 @@ import java.io.DataInput;
+ import java.io.DataOutput;
+ import java.io.IOException;
+ 
++import java.util.ArrayList;
+ import java.util.Arrays;
+ import java.util.List;
++import java.util.Objects;
++import java.util.stream.Collectors;
+ 
+ import java.util.concurrent.locks.StampedLock;
+ 
+ import java.util.function.Consumer;
+ 
++import org.jetbrains.annotations.NotNull;
++
+ import org.xvm.asm.Constant;
+ import org.xvm.asm.ConstantPool;
+ import org.xvm.asm.GenericTypeResolver;
+@@ -70,6 +75,16 @@ public class SignatureConstant
+         extends PseudoConstant {
+     // ----- constructors --------------------------------------------------------------------------
+ 
++    /**
++     * Construct a constant whose value is a method signature identifier with no params or returns.
++     *
++     * @param pool   the ConstantPool that will contain this Constant
++     * @param sName  the name of the method
++     */
++    public SignatureConstant(ConstantPool pool, @NotNull String sName) {
++        this(pool, sName, List.of(), List.of());
++    }
++
+     /**
+      * Construct a constant whose value is a method signature identifier.
+      *
+@@ -78,16 +93,13 @@ public class SignatureConstant
+      * @param params   the param types
+      * @param returns  the return types
+      */
+-    public SignatureConstant(ConstantPool pool, String sName, TypeConstant[] params, TypeConstant[] returns) {
++    public SignatureConstant(ConstantPool pool, @NotNull String sName,
++                             @NotNull List<TypeConstant> params, @NotNull List<TypeConstant> returns) {
+         super(pool);
+ 
+-        if (sName == null) {
+-            throw new IllegalArgumentException("name required");
+-        }
+-
+-        m_constName     = pool.ensureStringConstant(sName);
+-        m_aconstParams  = validateTypes(params);
+-        m_aconstReturns = validateTypes(returns);
++        m_constName         = pool.ensureStringConstant(Objects.requireNonNull(sName, "name required"));
++        m_listConstParams   = List.copyOf(Objects.requireNonNull(params, "params required"));
++        m_listConstReturns  = List.copyOf(Objects.requireNonNull(returns, "returns required"));
+     }
+ 
+     /**
+@@ -106,10 +118,10 @@ public class SignatureConstant
+             throw new IllegalArgumentException("property required");
+         }
+ 
+-        m_constName     = pool.ensureStringConstant(constProperty.getName());
+-        m_aconstParams  = ConstantPool.NO_TYPES;
+-        m_aconstReturns = new TypeConstant[] {constProperty.getType()};
+-        m_fProperty     = true;
++        m_constName         = pool.ensureStringConstant(constProperty.getName());
++        m_listConstParams   = List.of();
++        m_listConstReturns  = List.of(constProperty.getType());
++        m_fProperty         = true;
+     }
+ 
+     /**
+@@ -134,15 +146,34 @@ public class SignatureConstant
+     protected void resolveConstants() {
+         ConstantPool pool = getConstantPool();
+ 
+-        m_constName     = (StringConstant) pool.getConstant(m_iName);
+-        m_aconstParams  = lookupTypes(pool, m_aiParams);
+-        m_aconstReturns = lookupTypes(pool, m_aiReturns);
++        m_constName         = pool.getConstant(m_iName, StringConstant.class);
++        m_listConstParams   = lookupTypes(pool, m_aiParams);
++        m_listConstReturns  = lookupTypes(pool, m_aiReturns);
+ 
+         m_aiParams  = null;
+         m_aiReturns = null;
+     }
+ 
+ 
++    // ----- PoolTransferable ----------------------------------------------------------------------
++
++    @Override
++    public SignatureConstant transferTo(ConstantPool pool) {
++        if (pool == getConstantPool()) {
++            return this;
++        }
++
++        List<TypeConstant> listParams  = m_listConstParams.stream()
++                .map(type -> (TypeConstant) type.transferTo(pool))
++                .toList();
++        List<TypeConstant> listReturns = m_listConstReturns.stream()
++                .map(type -> (TypeConstant) type.transferTo(pool))
++                .toList();
++
++        return pool.ensureSignatureConstant(getName(), listParams, listReturns);
++    }
++
++
+     // ----- type-specific functionality -----------------------------------------------------------
+ 
+     /**
+@@ -156,42 +187,28 @@ public class SignatureConstant
+      * @return the method's parameter count
+      */
+     public int getParamCount() {
+-        return m_aconstParams.length;
+-    }
+-
+-    /**
+-     * @return the method's parameter types
+-     */
+-    public TypeConstant[] getRawParams() {
+-        return m_aconstParams;
++        return m_listConstParams.size();
+     }
+ 
+     /**
+      * @return the method's parameter types
+      */
+     public List<TypeConstant> getParams() {
+-        return Arrays.asList(m_aconstParams.clone());
++        return m_listConstParams;
+     }
+ 
+     /**
+      * @return the method's return count
+      */
+     public int getReturnCount() {
+-        return m_aconstReturns.length;
+-    }
+-
+-    /**
+-     * @return the method's return types
+-     */
+-    public TypeConstant[] getRawReturns() {
+-        return m_aconstReturns;
++        return m_listConstReturns.size();
+     }
+ 
+     /**
+      * @return the method's return types
+      */
+     public List<TypeConstant> getReturns() {
+-        return Arrays.asList(m_aconstReturns);
++        return m_listConstReturns;
+     }
+ 
+     /**
+@@ -205,13 +222,13 @@ public class SignatureConstant
+      * @return true iff this signature contains any generic types
+      */
+     public boolean containsGenericTypes() {
+-        for (TypeConstant type : m_aconstParams) {
++        for (TypeConstant type : m_listConstParams) {
+             if (type.containsGenericType(true)) {
+                 return true;
+             }
+         }
+ 
+-        for (TypeConstant type : m_aconstReturns) {
++        for (TypeConstant type : m_listConstReturns) {
+             if (type.containsGenericType(true)) {
+                 return true;
+             }
+@@ -223,13 +240,13 @@ public class SignatureConstant
+      * @return true iff this signature contains any formal type parameters
+      */
+     public boolean containsTypeParameters() {
+-        for (TypeConstant type : m_aconstParams) {
++        for (TypeConstant type : m_listConstParams) {
+             if (type.containsTypeParameter(true)) {
+                 return true;
+             }
+         }
+ 
+-        for (TypeConstant type : m_aconstReturns) {
++        for (TypeConstant type : m_listConstReturns) {
+             if (type.containsTypeParameter(true)) {
+                 return true;
+             }
+@@ -250,38 +267,36 @@ public class SignatureConstant
+             return this;
+         }
+ 
+-        TypeConstant[] aconstParamOriginal = m_aconstParams;
+-        TypeConstant[] aconstParamResolved = aconstParamOriginal;
+-        boolean        fDiff               = false;
+-        for (int i = 0, c = aconstParamOriginal.length; i < c; ++i) {
+-            TypeConstant constOriginal = aconstParamOriginal[i];
++        List<TypeConstant> listParams  = m_listConstParams;
++        List<TypeConstant> listReturns = m_listConstReturns;
++        boolean            fDiff       = false;
++
++        for (int i = 0, c = listParams.size(); i < c; ++i) {
++            TypeConstant constOriginal = listParams.get(i);
+             TypeConstant constResolved = constOriginal.resolveGenerics(pool, resolver);
+             if (constOriginal != constResolved) {
+-                if (aconstParamResolved == aconstParamOriginal) {
+-                    aconstParamResolved = aconstParamOriginal.clone();
+-                    fDiff               = true;
++                if (!fDiff) {
++                    listParams = new ArrayList<>(m_listConstParams);
++                    fDiff      = true;
+                 }
+-                aconstParamResolved[i] = constResolved;
++                listParams.set(i, constResolved);
+             }
+         }
+ 
+-        TypeConstant[] aconstReturnOriginal = m_aconstReturns;
+-        TypeConstant[] aconstReturnResolved = aconstReturnOriginal;
+-        for (int i = 0, c = aconstReturnOriginal.length; i < c; ++i) {
+-            TypeConstant constOriginal = aconstReturnOriginal[i];
++        for (int i = 0, c = listReturns.size(); i < c; ++i) {
++            TypeConstant constOriginal = listReturns.get(i);
+             TypeConstant constResolved = constOriginal.resolveGenerics(pool, resolver);
+             if (constOriginal != constResolved) {
+-                if (aconstReturnResolved == aconstReturnOriginal) {
+-                    aconstReturnResolved = aconstReturnOriginal.clone();
+-                    fDiff                = true;
++                if (listReturns == m_listConstReturns) {
++                    listReturns = new ArrayList<>(m_listConstReturns);
++                    fDiff       = true;
+                 }
+-                aconstReturnResolved[i] = constResolved;
++                listReturns.set(i, constResolved);
+             }
+         }
+ 
+         if (fDiff) {
+-            SignatureConstant that = pool.ensureSignatureConstant(
+-                    getName(), aconstParamResolved, aconstReturnResolved);
++            SignatureConstant that = pool.ensureSignatureConstant(getName(), listParams, listReturns);
+             that.m_fProperty = this.m_fProperty;
+             return that;
+         }
+@@ -298,13 +313,13 @@ public class SignatureConstant
+      * @return true iff any portion of this TypeConstant represents an auto-narrowing type
+      */
+     public boolean containsAutoNarrowing(boolean fAllowVirtChild) {
+-        for (TypeConstant typeParam : m_aconstParams) {
++        for (TypeConstant typeParam : m_listConstParams) {
+             if (typeParam.containsAutoNarrowing(fAllowVirtChild)) {
+                 return true;
+             }
+         }
+ 
+-        for (TypeConstant typeReturn : m_aconstReturns) {
++        for (TypeConstant typeReturn : m_listConstReturns) {
+             if (typeReturn.containsAutoNarrowing(fAllowVirtChild)) {
+                 return true;
+             }
+@@ -327,38 +342,41 @@ public class SignatureConstant
+      */
+     public SignatureConstant resolveAutoNarrowing(ConstantPool pool, TypeConstant typeTarget,
+                                                   IdentityConstant idCtx) {
+-        TypeConstant[] aconstParamOriginal = m_aconstParams;
+-        TypeConstant[] aconstParamResolved = aconstParamOriginal;
+-        boolean        fDiff               = false;
+-        for (int i = 0, c = aconstParamOriginal.length; i < c; ++i) {
+-            TypeConstant constOriginal = aconstParamOriginal[i];
++        List<TypeConstant> listParams  = m_listConstParams;
++        List<TypeConstant> listReturns = m_listConstReturns;
++        boolean            fDiff       = false;
++
++        for (int i = 0, c = listParams.size(); i < c; ++i) {
++            TypeConstant constOriginal = listParams.get(i);
+             TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, false, typeTarget, idCtx);
+             if (constOriginal != constResolved) {
+-                if (aconstParamResolved == aconstParamOriginal) {
+-                    aconstParamResolved = aconstParamOriginal.clone();
+-                    fDiff               = true;
++                if (!fDiff) {
++                    listParams = new ArrayList<>(m_listConstParams);
++                    fDiff      = true;
+                 }
+-                aconstParamResolved[i] = constResolved;
++                listParams.set(i, constResolved);
+             }
+         }
+ 
+-        TypeConstant[] aconstReturnOriginal = m_aconstReturns;
+-        TypeConstant[] aconstReturnResolved = aconstReturnOriginal;
+-        for (int i = 0, c = aconstReturnOriginal.length; i < c; ++i) {
+-            TypeConstant constOriginal = aconstReturnOriginal[i];
++        for (int i = 0, c = listReturns.size(); i < c; ++i) {
++            TypeConstant constOriginal = listReturns.get(i);
+             TypeConstant constResolved = constOriginal.resolveAutoNarrowing(pool, false, typeTarget, idCtx);
+             if (constOriginal != constResolved) {
+-                if (aconstReturnResolved == aconstReturnOriginal) {
+-                    aconstReturnResolved = aconstReturnOriginal.clone();
+-                    fDiff                = true;
++                if (listReturns == m_listConstReturns) {
++                    listReturns = new ArrayList<>(m_listConstReturns);
++                    fDiff       = true;
+                 }
+-                aconstReturnResolved[i] = constResolved;
++                listReturns.set(i, constResolved);
+             }
+         }
+ 
+-        return fDiff
+-                ? pool.ensureSignatureConstant(getName(), aconstParamResolved, aconstReturnResolved)
+-                : this;
++        if (fDiff) {
++            SignatureConstant that = pool.ensureSignatureConstant(getName(), listParams, listReturns);
++            that.m_fProperty = this.m_fProperty;
++            return that;
++        }
++
++        return this;
+     }
+ 
+     /**
+@@ -418,18 +436,18 @@ public class SignatureConstant
+             return false;
+         }
+ 
+-        TypeConstant[] aR1 = that.getRawReturns();
+-        TypeConstant[] aR2 = this.getRawReturns();
++        List<TypeConstant> listR1 = that.getReturns();
++        List<TypeConstant> listR2 = this.getReturns();
+         for (int i = 0, c = Math.min(cR1, cR2); i < c; i++) {
+-            if (!aR2[i].isCovariantReturn(aR1[i], typeCtx)) {
++            if (!listR2.get(i).isCovariantReturn(listR1.get(i), typeCtx)) {
+                 return false;
+             }
+         }
+ 
+-        TypeConstant[] aP1 = that.getRawParams();
+-        TypeConstant[] aP2 = this.getRawParams();
++        List<TypeConstant> listP1 = that.getParams();
++        List<TypeConstant> listP2 = this.getParams();
+         for (int i = 0; i < cP1; i++) {
+-            if (!aP2[i].isContravariantParameter(aP1[i], typeCtx)) {
++            if (!listP2.get(i).isContravariantParameter(listP1.get(i), typeCtx)) {
+                 return false;
+             }
+         }
+@@ -462,18 +480,18 @@ public class SignatureConstant
+             return false;
+         }
+ 
+-        TypeConstant[] aR1 = that.getRawReturns();
+-        TypeConstant[] aR2 = this.getRawReturns();
++        List<TypeConstant> listR1 = that.getReturns();
++        List<TypeConstant> listR2 = this.getReturns();
+         for (int i = 0, c = Math.min(cR1, cR2); i < c; i++) {
+-            if (!aR2[i].isA(aR1[i]) && !aR1[i].isA(aR2[i])) {
++            if (!listR2.get(i).isA(listR1.get(i)) && !listR1.get(i).isA(listR2.get(i))) {
+                 return false;
+             }
+         }
+ 
+-        TypeConstant[] aP1 = that.getRawParams();
+-        TypeConstant[] aP2 = this.getRawParams();
++        List<TypeConstant> listP1 = that.getParams();
++        List<TypeConstant> listP2 = this.getParams();
+         for (int i = 0; i < cP1; i++) {
+-            if (!aP1[i].isA(aP2[i]) && !aP2[i].isA(aP1[i])) {
++            if (!listP1.get(i).isA(listP2.get(i)) && !listP2.get(i).isA(listP1.get(i))) {
+                 return false;
+             }
+         }
+@@ -491,13 +509,13 @@ public class SignatureConstant
+      */
+     public boolean isShared(ConstantPool poolOther) {
+         if (poolOther != getConstantPool()) {
+-            for (TypeConstant type : m_aconstParams) {
++            for (TypeConstant type : m_listConstParams) {
+                 if (!type.isShared(poolOther)) {
+                     return false;
+                 }
+             }
+ 
+-            for (TypeConstant type : m_aconstReturns) {
++            for (TypeConstant type : m_listConstReturns) {
+                 if (!type.isShared(poolOther)) {
+                     return false;
+                 }
+@@ -511,7 +529,7 @@ public class SignatureConstant
+      * @return the type of the function that corresponds to this SignatureConstant
+      */
+     public TypeConstant asFunctionType() {
+-        return getConstantPool().buildFunctionType(m_aconstParams, m_aconstReturns);
++        return getConstantPool().buildFunctionType(m_listConstParams, m_listConstReturns);
+     }
+ 
+     /**
+@@ -519,14 +537,10 @@ public class SignatureConstant
+      *         (at index zero) parameter accepting the specified target type
+      */
+     public TypeConstant asBjarneLambdaType(ConstantPool pool, TypeConstant typeTarget) {
+-        TypeConstant[] aconstParamsOld = m_aconstParams;
+-        int            cParams         = aconstParamsOld.length;
+-        TypeConstant[] aconstParamsNew = new TypeConstant[cParams + 1];
+-
+-        aconstParamsNew[0] = typeTarget;
+-        System.arraycopy(aconstParamsOld, 0, aconstParamsNew, 1, cParams);
+-
+-        return pool.buildFunctionType(aconstParamsNew, m_aconstReturns);
++        List<TypeConstant> listParamsNew = new ArrayList<>(m_listConstParams.size() + 1);
++        listParamsNew.add(typeTarget);
++        listParamsNew.addAll(m_listConstParams);
++        return pool.buildFunctionType(listParamsNew, m_listConstReturns);
+     }
+ 
+     /**
+@@ -534,15 +548,15 @@ public class SignatureConstant
+      *         target type
+      */
+     public TypeConstant asMethodType(ConstantPool pool, TypeConstant typeTarget) {
+-        return pool.buildMethodType(typeTarget, m_aconstParams, m_aconstReturns);
++        return pool.buildMethodType(typeTarget, m_listConstParams, m_listConstReturns);
+     }
+ 
+     /**
+      * @return the type of the function that corresponds to this SignatureConstant as a constructor
+      */
+     public TypeConstant asConstructorType(ConstantPool pool, TypeConstant typeTarget) {
+-        assert getName().equals("construct") && m_aconstReturns.length == 0;
+-        return pool.buildFunctionType(m_aconstParams, typeTarget);
++        assert getName().equals("construct") && m_listConstReturns.isEmpty();
++        return pool.buildFunctionType(m_listConstParams, List.of(typeTarget));
+     }
+ 
+     /**
+@@ -556,14 +570,14 @@ public class SignatureConstant
+      */
+     public SignatureConstant truncateParams(int ofStart, int cParams) {
+         if (cParams < 0) {
+-            cParams = m_aconstParams.length - ofStart;
++            cParams = m_listConstParams.size() - ofStart;
+         }
+ 
+         assert ofStart >= 0;
+-        assert ofStart + cParams <= m_aconstParams.length;
++        assert ofStart + cParams <= m_listConstParams.size();
+ 
+         return getConstantPool().ensureSignatureConstant(getName(),
+-                Arrays.copyOfRange(m_aconstParams, ofStart, ofStart + cParams), m_aconstReturns);
++                m_listConstParams.subList(ofStart, ofStart + cParams), m_listConstReturns);
+     }
+ 
+ 
+@@ -584,13 +598,13 @@ public class SignatureConstant
+             return true;
+         }
+ 
+-        for (TypeConstant constant : m_aconstParams) {
++        for (TypeConstant constant : m_listConstParams) {
+             if (constant.containsUnresolved()) {
+                 return true;
+             }
+         }
+ 
+-        for (TypeConstant constant : m_aconstReturns) {
++        for (TypeConstant constant : m_listConstReturns) {
+             if (constant.containsUnresolved()) {
+                 return true;
+             }
+@@ -602,50 +616,48 @@ public class SignatureConstant
+     @Override
+     public void forEachUnderlying(Consumer<Constant> visitor) {
+         visitor.accept(m_constName);
+-        for (TypeConstant constant : m_aconstParams) {
++        for (TypeConstant constant : m_listConstParams) {
+             visitor.accept(constant);
+         }
+-        for (TypeConstant constant : m_aconstReturns) {
++        for (TypeConstant constant : m_listConstReturns) {
+             visitor.accept(constant);
+         }
+     }
+ 
+     @Override
+     public SignatureConstant resolveTypedefs() {
+-        // params
+-        TypeConstant[] atypeOldParams = m_aconstParams;
+-        TypeConstant[] atypeNewParams = atypeOldParams;
+-        boolean        fDiff          = false;
+-        for (int i = 0, c = atypeOldParams.length; i < c; ++i) {
+-            TypeConstant constOld = atypeOldParams[i];
++        List<TypeConstant> listParams  = m_listConstParams;
++        List<TypeConstant> listReturns = m_listConstReturns;
++        boolean            fDiff       = false;
++
++        for (int i = 0, c = listParams.size(); i < c; ++i) {
++            TypeConstant constOld = listParams.get(i);
+             TypeConstant constNew = constOld.resolveTypedefs();
+             if (constNew != constOld) {
+-                if (atypeNewParams == atypeOldParams) {
+-                    atypeNewParams = atypeOldParams.clone();
+-                    fDiff          = true;
++                if (!fDiff) {
++                    listParams = new ArrayList<>(m_listConstParams);
++                    fDiff      = true;
+                 }
+-                atypeNewParams[i] = constNew;
++                listParams.set(i, constNew);
+             }
+         }
+ 
+-        // returns
+-        TypeConstant[] atypeOldReturns = m_aconstReturns;
+-        TypeConstant[] atypeNewReturns = atypeOldReturns;
+-        for (int i = 0, c = atypeOldReturns.length; i < c; ++i) {
+-            TypeConstant constOld = atypeOldReturns[i];
++        for (int i = 0, c = listReturns.size(); i < c; ++i) {
++            TypeConstant constOld = listReturns.get(i);
+             TypeConstant constNew = constOld.resolveTypedefs();
+             if (constNew != constOld) {
+-                if (atypeNewReturns == atypeOldReturns) {
+-                    atypeNewReturns = atypeOldReturns.clone();
+-                    fDiff           = true;
++                if (listReturns == m_listConstReturns) {
++                    listReturns = new ArrayList<>(m_listConstReturns);
++                    fDiff       = true;
+                 }
+-                atypeNewReturns[i] = constNew;
++                listReturns.set(i, constNew);
+             }
+         }
+ 
+-        return fDiff
+-                ? getConstantPool().ensureSignatureConstant(getName(), atypeNewParams, atypeNewReturns)
+-                : this;
++        if (fDiff) {
++            return getConstantPool().ensureSignatureConstant(getName(), listParams, listReturns);
++        }
++        return this;
+     }
+ 
+     @Override
+@@ -665,9 +677,9 @@ public class SignatureConstant
+         boolean fCache = this.getConstantPool() == that.getConstantPool() && !containsUnresolved();
+         int     n      = this.m_constName.compareTo(that.m_constName);
+         if (n == 0) {
+-            n = compareTypes(this.m_aconstParams, that.m_aconstParams);
++            n = compareTypes(this.m_listConstParams, that.m_listConstParams);
+             if (n == 0) {
+-                n = compareTypes(this.m_aconstReturns, that.m_aconstReturns);
++                n = compareTypes(this.m_listConstReturns, that.m_listConstReturns);
+                 if (n == 0) {
+                     n = (this.m_fProperty ? 1 : 0) - (that.m_fProperty ? 1 : 0);
+                 }
+@@ -692,19 +704,19 @@ public class SignatureConstant
+     public String getValueString() {
+         StringBuilder sb = new StringBuilder();
+ 
+-        switch (m_aconstReturns.length) {
++        switch (m_listConstReturns.size()) {
+         case 0:
+             sb.append("void");
+             break;
+ 
+         case 1:
+-            sb.append(m_aconstReturns[0].getValueString());
++            sb.append(m_listConstReturns.getFirst().getValueString());
+             break;
+ 
+         default:
+             sb.append('(');
+             boolean first = true;
+-            for (TypeConstant type : m_aconstReturns) {
++            for (TypeConstant type : m_listConstReturns) {
+                 if (first) {
+                     first = false;
+                 } else {
+@@ -723,7 +735,7 @@ public class SignatureConstant
+             sb.append('(');
+ 
+             boolean first = true;
+-            for (TypeConstant type : m_aconstParams) {
++            for (TypeConstant type : m_listConstParams) {
+                 if (first) {
+                     first = false;
+                 } else {
+@@ -768,8 +780,8 @@ public class SignatureConstant
+     @Override
+     protected void registerConstants(ConstantPool pool) {
+         m_constName     = pool.register(m_constName);
+-        m_aconstParams  = TypeConstant.registerTypeConstants(pool, m_aconstParams);
+-        m_aconstReturns = TypeConstant.registerTypeConstants(pool, m_aconstReturns);
++        m_listConstParams  = TypeConstant.registerTypeConstants(pool, m_listConstParams);
++        m_listConstReturns = TypeConstant.registerTypeConstants(pool, m_listConstReturns);
+ 
+         // clear the cache
+         long stamp = m_lockPrev.writeLock();
+@@ -786,15 +798,15 @@ public class SignatureConstant
+ 
+         out.writeByte(getFormat().ordinal());
+         writePackedLong(out, m_constName.getPosition());
+-        writeTypes(out, m_aconstParams);
+-        writeTypes(out, m_aconstReturns);
++        writeTypes(out, m_listConstParams);
++        writeTypes(out, m_listConstReturns);
+     }
+ 
+     @Override
+     public String getDescription() {
+         return "name=" + getName()
+-                + ", params=" + formatTypes(m_aconstParams)
+-                + ", returns=" + formatTypes(m_aconstReturns);
++                + ", params=" + formatTypes(m_listConstParams)
++                + ", returns=" + formatTypes(m_listConstReturns);
+     }
+ 
+ 
+@@ -802,8 +814,8 @@ public class SignatureConstant
+ 
+     @Override
+     protected int computeHashCode() {
+-        return Hash.of(m_aconstParams,
+-               Hash.of(m_aconstReturns,
++        return Hash.of(m_listConstParams,
++               Hash.of(m_listConstReturns,
+                Hash.of(m_constName)));
+     }
+ 
+@@ -830,75 +842,76 @@ public class SignatureConstant
+     }
+ 
+     /**
+-     * Convert the passed array of constant indexes into an array of type constants.
++     * Convert the passed array of constant indexes into a list of type constants.
+      *
+      * @param pool  the ConstantPool
+      * @param an    an array of constant indexes
+      *
+-     * @return an array of type constants
++     * @return an immutable list of type constants
+      */
+-    protected static TypeConstant[] lookupTypes(ConstantPool pool, int[] an) {
+-        int c = an.length;
+-        TypeConstant[] aconst = new TypeConstant[c];
+-        for (int i = 0; i < c; ++i) {
+-            aconst[i] = (TypeConstant) pool.getConstant(an[i]);
++    protected static List<TypeConstant> lookupTypes(ConstantPool pool, int[] an) {
++        if (an.length == 0) {
++            return List.of();
+         }
+-        return aconst;
++        return Arrays.stream(an)
++                .mapToObj(i -> pool.getConstant(i, TypeConstant.class))
++                .toList();
+     }
+ 
+     /**
+      * Write a length-encoded series of type constants to the specified stream.
+      *
+-     * @param out     a DataOutput stream
+-     * @param aconst  an array of constants
++     * @param out        a DataOutput stream
++     * @param listConst  a list of constants
+      *
+      * @throws IOException  if an error occurs while writing the type constants
+      */
+-    protected static void writeTypes(DataOutput out, TypeConstant[] aconst)
++    protected static void writeTypes(DataOutput out, List<TypeConstant> listConst)
+             throws IOException {
+-        writePackedLong(out, aconst.length);
++        writePackedLong(out, listConst.size());
+ 
+-        for (TypeConstant typeConstant : aconst) {
++        for (TypeConstant typeConstant : listConst) {
+             writePackedLong(out, typeConstant.getPosition());
+         }
+     }
+ 
+     /**
+-     * Internal helper to scan a type array for nulls.
++     * Internal helper to validate a list of types for nulls.
+      *
+-     * @param aconst  an array of TypeConstant; may be null
++     * @param listConst  a list of TypeConstant; may be null
+      *
+-     * @return a non-null array of TypeConstant, each element of which is non-null
++     * @return an immutable non-null list of TypeConstant, each element of which is non-null
+      */
+-    protected static TypeConstant[] validateTypes(TypeConstant[] aconst) {
+-        if (aconst == null) {
+-            return ConstantPool.NO_TYPES;
++    protected static List<TypeConstant> validateTypes(List<TypeConstant> listConst) {
++        if (listConst == null || listConst.isEmpty()) {
++            return List.of();
+         }
+ 
+-        for (TypeConstant constant : aconst) {
++        for (TypeConstant constant : listConst) {
+             if (constant == null) {
+                 throw new IllegalArgumentException("type required");
+             }
+         }
+ 
+-        return aconst;
++        // Return immutable copy
++        return List.copyOf(listConst);
+     }
+ 
+     /**
+-     * Compare two arrays of type constants for order, as per the rules described by
++     * Compare two lists of type constants for order, as per the rules described by
+      * {@link Comparable}.
+      *
+-     * @param aconstThis  the first array of type constants
+-     * @param aconstThat  the second array of type constants
++     * @param listThis  the first list of type constants
++     * @param listThat  the second list of type constants
+      *
+-     * @return a negative, zero, or a positive integer, depending on if the first array is less
+-     *         than, equal to, or greater than the second array for purposes of ordering
++     * @return a negative, zero, or a positive integer, depending on if the first list is less
++     *         than, equal to, or greater than the second list for purposes of ordering
+      */
+-    protected static int compareTypes(TypeConstant[] aconstThis, TypeConstant[] aconstThat) {
+-        int cThis = aconstThis.length;
+-        int cThat = aconstThat.length;
++    protected static int compareTypes(List<TypeConstant> listThis, List<TypeConstant> listThat) {
++        int cThis = listThis.size();
++        int cThat = listThat.size();
+         for (int i = 0, c = Math.min(cThis, cThat); i < c; ++i) {
+-            int n = aconstThis[i].compareTo(aconstThat[i]);
++            int n = listThis.get(i).compareTo(listThat.get(i));
+             if (n != 0) {
+                 return n;
+             }
+@@ -907,23 +920,16 @@ public class SignatureConstant
+     }
+ 
+     /**
+-     * Render an array of TypeConstant objects as a comma-delimited string containing those types.
++     * Render a list of TypeConstant objects as a comma-delimited string containing those types.
+      *
+-     * @param aconst  the array of type constants
++     * @param listConst  the list of type constants
+      *
+      * @return a parenthesized, comma-delimited string of types
+      */
+-    protected static String formatTypes(TypeConstant[] aconst) {
+-        StringBuilder sb = new StringBuilder();
+-        sb.append('(');
+-        for (int i = 0, c = aconst.length; i < c; ++i) {
+-            if (i > 0) {
+-                sb.append(", ");
+-            }
+-            sb.append(aconst[i].getValueString());
+-        }
+-        sb.append(')');
+-        return sb.toString();
++    protected static String formatTypes(List<TypeConstant> listConst) {
++        return listConst.stream()
++                .map(TypeConstant::getValueString)
++                .collect(Collectors.joining(", ", "(", ")"));
+     }
+ 
+ 
+@@ -953,12 +959,12 @@ public class SignatureConstant
+     /**
+      * The invocation parameters of the method.
+      */
+-    private TypeConstant[] m_aconstParams;
++    private List<TypeConstant> m_listConstParams;
+ 
+     /**
+      * The return values from the method.
+      */
+-    private TypeConstant[] m_aconstReturns;
++    private List<TypeConstant> m_listConstReturns;
+ 
+     /**
+      * An indicator that this signature refers to a property.
+diff --git a/javatools/src/main/java/org/xvm/asm/constants/TerminalTypeConstant.java b/javatools/src/main/java/org/xvm/asm/constants/TerminalTypeConstant.java
+index bcfbf7ed7..8d3fb2783 100644
+--- a/javatools/src/main/java/org/xvm/asm/constants/TerminalTypeConstant.java
++++ b/javatools/src/main/java/org/xvm/asm/constants/TerminalTypeConstant.java
+@@ -94,6 +94,18 @@ public class TerminalTypeConstant
+     }
+ 
+ 
++    // ----- PoolTransferable ----------------------------------------------------------------------
++
++    @Override
++    public TerminalTypeConstant transferTo(ConstantPool pool) {
++        if (pool == getConstantPool()) {
++            return this;
++        }
++
++        return pool.ensureTerminalTypeConstant(m_constId.transferTo(pool));
++    }
++
++
+     // ----- TypeConstant methods ------------------------------------------------------------------
+ 
+     @Override
+diff --git a/javatools/src/main/java/org/xvm/asm/constants/ThisClassConstant.java b/javatools/src/main/java/org/xvm/asm/constants/ThisClassConstant.java
+index f26534ae6..5daceaad4 100644
+--- a/javatools/src/main/java/org/xvm/asm/constants/ThisClassConstant.java
++++ b/javatools/src/main/java/org/xvm/asm/constants/ThisClassConstant.java
+@@ -55,6 +55,18 @@ public class ThisClassConstant
+     }
+ 
+ 
++    // ----- PoolTransferable ----------------------------------------------------------------------
++
++    @Override
++    public ThisClassConstant transferTo(ConstantPool pool) {
++        if (pool == getConstantPool()) {
++            return this;
++        }
++
++        return pool.ensureThisClassConstant(m_constClass.transferTo(pool));
++    }
++
++
+     // ----- Pseudo-constant methods --------------------------------------------------------------
+ 
+     @Override
+diff --git a/javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java b/javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java
+index dfd9943ef..fc7935896 100644
+--- a/javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java
++++ b/javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java
+@@ -139,6 +139,27 @@ public abstract class TypeConstant
+     }
+ 
+ 
++    // ----- PoolTransferable ----------------------------------------------------------------------
++
++    /**
++     * Transfers this TypeConstant to a different pool.
++     * <p/>
++     * Subclasses should override this method to provide proper transfer implementation.
++     *
++     * @param pool  the target ConstantPool
++     *
++     * @return the equivalent TypeConstant in the target pool
++     */
++    @Override
++    public TypeConstant transferTo(ConstantPool pool) {
++        if (pool == getConstantPool()) {
++            return this;
++        }
++        throw new UnsupportedOperationException(
++            getClass().getSimpleName() + " must override transferTo(ConstantPool)");
++    }
++
++
+     // ----- GenericTypeResolver -------------------------------------------------------------------
+ 
+     @Override
+@@ -343,7 +364,7 @@ public abstract class TypeConstant
+         ConstantPool pool = getConstantPool();
+ 
+         // replace the AccessType with the underlying type
+-        Function<TypeConstant, TypeConstant> transformer = new Function<>() {
++        var transformer = new Function<TypeConstant, TypeConstant>() {
+             public TypeConstant apply(TypeConstant type) {
+                 return type instanceof TerminalTypeConstant ||
+                        type instanceof VirtualChildTypeConstant
+@@ -5295,7 +5316,7 @@ public abstract class TypeConstant
+         ConstantPool poolLeft = typeLeft.getConstantPool();
+         if (pool != poolLeft && !typeLeft.isShared(pool)) {
+             return this.isShared(poolLeft)
+-                ? ((TypeConstant) poolLeft.register(this)).calculateRelation(typeLeft)
++                ? poolLeft.register(this).calculateRelation(typeLeft)
+                 : Relation.INCOMPATIBLE;
+         }
+ 
+@@ -7139,6 +7160,19 @@ public abstract class TypeConstant
+         return atype;
+     }
+ 
++    /**
++     * Helper method for registering a list of TypeConstants.
++     */
++    protected static List<TypeConstant> registerTypeConstants(ConstantPool pool, List<TypeConstant> listTypes) {
++        List<TypeConstant> listResult = new ArrayList<>(listTypes.size());
++        for (TypeConstant type : listTypes) {
++            TypeConstant registered = pool.register(type);
++            registered.registerConstants(pool);
++            listResult.add(registered);
++        }
++        return List.copyOf(listResult);
++    }
++
+     /**
+      * Obtain a run-time object representing this type.
+      *
+diff --git a/javatools/src/main/java/org/xvm/asm/constants/TypeInfo.java b/javatools/src/main/java/org/xvm/asm/constants/TypeInfo.java
+index 932adcefb..b1ca0198f 100644
+--- a/javatools/src/main/java/org/xvm/asm/constants/TypeInfo.java
++++ b/javatools/src/main/java/org/xvm/asm/constants/TypeInfo.java
+@@ -1591,16 +1591,16 @@ public class TypeInfo {
+             MethodInfo     info = entry.getValue();
+             if (id.isTopLevel()
+                     && id.getName().equals(sName)
+-                    && id.getRawParams() .length >= cArgs
+-                    && id.getRawReturns().length >= cRedundant
++                    && id.getParams().size() >= cArgs
++                    && id.getReturns().size() >= cRedundant
+                     && (info.isCtorOrValidator()
+                             ? (!fMethod && !fFunction)
+                             : info.isFunction() ? fFunction : fMethod)) {
+-                SignatureConstant sig      = info.getSignature();
+-                TypeConstant[]    aParams  = sig.getRawParams();
+-                TypeConstant[]    aReturns = sig.getRawReturns();
++                SignatureConstant  sig         = info.getSignature();
++                List<TypeConstant> listParams  = sig.getParams();
++                List<TypeConstant> listReturns = sig.getReturns();
+                 for (int i = 0; i < cRedundant; ++i) {
+-                    TypeConstant typeReturn    = aReturns  [i];
++                    TypeConstant typeReturn    = listReturns.get(i);
+                     TypeConstant typeRedundant = aRedundant[i];
+ 
+                     if (!typeReturn.isA(typeRedundant)) {
+@@ -1608,8 +1608,8 @@ public class TypeInfo {
+                     }
+                 }
+                 for (int i = 0; i < cArgs; ++i) {
+-                    TypeConstant typeParam = aParams[i];
+-                    TypeConstant typeArg   = aArgs  [i];
++                    TypeConstant typeParam = listParams.get(i);
++                    TypeConstant typeArg   = aArgs[i];
+                     if (typeArg != null && !typeArg.isAssignableTo(typeParam)) {
+                         continue NextMethod;
+                     }
+@@ -1839,7 +1839,7 @@ public class TypeInfo {
+             case 1: {
+                 idMatch = setMethods.iterator().next();
+                 if (typeArg != null) {
+-                    TypeConstant typeParam = idMatch.getSignature().getRawParams()[0];
++                    TypeConstant typeParam = idMatch.getSignature().getParams().getFirst();
+ 
+                     if (!typeArg.isA(typeParam)) {
+                         // soft assert
+@@ -1855,7 +1855,7 @@ public class TypeInfo {
+                 if (typeArg != null) {
+                     idMatch = null;
+                     for (MethodConstant idMethod : setMethods) {
+-                        TypeConstant typeParam = idMethod.getSignature().getRawParams()[0];
++                        TypeConstant typeParam = idMethod.getSignature().getParams().getFirst();
+ 
+                         if (typeArg.isA(typeParam)) {
+                             if (typeParam.isA(typeArg)) {
+@@ -2148,7 +2148,7 @@ public class TypeInfo {
+         } else {
+             for (MethodInfo info : getAutoMethodInfos()) {
+                 MethodConstant method     = info.getIdentity();
+-                TypeConstant   typeResult = method.getRawReturns()[0];
++                TypeConstant   typeResult = method.getReturns().getFirst();
+                 if (typeResult.equals(typeDesired)) {
+                     // exact match -- it's not going to get any better than this
+                     return method;
+@@ -2158,7 +2158,7 @@ public class TypeInfo {
+                     if (methodMatch == null) {
+                         methodMatch = method;
+                     } else {
+-                        TypeConstant typeResultMatch = methodMatch.getRawReturns()[0];
++                        TypeConstant typeResultMatch = methodMatch.getReturns().getFirst();
+                         boolean fSub = typeResult.isA(typeResultMatch);
+                         boolean fSup = typeResultMatch.isA(typeResult);
+                         if (fSub ^ fSup) {
+diff --git a/javatools/src/main/java/org/xvm/asm/constants/TypeParameterConstant.java b/javatools/src/main/java/org/xvm/asm/constants/TypeParameterConstant.java
+index 26e680baa..b3c224342 100644
+--- a/javatools/src/main/java/org/xvm/asm/constants/TypeParameterConstant.java
++++ b/javatools/src/main/java/org/xvm/asm/constants/TypeParameterConstant.java
+@@ -5,6 +5,7 @@ import java.io.DataInput;
+ import java.io.DataOutput;
+ import java.io.IOException;
+ 
++import java.util.List;
+ import java.util.Set;
+ 
+ import java.util.function.Consumer;
+@@ -98,12 +99,12 @@ public class TypeParameterConstant
+             return getConstantPool().typeObject();
+         }
+ 
+-        int            nReg        = getRegister();
+-        TypeConstant[] atypeParams = constMethod.getRawParams();
++        int                nReg       = getRegister();
++        List<TypeConstant> listParams = constMethod.getParams();
+ 
+-        assert atypeParams.length > nReg;
++        assert listParams.size() > nReg;
+ 
+-        typeConstraint = atypeParams[nReg];
++        typeConstraint = listParams.get(nReg);
+         if (typeConstraint.isGenericType()) {
+             return m_typeConstraint = typeConstraint;
+         }
+diff --git a/javatools/src/main/java/org/xvm/compiler/Compiler.java b/javatools/src/main/java/org/xvm/compiler/Compiler.java
+index 1cd6a7b3c..c08dc479c 100644
+--- a/javatools/src/main/java/org/xvm/compiler/Compiler.java
++++ b/javatools/src/main/java/org/xvm/compiler/Compiler.java
+@@ -445,10 +445,14 @@ public class Compiler {
+         }
+ 
+         /**
+-         * @return the transition stage related to this stage
++         * @return the transition stage related to this stage; for Initial, returns Initial since
++         *         there is no prior transition stage
+          */
+         public Stage getTransitionStage() {
+             ensureValid();
++            if (this == Initial) {
++                return Initial;
++            }
+             return isTransition()
+                     ? this
+                     : prev();
+@@ -492,11 +496,15 @@ public class Compiler {
+         }
+ 
+         /**
+-         * @return the first "target-able" Stage that comes before this Stage
++         * @return the first "target-able" Stage that comes before this Stage, or Initial if there
++         *         is no previous targetable stage
+          */
+         public Stage prevTarget() {
++            if (this == Initial) {
++                return Initial;
++            }
+             Stage that = prev();
+-            while (!that.isTargetable()) {
++            while (!that.isTargetable() && that != Initial) {
+                 that = that.prev();
+             }
+             return that;
+diff --git a/javatools/src/main/java/org/xvm/compiler/EvalCompiler.java b/javatools/src/main/java/org/xvm/compiler/EvalCompiler.java
+index d9ba45a1c..6870466f4 100644
+--- a/javatools/src/main/java/org/xvm/compiler/EvalCompiler.java
++++ b/javatools/src/main/java/org/xvm/compiler/EvalCompiler.java
+@@ -2,6 +2,7 @@ package org.xvm.compiler;
+ 
+ 
+ import java.util.ArrayList;
++import java.util.Arrays;
+ import java.util.List;
+ import java.util.Map;
+ 
+@@ -126,7 +127,7 @@ public class EvalCompiler {
+ 
+             lambda.configureLambda(aparamParams, 0, aparamRets);
+             lambda.getIdentityConstant().setSignature(
+-                    pool.ensureSignatureConstant("->", atypeParams, atypeRets));
++                    pool.ensureSignatureConstant("->", Arrays.asList(atypeParams), Arrays.asList(atypeRets)));
+ 
+             // the lambda signature may have changed; re-generate the "bast" parameters
+             lambda.setAst(lambda.getAst(), astMethod.f_ctx.collectParameters());
+diff --git a/javatools/src/main/java/org/xvm/compiler/Parser.java b/javatools/src/main/java/org/xvm/compiler/Parser.java
+index eb7e542f0..574459d6d 100644
+--- a/javatools/src/main/java/org/xvm/compiler/Parser.java
++++ b/javatools/src/main/java/org/xvm/compiler/Parser.java
+@@ -441,7 +441,8 @@ public class Parser {
+                     }
+ 
+                     List<Expression> args = parseArgumentList(false, false, false);
+-                    compositions.add(new CompositionNode.Incorporates(null, keyword, type, args, constraints));
++                    compositions.add(new CompositionNode.Incorporates(null, keyword, type,
++                            args == null ? List.of() : args, constraints));
+                 } while (match(Id.COMMA) != null);
+             } else if ((keyword = match(Id.INTO)) != null) {
+                 compositions.add(new CompositionNode.Into(null, keyword, parseExtendedTypeExpression()));
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/AnnotationExpression.java b/javatools/src/main/java/org/xvm/compiler/ast/AnnotationExpression.java
+index 91faff693..7e4c8003c 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/AnnotationExpression.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/AnnotationExpression.java
+@@ -280,11 +280,11 @@ public class AnnotationExpression
+ 
+             // validate the argument expressions and fix up all the constants used as arguments to
+             // construct the annotation
+-            TypeConstant[] atypeParams = idConstruct.getRawParams();
+-            int            cAll        = constructor.getParamCount();
+-            int            cRequired   = constructor.getRequiredParamCount();
+-            Constant[]     aconstArgs  = new Constant[cAll];
+-            boolean        fDefaults   = cArgs < cAll;
++            List<TypeConstant> listParams = idConstruct.getParams();
++            int                cAll       = constructor.getParamCount();
++            int                cRequired  = constructor.getRequiredParamCount();
++            Constant[]         aconstArgs = new Constant[cAll];
++            boolean            fDefaults  = cArgs < cAll;
+ 
+             assert cArgs <= cAll && cArgs >= cRequired;
+ 
+@@ -294,7 +294,7 @@ public class AnnotationExpression
+                                         ? constructor.getParam(exprLbl.getName()).getIndex()
+                                         : iArg;
+ 
+-                Expression exprNew = exprOld.validate(ctx, atypeParams[iParam], errs);
++                Expression exprNew = exprOld.validate(ctx, listParams.get(iParam), errs);
+                 if (exprNew != null) {
+                     if (exprNew != exprOld) {
+                         listArgs.set(iArg, exprNew);
+@@ -406,15 +406,15 @@ public class AnnotationExpression
+         }
+ 
+         // validate the arguments
+-        TypeConstant[] atypeParam = idConstruct.getRawParams();
+-        boolean        fValid     = true;
+-        boolean        fConst     = true;
++        List<TypeConstant> listParams = idConstruct.getParams();
++        boolean            fValid     = true;
++        boolean            fConst     = true;
+ 
+-        assert atypeParam.length >= cArgs;
++        assert listParams.size() >= cArgs;
+ 
+         for (int iArg = 0; iArg < cArgs; ++iArg) {
+             Expression exprArgOld = listArgs.get(iArg);
+-            Expression exprArgNew = exprArgOld.validate(ctx, atypeParam[iArg], errs);
++            Expression exprArgNew = exprArgOld.validate(ctx, listParams.get(iArg), errs);
+ 
+             if (exprArgNew == null) {
+                 fValid = false;
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/AnonInnerClass.java b/javatools/src/main/java/org/xvm/compiler/ast/AnonInnerClass.java
+index 1d384bdea..05b4ebc96 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/AnonInnerClass.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/AnonInnerClass.java
+@@ -254,7 +254,7 @@ public class AnonInnerClass {
+ 
+             case MIXIN:
+                 ensureCompositions().add(new Incorporates(null,
+-                        genKeyword(exprType, Id.INCORPORATES), exprType, null, null));
++                        genKeyword(exprType, Id.INCORPORATES), exprType, List.of(), null));
+                 return;
+ 
+             case INTERFACE:
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/ArrayAccessExpression.java b/javatools/src/main/java/org/xvm/compiler/ast/ArrayAccessExpression.java
+index 7df6a175f..7d3e1d017 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/ArrayAccessExpression.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/ArrayAccessExpression.java
+@@ -11,6 +11,7 @@ import java.util.Set;
+ import java.util.function.Function;
+ import java.util.stream.Collectors;
+ 
++import org.jetbrains.annotations.NotNull;
+ import org.xvm.asm.Argument;
+ import org.xvm.asm.Constant;
+ import org.xvm.asm.ConstantPool;
+@@ -50,11 +51,10 @@ import org.xvm.util.Severity;
+  * <p/> TODO support tuple of indexes, particularly for multi-dimensional arrays
+  * <p/> TODO for multi-dimensional arrays, support partial binding? @Op("[?,_]") / @Op("[_,?]") etc.
+  */
+-public class ArrayAccessExpression
+-        extends Expression {
++public class ArrayAccessExpression extends Expression {
+     // ----- constructors --------------------------------------------------------------------------
+ 
+-    public ArrayAccessExpression(Expression expr, List<Expression> indexes, Token tokClose) {
++    public ArrayAccessExpression(Expression expr, @NotNull List<Expression> indexes, Token tokClose) {
+         this.expr     = expr;
+         this.indexes  = indexes;
+         this.tokClose = tokClose;
+@@ -171,9 +171,9 @@ public class ArrayAccessExpression
+         Set<MethodConstant> setMethods  = findPotentialOps(infoTarget, cIndexes);
+         for (MethodConstant idMethod : setMethods) {
+             if (setMethods.size() == 1 || indexesFit(ctx, idMethod)) {
+-                TypeConstant[] atypeReturns = idMethod.getRawReturns();
+-                if (atypeReturns.length >= 1) {
+-                    return idMethod.getRawReturns()[0];
++                List<TypeConstant> listReturns = idMethod.getReturns();
++                if (!listReturns.isEmpty()) {
++                    return listReturns.getFirst();
+                 }
+             }
+         }
+@@ -197,9 +197,9 @@ public class ArrayAccessExpression
+             TypeInfo            infoTarget = typeTarget.ensureTypeInfo();
+             Set<MethodConstant> setMethods = findPotentialOps(infoTarget, cIndexes);
+             for (MethodConstant idMethod : setMethods) {
+-                TypeConstant[] atypeReturns = idMethod.getRawReturns();
+-                if (atypeReturns.length >= 1 && indexesFit(ctx, idMethod)) {
+-                    fit = calcFit(ctx, atypeReturns[0], typeRequired);
++                List<TypeConstant> listReturns = idMethod.getReturns();
++                if (!listReturns.isEmpty() && indexesFit(ctx, idMethod)) {
++                    fit = calcFit(ctx, listReturns.getFirst(), typeRequired);
+                     if (fit.isFit()) {
+                         return fit;
+                     }
+@@ -482,8 +482,8 @@ public class ArrayAccessExpression
+                     m_fSlice = fSlice = true;
+                 }
+ 
+-                aIndexTypes = idGet.getRawParams();
+-                typeResult  = idGet.getRawReturns()[0].resolveAutoNarrowing(pool, true, typeArray, null);
++                aIndexTypes = idGet.getParams().toArray(TypeConstant[]::new);
++                typeResult  = idGet.getReturns().getFirst().resolveAutoNarrowing(pool, true, typeArray, null);
+                 m_idGet     = idGet;
+             }
+         }
+@@ -669,13 +669,12 @@ public class ArrayAccessExpression
+ 
+         if (m_idGet == null) {
+             throw notImplemented();
+-        } else {
+-            ExprAST[] astArgs = new ExprAST[cIndexes];
+-            for (int i = 0; i < cIndexes; i++) {
+-                astArgs[i] = indexes.get(i).getExprAST(ctx);
+-            }
+-            return new InvokeExprAST(m_idGet, getTypes(), expr.getExprAST(ctx), astArgs, false);
+         }
++        ExprAST[] astArgs = new ExprAST[cIndexes];
++        for (int i = 0; i < cIndexes; i++) {
++            astArgs[i] = indexes.get(i).getExprAST(ctx);
++        }
++        return new InvokeExprAST(m_idGet, getTypes(), expr.getExprAST(ctx), astArgs, false);
+     }
+ 
+ 
+@@ -720,14 +719,15 @@ public class ArrayAccessExpression
+                 sig = sig.resolveAutoNarrowing(pool(), typeTarget, null);
+             }
+ 
+-            if (!fTuple && typeReturn != null && (sig.getRawReturns().length < 1
+-                    || !isAssignable(ctx, sig.getRawReturns()[0], typeReturn))) {
++            List<TypeConstant> listReturns = sig.getReturns();
++            if (!fTuple && typeReturn != null && (listReturns.isEmpty()
++                    || !isAssignable(ctx, listReturns.getFirst(), typeReturn))) {
+                 continue;
+             }
+ 
+             // verify that there are enough parameters to receive the arguments
+-            TypeConstant[] atypeParams = sig.getRawParams();
+-            int            cParams     = atypeParams.length;
++            List<TypeConstant> listParams = sig.getParams();
++            int                cParams    = listParams.size();
+             if (cParams < cArgs) {
+                 continue;
+             }
+@@ -741,7 +741,7 @@ public class ArrayAccessExpression
+ 
+             // verify the args each have a matching parameter
+             for (int i = 0; i < cArgs; ++i) {
+-                TypeConstant typeParam = atypeParams[i];
++                TypeConstant typeParam = listParams.get(i);
+                 TypeConstant typeArg   = atypeArgs[i];
+                 if (typeArg == null || !isAssignable(ctx, typeArg, typeParam)) {
+                     Expression exprArg = aexprArgs[i];
+@@ -843,22 +843,22 @@ public class ArrayAccessExpression
+         MethodConstant idBest = null;
+         NextOp: for (MethodConstant idOp : setMethods) {
+             if (cParams > 0) {
+-                TypeConstant[] atypeOpParams = idOp.getRawParams();
+-                int            cOpParams     = atypeOpParams.length;
++                List<TypeConstant> listOpParams = idOp.getParams();
++                int                cOpParams    = listOpParams.size();
+                 if (cParams != cOpParams) {
+                     continue;
+                 }
+ 
+                 for (int i = 0; i < cParams; ++i) {
+-                    if (atypeParams[i] != null && !isAssignable(ctx, atypeParams[i], atypeOpParams[i])) {
++                    if (atypeParams[i] != null && !isAssignable(ctx, atypeParams[i], listOpParams.get(i))) {
+                         continue NextOp;
+                     }
+                 }
+             }
+ 
+             if (typeReturn != null) {
+-                TypeConstant[] atypeOpReturns = idOp.getRawReturns();
+-                if (atypeOpReturns.length == 0 || isAssignable(ctx, atypeOpReturns[0], typeReturn)) {
++                List<TypeConstant> listOpReturns = idOp.getReturns();
++                if (listOpReturns.isEmpty() || isAssignable(ctx, listOpReturns.getFirst(), typeReturn)) {
+                     continue;
+                 }
+             }
+@@ -899,12 +899,12 @@ public class ArrayAccessExpression
+      *         {@link #indexes}, and returns a value
+      */
+     private boolean indexesFit(Context ctx, MethodConstant method) {
+-        if (method.getRawReturns().length > 0) {
+-            TypeConstant[] atypes = method.getRawParams();
+-            int            cTypes = atypes.length;
++        if (!method.getReturns().isEmpty()) {
++            List<TypeConstant> listParams = method.getParams();
++            int                cTypes     = listParams.size();
+             if (cTypes == indexes.size()) {
+                 for (int i = 0; i < cTypes; ++i) {
+-                    if (!indexes.get(i).testFit(ctx, atypes[i], false, null).isFit()) {
++                    if (!indexes.get(i).testFit(ctx, listParams.get(i), false, null).isFit()) {
+                         return false;
+                     }
+                 }
+@@ -1180,8 +1180,9 @@ public class ArrayAccessExpression
+             if (typeArray != null) {
+                 MethodConstant id = findOpMethod(ctx, typeArray, "getElement", "[]", aexprIndexes,
+                         null, ErrorListener.BLACKHOLE);
+-                if (id != null && id.getRawReturns().length >= 1) {
+-                    typeIndex = id.getRawReturns()[0];
++                List<TypeConstant> listReturns = id == null ? List.of() : id.getReturns();
++                if (!listReturns.isEmpty()) {
++                    typeIndex = listReturns.getFirst();
+                     if (!pool.typeObject().isA(typeIndex)) {
+                         return typeIndex;
+                     }
+@@ -1198,7 +1199,7 @@ public class ArrayAccessExpression
+ 
+         Set<MethodInfo> setInfos = typeIndex.ensureTypeInfo().getAutoMethodInfos();
+         for (MethodInfo info : setInfos) {
+-            typeIndex = info.getSignature().getRawReturns()[0];
++            typeIndex = info.getSignature().getReturns().getFirst();
+             if (exprArray.testFit(ctx,
+                     pool.ensureParameterizedTypeConstant(pool.typeIndexed(), typeIndex), false, null).isFit()) {
+                 return typeIndex;
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/AstNode.java b/javatools/src/main/java/org/xvm/compiler/ast/AstNode.java
+index 16c65a483..fcb0576a4 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/AstNode.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/AstNode.java
+@@ -279,6 +279,12 @@ public abstract class AstNode
+ 
+         AstNode copy = withChildren(copiedChildren);
+         copy.adopt(copiedChildren);
++
++        // preserve the parent and stage from the original - this allows the copy to be
++        // used in the same compilation context (e.g., for test compilation)
++        copy.m_parent = this.m_parent;
++        copy.m_stage  = this.m_stage;
++
+         return copy;
+     }
+ 
+@@ -456,11 +462,22 @@ public abstract class AstNode
+      * @param method  the MethodStructure to donate the source code to
+      */
+     void donateSource(MethodStructure method) {
+-        if (method != null) {
++        donateSource(method, getSource());
++    }
++
++    /**
++     * Populate the MethodStructure with the source code from this AST node using the specified
++     * source reference.
++     *
++     * @param method  the MethodStructure to donate the source code to
++     * @param source  the Source to use (may be different from this node's source for copied nodes)
++     */
++    void donateSource(MethodStructure method, Source source) {
++        if (method != null && source != null) {
+             long   lStart = getStartPosition();
+             long   lEnd   = getEndPosition();
+             int    iLine  = Source.calculateLine(lStart);
+-            String sSrc   = getSource().toString(lStart, lEnd);
++            String sSrc   = source.toString(lStart, lEnd);
+ 
+             if (sSrc.startsWith("{") && sSrc.endsWith("}")) {
+                 sSrc = sSrc.substring(1, sSrc.length()-1);
+@@ -968,15 +985,15 @@ public abstract class AstNode
+      *
+      * @param ctx            the compiler context
+      * @param listExpr       the list of expressions (can be modified)
+-     * @param atypeRequired  the required types array
++     * @param listRequired   the required types (may be null)
+      * @param errs           the error listener
+      *
+      * @return an array of TypeConstants describing the actual expression types or null
+      *         if the validation fails, in which case an error has been reported
+      */
+     protected TypeConstant[] validateExpressions(Context ctx, List<Expression> listExpr,
+-                                                 TypeConstant[] atypeRequired, ErrorListener errs) {
+-        int            cReq   = atypeRequired == null ? 0 : atypeRequired.length;
++                                                 List<TypeConstant> listRequired, ErrorListener errs) {
++        int            cReq   = listRequired == null ? 0 : listRequired.size();
+         int            cExprs = listExpr.size();
+         TypeConstant[] atype  = new TypeConstant[cExprs];
+         boolean        fValid = true;
+@@ -987,7 +1004,7 @@ public abstract class AstNode
+                 continue;
+             }
+ 
+-            TypeConstant typeRequired = i < cReq ? atypeRequired[i] : null;
++            TypeConstant typeRequired = i < cReq ? listRequired.get(i) : null;
+             if (typeRequired != null) {
+                 ctx = ctx.enterInferring(typeRequired);
+             }
+@@ -1301,12 +1318,12 @@ public abstract class AstNode
+                 sigMethod = sigMethod.resolveGenericTypes(pool, GenericTypeResolver.of(mapTypeParams));
+             }
+ 
+-            TypeConstant[] atypeParam = sigMethod.getRawParams();
+-            TypeFit        fit        = TypeFit.Fit;
+-            boolean        fExact     = true;
++            List<TypeConstant> listParams = sigMethod.getParams();
++            TypeFit            fit        = TypeFit.Fit;
++            boolean            fExact     = true;
+             for (int i = 0; i < cArgs; ++i) {
+                 Expression   exprArg   = listArgs.get(i);
+-                TypeConstant typeParam = atypeParam[cTypeParams + i];
++                TypeConstant typeParam = listParams.get(cTypeParams + i);
+                 TypeConstant typeArg   = atypeArgs[i];
+ 
+                 // check if the method's parameter type fits the argument expression
+@@ -1570,8 +1587,8 @@ public abstract class AstNode
+                     if (!fOldBetter && !fNewBetter) {
+                         // choose the one that is narrower for every argument
+                         for (int i = 0; i < cParamsOld; i++) {
+-                            TypeConstant typeOld = sigOld.getRawParams()[i];
+-                            TypeConstant typeNew = sigNew.getRawParams()[i];
++                            TypeConstant typeOld = sigOld.getParams().get(i);
++                            TypeConstant typeNew = sigNew.getParams().get(i);
+ 
+                             if (typeOld.isA(typeNew) && !typeNew.isA(typeOld)) {
+                                 fOldBetter = true;
+@@ -1635,8 +1652,8 @@ public abstract class AstNode
+     protected TypeFit calculateReturnFit(SignatureConstant sigMethod, boolean fCall,
+                                          TypeConstant[] atypeReturn, TypeConstant typeCtx,
+                                          ErrorListener errs) {
+-        return calculateReturnFit(sigMethod.getRawReturns(), sigMethod.getValueString(), fCall,
+-                                    atypeReturn, typeCtx, errs);
++        return calculateReturnFit(sigMethod.getReturns().toArray(TypeConstant[]::new),
++                                    sigMethod.getValueString(), fCall, atypeReturn, typeCtx, errs);
+     }
+ 
+     /**
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/ComponentStatement.java b/javatools/src/main/java/org/xvm/compiler/ast/ComponentStatement.java
+index 42e09973b..067246ec4 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/ComponentStatement.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/ComponentStatement.java
+@@ -16,6 +16,16 @@ import org.xvm.compiler.Token;
+  */
+ public abstract class ComponentStatement
+         extends Statement {
++    // ----- Copyable ------------------------------------------------------------------------------
++
++    @Override
++    public ComponentStatement copy() {
++        ComponentStatement copy = (ComponentStatement) super.copy();
++        copy.component = this.component;
++        return copy;
++    }
++
++
+     // ----- constructors --------------------------------------------------------------------------
+ 
+     protected ComponentStatement(long lStartPos, long lEndPos) {
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/CompositionNode.java b/javatools/src/main/java/org/xvm/compiler/ast/CompositionNode.java
+index 9da275a44..d555a5626 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/CompositionNode.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/CompositionNode.java
+@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
+ import java.util.ArrayList;
+ import java.util.Collections;
+ import java.util.List;
++import java.util.Objects;
+ import java.util.function.Function;
+ import java.util.stream.Collectors;
+ 
+@@ -242,7 +243,7 @@ public abstract class CompositionNode
+         public Incorporates(Expression condition, Token keyword, TypeExpression type,
+                             @NotNull List<Expression> args, List<Parameter> constraints) {
+             super(condition, keyword, type);
+-            this.args        = args;
++            this.args        = Objects.requireNonNull(args, "args cannot be null");
+             this.constraints = constraints;
+         }
+ 
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/ConvertExpression.java b/javatools/src/main/java/org/xvm/compiler/ast/ConvertExpression.java
+index 69d8b9a66..89562c0a5 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/ConvertExpression.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/ConvertExpression.java
+@@ -53,10 +53,10 @@ public class ConvertExpression
+         assert aidConv != null && aidConv.length >= 1;
+         for (MethodConstant idConv : aidConv) {
+             if (idConv != null) {
+-                assert idConv.getRawParams().length == 0
++                assert idConv.getParams().isEmpty()
+                     || idConv.getComponent() instanceof MethodStructure method
+                         && method.getRequiredParamCount() == 0;
+-                assert idConv.getRawReturns().length > 0;
++                assert !idConv.getReturns().isEmpty();
+                 assert !idConv.getComponent().isStatic();
+             }
+         }
+@@ -66,7 +66,7 @@ public class ConvertExpression
+         if (expr.isSingle()) {
+             assert aidConv.length == 1 && aidConv[0] != null;
+ 
+-            TypeConstant type = aidConv[0].getRawReturns()[0];
++            TypeConstant type = aidConv[0].getReturns().getFirst();
+             Constant     val  = null;
+             if (expr.isConstant()) {
+                 // determine if compile-time conversion is supported
+@@ -81,7 +81,7 @@ public class ConvertExpression
+             for (int i = 0, c = aidConv.length; i < c; i++) {
+                 MethodConstant idConv = aidConv[i];
+                 if (idConv != null) {
+-                    aType[i] = idConv.getRawReturns()[0];
++                    aType[i] = idConv.getReturns().getFirst();
+                 }
+             }
+ 
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/Expression.java b/javatools/src/main/java/org/xvm/compiler/ast/Expression.java
+index b9c713410..23032ce6d 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/Expression.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/Expression.java
+@@ -7,6 +7,7 @@ import java.util.HashMap;
+ import java.util.List;
+ import java.util.Map;
+ 
++import org.jetbrains.annotations.NotNull;
+ import org.xvm.asm.Argument;
+ import org.xvm.asm.ClassStructure;
+ import org.xvm.asm.Constant;
+@@ -537,9 +538,9 @@ public abstract class Expression
+             assert !fit.isFit();
+             assert constVal == null;
+ 
+-            m_fit    = TypeFit.NoFit;
+-            m_oType  = typeRequired == null ? pool.typeObject() : typeRequired;
+-            m_oConst = null;
++            m_fit        = TypeFit.NoFit;
++            m_listTypes  = List.of(typeRequired == null ? pool.typeObject() : typeRequired);
++            m_listConsts = null;
+ 
+             return null;
+         }
+@@ -598,9 +599,9 @@ public abstract class Expression
+             //       and NewExpression#generateDynamicParameters()
+         }
+ 
+-        m_fit    = fit;
+-        m_oType  = typeActual;
+-        m_oConst = constVal;
++        m_fit        = fit;
++        m_listTypes  = List.of(typeActual);
++        m_listConsts = constVal == null ? null : List.of(constVal);
+ 
+         if (!fit.isFit()) {
+             return null;
+@@ -755,7 +756,9 @@ public abstract class Expression
+         // a null actual type indicates a fairly dramatic (i.e. halt required) validation failure
+         if (atypeActual == null) {
+             assert !fit.isFit() && aconstVal == null && (errs.hasSeriousErrors() || errs.isSilent());
+-            m_fit = TypeFit.NoFit;
++            m_fit        = TypeFit.NoFit;
++            m_listTypes  = null;
++            m_listConsts = null;
+             return null;
+         }
+ 
+@@ -851,9 +854,9 @@ public abstract class Expression
+             }
+         }
+ 
+-        m_fit    = fit;
+-        m_oType  = fit.isFit() || atypeRequired == null ? atypeActual : null;
+-        m_oConst = aconstVal;
++        m_fit        = fit;
++        m_listTypes  = fit.isFit() || atypeRequired == null ? List.of(atypeActual) : null;
++        m_listConsts = aconstVal == null ? null : List.of(aconstVal);
+ 
+         if (!fit.isFit()) {
+             return null;
+@@ -950,9 +953,7 @@ public abstract class Expression
+     public int getValueCount() {
+         checkValidated();
+ 
+-        return m_oType instanceof TypeConstant[] aTypes
+-                ? aTypes.length
+-                : 1;
++        return m_listTypes.size();
+     }
+ 
+     /**
+@@ -1009,12 +1010,7 @@ public abstract class Expression
+     public TypeConstant getType() {
+         checkValidated();
+ 
+-        if (m_oType instanceof TypeConstant type) {
+-            return type;
+-        }
+-
+-        TypeConstant[] atype = (TypeConstant[]) m_oType;
+-        return atype.length == 0 ? null : atype[0];
++        return m_listTypes.isEmpty() ? null : m_listTypes.getFirst();
+     }
+ 
+     /**
+@@ -1026,15 +1022,11 @@ public abstract class Expression
+      * @return a String that best describes the type of this expression
+      */
+     public String getTypeString(Context ctx) {
+-        if (m_oType instanceof TypeConstant type) {
+-            return type.getValueString();
+-        }
+-
+-        if (m_oType instanceof TypeConstant[] aTypes) {
+-            return switch (aTypes.length) {
++        if (m_listTypes != null) {
++            return switch (m_listTypes.size()) {
+                 case 0   -> "void";
+-                case 1  -> aTypes[0].getValueString();
+-                default -> aTypes[0].getValueString() + " (+" + (aTypes.length - 1) + " more)";
++                case 1   -> m_listTypes.getFirst().getValueString();
++                default  -> m_listTypes.getFirst().getValueString() + " (+" + (m_listTypes.size() - 1) + " more)";
+             };
+         }
+ 
+@@ -1056,9 +1048,7 @@ public abstract class Expression
+      *         indicates a void type
+      */
+     public TypeConstant[] getTypes() {
+-        return m_oType instanceof TypeConstant[] aTypes
+-                ? aTypes
+-                : new TypeConstant[] {getType()};
++        return m_listTypes.toArray(TypeConstant[]::new);
+     }
+ 
+     /**
+@@ -1193,7 +1183,7 @@ public abstract class Expression
+      * @return true iff the expression results in a compile-time (ConstantPool) constant value
+      */
+     public boolean isConstant() {
+-        return m_oConst != null;
++        return m_listConsts != null;
+     }
+ 
+     /**
+@@ -1283,11 +1273,7 @@ public abstract class Expression
+             return null;
+         }
+ 
+-        if (m_oConst instanceof Constant constant) {
+-            return constant;
+-        }
+-
+-        return ((Constant[]) m_oConst)[0];
++        return m_listConsts.isEmpty() ? null : m_listConsts.getFirst();
+     }
+ 
+     /**
+@@ -1305,9 +1291,7 @@ public abstract class Expression
+             return null;
+         }
+ 
+-        return m_oConst instanceof Constant[] aConst
+-                ? aConst
+-                : new Constant[] {toConstant()};
++        return m_listConsts.toArray(Constant[]::new);
+     }
+ 
+     /**
+@@ -1495,7 +1479,7 @@ public abstract class Expression
+             Assignable[] aLValNew = new Assignable[cRVals];
+             Arrays.fill(aLValNew, new Assignable());
+             System.arraycopy(aLVal, 0, aLValNew, 0, cLVals);
+-            aLVal  = aLValNew;
++            aLVal = aLValNew;
+             cLVals = cRVals;
+         }
+ 
+@@ -1567,6 +1551,7 @@ public abstract class Expression
+      */
+     public void generateConditionalJump(
+             Context ctx, Code code, Label label, boolean fWhenTrue, ErrorListener errs) {
++        // TODO assert with side effect since typeBoolean lazy loads. Don¨t do that.
+         assert !isVoid() && getType().isA(pool().typeBoolean());
+ 
+         if (isConstant()) {
+@@ -1578,10 +1563,8 @@ public abstract class Expression
+ 
+         // this is just a generic implementation; sub-classes should override this to simplify the
+         // generated code (e.g. by not having to always generate a separate boolean value)
+-        Argument arg = generateArgument(ctx, code, true, errs);
+-        code.add(fWhenTrue
+-                ? new JumpTrue(arg, label)
+-                : new JumpFalse(arg, label));
++        var arg = generateArgument(ctx, code, true, errs);
++        code.add(fWhenTrue ? new JumpTrue(arg, label) : new JumpFalse(arg, label));
+     }
+ 
+     /**
+@@ -2197,7 +2180,7 @@ public abstract class Expression
+                 case BlackHole -> generateBlackHole(null);
+                 case LocalVar  -> getRegister();
+                 case LocalProp -> getProperty();
+-                default        -> throw new IllegalStateException();
++                default        -> throw new IllegalStateException("getLocalArgument");
+             };
+         }
+ 
+@@ -2206,7 +2189,7 @@ public abstract class Expression
+          */
+         public Argument getTarget() {
+             if (m_form != AssignForm.LocalProp && m_form != AssignForm.TargetProp) {
+-                throw new IllegalStateException();
++                throw new IllegalStateException("getTarget");
+             }
+             return m_arg;
+         }
+@@ -2217,7 +2200,7 @@ public abstract class Expression
+         public PropertyConstant getProperty() {
+             if (m_form != AssignForm.LocalProp && m_form != AssignForm.TargetProp &&
+                 m_form != AssignForm.IndexedProp && m_form != AssignForm.IndexedNProp) {
+-                throw new IllegalStateException();
++                throw new IllegalStateException("getProperty");
+             }
+             return m_prop;
+         }
+@@ -2227,7 +2210,7 @@ public abstract class Expression
+          */
+         public Argument getArray() {
+             if (m_form != AssignForm.Indexed && m_form != AssignForm.IndexedN) {
+-                throw new IllegalStateException();
++                throw new IllegalStateException("getArray");
+             }
+             return m_arg;
+         }
+@@ -2240,7 +2223,7 @@ public abstract class Expression
+                 return (Argument) m_oIndex;
+             }
+ 
+-            throw new IllegalStateException();
++            throw new IllegalStateException("getIndex");
+         }
+ 
+         /**
+@@ -2446,7 +2429,7 @@ public abstract class Expression
+                 throw notImplemented();
+ 
+             default:
+-                throw new IllegalStateException();
++                throw new IllegalStateException("Expression.assign");
+             }
+         }
+ 
+@@ -3011,6 +2994,7 @@ public abstract class Expression
+          *
+          * @return true iff the other fit is considered to be a worse fit than this fit
+          */
++        @SuppressWarnings("unused")
+         public boolean worseThan(TypeFit that) {
+             return this.ordinal() < that.ordinal();
+         }
+@@ -3100,16 +3084,18 @@ public abstract class Expression
+     private TypeFit m_fit;
+ 
+     /**
+-     * After validation, contains the type(s) of the expression, stored as either a
+-     * {@code TypeConstant} or a {@code TypeConstant[]}.
++     * After validation, contains the type(s) of the expression. A single-valued expression
++     * has a list of size 1; a multi-valued expression has a list of size > 1; a void expression
++     * has an empty list. Null indicates the expression has not been validated.
+      */
+-    private Object m_oType;
++    private List<TypeConstant> m_listTypes;
+ 
+     /**
+      * After validation, contains the constant value(s) of the expression, iff the expression is a
+-     * constant, stored as either a {@code Constant} or a {@code Constant[]}.
++     * constant. Null indicates the expression is not constant; otherwise the list has the same
++     * size as {@link #m_listTypes}.
+      */
+-    private Object m_oConst;
++    private List<Constant> m_listConsts;
+ 
+     /**
+      * Various temporary flags.
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/InvocationExpression.java b/javatools/src/main/java/org/xvm/compiler/ast/InvocationExpression.java
+index 491da2bb9..4c3aceba2 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/InvocationExpression.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/InvocationExpression.java
+@@ -391,8 +391,8 @@ public class InvocationExpression
+                 // has two sub-types, the first of which is its "params" and the second of which is
+                 // its "returns", and the returns is a tuple type parameterized by the types of the
+                 // return values from the function
+-                TypeConstant[] atypeConvRets = m_idConvert.getRawReturns();
+-                TypeConstant   typeFn        = atypeConvRets[0];
++                List<TypeConstant> listConvRets = m_idConvert.getReturns();
++                TypeConstant       typeFn       = listConvRets.getFirst();
+ 
+                 assert typeFn.isFunction();
+                 if (m_fCall) {
+@@ -430,7 +430,7 @@ public class InvocationExpression
+                     }
+ 
+                     if (method.isFunction() || method.isConstructor()) {
+-                        return resolveTypes(resolver, idMethod.getSignature().getRawReturns());
++                        return resolveTypes(resolver, idMethod.getSignature().getReturns().toArray(TypeConstant[]::new));
+                     }
+                     if (typeLeft == null) {
+                         typeLeft = m_targetInfo == null
+@@ -440,7 +440,7 @@ public class InvocationExpression
+                     SignatureConstant sigMethod = idMethod.getSignature();
+ 
+                     return resolveTypes(resolver,
+-                            sigMethod.resolveAutoNarrowing(pool, typeLeft, null).getRawReturns());
++                            sigMethod.resolveAutoNarrowing(pool, typeLeft, null).getReturns().toArray(TypeConstant[]::new));
+                 }
+ 
+                 TypeConstant typeFn = m_fBindTarget
+@@ -747,8 +747,8 @@ public class InvocationExpression
+                 // has two sub-types, the first of which is its "params" and the second of which is
+                 // its "returns", and the returns is a tuple type parameterized by the types of the
+                 // return values from the function
+-                TypeConstant[] atypeConvRets = m_idConvert.getRawReturns();
+-                TypeConstant   typeFn        = atypeConvRets[0];
++                List<TypeConstant> listConvRets = m_idConvert.getReturns();
++                TypeConstant       typeFn       = listConvRets.getFirst();
+ 
+                 assert typeFn.isFunction();
+ 
+@@ -766,7 +766,7 @@ public class InvocationExpression
+             // handle method or function
+             if (argMethod instanceof MethodConstant idMethod) {
+                 MethodStructure method      = m_method;
+-                TypeConstant[]  atypeParams = idMethod.getRawParams();
++                TypeConstant[]  atypeParams = idMethod.getParams().toArray(TypeConstant[]::new);
+                 int             cTypeParams = method.getTypeParamCount();
+                 int             cParams     = method.getVisibleParamCount();
+                 int             cReturns    = atypeReturn == null ? 0 : atypeReturn.length;
+@@ -816,7 +816,7 @@ public class InvocationExpression
+                             : m_targetInfo.getTargetType();
+                 }
+ 
+-                TypeConstant[] atypeArgs = validateExpressions(ctx, listArgs, atypeParams, errs);
++                TypeConstant[] atypeArgs = validateExpressions(ctx, listArgs, Arrays.asList(atypeParams), errs);
+                 if (atypeArgs == null) {
+                     return null;
+                 }
+@@ -851,7 +851,7 @@ public class InvocationExpression
+                             continue;
+                         }
+ 
+-                        TypeConstant typeConstraint = idMethod.getRawParams()[iArg].getParamType(0);
++                        TypeConstant typeConstraint = idMethod.getParams().get(iArg).getParamType(0);
+ 
+                         // there's a possibility that type parameter constraints refer to
+                         // previous type parameters, for example:
+@@ -885,7 +885,7 @@ public class InvocationExpression
+                         sigMethod = sigMethod.resolveGenericTypes(pool,
+                                         GenericTypeResolver.of(mapTypeParams));
+                     }
+-                    atypeResult = sigMethod.getRawReturns();
++                    atypeResult = sigMethod.getReturns().toArray(TypeConstant[]::new);
+ 
+                     if (fCondReturn) {
+                         if (getParent().allowsConditional(this)) {
+@@ -1300,7 +1300,7 @@ public class InvocationExpression
+ 
+                             // it's a method, and we need to generate the necessary code that calls it;
+                             // generate the arguments
+-                            int        cAll      = idMethod.getRawParams().length;
++                            int        cAll      = idMethod.getParams().size();
+                             int        cDefaults = cAll - cTypeParams - cArgs;
+                             Argument   arg0      = null;
+                             Argument[] aArgs     = null;
+@@ -1324,7 +1324,7 @@ public class InvocationExpression
+                                     aAsts = new ExprAST[] {toTypeParameterAst(ctx, arg0)};
+                                 } else { // (cDefaults == 1)
+                                     arg0 = Register.DEFAULT;
+-                                    aAsts = new ExprAST[] {RegisterAST.defaultReg(idMethod.getRawParams()[0])};
++                                    aAsts = new ExprAST[] {RegisterAST.defaultReg(idMethod.getParams().getFirst())};
+                                 }
+                             } else {
+                                 chArgs = 'N';
+@@ -1349,7 +1349,7 @@ public class InvocationExpression
+                                 for (int i = 0; i < cDefaults; ++i) {
+                                     int iArg = cTypeParams + cArgs + i;
+                                     aArgs[iArg] = Register.DEFAULT;
+-                                    aAsts[iArg] = RegisterAST.defaultReg(idMethod.getRawParams()[cArgs + i]);
++                                    aAsts[iArg] = RegisterAST.defaultReg(idMethod.getParams().get(cArgs + i));
+                                 }
+                             }
+ 
+@@ -1528,7 +1528,7 @@ public class InvocationExpression
+             }
+         } else {
+             // argFn isn't a function; convert whatever-it-is into the desired function
+-            typeFn = idConv.getRawReturns()[0];
++            typeFn = idConv.getReturns().getFirst();
+             Register regFn = code.createRegister(typeFn);
+             code.add(new Invoke_01(argFn, idConv, regFn));
+             argFn = regFn;
+@@ -2711,7 +2711,7 @@ public class InvocationExpression
+                     log(errs, Severity.ERROR, Compiler.WRONG_TYPE, "Function", typeFn.getValueString());
+                     return null;
+                 } else {
+-                    typeFn = idConvert.getRawReturns()[0];
++                    typeFn = idConvert.getReturns().getFirst();
+                 }
+             }
+         }
+@@ -2821,7 +2821,7 @@ public class InvocationExpression
+             atypeParams = Arrays.copyOfRange(atypeParams, cTypeParams, cAllParams);
+         }
+ 
+-        if (validateExpressions(ctx, args, atypeParams, errs) == null) {
++        if (validateExpressions(ctx, args, Arrays.asList(atypeParams), errs) == null) {
+             return null;
+         }
+ 
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/LambdaExpression.java b/javatools/src/main/java/org/xvm/compiler/ast/LambdaExpression.java
+index f2cf758b6..5298a2e3c 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/LambdaExpression.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/LambdaExpression.java
+@@ -281,8 +281,7 @@ public class LambdaExpression
+         if (getParentBlock().isTerminatedAbnormally()) {
+             if (method.getIdentityConstant().isNascent()) {
+                 // stub out the lambda structure
+-                configureLambda(TypeConstant.NO_TYPES, Handy.NO_ARGS, 0,
+-                        new boolean[0], TypeConstant.NO_TYPES, false);
++                configureLambda();
+             }
+ 
+             mgr.deferChildren();
+@@ -591,7 +590,8 @@ public class LambdaExpression
+                 ctxLambda.getFormalMap().isEmpty() &&
+                 !ctxLambda.isLambdaMethod()) {
+                 // there are no bindings, so the lambda is a constant i.e. the function is the value
+-                configureLambda(atypeParams, asParams, 0, null, atypeRets, fCond);
++                configureLambda(Arrays.asList(atypeParams), Arrays.asList(asParams), 0, null,
++                        Arrays.asList(atypeRets), fCond);
+                 constVal = m_lambda.getIdentityConstant();
+             }
+         }
+@@ -1182,34 +1182,42 @@ public class LambdaExpression
+             m_aAstBind  = aAstBind;
+ 
+             // store the resulting signature for the lambda
+-            configureLambda(atypeParams, asParams, cTypeParams, afImplicitDeref, atypeReturns, fCondReturn);
++            configureLambda(Arrays.asList(atypeParams), Arrays.asList(asParams), cTypeParams,
++                    afImplicitDeref, Arrays.asList(atypeReturns), fCondReturn);
+         }
+ 
+         return m_aBindArgs;
+     }
+ 
++    /**
++     * Configure an empty lambda with no parameters and no returns.
++     */
++    protected void configureLambda() {
++        configureLambda(List.of(), List.of(), 0, null, List.of(), false);
++    }
++
+     /**
+      * Configure the lambda's parameters, and fill in the lambda's signature information.
+      *
+-     * @param atypeParams     the type of each lambda parameter
+-     * @param asParams        the name of each lambda parameter
++     * @param listParams      the type of each lambda parameter
++     * @param listNames       the name of each lambda parameter
+      * @param cFormal         the number of formal type parameters
+      * @param afImpliedDeref  indicates whether each lambda parameter needs an implicit de-reference
+-     * @param atypeRets       the type of each lambda return value
++     * @param listReturns     the type of each lambda return value
+      * @param fCondReturn     if true, lambda has a conditional return value
+      */
+-    protected void configureLambda(TypeConstant[] atypeParams, String[] asParams, int cFormal,
+-            boolean[] afImpliedDeref, TypeConstant[] atypeRets, boolean fCondReturn) {
++    protected void configureLambda(List<TypeConstant> listParams, List<String> listNames, int cFormal,
++            boolean[] afImpliedDeref, List<TypeConstant> listReturns, boolean fCondReturn) {
+         MethodStructure   lambda = m_lambda;
+         ConstantPool      pool   = pool();
+-        SignatureConstant sig    = pool.ensureSignatureConstant(METHOD_NAME, atypeParams, atypeRets);
++        SignatureConstant sig    = pool.ensureSignatureConstant(METHOD_NAME, listParams, listReturns);
+ 
+-        int cParams = atypeParams.length;
+-        int cNames  = asParams.length;
++        int cParams = listParams.size();
++        int cNames  = listNames.size();
+         org.xvm.asm.Parameter[] aparamParams = new org.xvm.asm.Parameter[cParams];
+         for (int i = 0; i < cParams; ++i) {
+-            String       sName = i < cNames ? asParams[i] : null;
+-            TypeConstant type  = atypeParams[i];
++            String       sName = i < cNames ? listNames.get(i) : null;
++            TypeConstant type  = listParams.get(i);
+             assert !type.containsUnresolved();
+ 
+             aparamParams[i] = new org.xvm.asm.Parameter(pool, type, sName, null, false, i, i < cFormal);
+@@ -1220,10 +1228,10 @@ public class LambdaExpression
+             }
+         }
+ 
+-        int cRets = atypeRets.length;
++        int cRets = listReturns.size();
+         org.xvm.asm.Parameter[] aparamRets = new org.xvm.asm.Parameter[cRets];
+         for (int i = 0; i < cRets; ++i) {
+-            TypeConstant type = atypeRets[i];
++            TypeConstant type = listReturns.get(i);
+             assert !type.containsUnresolved();
+ 
+             aparamRets[i] = new org.xvm.asm.Parameter(pool, type, null, null, true, i, false);
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/MethodDeclarationStatement.java b/javatools/src/main/java/org/xvm/compiler/ast/MethodDeclarationStatement.java
+index 8ae9c72f3..1e9b382b5 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/MethodDeclarationStatement.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/MethodDeclarationStatement.java
+@@ -560,13 +560,13 @@ public class MethodDeclarationStatement
+                 mgr.requestRevisit();
+             } else if (method.isFunction()) {
+                 // make sure functions don't use any generic types
+-                for (TypeConstant type : method.getIdentityConstant().getRawParams()) {
++                for (TypeConstant type : method.getIdentityConstant().getParams()) {
+                     if (type.containsGenericType(true)) {
+                         log(errs, Severity.ERROR, Compiler.GENERIC_FUNCTION_TYPE_NOT_ALLOWED,
+                                 method.getName(), type.getValueString());
+                     }
+                 }
+-                for (TypeConstant type : method.getIdentityConstant().getRawReturns()) {
++                for (TypeConstant type : method.getIdentityConstant().getReturns()) {
+                     if (type.containsGenericType(true)) {
+                         log(errs, Severity.ERROR, Compiler.GENERIC_FUNCTION_TYPE_NOT_ALLOWED,
+                                 method.getName(), type.getValueString());
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/NameExpression.java b/javatools/src/main/java/org/xvm/compiler/ast/NameExpression.java
+index dc845aa8a..0a7f56237 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/NameExpression.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/NameExpression.java
+@@ -1501,7 +1501,7 @@ public class NameExpression
+         lambda.configureLambda(aparamParam, 0, aparamReturn);
+         lambda.setStatic(true);
+         lambda.getIdentityConstant().setSignature(
+-                pool.ensureSignatureConstant("->", atypeParam, atypeReturn));
++                pool.ensureSignatureConstant("->", Arrays.asList(atypeParam), Arrays.asList(atypeReturn)));
+ 
+         Code     code      = lambda.createCode();
+         Register regTarget = new Register(atypeParam[0], null, 0);
+@@ -1627,8 +1627,7 @@ public class NameExpression
+         lambda.configureLambda(aparamParam, 0, aparamReturn);
+         lambda.setStatic(true);
+         lambda.getIdentityConstant().setSignature(
+-                pool.ensureSignatureConstant("->",
+-                    new TypeConstant[]{typeParam}, new TypeConstant[]{typeReturn}));
++                pool.ensureSignatureConstant("->", List.of(typeParam), List.of(typeReturn)));
+ 
+         Code     code      = lambda.createCode();
+         Register regTarget = new Register(typeParam, null, 0);
+@@ -2750,7 +2749,7 @@ public class NameExpression
+                         typeFn = idMethod.getBjarneLambdaType();
+                         if (!fDraft) {
+                             int cReturns = typeDesired == null
+-                                        ? idMethod.getRawReturns().length
++                                        ? idMethod.getReturns().size()
+                                         : pool.extractFunctionReturns(typeDesired).length;
+                             m_idBjarnLambda =
+                                 createBjarneLambda(ctx.getThisClass(), idMethod, cReturns);
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/NameResolver.java b/javatools/src/main/java/org/xvm/compiler/ast/NameResolver.java
+index 35ae384a8..d07d9211b 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/NameResolver.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/NameResolver.java
+@@ -291,7 +291,7 @@ public class NameResolver
+                     int             nRegister = constTypeParam.getRegister();
+                     MethodStructure method    = (MethodStructure) idMethod.getComponent();
+                     TypeConstant    typeParam = method == null
+-                            ? idMethod.getRawParams()[nRegister]
++                            ? idMethod.getParams().get(nRegister)
+                             : method.getParam(nRegister).getType();
+                     assert typeParam.isTypeOfType();
+ 
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/NewExpression.java b/javatools/src/main/java/org/xvm/compiler/ast/NewExpression.java
+index fc1a9040e..f42a09442 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/NewExpression.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/NewExpression.java
+@@ -707,7 +707,7 @@ public class NewExpression
+             args = listArgs;
+         }
+ 
+-        if (validateExpressions(ctx, listArgs, idConstruct.getRawParams(), errs) == null) {
++        if (validateExpressions(ctx, listArgs, idConstruct.getParams(), errs) == null) {
+             return null;
+         }
+ 
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/PrefixExpression.java b/javatools/src/main/java/org/xvm/compiler/ast/PrefixExpression.java
+index 7628380a5..76f511aef 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/PrefixExpression.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/PrefixExpression.java
+@@ -110,7 +110,7 @@ public abstract class PrefixExpression
+             boolean             fAmbiguous = false;
+             for (MethodConstant idMethod : setOps) {
+                 if (typeRequired != null &&
+-                        !isAssignable(ctx, idMethod.getSignature().getRawReturns()[0], typeRequired)) {
++                        !isAssignable(ctx, idMethod.getSignature().getReturns().getFirst(), typeRequired)) {
+                     continue;
+                 }
+ 
+@@ -150,7 +150,7 @@ public abstract class PrefixExpression
+                             operator.getValueText(), typeRight.getValueString());
+                 }
+             } else {
+-                return idBest.getSignature().getRawReturns()[0].removeAutoNarrowing();
++                return idBest.getSignature().getReturns().getFirst().removeAutoNarrowing();
+             }
+         }
+ 
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/PropertyDeclarationStatement.java b/javatools/src/main/java/org/xvm/compiler/ast/PropertyDeclarationStatement.java
+index 10d28d6e7..539373a22 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/PropertyDeclarationStatement.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/PropertyDeclarationStatement.java
+@@ -38,6 +38,7 @@ import org.xvm.asm.op.P_Var;
+ import org.xvm.compiler.Compiler;
+ import org.xvm.compiler.Compiler.Stage;
+ import org.xvm.compiler.Constants;
++import org.xvm.compiler.Source;
+ import org.xvm.compiler.Token;
+ 
+ import org.xvm.util.ListMap;
+@@ -414,21 +415,20 @@ public class PropertyDeclarationStatement
+                     // clear the "has initial value" setting
+                     prop.setInitialValue(null);
+                 } else {
+-                    // create a copy of ourselves
+-                    PropertyDeclarationStatement stmtClone = copy();
++                    // create a copy of ourselves for test compilation - the copy() method now
++                    // preserves parent, stage, and component so this is fully functional
++                    PropertyDeclarationStatement stmtCopy   = copy();
++                    MethodStructure              methodInit = stmtCopy.createInitializer();
++                    MethodDeclarationStatement stmtInit   = stmtCopy.createAstNodeFor(methodInit);
+ 
+-                    // create an initializer function
+-                    MethodStructure            methodInit = stmtClone.createInitializer();
+-                    MethodDeclarationStatement stmtInit   = stmtClone.createAstNodeFor(methodInit);
+-
+-                    // we're going to compile the (cloned) initializer now, so that we can determine
++                    // we're going to compile the copied initializer now, so that we can determine
+                     // if it could be discarded and replaced with a constant
+                     // IMPORTANT NOTE: this goes forward BEYOND validation, so the caller's context
+                     // must be ready to resolve the corresponding names (e.g. see NewExpression)
+                     ErrorListener errsTmp = errs.branch(this);
+                     if (!(new StageMgr(stmtInit, Stage.Emitted, errsTmp).fastForward(10)) ||
+                             errsTmp.hasSeriousErrors()) {
+-                        stmtClone.discardInitializer(methodInit);
++                        stmtCopy.discardInitializer(methodInit);
+                         stmtInit.discard(true);
+                         if (mgr.isLastAttempt()) {
+                             errsTmp.merge();
+@@ -452,7 +452,7 @@ public class PropertyDeclarationStatement
+                     if (fConstant) {
+                         Constant constValue = exprTest.toConstant();
+                         if (constValue.containsUnresolved()) {
+-                            stmtClone.discardInitializer(methodInit);
++                            stmtCopy.discardInitializer(methodInit);
+                             stmtInit.discard(true);
+                             if (mgr.isLastAttempt()) {
+                                 log(errs, Severity.ERROR, Compiler.CIRCULAR_INITIALIZER,
+@@ -493,8 +493,8 @@ public class PropertyDeclarationStatement
+                         prop.setInitialValue(null);
+                     }
+ 
+-                    // at this point, we are done with the "test clone"
+-                    stmtClone.discardInitializer(methodInit);
++                    // at this point, we are done with the test copy
++                    stmtCopy.discardInitializer(methodInit);
+                     stmtInit.discard(true);
+ 
+                     if (fMethodRequired) {
+@@ -791,12 +791,21 @@ public class PropertyDeclarationStatement
+      * @return a newly created property initializer method
+      */
+     private MethodStructure createInitializer() {
+-        PropertyStructure prop   = (PropertyStructure) getComponent();
+-        MethodStructure   method = prop.createMethod(isStatic(), Access.PRIVATE,
++        return createInitializer((PropertyStructure) getComponent(), getSource());
++    }
++
++    /**
++     * @param prop    the property structure to create the initializer for
++     * @param source  the source to associate with the method
++     *
++     * @return a newly created property initializer method
++     */
++    private MethodStructure createInitializer(PropertyStructure prop, Source source) {
++        MethodStructure method = prop.createMethod(isStatic(), Access.PRIVATE,
+                 org.xvm.asm.Annotation.NO_ANNOTATIONS,
+                 new Parameter[] {new Parameter(pool(), prop.getType(), null, null, true, 0, false)},
+                 "=", Parameter.NO_PARAMS, true, false);
+-        donateSource(method);
++        donateSource(method, source);
+         return method;
+     }
+ 
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/RelOpExpression.java b/javatools/src/main/java/org/xvm/compiler/ast/RelOpExpression.java
+index 4704a4e81..8497a1cf8 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/RelOpExpression.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/RelOpExpression.java
+@@ -193,7 +193,7 @@ public class RelOpExpression
+         MethodConstant method = getImplicitMethod(ctx);
+         return method == null
+                 ? null
+-                : method.getRawReturns()[0];
++                : method.getReturns().getFirst();
+     }
+ 
+     @Override
+@@ -202,7 +202,7 @@ public class RelOpExpression
+             MethodConstant method = getImplicitMethod(ctx);
+             return method == null
+                     ? null
+-                    : method.getRawReturns();
++                    : method.getReturns().toArray(TypeConstant[]::new);
+         }
+ 
+         return super.getImplicitTypes(ctx);
+@@ -274,13 +274,13 @@ public class RelOpExpression
+                                       Map<SignatureConstant, MethodConstant> mapBest) {
+         MethodConstant idBest = null;
+         for (MethodConstant idMethod : setOps) {
+-            TypeConstant type = idMethod.getRawParams()[0];
++            TypeConstant type = idMethod.getParams().getFirst();
+             if (typeParam.isAssignableTo(type)) {
+                 if (!mapBest.isEmpty()) {
+                     mapBest.put(idMethod.getSignature(), idMethod);
+-                } else if (idBest == null || type.isAssignableTo(idBest.getRawParams()[0])) {
++                } else if (idBest == null || type.isAssignableTo(idBest.getParams().getFirst())) {
+                     idBest = idMethod;
+-                } else if (!idBest.getRawParams()[0].isAssignableTo(type)) {
++                } else if (!idBest.getParams().getFirst().isAssignableTo(type)) {
+                     // ambiguous at this point
+                     mapBest.put(idBest  .getSignature(), idBest  );
+                     mapBest.put(idMethod.getSignature(), idMethod);
+@@ -320,9 +320,9 @@ public class RelOpExpression
+         String              sOp      = operator.getId().TEXT;
+         Set<MethodConstant> setOps   = infoLeft.findOpMethods(sMethod, sOp, 1);
+         for (MethodConstant idMethod : setOps) {
+-            TypeConstant[] aRets = idMethod.getRawReturns();
+-            if (aRets.length >= 1) {
+-                TypeConstant typeResult = aRets[0];
++            List<TypeConstant> listRets = idMethod.getReturns();
++            if (!listRets.isEmpty()) {
++                TypeConstant typeResult = listRets.getFirst();
+                 if (isA(ctx, typeResult, typeRequired)) {
+                     // the "right" expression will be checked during validation
+                     return TypeFit.Fit;
+@@ -339,14 +339,14 @@ public class RelOpExpression
+ 
+         ConstantPool pool = pool();
+         for (MethodInfo infoAuto : infoLeft.getAutoMethodInfos()) {
+-            TypeConstant typeConv = infoAuto.getSignature().getRawReturns()[0];
++            TypeConstant typeConv = infoAuto.getSignature().getReturns().getFirst();
+             if (typeConv.containsAutoNarrowing(false)) {
+                 typeConv = typeConv.resolveAutoNarrowing(pool, false, typeLeft, null);
+             }
+ 
+             for (MethodConstant idMethod : typeConv.ensureTypeInfo().findOpMethods(sMethod, sOp, 1)) {
+-                TypeConstant[] aRets = idMethod.getRawReturns();
+-                if (aRets.length >= 1 && isAssignable(ctx, aRets[0], typeRequired)) {
++                List<TypeConstant> listRets = idMethod.getReturns();
++                if (!listRets.isEmpty() && isAssignable(ctx, listRets.getFirst(), typeRequired)) {
+                     // there is a solution via an operator on the result of a conversion
+                     return TypeFit.Conv;
+                 }
+@@ -373,15 +373,15 @@ public class RelOpExpression
+         String              sOp      = operator.getId().TEXT;
+         Set<MethodConstant> setOps   = infoLeft.findOpMethods(sMethod, sOp, 1);
+         for (MethodConstant idMethod : setOps) {
+-            TypeConstant[] aRets = idMethod.getRawReturns();
+-            if (aRets.length >= 2) {
+-                if (isA(ctx, aRets[0], atypeRequired[0]) &&
+-                    isA(ctx, aRets[1], atypeRequired[1])) {
++            List<TypeConstant> listRets = idMethod.getReturns();
++            if (listRets.size() >= 2) {
++                if (isA(ctx, listRets.get(0), atypeRequired[0]) &&
++                    isA(ctx, listRets.get(1), atypeRequired[1])) {
+                     // the "right" expression will be checked during validation
+                     return TypeFit.Fit;
+                 }
+-                if (!fitVia.isFit() && isAssignable(ctx, aRets[0], atypeRequired[0])
+-                                    && isAssignable(ctx, aRets[1], atypeRequired[1])) {
++                if (!fitVia.isFit() && isAssignable(ctx, listRets.get(0), atypeRequired[0])
++                                    && isAssignable(ctx, listRets.get(1), atypeRequired[1])) {
+                     // there is a solution via conversion on the result of an operator
+                     fitVia = TypeFit.Conv;
+                 }
+@@ -392,12 +392,12 @@ public class RelOpExpression
+         }
+ 
+         for (MethodInfo infoAuto : infoLeft.getAutoMethodInfos()) {
+-            TypeConstant typeConv = infoAuto.getSignature().getRawReturns()[0];
++            TypeConstant typeConv = infoAuto.getSignature().getReturns().getFirst();
+             TypeInfo     infoConv = typeConv.ensureTypeInfo();
+             for (MethodConstant idMethod : infoConv.findOpMethods(sMethod, sOp, 1)) {
+-                TypeConstant[] aRets = idMethod.getRawReturns();
+-                if (aRets.length >= 2 && isAssignable(ctx, aRets[0], atypeRequired[0])
+-                                      && isAssignable(ctx, aRets[1], atypeRequired[1])) {
++                List<TypeConstant> listRets = idMethod.getReturns();
++                if (listRets.size() >= 2 && isAssignable(ctx, listRets.get(0), atypeRequired[0])
++                                         && isAssignable(ctx, listRets.get(1), atypeRequired[1])) {
+                     // there is a solution via an operator on the result of a conversion
+                     return TypeFit.Conv;
+                 }
+@@ -534,7 +534,7 @@ public class RelOpExpression
+             if (sig.containsAutoNarrowing(false)) {
+                 sig = sig.resolveAutoNarrowing(pool(), typeRequired, null);
+             }
+-            atypeResults = sig.getRawReturns();
++            atypeResults = sig.getReturns().toArray(TypeConstant[]::new);
+             cResults     = atypeResults.length;
+         }
+         if (idOp == null || cResults < cExpected) {
+@@ -630,8 +630,8 @@ public class RelOpExpression
+         if (expr1.testFit(ctx, typeRequired, false, null).isFit()) {
+             Set<MethodConstant> setOps = typeRequired.ensureTypeInfo().findOpMethods(sMethod, sOp, 1);
+             for (MethodConstant idMethod : setOps) {
+-                if (expr2.testFit(ctx, idMethod.getRawParams()[0], false, null).isFit()) {
+-                    TypeConstant typeReturn = idMethod.getRawReturns()[0];
++                if (expr2.testFit(ctx, idMethod.getParams().getFirst(), false, null).isFit()) {
++                    TypeConstant typeReturn = idMethod.getReturns().getFirst();
+                     if (typeReturn.containsAutoNarrowing(false)) {
+                         typeReturn = typeReturn.resolveAutoNarrowing(pool(), true, typeRequired, null);
+                     }
+@@ -649,8 +649,8 @@ public class RelOpExpression
+                 if (expr1.testFit(ctx, typeParam, false, null).isFit()) {
+                     Set<MethodConstant> setOps = typeParam.ensureTypeInfo().findOpMethods(sMethod, sOp, 1);
+                     for (MethodConstant idMethod : setOps) {
+-                        if (expr2.testFit(ctx, idMethod.getRawParams()[0], false, null).isFit()) {
+-                            TypeConstant typeReturn = idMethod.getRawReturns()[0];
++                        if (expr2.testFit(ctx, idMethod.getParams().getFirst(), false, null).isFit()) {
++                            TypeConstant typeReturn = idMethod.getReturns().getFirst();
+                             if (typeReturn.containsAutoNarrowing(false)) {
+                                 typeReturn = typeReturn.resolveAutoNarrowing(pool(), false,
+                                                 typeRequired, null);
+@@ -693,7 +693,7 @@ public class RelOpExpression
+             TypeFit      fitBest  = TypeFit.NoFit;
+             for (MethodConstant idMethod : setOps) {
+                 if (typeRequired != null) {
+-                    TypeConstant typeReturn = idMethod.getRawReturns()[0];
++                    TypeConstant typeReturn = idMethod.getReturns().getFirst();
+                     if (typeReturn.containsAutoNarrowing(false)) {
+                         typeReturn = typeReturn.resolveAutoNarrowing(pool(), true, typeRequired, null);
+                     }
+@@ -702,7 +702,7 @@ public class RelOpExpression
+                     }
+                 }
+ 
+-                TypeConstant typeParam = idMethod.getRawParams()[0];
++                TypeConstant typeParam = idMethod.getParams().getFirst();
+                 TypeFit      fit       = expr2.testFit(ctx, typeParam, /*fExhaustive*/ false, null);
+                 if (!fit.isFit()) {
+                     fit = expr2.testFitExhaustive(ctx, typeParam, null);
+@@ -763,8 +763,8 @@ public class RelOpExpression
+         String              sOp      = operator.getId().TEXT;
+         for (MethodConstant method : info1.findOpMethods(sMethod, sOp, 1)) {
+             // determine if this method satisfies the types (param and return)
+-            TypeConstant typeParam  = method.getRawParams()[0];
+-            TypeConstant typeReturn = method.getRawReturns()[0];
++            TypeConstant typeParam  = method.getParams().getFirst();
++            TypeConstant typeReturn = method.getReturns().getFirst();
+             if (typeReturn.containsAutoNarrowing(false)) {
+                 typeReturn = typeReturn.resolveAutoNarrowing(pool(), true, typeRequired, null);
+             }
+@@ -862,7 +862,7 @@ public class RelOpExpression
+     public static MethodConstant chooseBestMethod(Set<MethodConstant> setOps, TypeConstant typeActual) {
+         MethodConstant idBest = null;
+         for (MethodConstant idMethod : setOps) {
+-            TypeConstant typeParam = idMethod.getRawParams()[0];
++            TypeConstant typeParam = idMethod.getParams().getFirst();
+ 
+             if (typeActual.equals(typeParam)) {
+                 return idMethod;
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/ReturnStatement.java b/javatools/src/main/java/org/xvm/compiler/ast/ReturnStatement.java
+index 837a7d215..1589997d0 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/ReturnStatement.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/ReturnStatement.java
+@@ -185,7 +185,7 @@ public class ReturnStatement
+             }
+         } else if (cExprs > 1) {
+             // validate each expression, telling it what return type is expected
+-            atypeActual = validateExpressions(ctx, exprs, aRetTypes, errs);
++            atypeActual = validateExpressions(ctx, exprs, Arrays.asList(aRetTypes), errs);
+             fValid      = atypeActual != null;
+ 
+             // make sure the arity is correct (the number of exprs has to match the number of returns)
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/TypeCompositionStatement.java b/javatools/src/main/java/org/xvm/compiler/ast/TypeCompositionStatement.java
+index 8251d0116..f667e2e62 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/TypeCompositionStatement.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/TypeCompositionStatement.java
+@@ -2634,8 +2634,8 @@ public class TypeCompositionStatement
+                 }
+             }
+ 
+-            boolean        fValid      = true;
+-            TypeConstant[] atypeArgs   = idSuper.getRawParams();
++            boolean            fValid     = true;
++            List<TypeConstant> listParams = idSuper.getParams();
+             for (int i = 0, c = listSuperArgs.size(); i < c; i++) {
+                 Expression exprOld = listSuperArgs.get(i);
+                 if (exprOld.isValidated()) {
+@@ -2643,7 +2643,7 @@ public class TypeCompositionStatement
+                     // have been validated by NewExpression or a "revisit" after a partial failure
+                     continue;
+                 }
+-                Expression exprNew = exprOld.validate(ctx, atypeArgs[i], errs);
++                Expression exprNew = exprOld.validate(ctx, listParams.get(i), errs);
+                 if (exprNew == null) {
+                     fValid = false;
+                     continue;
+diff --git a/javatools/src/main/java/org/xvm/runtime/CallChain.java b/javatools/src/main/java/org/xvm/runtime/CallChain.java
+index 669fff9f6..586c49a33 100644
+--- a/javatools/src/main/java/org/xvm/runtime/CallChain.java
++++ b/javatools/src/main/java/org/xvm/runtime/CallChain.java
+@@ -1,6 +1,8 @@
+ package org.xvm.runtime;
+ 
+ 
++import java.util.List;
++
+ import org.xvm.asm.Component;
+ import org.xvm.asm.ConstantPool;
+ import org.xvm.asm.MethodStructure;
+@@ -610,10 +612,10 @@ public class CallChain {
+                 f_typeCtor    = null;
+             } else {
+                 MethodStructure constructor = infoCtor.getTopmostMethodStructure(infoTarget);
+-                TypeConstant[]  atypeParam  = constructor.getIdentityConstant().getSignature().
+-                                                resolveGenericTypes(pool, typeTarget).getRawParams();
++                List<TypeConstant> listParams = constructor.getIdentityConstant().getSignature().
++                                                resolveGenericTypes(pool, typeTarget).getParams();
+                 f_constructor = constructor;
+-                f_typeCtor    = pool.buildFunctionType(atypeParam, typeTarget);
++                f_typeCtor    = pool.buildFunctionType(listParams, List.of(typeTarget));
+             }
+         }
+ 
+diff --git a/javatools/src/main/java/org/xvm/runtime/ClassTemplate.java b/javatools/src/main/java/org/xvm/runtime/ClassTemplate.java
+index 906379320..3653fb674 100644
+--- a/javatools/src/main/java/org/xvm/runtime/ClassTemplate.java
++++ b/javatools/src/main/java/org/xvm/runtime/ClassTemplate.java
+@@ -1714,7 +1714,7 @@ public abstract class ClassTemplate
+             SignatureConstant sig      = idMethod.getSignature();
+             if (hArg != null) {
+                 TypeConstant typeArg   = hArg.getType();
+-                TypeConstant typeParam = sig.getRawParams()[0];
++                TypeConstant typeParam = sig.getParams().getFirst();
+ 
+                 if (!typeArg.isA(typeParam)) {
+                     // soft assert
+@@ -1732,7 +1732,7 @@ public abstract class ClassTemplate
+                 TypeConstant      typeArg = hArg.getType();
+                 for (MethodConstant idMethod : setMethods) {
+                     SignatureConstant sig       = idMethod.getSignature();
+-                    TypeConstant      typeParam = sig.getRawParams()[0];
++                    TypeConstant      typeParam = sig.getParams().getFirst();
+ 
+                     if (typeArg.isA(typeParam)) {
+                         if (sigBest == null) {
+@@ -1750,7 +1750,7 @@ public abstract class ClassTemplate
+                             // Until we have a better solution, let's choose a signature with a
+                             // simpler type, because it should've been the one chosen by the
+                             // compiler.
+-                            int nBestDepth  = sigBest.getRawParams()[0].getTypeDepth();
++                            int nBestDepth  = sigBest.getParams().getFirst().getTypeDepth();
+                             int nParamDepth = typeParam.getTypeDepth();
+ 
+                             if (nParamDepth < nBestDepth) {
+@@ -1797,10 +1797,11 @@ public abstract class ClassTemplate
+             for (MethodConstant idMethod : setMethods) {
+                 SignatureConstant sig = idMethod.getSignature();
+ 
++                List<TypeConstant> listParams = sig.getParams();
+                 for (int i = 0; i < cArgs; i++) {
+                     ObjectHandle hArg      = ahArg[i];
+                     TypeConstant typeArg   = hArg.getType();
+-                    TypeConstant typeParam = sig.getRawParams()[i];
++                    TypeConstant typeParam = listParams.get(i);
+ 
+                     if (!typeArg.isA(typeParam)) {
+                         continue NextMethod;
+@@ -1954,27 +1955,27 @@ public abstract class ClassTemplate
+ 
+         MethodStructure method = getStructure().findMethodDeep(sName, m -> {
+                 if (atypeParam != null) {
+-                    TypeConstant[] atypeParamTest = m.getIdentityConstant().getRawParams();
+-                    int            cParams        = atypeParamTest.length;
++                    List<TypeConstant> listParamTest = m.getIdentityConstant().getParams();
++                    int                cParams       = listParamTest.size();
+                     if (cParams != atypeParam.length) {
+                         return false;
+                     }
+ 
+                     for (int i = 0; i < cParams; i++) {
+-                        if (!atypeParamTest[i].isA(atypeParam[i])) {
++                        if (!listParamTest.get(i).isA(atypeParam[i])) {
+                             return false;
+                         }
+                     }
+                 }
+                 if (atypeReturn != null) {
+-                    TypeConstant[] atypeReturnTest = m.getIdentityConstant().getRawReturns();
+-                    int            cReturns        = atypeReturnTest.length;
++                    List<TypeConstant> listReturnTest = m.getIdentityConstant().getReturns();
++                    int                cReturns       = listReturnTest.size();
+                     if (cReturns != atypeReturn.length) {
+                         return false;
+                     }
+ 
+                     for (int i = 0; i < cReturns; i++) {
+-                        if (!atypeReturnTest[i].isA(atypeReturn[i])) {
++                        if (!listReturnTest.get(i).isA(atypeReturn[i])) {
+                             return false;
+                         }
+                     }
+diff --git a/javatools/src/main/java/org/xvm/runtime/Frame.java b/javatools/src/main/java/org/xvm/runtime/Frame.java
+index ad8df610d..21e279689 100644
+--- a/javatools/src/main/java/org/xvm/runtime/Frame.java
++++ b/javatools/src/main/java/org/xvm/runtime/Frame.java
+@@ -2555,8 +2555,8 @@ public class Frame
+                 : ((FunctionHandle) frame.f_ahVar[nTargetReg]).getMethodId();
+ 
+             return frame.resolveType(iAuxId >= 0
+-                ? idMethod.getRawReturns()[iAuxId]
+-                : pool.ensureTupleType(idMethod.getSignature().getRawReturns()));
++                ? idMethod.getReturns().get(iAuxId)
++                : pool.ensureTupleType(idMethod.getSignature().getReturns()));
+         }
+     };
+ 
+diff --git a/javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTFunction.java b/javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTFunction.java
+index 4620a56c2..4040cdc17 100644
+--- a/javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTFunction.java
++++ b/javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTFunction.java
+@@ -11,6 +11,8 @@ import org.xvm.asm.MethodStructure;
+ import org.xvm.asm.Op;
+ import org.xvm.asm.Parameter;
+ 
++import java.util.List;
++
+ import org.xvm.asm.constants.ArrayConstant;
+ import org.xvm.asm.constants.MethodConstant;
+ import org.xvm.asm.constants.TypeConstant;
+@@ -96,10 +98,10 @@ public class xRTFunction
+     protected TypeComposition ensureClass(Container container, MethodStructure function) {
+         ConstantPool pool = container.getConstantPool();
+ 
+-        TypeConstant[] atypeR = function.getIdentityConstant().getRawReturns();
++        List<TypeConstant> listReturns = function.getIdentityConstant().getReturns();
+ 
+         TypeConstant typeP   = pool.typeTuple0();
+-        TypeConstant typeR   = atypeR.length == 0 ? pool.typeTuple0() : pool.ensureTupleType(atypeR);
++        TypeConstant typeR   = listReturns.isEmpty() ? pool.typeTuple0() : pool.ensureTupleType(listReturns);
+         TypeConstant typeClz = pool.ensureParameterizedTypeConstant(pool.typeFunction(), typeP, typeR);
+ 
+         Annotation[] aAnno = function.getAnnotations();
+diff --git a/javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTMethod.java b/javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTMethod.java
+index a13b1bd9b..38d32d8ac 100644
+--- a/javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTMethod.java
++++ b/javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTMethod.java
+@@ -297,12 +297,12 @@ public class xRTMethod
+ 
+         @Override
+         public TypeConstant getParamType(int iArg) {
+-            return getMethodInfo().getIdentity().getSignature().getRawParams()[iArg];
++            return getMethodInfo().getIdentity().getSignature().getParams().get(iArg);
+         }
+ 
+         @Override
+         public TypeConstant getReturnType(int iArg) {
+-            return getMethodInfo().getIdentity().getSignature().getRawReturns()[iArg];
++            return getMethodInfo().getIdentity().getSignature().getReturns().get(iArg);
+         }
+ 
+         private CallChain getCallChain(Frame frame, ObjectHandle hTarget) {
+diff --git a/javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTType.java b/javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTType.java
+index 1f4b00ec2..410aa648f 100644
+--- a/javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTType.java
++++ b/javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTType.java
+@@ -671,7 +671,7 @@ public class xRTType
+                 MethodInfo      infoMethod  = infoTarget.getMethodById(idConstr, true);
+                 MethodStructure constructor = infoMethod.getTopmostMethodStructure(infoTarget);
+                 Parameter[]     aParams     = constructor.getParamArray();
+-                TypeConstant[]  atypeParams = infoMethod.getSignature().getRawParams();
++                TypeConstant[]  atypeParams = infoMethod.getSignature().getParams().toArray(TypeConstant[]::new);
+ 
+                 // each constructor function will be of a certain type, which differs only in the
+                 // additional parameters that each constructor has; for a virtual child, all of the
+diff --git a/javatools/src/main/java/org/xvm/runtime/template/collections/xArray.java b/javatools/src/main/java/org/xvm/runtime/template/collections/xArray.java
+index 23bb3bd73..7d97914bd 100644
+--- a/javatools/src/main/java/org/xvm/runtime/template/collections/xArray.java
++++ b/javatools/src/main/java/org/xvm/runtime/template/collections/xArray.java
+@@ -2,6 +2,7 @@ package org.xvm.runtime.template.collections;
+ 
+ 
+ import java.util.HashMap;
++import java.util.List;
+ import java.util.Map;
+ 
+ import org.xvm.asm.ClassStructure;
+@@ -196,14 +197,14 @@ public class xArray
+             default    -> throw new IllegalStateException();
+         };
+ 
+-        TypeConstant typeArray = constArray.getType();
+-        Constant[]   aconst    = constArray.getValue();
+-        int          cSize     = aconst.length;
++        TypeConstant   typeArray = constArray.getType();
++        List<Constant> listVal   = constArray.getValues();
++        int            cSize     = listVal.size();
+ 
+         ObjectHandle[] ahValue   = new ObjectHandle[cSize];
+         boolean        fDeferred = false;
+         for (int i = 0; i < cSize; i++) {
+-            ObjectHandle hValue = frame.getConstHandle(aconst[i]);
++            ObjectHandle hValue = frame.getConstHandle(listVal.get(i));
+ 
+             if (Op.isDeferred(hValue)) {
+                 fDeferred = true;
+diff --git a/javatools/src/main/java/org/xvm/runtime/template/collections/xTuple.java b/javatools/src/main/java/org/xvm/runtime/template/collections/xTuple.java
+index 8c25c3846..f2aa26764 100644
+--- a/javatools/src/main/java/org/xvm/runtime/template/collections/xTuple.java
++++ b/javatools/src/main/java/org/xvm/runtime/template/collections/xTuple.java
+@@ -3,6 +3,7 @@ package org.xvm.runtime.template.collections;
+ 
+ import java.util.Arrays;
+ import java.util.IdentityHashMap;
++import java.util.List;
+ import java.util.Map;
+ 
+ import org.xvm.asm.ClassStructure;
+@@ -86,8 +87,8 @@ public class xTuple
+ 
+         assert constTuple.getFormat() == Constant.Format.Tuple;
+ 
+-        Constant[] aconst = constTuple.getValue();
+-        int c = aconst.length;
++        List<Constant> listConst = constTuple.getValues();
++        int            c         = listConst.size();
+ 
+         if (c == 0) {
+             return frame.pushStack(H_VOID);
+@@ -101,7 +102,7 @@ public class xTuple
+         ObjectHandle[] ahValue   = new ObjectHandle[c];
+         boolean        fDeferred = false;
+         for (int i = 0; i < c; i++) {
+-            ObjectHandle hValue = frame.getConstHandle(aconst[i]);
++            ObjectHandle hValue = frame.getConstHandle(listConst.get(i));
+ 
+             if (Op.isDeferred(hValue)) {
+                 fDeferred = true;
+diff --git a/javatools/src/main/java/org/xvm/runtime/template/numbers/xNumber.java b/javatools/src/main/java/org/xvm/runtime/template/numbers/xNumber.java
+index 1359f9d13..d3911cb0b 100644
+--- a/javatools/src/main/java/org/xvm/runtime/template/numbers/xNumber.java
++++ b/javatools/src/main/java/org/xvm/runtime/template/numbers/xNumber.java
+@@ -63,7 +63,7 @@ public abstract class xNumber
+                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn) {
+         SignatureConstant sig = constructor.getIdentityConstant().getSignature();
+         if (sig.getParamCount() == 1) {
+-            TypeConstant typeParam = sig.getRawParams()[0];
++            TypeConstant typeParam = sig.getParams().getFirst();
+             if (typeParam.equals(pool().typeString())) {
+                 StringHandle hText = (StringHandle) ahVar[0];
+                 return constructFromString(frame, hText.getStringValue(), iReturn);
+diff --git a/javatools/src/main/java/org/xvm/runtime/template/text/xString.java b/javatools/src/main/java/org/xvm/runtime/template/text/xString.java
+index 389fc515e..af85e790b 100644
+--- a/javatools/src/main/java/org/xvm/runtime/template/text/xString.java
++++ b/javatools/src/main/java/org/xvm/runtime/template/text/xString.java
+@@ -101,7 +101,7 @@ public class xString
+     @Override
+     public int construct(Frame frame, MethodStructure constructor, TypeComposition clazz,
+                          ObjectHandle hParent, ObjectHandle[] ahVar, int iReturn) {
+-        if (constructor.getIdentityConstant().getRawParams()[0].equals(frame.poolContext().typeString())) {
++        if (constructor.getIdentityConstant().getParams().getFirst().equals(frame.poolContext().typeString())) {
+             return frame.assignValue(iReturn, ahVar[0]);
+         }
+ 
+diff --git a/javatools/src/main/java/org/xvm/tool/Launcher.java b/javatools/src/main/java/org/xvm/tool/Launcher.java
+index 1efa7e28e..9af504551 100644
+--- a/javatools/src/main/java/org/xvm/tool/Launcher.java
++++ b/javatools/src/main/java/org/xvm/tool/Launcher.java
+@@ -304,6 +304,7 @@ public abstract class Launcher<T extends LauncherOptions>
+             return e.getExitCode();
+         } catch (Throwable e) {
+             console.log(ERROR, e, "Unexpected exception or error: {}", e.getMessage());
++            e.printStackTrace(System.err);
+             return 1;
+         }
+     }

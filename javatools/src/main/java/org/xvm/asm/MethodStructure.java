@@ -1770,10 +1770,10 @@ public class MethodStructure
             throws IOException {
         super.disassemble(in);
 
-        ConstantPool   pool              = getConstantPool();
-        MethodConstant constMethod       = getIdentityConstant();
-        TypeConstant[] aconstReturnTypes = constMethod.getRawReturns();
-        TypeConstant[] aconstParamTypes  = constMethod.getRawParams();
+        ConstantPool       pool             = getConstantPool();
+        MethodConstant     constMethod      = getIdentityConstant();
+        List<TypeConstant> listReturnTypes  = constMethod.getReturns();
+        List<TypeConstant> listParamTypes   = constMethod.getParams();
 
         int          cAnnos = readMagnitude(in);
         Annotation[] aAnnos = cAnnos == 0 ? Annotation.NO_ANNOTATIONS : new Annotation[cAnnos];
@@ -1783,12 +1783,12 @@ public class MethodStructure
 
         m_idFinally = (MethodConstant) pool.getConstant(readIndex(in));
 
-        int         cReturns = aconstReturnTypes.length;
+        int         cReturns = listReturnTypes.size();
         Parameter[] aReturns = new Parameter[cReturns];
         boolean     fCond    = isConditionalReturn();
         for (int i = 0; i < cReturns; ++i) {
             Parameter param = new Parameter(pool, in, true, i, i==0 && fCond);
-            if (!param.getType().equals(aconstReturnTypes[i])) {
+            if (!param.getType().equals(listReturnTypes.get(i))) {
                 throw new IOException("type mismatch between method constant and return " + i + " value type");
             }
             aReturns[i] = param;
@@ -1796,11 +1796,11 @@ public class MethodStructure
 
         int         cTypeParams    = readMagnitude(in);
         int         cDefaultParams = readMagnitude(in);
-        int         cParams        = aconstParamTypes.length;
+        int         cParams        = listParamTypes.size();
         Parameter[] aParams        = new Parameter[cParams];
         for (int i = 0; i < cParams; ++i) {
             Parameter param = new Parameter(pool, in, false, i, i < cTypeParams);
-            if (!param.getType().equals(aconstParamTypes[i])) {
+            if (!param.getType().equals(listParamTypes.get(i))) {
                 throw new IOException("type mismatch between method constant and param " + i + " value type");
             }
             aParams[i] = param;

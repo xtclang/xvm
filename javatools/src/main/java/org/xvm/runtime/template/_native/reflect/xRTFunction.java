@@ -11,6 +11,8 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
 
+import java.util.List;
+
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -96,10 +98,10 @@ public class xRTFunction
     protected TypeComposition ensureClass(Container container, MethodStructure function) {
         ConstantPool pool = container.getConstantPool();
 
-        TypeConstant[] atypeR = function.getIdentityConstant().getRawReturns();
+        List<TypeConstant> listReturns = function.getIdentityConstant().getReturns();
 
         TypeConstant typeP   = pool.typeTuple0();
-        TypeConstant typeR   = atypeR.length == 0 ? pool.typeTuple0() : pool.ensureTupleType(atypeR);
+        TypeConstant typeR   = listReturns.isEmpty() ? pool.typeTuple0() : pool.ensureTupleType(listReturns);
         TypeConstant typeClz = pool.ensureParameterizedTypeConstant(pool.typeFunction(), typeP, typeR);
 
         Annotation[] aAnno = function.getAnnotations();

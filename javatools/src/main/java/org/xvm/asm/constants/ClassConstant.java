@@ -54,6 +54,18 @@ public class ClassConstant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    @Override
+    public ClassConstant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+
+        return pool.ensureClassConstant(getParentConstant().transferTo(pool), getName());
+    }
+
+
     // ----- ClassConstant methods -----------------------------------------------------------------
 
     /**

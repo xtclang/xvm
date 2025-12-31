@@ -1591,16 +1591,16 @@ public class TypeInfo {
             MethodInfo     info = entry.getValue();
             if (id.isTopLevel()
                     && id.getName().equals(sName)
-                    && id.getRawParams() .length >= cArgs
-                    && id.getRawReturns().length >= cRedundant
+                    && id.getParams().size() >= cArgs
+                    && id.getReturns().size() >= cRedundant
                     && (info.isCtorOrValidator()
                             ? (!fMethod && !fFunction)
                             : info.isFunction() ? fFunction : fMethod)) {
-                SignatureConstant sig      = info.getSignature();
-                TypeConstant[]    aParams  = sig.getRawParams();
-                TypeConstant[]    aReturns = sig.getRawReturns();
+                SignatureConstant  sig         = info.getSignature();
+                List<TypeConstant> listParams  = sig.getParams();
+                List<TypeConstant> listReturns = sig.getReturns();
                 for (int i = 0; i < cRedundant; ++i) {
-                    TypeConstant typeReturn    = aReturns  [i];
+                    TypeConstant typeReturn    = listReturns.get(i);
                     TypeConstant typeRedundant = aRedundant[i];
 
                     if (!typeReturn.isA(typeRedundant)) {
@@ -1608,8 +1608,8 @@ public class TypeInfo {
                     }
                 }
                 for (int i = 0; i < cArgs; ++i) {
-                    TypeConstant typeParam = aParams[i];
-                    TypeConstant typeArg   = aArgs  [i];
+                    TypeConstant typeParam = listParams.get(i);
+                    TypeConstant typeArg   = aArgs[i];
                     if (typeArg != null && !typeArg.isAssignableTo(typeParam)) {
                         continue NextMethod;
                     }
@@ -1839,7 +1839,7 @@ public class TypeInfo {
             case 1: {
                 idMatch = setMethods.iterator().next();
                 if (typeArg != null) {
-                    TypeConstant typeParam = idMatch.getSignature().getRawParams()[0];
+                    TypeConstant typeParam = idMatch.getSignature().getParams().getFirst();
 
                     if (!typeArg.isA(typeParam)) {
                         // soft assert
@@ -1855,7 +1855,7 @@ public class TypeInfo {
                 if (typeArg != null) {
                     idMatch = null;
                     for (MethodConstant idMethod : setMethods) {
-                        TypeConstant typeParam = idMethod.getSignature().getRawParams()[0];
+                        TypeConstant typeParam = idMethod.getSignature().getParams().getFirst();
 
                         if (typeArg.isA(typeParam)) {
                             if (typeParam.isA(typeArg)) {
@@ -2148,7 +2148,7 @@ public class TypeInfo {
         } else {
             for (MethodInfo info : getAutoMethodInfos()) {
                 MethodConstant method     = info.getIdentity();
-                TypeConstant   typeResult = method.getRawReturns()[0];
+                TypeConstant   typeResult = method.getReturns().getFirst();
                 if (typeResult.equals(typeDesired)) {
                     // exact match -- it's not going to get any better than this
                     return method;
@@ -2158,7 +2158,7 @@ public class TypeInfo {
                     if (methodMatch == null) {
                         methodMatch = method;
                     } else {
-                        TypeConstant typeResultMatch = methodMatch.getRawReturns()[0];
+                        TypeConstant typeResultMatch = methodMatch.getReturns().getFirst();
                         boolean fSub = typeResult.isA(typeResultMatch);
                         boolean fSup = typeResultMatch.isA(typeResult);
                         if (fSub ^ fSup) {

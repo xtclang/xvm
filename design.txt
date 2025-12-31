@@ -1,0 +1,14 @@
+> I think it might be a better idea if you started lookling at the construcvtors of the various ast node classes and
+ cosntant pool classes, and made sure that any array that gets in turns into a list instead, that we have fial 
+variable fields wherever we can (substituting if x = null x = .. lazy field inits in getter with yor Lazy.java API 
+that you wrote), try to keep fields final, try to never return mutable collections or arrays and so on.  Go through 
+and annotate these fields and return values with notnull and similar mechansisms to make sure thye are consistent,. 
+Follow the constructor calls to their roots and determine if null checks are just fucked up and we can initialize to
+ empty collections instead. Use Optional for return values where there really is a case of not computed . but no 
+overkill. We are attempting create clean API boundaries, annotated celarly for nullness and trace where bad data 
+representation and stateful not finalness comes from and eliminate them. Internally and in the APIs we would much 
+rather prefer to work with immutable collections like Lists, not arrays. We also want to get rid of hte clone legacy
+ shit and do our manual copies, and move towards copy on write style / transform semantics for the compiler and 
+nodes ad described in the plan. Make sure you are up to date with the plan and get started 
+
+

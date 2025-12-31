@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.jetbrains.annotations.NotNull;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -50,11 +51,10 @@ import org.xvm.util.Severity;
  * <p/> TODO support tuple of indexes, particularly for multi-dimensional arrays
  * <p/> TODO for multi-dimensional arrays, support partial binding? @Op("[?,_]") / @Op("[_,?]") etc.
  */
-public class ArrayAccessExpression
-        extends Expression {
+public class ArrayAccessExpression extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public ArrayAccessExpression(Expression expr, List<Expression> indexes, Token tokClose) {
+    public ArrayAccessExpression(Expression expr, @NotNull List<Expression> indexes, Token tokClose) {
         this.expr     = expr;
         this.indexes  = indexes;
         this.tokClose = tokClose;
@@ -171,9 +171,9 @@ public class ArrayAccessExpression
         Set<MethodConstant> setMethods  = findPotentialOps(infoTarget, cIndexes);
         for (MethodConstant idMethod : setMethods) {
             if (setMethods.size() == 1 || indexesFit(ctx, idMethod)) {
-                TypeConstant[] atypeReturns = idMethod.getRawReturns();
-                if (atypeReturns.length >= 1) {
-                    return idMethod.getRawReturns()[0];
+                List<TypeConstant> listReturns = idMethod.getReturns();
+                if (!listReturns.isEmpty()) {
+                    return listReturns.getFirst();
                 }
             }
         }
@@ -197,9 +197,9 @@ public class ArrayAccessExpression
             TypeInfo            infoTarget = typeTarget.ensureTypeInfo();
             Set<MethodConstant> setMethods = findPotentialOps(infoTarget, cIndexes);
             for (MethodConstant idMethod : setMethods) {
-                TypeConstant[] atypeReturns = idMethod.getRawReturns();
-                if (atypeReturns.length >= 1 && indexesFit(ctx, idMethod)) {
-                    fit = calcFit(ctx, atypeReturns[0], typeRequired);
+                List<TypeConstant> listReturns = idMethod.getReturns();
+                if (!listReturns.isEmpty() && indexesFit(ctx, idMethod)) {
+                    fit = calcFit(ctx, listReturns.getFirst(), typeRequired);
                     if (fit.isFit()) {
                         return fit;
                     }
@@ -482,8 +482,8 @@ public class ArrayAccessExpression
                     m_fSlice = fSlice = true;
                 }
 
-                aIndexTypes = idGet.getRawParams();
-                typeResult  = idGet.getRawReturns()[0].resolveAutoNarrowing(pool, true, typeArray, null);
+                aIndexTypes = idGet.getParams().toArray(TypeConstant[]::new);
+                typeResult  = idGet.getReturns().getFirst().resolveAutoNarrowing(pool, true, typeArray, null);
                 m_idGet     = idGet;
             }
         }
@@ -669,13 +669,12 @@ public class ArrayAccessExpression
 
         if (m_idGet == null) {
             throw notImplemented();
-        } else {
-            ExprAST[] astArgs = new ExprAST[cIndexes];
-            for (int i = 0; i < cIndexes; i++) {
-                astArgs[i] = indexes.get(i).getExprAST(ctx);
-            }
-            return new InvokeExprAST(m_idGet, getTypes(), expr.getExprAST(ctx), astArgs, false);
         }
+        ExprAST[] astArgs = new ExprAST[cIndexes];
+        for (int i = 0; i < cIndexes; i++) {
+            astArgs[i] = indexes.get(i).getExprAST(ctx);
+        }
+        return new InvokeExprAST(m_idGet, getTypes(), expr.getExprAST(ctx), astArgs, false);
     }
 
 
@@ -720,14 +719,15 @@ public class ArrayAccessExpression
                 sig = sig.resolveAutoNarrowing(pool(), typeTarget, null);
             }
 
-            if (!fTuple && typeReturn != null && (sig.getRawReturns().length < 1
-                    || !isAssignable(ctx, sig.getRawReturns()[0], typeReturn))) {
+            List<TypeConstant> listReturns = sig.getReturns();
+            if (!fTuple && typeReturn != null && (listReturns.isEmpty()
+                    || !isAssignable(ctx, listReturns.getFirst(), typeReturn))) {
                 continue;
             }
 
             // verify that there are enough parameters to receive the arguments
-            TypeConstant[] atypeParams = sig.getRawParams();
-            int            cParams     = atypeParams.length;
+            List<TypeConstant> listParams = sig.getParams();
+            int                cParams    = listParams.size();
             if (cParams < cArgs) {
                 continue;
             }
@@ -741,7 +741,7 @@ public class ArrayAccessExpression
 
             // verify the args each have a matching parameter
             for (int i = 0; i < cArgs; ++i) {
-                TypeConstant typeParam = atypeParams[i];
+                TypeConstant typeParam = listParams.get(i);
                 TypeConstant typeArg   = atypeArgs[i];
                 if (typeArg == null || !isAssignable(ctx, typeArg, typeParam)) {
                     Expression exprArg = aexprArgs[i];
@@ -843,22 +843,22 @@ public class ArrayAccessExpression
         MethodConstant idBest = null;
         NextOp: for (MethodConstant idOp : setMethods) {
             if (cParams > 0) {
-                TypeConstant[] atypeOpParams = idOp.getRawParams();
-                int            cOpParams     = atypeOpParams.length;
+                List<TypeConstant> listOpParams = idOp.getParams();
+                int                cOpParams    = listOpParams.size();
                 if (cParams != cOpParams) {
                     continue;
                 }
 
                 for (int i = 0; i < cParams; ++i) {
-                    if (atypeParams[i] != null && !isAssignable(ctx, atypeParams[i], atypeOpParams[i])) {
+                    if (atypeParams[i] != null && !isAssignable(ctx, atypeParams[i], listOpParams.get(i))) {
                         continue NextOp;
                     }
                 }
             }
 
             if (typeReturn != null) {
-                TypeConstant[] atypeOpReturns = idOp.getRawReturns();
-                if (atypeOpReturns.length == 0 || isAssignable(ctx, atypeOpReturns[0], typeReturn)) {
+                List<TypeConstant> listOpReturns = idOp.getReturns();
+                if (listOpReturns.isEmpty() || isAssignable(ctx, listOpReturns.getFirst(), typeReturn)) {
                     continue;
                 }
             }
@@ -899,12 +899,12 @@ public class ArrayAccessExpression
      *         {@link #indexes}, and returns a value
      */
     private boolean indexesFit(Context ctx, MethodConstant method) {
-        if (method.getRawReturns().length > 0) {
-            TypeConstant[] atypes = method.getRawParams();
-            int            cTypes = atypes.length;
+        if (!method.getReturns().isEmpty()) {
+            List<TypeConstant> listParams = method.getParams();
+            int                cTypes     = listParams.size();
             if (cTypes == indexes.size()) {
                 for (int i = 0; i < cTypes; ++i) {
-                    if (!indexes.get(i).testFit(ctx, atypes[i], false, null).isFit()) {
+                    if (!indexes.get(i).testFit(ctx, listParams.get(i), false, null).isFit()) {
                         return false;
                     }
                 }
@@ -1180,8 +1180,9 @@ public class ArrayAccessExpression
             if (typeArray != null) {
                 MethodConstant id = findOpMethod(ctx, typeArray, "getElement", "[]", aexprIndexes,
                         null, ErrorListener.BLACKHOLE);
-                if (id != null && id.getRawReturns().length >= 1) {
-                    typeIndex = id.getRawReturns()[0];
+                List<TypeConstant> listReturns = id == null ? List.of() : id.getReturns();
+                if (!listReturns.isEmpty()) {
+                    typeIndex = listReturns.getFirst();
                     if (!pool.typeObject().isA(typeIndex)) {
                         return typeIndex;
                     }
@@ -1198,7 +1199,7 @@ public class ArrayAccessExpression
 
         Set<MethodInfo> setInfos = typeIndex.ensureTypeInfo().getAutoMethodInfos();
         for (MethodInfo info : setInfos) {
-            typeIndex = info.getSignature().getRawReturns()[0];
+            typeIndex = info.getSignature().getReturns().getFirst();
             if (exprArray.testFit(ctx,
                     pool.ensureParameterizedTypeConstant(pool.typeIndexed(), typeIndex), false, null).isFit()) {
                 return typeIndex;

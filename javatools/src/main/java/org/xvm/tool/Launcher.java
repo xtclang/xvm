@@ -304,6 +304,7 @@ public abstract class Launcher<T extends LauncherOptions>
             return e.getExitCode();
         } catch (Throwable e) {
             console.log(ERROR, e, "Unexpected exception or error: {}", e.getMessage());
+            e.printStackTrace(System.err);
             return 1;
         }
     }

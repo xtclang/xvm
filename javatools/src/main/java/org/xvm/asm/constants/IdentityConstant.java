@@ -40,6 +40,25 @@ public abstract class IdentityConstant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    /**
+     * Transfers this IdentityConstant to a different pool.
+     *
+     * @param pool  the target ConstantPool
+     *
+     * @return the equivalent IdentityConstant in the target pool
+     */
+    @Override
+    public IdentityConstant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+        throw new UnsupportedOperationException(
+            getClass().getSimpleName() + " must override transferTo(ConstantPool)");
+    }
+
+
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     /**

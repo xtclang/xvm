@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.List;
 import java.util.Set;
 
 import java.util.function.Consumer;
@@ -98,12 +99,12 @@ public class TypeParameterConstant
             return getConstantPool().typeObject();
         }
 
-        int            nReg        = getRegister();
-        TypeConstant[] atypeParams = constMethod.getRawParams();
+        int                nReg       = getRegister();
+        List<TypeConstant> listParams = constMethod.getParams();
 
-        assert atypeParams.length > nReg;
+        assert listParams.size() > nReg;
 
-        typeConstraint = atypeParams[nReg];
+        typeConstraint = listParams.get(nReg);
         if (typeConstraint.isGenericType()) {
             return m_typeConstraint = typeConstraint;
         }

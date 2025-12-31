@@ -558,7 +558,9 @@ public class MethodBody {
             SignatureConstant sigActual     = getIdentity().getSignature().
                                                     resolveGenericTypes(ts.pool(), typeCanonical);
 
-            m_jmd = jmd = JitMethodDesc.of(sigActual.getRawParams(), sigActual.getRawReturns(),
+            m_jmd = jmd = JitMethodDesc.of(
+                                sigActual.getParams().toArray(TypeConstant[]::new),
+                                sigActual.getReturns().toArray(TypeConstant[]::new),
                                 isCtorOrValidator(), typeContainer.ensureClassDesc(ts),
                                 method.getRequiredParamCount(), ts);
             m_typeJmdContainer = typeContainer;

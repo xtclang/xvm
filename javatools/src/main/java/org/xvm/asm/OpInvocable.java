@@ -242,11 +242,11 @@ public abstract class OpInvocable extends Op {
             SignatureConstant sig    = idMethod.getSignature();
             String            sName  = sig.getName();
 
-            if ("get".equals(sName) && sig.getRawReturns()[0].isA(idProp.getType())) {
+            if ("get".equals(sName) && sig.getReturns().getFirst().isA(idProp.getType())) {
                 return idProp;
             }
 
-            if ("set".equals(sName) && sig.getRawParams()[0].isA(idProp.getType())) {
+            if ("set".equals(sName) && sig.getParams().getFirst().isA(idProp.getType())) {
                 return idProp;
             }
         }

@@ -16,6 +16,16 @@ import org.xvm.compiler.Token;
  */
 public abstract class ComponentStatement
         extends Statement {
+    // ----- Copyable ------------------------------------------------------------------------------
+
+    @Override
+    public ComponentStatement copy() {
+        ComponentStatement copy = (ComponentStatement) super.copy();
+        copy.component = this.component;
+        return copy;
+    }
+
+
     // ----- constructors --------------------------------------------------------------------------
 
     protected ComponentStatement(long lStartPos, long lEndPos) {

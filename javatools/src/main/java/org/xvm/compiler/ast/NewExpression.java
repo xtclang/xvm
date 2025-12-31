@@ -707,7 +707,7 @@ public class NewExpression
             args = listArgs;
         }
 
-        if (validateExpressions(ctx, listArgs, idConstruct.getRawParams(), errs) == null) {
+        if (validateExpressions(ctx, listArgs, idConstruct.getParams(), errs) == null) {
             return null;
         }
 

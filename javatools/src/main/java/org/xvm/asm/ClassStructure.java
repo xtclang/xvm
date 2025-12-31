@@ -3180,14 +3180,14 @@ public class ClassStructure
             fnThis.markTransient();
 
             // 3) resolve the identity
-            MethodConstant idMethod    = fnThis.getIdentityConstant();
-            TypeConstant[] atypeParams = idMethod.getRawParams();
+            MethodConstant       idMethod   = fnThis.getIdentityConstant();
+            List<TypeConstant>   listParams = idMethod.getParams();
 
             TypeParameterConstant constParam = pool.ensureRegisterConstant(idMethod, 0, "CompileType");
             TypeConstant          typeFormal = constParam.getType();
 
-            for (int i = 1, c = atypeParams.length; i < c; i++) {
-                ((UnresolvedTypeConstant) atypeParams[i]).resolve(typeFormal);
+            for (int i = 1, c = listParams.size(); i < c; i++) {
+                ((UnresolvedTypeConstant) listParams.get(i)).resolve(typeFormal);
             }
 
             // 4) get rid of the unresolved constants
@@ -3476,20 +3476,20 @@ public class ClassStructure
 
         MethodStructure method = findMethod(sig);
         if (method == null) {
-            ConstantPool   pool        = getConstantPool();
-            TypeConstant[] atypeParam  = sig.getRawParams();
-            TypeConstant[] atypeReturn = sig.getRawReturns();
-            int            cParams     = atypeParam.length;
-            int            cReturns    = atypeReturn.length;
+            ConstantPool       pool        = getConstantPool();
+            List<TypeConstant> listParams  = sig.getParams();
+            List<TypeConstant> listReturns = sig.getReturns();
+            int                cParams     = listParams.size();
+            int                cReturns    = listReturns.size();
 
             Parameter[] aParam = new Parameter[cParams];
             for (int i = 0; i < cParams; i++) {
-                aParam[i] = new Parameter(pool, atypeParam[i], "p"+i, null, false, i, false);
+                aParam[i] = new Parameter(pool, listParams.get(i), "p"+i, null, false, i, false);
             }
 
             Parameter[] aReturn = new Parameter[cReturns];
             for (int i = 0; i < cReturns; i++) {
-                aReturn[i] = new Parameter(pool, atypeReturn[i], null, null, true, i, false);
+                aReturn[i] = new Parameter(pool, listReturns.get(i), null, null, true, i, false);
             }
             method = createMethod(/*function*/ false, Access.PUBLIC, null, aReturn,
                             sig.getName(), aParam, /*hasCode*/ false, /*usesSuper*/ false);

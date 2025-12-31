@@ -1501,7 +1501,7 @@ public class NameExpression
         lambda.configureLambda(aparamParam, 0, aparamReturn);
         lambda.setStatic(true);
         lambda.getIdentityConstant().setSignature(
-                pool.ensureSignatureConstant("->", atypeParam, atypeReturn));
+                pool.ensureSignatureConstant("->", Arrays.asList(atypeParam), Arrays.asList(atypeReturn)));
 
         Code     code      = lambda.createCode();
         Register regTarget = new Register(atypeParam[0], null, 0);
@@ -1627,8 +1627,7 @@ public class NameExpression
         lambda.configureLambda(aparamParam, 0, aparamReturn);
         lambda.setStatic(true);
         lambda.getIdentityConstant().setSignature(
-                pool.ensureSignatureConstant("->",
-                    new TypeConstant[]{typeParam}, new TypeConstant[]{typeReturn}));
+                pool.ensureSignatureConstant("->", List.of(typeParam), List.of(typeReturn)));
 
         Code     code      = lambda.createCode();
         Register regTarget = new Register(typeParam, null, 0);
@@ -2750,7 +2749,7 @@ public class NameExpression
                         typeFn = idMethod.getBjarneLambdaType();
                         if (!fDraft) {
                             int cReturns = typeDesired == null
-                                        ? idMethod.getRawReturns().length
+                                        ? idMethod.getReturns().size()
                                         : pool.extractFunctionReturns(typeDesired).length;
                             m_idBjarnLambda =
                                 createBjarneLambda(ctx.getThisClass(), idMethod, cReturns);

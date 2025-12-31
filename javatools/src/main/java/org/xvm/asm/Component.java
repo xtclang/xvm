@@ -19,6 +19,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.StringJoiner;
 
 import java.util.function.Consumer;
 
@@ -3154,81 +3155,44 @@ public abstract class Component
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder();
-
-            switch (m_composition) {
-            case Annotation:
-                sb.append('@');
-                break;
-
-            case Equal:
-                sb.append(m_composition)
-                  .append(' ');
-                break;
-
-            default:
-                sb.append(m_composition.toString().toLowerCase())
-                  .append(' ');
-                break;
-            }
+            String prefix = switch (m_composition) {
+                case Annotation -> "@";
+                case Equal      -> m_composition + " ";
+                default         -> m_composition.toString().toLowerCase() + " ";
+            };
 
             if (m_composition == Composition.Incorporates && m_mapParams != null) {
-                TypeConstant constMixin = m_typeContrib;
-                sb.append("conditional ")
-                  .append(constMixin.getDefiningConstant())
-                  .append('<');
-
-                boolean fFirst = true;
-                for (TypeConstant constParam : constMixin.getParamTypesArray()) {
-                    if (fFirst) {
-                        fFirst = false;
-                    } else {
-                        sb.append(", ");
-                    }
-
-                    sb.append(constParam.getValueString());
-
-                    // extract the type name from the type param
+                StringJoiner joiner = new StringJoiner(", ", "<", ">");
+                for (TypeConstant constParam : m_typeContrib.getParamTypesArray()) {
+                    String paramStr = constParam.getValueString();
                     if (constParam.isSingleDefiningConstant()
                             && constParam.getDefiningConstant() instanceof PropertyConstant idProp) {
-                        StringConstant constName       = idProp.getNameConstant();
-                        TypeConstant   constConstraint = m_mapParams.get(constName);
-                        if (constConstraint != null) {
-                            sb.append(" extends ")
-                              .append(constConstraint.getValueString());
+                        TypeConstant constraint = m_mapParams.get(idProp.getNameConstant());
+                        if (constraint != null) {
+                            paramStr += " extends " + constraint.getValueString();
                         }
                     }
+                    joiner.add(paramStr);
                 }
+                return prefix + "conditional " + m_typeContrib.getDefiningConstant() + joiner;
+            }
 
-                sb.append('>');
-            } else {
-                if (m_typeContrib != null) {
-                    sb.append(m_typeContrib.resolveTypedefs().getDescription());
-                }
+            StringBuilder sb = new StringBuilder(prefix);
+            if (m_typeContrib != null) {
+                sb.append(m_typeContrib.resolveTypedefs().getDescription());
+            }
 
-                if (m_composition == Composition.Annotation && m_annotation != null) {
-                    Constant[] aconstArgs = m_annotation.getParams();
-                    if (aconstArgs.length > 0) {
-                        sb.append('(');
-
-                        boolean fFirst = true;
-                        for (Constant constParam : aconstArgs) {
-                            if (fFirst) {
-                                fFirst = false;
-                            } else {
-                                sb.append(", ");
-                            }
-
-                            sb.append(constParam.getValueString());
-                        }
-
-                        sb.append(')');
+            if (m_composition == Composition.Annotation && m_annotation != null) {
+                Constant[] params = m_annotation.getParams();
+                if (params.length > 0) {
+                    StringJoiner joiner = new StringJoiner(", ", "(", ")");
+                    for (Constant param : params) {
+                        joiner.add(param.getValueString());
                     }
-                } else if (m_composition == Composition.Delegates) {
-                    sb.append('(')
-                      .append(m_constProp.getDescription())
-                      .append(')');
+                    sb.append(joiner);
                 }
+            } else if (m_composition == Composition.Delegates) {
+                sb.append('(').append(m_constProp.getDescription()).append(')');
             }
 
             return sb.toString();
@@ -3495,6 +3459,7 @@ public abstract class Component
     private boolean m_fModified;
 
     /**
+     * TODO: We can't have this. Pass a level argument or somethibng
      * Recursion check for {@link #resolveContributedName}. Not thread-safe.
      */
     private transient Boolean m_FVisited;

@@ -55,6 +55,18 @@ public class ThisClassConstant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    @Override
+    public ThisClassConstant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+
+        return pool.ensureThisClassConstant(m_constClass.transferTo(pool));
+    }
+
+
     // ----- Pseudo-constant methods --------------------------------------------------------------
 
     @Override

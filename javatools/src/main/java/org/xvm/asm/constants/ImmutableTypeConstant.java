@@ -70,6 +70,18 @@ public class ImmutableTypeConstant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    @Override
+    public ImmutableTypeConstant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+
+        return pool.ensureImmutableTypeConstant(m_constType.transferTo(pool));
+    }
+
+
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override

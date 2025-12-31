@@ -3,6 +3,7 @@ package org.xvm.runtime.template.collections;
 
 import java.util.Arrays;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
@@ -86,8 +87,8 @@ public class xTuple
 
         assert constTuple.getFormat() == Constant.Format.Tuple;
 
-        Constant[] aconst = constTuple.getValue();
-        int c = aconst.length;
+        List<Constant> listConst = constTuple.getValues();
+        int            c         = listConst.size();
 
         if (c == 0) {
             return frame.pushStack(H_VOID);
@@ -101,7 +102,7 @@ public class xTuple
         ObjectHandle[] ahValue   = new ObjectHandle[c];
         boolean        fDeferred = false;
         for (int i = 0; i < c; i++) {
-            ObjectHandle hValue = frame.getConstHandle(aconst[i]);
+            ObjectHandle hValue = frame.getConstHandle(listConst.get(i));
 
             if (Op.isDeferred(hValue)) {
                 fDeferred = true;

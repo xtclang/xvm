@@ -1,11 +1,16 @@
 package org.xvm.asm.constants;
 
 
-import java.util.function.Consumer;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.function.Consumer;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -29,19 +34,16 @@ public class ArrayConstant
      * @param pool       the ConstantPool that will contain this Constant
      * @param fmt        the format of the constant
      * @param constType  the data type of the constant
-     * @param aconstVal  the value of the constant
+     * @param values     the values of the constant (never null, use empty list)
      */
-    public ArrayConstant(ConstantPool pool, Format fmt, TypeConstant constType, Constant... aconstVal) {
+    public ArrayConstant(ConstantPool pool, Format fmt, TypeConstant constType,
+                         @NotNull List<Constant> values) {
         super(pool);
         validateFormatAndType(fmt, constType);
 
-        if (aconstVal == null) {
-            throw new IllegalArgumentException("value required");
-        }
-
         f_fmt       = fmt;
         m_constType = constType;
-        m_aconstVal = aconstVal;
+        m_listVal   = List.copyOf(Objects.requireNonNull(values, "values required"));
     }
 
     /**
@@ -75,13 +77,13 @@ public class ArrayConstant
 
         m_constType = (TypeConstant) pool.getConstant(m_iType);
 
-        int[]      aiConst = m_aiVal;
-        int        cConsts = aiConst.length;
-        Constant[] aconst  = new Constant[cConsts];
+        int[]          aiConst = m_aiVal;
+        int            cConsts = aiConst.length;
+        List<Constant> list    = new ArrayList<>(cConsts);
         for (int i = 0; i < cConsts; ++i) {
-            aconst[i] = pool.getConstant(aiConst[i]);
+            list.add(pool.getConstant(aiConst[i]));
         }
-        m_aconstVal = aconst;
+        m_listVal = List.copyOf(list);
     }
 
     private void validateFormatAndType(Format fmt, TypeConstant constType) {
@@ -114,18 +116,18 @@ public class ArrayConstant
             if (typeOut.getDefiningConstant().equals(pool.clzArray())) {
                 TypeConstant typeEl = typeOut.getParamType(0);
 
-                Constant[] aconstIn  = getValue();
-                int        cValues   = aconstIn.length;
-                Constant[] aconstOut = new Constant[cValues];
+                List<Constant> listIn  = getValues();
+                int            cValues = listIn.size();
+                List<Constant> listOut = new ArrayList<>(cValues);
 
-                for (int i = 0; i < cValues; i++) {
-                    Constant constEl = aconstIn[i].convertTo(typeEl);
+                for (Constant constIn : listIn) {
+                    Constant constEl = constIn.convertTo(typeEl);
                     if (constEl == null) {
                         return null;
                     }
-                    aconstOut[i] = constEl;
+                    listOut.add(constEl);
                 }
-                return pool.ensureArrayConstant(typeOut, aconstOut);
+                return pool.ensureArrayConstant(typeOut, listOut);
             }
         }
         return null;
@@ -141,11 +143,29 @@ public class ArrayConstant
 
     /**
      * {@inheritDoc}
-     * @return  the constant's contents as an array of constants
+     * @return  the constant's contents as an immutable list of constants
      */
     @Override
-    public Constant[] getValue() {
-        return m_aconstVal;
+    public List<Constant> getValue() {
+        return m_listVal;
+    }
+
+    /**
+     * @return the constant's contents as an immutable list of constants
+     */
+    public List<Constant> getValues() {
+        return m_listVal;
+    }
+
+    /**
+     * Get the values as an array for backward compatibility.
+     *
+     * @return the constant's contents as an array (creates a new array each call)
+     * @deprecated Use {@link #getValues()} instead for immutability.
+     */
+    @Deprecated
+    public Constant[] getValueArray() {
+        return m_listVal.toArray(Constant[]::new);
     }
 
 
@@ -171,7 +191,7 @@ public class ArrayConstant
             return true;
         }
 
-        for (Constant constant : m_aconstVal) {
+        for (Constant constant : m_listVal) {
             if (constant.containsUnresolved()) {
                 return true;
             }
@@ -183,7 +203,7 @@ public class ArrayConstant
     @Override
     public void forEachUnderlying(Consumer<Constant> visitor) {
         visitor.accept(m_constType);
-        for (Constant constant : m_aconstVal) {
+        for (Constant constant : m_listVal) {
             visitor.accept(constant);
         }
     }
@@ -194,41 +214,45 @@ public class ArrayConstant
         TypeConstant typeNew = typeOld.resolveTypedefs();
 
         // check values
-        Constant[] aconstOld = m_aconstVal;
-        Constant[] aconstNew = null;
-        for (int i = 0, c = aconstOld.length; i < c; ++i) {
-            Constant constOld = aconstOld[i];
+        List<Constant> listOld     = m_listVal;
+        List<Constant> listNew     = null;
+        boolean        fAnyChanged = false;
+
+        for (int i = 0, c = listOld.size(); i < c; ++i) {
+            Constant constOld = listOld.get(i);
             Constant constNew = constOld.resolveTypedefs();
             if (constNew != constOld) {
-                if (aconstNew == null) {
-                    aconstNew = aconstOld.clone();
+                if (!fAnyChanged) {
+                    listNew     = new ArrayList<>(listOld);
+                    fAnyChanged = true;
                 }
-                aconstNew[i] = constNew;
+                listNew.set(i, constNew);
             }
         }
 
-        return typeNew == typeOld && aconstNew == null
+        return typeNew == typeOld && !fAnyChanged
                 ? this
                 : (ArrayConstant) getConstantPool().register(
-                        new ArrayConstant(getConstantPool(), f_fmt, typeNew, aconstNew));
+                        new ArrayConstant(getConstantPool(), f_fmt, typeNew,
+                                fAnyChanged ? listNew : listOld));
     }
 
     @Override
     protected int compareDetails(Constant that) {
-        if (!(that instanceof ArrayConstant)) {
+        if (!(that instanceof ArrayConstant thatArray)) {
             return -1;
         }
-        int nResult = this.m_constType.compareTo(((ArrayConstant) that).m_constType);
+        int nResult = this.m_constType.compareTo(thatArray.m_constType);
         if (nResult != 0) {
             return nResult;
         }
 
-        Constant[] aconstThis = this.m_aconstVal;
-        Constant[] aconstThat = ((ArrayConstant) that).m_aconstVal;
-        int cThis = aconstThis.length;
-        int cThat = aconstThat.length;
+        List<Constant> listThis = this.m_listVal;
+        List<Constant> listThat = thatArray.m_listVal;
+        int cThis = listThis.size();
+        int cThat = listThat.size();
         for (int i = 0, c = Math.min(cThis, cThat); i < c; ++i) {
-            nResult = aconstThis[i].compareTo(aconstThat[i]);
+            nResult = listThis.get(i).compareTo(listThat.get(i));
             if (nResult != 0) {
                 return nResult;
             }
@@ -238,8 +262,8 @@ public class ArrayConstant
 
     @Override
     public String getValueString() {
-        Constant[] aconst  = m_aconstVal;
-        int        cConsts = aconst.length;
+        List<Constant> list    = m_listVal;
+        int            cConsts = list.size();
 
         String sStart;
         String sEnd;
@@ -268,7 +292,7 @@ public class ArrayConstant
                 sb.append(", ");
             }
 
-            sb.append(aconst[i]);
+            sb.append(list.get(i));
         }
 
         sb.append(sEnd);
@@ -281,7 +305,13 @@ public class ArrayConstant
     @Override
     protected void registerConstants(ConstantPool pool) {
         m_constType = pool.register(m_constType);
-        m_aconstVal = registerConstants(pool, m_aconstVal);
+
+        List<Constant> listOld = m_listVal;
+        List<Constant> listNew = new ArrayList<>(listOld.size());
+        for (Constant constant : listOld) {
+            listNew.add(pool.register(constant));
+        }
+        m_listVal = List.copyOf(listNew);
     }
 
     @Override
@@ -289,16 +319,16 @@ public class ArrayConstant
             throws IOException {
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, m_constType.getPosition());
-        Constant[] aconst  = m_aconstVal;
-        writePackedLong(out, aconst.length);
-        for (Constant constant : aconst) {
+        List<Constant> list = m_listVal;
+        writePackedLong(out, list.size());
+        for (Constant constant : list) {
             writePackedLong(out, constant.getPosition());
         }
     }
 
     @Override
     public String getDescription() {
-        return "array-length=" + m_aconstVal.length;
+        return "array-length=" + m_listVal.size();
     }
 
 
@@ -307,7 +337,7 @@ public class ArrayConstant
     @Override
     public int computeHashCode() {
         return Hash.of(m_constType,
-               Hash.of(m_aconstVal));
+               Hash.of(m_listVal));
     }
 
 
@@ -335,8 +365,9 @@ public class ArrayConstant
     private TypeConstant m_constType;
 
     /**
-     * The values in the array, tuple, or set.
+     * The values in the array, tuple, or set (immutable list).
      */
-    private Constant[] m_aconstVal;
+    private List<Constant> m_listVal;
 }
+
 

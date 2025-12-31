@@ -5,6 +5,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.Arrays;
 import java.util.List;
 
 import java.util.function.Consumer;
@@ -56,7 +57,8 @@ public class MethodConstant
      */
     public MethodConstant(ConstantPool pool, MultiMethodConstant constParent,
                           TypeConstant[] params, TypeConstant[] returns) {
-        this(pool, constParent, pool.ensureSignatureConstant(constParent.getName(), params, returns), 0);
+        this(pool, constParent, pool.ensureSignatureConstant(constParent.getName(),
+                Arrays.asList(params), Arrays.asList(returns)), 0);
     }
 
     /**
@@ -177,22 +179,8 @@ public class MethodConstant
     /**
      * @return the method's parameter types
      */
-    public TypeConstant[] getRawParams() {
-        return getSignature().getRawParams();
-    }
-
-    /**
-     * @return the method's parameter types
-     */
     public List<TypeConstant> getParams() {
         return getSignature().getParams();
-    }
-
-    /**
-     * @return the method's return types
-     */
-    public TypeConstant[] getRawReturns() {
-        return getSignature().getRawReturns();
     }
 
     /**
@@ -206,7 +194,7 @@ public class MethodConstant
      * @return the method's return types as a Tuple
      */
     public TypeConstant getReturnsAsTuple() {
-        return getConstantPool().ensureTupleType(getRawReturns());
+        return getConstantPool().ensureTupleType(getReturns());
     }
 
     /**
@@ -303,7 +291,7 @@ public class MethodConstant
                     SignatureConstant sigJit = getSignature();
                     if (!prefix.isEmpty()) {
                         sigJit  = sigJit.getConstantPool().ensureSignatureConstant(
-                            prefix + sigJit.getName(), sigJit.getRawParams(), sigJit.getRawReturns());
+                            prefix + sigJit.getName(), sigJit.getParams(), sigJit.getReturns());
                     }
                     sJitName = sigJit.ensureJitMethodName(ts);
                 } else {
@@ -406,13 +394,12 @@ public class MethodConstant
               .append(']');
         } else {
             sb.append('(');
-            TypeConstant[] aParamType = getRawParams();
-            for (int i = 0, c = aParamType.length; i < c; i++) {
-                TypeConstant typeParam = aParamType[i];
+            List<TypeConstant> listParams = getParams();
+            for (int i = 0, c = listParams.size(); i < c; i++) {
                 if (i > 0) {
                     sb.append(", ");
                 }
-                sb.append(typeParam.getValueString());
+                sb.append(listParams.get(i).getValueString());
             }
             sb.append(')');
         }

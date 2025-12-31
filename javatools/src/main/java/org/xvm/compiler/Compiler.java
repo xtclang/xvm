@@ -445,10 +445,14 @@ public class Compiler {
         }
 
         /**
-         * @return the transition stage related to this stage
+         * @return the transition stage related to this stage; for Initial, returns Initial since
+         *         there is no prior transition stage
          */
         public Stage getTransitionStage() {
             ensureValid();
+            if (this == Initial) {
+                return Initial;
+            }
             return isTransition()
                     ? this
                     : prev();
@@ -492,11 +496,15 @@ public class Compiler {
         }
 
         /**
-         * @return the first "target-able" Stage that comes before this Stage
+         * @return the first "target-able" Stage that comes before this Stage, or Initial if there
+         *         is no previous targetable stage
          */
         public Stage prevTarget() {
+            if (this == Initial) {
+                return Initial;
+            }
             Stage that = prev();
-            while (!that.isTargetable()) {
+            while (!that.isTargetable() && that != Initial) {
                 that = that.prev();
             }
             return that;

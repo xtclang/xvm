@@ -2,6 +2,7 @@ package org.xvm.runtime.template.collections;
 
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.ClassStructure;
@@ -196,14 +197,14 @@ public class xArray
             default    -> throw new IllegalStateException();
         };
 
-        TypeConstant typeArray = constArray.getType();
-        Constant[]   aconst    = constArray.getValue();
-        int          cSize     = aconst.length;
+        TypeConstant   typeArray = constArray.getType();
+        List<Constant> listVal   = constArray.getValues();
+        int            cSize     = listVal.size();
 
         ObjectHandle[] ahValue   = new ObjectHandle[cSize];
         boolean        fDeferred = false;
         for (int i = 0; i < cSize; i++) {
-            ObjectHandle hValue = frame.getConstHandle(aconst[i]);
+            ObjectHandle hValue = frame.getConstHandle(listVal.get(i));
 
             if (Op.isDeferred(hValue)) {
                 fDeferred = true;

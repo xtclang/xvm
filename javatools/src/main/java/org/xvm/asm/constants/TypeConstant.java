@@ -139,6 +139,27 @@ public abstract class TypeConstant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    /**
+     * Transfers this TypeConstant to a different pool.
+     * <p/>
+     * Subclasses should override this method to provide proper transfer implementation.
+     *
+     * @param pool  the target ConstantPool
+     *
+     * @return the equivalent TypeConstant in the target pool
+     */
+    @Override
+    public TypeConstant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+        throw new UnsupportedOperationException(
+            getClass().getSimpleName() + " must override transferTo(ConstantPool)");
+    }
+
+
     // ----- GenericTypeResolver -------------------------------------------------------------------
 
     @Override
@@ -343,7 +364,7 @@ public abstract class TypeConstant
         ConstantPool pool = getConstantPool();
 
         // replace the AccessType with the underlying type
-        Function<TypeConstant, TypeConstant> transformer = new Function<>() {
+        var transformer = new Function<TypeConstant, TypeConstant>() {
             public TypeConstant apply(TypeConstant type) {
                 return type instanceof TerminalTypeConstant ||
                        type instanceof VirtualChildTypeConstant
@@ -5295,7 +5316,7 @@ public abstract class TypeConstant
         ConstantPool poolLeft = typeLeft.getConstantPool();
         if (pool != poolLeft && !typeLeft.isShared(pool)) {
             return this.isShared(poolLeft)
-                ? ((TypeConstant) poolLeft.register(this)).calculateRelation(typeLeft)
+                ? poolLeft.register(this).calculateRelation(typeLeft)
                 : Relation.INCOMPATIBLE;
         }
 
@@ -7137,6 +7158,19 @@ public abstract class TypeConstant
             typeConstant.registerConstants(pool);
         }
         return atype;
+    }
+
+    /**
+     * Helper method for registering a list of TypeConstants.
+     */
+    protected static List<TypeConstant> registerTypeConstants(ConstantPool pool, List<TypeConstant> listTypes) {
+        List<TypeConstant> listResult = new ArrayList<>(listTypes.size());
+        for (TypeConstant type : listTypes) {
+            TypeConstant registered = pool.register(type);
+            registered.registerConstants(pool);
+            listResult.add(registered);
+        }
+        return List.copyOf(listResult);
     }
 
     /**

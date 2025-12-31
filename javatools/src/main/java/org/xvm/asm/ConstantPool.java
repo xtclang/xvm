@@ -28,6 +28,7 @@ import java.util.Vector;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.jetbrains.annotations.NotNull;
 import org.xvm.asm.Constant.Format;
 
 import org.xvm.asm.constants.*;
@@ -82,6 +83,19 @@ public class ConstantPool
      */
     public Constant getConstant(int i) {
         return i == -1 ? null : m_listConst.get(i);
+    }
+
+    /**
+     * Obtain the Constant at the specified index, cast to the expected type.
+     *
+     * @param i      the index, for example obtained during the disassembly process (-1 returns null)
+     * @param clazz  the expected type of the constant
+     * @param <T>    the Constant type
+     *
+     * @return the Constant at that index, cast to the expected type
+     */
+    public <T extends Constant> T getConstant(int i, Class<T> clazz) {
+        return clazz.cast(i == -1 ? null : m_listConst.get(i));
     }
 
     /**
@@ -699,32 +713,66 @@ public class ConstantPool
      * Create an array constant value.
      *
      * @param constType  the type of the array
-     * @param aconst     an array of constant values
+     * @param values     the constant values (not null)
      *
      * @return a constant representing the Array value
      */
-    public ArrayConstant ensureArrayConstant(TypeConstant constType, Constant[] aconst) {
-        checkElementsNonNull(aconst);
-
-        return register(new ArrayConstant(this, Format.Array, constType, aconst.clone()));
+    public ArrayConstant ensureArrayConstant(TypeConstant constType, @NotNull List<Constant> values) {
+        return register(new ArrayConstant(this, Format.Array, constType, values));
     }
 
     /**
      * Create a set constant value.
      *
      * @param constType  the type of the set
-     * @param aconst     an array of constant values
+     * @param values     the constant values (not null)
      *
      * @return a constant representing the Set value
      */
-    public ArrayConstant ensureSetConstant(TypeConstant constType, Constant[] aconst) {
-        checkElementsNonNull(aconst);
-
-        return register(new ArrayConstant(this, Format.Set, constType, aconst.clone()));
+    public ArrayConstant ensureSetConstant(TypeConstant constType, @NotNull List<Constant> values) {
+        return register(new ArrayConstant(this, Format.Set, constType, values));
     }
 
     /**
      * Create a tuple constant value.
+     *
+     * @param constType  the type of the tuple
+     * @param values     the constant values (not null)
+     *
+     * @return a constant representing the tuple value
+     */
+    public ArrayConstant ensureTupleConstant(TypeConstant constType, @NotNull List<Constant> values) {
+        return register(new ArrayConstant(this, Format.Tuple, constType, values));
+    }
+
+    // --- Backward-compatible array-accepting overloads (convert to List internally) ---
+
+    /**
+     * Create an array constant value from an array.
+     *
+     * @param constType  the type of the array
+     * @param aconst     an array of constant values
+     *
+     * @return a constant representing the Array value
+     */
+    public ArrayConstant ensureArrayConstant(TypeConstant constType, Constant... aconst) {
+        return ensureArrayConstant(constType, aconst == null ? List.of() : Arrays.asList(aconst));
+    }
+
+    /**
+     * Create a set constant value from an array.
+     *
+     * @param constType  the type of the set
+     * @param aconst     an array of constant values
+     *
+     * @return a constant representing the Set value
+     */
+    public ArrayConstant ensureSetConstant(TypeConstant constType, Constant... aconst) {
+        return ensureSetConstant(constType, aconst == null ? List.of() : Arrays.asList(aconst));
+    }
+
+    /**
+     * Create a tuple constant value from an array.
      *
      * @param constType  the type of the tuple
      * @param aconst     an array of constant values
@@ -732,9 +780,7 @@ public class ConstantPool
      * @return a constant representing the tuple value
      */
     public ArrayConstant ensureTupleConstant(TypeConstant constType, Constant... aconst) {
-        checkElementsNonNull(aconst);
-
-        return register(new ArrayConstant(this, Format.Tuple, constType, aconst.clone()));
+        return ensureTupleConstant(constType, aconst == null ? List.of() : Arrays.asList(aconst));
     }
 
     /**
@@ -1204,7 +1250,7 @@ public class ConstantPool
      *
      * @return the Component for the specified name, or null if the name is not implicitly imported
      */
-    public Component getImplicitlyImportedComponent(String sName) {
+    public Component getImplicitlyImportedComponent(@NotNull String sName) {
         var constId = getImplicitlyImportedIdentity(sName);
         if (constId == null) {
             return null;
@@ -1318,16 +1364,15 @@ public class ConstantPool
     /**
      * Obtain a constant that represents a method signature.
      *
-     * @param sName          the method name
-     * @param aconstParams   the parameter types
-     * @param aconstReturns  the return value types
+     * @param sName         the method name
+     * @param listParams    the parameter types
+     * @param listReturns   the return value types
      *
      * @return the SignatureConstant
      */
-    public SignatureConstant ensureSignatureConstant(String sName, TypeConstant[] aconstParams,
-            TypeConstant[] aconstReturns) {
-        return register(new SignatureConstant(this, sName, aconstParams,
-                aconstReturns));
+    public SignatureConstant ensureSignatureConstant(String sName, List<TypeConstant> listParams,
+            List<TypeConstant> listReturns) {
+        return register(new SignatureConstant(this, sName, listParams, listReturns));
     }
 
     /**
@@ -1404,13 +1449,29 @@ public class ConstantPool
      *
      * @return a type constant with the specified type parameter types
      */
+    /**
+     * @deprecated use {@link #ensureParameterizedTypeConstant(TypeConstant, List)} instead
+     */
+    @Deprecated
     public TypeConstant ensureParameterizedTypeConstant(TypeConstant constType, TypeConstant... constTypes) {
+        return ensureParameterizedTypeConstant(constType, Arrays.asList(constTypes));
+    }
+
+    /**
+     * Obtain a TypeConstant for a parameterized type.
+     *
+     * @param constType   the parameterized type
+     * @param listTypes   the types of the parameters of the parameterized type
+     *
+     * @return a type constant with the specified type parameter types
+     */
+    public TypeConstant ensureParameterizedTypeConstant(TypeConstant constType, List<TypeConstant> listTypes) {
         if (constType.isParamsSpecified()) {
-            TypeConstant[] atypeParam = constType.getParamTypesArray();
-            int c = atypeParam.length;
-            CheckTypes: if (c == constTypes.length) {
+            List<TypeConstant> listParam = constType.getParamTypes();
+            int c = listParam.size();
+            CheckTypes: if (c == listTypes.size()) {
                 for (int i = 0; i < c; ++i) {
-                    if (!constTypes[i].equals(atypeParam[i])) {
+                    if (!listTypes.get(i).equals(listParam.get(i))) {
                         break CheckTypes;
                     }
                 }
@@ -1423,9 +1484,14 @@ public class ConstantPool
             throw new IllegalArgumentException("type already has parameters specified");
         }
 
-        checkElementsNonNull(constTypes);
+        for (TypeConstant type : listTypes) {
+            if (type == null) {
+                throw new IllegalArgumentException("null type parameter");
+            }
+        }
 
-        return register(new ParameterizedTypeConstant(this, constType, constTypes));
+        // TODO: ParameterizedTypeConstant should be converted to use List internally
+        return register(new ParameterizedTypeConstant(this, constType, listTypes.toArray(TypeConstant[]::new)));
     }
 
     /**
@@ -1496,6 +1562,17 @@ public class ConstantPool
     }
 
     /**
+     * Obtain a TypeConstant for a parameterized Tuple.
+     *
+     * @param listParams  the parameter types of the Tuple
+     *
+     * @return the Tuple type
+     */
+    public TypeConstant ensureTupleType(List<TypeConstant> listParams) {
+        return ensureParameterizedTypeConstant(typeTuple(), listParams);
+    }
+
+    /**
      * Given the specified type, obtain a TypeConstant that represents the explicitly immutable form
      * of that type.
      *
@@ -1503,15 +1580,15 @@ public class ConstantPool
      *
      * @return the explicitly immutable form of the passed TypeConstant
      */
-    public TypeConstant ensureImmutableTypeConstant(TypeConstant constType) {
+    public ImmutableTypeConstant ensureImmutableTypeConstant(TypeConstant constType) {
         if (constType.isImmutabilitySpecified()) {
             throw new IllegalArgumentException("type already has the immutability specified");
         }
 
-        TypeConstant constant = (TypeConstant) ensureLocatorLookup(Format.ImmutableType).get(constType);
+        ImmutableTypeConstant constant = (ImmutableTypeConstant) ensureLocatorLookup(Format.ImmutableType).get(constType);
         return constant == null
                 ? register(new ImmutableTypeConstant(this, constType))
-                :  constant;
+                : constant;
     }
 
     /**
@@ -1864,11 +1941,11 @@ public class ConstantPool
      *
      * @return the TerminalTypeConstant corresponding to the specified identity
      */
-    public TypeConstant ensureTerminalTypeConstant(Constant constId) {
+    public TerminalTypeConstant ensureTerminalTypeConstant(Constant constId) {
         assert constId != null && !(constId instanceof TypeConstant);
 
         // the TerminalClassConstant's locator is the underlying constId
-        TypeConstant constType = (TerminalTypeConstant)
+        TerminalTypeConstant constType = (TerminalTypeConstant)
                 ensureLocatorLookup(Format.TerminalType).get(constId);
         if (constType == null) {
             constType = register(new TerminalTypeConstant(this, constId));
@@ -2182,7 +2259,7 @@ public class ConstantPool
     public SignatureConstant sigEquals()         {SignatureConstant c = m_sigEquals;         if (c == null) {m_sigEquals         = c = getSignature("Object",    "equals",    3)                        ;} return c;}
     public SignatureConstant sigCompare()        {SignatureConstant c = m_sigCompare;        if (c == null) {m_sigCompare        = c = getSignature("Orderable", "compare",   3)                        ;} return c;}
     public SignatureConstant sigClose()          {SignatureConstant c = m_sigClose;          if (c == null) {m_sigClose          = c = getSignature("Closeable", "close",     1)                        ;} return c;}
-    public SignatureConstant sigValidator()      {SignatureConstant c = m_sigValidator;      if (c == null) {m_sigValidator      = c = ensureSignatureConstant("assert", NO_TYPES, NO_TYPES)            ;} return c;}
+    public SignatureConstant sigValidator()      {SignatureConstant c = m_sigValidator;      if (c == null) {m_sigValidator      = c = ensureSignatureConstant("assert", List.of(), List.of())         ;} return c;}
 
 
     // ---- internal class helpers -----------------------------------------------------------------
@@ -3212,29 +3289,46 @@ public class ConstantPool
     /**
      * Build a TypeConstant for a function.
      *
-     * @param atypeParams   the parameter types of the function
-     * @param atypeReturns  the return types of the function
+     * @param listParams   the parameter types of the function
+     * @param listReturns  the return types of the function
      *
      * @return the function type
      */
-    public TypeConstant buildFunctionType(TypeConstant[] atypeParams, TypeConstant... atypeReturns) {
+    public TypeConstant buildFunctionType(List<TypeConstant> listParams, List<TypeConstant> listReturns) {
         return ensureParameterizedTypeConstant(
-                typeFunction(), ensureTupleType(atypeParams), ensureTupleType(atypeReturns));
+                typeFunction(), ensureTupleType(listParams), ensureTupleType(listReturns));
+    }
+
+    /**
+     * @deprecated use {@link #buildFunctionType(List, List)} instead
+     */
+    @Deprecated
+    public TypeConstant buildFunctionType(TypeConstant[] atypeParams, TypeConstant... atypeReturns) {
+        return buildFunctionType(Arrays.asList(atypeParams), Arrays.asList(atypeReturns));
     }
 
     /**
      * Build a TypeConstant for a Method.
      *
-     * @param typeTarget    the targete type
-     * @param atypeParams   the parameter types of the method
-     * @param atypeReturns  the return types of the method
+     * @param typeTarget   the target type
+     * @param listParams   the parameter types of the method
+     * @param listReturns  the return types of the method
      *
      * @return the method type
      */
     public TypeConstant buildMethodType(TypeConstant typeTarget,
-                                        TypeConstant[] atypeParams, TypeConstant... atypeReturns) {
+                                        List<TypeConstant> listParams, List<TypeConstant> listReturns) {
         return ensureParameterizedTypeConstant(
-                typeMethod(), typeTarget, ensureTupleType(atypeParams), ensureTupleType(atypeReturns));
+                typeMethod(), typeTarget, ensureTupleType(listParams), ensureTupleType(listReturns));
+    }
+
+    /**
+     * @deprecated use {@link #buildMethodType(TypeConstant, List, List)} instead
+     */
+    @Deprecated
+    public TypeConstant buildMethodType(TypeConstant typeTarget,
+                                        TypeConstant[] atypeParams, TypeConstant... atypeReturns) {
+        return buildMethodType(typeTarget, Arrays.asList(atypeParams), Arrays.asList(atypeReturns));
     }
 
     /**

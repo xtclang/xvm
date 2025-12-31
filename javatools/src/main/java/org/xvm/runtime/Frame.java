@@ -2555,8 +2555,8 @@ public class Frame
                 : ((FunctionHandle) frame.f_ahVar[nTargetReg]).getMethodId();
 
             return frame.resolveType(iAuxId >= 0
-                ? idMethod.getRawReturns()[iAuxId]
-                : pool.ensureTupleType(idMethod.getSignature().getRawReturns()));
+                ? idMethod.getReturns().get(iAuxId)
+                : pool.ensureTupleType(idMethod.getSignature().getReturns()));
         }
     };
 

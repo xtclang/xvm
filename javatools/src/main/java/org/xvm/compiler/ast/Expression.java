@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.jetbrains.annotations.NotNull;
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
@@ -537,9 +538,9 @@ public abstract class Expression
             assert !fit.isFit();
             assert constVal == null;
 
-            m_fit    = TypeFit.NoFit;
-            m_oType  = typeRequired == null ? pool.typeObject() : typeRequired;
-            m_oConst = null;
+            m_fit        = TypeFit.NoFit;
+            m_listTypes  = List.of(typeRequired == null ? pool.typeObject() : typeRequired);
+            m_listConsts = null;
 
             return null;
         }
@@ -598,9 +599,9 @@ public abstract class Expression
             //       and NewExpression#generateDynamicParameters()
         }
 
-        m_fit    = fit;
-        m_oType  = typeActual;
-        m_oConst = constVal;
+        m_fit        = fit;
+        m_listTypes  = List.of(typeActual);
+        m_listConsts = constVal == null ? null : List.of(constVal);
 
         if (!fit.isFit()) {
             return null;
@@ -755,7 +756,9 @@ public abstract class Expression
         // a null actual type indicates a fairly dramatic (i.e. halt required) validation failure
         if (atypeActual == null) {
             assert !fit.isFit() && aconstVal == null && (errs.hasSeriousErrors() || errs.isSilent());
-            m_fit = TypeFit.NoFit;
+            m_fit        = TypeFit.NoFit;
+            m_listTypes  = null;
+            m_listConsts = null;
             return null;
         }
 
@@ -851,9 +854,9 @@ public abstract class Expression
             }
         }
 
-        m_fit    = fit;
-        m_oType  = fit.isFit() || atypeRequired == null ? atypeActual : null;
-        m_oConst = aconstVal;
+        m_fit        = fit;
+        m_listTypes  = fit.isFit() || atypeRequired == null ? List.of(atypeActual) : null;
+        m_listConsts = aconstVal == null ? null : List.of(aconstVal);
 
         if (!fit.isFit()) {
             return null;
@@ -950,9 +953,7 @@ public abstract class Expression
     public int getValueCount() {
         checkValidated();
 
-        return m_oType instanceof TypeConstant[] aTypes
-                ? aTypes.length
-                : 1;
+        return m_listTypes.size();
     }
 
     /**
@@ -1009,12 +1010,7 @@ public abstract class Expression
     public TypeConstant getType() {
         checkValidated();
 
-        if (m_oType instanceof TypeConstant type) {
-            return type;
-        }
-
-        TypeConstant[] atype = (TypeConstant[]) m_oType;
-        return atype.length == 0 ? null : atype[0];
+        return m_listTypes.isEmpty() ? null : m_listTypes.getFirst();
     }
 
     /**
@@ -1026,15 +1022,11 @@ public abstract class Expression
      * @return a String that best describes the type of this expression
      */
     public String getTypeString(Context ctx) {
-        if (m_oType instanceof TypeConstant type) {
-            return type.getValueString();
-        }
-
-        if (m_oType instanceof TypeConstant[] aTypes) {
-            return switch (aTypes.length) {
+        if (m_listTypes != null) {
+            return switch (m_listTypes.size()) {
                 case 0   -> "void";
-                case 1  -> aTypes[0].getValueString();
-                default -> aTypes[0].getValueString() + " (+" + (aTypes.length - 1) + " more)";
+                case 1   -> m_listTypes.getFirst().getValueString();
+                default  -> m_listTypes.getFirst().getValueString() + " (+" + (m_listTypes.size() - 1) + " more)";
             };
         }
 
@@ -1056,9 +1048,7 @@ public abstract class Expression
      *         indicates a void type
      */
     public TypeConstant[] getTypes() {
-        return m_oType instanceof TypeConstant[] aTypes
-                ? aTypes
-                : new TypeConstant[] {getType()};
+        return m_listTypes.toArray(TypeConstant[]::new);
     }
 
     /**
@@ -1193,7 +1183,7 @@ public abstract class Expression
      * @return true iff the expression results in a compile-time (ConstantPool) constant value
      */
     public boolean isConstant() {
-        return m_oConst != null;
+        return m_listConsts != null;
     }
 
     /**
@@ -1283,11 +1273,7 @@ public abstract class Expression
             return null;
         }
 
-        if (m_oConst instanceof Constant constant) {
-            return constant;
-        }
-
-        return ((Constant[]) m_oConst)[0];
+        return m_listConsts.isEmpty() ? null : m_listConsts.getFirst();
     }
 
     /**
@@ -1305,9 +1291,7 @@ public abstract class Expression
             return null;
         }
 
-        return m_oConst instanceof Constant[] aConst
-                ? aConst
-                : new Constant[] {toConstant()};
+        return m_listConsts.toArray(Constant[]::new);
     }
 
     /**
@@ -1495,7 +1479,7 @@ public abstract class Expression
             Assignable[] aLValNew = new Assignable[cRVals];
             Arrays.fill(aLValNew, new Assignable());
             System.arraycopy(aLVal, 0, aLValNew, 0, cLVals);
-            aLVal  = aLValNew;
+            aLVal = aLValNew;
             cLVals = cRVals;
         }
 
@@ -1567,6 +1551,7 @@ public abstract class Expression
      */
     public void generateConditionalJump(
             Context ctx, Code code, Label label, boolean fWhenTrue, ErrorListener errs) {
+        // TODO assert with side effect since typeBoolean lazy loads. Don¨t do that.
         assert !isVoid() && getType().isA(pool().typeBoolean());
 
         if (isConstant()) {
@@ -1578,10 +1563,8 @@ public abstract class Expression
 
         // this is just a generic implementation; sub-classes should override this to simplify the
         // generated code (e.g. by not having to always generate a separate boolean value)
-        Argument arg = generateArgument(ctx, code, true, errs);
-        code.add(fWhenTrue
-                ? new JumpTrue(arg, label)
-                : new JumpFalse(arg, label));
+        var arg = generateArgument(ctx, code, true, errs);
+        code.add(fWhenTrue ? new JumpTrue(arg, label) : new JumpFalse(arg, label));
     }
 
     /**
@@ -2197,7 +2180,7 @@ public abstract class Expression
                 case BlackHole -> generateBlackHole(null);
                 case LocalVar  -> getRegister();
                 case LocalProp -> getProperty();
-                default        -> throw new IllegalStateException();
+                default        -> throw new IllegalStateException("getLocalArgument");
             };
         }
 
@@ -2206,7 +2189,7 @@ public abstract class Expression
          */
         public Argument getTarget() {
             if (m_form != AssignForm.LocalProp && m_form != AssignForm.TargetProp) {
-                throw new IllegalStateException();
+                throw new IllegalStateException("getTarget");
             }
             return m_arg;
         }
@@ -2217,7 +2200,7 @@ public abstract class Expression
         public PropertyConstant getProperty() {
             if (m_form != AssignForm.LocalProp && m_form != AssignForm.TargetProp &&
                 m_form != AssignForm.IndexedProp && m_form != AssignForm.IndexedNProp) {
-                throw new IllegalStateException();
+                throw new IllegalStateException("getProperty");
             }
             return m_prop;
         }
@@ -2227,7 +2210,7 @@ public abstract class Expression
          */
         public Argument getArray() {
             if (m_form != AssignForm.Indexed && m_form != AssignForm.IndexedN) {
-                throw new IllegalStateException();
+                throw new IllegalStateException("getArray");
             }
             return m_arg;
         }
@@ -2240,7 +2223,7 @@ public abstract class Expression
                 return (Argument) m_oIndex;
             }
 
-            throw new IllegalStateException();
+            throw new IllegalStateException("getIndex");
         }
 
         /**
@@ -2446,7 +2429,7 @@ public abstract class Expression
                 throw notImplemented();
 
             default:
-                throw new IllegalStateException();
+                throw new IllegalStateException("Expression.assign");
             }
         }
 
@@ -3011,6 +2994,7 @@ public abstract class Expression
          *
          * @return true iff the other fit is considered to be a worse fit than this fit
          */
+        @SuppressWarnings("unused")
         public boolean worseThan(TypeFit that) {
             return this.ordinal() < that.ordinal();
         }
@@ -3100,16 +3084,18 @@ public abstract class Expression
     private TypeFit m_fit;
 
     /**
-     * After validation, contains the type(s) of the expression, stored as either a
-     * {@code TypeConstant} or a {@code TypeConstant[]}.
+     * After validation, contains the type(s) of the expression. A single-valued expression
+     * has a list of size 1; a multi-valued expression has a list of size > 1; a void expression
+     * has an empty list. Null indicates the expression has not been validated.
      */
-    private Object m_oType;
+    private List<TypeConstant> m_listTypes;
 
     /**
      * After validation, contains the constant value(s) of the expression, iff the expression is a
-     * constant, stored as either a {@code Constant} or a {@code Constant[]}.
+     * constant. Null indicates the expression is not constant; otherwise the list has the same
+     * size as {@link #m_listTypes}.
      */
-    private Object m_oConst;
+    private List<Constant> m_listConsts;
 
     /**
      * Various temporary flags.

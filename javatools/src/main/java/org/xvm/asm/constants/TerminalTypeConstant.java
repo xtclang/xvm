@@ -94,6 +94,18 @@ public class TerminalTypeConstant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    @Override
+    public TerminalTypeConstant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+
+        return pool.ensureTerminalTypeConstant(m_constId.transferTo(pool));
+    }
+
+
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override

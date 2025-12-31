@@ -38,6 +38,7 @@ import org.xvm.asm.op.P_Var;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Constants;
+import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 
 import org.xvm.util.ListMap;
@@ -414,21 +415,20 @@ public class PropertyDeclarationStatement
                     // clear the "has initial value" setting
                     prop.setInitialValue(null);
                 } else {
-                    // create a copy of ourselves
-                    PropertyDeclarationStatement stmtClone = copy();
+                    // create a copy of ourselves for test compilation - the copy() method now
+                    // preserves parent, stage, and component so this is fully functional
+                    PropertyDeclarationStatement stmtCopy   = copy();
+                    MethodStructure              methodInit = stmtCopy.createInitializer();
+                    MethodDeclarationStatement stmtInit   = stmtCopy.createAstNodeFor(methodInit);
 
-                    // create an initializer function
-                    MethodStructure            methodInit = stmtClone.createInitializer();
-                    MethodDeclarationStatement stmtInit   = stmtClone.createAstNodeFor(methodInit);
-
-                    // we're going to compile the (cloned) initializer now, so that we can determine
+                    // we're going to compile the copied initializer now, so that we can determine
                     // if it could be discarded and replaced with a constant
                     // IMPORTANT NOTE: this goes forward BEYOND validation, so the caller's context
                     // must be ready to resolve the corresponding names (e.g. see NewExpression)
                     ErrorListener errsTmp = errs.branch(this);
                     if (!(new StageMgr(stmtInit, Stage.Emitted, errsTmp).fastForward(10)) ||
                             errsTmp.hasSeriousErrors()) {
-                        stmtClone.discardInitializer(methodInit);
+                        stmtCopy.discardInitializer(methodInit);
                         stmtInit.discard(true);
                         if (mgr.isLastAttempt()) {
                             errsTmp.merge();
@@ -452,7 +452,7 @@ public class PropertyDeclarationStatement
                     if (fConstant) {
                         Constant constValue = exprTest.toConstant();
                         if (constValue.containsUnresolved()) {
-                            stmtClone.discardInitializer(methodInit);
+                            stmtCopy.discardInitializer(methodInit);
                             stmtInit.discard(true);
                             if (mgr.isLastAttempt()) {
                                 log(errs, Severity.ERROR, Compiler.CIRCULAR_INITIALIZER,
@@ -493,8 +493,8 @@ public class PropertyDeclarationStatement
                         prop.setInitialValue(null);
                     }
 
-                    // at this point, we are done with the "test clone"
-                    stmtClone.discardInitializer(methodInit);
+                    // at this point, we are done with the test copy
+                    stmtCopy.discardInitializer(methodInit);
                     stmtInit.discard(true);
 
                     if (fMethodRequired) {
@@ -791,12 +791,21 @@ public class PropertyDeclarationStatement
      * @return a newly created property initializer method
      */
     private MethodStructure createInitializer() {
-        PropertyStructure prop   = (PropertyStructure) getComponent();
-        MethodStructure   method = prop.createMethod(isStatic(), Access.PRIVATE,
+        return createInitializer((PropertyStructure) getComponent(), getSource());
+    }
+
+    /**
+     * @param prop    the property structure to create the initializer for
+     * @param source  the source to associate with the method
+     *
+     * @return a newly created property initializer method
+     */
+    private MethodStructure createInitializer(PropertyStructure prop, Source source) {
+        MethodStructure method = prop.createMethod(isStatic(), Access.PRIVATE,
                 org.xvm.asm.Annotation.NO_ANNOTATIONS,
                 new Parameter[] {new Parameter(pool(), prop.getType(), null, null, true, 0, false)},
                 "=", Parameter.NO_PARAMS, true, false);
-        donateSource(method);
+        donateSource(method, source);
         return method;
     }
 

@@ -2,6 +2,7 @@ package org.xvm.compiler;
 
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -126,7 +127,7 @@ public class EvalCompiler {
 
             lambda.configureLambda(aparamParams, 0, aparamRets);
             lambda.getIdentityConstant().setSignature(
-                    pool.ensureSignatureConstant("->", atypeParams, atypeRets));
+                    pool.ensureSignatureConstant("->", Arrays.asList(atypeParams), Arrays.asList(atypeRets)));
 
             // the lambda signature may have changed; re-generate the "bast" parameters
             lambda.setAst(lambda.getAst(), astMethod.f_ctx.collectParameters());
