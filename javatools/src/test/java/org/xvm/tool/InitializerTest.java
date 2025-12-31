@@ -1,17 +1,15 @@
 package org.xvm.tool;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.PrintStream;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import java.util.Comparator;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -29,17 +27,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class InitializerTest {
 
-    private Path tempDir;
+    @TempDir
+    Path tempDir;
+
     private PrintStream originalOut;
     private PrintStream originalErr;
     private ByteArrayOutputStream outContent;
     private ByteArrayOutputStream errContent;
 
     @BeforeEach
-    public void setUp() throws Exception {
-        // Create a temp directory for test projects
-        tempDir = Files.createTempDirectory("xtc-init-test");
-
+    public void setUp() {
         // Save and redirect output streams
         originalOut = System.out;
         originalErr = System.err;
@@ -50,18 +47,11 @@ public class InitializerTest {
     }
 
     @AfterEach
-    public void tearDown() throws Exception {
+    public void tearDown() {
         // Restore output streams
         System.setOut(originalOut);
         System.setErr(originalErr);
-
-        // Clean up temp directory
-        if (tempDir != null && Files.exists(tempDir)) {
-            Files.walk(tempDir)
-                .sorted(Comparator.reverseOrder())
-                .map(Path::toFile)
-                .forEach(File::delete);
-        }
+        // @TempDir handles cleanup automatically
     }
 
     /**
