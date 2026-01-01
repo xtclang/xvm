@@ -178,11 +178,13 @@ public abstract class Launcher<T extends LauncherOptions>
      * @throws LauncherException if an unrecoverable exception occurs
      */
     public static int launch(String[] asArg) {
+        final var console = new Console() {};
+
         if (asArg.length < 1) {
-            throw new IllegalArgumentException("Command name is missing. Available commands: " + commandNames());
+            showHelp(console);
+            return 0;
         }
 
-        final var console = new Console() {};
         return launch(
                 stripDebugPrefix(asArg[0]),
                 Arrays.copyOfRange(asArg, 1, asArg.length),
@@ -220,6 +222,12 @@ public abstract class Launcher<T extends LauncherOptions>
                     final var handler = COMMANDS.get(cmd);
                     if (handler != null) {
                         yield handler.launch(args, console, errListener);
+                    }
+                    // If the command looks like an option (e.g., "-L"), no command was provided;
+                    // show help without an error message
+                    if (cmd.startsWith("-")) {
+                        showHelp(console);
+                        yield 0;
                     }
                     console.log(ERROR, "Unknown command: {}. Available commands: {}",
                             quoted(cmd), commandNames());
