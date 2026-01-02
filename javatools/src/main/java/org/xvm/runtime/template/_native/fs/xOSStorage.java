@@ -139,6 +139,15 @@ public class xOSStorage
                     return frame.assignValue(iReturn, xBoolean.FALSE);
                 }
 
+                Path parent = path.getParent();
+                if (!Files.exists(parent)) {
+                    return frame.raiseException(xException.ioException(frame,
+                            "Cannot create file, parent directory does not exist: " + path));
+                }
+                if (!Files.isDirectory(parent)) {
+                    return frame.raiseException(xException.ioException(frame,
+                            "Cannot create file, parent is not a directory: " + path));
+                }
                 return frame.assignValue(iReturn,
                     xBoolean.makeHandle(path.toFile().createNewFile()));
             } catch (IOException|InvalidPathException e) {
