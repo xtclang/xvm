@@ -112,12 +112,11 @@ public class TestRunner extends Runner {
         Path wd = new File("").getAbsoluteFile().toPath();
         options.getOutputFile().ifPresent(out ->
                 injections.put(XUNIT_TEST_BUILD_DIR,
-                        List.of(wd.relativize(out.toPath()).toString())));
+                        List.of(wd.relativize(out.getAbsoluteFile().toPath()).toString())));
 
         options.optionValue(LauncherOptions.OPTION_XUNIT_OUT).map(File::new).ifPresent(dir -> {
                     injections.put(XUNIT_TEST_OUTPUT_DIR,
-                            List.of(wd.relativize(dir.toPath()).toString()));
-
+                            List.of(wd.relativize(dir.getAbsoluteFile().toPath()).toString()));
                 });
         connector.start(injections);
         return connector;

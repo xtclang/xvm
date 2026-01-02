@@ -5,6 +5,12 @@
  *
  *  xtc test -L build/xtc/main/lib -o  build/xtc/main/lib src/main/x/xunit-demo.x
  *
+ * Any XUnit test output will be in the manualTests/xunit directory. This can be changed using the
+ * --xunit-out command line option, for example to put output into the manualTests/build/xunit
+ * directory
+ *
+ *  xtc test -L build/xtc/main/lib -o build/xtc/main/lib --xunit-out build/xunit src/main/x/xunit-demo.x
+ *
  */
 module xunit_demo {
 
@@ -35,10 +41,6 @@ module xunit_demo {
         console.print(">>>> In Module BeforeAll");
         @Inject ExecutionContext context;
         console.print($">>>> In Module BeforeAll {context.testClass} {context.testMethod}");
-        @Inject("buildDir") Directory buildDir;
-        @Inject("testOutputRoot") Directory testOutputRoot;
-        @Inject("testOutput") Directory testOutput;
-        console.print($">>>> In Module BeforeAll buildDir={buildDir}/{buildDir.exists} testOutputRoot={testOutputRoot}/{testOutputRoot.exists} testOutput={testOutput}/{testOutput.exists}");
     }
 
     /**
@@ -60,10 +62,6 @@ module xunit_demo {
         console.print($"  >>>> In Module BeforeEach static");
         @Inject ExecutionContext context;
         console.print($"  >>>> In Module BeforeEach static {context.testClass} {context.testMethod}");
-        @Inject("buildDir") Directory buildDir;
-        @Inject("testOutputRoot") Directory testOutputRoot;
-        @Inject("testOutput") Directory testOutput;
-        console.print($">>>> In Module BeforeEach static buildDir={buildDir}/{buildDir.exists} testOutputRoot={testOutputRoot}/{testOutputRoot.exists} testOutput={testOutput}/{testOutput.exists}");
     }
 
     /**
@@ -227,13 +225,12 @@ module xunit_demo {
 
    package tests {
 
-    class Bar {
-        @Test
-        void testBar() {
-            @Inject ExecutionContext context;
-            console.print($"       >>>> In Bar testBar {context.testClass} {context.testMethod}");
+        class Bar {
+            @Test
+            void testBar() {
+                @Inject ExecutionContext context;
+                console.print($"       >>>> In Bar testBar {context.testClass} {context.testMethod}");
+            }
         }
-    }
-
    }
 }
