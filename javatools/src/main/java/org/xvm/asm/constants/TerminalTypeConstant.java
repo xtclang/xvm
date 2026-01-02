@@ -960,12 +960,10 @@ public class TerminalTypeConstant
              *
              *   Element extends (immutable Object | Freezable)
              *   Element e = ...;
-             *   if (!e.is(immutable Object))
-             *      {
+             *   if (!e.is(immutable Object)) {
              *      // the type inference implication gets resolved to: e.is(Freezable)
-             *  }
-             *   if (!e.is(immutable Element))
-             *      {
+             *   }
+             *   if (!e.is(immutable Element)) {
              *      // logically, the type inference implication here should be the same
              *      // as above, but the logic in UnionTypeConstant.andNot()
              *      // doesn't have enough knowledge to figure that out.
