@@ -1659,6 +1659,7 @@ public class BuildContext {
 
     @Override
     public String toString() {
-        return className + " " + methodStruct.getIdentityConstant().getValueString();
+        return className + " " + methodStruct.getIdentityConstant().getValueString() +
+            ":" + lineNumber;
     }
 }
