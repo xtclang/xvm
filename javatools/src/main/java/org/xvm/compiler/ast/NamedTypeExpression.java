@@ -51,6 +51,23 @@ import static org.xvm.compiler.Lexer.isValidQualifiedModule;
 public class NamedTypeExpression
         extends TypeExpression
         implements NameResolver.NameResolving {
+    // ----- Copyable ------------------------------------------------------------------------------
+
+    @Override
+    public NamedTypeExpression copy() {
+        NamedTypeExpression copy = (NamedTypeExpression) super.copy();
+
+        // Preserve resolved state so the copy can be used for compilation.
+        // Only copy if it's actually resolved (not an UnresolvedNameConstant).
+        Constant constId = this.m_constId;
+        if (constId != null && !constId.containsUnresolved()) {
+            copy.m_constId = constId;
+        }
+
+        return copy;
+    }
+
+
     // ----- constructors --------------------------------------------------------------------------
 
     /**

@@ -141,7 +141,7 @@ public class CaseStatement
                 if (constVal instanceof MatchAnyConstant
                     || constVal instanceof ArrayConstant tup
                         && tup.getFormat() == Format.Tuple
-                        && Arrays.stream(tup.getValue()).allMatch(c -> c instanceof MatchAnyConstant)) {
+                        && tup.getValues().stream().allMatch(c -> c instanceof MatchAnyConstant)) {
                     aconstCase[++iCase] = null;
                 } else {
                     aconstCase[++iCase] = constVal;

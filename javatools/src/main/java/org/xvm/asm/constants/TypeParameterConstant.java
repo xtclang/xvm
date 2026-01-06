@@ -66,6 +66,21 @@ public class TypeParameterConstant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    @Override
+    public TypeParameterConstant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+
+        // Don't recursively transfer the parent MethodConstant as that creates a cycle
+        // (Method -> Signature -> TypeParameter -> Method). Instead, just use the parent as-is
+        // since it will be registered separately when needed.
+        return pool.register(new TypeParameterConstant(pool, getMethod(), getName(), f_iReg));
+    }
+
+
     // ----- accessors -----------------------------------------------------------------------------
 
     /**

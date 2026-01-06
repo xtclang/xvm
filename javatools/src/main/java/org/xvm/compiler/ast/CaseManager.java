@@ -603,11 +603,11 @@ public class CaseManager<CookieType> {
                                 }
                             }
                         } else if (m_afIsSwitch != 0 && constCase instanceof ArrayConstant constArray) {
-                            Constant[] aConstCase = constArray.getValue();
+                            List<Constant> listConstCase = constArray.getValues();
                             for (int i = 0, c = 64 - Long.numberOfLeadingZeros(m_afIsSwitch); i < c; i++) {
                                 if ((m_afIsSwitch & (1L << i)) != 0 &&
                                         m_listCond.get(i) instanceof Expression exprTest) {
-                                    Constant constCaseNext = aConstCase[i];
+                                    Constant constCaseNext = listConstCase.get(i);
                                     if (constCaseNext instanceof TypeConstant typeCase &&
                                             typeCase.isTypeOfType()) {
                                         typeCase = typeCase.getParamType(0);
@@ -677,12 +677,12 @@ public class CaseManager<CookieType> {
                 exprTest.narrowType(ctx, Branch.Always, typeCase);
             }
         } else if (constCase instanceof ArrayConstant constArray) {
-            Constant[] aConstCase = constArray.getValue();
+            List<Constant> listConstCase = constArray.getValues();
             for (int i = 0, c = 64 - Long.numberOfLeadingZeros(m_lTypeExpr); i < c; i++) {
                 long lPos = 1L << i;
                 if ((m_lTypeExpr & lPos) != 0L &&
                         m_listCond.get(i) instanceof NameExpression exprTest &&
-                        aConstCase[i] instanceof TypeConstant typeCase) {
+                        listConstCase.get(i) instanceof TypeConstant typeCase) {
                     assert typeCase.isTypeOfType();
 
                     if ((m_afIsSwitch & lPos) != 0L) {
@@ -901,11 +901,11 @@ public class CaseManager<CookieType> {
             assert cConds > 1;
             if (constThis.getFormat() == Format.Tuple &&
                 constThat.getFormat() == Format.Tuple) {
-                Constant[] aconstThis = ((ArrayConstant) constThis).getValue();
-                Constant[] aconstThat = ((ArrayConstant) constThat).getValue();
+                List<Constant> listConstThis = ((ArrayConstant) constThis).getValues();
+                List<Constant> listConstThat = ((ArrayConstant) constThat).getValues();
                 for (int i = 0; i < cConds; ++i) {
-                    if (!covers(aconstThis[i], (lRangeThis & (1L << i)) != 0,
-                                aconstThat[i], (lRangeThat & (1L << i)) != 0)) {
+                    if (!covers(listConstThis.get(i), (lRangeThis & (1L << i)) != 0,
+                                listConstThat.get(i), (lRangeThat & (1L << i)) != 0)) {
                         return false;
                     }
                 }
@@ -1084,7 +1084,7 @@ public class CaseManager<CookieType> {
                 continue;
             }
 
-            Constant[] aconstCase = ((ArrayConstant) constTuple).getValue();
+            Constant[] aconstCase = ((ArrayConstant) constTuple).getValueArray();
             assert aconstCase.length == cConds;
 
             processCondition(cube, 0, anPoint, cConds, aconstCase, aconstBase);

@@ -77,6 +77,18 @@ public class PropertyConstant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    @Override
+    public PropertyConstant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+
+        return pool.ensurePropertyConstant(getParentConstant().transferTo(pool), getName());
+    }
+
+
     // ----- FormalConstant methods ----------------------------------------------------------------
 
     @Override

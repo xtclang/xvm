@@ -34,6 +34,17 @@ public class ArrayConstant
      * @param pool       the ConstantPool that will contain this Constant
      * @param fmt        the format of the constant
      * @param constType  the data type of the constant
+     */
+    public ArrayConstant(ConstantPool pool, Format fmt, TypeConstant constType) {
+        this(pool, fmt, constType, List.of());
+    }
+
+    /**
+     * Construct a constant whose value is an array or tuple.
+     *
+     * @param pool       the ConstantPool that will contain this Constant
+     * @param fmt        the format of the constant
+     * @param constType  the data type of the constant
      * @param values     the values of the constant (never null, use empty list)
      */
     public ArrayConstant(ConstantPool pool, Format fmt, TypeConstant constType,

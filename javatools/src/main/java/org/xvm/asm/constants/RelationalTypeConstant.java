@@ -631,7 +631,6 @@ public abstract class RelationalTypeConstant
         throw new UnsupportedOperationException();
     }
 
-
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
@@ -665,13 +664,13 @@ public abstract class RelationalTypeConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
+        // TODO: We need to check all reassignments.
         m_constType1 = pool.register(m_constType1);
         m_constType2 = pool.register(m_constType2);
     }
 
     @Override
-    protected void assemble(DataOutput out)
-            throws IOException {
+    protected void assemble(DataOutput out) throws IOException {
         out.writeByte(getFormat().ordinal());
         writePackedLong(out, indexOf(m_constType1));
         writePackedLong(out, indexOf(m_constType2));
@@ -689,8 +688,7 @@ public abstract class RelationalTypeConstant
 
     @Override
     public int computeHashCode() {
-        return Hash.of(m_constType1,
-               Hash.of(m_constType2));
+        return Hash.of(m_constType1, Hash.of(m_constType2));
     }
 
 

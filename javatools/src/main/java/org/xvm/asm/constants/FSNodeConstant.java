@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import java.nio.file.attribute.FileTime;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
@@ -192,11 +193,11 @@ public class FSNodeConstant
     public FSNodeConstant[] getDirectoryContents() {
         assert m_fmt == Format.FSDir;
 
-        Constant[]       aConst  = ((ArrayConstant) m_constData).getValue();
-        int              cConsts = aConst.length;
-        FSNodeConstant[] aFSNode = new FSNodeConstant[cConsts];
+        List<Constant>   listConst = ((ArrayConstant) m_constData).getValues();
+        int              cConsts   = listConst.size();
+        FSNodeConstant[] aFSNode   = new FSNodeConstant[cConsts];
         for (int i = 0; i < cConsts; ++i) {
-            aFSNode[i] = (FSNodeConstant) aConst[i];
+            aFSNode[i] = (FSNodeConstant) listConst.get(i);
         }
         return aFSNode;
     }

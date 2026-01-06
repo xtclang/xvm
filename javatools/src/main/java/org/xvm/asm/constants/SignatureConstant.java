@@ -71,8 +71,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * A SignatureConstant can also be used to represent a property, but such a use is never serialized;
  * i.e. it is a transient use case.
  */
-public class SignatureConstant
-        extends PseudoConstant {
+public class SignatureConstant extends PseudoConstant {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -133,8 +132,7 @@ public class SignatureConstant
      *
      * @throws IOException  if an issue occurs reading the Constant value
      */
-    public SignatureConstant(ConstantPool pool, Format format, DataInput in)
-            throws IOException {
+    public SignatureConstant(ConstantPool pool, Format format, DataInput in) throws IOException {
         super(pool);
 
         m_iName     = readMagnitude(in);
@@ -555,7 +553,7 @@ public class SignatureConstant
      * @return the type of the function that corresponds to this SignatureConstant as a constructor
      */
     public TypeConstant asConstructorType(ConstantPool pool, TypeConstant typeTarget) {
-        assert getName().equals("construct") && m_listConstReturns.isEmpty();
+        assert "construct".equals(getName()) && m_listConstReturns.isEmpty();
         return pool.buildFunctionType(m_listConstParams, List.of(typeTarget));
     }
 

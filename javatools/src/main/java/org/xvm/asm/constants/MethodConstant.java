@@ -128,6 +128,20 @@ public class MethodConstant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    @Override
+    public MethodConstant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+
+        return pool.ensureMethodConstant(
+            getParentConstant().transferTo(pool),
+            getSignature().transferTo(pool));
+    }
+
+
     // ----- type-specific functionality -----------------------------------------------------------
 
     /**

@@ -32,12 +32,13 @@ import org.xvm.runtime.template.xOrdered;
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
+import java.util.List;
+
 
 /**
  * Native Method implementation.
  */
-public class xRTMethod
-        extends xRTSignature {
+public class xRTMethod extends xRTSignature {
     public static xRTMethod INSTANCE;
 
     public xRTMethod(Container container, ClassStructure structure, boolean fInstance) {
@@ -67,11 +68,10 @@ public class xRTMethod
 
         assert typeActual.isA(pool.typeMethod());
 
-        TypeConstant typeTarget = typeActual.getParamType(0);
-        TypeConstant typeP      = typeActual.getParamType(1);
-        TypeConstant typeR      = typeActual.getParamType(2);
-        TypeConstant typeMethod = pool.ensureParameterizedTypeConstant(
-                                        pool.typeMethod(), typeTarget, typeP, typeR);
+        var typeTarget = typeActual.getParamType(0);
+        var typeP      = typeActual.getParamType(1);
+        var typeR      = typeActual.getParamType(2);
+        var typeMethod = pool.ensureParameterizedTypeConstant(pool.typeMethod(), List.of(typeTarget, typeP, typeR));
         if (typeActual.isAnnotated()) {
             typeMethod = typeMethod.adoptAnnotations(pool, typeActual);
         }

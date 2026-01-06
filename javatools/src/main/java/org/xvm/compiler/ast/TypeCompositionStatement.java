@@ -3021,9 +3021,8 @@ public class TypeCompositionStatement
         if (body != null && (result = visitor.apply(body)) != null) {
             return result;
         }
-        if (enclosed != null && (result = visitor.apply(enclosed)) != null) {
-            return result;
-        }
+        // Note: enclosed is NOT visited here because it's already a child of body
+        // (it's added via ensureBody().addStatement(enclosed) in addEnclosed())
         return null;
     }
 
@@ -3068,9 +3067,9 @@ public class TypeCompositionStatement
             i += compositions.size();
         }
         StatementBlock newBody = body == null ? null : (StatementBlock) children.get(i++);
-        StatementBlock newEnclosed = enclosed == null ? null : (StatementBlock) children.get(i++);
+        // Note: enclosed is NOT extracted here because it's already a child of body
 
-        return new TypeCompositionStatement(
+        TypeCompositionStatement result = new TypeCompositionStatement(
             source,
             getStartPosition(),
             getEndPosition(),
@@ -3085,6 +3084,13 @@ public class TypeCompositionStatement
             newCompositions,
             newBody,
             doc);
+
+        // Set fields not accepted by the constructor
+        result.typeArgs = newTypeArgs;
+        result.args = newArgs;
+        result.m_fAnon = this.m_fAnon;
+        result.m_fVirtChild = this.m_fVirtChild;
+        return result;
     }
 
 

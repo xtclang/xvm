@@ -503,7 +503,8 @@ public abstract class Component
      * @return false iff all of the contributions have fully resolved types
      */
     public boolean containsUnresolvedContribution() {
-        return m_listContribs.stream().anyMatch(Contribution::containsUnresolved);
+        return m_listContribs != null
+                && m_listContribs.stream().anyMatch(Contribution::containsUnresolved);
     }
 
     /**
@@ -581,8 +582,7 @@ public abstract class Component
      * @param constClass      the mixin class type
      * @param mapConstraints  the type constraints that make the mixin conditional
      */
-    public Contribution addIncorporates(TypeConstant constClass,
-                                Map<String, TypeConstant> mapConstraints) {
+    public Contribution addIncorporates(TypeConstant constClass, Map<String, TypeConstant> mapConstraints) {
         ListMap<StringConstant, TypeConstant> map = null;
         if (mapConstraints != null) {
             ConstantPool pool = getConstantPool();

@@ -122,6 +122,24 @@ public class ParameterizedTypeConstant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    @Override
+    public ParameterizedTypeConstant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+
+        TypeConstant   typeBase     = m_constType.transferTo(pool);
+        TypeConstant[] atypeParams  = m_atypeParams;
+        TypeConstant[] atypeTransferred = new TypeConstant[atypeParams.length];
+        for (int i = 0; i < atypeParams.length; i++) {
+            atypeTransferred[i] = atypeParams[i].transferTo(pool);
+        }
+        return (ParameterizedTypeConstant) pool.ensureParameterizedTypeConstant(typeBase, atypeTransferred);
+    }
+
+
     // ----- TypeConstant methods ------------------------------------------------------------------
 
     @Override

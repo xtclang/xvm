@@ -566,7 +566,7 @@ public class RelOpExpression
             try {
                 Constant constResult = expr1New.toConstant().apply(operator.getId(), expr2New.toConstant());
                 aconstResult = fMulti
-                        ? ((ArrayConstant) constResult).getValue() // divrem result is in a tuple
+                        ? ((ArrayConstant) constResult).getValueArray() // divrem result is in a tuple
                         : new Constant[] {constResult};
             } catch (ArithmeticException e) {
                 log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, typeRequired, this);

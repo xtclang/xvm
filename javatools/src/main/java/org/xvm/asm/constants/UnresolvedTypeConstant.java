@@ -48,6 +48,24 @@ public class UnresolvedTypeConstant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    @Override
+    public TypeConstant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+
+        // if resolved, transfer the resolved type; otherwise, this shouldn't be called
+        TypeConstant typeResolved = m_type;
+        if (typeResolved != null) {
+            return typeResolved.transferTo(pool);
+        }
+
+        throw new IllegalStateException("Cannot transfer unresolved type: " + this);
+    }
+
+
     // ----- type-specific functionality -----------------------------------------------------------
 
     @Override

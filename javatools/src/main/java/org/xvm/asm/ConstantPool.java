@@ -1452,7 +1452,6 @@ public class ConstantPool
     /**
      * @deprecated use {@link #ensureParameterizedTypeConstant(TypeConstant, List)} instead
      */
-    @Deprecated
     public TypeConstant ensureParameterizedTypeConstant(TypeConstant constType, TypeConstant... constTypes) {
         return ensureParameterizedTypeConstant(constType, Arrays.asList(constTypes));
     }
@@ -1467,7 +1466,7 @@ public class ConstantPool
      */
     public TypeConstant ensureParameterizedTypeConstant(TypeConstant constType, List<TypeConstant> listTypes) {
         if (constType.isParamsSpecified()) {
-            List<TypeConstant> listParam = constType.getParamTypes();
+            var listParam = constType.getParamTypes();
             int c = listParam.size();
             CheckTypes: if (c == listTypes.size()) {
                 for (int i = 0; i < c; ++i) {

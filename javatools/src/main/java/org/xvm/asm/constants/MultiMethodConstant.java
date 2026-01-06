@@ -60,6 +60,18 @@ public class MultiMethodConstant
     }
 
 
+    // ----- PoolTransferable ----------------------------------------------------------------------
+
+    @Override
+    public MultiMethodConstant transferTo(ConstantPool pool) {
+        if (pool == getConstantPool()) {
+            return this;
+        }
+
+        return pool.ensureMultiMethodConstant(getParentConstant().transferTo(pool), getName());
+    }
+
+
     // ----- IdentityConstant methods --------------------------------------------------------------
 
     @Override

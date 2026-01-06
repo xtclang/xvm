@@ -57,6 +57,7 @@ public class PropertyDeclarationStatement
 
     @Override
     public PropertyDeclarationStatement copy() {
+        // initializer and assignment are included in forEachChild() and handled by withChildren()
         return (PropertyDeclarationStatement) super.copy();
     }
 
@@ -753,6 +754,14 @@ public class PropertyDeclarationStatement
         if (body != null && (result = visitor.apply(body)) != null) {
             return result;
         }
+        // These are @Derived fields created during registration, but they still need
+        // to be visited so their children get processed by StageMgr
+        if (initializer != null && (result = visitor.apply(initializer)) != null) {
+            return result;
+        }
+        if (assignment != null && (result = visitor.apply(assignment)) != null) {
+            return result;
+        }
         return null;
     }
 
@@ -770,7 +779,7 @@ public class PropertyDeclarationStatement
         Expression newValue = value == null ? null : (Expression) children.get(i++);
         StatementBlock newBody = body == null ? null : (StatementBlock) children.get(i++);
 
-        return new PropertyDeclarationStatement(
+        PropertyDeclarationStatement result = new PropertyDeclarationStatement(
             getStartPosition(),
             getEndPosition(),
             newCondition,
@@ -782,6 +791,16 @@ public class PropertyDeclarationStatement
             newValue,
             newBody,
             doc);
+
+        // Handle @Derived fields that are still AST children
+        if (initializer != null) {
+            result.initializer = (MethodDeclarationStatement) children.get(i++);
+        }
+        if (assignment != null) {
+            result.assignment = (AssignmentStatement) children.get(i++);
+        }
+
+        return result;
     }
 
 

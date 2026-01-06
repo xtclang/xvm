@@ -166,7 +166,7 @@ public class UnpackExpression
         if (exprTuple.isConstant()) {
             Constant constTuple = exprTuple.toConstant();
             assert constTuple.getFormat() == Format.Tuple;
-            aconstVal = ((ArrayConstant) constTuple).getValue();
+            aconstVal = ((ArrayConstant) constTuple).getValueArray();
         }
 
         return finishValidations(ctx, null, atypeField, expr.getTypeFit().addUnpack(), aconstVal, errs);

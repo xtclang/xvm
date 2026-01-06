@@ -112,8 +112,23 @@ public class MethodInfo
      * @return the resulting MethodInfo
      */
     public MethodInfo layerOn(MethodInfo that, boolean fSelf, ErrorListener errs) {
-        assert this.getIdentity().getName().equals(that.getIdentity().getName());
-        assert !this.isFunction() && !that.isFunction();
+        assert this.getIdentity().getName().equals(that.getIdentity().getName())
+            : "Method name mismatch: this='" + this.getIdentity().getName()
+            + "' (id=" + this.getIdentity().getValueString()
+            + "), that='" + that.getIdentity().getName()
+            + "' (id=" + that.getIdentity().getValueString() + ")";
+
+        // Functions should not be layered; if both are functions with the same signature,
+        // they are separate methods that happen to have the same signature (e.g., private
+        // methods in different interfaces). Keep the existing one.
+        if (this.isFunction() && that.isFunction()) {
+            return this;
+        }
+        assert !this.isFunction() && !that.isFunction()
+            : "Cannot layer function with virtual method: this.isFunction=" + this.isFunction()
+            + ", that.isFunction=" + that.isFunction()
+            + ", this=" + this.getIdentity().getValueString()
+            + ", that=" + that.getIdentity().getValueString();
 
         if (!this.getAccess().isAsAccessibleAs(Access.PROTECTED) ||
             !that.getAccess().isAsAccessibleAs(Access.PROTECTED) ||

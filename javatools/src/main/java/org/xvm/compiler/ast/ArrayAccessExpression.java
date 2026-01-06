@@ -1237,11 +1237,11 @@ public class ArrayAccessExpression extends Expression {
      * @return the extracted element
      */
     private Constant evalConst(ArrayConstant constArray, IntConstant constIndex, ErrorListener errs) {
-        Constant[]    aconstVals = constArray.getValue();
-        int           cVals      = aconstVals.length;
-        PackedInteger piIndex    = constIndex.getValue();
+        List<Constant> listConstVals = constArray.getValues();
+        int            cVals         = listConstVals.size();
+        PackedInteger  piIndex       = constIndex.getValue();
         if (piIndex.checkRange(0, cVals-1)) {
-            return aconstVals[piIndex.getInt()];
+            return listConstVals.get(piIndex.getInt());
         } else {
             log(errs, Severity.ERROR, Compiler.INVALID_INDEX, piIndex, 0, cVals-1);
             return null;
@@ -1261,8 +1261,8 @@ public class ArrayAccessExpression extends Expression {
     private Constant evalConst(ArrayConstant constArray, RangeConstant constIndex,
                                TypeConstant typeResult, ErrorListener errs) {
      // TODO
-        Constant[]    aOldVals = constArray.getValue();
-        int           cOldVals = aOldVals.length;
+        List<Constant> listOldVals = constArray.getValues();
+        int            cOldVals    = listOldVals.size();
         PackedInteger piIndex1 = constIndex.getEffectiveFirst().getIntValue();
         PackedInteger piIndex2 = constIndex.getEffectiveLast() .getIntValue();
         if (piIndex1.checkRange(0, cOldVals - 1) && piIndex2.checkRange(0, cOldVals-1)) {
@@ -1273,7 +1273,7 @@ public class ArrayAccessExpression extends Expression {
                 int nLast  = piIndex2.getInt();
                 int nStep  = nFirst <= nLast ? 1 : -1;
                 for (int iNew = 0, iOld = nFirst; iNew < cNewVals; ++iNew, iOld += nStep) {
-                    aNewVals[iNew] = aOldVals[iOld];
+                    aNewVals[iNew] = listOldVals.get(iOld);
                 }
             }
             ConstantPool pool = pool();

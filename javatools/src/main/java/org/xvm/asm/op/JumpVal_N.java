@@ -137,18 +137,18 @@ public class JumpVal_N
         ConstantPool poolTarget = frame.f_function.getConstantPool();
 
         for (int cRows = m_aofCase.length; iRow < cRows; iRow++) {
-            int            cColumns     = ahValue.length;
-            ArrayConstant  contValues   = (ArrayConstant) frame.getConstant(m_anConstCase[iRow]);
-            Constant[]     aconstValues = contValues.getValue();
-            ObjectHandle[] ahCases      = new ObjectHandle[cColumns];
+            int            cColumns       = ahValue.length;
+            ArrayConstant  contValues     = (ArrayConstant) frame.getConstant(m_anConstCase[iRow]);
+            List<Constant> listConstVals  = contValues.getValues();
+            ObjectHandle[] ahCases        = new ObjectHandle[cColumns];
 
             aahCases[iRow] = ahCases;
 
-            assert aconstValues.length == cColumns;
+            assert listConstVals.size() == cColumns;
 
             boolean fDeferred = false;
             for (int iC = 0; iC < cColumns; iC++) {
-                Constant constCase = aconstValues[iC];
+                Constant constCase = listConstVals.get(iC);
                 if (constCase instanceof MatchAnyConstant) {
                     ahCases[iC] = ObjectHandle.DEFAULT;
                     continue;

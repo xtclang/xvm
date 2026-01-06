@@ -27,6 +27,20 @@ public class PackageStructure
         super(xsParent, nFlags, constId, condition);
     }
 
+    /**
+     * Copy constructor.
+     *
+     * @param that  the PackageStructure to copy
+     */
+    protected PackageStructure(PackageStructure that) {
+        super(that);
+    }
+
+    @Override
+    public PackageStructure copy() {
+        return new PackageStructure(this);
+    }
+
 
     // ----- accessors --------------------------------------------------------------------------------------
 
