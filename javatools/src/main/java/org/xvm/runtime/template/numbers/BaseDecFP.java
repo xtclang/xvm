@@ -335,7 +335,10 @@ public abstract class BaseDecFP
 
     @Override
     public boolean compareIdentity(ObjectHandle hValue1, ObjectHandle hValue2) {
-        return ((DecimalHandle) hValue1).getValue().equals(((DecimalHandle) hValue2).getValue());
+        DecimalHandle h1 = (DecimalHandle) hValue1;
+        DecimalHandle h2 = (DecimalHandle) hValue2;
+
+        return h1.getValue().compareForObjectOrder(h2.getValue()) == 0;
     }
 
     @Override
