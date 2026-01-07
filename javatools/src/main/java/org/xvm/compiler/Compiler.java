@@ -1368,6 +1368,10 @@ public class Compiler {
      */
     public static final String PARENT_MISSING                     = "COMPILER-203";
     /**
+     * {0} cannot be used as an assert message.
+     */
+    public static final String INVALID_ASSERT_MESSAGE             = "COMPILER-204";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";
