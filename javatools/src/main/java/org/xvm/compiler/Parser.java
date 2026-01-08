@@ -1325,7 +1325,7 @@ public class Parser {
             return parseWhileStatement();
 
         case IDENTIFIER:
-            Token decl = null;
+            Token decl;
             if (       (decl = match(Id.CLASS     )) != null
                     || (decl = match(Id.INTERFACE )) != null
                     || (decl = match(Id.SERVICE   )) != null
