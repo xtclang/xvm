@@ -200,6 +200,8 @@ public class ThrowExpression
         }
 
         if (fValid && expr != null) {
+            assert keyword.getId() == Token.Id.THROW;
+
             // validate the throw value expressions
             Expression exprNew = expr.validate(ctx, typeRequired, errs);
             if (exprNew != expr) {

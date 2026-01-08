@@ -877,10 +877,16 @@ AnonClassBody
 # trailing invocation, i.e. it is a block of statements that executes, and at the end, it must
 # return a value (unlike a "naked" lambda, it can not just be an expression)
 StatementExpression
-    StatementBlock                  # a "block expression"
-    "throw" TernaryExpression       # non-completing
-    "TODO" TodoFinish-opt           # non-completing
-    "assert"                        # non-completing
+    StatementBlock                              # a "block expression"
+    "throw" TernaryExpression                   # non-completing
+    "TODO" TodoFinish-opt                       # non-completing
+    AlwaysAssertInstruction AssertMessage-opt   # non-completing
+
+AlwaysAssertInstruction
+    "assert"                                    # runtime, IllegalState
+    "assert:arg"                                # runtime, IllegalArgument
+    "assert:bounds"                             # runtime, OutOfBounds
+    "assert:TODO"                               # runtime, NotImplemented
 
 SwitchExpression
     "switch" "(" SwitchConditionList ")" "{" SwitchExpressionBlocks "}"

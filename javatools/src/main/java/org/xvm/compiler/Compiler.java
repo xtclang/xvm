@@ -1326,47 +1326,47 @@ public class Compiler {
     /**
      * The "using" clause must specify an implementation of the ResourceProvider interface.
      */
-    public static final String INJECTOR_REQUIRED                  = "COMPILER-193";
+    public static final String INJECTOR_REQUIRED                   = "COMPILER-193";
     /**
      * The delegation target must be a property.
      */
-    public static final String DELEGATE_INVALID                   = "COMPILER-194";
+    public static final String DELEGATE_INVALID                    = "COMPILER-194";
     /**
      * A super method indicated by @Override cannot be found.
      */
-    public static final String SUPER_MISSING                      = "COMPILER-195";
+    public static final String SUPER_MISSING                       = "COMPILER-195";
     /**
      * A "try" must have either "catch" or "finally" block.
      */
-    public static final String TRY_WITHOUT_CATCH                  = "COMPILER-196";
+    public static final String TRY_WITHOUT_CATCH                   = "COMPILER-196";
     /**
      * Attempt to mutate the captured variable {0}. (If intended, add the "@Volatile" annotation.)
      */
-    public static final String WRITEABLE_CAPTURE                  = "COMPILER-197";
+    public static final String WRITEABLE_CAPTURE                   = "COMPILER-197";
     /**
      * Invalid annotation combination: {0} and {1} are incompatible.
      */
-    public static final String INVALID_ANNOTATIONS_COMBO          = "COMPILER-198";
+    public static final String INVALID_ANNOTATIONS_COMBO           = "COMPILER-198";
     /**
      * A resource (file or directory) is missing.
      */
-    public static final String MISSING_RESOURCE                   = "COMPILER-199";
+    public static final String MISSING_RESOURCE                    = "COMPILER-199";
     /**
      * Parameter {0} ({1}) points to a missing resource {2}.
      */
-    public static final String MISSING_PARAM_RESOURCE             = "COMPILER-200";
+    public static final String MISSING_PARAM_RESOURCE              = "COMPILER-200";
     /**
      * Property {0} is assigned to itself.
      */
-    public static final String PROP_SELF_ASSIGNED                 = "COMPILER-201";
+    public static final String PROP_SELF_ASSIGNED                  = "COMPILER-201";
     /**
      * Read-only property {0} cannot be initialized.
      */
-    public static final String PROP_READONLY_INIT                 = "COMPILER-202";
+    public static final String PROP_READONLY_INIT                  = "COMPILER-202";
     /**
      * Virtual child {0} construction requires a parent instance.
      */
-    public static final String PARENT_MISSING                     = "COMPILER-203";
+    public static final String PARENT_MISSING                      = "COMPILER-203";
     /**
      * {0} is not yet implemented.
      */

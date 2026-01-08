@@ -1325,7 +1325,7 @@ public class Parser {
             return parseWhileStatement();
 
         case IDENTIFIER:
-            Token decl = null;
+            Token decl;
             if (       (decl = match(Id.CLASS     )) != null
                     || (decl = match(Id.INTERFACE )) != null
                     || (decl = match(Id.SERVICE   )) != null
@@ -3231,13 +3231,9 @@ public class Parser {
             return new ThrowExpression(expect(Id.THROW), parseTernaryExpression(), null);
 
         case ASSERT:
-        case ASSERT_RND:
         case ASSERT_ARG:
         case ASSERT_BOUNDS:
-        case ASSERT_TODO:
-        case ASSERT_ONCE:
-        case ASSERT_TEST:
-        case ASSERT_DBG: {
+        case ASSERT_TODO: {
             Token keyword = current();
             Expression expr = null;
             switch (peek().getId()) {
@@ -3261,7 +3257,19 @@ public class Parser {
                 exprMsg = parseTernaryExpression();
             }
 
+            if (expr != null) {
+                log(Severity.ERROR, ASSERT_EXPR_COND, expr.getStartPosition(), expr.getEndPosition());
+            }
             return new ThrowExpression(keyword, expr, exprMsg);
+        }
+
+        case ASSERT_RND:
+        case ASSERT_ONCE:
+        case ASSERT_TEST:
+        case ASSERT_DBG: {
+            // these are not guaranteed to be non-completing; assume "assert" was intended
+            expect(Id.ASSERT);                  // this will always throw an exception
+            throw new IllegalStateException();  // ... so it should not reach this line
         }
 
         case TODO:
@@ -5709,6 +5717,10 @@ public class Parser {
      * the extended type syntax.
      */
     public static final String EXT_TYPE_SYNTAX   = "PARSER-27";
+    /**
+     * Assertion used as an expression must not specify an assertion condition.
+     */
+    public static final String ASSERT_EXPR_COND  = "PARSER-28";
 
 
     // ----- data members --------------------------------------------------------------------------

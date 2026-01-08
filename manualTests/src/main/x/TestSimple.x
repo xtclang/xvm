@@ -2,27 +2,13 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
+        Int i = 0;
+        Int j = 1;
+
+        assert i > j as assert as assert as message();
+        assert i > j as assert False; // this used to blow up in the compiler
     }
 
-    @MixinC
-    class ClassA {
-    }
-
-    annotation MixinA {
-    }
-
-    @MixinB
-    class ClassB extends ClassA {
-    }
-
-    @MixinC
-    annotation MixinB extends MixinA { // used to blow up the compiler; a fatal error now
-    }
-
-    @MixinA
-    class ClassC extends ClassB {
-    }
-
-    annotation MixinC extends MixinB {
-    }
+    String message() = "wrong";
 }
+
