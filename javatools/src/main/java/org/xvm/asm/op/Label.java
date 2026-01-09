@@ -90,8 +90,11 @@ public class Label
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        assert m_label != null;
-        code.labelBinding(m_label);
+        // there is a possibility that the label was only used by the "dead" code that has been
+        // eliminated
+        if (m_label != null) {
+            code.labelBinding(m_label);
+        }
         getNextOp().build(bctx, code);
     }
 
