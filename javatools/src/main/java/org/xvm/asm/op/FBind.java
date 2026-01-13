@@ -225,6 +225,22 @@ public class FBind
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        TypeConstant typeFn = bctx.getArgumentType(m_nFunctionId);
+
+        assert typeFn.isFunction();
+
+        for (int i = 0, c = m_anParamIx.length; i < c; i++) {
+            // we assume that the indexes are sorted in the ascending order;
+            // after every step, the resulting function accepts one less parameter, so it needs to
+            // compensate the absolute position
+            typeFn = bctx.pool().bindFunctionParam(typeFn, m_anParamIx[i] - i);
+        }
+
+        bctx.typeMatrix.assign(getAddress(), m_nRetValue, typeFn);
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
 
         TypeSystem   ts     = bctx.typeSystem;

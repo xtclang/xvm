@@ -72,6 +72,17 @@ public class GuardEnd
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        bctx.exitScope(null);
+
+        // we could be called for dead code to correctly compute the scopes, but should not
+        // compute types further
+        if (bctx.typeMatrix.isReached(getAddress())) {
+            bctx.typeMatrix.follow(getAddress(), getAddress() + m_ofJmp, -1);
+        }
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         bctx.exitScope(code);
         if (m_ofJmp > 1) {

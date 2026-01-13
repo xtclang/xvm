@@ -96,6 +96,11 @@ public class Throw
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        // don't propagate anything
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo target = bctx.loadArgument(code, m_nArgValue);
         assert target.type().isA(bctx.pool().typeException());

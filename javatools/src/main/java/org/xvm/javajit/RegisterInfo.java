@@ -29,6 +29,13 @@ public interface RegisterInfo {
     TypeConstant type();
 
     /**
+     * @return the jit type for XTC register
+     */
+    default TypeConstant jitType() {
+        return type().getCanonicalJitType();
+    }
+
+    /**
      * @return the Java slot ClassDesc
      */
     ClassDesc cd();
@@ -48,6 +55,13 @@ public interface RegisterInfo {
      */
     default RegisterInfo original() {
         return this;
+    }
+
+    /**
+     * @return true iff the XTC register represents a value on Java stack
+     */
+    default boolean isJavaStack() {
+        return regId() == JAVA_STACK;
     }
 
     /**
@@ -83,6 +97,12 @@ public interface RegisterInfo {
         if (isIgnore()) {
             Builder.pop(code, cd());
         } else {
+            if (type == null) {
+                type = type();
+            }
+            if (type.isPrimitive() && !cd().isPrimitive()) {
+                Builder.box(code, type, JitTypeDesc.getPrimitiveClass(type));
+            }
             Builder.store(code, cd(), slot());
         }
         return this;
@@ -98,9 +118,4 @@ public interface RegisterInfo {
      * Used for the value of the {@link #slot()} to indicates that the value is on the Java stack.
      */
     int JAVA_STACK = -1;
-
-    /**
-     * Used for the value of the {@link #slot()} to indicates that there is no slot for the value.
-     */
-    int NONE = -2;
 }

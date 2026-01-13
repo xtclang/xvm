@@ -59,6 +59,8 @@ module test1.examples.org {
             if (String s := value.is(String)) {
                 console.print("it's a String; size is ", True);
                 console.print(s.size);
+            } else {
+                console.print("Not a String");
             }
 
             Element value = this.value;

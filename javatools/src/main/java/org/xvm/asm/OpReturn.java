@@ -64,6 +64,14 @@ public abstract class OpReturn
         m_nFinallyAddr = nFinallyAddr;
     }
 
+    @Override
+    public void computeTypes(BuildContext bctx) {
+        // only propagate onto the "finally" block
+        if (m_fCallFinally) {
+            bctx.typeMatrix.follow(m_nFinallyAddr);
+        }
+    }
+
     /**
      * Customization of the {@link #build} method. See {@link org.xvm.asm.op.GuardAll#build} for
      * the return values allocations.

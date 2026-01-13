@@ -419,6 +419,13 @@ public abstract class Op {
     // ----- JIT support ---------------------------------------------------------------------------
 
     /**
+     * Compute the register types for this op.
+     */
+    public void computeTypes(BuildContext bctx) {
+        bctx.typeMatrix.follow(getAddress());
+    }
+
+    /**
      * Build the Java code for this op.
      */
     public void build(BuildContext bctx, CodeBuilder code) {

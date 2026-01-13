@@ -29,6 +29,7 @@ import org.xvm.asm.OpReturn;
 import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
+import org.xvm.asm.constants.CastTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
@@ -48,6 +49,7 @@ import org.xvm.asm.op.FinallyStart;
 import org.xvm.asm.op.GuardAll;
 import org.xvm.asm.op.Guarded;
 import org.xvm.asm.op.Jump;
+import org.xvm.asm.op.Nop;
 
 import static java.lang.constant.ConstantDescs.CD_CallSite;
 import static java.lang.constant.ConstantDescs.CD_MethodHandle;
@@ -67,6 +69,7 @@ import static org.xvm.javajit.Builder.CD_JavaString;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nException;
 import static org.xvm.javajit.Builder.CD_nFunction;
+import static org.xvm.javajit.Builder.CD_nObj;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.N_TypeMismatch;
 import static org.xvm.javajit.Builder.OPT;
@@ -310,6 +313,9 @@ public class BuildContext {
      * @param ops
      */
     public void preprocess(CodeBuilder code, Op[] ops) {
+        Scope origScope = scope;
+        scope = origScope.startPreprocessing();
+
         Deque<Integer>       guardStack    = null;
         Deque<List<Integer>> jumpAddrStack = null;
         Deque<List<Integer>> jumpDestStack = null;
@@ -319,8 +325,9 @@ public class BuildContext {
         List<Integer>  jumpsAddr  = null;  // the addresses of Jump ops
         List<Integer>  jumpsDest  = null;  // the addresses of jump destinations
         boolean        doReturn   = false; // indicates whether FinallyEnd should generate returns
-        for (int iPC = 0, c = ops.length; iPC < c; iPC++) {
-            switch (ops[iPC]) {
+        for (int iPC = 0, opsCount = ops.length; iPC < opsCount; iPC++) {
+            Op op = ops[currOpAddr = iPC];
+            switch (op) {
             case GuardAll _:
                 if (guardAddr < 0) {
                     guardStack    = new ArrayDeque<>();
@@ -409,7 +416,21 @@ public class BuildContext {
             default:
                 break;
             }
+
+            // there are scenarios when Exit or Nop are unreachable (e.g. following LoopEnd or throw);
+            // also we still need to process all scope changing ops
+            if (typeMatrix.isReached(iPC) || op.isEnter() || op.isExit() || op instanceof Nop) {
+                op.computeTypes(this);
+            } else {
+                // TODO: remove
+                System.err.println("Dead code: " + Op.toName(op.getOpCode()) + " at " + this +
+                    " for " + typeInfo.getType().getValueString());
+            }
         }
+
+        // finish the preprocessing phase
+        lineNumber = 1;
+        scope = origScope;
     }
 
     /**
@@ -624,7 +645,10 @@ public class BuildContext {
      */
     public Scope enterScope(CodeBuilder code) {
         scope = scope.enter(currOpAddr);
-        code.labelBinding(scope.startLabel);
+
+        if (!scope.preprocess) {
+            code.labelBinding(scope.startLabel);
+        }
         return scope;
     }
 
@@ -635,9 +659,47 @@ public class BuildContext {
         Scope prevScope = scope;
         scope = prevScope.exit();
 
+        boolean isReached = typeMatrix.isReached(currOpAddr);
+
         // clear up the old scope's entries
-        registerInfos.entrySet().removeIf(entry -> entry.getKey() >= scope.topReg);
+        typeMatrix.removeRegisters(isReached ? currOpAddr : currOpAddr + 1, scope.topReg);
+
+        if (!scope.preprocess) {
+            for (var it = registerInfos.entrySet().iterator(); it.hasNext();) {
+                var entry = it.next();
+                if (entry.getKey() >= scope.topReg) {
+                    // remove the register
+                    it.remove();
+                }
+                if (entry.getValue() instanceof Narrowed narrowedReg &&
+                        narrowedReg.scopeDepth >= scope.depth) {
+                    // reset the register type
+                    entry.setValue(narrowedReg.origReg());
+                }
+            }
+
+
+            // there are scenarios when Exit is unreachable (e.g. following LoopEnd)
+            if (isReached) {
+                mergeTypes(code, currOpAddr + 1);
+            }
+        }
+
         return prevScope;
+    }
+
+    /**
+     * Merge the types for the specified address.
+     */
+    public void mergeTypes(CodeBuilder code, int jumpAddr) {
+        // collect the registered that need to be "widened"
+        for (int widenedId : typeMatrix.follow(currOpAddr, jumpAddr, -1)) {
+            if (registerInfos.get(widenedId) instanceof Narrowed narrowedReg) {
+                // TODO: if reg.changed
+                RegisterInfo reg = narrowedReg.widen(this, code, typeMatrix.getType(widenedId, jumpAddr));
+                registerInfos.put(widenedId, reg);
+            }
+        }
     }
 
     /**
@@ -706,7 +768,7 @@ public class BuildContext {
     public RegisterInfo loadThis(CodeBuilder code) {
         assert isConstructor || !isFunction;
 
-        RegisterInfo reg = getRegisterInfo(Op.A_THIS);
+        RegisterInfo reg = getRegisterInfo(code, Op.A_THIS);
         reg.load(code);
         return reg;
     }
@@ -716,9 +778,7 @@ public class BuildContext {
      */
     public TypeConstant getArgumentType(int argId) {
         if (argId >= 0) {
-            RegisterInfo reg = getRegisterInfo(argId);
-            assert reg != null;
-            return reg.type();
+            return typeMatrix.getType(argId, currOpAddr);
         }
 
         if (argId <= Op.CONSTANT_OFFSET) {
@@ -726,12 +786,22 @@ public class BuildContext {
             if (type.containsFormalType(true)) {
                 type = type.resolveGenerics(pool(), typeInfo.getType());
             }
+
+            // if the type is an enum value, widen it to its parent Enumeration
+            if (type.isEnumValue()) {
+                type = type.getSingleUnderlyingClass(false).getNamespace().getType();
+            }
             return type;
         }
 
         return switch (argId) {
-            case Op.A_THIS -> getRegisterInfo(Op.A_THIS).type();
-            default        -> throw new UnsupportedOperationException("id=" + argId);
+            case Op.A_THIS  -> typeMatrix.getType(argId, currOpAddr);
+            case Op.A_SUPER -> {
+                TypeConstant typeSuper = callChain[callDepth + 1].getIdentity().getType();
+                assert typeSuper.isMethod();
+                yield pool().bindMethodTarget(typeSuper);
+            }
+            default -> throw new UnsupportedOperationException("id=" + argId);
         };
     }
 
@@ -740,7 +810,7 @@ public class BuildContext {
      */
     public RegisterInfo loadArgument(CodeBuilder code, int argId) {
         if (argId >= 0) {
-            RegisterInfo reg = getRegisterInfo(argId);
+            RegisterInfo reg = getRegisterInfo(code, argId);
             assert reg != null;
             ClassDesc cd = reg.cd();
             if (reg instanceof DoubleSlot doubleSlot) {
@@ -766,14 +836,55 @@ public class BuildContext {
                     code.loadLocal(Builder.toTypeKind(cd), doubleSlot.slot);
                     code.loadLocal(TypeKind.BOOLEAN, doubleSlot.extSlot);
                     return reg;
+
+                default:
+                    throw new IllegalStateException();
                 }
             }
             code.loadLocal(Builder.toTypeKind(cd), reg.slot());
-            return reg;
+
+            return adjustRegister(code, reg, true);
         }
         return argId <= Op.CONSTANT_OFFSET
                 ? loadConstant(code, argId)
                 : loadPredefineArgument(code, argId);
+    }
+
+    /**
+     * Adjust the register type based on the type matrix type. This only appies to non-primitive
+     * or boxed registers.
+     *
+     * @param loaded  if true, the register value has been loaded on the Java stack
+     */
+    protected RegisterInfo adjustRegister(CodeBuilder code, RegisterInfo reg, boolean loaded) {
+        if (!reg.cd().isPrimitive()) {
+            int          regId   = reg.regId();
+            TypeConstant regType = reg.type().getCanonicalJitType();
+            TypeConstant mtxType = typeMatrix.getType(regId, currOpAddr);
+
+            if (!mtxType.equals(regType)) {
+                int depth = scope.depth;
+                if (reg instanceof Narrowed narrowedReg) {
+                    reg     = narrowedReg.origReg();
+                    regType = reg.type();
+                    depth   = narrowedReg.scopeDepth;
+                    if (mtxType.equals(regType)) {
+                        return reg;
+                    }
+                }
+
+                assert mtxType.isA(regType);
+                // narrow, but stay boxed for primitive types
+                ClassDesc narrowedCD = mtxType.ensureClassDesc(typeSystem);
+                // if already loaded - cast here and don't cast on load
+                reg = new Narrowed(regId, reg.slot(), mtxType, narrowedCD, reg.name(), depth, !loaded, reg);
+                registerInfos.put(regId, reg);
+                if (loaded) {
+                    code.checkcast(narrowedCD);
+                }
+            }
+        }
+        return reg;
     }
 
     /**
@@ -817,7 +928,7 @@ public class BuildContext {
      */
     public RegisterInfo ensureRegister(CodeBuilder code, int argId) {
         if (argId >= 0) {
-            return getRegisterInfo(argId);
+            return adjustRegister(code, getRegisterInfo(code, argId), false);
         }
         RegisterInfo reg = argId <= Op.CONSTANT_OFFSET
                 ? loadConstant(code, argId)
@@ -946,11 +1057,7 @@ public class BuildContext {
      * @param type  (optional) the known destination type
      */
     public void storeValue(CodeBuilder code, RegisterInfo reg, TypeConstant type) {
-        Label varStart = unassignedRegisters.remove(reg);
-        if (varStart != null) {
-            code.labelBinding(varStart);
-        }
-
+        ensureVarScope(code, reg);
         reg.store(this, code, type);
     }
 
@@ -1015,6 +1122,16 @@ public class BuildContext {
         registerInfos.put(regId, reg);
         unassignedRegisters.put(reg, varStart);
         return reg;
+    }
+
+    /**
+     * Ensure the scope for the Java slot associated with the specified register.
+     */
+    public void ensureVarScope(CodeBuilder code, RegisterInfo reg) {
+        Label varStart = unassignedRegisters.remove(reg);
+        if (varStart != null) {
+            code.labelBinding(varStart);
+        }
     }
 
     /**
@@ -1104,12 +1221,8 @@ public class BuildContext {
     /**
      * Get a {@link RegisterInfo} for the specified register id.
      */
-    public RegisterInfo getRegisterInfo(int regId) {
-        RegisterInfo reg = registerInfos.get(regId);
-        if (reg instanceof Narrowed narrowed && currOpAddr >= narrowed.lastOp) {
-            reg = resetRegister(narrowed);
-        }
-        return reg;
+    public RegisterInfo getRegisterInfo(CodeBuilder code, int regId) {
+        return registerInfos.get(regId);
     }
 
     /**
@@ -1141,7 +1254,7 @@ public class BuildContext {
      */
     public RegisterInfo narrowRegister(CodeBuilder code, RegisterInfo origReg,
                                        TypeConstant narrowedType) {
-        return narrowRegister(code, origReg, currOpAddr, currOpAddr + 1, narrowedType);
+        return narrowRegister(code, origReg, currOpAddr + 1, narrowedType);
     }
 
     /**
@@ -1152,44 +1265,56 @@ public class BuildContext {
      * Note, that unlike the dead code elimination below, the narrowing could "stop" at any point an
      * assignment is made to the register.
      *
-     * @param origReg       the register to narrow
-     * @param fromAddr      the beginning address at which the narrowing should apply (inclusive)
-     * @param toAddr        the address after which the narrowing should not apply (exclusive;
-     *                      could be -1)
-     * @param narrowedType  the narrowed type
+     * @param origReg      the register to narrow
+     * @param fromAddr     the beginning address at which the narrowing should apply
+     * @param narrowedType the narrowed type
      *
      * @return the narrowed register (if applied)
      */
     public RegisterInfo narrowRegister(CodeBuilder code, RegisterInfo origReg,
-                                       int fromAddr, int toAddr, TypeConstant narrowedType) {
-        if (toAddr == -1) {
-            int endAddr = computeEndScopeAddr(fromAddr);
-            if (endAddr == fromAddr) {
-                // there is nothing to apply narrowing to
-                return origReg;
-            }
-            toAddr = endAddr;
+                                       int fromAddr, TypeConstant narrowedType) {
+        TypeConstant origType = origReg.type();
+
+        if (origReg.isJavaStack() || narrowedType.getCanonicalJitType().equals(origType)) {
+            return origReg;
         }
 
-        ClassDesc narrowedCD   = JitTypeDesc.getJitClass(typeSystem, narrowedType);
-        int       narrowedSlot = scope.allocateJavaSlot(narrowedCD);
+        if (fromAddr > currOpAddr + 1 && computeEndScopeAddr(fromAddr) == fromAddr) {
+            // there is nothing to apply the narrowing to
+            return origReg;
+        }
+
+        ClassDesc narrowedCD = JitTypeDesc.getJitClass(typeSystem, narrowedType);
+        int       narrowedSlot;
+        if (narrowedType.isPrimitive() || origType.isPrimitive()) {
+            narrowedSlot = scope.allocateJavaSlot(narrowedCD);
+        } else {
+            narrowedSlot = origReg.slot();
+        }
 
         Narrowed narrowedReg = new Narrowed(origReg.regId(), narrowedSlot, narrowedType, narrowedCD,
-                origReg.name(), fromAddr, toAddr, origReg);
+                origReg.name(), scope.depth, false, origReg);
         OpAction action = () -> {
-            registerInfos.put(narrowedReg.regId, narrowedReg);
-            origReg.load(code);
-            if (narrowedCD.isPrimitive() && !origReg.cd().isPrimitive()) {
-                code.checkcast(narrowedType.ensureClassDesc(typeSystem)); // boxed
-                Builder.unbox(code, narrowedReg);
-            } else {
-                code.checkcast(narrowedCD);
+            if (fromAddr > currOpAddr) {
+                registerInfos.put(narrowedReg.regId, narrowedReg);
             }
-            Builder.store(code, narrowedCD, narrowedSlot);
+
+            if (origReg.slot() != narrowedSlot || !narrowedCD.equals(CD_nObj)) {
+                // even if the narrowed register uses the same slot, we need to let the Java verifier
+                // know that
+                origReg.load(code);
+                if (narrowedCD.isPrimitive() && !origReg.cd().isPrimitive()) {
+                    code.checkcast(narrowedType.ensureClassDesc(typeSystem)); // boxed
+                    Builder.unbox(code, narrowedReg);
+                } else {
+                    code.checkcast(narrowedCD);
+                }
+                Builder.store(code, narrowedCD, narrowedSlot);
+            }
             return -1;
         };
 
-        if (fromAddr == currOpAddr) {
+        if (fromAddr <= currOpAddr + 1) {
             action.prepare();
         } else {
             addAction(fromAddr, action);
@@ -1212,15 +1337,19 @@ public class BuildContext {
      *
      * @param fromAddr  the beginning address of the dead code (inclusive)
      * @param toAddr    the ending address of the dead code (exclusive; could be -1)
+     *
+     * @return true iff the end of scope was computed and the "skip" action was generated
      */
-    public void markDeadCode(int fromAddr, int toAddr) {
+    public boolean markDeadCode(int fromAddr, int toAddr) {
         int endAdr = toAddr == -1
             ? computeEndScopeAddr(fromAddr)
             : toAddr;
 
         if (endAdr > fromAddr) {
             addAction(fromAddr, () -> endAdr);
+            return true;
         }
+        return false;
     }
 
     /**
@@ -1232,7 +1361,7 @@ public class BuildContext {
         }
 
         PropertyConstant propId = getConstant(propIdIndex, PropertyConstant.class);
-        JitMethodDesc    jmdGet = builder.loadProperty(code, targetSlot.type(), propId);
+        JitMethodDesc    jmdGet = builder.loadProperty(code, targetSlot.jitType(), propId);
 
         assignReturns(code, jmdGet, 1, new int[] {retId});
     }
@@ -1245,7 +1374,7 @@ public class BuildContext {
             throw new UnsupportedOperationException("Multislot P_Set");
         }
         PropertyConstant propId     = getConstant(propIdIndex, PropertyConstant.class);
-        PropertyInfo     propInfo   = propId.getPropertyInfo(targetSlot.type());
+        PropertyInfo     propInfo   = propId.getPropertyInfo(targetSlot.jitType());
         JitMethodDesc    jmd        = propInfo.getSetterJitDesc(typeSystem);
         String           setterName = propInfo.ensureSetterJitMethodName(typeSystem);
 
@@ -1512,6 +1641,40 @@ public class BuildContext {
         deferAssembly(new BuildContext(this, jitName, body));
     }
 
+    /**
+     * Wrapper around {@link TypeConstant#combine} that considers primitive and formal types.
+     */
+    public TypeConstant combine(TypeConstant baseType, TypeConstant inferredType) {
+        if (baseType.isPrimitive()) {
+            assert baseType.isA(inferredType) || inferredType.isFormalType();
+            return baseType;
+        }
+        if (inferredType.isPrimitive()) {
+            assert inferredType.isA(baseType) || baseType.isFormalType();
+            return inferredType;
+        }
+
+        if (baseType.isFormalType() && inferredType.isA(baseType.resolveConstraints())) {
+            // use non-formal type
+            return inferredType;
+        }
+        if (inferredType.isFormalType() && baseType.isA(inferredType.resolveConstraints())) {
+            return baseType;
+        }
+
+        return new CastTypeConstant(pool(), baseType, inferredType);
+    }
+
+    /**
+     * Wrapper around {@link TypeConstant#andNot} that considers primitive and formal types.
+     */
+    public TypeConstant andNot(TypeConstant baseType, TypeConstant inferredType) {
+        TypeConstant notType = baseType.andNot(pool(), inferredType);
+        return notType == null || notType.equals(baseType)
+            ? baseType
+            : new CastTypeConstant(pool(), baseType, notType);
+    }
+
     // ----- helper methods ------------------------------------------------------------------------
 
     /**
@@ -1523,7 +1686,7 @@ public class BuildContext {
         if (startOp instanceof OpReturn) {
             return fromAddr;
         }
-        if (startOp instanceof Enter) {
+        if (startOp.isEnter()) {
             int depth = 1;
             int addr  = fromAddr + 1;
             while (true) {
@@ -1604,7 +1767,7 @@ public class BuildContext {
     }
 
     public record Narrowed(int regId, int slot, TypeConstant type, ClassDesc cd, String name,
-                           int firstOp, int lastOp, RegisterInfo origReg)
+                           int scopeDepth, boolean castOnLoad, RegisterInfo origReg)
             implements RegisterInfo {
 
         @Override
@@ -1615,6 +1778,15 @@ public class BuildContext {
         @Override
         public RegisterInfo original() {
             return origReg;
+        }
+
+        @Override
+        public RegisterInfo load(CodeBuilder code) {
+            RegisterInfo.super.load(code);
+            if (castOnLoad) {
+                code.checkcast(cd);
+            }
+            return this;
         }
 
         @Override
@@ -1634,7 +1806,7 @@ public class BuildContext {
                     }
                 }
 
-                origReg.store(bctx, code, null);
+                Builder.store(code, origReg.cd(), origReg.slot());
                 return origReg;
             }
 
@@ -1669,13 +1841,12 @@ public class BuildContext {
                         Builder.box(code, prevType, cd());
                     }
                 }
-                origReg.store(bctx, code, null);
+                Builder.store(code, origReg.cd(), origReg.slot());
             }
 
-            if (!wideType.equals(origType)) {
-                return bctx.narrowRegister(code, origReg, wideType).store(bctx, code, wideType);
-            }
-            return origReg;
+            return wideType.equals(origType)
+                ? origReg
+                : bctx.narrowRegister(code, origReg, wideType).store(bctx, code, wideType);
         }
     }
 
@@ -1712,6 +1883,6 @@ public class BuildContext {
     @Override
     public String toString() {
         return className + " " + methodStruct.getIdentityConstant().getValueString() +
-            ":" + lineNumber;
+            ":" + lineNumber + " #" + currOpAddr;
     }
 }

@@ -59,6 +59,13 @@ public class Int64 extends nConst {
         return new Int64(value);
     }
 
+    /**
+     * Int64 mul(Int64! n)
+     */
+    public long mul$p(Ctx ctx, long n) {
+        return $value*n;
+    }
+
     // ----- primitive helpers ---------------------------------------------------------------------
 
     public static long $next(Ctx ctx, long n) {

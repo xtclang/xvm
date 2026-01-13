@@ -14,10 +14,10 @@ import org.xvm.asm.Op;
 import org.xvm.asm.OpMove;
 import org.xvm.asm.Register;
 
+import org.xvm.asm.constants.CastTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.Narrowed;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.RegisterInfo;
 
@@ -87,6 +87,29 @@ public class Move
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        TypeConstant typeFrom = bctx.getArgumentType(m_nFromValue);
+        TypeConstant typeTo   = bctx.getArgumentType(m_nToValue);
+        TypeConstant type;
+
+        if (typeTo == null) {
+            type = typeFrom;
+        } else if (typeTo.isA(typeFrom)) {
+            // sometimes !typeTo.equals(typeFrom) can happen - (Trace for asserts and assignment of
+            // narrowed properties)
+            type = typeTo;
+        } else if (typeTo instanceof CastTypeConstant typeInferred) {
+            assert typeFrom.isA(typeInferred.getBaseType());
+            type = typeFrom;
+        } else {
+            // this can happen inside an unreachable code
+            //  (e.g.: "String s := value.is(String)" where "value" is known to be an "Int")
+            type = typeTo;
+        }
+        bctx.typeMatrix.assign(getAddress(), m_nToValue, type);
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo regFrom  = bctx.loadArgument(code, m_nFromValue);
         RegisterInfo regTo    = bctx.ensureRegInfo(m_nToValue, regFrom.type());
@@ -95,41 +118,31 @@ public class Move
         ClassDesc    cdFrom   = regFrom.cd();
         ClassDesc    cdTo     = regTo.cd();
 
-        if (typeFrom.isA(typeTo)) {
-            buildMove(bctx, code, regFrom, regTo);
-            typeTo = typeFrom;
-        } else {
-            if (typeFrom.isA(regTo.original().type())) {
-                regTo = bctx.resetRegister((Narrowed) regTo);
-                buildMove(bctx, code, regFrom, regTo);
-                typeTo = typeFrom;
-            } else {
+        if (!typeFrom.isA(typeTo)) {
+            regTo  = regTo.original();
+            typeTo = regTo.type();
+            if (!typeFrom.isA(typeTo)) {
                 if (cdFrom.isPrimitive()) {
-                    if (cdTo.isPrimitive()) {
-                        throw new IllegalStateException("Unreconcilable types " +
+                    // this can only be caused by a dead/unreachable code
+                    bctx.ensureVarScope(code, regTo);
+                    bctx.throwTypeMismatch(code, "Unreconcilable types " +
                             typeFrom.getValueString() + " -> " + typeTo.getValueString());
-                    }
-                    Builder.box(code, typeFrom, cdFrom);
+                    return;
                 }
+
+                // this can happen sometimes (e.g.: assignment of narrowed properties)
                 // TODO: generateCheckCast()
                 code.checkcast(typeTo.ensureClassDesc(bctx.typeSystem));
-                if (cdTo.isPrimitive()) {
-                    Builder.unbox(code, typeTo, cdTo);
-                }
-                typeTo = typeTo.combine(bctx.pool(), typeFrom);
             }
+        }
+
+        if (cdFrom.isPrimitive()) {
+            if (!cdTo.isPrimitive()) {
+                Builder.box(code, typeFrom, cdFrom);
+            }
+        } else if (cdTo.isPrimitive()) {
+            Builder.unbox(code, typeTo, cdTo);
         }
         bctx.storeValue(code, regTo, typeTo);
-    }
-
-    public void buildMove(BuildContext bctx, CodeBuilder code,
-                          RegisterInfo regFrom, RegisterInfo regTo) {
-        if (regFrom.cd().isPrimitive() ^ regTo.cd().isPrimitive()) {
-            if (regFrom.cd().isPrimitive()) {
-                Builder.box(code, regFrom);
-            } else {
-                Builder.unbox(code, regTo);
-            }
-        }
     }
 }

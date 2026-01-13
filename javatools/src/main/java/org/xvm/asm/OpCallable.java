@@ -26,6 +26,7 @@ import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.RegisterInfo;
+import org.xvm.javajit.TypeMatrix;
 import org.xvm.javajit.TypeSystem;
 
 import org.xvm.runtime.ClassTemplate;
@@ -564,6 +565,50 @@ public abstract class OpCallable extends Op {
     }
 
     // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void computeTypes(BuildContext bctx) {
+        TypeMatrix tmx = bctx.typeMatrix;
+
+        if (m_nRetValue == A_IGNORE && m_anRetValue == null) {
+            // no return - no type change
+            tmx.follow(getAddress());
+            return;
+        }
+
+        TypeConstant[] atypeResult;
+        if (m_nFunctionId == A_SUPER) {
+            MethodBody bodySuper = bctx.callChain[bctx.callDepth + 1];
+
+            TypeConstant typeThis = bctx.typeMatrix.getType(A_THIS, getAddress());
+            atypeResult = bodySuper.getSignature().
+                            resolveGenericTypes(bctx.pool(), typeThis).getRawReturns();
+        } else if (m_nFunctionId <= CONSTANT_OFFSET) {
+            MethodConstant idMethod = bctx.getConstant(m_nFunctionId, MethodConstant.class);
+
+            if (idMethod.isConstructor()) {
+                tmx.assign(getAddress(), m_nRetValue, idMethod.getNamespace().getType());
+                return;
+            }
+            atypeResult = idMethod.getSignature().getRawReturns();
+        } else {
+            TypeConstant typeFn = bctx.getArgumentType(m_nFunctionId);
+            assert typeFn.isFunction();
+
+            atypeResult = bctx.pool().extractFunctionReturns(typeFn);
+        }
+
+        if (isMultiReturn()) {
+            for (int i = 0, c = m_anRetValue.length; i < c; i++) {
+                int nRetVal = m_anRetValue[i];
+                if (nRetVal != A_IGNORE) {
+                    tmx.assign(getAddress(), nRetVal, atypeResult[i]);
+                }
+            }
+        } else {
+            tmx.assign(getAddress(), m_nRetValue, atypeResult[0]);
+        }
+    }
 
     /**
      * Support for CALL_ ops.

@@ -111,6 +111,18 @@ public class FinallyStart
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        bctx.exitScope(null);
+        bctx.enterScope(null);
+
+        // we could be called for dead code to correctly compute the scopes, but should not
+        // compute types further
+        if (bctx.typeMatrix.isReached(getAddress())) {
+            bctx.typeMatrix.assign(getAddress(), m_nVar, bctx.pool().typeException१());
+        }
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         org.xvm.javajit.Scope scopeGuarded = bctx.exitScope(code);
         assert scopeGuarded.parent == bctx.scope;

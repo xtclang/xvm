@@ -177,6 +177,22 @@ public class GuardStart
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        bctx.enterScope(null);
+
+        // we could be called for dead code to correctly compute the scopes, but should not
+        // compute types further
+        if (bctx.typeMatrix.isReached(getAddress())) {
+            int nAddrThis = getAddress();
+
+            bctx.typeMatrix.follow(nAddrThis);
+            for (int ofCatch : m_aofCatch) {
+                bctx.typeMatrix.follow(nAddrThis, nAddrThis + ofCatch, -1);
+            }
+        }
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         // the GuardStart-GuardEnd are the scope boundary ops as well
         bctx.enterScope(code);

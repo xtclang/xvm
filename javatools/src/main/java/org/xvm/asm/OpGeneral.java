@@ -17,6 +17,7 @@ import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.RegisterInfo;
+import org.xvm.javajit.TypeMatrix;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -196,6 +197,25 @@ public abstract class OpGeneral
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        TypeMatrix tmx = bctx.typeMatrix;
+
+        if (isBinaryOp()) {
+            TypeConstant typeTarget = bctx.getArgumentType(m_nTarget);
+            MethodInfo   method     = findOpMethod(bctx, typeTarget);
+            TypeConstant typeResult = method.getSignature().getRawReturns()[0];
+            if (!typeResult.equals(typeTarget)) {
+                tmx.assign(getAddress(), m_nRetValue,
+                    typeResult.resolveGenerics(bctx.pool(), typeTarget)
+                              .resolveAutoNarrowing(bctx.pool(), false, typeTarget, null));
+                return;
+            }
+        }
+        // for all other ops/scenarios the types do not change
+        tmx.follow(getAddress());
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo regTarget = bctx.ensureRegister(code, m_nTarget);
 
@@ -290,9 +310,8 @@ public abstract class OpGeneral
             default -> throw new UnsupportedOperationException(toName(getOpCode()));
         }
 
-        TypeConstant  typeArg  = bctx.getArgumentType(m_nArgValue);
-        MethodInfo    method   = typeTarget.ensureTypeInfo().findOpMethod(sName, sOp, typeArg);
-        return method;
+        return typeTarget.ensureTypeInfo().findOpMethod(sName, sOp,
+                bctx.getArgumentType(m_nArgValue));
     }
 
     // ----- fields --------------------------------------------------------------------------------

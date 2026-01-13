@@ -114,6 +114,11 @@ public class Var_C
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        bctx.typeMatrix.declare(getAddress(), m_nVar, bctx.getArgumentType(m_nArgValue));
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         bctx.introduceVar(code, m_nVar, bctx.getArgumentType(m_nArgValue), "");
         throw new UnsupportedOperationException("create a dynamic ref");

@@ -20,6 +20,7 @@ import org.xvm.javajit.BuildContext.DoubleSlot;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.RegisterInfo;
+import org.xvm.javajit.TypeMatrix;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -314,6 +315,65 @@ public abstract class OpCondJump
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        TypeMatrix tmx       = bctx.typeMatrix;
+        int        nAddrThis = getAddress();
+        int        nAddrJump = nAddrThis + m_ofJmp;
+
+        switch (getOpCode()) {
+            case OP_JMP_NULL, OP_JMP_NNULL: {
+                TypeConstant type = bctx.getArgumentType(m_nArg);
+
+                if (getOpCode() == OP_JMP_NULL) {
+                    tmx.assign(nAddrThis, m_nArg, type.removeNullable());
+                    tmx.assign(nAddrThis, nAddrJump, m_nArg, bctx.pool().typeNullable());
+                } else {
+                    tmx.assign(nAddrThis, m_nArg, bctx.pool().typeNullable());
+                    tmx.assign(nAddrThis, nAddrJump, m_nArg, type.removeNullable());
+                }
+                return;
+            }
+
+            case OP_JMP_TYPE, OP_JMP_NTYPE: {
+                // we can only infer types for registers and constant types
+                if (m_nArg < 0 || m_nArg2 > CONSTANT_OFFSET) {
+                    break;
+                }
+                TypeConstant typeTarget = bctx.getArgumentType(m_nArg);
+                TypeConstant typeTest   = bctx.getTypeConstant(m_nArg2);
+
+                if (typeTarget.isPrimitive()) {
+                    // we can statically compute the result, which most probably means that a formal
+                    // type was narrowed for a particular class flavor and the corresponding code
+                    // is either always true or can be safely eliminated
+                    boolean isA = typeTarget.isA(typeTest);
+                    if ((getOpCode() == OP_JMP_TYPE) == isA) {
+                        tmx.follow(nAddrThis, nAddrJump, -1);
+                    } else {
+                        tmx.follow(nAddrThis);
+                    }
+                    return;
+                }
+
+                TypeConstant typeIs    = bctx.combine(typeTarget, typeTest);
+                TypeConstant typeIsNot = bctx.andNot(typeTarget, typeTest);
+
+                if (getOpCode() == OP_JMP_TYPE) {
+                    tmx.assign(nAddrThis, m_nArg, typeIsNot);
+                    tmx.assign(nAddrThis, nAddrJump, m_nArg, typeIs);
+                } else {
+                    tmx.assign(nAddrThis, m_nArg, typeIs);
+                    tmx.assign(nAddrThis, nAddrJump, m_nArg, typeIsNot);
+                }
+                return;
+            }
+        }
+
+        tmx.follow(nAddrThis);
+        tmx.follow(nAddrThis, nAddrJump, -1);
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         if (isBinaryOp()) {
             buildBinary(bctx, code);
@@ -350,11 +410,11 @@ public abstract class OpCondJump
 
             if (type1.isNullable()) {
                 type1 = type1.removeNullable();
-                reg1  = bctx.narrowRegister(code, reg1, type1);
+                reg1  = bctx.narrowRegister(code, reg1, getAddress(), type1);
             }
             if (type2.isNullable()) {
                 type2 = type2.removeNullable();
-                reg1  = bctx.narrowRegister(code, reg2, type2);
+                reg1  = bctx.narrowRegister(code, reg2, getAddress(), type2);
             }
             typeCmp = typeCmp.removeNullable();
         }
@@ -412,7 +472,6 @@ public abstract class OpCondJump
         code.labelBinding(lblProceed);
     }
 
-
     protected void buildUnary(BuildContext bctx, CodeBuilder code) {
         int   nAddrJump = getAddress() + m_ofJmp;
         Label lblJump   = bctx.ensureLabel(code, nAddrJump);
@@ -444,9 +503,20 @@ public abstract class OpCondJump
                 assert doubleSlot.flavor() == JitFlavor.MultiSlotPrimitive;
                 code.iload(doubleSlot.extSlot()); // boolean Null indication
                 switch (op) {
-                    case OP_JMP_NULL  -> code.ifne(lblJump);
-                    case OP_JMP_NNULL -> code.ifeq(lblJump);
-                    default           -> throw new IllegalStateException();
+                case OP_JMP_NULL:
+                    code.ifne(lblJump);
+                    bctx.narrowRegister(code, reg, reg.type().removeNullable());
+                    bctx.narrowRegister(code, reg, nAddrJump, bctx.pool().typeNullable());
+                    break;
+
+                case OP_JMP_NNULL:
+                    code.ifeq(lblJump);
+                    bctx.narrowRegister(code, reg, nAddrJump, bctx.pool().typeNullable());
+                    bctx.narrowRegister(code, reg, reg.type().removeNullable());
+                    break;
+
+                default:
+                    throw new IllegalStateException();
                 }
                 return;
             }
@@ -479,20 +549,19 @@ public abstract class OpCondJump
                 throw new IllegalStateException();
             }
         } else {
-            int nAddrThis = getAddress();
             switch (op) {
             case OP_JMP_NULL:
                 Builder.loadNull(code);
                 code.if_acmpeq(lblJump);
-                bctx.narrowRegister(code, reg, nAddrThis + 1, -1, reg.type().removeNullable());
-                bctx.narrowRegister(code, reg, nAddrJump,     -1, bctx.pool().typeNullable());
+                bctx.narrowRegister(code, reg, reg.type().removeNullable());
+                bctx.narrowRegister(code, reg, nAddrJump, bctx.pool().typeNullable());
                 break;
 
             case OP_JMP_NNULL:
                 Builder.loadNull(code);
                 code.if_acmpne(lblJump);
-                bctx.narrowRegister(code, reg, nAddrJump,     -1, bctx.pool().typeNullable());
-                bctx.narrowRegister(code, reg, nAddrThis + 1, -1, reg.type().removeNullable());
+                bctx.narrowRegister(code, reg, bctx.pool().typeNullable());
+                bctx.narrowRegister(code, reg, reg.type().removeNullable());
                 break;
 
             default:
@@ -530,25 +599,31 @@ public abstract class OpCondJump
             bctx.loadCtx(code);
             code.invokevirtual(regTarget.cd(), "$xvmType", MD_xvmType); // target type
             Builder.loadTypeConstant(code, bctx.typeSystem, typeTest);  // test type
+            code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
 
+            TypeConstant typeIs    = bctx.combine(typeTarget, typeTest);
+            TypeConstant typeIsNot = bctx.andNot(typeTarget, typeTest);
             if (getOpCode() == OP_JMP_TYPE) {
-                bctx.narrowRegister(code, regTarget, nAddrJump, -1, typeTest);
+                bctx.narrowRegister(code, regTarget, nAddrJump, typeIs);
+                code.ifne(lblJump);
+                bctx.narrowRegister(code, regTarget, typeIsNot);
             } else {
-                bctx.narrowRegister(code, regTarget, nAddrThis + 1, nAddrJump, typeTest);
+                bctx.narrowRegister(code, regTarget, nAddrJump, typeIsNot);
+                code.ifeq(lblJump);
+                bctx.narrowRegister(code, regTarget, typeIs);
             }
         } else {
             // dynamic types
             RegisterInfo regType = bctx.loadArgument(code, m_nArg2); // xType
             assert regType.type().isTypeOfType();
-            code.getfield(CD_nType, "$type", CD_TypeConstant);
-        }
+            code.getfield(CD_nType, "$type", CD_TypeConstant)
+                .invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
 
-        code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
-
-        if (getOpCode() == OP_JMP_TYPE) {
-            code.ifne(lblJump);
-        } else { // OP_JMP_NTYPE
-            code.ifeq(lblJump);
+            if (getOpCode() == OP_JMP_TYPE) {
+                code.ifne(lblJump);
+            } else { // OP_JMP_NTYPE
+                code.ifeq(lblJump);
+            }
         }
     }
 

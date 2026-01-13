@@ -89,6 +89,11 @@ public class Label
     // ----- JIT support ------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        getNextOp().computeTypes(bctx);
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         // there is a possibility that the label was only used by the "dead" code that has been
         // eliminated

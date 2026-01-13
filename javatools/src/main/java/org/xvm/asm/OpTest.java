@@ -252,6 +252,12 @@ public abstract class OpTest
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        bctx.typeMatrix.assign(getAddress(), m_nRetValue,
+            getOpCode() == OP_CMP ? bctx.pool().typeOrdered() : bctx.pool().typeBoolean());
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         if (isBinaryOp()) {
             buildBinary(bctx, code);
@@ -262,7 +268,7 @@ public abstract class OpTest
 
     protected void buildBinary(BuildContext bctx, CodeBuilder code) {
         // this is very similar to OpCondJump logic
-        TypeConstant typeCmp = bctx.getTypeConstant(m_nType);
+        TypeConstant typeCmp = bctx.getTypeConstant(m_nType).getCanonicalJitType();
         RegisterInfo reg1    = bctx.ensureRegister(code, m_nValue1);
         RegisterInfo reg2    = bctx.ensureRegister(code, m_nValue2);
         TypeConstant type1   = reg1.type();
@@ -288,8 +294,8 @@ public abstract class OpTest
         if (typeCmp.isFormalType()) {
             typeCmp = typeCmp.resolveConstraints();
         }
-        assert typeCmp.equals(
-            selectCommonType(type1, type2, ErrorListener.BLACKHOLE).removeNullable());
+        TypeConstant typeCommon = selectCommonType(type1, type2, ErrorListener.BLACKHOLE).removeNullable();
+        assert typeCmp.isA(typeCommon) && typeCommon.isA(typeCmp);
 
         typeCmp.buildCompare(bctx, code, nOp, reg1, reg2, /*lblTrue*/ null);
 

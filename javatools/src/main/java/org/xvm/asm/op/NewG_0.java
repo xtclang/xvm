@@ -106,6 +106,11 @@ public class NewG_0
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        bctx.typeMatrix.assign(getAddress(), m_nRetValue, bctx.getTypeConstant(m_nTypeValue));
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         buildNewG(bctx, code, m_nTypeValue, NO_ARGS);
     }

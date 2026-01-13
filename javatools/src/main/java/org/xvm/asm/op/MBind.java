@@ -113,6 +113,13 @@ public class MBind
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        TypeConstant typeMethod = bctx.getArgumentType(m_nMethodId);
+
+        bctx.typeMatrix.assign(getAddress(), m_nRetValue, bctx.pool().bindMethodTarget(typeMethod));
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo regMethod = bctx.ensureRegister(code, m_nMethodId);
         RegisterInfo regTarget = bctx.ensureRegister(code, m_nTarget);

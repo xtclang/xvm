@@ -6,7 +6,10 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
+
+import org.xvm.asm.constants.CastTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 /**
@@ -59,10 +62,15 @@ public class TypeMatrix {
      * @return the set of registers that have widened their types
      */
     public Set<Integer> follow(int currAddr, int nextAddr, int exceptId) {
+        Set<Integer> changeSet = Collections.emptySet();
+
+        if (nextAddr >= views.length) {
+            return changeSet;
+        }
+
         OpView currView = views[currAddr];
         OpView nextView = views[nextAddr];
 
-        Set<Integer> changeSet = Collections.emptySet();
         if (currView != null) {
             if (nextView == null) {
                 if (exceptId >= 0 && currView.types.containsKey(exceptId)) {
@@ -80,50 +88,71 @@ public class TypeMatrix {
     }
 
     /**
-     * Propagate all types from current op to the next op and set the specified register's type.
+     * Propagate all types from current op to the next op and declare the specified register's type.
      */
     public void declare(int currAddr, int regId, TypeConstant type) {
-        declare(currAddr, currAddr + 1, regId, type);
+        assert type != null;
+
+        if (currAddr != -1) {
+            follow(currAddr, currAddr + 1, regId);
+        }
+
+        ensureMutableView(currAddr + 1).types.put(regId, type);
+
+        if (regId >= 0) {
+            bctx.scope.declareRegister(regId);
+        }
     }
 
     /**
-     * Propagate all types from current op to the destination op and set the specified register's
+     * Propagate all types from current op to the next op and assign the specified register's type.
+     */
+    public void assign(int currAddr, int regId, TypeConstant type) {
+        assign(currAddr, currAddr + 1, regId, type);
+    }
+
+    /**
+     * Propagate all types from current op to the destination op and assign the specified register's
      * type.
      */
-    public void declare(int currAddr, int nextAddr, int regId, TypeConstant type) {
-        if (currAddr != -1) {
-            follow(currAddr, nextAddr, regId);
-        }
+    public void assign(int currAddr, int nextAddr, int regId, TypeConstant type) {
+        assert currAddr >= 0 && type != null;
 
-        ensureMutableView(nextAddr).types.put(regId, type);
-    }
+        follow(currAddr, nextAddr, -1);
 
-    /**
-     * Propagate all register types from current op to the next op and merge the type for the
-     * specified register with any previously known type for that register.
-     */
-    public void merge(int currAddr, int regId, TypeConstant type) {
-        merge(currAddr, currAddr + 1, regId, type);
-    }
+        OpView       nextView = ensureMutableView(nextAddr);
+        TypeConstant nextType = nextView.types.get(regId);
 
-    /**
-     * Propagate all register types from current op to the destination op and merge the type for the
-     * specified register with any previously known type for that register.
-     */
-    public void merge(int currAddr, int nextAddr, int regId, TypeConstant type) {
-        follow(currAddr, nextAddr, regId);
-
-        OpView nextView = views[nextAddr];
-        if (nextView == null) {
-            nextView = ensureMutableView(nextAddr);
-            nextView.types.put(regId, type);
+        ComputeType:
+        if (nextType == null) {
+            if (regId >= 0) {
+                bctx.scope.declareRegister(regId);
+            }
         } else {
-            TypeConstant nextType = nextView.types.get(regId);
+            if (type.equals(nextType)) {
+                return;
+            }
+
+            if (nextType instanceof CastTypeConstant inferredType) {
+                nextType = inferredType.getBaseType();
+            }
+
+            // use CastTypeConstant to remember the original type
+            assert type.isA(nextType);
+
             if (!type.equals(nextType)) {
-                nextView = ensureMutableView(nextAddr);
-                mergeType(nextView.types, regId, nextType, type);
+                if (type instanceof CastTypeConstant inferredType) {
+                    TypeConstant baseType = inferredType.getBaseType();
+                    if (baseType.equals(nextType)) {
+                        // take as is
+                        break ComputeType;
+                    }
+                    type = inferredType.getUnderlyingType2();
+                }
+                type = new CastTypeConstant(bctx.pool(), nextType, type);
             }
         }
+        nextView.types.put(regId, type);
     }
 
     /**
@@ -131,8 +160,10 @@ public class TypeMatrix {
      * the specified register id.
      */
     public void removeRegisters(int currAddr, int topRegId) {
-        ensureMutableView(currAddr).types.entrySet().
-            removeIf(entry -> entry.getKey() >= topRegId);
+        if (currAddr < views.length) {
+            ensureMutableView(currAddr).types.entrySet().
+                removeIf(entry -> entry.getKey() >= topRegId);
+        }
     }
 
     // ----- collection phase helpers --------------------------------------------------------------
@@ -202,8 +233,30 @@ public class TypeMatrix {
                            TypeConstant currType, TypeConstant mergeType) {
         if (mergeType == null) {
             types.put(regId, currType);
-        } else if (!currType.equals(mergeType)) {
-            types.put(regId, currType.union(bctx.pool(), mergeType));
+        } else if (!mergeType.equals(currType)) {
+            if (mergeType.isA(currType)) {
+                types.put(regId, currType);
+            } else if (currType.isA(mergeType)) {
+                types.put(regId, mergeType);
+            } else {
+                TypeConstant baseType = null;
+                if (currType instanceof CastTypeConstant inferredType) {
+                    baseType = inferredType.getBaseType();
+                    currType = inferredType.getUnderlyingType2();
+                    assert mergeType.isA(baseType);
+                }
+
+                if (mergeType instanceof CastTypeConstant inferredType) {
+                    baseType  = inferredType.getBaseType();
+                    mergeType = inferredType.getUnderlyingType2();
+                }
+
+                ConstantPool pool      = bctx.pool();
+                TypeConstant unionType = currType.union(pool, mergeType);
+                types.put(regId, baseType == null // this usually means an "out-of-scope" var
+                    ? unionType
+                    : new CastTypeConstant(pool, baseType, unionType));
+            }
             return true;
         }
         return false;

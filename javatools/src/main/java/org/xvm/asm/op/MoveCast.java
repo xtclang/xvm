@@ -117,6 +117,13 @@ public class MoveCast
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        TypeConstant typeFrom = bctx.getArgumentType(m_nFromValue);
+        TypeConstant typeTo   = bctx.getArgumentType(m_nToValue);
+        bctx.typeMatrix.assign(getAddress(), m_nFromValue, typeFrom.combine(bctx.pool(), typeTo));
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo regType = bctx.loadConstant(code, m_nToType);
         bctx.loadArgument(code, m_nFromValue);

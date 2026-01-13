@@ -97,6 +97,18 @@ public class GuardAll
     }
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        bctx.enterScope(null);
+        bctx.enterScope(null);
+
+        // we could be called for dead code to correctly compute the scopes, but should not
+        // compute types further
+        if (bctx.typeMatrix.isReached(getAddress())) {
+            super.computeTypes(bctx);
+        }
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         // the GuardAll introduces two scopes:
         //  - outer with synthetic vars: $rethrow, $contLoop, $breakLoop

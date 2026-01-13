@@ -14,6 +14,7 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.javajit.BuildContext;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.template.xBoolean;
@@ -266,6 +267,17 @@ public abstract class OpSwitch
 
     protected abstract void appendArgDescription(StringBuilder sb);
 
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void computeTypes(BuildContext bctx) {
+        int nAddrThis = getAddress();
+        for (int ofCase : m_aofCase) {
+            bctx.typeMatrix.follow(nAddrThis, nAddrThis + ofCase, -1);
+        }
+        bctx.typeMatrix.follow(nAddrThis, nAddrThis + m_ofDefault, -1);
+    }
 
     // ----- fields and enums ----------------------------------------------------------------------
 

@@ -2,8 +2,9 @@ module test2.examples.org {
 
     import ecstasy.io.IOException;
 
-    @Inject Console console;
     void run() {
+        @Inject Console console;
+
         Color c = Blue;
         console.print(c.ordinal);
         console.print(c.text);
@@ -24,6 +25,7 @@ module test2.examples.org {
         Color|Int cint = Red;
         assert testRed1(cint);
         assert testRed2(cint);
+        assert testRed3(cint);
     }
 
     Boolean testRedOrNull(Color? c) {
@@ -42,8 +44,18 @@ module test2.examples.org {
     }
 
     Boolean testRed2(Color|Int cint) {
-        if (cint == 43) {
-            assert:debug;
+        if (cint.is(Color)) {
+            cint = 111;
+            cint = cint * 43;
+        }
+        return cint != 42;
+    }
+
+    Boolean testRed3(Color|Int cint) {
+        if (cint.is(Color)) {
+            cint = 111;
+            cint = cint * 43;
+            cint = Blue;
         }
         return cint != 42;
     }

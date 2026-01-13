@@ -206,6 +206,16 @@ public abstract class OpIndex
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        if (isAssignOp()) {
+            TypeConstant typeFrom = bctx.getArgumentType(m_nTarget);
+            bctx.typeMatrix.assign(getAddress(), m_nRetValue, typeFrom.getParamType(0));
+        } else {
+            super.computeTypes(bctx);
+        }
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         TypeSystem   ts     = bctx.typeSystem;
         RegisterInfo reg    = bctx.loadArgument(code, m_nTarget);

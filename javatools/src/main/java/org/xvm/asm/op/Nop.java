@@ -133,6 +133,17 @@ public class Nop extends Op {
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        bctx.lineNumber += getLineCount();
+
+        // we could be called for dead code to correctly update the line count, but should not
+        // compute types further
+        if (bctx.typeMatrix.isReached(getAddress())) {
+            super.computeTypes(bctx);
+        }
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         bctx.lineNumber += getLineCount();
         code.lineNumber(bctx.lineNumber);
