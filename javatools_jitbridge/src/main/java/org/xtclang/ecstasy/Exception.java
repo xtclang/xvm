@@ -45,7 +45,7 @@ public class Exception extends nConst {
      * Helper method for native exception construction.
      */
     public nException $init(Ctx ctx, java.lang.String message, Throwable cause) {
-        this.text       = message != null ? String.of(ctx, message) : Nullable.Null;
+        this.text       = message == null ? Nullable.Null : String.of(ctx, message);
         this.cause      = cause instanceof nException e ? e.exception : Nullable.Null;
         this.$exception = $createJavaException(cause);
         return $exception;

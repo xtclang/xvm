@@ -248,7 +248,7 @@ public interface NumberSupport {
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
      * @param regTarget  the register containing the target of the operation
-     * @param nArgValue  the register containing the operation argument
+     * @param nArgValue  the operation argument id
      *
      * @return the type of the result of the operation
      */
@@ -270,7 +270,7 @@ public interface NumberSupport {
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
      * @param regTarget  the register containing the target of the operation
-     * @param nArgValue  the register containing the operation argument
+     * @param nArgValue  the operation argument id
      *
      * @return the type of the result of the operation
      */

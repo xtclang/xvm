@@ -255,7 +255,7 @@ public abstract class OpGeneral
                     md = jmd.standardMD;
                 }
 
-                bctx.loadArgument(code, m_nTarget);
+                regTarget.load(code);
                 bctx.loadCtx(code);
                 code.invokevirtual(regTarget.cd(), sJitName, md);
             }

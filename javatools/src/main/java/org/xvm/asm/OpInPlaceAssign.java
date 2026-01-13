@@ -194,17 +194,17 @@ public abstract class OpInPlaceAssign
         String sName;
         String sOp;
         switch (getOpCode()) {
-            case OP_IP_ADD     -> {sName = "add";           sOp = "+";   }
-            case OP_IP_SUB     -> {sName = "sub";           sOp = "-";   }
-            case OP_IP_MUL     -> {sName = "mul";           sOp = "*";   }
-            case OP_IP_DIV     -> {sName = "div";           sOp = "/";   }
-            case OP_IP_MOD     -> {sName = "mod";           sOp = "%";   }
-            case OP_IP_SHL     -> {sName = "shiftLeft";     sOp = "<<";  }
-            case OP_IP_SHR     -> {sName = "shiftRight";    sOp = ">>";  }
-            case OP_IP_USHR    -> {sName = "shiftAllRight"; sOp = ">>";  }
-            case OP_IP_AND     -> {sName = "and";           sOp = "&";   }
-            case OP_IP_OR      -> {sName = "or";            sOp = "|";   }
-            case OP_IP_XOR     -> {sName = "xor";           sOp = "^";   }
+            case OP_IP_ADD  -> {sName = "add";           sOp = "+";   }
+            case OP_IP_SUB  -> {sName = "sub";           sOp = "-";   }
+            case OP_IP_MUL  -> {sName = "mul";           sOp = "*";   }
+            case OP_IP_DIV  -> {sName = "div";           sOp = "/";   }
+            case OP_IP_MOD  -> {sName = "mod";           sOp = "%";   }
+            case OP_IP_SHL  -> {sName = "shiftLeft";     sOp = "<<";  }
+            case OP_IP_SHR  -> {sName = "shiftRight";    sOp = ">>";  }
+            case OP_IP_USHR -> {sName = "shiftAllRight"; sOp = ">>";  }
+            case OP_IP_AND  -> {sName = "and";           sOp = "&";   }
+            case OP_IP_OR   -> {sName = "or";            sOp = "|";   }
+            case OP_IP_XOR  -> {sName = "xor";           sOp = "^";   }
 
             default -> throw new UnsupportedOperationException(toName(getOpCode()));
         }
