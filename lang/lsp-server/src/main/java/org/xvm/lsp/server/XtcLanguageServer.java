@@ -43,9 +43,12 @@ import org.xvm.lsp.model.CompilationResult;
 import org.xvm.lsp.model.Diagnostic;
 import org.xvm.lsp.model.SymbolInfo;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -55,6 +58,20 @@ import java.util.concurrent.ConcurrentHashMap;
 public class XtcLanguageServer implements LanguageServer, LanguageClientAware {
 
     private static final Logger LOG = LoggerFactory.getLogger(XtcLanguageServer.class);
+    private static final String BUILD_INFO = loadBuildInfo();
+
+    private static String loadBuildInfo() {
+        try (InputStream is = XtcLanguageServer.class.getResourceAsStream("/lsp-version.properties")) {
+            if (is != null) {
+                Properties props = new Properties();
+                props.load(is);
+                return "v" + props.getProperty("lsp.version", "?") + " built " + props.getProperty("lsp.build.time", "?");
+            }
+        } catch (IOException e) {
+            // Ignore
+        }
+        return "unknown";
+    }
 
     private final XtcCompilerAdapter adapter;
     private final XtcTextDocumentService textDocumentService;
@@ -77,7 +94,10 @@ public class XtcLanguageServer implements LanguageServer, LanguageClientAware {
 
     @Override
     public CompletableFuture<InitializeResult> initialize(final InitializeParams params) {
-        LOG.info("Initializing XTC Language Server");
+        LOG.info("========================================");
+        LOG.info("XTC Language Server {}", BUILD_INFO);
+        LOG.info("========================================");
+        LOG.info("Initializing for root: {}", params.getRootUri());
 
         final ServerCapabilities capabilities = new ServerCapabilities();
 
@@ -118,7 +138,7 @@ public class XtcLanguageServer implements LanguageServer, LanguageClientAware {
     @Override
     public void exit() {
         LOG.info("Exiting XTC Language Server");
-        System.exit(initialized ? 1 : 0);
+        // Do NOT call System.exit() - we may be running in-process in IntelliJ
     }
 
     @Override
@@ -201,8 +221,13 @@ public class XtcLanguageServer implements LanguageServer, LanguageClientAware {
         @Override
         public void didChange(final DidChangeTextDocumentParams params) {
             final String uri = params.getTextDocument().getUri();
+            final var changes = params.getContentChanges();
+            if (changes == null || changes.isEmpty()) {
+                LOG.warn("didChange received with no content changes for: {}", uri);
+                return;
+            }
             // We use full sync, so there's only one change with the full content
-            final String content = params.getContentChanges().getFirst().getText();
+            final String content = changes.getFirst().getText();
 
             LOG.debug("Document changed: {}", uri);
             openDocuments.put(uri, content);

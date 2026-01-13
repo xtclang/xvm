@@ -23,25 +23,21 @@
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.gradle</depends>
+    <!-- TextMate plugin for syntax highlighting -->
+    <depends>org.jetbrains.plugins.textmate</depends>
     <!-- LSP4IJ provides LSP support for Community Edition -->
     <depends>com.redhat.devtools.lsp4ij</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <!-- Project Generator for New Project wizard -->
-        <directoryProjectGenerator
-            implementation="org.xtclang.idea.project.XtcProjectGenerator"/>
+        <!-- Project Generator for New Project wizard (IntelliJ IDEA) -->
+        <newProjectWizard.generator
+            implementation="org.xtclang.idea.project.XtcNewProjectWizard"/>
 
         <!-- Run Configuration -->
         <configurationType
             implementation="org.xtclang.idea.run.XtcRunConfigurationType"/>
 
-        <!-- File Type for .x files -->
-        <fileType
-            name="XTC Source"
-            implementationClass="org.xtclang.idea.XtcFileType"
-            fieldName="INSTANCE"
-            language="XTC"
-            extensions="x"/>
+        <!-- No FileType registered - TextMate bundle handles .x files -->
     </extensions>
 
     <!-- LSP4IJ Language Server registration -->
@@ -54,20 +50,14 @@
                 Requires XDK_HOME to be set or the LSP server JAR to be bundled.
             ]]></description>
         </server>
-        <languageMapping language="XTC"
-                         serverId="xtcLanguageServer"/>
+        <!-- Use file pattern mapping instead of language mapping so TextMate can handle the file type -->
+        <fileNamePatternMapping patterns="*.x"
+                                 serverId="xtcLanguageServer"/>
     </extensions>
 
-    <!-- TextMate grammar for syntax highlighting (via tm4e bundled with LSP4IJ) -->
-    <extensions defaultExtensionNs="org.eclipse.tm4e.registry">
-        <grammar path="textmate/xtc.tmLanguage.json"
-                 scopeName="source.xtc"/>
-        <scopeNameContentTypeBinding scopeName="source.xtc"
-                                     contentTypeId="XTC"/>
-    </extensions>
-
-    <extensions defaultExtensionNs="org.eclipse.tm4e.languageconfiguration">
-        <languageConfiguration path="textmate/language-configuration.json"
-                               contentTypeId="XTC"/>
+    <!-- TextMate grammar for syntax highlighting (via IntelliJ's TextMate plugin) -->
+    <extensions defaultExtensionNs="com.intellij">
+        <textmate.bundleProvider
+            implementation="org.xtclang.idea.XtcTextMateBundleProvider"/>
     </extensions>
 </idea-plugin>

@@ -20,30 +20,86 @@ repositories {
     }
 }
 
+// =============================================================================
+// Sync XtcProjectCreator from javatools (compiled for Java 21)
+// =============================================================================
+// XtcProjectCreator is a standalone class with no javatools dependencies.
+// We sync it here and compile it for Java 21 (IntelliJ's runtime).
+
+val syncedJavaSourceDir = layout.buildDirectory.dir("generated/synced-java")
+
+val syncXtcProjectCreator by tasks.registering(Copy::class) {
+    description = "Sync XtcProjectCreator.java from javatools for Java 21 compilation"
+    from(rootProject.file("../javatools/src/main/java/org/xvm/tool/XtcProjectCreator.java"))
+    into(syncedJavaSourceDir.map { it.dir("org/xvm/tool") })
+}
+
+sourceSets.main {
+    java.srcDir(syncedJavaSourceDir)
+}
+
+tasks.named("compileJava") {
+    dependsOn(syncXtcProjectCreator)
+}
+
+tasks.named("compileKotlin") {
+    dependsOn(syncXtcProjectCreator)
+}
+
+// =============================================================================
+// Consumer configurations for artifacts from sibling projects
+// =============================================================================
+
+// Configuration to consume TextMate grammar from root project
+val textMateGrammar by configurations.creating {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+    attributes {
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.DOCUMENTATION))
+        attribute(Usage.USAGE_ATTRIBUTE, objects.named("textmate-grammar"))
+    }
+}
+
+
 dependencies {
     implementation(kotlin("stdlib"))
+
+    // LSP server for in-process execution (no subprocess needed)
+    implementation(project(":lsp-server"))
 
     intellijPlatform {
         intellijIdeaCommunity("2025.1")
         bundledPlugin("com.intellij.gradle")
+        // TextMate plugin for syntax highlighting (bundled in IntelliJ)
+        bundledPlugin("org.jetbrains.plugins.textmate")
         // LSP4IJ provides LSP support for Community Edition
         plugin("com.redhat.devtools.lsp4ij:0.11.0")
         pluginVerifier()
     }
+
+    testImplementation(kotlin("test-junit5"))
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    // JUnit 4 needed by IntelliJ test framework at runtime
+    testRuntimeOnly("junit:junit:4.13.2")
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.10.2")
+
+    // Depend on sibling project artifacts via configurations
+    textMateGrammar(project(path = ":", configuration = "textMateElements"))
 }
 
-// Use Kotlin JDK version from xdkProperties
-val kotlinJdkVersion = xdkProperties.int("org.xtclang.kotlin.jdk")
+// IntelliJ 2025.1 runs on JDK 21, so we must target JDK 21 (not the project's JDK 24)
+val intellijJdkVersion = 21
 
 java {
     toolchain {
-        languageVersion.set(kotlinJdkVersion.map { JavaLanguageVersion.of(it) })
+        languageVersion.set(JavaLanguageVersion.of(intellijJdkVersion))
     }
 }
 
 kotlin {
     jvmToolchain {
-        languageVersion.set(kotlinJdkVersion.map { JavaLanguageVersion.of(it) })
+        languageVersion.set(JavaLanguageVersion.of(intellijJdkVersion))
     }
 }
 
@@ -65,26 +121,19 @@ intellijPlatform {
                 <li>New Project wizard for XTC projects</li>
                 <li>Run configurations for XTC applications</li>
                 <li>File type support for .x files</li>
+                <li>LSP-based language features</li>
             </ul>
         """.trimIndent()
     }
 
     signing {
-        // Plugin signing is optional but recommended for production releases
-        // Set these environment variables to enable signing:
-        //   JETBRAINS_CERTIFICATE_CHAIN - Base64-encoded certificate chain
-        //   JETBRAINS_PRIVATE_KEY - Base64-encoded private key
-        //   JETBRAINS_PRIVATE_KEY_PASSWORD - Private key password
         certificateChain = providers.environmentVariable("JETBRAINS_CERTIFICATE_CHAIN")
         privateKey = providers.environmentVariable("JETBRAINS_PRIVATE_KEY")
         password = providers.environmentVariable("JETBRAINS_PRIVATE_KEY_PASSWORD")
     }
 
     publishing {
-        // Token from https://plugins.jetbrains.com/author/me/tokens
         token = providers.environmentVariable("JETBRAINS_TOKEN")
-
-        // Release channel from version.properties: alpha, beta, or default (stable)
         channels = listOf(releaseChannel)
     }
 }
@@ -124,29 +173,30 @@ val buildSearchableOptions by tasks.existing {
 }
 
 // =============================================================================
-// TextMate Grammar Integration
+// Copy TextMate Grammar into plugin lib directory
 // =============================================================================
-// Copy TextMate grammar from parent lang project's build output into plugin resources.
-// The grammar is generated by lang's generateTextMate task from dsl/XtcLanguage.kt.
-//
-// IMPORTANT: When building via lang:build, the grammar is generated first.
-// When building standalone, run `../gradlew generateEditorSupport` first.
+// TextMate grammar provides syntax highlighting via IntelliJ's TextMate plugin.
+// The grammar files must be on the filesystem (not inside JAR) for TextMateBundleProvider.
 
-val parentTextMateDir: Directory = layout.projectDirectory.dir("../build/generated/textmate")
-val pluginTextMateDir: Directory = layout.projectDirectory.dir("src/main/resources/textmate")
+val sandboxPluginTextMate = layout.buildDirectory.dir("idea-sandbox/IC-2025.1/plugins/${project.name}/lib/textmate")
 
-val copyTextMateGrammar by tasks.registering(Sync::class) {
+val copyTextMateToSandbox by tasks.registering(Sync::class) {
     group = "build"
-    description = "Sync generated TextMate grammar into plugin resources"
+    description = "Copy TextMate grammar into plugin sandbox lib directory"
 
-    from(parentTextMateDir)
-    into(pluginTextMateDir)
-
-    // Declare explicit file inputs for proper up-to-date checking
-    inputs.dir(parentTextMateDir).optional()
+    from(textMateGrammar)
+    into(sandboxPluginTextMate)
 }
 
-// Ensure grammar is synced before processing resources
-val processResources by tasks.existing {
-    dependsOn(copyTextMateGrammar)
+// Get typed reference to IntelliJ Platform tasks
+val prepareSandbox by tasks.existing(Sync::class) {
+    finalizedBy(copyTextMateToSandbox)
+}
+
+val prepareJarSearchableOptions by tasks.existing {
+    mustRunAfter(copyTextMateToSandbox)
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
 }

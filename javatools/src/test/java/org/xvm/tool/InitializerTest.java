@@ -215,18 +215,20 @@ public class InitializerTest {
     }
 
     @Test
-    public void testDirectoryAlreadyExists() throws Exception {
+    public void testDirectoryAlreadyExistsAndNotEmpty() throws Exception {
         String projectName = "existing";
 
-        // Create the directory first
-        Files.createDirectory(tempDir.resolve(projectName));
+        // Create the directory with a file in it (non-empty)
+        Path projectDir = tempDir.resolve(projectName);
+        Files.createDirectory(projectDir);
+        Files.writeString(projectDir.resolve("somefile.txt"), "content");
 
         int result = runInitializer(projectPath(projectName));
 
-        assertEquals(1, result, "Initializer should fail when directory exists");
+        assertEquals(1, result, "Initializer should fail when directory exists and is not empty");
         String output = outContent.toString() + errContent.toString();
-        assertTrue(output.contains("already exists"),
-                   "Error message should mention directory exists");
+        assertTrue(output.contains("already exists") && output.contains("not empty"),
+                   "Error message should mention directory exists and is not empty");
     }
 
     @Test

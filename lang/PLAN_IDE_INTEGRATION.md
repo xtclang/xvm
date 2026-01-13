@@ -192,6 +192,7 @@ The LSP server at `/lang/` provides:
 | Find References | `textDocument/references` | ✅ Implemented |
 | Document Symbols | `textDocument/documentSymbol` | ✅ Implemented |
 | Diagnostics | `textDocument/publishDiagnostics` | ✅ Implemented |
+| Semantic Tokens | `textDocument/semanticTokens` | ❌ Not yet |
 | Formatting | `textDocument/formatting` | ❌ Not yet |
 | Rename | `textDocument/rename` | ❌ Not yet |
 
@@ -272,6 +273,72 @@ xtc run
 |------|---------|
 | `javatools/.../tool/Launcher.java` | Added `init` command case |
 
+## Syntax Highlighting Strategy
+
+### Current: TextMate Grammar
+
+Currently using TextMate grammar for syntax highlighting:
+- IDE-independent format (works in VS Code, IntelliJ, Sublime, etc.)
+- Generated from DSL in `lang/build.gradle.kts`
+- Located at `lang/build/textmate/`
+- Provides basic keyword/string/comment highlighting
+
+**Limitation**: TextMate is regex-based and cannot understand semantic context.
+
+### Future: LSP Semantic Tokens
+
+**Goal**: Migrate syntax highlighting to LSP semantic tokens for IDE-independent, semantically-accurate highlighting.
+
+**Benefits**:
+- Highlighting logic lives in LSP server (single implementation)
+- Works with ANY LSP-compatible editor
+- Semantic accuracy (knows if `Console` is a type vs variable)
+- Can highlight based on actual XTC parser/compiler knowledge
+
+**Required Changes**:
+
+1. **LSP Server** (`lang/lsp-server/`):
+   - Implement `textDocument/semanticTokens/full`
+   - Implement `textDocument/semanticTokens/range` (optional, for performance)
+   - Return token types: `keyword`, `type`, `function`, `variable`, `string`, `comment`, etc.
+   - Use XTC lexer/parser for accurate tokenization
+
+2. **Capability Registration**:
+   ```java
+   // In XtcLanguageServer.initialize()
+   ServerCapabilities capabilities = new ServerCapabilities();
+   SemanticTokensOptions semanticTokens = new SemanticTokensOptions();
+   semanticTokens.setFull(true);
+   semanticTokens.setLegend(new SemanticTokensLegend(
+       Arrays.asList("keyword", "type", "function", "variable", "string", "comment", "number", "operator"),
+       Arrays.asList("declaration", "definition", "readonly", "static")
+   ));
+   capabilities.setSemanticTokensProvider(semanticTokens);
+   ```
+
+3. **Token Provider Implementation**:
+   ```java
+   @Override
+   public CompletableFuture<SemanticTokens> semanticTokensFull(SemanticTokensParams params) {
+       // Use XTC Lexer to tokenize the document
+       // Map XTC token types to LSP semantic token types
+       // Return encoded token data
+   }
+   ```
+
+4. **IDE Plugins**:
+   - LSP4IJ (IntelliJ) automatically supports semantic tokens
+   - VS Code LSP client automatically supports semantic tokens
+   - No plugin changes needed once server implements it
+
+**Migration Path**:
+1. Keep TextMate grammar as fallback (for editors without LSP)
+2. Implement semantic tokens in LSP server
+3. LSP clients will prefer semantic tokens when available
+4. Eventually deprecate TextMate for LSP-enabled editors
+
+**Priority**: Medium - TextMate works for basic highlighting, semantic tokens adds accuracy.
+
 ## Design Principles
 
 1. **CLI is source of truth** - All logic lives in the xtc CLI
@@ -279,3 +346,4 @@ xtc run
 3. **Maintain UX parity** - Same experience across all IDEs
 4. **Leverage LSP** - Write language features once, use everywhere
 5. **Gradle for build** - Use existing Gradle plugin infrastructure
+6. **Prefer LSP over IDE-specific** - Semantic tokens over TextMate when possible

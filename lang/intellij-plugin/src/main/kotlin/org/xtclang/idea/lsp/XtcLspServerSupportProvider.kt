@@ -1,140 +1,118 @@
 package org.xtclang.idea.lsp
 
+import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.redhat.devtools.lsp4ij.LanguageServerFactory
 import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
 import com.redhat.devtools.lsp4ij.server.StreamConnectionProvider
+import org.eclipse.lsp4j.launch.LSPLauncher
+import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.lsp4j.services.LanguageServer
-import java.io.File
+import org.xvm.lsp.adapter.MockXtcCompilerAdapter
+import org.xvm.lsp.server.XtcLanguageServer
 import java.io.InputStream
 import java.io.OutputStream
+import java.io.PipedInputStream
+import java.io.PipedOutputStream
+import java.util.Properties
+import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
 
 /**
- * Factory for creating XTC Language Server instances.
- *
- * The LSP server JAR is located via:
- * 1. XDK_HOME environment variable (preferred)
- * 2. Bundled with the plugin (fallback)
- *
- * Communication is via stdio (stdin/stdout).
+ * Factory for creating XTC Language Server connections.
+ * The server runs in-process using piped streams for communication.
  */
 class XtcLanguageServerFactory : LanguageServerFactory {
 
-    override fun createConnectionProvider(project: Project): StreamConnectionProvider {
-        return XtcStreamConnectionProvider()
+    private val log = logger<XtcLanguageServerFactory>()
+
+    private val buildInfo: String by lazy {
+        runCatching {
+            Properties().apply {
+                XtcLanguageServerFactory::class.java
+                    .getResourceAsStream("/lsp-version.properties")
+                    ?.use { load(it) }
+            }.let { props ->
+                "v${props.getProperty("lsp.version", "?")} built ${props.getProperty("lsp.build.time", "?")}"
+            }
+        }.getOrDefault("unknown")
     }
 
-    override fun createLanguageClient(project: Project): LanguageClientImpl {
-        return LanguageClientImpl(project)
-    }
+    override fun createConnectionProvider(project: Project) =
+        XtcLspConnectionProvider().also {
+            log.info("Creating XTC LSP connection provider - $buildInfo")
+        }
 
-    override fun getServerInterface(): Class<out LanguageServer> {
-        return LanguageServer::class.java
-    }
+    override fun createLanguageClient(project: Project) = LanguageClientImpl(project)
+
+    override fun getServerInterface(): Class<out LanguageServer> = LanguageServer::class.java
 }
 
 /**
- * Provides the connection to the XTC LSP server process.
- * Launches the server as a subprocess and communicates via stdio.
+ * In-process LSP server connection using piped streams.
+ *
+ * Runs the XTC Language Server in the same JVM as IntelliJ,
+ * communicating via piped input/output streams. This avoids subprocess
+ * management and JAR path resolution issues.
  */
-class XtcStreamConnectionProvider : StreamConnectionProvider {
+class XtcLspConnectionProvider : StreamConnectionProvider {
 
-    private var process: Process? = null
+    private val log = logger<XtcLspConnectionProvider>()
+
+    private lateinit var clientInput: PipedInputStream
+    private lateinit var clientOutput: PipedOutputStream
+    private var server: XtcLanguageServer? = null
+    private var serverFuture: Future<Void>? = null
+
+    @Volatile
+    private var alive = false
 
     override fun start() {
-        val command = buildCommand()
-        val processBuilder = ProcessBuilder(command)
-            .redirectErrorStream(false)
+        log.info("Starting XTC LSP Server (in-process)")
 
-        process = processBuilder.start()
+        // Create piped streams for bidirectional communication
+        val serverInput = PipedInputStream()
+        val serverOutput = PipedOutputStream()
+        clientOutput = PipedOutputStream(serverInput)
+        clientInput = PipedInputStream(serverOutput)
+
+        // Create and start the language server
+        server = XtcLanguageServer(MockXtcCompilerAdapter()).also { srv ->
+            LSPLauncher.createServerLauncher(srv, serverInput, serverOutput).also { launcher ->
+                srv.connect(launcher.remoteProxy)
+                serverFuture = launcher.startListening()
+            }
+        }
+        alive = true
+
+        log.info("XTC LSP Server started (in-process)")
     }
 
-    override fun getInputStream(): InputStream {
-        return process?.inputStream
-            ?: throw IllegalStateException("LSP server process not started")
-    }
+    override fun getInputStream(): InputStream = clientInput
 
-    override fun getOutputStream(): OutputStream {
-        return process?.outputStream
-            ?: throw IllegalStateException("LSP server process not started")
-    }
+    override fun getOutputStream(): OutputStream = clientOutput
 
-    fun getErrorStream(): InputStream? {
-        return process?.errorStream
-    }
+    override fun isAlive() = alive && serverFuture?.isDone != true
 
     override fun stop() {
-        process?.let { p ->
-            p.outputStream.close()
-            p.destroy()
-            if (p.isAlive) {
-                p.destroyForcibly()
-            }
-        }
-        process = null
-    }
+        log.info("Stopping XTC LSP Server")
+        alive = false
 
-    override fun isAlive(): Boolean {
-        return process?.isAlive == true
-    }
-
-    private fun buildCommand(): List<String> {
-        val serverJar = findLspServerJar()
-        val javaExe = findJavaExecutable()
-
-        return listOf(javaExe, "-jar", serverJar)
-    }
-
-    private fun findLspServerJar(): String {
-        // Try XDK_HOME first
-        val xdkHome = System.getenv("XDK_HOME")
-        if (xdkHome != null) {
-            val xdkJar = File(xdkHome, "lib/xtc-lsp-all.jar")
-            if (xdkJar.exists()) {
-                return xdkJar.absolutePath
-            }
+        // Graceful shutdown with timeout
+        server?.let { srv ->
+            runCatching { srv.shutdown()?.get(2, TimeUnit.SECONDS) }
+                .onFailure { log.debug("Server shutdown: ${it.message}") }
+            runCatching { srv.exit() }
         }
 
-        // Try relative to plugin installation (for bundled JAR)
-        val pluginPath = javaClass.protectionDomain.codeSource?.location?.toURI()?.let {
-            File(it).parentFile
-        }
-        if (pluginPath != null) {
-            val bundledJar = File(pluginPath, "xtc-lsp-all.jar")
-            if (bundledJar.exists()) {
-                return bundledJar.absolutePath
-            }
-        }
+        serverFuture?.cancel(true)
+        serverFuture = null
 
-        throw IllegalStateException(
-            """
-            XTC LSP server not found.
+        // Close streams (ignore errors - pipe may already be broken)
+        runCatching { clientOutput.close() }
+        runCatching { clientInput.close() }
 
-            Please ensure one of:
-            1. Set XDK_HOME environment variable to your XTC installation
-            2. The xtc-lsp-all.jar is bundled with the plugin
-
-            Expected locations:
-            - ${'$'}XDK_HOME/lib/xtc-lsp-all.jar
-            """.trimIndent()
-        )
-    }
-
-    private fun findJavaExecutable(): String {
-        // Try JAVA_HOME first
-        val javaHome = System.getenv("JAVA_HOME")
-        if (javaHome != null) {
-            val javaExe = if (System.getProperty("os.name").lowercase().contains("win")) {
-                File(javaHome, "bin/java.exe")
-            } else {
-                File(javaHome, "bin/java")
-            }
-            if (javaExe.exists()) {
-                return javaExe.absolutePath
-            }
-        }
-
-        // Fallback to 'java' in PATH
-        return "java"
+        server = null
+        log.info("XTC LSP Server stopped")
     }
 }

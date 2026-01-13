@@ -20,8 +20,19 @@ import java.util.concurrent.ExecutionException;
  *   <li>For stdio communication: {@code java -jar xtc-lsp.jar}</li>
  *   <li>For socket communication: {@code java -jar xtc-lsp.jar --socket 5007}</li>
  * </ul>
+ *
+ * <p>Important: This LSP server uses stdio for communication. All logging goes to stderr
+ * to keep stdout clean for the JSON-RPC protocol.
  */
 public final class XtcLanguageServerLauncher {
+
+    // Static initializer runs before any SLF4J initialization to suppress
+    // SLF4J's informational messages that would otherwise go to stdout and
+    // corrupt the JSON-RPC protocol stream.
+    static {
+        // Suppress SLF4J internal messages (they go to stdout by default)
+        System.setProperty("slf4j.internal.verbosity", "WARN");
+    }
 
     private static final Logger LOG = LoggerFactory.getLogger(XtcLanguageServerLauncher.class);
 

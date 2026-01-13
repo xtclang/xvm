@@ -7,6 +7,8 @@ plugins {
     id("org.xtclang.build.common")
 }
 
-rootProject.name = "xtc-lsp"
+rootProject.name = "xtc-lang"
 
-includeBuild("intellij-plugin")
+// Subprojects
+include("lsp-server")
+include("intellij-plugin")

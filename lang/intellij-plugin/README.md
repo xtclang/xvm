@@ -71,19 +71,93 @@ The plugin invokes `xtc init` to scaffold the project, then imports it as a Grad
 ### Building the Plugin
 
 ```bash
-cd init/intellij-plugin
-
-# Build the plugin
-gradle buildPlugin
+# From the repository root
+./gradlew :lang:intellij-plugin:buildPlugin
 
 # Run in a sandbox IDE for testing
-gradle runIde
+./gradlew :lang:intellij-plugin:runIde
 
 # Run plugin verification
-gradle verifyPlugin
+./gradlew :lang:intellij-plugin:verifyPlugin
 ```
 
-The built plugin ZIP will be at `build/distributions/xtc-intellij-plugin-<version>.zip`.
+The built plugin ZIP will be at `lang/intellij-plugin/build/distributions/`.
+
+### Testing During Development
+
+When running `runIde`, a sandboxed IntelliJ IDEA instance opens with the plugin installed. Here's how to test each feature:
+
+#### Testing Syntax Highlighting
+
+1. Create or open a project containing `.x` files
+2. Open a `.x` file - you should see:
+   - XTC file icon (X logo) in the file tree
+   - Syntax highlighting (keywords, strings, comments colored)
+   - The file type shows as "XTC Source" in the status bar
+3. If syntax highlighting doesn't work, check:
+   - **Help → Show Log in Finder** and look for TextMate bundle errors
+   - Ensure the `textmate/` directory exists in the plugin's lib folder
+
+#### Testing the Project Creation Wizard
+
+1. **File → New → Project...**
+2. In the left panel, select **XTC**
+3. Configure:
+   - **Project name**: Enter a name (e.g., "MyXtcApp")
+   - **Project type**: Choose Application, Library, or Service
+   - **Multi-module**: Check for multi-module project structure
+4. Click **Create**
+5. Verify:
+   - A Gradle project is created with XTC structure
+   - The `build.gradle.kts` contains XTC plugin configuration
+   - Sample `.x` files are generated
+
+#### Testing Run Configurations
+
+1. Open a project with XTC modules
+2. **Run → Edit Configurations...**
+3. Click **+** → **XTC Application**
+4. Configure:
+   - **Module name**: The XTC module containing your app
+   - **Program arguments**: Any arguments for your app
+   - **Use Gradle**: Recommended for integrated builds
+5. Click **Apply**, then **Run**
+6. Verify:
+   - The run configuration appears in the toolbar
+   - Running invokes Gradle's `xtcRun` task
+   - Output appears in the Run tool window
+
+#### Testing LSP Features (Language Server)
+
+1. Open a `.x` file in an XTC project
+2. Test hover: Move cursor over a symbol - you should see documentation
+3. Test completion: Type and trigger completion (Ctrl+Space)
+4. Test go-to-definition: Ctrl+Click on a symbol
+5. If LSP isn't working:
+   - Check **Help → Show Log in Finder** for `XtcStreamConnectionProvider` messages
+   - Look for "XTC LSP server started with PID:" in the log
+   - Verify `xtc-lsp.jar` exists in the plugin's lib folder
+
+#### Viewing Plugin Logs
+
+The sandbox IDE writes logs to:
+```
+lang/intellij-plugin/build/idea-sandbox/IC-2025.1/log/idea.log
+```
+
+To view logs in real-time:
+```bash
+tail -f lang/intellij-plugin/build/idea-sandbox/IC-2025.1/log/idea.log | grep -i "xtc\|lsp"
+```
+
+#### Clearing Sandbox State
+
+If you need a fresh start, clean the sandbox:
+```bash
+./gradlew :lang:intellij-plugin:clean
+# Or manually:
+rm -rf lang/intellij-plugin/build/idea-sandbox/
+```
 
 ---
 

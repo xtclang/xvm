@@ -1,14 +1,21 @@
 package org.xtclang.idea.run
 
 import com.intellij.execution.Executor
-import com.intellij.execution.configurations.*
+import com.intellij.execution.configurations.CommandLineState
+import com.intellij.execution.configurations.ConfigurationFactory
+import com.intellij.execution.configurations.GeneralCommandLine
+import com.intellij.execution.configurations.RunConfiguration
+import com.intellij.execution.configurations.RunConfigurationBase
+import com.intellij.execution.configurations.RunProfileState
 import com.intellij.execution.process.OSProcessHandler
-import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.runners.ExecutionEnvironment
 import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.project.Project
+import com.intellij.ui.dsl.builder.bindSelected
+import com.intellij.ui.dsl.builder.bindText
+import com.intellij.ui.dsl.builder.panel
 import org.jdom.Element
-import javax.swing.*
+import kotlin.io.path.Path
 
 /**
  * Run configuration for XTC applications.
@@ -20,60 +27,44 @@ class XtcRunConfiguration(
     name: String
 ) : RunConfigurationBase<Any>(project, factory, name) {
 
-    var moduleName: String = ""
-    var programArguments: String = ""
-    var useGradle: Boolean = true
+    var moduleName = ""
+    var programArguments = ""
+    var useGradle = true
 
-    override fun getConfigurationEditor(): SettingsEditor<out RunConfiguration> {
-        return XtcRunSettingsEditor()
-    }
+    override fun getConfigurationEditor(): SettingsEditor<out RunConfiguration> = XtcRunSettingsEditor()
 
-    override fun getState(executor: Executor, environment: ExecutionEnvironment): RunProfileState {
-        return object : CommandLineState(environment) {
-            override fun startProcess(): ProcessHandler {
-                val commandLine = if (useGradle) {
-                    createGradleCommandLine()
-                } else {
-                    createXtcCommandLine()
+    override fun getState(executor: Executor, environment: ExecutionEnvironment): RunProfileState =
+        object : CommandLineState(environment) {
+            override fun startProcess() = OSProcessHandler(
+                when {
+                    useGradle -> createGradleCommandLine()
+                    else -> createXtcCommandLine()
                 }
-                return OSProcessHandler(commandLine)
-            }
+            )
         }
+
+    private fun createGradleCommandLine() = GeneralCommandLine().apply {
+        exePath = when {
+            "win" in System.getProperty("os.name").lowercase() -> "gradlew.bat"
+            else -> "./gradlew"
+        }
+        addParameter("xtcRun")
+        programArguments.takeIf { it.isNotBlank() }?.let { addParameter("--args=$it") }
+        workDirectory = project.basePath?.let { Path(it).toFile() }
     }
 
-    private fun createGradleCommandLine(): GeneralCommandLine {
-        val cmd = GeneralCommandLine()
-        cmd.exePath = if (System.getProperty("os.name").lowercase().contains("win")) {
-            "gradlew.bat"
-        } else {
-            "./gradlew"
-        }
-        cmd.addParameter("xtcRun")
-        if (programArguments.isNotBlank()) {
-            cmd.addParameter("--args=$programArguments")
-        }
-        cmd.workDirectory = project.basePath?.let { java.io.File(it) }
-        return cmd
-    }
-
-    private fun createXtcCommandLine(): GeneralCommandLine {
-        val cmd = GeneralCommandLine()
-        cmd.exePath = "xtc"
-        cmd.addParameter("run")
-        if (moduleName.isNotBlank()) {
-            cmd.addParameter(moduleName)
-        }
-        if (programArguments.isNotBlank()) {
-            programArguments.split(" ").forEach { cmd.addParameter(it) }
-        }
-        cmd.workDirectory = project.basePath?.let { java.io.File(it) }
-        return cmd
+    private fun createXtcCommandLine() = GeneralCommandLine().apply {
+        exePath = "xtc"
+        addParameter("run")
+        moduleName.takeIf { it.isNotBlank() }?.let { addParameter(it) }
+        programArguments.split(" ").filter { it.isNotBlank() }.forEach(::addParameter)
+        workDirectory = project.basePath?.let { Path(it).toFile() }
     }
 
     override fun readExternal(element: Element) {
         super.readExternal(element)
-        moduleName = element.getAttributeValue("moduleName") ?: ""
-        programArguments = element.getAttributeValue("programArguments") ?: ""
+        moduleName = element.getAttributeValue("moduleName").orEmpty()
+        programArguments = element.getAttributeValue("programArguments").orEmpty()
         useGradle = element.getAttributeValue("useGradle")?.toBoolean() ?: true
     }
 
@@ -86,41 +77,29 @@ class XtcRunConfiguration(
 }
 
 /**
- * Settings editor for XTC run configuration.
+ * Settings editor for XTC run configuration using Kotlin UI DSL.
  */
 class XtcRunSettingsEditor : SettingsEditor<XtcRunConfiguration>() {
 
-    private val moduleNameField = JTextField(30)
-    private val programArgumentsField = JTextField(30)
-    private val useGradleCheckbox = JCheckBox("Use Gradle (recommended)", true)
+    private var moduleName = ""
+    private var programArguments = ""
+    private var useGradle = true
 
-    override fun createEditor(): JComponent {
-        return JPanel().apply {
-            layout = BoxLayout(this, BoxLayout.Y_AXIS)
-
-            add(JPanel().apply {
-                add(JLabel("Module name:"))
-                add(moduleNameField)
-            })
-
-            add(JPanel().apply {
-                add(JLabel("Program arguments:"))
-                add(programArgumentsField)
-            })
-
-            add(useGradleCheckbox)
-        }
+    override fun createEditor() = panel {
+        row("Module name:") { textField().bindText(::moduleName) }
+        row("Program arguments:") { textField().bindText(::programArguments) }
+        row { checkBox("Use Gradle (recommended)").bindSelected(::useGradle) }
     }
 
     override fun applyEditorTo(config: XtcRunConfiguration) {
-        config.moduleName = moduleNameField.text
-        config.programArguments = programArgumentsField.text
-        config.useGradle = useGradleCheckbox.isSelected
+        config.moduleName = moduleName
+        config.programArguments = programArguments
+        config.useGradle = useGradle
     }
 
     override fun resetEditorFrom(config: XtcRunConfiguration) {
-        moduleNameField.text = config.moduleName
-        programArgumentsField.text = config.programArguments
-        useGradleCheckbox.isSelected = config.useGradle
+        moduleName = config.moduleName
+        programArguments = config.programArguments
+        useGradle = config.useGradle
     }
 }
