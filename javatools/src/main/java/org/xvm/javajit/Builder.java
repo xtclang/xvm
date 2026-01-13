@@ -100,12 +100,31 @@ public abstract class Builder {
             loadString(code, stringConst.getValue());
             return new SingleSlot(stringConst.getType(), CD_String, "");
 
-        case IntConstant intConstant:// TODO: support all Int/UInt types
-            code.ldc(intConstant.getValue().getLong());
-            return new SingleSlot(constant.getType(), CD_long, "");
+        case IntConstant intConstant:
+            return switch (intConstant.getFormat()) {
+                case Int16, UInt16, Int32 -> {
+                    code.ldc(intConstant.getValue().getInt());
+                    yield new SingleSlot(constant.getType(), CD_int, "");
+                }
+                case UInt32 -> {
+                    code.ldc(intConstant.getValue().getLong())
+                        .ldc(0xFFFFFFFFL)
+                        .land()
+                        .l2i();
+                    yield new SingleSlot(constant.getType(), CD_int, "");
+                }
+                case Int64, UInt64 -> {
+                    code.ldc(intConstant.getValue().getLong());
+                    yield new SingleSlot(constant.getType(), CD_long, "");
+                }
+                // TODO: Need to add Int128 and UInt128
+                default ->
+                    throw new IllegalStateException("Unsupported IntConstant type "
+                            + intConstant.getFormat());
+            };
 
         case ByteConstant byteConstant:
-            code.ldc(byteConstant.getValue().intValue());
+            code.ldc(byteConstant.getValue());
             return new SingleSlot(constant.getType(), CD_int, "");
 
         case LiteralConstant litConstant:
@@ -542,7 +561,7 @@ public abstract class Builder {
         case "J": // long
             switch (type.getSingleUnderlyingClass(false).getName()) {
                 case "Int64"  -> code.getfield(CD_Int64,  "$value", cd);
-                case "UInt64" -> code.getfield(CD_UInt32, "$value", cd);
+                case "UInt64" -> code.getfield(CD_UInt64, "$value", cd);
                 default       -> throw new IllegalStateException();
             }
             break;
@@ -916,6 +935,8 @@ public abstract class Builder {
     public static final String         Instance       = "$INSTANCE";
     public static final MethodTypeDesc MD_Boolean_box = MethodTypeDesc.of(CD_Boolean, CD_boolean);
     public static final MethodTypeDesc MD_Char_box    = MethodTypeDesc.of(CD_Char,   CD_int);
+    public static final MethodTypeDesc MD_Char_addInt = MethodTypeDesc.of(CD_int,    CD_Ctx, CD_int, CD_long);
+    public static final MethodTypeDesc MD_Char_subInt = MethodTypeDesc.of(CD_int,    CD_Ctx, CD_int, CD_long);
     public static final MethodTypeDesc MD_Int8_box    = MethodTypeDesc.of(CD_Int8,   CD_int);
     public static final MethodTypeDesc MD_Int16_box   = MethodTypeDesc.of(CD_Int16,  CD_int);
     public static final MethodTypeDesc MD_Int32_box   = MethodTypeDesc.of(CD_Int32,  CD_int);

@@ -11,6 +11,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.OpGeneral;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.NumberSupport;
 import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
@@ -21,7 +22,8 @@ import org.xvm.runtime.ObjectHandle;
  * GP_DIV rvalue1, rvalue2, lvalue ; T / T -> T
  */
 public class GP_Div
-        extends OpGeneral {
+        extends OpGeneral
+        implements NumberSupport {
     /**
      * Construct a GP_DIV op for the passed arguments.
      *
@@ -56,16 +58,10 @@ public class GP_Div
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
-        switch (regTarget.cd().descriptorString()) {
-            case "I" -> {
-                code.idiv();
-                bctx.adjustIntValue(code, regTarget.type());
-            }
-            case "J" -> code.ldiv();
-            case "F" -> code.fdiv();
-            case "D" -> code.ddiv();
-            default  -> throw new IllegalStateException();
-        }
+    protected void buildOptimizedBinary(BuildContext bctx,
+                                        CodeBuilder  code,
+                                        RegisterInfo regTarget,
+                                        RegisterInfo regArg) {
+        buildPrimitiveDiv(bctx, code, regTarget);
     }
 }

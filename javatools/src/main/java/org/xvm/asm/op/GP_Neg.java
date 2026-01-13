@@ -11,6 +11,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.OpGeneral;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.NumberSupport;
 import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
@@ -20,7 +21,8 @@ import org.xvm.runtime.ObjectHandle;
  * GP_NEG rvalue, lvalue   ; -T -> T
  */
 public class GP_Neg
-        extends OpGeneral {
+        extends OpGeneral
+        implements NumberSupport {
     /**
      * Construct a GP_NEG op for the passed arguments.
      *
@@ -60,24 +62,9 @@ public class GP_Neg
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    protected void buildOptimizedUnary(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
-        switch (regTarget.cd().descriptorString()) {
-            case "I" -> {
-                code.ineg();
-
-                switch (regTarget.type().getSingleUnderlyingClass(false).getName()) {
-                    case "Int8"  -> code.i2b();
-                    case "Int16" -> code.i2s();
-                    case "Int32" -> {}
-                    case "UInt8", "UInt16", "UInt32"
-                                 -> bctx.throwUnsupported(code);
-                    default -> throw new IllegalStateException();
-                }
-            }
-            case "J" -> code.lneg();
-            case "F" -> code.fneg();
-            case "D" -> code.dneg();
-            default  -> throw new IllegalStateException();
-        }
+    protected void buildOptimizedUnary(BuildContext bctx,
+                                       CodeBuilder  code,
+                                       RegisterInfo regTarget) {
+        buildPrimitiveNeg(bctx, code, regTarget);
     }
 }

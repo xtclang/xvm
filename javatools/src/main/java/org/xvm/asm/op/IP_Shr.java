@@ -4,11 +4,18 @@ package org.xvm.asm.op;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpInPlaceAssign;
 
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.NumberSupport;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -20,7 +27,8 @@ import org.xvm.runtime.template.reflect.xRef.RefHandle;
  * IP_SHR rvalue-target, rvalue2 ; T >>= T
  */
 public class IP_Shr
-        extends OpInPlaceAssign {
+        extends OpInPlaceAssign
+        implements NumberSupport {
     /**
      * Construct a IP_SHR op based on the passed arguments.
      *
@@ -60,5 +68,15 @@ public class IP_Shr
     @Override
     protected int completeWithProperty(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue) {
         return hTarget.getTemplate().invokePropertyShr(frame, hTarget, idProp, hValue);
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    protected TypeConstant buildOptimizedBinary(BuildContext bctx,
+                                                CodeBuilder  code,
+                                                RegisterInfo regTarget,
+                                                int          nArgValue) {
+        return buildPrimitiveShr(bctx, code, regTarget, nArgValue);
     }
 }

@@ -31,7 +31,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * Base class for GP_ op codes.
  */
 public abstract class OpGeneral
-        extends Op {
+        extends OpOptimized {
     /**
      * Construct a unary op for the passed arguments.
      *
@@ -197,26 +197,19 @@ public abstract class OpGeneral
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        RegisterInfo regTarget = bctx.loadArgument(code, m_nTarget);
+        RegisterInfo regTarget = bctx.ensureRegister(code, m_nTarget);
 
         if (!regTarget.isSingle()) {
             throw new UnsupportedOperationException(toName(getOpCode()) + " operation on multi-slot");
         }
 
-        ClassDesc    cdTarget   = regTarget.cd();
-        TypeConstant typeTarget = regTarget.type();
+        ClassDesc    cdTarget    = regTarget.cd();
+        TypeConstant typeTarget  = regTarget.type();
 
         if (isBinaryOp()) {
-            TypeConstant typeResult = typeTarget;
+            TypeConstant typeResult;
             if (cdTarget.isPrimitive()) {
-                RegisterInfo regArg = bctx.loadArgument(code, m_nArgValue);
-
-                if (!regArg.cd().equals(cdTarget)) {
-                    throw new UnsupportedOperationException("Convert " +
-                        regArg.type().getValueString() + " to " + typeTarget.getValueString());
-                }
-
-                buildOptimizedBinary(bctx, code, regTarget);
+                typeResult = buildOptimizedBinary(bctx, code, regTarget, m_nArgValue);
             } else {
                 MethodInfo    method   = findOpMethod(bctx, typeTarget);
                 String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
@@ -230,6 +223,7 @@ public abstract class OpGeneral
                     md = jmd.standardMD;
                 }
 
+                regTarget.load(code);
                 bctx.loadCtx(code);
                 bctx.loadArgument(code, m_nArgValue);
                 code.invokevirtual(regTarget.cd(), sJitName, md);
@@ -239,6 +233,7 @@ public abstract class OpGeneral
             bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeResult), typeResult);
         } else { // unary op
             if (cdTarget.isPrimitive()) {
+                regTarget.load(code);
                 buildOptimizedUnary(bctx, code, regTarget);
             } else {
                 String sName;
@@ -260,6 +255,7 @@ public abstract class OpGeneral
                     md = jmd.standardMD;
                 }
 
+                bctx.loadArgument(code, m_nTarget);
                 bctx.loadCtx(code);
                 code.invokevirtual(regTarget.cd(), sJitName, md);
             }
@@ -297,22 +293,6 @@ public abstract class OpGeneral
         TypeConstant  typeArg  = bctx.getArgumentType(m_nArgValue);
         MethodInfo    method   = typeTarget.ensureTypeInfo().findOpMethod(sName, sOp, typeArg);
         return method;
-    }
-
-    /**
-     * Generate the bytecodes for the corresponding op. The primitive values for the target and
-     * the argument are already on the Java stack.
-     */
-    protected void buildOptimizedUnary(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
-        throw new UnsupportedOperationException();
-    }
-
-    /**
-     * Generate the bytecodes for the corresponding op. The primitive value for the target is
-     * already on the Java stack.
-     */
-    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
-        throw new UnsupportedOperationException();
     }
 
     // ----- fields --------------------------------------------------------------------------------

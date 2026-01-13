@@ -4,11 +4,19 @@ package org.xvm.asm.op;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpInPlaceAssign;
 
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.NumberSupport;
+import org.xvm.javajit.RegisterInfo;
+import org.xvm.javajit.TextSupport;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -20,7 +28,8 @@ import org.xvm.runtime.template.reflect.xRef.RefHandle;
  * IP_ADD rvalue-target, rvalue2 ; T += T
  */
 public class IP_Add
-        extends OpInPlaceAssign {
+        extends OpInPlaceAssign
+        implements NumberSupport, TextSupport {
     /**
      * Construct a IP_ADD op based on the passed arguments.
      *
@@ -60,5 +69,26 @@ public class IP_Add
     @Override
     protected int completeWithProperty(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue) {
         return hTarget.getTemplate().invokePropertyAdd(frame, hTarget, idProp, hValue);
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    protected TypeConstant buildOptimizedBinary(BuildContext bctx,
+                                                CodeBuilder  code,
+                                                RegisterInfo regTarget,
+                                                int          nArgValue) {
+        if (regTarget.type().getValueString().equals("Char")) {
+            return buildAddToChar(bctx, code, regTarget, nArgValue);
+        }
+        return super.buildOptimizedBinary(bctx, code, regTarget, nArgValue);
+    }
+
+    @Override
+    protected void buildOptimizedBinary(BuildContext bctx,
+                                        CodeBuilder  code,
+                                        RegisterInfo regTarget,
+                                        RegisterInfo regArg) {
+        buildPrimitiveAdd(bctx, code, regTarget);
     }
 }

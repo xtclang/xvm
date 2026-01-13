@@ -6,6 +6,7 @@ import java.lang.classfile.TypeKind;
 
 import java.lang.constant.ClassDesc;
 import java.lang.constant.DirectMethodHandleDesc;
+import java.lang.constant.DynamicCallSiteDesc;
 import java.lang.constant.MethodHandleDesc;
 import java.lang.constant.MethodTypeDesc;
 
@@ -48,7 +49,12 @@ import org.xvm.asm.op.GuardAll;
 import org.xvm.asm.op.Guarded;
 import org.xvm.asm.op.Jump;
 
+import static java.lang.constant.ConstantDescs.CD_CallSite;
 import static java.lang.constant.ConstantDescs.CD_MethodHandle;
+import static java.lang.constant.ConstantDescs.CD_MethodHandles_Lookup;
+import static java.lang.constant.ConstantDescs.CD_MethodType;
+import static java.lang.constant.ConstantDescs.CD_Object;
+import static java.lang.constant.ConstantDescs.CD_String;
 import static java.lang.constant.ConstantDescs.CD_Throwable;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_void;
@@ -1409,6 +1415,51 @@ public class BuildContext {
     }
 
     /**
+     * Create a String and store the reference to the String on the stack.
+     * <p>
+     * The String template is formatted with values from the provided slots.
+     * Each occurrence of {@code "\u0001"} is replaced with the value from an entry in the {@code
+     * argSlots} array.
+     *
+     * @param code       the {@link CodeBuilder} to use
+     * @param text       the String template to inject values into
+     * @param argsTypes  the types of the arguments to inject into the String. The array must
+     */
+    public void buildString(CodeBuilder  code,
+                                   String       text,
+                                   ClassDesc... argsTypes) {
+        DirectMethodHandleDesc bsm = MethodHandleDesc.ofMethod(
+                DirectMethodHandleDesc.Kind.STATIC,
+                ClassDesc.of("java.lang.invoke.StringConcatFactory"),
+                "makeConcatWithConstants",
+                MethodTypeDesc.of(CD_CallSite, CD_MethodHandles_Lookup, CD_String,
+                        CD_MethodType, CD_String, CD_Object.arrayType())
+        );
+        code.invokedynamic(DynamicCallSiteDesc.of(bsm, "makeConcat",
+                MethodTypeDesc.of(CD_String, argsTypes), text));
+    }
+
+    /**
+     * Create a String and store the reference to the String in a new local variable slot.
+     * <p>
+     * The String template is formatted with values from the provided slots.
+     * Each occurrence of {@code "\u0001"} is replaced with the value from an entry in the {@code
+     * argSlots} array.
+     *
+     * @param code       the {@link CodeBuilder} to use
+     * @param text       the String template to inject values into
+     * @param argsTypes  the types of the arguments to inject into the String. The array must
+     *
+     * @return the identifier of the local variable slot that the String has been stored into
+     */
+    public int buildAndStoreString(CodeBuilder  code,
+                                   String       text,
+                                   ClassDesc... argsTypes) {
+        buildString(code, text, argsTypes);
+        return storeTempValue(code, CD_String);
+    }
+
+    /**
      * Adjust the int value on the stack according to its type.
      */
     public void adjustIntValue(CodeBuilder code, TypeConstant type) {
@@ -1419,6 +1470,7 @@ public class BuildContext {
             case "UInt8"  -> code.ldc(0xFF).iand();
             case "UInt16" -> code.ldc(0xFFFF).iand();
             case "UInt32" -> {}
+            case "Char"   -> {}
             default       -> throw new IllegalStateException();
         }
     }

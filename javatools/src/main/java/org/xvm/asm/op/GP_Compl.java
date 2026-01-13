@@ -11,6 +11,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.OpGeneral;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.NumberSupport;
 import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
@@ -21,7 +22,8 @@ import org.xvm.runtime.ObjectHandle;
  * GP_COMPL rvalue, lvalue   ; ~T -> T
  */
 public class GP_Compl
-        extends OpGeneral {
+        extends OpGeneral
+        implements NumberSupport {
     /**
      * Construct a GP_COMPL op for the passed arguments.
      *
@@ -61,15 +63,9 @@ public class GP_Compl
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    protected void buildOptimizedUnary(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
-        switch (regTarget.cd().descriptorString()) {
-            case "I"  -> {
-                code.iconst_m1().ixor();
-                bctx.adjustIntValue(code, regTarget.type());
-            }
-            case "Z" -> code.iconst_m1().ixor();
-            case "J" -> code.ldc(-1L).lxor();
-            default  -> throw new IllegalStateException();
-        }
+    protected void buildOptimizedUnary(BuildContext bctx,
+                                       CodeBuilder  code,
+                                       RegisterInfo regTarget) {
+        buildPrimitiveCompl(bctx, code, regTarget);
     }
 }
