@@ -2,6 +2,8 @@ package org.xvm.javajit;
 
 import java.lang.classfile.CodeBuilder;
 
+import java.lang.constant.ClassDesc;
+
 import java.lang.constant.MethodTypeDesc;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -10,6 +12,12 @@ import static java.lang.constant.ConstantDescs.CD_Integer;
 import static java.lang.constant.ConstantDescs.CD_Long;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
+
+import static org.xvm.javajit.Builder.CD_JavaMath;
+import static org.xvm.javajit.Builder.MD_FloorModI;
+import static org.xvm.javajit.Builder.MD_FloorModJ;
+import static org.xvm.javajit.Builder.MD_UDivInt;
+import static org.xvm.javajit.Builder.MD_UDivLong;
 
 /**
  * A "mixin" interface to generate bytecodes for operations on Ecstasy numeric types.
@@ -122,13 +130,24 @@ public interface NumberSupport {
      * @param regTarget  that final result type
      */
     default void buildPrimitiveMod(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
-        // TODO: convert remainder to a modulo
-        switch (regTarget.cd().descriptorString()) {
+        ClassDesc cd       = regTarget.cd();
+        boolean   unsigned = regTarget.type().getValueString().startsWith("UInt");
+        switch (cd.descriptorString()) {
             case "I" -> {
-                code.irem();
+                if (unsigned) {
+                    code.invokestatic(CD_Integer, "remainderUnsigned", MD_UDivInt);
+                } else {
+                    code.invokestatic(CD_JavaMath, "floorMod", MD_FloorModI);
+                }
                 bctx.adjustIntValue(code, regTarget.type());
             }
-            case "J" -> code.lrem();
+            case "J" -> {
+                if (unsigned) {
+                    code.invokestatic(CD_Long, "remainderUnsigned", MD_UDivLong);
+                } else {
+                    code.invokestatic(CD_JavaMath, "floorMod", MD_FloorModJ);
+                }
+            }
             case "F" -> code.frem();
             case "D" -> code.drem();
             default  -> throw new IllegalStateException();

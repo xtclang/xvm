@@ -927,6 +927,7 @@ public abstract class Builder {
     public static final ClassDesc CD_JavaBoolean   = ClassDesc.of(java.lang.Boolean.class.getName());
     public static final ClassDesc CD_JavaInteger   = ClassDesc.of(java.lang.Integer.class.getName());
     public static final ClassDesc CD_JavaLong      = ClassDesc.of(java.lang.Long.class.getName());
+    public static final ClassDesc CD_JavaMath      = ClassDesc.of(java.lang.Math.class.getName());
     public static final ClassDesc CD_JavaObject    = ClassDesc.of(java.lang.Object.class.getName());
     public static final ClassDesc CD_JavaString    = ClassDesc.of(java.lang.String.class.getName());
 
@@ -949,4 +950,8 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_StringOf    = MethodTypeDesc.of(CD_String, CD_Ctx, CD_JavaString);
     public static final MethodTypeDesc MD_xvmType     = MethodTypeDesc.of(CD_TypeConstant, CD_Ctx);
     public static final MethodTypeDesc MD_TypeIsA     = MethodTypeDesc.of(CD_boolean, CD_TypeConstant);
+    public static final MethodTypeDesc MD_FloorModI   = MethodTypeDesc.of(CD_int, CD_int, CD_int);
+    public static final MethodTypeDesc MD_FloorModJ   = MethodTypeDesc.of(CD_long, CD_long, CD_long);
+    public static final MethodTypeDesc MD_UDivInt     = MethodTypeDesc.of(CD_int, CD_int, CD_int);
+    public static final MethodTypeDesc MD_UDivLong    = MethodTypeDesc.of(CD_long, CD_long, CD_long);
 }
