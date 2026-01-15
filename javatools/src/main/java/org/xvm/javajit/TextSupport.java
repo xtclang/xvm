@@ -25,20 +25,20 @@ public interface TextSupport {
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
      * @param regTarget  the register containing the target of the operation
-     * @param nArgValue  the register containing the operation argument
+     * @param nArgId     the identifier of the register containing the operation argument
      *
      * @return the type of the result of the operation
      */
     default TypeConstant buildAddToChar(BuildContext bctx,
                                         CodeBuilder  code,
                                         RegisterInfo regTarget,
-                                        int          nArgValue) {
-        TypeConstant typeArg   = bctx.getArgumentType(nArgValue);
+                                        int          nArgId) {
+        TypeConstant typeArg   = bctx.getArgumentType(nArgId);
         String       typeName  = typeArg.getValueString();
         return switch (typeName) {
-            case "Int"    -> buildAddIntToChar(bctx, code, regTarget, nArgValue);
-            case "Char"   -> buildAddCharToChar(bctx, code, regTarget, nArgValue);
-            case "String" -> buildAddStringToChar(bctx, code, regTarget, nArgValue);
+            case "Int"    -> buildAddIntToChar(bctx, code, regTarget, nArgId);
+            case "Char"   -> buildAddCharToChar(bctx, code, regTarget, nArgId);
+            case "String" -> buildAddStringToChar(bctx, code, regTarget, nArgId);
             default       ->  throw new UnsupportedOperationException("Cannot add " + typeName
                     + " to Char");
         };
@@ -55,18 +55,18 @@ public interface TextSupport {
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
      * @param regTarget  the register containing the target of the operation
-     * @param nArgValue  the operation argument id
+     * @param nArgId     the identifier of the register containing the operation argument
      *
      * @return the type of the result of the operation
      */
     default TypeConstant buildAddIntToChar(BuildContext bctx,
                                            CodeBuilder  code,
                                            RegisterInfo regTarget,
-                                           int          nArgValue) {
+                                           int          nArgId) {
         bctx.loadCtx(code);
         regTarget.load(code);
-        bctx.loadArgument(code, nArgValue);
-        code.invokestatic(CD_Char, "$addInt", MD_Char_addInt);
+        bctx.loadArgument(code, nArgId);
+        code.invokestatic(CD_Char, "add$p", MD_Char_addInt);
         return regTarget.type();
     }
 
@@ -78,17 +78,17 @@ public interface TextSupport {
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
      * @param regTarget  the register containing the target of the operation
-     * @param nArgValue  the operation argument id
+     * @param nArgId     the identifier of the register containing the operation argument
      *
      * @return the type of the result of the operation
      */
     default TypeConstant buildAddCharToChar(BuildContext bctx,
                                             CodeBuilder  code,
                                             RegisterInfo regTarget,
-                                            int          nArgValue) {
+                                            int          nArgId) {
         regTarget.load(code);
         code.i2c();
-        bctx.loadArgument(code, nArgValue);
+        bctx.loadArgument(code, nArgId);
         code.i2c();
         int slot = bctx.buildAndStoreString(code, "\u0001\u0001", CD_char, CD_char);
         bctx.loadCtx(code);
@@ -105,17 +105,17 @@ public interface TextSupport {
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
      * @param regTarget  the register containing the target of the operation
-     * @param nArgValue  the operation argument id
+     * @param nArgId     the identifier of the register containing the operation argument
      *
      * @return the type of the result of the operation
      */
     default TypeConstant buildAddStringToChar(BuildContext bctx,
                                               CodeBuilder  code,
                                               RegisterInfo regTarget,
-                                              int          nArgValue) {
+                                              int          nArgId) {
         regTarget.load(code);
         code.i2c();
-        bctx.loadArgument(code, nArgValue);
+        bctx.loadArgument(code, nArgId);
         int slot = bctx.buildAndStoreString(code, "\u0001\u0001", CD_char, CD_String);
         bctx.loadCtx(code);
         code.aload(slot);
@@ -131,19 +131,19 @@ public interface TextSupport {
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
      * @param regTarget  the register containing the target of the operation
-     * @param nArgValue  the operation argument id
+     * @param nArgId     the identifier of the register containing the operation argument
      *
      * @return the type of the result of the operation
      */
     default TypeConstant buildSubFromChar(BuildContext bctx,
                                           CodeBuilder  code,
                                           RegisterInfo regTarget,
-                                          int          nArgValue) {
-        TypeConstant typeArg   = bctx.getArgumentType(nArgValue);
+                                          int          nArgId) {
+        TypeConstant typeArg   = bctx.getArgumentType(nArgId);
         String       typeName  = typeArg.getValueString();
         return switch (typeName) {
-            case "Int"    -> buildSubIntFromChar(bctx, code, regTarget, nArgValue);
-            case "Char"   -> buildSubCharFromChar(bctx, code, regTarget, nArgValue);
+            case "Int"    -> buildSubIntFromChar(bctx, code, regTarget, nArgId);
+            case "Char"   -> buildSubCharFromChar(bctx, code, regTarget, nArgId);
             default       ->  throw new UnsupportedOperationException("Cannot subtract "
                     + typeName + " from Char");
         };
@@ -160,18 +160,18 @@ public interface TextSupport {
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
      * @param regTarget  the register containing the target of the operation
-     * @param nArgValue  the operation argument id
+     * @param nArgId     the identifier of the register containing the operation argument
      *
      * @return the type of the result of the operation
      */
     default TypeConstant buildSubIntFromChar(BuildContext bctx,
                                              CodeBuilder  code,
                                              RegisterInfo regTarget,
-                                             int          nArgValue) {
+                                             int          nArgId) {
         bctx.loadCtx(code);
         regTarget.load(code);
-        bctx.loadArgument(code, nArgValue);
-        code.invokestatic(CD_Char, "$subInt", MD_Char_subInt);
+        bctx.loadArgument(code, nArgId);
+        code.invokestatic(CD_Char, "sub$p", MD_Char_subInt);
         return regTarget.type();
     }
 
@@ -186,16 +186,16 @@ public interface TextSupport {
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
      * @param regTarget  the register containing the target of the operation
-     * @param nArgValue  the operation argument id
+     * @param nArgId     the identifier of the register containing the operation argument
      *
      * @return the type of the result of the operation, which should be UInt32
      */
     default TypeConstant buildSubCharFromChar(BuildContext bctx,
                                               CodeBuilder  code,
                                               RegisterInfo regTarget,
-                                              int          nArgValue) {
+                                              int          nArgId) {
         regTarget.load(code);
-        bctx.loadArgument(code, nArgValue);
+        bctx.loadArgument(code, nArgId);
         code.isub();
         return bctx.pool().typeUInt32();
     }

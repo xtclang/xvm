@@ -29,7 +29,7 @@ public interface NumberSupport {
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
-     * @param regTarget  that final result type
+     * @param regTarget  the register containing the target of the operation
      */
     default void buildPrimitiveAdd(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
         switch (regTarget.cd().descriptorString()) {
@@ -52,7 +52,7 @@ public interface NumberSupport {
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
-     * @param regTarget  that final result type
+     * @param regTarget  the register containing the target of the operation
      */
     default void buildPrimitiveAnd(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
         switch (regTarget.cd().descriptorString()) {
@@ -71,7 +71,7 @@ public interface NumberSupport {
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
-     * @param regTarget  that final result type
+     * @param regTarget  the register containing the target of the operation
      */
     default void buildPrimitiveCompl(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
         switch (regTarget.cd().descriptorString()) {
@@ -91,7 +91,7 @@ public interface NumberSupport {
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
-     * @param regTarget  that final result type
+     * @param regTarget  the register containing the target of the operation
      */
     default void buildPrimitiveDiv(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
         TypeConstant typeTarget = regTarget.type();
@@ -127,7 +127,7 @@ public interface NumberSupport {
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
-     * @param regTarget  that final result type
+     * @param regTarget  the register containing the target of the operation
      */
     default void buildPrimitiveMod(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
         ClassDesc cd       = regTarget.cd();
@@ -159,7 +159,7 @@ public interface NumberSupport {
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
-     * @param regTarget  that final result type
+     * @param regTarget  the register containing the target of the operation
      */
     default void buildPrimitiveNeg(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
         switch (regTarget.cd().descriptorString()) {
@@ -188,7 +188,7 @@ public interface NumberSupport {
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
-     * @param regTarget  that final result type
+     * @param regTarget  the register containing the target of the operation
      */
     default void buildPrimitiveMul(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
         switch (regTarget.cd().descriptorString()) {
@@ -209,7 +209,7 @@ public interface NumberSupport {
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
-     * @param regTarget  that final result type
+     * @param regTarget  the register containing the target of the operation
      */
     default void buildPrimitiveOr(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
         switch (regTarget.cd().descriptorString()) {
@@ -231,17 +231,17 @@ public interface NumberSupport {
      *
      * @param bctx      the current build context
      * @param code      the code builder to add the op codes to
-     * @param regTarget that final result type
-     * @param nArgValue the register containing the operation argument
+     * @param regTarget  the register containing the target of the operation
+     * @param nArgId     the identifier of the register containing the operation argument
      *
      * @return the result type
      */
     default TypeConstant buildPrimitiveShl(BuildContext bctx,
                                            CodeBuilder  code,
                                            RegisterInfo regTarget,
-                                           int          nArgValue) {
+                                           int          nArgId) {
         regTarget.load(code);
-        RegisterInfo regArg = bctx.loadArgument(code, nArgValue);
+        RegisterInfo regArg = bctx.loadArgument(code, nArgId);
         if (regArg.cd().equals(CD_long)) {
             code.l2i();
         } else if (!regArg.cd().equals(CD_int)) {
@@ -267,16 +267,16 @@ public interface NumberSupport {
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
      * @param regTarget  the register containing the target of the operation
-     * @param nArgValue  the operation argument id
+     * @param nArgId     the identifier of the register containing the operation argument
      *
      * @return the type of the result of the operation
      */
     default TypeConstant buildPrimitiveShr(BuildContext bctx,
                                            CodeBuilder  code,
                                            RegisterInfo regTarget,
-                                           int          nArgValue) {
+                                           int          nArgId) {
         regTarget.load(code);
-        RegisterInfo regArg     = bctx.loadArgument(code, nArgValue);
+        RegisterInfo regArg     = bctx.loadArgument(code, nArgId);
         TypeConstant typeTarget = regTarget.type();
         boolean      fUnsigned  = typeTarget.getValueString().charAt(0) == 'U';
         return buildPrimitiveShr(bctx, code, regTarget, regArg, fUnsigned);
@@ -289,14 +289,14 @@ public interface NumberSupport {
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
      * @param regTarget  the register containing the target of the operation
-     * @param nArgValue  the operation argument id
+     * @param nArgId     the identifier of the register containing the operation argument
      *
      * @return the type of the result of the operation
      */
     default TypeConstant buildPrimitiveShrAll(BuildContext bctx,
                                               CodeBuilder  code,
                                               RegisterInfo regTarget,
-                                              int          nArgValue) {
+                                              int          nArgId) {
         regTarget.load(code);
         TypeConstant typeTarget = regTarget.type();
 
@@ -305,7 +305,7 @@ public interface NumberSupport {
             case "Int16", "UInt16" -> code.ldc(0xFFFF).iand();
         }
 
-        RegisterInfo regArg     = bctx.loadArgument(code, nArgValue);
+        RegisterInfo regArg     = bctx.loadArgument(code, nArgId);
         return buildPrimitiveShr(bctx, code, regTarget, regArg, true);
     }
 
@@ -364,7 +364,7 @@ public interface NumberSupport {
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
-     * @param regTarget  that final result type
+     * @param regTarget  the register containing the target of the operation
      */
     default void buildPrimitiveSub(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
         switch (regTarget.cd().descriptorString()) {
@@ -385,7 +385,7 @@ public interface NumberSupport {
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
-     * @param regTarget  that final result type
+     * @param regTarget  the register containing the target of the operation
      */
     default void buildPrimitiveXor(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
         switch (regTarget.cd().descriptorString()) {

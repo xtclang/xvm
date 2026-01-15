@@ -60,7 +60,7 @@ public class Char extends nConst {
      *
      * @throws OutOfBounds if the result is not a valid Unicode codepoint
      */
-    public static int $addInt(Ctx ctx, int codepoint, long n) {
+    public static int add$p(Ctx ctx, int codepoint, long n) {
         long cp = codepoint + n;
         if (cp < 0 || cp > 0x10FFFF) {
             OutOfBounds oob = new OutOfBounds(ctx);
@@ -81,7 +81,7 @@ public class Char extends nConst {
      *
      * @throws OutOfBounds if the result is not a valid Unicode codepoint
      */
-    public static int $subInt(Ctx ctx, int codepoint, long n) {
+    public static int sub$p(Ctx ctx, int codepoint, long n) {
         long cp = (long) codepoint - n;
         if (cp < 0 || cp > 0x10FFFF) {
             OutOfBounds oob = new OutOfBounds(ctx);
