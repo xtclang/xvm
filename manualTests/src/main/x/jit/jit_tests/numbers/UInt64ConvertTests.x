@@ -48,17 +48,17 @@ class UInt64ConvertTests {
         testUInt64ToInt64(0x7FFFFFFF, 0x7FFFFFFF);
         testUInt64ToInt64(UInt64.MaxValue, -1);
 
-        testUInt64ToInt64WithBoundsCheck(0, 0, True);
-        testUInt64ToInt64WithBoundsCheck(100, 100, True);
-        testUInt64ToInt64WithBoundsCheck(0x7FFFFFFF, 0x7FFFFFFF, True);
-        testUInt64ToInt64WithBoundsCheck(0x7FFF_FFFF_FFFF_FFFF, 0x7FFF_FFFF_FFFF_FFFF, True);
-        testUInt64ToInt64WithBoundsCheck(UInt64.MaxValue, 0, False);
+        testUInt64ToInt64WithBoundsCheck(0, 0, False);
+        testUInt64ToInt64WithBoundsCheck(100, 100, False);
+        testUInt64ToInt64WithBoundsCheck(0x7FFFFFFF, 0x7FFFFFFF, False);
+        testUInt64ToInt64WithBoundsCheck(0x7FFF_FFFF_FFFF_FFFF, 0x7FFF_FFFF_FFFF_FFFF, False);
+        testUInt64ToInt64WithBoundsCheck(UInt64.MaxValue, 0, True);
 
         testUInt64ToUInt8(0, 0);
         testUInt64ToUInt8(100, 100);
         testUInt64ToUInt8(127, 127);
         // UInt64.MaxValue is 0xFFFF_FFFF_FFFF_FFFF the lowest byte is 0xFF == 255
-        testUInt64ToUInt8(UInt64.MaxValue, 255);
+        testUInt64ToUInt8(UInt64.MaxValue, 0xFF);
 
         testUInt64ToUInt8WithBoundsCheck(0, 0, False);
         testUInt64ToUInt8WithBoundsCheck(100, 100, False);
@@ -76,7 +76,7 @@ class UInt64ConvertTests {
 
         testUInt64ToUInt32(0, 0);
         testUInt64ToUInt32(100, 100);
-        testUInt64ToUInt32(UInt64.MaxValue, 2147483647);
+        testUInt64ToUInt32(UInt64.MaxValue, 4294967295);
 
         testUInt64ToUInt32WithBoundsCheck(0, 0, False);
         testUInt64ToUInt32WithBoundsCheck(100, 100, False);
@@ -84,7 +84,7 @@ class UInt64ConvertTests {
 
         testUInt64ToUInt64(0, 0);
         testUInt64ToUInt64(100, 100);
-        testUInt64ToUInt64(UInt64.MaxValue, 2147483647);
+        testUInt64ToUInt64(UInt64.MaxValue, 18446744073709551615);
 
         testUInt64ToUInt64WithBoundsCheck(0, 0, False);
         testUInt64ToUInt64WithBoundsCheck(100, 100, False);

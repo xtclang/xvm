@@ -225,7 +225,7 @@ public class UInt64 extends nConst {
             OutOfBounds oob = new OutOfBounds(ctx);
             throw oob.$init(ctx, "UInt32 value " + $value + " is not a valid UInt8 value");
         }
-        return (int) $value;
+        return (int) $value & 0xFF;
     }
 
     /**
@@ -257,7 +257,7 @@ public class UInt64 extends nConst {
             OutOfBounds oob = new OutOfBounds(ctx);
             throw oob.$init(ctx, "UInt32 value " + $value + " is not a valid UInt16 value");
         }
-        return (int) $value;
+        return (int) $value & 0xFFFF;
     }
 
     /**
@@ -289,7 +289,7 @@ public class UInt64 extends nConst {
             OutOfBounds oob = new OutOfBounds(ctx);
             throw oob.$init(ctx, "UInt32 value " + $value + " is not a valid UInt32 value");
         }
-        return (int) $value;
+        return (int) ($value & 0xFFFFFFFFL);
     }
 
     /**

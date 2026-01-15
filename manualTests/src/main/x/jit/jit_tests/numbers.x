@@ -17,7 +17,7 @@ package numbers {
                 passed = runTest(() -> new UInt8ConvertTests().run()) && passed;
                 passed = runTest(() -> new UInt16ConvertTests().run()) && passed;
                 passed = runTest(() -> new UInt32ConvertTests().run()) && passed;
-//                passed = runTest(() -> new UInt64ConvertTests().run()) && passed;
+                passed = runTest(() -> new UInt64ConvertTests().run()) && passed;
             } catch (IllegalState e) {
                 console.print(e);
             }
