@@ -106,10 +106,21 @@ public class XtcProjectCreator {
      * @return result indicating success or failure with a message
      */
     public Result create() {
-        String moduleName = projectPath.getFileName().toString();
+        String moduleName = projectPath.getFileName().toString().trim();
+
+        // Remove trailing dots (IntelliJ quirk)
+        while (moduleName.endsWith(".")) {
+            moduleName = moduleName.substring(0, moduleName.length() - 1);
+        }
 
         if (moduleName.isEmpty()) {
             return Result.error("Invalid project path: " + projectPath);
+        }
+
+        // Validate module name for XTC compliance
+        String validationError = validateModuleName(moduleName);
+        if (validationError != null) {
+            return Result.error(validationError);
         }
 
         if (Files.exists(projectPath) && !isEmptyDirectory(projectPath)) {
@@ -126,6 +137,34 @@ public class XtcProjectCreator {
         } catch (IOException e) {
             return Result.error("Failed to create project: " + e.getMessage());
         }
+    }
+
+    /**
+     * Validate that a module name is XTC compliant.
+     *
+     * @return error message if invalid, null if valid
+     */
+    public static String validateModuleName(String name) {
+        if (name == null || name.isEmpty()) {
+            return "Module name cannot be empty";
+        }
+
+        // Must start with letter or underscore
+        char first = name.charAt(0);
+        if (!Character.isLetter(first) && first != '_') {
+            return "Module name '" + name + "' must start with a letter or underscore";
+        }
+
+        // Must contain only letters, digits, and underscores
+        for (int i = 0; i < name.length(); i++) {
+            char c = name.charAt(i);
+            if (!Character.isLetterOrDigit(c) && c != '_') {
+                return "Module name '" + name + "' contains invalid character '" + c + "'. " +
+                       "Use only letters, digits, and underscores (no hyphens or spaces)";
+            }
+        }
+
+        return null; // Valid
     }
 
     private void createSingleModuleProject(String projectName) throws IOException {
@@ -470,12 +509,10 @@ public class XtcProjectCreator {
             }
         }
 
-        // Copy gradle-wrapper.properties
-        try (InputStream in = getClass().getResourceAsStream("/gradle-wrapper/gradle/wrapper/gradle-wrapper.properties")) {
-            if (in != null) {
-                Files.copy(in, projectPath.resolve("gradle/wrapper/gradle-wrapper.properties"), StandardCopyOption.REPLACE_EXISTING);
-            }
-        }
+        // Generate gradle-wrapper.properties with the specified Gradle version
+        // (don't copy from resources - we need the dynamic version)
+        Path wrapperDir = projectPath.resolve("gradle/wrapper");
+        writeFile(wrapperDir.resolve("gradle-wrapper.properties"), generateWrapperProperties());
 
         return true;
     }

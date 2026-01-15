@@ -59,6 +59,9 @@ build/
 # Build directories (IntelliJ)
 out/
 
+# Node.js
+node_modules/
+
 # Tooling and project files
 prj/
 .idea/

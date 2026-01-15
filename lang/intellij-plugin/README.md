@@ -6,7 +6,18 @@ IntelliJ IDEA plugin for XTC (Ecstasy) language support.
 
 - **New Project Wizard** - Create XTC projects directly from IntelliJ (File → New → Project → XTC)
 - **Run Configurations** - Run XTC applications via Gradle or `xtc run`
-- **File Type Support** - Syntax recognition for `.x` files
+- **Syntax Highlighting** - Full syntax highlighting for `.x` files (via TextMate grammar)
+- **Language Features via LSP** (currently mocked - real compiler integration coming):
+  - Hover information
+  - Code completion
+  - Go to definition
+  - Find references
+  - Document outline
+  - Diagnostics
+
+> **Note**: The LSP server currently uses a mock adapter with basic regex-based parsing.
+> Full semantic features (accurate go-to-definition, type-aware completion, etc.) will
+> be available once the real XTC compiler is integrated.
 
 ## Installation
 
@@ -30,11 +41,21 @@ IntelliJ IDEA plugin for XTC (Ecstasy) language support.
 ### Building from Source
 
 ```bash
-cd init/intellij-plugin
-./gradlew buildPlugin
+# From the repository root
+./gradlew :lang:intellij-plugin:buildPlugin
 ```
 
-The plugin ZIP will be in `build/distributions/`.
+The plugin ZIP will be created at:
+```
+lang/intellij-plugin/build/distributions/intellij-plugin-<version>.zip
+```
+
+Then install manually:
+1. Open IntelliJ IDEA
+2. **Settings/Preferences → Plugins**
+3. Click the gear icon (⚙️) → **Install Plugin from Disk...**
+4. Navigate to and select the ZIP file
+5. Restart IntelliJ IDEA
 
 ## Prerequisites
 
@@ -72,16 +93,41 @@ The plugin invokes `xtc init` to scaffold the project, then imports it as a Grad
 
 ```bash
 # From the repository root
-./gradlew :lang:intellij-plugin:buildPlugin
 
-# Run in a sandbox IDE for testing
+# Build distributable ZIP (for manual installation or sharing)
+./gradlew :lang:intellij-plugin:buildPlugin
+# Output: lang/intellij-plugin/build/distributions/intellij-plugin-<version>.zip
+
+# Run in a sandbox IDE for quick testing during development
 ./gradlew :lang:intellij-plugin:runIde
 
-# Run plugin verification
+# Run plugin verification (checks compatibility with target IDE versions)
 ./gradlew :lang:intellij-plugin:verifyPlugin
 ```
 
-The built plugin ZIP will be at `lang/intellij-plugin/build/distributions/`.
+### Build Artifacts
+
+| Task | Output | Use Case |
+|------|--------|----------|
+| `buildPlugin` | `build/distributions/*.zip` | Install in any IntelliJ instance |
+| `runIde` | Launches sandbox IDE | Quick testing during development |
+| `verifyPlugin` | Verification report | Check IDE compatibility |
+
+### Installing the Built Plugin
+
+After running `buildPlugin`, you can install the ZIP in any IntelliJ IDEA 2025.1+ instance:
+
+1. Locate the ZIP: `lang/intellij-plugin/build/distributions/intellij-plugin-<version>.zip`
+2. Open IntelliJ IDEA → **Settings/Preferences → Plugins**
+3. Click ⚙️ → **Install Plugin from Disk...**
+4. Select the ZIP file
+5. Restart IntelliJ IDEA
+
+This is useful for:
+- Testing in your main IDE (not a sandbox)
+- Sharing with team members before publishing
+- Testing on different IDE versions
+- Verifying the plugin works outside the development environment
 
 ### Testing During Development
 
@@ -129,10 +175,13 @@ When running `runIde`, a sandboxed IntelliJ IDEA instance opens with the plugin 
 
 #### Testing LSP Features (Language Server)
 
+> **Note**: The LSP currently uses mock responses based on regex pattern matching.
+> Features like go-to-definition will show plausible results but are not semantically accurate.
+
 1. Open a `.x` file in an XTC project
-2. Test hover: Move cursor over a symbol - you should see documentation
-3. Test completion: Type and trigger completion (Ctrl+Space)
-4. Test go-to-definition: Ctrl+Click on a symbol
+2. Test hover: Move cursor over a symbol - you should see type information (mocked)
+3. Test completion: Type and trigger completion (Ctrl+Space) - shows keyword/symbol suggestions
+4. Test go-to-definition: Ctrl+Click on a symbol - navigates based on pattern matching
 5. If LSP isn't working:
    - Check **Help → Show Log in Finder** for `XtcStreamConnectionProvider` messages
    - Look for "XTC LSP server started with PID:" in the log

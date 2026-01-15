@@ -7,7 +7,7 @@ plugins {
 }
 
 // IntelliJ 2025.1 runs on JDK 21, so LSP server must target JDK 21 for in-process execution
-val intellijJdkVersion = 21
+val intellijJdkVersion = libs.versions.intellij.jdk.get().toInt()
 
 // Generate build info for version verification
 val generateBuildInfo by tasks.registering {
@@ -40,8 +40,8 @@ dependencies {
     // LSP4J - Eclipse LSP implementation for Java
     // Use compileOnly because LSP4IJ provides LSP4J at runtime.
     // Bundling our own version causes ClassCastException due to classloader conflicts.
-    compileOnly("org.eclipse.lsp4j:org.eclipse.lsp4j:0.21.1")
-    compileOnly("org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:0.21.1")
+    compileOnly(libs.lsp4j)
+    compileOnly(libs.lsp4j.jsonrpc)
 
     // JSpecify for nullability annotations
     compileOnly(libs.jspecify)
@@ -49,7 +49,10 @@ dependencies {
     // Logging - compileOnly since IntelliJ provides SLF4J
     compileOnly(libs.slf4j.api)
 
-    // Testing
+    // Testing - LSP4J and SLF4J needed for test compilation/runtime (compileOnly doesn't expose to tests)
+    testImplementation(libs.lsp4j)
+    testImplementation(libs.lsp4j.jsonrpc)
+    testRuntimeOnly(libs.slf4j.simple)
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)

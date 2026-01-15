@@ -33,6 +33,10 @@ import org.xtclang.tooling.model.LanguageModel
  */
 class VSCodeConfigGenerator(private val model: LanguageModel) {
 
+    companion object {
+        private val json = Json { prettyPrint = true }
+    }
+
     fun generate(): String {
         val config = buildJsonObject {
             // Comments from model
@@ -120,7 +124,7 @@ class VSCodeConfigGenerator(private val model: LanguageModel) {
             }
         }
 
-        return Json { prettyPrint = true }.encodeToString(JsonObject.serializer(), config)
+        return json.encodeToString(JsonObject.serializer(), config)
     }
 }
 

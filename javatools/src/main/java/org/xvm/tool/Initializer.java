@@ -1,7 +1,5 @@
 package org.xvm.tool;
 
-import java.io.File;
-
 import java.nio.file.Path;
 
 import org.xvm.asm.BuildInfo;
@@ -22,6 +20,7 @@ import static org.xvm.util.Severity.ERROR;
  *   xtc init mylib --type=library         # Create library project
  *   xtc init myproj --multi-module        # Create multi-module project
  *   xtc init myapp --type=service         # Create service project
+ *   xtc init myapp --dir=/path/to/parent  # Create in specific directory
  * </pre>
  */
 public class Initializer extends Launcher<InitializerOptions> {
@@ -57,12 +56,16 @@ public class Initializer extends Launcher<InitializerOptions> {
     protected int process() {
         final var opts = options();
 
-        final var projectPath = opts.getProjectName().orElseThrow(); // validated above
+        final var projectName = opts.getProjectName().orElseThrow(); // validated above
         final var type = XtcProjectCreator.ProjectType.fromString(opts.getProjectType());
         final var multiModule = opts.isMultiModule();
 
-        File projectDir = new File(projectPath);
-        String moduleName = projectDir.getName();
+        // Compute project path: if --dir is specified, create project in that directory
+        Path projectPath = opts.getOutputDirectory()
+            .map(dir -> Path.of(dir).resolve(projectName))
+            .orElse(Path.of(projectName));
+
+        String moduleName = projectPath.getFileName().toString();
 
         out("Creating " + (multiModule ? "multi-module " : "") + type.getName() + " project: " + moduleName);
 
@@ -70,7 +73,7 @@ public class Initializer extends Launcher<InitializerOptions> {
         String xtcVersion = BuildInfo.getXdkVersion();
 
         XtcProjectCreator creator = new XtcProjectCreator(
-            Path.of(projectPath),
+            projectPath,
             type,
             multiModule,
             xtcVersion,
@@ -84,7 +87,7 @@ public class Initializer extends Launcher<InitializerOptions> {
             out("Project '" + moduleName + "' created successfully!");
             out();
             out("Next steps:");
-            out("  cd " + projectDir.getPath());
+            out("  cd " + projectPath);
             out("  ./gradlew build");
             if (type == XtcProjectCreator.ProjectType.APPLICATION || type == XtcProjectCreator.ProjectType.SERVICE) {
                 out("  ./gradlew run");

@@ -1,9 +1,10 @@
 import org.gradle.jvm.toolchain.JavaLanguageVersion
+import java.io.File
 
 plugins {
     alias(libs.plugins.xdk.build.properties)
     alias(libs.plugins.kotlin.jvm)
-    id("org.jetbrains.intellij.platform") version "2.10.5"
+    alias(libs.plugins.intellij.platform)
 }
 
 // Access version from xdkProperties (set by xdk.build.properties plugin)
@@ -12,6 +13,64 @@ val releaseChannel: String = xdkProperties.stringValue("xdk.intellij.release.cha
 
 // Publishing is disabled by default. Enable with: ./gradlew publishPlugin -PenablePublish=true
 val enablePublish = project.findProperty("enablePublish")?.toString()?.toBoolean() ?: false
+
+// =============================================================================
+// Local IntelliJ IDE Detection
+// =============================================================================
+// Using a local IDE avoids Gradle transform cache issues on macOS where
+// Gatekeeper/codesigning can modify extracted files, corrupting the cache.
+// Override with: -PintellijLocalPath=/path/to/IntelliJ
+
+fun findLocalIntelliJ(): File? {
+    // Allow explicit override via gradle property
+    val explicitPath = project.findProperty("intellijLocalPath")?.toString()
+    if (explicitPath != null) {
+        val explicit = File(explicitPath)
+        if (explicit.exists()) return explicit
+        logger.warn("Explicit intellijLocalPath '$explicitPath' does not exist, searching for installed IDE")
+    }
+
+    val osName = System.getProperty("os.name").lowercase()
+    val candidates = when {
+        osName.contains("mac") -> listOf(
+            "/Applications/IntelliJ IDEA CE.app",
+            "/Applications/IntelliJ IDEA.app",
+            "${System.getProperty("user.home")}/Applications/IntelliJ IDEA CE.app",
+            "${System.getProperty("user.home")}/Applications/IntelliJ IDEA.app"
+        )
+        osName.contains("linux") -> {
+            val home = System.getProperty("user.home")
+            listOf(
+                "/opt/idea-IC",
+                "/opt/intellij-idea-community",
+                "/usr/share/intellij-idea-community",
+                "$home/.local/share/JetBrains/Toolbox/apps/IDEA-C/ch-0",
+                "$home/idea-IC"
+            ) + (File("/opt").listFiles()?.filter { it.name.startsWith("idea-IC-") }?.map { it.path } ?: emptyList()) +
+              (File(home).listFiles()?.filter { it.name.startsWith("idea-IC-") }?.map { it.path } ?: emptyList())
+        }
+        osName.contains("windows") -> {
+            val programFiles = System.getenv("ProgramFiles") ?: "C:\\Program Files"
+            listOf(
+                "$programFiles\\JetBrains\\IntelliJ IDEA Community Edition 2025.1",
+                "$programFiles\\JetBrains\\IntelliJ IDEA Community Edition",
+                "${System.getProperty("user.home")}\\AppData\\Local\\JetBrains\\Toolbox\\apps\\IDEA-C"
+            )
+        }
+        else -> emptyList()
+    }
+
+    return candidates.map { File(it) }.firstOrNull { it.exists() }
+}
+
+val localIntelliJ: File? = findLocalIntelliJ()
+val useLocalIde = localIntelliJ != null
+
+if (useLocalIde) {
+    logger.lifecycle("Using local IntelliJ IDE: ${localIntelliJ!!.absolutePath}")
+} else {
+    logger.lifecycle("No local IntelliJ IDE found, will download (may cause cache issues on macOS)")
+}
 
 repositories {
     mavenCentral()
@@ -34,16 +93,30 @@ val syncXtcProjectCreator by tasks.registering(Copy::class) {
     into(syncedJavaSourceDir.map { it.dir("org/xvm/tool") })
 }
 
+// Sync gradle-wrapper resources needed by XtcProjectCreator
+val syncedResourcesDir = layout.buildDirectory.dir("generated/synced-resources")
+
+val syncGradleWrapperResources by tasks.registering(Copy::class) {
+    description = "Sync gradle-wrapper resources from javatools"
+    from(rootProject.file("../javatools/src/main/resources/gradle-wrapper"))
+    into(syncedResourcesDir.map { it.dir("gradle-wrapper") })
+}
+
 sourceSets.main {
     java.srcDir(syncedJavaSourceDir)
+    resources.srcDir(syncedResourcesDir)
 }
 
-tasks.named("compileJava") {
+val compileJava by tasks.existing {
     dependsOn(syncXtcProjectCreator)
 }
 
-tasks.named("compileKotlin") {
+val compileKotlin by tasks.existing {
     dependsOn(syncXtcProjectCreator)
+}
+
+val processResources by tasks.existing {
+    dependsOn(syncGradleWrapperResources)
 }
 
 // =============================================================================
@@ -62,34 +135,27 @@ val textMateGrammar by configurations.creating {
 
 
 dependencies {
-    implementation(kotlin("stdlib"))
-
     // LSP server for in-process execution (no subprocess needed)
     implementation(project(":lsp-server"))
 
     intellijPlatform {
-        intellijIdeaCommunity("2025.1")
+        // Use local IDE if available to avoid Gradle transform cache issues on macOS
+        if (useLocalIde) {
+            local(localIntelliJ!!.absolutePath)
+        } else {
+            intellijIdeaCommunity(libs.versions.intellij.ide.get())
+        }
         bundledPlugin("com.intellij.gradle")
-        // TextMate plugin for syntax highlighting (bundled in IntelliJ)
         bundledPlugin("org.jetbrains.plugins.textmate")
-        // LSP4IJ provides LSP support for Community Edition
-        plugin("com.redhat.devtools.lsp4ij:0.11.0")
-        pluginVerifier()
+        plugin("com.redhat.devtools.lsp4ij", libs.versions.lsp4ij.get())
+        // pluginVerifier() - only enable when publishing to verify compatibility
     }
 
-    testImplementation(kotlin("test-junit5"))
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    // JUnit 4 needed by IntelliJ test framework at runtime
-    testRuntimeOnly("junit:junit:4.13.2")
-    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.10.2")
-
-    // Depend on sibling project artifacts via configurations
     textMateGrammar(project(path = ":", configuration = "textMateElements"))
 }
 
-// IntelliJ 2025.1 runs on JDK 21, so we must target JDK 21 (not the project's JDK 24)
-val intellijJdkVersion = 21
+// IntelliJ 2025.1 runs on JDK 21, so we must target JDK 21 (not the project's JDK 25)
+val intellijJdkVersion = libs.versions.intellij.jdk.get().toInt()
 
 java {
     toolchain {
@@ -178,7 +244,11 @@ val buildSearchableOptions by tasks.existing {
 // TextMate grammar provides syntax highlighting via IntelliJ's TextMate plugin.
 // The grammar files must be on the filesystem (not inside JAR) for TextMateBundleProvider.
 
-val sandboxPluginTextMate = layout.buildDirectory.dir("idea-sandbox/IC-2025.1/plugins/${project.name}/lib/textmate")
+// Get typed reference to IntelliJ Platform tasks
+val prepareSandbox by tasks.existing(Sync::class)
+
+// Derive TextMate destination from prepareSandbox's output (works with any IDE version)
+val sandboxPluginTextMate = prepareSandbox.map { it.destinationDir.resolve("lib/textmate") }
 
 val copyTextMateToSandbox by tasks.registering(Sync::class) {
     group = "build"
@@ -188,8 +258,7 @@ val copyTextMateToSandbox by tasks.registering(Sync::class) {
     into(sandboxPluginTextMate)
 }
 
-// Get typed reference to IntelliJ Platform tasks
-val prepareSandbox by tasks.existing(Sync::class) {
+prepareSandbox.configure {
     finalizedBy(copyTextMateToSandbox)
 }
 
@@ -197,6 +266,13 @@ val prepareJarSearchableOptions by tasks.existing {
     mustRunAfter(copyTextMateToSandbox)
 }
 
-tasks.withType<Test>().configureEach {
-    useJUnitPlatform()
+// Ensure TextMate files are copied before IDE starts
+// NOTE: finalizedBy doesn't guarantee completion, so we need explicit dependsOn
+val runIde by tasks.existing {
+    dependsOn(copyTextMateToSandbox)
+}
+
+// No tests in this module - disable test task to avoid IntelliJ plugin test infrastructure overhead
+val test by tasks.existing {
+    enabled = false
 }

@@ -196,4 +196,5 @@ val check by tasks.existing {
 val clean by tasks.existing {
     dependsOn(project(":lsp-server").tasks.named("clean"))
     dependsOn(project(":intellij-plugin").tasks.named("clean"))
+    dependsOn(project(":vscode-extension").tasks.named("clean"))
 }

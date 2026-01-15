@@ -1,9 +1,11 @@
 package org.xtclang.idea.project
 
+import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.ide.wizard.AbstractNewProjectWizardStep
 import com.intellij.ide.wizard.NewProjectWizardBaseData.Companion.baseData
 import com.intellij.ide.wizard.NewProjectWizardStep
 import com.intellij.openapi.diagnostic.logger
+import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.dsl.builder.Panel
@@ -42,9 +44,14 @@ class XtcNewProjectWizardStep(parent: NewProjectWizardStep) : AbstractNewProject
         }
 
         val projectPath = Path(base.path).resolve(base.name)
-        log.info("Creating XTC project: path=$projectPath, type=$projectType, multiModule=$multiModule")
 
-        val creator = XtcProjectCreator(projectPath, projectType, multiModule)
+        // Get XTC version from the plugin's own version (matches published artifacts)
+        val xtcVersion = PluginManagerCore.getPlugin(PluginId.getId("org.xtclang.idea"))?.version
+            ?: XtcProjectCreator.DEFAULT_XTC_VERSION
+
+        log.info("Creating XTC project: path=$projectPath, type=$projectType, multiModule=$multiModule, xtcVersion=$xtcVersion")
+
+        val creator = XtcProjectCreator(projectPath, projectType, multiModule, xtcVersion, null)
         val result = creator.create()
 
         if (result.success()) {

@@ -43,7 +43,7 @@ public class XtcProjectCreatorIntegrationTest {
 
     @Test
     public void testApplicationProjectConfigures() throws Exception {
-        Path projectPath = tempDir.resolve("test-app");
+        Path projectPath = tempDir.resolve("testapp");
 
         XtcProjectCreator creator = createProjectCreator(projectPath, XtcProjectCreator.ProjectType.APPLICATION, false);
         XtcProjectCreator.Result result = creator.create();
@@ -58,7 +58,7 @@ public class XtcProjectCreatorIntegrationTest {
 
     @Test
     public void testLibraryProjectConfigures() throws Exception {
-        Path projectPath = tempDir.resolve("test-lib");
+        Path projectPath = tempDir.resolve("testlib");
 
         XtcProjectCreator creator = createProjectCreator(projectPath, XtcProjectCreator.ProjectType.LIBRARY, false);
         XtcProjectCreator.Result result = creator.create();
@@ -73,7 +73,7 @@ public class XtcProjectCreatorIntegrationTest {
 
     @Test
     public void testServiceProjectConfigures() throws Exception {
-        Path projectPath = tempDir.resolve("test-svc");
+        Path projectPath = tempDir.resolve("testsvc");
 
         XtcProjectCreator creator = createProjectCreator(projectPath, XtcProjectCreator.ProjectType.SERVICE, false);
         XtcProjectCreator.Result result = creator.create();
@@ -88,7 +88,7 @@ public class XtcProjectCreatorIntegrationTest {
 
     @Test
     public void testMultiModuleProjectConfigures() throws Exception {
-        Path projectPath = tempDir.resolve("test-multi");
+        Path projectPath = tempDir.resolve("testmulti");
 
         XtcProjectCreator creator = createProjectCreator(projectPath, XtcProjectCreator.ProjectType.APPLICATION, true);
         XtcProjectCreator.Result result = creator.create();

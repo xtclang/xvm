@@ -117,7 +117,9 @@ public abstract class LauncherOptions {
         .addOption(builder("t").longOpt("type").argName("type").hasArg()
             .desc("Project type: application (default), library, or service").get())
         .addOption(builder("m").longOpt("multi-module")
-            .desc("Create a multi-module project structure").get());
+            .desc("Create a multi-module project structure").get())
+        .addOption(builder().longOpt("dir").argName("directory").hasArg()
+            .desc("Directory to create the project in (default: current directory)").get());
 
     /**
      * Parsed command line from Apache Commons CLI.
@@ -1343,6 +1345,14 @@ public abstract class LauncherOptions {
             return hasOption("multi-module");
         }
 
+        /**
+         * Get the output directory (where the project folder will be created).
+         * If not specified, returns empty (meaning current directory).
+         */
+        public Optional<String> getOutputDirectory() {
+            return optionValue("dir");
+        }
+
         @Override
         public String[] toCommandLine() {
             final List<String> args = new ArrayList<>();
@@ -1351,6 +1361,7 @@ public abstract class LauncherOptions {
             if (isMultiModule()) {
                 args.add("-m");
             }
+            getOutputDirectory().ifPresent(dir -> args.addAll(List.of("--dir", dir)));
             getProjectName().ifPresent(args::add);
             return args.toArray(String[]::new);
         }
@@ -1398,6 +1409,25 @@ public abstract class LauncherOptions {
                 if (multiModule) {
                     args.add("-m");
                 }
+                return this;
+            }
+
+            /**
+             * Set the output directory.
+             *
+             * @param directory the directory to create the project in
+             */
+            public Builder setOutputDirectory(final String directory) {
+                args.removeIf(arg -> arg.equals("--dir"));
+                // Remove the value after --dir if present
+                for (int i = 0; i < args.size() - 1; i++) {
+                    if (args.get(i).equals("--dir")) {
+                        args.remove(i + 1);
+                        args.remove(i);
+                        break;
+                    }
+                }
+                args.addAll(List.of("--dir", directory));
                 return this;
             }
 

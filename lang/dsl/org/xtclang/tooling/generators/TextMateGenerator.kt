@@ -18,7 +18,11 @@ import org.xtclang.tooling.model.OperatorCategory
  * - Many other editors via plugins
  */
 class TextMateGenerator(private val model: LanguageModel) {
-    
+
+    companion object {
+        private val json = Json { prettyPrint = true }
+    }
+
     fun generate(): String {
         val grammar = buildJsonObject {
             put("name", model.name)
@@ -348,7 +352,7 @@ class TextMateGenerator(private val model: LanguageModel) {
             }
         }
         
-        return Json { prettyPrint = true }.encodeToString(JsonObject.serializer(), grammar)
+        return json.encodeToString(JsonObject.serializer(), grammar)
     }
     
     private fun controlFlowKeywords(): List<String> {
