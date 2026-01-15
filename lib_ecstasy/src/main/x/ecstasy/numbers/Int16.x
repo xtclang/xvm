@@ -169,51 +169,162 @@ const Int16
 
     // ----- conversions ---------------------------------------------------------------------------
 
+    /**
+     * Convert this Int16 to an Int8.
+     *
+     * Conversion is performed after optionally checking the bounds, by preserving the low-order 8
+     * bits of this Int16.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of an Int8
+     *
+     * @return  an Int8 that is equivalent to this Int16
+     *
+     * @throws OutOfBounds if this Int16 if checkBounds is True and this Int16 does not fit within
+     *         the bounds of an Int8
+     */
     @Override
     Int8 toInt8(Boolean checkBounds = False) {
         assert:bounds this >= Int8.MinValue && this <= Int8.MaxValue;
         return new Int8(bits[bitLength-8 ..< bitLength]);
     }
 
+    /**
+     * Convert this Int16 to an Int16, which is effectively a no-op and returns this Int16.
+     *
+     * @param checkBounds  this parameter will be ignored
+     *
+     * @return  this Int16
+     */
     @Override
     Int16 toInt16(Boolean checkBounds = False) = this;
 
+    /**
+     * Convert this Int16 to an Int32.
+     *
+     * Conversion is performed by sign extending this Int16 up to an Int32.
+     * An Int16 will always fit within an Int32, so the checkBounds parameter is effectively ignored.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of an Int32
+     *
+     * @return  an Int32 that is equivalent to this Int16
+     */
     @Auto
     @Override
     Int32 toInt32(Boolean checkBounds = False) = new Int32(new Bit[32](i -> bits[i < 32-bitLength ? 0 : i]));
 
+    /**
+     * Convert this Int16 to an Int64.
+     *
+     * Conversion is performed by sign extending this Int16 up to an Int64.
+     * An Int16 will always fit within an Int64, so the checkBounds parameter is effectively ignored.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of an Int64
+     *
+     * @return  an Int64 that is equivalent to this Int16
+     */
     @Auto
     @Override
     Int64 toInt64(Boolean checkBounds = False) = new Int64(new Bit[64](i -> bits[i < 64-bitLength ? 0 : i]));
 
+    /**
+     * Convert this Int16 to an Int128.
+     *
+     * Conversion is performed by sign extending this Int16 up to an Int128.
+     * An Int16 will always fit within an Int128, so the checkBounds parameter is effectively ignored.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of an Int128
+     *
+     * @return  an Int128 that is equivalent to this Int16
+     */
     @Auto
     @Override
     Int128 toInt128(Boolean checkBounds = False) = new Int128(new Bit[128](i -> bits[i < 128-bitLength ? 0 : i]));
 
+    /**
+     * Convert this Int16 to a UInt8.
+     *
+     * Conversion is performed after optionally checking the bounds, by preserving the low-order 8
+     * bits of this Int16.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of a UInt8
+     *
+     * @return  a UInt8 that is equivalent to this Int16
+     *
+     * @throws OutOfBounds if checkBounds is True and this Int16 is negative, or does not fit within
+     *         the bounds of a UInt8
+     */
     @Override
     UInt8 toUInt8(Boolean checkBounds = False) {
         assert:bounds !checkBounds || this >= UInt8.MinValue && this <= UInt8.MaxValue;
         return new UInt8(bits[bitLength-8 ..< bitLength]);
     }
 
+    /**
+     * Convert this Int16 to a UInt16.
+     *
+     * Conversion is performed after optionally checking the bounds, by preserving the bit pattern
+     * of this Int16, the high-order bit loses its function as a sign bit.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of a UInt16
+     *
+     * @return  a UInt16 that is equivalent to this Int16
+     *
+     * @throws OutOfBounds if this Int16 is negative and checkBounds is True
+     */
     @Override
     UInt16 toUInt16(Boolean checkBounds = False) {
         assert:bounds !checkBounds || this >= 0;
         return new UInt16(bits);
     }
 
+    /**
+     * Convert this Int16 to a UInt32.
+     *
+     * Conversion is performed after optionally checking the bounds, by sign-extending this Int16
+     * to an Int32 converting to a UInt32, the high-order bit loses its function as a sign bit.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of an UInt32
+     *
+     * @return  a UInt32 that is equivalent to this Int16
+     *
+     * @throws OutOfBounds if this Int16 is negative and checkBounds is True
+     */
     @Override
     UInt32 toUInt32(Boolean checkBounds = False) {
         assert:bounds !checkBounds || this >= 0;
         return new UInt32(new Bit[32](i -> (i < 32-bitLength ? 0 : bits[i])));
     }
 
+    /**
+     * Convert this Int16 to a UInt64.
+     *
+     * Conversion is performed after optionally checking the bounds, by sign-extending this Int16
+     * to an Int64 converting to a UInt64, the high-order bit loses its function as a sign bit.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of an UInt64
+     *
+     * @return  a UInt64 that is equivalent to this Int16
+     *
+     * @throws OutOfBounds if this Int16 is negative and checkBounds is True
+     */
     @Override
     UInt64 toUInt64(Boolean checkBounds = False) {
         assert:bounds !checkBounds || this >= 0;
         return new UInt64(new Bit[64](i -> (i < 64-bitLength ? 0 : bits[i])));
     }
 
+    /**
+     * Convert this Int16 to a UInt128.
+     *
+     * Conversion is performed after optionally checking the bounds, by sign-extending this Int16
+     * to an Int128 converting to a UInt128, the high-order bit loses its function as a sign bit.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of an UInt128
+     *
+     * @return  a UInt128 that is equivalent to this Int16
+     *
+     * @throws OutOfBounds if this Int16 is negative and checkBounds is True
+     */
     @Override
     UInt128 toUInt128(Boolean checkBounds = False) {
         assert:bounds !checkBounds || this >= 0;

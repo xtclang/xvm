@@ -4,36 +4,40 @@
 package ip_ops {
 
     public const TestRunner {
-        void run() {
+        Boolean run() {
             @Inject Console console;
             console.print(">>>> Running Ip Op Tests >>>>");
 
+            Boolean passed = True;
             try {
-                runTest(() -> new IpAddTests().run());
-                runTest(() -> new IpAndTests().run());
-                runTest(() -> new IpDivTests().run());
-                runTest(() -> new IpModTests().run());
-                runTest(() -> new IpMulTests().run());
-                runTest(() -> new IpOrTests().run());
-                runTest(() -> new IpShlTests().run());
-                runTest(() -> new IpShrAllTests().run());
-                runTest(() -> new IpShrTests().run());
-                runTest(() -> new IpSubTests().run());
-                runTest(() -> new IpXorTests().run());
+                passed = runTest(() -> new IpAddTests().run()) && passed;
+                passed = runTest(() -> new IpAndTests().run()) && passed;
+                passed = runTest(() -> new IpDivTests().run()) && passed;
+                passed = runTest(() -> new IpModTests().run()) && passed;
+                passed = runTest(() -> new IpMulTests().run()) && passed;
+                passed = runTest(() -> new IpOrTests().run()) && passed;
+                passed = runTest(() -> new IpShlTests().run()) && passed;
+                passed = runTest(() -> new IpShrAllTests().run()) && passed;
+                passed = runTest(() -> new IpShrTests().run()) && passed;
+                passed = runTest(() -> new IpSubTests().run()) && passed;
+                passed = runTest(() -> new IpXorTests().run()) && passed;
             } catch (IllegalState e) {
                 console.print(e);
             }
 
             console.print("<<<< Finished Ip Op Tests <<<<<");
+            return passed;
         }
 
-        void runTest(function void () test) {
+        Boolean runTest(function void () test) {
             try {
                 test();
+                return True;
             } catch (IllegalState e) {
                 @Inject Console console;
                 console.print(e);
             }
+            return False;
         }
     }
 }

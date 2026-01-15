@@ -1,50 +1,25 @@
 package org.xtclang.ecstasy.numbers;
 
-import org.xtclang.ecstasy.nConst;
 import org.xtclang.ecstasy.OutOfBounds;
-
-import org.xtclang.ecstasy.text.String;
-
+import org.xtclang.ecstasy.nConst;
 import org.xvm.javajit.Ctx;
+import org.xvm.runtime.template.numbers.LongLong;
 
 /**
- * Native Int8 wrapper.
+ * Native Int128 wrapper.
  */
-public class Int8 extends nConst {
+public class Int128 extends nConst {
     /**
-     * Construct an Ecstasy Int8 object.
-     *
-     * @param value  the 8-bit signed integer value
+     * Construct an Ecstasy Int128 object.
      */
-    private Int8(int value) {
+    Int128(long lowValue, long highValue) {
         super(null);
-        $value = value;
+        $lowValue  = lowValue;
+        $highValue = highValue;
     }
 
-    private static final Int8[] CACHE = new Int8[256];
-
-    public final int $value;
-
-    @Override
-    public String toString(Ctx ctx) {
-        return String.of(ctx, Integer.toString($value));
-    }
-
-    /**
-     * Obtain an Int8 for an 8-bit "primitive" signed int (a Java "int" value).
-     *
-     * @param value  an 8-bit "primitive" signed int
-     *
-     * @return an Int8 reference
-     */
-    public static Int8 $box(int value) {
-        int  key = 128 + (value = (byte) value);
-        Int8 ref = CACHE[key];
-        if (ref == null) {
-            CACHE[key] = ref = new Int8(value);
-        }
-        return ref;
-    }
+    public final long $lowValue;
+    public final long $highValue;
 
     // ----- conversion ----------------------------------------------------------------------------
 
@@ -59,7 +34,7 @@ public class Int8 extends nConst {
      * @return this Int8 value as an Int8
      */
     public Int8 toInt8(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return this;
+        return Int8.$box(toInt8$p(ctx, checkBounds, dfltCheckBounds));
     }
 
     /**
@@ -73,7 +48,13 @@ public class Int8 extends nConst {
      * @return this Int8 value as a Java {@code int}
      */
     public int toInt8$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+        if (!dfltCheckBounds && checkBounds && $highValue != 0 && $highValue != -1
+                && ($lowValue < Byte.MIN_VALUE || $lowValue > Byte.MAX_VALUE)) {
+            OutOfBounds oob = new OutOfBounds(ctx);
+            throw oob.$init(ctx, "Int128 value " + new LongLong($lowValue, $highValue)
+                    + " is not a valid Int8 value");
+        }
+        return (byte) $lowValue;
     }
 
     /**
@@ -87,7 +68,7 @@ public class Int8 extends nConst {
      * @return this Int8 value as a Java {@code int}
      */
     public Int16 toInt16(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return Int16.$box($value);
+        return Int16.$box(toInt16$p(ctx, checkBounds, dfltCheckBounds));
     }
 
     /**
@@ -101,7 +82,13 @@ public class Int8 extends nConst {
      * @return this Int8 value as a Java {@code int}
      */
     public int toInt16$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+        if (!dfltCheckBounds && checkBounds && $highValue != 0 && $highValue != -1
+                && ($lowValue < Short.MIN_VALUE || $lowValue > Short.MAX_VALUE)) {
+            OutOfBounds oob = new OutOfBounds(ctx);
+            throw oob.$init(ctx, "Int128 value " + new LongLong($lowValue, $highValue)
+                    + " is not a valid Int16 value");
+        }
+        return (short) $lowValue;
     }
 
     /**
@@ -115,7 +102,7 @@ public class Int8 extends nConst {
      * @return this Int8 value as a Java {@code int}
      */
     public Int32 toInt32(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return Int32.$box($value);
+        return Int32.$box(toInt32$p(ctx, checkBounds, dfltCheckBounds));
     }
 
     /**
@@ -129,7 +116,13 @@ public class Int8 extends nConst {
      * @return this Int8 value as a Java {@code int}
      */
     public int toInt32$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+        if (!dfltCheckBounds && checkBounds && $highValue != 0 && $highValue != -1
+                && ($lowValue < Integer.MIN_VALUE || $lowValue > Integer.MAX_VALUE)) {
+            OutOfBounds oob = new OutOfBounds(ctx);
+            throw oob.$init(ctx, "Int128 value " + new LongLong($lowValue, $highValue)
+                    + " is not a valid Int32 value");
+        }
+        return (int) $lowValue;
     }
 
     /**
@@ -143,7 +136,7 @@ public class Int8 extends nConst {
      * @return this Int8 value as a Java long
      */
     public Int64 toInt64(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return Int64.$box($value);
+        return Int64.$box(toInt64$p(ctx, checkBounds, dfltCheckBounds));
     }
 
     /**
@@ -157,7 +150,13 @@ public class Int8 extends nConst {
      * @return this Int8 value as a Java long
      */
     public long toInt64$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return $value;
+        if (!dfltCheckBounds && checkBounds && $highValue != 0 && $highValue != -1
+                && ($lowValue < Integer.MIN_VALUE || $lowValue > Integer.MAX_VALUE)) {
+            OutOfBounds oob = new OutOfBounds(ctx);
+            throw oob.$init(ctx, "Int128 value " + new LongLong($lowValue, $highValue)
+                    + " is not a valid Int32 value");
+        }
+        return $lowValue;
     }
 
     /**
@@ -171,7 +170,7 @@ public class Int8 extends nConst {
      * @return this Int8 value as an Int128
      */
     public Int128 toInt128(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return new Int128($value, $value < 0 ? -1L : 0L);
+        return this;
     }
 
     /**
@@ -185,7 +184,7 @@ public class Int8 extends nConst {
      * @return this Int8 value as an Int128
      */
     public Int128 toInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return new Int128($value, $value < 0 ? -1L : 0L);
+        return this;
     }
 
     /**
@@ -199,7 +198,7 @@ public class Int8 extends nConst {
      * @return this Int8 value as a Java {@code int}
      */
     public UInt8 toUInt8(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return UInt8.$box(toUInt8$p(ctx, checkBounds, dfltCheckBounds));
+        return UInt8.$box(toInt8$p(ctx, checkBounds, dfltCheckBounds));
     }
 
     /**
@@ -213,11 +212,13 @@ public class Int8 extends nConst {
      * @return this Int8 value as a Java {@code int}
      */
     public int toUInt8$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $value < 0) {
+        if (!dfltCheckBounds && checkBounds && $highValue != 0 && $highValue != -1
+                && ($lowValue < 0L || $lowValue > 255L)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Int8 value " + $value + " is not a valid UInt8 value");
+            throw oob.$init(ctx, "Int128 value " + new LongLong($lowValue, $highValue)
+                    + " is not a valid UInt8 value");
         }
-        return $value & 0xFF;
+        return (byte) $lowValue & 0xFF;
     }
 
     /**
@@ -231,7 +232,7 @@ public class Int8 extends nConst {
      * @return this Int8 value as a Java {@code int}
      */
     public UInt16 toUInt16(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return UInt16.$box(toUInt16$p(ctx, checkBounds, dfltCheckBounds));
+        return UInt16.$box(toInt16$p(ctx, checkBounds, dfltCheckBounds));
     }
 
     /**
@@ -245,11 +246,13 @@ public class Int8 extends nConst {
      * @return this Int8 value as a Java {@code int}
      */
     public int toUInt16$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $value < 0) {
+        if (!dfltCheckBounds && checkBounds && $highValue != 0 && $highValue != -1
+                && ($lowValue < 0 || $lowValue > 65535L)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Int8 value " + $value + " is not a valid UInt16 value");
+            throw oob.$init(ctx, "Int128 value " + new LongLong($lowValue, $highValue)
+                    + " is not a valid UInt16 value");
         }
-        return $value & 0xFFFF;
+        return (int) $lowValue & 0xFFFF;
     }
 
     /**
@@ -263,7 +266,7 @@ public class Int8 extends nConst {
      * @return this Int8 value as a Java {@code int}
      */
     public UInt32 toUInt32(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return UInt32.$box(toUInt32$p(ctx, checkBounds, dfltCheckBounds));
+        return UInt32.$box(toInt32$p(ctx, checkBounds, dfltCheckBounds));
     }
 
     /**
@@ -277,11 +280,13 @@ public class Int8 extends nConst {
      * @return this Int8 value as a Java {@code int}
      */
     public int toUInt32$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $value < 0) {
+        if (!dfltCheckBounds && checkBounds && $highValue != 0 && $highValue != -1
+                && ($lowValue < 0L || $lowValue > 4294967295L)) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Int8 value " + $value + " is not a valid UInt32 value");
+            throw oob.$init(ctx, "Int128 value " + new LongLong($lowValue, $highValue)
+                    + " is not a valid UInt32 value");
         }
-        return $value;
+        return (int) $lowValue;
     }
 
     /**
@@ -309,11 +314,13 @@ public class Int8 extends nConst {
      * @return this Int8 value as a Java long
      */
     public long toUInt64$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $value < 0) {
+        if (!dfltCheckBounds && checkBounds && $highValue != 0 && $highValue != -1
+                && $lowValue < 0L) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Int8 value " + $value + " is not a valid UInt64 value");
+            throw oob.$init(ctx, "Int128 value " + new LongLong($lowValue, $highValue)
+                    + " is not a valid UInt64 value");
         }
-        return $value;
+        return $lowValue;
     }
 
     /**
@@ -341,16 +348,18 @@ public class Int8 extends nConst {
      * @return this Int8 value as a UInt128
      */
     public UInt128 toUInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $value < 0) {
+        if (!dfltCheckBounds && checkBounds && $highValue < 0L) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Int8 value " + $value + " is not a valid UInt128 value");
+            throw oob.$init(ctx, "Int128 value " + new LongLong($lowValue, $highValue)
+                    + " is not a valid UInt128 value");
         }
-        return new UInt128($value, $value >= 0 ? 0L : -1L);
+        return new UInt128($lowValue, $highValue);
     }
 
     // ----- debugging support ---------------------------------------------------------------------
 
-    @Override public java.lang.String toString() {
-        return "Int8:" + $value;
+    @Override
+    public String toString() {
+        return new LongLong($lowValue, $highValue).toString();
     }
 }

@@ -4,36 +4,41 @@
 package gp_ops {
 
     public const TestRunner {
-        void run() {
+        Boolean run() {
             @Inject Console console;
             console.print(">>>> Running Gp Op Tests >>>>");
+
+            Boolean passed = True;
             try {
-                runTest(() -> new GpAddTests().run());
-                runTest(() -> new GpAndTests().run());
-                runTest(() -> new GpComplTests().run());
-                runTest(() -> new GpDivTests().run());
-                runTest(() -> new GpModTests().run());
-                runTest(() -> new GpMulTests().run());
-                runTest(() -> new GpOrTests().run());
-                runTest(() -> new GpShlTests().run());
-                runTest(() -> new GpShrAllTests().run());
-                runTest(() -> new GpShrTests().run());
-                runTest(() -> new GpSubTests().run());
-                runTest(() -> new GpXorTests().run());
+                passed = runTest(() -> new GpAddTests().run()) && passed;
+                passed = runTest(() -> new GpAndTests().run()) && passed;
+                passed = runTest(() -> new GpComplTests().run()) && passed;
+                passed = runTest(() -> new GpDivTests().run()) && passed;
+                passed = runTest(() -> new GpModTests().run()) && passed;
+                passed = runTest(() -> new GpMulTests().run()) && passed;
+                passed = runTest(() -> new GpOrTests().run()) && passed;
+                passed = runTest(() -> new GpShlTests().run()) && passed;
+                passed = runTest(() -> new GpShrAllTests().run()) && passed;
+                passed = runTest(() -> new GpShrTests().run()) && passed;
+                passed = runTest(() -> new GpSubTests().run()) && passed;
+                passed = runTest(() -> new GpXorTests().run()) && passed;
             } catch (IllegalState e) {
                 console.print(e);
             }
 
             console.print("<<<< Finished Gp Op Tests <<<<<");
+            return passed;
         }
 
-        void runTest(function void () test) {
+        Boolean runTest(function void () test) {
             try {
                 test();
+                return True;
             } catch (IllegalState e) {
                 @Inject Console console;
                 console.print(e);
             }
+            return False;
         }
     }
 

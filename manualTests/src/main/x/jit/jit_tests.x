@@ -9,10 +9,17 @@ module jit_tests.examples.org {
 
     void run() {
         console.print(">>>> Running JIT tests >>>>");
+        Boolean passed = True;
 
-        new gp_ops.TestRunner().run();
-        new ip_ops.TestRunner().run();
+        passed = new gp_ops.TestRunner().run() && passed;
+        passed = new ip_ops.TestRunner().run() && passed;
+        passed = new numbers.TestRunner().run() && passed;
 
         console.print("<<<< Finished JIT tests <<<<");
+        if (passed) {
+            console.print("All JIT tests passed");
+        } else {
+            console.print("One or more JIT tests failed");
+        }
     }
 }

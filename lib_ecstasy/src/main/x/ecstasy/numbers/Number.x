@@ -379,7 +379,7 @@
      *                     if additional bits are required
      *
      * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
-     *                      unsigned 8-bit integer range
+     *                      unsigned 16-bit integer range
      */
     @Override
     UInt16 toUInt16(Boolean checkBounds = False) = toUInt64(checkBounds).toUInt16(checkBounds);
@@ -391,7 +391,7 @@
      *                     if additional bits are required
      *
      * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
-     *                      unsigned 8-bit integer range
+     *                      unsigned 32-bit integer range
      */
     @Override
     UInt32 toUInt32(Boolean checkBounds = False) = toUInt64(checkBounds).toUInt32(checkBounds);
@@ -403,7 +403,7 @@
      *                     if additional bits are required
      *
      * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
-     *                      unsigned 8-bit integer range
+     *                      unsigned 64-bit integer range
      */
     @Override
     UInt64 toUInt64(Boolean checkBounds = False) = toUIntN().toUInt64(checkBounds);
@@ -415,7 +415,7 @@
      *                     if additional bits are required
      *
      * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
-     *                      unsigned 8-bit integer range
+     *                      unsigned 128-bit integer range
      */
     @Override
     UInt128 toUInt128(Boolean checkBounds = False) = toUIntN().toUInt128(checkBounds);
@@ -448,7 +448,7 @@
      *                     magnitude or change the sign of the result
      *
      * @throws OutOfBounds  iff `checkBounds` is `True` and the resulting value is out of the
-     *                      unsigned 8-bit integer range
+     *                      unsigned 64-bit integer range
      */
     @Override
     UInt toUInt(Boolean checkBounds = False) = toUInt64(checkBounds);
