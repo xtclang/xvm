@@ -486,9 +486,12 @@ public abstract class xConstrainedInteger
 
     @Override
     public int invokeShr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
+        if (!f_fSigned) {
+            // for unsigned values we perform an unsigned right shift
+            return invokeShrAll(frame, hTarget, hArg, iReturn);
+        }
         long l1 = ((JavaLong) hTarget).getValue();
         long l2 = ((JavaLong) hArg).getValue();
-
         return frame.assignValue(iReturn, makeJavaLong(l1 >> l2));
     }
 
@@ -496,7 +499,14 @@ public abstract class xConstrainedInteger
     public int invokeShrAll(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         long l1 = ((JavaLong) hTarget).getValue();
         long l2 = ((JavaLong) hArg).getValue();
-
+        // we mask the value to ensure it fits within the constrained integer range
+        // for example, if this is an 8-bit Int8 with a value -1 the long will be
+        // 0xFFFFFFFFFFFFFFFF, and if we do a >>> 2, the value will be 0x3FFFFFFFFFFFFFFF but the
+        // lowest 8 bits is still 0xFF so the Int8 will still have a value of -1. Performing >>> 2
+        // on an Int8 should result in a value of 0x3E
+        if (f_cNumBits < 64) {
+            l1 = l1 & ((1L << f_cNumBits) - 1);
+        }
         return frame.assignValue(iReturn, makeJavaLong(l1 >>> l2));
     }
 

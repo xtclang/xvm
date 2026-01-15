@@ -39,7 +39,7 @@ class GpModTests {
         UInt value2 = 0xFAAAAAAAAAAAAAA1;
         UInt value3 = 5;
         value1 = value2 % value3;
-        assert value1 == 1; // fails in the JIT with value1 == 0
+        assert value1 == 1;
     }
 
     void testGpModInt8() {

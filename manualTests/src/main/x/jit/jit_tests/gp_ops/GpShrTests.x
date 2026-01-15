@@ -46,7 +46,7 @@ class GpShrTests {
     void testGpShrInt8() {
         Int8 value1 = 0;
         Int8 value2 = 0x4A;
-        Int8 value3  = 2;
+        Int  value3  = 2;
         value1 = value2 >> value3;
         assert value1 == 0x12;
     }

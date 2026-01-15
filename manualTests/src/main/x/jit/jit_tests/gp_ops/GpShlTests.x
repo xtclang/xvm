@@ -78,8 +78,8 @@ class GpShlTests {
     void testGpShlInt32() {
         Int32 value1 = 0;
         Int32 value2 = 0x4A4A4A4A;
-        Int32 value3 = 2;
-        value1 = value2 << value3.toInt64();
+        Int   value3 = 2;
+        value1 = value2 << value3;
         assert value1 == 0x29292928;
     }
 
