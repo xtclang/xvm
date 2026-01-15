@@ -48,7 +48,7 @@ class GpShrAllTests {
         Int8 value2 = -1;
         Int value3  = 2;
         value1 = value2 >>> value3;
-        assert value1 == 0x3F; // Fails in the non-JIT case with value1 == -1
+        assert value1 == 0x3F;
     }
 
     void testGpShrAllUInt8() {

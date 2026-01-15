@@ -5,7 +5,6 @@ class IpShrTests {
 
     @Inject Console console;
 
-    // TODO: running this without the JIT fails - I think the non-JIT code is wrong
     void run() {
         console.print(">>>> Running IpShrTests >>>>");
         testIpShrInt();

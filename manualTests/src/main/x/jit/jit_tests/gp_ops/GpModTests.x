@@ -87,7 +87,7 @@ class GpModTests {
         UInt32 value2 = 0xFFFFFFF1;
         UInt32 value3 = 5;
         value1 = value2 % value3;
-//        assert value1 == 1;
+        assert value1 == 1;
     }
 
     void testGpModInt128() {

@@ -29,7 +29,7 @@ class IpModTests {
     void testIpModUInt() {
         UInt value1 = 0xFAAAAAAAAAAAAAA1;
         value1 %= 5;
-//        assert value1 == 1;
+        assert value1 == 1;
     }
 
     void testIpModInt8() {
@@ -65,7 +65,7 @@ class IpModTests {
     void testIpModUInt32() {
         UInt32 value1 = 0xFFFFFFF1;
         value1 %= 5;
-//        assert value1 == 1;
+        assert value1 == 1;
     }
 
     void testIpModInt128() {
