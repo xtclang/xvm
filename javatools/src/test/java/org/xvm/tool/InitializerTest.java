@@ -237,7 +237,7 @@ public class InitializerTest {
         try {
             runInitializer("--help");
         } catch (Launcher.LauncherException e) {
-            assertFalse(e.error, "Help should not be an error");
+            assertFalse(e.isError(), "Help should not be an error");
         }
     }
 
@@ -254,8 +254,14 @@ public class InitializerTest {
         assertTrue(Files.exists(buildGradle), "build.gradle.kts should exist");
 
         String content = Files.readString(buildGradle);
-        assertTrue(content.contains("org.xtclang.xtc"), "Should use XTC plugin");
+        assertTrue(content.contains("alias(libs.plugins.xtc)"), "Should use XTC plugin via version catalog");
         assertTrue(content.contains("xtcRun"), "Application should have xtcRun config");
+
+        // Verify version catalog exists with plugin definition
+        Path versionCatalog = tempDir.resolve(projectName).resolve("gradle/libs.versions.toml");
+        assertTrue(Files.exists(versionCatalog), "Version catalog should exist");
+        String catalogContent = Files.readString(versionCatalog);
+        assertTrue(catalogContent.contains("org.xtclang.xtc-plugin"), "Version catalog should define XTC plugin");
     }
 
     @Test
@@ -267,7 +273,7 @@ public class InitializerTest {
         assertTrue(Files.exists(buildGradle), "build.gradle.kts should exist");
 
         String content = Files.readString(buildGradle);
-        assertTrue(content.contains("org.xtclang.xtc"), "Should use XTC plugin");
+        assertTrue(content.contains("alias(libs.plugins.xtc)"), "Should use XTC plugin via version catalog");
         assertFalse(content.contains("xtcRun"), "Library should NOT have xtcRun config");
     }
 
@@ -327,7 +333,7 @@ public class InitializerTest {
 
             return Launcher.launch(fullArgs);
         } catch (Launcher.LauncherException e) {
-            return e.error ? 1 : 0;
+            return e.isError() ? 1 : 0;
         }
     }
 

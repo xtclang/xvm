@@ -57,7 +57,8 @@ This repository contains comprehensive documentation organized hierarchically:
 - **[Contributing Guide](CONTRIBUTING.md)** - How to contribute to the Ecstasy project
 - **[Code of Conduct](CODE_OF_CONDUCT.md)** - Community guidelines and expectations
 
-### Development Documentation  
+### Development Documentation
+- **[XTC CLI Reference](doc/XTC_CLI.md)** - Command-line tools: `xtc init`, `xtc build`, `xtc run`, `xtc test`
 - **[Docker Guide](docker/README.md)** - Container development, build instructions, and CI integration
 - **[GitHub Actions](/.github/GITHUB_WORKFLOWS.md)** - CI/CD pipeline, workflows, and automation documentation
 
