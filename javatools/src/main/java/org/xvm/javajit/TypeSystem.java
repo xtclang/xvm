@@ -26,6 +26,7 @@ import org.xvm.javajit.builders.EnumValueBuilder;
 import org.xvm.javajit.builders.EnumerationBuilder;
 import org.xvm.javajit.builders.ExceptionBuilder;
 import org.xvm.javajit.builders.ModuleBuilder;
+import org.xvm.javajit.builders.PackageBuilder;
 
 import static org.xvm.javajit.Builder.MODULE;
 
@@ -343,9 +344,15 @@ public class TypeSystem {
         TypeConstant type = art.type;
 
         if (type.isA(pool.typeModule())) {
-            // it's definitely not Module, since this is not the native TypeSystem
+            // it's definitely not Module.x, since this is not the native TypeSystem
             assert !type.equals(pool.typeModule());
             return new ModuleBuilder(this, type);
+        }
+
+        if (type.isA(pool.typePackage())) {
+            // it's definitely not Package.x, since this is not the native TypeSystem
+            assert !type.equals(pool.typeModule());
+            return new PackageBuilder(this, type);
         }
 
         if (art.shape == ClassfileShape.Enum) {

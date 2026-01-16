@@ -20,7 +20,7 @@ module test1.examples.org {
         assert t1.augment() == (t1.x + 1) * t1.x;
 
         TestFormal<String> ts = new TestFormal("hello");
-        console.print(ts.value);
+        assert ts.value == "hello";
         ts.testType();
 
         TestFormal<Int> ti = new TestFormal(7);

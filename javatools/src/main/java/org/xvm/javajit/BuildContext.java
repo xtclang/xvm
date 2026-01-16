@@ -73,7 +73,6 @@ import static org.xvm.javajit.Builder.CD_nObj;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.N_TypeMismatch;
 import static org.xvm.javajit.Builder.OPT;
-
 import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
 import static org.xvm.javajit.TypeSystem.ID_NUM;
 
@@ -1361,7 +1360,7 @@ public class BuildContext {
         }
 
         PropertyConstant propId = getConstant(propIdIndex, PropertyConstant.class);
-        JitMethodDesc    jmdGet = builder.loadProperty(code, targetSlot.jitType(), propId);
+        JitMethodDesc    jmdGet = builder.loadProperty(code, targetSlot.type(), propId);
 
         assignReturns(code, jmdGet, 1, new int[] {retId});
     }
@@ -1374,7 +1373,7 @@ public class BuildContext {
             throw new UnsupportedOperationException("Multislot P_Set");
         }
         PropertyConstant propId     = getConstant(propIdIndex, PropertyConstant.class);
-        PropertyInfo     propInfo   = propId.getPropertyInfo(targetSlot.jitType());
+        PropertyInfo     propInfo   = propId.getPropertyInfo(targetSlot.type());
         JitMethodDesc    jmd        = propInfo.getSetterJitDesc(typeSystem);
         String           setterName = propInfo.ensureSetterJitMethodName(typeSystem);
 
@@ -1810,12 +1809,12 @@ public class BuildContext {
                 return origReg;
             }
 
-            if (!type.isA(this.type())) {
+            if (type.isA(this.type())) {
+                return RegisterInfo.super.store(bctx, code, type);
+            } else {
                 assert type.isA(original().type());
                 return bctx.narrowRegister(code, original(), type).store(bctx, code, type);
             }
-
-            return RegisterInfo.super.store(bctx, code, type);
         }
 
         /**
