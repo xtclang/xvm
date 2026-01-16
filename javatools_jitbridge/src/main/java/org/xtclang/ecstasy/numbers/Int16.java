@@ -49,20 +49,6 @@ public class Int16 extends nConst {
      * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
      *                         default value (in this case False)
      *
-     * @return this Int8 value as an Int8
-     */
-    public Int8 toInt8(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return Int8.$box(toInt8$p(ctx, checkBounds, dfltCheckBounds));
-    }
-
-    /**
-     * Implementation of Int8 toInt8(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
      * @return this Int8 value as a Java {@code int}
      */
     public int toInt8$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
@@ -72,20 +58,6 @@ public class Int16 extends nConst {
             throw oob.$init(ctx, "Int16 value " + $value + " is not a valid Int8 value");
         }
         return (byte) $value;
-    }
-
-    /**
-     * Implementation of Int16 toInt16(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this Int8 value as a Java {@code int}
-     */
-    public Int16 toInt16(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return this;
     }
 
     /**
@@ -100,20 +72,6 @@ public class Int16 extends nConst {
      */
     public int toInt16$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         return $value;
-    }
-
-    /**
-     * Implementation of Int32 toInt32(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this Int8 value as a Java {@code int}
-     */
-    public Int32 toInt32(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return Int32.$box($value);
     }
 
     /**
@@ -140,36 +98,8 @@ public class Int16 extends nConst {
      *
      * @return this Int8 value as a Java long
      */
-    public Int64 toInt64(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return Int64.$box($value);
-    }
-
-    /**
-     * Implementation of Int64 toInt64(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this Int8 value as a Java long
-     */
     public long toInt64$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         return $value;
-    }
-
-    /**
-     * Implementation of Int128 toInt128(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this Int8 value as an Int128
-     */
-    public Int128 toInt128(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return new Int128($value, $value >= 0 ? 0L : -1L);
     }
 
     /**
@@ -184,20 +114,6 @@ public class Int16 extends nConst {
      */
     public Int128 toInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         return new Int128($value, $value >= 0 ? 0L : -1L);
-    }
-
-    /**
-     * Implementation of UInt8 toUInt8(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this Int8 value as a Java {@code int}
-     */
-    public UInt8 toUInt8(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return UInt8.$box(toUInt8$p(ctx, checkBounds, dfltCheckBounds));
     }
 
     /**
@@ -219,20 +135,6 @@ public class Int16 extends nConst {
     }
 
     /**
-     * Implementation of UInt16 toUInt16(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this Int8 value as a Java {@code int}
-     */
-    public UInt16 toUInt16(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return UInt16.$box(toUInt16$p(ctx, checkBounds, dfltCheckBounds));
-    }
-
-    /**
      * The primitive implementation of UInt16 toUInt16(Boolean checkBounds = False)
      *
      * @param ctx              the build context
@@ -248,20 +150,6 @@ public class Int16 extends nConst {
             throw oob.$init(ctx, "Int16 value " + $value + " is not a valid UInt16 value");
         }
         return (short) $value & 0xFFFF;
-    }
-
-    /**
-     * Implementation of UInt32 toUInt8(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this Int8 value as a Java {@code int}
-     */
-    public UInt32 toUInt32(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return UInt32.$box(toUInt32$p(ctx, checkBounds, dfltCheckBounds));
     }
 
     /**
@@ -283,20 +171,6 @@ public class Int16 extends nConst {
     }
 
     /**
-     * Implementation of UInt64 toUInt64(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this Int8 value as a Java long
-     */
-    public UInt64 toUInt64(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return UInt64.$box(toUInt64$p(ctx, checkBounds, dfltCheckBounds));
-    }
-
-    /**
      * The primitive implementation of UInt64 toUInt64(Boolean checkBounds = False)
      *
      * @param ctx              the build context
@@ -312,20 +186,6 @@ public class Int16 extends nConst {
             throw oob.$init(ctx, "Int16 value " + $value + " is not a valid UInt64 value");
         }
         return $value;
-    }
-
-    /**
-     * Implementation of UInt128 toUInt128(Boolean checkBounds = False)
-     *
-     * @param ctx              the build context
-     * @param checkBounds      the check bounds flag
-     * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
-     *                         default value (in this case False)
-     *
-     * @return this Int8 value as a UInt128
-     */
-    public UInt128 toUInt128(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return toUInt128$p(ctx, checkBounds, dfltCheckBounds);
     }
 
     /**

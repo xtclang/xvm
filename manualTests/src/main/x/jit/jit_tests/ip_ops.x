@@ -10,17 +10,17 @@ package ip_ops {
 
             Boolean passed = True;
             try {
-                passed = runTest(() -> new IpAddTests().run()) && passed;
-                passed = runTest(() -> new IpAndTests().run()) && passed;
-                passed = runTest(() -> new IpDivTests().run()) && passed;
-                passed = runTest(() -> new IpModTests().run()) && passed;
-                passed = runTest(() -> new IpMulTests().run()) && passed;
-                passed = runTest(() -> new IpOrTests().run()) && passed;
-                passed = runTest(() -> new IpShlTests().run()) && passed;
-                passed = runTest(() -> new IpShrAllTests().run()) && passed;
-                passed = runTest(() -> new IpShrTests().run()) && passed;
-                passed = runTest(() -> new IpSubTests().run()) && passed;
-                passed = runTest(() -> new IpXorTests().run()) && passed;
+                passed &= runTest(() -> new IpAddTests().run());
+                passed &= runTest(() -> new IpAndTests().run());
+                passed &= runTest(() -> new IpDivTests().run());
+                passed &= runTest(() -> new IpModTests().run());
+                passed &= runTest(() -> new IpMulTests().run());
+                passed &= runTest(() -> new IpOrTests().run());
+                passed &= runTest(() -> new IpShlTests().run());
+                passed &= runTest(() -> new IpShrAllTests().run());
+                passed &= runTest(() -> new IpShrTests().run());
+                passed &= runTest(() -> new IpSubTests().run());
+                passed &= runTest(() -> new IpXorTests().run());
             } catch (IllegalState e) {
                 console.print(e);
             }

@@ -11,9 +11,9 @@ module jit_tests.examples.org {
         console.print(">>>> Running JIT tests >>>>");
         Boolean passed = True;
 
-        passed = new gp_ops.TestRunner().run() && passed;
-        passed = new ip_ops.TestRunner().run() && passed;
-        passed = new numbers.TestRunner().run() && passed;
+        passed &= new gp_ops.TestRunner().run();
+        passed &= new ip_ops.TestRunner().run();
+        passed &= new numbers.TestRunner().run();
 
         console.print("<<<< Finished JIT tests <<<<");
         if (passed) {

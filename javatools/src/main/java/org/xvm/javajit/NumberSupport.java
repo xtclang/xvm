@@ -60,6 +60,7 @@ public interface NumberSupport {
                 bctx.adjustIntValue(code, regTarget.type());
             }
             case "J" -> code.land();
+            case "Z" -> code.iand();
             default  -> throw new IllegalStateException();
         }
     }
