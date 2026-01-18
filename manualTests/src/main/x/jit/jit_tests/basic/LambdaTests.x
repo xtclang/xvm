@@ -1,7 +1,9 @@
-module test8.examples.org {
+package LambdaTests {
     @Inject Console console;
 
     void run() {
+        console.print(">>>> Running LambdaTests >>>>");
+
         test1();
         test2();
         test3();

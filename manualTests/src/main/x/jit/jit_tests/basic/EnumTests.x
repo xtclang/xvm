@@ -1,14 +1,16 @@
-module test2.examples.org {
+package EnumTests {
 
     import ecstasy.io.IOException;
 
     void run() {
         @Inject Console console;
 
+        console.print(">>>> Running EnumTests >>>>");
+
         Color c = Blue;
-        console.print(c.ordinal);
-        console.print(c.text);
-        console.print(c.rgb);
+        assert c.ordinal == 2;
+        assert c.text == "B";
+        assert c.rgb == 65_025;
         console.print(c);
 
         assert c != Green;
@@ -18,8 +20,7 @@ module test2.examples.org {
         assert !testRed(c);
 
         Boolean b = True;
-        console.print(b);
-        console.print(b.not());
+        assert !b.not();
         console.print(b.toInt64()); // this won't work correctly until we compile Boolean
 
         Color|Int cint = Red;

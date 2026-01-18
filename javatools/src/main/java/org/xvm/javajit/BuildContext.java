@@ -423,7 +423,7 @@ public class BuildContext {
             } else {
                 // TODO: remove
                 System.err.println("Dead code: " + Op.toName(op.getOpCode()) + " at " + this +
-                    " for " + typeInfo.getType().getValueString());
+                    " for " + typeInfo.getType().removeAccess().getValueString());
             }
         }
 

@@ -1,15 +1,9 @@
-module test1.examples.org {
+package GenericTests {
 
     @Inject Console console;
 
-    Int prop1 = 42;
-    String prop2.get() = "hello";
-    Int prop3.get() = 43;
-
     void run() {
-        console.print(prop1);
-        console.print(prop2);
-        assert prop3 - 1 == prop1;
+        console.print(">>>> Running GenericTests >>>>");
 
         TestBase t0 = new TestBase(5);
         console.print(t0);
@@ -35,22 +29,20 @@ module test1.examples.org {
     }
 
     class TestBase(Int x) {
-        Int augment() {
-            return x + 1;
-        }
+        Int augment() = x + 1;
     }
+
     class TestDerived(Int x) extends TestBase(x) {
-        @Override Int augment() {
-            return super() * x;
-        }
+        @Override Int augment() = super() * x;
     }
+
     class TestFormal<Element> (Element value) {
-        Element getValue() {
-            return value;
-        }
+        Element getValue() = value;
+
         void setValue(Element value) {
             this.value = value;
         }
+
         void testType() {
             if (Int i := value.is(Int)) {
                 console.print("it's an Int; next is ", True);

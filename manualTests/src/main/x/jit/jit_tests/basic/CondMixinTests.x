@@ -1,7 +1,9 @@
-module test6.examples.org {
+package CondMixinTests {
     @Inject Console console;
 
     void run() {
+        console.print(">>>> Running CondMixinTests >>>>");
+
         test1();
         test2();
     }
@@ -10,28 +12,28 @@ module test6.examples.org {
         import t1.*;
 
         Test<String> ts = new Test("hello");
-        console.print("Element: ", True);
+        console.print("1a) Element=", True);
         console.print(ts.Element);
-        console.print(ts.size()); // the result is going to be incorrect (zero) until we compile String.x
+        assert ts.size() < 6; // TODO: the result is incorrect (zero) until we compile String.x
 
         Test<Int> ti = new Test(42);
-        console.print("Element: ", True);
+        console.print("1b) Element=", True);
         console.print(ti.Element);
-        console.print(ti.value());
+        assert ti.value() == 42;
     }
 
     void test2() {
         import t2.*;
 
         Test<String> ts = new Test("hello");
-        console.print("Element: ", True);
+        console.print("2a) Element=", True);
         console.print(ts.Element);
-        console.print(ts.size());
+        assert ts.size() == 5;
 
         Test<Int> ti = new Test(42);
-        console.print("Element: ", True);
+        console.print("2b) Element=", True);
         console.print(ti.Element);
-        console.print(ti.value());
+        assert ti.value() == 42;
     }
 
     package t1 {

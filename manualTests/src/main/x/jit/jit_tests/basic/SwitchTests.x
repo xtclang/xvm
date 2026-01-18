@@ -1,22 +1,25 @@
-module test4.examples.org {
+package SwitchTests {
 
     import ecstasy.io.IOException;
 
     @Inject Console console;
 
     void run() {
+        console.print(">>>> Running SwitchTests >>>>");
+
         testSwitch1(0);
         testSwitch1(4);
         testSwitch1(171);
 
-        console.print(testSwitch2(0));
-        console.print(testSwitch2(4));
-        console.print(testSwitch2(171));
+        assert testSwitch2(0)   == "2-a";
+        assert testSwitch2(4)   == "2-b";
+        assert testSwitch2(171) == "2-other";
 
-        console.print(testSwitch3(33));
-        console.print(testSwitch3(-Int32.MaxValue+1));
+        assert testSwitch3(33)                == "3-b";
+        assert testSwitch3(Int32.MaxValue+1)  == "3-d";
+        assert testSwitch3(-Int32.MaxValue+1) == "3-other";
 
-        console.print(testSwitch4(Green));
+        assert testSwitch4(Green) == "Verde";
     }
 
     void testSwitch1(Int i) {
