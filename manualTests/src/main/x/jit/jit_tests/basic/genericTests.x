@@ -1,4 +1,4 @@
-package GenericTests {
+package genericTests {
 
     @Inject Console console;
 

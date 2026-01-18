@@ -1,4 +1,4 @@
-package TryTests {
+package tryTests {
 
     import ecstasy.io.IOException;
 

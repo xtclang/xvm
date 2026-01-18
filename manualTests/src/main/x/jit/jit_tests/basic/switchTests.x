@@ -1,4 +1,4 @@
-package SwitchTests {
+package switchTests {
 
     import ecstasy.io.IOException;
 

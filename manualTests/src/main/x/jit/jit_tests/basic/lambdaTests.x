@@ -1,4 +1,4 @@
-package LambdaTests {
+package lambdaTests {
     @Inject Console console;
 
     void run() {

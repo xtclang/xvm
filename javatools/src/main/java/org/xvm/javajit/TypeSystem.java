@@ -293,12 +293,11 @@ public class TypeSystem {
      * @return the bytes of the ClassFile for the specified class name
      */
     public byte[] genClass(ModuleLoader moduleLoader, String name) {
-        String className = moduleLoader.prefix + name;
-
         ModuleStructure module = moduleLoader.module;
         Artifact        art    = deduceArtifact(module, name);
         if (art != null) {
-            Builder builder = ensureBuilder(art);
+            String  className = moduleLoader.prefix + name;
+            Builder builder   = ensureBuilder(art);
             Consumer<? super ClassBuilder> handler = classBuilder -> {
                 switch (art.shape) {
                 case Impl:
@@ -439,7 +438,8 @@ public class TypeSystem {
             name = name.substring(0, idOffset);
         }
 
-        if (module.getChildByPath(name.replace('$', '.')) instanceof ClassStructure struct) {
+        String xvmName = unescapeJitName(name).replace('$', '.');
+        if (module.getChildByPath(xvmName) instanceof ClassStructure struct) {
             if (type == null) {
                 type = struct.getCanonicalType();
             }

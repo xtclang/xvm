@@ -1,4 +1,4 @@
-package CondMixinTests {
+package condMixinTests {
     @Inject Console console;
 
     void run() {

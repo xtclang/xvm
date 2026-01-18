@@ -1,4 +1,4 @@
-package EnumTests {
+package enumTests {
 
     import ecstasy.io.IOException;
 

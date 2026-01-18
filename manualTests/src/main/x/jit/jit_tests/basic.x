@@ -10,15 +10,15 @@ package basic {
 
             Boolean passed = True;
             try {
-                passed &= runTest(() -> ArrayTests.run());
-                passed &= runTest(() -> CallTests.run());
-                passed &= runTest(() -> CondMixinTests.run());
-                passed &= runTest(() -> EnumTests.run());
-                passed &= runTest(() -> GenericTests.run());
-                passed &= runTest(() -> LambdaTests.run());
-                passed &= runTest(() -> MixinTests.run());
-                passed &= runTest(() -> SwitchTests.run());
-                passed &= runTest(() -> TryTests.run());
+                passed &= runTest(() -> arrayTests.run());
+                passed &= runTest(() -> callTests.run());
+                passed &= runTest(() -> condMixinTests.run());
+                passed &= runTest(() -> enumTests.run());
+                passed &= runTest(() -> genericTests.run());
+                passed &= runTest(() -> lambdaTests.run());
+                passed &= runTest(() -> mixinTests.run());
+                passed &= runTest(() -> switchTests.run());
+                passed &= runTest(() -> tryTests.run());
             } catch (IllegalState e) {
                 console.print(e);
             }

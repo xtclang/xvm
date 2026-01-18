@@ -1,4 +1,4 @@
-package CallTests {
+package callTests {
 
     @Inject Console console;
 

@@ -1,4 +1,4 @@
-package ArrayTests {
+package arrayTests {
     @Inject Console console;
 
     void run() {
