@@ -1,3 +1,17 @@
+// TODO LSP: Current VS Code extension limitations:
+// - Uses TextMate grammar (syntaxes/xtc.tmLanguage.json) for highlighting
+//   Should be replaced with LSP semantic tokens when parallel lexer is complete
+// - LSP client only connects to basic features (hover, completion, definition, references)
+//   Missing: rename, codeActions, formatting, semanticTokens, signatureHelp, etc.
+// - No debug adapter (DAP) integration yet
+//   See: XtcCompilerAdapterFull for DAP interface definition
+//
+// To enable semantic tokens when ready:
+// 1. Add to clientOptions.initializationOptions: { semanticTokensProvider: true }
+// 2. VS Code will automatically use LSP semantic tokens over TextMate
+//
+// See: doc/plans/PLAN_LSP_PARALLEL_LEXER.md for semantic token roadmap
+
 import * as path from 'path';
 import * as vscode from 'vscode';
 import {
@@ -34,11 +48,19 @@ export function activate(context: vscode.ExtensionContext) {
     };
 
     // Client options
+    // TODO LSP: Add more client capabilities as they become available in the server:
+    // - middleware for custom handling
+    // - semantic tokens configuration
+    // - code action kinds
     const clientOptions: LanguageClientOptions = {
         documentSelector: [{ scheme: 'file', language: 'xtc' }],
         synchronize: {
             fileEvents: vscode.workspace.createFileSystemWatcher('**/*.x')
         }
+        // TODO LSP: Enable when semantic tokens are implemented in the server:
+        // initializationOptions: {
+        //     semanticTokensProvider: true
+        // }
     };
 
     // Create and start the language client

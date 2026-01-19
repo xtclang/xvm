@@ -54,49 +54,45 @@ public class Initializer extends Launcher<InitializerOptions> {
 
     @Override
     protected int process() {
-        final var opts = options();
+        var opts = options();
+        var type = XtcProjectCreator.ProjectType.fromString(opts.getProjectType());
+        var projectName = opts.getProjectName().orElseThrow();
 
-        final var projectName = opts.getProjectName().orElseThrow(); // validated above
-        final var type = XtcProjectCreator.ProjectType.fromString(opts.getProjectType());
-        final var multiModule = opts.isMultiModule();
+        out("Creating " + (opts.isMultiModule() ? "multi-module " : "") + type.getName() +
+            " project: " + projectName);
 
-        // Compute project path: if --dir is specified, create project in that directory
-        Path projectPath = opts.getOutputDirectory()
+        // Compute project path
+        var projectPath = opts.getOutputDirectory()
             .map(dir -> Path.of(dir).resolve(projectName))
             .orElse(Path.of(projectName));
 
-        String moduleName = projectPath.getFileName().toString();
-
-        out("Creating " + (multiModule ? "multi-module " : "") + type.getName() + " project: " + moduleName);
-
         // Use exact version from build info (including -SNAPSHOT if present)
-        String xtcVersion = BuildInfo.getXdkVersion();
-
-        XtcProjectCreator creator = new XtcProjectCreator(
+        var xtcVersion = BuildInfo.getXdkVersion();
+        var creator = new XtcProjectCreator(
             projectPath,
             type,
-            multiModule,
+            opts.isMultiModule(),
             xtcVersion,
-            null  // Use default Gradle version
+            null,
+            opts.isUseLocalAndSnapshotRepos()
         );
+        var result = creator.create();
 
-        XtcProjectCreator.Result result = creator.create();
-
-        if (result.success()) {
-            out();
-            out("Project '" + moduleName + "' created successfully!");
-            out();
-            out("Next steps:");
-            out("  cd " + projectPath);
-            out("  ./gradlew build");
-            if (type == XtcProjectCreator.ProjectType.APPLICATION || type == XtcProjectCreator.ProjectType.SERVICE) {
-                out("  ./gradlew run");
-            }
-            return 0;
-        } else {
+        if (!result.success()) {
             log(ERROR, result.message());
             return 1;
         }
+
+        out();
+        out(result.message());
+        out();
+        out("Next steps:");
+        out("  cd " + projectName);
+        out("  ./gradlew build");
+        if (type == XtcProjectCreator.ProjectType.APPLICATION || type == XtcProjectCreator.ProjectType.SERVICE) {
+            out("  ./gradlew runXtc");
+        }
+        return 0;
     }
 
     @Override

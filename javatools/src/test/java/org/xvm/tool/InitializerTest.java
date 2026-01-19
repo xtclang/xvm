@@ -366,7 +366,8 @@ public class InitializerTest {
         Path projectDir = tempDir.resolve(projectName);
 
         assertTrue(Files.isDirectory(projectDir), "Project directory should exist");
-        assertTrue(Files.exists(projectDir.resolve("build.gradle.kts")), "Root build.gradle.kts should exist");
+        // No root build.gradle.kts - subprojects are self-contained
+        assertFalse(Files.exists(projectDir.resolve("build.gradle.kts")), "Root build.gradle.kts should NOT exist");
         assertTrue(Files.exists(projectDir.resolve("settings.gradle.kts")), "settings.gradle.kts should exist");
 
         // App subproject
@@ -388,7 +389,7 @@ public class InitializerTest {
         String content = Files.readString(moduleFile);
 
         assertTrue(content.contains("module " + projectName), "Should declare module");
-        assertTrue(content.contains("void run()"), "Application should have run method");
+        assertTrue(content.contains("void run(String[] args=[])"), "Application should have run method with optional args");
         assertTrue(content.contains("@Inject Console"), "Should inject Console");
     }
 

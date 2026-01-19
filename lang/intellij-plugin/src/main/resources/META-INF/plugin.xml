@@ -37,7 +37,12 @@
         <configurationType
             implementation="org.xtclang.idea.run.XtcRunConfigurationType"/>
 
-        <!-- No FileType registered - TextMate bundle handles .x files -->
+        <!-- Run Configuration Producer - auto-creates run configs from .x file context -->
+        <runConfigurationProducer
+            implementation="org.xtclang.idea.run.XtcRunConfigurationProducer"/>
+
+        <!-- IconProvider for .x files - provides icon without overriding TextMate highlighting -->
+        <iconProvider implementation="org.xtclang.idea.XtcIconProvider"/>
     </extensions>
 
     <!-- LSP4IJ Language Server registration -->
@@ -50,7 +55,6 @@
                 Requires XDK_HOME to be set or the LSP server JAR to be bundled.
             ]]></description>
         </server>
-        <!-- Use file pattern mapping instead of language mapping so TextMate can handle the file type -->
         <fileNamePatternMapping patterns="*.x"
                                  serverId="xtcLanguageServer"/>
     </extensions>

@@ -6,12 +6,20 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 /**
- * Core project creation logic for XTC projects. This class is designed to be
- * standalone with no dependencies on the Launcher infrastructure, making it
- * suitable for use both from the CLI (via Initializer) and from IDE plugins.
+ * Core project creation logic for XTC projects.
  *
- * <p>This class is synced to the IntelliJ plugin during build.
+ * <p><b>IMPORTANT:</b> This class MUST remain standalone with no dependencies on other
+ * javatools classes (LauncherOptions, BuildInfo, etc.). The reason is that this file
+ * is copied verbatim to the IntelliJ plugin during build and compiled separately with
+ * Java 21 (IntelliJ's runtime requirement). Any dependencies on javatools classes would
+ * break the plugin build since those classes are not available in that context.
+ *
+ * <p>The CLI (via {@code Initializer}) extracts values from {@code LauncherOptions.InitializerOptions}
+ * and passes them to the constructors here. The IDE plugin calls the constructors directly.
  */
 public class XtcProjectCreator {
 
@@ -74,12 +82,13 @@ public class XtcProjectCreator {
     private final boolean multiModule;
     private final String xtcVersion;
     private final String gradleVersion;
+    private final boolean useLocalAndSnapshotRepos;
 
     /**
      * Create a project creator with default versions.
      */
-    public XtcProjectCreator(Path projectPath, ProjectType type, boolean multiModule) {
-        this(projectPath, type, multiModule, DEFAULT_XTC_VERSION, DEFAULT_GRADLE_VERSION);
+    public XtcProjectCreator(@NotNull Path projectPath, @NotNull ProjectType type, boolean multiModule) {
+        this(projectPath, type, multiModule, DEFAULT_XTC_VERSION, DEFAULT_GRADLE_VERSION, true);
     }
 
     /**
@@ -88,16 +97,35 @@ public class XtcProjectCreator {
      * @param projectPath   path where the project will be created
      * @param type          the type of project to create
      * @param multiModule   whether to create a multi-module project
-     * @param xtcVersion    XTC plugin version to use
-     * @param gradleVersion Gradle version for the wrapper
+     * @param xtcVersion    XTC plugin version to use, null for default
+     * @param gradleVersion Gradle version for the wrapper, null for default
+     */
+    public XtcProjectCreator(@NotNull Path projectPath,
+                             @NotNull ProjectType type,
+                             boolean multiModule,
+                             @Nullable String xtcVersion,
+                             @Nullable String gradleVersion) {
+        this(projectPath, type, multiModule, xtcVersion, gradleVersion, true);
+    }
+
+    /**
+     * Create a project creator with all options (legacy constructor for IDE plugin).
+     *
+     * @param projectPath              path where the project will be created
+     * @param type                     the type of project to create
+     * @param multiModule              whether to create a multi-module project
+     * @param xtcVersion               XTC plugin version to use
+     * @param gradleVersion            Gradle version for the wrapper
+     * @param useLocalAndSnapshotRepos whether to include mavenLocal() and maven-snapshots repository
      */
     public XtcProjectCreator(Path projectPath, ProjectType type, boolean multiModule,
-                             String xtcVersion, String gradleVersion) {
+                             String xtcVersion, String gradleVersion, boolean useLocalAndSnapshotRepos) {
         this.projectPath = projectPath;
         this.type = type;
         this.multiModule = multiModule;
         this.xtcVersion = xtcVersion != null ? xtcVersion : DEFAULT_XTC_VERSION;
         this.gradleVersion = gradleVersion != null ? gradleVersion : DEFAULT_GRADLE_VERSION;
+        this.useLocalAndSnapshotRepos = useLocalAndSnapshotRepos;
     }
 
     /**
@@ -173,6 +201,10 @@ public class XtcProjectCreator {
         Path srcDir = projectPath.resolve("src/main/x");
         Files.createDirectories(srcDir);
 
+        // Create disabled test source set (pending plugin fix for test auto-resolution)
+        Path testDir = projectPath.resolve("src/test.disabled/x");
+        Files.createDirectories(testDir);
+
         // Create version catalog
         createVersionCatalog();
 
@@ -180,6 +212,7 @@ public class XtcProjectCreator {
         writeFile(projectPath.resolve("settings.gradle.kts"), generateSettingsGradle(projectName, false));
         writeFile(projectPath.resolve("gradle.properties"), generateGradleProperties(projectName));
         writeFile(srcDir.resolve(projectName + ".x"), generateModuleSource(projectName, type));
+        writeFile(testDir.resolve(projectName + "Test.x"), generateTestSource(projectName, type));
         writeFile(projectPath.resolve(".gitignore"), generateGitignore());
         createGradleWrapper();
     }
@@ -190,7 +223,8 @@ public class XtcProjectCreator {
         // Create version catalog
         createVersionCatalog();
 
-        writeFile(projectPath.resolve("build.gradle.kts"), generateRootBuildGradle());
+        // No root build.gradle.kts needed - subprojects are self-contained
+        // settings.gradle.kts defines the project structure
         writeFile(projectPath.resolve("settings.gradle.kts"), generateSettingsGradle(projectName, true));
         writeFile(projectPath.resolve("gradle.properties"), generateGradleProperties(projectName));
         writeFile(projectPath.resolve(".gitignore"), generateGitignore());
@@ -198,14 +232,18 @@ public class XtcProjectCreator {
         // Create app subproject (depends on lib)
         Path appDir = projectPath.resolve("app");
         Files.createDirectories(appDir.resolve("src/main/x"));
+        Files.createDirectories(appDir.resolve("src/test.disabled/x"));
         writeFile(appDir.resolve("build.gradle.kts"), generateBuildGradle("app", type, true, true));
         writeFile(appDir.resolve("src/main/x/app.x"), generateAppWithLibImport());
+        writeFile(appDir.resolve("src/test.disabled/x/appTest.x"), generateAppTestSource());
 
         // Create lib subproject
         Path libDir = projectPath.resolve("lib");
         Files.createDirectories(libDir.resolve("src/main/x"));
+        Files.createDirectories(libDir.resolve("src/test.disabled/x"));
         writeFile(libDir.resolve("build.gradle.kts"), generateBuildGradle("lib", ProjectType.LIBRARY, true, false));
         writeFile(libDir.resolve("src/main/x/lib.x"), generateModuleSource("lib", ProjectType.LIBRARY));
+        writeFile(libDir.resolve("src/test.disabled/x/libTest.x"), generateLibTestSource());
 
         createGradleWrapper();
     }
@@ -253,6 +291,8 @@ public class XtcProjectCreator {
         if (projectType == ProjectType.APPLICATION || projectType == ProjectType.SERVICE) {
             sb.append("""
 
+                // Run configuration - can be overridden from command line:
+                //   ./gradlew runXtc --module=other --method=main --args=arg1,arg2
                 xtcRun {
                     module {
                         moduleName = "%s"
@@ -264,47 +304,23 @@ public class XtcProjectCreator {
         return sb.toString();
     }
 
-    private String generateRootBuildGradle() {
-        return """
-            /*
-             * Root build file for multi-module XTC project.
-             */
-            plugins {
-                alias(libs.plugins.xtc)
-            }
-
-            subprojects {
-                group = rootProject.group
-                version = rootProject.version
-            }
-
-            dependencies {
-                xdkDistribution(libs.xdk)
-
-                // Aggregate all modules
-                xtcModule(projects.app)
-                xtcModule(projects.lib)
-            }
-
-            xtcRun {
-                module {
-                    moduleName = "app"
-                }
-            }
-            """;
-    }
-
     private String generateSettingsGradle(String projectName, boolean isMultiModule) {
+        String localRepos = useLocalAndSnapshotRepos ? """
+                        mavenLocal()
+                        maven("https://central.sonatype.com/repository/maven-snapshots/") {
+                            mavenContent { snapshotsOnly() }
+                        }
+                """ : "";
+
         if (isMultiModule) {
             return """
+                @file:Suppress("UnstableApiUsage")
+
                 rootProject.name = "%s"
 
                 pluginManagement {
                     repositories {
-                        maven("https://central.sonatype.com/repository/maven-snapshots/") {
-                            mavenContent { snapshotsOnly() }
-                        }
-                        mavenCentral()
+                %s        mavenCentral()
                         gradlePluginPortal()
                     }
                 }
@@ -314,40 +330,33 @@ public class XtcProjectCreator {
 
                 dependencyResolutionManagement {
                     repositories {
-                        maven("https://central.sonatype.com/repository/maven-snapshots/") {
-                            mavenContent { snapshotsOnly() }
-                        }
-                        mavenCentral()
+                %s        mavenCentral()
                     }
                 }
 
                 include("app")
                 include("lib")
-                """.formatted(projectName);
+                """.formatted(projectName, localRepos, localRepos);
         }
 
         return """
+            @file:Suppress("UnstableApiUsage")
+
             rootProject.name = "%s"
 
             pluginManagement {
                 repositories {
-                    maven("https://central.sonatype.com/repository/maven-snapshots/") {
-                        mavenContent { snapshotsOnly() }
-                    }
-                    mavenCentral()
+            %s        mavenCentral()
                     gradlePluginPortal()
                 }
             }
 
             dependencyResolutionManagement {
                 repositories {
-                    maven("https://central.sonatype.com/repository/maven-snapshots/") {
-                        mavenContent { snapshotsOnly() }
-                    }
-                    mavenCentral()
+            %s        mavenCentral()
                 }
             }
-            """.formatted(projectName);
+            """.formatted(projectName, localRepos, localRepos);
     }
 
     private String generateGradleProperties(String projectName) {
@@ -378,11 +387,20 @@ public class XtcProjectCreator {
         return """
             /**
              * %s application module.
+             *
+             * Run with: ./gradlew runXtc
+             * Run with args: ./gradlew runXtc --args=World,XTC
              */
             module %s {
-                void run() {
+                void run(String[] args=[]) {
                     @Inject Console console;
-                    console.print("Hello from %s!");
+                    if (args.empty) {
+                        console.print("Hello from %s!");
+                        return;
+                    }
+                    for (String arg : args) {
+                        console.print($"Hello, {arg}!");
+                    }
                 }
             }
             """.formatted(moduleName, moduleName, moduleName);
@@ -439,6 +457,158 @@ public class XtcProjectCreator {
                 }
             }
             """.formatted(moduleName, moduleName, moduleName);
+    }
+
+    // ---- Test source generation ----
+
+    private static final String TEST_DISABLED_NOTICE = """
+        /*
+         * NOTE: This test module is in src/test.disabled/ because the XTC Gradle plugin
+         * test auto-resolution feature is pending. Once the plugin fix is released:
+         *
+         *   1. Rename src/test.disabled/ to src/test/
+         *   2. Run: ./gradlew build
+         *
+         * The test module will then be automatically discovered and executed.
+         * See: https://github.com/xtclang/xvm/pull/373
+         */
+
+        """;
+
+    private String generateTestSource(String moduleName, ProjectType projectType) {
+        return switch (projectType) {
+            case APPLICATION -> generateApplicationTestSource(moduleName);
+            case LIBRARY -> generateLibraryTestSource(moduleName);
+            case SERVICE -> generateServiceTestSource(moduleName);
+        };
+    }
+
+    private String generateApplicationTestSource(String moduleName) {
+        return TEST_DISABLED_NOTICE + """
+            /**
+             * Unit tests for the %s application module.
+             */
+            module %sTest {
+                package app import %s;
+
+                /**
+                 * Basic tests for the application.
+                 */
+                class AppTest {
+                    @Test
+                    void shouldExist() {
+                        // Placeholder test - add real tests for your application logic
+                        assert True;
+                    }
+                }
+            }
+            """.formatted(moduleName, moduleName, moduleName);
+    }
+
+    private String generateLibraryTestSource(String moduleName) {
+        return TEST_DISABLED_NOTICE + """
+            /**
+             * Unit tests for the %s library module.
+             */
+            module %sTest {
+                package lib import %s;
+
+                /**
+                 * Tests for the Greeter service.
+                 */
+                class GreeterTest {
+                    @Test
+                    void shouldGreetWithName() {
+                        lib.Greeter greeter = new lib.Greeter();
+                        String result = greeter.greet("World");
+                        assert result == "Hello, World!";
+                    }
+
+                    @Test
+                    void shouldGreetWithDifferentName() {
+                        lib.Greeter greeter = new lib.Greeter();
+                        String result = greeter.greet("XTC");
+                        assert result == "Hello, XTC!";
+                    }
+                }
+            }
+            """.formatted(moduleName, moduleName, moduleName);
+    }
+
+    private String generateServiceTestSource(String moduleName) {
+        return TEST_DISABLED_NOTICE + """
+            /**
+             * Unit tests for the %s service module.
+             */
+            module %sTest {
+                package svc import %s;
+
+                /**
+                 * Basic tests for the service.
+                 */
+                class ServiceTest {
+                    @Test
+                    void shouldExist() {
+                        // Placeholder test - add real tests for your service logic
+                        assert True;
+                    }
+                }
+            }
+            """.formatted(moduleName, moduleName, moduleName);
+    }
+
+    private String generateAppTestSource() {
+        return TEST_DISABLED_NOTICE + """
+            /**
+             * Unit tests for the app module.
+             */
+            module appTest {
+                package app import app;
+                package lib import lib;
+
+                /**
+                 * Tests for the application using the lib module.
+                 */
+                class AppTest {
+                    @Test
+                    void shouldUseGreeterFromLib() {
+                        lib.Greeter greeter = new lib.Greeter();
+                        String result = greeter.greet("Test");
+                        assert result == "Hello, Test!";
+                    }
+                }
+            }
+            """;
+    }
+
+    private String generateLibTestSource() {
+        return TEST_DISABLED_NOTICE + """
+            /**
+             * Unit tests for the lib module.
+             */
+            module libTest {
+                package lib import lib;
+
+                /**
+                 * Tests for the Greeter service.
+                 */
+                class GreeterTest {
+                    @Test
+                    void shouldGreetWithName() {
+                        lib.Greeter greeter = new lib.Greeter();
+                        String result = greeter.greet("World");
+                        assert result == "Hello, World!";
+                    }
+
+                    @Test
+                    void shouldGreetWithDifferentName() {
+                        lib.Greeter greeter = new lib.Greeter();
+                        String result = greeter.greet("XTC");
+                        assert result == "Hello, XTC!";
+                    }
+                }
+            }
+            """;
     }
 
     private String generateGitignore() {

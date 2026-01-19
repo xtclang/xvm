@@ -7,7 +7,9 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
@@ -45,13 +47,13 @@ public class XtcProjectCreatorIntegrationTest {
     public void testApplicationProjectConfigures() throws Exception {
         Path projectPath = tempDir.resolve("testapp");
 
-        XtcProjectCreator creator = createProjectCreator(projectPath, XtcProjectCreator.ProjectType.APPLICATION, false);
-        XtcProjectCreator.Result result = creator.create();
+        var creator = createProjectCreator(projectPath, XtcProjectCreator.ProjectType.APPLICATION, false);
+        var result = creator.create();
         assertTrue(result.success(), "Project creation should succeed: " + result.message());
 
         addMavenLocalToProject(projectPath);
 
-        GradleResult gradleResult = runGradle(projectPath, "tasks");
+        var gradleResult = runGradle(projectPath, "tasks");
         assertEquals(0, gradleResult.exitCode(),
             "Gradle tasks should succeed for application project.\nOutput:\n" + gradleResult.output());
     }
@@ -60,13 +62,13 @@ public class XtcProjectCreatorIntegrationTest {
     public void testLibraryProjectConfigures() throws Exception {
         Path projectPath = tempDir.resolve("testlib");
 
-        XtcProjectCreator creator = createProjectCreator(projectPath, XtcProjectCreator.ProjectType.LIBRARY, false);
-        XtcProjectCreator.Result result = creator.create();
+        var creator = createProjectCreator(projectPath, XtcProjectCreator.ProjectType.LIBRARY, false);
+        var result = creator.create();
         assertTrue(result.success(), "Project creation should succeed: " + result.message());
 
         addMavenLocalToProject(projectPath);
 
-        GradleResult gradleResult = runGradle(projectPath, "tasks");
+        var gradleResult = runGradle(projectPath, "tasks");
         assertEquals(0, gradleResult.exitCode(),
             "Gradle tasks should succeed for library project.\nOutput:\n" + gradleResult.output());
     }
@@ -90,13 +92,13 @@ public class XtcProjectCreatorIntegrationTest {
     public void testMultiModuleProjectConfigures() throws Exception {
         Path projectPath = tempDir.resolve("testmulti");
 
-        XtcProjectCreator creator = createProjectCreator(projectPath, XtcProjectCreator.ProjectType.APPLICATION, true);
-        XtcProjectCreator.Result result = creator.create();
+        var creator = createProjectCreator(projectPath, XtcProjectCreator.ProjectType.APPLICATION, true);
+        var result = creator.create();
         assertTrue(result.success(), "Project creation should succeed: " + result.message());
 
         addMavenLocalToProject(projectPath);
 
-        GradleResult gradleResult = runGradle(projectPath, "tasks");
+        var gradleResult = runGradle(projectPath, "tasks");
         assertEquals(0, gradleResult.exitCode(),
             "Gradle tasks should succeed for multi-module project.\nOutput:\n" + gradleResult.output());
     }
@@ -107,8 +109,7 @@ public class XtcProjectCreatorIntegrationTest {
      */
     private XtcProjectCreator createProjectCreator(Path projectPath, XtcProjectCreator.ProjectType type, boolean multiModule) {
         // Use the actual XDK version from this build so it matches what was published to mavenLocal
-        String xtcVersion = BuildInfo.getXdkVersion();
-        return new XtcProjectCreator(projectPath, type, multiModule, xtcVersion, null);
+        return new XtcProjectCreator(projectPath, type, multiModule, BuildInfo.getXdkVersion(), null);
     }
 
     /**
@@ -116,8 +117,8 @@ public class XtcProjectCreatorIntegrationTest {
      * the locally-built XTC plugin during testing.
      */
     private void addMavenLocalToProject(Path projectPath) throws IOException {
-        Path settingsFile = projectPath.resolve("settings.gradle.kts");
-        String content = Files.readString(settingsFile);
+        var settingsFile = projectPath.resolve("settings.gradle.kts");
+        var content = Files.readString(settingsFile);
 
         // Add mavenLocal() as first repository in pluginManagement
         String modified = content.replace(
@@ -137,24 +138,24 @@ public class XtcProjectCreatorIntegrationTest {
     /**
      * Run Gradle in the specified project directory.
      */
-    private GradleResult runGradle(Path projectPath, String... tasks) throws IOException, InterruptedException {
+    private GradleResult runGradle(Path projectPath, @SuppressWarnings("SameParameterValue") String... tasks) throws IOException, InterruptedException {
         String gradlewName = System.getProperty("os.name").toLowerCase().contains("win")
             ? "gradlew.bat"
             : "gradlew";
 
-        String[] command = new String[tasks.length + 2];
-        command[0] = projectPath.resolve(gradlewName).toString();
-        command[1] = "--no-daemon";
-        System.arraycopy(tasks, 0, command, 2, tasks.length);
+        String[] command = Stream.concat(
+            Stream.of(projectPath.resolve(gradlewName).toString(), "--no-daemon"),
+            Arrays.stream(tasks)
+        ).toArray(String[]::new);
 
-        ProcessBuilder pb = new ProcessBuilder(command);
+        var pb = new ProcessBuilder(command);
         pb.directory(projectPath.toFile());
         pb.redirectErrorStream(true);
 
-        Process process = pb.start();
+        var process = pb.start();
 
-        StringBuilder output = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+        var output = new StringBuilder();
+        try (var reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 output.append(line).append("\n");

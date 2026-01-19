@@ -119,7 +119,11 @@ public abstract class LauncherOptions {
         .addOption(builder("m").longOpt("multi-module")
             .desc("Create a multi-module project structure").get())
         .addOption(builder().longOpt("dir").argName("directory").hasArg()
-            .desc("Directory to create the project in (default: current directory)").get());
+            .desc("Directory to create the project in (default: current directory)").get())
+        .addOption(builder().longOpt("local-and-snapshot-repos")
+            .desc("Include mavenLocal() and maven-snapshots repository in settings.gradle.kts (default: true)").get())
+        .addOption(builder().longOpt("no-local-and-snapshot-repos")
+            .desc("Exclude mavenLocal() and maven-snapshots repository from settings.gradle.kts").get());
 
     /**
      * Parsed command line from Apache Commons CLI.
@@ -1353,6 +1357,14 @@ public abstract class LauncherOptions {
             return optionValue("dir");
         }
 
+        /**
+         * Check if mavenLocal() and maven-snapshots repository should be included.
+         * Default is true unless --no-local-and-snapshot-repos is specified.
+         */
+        public boolean isUseLocalAndSnapshotRepos() {
+            return !hasOption("no-local-and-snapshot-repos");
+        }
+
         @Override
         public String[] toCommandLine() {
             final List<String> args = new ArrayList<>();
@@ -1362,6 +1374,9 @@ public abstract class LauncherOptions {
                 args.add("-m");
             }
             getOutputDirectory().ifPresent(dir -> args.addAll(List.of("--dir", dir)));
+            if (!isUseLocalAndSnapshotRepos()) {
+                args.add("--no-local-and-snapshot-repos");
+            }
             getProjectName().ifPresent(args::add);
             return args.toArray(String[]::new);
         }
@@ -1438,6 +1453,20 @@ public abstract class LauncherOptions {
              */
             public Builder setProjectName(final String name) {
                 args.add(name);
+                return this;
+            }
+
+            /**
+             * Enable or disable mavenLocal() and maven-snapshots repository.
+             *
+             * @param useLocalAndSnapshotRepos true to include these repositories (default)
+             */
+            public Builder setUseLocalAndSnapshotRepos(final boolean useLocalAndSnapshotRepos) {
+                args.remove("--local-and-snapshot-repos");
+                args.remove("--no-local-and-snapshot-repos");
+                if (!useLocalAndSnapshotRepos) {
+                    args.add("--no-local-and-snapshot-repos");
+                }
                 return this;
             }
 

@@ -4,7 +4,7 @@ import com.intellij.execution.configurations.ConfigurationFactory
 import com.intellij.execution.configurations.ConfigurationType
 import com.intellij.execution.configurations.RunConfiguration
 import com.intellij.openapi.project.Project
-import org.xtclang.idea.XtcIcons
+import org.xtclang.idea.XtcIconProvider
 import javax.swing.Icon
 
 /**
@@ -16,7 +16,7 @@ class XtcRunConfigurationType : ConfigurationType {
 
     override fun getConfigurationTypeDescription() = "Run an XTC application"
 
-    override fun getIcon(): Icon = XtcIcons.FILE ?: com.intellij.icons.AllIcons.RunConfigurations.Application
+    override fun getIcon(): Icon = XtcIconProvider.XTC_ICON ?: com.intellij.icons.AllIcons.FileTypes.Any_type
 
     override fun getId() = "XtcRunConfiguration"
 

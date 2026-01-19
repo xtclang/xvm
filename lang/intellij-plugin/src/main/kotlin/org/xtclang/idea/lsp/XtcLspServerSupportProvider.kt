@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit
  */
 class XtcLanguageServerFactory : LanguageServerFactory {
 
-    private val log = logger<XtcLanguageServerFactory>()
+    private val logger = logger<XtcLanguageServerFactory>()
 
     private val buildInfo: String by lazy {
         runCatching {
@@ -40,7 +40,7 @@ class XtcLanguageServerFactory : LanguageServerFactory {
 
     override fun createConnectionProvider(project: Project) =
         XtcLspConnectionProvider().also {
-            log.info("Creating XTC LSP connection provider - $buildInfo")
+            logger.info("Creating XTC LSP connection provider - $buildInfo")
         }
 
     override fun createLanguageClient(project: Project) = LanguageClientImpl(project)
@@ -57,7 +57,7 @@ class XtcLanguageServerFactory : LanguageServerFactory {
  */
 class XtcLspConnectionProvider : StreamConnectionProvider {
 
-    private val log = logger<XtcLspConnectionProvider>()
+    private val logger = logger<XtcLspConnectionProvider>()
 
     private lateinit var clientInput: PipedInputStream
     private lateinit var clientOutput: PipedOutputStream
@@ -68,7 +68,7 @@ class XtcLspConnectionProvider : StreamConnectionProvider {
     private var alive = false
 
     override fun start() {
-        log.info("Starting XTC LSP Server (in-process)")
+        logger.info("Starting XTC LSP Server (in-process)")
 
         // Create piped streams for bidirectional communication
         val serverInput = PipedInputStream()
@@ -85,7 +85,7 @@ class XtcLspConnectionProvider : StreamConnectionProvider {
         }
         alive = true
 
-        log.info("XTC LSP Server started (in-process)")
+        logger.info("XTC LSP Server started (in-process)")
     }
 
     override fun getInputStream(): InputStream = clientInput
@@ -95,13 +95,13 @@ class XtcLspConnectionProvider : StreamConnectionProvider {
     override fun isAlive() = alive && serverFuture?.isDone != true
 
     override fun stop() {
-        log.info("Stopping XTC LSP Server")
+        logger.info("Stopping XTC LSP Server")
         alive = false
 
         // Graceful shutdown with timeout
         server?.let { srv ->
             runCatching { srv.shutdown()?.get(2, TimeUnit.SECONDS) }
-                .onFailure { log.debug("Server shutdown: ${it.message}") }
+                .onFailure { logger.debug("Server shutdown: ${it.message}") }
             runCatching { srv.exit() }
         }
 
@@ -113,6 +113,6 @@ class XtcLspConnectionProvider : StreamConnectionProvider {
         runCatching { clientInput.close() }
 
         server = null
-        log.info("XTC LSP Server stopped")
+        logger.info("XTC LSP Server stopped")
     }
 }

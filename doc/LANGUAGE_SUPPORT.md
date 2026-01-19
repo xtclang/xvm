@@ -9,10 +9,9 @@ This document outlines a comprehensive plan to create IDE-independent language s
 1. [Understanding XTC/Ecstasy](#understanding-xtcecstasy)
 2. [Current State of Tooling](#current-state-of-tooling)
 3. [IDE-Independent Language Support Technologies](#ide-independent-language-support-technologies)
-4. [Why DSL Representation is Beneficial](#why-dsl-representation-is-beneficial)
-5. [Comprehensive Implementation Plan](#comprehensive-implementation-plan)
-6. [Architecture Overview](#architecture-overview)
-7. [Phased Rollout Strategy](#phased-rollout-strategy)
+4. [Comprehensive Implementation Plan](#comprehensive-implementation-plan)
+5. [Architecture Overview](#architecture-overview)
+6. [Phased Rollout Strategy](#phased-rollout-strategy)
 
 ---
 
@@ -1307,7 +1306,98 @@ Based on these real-world examples, Ecstasy should follow this proven pattern:
 - ✅ If JIT is Java bytecode: use JDWP
 - ✅ If JIT is LLVM: use LLDB with DWARF
 
-This matches the proven patterns from Rust, Go, TypeScript, and Java! 🎯
+This matches the proven patterns from Rust, Go, TypeScript, and Java!
+
+---
+
+## Adapter Architecture: Lexer vs Parser vs Compiler
+
+A key architectural decision is how to layer the compiler adapter to support different LSP features with appropriate performance characteristics.
+
+### The Problem
+
+Different LSP features require different levels of analysis:
+
+| Feature | Analysis Level | Speed Requirement |
+|---------|---------------|-------------------|
+| Syntax highlighting (TextMate) | Regex/Lexer | < 1ms |
+| Semantic tokens | Lexer + Parser | < 10ms |
+| Completions | Parser + partial type info | < 100ms |
+| Hover/definitions | Full type resolution | < 200ms |
+| Rename/refactoring | Full semantic analysis | < 500ms |
+
+### Layered Adapter Design
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     XtcCompilerAdapterFull                      │
+│         (Unified interface - delegates to appropriate layer)    │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+          ┌───────────────────┼───────────────────┐
+          │                   │                   │
+          ▼                   ▼                   ▼
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│  LexerAdapter   │  │  ParserAdapter  │  │ CompilerAdapter │
+│                 │  │                 │  │                 │
+│ • Tokenization  │  │ • AST building  │  │ • Type checking │
+│ • Fast semantic │  │ • Symbol outline│  │ • Full semantics│
+│   tokens        │  │ • Syntax errors │  │ • Cross-file    │
+│ • Bracket match │  │ • Basic hover   │  │   analysis      │
+└─────────────────┘  └─────────────────┘  └─────────────────┘
+      ~1ms               ~10ms               ~100-500ms
+```
+
+### Semantic Tokens: Which Layer?
+
+**Semantic tokens** (LSP 3.16+) provide rich syntax highlighting beyond TextMate:
+- Distinguish variables from parameters
+- Identify type references vs value references
+- Mark deprecated symbols
+- Show read vs write access
+
+**Two approaches:**
+
+1. **Lexer-based semantic tokens** (fast, limited):
+   - Keywords, literals, comments, operators
+   - No distinction between variable kinds
+   - Works on broken code
+   - Speed: ~1ms
+
+2. **Parser/Compiler-based semantic tokens** (slower, richer):
+   - Full symbol classification
+   - Type-aware coloring (class vs interface vs enum)
+   - Parameter vs local variable vs field
+   - Speed: ~10-100ms
+
+**Recommendation**: Start with lexer-based semantic tokens for responsiveness, then enhance with parser-based tokens when the AST is available (incremental strategy).
+
+### Implementation Strategy
+
+**Phase 2A: Lexer Adapter** (2-3 weeks)
+- Wrap existing `org.xvm.compiler.Lexer`
+- Provide fast tokenization for semantic tokens
+- No dependencies on full compilation
+
+**Phase 2B: Parser Adapter** (3-4 weeks)
+- Wrap existing `org.xvm.compiler.Parser`
+- AST construction with error recovery
+- Document symbols, folding ranges, basic hover
+
+**Phase 2C: Compiler Adapter** (4-6 weeks)
+- Full type resolution via compiler
+- Cross-file symbol resolution
+- Incremental compilation caching
+
+### Interface Design
+
+The `XtcCompilerAdapterFull` interface (see `lang/lsp-server/src/main/java/org/xvm/lsp/adapter/XtcCompilerAdapterFull.java`) defines the complete API. Implementations can:
+
+1. **Mock adapter**: Returns placeholder data for testing
+2. **Lexer-only adapter**: Fast but limited features
+3. **Full adapter**: Complete compiler integration
+
+This allows the LSP server to start with a mock/lexer adapter and progressively add features.
 
 ---
 
@@ -1409,7 +1499,7 @@ A **reflective DSL** is a domain-specific language that:
 1. **Reflects** the structure of the target language (XTC/Ecstasy)
 2. Provides **type-safe** APIs for working with language constructs
 3. Enables **programmatic** manipulation of code
-4. Supports **meta-programming** (code that generates/analyzes code)
+4. Supports **metaprogramming** (code that generates/analyzes code)
 
 ### Why Kotlin for XTC DSLs?
 
@@ -1726,7 +1816,7 @@ val userEmail: String = user["email"]
 - ✅ Type-safe reflection
 - ✅ Runtime introspection
 - ✅ Dynamic invocation
-- ✅ Clean API for meta-programming
+- ✅ Clean API for metaprogramming
 
 **Similar Approach**: Kotlin Reflection API (`kotlin-reflect`)
 
@@ -1906,7 +1996,7 @@ module.writeTo("build/generated/x/api.x")
 | **Ruby** | Metaprogramming, blocks, method_missing | Rake build scripts, RSpec tests, Rails routing | ⭐⭐⭐⭐ Very Good |
 | **Groovy** | AST transformations, builders, closures | Gradle (legacy), Spock tests, Jenkins pipelines | ⭐⭐⭐⭐ Very Good |
 | **Rust** | Macros (declarative and procedural) | Serde serialization, Rocket routing, test frameworks | ⭐⭐⭐⭐ Very Good |
-| **Lisp/Clojure** | Homoiconicity, macros | Code as data, meta-programming, test frameworks | ⭐⭐⭐⭐⭐ Excellent |
+| **Lisp/Clojure** | Homoiconicity, macros | Code as data, metaprogramming, test frameworks | ⭐⭐⭐⭐⭐ Excellent |
 | **Python** | Decorators, metaclasses, descriptors | Flask routes, pytest fixtures, Django models | ⭐⭐⭐ Good |
 | **TypeScript** | Decorators, type system | NestJS controllers, TypeORM entities | ⭐⭐⭐ Good |
 

@@ -15,7 +15,6 @@
 
 [versions]
 apache-commons-cli = "1.11.0"
-# Third party dependency versions
 assertj = "3.24.2"
 awaitility = "4.2.0"
 kotlin = "2.2.0"
@@ -32,11 +31,13 @@ jakarta-xml-bind-api = "4.0.4"
 jaxb-runtime = "4.0.6"
 jetbrains-annotations = "26.0.2-1"
 jline = "3.30.6"
-jspecify = "1.0.0"
 junit = "6.0.2"
+junit-platform = "1.11.4"
 ktlint = "13.1.0"
 logback = "1.5.13"
 lsp4ij = "0.11.0"
+jtreesitter = "0.25.3"
+tree-sitter-cli = "0.22.6"
 lsp4j = "0.21.1"
 mockito = "5.8.0"
 palantir-git-version = "4.0.0"
@@ -103,7 +104,7 @@ jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "j
 jline = { module = "org.jline:jline", version.ref = "jline" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
-junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version = "1.11.4" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
 
 # Testing utilities
 assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }
@@ -119,8 +120,8 @@ logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 lsp4j = { module = "org.eclipse.lsp4j:org.eclipse.lsp4j", version.ref = "lsp4j" }
 lsp4j-jsonrpc = { module = "org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc", version.ref = "lsp4j" }
 
-# Annotations
-jspecify = { module = "org.jspecify:jspecify", version.ref = "jspecify" }
+# Tree-sitter - JVM bindings for incremental parsing
+jtreesitter = { module = "io.github.tree-sitter:jtreesitter", version.ref = "jtreesitter" }
 
 # Kotlin
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }

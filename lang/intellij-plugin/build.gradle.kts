@@ -94,11 +94,17 @@ val syncXtcProjectCreator by tasks.registering(Copy::class) {
 }
 
 // Sync gradle-wrapper resources needed by XtcProjectCreator
+// Source of truth is the repo root's gradle wrapper (same as what builds XVM)
 val syncedResourcesDir = layout.buildDirectory.dir("generated/synced-resources")
+val compositeRoot = rootProject.projectDir.parentFile  // /lang -> /
 
 val syncGradleWrapperResources by tasks.registering(Copy::class) {
-    description = "Sync gradle-wrapper resources from javatools"
-    from(rootProject.file("../javatools/src/main/resources/gradle-wrapper"))
+    description = "Sync gradle-wrapper resources from repo root (single source of truth)"
+    from(File(compositeRoot, "gradlew"))
+    from(File(compositeRoot, "gradlew.bat"))
+    from(File(compositeRoot, "gradle/wrapper")) {
+        into("gradle/wrapper")
+    }
     into(syncedResourcesDir.map { it.dir("gradle-wrapper") })
 }
 
@@ -123,7 +129,7 @@ val processResources by tasks.existing {
 // Consumer configurations for artifacts from sibling projects
 // =============================================================================
 
-// Configuration to consume TextMate grammar from root project
+// Configuration to consume TextMate grammar from dsl project
 val textMateGrammar by configurations.creating {
     isCanBeConsumed = false
     isCanBeResolved = true
@@ -151,7 +157,7 @@ dependencies {
         // pluginVerifier() - only enable when publishing to verify compatibility
     }
 
-    textMateGrammar(project(path = ":", configuration = "textMateElements"))
+    textMateGrammar(project(path = ":dsl", configuration = "textMateElements"))
 }
 
 // IntelliJ 2025.1 runs on JDK 21, so we must target JDK 21 (not the project's JDK 25)
@@ -248,7 +254,8 @@ val buildSearchableOptions by tasks.existing {
 val prepareSandbox by tasks.existing(Sync::class)
 
 // Derive TextMate destination from prepareSandbox's output (works with any IDE version)
-val sandboxPluginTextMate = prepareSandbox.map { it.destinationDir.resolve("lib/textmate") }
+// prepareSandbox.destinationDir is the plugins/ directory, we need plugins/<plugin-name>/lib/textmate
+val sandboxPluginTextMate = prepareSandbox.map { it.destinationDir.resolve("intellij-plugin/lib/textmate") }
 
 val copyTextMateToSandbox by tasks.registering(Sync::class) {
     group = "build"
@@ -256,6 +263,9 @@ val copyTextMateToSandbox by tasks.registering(Sync::class) {
 
     from(textMateGrammar)
     into(sandboxPluginTextMate)
+
+    // Ensure DSL test compilation completes before copying (Gradle detected potential conflict with build/generated)
+    mustRunAfter(project(":dsl").tasks.named("compileTestJava"))
 }
 
 prepareSandbox.configure {
@@ -266,10 +276,53 @@ val prepareJarSearchableOptions by tasks.existing {
     mustRunAfter(copyTextMateToSandbox)
 }
 
+// =============================================================================
+// Disable Ultimate-only plugins in the sandbox
+// =============================================================================
+// The local IDE detection (findLocalIntelliJ) may find Ultimate instead of Community.
+// Ultimate bundles plugins that require com.intellij.modules.ultimate, which isn't
+// available in the sandbox since we target Community. This causes errors like:
+//   "Plugin 'Kubernetes' requires plugin with id=com.intellij.modules.ultimate"
+//
+// By disabling the Ultimate module marker, IntelliJ automatically disables all
+// plugins that depend on it, giving us a clean Community-equivalent sandbox.
+
+// Derive sandbox config dir from prepareSandbox (handles versioned sandbox directories like IU-2025.3.1.1)
+// prepareSandbox.destinationDir is the plugins/ directory, config/ is a sibling
+val sandboxConfigDir = prepareSandbox.map { it.destinationDir.parentFile.resolve("config") }
+
+// Plugins to disable in sandbox (Ultimate-only or problematic split-architecture plugins)
+val disabledSandboxPlugins = listOf(
+    "com.intellij.modules.ultimate",
+    "com.intellij.kubernetes",  // Split frontend/backend - partially loads even with ultimate disabled
+    "com.intellij.clouds.kubernetes"  // Another Kubernetes component
+)
+
+val configureDisabledPlugins by tasks.registering {
+    group = "intellij platform"
+    description = "Disable Ultimate-only plugins in the sandbox IDE"
+
+    // Must run after prepareSandbox creates the directory structure
+    dependsOn(prepareSandbox)
+    mustRunAfter(prepareSandbox)
+
+    val configDir = sandboxConfigDir  // Capture for configuration cache
+    val pluginsList = disabledSandboxPlugins
+    inputs.property("disabledPlugins", pluginsList)
+    outputs.dir(configDir)  // Output is the config directory
+
+    doLast {
+        val disabledPluginsFile = configDir.get().resolve("disabled_plugins.txt")
+        disabledPluginsFile.parentFile.mkdirs()
+        disabledPluginsFile.writeText(pluginsList.joinToString("\n") + "\n")
+    }
+}
+
 // Ensure TextMate files are copied before IDE starts
 // NOTE: finalizedBy doesn't guarantee completion, so we need explicit dependsOn
 val runIde by tasks.existing {
     dependsOn(copyTextMateToSandbox)
+    dependsOn(configureDisabledPlugins)
 }
 
 // No tests in this module - disable test task to avoid IntelliJ plugin test infrastructure overhead

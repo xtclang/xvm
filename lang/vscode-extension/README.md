@@ -99,7 +99,7 @@ vscode-extension/
 
 ```bash
 # From the repository root
-./gradlew :lang:vscode-extension:runCode
+./gradlew :lang:vscode-extension:runIde
 ```
 
 This builds the extension and launches VS Code with it loaded - similar to IntelliJ's `runIde`.
@@ -143,7 +143,8 @@ Then in VS Code:
 2. Open `src/main/x/testapp.x`
 3. You should see syntax highlighting and LSP features
 
-**Troubleshooting**: The LSP server needs Java 21+ in your PATH or `JAVA_HOME` set. Check the Output panel (View → Output → select "XTC Language Server") if LSP isn't working.
+**Troubleshooting**: The LSP server needs Java 21+ in your PATH or `JAVA_HOME` set. Check the Output panel (View →
+Output → select "XTC Language Server") if LSP isn't working.
 
 ## License
 

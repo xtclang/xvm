@@ -95,7 +95,7 @@ val assemble by tasks.existing {
     dependsOn(copyTextMateGrammar, copyLanguageConfig, copyIcon, copyLspServer, npmCompile)
 }
 
-// Launch VS Code with extension loaded for testing (like IntelliJ's runIde)
+// Launch VS Code with extension loaded for testing
 val runCode by tasks.registering(Exec::class) {
     group = "run"
     description = "Launch VS Code with the extension loaded for testing"

@@ -6,7 +6,7 @@ import com.intellij.ide.wizard.NewProjectWizardBaseStep
 import com.intellij.ide.wizard.NewProjectWizardChainStep.Companion.nextStep
 import com.intellij.ide.wizard.NewProjectWizardStep
 import com.intellij.ide.wizard.RootNewProjectWizardStep
-import org.xtclang.idea.XtcIcons
+import org.xtclang.idea.XtcIconProvider
 import javax.swing.Icon
 
 /**
@@ -17,7 +17,7 @@ class XtcNewProjectWizard : GeneratorNewProjectWizard {
 
     override val id = "XTC"
     override val name = "XTC"
-    override val icon: Icon = XtcIcons.FILE ?: com.intellij.icons.AllIcons.FileTypes.Any_type
+    override val icon: Icon = XtcIconProvider.XTC_ICON ?: com.intellij.icons.AllIcons.FileTypes.Any_type
     override val ordinal = 1000
 
     override fun isEnabled() = true

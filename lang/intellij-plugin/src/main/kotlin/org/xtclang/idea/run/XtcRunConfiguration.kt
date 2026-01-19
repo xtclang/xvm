@@ -19,7 +19,7 @@ import kotlin.io.path.Path
 
 /**
  * Run configuration for XTC applications.
- * Invokes `xtc run` or the Gradle `xtcRun` task.
+ * Invokes `xtc run` or the Gradle `runXtc` task.
  */
 class XtcRunConfiguration(
     project: Project,
@@ -28,7 +28,8 @@ class XtcRunConfiguration(
 ) : RunConfigurationBase<Any>(project, factory, name) {
 
     var moduleName = ""
-    var programArguments = ""
+    var methodName = ""  // Empty means use default "run"
+    var moduleArguments = ""  // Comma-separated arguments passed to the module
     var useGradle = true
 
     override fun getConfigurationEditor(): SettingsEditor<out RunConfiguration> = XtcRunSettingsEditor()
@@ -48,8 +49,11 @@ class XtcRunConfiguration(
             "win" in System.getProperty("os.name").lowercase() -> "gradlew.bat"
             else -> "./gradlew"
         }
-        addParameter("xtcRun")
-        programArguments.takeIf { it.isNotBlank() }?.let { addParameter("--args=$it") }
+        addParameter("runXtc")
+        // Pass configuration as Gradle task options (--module, --method, --args)
+        moduleName.takeIf { it.isNotBlank() }?.let { addParameter("--module=$it") }
+        methodName.takeIf { it.isNotBlank() }?.let { addParameter("--method=$it") }
+        moduleArguments.takeIf { it.isNotBlank() }?.let { addParameter("--args=$it") }
         workDirectory = project.basePath?.let { Path(it).toFile() }
     }
 
@@ -57,21 +61,23 @@ class XtcRunConfiguration(
         exePath = "xtc"
         addParameter("run")
         moduleName.takeIf { it.isNotBlank() }?.let { addParameter(it) }
-        programArguments.split(" ").filter { it.isNotBlank() }.forEach(::addParameter)
+        moduleArguments.split(",").filter { it.isNotBlank() }.forEach(::addParameter)
         workDirectory = project.basePath?.let { Path(it).toFile() }
     }
 
     override fun readExternal(element: Element) {
         super.readExternal(element)
         moduleName = element.getAttributeValue("moduleName").orEmpty()
-        programArguments = element.getAttributeValue("programArguments").orEmpty()
+        methodName = element.getAttributeValue("methodName").orEmpty()
+        moduleArguments = element.getAttributeValue("moduleArguments").orEmpty()
         useGradle = element.getAttributeValue("useGradle")?.toBoolean() ?: true
     }
 
     override fun writeExternal(element: Element) {
         super.writeExternal(element)
         element.setAttribute("moduleName", moduleName)
-        element.setAttribute("programArguments", programArguments)
+        element.setAttribute("methodName", methodName)
+        element.setAttribute("moduleArguments", moduleArguments)
         element.setAttribute("useGradle", useGradle.toString())
     }
 }
@@ -82,24 +88,43 @@ class XtcRunConfiguration(
 class XtcRunSettingsEditor : SettingsEditor<XtcRunConfiguration>() {
 
     private var moduleName = ""
-    private var programArguments = ""
+    private var methodName = ""
+    private var moduleArguments = ""
     private var useGradle = true
 
-    override fun createEditor() = panel {
-        row("Module name:") { textField().bindText(::moduleName) }
-        row("Program arguments:") { textField().bindText(::programArguments) }
-        row { checkBox("Use Gradle (recommended)").bindSelected(::useGradle) }
+    private val editorPanel by lazy {
+        panel {
+            row("Module name:") {
+                textField().bindText(::moduleName)
+                    .comment("The XTC module to run (overrides build.gradle.kts default)")
+            }
+            row("Method name:") {
+                textField().bindText(::methodName)
+                    .comment("Method to invoke (leave empty for default 'run')")
+            }
+            row("Module arguments:") {
+                textField().bindText(::moduleArguments)
+                    .comment("Comma-separated arguments passed to the module")
+            }
+            row { checkBox("Use Gradle (recommended)").bindSelected(::useGradle) }
+        }
     }
 
+    override fun createEditor() = editorPanel
+
     override fun applyEditorTo(config: XtcRunConfiguration) {
+        editorPanel.apply()  // Apply UI values to backing properties
         config.moduleName = moduleName
-        config.programArguments = programArguments
+        config.methodName = methodName
+        config.moduleArguments = moduleArguments
         config.useGradle = useGradle
     }
 
     override fun resetEditorFrom(config: XtcRunConfiguration) {
         moduleName = config.moduleName
-        programArguments = config.programArguments
+        methodName = config.methodName
+        moduleArguments = config.moduleArguments
         useGradle = config.useGradle
+        editorPanel.reset()  // Reset UI from backing properties
     }
 }

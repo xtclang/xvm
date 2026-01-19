@@ -84,7 +84,7 @@ The plugin invokes `xtc init` to scaffold the project, then imports it as a Grad
 3. Configure:
    - **Module name** - The XTC module to run
    - **Program arguments** - Arguments to pass to your application
-   - **Use Gradle** - Recommended; uses `./gradlew xtcRun`
+   - **Use Gradle** - Recommended; uses `./gradlew runXtc`
 4. Click **Run** or **Debug**
 
 ## Development
@@ -131,7 +131,8 @@ This is useful for:
 
 ### Testing During Development
 
-When running `runIde`, a sandboxed IntelliJ IDEA instance opens with the plugin installed. Here's how to test each feature:
+When running `runIde`, a sandboxed IntelliJ IDEA instance opens with the plugin installed. Here's how to test each
+feature:
 
 #### Testing Syntax Highlighting
 
@@ -170,7 +171,7 @@ When running `runIde`, a sandboxed IntelliJ IDEA instance opens with the plugin 
 5. Click **Apply**, then **Run**
 6. Verify:
    - The run configuration appears in the toolbar
-   - Running invokes Gradle's `xtcRun` task
+   - Running invokes Gradle's `runXtc` task
    - Output appears in the Run tool window
 
 #### Testing LSP Features (Language Server)

@@ -88,7 +88,8 @@ LanguageModel.kt  ←─uses─  XtcLanguage.kt  ←─uses─  Generators
 - **XtcLanguage.kt** imports LanguageModel.kt and calls its DSL to create `val xtcLanguage: LanguageModel`
 - **Generators** import XtcLanguage.kt and read from `xtcLanguage` to produce output
 
-LanguageModel.kt knows nothing about XTC - it could be used to define any language. XtcLanguage.kt is where the actual language knowledge lives.
+LanguageModel.kt knows nothing about XTC - it could be used to define any language. XtcLanguage.kt is where the actual
+language knowledge lives.
 
 ### How Data Flows
 
@@ -875,7 +876,8 @@ cd build/intellij-xtc
 
 ## When to Use Lexer vs Parser vs Both
 
-Language tooling has different tiers of sophistication. Understanding when to use each component helps optimize performance and complexity.
+Language tooling has different tiers of sophistication. Understanding when to use each component helps optimize
+performance and complexity.
 
 ### Lexer-Only Scenarios (Token-Level)
 
@@ -914,7 +916,8 @@ public class EcstasySyntaxHighlighter extends SyntaxHighlighterBase {
 
 ### Parser-Only Scenarios (Structure-Level)
 
-A parser consumes tokens to build an AST (Abstract Syntax Tree). Use **parser with AST** when you need to understand code structure:
+A parser consumes tokens to build an AST (Abstract Syntax Tree). Use **parser with AST** when you need to understand
+code structure:
 
 | Scenario | Use Case | Why Parser is Required |
 |----------|----------|----------------------|
@@ -987,11 +990,13 @@ Modern IDE support typically uses a layered approach:
 
 **Why This Matters:**
 
-1. **Immediate Feedback**: TextMate highlighting appears instantly when you open a file, even before the LSP server connects.
+1. **Immediate Feedback**: TextMate highlighting appears instantly when you open a file, even before the LSP server
+connects.
 
 2. **Graceful Degradation**: If the LSP server crashes or hangs, basic syntax highlighting continues working.
 
-3. **Performance**: Lexer-based highlighting handles rapid keystrokes smoothly. Semantic tokens are updated less frequently.
+3. **Performance**: Lexer-based highlighting handles rapid keystrokes smoothly. Semantic tokens are updated less
+frequently.
 
 4. **Incremental Parsing**: Some systems use incremental parsing - re-lex and re-parse only changed regions.
 

@@ -1,0 +1,713 @@
+# PLAN: Tree-sitter Integration for XTC Language Support
+
+**Goal**: Use the existing `TreeSitterGenerator` to build a functional LSP with syntax-level
+intelligence, without requiring compiler modifications.
+
+**Timeline**: 2-3 weeks for core functionality
+**Risk**: Low (additive, no compiler changes)
+**Prerequisites**: Working `TreeSitterGenerator` in `lang/dsl/` (already exists)
+**Complements**: [Adapter Layer Design](../3-lsp-solution/adapter-layer-design.md) (can add later for semantic features)
+
+---
+
+## Quick Reference: Testing the Grammar
+
+```bash
+# Generate, validate, and test grammar in one command
+./gradlew :lang:dsl:generateTreeSitter :lang:dsl:validateTreeSitterGrammar :lang:dsl:testTreeSitterParse
+
+# Test a specific file manually
+cd lang/dsl/build/generated
+../tree-sitter-cli/tree-sitter parse /path/to/file.x
+
+# Run full build (includes all generators)
+./gradlew build
+```
+
+---
+
+## Implementation Status
+
+> **Last Updated**: 2026-01-22
+
+### Completed ✅
+- [x] LSP server converted from Java to Kotlin (better DSL support, null safety, coroutines)
+- [x] `jtreesitter` dependency added to `lang/lsp-server/build.gradle.kts`
+- [x] Tree-sitter parser wrappers implemented (`XtcParser`, `XtcTree`, `XtcNode`)
+- [x] Query patterns and engine implemented (`XtcQueries`, `XtcQueryEngine`)
+- [x] `TreeSitterAdapter` integrated with existing adapter interface
+- [x] Gradle tasks for grammar validation (platform-independent, no brew/npm required)
+- [x] Test corpus uses 675+ real XTC files from `lib_*` directories
+- [x] Grammar conflicts resolved (lambda, annotation, dangling else, list/map literals)
+- [x] Grammar validation passes (`./gradlew :lang:dsl:validateTreeSitterGrammar`)
+
+### In Progress 🔄
+- **Grammar coverage: 212/676 XTC files parse successfully (31%)**
+- Native library compilation for target platforms
+
+### Grammar Support Status (2026-01-23)
+
+The following features have been added to `TreeSitterGenerator.kt`:
+
+#### Recently Completed ✅
+
+| Feature | Example | Status |
+|---------|---------|--------|
+| Typedef declarations | `typedef String\|Int as Value` | ✅ With doc comments, annotations |
+| Union/intersection types | `Type1 \| Type2`, `Type1 + Type2`, `Type1 - Type2` | ✅ All three operators |
+| Range literals | `..<`, `>..`, `>..<`, `..` | ✅ All 4 variants |
+| Immutable modifier | `immutable Map`, standalone `immutable` | ✅ In types |
+| Conditional keyword | `conditional Int method()` | ✅ In return types |
+| Using blocks | `using (val x = expr) { }` | ✅ With resources |
+| Enum constructor params | `enum Ordered(String symbol)` | ✅ |
+| Enum value arguments | `Lesser("<", Greater)` | ✅ With optional bodies |
+| Enum default clause | `enum Foo default(args)` | ✅ |
+| Conditional assignment | `val x := expr`, `if (Type x := expr)` | ✅ `:=` operator |
+| Typed literals | `Map:[]`, `List:[1,2,3]` | ✅ |
+| Switch expressions | `return switch (x) { case A: val; }` | ✅ With expression cases |
+| Tuple patterns | `case (Lesser, _):` | ✅ With wildcard `_` |
+| Instance new | `expr.new(args)` | ✅ Virtual constructors |
+| Tuple expressions | `(True, value)` | ✅ Multi-value returns |
+| Method type params | `<T> T method()` | ✅ Before return type |
+| Throw expression | `s -> throw new Ex()` | ✅ In lambdas |
+| Property accessors | `prop.get()`, `prop.calc()` | ✅ Any accessor name |
+| Constructor finally | `construct() {} finally {}` | ✅ |
+| Type arg constraints | `<Key, Value extends X>` | ✅ In arguments |
+| Types in arguments | `.is(immutable)`, `.as(Type)` | ✅ |
+| Method expr body | `Int foo() = 42;` | ✅ |
+| Assert with conditions | `assert val x := expr, y` | ✅ Multiple conditions |
+| Multiple implements | `class Foo implements A implements B` | ✅ All type decls |
+| Labeled statements | `Loop: for (...)` | ✅ For break/continue |
+| Constructor delegation | `construct OtherCtor(args);` | ✅ Chaining constructors |
+| Local var annotations | `@Volatile Type x = expr;` | ✅ With or without val/var |
+| Dual visibility | `public/private Type prop` | ✅ Combined modifiers |
+| Tuple destructure for | `for ((K k, V v) : map)` | ✅ In for-each loops |
+| Tuple assignment | `(Int x, this.y) = expr;` | ✅ Destructuring assignment |
+| Array instantiation | `new Type[size]` | ✅ With size expression |
+
+#### Still Needed (High Priority)
+
+| Feature | Example | Notes |
+|---------|---------|-------|
+| Multiline strings | `\| continuation` | Lexer: `eatMultilineLiteral()` |
+| String interpolation | `$"text {expr}"` | Lexer: `eatTemplateExpression()` |
+| `this:` variants | `this:struct`, `this:private` | Special member access |
+| Function type vars | `function Type(Args) name = expr;` | Function type declarations |
+
+#### Lower Priority
+
+| Feature | Example | Notes |
+|---------|---------|-------|
+| `@:` syntax | `@:annotate` | Annotation with colon |
+| Dir/path literals | `./`, `../` | Special literals |
+| Binary file literal | `#file.bin` | Resource embedding |
+| Async invocation | `^(expr)` | Future/async call |
+
+> **Ground Truth**: The authoritative sources for XTC syntax are:
+> - `javatools/src/main/java/org/xvm/compiler/Lexer.java` - Token definitions
+> - `javatools/src/main/java/org/xvm/compiler/Parser.java` - Grammar rules
+> - `javatools/src/main/java/org/xvm/compiler/Token.java` - Token enum with all keywords/operators
+
+### Blocked ⏸️
+- Native library compilation (requires C compiler toolchain)
+- Full TreeSitterAdapter testing (requires native library)
+
+---
+
+## Adapter Architecture
+
+The LSP server uses a pluggable adapter pattern to support different parsing backends:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     XtcLanguageServer                       │
+│            (takes XtcCompilerAdapter via constructor)       │
+└────────────────────────────┬────────────────────────────────┘
+                             │
+               ┌─────────────┴─────────────┐
+               │    XtcCompilerAdapter     │  ← Interface
+               └─────────────┬─────────────┘
+                             │
+        ┌────────────────────┼────────────────────┐
+        │                    │                    │
+        ▼                    ▼                    ▼
+┌───────────────┐    ┌───────────────┐    ┌───────────────┐
+│ MockXtc-      │    │ TreeSitter-   │    │ (Future)      │
+│ Compiler-     │    │ Adapter       │    │ Compiler-     │
+│ Adapter       │    │               │    │ Adapter       │
+│               │    │               │    │               │
+│ - Regex-based │    │ - Tree-sitter │    │ - Full XTC    │
+│ - For testing │    │ - Syntax only │    │   compiler    │
+└───────────────┘    └───────────────┘    └───────────────┘
+```
+
+### Current Adapter Implementations
+
+| Adapter | File | Description | Use Case |
+|---------|------|-------------|----------|
+| `MockXtcCompilerAdapter` | `adapter/MockXtcCompilerAdapter.kt` | Regex-based parsing | Testing, fallback |
+| `TreeSitterAdapter` | `adapter/TreeSitterAdapter.kt` | Tree-sitter parsing | Syntax intelligence |
+| `XtcCompilerAdapterFull` | `adapter/XtcCompilerAdapterFull.kt` | Extended interface | Future compiler integration |
+
+### Switching Adapters
+
+The adapter is selected at **build time** via a Gradle property. The launcher reads this from
+the embedded `lsp-version.properties` file.
+
+**Build with Mock adapter (default):**
+```bash
+./gradlew :lang:lsp-server:build
+```
+
+**Build with Tree-sitter adapter:**
+```bash
+./gradlew :lang:lsp-server:build -Plsp.adapter=treesitter
+```
+
+**Set default in gradle.properties:**
+```properties
+# In lang/lsp-server/gradle.properties (create if needed)
+lsp.adapter=mock
+# or
+lsp.adapter=treesitter
+```
+
+**How it works:**
+1. Build property `lsp.adapter` is written to `lsp-version.properties` in the JAR
+2. Launcher reads property at startup and creates the appropriate adapter
+3. Server logs the active backend prominently:
+   ```
+   ========================================
+   XTC Language Server v1.0.0
+   Backend: Tree-sitter (syntax-aware)
+   Built: 2026-01-21T15:30:00Z
+   ========================================
+   ```
+
+**To enable Tree-sitter mode:**
+1. Build the native library: `./gradlew :lang:dsl:buildTreeSitterLibrary`
+2. Copy to resources: `lang/lsp-server/src/main/resources/native/<platform>/`
+3. Build with tree-sitter: `./gradlew :lang:lsp-server:build -Plsp.adapter=treesitter`
+
+---
+
+## Testing the Tree-sitter Functionality
+
+### 1. Grammar Validation (No Native Library Needed)
+
+```bash
+# Generate grammar from XtcLanguage.kt
+./gradlew :lang:dsl:generateTreeSitter
+
+# Validate grammar compiles (downloads tree-sitter CLI automatically)
+./gradlew :lang:dsl:validateTreeSitterGrammar
+
+# Test parsing against 675+ XTC files from lib_* directories
+./gradlew :lang:dsl:testTreeSitterParse
+```
+
+### 2. Direct Tree-sitter CLI Testing
+
+```bash
+# Parse a specific file
+cd lang/dsl/build/generated
+../tree-sitter-cli/tree-sitter parse /path/to/file.x
+
+# Show parse tree with S-expressions
+../tree-sitter-cli/tree-sitter parse /path/to/file.x
+
+# Highlight with the generated highlights.scm
+../tree-sitter-cli/tree-sitter highlight /path/to/file.x
+```
+
+### 3. Unit Tests for Tree-sitter Wrappers
+
+```bash
+./gradlew :lang:lsp-server:test
+```
+
+### 4. Testing in IntelliJ with LSP4IJ
+
+The IntelliJ plugin uses the LSP server via LSP4IJ. To test tree-sitter functionality:
+
+**Step 1: Build the plugin with tree-sitter backend**
+```bash
+# Build LSP server with tree-sitter
+./gradlew :lang:lsp-server:build -Plsp.adapter=treesitter
+
+# Build the IntelliJ plugin (it bundles the fat JAR)
+./gradlew :lang:intellij-plugin:buildPlugin
+```
+
+**Step 2: Install and run**
+1. Open IntelliJ IDEA
+2. Go to Settings → Plugins → Install from disk
+3. Select `lang/intellij-plugin/build/distributions/xtc-intellij-plugin-*.zip`
+4. Restart IntelliJ
+
+**Step 3: Verify the backend**
+1. Open View → Tool Windows → Language Servers (LSP4IJ)
+2. Open any `.x` file to trigger LSP server start
+3. Check the server logs - you should see:
+   ```
+   ========================================
+   XTC Language Server v1.0.0
+   Backend: Tree-sitter (syntax-aware)
+   ========================================
+   ```
+4. If you see `Backend: Mock (regex-based)`, the native library is missing
+
+**Step 4: Test features**
+With tree-sitter active, verify these work:
+- **Document Outline**: View → Tool Windows → Structure (shows symbols)
+- **Hover**: Mouse over identifiers (shows type/declaration info)
+- **Completions**: Type in a method body (Ctrl+Space for keywords/locals)
+- **Go-to-Definition**: Ctrl+Click on identifier (same-file navigation)
+- **Find References**: Right-click → Find Usages (same-file)
+- **Syntax Errors**: Introduce a syntax error (red squiggly line)
+
+### 5. Comparing Mock vs Tree-sitter
+
+Build and install both versions to compare:
+
+```bash
+# Build with mock (default)
+./gradlew :lang:lsp-server:build
+cp lang/lsp-server/build/libs/*-all.jar /tmp/xtc-lsp-mock.jar
+
+# Build with tree-sitter
+./gradlew :lang:lsp-server:build -Plsp.adapter=treesitter
+cp lang/lsp-server/build/libs/*-all.jar /tmp/xtc-lsp-treesitter.jar
+```
+
+| Feature | Mock | Tree-sitter |
+|---------|------|-------------|
+| Symbol detection | Regex (basic) | AST-based (accurate) |
+| Nested symbols | ❌ Limited | ✅ Full hierarchy |
+| Syntax errors | ❌ Basic patterns | ✅ Precise location |
+| Error recovery | ❌ None | ✅ Continues parsing |
+| Performance | Fast | Fast (incremental)
+
+---
+
+## Executive Summary
+
+We already have a `TreeSitterGenerator` that produces a complete Tree-sitter grammar from
+`XtcLanguage.kt`. This plan turns that grammar into a working LSP server that provides:
+
+- Document symbols (outline)
+- Go-to-definition (same file, cross-file by name)
+- Find references
+- Completion (keywords, locals, visible names)
+- Syntax error reporting
+- Code folding
+- Hover (show declaration)
+
+This gives us **~70% of LSP functionality** without touching the compiler. The remaining 30%
+(type inference, semantic errors) can be added later via the compiler adapter.
+
+### Why Tree-sitter First?
+
+| Approach | Time to Working LSP | Semantic Features | Risk |
+|----------|--------------------|--------------------|------|
+| Tree-sitter only | 2-3 weeks | Syntax-level | Low |
+| Compiler adapter | 6-8 weeks | Full | Medium |
+| Both (hybrid) | 3-4 weeks initial | Syntax now, semantic later | Low |
+
+Tree-sitter provides immediate value while we plan the deeper compiler integration.
+
+---
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         LSP Server                              │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────────┐   │
+│  │  Hover   │ │ Complete │ │ GoToDef  │ │ DocumentSymbols  │   │
+│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────────┬─────────┘   │
+│       └────────────┴────────────┴────────────────┘             │
+│                              │                                  │
+│                    ┌─────────▼─────────┐                        │
+│                    │   XtcQueryEngine  │                        │
+│                    │     (Kotlin)      │                        │
+│                    └─────────┬─────────┘                        │
+│                              │                                  │
+├──────────────────────────────┼──────────────────────────────────┤
+│                    ┌─────────▼─────────┐                        │
+│                    │  Tree-sitter JNI  │                        │
+│                    │  (jtreesitter)    │                        │
+│                    └─────────┬─────────┘                        │
+│                              │                                  │
+├──────────────────────────────┼──────────────────────────────────┤
+│                    ┌─────────▼─────────┐                        │
+│                    │  tree-sitter-xtc  │                        │
+│                    │ (compiled grammar)│                        │
+│                    └───────────────────┘                        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Phase 1: Validate the Generated Grammar ✅ COMPLETE
+
+### 1.1 Existing Infrastructure
+
+The grammar generation already exists:
+
+- **Gradle task**: `./gradlew :lang:dsl:generateTreeSitter`
+- **Output**: `lang/dsl/build/generated/grammar.js` and `highlights.scm`
+- **Source**: `TreeSitterGenerator.kt` and `LanguageModelCli.kt`
+
+### 1.2 Gradle Tasks for Grammar Testing ✅
+
+Tasks implemented in `lang/dsl/build.gradle.kts`:
+
+- `downloadTreeSitterCliGz` - Downloads platform-specific CLI binary
+- `extractTreeSitterCli` - Extracts using Java's GZIPInputStream
+- `validateTreeSitterGrammar` - Validates grammar compiles
+- `testTreeSitterParse` - Tests parsing 675+ XTC files
+
+### 1.3 Grammar Conflicts Resolved ✅
+
+The following conflicts have been fixed in `TreeSitterGenerator.kt`:
+
+1. **Lambda expression**: `identifier ->` - fixed with `prec(18, ...)`
+2. **Annotation arguments**: `@foo(...)` - fixed with `prec.left(...)`
+3. **Dangling else**: `if (a) if (b) x else y` - fixed with `prec.right(...)`
+4. **Expression conflicts**: Binary/unary/call - fixed with explicit `conflicts` array
+5. **List vs map literal**: `[]` - fixed with conflict declaration
+
+**Deliverables:**
+- [x] `downloadTreeSitterCli` task downloads CLI binary
+- [x] `validateTreeSitterGrammar` task confirms grammar compiles
+- [x] `testTreeSitterParse` task parses sample `.x` files
+- [x] All tasks work on macOS (x64/arm64) and Linux (x64/arm64)
+
+---
+
+## Phase 2: JVM Integration (In Progress)
+
+### 2.1 How Tree-sitter Works with JVM
+
+Tree-sitter is a C library. To use it from Kotlin/Java, you need:
+
+1. **A compiled grammar** - your `grammar.js` compiled to a shared library (`.so`/`.dylib`)
+2. **JVM bindings** - a Java library that calls the C code via JNI
+
+### 2.2 One-Time Grammar Compilation
+
+```bash
+# Validate and generate parser source
+./gradlew :lang:dsl:validateTreeSitterGrammar
+
+# Build shared library
+./gradlew :lang:dsl:buildTreeSitterLibrary
+
+# Result: libtree-sitter-xtc.so (Linux) or .dylib (macOS)
+# Commit to lang/lsp-server/src/main/resources/native/
+```
+
+### 2.3 JVM Binding Library ✅
+
+Using official tree-sitter bindings:
+
+```kotlin
+// build.gradle.kts
+dependencies {
+    implementation("io.github.tree-sitter:jtreesitter:0.25.3")
+}
+```
+
+### 2.4 XtcParser Wrapper ✅
+
+Implemented in `org.xvm.lsp.treesitter` package:
+
+- `XtcParser.kt` - Parser wrapper with incremental parsing support
+- `XtcTree.kt` - Parsed tree wrapper
+- `XtcNode.kt` - Node wrapper with navigation
+- `XtcQueries.kt` - S-expression query patterns
+- `XtcQueryEngine.kt` - Query execution engine
+
+**Deliverables:**
+- [x] jtreesitter dependency added
+- [x] `XtcParser` wrapper class
+- [ ] Native libraries compiled for target platforms
+- [ ] Test parsing a real `.x` file end-to-end
+
+---
+
+## Phase 3: Query Engine ✅ COMPLETE
+
+### 3.1 Query Patterns ✅
+
+Defined in `XtcQueries.kt`:
+
+```kotlin
+object XtcQueries {
+    val TYPE_DECLARATIONS = """
+        (class_declaration name: (type_name) @name) @declaration
+        (interface_declaration name: (type_name) @name) @declaration
+        ...
+    """.trimIndent()
+
+    val METHOD_DECLARATIONS = "..."
+    val PROPERTY_DECLARATIONS = "..."
+    val IDENTIFIERS = "..."
+    val VARIABLE_DECLARATIONS = "..."
+    val IMPORTS = "..."
+}
+```
+
+### 3.2 Query Engine ✅
+
+Implemented in `XtcQueryEngine.kt` with methods:
+- `findAllDeclarations(tree, uri)`
+- `findTypeDeclarations(tree, uri)`
+- `findMethodDeclarations(tree, uri)`
+- `findPropertyDeclarations(tree, uri)`
+- `findAllIdentifiers(tree, name, uri)`
+- `findImports(tree)`
+- `findDeclarationAt(tree, line, column, uri)`
+
+**Deliverables:**
+- [x] Query patterns for all major XTC constructs
+- [x] `XtcQueryEngine` with find methods
+- [ ] Tests for query accuracy (requires grammar coverage improvements)
+
+---
+
+## Phase 4: LSP Features ✅ IMPLEMENTED (Pending Testing)
+
+### TreeSitterAdapter ✅
+
+The `TreeSitterAdapter` class implements all basic LSP features:
+
+```kotlin
+class TreeSitterAdapter : XtcCompilerAdapter, Closeable {
+    override fun compile(uri: String, content: String): CompilationResult
+    override fun findSymbolAt(uri: String, line: Int, column: Int): SymbolInfo?
+    override fun getHoverInfo(uri: String, line: Int, column: Int): String?
+    override fun getCompletions(uri: String, line: Int, column: Int): List<CompletionItem>
+    override fun findDefinition(uri: String, line: Int, column: Int): Location?
+    override fun findReferences(uri: String, line: Int, column: Int, includeDeclaration: Boolean): List<Location>
+}
+```
+
+**Deliverables:**
+- [x] `compile()` with syntax error detection
+- [x] `findSymbolAt()` for symbol lookup
+- [x] `getHoverInfo()` for hover
+- [x] `getCompletions()` with keywords, types, and locals
+- [x] `findDefinition()` for same-file navigation
+- [x] `findReferences()` for same-file references
+- [ ] Integration tests with real `.x` files
+
+---
+
+## Phase 5: Cross-File Support (Pending)
+
+### 5.1 Workspace Index
+
+Need to implement `WorkspaceIndex` for cross-file symbol tracking.
+
+**Deliverables:**
+- [ ] `WorkspaceIndex` with file tracking
+- [ ] Cross-file go-to-definition
+- [ ] Workspace symbol search
+- [ ] Incremental re-indexing on file change
+
+---
+
+## Grammar Coverage Progress
+
+The grammar validates and now supports many XTC language features. Coverage improved from 9% to 31% (212/676 files).
+
+### Common Remaining Parse Errors
+
+Files failing to parse typically use these advanced features (still being added):
+
+| Error Pattern | Example | Notes |
+|---------------|---------|-------|
+| Multiline strings | `\|...` continuation | Requires lexer-level handling |
+| String interpolation | `$"Hello {name}"` | Template expressions with `{expr}` |
+| `this:` variants | `this:private`, `this:struct` | Special member access forms |
+| Function type vars | `function Type(Args) name = ...` | Function type declarations |
+| `&` reference operator | `&hasher`, `that.&hasher` | Reference expressions |
+
+### Improvement Path
+
+1. ✅ Added missing grammar rules to `TreeSitterGenerator.kt`
+2. ✅ Regenerate and validate grammar
+3. ✅ Coverage improved from 21% (144/675) to 31% (212/676)
+4. Target: 50%+ of XTC files parsing successfully for initial LSP release
+
+---
+
+## What This Plan Does NOT Cover
+
+These features require compiler integration (Phase 2 - Adapter Layer):
+
+| Feature | Why Compiler Needed |
+|---------|---------------------|
+| Type inference | `val x = foo()` - need to resolve `foo()` return type |
+| Semantic errors | Type mismatches, missing methods, etc. |
+| Smart completion | Members of a type require type resolution |
+| Rename refactoring | Need to know which references are semantic matches |
+| Import organization | Need to resolve qualified names |
+
+The Tree-sitter approach gets you working LSP features quickly. Add the compiler adapter
+later to enhance these features with semantic information.
+
+---
+
+## Dependencies
+
+### External
+
+| Dependency | Version | Purpose |
+|------------|---------|---------|
+| tree-sitter CLI | 0.22.6 | Grammar validation (auto-downloaded by Gradle task) |
+| jtreesitter | 0.25.3 | JVM bindings (Maven Central: `io.github.tree-sitter:jtreesitter`) |
+| lsp4j | 0.21.0+ | LSP protocol implementation (already in lsp-server) |
+
+**Build requirements:**
+- Tree-sitter CLI is **auto-downloaded** by `downloadTreeSitterCli` task - no manual install
+- No Rust/Cargo/npm/brew required (platform-independent gzip extraction)
+- Compiled grammar binary (`.so`/`.dylib`) is committed to repo for runtime
+
+**Language:** All code is **Kotlin** - the LSP server was converted from Java to Kotlin for better
+DSL support, null safety, and coroutines. Bytecode targets JDK 21 for IntelliJ 2025.1 compatibility.
+
+### Internal (Already Exists)
+
+| Component | Location | Notes |
+|-----------|----------|-------|
+| `TreeSitterGenerator` | `lang/dsl/.../generators/` | Generates `grammar.js` and `highlights.scm` |
+| `XtcLanguage.kt` | `lang/dsl/.../XtcLanguage.kt` | Complete language model (60+ AST concepts) |
+| `generateTreeSitter` task | `lang/dsl/build.gradle.kts` | Gradle task to run generator |
+| `LanguageModelCli` | `lang/dsl/.../LanguageModelCli.kt` | CLI interface for generators |
+| `lang/lsp-server/` | `lang/lsp-server/` | LSP server module (integrate tree-sitter here) |
+
+---
+
+## Success Criteria
+
+### Phase 1-2 Complete
+- [x] `tree-sitter generate` succeeds (grammar validates)
+- [ ] Native library compiled for all platforms
+- [ ] Kotlin test can parse `.x` file and traverse AST
+
+### Phase 3-4 Complete
+- [x] Query engine implemented
+- [x] TreeSitterAdapter implements all basic LSP methods
+- [ ] Document symbols shows class/method outline (requires working native lib)
+- [ ] Go-to-definition works for local variables
+- [ ] Find references works within same file
+- [ ] Completion shows keywords and locals
+
+### Phase 5 Complete
+- [ ] Go-to-definition works across files
+- [ ] Workspace symbol search works
+- [ ] Performance acceptable (<100ms for typical operations)
+
+---
+
+## File Structure (Actual - Kotlin)
+
+```
+lang/
+├── dsl/                              # Grammar generation
+│   ├── build.gradle.kts              #   Has tree-sitter Gradle tasks
+│   ├── build/
+│   │   ├── generated/                #   Output: grammar.js, highlights.scm
+│   │   └── tree-sitter-cli/          #   Downloaded CLI binary
+│   └── src/main/kotlin/
+│       └── org/xtclang/tooling/
+│           ├── XtcLanguage.kt        #   Language model definition
+│           └── generators/
+│               └── TreeSitterGenerator.kt
+│
+└── lsp-server/                       # LSP server (all Kotlin)
+    ├── build.gradle.kts              #   Has jtreesitter dependency
+    └── src/
+        ├── main/kotlin/org/xvm/lsp/
+        │   ├── adapter/
+        │   │   ├── XtcCompilerAdapter.kt      # Interface
+        │   │   ├── MockXtcCompilerAdapter.kt  # Regex-based (testing)
+        │   │   ├── TreeSitterAdapter.kt       # Tree-sitter based
+        │   │   └── XtcCompilerAdapterFull.kt  # Extended interface
+        │   ├── model/
+        │   │   ├── CompilationResult.kt
+        │   │   ├── Diagnostic.kt
+        │   │   ├── Location.kt
+        │   │   └── SymbolInfo.kt
+        │   ├── server/
+        │   │   ├── XtcLanguageServer.kt
+        │   │   └── XtcLanguageServerLauncher.kt
+        │   └── treesitter/
+        │       ├── XtcParser.kt          # Parser wrapper
+        │       ├── XtcTree.kt            # Tree wrapper
+        │       ├── XtcNode.kt            # Node wrapper
+        │       ├── XtcQueries.kt         # Query patterns
+        │       └── XtcQueryEngine.kt     # Query execution
+        ├── main/resources/native/        # Native libs (to be added)
+        │   ├── linux-x86_64/libtree-sitter-xtc.so
+        │   ├── darwin-x86_64/libtree-sitter-xtc.dylib
+        │   └── darwin-aarch64/libtree-sitter-xtc.dylib
+        └── test/kotlin/org/xvm/lsp/
+            ├── adapter/MockXtcCompilerAdapterTest.kt
+            ├── model/CompilationResultTest.kt
+            ├── model/DiagnosticTest.kt
+            ├── server/XtcLanguageServerTest.kt
+            └── BytecodeVersionTest.kt
+```
+
+---
+
+## Next Steps
+
+1. **Improve Grammar Coverage** - Add missing XTC features to `TreeSitterGenerator.kt`
+2. **Build Native Library** - Compile grammar for all platforms
+3. **Enable TreeSitterAdapter** - Switch launcher to use tree-sitter
+4. **IDE Integration** - VS Code extension, IntelliJ plugin per [PLAN_IDE_INTEGRATION.md](./PLAN_IDE_INTEGRATION.md)
+5. **Compiler Adapter** - Add semantic features (see [xtc-language-support-research](https://github.com/xtclang/xtc-language-support-research))
+
+---
+
+## Reference: Source Files for Grammar
+
+> **Important**: The Lexer and Parser Java files are the **single source of truth** for XTC syntax.
+> Any grammar documentation may be outdated.
+
+### Authoritative Sources (Ground Truth)
+
+| File | Purpose | Key Methods/Content |
+|------|---------|---------------------|
+| `javatools/src/main/java/org/xvm/compiler/Lexer.java` | Tokenization | `eatToken()`, `eatStringChars()`, `eatTemplateLiteral()`, `eatMultilineLiteral()` |
+| `javatools/src/main/java/org/xvm/compiler/Parser.java` | Grammar rules | All `parse*()` methods, BNF in Javadoc comments |
+| `javatools/src/main/java/org/xvm/compiler/Token.java` | Token definitions | `enum Id` with all keywords, operators, literals |
+
+### Supplementary Reference (May Be Outdated - Verify Against Lexer/Parser)
+
+| File | Description | Notes |
+|------|-------------|-------|
+| `doc/bnf.x` | BNF grammar file | ~1300 lines. **Not guaranteed to be current** - verify rules against Parser.java before using. |
+| `doc/x.md` | Language specification (DRAFT-20180913) | Design document with BNF-like grammar. **Not guaranteed to be current** - verify against Lexer/Parser. |
+
+### Token Categories from Token.java
+
+**Operators (with special semantics):**
+- Range: `..` `>..<` `..<` `>..`
+- Assignment: `=` `+=` `-=` `*=` `/=` `%=` etc.
+- Member access: `.` `?.`
+- Lambda: `->`
+- Async: `^(`
+
+**Keywords (context-sensitive marked with *):**
+- Declarations: `module`* `package`* `class`* `interface`* `mixin`* `service`* `const`* `enum`* `annotation`
+- Modifiers: `public` `private` `protected` `static` `abstract` `immutable`
+- Control: `if` `else` `for` `while` `do` `switch` `case` `default` `break` `continue` `return`
+- Types: `val`* `var`* `void` `conditional` `typedef` `function`
+- Special: `this`* `super`* `outer`* and variants like `this:class`* `this:module`*
+- Assert variants: `assert` `assert:rnd` `assert:arg` `assert:bounds` `assert:TODO` `assert:once` `assert:test` `assert:debug`

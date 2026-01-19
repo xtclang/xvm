@@ -10,6 +10,7 @@ plugins {
 rootProject.name = "xtc-lang"
 
 // Subprojects
+include("dsl")
 include("lsp-server")
 include("intellij-plugin")
 include("vscode-extension")

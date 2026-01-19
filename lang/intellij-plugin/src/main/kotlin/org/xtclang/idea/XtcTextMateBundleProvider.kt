@@ -9,27 +9,54 @@ import kotlin.io.path.exists
 /**
  * Provides TextMate bundle for XTC syntax highlighting.
  * The bundle is located in the plugin's lib/textmate directory.
+ *
+ * // TODO LSP: TextMate grammars are regex-based and have limitations:
+ * // - Cannot distinguish type names from variable names
+ * // - Cannot highlight based on semantic information (is this a field? parameter?)
+ * // - Regex patterns can be slow and fragile for complex syntax
+ * //
+ * // When the parallel compiler is complete, REPLACE TextMate with LSP semantic tokens:
+ * // 1. LSP server provides getSemanticTokens() using real lexer + symbol resolution
+ * // 2. IntelliJ LSP client receives and applies semantic token highlighting
+ * // 3. TextMate becomes fallback only (for when LSP is not available)
+ * //
+ * // See: PLAN_LSP_PARALLEL_LEXER.md (Phase 1 - Semantic Tokens)
+ * // See: XtcCompilerAdapterFull.getSemanticTokens()
  */
 class XtcTextMateBundleProvider : TextMateBundleProvider {
 
-    private val log = logger<XtcTextMateBundleProvider>()
+    private val logger = logger<XtcTextMateBundleProvider>()
 
     override fun getBundles(): List<TextMateBundleProvider.PluginBundle> {
+        logger.warn("XtcTextMateBundleProvider.getBundles() called")
+
         val plugin = PluginManagerCore.getPlugin(PluginId.getId("org.xtclang.idea"))
-            ?: return emptyList<TextMateBundleProvider.PluginBundle>().also {
-                log.warn("XTC plugin not found in PluginManagerCore")
-            }
+        if (plugin == null) {
+            logger.warn("XTC plugin not found in PluginManagerCore")
+            return emptyList()
+        }
+
+        logger.warn("XTC plugin path: ${plugin.pluginPath}")
 
         val textmatePath = plugin.pluginPath.resolve("lib/textmate")
-        log.info("TextMate bundle path: $textmatePath (exists=${textmatePath.exists()})")
+        val exists = textmatePath.exists()
+        logger.warn("TextMate bundle path: $textmatePath (exists=$exists)")
 
-        return when {
-            textmatePath.exists() -> listOf(TextMateBundleProvider.PluginBundle("XTC", textmatePath)).also {
-                log.info("Registered TextMate bundle: XTC")
+        if (!exists) {
+            logger.warn("TextMate bundle not found at: $textmatePath")
+            // List what IS in lib directory
+            val libPath = plugin.pluginPath.resolve("lib")
+            if (libPath.exists()) {
+                logger.warn("Contents of lib: ${libPath.toFile().listFiles()?.map { it.name }}")
             }
-            else -> emptyList<TextMateBundleProvider.PluginBundle>().also {
-                log.warn("TextMate bundle not found at: $textmatePath")
-            }
+            return emptyList()
         }
+
+        // List contents of textmate directory
+        logger.warn("Contents of textmate: ${textmatePath.toFile().listFiles()?.map { it.name }}")
+
+        val bundle = TextMateBundleProvider.PluginBundle("XTC", textmatePath)
+        logger.warn("Registered TextMate bundle: XTC at $textmatePath")
+        return listOf(bundle)
     }
 }
