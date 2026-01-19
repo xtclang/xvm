@@ -93,6 +93,10 @@ public class TypeMatrix {
     public void declare(int currAddr, int regId, TypeConstant type) {
         assert type != null;
 
+        if (type.containsFormalType(true)) {
+            type = type.resolveGenerics(bctx.pool(), bctx.typeInfo.getType());
+        }
+
         if (currAddr != -1) {
             follow(currAddr, currAddr + 1, regId);
         }
@@ -117,6 +121,10 @@ public class TypeMatrix {
      */
     public void assign(int currAddr, int nextAddr, int regId, TypeConstant type) {
         assert currAddr >= 0 && type != null;
+
+        if (type.containsFormalType(true)) {
+            type = type.resolveGenerics(bctx.pool(), bctx.typeInfo.getType());
+        }
 
         follow(currAddr, nextAddr, -1);
 

@@ -612,6 +612,10 @@ public class BuildContext {
             TypeConstant type      = param.getType();
             int          slot      = code.parameterSlot(extraArgs + i); // compensate for implicits
 
+            if (type.containsFormalType(true)) {
+                type = type.resolveGenerics(pool(), thisType);
+            }
+
             code.localVariable(slot, name, paramDesc.cd, scope.startLabel, scope.endLabel);
             scope.topReg = Math.max(scope.topReg, varIndex + 1);
 
@@ -1073,10 +1077,6 @@ public class BuildContext {
         TypeConstant type = (TypeConstant) getConstant(typeId);
         String       name = nameId == 0 ? "" : ((StringConstant) getConstant(nameId)).getValue();
 
-        if (type.containsFormalType(true)) {
-            type = type.resolveGenerics(pool(), typeInfo.getType());
-        }
-
         return introduceVar(code, regId, type, name);
     }
 
@@ -1091,6 +1091,11 @@ public class BuildContext {
         if (regId < 0) {
             throw new IllegalArgumentException("Invalid var index: " + regId);
         }
+
+        if (type.containsFormalType(true)) {
+            type = type.resolveGenerics(pool(), typeInfo.getType());
+        }
+
         if (name.isEmpty()) {
             name = "v$" + regId;
         } else {
@@ -1238,8 +1243,14 @@ public class BuildContext {
     public RegisterInfo ensureRegInfo(int regId, TypeConstant type, ClassDesc cd, String name) {
         return regId == Op.A_IGNORE
             ? new SingleSlot(regId, -2, type, cd, name)
-            : registerInfos.computeIfAbsent(regId, ix -> new SingleSlot(regId,
-                    scope.allocateLocal(ix, cd), type, cd, name));
+            : registerInfos.computeIfAbsent(regId, ix -> {
+                TypeConstant resolvedType = type.containsFormalType(true)
+                    ? type.resolveGenerics(pool(), typeInfo.getType())
+                    : type;
+
+                return new SingleSlot(regId, scope.allocateLocal(ix, cd), resolvedType, cd, name);
+            }
+        );
     }
 
     /**
