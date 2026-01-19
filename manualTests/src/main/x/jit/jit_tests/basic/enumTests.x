@@ -39,7 +39,7 @@ package enumTests {
 
     Boolean testRed1(Color|Int cint) {
         if (Blue == cint) {
-            assert:debug;
+            assert;
         }
         return Red == cint;
     }
