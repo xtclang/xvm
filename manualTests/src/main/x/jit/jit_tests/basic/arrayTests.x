@@ -1,7 +1,9 @@
-module test5.examples.org {
+package arrayTests {
     @Inject Console console;
 
     void run() {
+        console.print(">>>> Running ArrayTests >>>>");
+
         test1();
         test2();
     }

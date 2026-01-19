@@ -402,6 +402,10 @@ public abstract class xUnconstrainedInteger
 
     @Override
     public int invokeShr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
+        if (!f_fSigned) {
+            // for unsigned values we perform an unsigned right shift
+            return invokeShrAll(frame, hTarget, hArg, iReturn);
+        }
         PackedInteger pi1 = ((IntNHandle) hTarget).getValue();
         PackedInteger pi2 = ((IntNHandle) hArg).getValue();
 

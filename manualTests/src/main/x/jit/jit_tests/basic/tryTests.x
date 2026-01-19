@@ -1,10 +1,12 @@
-module test3.examples.org {
+package tryTests {
 
     import ecstasy.io.IOException;
 
     @Inject Console console;
 
-    void run( ) {
+    void run() {
+        console.print(">>>> Running TryTests >>>>");
+
         testTry1();
         console.print(testTry2());
         testAssert1(False);

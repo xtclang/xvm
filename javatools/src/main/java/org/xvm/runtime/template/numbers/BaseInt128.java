@@ -479,6 +479,10 @@ public abstract class BaseInt128
 
     @Override
     public int invokeShr(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
+        if (!f_fSigned) {
+            // for unsigned values we perform an unsigned right shift
+            return invokeShrAll(frame, hTarget, hArg, iReturn);
+        }
         LongLong ll1 = ((LongLongHandle) hTarget).getValue();
         int      c   = (int) ((JavaLong) hArg).getValue();
 

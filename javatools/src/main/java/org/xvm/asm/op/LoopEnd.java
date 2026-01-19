@@ -89,6 +89,14 @@ public class LoopEnd
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        bctx.exitScope(null);
+
+        // don't propagate anything
+        // TODO: we may need to go over the ops one more time
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         code.goto_(bctx.ensureLabel(code, getAddress() + m_ofJmp));
 

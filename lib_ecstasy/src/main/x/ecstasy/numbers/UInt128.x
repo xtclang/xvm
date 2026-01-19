@@ -149,60 +149,173 @@ const UInt128
 
     // ----- conversions ---------------------------------------------------------------------------
 
+    /**
+     * Convert this UInt128 to an Int8.
+     *
+     * Conversion is performed after optionally checking the bounds, by preserving the low-order
+     * 8 bits bits of this UInt128. The high-order bit becomes the sign bit.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of an Int8
+     *
+     * @return  an Int8 that has the same bit pattern as the low order 8 bits of this UInt128
+     *
+     * @throws OutOfBounds if checkBounds is True and this UInt128 is higher then Int8.MaxValue
+     */
     @Override
     Int8 toInt8(Boolean checkBounds = False) {
         assert:bounds !checkBounds || this <= Int8.MaxValue;
         return new Int8(bits[bitLength-8 ..< bitLength]);
     }
 
+    /**
+     * Convert this UInt128 to an Int16.
+     *
+     * Conversion is performed after optionally checking the bounds, by preserving the low-order
+     * 16 bits bits of this UInt128. The high-order bit becomes the sign bit.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of an Int16
+     *
+     * @return  an Int16 that has the same bit pattern as the low order 16 bits of this UInt128
+     *
+     * @throws OutOfBounds if checkBounds is True and this UInt128 is higher then Int16.MaxValue
+     */
     @Override
     Int16 toInt16(Boolean checkBounds = False) {
         assert:bounds !checkBounds || this <= Int16.MaxValue;
         return new Int16(bits[bitLength-16 ..< bitLength]);
     }
 
+    /**
+     * Convert this UInt128 to an Int32.
+     *
+     * Conversion is performed after optionally checking the bounds, by preserving the low-order
+     * 32 bits bits of this UInt128. The high-order bit becomes the sign bit.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of an Int32
+     *
+     * @return  an Int32 that has the same bit pattern as the low order 32 bits of this UInt128
+     *
+     * @throws OutOfBounds if checkBounds is True and this UInt128 is higher then Int32.MaxValue
+     */
     @Override
     Int32 toInt32(Boolean checkBounds = False) {
         assert:bounds !checkBounds || this <= Int32.MaxValue;
         return new Int32(bits[bitLength-32 ..< bitLength]);
     }
 
+    /**
+     * Convert this UInt128 to an Int64.
+     *
+     * Conversion is performed after optionally checking the bounds, by preserving the low-order
+     * 64 bits bits of this UInt128. The high-order bit becomes the sign bit.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of an Int64
+     *
+     * @return  an Int64 that has the same bit pattern as the low order 64 bits of this UInt128
+     *
+     * @throws OutOfBounds if checkBounds is True and this UInt128 is higher then Int64.MaxValue
+     */
     @Override
     Int64 toInt64(Boolean checkBounds = False) {
         assert:bounds !checkBounds || this <= Int64.MaxValue;
         return new Int64(bits[bitLength-64 ..< bitLength]);
     }
 
+    /**
+     * Convert this UInt128 to an Int128.
+     *
+     * Conversion is performed after optionally checking the bounds, by preserving the bit pattern
+     * of this UInt128. The high-order bit becomes the sign bit.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of an Int128
+     *
+     * @return  an Int128 that has the same bit pattern as this UInt128
+     */
     @Override
     Int128 toInt128(Boolean checkBounds = False) {
         assert:bounds !checkBounds || this <= Int128.MaxValue;
         return new Int128(bits);
     }
 
+    /**
+     * Convert this UInt128 to an UInt8.
+     *
+     * Conversion is performed after optionally checking the bounds, by preserving the low-order
+     * 8 bits bits of this UInt128.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of a UInt8
+     *
+     * @return  an Int8 that has the same bit pattern as the low order 8 bits of this UInt128
+     *
+     * @throws OutOfBounds if checkBounds is True and this UInt128 is higher then Int8.MaxValue
+     */
     @Override
     UInt8 toUInt8(Boolean checkBounds = False) {
         assert:bounds !checkBounds || this <= UInt8.MaxValue;
         return new UInt8(bits[bitLength-8 ..< bitLength]);
     }
 
+    /**
+     * Convert this UInt128 to an UInt16.
+     *
+     * Conversion is performed after optionally checking the bounds, by preserving the low-order
+     * 16 bits bits of this UInt128.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of a UInt16
+     *
+     * @return  an Int16 that has the same bit pattern as the low order 16 bits of this UInt128
+     *
+     * @throws OutOfBounds if checkBounds is True and this UInt128 is higher then Int16.MaxValue
+     */
     @Override
     UInt16 toUInt16(Boolean checkBounds = False) {
         assert:bounds !checkBounds || this <= UInt16.MaxValue;
         return new UInt16(bits[bitLength-16 ..< bitLength]);
     }
 
+    /**
+     * Convert this UInt128 to an UInt32.
+     *
+     * Conversion is performed after optionally checking the bounds, by preserving the low-order
+     * 32 bits bits of this UInt128.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of a UInt32
+     *
+     * @return  an Int32 that has the same bit pattern as the low order 32 bits of this UInt128
+     *
+     * @throws OutOfBounds if checkBounds is True and this UInt128 is higher then Int32.MaxValue
+     */
     @Override
     UInt32 toUInt32(Boolean checkBounds = False) {
         assert:bounds !checkBounds || this <= UInt32.MaxValue;
         return new UInt32(bits[bitLength-32 ..< bitLength]);
     }
 
+    /**
+     * Convert this UInt128 to an UInt64.
+     *
+     * Conversion is performed after optionally checking the bounds, by preserving the low-order
+     * 64 bits bits of this UInt128.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of a UInt64
+     *
+     * @return  an Int64 that has the same bit pattern as the low order 64 bits of this UInt128
+     *
+     * @throws OutOfBounds if checkBounds is True and this UInt128 is higher then Int64.MaxValue
+     */
     @Override
     UInt64 toUInt64(Boolean checkBounds = False) {
         assert:bounds !checkBounds || this <= UInt64.MaxValue;
         return new UInt64(bits[bitLength-64 ..< bitLength]);
     }
 
+    /**
+     * Convert this UInt128 to an UInt128, which is effectively a no-op and returns this UInt128.
+     *
+     * @param checkBounds  this parameter will be ignored
+     *
+     * @return  this UInt128
+     */
     @Override
     UInt128 toUInt128(Boolean checkBounds = False) = this;
 

@@ -5,7 +5,7 @@ package org.xvm.javajit;
  */
 public enum JitFlavor {
     /**
-     * A non-widened Java type (xObj or below) representing a specific xtc type (e.g. Person); most
+     * A non-widened Java type (nObj or below) representing a specific xtc type (e.g. Person); most
      * probably {@link org.xvm.asm.constants.TypeConstant#isSingleUnderlyingClass}
      * <p>
      * Implication is that it uses a single slot and no casts or transformations are required.
@@ -13,7 +13,7 @@ public enum JitFlavor {
     Specific(false, false),
 
     /**
-     * A widened Java type (xObj or below); most probably a
+     * A widened Java type (nObj or below); most probably a
      * {@link org.xvm.asm.constants.RelationalTypeConstant} (e.g. Person|String)
      * <p>
      * Implication is that it uses a single slot and casts are required.
@@ -41,7 +41,7 @@ public enum JitFlavor {
     /**
      * A parameter of the {@link #Specific} flavor with a default value.
      *
-     * Implication is that a `null` value is allowed to passed in, indicating that the default
+     * Implication is that a Java `null` value is allowed to passed in, indicating that the default
      * value should be used.
      */
     SpecificWithDefault(false, false),

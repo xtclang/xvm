@@ -87,6 +87,7 @@ import org.xvm.util.Severity;
 import org.xvm.util.TransientThreadLocal;
 
 
+import static org.xvm.javajit.Builder.CD_nObj;
 import static org.xvm.javajit.Builder.OPT;
 import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
@@ -5295,7 +5296,7 @@ public abstract class TypeConstant
         ConstantPool poolLeft = typeLeft.getConstantPool();
         if (pool != poolLeft && !typeLeft.isShared(pool)) {
             return this.isShared(poolLeft)
-                ? ((TypeConstant) poolLeft.register(this)).calculateRelation(typeLeft)
+                ? poolLeft.register(this).calculateRelation(typeLeft)
                 : Relation.INCOMPATIBLE;
         }
 
@@ -6444,7 +6445,9 @@ public abstract class TypeConstant
      * Ensure a unique ClassDesc for this type for the specified TypeSystem.
      */
     public ClassDesc ensureClassDesc(TypeSystem ts) {
-        return ClassDesc.of(ensureJitClassName(ts));
+        return isSingleUnderlyingClass(true)
+            ? ClassDesc.of(ensureJitClassName(ts))
+            : CD_nObj;
     }
 
     /**
@@ -6455,7 +6458,7 @@ public abstract class TypeConstant
         if (sJitName == null) {
             // get the master instance of the type constant
             ModuleLoader loader = ts.findOwnerLoader(this);
-            TypeConstant that = (TypeConstant) loader.module.getConstantPool().register(this);
+            TypeConstant that = loader.module.getConstantPool().register(this);
             sJitName   = this == that ? buildJitClassName(ts, loader) : that.ensureJitClassName(ts);
             m_sJitName = sJitName;
         }
@@ -6573,7 +6576,7 @@ public abstract class TypeConstant
      */
     public TypeConstant getCanonicalJitType() {
         if (!isModifyingType()) {
-            return this;
+            return removeAutoNarrowing();
         }
 
         TypeConstant constOriginal = getUnderlyingType();
@@ -6605,8 +6608,14 @@ public abstract class TypeConstant
             ClassDesc cdCommon = JitTypeDesc.getPrimitiveClass(this);
             String    desc     = cdCommon.descriptorString();
 
-            Builder.load(code, reg1);
-            Builder.load(code, reg2);
+            reg1.load(code);
+            if (!reg1.cd().isPrimitive()) {
+                Builder.unbox(code, this, cdCommon);
+            }
+            reg2.load(code);
+            if (!reg2.cd().isPrimitive()) {
+                Builder.unbox(code, this, cdCommon);
+            }
 
             switch (desc) {
             case "I", "S", "B", "C", "Z":
@@ -6669,8 +6678,8 @@ public abstract class TypeConstant
 
             bctx.loadCtx(code);
             Builder.loadType(code, ts, this);
-            Builder.load(code, reg1);
-            Builder.load(code, reg2);
+            reg1.load(code);
+            reg2.load(code);
 
             switch (nOp) {
             case Op.OP_IS_EQ, Op.OP_JMP_EQ, Op.OP_IS_NEQ, Op.OP_JMP_NEQ:
@@ -6802,7 +6811,7 @@ public abstract class TypeConstant
                     assert getConstantPool() == hType.getComposition().getConstantPool();
                 } else {
                     // don't cache a foreign handle
-                    return ((TypeConstant) poolThat.register(this)).ensureTypeHandle(container);
+                    return poolThat.register(this).ensureTypeHandle(container);
                 }
             }
             return hType;

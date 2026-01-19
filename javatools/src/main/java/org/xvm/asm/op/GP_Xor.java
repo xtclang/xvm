@@ -11,6 +11,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.OpGeneral;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.NumberSupport;
 import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
@@ -21,7 +22,8 @@ import org.xvm.runtime.ObjectHandle;
  * GP_XOR rvalue1, rvalue2, lvalue ; T ^ T -> T
  */
 public class GP_Xor
-        extends OpGeneral {
+        extends OpGeneral
+        implements NumberSupport {
     /**
      * Construct a GP_XOR op for the passed arguments.
      *
@@ -56,15 +58,10 @@ public class GP_Xor
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
-        switch (regTarget.cd().descriptorString()) {
-            case "I" -> {
-                code.ixor();
-                bctx.adjustIntValue(code, regTarget.type());
-            }
-            case "Z" -> code.ixor();
-            case "J" -> code.lxor();
-            default  -> throw new IllegalStateException();
-        }
+    protected void buildOptimizedBinary(BuildContext bctx,
+                                     CodeBuilder  code,
+                                     RegisterInfo regTarget,
+                                     RegisterInfo regArg) {
+        buildPrimitiveXor(bctx, code, regTarget);
     }
 }

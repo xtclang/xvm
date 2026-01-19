@@ -1348,7 +1348,8 @@ public class PropertyInfo
         IdentityConstant idOwner  = id.getNamespace();
         Component.Format format   = idOwner.getComponent().getFormat();
         return (format == Format.MIXIN || format == Format.ANNOTATION ||
-                    idOwner.equals(typeOwner.getSingleUnderlyingClass(true))
+                    (typeOwner.isSingleUnderlyingClass(true) &&
+                        idOwner.equals(typeOwner.getSingleUnderlyingClass(true)))
                 ? typeOwner
                 : idOwner.getFormalType().resolveGenerics(ts.pool(), typeOwner))
             .ensureClassDesc(ts);

@@ -25,12 +25,29 @@ public class CastTypeConstant
     public CastTypeConstant(ConstantPool pool, TypeConstant constType1, TypeConstant constType2) {
         super(pool, constType2.combine(pool, constType1), constType2);
 
-        m_constType1Orig = constType1;
+        f_constType1Orig = constType1;
+    }
+
+    /**
+     * @return the original underlying type
+     */
+    public TypeConstant getBaseType() {
+        return f_constType1Orig;
     }
 
     @Override
     public TypeConstant resolveTypedefs() {
         return getUnderlyingType();
+    }
+
+    @Override
+    public boolean isSingleUnderlyingClass(boolean fAllowInterface) {
+        return getUnderlyingType().isSingleUnderlyingClass(fAllowInterface);
+    }
+
+    @Override
+    public IdentityConstant getSingleUnderlyingClass(boolean fAllowInterface) {
+        return getUnderlyingType().getSingleUnderlyingClass(fAllowInterface);
     }
 
     @Override
@@ -41,6 +58,11 @@ public class CastTypeConstant
     @Override
     protected Relation calculateRelationToRight(TypeConstant typeRight) {
         return getUnderlyingType().calculateRelationToRight(typeRight);
+    }
+
+    @Override
+    public boolean isPrimitive() {
+        return getUnderlyingType().isPrimitive();
     }
 
     @Override
@@ -55,8 +77,11 @@ public class CastTypeConstant
 
     @Override
     public String getValueString() {
-        return m_constType1Orig.getValueString() + ".as(" + m_constType2.getValueString() + ")";
+        return (f_constType1Orig.isRelationalType()
+                ? '(' + f_constType1Orig.getValueString() + ").as("
+                : f_constType1Orig.getValueString() + ".as(")
+            + m_constType2.getValueString() + ")";
     }
 
-    private final TypeConstant m_constType1Orig;
+    private final TypeConstant f_constType1Orig;
 }

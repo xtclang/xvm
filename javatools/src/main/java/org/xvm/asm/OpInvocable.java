@@ -23,6 +23,7 @@ import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.RegisterInfo;
+import org.xvm.javajit.TypeMatrix;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.CallChain.VirtualConstructorChain;
@@ -302,6 +303,32 @@ public abstract class OpInvocable extends Op {
     }
 
     // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void computeTypes(BuildContext bctx) {
+        TypeMatrix tmx = bctx.typeMatrix;
+
+        if (m_nRetValue == A_IGNORE && m_anRetValue == null) {
+            // no return - no type change
+            tmx.follow(getAddress());
+            return;
+        }
+
+        TypeConstant   typeThis    = tmx.getType(A_THIS, getAddress());
+        MethodConstant idMethod    = bctx.getConstant(m_nMethodId, MethodConstant.class);
+        TypeConstant[] atypeResult = idMethod.getSignature().
+                                        resolveGenericTypes(bctx.pool(), typeThis).getRawReturns();
+        if (isMultiReturn()) {
+            for (int i = 0, c = m_anRetValue.length; i < c; i++) {
+                int nRetVal = m_anRetValue[i];
+                if (nRetVal != A_IGNORE) {
+                    tmx.assign(getAddress(), nRetVal, atypeResult[i]);
+                }
+            }
+        } else {
+            tmx.assign(getAddress(), m_nRetValue, atypeResult[0]);
+        }
+    }
 
     protected void buildInvoke(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
         RegisterInfo regTarget = bctx.loadArgument(code, m_nTarget);

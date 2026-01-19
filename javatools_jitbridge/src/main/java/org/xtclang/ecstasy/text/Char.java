@@ -1,5 +1,6 @@
 package org.xtclang.ecstasy.text;
 
+import org.xtclang.ecstasy.OutOfBounds;
 import org.xtclang.ecstasy.nConst;
 
 import org.xvm.javajit.Ctx;
@@ -46,6 +47,48 @@ public class Char extends nConst {
         }
 
         return ch;
+    }
+
+    /**
+     * Add an Int64 value to a Char codepoint.
+     *
+     * @param ctx        the runtime context
+     * @param codepoint  the codepoint to add to
+     * @param n          the value to add to the codepoint
+     *
+     * @return the result of the addition
+     *
+     * @throws OutOfBounds if the result is not a valid Unicode codepoint
+     */
+    public static int add$p(Ctx ctx, int codepoint, long n) {
+        long cp = codepoint + n;
+        if (cp < 0 || cp > 0x10FFFF) {
+            OutOfBounds oob = new OutOfBounds(ctx);
+            throw oob.$init(ctx, "Adding " + n + " to character code-point "
+                    + codepoint + " would exceed the Unicode range");
+        }
+        return (int) cp;
+    }
+
+    /**
+     * Subtract an Int64 value from a Char codepoint.
+     *
+     * @param ctx        the runtime context
+     * @param codepoint  the codepoint to add to
+     * @param n          the value to add to the codepoint
+     *
+     * @return the result of the addition
+     *
+     * @throws OutOfBounds if the result is not a valid Unicode codepoint
+     */
+    public static int sub$p(Ctx ctx, int codepoint, long n) {
+        long cp = (long) codepoint - n;
+        if (cp < 0 || cp > 0x10FFFF) {
+            OutOfBounds oob = new OutOfBounds(ctx);
+            throw oob.$init(ctx, "Adding " + n + " to character code-point "
+                    + codepoint + " would exceed the Unicode range");
+        }
+        return (int) cp;
     }
 
     @Override

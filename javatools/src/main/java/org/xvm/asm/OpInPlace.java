@@ -212,17 +212,28 @@ public abstract class OpInPlace
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        if (isAssignOp()) {
+            bctx.typeMatrix.assign(getAddress(), m_nRetValue, bctx.getArgumentType(m_nTarget));
+        } else {
+            bctx.typeMatrix.follow(getAddress());
+        }
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         int nTarget = m_nTarget;
         if (nTarget >= 0) {
             // operation on a register
-            RegisterInfo reg = bctx.getRegisterInfo(nTarget);
+            RegisterInfo reg = bctx.ensureRegister(code, nTarget);
             if (reg.cd().isPrimitive()) {
                 assert reg.isSingle();
 
                 buildPrimitiveLocal(code, reg);
                 if (isAssignOp()) {
                     bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, reg.type()));
+                } else {
+                    reg.markChanged();
                 }
             } else {
                 // call the corresponding op method
@@ -453,7 +464,7 @@ public abstract class OpInPlace
 
         assert !jmd.isOptimized;
 
-        code.aload(reg.slot());
+        reg.load(code);
         bctx.loadCtx(code);
         code.invokevirtual(reg.cd(), sJitName, jmd.standardMD);
         return jmd;

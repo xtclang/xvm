@@ -225,6 +225,22 @@ public class FBind
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        TypeConstant typeFn = bctx.getArgumentType(m_nFunctionId);
+
+        assert typeFn.isFunction();
+
+        for (int i = 0, c = m_anParamIx.length; i < c; i++) {
+            // we assume that the indexes are sorted in the ascending order;
+            // after every step, the resulting function accepts one less parameter, so it needs to
+            // compensate the absolute position
+            typeFn = bctx.pool().bindFunctionParam(typeFn, m_anParamIx[i] - i);
+        }
+
+        bctx.typeMatrix.assign(getAddress(), m_nRetValue, typeFn);
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
 
         TypeSystem   ts     = bctx.typeSystem;
@@ -242,16 +258,16 @@ public class FBind
         boolean fOptBefore = jmdBefore.isOptimized;
 
          // initialize slots for the resulting handles
-        code.aload(regFn.slot())
-            .getfield(CD_nFunction, "stdMethod", CD_MethodHandle);
+        regFn.load(code);
+        code.getfield(CD_nFunction, "stdMethod", CD_MethodHandle);
         int slotStd = bctx.storeTempValue(code, CD_MethodHandle);
 
-        code.aload(regFn.slot())
-            .getfield(CD_nFunction, "optMethod", CD_MethodHandle);
+        regFn.load(code);
+        code.getfield(CD_nFunction, "optMethod", CD_MethodHandle);
         int slotOpt = bctx.storeTempValue(code, CD_MethodHandle);
 
-        code.aload(regFn.slot())
-            .getfield(CD_nFunction, "immutable", CD_boolean);
+        regFn.load(code);
+        code.getfield(CD_nFunction, "immutable", CD_boolean);
         int slotImm = bctx.storeTempValue(code, CD_boolean);
 
         int[] anArg = m_anParamValue;
@@ -354,7 +370,7 @@ public class FBind
                     CD_MethodHandle, CD_MethodHandle, CD_boolean));
 
         RegisterInfo regRet = bctx.ensureRegInfo(m_nRetValue, typeFn, cdFn, "");
-        bctx.storeValue(code, regRet);
+        bctx.storeValue(code, regRet, typeFn);
     }
 
     private static void bindArgument(CodeBuilder code, int slotMethod, int nPos,
@@ -368,7 +384,7 @@ public class FBind
             .anewarray(CD_JavaObject)
             .dup()
             .iconst_0();
-        Builder.load(code, regArg);
+        regArg.load(code);
         if (fBox) {
             Builder.box(code, regArg);
         } else if (regArg.cd().isPrimitive()) {
@@ -385,7 +401,7 @@ public class FBind
         Label labelEnd = code.newLabel();
         code.iload(slotImm)
             .ifeq(labelEnd);
-        Builder.load(code, regArg);
+        regArg.load(code);
         code.invokevirtual(CD_nObj, "$isImmut", MethodTypeDesc.of(CD_boolean))
             .iand()
             .istore(slotImm)

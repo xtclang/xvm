@@ -174,43 +174,140 @@ const UInt8
 
     // ----- conversions ---------------------------------------------------------------------------
 
+    /**
+     * Convert this UInt8 to an Int8.
+     *
+     * Conversion is performed after optionally checking the bounds, by preserving the bit pattern
+     * of this Int8. The high-order bit becomes the sign bit.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of an Int8
+     *
+     * @return  an Int8 that has the same bit pattern as this UInt8
+     */
     @Override
     Int8 toInt8(Boolean checkBounds = False) {
         assert:bounds !checkBounds || this <= Int8.MaxValue;
         return new Int8(bits);
     }
 
+    /**
+     * Convert this UInt8 to an Int16.
+     *
+     * Conversion is performed by zero-extending this UInt8 up to an Int16.
+     * A UInt8 will always fit within an Int16, so the checkBounds parameter is effectively ignored.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of an Int16
+     *
+     * @return  an Int16 that is equivalent to this Int8
+     */
     @Auto
     @Override
     Int16 toInt16(Boolean checkBounds = False) = new Int16(new Bit[16](i -> i < 16-bitLength ? 0 : bits[i]));
 
+    /**
+     * Convert this UInt8 to an Int32.
+     *
+     * Conversion is performed by zero-extending this UInt8 up to an Int32.
+     * A UInt8 will always fit within an Int32, so the checkBounds parameter is effectively ignored.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of an Int32
+     *
+     * @return  an Int32 that is equivalent to this Int8
+     */
     @Auto
     @Override
     Int32 toInt32(Boolean checkBounds = False) = new Int32(new Bit[32](i -> i < 32-bitLength ? 0 : bits[i]));
 
+    /**
+     * Convert this UInt8 to an Int64.
+     *
+     * Conversion is performed by zero-extending this UInt8 up to an Int64.
+     * A UInt8 will always fit within an Int64, so the checkBounds parameter is effectively ignored.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of an Int64
+     *
+     * @return  an Int64 that is equivalent to this Int8
+     */
     @Auto
     @Override
     Int64 toInt64(Boolean checkBounds = False) = new Int64(new Bit[64](i -> i < 64-bitLength ? 0 : bits[i]));
 
+    /**
+     * Convert this UInt8 to an Int128.
+     *
+     * Conversion is performed by zero-extending this UInt8 up to an Int128.
+     * A UInt8 will always fit within an Int128, so the checkBounds parameter is effectively ignored.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of an Int128
+     *
+     * @return  an Int128 that is equivalent to this Int8
+     */
     @Auto
     @Override
     Int128 toInt128(Boolean checkBounds = False) = new Int128(new Bit[128](i -> i < 128-bitLength ? 0 : bits[i]));
 
+    /**
+     * Convert this UInt8 to an UInt8, which is effectively a no-op and returns this UInt8.
+     *
+     * @param checkBounds  this parameter will be ignored
+     *
+     * @return  this UInt8
+     */
     @Override
     UInt8 toUInt8(Boolean checkBounds = False) = this;
 
+    /**
+     * Convert this UInt8 to an UInt16.
+     *
+     * Conversion is performed by sign extending this UInt8 up to an UInt16.
+     * A UInt8 will always fit within an Int16, so the checkBounds parameter is effectively ignored.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of a Unt16
+     *
+     * @return  an UInt16 that is equivalent to this UInt8
+     */
     @Auto
     @Override
     UInt16 toUInt16(Boolean checkBounds = False) = new UInt16(new Bit[16](i -> i < 16-bitLength ? 0 : bits[i]));
 
+    /**
+     * Convert this UInt8 to an UInt32.
+     *
+     * Conversion is performed by sign extending this UInt8 up to an UInt32.
+     * A UInt8 will always fit within an Int32, so the checkBounds parameter is effectively ignored.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of a UInt32
+     *
+     * @return  an UInt32 that is equivalent to this UInt8
+     */
     @Auto
     @Override
     UInt32 toUInt32(Boolean checkBounds = False) =  new UInt32(new Bit[32](i -> i < 32-bitLength ? 0 : bits[i]));
 
+    /**
+     * Convert this UInt8 to an UInt64.
+     *
+     * Conversion is performed by sign extending this UInt8 up to an UInt64.
+     * A UInt8 will always fit within an Int64, so the checkBounds parameter is effectively ignored.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of a UInt64
+     *
+     * @return  an UInt64 that is equivalent to this UInt8
+     */
     @Auto
     @Override
     UInt64 toUInt64(Boolean checkBounds = False) = new UInt64(new Bit[64](i -> i < 64-bitLength ? 0 : bits[i]));
 
+    /**
+     * Convert this UInt8 to an UInt128.
+     *
+     * Conversion is performed by sign extending this UInt8 up to an UInt128.
+     * A UInt8 will always fit within an Int128, so the checkBounds parameter is effectively ignored.
+     *
+     * @param checkBounds  whether to check whether the result fits within the bounds of a UInt128
+     *
+     * @return  an UInt128 that is equivalent to this UInt8
+     */
     @Auto
     @Override
     UInt128 toUInt128(Boolean checkBounds = False) = new UInt128(new Bit[128](i -> i < 128-bitLength ? 0 : bits[i]));

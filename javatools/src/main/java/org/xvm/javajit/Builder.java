@@ -13,7 +13,6 @@ import java.lang.constant.MethodTypeDesc;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
-import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ByteConstant;
 import org.xvm.asm.constants.CharConstant;
@@ -31,8 +30,8 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
-import org.xvm.javajit.BuildContext.SingleSlot;
 import org.xvm.javajit.BuildContext.DoubleSlot;
+import org.xvm.javajit.BuildContext.SingleSlot;
 import org.xvm.javajit.TypeSystem.ClassfileShape;
 
 import static java.lang.constant.ConstantDescs.CD_MethodHandle;
@@ -101,12 +100,31 @@ public abstract class Builder {
             loadString(code, stringConst.getValue());
             return new SingleSlot(stringConst.getType(), CD_String, "");
 
-        case IntConstant intConstant:// TODO: support all Int/UInt types
-            code.ldc(intConstant.getValue().getLong());
-            return new SingleSlot(constant.getType(), CD_long, "");
+        case IntConstant intConstant:
+            return switch (intConstant.getFormat()) {
+                case Int16, UInt16, Int32 -> {
+                    code.ldc(intConstant.getValue().getInt());
+                    yield new SingleSlot(constant.getType(), CD_int, "");
+                }
+                case UInt32 -> {
+                    code.ldc(intConstant.getValue().getLong())
+                        .ldc(0xFFFFFFFFL)
+                        .land()
+                        .l2i();
+                    yield new SingleSlot(constant.getType(), CD_int, "");
+                }
+                case Int64, UInt64 -> {
+                    code.ldc(intConstant.getValue().getLong());
+                    yield new SingleSlot(constant.getType(), CD_long, "");
+                }
+                // TODO: Need to add Int128 and UInt128
+                default ->
+                    throw new IllegalStateException("Unsupported IntConstant type "
+                            + intConstant.getFormat());
+            };
 
         case ByteConstant byteConstant:
-            code.ldc(byteConstant.getValue().intValue());
+            code.ldc(byteConstant.getValue());
             return new SingleSlot(constant.getType(), CD_int, "");
 
         case LiteralConstant litConstant:
@@ -285,10 +303,11 @@ public abstract class Builder {
      */
     public JitMethodDesc loadProperty(CodeBuilder code, TypeConstant typeContainer,
                                       PropertyConstant propId) {
-        PropertyInfo     propInfo   = propId.getPropertyInfo(typeContainer);
-        ClassDesc        cdOwner    = propInfo.getOwnerClassDesc(typeSystem, typeContainer);
-        JitMethodDesc    jmdGet     = propInfo.getGetterJitDesc(typeSystem);
-        String           getterName = propInfo.ensureGetterJitMethodName(typeSystem);
+        PropertyInfo  xvmInfo    = propId.getPropertyInfo(typeContainer);
+        PropertyInfo  jitInfo    = propId.getPropertyInfo(typeContainer.getCanonicalJitType());
+        ClassDesc     cdOwner    = jitInfo.getOwnerClassDesc(typeSystem, typeContainer);
+        JitMethodDesc jmdGet     = jitInfo.getGetterJitDesc(typeSystem);
+        String        getterName = jitInfo.ensureGetterJitMethodName(typeSystem);
 
         MethodTypeDesc md;
         if (jmdGet.isOptimized) {
@@ -300,18 +319,10 @@ public abstract class Builder {
 
         code.aload(code.parameterSlot(0)); // $ctx
         code.invokevirtual(cdOwner, getterName, md);
-        return jmdGet;
-    }
-
-    /**
-     * Generate a value "load" for the specified register. If the register is a {@link DoubleSlot},
-     * load the "extension" boolean flag first.
-     */
-    public static void load(CodeBuilder code, RegisterInfo reg) {
-        if (reg instanceof DoubleSlot doubleSlot) {
-            code.iload(doubleSlot.extSlot());
+        if (!xvmInfo.getType().equals(jitInfo.getType())) {
+            code.checkcast(xvmInfo.getType().ensureClassDesc(typeSystem));
         }
-        load(code, reg.cd(), reg.slot());
+        return jmdGet;
     }
 
     /**
@@ -338,17 +349,6 @@ public abstract class Builder {
         } else {
             code.aload(slot);
         }
-    }
-
-    /**
-     * Generate a value "store" for the specified register.  If the register is a {@link DoubleSlot},
-     * store the "extension" boolean flag first.
-     */
-    public static void store(CodeBuilder code, RegisterInfo reg) {
-        if (reg instanceof DoubleSlot doubleSlot) {
-            code.istore(doubleSlot.extSlot());
-        }
-        store(code, reg.cd(), reg.slot());
     }
 
     /**
@@ -417,7 +417,7 @@ public abstract class Builder {
         } else {
             assert !reg.cd().isPrimitive();
 
-            code.aload(reg.slot());
+            reg.load(code);
             loadNull(code);
             code.if_acmpeq(lblNull);
         }
@@ -437,7 +437,7 @@ public abstract class Builder {
         } else {
             assert !reg.cd().isPrimitive();
 
-            code.aload(reg.slot());
+            reg.load(code);
             loadNull(code);
             code.if_acmpne(lblNotNull);
         }
@@ -565,7 +565,7 @@ public abstract class Builder {
         case "J": // long
             switch (type.getSingleUnderlyingClass(false).getName()) {
                 case "Int64"  -> code.getfield(CD_Int64,  "$value", cd);
-                case "UInt64" -> code.getfield(CD_UInt32, "$value", cd);
+                case "UInt64" -> code.getfield(CD_UInt64, "$value", cd);
                 default       -> throw new IllegalStateException();
             }
             break;
@@ -875,6 +875,7 @@ public abstract class Builder {
     public static final String N_nMethod      = "org.xtclang.ecstasy.nMethod";
     public static final String N_nModule      = "org.xtclang.ecstasy.nModule";
     public static final String N_nObj         = "org.xtclang.ecstasy.nObj";
+    public static final String N_nPackage     = "org.xtclang.ecstasy.nPackage";
     public static final String N_nRangeInt64  = "org.xtclang.ecstasy.nRangeᐸInt64ᐳ";
     public static final String N_nService     = "org.xtclang.ecstasy.nService";
     public static final String N_nType        = "org.xtclang.ecstasy.nType";
@@ -897,6 +898,7 @@ public abstract class Builder {
     public static final ClassDesc CD_nFunction     = ClassDesc.of(N_nFunction);
     public static final ClassDesc CD_nMethod       = ClassDesc.of(N_nMethod);
     public static final ClassDesc CD_nModule       = ClassDesc.of(N_nModule);
+    public static final ClassDesc CD_nPackage      = ClassDesc.of(N_nPackage);
     public static final ClassDesc CD_nRangeInt64   = ClassDesc.of(N_nRangeInt64);
 
     public static final ClassDesc CD_nArrayChar    = ClassDesc.of(N_nArrayChar);
@@ -931,6 +933,7 @@ public abstract class Builder {
     public static final ClassDesc CD_JavaBoolean   = ClassDesc.of(java.lang.Boolean.class.getName());
     public static final ClassDesc CD_JavaInteger   = ClassDesc.of(java.lang.Integer.class.getName());
     public static final ClassDesc CD_JavaLong      = ClassDesc.of(java.lang.Long.class.getName());
+    public static final ClassDesc CD_JavaMath      = ClassDesc.of(java.lang.Math.class.getName());
     public static final ClassDesc CD_JavaObject    = ClassDesc.of(java.lang.Object.class.getName());
     public static final ClassDesc CD_JavaString    = ClassDesc.of(java.lang.String.class.getName());
 
@@ -939,6 +942,8 @@ public abstract class Builder {
     public static final String         Instance       = "$INSTANCE";
     public static final MethodTypeDesc MD_Boolean_box = MethodTypeDesc.of(CD_Boolean, CD_boolean);
     public static final MethodTypeDesc MD_Char_box    = MethodTypeDesc.of(CD_Char,   CD_int);
+    public static final MethodTypeDesc MD_Char_addInt = MethodTypeDesc.of(CD_int,    CD_Ctx, CD_int, CD_long);
+    public static final MethodTypeDesc MD_Char_subInt = MethodTypeDesc.of(CD_int,    CD_Ctx, CD_int, CD_long);
     public static final MethodTypeDesc MD_Int8_box    = MethodTypeDesc.of(CD_Int8,   CD_int);
     public static final MethodTypeDesc MD_Int16_box   = MethodTypeDesc.of(CD_Int16,  CD_int);
     public static final MethodTypeDesc MD_Int32_box   = MethodTypeDesc.of(CD_Int32,  CD_int);
@@ -951,4 +956,8 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_StringOf    = MethodTypeDesc.of(CD_String, CD_Ctx, CD_JavaString);
     public static final MethodTypeDesc MD_xvmType     = MethodTypeDesc.of(CD_TypeConstant, CD_Ctx);
     public static final MethodTypeDesc MD_TypeIsA     = MethodTypeDesc.of(CD_boolean, CD_TypeConstant);
+    public static final MethodTypeDesc MD_FloorModI   = MethodTypeDesc.of(CD_int, CD_int, CD_int);
+    public static final MethodTypeDesc MD_FloorModJ   = MethodTypeDesc.of(CD_long, CD_long, CD_long);
+    public static final MethodTypeDesc MD_UDivInt     = MethodTypeDesc.of(CD_int, CD_int, CD_int);
+    public static final MethodTypeDesc MD_UDivLong    = MethodTypeDesc.of(CD_long, CD_long, CD_long);
 }

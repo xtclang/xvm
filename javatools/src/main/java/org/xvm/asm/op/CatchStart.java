@@ -138,13 +138,24 @@ public class CatchStart
 
     // ----- JIT support ---------------------------------------------------------------------------
 
+    @Override
+    public void computeTypes(BuildContext bctx) {
+        bctx.enterScope(null);
+
+        // we could be called for dead code to correctly compute the scopes, but should not
+        // compute types further
+        if (bctx.typeMatrix.isReached(getAddress())) {
+            bctx.typeMatrix.assign(getAddress(), m_nVar, bctx.getTypeConstant(m_nType));
+        }
+    }
+
     /**
      * Called by the {@link Guarded} "label" op,
      *
      * @param scopeGuarded  the guarded scope (not the current one)
      */
     public void build(BuildContext bctx, CodeBuilder code, org.xvm.javajit.Scope scopeGuarded) {
-        org.xvm.javajit.Scope scopeThis = bctx.enterScope(code, getAddress());
+        org.xvm.javajit.Scope scopeThis = bctx.enterScope(code);
 
         TypeSystem   ts     = bctx.typeSystem;
         RegisterInfo regEx  = bctx.introduceVar(code, m_nVar, m_nType, m_nNameId);

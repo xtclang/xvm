@@ -11,6 +11,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.OpGeneral;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.NumberSupport;
 import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
@@ -21,7 +22,8 @@ import org.xvm.runtime.ObjectHandle;
  * GP_MOD rvalue1, rvalue2, lvalue ; T % T -> T
  */
 public class GP_Mod
-        extends OpGeneral {
+        extends OpGeneral
+        implements NumberSupport {
     /**
      * Construct a GP_MOD op for the passed arguments.
      *
@@ -56,17 +58,10 @@ public class GP_Mod
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
-        // TODO: convert remainder to a modulo
-        switch (regTarget.cd().descriptorString()) {
-            case "I" -> {
-                code.irem();
-                bctx.adjustIntValue(code, regTarget.type());
-            }
-            case "J" -> code.lrem();
-            case "F" -> code.frem();
-            case "D" -> code.drem();
-            default  -> throw new IllegalStateException();
-        }
+    protected void buildOptimizedBinary(BuildContext bctx,
+                                        CodeBuilder  code,
+                                        RegisterInfo regTarget,
+                                        RegisterInfo regArg) {
+        buildPrimitiveMod(bctx, code, regTarget);
     }
 }

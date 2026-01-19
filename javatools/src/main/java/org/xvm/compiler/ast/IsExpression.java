@@ -14,7 +14,7 @@ import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.IsType;
-import org.xvm.asm.op.JumpFalse;
+import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.JumpNType;
 import org.xvm.asm.op.JumpType;
 import org.xvm.asm.op.Label;
@@ -215,16 +215,24 @@ public class IsExpression
             }
         }
 
-        code.add(new IsType(argTarget, argType, argCond));
         if (cLVals > 1) {
-            if (generateConditionFalseJump(code, argCond)) {
-                aLVal[1].assign(argTarget, code, errs);
-            } else {
-                Label label = new Label("skip_assign");
-                code.add(new JumpFalse(argCond, label));
-                aLVal[1].assign(argTarget, code, errs);
-                code.add(label);
+            Label lblCond  = getConditionFalseLabel();
+            Label lblIs    = new Label("assign");
+            Label lblIsNot = lblCond == null ? new Label("skip_assign") : lblCond;
+
+            code.add(new JumpType(argTarget, argType, lblIs));
+            aLVal[0].assign(pool().valFalse(), code, errs);
+            code.add(new Jump(lblIsNot));
+
+            code.add(lblIs);
+            aLVal[0].assign(pool().valTrue(), code, errs);
+            aLVal[1].assign(argTarget, code, errs);
+
+            if (lblCond == null) {
+                code.add(lblIsNot);
             }
+        } else {
+            code.add(new IsType(argTarget, argType, argCond));
         }
     }
 

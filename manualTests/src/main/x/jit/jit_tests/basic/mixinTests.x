@@ -1,7 +1,9 @@
-module test7.examples.org {
+package mixinTests {
     @Inject Console console;
 
     void run() {
+        console.print(">>>> Running MixinTests >>>>");
+
         test1();
         test2();
         test3();

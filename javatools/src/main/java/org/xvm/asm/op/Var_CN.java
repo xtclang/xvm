@@ -5,12 +5,16 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.StringConstant;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -119,6 +123,21 @@ public class Var_CN
     public String getName(Constant[] aconst) {
         return getName(aconst, m_constName, m_nNameId);
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void computeTypes(BuildContext bctx) {
+        bctx.typeMatrix.declare(getAddress(), m_nVar, bctx.getArgumentType(m_nArgValue));
+    }
+
+    @Override
+    public void build(BuildContext bctx, CodeBuilder code) {
+        bctx.introduceVar(code, m_nVar, bctx.getArgumentType(m_nArgValue), bctx.getString(m_nNameId));
+        throw new UnsupportedOperationException("create a dynamic ref");
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private int m_nNameId;
     private int m_nArgValue;

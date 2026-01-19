@@ -55,6 +55,16 @@ public class Exit
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        bctx.exitScope(null);
+
+        // there are scenarios when Exit is unreachable (e.g. following LoopEnd)
+        if (bctx.typeMatrix.isReached(getAddress())) {
+            super.computeTypes(bctx);
+        }
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         bctx.exitScope(code);
     }

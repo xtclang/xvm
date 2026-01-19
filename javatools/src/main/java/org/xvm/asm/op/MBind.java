@@ -113,6 +113,13 @@ public class MBind
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        TypeConstant typeMethod = bctx.getArgumentType(m_nMethodId);
+
+        bctx.typeMatrix.assign(getAddress(), m_nRetValue, bctx.pool().bindMethodTarget(typeMethod));
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo regMethod = bctx.ensureRegister(code, m_nMethodId);
         RegisterInfo regTarget = bctx.ensureRegister(code, m_nTarget);
@@ -129,24 +136,24 @@ public class MBind
            Note that the resulting function is immutable if the target is immutable.
         */
 
-        code.aload(regMethod.slot())
-            .getfield(CD_nMethod, "stdMethod", CD_MethodHandle)
-            .aload(regTarget.slot())
-            .invokevirtual(CD_MethodHandle, "bindTo", MethodTypeDesc.of(CD_MethodHandle, CD_JavaObject));
+        regMethod.load(code);
+        code.getfield(CD_nMethod, "stdMethod", CD_MethodHandle);
+        regTarget.load(code);
+        code.invokevirtual(CD_MethodHandle, "bindTo", MethodTypeDesc.of(CD_MethodHandle, CD_JavaObject));
         int slotStd = bctx.storeTempValue(code, CD_MethodHandle);
 
         java.lang.classfile.Label ifNull = code.newLabel();
-        code.aload(regMethod.slot())
-            .getfield(CD_nMethod, "optMethod", CD_MethodHandle)
+        regMethod.load(code);
+        code.getfield(CD_nMethod, "optMethod", CD_MethodHandle)
             .dup()
-            .ifnull(ifNull)
-            .aload(regTarget.slot())
-            .invokevirtual(CD_MethodHandle, "bindTo", MethodTypeDesc.of(CD_MethodHandle, CD_JavaObject))
+            .ifnull(ifNull);
+        regTarget.load(code);
+        code.invokevirtual(CD_MethodHandle, "bindTo", MethodTypeDesc.of(CD_MethodHandle, CD_JavaObject))
             .labelBinding(ifNull);
         int slotOpt = bctx.storeTempValue(code, CD_MethodHandle);
 
-        code.aload(regTarget.slot())
-            .invokevirtual(regTarget.cd(), "$isImmut", MethodTypeDesc.of(CD_boolean));
+        regTarget.load(code);
+        code.invokevirtual(regTarget.cd(), "$isImmut", MethodTypeDesc.of(CD_boolean));
         int slotImm = bctx.storeTempValue(code, CD_boolean);
 
         TypeConstant typeFn = bctx.pool().bindMethodTarget(regMethod.type());
@@ -162,6 +169,6 @@ public class MBind
                     CD_MethodHandle, CD_MethodHandle, CD_boolean));
 
         RegisterInfo regRet = bctx.ensureRegInfo(m_nRetValue, typeFn, cdFn, "");
-        bctx.storeValue(code, regRet);
+        bctx.storeValue(code, regRet, typeFn);
     }
 }

@@ -137,22 +137,31 @@ public class Jump
     }
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        int nAddr = getAddress();
+        bctx.typeMatrix.follow(nAddr, nAddr + m_ofJmp, -1);
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
+        int nAddr = getAddress();
         int ofJmp = m_ofJmp;
         if (m_fCallFinally) {
             // $jumpN = true;
-            int slotJump = bctx.scope.getSynthetic("$jump" + (getAddress() + ofJmp), true);
+            int slotJump = bctx.scope.getSynthetic("$jump" + (nAddr + ofJmp), true);
             assert slotJump != -1;
             code.iconst_1()
                 .istore(slotJump);
             ofJmp = m_ofJumpFinally;
         }
 
+        int nAddrJump = nAddr + ofJmp;
         if (ofJmp > 1) {
-            code.goto_(bctx.ensureLabel(code, getAddress() + ofJmp));
+            code.goto_(bctx.ensureLabel(code, nAddrJump));
         } else {
             assert ofJmp == 1;
         }
+        bctx.mergeTypes(code, nAddrJump);
     }
 
     // ----- fields --------------------------------------------------------------------------------

@@ -10,8 +10,12 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpGeneral;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.NumberSupport;
 import org.xvm.javajit.RegisterInfo;
+import org.xvm.javajit.TextSupport;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -21,7 +25,8 @@ import org.xvm.runtime.ObjectHandle;
  * GP_SUB rvalue1, rvalue2, lvalue ; T - T -> T
  */
 public class GP_Sub
-        extends OpGeneral {
+        extends OpGeneral
+        implements NumberSupport, TextSupport {
     /**
      * Construct a GP_SUB op for the passed arguments.
      *
@@ -56,16 +61,21 @@ public class GP_Sub
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
-        switch (regTarget.cd().descriptorString()) {
-            case "I" -> {
-                code.isub();
-                bctx.adjustIntValue(code, regTarget.type());
-            }
-            case "J" -> code.lsub();
-            case "F" -> code.fsub();
-            case "D" -> code.dsub();
-            default  -> throw new IllegalStateException();
+    protected TypeConstant buildOptimizedBinary(BuildContext bctx,
+                                                CodeBuilder  code,
+                                                RegisterInfo regTarget,
+                                                int          nArgValue) {
+        if (regTarget.type().getValueString().equals("Char")) {
+            return buildSubFromChar(bctx, code, regTarget, nArgValue);
         }
+        return super.buildOptimizedBinary(bctx, code, regTarget, nArgValue);
+    }
+
+    @Override
+    protected void buildOptimizedBinary(BuildContext bctx,
+                                        CodeBuilder  code,
+                                        RegisterInfo regTarget,
+                                        RegisterInfo regArg) {
+        buildPrimitiveSub(bctx, code, regTarget);
     }
 }

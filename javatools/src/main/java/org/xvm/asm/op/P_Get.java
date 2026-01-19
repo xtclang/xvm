@@ -9,11 +9,11 @@ import java.lang.classfile.CodeBuilder;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.OpProperty;
 import org.xvm.asm.Scope;
 
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
@@ -127,6 +127,16 @@ public class P_Get
     }
 
     // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void computeTypes(BuildContext bctx) {
+        TypeConstant     typeTarget = bctx.getArgumentType(m_nTarget);
+        PropertyConstant idProp     = bctx.getConstant(m_nPropId, PropertyConstant.class);
+        PropertyInfo     propInfo   = idProp.getPropertyInfo(typeTarget);
+        TypeConstant     typeProp   = propInfo.getType();
+
+        bctx.typeMatrix.assign(getAddress(), m_nRetValue, typeProp);
+    }
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {

@@ -8,6 +8,8 @@ import java.io.IOException;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.javajit.BuildContext;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
@@ -200,6 +202,32 @@ public abstract class OpVar
 
         return sb.toString();
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void computeTypes(BuildContext bctx) {
+        if (isTypeAware()) {
+            TypeConstant typeVar = switch (getOpCode()) {
+                case OP_VAR, OP_VAR_I, OP_VAR_N, OP_VAR_IN ->
+                    bctx.getTypeConstant(m_nType);
+
+                case OP_VAR_D, OP_VAR_DN ->
+                    bctx.getConstant(m_nType, TypeConstant.class).getParamType(0);
+
+                default -> throw new UnsupportedOperationException(Op.toName(getOpCode()));
+            };
+
+            if (typeVar.containsGenericType(true)) {
+                typeVar = typeVar.resolveGenerics(bctx.pool(), bctx.typeInfo.getType());
+            }
+            bctx.typeMatrix.declare(getAddress(), m_nVar, typeVar);
+        } else {
+            super.computeTypes(bctx);
+        }
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     /**
      * The register that the VAR op is responsible for creating.

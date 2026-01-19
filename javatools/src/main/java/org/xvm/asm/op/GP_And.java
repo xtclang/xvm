@@ -11,6 +11,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.OpGeneral;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.NumberSupport;
 import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
@@ -21,7 +22,8 @@ import org.xvm.runtime.ObjectHandle;
  * GP_AND rvalue1, rvalue2, lvalue ; T & T -> T
  */
 public class GP_And
-        extends OpGeneral {
+        extends OpGeneral
+        implements NumberSupport {
     /**
      * Construct a GP_AND op for the passed arguments.
      *
@@ -56,14 +58,10 @@ public class GP_And
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    protected void buildOptimizedBinary(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
-        switch (regTarget.cd().descriptorString()) {
-            case "I" -> {
-                code.iand();
-                bctx.adjustIntValue(code, regTarget.type());
-            }
-            case "J" -> code.land();
-            default  -> throw new IllegalStateException();
-        }
+    protected void buildOptimizedBinary(BuildContext bctx,
+                                        CodeBuilder  code,
+                                        RegisterInfo regTarget,
+                                        RegisterInfo regArg) {
+        buildPrimitiveAnd(bctx, code, regTarget);
     }
 }

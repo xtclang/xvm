@@ -89,14 +89,22 @@ public class Label
     // ----- JIT support ------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        getNextOp().computeTypes(bctx);
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        assert m_label != null;
-        code.labelBinding(m_label);
+        // there is a possibility that the label was only used by the "dead" code that has been
+        // eliminated
+        if (m_label != null) {
+            code.labelBinding(m_label);
+        }
         getNextOp().build(bctx, code);
     }
 
     /**
-     * Ensure there is a Java label associated with this Prefix.
+     * Set or remove a Java label associated with this Prefix.
      */
     public void setLabel(java.lang.classfile.Label label) {
         m_label = label;

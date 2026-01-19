@@ -278,7 +278,9 @@ public class String
 
 
     public static boolean equals$p(Ctx ctx, nType type, String s1, String s2) {
-        return false;
+        // TODO CP: optimize
+        return s1.size$get$p(ctx) == s2.size$get$p(ctx) &&
+            s1.toString().equals(s2.toString());
     }
 
     @Override

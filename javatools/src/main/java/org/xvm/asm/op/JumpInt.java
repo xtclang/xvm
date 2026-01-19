@@ -204,6 +204,15 @@ public class JumpInt
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        int nAddrThis = getAddress();
+        for (int ofCase : m_aofCase) {
+            bctx.typeMatrix.follow(nAddrThis, nAddrThis + ofCase, -1);
+        }
+        bctx.typeMatrix.follow(nAddrThis, nAddrThis + m_ofDefault, -1);
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo regArg = bctx.loadArgument(code, m_nArg);
 

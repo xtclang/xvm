@@ -4,11 +4,17 @@ package org.xvm.asm.op;
 import java.io.DataInput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpInPlaceAssign;
 
 import org.xvm.asm.constants.PropertyConstant;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.NumberSupport;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -20,7 +26,8 @@ import org.xvm.runtime.template.reflect.xRef.RefHandle;
  * IP_AND rvalue-target, rvalue2 ; T &= T
  */
 public class IP_And
-        extends OpInPlaceAssign {
+        extends OpInPlaceAssign
+        implements NumberSupport {
     /**
      * Construct a IP_AND op based on the passed arguments.
      *
@@ -60,5 +67,15 @@ public class IP_And
     @Override
     protected int completeWithProperty(Frame frame, ObjectHandle hTarget, PropertyConstant idProp, ObjectHandle hValue) {
         return hTarget.getTemplate().invokePropertyAnd(frame, hTarget, idProp, hValue);
+    }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    protected void buildOptimizedBinary(BuildContext bctx,
+                                        CodeBuilder  code,
+                                        RegisterInfo regTarget,
+                                        RegisterInfo regArg) {
+        buildPrimitiveAnd(bctx, code, regTarget);
     }
 }

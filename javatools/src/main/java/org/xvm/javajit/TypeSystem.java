@@ -26,6 +26,7 @@ import org.xvm.javajit.builders.EnumValueBuilder;
 import org.xvm.javajit.builders.EnumerationBuilder;
 import org.xvm.javajit.builders.ExceptionBuilder;
 import org.xvm.javajit.builders.ModuleBuilder;
+import org.xvm.javajit.builders.PackageBuilder;
 
 import static org.xvm.javajit.Builder.MODULE;
 
@@ -292,12 +293,11 @@ public class TypeSystem {
      * @return the bytes of the ClassFile for the specified class name
      */
     public byte[] genClass(ModuleLoader moduleLoader, String name) {
-        String className = moduleLoader.prefix + name;
-
         ModuleStructure module = moduleLoader.module;
         Artifact        art    = deduceArtifact(module, name);
         if (art != null) {
-            Builder builder = ensureBuilder(art);
+            String  className = moduleLoader.prefix + name;
+            Builder builder   = ensureBuilder(art);
             Consumer<? super ClassBuilder> handler = classBuilder -> {
                 switch (art.shape) {
                 case Impl:
@@ -343,9 +343,15 @@ public class TypeSystem {
         TypeConstant type = art.type;
 
         if (type.isA(pool.typeModule())) {
-            // it's definitely not Module, since this is not the native TypeSystem
+            // it's definitely not Module.x, since this is not the native TypeSystem
             assert !type.equals(pool.typeModule());
             return new ModuleBuilder(this, type);
+        }
+
+        if (type.isA(pool.typePackage())) {
+            // it's definitely not Package.x, since this is not the native TypeSystem
+            assert !type.equals(pool.typeModule());
+            return new PackageBuilder(this, type);
         }
 
         if (art.shape == ClassfileShape.Enum) {
@@ -432,7 +438,8 @@ public class TypeSystem {
             name = name.substring(0, idOffset);
         }
 
-        if (module.getChildByPath(name.replace('$', '.')) instanceof ClassStructure struct) {
+        String xvmName = unescapeJitName(name).replace('$', '.');
+        if (module.getChildByPath(xvmName) instanceof ClassStructure struct) {
             if (type == null) {
                 type = struct.getCanonicalType();
             }

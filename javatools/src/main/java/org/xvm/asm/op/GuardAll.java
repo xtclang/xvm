@@ -97,11 +97,23 @@ public class GuardAll
     }
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        bctx.enterScope(null);
+        bctx.enterScope(null);
+
+        // we could be called for dead code to correctly compute the scopes, but should not
+        // compute types further
+        if (bctx.typeMatrix.isReached(getAddress())) {
+            super.computeTypes(bctx);
+        }
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         // the GuardAll introduces two scopes:
         //  - outer with synthetic vars: $rethrow, $contLoop, $breakLoop
         //  - inner loop that is guarded by "FinallyStart" op
-        org.xvm.javajit.Scope scopeOuter = bctx.enterScope(code, getAddress());
+        org.xvm.javajit.Scope scopeOuter = bctx.enterScope(code);
 
         // $rethrow = null;
         scopeOuter.allocateRethrow(code);
@@ -140,7 +152,7 @@ public class GuardAll
             }
         }
 
-        bctx.enterScope(code, getAddress()); // guarded by FinallyStart
+        bctx.enterScope(code); // guarded by FinallyStart
     }
 
     // ----- fields --------------------------------------------------------------------------------

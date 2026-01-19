@@ -21,22 +21,15 @@ public class Scope {
      * Construct the initial scope.
      */
     public Scope(BuildContext bctx, CodeBuilder code) {
-        this(bctx, code, null, -1, -1, 0, 0, 0);
+        this(bctx, code, null, -1, -1, 0, 0, 0, false);
     }
 
     /**
-     * Construct the child scope.
-     */
-    private Scope(Scope parent, int startAddr) {
-        this(parent.bctx, parent.code, parent, parent.startLocal, parent.topLocal, parent.topReg,
-             parent.depth + 1, startAddr);
-    }
-
-    /**
-     * The main constructor.
+     * The internal constructor.
      */
     private Scope(BuildContext bctx, CodeBuilder code, Scope parent,
-                  int startLocal, int topLocal, int topReg, int depth, int startAddr) {
+                  int startLocal, int topLocal, int topReg, int depth, int startAddr,
+                  boolean preprocess) {
         this.bctx       = bctx;
         this.code       = code;
         this.parent     = parent;
@@ -45,6 +38,7 @@ public class Scope {
         this.topReg     = topReg;
         this.depth      = depth;
         this.startAddr  = startAddr;
+        this.preprocess = preprocess;
         this.startLabel = code.newLabel();
         this.endLabel   = code.newLabel();
     }
@@ -93,6 +87,11 @@ public class Scope {
     public final int startAddr;
 
     /**
+     * If `true`, indicates a pre-processing phase.
+     */
+    public final boolean preprocess;
+
+    /**
      * The list of jumps addresses the "finally" block may need to conditionally jump to.
      */
     public List<Integer> jumps;
@@ -103,12 +102,22 @@ public class Scope {
     private Map<String, Integer> synthetics;
 
     /**
+     * Create a clone of the Scope that could be used for preprocessing.
+     */
+    public Scope startPreprocessing() {
+        assert depth == 0;
+        return new Scope(bctx, code, null, startLocal, topLocal, topReg,
+            0, startAddr, true);
+    }
+
+    /**
      * Enter a new Scope.
      *
      * @param startAddr  the address of the corresponding op
      */
     public Scope enter(int startAddr) {
-        return new Scope(this, startAddr);
+        return new Scope(bctx, code, this, startLocal, topLocal, topReg,
+            depth + 1, startAddr, preprocess);
     }
 
     /**
@@ -128,16 +137,27 @@ public class Scope {
      * @return the Java slot for the newly allocated local variable
      */
     public int allocateLocal(int regId, TypeKind kind) {
+        assert !preprocess;
+
         int slot = allocateJavaSlot(kind);
+        declareRegister(regId);
+        return slot;
+    }
+
+    /**
+     * Declare the specified register at this scope.
+     */
+    public void declareRegister(int regId) {
         assert parent == null || regId >= parent.topReg;
         topReg = Math.max(topReg, regId + 1);
-        return slot;
     }
 
     /**
      * Allocate a slot for an exception to be rethrown by the {@link FinallyEnd}.
      */
     public void allocateRethrow(CodeBuilder code) {
+        assert !preprocess;
+
         // at the moment, the name doesn't have to be unique across the scopes since we don't
         // register the variable with the method, but we can always augment it by the "depth"
         int slot = allocateSynthetic("$rethrow", TypeKind.REFERENCE);
@@ -156,6 +176,8 @@ public class Scope {
      * Allocate Java slots for conditional jumps by the {@link FinallyEnd}.
      */
     public void allocateJumps(CodeBuilder code, List<Integer> jumps) {
+        assert !preprocess;
+
         for (Integer jump : jumps) {
             // $jumpN = false;
             int slot = allocateSynthetic("$jump" + jump, TypeKind.BOOLEAN);
@@ -171,6 +193,8 @@ public class Scope {
      * @return the Java slot for the newly allocated synthetic variable
      */
     public int allocateSynthetic(String name, TypeKind kind) {
+        assert !preprocess;
+
         int slot = allocateJavaSlot(kind);
         if (synthetics == null) {
             synthetics = new HashMap<>();
@@ -192,6 +216,8 @@ public class Scope {
      * @return a Java slot(s) of the specified kind within this scope
      */
     public int allocateJavaSlot(TypeKind kind) {
+        assert !preprocess;
+
         int slot;
         if (topLocal >= bctx.maxLocal || startLocal == -1) {
             slot = code.allocateLocal(kind);
@@ -234,7 +260,9 @@ public class Scope {
             parent.startLocal = this.startLocal;
             parent.topLocal   = this.topLocal;
         }
-        code.labelBinding(endLabel);
+        if (!preprocess) {
+            code.labelBinding(endLabel);
+        }
         return parent;
     }
 }

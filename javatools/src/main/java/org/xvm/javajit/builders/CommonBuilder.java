@@ -274,7 +274,7 @@ public class CommonBuilder
 
         Format format = classStruct.getFormat();
         switch (format) {
-        case CLASS, CONST, SERVICE, MODULE, ENUM, ENUMVALUE:
+        case CLASS, CONST, SERVICE, MODULE, PACKAGE, ENUM, ENUMVALUE:
             assembleInitializer(className, classBuilder, initProps);
             break;
         }
@@ -431,13 +431,9 @@ public class CommonBuilder
                 Label endScope   = code.newLabel();
                 code.labelBinding(startScope);
 
-                int ctxSlot = code.parameterSlot(0);
-                code.localVariable(ctxSlot, "$ctx", CD_Ctx, startScope, endScope);
+                code.localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, startScope, endScope);
 
-                // super($ctx);
-                code.aload(0)
-                    .aload(ctxSlot)
-                    .invokespecial(getSuperCD(), INIT_NAME, MD_Initializer);
+                callSuperInitializer(code);
 
                 // add field initialization
                 for (PropertyInfo prop : props) {
@@ -471,6 +467,16 @@ public class CommonBuilder
                     .return_();
             }
         );
+    }
+
+    /**
+     * Assemble the super class constructor call.
+     */
+    protected void callSuperInitializer(CodeBuilder code) {
+        // super($ctx);
+        code.aload(0)
+            .aload(code.parameterSlot(0))
+            .invokespecial(getSuperCD(), INIT_NAME, MD_Initializer);
     }
 
     /**
@@ -769,12 +775,14 @@ public class CommonBuilder
      * Assemble methods for the "Impl" shape.
      */
     protected void assembleImplMethods(String className, ClassBuilder classBuilder) {
+        boolean assembleDeclared = classStruct.getFormat() != Format.INTERFACE;
+
         for (MethodInfo method : typeInfo.getMethods().values()) {
             if (method.isNative()) {
                 continue; // not our responsibility
             }
 
-            if (classStruct.getFormat() != Format.INTERFACE &&
+            if (assembleDeclared &&
                     method.getHead().getImplementation() == Implementation.Declared) {
                 assembleImplMethod(className, classBuilder, method);
             }
