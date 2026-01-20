@@ -34,6 +34,20 @@ public abstract class BaseBinaryFP
     }
 
     @Override
+    public void initNative() {
+        super.initNative();
+
+        markNativeMethod("toInt64",   null, null);
+        markNativeMethod("toDec64",   null, null);
+        markNativeMethod("toFloat32", null, null);
+        markNativeMethod("toFloat64", null, null);
+        markNativeMethod("toIntN",    null, null);
+        markNativeMethod("toUIntN",   null, null);
+        markNativeMethod("toFloatN",  null, null);
+        markNativeMethod("toDecN",    null, null);
+    }
+
+    @Override
     public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
         double d = ((FloatHandle) hTarget).getValue();
 
