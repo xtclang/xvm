@@ -359,7 +359,7 @@ public abstract class OpInvocable extends Op {
         }
 
         bctx.loadCtx(code);
-        bctx.loadArguments(code, jmd, anArgValue);
+        bctx.loadCallArguments(code, jmd, anArgValue);
 
         if (infoMethod.getHead().getImplementation().getExistence() == MethodBody.Existence.Interface) {
             code.invokeinterface(cdTarget, methodName, md);

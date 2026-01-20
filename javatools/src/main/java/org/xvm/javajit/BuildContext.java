@@ -628,7 +628,7 @@ public class BuildContext {
                 int extSlot = code.parameterSlot(extraArgs + i + 1);
 
                 registerInfos.put(varIndex,
-                    new DoubleSlot(varIndex, slot, extSlot, paramDesc.flavor, type, paramDesc.cd, name));
+                    new DoubleSlot(this, varIndex, slot, extSlot, paramDesc.flavor, type, paramDesc.cd, name));
                 i++; // already processed
                 break;
             }
@@ -772,8 +772,7 @@ public class BuildContext {
         assert isConstructor || !isFunction;
 
         RegisterInfo reg = getRegisterInfo(code, Op.A_THIS);
-        reg.load(code);
-        return reg;
+        return reg.load(code);
     }
 
     /**
@@ -812,45 +811,45 @@ public class BuildContext {
      * Build the code to load an argument value on the Java stack.
      */
     public RegisterInfo loadArgument(CodeBuilder code, int argId) {
-        if (argId >= 0) {
-            RegisterInfo reg = getRegisterInfo(code, argId);
-            assert reg != null;
-            ClassDesc cd = reg.cd();
-            if (reg instanceof DoubleSlot doubleSlot) {
-                switch (doubleSlot.flavor) {
-                case PrimitiveWithDefault:
-                    Parameter parameter = methodStruct.getParam(argId);
-                    assert parameter.hasDefaultValue();
-
-                    Label ifTrue = code.newLabel();
-                    Label endIf  = code.newLabel();
-
-                    // if the extension slot is `true`, take the default value
-                    code.iload(doubleSlot.extSlot)
-                        .ifne(ifTrue)
-                        .loadLocal(Builder.toTypeKind(cd), doubleSlot.slot)
-                        .goto_(endIf)
-                        .labelBinding(ifTrue);
-                    builder.loadConstant(this, code, parameter.getDefaultValue());
-                    code.labelBinding(endIf);
-                    return new SingleSlot(reg.type(), cd, reg.name());
-
-                case MultiSlotPrimitive:
-                    code.loadLocal(Builder.toTypeKind(cd), doubleSlot.slot);
-                    code.loadLocal(TypeKind.BOOLEAN, doubleSlot.extSlot);
-                    return reg;
-
-                default:
-                    throw new IllegalStateException();
-                }
-            }
-            code.loadLocal(Builder.toTypeKind(cd), reg.slot());
-
-            return adjustRegister(code, reg, true);
-        }
-        return argId <= Op.CONSTANT_OFFSET
+        return argId >= 0
+            ? adjustRegister(code, getRegisterInfo(code, argId).load(code), true)
+            : argId <= Op.CONSTANT_OFFSET
                 ? loadConstant(code, argId)
                 : loadPredefineArgument(code, argId);
+    }
+
+    /**
+     * Build the code to load an argument value on the Java stack. If the argument represents a
+     * constant, the corresponding value gets loaded on the Java stack directly, without allocating
+     * a Java slot, in which case the RegisterInfo.slot() returns the value of {@link Op#A_STACK}
+     * (-1).
+     *
+     * @param targetDesc  the desired type description
+     */
+    public RegisterInfo loadArgument(CodeBuilder code, int argId, JitTypeDesc targetDesc) {
+        RegisterInfo reg = loadArgument(code, argId);
+        if (reg.cd().isPrimitive() && !targetDesc.cd.isPrimitive()) {
+            if (reg instanceof DoubleSlot doubleSlot) {
+                assert doubleSlot.flavor == MultiSlotPrimitive;
+                // loadArgument() has already loaded the value and the boolean
+
+                Label ifTrue = code.newLabel();
+                Label endIf  = code.newLabel();
+
+                code.ifne(ifTrue);
+                Builder.box(code, reg.type().removeNullable(), reg.cd());
+                code.goto_(endIf)
+                    .labelBinding(ifTrue);
+                Builder.pop(code, doubleSlot.cd);
+                Builder.loadNull(code);
+                code.labelBinding(endIf);
+                reg = new SingleSlot(targetDesc.type, targetDesc.cd, reg.name() + "?");
+            } else {
+                Builder.box(code, reg.type(), reg.cd());
+                reg = new SingleSlot(targetDesc.type, targetDesc.cd, reg.name());
+            }
+        }
+        return reg;
     }
 
     /**
@@ -885,40 +884,6 @@ public class BuildContext {
                 if (loaded) {
                     code.checkcast(narrowedCD);
                 }
-            }
-        }
-        return reg;
-    }
-
-    /**
-     * Build the code to load an argument value on the Java stack. If the argument represents a
-     * constant, the corresponding value gets loaded on the Java stack directly, without allocating
-     * a Java slot, in which case the RegisterInfo.slot() returns the value of {@link Op#A_STACK}
-     * (-1).
-     *
-     * @param targetDesc  the desired type description
-     */
-    public RegisterInfo loadArgument(CodeBuilder code, int argId, JitTypeDesc targetDesc) {
-        RegisterInfo reg = loadArgument(code, argId);
-        if (reg.cd().isPrimitive() && !targetDesc.cd.isPrimitive()) {
-            if (reg instanceof DoubleSlot doubleSlot) {
-                assert doubleSlot.flavor == MultiSlotPrimitive;
-                // loadArgument() has already loaded the value and the boolean
-
-                Label ifTrue = code.newLabel();
-                Label endIf  = code.newLabel();
-
-                code.ifne(ifTrue);
-                Builder.box(code, reg.type().removeNullable(), reg.cd());
-                code.goto_(endIf)
-                    .labelBinding(ifTrue);
-                Builder.pop(code, doubleSlot.cd);
-                Builder.loadNull(code);
-                code.labelBinding(endIf);
-                reg = new SingleSlot(targetDesc.type, targetDesc.cd, reg.name() + "?");
-            } else {
-                Builder.box(code, reg.type(), reg.cd());
-                reg = new SingleSlot(targetDesc.type, targetDesc.cd, reg.name());
             }
         }
         return reg;
@@ -972,8 +937,7 @@ public class BuildContext {
         case Op.A_STACK:
             // this refers to a synthetic RegInfo created by the pushTempRegister() method
             RegisterInfo reg = tempRegStack.pop();
-            reg.load(code);
-            return reg;
+            return reg.load(code);
 
         case Op.A_THIS:
             return loadThis(code);
@@ -1113,7 +1077,7 @@ public class BuildContext {
             code.localVariable(slotPrime, name, cd, varStart, scope.endLabel);
             code.localVariable(slotExt,   name+EXT, CD_boolean, varStart, scope.endLabel);
 
-            reg = new DoubleSlot(regId, slotPrime, slotExt, MultiSlotPrimitive, type, cd, name);
+            reg = new DoubleSlot(this, regId, slotPrime, slotExt, MultiSlotPrimitive, type, cd, name);
         } else {
             cd = JitParamDesc.getJitClass(typeSystem, type);
 
@@ -1186,7 +1150,7 @@ public class BuildContext {
     /**
      * Load arguments for a method invocation.
      */
-    public void loadArguments(CodeBuilder code, JitMethodDesc jmd, int[] anArgValue) {
+    public void loadCallArguments(CodeBuilder code, JitMethodDesc jmd, int[] anArgValue) {
         boolean isOptimized = jmd.isOptimized;
         int     argCount    = anArgValue.length;
 
@@ -1437,7 +1401,7 @@ public class BuildContext {
         if (infoTarget.hasGenericTypes()) {
             Builder.loadTypeConstant(code, typeSystem, infoTarget.getType());
         }
-        loadArguments(code, jmdNew, anArgValue);
+        loadCallArguments(code, jmdNew, anArgValue);
 
         code.invokestatic(cdTarget, sJitNew, md);
         return cdTarget;
@@ -1739,12 +1703,13 @@ public class BuildContext {
         }
     }
 
-    public record DoubleSlot(int regId, int slot, int extSlot, JitFlavor flavor,
-                             TypeConstant type, ClassDesc cd, String name)
+    public record DoubleSlot(BuildContext bctx, int regId, int slot, int extSlot,
+                             JitFlavor flavor, TypeConstant type, ClassDesc cd, String name)
             implements RegisterInfo {
 
-        public DoubleSlot(int regId, int slot, int extSlot, JitFlavor flavor,
+        public DoubleSlot(BuildContext bctx, int regId, int slot, int extSlot, JitFlavor flavor,
                              TypeConstant type, ClassDesc cd, String name) {
+            this.bctx    = bctx;
             this.regId   = regId;
             this.slot    = slot;
             this.extSlot = extSlot;
@@ -1761,10 +1726,33 @@ public class BuildContext {
 
         @Override
         public RegisterInfo load(CodeBuilder code) {
-            // load the "extension" boolean flag first.
-            code.iload(extSlot());
+            switch (flavor) {
+            case PrimitiveWithDefault:
+                Parameter parameter = bctx.methodStruct.getParam(regId);
+                assert parameter.hasDefaultValue();
 
-            return RegisterInfo.super.load(code);
+                Label ifTrue = code.newLabel();
+                Label endIf  = code.newLabel();
+
+                // if the extension slot is `true`, take the default value
+                code.iload(extSlot)
+                    .ifne(ifTrue)
+                    .loadLocal(Builder.toTypeKind(cd), slot)
+                    .goto_(endIf)
+                    .labelBinding(ifTrue);
+                bctx.builder.loadConstant(bctx, code, parameter.getDefaultValue());
+                code.labelBinding(endIf);
+                return new SingleSlot(type(), cd, name());
+
+            case MultiSlotPrimitive:
+                // load the "extension" boolean flag last
+                Builder.load(code, cd, slot);
+                Builder.load(code, CD_boolean, extSlot);
+                return this;
+
+            default:
+                throw new IllegalStateException();
+            }
         }
 
         @Override

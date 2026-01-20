@@ -673,7 +673,7 @@ public abstract class OpCallable extends Op {
             }
 
             bctx.loadCtx(code);
-            bctx.loadArguments(code, jmdCall, anArgValue);
+            bctx.loadCallArguments(code, jmdCall, anArgValue);
 
             code.invokevirtual(CD_MethodHandle, "invokeExact",
                 jmdCall.isOptimized ? jmdCall.optimizedMD : jmdCall.standardMD);
@@ -695,7 +695,7 @@ public abstract class OpCallable extends Op {
         }
 
         bctx.loadCtx(code);
-        bctx.loadArguments(code, jmdCall, anArgValue);
+        bctx.loadCallArguments(code, jmdCall, anArgValue);
 
         if (fSpecial) {
             code.invokespecial(cdTarget, sJitName, mdCall);
@@ -785,7 +785,7 @@ public abstract class OpCallable extends Op {
         bctx.loadCtx(code);
         bctx.loadCtorCtx(code);
         bctx.loadThis(code);
-        bctx.loadArguments(code, jmdCtor, anArgValue);
+        bctx.loadCallArguments(code, jmdCtor, anArgValue);
         code.invokestatic(cdTarget, sJitCtor, md);
     }
 
