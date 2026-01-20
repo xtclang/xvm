@@ -41,6 +41,19 @@ public abstract class BaseDecFP
     }
 
     @Override
+    public void initNative() {
+        super.initNative();
+
+        markNativeMethod("toInt64",   null, null);
+        markNativeMethod("toFloat32", null, null);
+        markNativeMethod("toFloat64", null, null);
+        markNativeMethod("toIntN",    null, null);
+        markNativeMethod("toUIntN",   null, null);
+        markNativeMethod("toFloatN",  null, null);
+        markNativeMethod("toDecN",    null, null);
+    }
+
+    @Override
     public int createConstHandle(Frame frame, Constant constant) {
         if (constant instanceof DecimalConstant constDec) {
             return frame.pushStack(makeHandle(constDec.getValue()));

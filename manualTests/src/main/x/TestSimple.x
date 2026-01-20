@@ -2,13 +2,16 @@ module TestSimple {
     @Inject Console console;
 
     void run() {
-        Int i = 0;
-        Int j = 1;
+        Double i = 0.1;
+        Int    j = 10;
+        Int    k64 = (j / i).toInt64();
 
-        assert i > j as assert as assert as message();
-        assert i > j as assert False; // this used to blow up in the compiler
+        // used to throw at run-time
+        Int32  k32 = (j / i).toInt32();
+        Int16  k16 = (j / i).toInt16();
+        Int8   k8  = (j / i).toInt8();
+
+        console.print($"{k64=} {k32=} {k16=} {k8=}");
     }
-
-    String message() = "wrong";
 }
 

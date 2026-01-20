@@ -267,7 +267,7 @@ const Dec64
     Float128 toFloat128();
 
     @Override
-    Dec64 toDec64() =this;
+    Dec64 toDec64() = this;
 
     @Auto
     @Override
