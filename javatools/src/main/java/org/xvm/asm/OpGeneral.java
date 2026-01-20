@@ -253,8 +253,7 @@ public abstract class OpGeneral
             bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeResult), typeResult);
         } else { // unary op
             if (cdTarget.isPrimitive()) {
-                regTarget.load(code);
-                buildOptimizedUnary(bctx, code, regTarget);
+                buildOptimizedUnary(bctx, code, regTarget.load(code));
             } else {
                 String sName;
                 String sOp;
