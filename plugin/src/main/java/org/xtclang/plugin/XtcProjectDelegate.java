@@ -463,6 +463,14 @@ public class XtcProjectDelegate {
             task.setDescription("Compile an XTC source set, similar to the JavaCompile task for Java.");
             task.dependsOn(XDK_EXTRACT_TASK_NAME);
             task.setSource(sourceSet.getExtensions().getByName(XTC_LANGUAGE_NAME)); // Register this task as an XTC language compiler. Not a Java compiler.
+
+            // Test source set should depend on main source set compilation
+            // This mirrors Java's behavior where testCompileJava depends on compileJava
+            if (SourceSet.TEST_SOURCE_SET_NAME.equals(sourceSet.getName())) {
+                final var mainCompileTaskName = getCompileTaskName(getSourceSets(project).getByName(MAIN_SOURCE_SET_NAME));
+                task.dependsOn(mainCompileTaskName);
+                logger.info("[plugin] Added dependency: {} -> {}", compileTaskName, mainCompileTaskName);
+            }
         });
 
         // Find the "classes" task in the Java build life cycle that we reuse, and set the dependency correctly. This should
@@ -607,6 +615,15 @@ public class XtcProjectDelegate {
             addXtcModuleAttributes(config);
         });
         logger.info("[plugin] Created config '{}'", xtcModule.getName());
+
+        // Test source set should automatically depend on main source set output
+        // This mirrors Java's behavior where test compilation can see main classes
+        if (SourceSet.TEST_SOURCE_SET_NAME.equals(sourceSet.getName())) {
+            final var mainSourceSet = getSourceSets(project).getByName(MAIN_SOURCE_SET_NAME);
+            final var mainOutputDir = getXtcSourceSetOutputDirectory(project, mainSourceSet);
+            project.getDependencies().add(xtcModuleConsumerConfig, project.files(mainOutputDir));
+            logger.info("[plugin] Added main source set output to {}: {}", xtcModuleConsumerConfig, mainOutputDir);
+        }
 
         final var xtcModuleProvider = configs.register(xtcModuleProducerConfig, config -> {
             config.setDescription("Configuration that contains location of the .xtc files produced by this project build.");
