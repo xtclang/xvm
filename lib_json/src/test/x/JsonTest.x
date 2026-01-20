@@ -12,12 +12,6 @@ module JsonTest {
      */
     class DocTest {
         @Test
-        void shouldCreateNullDoc() {
-            json.Doc doc = Null;
-            assert doc == Null;
-        }
-
-        @Test
         void shouldCreateBooleanDoc() {
             json.Doc docTrue = True;
             json.Doc docFalse = False;

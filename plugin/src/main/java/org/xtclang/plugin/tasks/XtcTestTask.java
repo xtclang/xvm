@@ -1,15 +1,20 @@
 package org.xtclang.plugin.tasks;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Stream;
 
 import javax.inject.Inject;
 
 import org.gradle.api.Project;
 import org.gradle.api.file.Directory;
 import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.CacheableTask;
@@ -35,17 +40,17 @@ import static org.xtclang.plugin.XtcPluginUtils.failure;
  * Task that runs XTC xunit tests.
  * <p>
  * This task extends XtcRunTask to inherit all module running capabilities,
- * adding test-specific behavior like fail-on-failure control and test filtering.
+ * adding test-specific behavior like fail-on-failure control.
  * <p>
  * Tests are configured the same way as run modules - via the xtcTest extension
  * or directly on the task. The task will run the configured test modules and
  * report results.
+ * <p>
+ * Test filtering (include/exclude) is handled at the source set level.
  */
 @CacheableTask
 public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension {
     private final Property<@NotNull Boolean> failOnTestFailure;
-    private final ListProperty<@NotNull String> includes;
-    private final ListProperty<@NotNull String> excludes;
     private final XtcTestExtension testExtension;
     private final Directory outputDir;
 
@@ -58,8 +63,6 @@ public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension
         this.testExtension = XtcProjectDelegate.resolveXtcTestExtension(project);
         this.outputDir = project.getLayout().getBuildDirectory().get().dir("xunit");
         this.failOnTestFailure = objects.property(Boolean.class).convention(testExtension.getFailOnTestFailure());
-        this.includes = objects.listProperty(String.class).convention(testExtension.getIncludes());
-        this.excludes = objects.listProperty(String.class).convention(testExtension.getExcludes());
     }
 
     /**
@@ -75,18 +78,6 @@ public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension
     @Override
     public Property<@NotNull Boolean> getFailOnTestFailure() {
         return failOnTestFailure;
-    }
-
-    @Internal
-    @Override
-    public ListProperty<@NotNull String> getIncludes() {
-        return includes;
-    }
-
-    @Internal
-    @Override
-    public ListProperty<@NotNull String> getExcludes() {
-        return excludes;
     }
 
     @Internal
@@ -143,51 +134,56 @@ public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension
         logger.info("[plugin] Auto-discovered {} test module(s):", discoveredModules.size());
         discoveredModules.forEach(module -> logger.info("[plugin]    Test module: {}", module.getModuleName().get()));
 
-        // TODO: Apply include/exclude filters to discovered test modules
         return discoveredModules;
     }
 
     /**
      * Discovers test modules from the test source set output directory.
      * Scans for .xtc files and creates XtcRunModule instances for each.
+     * Results are sorted by module name for deterministic test execution order.
      *
-     * @return list of discovered test modules
+     * @return list of discovered test modules, sorted by name
      */
     private List<XtcRunModule> discoverTestModules() {
-        final List<XtcRunModule> modules = new ArrayList<>();
-
         // Get the test source set output directory
         final Provider<@NotNull Directory> testOutputDir = sourceSetOutputDirs.get(SourceSet.TEST_SOURCE_SET_NAME);
         if (testOutputDir == null) {
             logger.warn("[plugin] Test source set output directory not found.");
-            return modules;
+            return List.of();
         }
 
-        final File testOutputDirFile = testOutputDir.get().getAsFile();
-        if (!testOutputDirFile.exists() || !testOutputDirFile.isDirectory()) {
-            logger.info("[plugin] Test source set output directory does not exist or is not a directory: {}", testOutputDirFile);
-            return modules;
+        final Path testOutputPath = testOutputDir.get().getAsFile().toPath();
+        if (!Files.exists(testOutputPath) || !Files.isDirectory(testOutputPath)) {
+            logger.info("[plugin] Test source set output directory does not exist or is not a directory: {}", testOutputPath);
+            return List.of();
         }
 
-        // Scan for .xtc files
-        final File[] xtcFiles = testOutputDirFile.listFiles((dir, name) -> name.endsWith("." + XTC_MODULE_FILE_EXTENSION));
-        if (xtcFiles == null || xtcFiles.length == 0) {
-            logger.info("[plugin] No .xtc files found in test output directory: {}", testOutputDirFile);
-            return modules;
+        final String xtcExtension = "." + XTC_MODULE_FILE_EXTENSION;
+        final List<XtcRunModule> modules = new ArrayList<>();
+
+        // Use NIO Files.list for proper resource handling and deterministic ordering
+        try (Stream<Path> files = Files.list(testOutputPath)) {
+            files.filter(Files::isRegularFile)
+                .filter(path -> path.getFileName().toString().endsWith(xtcExtension))
+                .sorted(Comparator.comparing(path -> path.getFileName().toString()))
+                .forEach(xtcPath -> {
+                    final String fileName = xtcPath.getFileName().toString();
+                    // Remove .xtc extension to get module name
+                    final String moduleName = fileName.substring(0, fileName.length() - xtcExtension.length());
+
+                    final DefaultXtcRunModule runModule = objects.newInstance(DefaultXtcRunModule.class);
+                    runModule.getModuleName().set(moduleName);
+                    // Method name defaults to "run" which is correct for test modules
+                    modules.add(runModule);
+
+                    logger.info("[plugin] Discovered test module: {} (from {})", moduleName, xtcPath);
+                });
+        } catch (final IOException e) {
+            throw new UncheckedIOException("Failed to list test output directory: " + testOutputPath, e);
         }
 
-        // Create XtcRunModule for each discovered .xtc file
-        for (final File xtcFile : xtcFiles) {
-            final String fileName = xtcFile.getName();
-            // Remove .xtc extension to get module name
-            final String moduleName = fileName.substring(0, fileName.length() - XTC_MODULE_FILE_EXTENSION.length() - 1);
-
-            final DefaultXtcRunModule runModule = objects.newInstance(DefaultXtcRunModule.class);
-            runModule.getModuleName().set(moduleName);
-            // Method name defaults to "run" which is correct for test modules
-            modules.add(runModule);
-
-            logger.info("[plugin] Discovered test module: {} (from {})", moduleName, xtcFile);
+        if (modules.isEmpty()) {
+            logger.info("[plugin] No .xtc files found in test output directory: {}", testOutputPath);
         }
 
         return modules;

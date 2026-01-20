@@ -1,6 +1,5 @@
 package org.xtclang.plugin;
 
-import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.jetbrains.annotations.NotNull;
 
@@ -11,6 +10,8 @@ import org.jetbrains.annotations.NotNull;
  * <p>
  * As with every other extension, by convention, it should be possible to change, extend
  * or override parts of it on individual test task level.
+ * <p>
+ * Test filtering (include/exclude) is handled at the source set level, not here.
  */
 public interface XtcTestExtension extends XtcRuntimeExtension {
 
@@ -21,19 +22,4 @@ public interface XtcTestExtension extends XtcRuntimeExtension {
      * @return property controlling build failure on test failure
      */
     Property<@NotNull Boolean> getFailOnTestFailure();
-
-    /**
-     * Patterns for test classes to include.
-     * If empty, all tests are included.
-     *
-     * @return list of include patterns
-     */
-    ListProperty<@NotNull String> getIncludes();
-
-    /**
-     * Patterns for test classes to exclude.
-     *
-     * @return list of exclude patterns
-     */
-    ListProperty<@NotNull String> getExcludes();
 }
