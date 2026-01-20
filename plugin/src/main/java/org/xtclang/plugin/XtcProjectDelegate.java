@@ -524,6 +524,7 @@ public class XtcProjectDelegate {
             task.setGroup(LifecycleBasePlugin.VERIFICATION_GROUP);
             task.setDescription("Run XTC xunit tests.");
             task.getFailOnTestFailure().convention(true);
+            task.dependsOn(compileTaskNames);
             logger.info("[plugin] Configured test task with dependency on: {}", compileTaskNames);
         });
 
@@ -575,8 +576,18 @@ public class XtcProjectDelegate {
         createJavaToolsConfig(); // Ensure javatools config exists before tasks are created
     }
 
-    // Attributes for anything that consumes or produces xtc files to a source set output directory
-    private void addXtcModuleAttributes(final Configuration config) {
+    // Attributes for anything that consumes xtc files from external projects
+    // Consumer configs always use the base "xtc" element to consume main outputs
+    private void addXtcModuleConsumerAttributes(final Configuration config) {
+        config.attributes(it -> {
+            it.attribute(CATEGORY_ATTRIBUTE, objects.named(Category.class, LIBRARY));
+            it.attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.class, XTC_LANGUAGE_NAME));
+        });
+    }
+
+    // Attributes for anything that produces xtc files from this project
+    // Producer configs use "xtc" for main and "xtc-test" for test source sets
+    private void addXtcModuleProducerAttributes(final Configuration config) {
         config.attributes(it -> {
             it.attribute(CATEGORY_ATTRIBUTE, objects.named(Category.class, LIBRARY));
             it.attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.class, xtcModuleLibraryElementName(config)));
@@ -612,7 +623,7 @@ public class XtcProjectDelegate {
                 "Configuration that contains location of the .xtc file created by other entities, so that they can be declared as dependencies.");
             config.setCanBeResolved(true);
             config.setCanBeConsumed(false);
-            addXtcModuleAttributes(config);
+            addXtcModuleConsumerAttributes(config);
         });
         logger.info("[plugin] Created config '{}'", xtcModule.getName());
 
@@ -629,9 +640,11 @@ public class XtcProjectDelegate {
             config.setDescription("Configuration that contains location of the .xtc files produced by this project build.");
             config.setCanBeResolved(false);
             config.setCanBeConsumed(true);
-            addXtcModuleAttributes(config);
+            // Extend from the consumer config to expose transitive dependencies
+            config.extendsFrom(configs.getByName(xtcModuleConsumerConfig));
+            addXtcModuleProducerAttributes(config);
         });
-        logger.info("[plugin] Created config '{}'", xtcModuleProvider.getName());
+        logger.info("[plugin] Created config '{}' (extends {})", xtcModuleProvider.getName(), xtcModuleConsumerConfig);
 
         // Tell the system that the system may produce an artifact, which is the output directory for this sourceSet,
         // that will contain all xtc files built by the compile task for this source set. This makes it possible for
@@ -643,11 +656,13 @@ public class XtcProjectDelegate {
             // But we need to declare this artifact in the xdkModuleProvider if we want someone to use the xtcModule consumer
             // and get the build directory (also forcing it to be built since it depends on the compileTask)
             final var location = getXtcSourceSetOutputDirectory(project, sourceSet);
+            final var compileTaskName = getCompileTaskName(sourceSet);
             artifactHandler.add(xtcModuleProvider.getName(), location, artifact -> {
-                logger.info("[plugin] Adding outgoing artifact {}; builtBy {}.", location.get(), "build task");
-                // Make XTC module artifacts depend on the full build lifecycle (including tests)
-                // rather than just compilation, so distributions trigger complete builds
-                artifact.builtBy(project.getTasks().named("build"));
+                logger.info("[plugin] Adding outgoing artifact {}; builtBy {}.", location.get(), compileTaskName);
+                // Module artifacts depend on the compile task, not the full build lifecycle.
+                // This avoids circular dependencies when tests depend on modules from other projects.
+                // Distributions that need complete builds should depend on 'build' task explicitly.
+                artifact.builtBy(project.getTasks().named(compileTaskName));
                 artifact.setType(ArtifactTypeDefinition.DIRECTORY_TYPE);
             });
         });
