@@ -20,6 +20,7 @@ import org.gradle.api.provider.Provider;
 import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.TaskAction;
 
@@ -52,7 +53,7 @@ import static org.xtclang.plugin.XtcPluginUtils.failure;
 public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension {
     private final Property<@NotNull Boolean> failOnTestFailure;
     private final XtcTestExtension testExtension;
-    private final Directory outputDir;
+    private final Provider<@NotNull Directory> outputDir;
 
     @SuppressWarnings({"ConstructorNotProtectedInAbstractClass", "this-escape"})
     @Inject
@@ -61,7 +62,7 @@ public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension
 
         // Test-specific properties with conventions from extension
         this.testExtension = XtcProjectDelegate.resolveXtcTestExtension(project);
-        this.outputDir = project.getLayout().getBuildDirectory().get().dir("xunit");
+        this.outputDir = project.getLayout().getBuildDirectory().map(dir -> dir.dir("xunit"));
         this.failOnTestFailure = objects.property(Boolean.class).convention(testExtension.getFailOnTestFailure());
     }
 
@@ -86,8 +87,8 @@ public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension
         return XTC_TEST_RUNNER_CLASS_NAME;
     }
 
-    @Internal
-    public Directory getOutputDirectory() {
+    @OutputDirectory
+    public Provider<@NotNull Directory> getOutputDirectory() {
         return outputDir;
     }
 

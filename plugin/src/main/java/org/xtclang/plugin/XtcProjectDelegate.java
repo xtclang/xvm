@@ -8,6 +8,7 @@ import static org.gradle.api.tasks.SourceSet.MAIN_SOURCE_SET_NAME;
 
 import static org.xtclang.plugin.XtcPluginConstants.PLUGIN_BUILD_INFO_FILENAME;
 import static org.xtclang.plugin.XtcPluginConstants.PLUGIN_BUILD_INFO_RESOURCE_PATH;
+import static org.xtclang.plugin.XtcPluginConstants.PROPERTY_SKIP_TESTS;
 import static org.xtclang.plugin.XtcPluginConstants.PROPERTY_VERBOSE_LOGGING_OVERRIDE;
 import static org.xtclang.plugin.XtcPluginConstants.UNSPECIFIED;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_ARTIFACT_JAVATOOLS_JAR;
@@ -513,18 +514,27 @@ public class XtcProjectDelegate {
     /**
      * Create the XTC test task. This task runs xunit tests for XTC modules.
      * The test task depends on compile tasks and is wired into the Gradle check lifecycle.
+     * <p>
+     * The task can be skipped by setting the project property {@code -PskipXtcTests}.
      */
     private void createDefaultTestTask(final Project project) {
         final var compileTaskNames = getSourceSets(project).stream()
             .map(sourceSet -> sourceSet.getCompileTaskName(XTC_LANGUAGE_NAME))
             .toList();
 
+        // Capture skip property at configuration time for configuration cache compatibility
+        final boolean skipTests = project.hasProperty(PROPERTY_SKIP_TESTS);
+
         final var testTask = tasks.register(XTC_TEST_TASK_NAME, XtcTestTask.class, project);
         testTask.configure(task -> {
             task.setGroup(LifecycleBasePlugin.VERIFICATION_GROUP);
-            task.setDescription("Run XTC xunit tests.");
+            task.setDescription("Run XTC xunit tests. Skip with -P" + PROPERTY_SKIP_TESTS + ".");
             task.getFailOnTestFailure().convention(true);
             task.dependsOn(compileTaskNames);
+            task.onlyIf(t -> !skipTests);
+            if (skipTests) {
+                logger.lifecycle("[plugin] XTC tests will be skipped (-P{} is set)", PROPERTY_SKIP_TESTS);
+            }
             logger.info("[plugin] Configured test task with dependency on: {}", compileTaskNames);
         });
 

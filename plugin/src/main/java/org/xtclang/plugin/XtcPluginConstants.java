@@ -62,6 +62,7 @@ public final class XtcPluginConstants {
 
     // Project property names
     public static final String PROPERTY_VERBOSE_LOGGING_OVERRIDE = "xtcPluginOverrideVerboseLogging";
+    public static final String PROPERTY_SKIP_TESTS = "skipTests";
     public static final ExecutionMode DEFAULT_EXECUTION_MODE = ExecutionMode.ATTACHED;
 
     public static final String UNSPECIFIED = Project.DEFAULT_VERSION;
