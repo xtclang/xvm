@@ -1,12 +1,9 @@
+import json.Mapping;
+import json.ObjectInputStream;
+import json.Parser;
+import json.Schema;
 
 class ParsingTest {
-
-    import json.Mapping;
-    import json.ObjectInputStream;
-    import json.Parser;
-    import json.Schema;
-
-    @Inject Console console;
 
     Schema jsonSchema = Schema.DEFAULT;
 

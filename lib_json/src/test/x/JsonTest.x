@@ -5,7 +5,8 @@
  * during the XVM bootstrap build.
  */
 module JsonTest {
-    package json import json.xtclang.org;
+    package json  import json.xtclang.org;
+    package xunit import xunit.xtclang.org;
 
     /**
      * Basic tests for JSON document types.
