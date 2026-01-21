@@ -345,6 +345,29 @@ xtcTest {
 }
 ```
 
+**Skipping Tests**:
+
+The plugin supports standard Gradle/Maven conventions for skipping tests during development:
+
+| Flag | Effect |
+|------|--------|
+| `-PskipTests` | Skips XTC tests only (`testXtc`) |
+| `-PskipAllTests` | Skips both Java tests (`test`) and XTC tests (`testXtc`) |
+| `-x :project:testXtc` | Excludes specific XTC test task |
+| `-x test` | Excludes Java tests only |
+
+**Examples**:
+```bash
+# Skip XTC tests during rapid iteration on runtime
+./gradlew build -PskipTests
+
+# Skip all tests (Java and XTC) during development
+./gradlew build -PskipAllTests
+
+# Exclude specific test task
+./gradlew build -x :xdk:testXtc
+```
+
 ### Launcher Configuration
 
 **Common Scenarios**:
