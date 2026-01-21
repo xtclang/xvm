@@ -760,6 +760,14 @@ public abstract class TypeConstant
     }
 
     /**
+     * @return true iff objects fo this type can be injected by the runtime
+     */
+    public boolean isInjectable() {
+        // a type is injectable only if it's a "const" an interface or a union of those
+        return isConst() || isInterfaceType();
+    }
+
+    /**
      * Determine if this type is known to not be combinable (as an intersection) with the specified
      * type. Note that the negative answer does not guarantee logical combinability.
      *

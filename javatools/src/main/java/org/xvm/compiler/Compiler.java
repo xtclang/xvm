@@ -1368,6 +1368,10 @@ public class Compiler {
      */
     public static final String PARENT_MISSING                      = "COMPILER-203";
     /**
+     * Only interfaces or const objects can be injected.
+     */
+    public static final String INVALID_INJECTION_TYPE              = "COMPILER-204";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";

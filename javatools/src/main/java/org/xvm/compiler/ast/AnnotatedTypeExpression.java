@@ -221,7 +221,12 @@ public class AnnotatedTypeExpression
         if (m_fDisassociateRef) {
             Constant clzAnno = anno.getAnnotationClass();
             if (clzAnno.equals(pool.clzInject())) {
-                m_fInjected = true;
+                if (typeReferent.isInjectable()) {
+                    m_fInjected = true;
+                } else {
+                    log(errs, Severity.ERROR, Compiler.INVALID_INJECTION_TYPE);
+                    return null;
+                }
             }
 
             if (exprTypeNew instanceof AnnotatedTypeExpression exprTypeNext) {

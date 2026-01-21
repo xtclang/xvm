@@ -62,12 +62,12 @@ service BasicResourceProvider
                 return value;
             };
 
-        case (String[]?, _):
+        case (List<String>?, _):
             // ToDo This will return ANY string injectable from the parent, we might want to think
             // about this and maybe filter them in some way as we would not necessarily want to pass
             // down some injected information that the child container should not be able to see
             return (Inject.Options opts) -> {
-                @Inject(resourceName=name, opts=opts) String[]? value;
+                @Inject(resourceName=name, opts=opts) List<String>? value;
                 return value;
             };
 
