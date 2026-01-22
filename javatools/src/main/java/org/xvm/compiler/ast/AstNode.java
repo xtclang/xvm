@@ -1012,12 +1012,7 @@ public abstract class AstNode
      * @return true iff the specified list contains a named argument
      */
     protected boolean containsNamedArgs(List<Expression> listExprArgs) {
-        for (Expression exprArg : listExprArgs) {
-            if (exprArg instanceof LabeledExpression) {
-                return true;
-            }
-        }
-        return false;
+        return listExprArgs.stream().anyMatch(LabeledExpression.class::isInstance);
     }
 
     /**

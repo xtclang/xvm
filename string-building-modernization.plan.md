@@ -13,7 +13,7 @@ This document catalogs occurrences of legacy patterns in the XVM codebase that c
 | `Arrays.asList()` → `List.of()` | 19 | 12 | Medium | **DONE** |
 | `System.arraycopy()` → `Arrays.copyOf()` | ~30 | 20 | Medium | 5 done |
 | Lazy list instantiation (`List x = null`) | ~26 | ~15 | Medium | **20 done** |
-| Loop-to-lambda simplifications | 7 | 3 | Medium | **DONE** |
+| Loop-to-lambda simplifications | 9 | 5 | Medium | **DONE** |
 
 ### 🐛 **CRITICAL BUG FOUND**
 
@@ -773,6 +773,13 @@ return clzThis.children().stream()
 | `asm/constants/TypeConstant.java` | 6387-6392 | Find first ENUMVALUE child | **DONE** |
 | `asm/MethodStructure.java` | 254-262 | Find annotation by class | **DONE** |
 | `asm/Component.java` | 489-499 | Find contribution by composition | **DONE** |
+| `asm/constants/MethodInfo.java` | 1085-1092 | Get access from first body | **DONE** |
+
+### 7.5 AnyMatch Patterns → `stream().anyMatch()`
+
+| File | Line | Current Pattern | Status |
+|------|------|-----------------|--------|
+| `compiler/ast/AstNode.java` | 1015-1020 | Check for LabeledExpression | **DONE** |
 
 ### 7.4 Collection/Filter Loops → `stream().map().filter().collect()`
 

@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
@@ -1082,14 +1083,12 @@ public class MethodInfo
      * @return the access of the first method in the chain; Public if there are no "real" bodies
      */
     public Access getAccess() {
-        for (MethodBody body : m_aBody) {
-            MethodStructure struct = body.getMethodStructure();
-            if (struct != null) {
-                return struct.getAccess();
-            }
-        }
-
-        return Access.PUBLIC;
+        return Arrays.stream(m_aBody)
+                .map(MethodBody::getMethodStructure)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .map(MethodStructure::getAccess)
+                .orElse(Access.PUBLIC);
     }
 
     /**
