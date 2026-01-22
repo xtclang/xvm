@@ -5,7 +5,6 @@ plugins {
 dependencies {
     xdkJavaTools(libs.javatools)
     xtcModule(libs.xdk.ecstasy)
-    xtcModule(libs.xdk.crypto)
     xtcModule(libs.xdk.json)
-    xtcModule(libs.xdk.net)
+    xtcModule(libs.xdk.net)  // transitively includes crypto
 }

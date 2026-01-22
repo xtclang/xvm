@@ -16,7 +16,9 @@ import kotlin.Pair;
 
 import org.gradle.api.Project;
 import org.gradle.api.model.ObjectFactory;
+import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.Directory;
+import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.FileTree;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
@@ -61,6 +63,9 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     private final Directory outputDir;
     private final Set<File> sourceSetDirs;
 
+    // Source-set-specific module dependencies (avoids circular dependency with own output)
+    private final ConfigurableFileCollection compileModuleDependencies;
+
     /**
      * Create an XTC Compile task. This goes through the Gradle build script, and task creation through
      * the project ObjectFactory.
@@ -90,6 +95,23 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         this.outputDir = XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, sourceSet).get();
         this.sourceSetDirs = sourceSet.getAllSource().getSrcDirs();
 
+        // Build source-set-specific module dependencies for compilation
+        // Main compile: only xtcModule (external deps)
+        // Test compile: xtcModule + xtcModuleTest (external deps + main output)
+        // This avoids the circular dependency where a task's output is also its input
+        this.compileModuleDependencies = objects.fileCollection();
+        final var configurations = project.getConfigurations();
+        final var mainConfig = configurations.findByName(XtcProjectDelegate.incomingXtcModuleDependencies(SourceSet.MAIN_SOURCE_SET_NAME));
+        if (mainConfig != null) {
+            compileModuleDependencies.from(mainConfig);
+        }
+        if (SourceSet.TEST_SOURCE_SET_NAME.equals(sourceSet.getName())) {
+            final var testConfig = configurations.findByName(XtcProjectDelegate.incomingXtcModuleDependencies(SourceSet.TEST_SOURCE_SET_NAME));
+            if (testConfig != null) {
+                compileModuleDependencies.from(testConfig);
+            }
+        }
+
         // Conventions inherited from extension; can be reset on a per-task basis, of course.
         this.disableWarnings = objects.property(Boolean.class).convention(ext.getDisableWarnings());
         this.strict = objects.property(Boolean.class).convention(ext.getStrict());
@@ -106,6 +128,22 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
 
     private boolean isMainSourceSetCompileTask() {
         return SourceSet.MAIN_SOURCE_SET_NAME.equals(getCompileSourceSetName());
+    }
+
+    /**
+     * Override to return source-set-specific dependencies for compilation.
+     * This avoids the circular dependency where a compile task's own output
+     * appears in its inputs (via xtcModuleDependencies from all source sets).
+     * <p>
+     * Main compile: only external dependencies from xtcModule
+     * Test compile: xtcModule + xtcModuleTest (includes main output)
+     */
+    @Override
+    @Optional
+    @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
+    public FileCollection getXtcModuleDependencies() {
+        return compileModuleDependencies;
     }
 
     // TODO Why do we even have these internals?

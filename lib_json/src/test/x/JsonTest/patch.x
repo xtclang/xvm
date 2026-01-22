@@ -5,9 +5,12 @@ package patch {
 
     import ecstasy.io.CharArrayReader;
     import ecstasy.io.Reader;
+
     import json.JsonPatch;
     import json.ObjectInputStream;
     import json.Schema;
+
+    import xunit.assertions.assertThrows;
 
     static void assertOperation(String jsonOp, JsonPatch.Operation expected) {
         Schema              schema = Schema.DEFAULT;
@@ -16,5 +19,4 @@ package patch {
         JsonPatch.Operation result = o_in.read();
         assert result == expected;
     }
-
 }

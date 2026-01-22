@@ -188,6 +188,17 @@ subprojects {
          */
         xtcVersion = version.toString()
     }
+
+    // Aggregate subproject lifecycle tasks into xdk lifecycle tasks.
+    // Normally, running `./gradlew check` would execute `check` for all projects in the build.
+    // However, the root aggregator plugin explicitly wires `:check` to depend on `:xdk:check`,
+    // which bypasses the natural Gradle behavior of running tasks for all subprojects.
+    // This explicit aggregation ensures subproject lifecycle tasks are included.
+    pluginManager.withPlugin("base") {
+        listOf("check", "build", "assemble", "clean").forEach { taskName ->
+            rootProject.tasks.named(taskName) { dependsOn(tasks.named(taskName)) }
+        }
+    }
 }
 
 

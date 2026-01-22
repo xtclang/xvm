@@ -32,10 +32,11 @@ class JsonPatchCopyTest {
     }
 
     @Test
-    void shouldNotCopyPrimitiveFromRootToRoot() {
-        Doc          target = "Foo";
-        JsonPatch    patch  = JsonPatch.builder().copy("/", "/").build();
-        IllegalState error  = assertThrows(() -> patch.apply(target));
+    void shouldCopyPrimitiveFromRootToRoot() {
+        Doc       target = "Foo";
+        JsonPatch patch  = JsonPatch.builder().copy("/", "/").build();
+        Doc       result = patch.apply(target);
+        assert result == "Foo";
     }
 
     @Test

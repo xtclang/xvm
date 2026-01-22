@@ -1,5 +1,7 @@
+import org.gradle.api.Task
 import org.gradle.api.artifacts.VersionCatalogsExtension
 import org.gradle.api.provider.Provider
+import org.gradle.api.specs.Spec
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.testing.Test
@@ -74,6 +76,13 @@ private class ConfigureTestLoggingAction(
             )
         }
     }
+}
+
+/** Spec to skip tests when skipAllTests property is set (configuration cache safe). */
+private class SkipAllTestsSpec(
+    private val skipAllTests: Boolean
+) : Spec<Task> {
+    override fun isSatisfiedBy(task: Task): Boolean = !skipAllTests
 }
 
 /* ── Properties (Providers) ───────────────────────────────────────────────── */
@@ -171,4 +180,6 @@ tasks.withType<Test>().configureEach {
     jvmArgumentProviders.add(DefaultJvmArgsProvider(defaultJvmArgs))
     inputs.property("defaultJvmArgs", defaultJvmArgs)
     inputs.property("showTestStdout", showTestStdout)
+    // Skip all tests when -PskipAllTests is set (configuration cache safe)
+    onlyIf(SkipAllTestsSpec(project.hasProperty("skipAllTests")))
 }

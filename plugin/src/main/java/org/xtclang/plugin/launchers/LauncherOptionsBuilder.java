@@ -119,7 +119,7 @@ public final class LauncherOptionsBuilder {
         // Set flags - same as runner options
         // Use explicit type to ensure we get TestRunnerOptions.Builder
         final TestRunnerOptions.Builder builder = TestRunnerOptions.builder()
-                .setXUnitOutputDirectory(outputDir.getAsFile().getAbsolutePath());
+                .setXUnitOutputDirectory(outputDir.get().getAsFile().getAbsolutePath());
         builder.enableShowVersion(task.getShowVersion().get())
             .enableVerbose(task.getVerbose().get())
             .setTarget(moduleName, moduleArgs)
