@@ -1436,20 +1436,17 @@ public class TypeCompositionStatement
     private void addImplicitTypeConstraints(ClassStructure component, ErrorListener errs) {
         assert component.isParameterized();
 
-        List<String> listUnconstrained = null;
+        var listUnconstrained = new ArrayList<String>();
         for (Map.Entry<StringConstant, TypeConstant> entry : component.getTypeParams().entrySet()) {
             String       sName          = entry.getKey().getValue();
             TypeConstant typeConstraint = entry.getValue();
 
             if (typeConstraint.equals(pool().typeObject())) {
-                if (listUnconstrained == null) {
-                    listUnconstrained = new ArrayList<>();
-                }
                 listUnconstrained.add(sName);
             }
         }
 
-        if (listUnconstrained == null) {
+        if (listUnconstrained.isEmpty()) {
             // call with non-existing name just to report missing type parameters
             findImplicitConstraint(component, "", null, true, errs);
             return;

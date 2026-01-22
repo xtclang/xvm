@@ -140,7 +140,7 @@ public class PropertyInfo
         PropertyBody[] aAdd  = that.m_aBody;
         int            cAdd  = aAdd.length;
 
-        ArrayList<PropertyBody> listMerge = null;
+        var listMerge = new ArrayList<PropertyBody>();
         NextLayer: for (PropertyBody bodyAdd : aAdd) {
             // unlike the MethodInfo processing, we don't need to allow duplicate interface
             // properties to survive; AAMOF if we allowed it to go on top, the "asInto" would
@@ -156,13 +156,10 @@ public class PropertyInfo
                     continue NextLayer;
                 }
             }
-            if (listMerge == null) {
-                listMerge = new ArrayList<>();
-            }
             listMerge.add(bodyAdd);
         }
 
-        if (listMerge == null) {
+        if (listMerge.isEmpty()) {
             return this;
         }
 

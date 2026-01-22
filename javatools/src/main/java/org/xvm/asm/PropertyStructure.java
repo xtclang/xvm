@@ -292,8 +292,8 @@ public class PropertyStructure
 
     private void buildAnnotationArrays() {
         ConstantPool     pool         = getConstantPool();
-        List<Annotation> listPropAnno = null;
-        List<Annotation> listRefAnno  = null;
+        var              listPropAnno = new ArrayList<Annotation>();
+        var              listRefAnno  = new ArrayList<Annotation>();
         for (Contribution contrib : getContributionsAsList()) {
             if (contrib.getComposition() == Composition.Annotation) {
                 Annotation   annotation = contrib.getAnnotation();
@@ -303,23 +303,17 @@ public class PropertyStructure
                         && typeAnno.getExplicitClassFormat() == Format.ANNOTATION
                         && pool.typeProperty().equals(
                                 typeAnno.getExplicitClassInto().getIntoPropertyType())) {
-                    if (listPropAnno == null) {
-                        listPropAnno = new ArrayList<>();
-                    }
                     listPropAnno.add(annotation);
                 } else {
-                    if (listRefAnno == null) {
-                        listRefAnno = new ArrayList<>();
-                    }
                     listRefAnno.add(annotation);
                 }
             }
         }
 
-        m_aPropAnno = listPropAnno == null
+        m_aPropAnno = listPropAnno.isEmpty()
                 ? Annotation.NO_ANNOTATIONS
                 : listPropAnno.toArray(Annotation.NO_ANNOTATIONS);
-        m_aRefAnno = listRefAnno == null
+        m_aRefAnno = listRefAnno.isEmpty()
                 ? Annotation.NO_ANNOTATIONS
                 : listRefAnno.toArray(Annotation.NO_ANNOTATIONS);
     }
@@ -482,7 +476,7 @@ public class PropertyStructure
             return false;
         }
 
-        List<Contribution> listMove = null;
+        var listMove = new ArrayList<Contribution>();
         for (Contribution contrib : listContribs) {
             if (contrib.getComposition() == Composition.Annotation) {
                 Annotation annotation = contrib.getAnnotation();
@@ -526,16 +520,13 @@ public class PropertyStructure
                 }
 
                 if (fMove) {
-                    if (listMove == null) {
-                        listMove = new ArrayList<>();
-                    }
                     listMove.add(contrib);
                 }
             }
         }
 
         // now that everything is figured out, do the actual move of any selected contributions
-        if (listMove != null) {
+        if (!listMove.isEmpty()) {
             // go backwards to that the resulting type constant is built up (nested) correctly
             ConstantPool pool = getConstantPool();
             for (int i = listMove.size()-1; i >= 0; --i) {
@@ -631,7 +622,7 @@ public class PropertyStructure
 
     @Override
     protected Iterator<IdentityConstant> potentialVirtualChildContributors() {
-        List<IdentityConstant> list = null;
+        var list = new ArrayList<IdentityConstant>();
 
         for (Contribution contrib : getContributionsAsList()) {
             if (contrib.getComposition() == Composition.Annotation) {
@@ -640,15 +631,12 @@ public class PropertyStructure
                     return null;
                 }
                 if (typeAnno.isIntoVariableType()) {
-                    if (list == null) {
-                        list = new ArrayList<>();
-                    }
                     list.add(typeAnno.getSingleUnderlyingClass(true));
                 }
             }
         }
 
-        return list == null
+        return list.isEmpty()
                 ? Collections.emptyIterator()
                 : list.iterator();
     }
@@ -724,17 +712,14 @@ public class PropertyStructure
     public Iterator<? extends XvmStructure> getContained() {
         // we cannot use the "getPropertyAnnotation" API at this time, since our module may not yet
         // be linked
-        List<Annotation> listAnno = null;
+        var listAnno = new ArrayList<Annotation>();
         for (Contribution contrib : getContributionsAsList()) {
             if (contrib.getComposition() == Composition.Annotation) {
-                if (listAnno == null) {
-                    listAnno = new ArrayList<>();
-                }
                 listAnno.add(contrib.getAnnotation());
             }
         }
 
-        return listAnno == null
+        return listAnno.isEmpty()
                 ? super.getContained()
                 : new LinkedIterator(
                         super.getContained(),

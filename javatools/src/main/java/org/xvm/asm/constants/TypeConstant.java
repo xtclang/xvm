@@ -2119,7 +2119,7 @@ public abstract class TypeConstant
      * Note: the annotations must be collected in the inverse order.
      */
     private Annotation[] collectMixinAnnotations(List<Contribution> listContrib) {
-        List<Annotation> listAnnos = null;
+        var listAnnos = new ArrayList<Annotation>();
         for (int c = listContrib.size(), i = c - 1; i >= 0; i--) {
             Contribution contrib = listContrib.get(i);
             switch (contrib.getComposition()) {
@@ -2128,9 +2128,6 @@ public abstract class TypeConstant
                 TypeConstant typeInto = anno.getAnnotationType().getExplicitClassInto().
                                             resolveGenerics(getConstantPool(), this);
                 if (this.isA(typeInto)) {
-                    if (listAnnos == null) {
-                        listAnnos = new ArrayList<>();
-                    }
                     listAnnos.add(anno);
                 }
                 break;
@@ -2140,16 +2137,13 @@ public abstract class TypeConstant
                 TypeInfo     infoExtend  = contrib.getTypeConstant().ensureTypeInfo();
                 Annotation[] aAnnoExtend = infoExtend.getMixinAnnotations();
                 if (aAnnoExtend.length > 0) {
-                    if (listAnnos == null) {
-                        listAnnos = new ArrayList<>();
-                    }
                     Collections.addAll(listAnnos, aAnnoExtend);
                 }
                 break;
             }
             }
         }
-        return listAnnos == null
+        return listAnnos.isEmpty()
                 ? Annotation.NO_ANNOTATIONS
                 : listAnnos.toArray(Annotation.NO_ANNOTATIONS);
     }
@@ -2698,7 +2692,7 @@ public abstract class TypeConstant
             List<Contribution> listContribs,
             TypeConstant[]     aContribType,
             ErrorListener      errs) {
-        List<TypeConstant> listCondContribs = null;
+        var listCondContribs = new ArrayList<TypeConstant>();
 
         // process the annotations and conditional incorporates at the front of the contribution list
         for (int iContrib = 0, cContribs = listContribs.size(); iContrib < cContribs; ++iContrib) {
@@ -2735,16 +2729,12 @@ public abstract class TypeConstant
                 continue;
             }
 
-            if (listCondContribs == null) {
-                listCondContribs = new ArrayList<>();
-            } else {
-                // check if this mixin extends any of the already collected ones
-                for (Iterator<TypeConstant> iter = listCondContribs.iterator(); iter.hasNext();) {
-                    TypeConstant     typeOther = iter.next();
-                    IdentityConstant idOther   = typeOther.getSingleUnderlyingClass(true);
-                    if (typeMixin.extendsClass(idOther)) {
-                        iter.remove();
-                    }
+            // check if this mixin extends any of the already collected ones
+            for (Iterator<TypeConstant> iter = listCondContribs.iterator(); iter.hasNext();) {
+                TypeConstant     typeOther = iter.next();
+                IdentityConstant idOther   = typeOther.getSingleUnderlyingClass(true);
+                if (typeMixin.extendsClass(idOther)) {
+                    iter.remove();
                 }
             }
             listCondContribs.add(typeMixin);
@@ -2753,7 +2743,7 @@ public abstract class TypeConstant
             processMixins(constId, typeMixin, struct, new ArrayList<>(), errs);
         }
 
-        return listCondContribs == null
+        return listCondContribs.isEmpty()
                 ? null
                 : listCondContribs.toArray(TypeConstant.NO_TYPES);
     }
@@ -4264,7 +4254,7 @@ public abstract class TypeConstant
         MethodStructure   method    = methodInfo.getHead().getMethodStructure();
         SignatureConstant sigSub    = methodInfo.getSignature();
         int               cDefaults = method == null ? 0 : method.getDefaultParamCount();
-        List<Object>      listMatch = null;
+        var               listMatch = new ArrayList<Object>();
 
         for (Entry<Object, MethodInfo> entry : mapSupers.entrySet()) {
             Object nidCandidate = entry.getKey();
@@ -4274,9 +4264,6 @@ public abstract class TypeConstant
                 if (sigCandidate.getName().equals(sigSub.getName())) {
                     if (infoCandidate.containsBody(methodInfo.getIdentity()) ||
                             sigSub.isSubstitutableFor(sigCandidate, this)) {
-                        if (listMatch == null) {
-                            listMatch = new ArrayList<>();
-                        }
                         listMatch.add(nidCandidate);
                     } else if (cDefaults > 0) {
                         // allow default parameters (but only if there is no "exact" match)
@@ -4285,9 +4272,6 @@ public abstract class TypeConstant
                         if (cParamsSub > cParamsReq && cParamsSub - cDefaults <= cParamsReq) {
                             SignatureConstant sigSubReq = sigSub.truncateParams(0, cParamsReq);
                             if (sigSubReq.isSubstitutableFor(sigCandidate, this)) {
-                                if (listMatch == null) {
-                                    listMatch = new ArrayList<>();
-                                }
                                 listMatch.add(nidCandidate);
                             }
                         }
@@ -4295,7 +4279,7 @@ public abstract class TypeConstant
                 }
             }
         }
-        return listMatch == null ? List.of() : listMatch;
+        return listMatch.isEmpty() ? List.of() : listMatch;
     }
 
     /**
@@ -4312,10 +4296,10 @@ public abstract class TypeConstant
     protected List<MethodConstant> collectConstructors(
                 MethodInfo                      infoConstruct,
                 Map<MethodConstant, MethodInfo> mapMethods) {
-        MethodStructure      method    = infoConstruct.getHead().getMethodStructure();
-        SignatureConstant    sigSub    = infoConstruct.getSignature();
-        List<MethodConstant> listMatch = null;
-        boolean              fExact    = true;
+        MethodStructure   method    = infoConstruct.getHead().getMethodStructure();
+        SignatureConstant sigSub    = infoConstruct.getSignature();
+        var               listMatch = new ArrayList<MethodConstant>();
+        boolean           fExact    = true;
 
         for (Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet()) {
             MethodConstant idCandidate = entry.getKey();
@@ -4328,15 +4312,12 @@ public abstract class TypeConstant
 
             if (sigCandidate.getName().equals(sigSub.getName())) {
                 if (sigSub.isSubstitutableFor(sigCandidate, this)) {
-                    if (!fExact && listMatch != null) {
+                    if (!fExact && !listMatch.isEmpty()) {
                         // we found an exact match; get rid of non-exact ones
                         listMatch.clear();
                     }
-                    if (listMatch == null) {
-                        listMatch = new ArrayList<>();
-                    }
                     listMatch.add(idCandidate);
-                } else if (method != null && (listMatch == null || !fExact)) {
+                } else if (method != null && (listMatch.isEmpty() || !fExact)) {
                     // allow default parameters (but only if there is no "exact" match)
                     int cDefault = method.getDefaultParamCount();
                     if (cDefault > 0) {
@@ -4345,9 +4326,6 @@ public abstract class TypeConstant
                         if (cParamsSub > cParamsReq && cParamsSub - cDefault <= cParamsReq) {
                             SignatureConstant sigSubReq = sigSub.truncateParams(0, cParamsReq);
                             if (sigSubReq.isSubstitutableFor(sigCandidate, this)) {
-                                if (listMatch == null) {
-                                    listMatch = new ArrayList<>();
-                                }
                                 listMatch.add(idCandidate);
                                 fExact = false;
                             }
@@ -4356,7 +4334,7 @@ public abstract class TypeConstant
                 }
             }
         }
-        return listMatch == null ? List.of() : listMatch;
+        return listMatch.isEmpty() ? List.of() : listMatch;
     }
 
     /**

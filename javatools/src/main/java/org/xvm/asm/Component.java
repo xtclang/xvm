@@ -1588,20 +1588,17 @@ public abstract class Component
     protected List<Component> selectMatchingSiblings(Component firstSibling) {
         AssemblerContext ctxAsm  = getFileStructure().getContext();
         LinkerContext    ctxLink = ctxAsm == null ? null : ctxAsm.getLinkerContext();
-        List<Component>  matches = null;
+        var              matches = new ArrayList<Component>();
 
         // see which siblings will be present based on what has been required in the current
         // assembler context
         for (Component eachSibling = firstSibling; eachSibling != null; eachSibling = eachSibling.getNextSibling()) {
             if (ctxLink == null || eachSibling.isPresent(ctxLink)) {
-                if (matches == null) {
-                    matches = new ArrayList<>();
-                }
                 matches.add(eachSibling);
             }
         }
 
-        return matches == null ? List.of() : matches;
+        return matches.isEmpty() ? List.of() : matches;
     }
 
     protected boolean canBeSeen(Access access) {

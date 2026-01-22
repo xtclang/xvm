@@ -12,7 +12,7 @@ This document catalogs occurrences of legacy patterns in the XVM codebase that c
 | `Collections.singletonList()` → `List.of()` | 22 | 10 | **High** | **DONE** |
 | `Arrays.asList()` → `List.of()` | 19 | 12 | Medium | **DONE** |
 | `System.arraycopy()` → `Arrays.copyOf()` | ~30 | 20 | Medium | 5 done |
-| Lazy list instantiation (`List x = null`) | ~26 | ~15 | Medium | Pending |
+| Lazy list instantiation (`List x = null`) | ~26 | ~15 | Medium | **20 done** |
 
 ### 🐛 **CRITICAL BUG FOUND**
 
@@ -675,7 +675,22 @@ List<X> items = new ArrayList<>();
 
 **Occurrences found:** ~26 in compiler/asm directories (local variables only)
 
-**Status:** Needs case-by-case review. Some may have legitimate null-vs-empty semantics in the API contract.
+**Status:** 20 modernized across 10 files. Remaining patterns either:
+- Use helper methods that pass list through (MethodStructure.addSingleton)
+- Have null-vs-empty semantic meaning in API contracts (Parser.java parsing methods)
+- Use `startList()` helper for copy-on-write patterns (MethodInfo, PropertyInfo)
+
+**Modernized files:**
+- ClassStructure.java (3 patterns)
+- MethodInfo.java (3 patterns)
+- PropertyInfo.java (1 pattern)
+- PropertyStructure.java (4 patterns)
+- TypeConstant.java (4 patterns)
+- Component.java (1 pattern)
+- VersionTree.java (1 pattern)
+- DynamicFormalConstant.java (1 pattern)
+- InvocationExpression.java (1 pattern)
+- TypeCompositionStatement.java (1 pattern)
 
 ---
 

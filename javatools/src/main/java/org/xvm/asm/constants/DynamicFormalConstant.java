@@ -138,12 +138,8 @@ public class DynamicFormalConstant
         FormalConstant constFormal = getFormalConstant();
 
         // if the underlying constant is A.B.C, collect the names in reverse order (FILO)
-        LinkedList<FormalTypeChildConstant> listNames = null;
+        var listNames = new LinkedList<FormalTypeChildConstant>();
         while (constFormal instanceof FormalTypeChildConstant idChild) {
-            if (listNames == null) {
-                listNames = new LinkedList<>();
-            }
-
             listNames.addFirst(idChild);
             constFormal = idChild.getParentConstant();
         }
@@ -151,10 +147,8 @@ public class DynamicFormalConstant
         // we've reached the top; it must be a PropertyConstant
         if (constFormal instanceof PropertyConstant idProp) {
             ExprAST astExpr = new PropertyExprAST(getRegister().getRegisterAST(), idProp);
-            if (listNames != null) {
-                for (FormalTypeChildConstant idNext : listNames) {
-                    astExpr = new PropertyExprAST(astExpr, idNext);
-                }
+            for (FormalTypeChildConstant idNext : listNames) {
+                astExpr = new PropertyExprAST(astExpr, idNext);
             }
             return astExpr;
         }

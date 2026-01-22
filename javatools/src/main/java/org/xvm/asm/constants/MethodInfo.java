@@ -176,7 +176,7 @@ public class MethodInfo
             }
         }
 
-        ArrayList<MethodBody> listMerge = null;
+        var listMerge = new ArrayList<MethodBody>();
         NextLayer: for (int iThat = 0; iThat < cAdd; ++iThat) {
             MethodBody bodyThat = aAdd[iThat];
             // allow duplicate interface methods to survive (we need the correct "default" to be on
@@ -202,13 +202,10 @@ public class MethodInfo
                     continue NextLayer;
                 }
             }
-            if (listMerge == null) {
-                listMerge = new ArrayList<>();
-            }
             listMerge.add(bodyThat);
         }
 
-        if (listMerge == null) {
+        if (listMerge.isEmpty()) {
             // all the bodies in "that" were duplicates of bodies in "this"
             return this;
         }
@@ -247,7 +244,7 @@ public class MethodInfo
         MethodBody[] aBase = this.m_aBody;
         MethodBody[] aAdd  = that.m_aBody;
 
-        ArrayList<MethodBody> listMerge = null;
+        var listMerge = new ArrayList<MethodBody>();
         NextLayer: for (MethodBody bodyThat : aAdd) {
             for (MethodBody methodBody : aBase) {
                 if (bodyThat.equals(methodBody)) {
@@ -255,13 +252,10 @@ public class MethodInfo
                     continue NextLayer;
                 }
             }
-            if (listMerge == null) {
-                listMerge = new ArrayList<>();
-            }
             listMerge.add(bodyThat);
         }
 
-        if (listMerge == null) {
+        if (listMerge.isEmpty()) {
             return this;
         }
 
@@ -323,7 +317,7 @@ public class MethodInfo
         MethodBody[] aBase = that.m_aBody;
         MethodBody[] aAdd  = this.m_aBody;
 
-        ArrayList<MethodBody> listMerge = null;
+        var listMerge = new ArrayList<MethodBody>();
         NextLayer: for (MethodBody bodyAdd : aAdd) {
             for (MethodBody bodyBase : aBase) {
                 // discard duplicates or an abstract replacing a non-abstract
@@ -332,14 +326,10 @@ public class MethodInfo
                     continue NextLayer;
                 }
             }
-
-            if (listMerge == null) {
-                listMerge = new ArrayList<>();
-            }
             listMerge.add(bodyAdd);
         }
 
-        if (listMerge == null) {
+        if (listMerge.isEmpty()) {
             // all the bodies in "this" were duplicates of bodies in "base"
             return that;
         }

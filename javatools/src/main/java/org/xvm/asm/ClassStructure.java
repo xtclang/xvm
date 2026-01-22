@@ -201,21 +201,18 @@ public class ClassStructure
     public Annotation[] collectAnnotations(boolean fIntoClass) {
         Annotation[] annos = fIntoClass ? m_aAnnoClass : m_aAnnoMixin;
         if (annos == null) {
-            List<Annotation> listAnnos = null;
+            var listAnnos = new ArrayList<Annotation>();
 
             for (Contribution contrib : getContributionsAsList()) {
                 if (contrib.getComposition() == Composition.Annotation) {
                     Annotation anno = contrib.getAnnotation();
 
                     if (fIntoClass == anno.getAnnotationType().getExplicitClassInto().isIntoClassType()) {
-                        if (listAnnos == null) {
-                            listAnnos = new ArrayList<>();
-                        }
                         listAnnos.add(anno);
                     }
                 }
             }
-            annos = listAnnos == null
+            annos = listAnnos.isEmpty()
                     ? Annotation.NO_ANNOTATIONS
                     : listAnnos.toArray(Annotation.NO_ANNOTATIONS);
             if (fIntoClass) {
@@ -1418,7 +1415,7 @@ public class ClassStructure
 
     @Override
     protected Iterator<IdentityConstant> potentialVirtualChildContributors() {
-        List<IdentityConstant> list = null;
+        var list = new ArrayList<IdentityConstant>();
 
         for (Contribution contrib : getContributionsAsList()) {
             TypeConstant type = contrib.getTypeConstant();
@@ -1435,17 +1432,13 @@ public class ClassStructure
                     return null;
                 }
                 if (type.isExplicitClassIdentity(true)) {
-                    if (list == null) {
-                        list = new ArrayList<>();
-                    }
-
                     list.add(type.getSingleUnderlyingClass(true));
                 }
                 break;
             }
         }
 
-        return list == null
+        return list.isEmpty()
                 ? Collections.emptyIterator()
                 : list.iterator();
     }
@@ -3355,17 +3348,14 @@ public class ClassStructure
     public Iterator<? extends XvmStructure> getContained() {
         // we cannot use the "collectAnnotations" API at this time, since our module may not yet
         // be linked
-        List<Annotation> listAnno = null;
+        var listAnno = new ArrayList<Annotation>();
         for (Contribution contrib : getContributionsAsList()) {
             if (contrib.getComposition() == Composition.Annotation) {
-                if (listAnno == null) {
-                    listAnno = new ArrayList<>();
-                }
                 listAnno.add(contrib.getAnnotation());
             }
         }
 
-        return listAnno == null
+        return listAnno.isEmpty()
                 ? super.getContained()
                 : new LinkedIterator(
                         super.getContained(),

@@ -832,13 +832,10 @@ public class InvocationExpression
                     }
 
                     Argument[]   aargTypeParam  = new Argument[mapTypeParams.size()];
-                    List<String> listUnresolved = null;
+                    var          listUnresolved = new ArrayList<String>();
                     int          iArg           = 0;
                     for (TypeConstant typeArg : mapTypeParams.values()) {
                         if (typeArg.containsUnresolved()) {
-                            if (listUnresolved == null) {
-                                listUnresolved = new ArrayList<>();
-                            }
                             listUnresolved.add(method.getParam(iArg++).getName());
                             continue;
                         }
@@ -861,7 +858,7 @@ public class InvocationExpression
                         aargTypeParam[iArg++] = typeArg.getType();
                     }
 
-                    if (listUnresolved != null) {
+                    if (!listUnresolved.isEmpty()) {
                         log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNRESOLVABLE, listUnresolved);
                         return null;
                     }
