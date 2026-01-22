@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.constants.TypeConstant;
@@ -76,23 +77,9 @@ public class TupleTypeExpression
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append('<');
-
-        boolean first = true;
-        for (TypeExpression type : paramTypes) {
-            if (first) {
-                first = false;
-            } else {
-                sb.append(", ");
-            }
-            sb.append(type);
-        }
-
-        sb.append('>');
-
-        return sb.toString();
+        return paramTypes.stream()
+                .map(Object::toString)
+                .collect(Collectors.joining(", ", "<", ">"));
     }
 
     @Override
