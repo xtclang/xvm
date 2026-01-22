@@ -13,7 +13,7 @@ This document catalogs occurrences of legacy string-building patterns in the XVM
 
 ## Progress
 
-### Completed (7 occurrences)
+### Completed (29 occurrences)
 
 | File | Method | Status |
 |------|--------|--------|
@@ -24,6 +24,29 @@ This document catalogs occurrences of legacy string-building patterns in the XVM
 | `compiler/ast/ArrayAccessExpression.java:1288` | `toString()` | Done |
 | `compiler/ast/MultipleLValueStatement.java:232` | `toString()` | Done |
 | `tool/ResourceDir.java:246` | `toString()` | Done |
+| `compiler/ast/NamedTypeExpression.java:134` | `getModule()` | Done |
+| `compiler/ast/NamedTypeExpression.java:159` | `getName()` | Done |
+| `compiler/ast/NamedTypeExpression.java:1063` | `toString()` paramTypes | Done |
+| `compiler/ast/MethodDeclarationStatement.java:1138` | `toSignatureString()` typeParams | Done |
+| `compiler/ast/MethodDeclarationStatement.java:1159` | `toSignatureString()` returns | Done |
+| `compiler/ast/MethodDeclarationStatement.java:1175` | `toSignatureString()` redundant | Done |
+| `compiler/ast/MethodDeclarationStatement.java:1189` | `toSignatureString()` params | Done |
+| `compiler/ast/ReturnStatement.java:477` | `toString()` | Done |
+| `compiler/ast/AnnotationExpression.java:441` | `toString()` | Done |
+| `compiler/ast/InvocationExpression.java:3007` | `toString()` | Done |
+| `compiler/ast/LambdaExpression.java:1271` | `toSignatureString()` | Done |
+| `compiler/ast/TryStatement.java:486` | `toString()` | Done |
+| `compiler/ast/FunctionTypeExpression.java:155` | `toString()` returnValues | Done |
+| `compiler/ast/FunctionTypeExpression.java:168` | `toString()` paramTypes | Done |
+| `asm/constants/SignatureConstant.java:706` | `getValueString()` returns | Done |
+| `asm/constants/SignatureConstant.java:725` | `getValueString()` params | Done |
+| `asm/Annotation.java:275` | `getValueString()` | Done |
+| `asm/constants/ParameterizedTypeConstant.java:1057` | `getValueString()` | Done |
+| `compiler/ast/CompositionNode.java:168` | `Extends.toString()` | Done |
+| `compiler/ast/CompositionNode.java:235` | `Annotates.toString()` | Done |
+| `compiler/ast/CompositionNode.java:315` | `Incorporates.toString()` constraints | Done |
+| `compiler/ast/CompositionNode.java:332` | `Incorporates.toString()` args | Done |
+| `compiler/ast/CompositionNode.java:559` | `Import.toString()` injects | Done |
 
 ### Not Applicable (reclassified)
 
@@ -67,11 +90,11 @@ for (Item item : items) {
 
 | File | Line | Method | Building | Difficulty |
 |------|------|--------|----------|------------|
-| `javatools/src/main/java/org/xvm/asm/constants/ParameterizedTypeConstant.java` | 1057 | `getValueString()` | Generic type parameters `Type<P1, P2>` | Medium |
-| `javatools/src/main/java/org/xvm/asm/constants/SignatureConstant.java` | 706 | `getValueString()` | Return types `(T1, T2)` | Medium |
-| `javatools/src/main/java/org/xvm/asm/constants/SignatureConstant.java` | 725 | `getValueString()` | Parameter types | Medium |
+| `javatools/src/main/java/org/xvm/asm/constants/ParameterizedTypeConstant.java` | 1057 | `getValueString()` | Generic type parameters `Type<P1, P2>` | ~~Medium~~ Done |
+| `javatools/src/main/java/org/xvm/asm/constants/SignatureConstant.java` | 706 | `getValueString()` | Return types `(T1, T2)` | ~~Medium~~ Done |
+| `javatools/src/main/java/org/xvm/asm/constants/SignatureConstant.java` | 725 | `getValueString()` | Parameter types | ~~Medium~~ Done |
 | `javatools/src/main/java/org/xvm/asm/FileStructure.java` | 938 | `getDescription()` | Module list | Easy |
-| `javatools/src/main/java/org/xvm/asm/Annotation.java` | 275 | `getValueString()` | Annotation parameters | Medium |
+| `javatools/src/main/java/org/xvm/asm/Annotation.java` | 275 | `getValueString()` | Annotation parameters | ~~Medium~~ Done |
 | `javatools/src/main/java/org/xvm/asm/Component.java` | 666 | Iterator class | Iterator state (not string) | N/A |
 
 #### Compiler Parser (3 occurrences - NOT APPLICABLE)
@@ -89,25 +112,26 @@ These are parsing loop control patterns, not string building. See "Not Applicabl
 | File | Line(s) | Method | Building | Difficulty |
 |------|---------|--------|----------|------------|
 | `javatools/src/main/java/org/xvm/compiler/ast/NameExpression.java` | 3271 | `toString()` | Type parameters | Medium |
-| `javatools/src/main/java/org/xvm/compiler/ast/CompositionNode.java` | 168, 235, 315, 332, 541, 559 | Multiple | Annotation args, type constraints, composition args, version overrides, injection parameters | Medium-Hard |
+| `javatools/src/main/java/org/xvm/compiler/ast/CompositionNode.java` | 168, 235, 315, 332, 559 | Multiple | Annotation args, type constraints, composition args, injection parameters | ~~Medium~~ Done |
+| `javatools/src/main/java/org/xvm/compiler/ast/CompositionNode.java` | 541 | `Import.toString()` | Version overrides (different delimiters) | Hard |
 | `javatools/src/main/java/org/xvm/compiler/ast/ImportStatement.java` | 116 | `getQualifiedNameString()` | Qualified names | ~~Easy~~ Done |
 | `javatools/src/main/java/org/xvm/compiler/ast/ImportStatement.java` | 242 | `toString()` | Import statements | Medium |
-| `javatools/src/main/java/org/xvm/compiler/ast/AnnotationExpression.java` | 441 | `toString()` | Annotation arguments | Medium |
-| `javatools/src/main/java/org/xvm/compiler/ast/LambdaExpression.java` | 1271 | `toString()` | Lambda parameters | Medium |
-| `javatools/src/main/java/org/xvm/compiler/ast/InvocationExpression.java` | 3007 | `toString()` | Method invocation arguments | Medium |
+| `javatools/src/main/java/org/xvm/compiler/ast/AnnotationExpression.java` | 441 | `toString()` | Annotation arguments | ~~Medium~~ Done |
+| `javatools/src/main/java/org/xvm/compiler/ast/LambdaExpression.java` | 1271 | `toString()` | Lambda parameters | ~~Medium~~ Done |
+| `javatools/src/main/java/org/xvm/compiler/ast/InvocationExpression.java` | 3007 | `toString()` | Method invocation arguments | ~~Medium~~ Done |
 | `javatools/src/main/java/org/xvm/compiler/ast/NewExpression.java` | 1532 | `toString()` | Array dimensions `Type[d1, d2]` | Medium |
 | `javatools/src/main/java/org/xvm/compiler/ast/NewExpression.java` | 1546 | `toString()` | Constructor arguments | Medium |
 | `javatools/src/main/java/org/xvm/compiler/ast/TupleExpression.java` | 488 | `toString()` | Tuple elements `(e1, e2)` | ~~Easy~~ Done |
-| `javatools/src/main/java/org/xvm/compiler/ast/NamedTypeExpression.java` | 134 | - | Module names | Easy |
-| `javatools/src/main/java/org/xvm/compiler/ast/NamedTypeExpression.java` | 159 | - | Type names | Easy |
-| `javatools/src/main/java/org/xvm/compiler/ast/NamedTypeExpression.java` | 1084 | - | Generic type parameters | Medium |
-| `javatools/src/main/java/org/xvm/compiler/ast/MethodDeclarationStatement.java` | 1138 | `toString()` | Type parameters | Medium |
-| `javatools/src/main/java/org/xvm/compiler/ast/MethodDeclarationStatement.java` | 1159 | `toString()` | Method parameters | Medium |
-| `javatools/src/main/java/org/xvm/compiler/ast/MethodDeclarationStatement.java` | 1175 | `toString()` | Return parameters | Medium |
-| `javatools/src/main/java/org/xvm/compiler/ast/MethodDeclarationStatement.java` | 1189 | `toString()` | Throws clause | Easy |
-| `javatools/src/main/java/org/xvm/compiler/ast/TryStatement.java` | 486 | `toString()` | Exception handlers | Medium |
-| `javatools/src/main/java/org/xvm/compiler/ast/FunctionTypeExpression.java` | 155 | `toString()` | Function return types | Medium |
-| `javatools/src/main/java/org/xvm/compiler/ast/FunctionTypeExpression.java` | 168 | `toString()` | Function parameters | Medium |
+| `javatools/src/main/java/org/xvm/compiler/ast/NamedTypeExpression.java` | 134 | `getModule()` | Module names | ~~Easy~~ Done |
+| `javatools/src/main/java/org/xvm/compiler/ast/NamedTypeExpression.java` | 159 | `getName()` | Type names | ~~Easy~~ Done |
+| `javatools/src/main/java/org/xvm/compiler/ast/NamedTypeExpression.java` | 1084 | `toString()` | Generic type parameters | ~~Medium~~ Done |
+| `javatools/src/main/java/org/xvm/compiler/ast/MethodDeclarationStatement.java` | 1138 | `toSignatureString()` | Type parameters | ~~Medium~~ Done |
+| `javatools/src/main/java/org/xvm/compiler/ast/MethodDeclarationStatement.java` | 1159 | `toSignatureString()` | Method parameters | ~~Medium~~ Done |
+| `javatools/src/main/java/org/xvm/compiler/ast/MethodDeclarationStatement.java` | 1175 | `toSignatureString()` | Return parameters | ~~Medium~~ Done |
+| `javatools/src/main/java/org/xvm/compiler/ast/MethodDeclarationStatement.java` | 1189 | `toSignatureString()` | Throws clause | ~~Easy~~ Done |
+| `javatools/src/main/java/org/xvm/compiler/ast/TryStatement.java` | 486 | `toString()` | Exception handlers | ~~Medium~~ Done |
+| `javatools/src/main/java/org/xvm/compiler/ast/FunctionTypeExpression.java` | 155 | `toString()` | Function return types | ~~Medium~~ Done |
+| `javatools/src/main/java/org/xvm/compiler/ast/FunctionTypeExpression.java` | 168 | `toString()` | Function parameters | ~~Medium~~ Done |
 | `javatools/src/main/java/org/xvm/compiler/ast/TupleTypeExpression.java` | 83 | `toString()` | Tuple type elements | ~~Easy~~ Done |
 | `javatools/src/main/java/org/xvm/compiler/ast/ListExpression.java` | 408 | `toString()` | List elements | ~~Easy~~ Done |
 | `javatools/src/main/java/org/xvm/compiler/ast/TypeCompositionStatement.java` | 2991 | `toString()` | Class modifiers | Hard |
@@ -115,7 +139,7 @@ These are parsing loop control patterns, not string building. See "Not Applicabl
 | `javatools/src/main/java/org/xvm/compiler/ast/TypeCompositionStatement.java` | 3037 | `toString()` | Constructor parameters | Medium |
 | `javatools/src/main/java/org/xvm/compiler/ast/TypeCompositionStatement.java` | 3050 | `toString()` | Base classes | Medium |
 | `javatools/src/main/java/org/xvm/compiler/ast/TypeCompositionStatement.java` | 3064 | `toString()` | Implemented interfaces | Medium |
-| `javatools/src/main/java/org/xvm/compiler/ast/ReturnStatement.java` | 477 | `toString()` | Return values | Easy |
+| `javatools/src/main/java/org/xvm/compiler/ast/ReturnStatement.java` | 477 | `toString()` | Return values | ~~Easy~~ Done |
 | `javatools/src/main/java/org/xvm/compiler/ast/ArrayAccessExpression.java` | 1288 | `toString()` | Array indices | ~~Easy~~ Done |
 | `javatools/src/main/java/org/xvm/compiler/ast/MultipleLValueStatement.java` | 232 | `toString()` | Assignment targets | ~~Easy~~ Done |
 | `javatools/src/main/java/org/xvm/compiler/ast/ForStatement.java` | 697, 721 | `toString()` | Loop variables and conditions | Medium |

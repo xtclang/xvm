@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import java.util.concurrent.locks.StampedLock;
 
@@ -1052,19 +1053,11 @@ public class ParameterizedTypeConstant
             sb.append(')');
         } else {
             sb.append(m_constType.getValueString())
-              .append('<');
-
-            boolean first = true;
-            for (TypeConstant type : m_atypeParams) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(type.getValueString());
-            }
-
-            sb.append('>');
+              .append('<')
+              .append(Arrays.stream(m_atypeParams)
+                      .map(TypeConstant::getValueString)
+                      .collect(Collectors.joining(", ")))
+              .append('>');
         }
 
         return sb.toString();

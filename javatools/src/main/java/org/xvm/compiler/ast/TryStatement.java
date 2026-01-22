@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -482,17 +483,11 @@ public class TryStatement
         sb.append(keyword.getId().TEXT);
 
         if (resources != null) {
-            sb.append(" (");
-            boolean first = true;
-            for (Statement resource : resources) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(resource);
-            }
-            sb.append(')');
+            sb.append(" (")
+              .append(resources.stream()
+                      .map(Statement::toString)
+                      .collect(Collectors.joining(", ")))
+              .append(')');
         }
 
         sb.append('\n')

@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Argument;
@@ -436,19 +437,11 @@ public class AnnotationExpression
           .append(type);
 
         if (args != null) {
-            sb.append('(');
-
-            boolean first = true;
-            for (Expression expr : args) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(expr);
-            }
-
-            sb.append(')');
+            sb.append('(')
+              .append(args.stream()
+                      .map(Expression::toString)
+                      .collect(Collectors.joining(", ")))
+              .append(')');
         }
 
         return sb.toString();

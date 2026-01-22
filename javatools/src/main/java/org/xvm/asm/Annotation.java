@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import java.util.Arrays;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import java.util.function.Consumer;
 
@@ -270,19 +271,11 @@ public class Annotation
           .append(getAnnotationClass().getValueString());
 
         if (m_aParams.length > 0) {
-            sb.append('(');
-
-            boolean first = true;
-            for (Constant param : m_aParams) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(param.getValueString());
-            }
-
-            sb.append(')');
+            sb.append('(')
+              .append(Arrays.stream(m_aParams)
+                      .map(Constant::getValueString)
+                      .collect(Collectors.joining(", ")))
+              .append(')');
         }
 
         return sb.toString();

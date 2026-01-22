@@ -3004,17 +3004,10 @@ public class InvocationExpression
         }
         sb.append('(');
 
-        boolean first = true;
-        for (Expression arg : args) {
-            if (first) {
-                first = false;
-            } else {
-                sb.append(", ");
-            }
-            sb.append(arg);
-        }
-
-        sb.append(')');
+        sb.append(args.stream()
+                .map(Expression::toString)
+                .collect(Collectors.joining(", ")))
+          .append(')');
         return sb.toString();
     }
 

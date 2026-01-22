@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
@@ -1267,18 +1268,12 @@ public class LambdaExpression
     public String toSignatureString() {
         StringBuilder sb = new StringBuilder();
 
-        sb.append('(');
-        boolean first = true;
-        for (Object param : (params == null ? paramNames : params)) {
-            if (first) {
-                first = false;
-            } else {
-                sb.append(", ");
-            }
-            sb.append(param);
-        }
-
-        sb.append(')')
+        List<?> source = params == null ? paramNames : params;
+        sb.append('(')
+          .append(source.stream()
+                  .map(Object::toString)
+                  .collect(Collectors.joining(", ")))
+          .append(')')
           .append(' ')
           .append(operator.getId().TEXT);
 

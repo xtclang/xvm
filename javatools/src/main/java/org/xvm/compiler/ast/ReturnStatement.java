@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
@@ -474,16 +475,10 @@ public class ReturnStatement
                 break;
 
             default:
-                boolean first = true;
-                for (Expression expr : exprs) {
-                    if (first) {
-                        first = false;
-                        sb.append(" ");
-                    } else {
-                        sb.append(", ");
-                    }
-                    sb.append(expr);
-                }
+                sb.append(" ")
+                  .append(exprs.stream()
+                          .map(Expression::toString)
+                          .collect(Collectors.joining(", ")));
                 break;
             }
         }

@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
@@ -1134,17 +1135,11 @@ public class MethodDeclarationStatement
         }
 
         if (typeParams != null) {
-            sb.append('<');
-            boolean first = true;
-            for (Parameter param : typeParams) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(param.toTypeParamString());
-            }
-            sb.append("> ");
+            sb.append('<')
+              .append(typeParams.stream()
+                      .map(Parameter::toTypeParamString)
+                      .collect(Collectors.joining(", ")))
+              .append("> ");
         }
 
         if (returns == null) {
@@ -1155,47 +1150,29 @@ public class MethodDeclarationStatement
             sb.append(returns.get(0))
                     .append(' ');
         } else {
-            sb.append(" (");
-            boolean first = true;
-            for (Parameter param : returns) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(param);
-            }
-            sb.append(") ");
+            sb.append(" (")
+              .append(returns.stream()
+                      .map(Parameter::toString)
+                      .collect(Collectors.joining(", ")))
+              .append(") ");
         }
 
         sb.append(getName());
 
         if (redundant != null) {
-            sb.append('<');
-            boolean first = true;
-            for (TypeExpression type : redundant) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(type);
-            }
-            sb.append('>');
+            sb.append('<')
+              .append(redundant.stream()
+                      .map(TypeExpression::toString)
+                      .collect(Collectors.joining(", ")))
+              .append('>');
         }
 
         if (params != null) {
-            sb.append('(');
-            boolean first = true;
-            for (Parameter param : params) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(param);
-            }
-            sb.append(')');
+            sb.append('(')
+              .append(params.stream()
+                      .map(Parameter::toString)
+                      .collect(Collectors.joining(", ")))
+              .append(')');
         }
 
         if (m_bodyFinally != null) {
