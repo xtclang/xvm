@@ -238,8 +238,8 @@ public class MethodStructure
      * Replace the annotations with an equivalent re-ordered array.
      */
     public void reorderAnnotations(Annotation[] annotations) {
-        assert new HashSet(Arrays.asList(annotations)).equals(
-               new HashSet(Arrays.asList(m_aAnnotations)));
+        assert new HashSet<>(List.of(annotations)).equals(
+               new HashSet<>(List.of(m_aAnnotations)));
 
         m_aAnnotations = annotations;
     }
@@ -435,7 +435,7 @@ public class MethodStructure
      * @return a list of Parameter structures that represent all return values of the method
      */
     public List<Parameter> getReturns() {
-        return Arrays.asList(m_aReturns);
+        return List.of(m_aReturns);
     }
 
     /**
@@ -528,7 +528,7 @@ public class MethodStructure
      * @return a list of Parameter structures that represent all parameters of the method
      */
     public List<Parameter> getParams() {
-        return Arrays.asList(m_aParams);
+        return List.of(m_aParams);
     }
 
     /**

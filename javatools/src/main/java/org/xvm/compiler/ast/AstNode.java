@@ -7,7 +7,6 @@ import java.io.StringWriter;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -1398,7 +1397,7 @@ public abstract class AstNode
             }
         }
 
-        return Arrays.asList(aexpr);
+        return List.of(aexpr);
     }
 
     /**
@@ -1744,7 +1743,7 @@ public abstract class AstNode
             }
             case Object[] kids -> {
                 cKids = kids.length;
-                iterK = Arrays.asList(kids).iterator();
+                iterK = List.of(kids).iterator();
             }
             case null, default -> {
                 cKids = 1;

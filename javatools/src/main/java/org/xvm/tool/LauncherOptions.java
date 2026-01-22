@@ -546,7 +546,7 @@ public abstract class LauncherOptions {
         }
 
         public T setModulePath(final File... paths) {
-            return setModulePath(Arrays.asList(paths));
+            return setModulePath(List.of(paths));
         }
 
         public T setModulePath(final String... paths) {
@@ -566,7 +566,7 @@ public abstract class LauncherOptions {
         }
 
         public T addModulePath(final File... paths) {
-            return addModulePath(Arrays.asList(paths));
+            return addModulePath(List.of(paths));
         }
 
         public T addModulePath(final String... paths) {

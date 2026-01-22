@@ -52,7 +52,7 @@ public class ReturnStatement
     }
 
     public ReturnStatement(Token keyword, Expression expr) {
-        this(keyword, Arrays.asList(expr)); // mutable list
+        this(keyword, List.of(expr));
     }
 
     public ReturnStatement(Token keyword, List<Expression> exprs) {

@@ -5,7 +5,6 @@ import java.io.File;
 import java.io.IOException;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -1057,7 +1056,7 @@ public class Parser {
             Expression expr = parseExpression();
             Token semi = expect(Id.SEMICOLON);
             ReturnStatement stmt = new ReturnStatement(eq, expr);
-            body = new StatementBlock(Arrays.asList(stmt), stmt.getStartPosition(),
+            body = new StatementBlock(List.of(stmt), stmt.getStartPosition(),
                                                            semi.getEndPosition());
             break;
         default:
@@ -1109,7 +1108,7 @@ public class Parser {
             if (eq != null) {
                 Expression expr = parseExpression();
                 ReturnStatement stmt = new ReturnStatement(eq, expr);
-                block = new StatementBlock(Arrays.asList(stmt), stmt.getStartPosition(),
+                block = new StatementBlock(List.of(stmt), stmt.getStartPosition(),
                                                                 stmt.getEndPosition());
                 fNeedsSemi = true;
             } else {

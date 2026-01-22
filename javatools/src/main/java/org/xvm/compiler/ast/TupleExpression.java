@@ -3,7 +3,6 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -59,7 +58,7 @@ public class TupleExpression
         Expression expr0 = aExprs[0];
 
         this.type        = null;
-        this.exprs       = Arrays.asList(aExprs);
+        this.exprs       = List.of(aExprs);
         this.m_lStartPos = expr0.getStartPosition();
         this.m_lEndPos   = aExprs[cExprs-1].getEndPosition();
 

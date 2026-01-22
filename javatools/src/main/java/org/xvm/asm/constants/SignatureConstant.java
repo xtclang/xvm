@@ -171,7 +171,7 @@ public class SignatureConstant
      * @return the method's parameter types
      */
     public List<TypeConstant> getParams() {
-        return Arrays.asList(m_aconstParams.clone());
+        return List.of(m_aconstParams);
     }
 
     /**
@@ -192,7 +192,7 @@ public class SignatureConstant
      * @return the method's return types
      */
     public List<TypeConstant> getReturns() {
-        return Arrays.asList(m_aconstReturns);
+        return List.of(m_aconstReturns);
     }
 
     /**

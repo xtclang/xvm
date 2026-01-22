@@ -404,8 +404,7 @@ public class PropertyInfo
                     list.add(body);
                 }
             } else if (list == null) {
-                // "Array.asList()" produces an immutable list
-                list = new ArrayList<>(Arrays.asList(aBody).subList(0, i));
+                list = new ArrayList<>(List.of(aBody).subList(0, i));
             }
         }
 

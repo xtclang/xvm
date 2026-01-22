@@ -1,7 +1,7 @@
 package org.xvm.runtime.template.reflect;
 
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -220,7 +220,8 @@ public class xRef
                                     typeMask.ensureAccess(Access.PRIVATE),
                                     pool.typeStruct());
         if (typeOrig.isAnnotated()) {
-            List<Annotation> listAnno = Arrays.asList(typeOrig.getAnnotations());
+            // NOTE: This was a bug - Arrays.asList() returns a fixed-size list that doesn't support removeIf()
+            List<Annotation> listAnno = new ArrayList<>(List.of(typeOrig.getAnnotations()));
             listAnno.removeIf(anno -> !anno.getAnnotationType().isShared(pool));
             if (!listAnno.isEmpty()) {
                 typeClz = pool.ensureAnnotatedTypeConstant(typeClz,
