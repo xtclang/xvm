@@ -206,7 +206,7 @@ public abstract class PrefixExpression
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         boolean fPre = !(this instanceof SequentialAssignExpression exprSeq) || exprSeq.isPre();
         if (fPre) {

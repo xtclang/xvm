@@ -1216,7 +1216,7 @@ public class MethodInfo
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append(getSignature().getValueString());
 
         int i = 0;

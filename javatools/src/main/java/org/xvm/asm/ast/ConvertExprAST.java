@@ -95,30 +95,30 @@ public class ConvertExprAST
             MethodConstant convMethod = (MethodConstant) convMethods[0];
             return getExpr().toString() + "." + convMethod.getName() + "()";
         } else {
-            StringBuilder buff = new StringBuilder("(");
-            String        expr = getExpr().toString();
-            boolean       cond = isConditional();
+            var     sb   = new StringBuilder("(");
+            String  expr = getExpr().toString();
+            boolean cond = isConditional();
             for (int i = 0, c = convMethods.length; i < c; i++) {
                 MethodConstant convMethod = (MethodConstant) convMethods[i];
 
                 if (i > (cond ? 1 : 0)) {
-                    buff.append(", ");
+                    sb.append(", ");
                 }
                 if (convMethod == null) {
                     if (cond && i == 0) {
-                        buff.append("conditional ");
+                        sb.append("conditional ");
                     } else {
-                        buff.append(expr)
+                        sb.append(expr)
                             .append("[").append(i).append("]");
                     }
                 } else {
-                    buff.append(expr)
+                    sb.append(expr)
                         .append("[").append(i).append("].")
                         .append(convMethod.getName())
                         .append('<').append(types[i].getValueString()).append(">()");
                     }
             }
-            return buff.append(')').toString();
+            return sb.append(')').toString();
         }
     }
 }

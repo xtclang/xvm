@@ -423,7 +423,7 @@ public class MapExpression
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.append("\n    {");
 

@@ -134,7 +134,7 @@ public class TemplateExpression
         Constant constVal = null;
         if (fValid && fConst) {
             ConstantPool  pool = pool();
-            StringBuilder sb   = new StringBuilder();
+            var           sb   = new StringBuilder();
             for (Expression expr : exprs) {
                 TypeConstant[] atype = expr.getTypes();
                 if (atype.length > 0) {
@@ -261,7 +261,7 @@ public class TemplateExpression
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.append("$\"");
 

@@ -521,7 +521,7 @@ public abstract class XvmStructure
             int i = 0;
             String sIndentMore = nextIndent(sIndent);
             for (XvmStructure xs : collStructs) {
-                StringBuilder sb = new StringBuilder();
+                var sb = new StringBuilder();
                 sb.append(sIndent)
                   .append('[')
                   .append(i++)

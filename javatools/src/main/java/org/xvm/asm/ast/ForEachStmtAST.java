@@ -103,18 +103,18 @@ public class ForEachStmtAST
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder("for (");
-        buf.append(lval);
-        buf.append(": ");
-        buf.append(rval);
-        buf.append(") ");
+        var sb = new StringBuilder("for (");
+        sb.append(lval)
+          .append(": ")
+          .append(rval)
+          .append(") ");
         if (body == null) {
-            buf.append("{}");
+            sb.append("{}");
         } else {
-            buf.append("{\n")
+            sb.append("{\n")
                .append(Handy.indentLines(body.toString(), "  "))
                .append("\n}");
         }
-        return buf.toString();
+        return sb.toString();
     }
 }

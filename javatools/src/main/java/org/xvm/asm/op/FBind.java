@@ -206,7 +206,7 @@ public class FBind
 
     @Override
     protected String getParamsString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         int cArgNums = m_anParamValue == null ? 0 : m_anParamValue.length;
         int cArgRefs = m_aArgParam    == null ? 0 : m_aArgParam   .length;
         for (int i = 0, c = m_anParamIx.length; i < c; ++i) {

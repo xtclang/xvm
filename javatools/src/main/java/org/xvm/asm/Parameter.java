@@ -404,7 +404,7 @@ public class Parameter
 
     @Override
     public String getDescription() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.append(isParameter() ? "param" : "return")
           .append("-index=")

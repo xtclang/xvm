@@ -37,7 +37,7 @@ public class Redundant
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder("_: ");
+        var sb = new StringBuilder("_: ");
 
         Op op = getNextOp();
         if (op != null) {

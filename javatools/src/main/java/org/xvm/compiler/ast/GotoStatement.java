@@ -153,7 +153,7 @@ public abstract class GotoStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.append(keyword.getId().TEXT);
 

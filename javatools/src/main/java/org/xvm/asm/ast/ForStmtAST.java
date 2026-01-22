@@ -93,26 +93,26 @@ public class ForStmtAST
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder("for (");
+        var sb = new StringBuilder("for (");
         if (init != null) {
-            buf.append(init);
+            sb.append(init);
         }
-        buf.append("; ");
+        sb.append("; ");
         if (cond != null) {
-            buf.append(cond);
+            sb.append(cond);
         }
-        buf.append("; ");
+        sb.append("; ");
         if (update != null) {
-            buf.append(update);
+            sb.append(update);
         }
-        buf.append(") ");
+        sb.append(") ");
         if (body == null) {
-            buf.append("{}");
+            sb.append("{}");
         } else {
-            buf.append("{\n")
+            sb.append("{\n")
                .append(Handy.indentLines(body.toString(), "  "))
                .append("\n}");
         }
-        return buf.toString();
+        return sb.toString();
     }
 }

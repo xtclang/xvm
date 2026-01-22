@@ -6,12 +6,12 @@ This document catalogs occurrences of legacy patterns in the XVM codebase that c
 
 | Pattern | Occurrences | Files Affected | Priority | Status |
 |---------|-------------|----------------|----------|--------|
-| `boolean first` loop pattern | ~70+ | 30 | Medium | ~39 done |
-| Explicit `StringBuilder` declarations | 217 | ~80 | Low | Pending |
+| `boolean first` loop pattern | ~70+ | 30 | Medium | **DONE** |
+| Explicit `StringBuilder` declarations | 217 | ~80 | Low | **DONE** |
 | `Collections.emptyList()` → `List.of()` | 49 | 22 | **High** | **DONE** |
 | `Collections.singletonList()` → `List.of()` | 22 | 10 | **High** | **DONE** |
-| `Arrays.asList()` → `List.of()` | 19 | 12 | Medium | Pending (some need mutability) |
-| `System.arraycopy()` → `Arrays.copyOf()` | ~30 | 20 | Medium | Pending |
+| `Arrays.asList()` → `List.of()` | 19 | 12 | Medium | **DONE** |
+| `System.arraycopy()` → `Arrays.copyOf()` | ~30 | 20 | Medium | 5 done |
 | Lazy list instantiation (`List x = null`) | ~26 | ~15 | Medium | Pending |
 
 ### 🐛 **CRITICAL BUG FOUND**
@@ -126,7 +126,7 @@ for (Item item : items) {
 | `javatools/src/main/java/org/xvm/asm/constants/ParameterizedTypeConstant.java` | 1057 | `getValueString()` | Generic type parameters `Type<P1, P2>` | ~~Medium~~ Done |
 | `javatools/src/main/java/org/xvm/asm/constants/SignatureConstant.java` | 706 | `getValueString()` | Return types `(T1, T2)` | ~~Medium~~ Done |
 | `javatools/src/main/java/org/xvm/asm/constants/SignatureConstant.java` | 725 | `getValueString()` | Parameter types | ~~Medium~~ Done |
-| `javatools/src/main/java/org/xvm/asm/FileStructure.java` | 938 | `getDescription()` | Module list | Easy |
+| `javatools/src/main/java/org/xvm/asm/FileStructure.java` | 938 | `getDescription()` | Module list | ~~Easy~~ Done |
 | `javatools/src/main/java/org/xvm/asm/Annotation.java` | 275 | `getValueString()` | Annotation parameters | ~~Medium~~ Done |
 | `javatools/src/main/java/org/xvm/asm/Component.java` | 666 | Iterator class | Iterator state (not string) | N/A |
 
@@ -146,7 +146,7 @@ These are parsing loop control patterns, not string building. See "Not Applicabl
 |------|---------|--------|----------|------------|
 | `javatools/src/main/java/org/xvm/compiler/ast/NameExpression.java` | 3271 | `toString()` | Type parameters | Medium |
 | `javatools/src/main/java/org/xvm/compiler/ast/CompositionNode.java` | 168, 235, 315, 332, 559 | Multiple | Annotation args, type constraints, composition args, injection parameters | ~~Medium~~ Done |
-| `javatools/src/main/java/org/xvm/compiler/ast/CompositionNode.java` | 541 | `Import.toString()` | Version overrides (different delimiters) | Hard |
+| `javatools/src/main/java/org/xvm/compiler/ast/CompositionNode.java` | 541 | `Import.toString()` | Version overrides (different delimiters) | ~~Hard~~ Done |
 | `javatools/src/main/java/org/xvm/compiler/ast/ImportStatement.java` | 116 | `getQualifiedNameString()` | Qualified names | ~~Easy~~ Done |
 | `javatools/src/main/java/org/xvm/compiler/ast/ImportStatement.java` | 242 | `toString()` | Import statements | Medium |
 | `javatools/src/main/java/org/xvm/compiler/ast/AnnotationExpression.java` | 441 | `toString()` | Annotation arguments | ~~Medium~~ Done |
@@ -611,19 +611,20 @@ T[] newArray = Arrays.copyOf(oldArray, newSize);
 
 #### Prime Candidates (copy from index 0 to index 0)
 
-| File | Line | Current Pattern |
-|------|------|-----------------|
-| `asm/Parameter.java` | 140 | Annotation array resize |
-| `asm/MethodStructure.java` | 1580 | Annotation array resize |
-| `asm/MethodStructure.java` | 2468 | Op array resize |
-| `asm/MethodStructure.java` | 2569 | Op array resize |
-| `asm/constants/MethodInfo.java` | 300 | MethodBody array merge |
-| `asm/constants/PropertyInfo.java` | 1277 | PropertyBody chain resize |
-| `asm/constants/AllCondition.java` | 122, 154 | Condition array manipulation |
-| `asm/Version.java` | 506 | Version parts trimming |
-| `asm/VersionTree.java` | 885 | Node array resize |
-| `runtime/FiberQueue.java` | 284 | Frame array resize |
-| `runtime/template/collections/xTuple.java` | 286, 296, 331, 341, 562 | Tuple manipulation |
+| File | Line | Current Pattern | Status |
+|------|------|-----------------|--------|
+| `asm/Parameter.java` | 140 | Annotation array resize | N/A (adds element after) |
+| `asm/MethodStructure.java` | 1580 | Annotation array resize | N/A (adds element after) |
+| `asm/MethodStructure.java` | 2468 | Op array resize | **DONE** |
+| `asm/MethodStructure.java` | 2569 | Op array resize | **DONE** |
+| `asm/constants/MethodInfo.java` | 300 | MethodBody array merge | N/A (merges two arrays) |
+| `asm/constants/PropertyInfo.java` | 1277 | PropertyBody chain resize | N/A (adds element after) |
+| `asm/constants/AllCondition.java` | 122, 154 | Condition array manipulation | N/A (adds element after) |
+| `asm/Version.java` | 506 | Version parts trimming | **DONE** |
+| `asm/VersionTree.java` | 885 | Node array resize | **DONE** |
+| `asm/ast/SwitchAST.java` | 89 | BinaryAST array resize | **DONE** |
+| `runtime/FiberQueue.java` | 284 | Frame array resize | N/A (conditional) |
+| `runtime/template/collections/xTuple.java` | 286, 296, 331, 341, 562 | Tuple manipulation | N/A (add/merge after) |
 
 **Example transformation:**
 ```java

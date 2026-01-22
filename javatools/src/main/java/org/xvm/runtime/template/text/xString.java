@@ -386,7 +386,7 @@ public class xString
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder(super.toString());
+            var sb = new StringBuilder(super.toString());
             sb.append('\"');
             Handy.appendString(sb, getStringValue());
             return sb.append('\"').toString();

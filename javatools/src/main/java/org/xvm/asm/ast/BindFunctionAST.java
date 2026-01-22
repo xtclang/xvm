@@ -111,23 +111,23 @@ public class BindFunctionAST
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder("&");
-        buf.append(target)
+        var sb = new StringBuilder("&");
+        sb.append(target)
            .append("(");
         if (indexes.length > 0) {
             for (int i = 0, argIx = 0, max = Arrays.stream(indexes).max().getAsInt(); argIx <= max; i++) {
                 if (argIx != 0) {
-                    buf.append(", ");
+                    sb.append(", ");
                 }
                 if (i == indexes[argIx]) {
-                    buf.append(args[i]);
+                    sb.append(args[i]);
                     argIx++;
                 } else {
-                    buf.append("_");
+                    sb.append("_");
                 }
             }
         }
-        buf.append(")");
-        return buf.toString();
+        sb.append(")");
+        return sb.toString();
     }
 }

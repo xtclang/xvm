@@ -73,7 +73,7 @@ public class Label
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.append(f_sName)
           .append(": ");

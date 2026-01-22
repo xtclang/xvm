@@ -599,7 +599,7 @@ public class xRTFunction
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             sb.append(getName())
               .append('(');
             for (int i = 0, c = getParamCount(); i < c; ++i) {

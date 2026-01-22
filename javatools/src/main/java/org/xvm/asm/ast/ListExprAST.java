@@ -71,13 +71,13 @@ public class ListExprAST
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append(type).append(":[");
+        var sb = new StringBuilder();
+        sb.append(type).append(":[");
         for (ExprAST value : values) {
-            buf.append(value.toString()).append(", ");
+            sb.append(value.toString()).append(", ");
         }
-        buf.delete(buf.length()-2, buf.length())
+        sb.delete(sb.length()-2, sb.length())
            .append(']');
-        return buf.toString();
+        return sb.toString();
     }
 }

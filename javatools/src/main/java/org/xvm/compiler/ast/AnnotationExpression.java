@@ -431,7 +431,7 @@ public class AnnotationExpression
             return m_anno.getValueString();
         }
 
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.append('@')
           .append(type);

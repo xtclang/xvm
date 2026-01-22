@@ -426,7 +426,7 @@ public class PropertyConstant
 
     @Override
     public String getDescription() {
-        StringBuilder sb = new StringBuilder("property=");
+        var sb = new StringBuilder("property=");
         sb.append(getName());
         IdentityConstant idParent = getNamespace();
         while (idParent != null) {

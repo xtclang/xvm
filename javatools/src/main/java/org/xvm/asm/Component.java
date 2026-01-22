@@ -2114,7 +2114,7 @@ public abstract class Component
 
     @Override
     public String getDescription() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append("name=")
           .append(getName())
           .append(", format=")
@@ -3167,7 +3167,7 @@ public abstract class Component
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
 
             switch (m_composition) {
             case Annotation:

@@ -246,7 +246,7 @@ public class TypeCompositionStatement
 
     public String getName() {
         if (category.getId() == Token.Id.MODULE) {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             for (Token suffix : qualified) {
                 sb.append('.')
                   .append(suffix.getValue());
@@ -1410,7 +1410,7 @@ public class TypeCompositionStatement
     private void reportAmbiguousConstructor(List<Parameter> listParams, TypeConstant[] atypeParams,
                                             ErrorListener errs) {
         int           cParams = atypeParams.length;
-        StringBuilder sb = new StringBuilder("construct(");
+        var sb = new StringBuilder("construct(");
         for (int i = 0; i < cParams; ++i) {
             if (i > 0) {
                 sb.append(", ");
@@ -2900,7 +2900,7 @@ public class TypeCompositionStatement
             return null;
         }
 
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         int nState = 0;
         for (char ch : sDoc.substring(1).toCharArray()) {
             switch (nState) {
@@ -2974,7 +2974,7 @@ public class TypeCompositionStatement
     // ----- debugging assistance ------------------------------------------------------------------
 
     public String toSignatureString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         if (category.getId() == Token.Id.ENUM_VAL) {
             if (annotations != null) {
@@ -3043,7 +3043,7 @@ public class TypeCompositionStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         if (doc != null) {
             String sDoc = String.valueOf(doc.getValue());

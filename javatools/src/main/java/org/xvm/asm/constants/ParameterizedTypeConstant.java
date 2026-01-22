@@ -998,7 +998,7 @@ public class ParameterizedTypeConstant
 
     @Override
     public String getValueString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         ConstantPool pool = getConstantPool();
         if (m_constType.isA(pool.typeFunction())) {

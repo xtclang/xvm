@@ -82,15 +82,15 @@ public class MapExprAST
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append(type).append(":[");
+        var sb = new StringBuilder();
+        sb.append(type).append(":[");
         for (int i = 0, c = keys.length; i < c; i++) {
             ExprAST key   = keys[i];
             ExprAST value = values[i];
-            buf.append(key.toString())  .append("=")
+            sb.append(key.toString())  .append("=")
                .append(value.toString()).append(", ");
         }
-        buf.append(']');
-        return buf.toString();
+        sb.append(']');
+        return sb.toString();
     }
 }

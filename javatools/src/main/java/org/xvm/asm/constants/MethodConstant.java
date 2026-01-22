@@ -398,7 +398,7 @@ public class MethodConstant
 
     @Override
     public String getPathElementString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         if (isNascent()) {
             sb.append('[')
@@ -623,7 +623,7 @@ public class MethodConstant
 
     @Override
     public String getDescription() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.append(getName());
         IdentityConstant idParent = getNamespace();

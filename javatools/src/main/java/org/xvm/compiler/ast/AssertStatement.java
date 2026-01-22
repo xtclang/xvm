@@ -366,7 +366,7 @@ public class AssertStatement
                 mapTrace = new ListMap<>();
                 cond.selectTraceableExpressions(mapTrace);
                 if (!mapTrace.isEmpty()) {
-                    StringBuilder sb = new StringBuilder()
+                    var sb = new StringBuilder()
                             .append('"')
                             .append(sCond)
                             .append('"');
@@ -624,7 +624,7 @@ public class AssertStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.append(keyword.getId().TEXT);
         if (interval != null) {

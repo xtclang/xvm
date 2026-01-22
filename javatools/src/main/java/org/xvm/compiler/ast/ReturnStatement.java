@@ -462,7 +462,7 @@ public class ReturnStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append("return");
         if(exprs != null) {
             switch (exprs.size()) {

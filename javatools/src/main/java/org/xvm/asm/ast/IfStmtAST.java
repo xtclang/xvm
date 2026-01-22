@@ -98,18 +98,18 @@ public class IfStmtAST
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append("if (")
+        var sb = new StringBuilder();
+        sb.append("if (")
            .append(cond)
            .append(") {\n")
            .append(indentLines(thenStmt.toString(), "  "))
            .append("\n}");
 
         if (hasElse) {
-            buf.append(" else {\n")
+            sb.append(" else {\n")
                .append(indentLines(elseStmt.toString(), "  "))
                .append("\n}");
         }
-        return buf.toString();
+        return sb.toString();
     }
 }

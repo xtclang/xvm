@@ -450,7 +450,7 @@ public class Register
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         if (m_type != null) {
             sb.append(m_type.getValueString())

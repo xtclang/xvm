@@ -6531,7 +6531,7 @@ public abstract class TypeConstant
             return Builder.N_nFunction;
         }
 
-        StringBuilder sb = new StringBuilder()
+        var sb = new StringBuilder()
             .append(loader.prefix)
             .append(id.getJitName(ts));
 

@@ -255,7 +255,7 @@ public abstract class MultiCondition
     public String getValueString() {
         final ConditionalConstant[] aconstCond = m_aconstCond;
 
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append('(')
           .append(m_aconstCond[0].getValueString());
 

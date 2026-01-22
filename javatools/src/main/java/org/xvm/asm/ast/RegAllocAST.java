@@ -141,14 +141,14 @@ public class RegAllocAST
         TypeConstant typeRef = reg.getRefType();
         TypeConstant type    = reg.getType();
 
-        StringBuilder buf = new StringBuilder();
+        var sb = new StringBuilder();
         if (typeRef != null) {
-            buf.append(typeRef.getValueString())
+            sb.append(typeRef.getValueString())
                .append(' ');
         }
-        buf.append(type.getValueString())
+        sb.append(type.getValueString())
            .append(' ')
            .append(reg);
-        return buf.toString();
+        return sb.toString();
     }
 }

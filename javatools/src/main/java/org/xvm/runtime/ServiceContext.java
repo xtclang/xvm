@@ -1548,7 +1548,7 @@ public class ServiceContext {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append("Service \"")
           .append(f_sName)
           .append("\" (id=")

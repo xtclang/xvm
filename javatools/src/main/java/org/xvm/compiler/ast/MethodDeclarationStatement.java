@@ -1118,7 +1118,7 @@ public class MethodDeclarationStatement
                     : struct.getIdentityConstant().getValueString();
         }
 
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         if (modifiers != null) {
             for (Token token : modifiers) {
@@ -1184,7 +1184,7 @@ public class MethodDeclarationStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         if (doc != null) {
             String sDoc = String.valueOf(doc.getValue());

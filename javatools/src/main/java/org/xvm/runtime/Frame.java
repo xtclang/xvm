@@ -1976,7 +1976,7 @@ public class Frame
      * @return the frame stack in a human-readable format
      */
     public String getStackTrace() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         for (String sFrame : getStackTraceArray()) {
             sb.append("\n\t")
@@ -2005,7 +2005,7 @@ public class Frame
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             if (boundary) {
                 sb.append("^");
             }
@@ -2183,7 +2183,7 @@ public class Frame
 
     protected static String formatFrameDetails(ServiceContext ctx, MethodStructure function,
                                                int iPC, Op[] aOp, Frame framePrev) {
-        StringBuilder sb = new StringBuilder("at ");
+        var sb = new StringBuilder("at ");
 
         if (function == null) {
             if (framePrev == null) {

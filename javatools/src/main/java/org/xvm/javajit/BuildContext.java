@@ -452,7 +452,7 @@ public class BuildContext {
                 ops[iPC].build(this, code);
             } catch (Throwable e) {
                 MethodStructure struct = methodStruct;
-                StringBuilder sb = new StringBuilder();
+                var sb = new StringBuilder();
                 sb.append(className)
                     .append('.')
                     .append(struct.getIdentityConstant().getName())

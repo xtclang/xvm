@@ -93,7 +93,7 @@ public class TypedefStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         if (cond != null) {
             sb.append("if (")

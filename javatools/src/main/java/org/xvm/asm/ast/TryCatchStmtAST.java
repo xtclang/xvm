@@ -77,29 +77,29 @@ public class TryCatchStmtAST
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append("try");
+        var sb = new StringBuilder();
+        sb.append("try");
 
         if (resources.length > 0) {
-            buf.append(" (");
+            sb.append(" (");
             for (int i = 0, c = resources.length; i < c; ++i) {
                 if (i > 0) {
-                    buf.append(", ");
+                    sb.append(", ");
                 }
-                buf.append(resources[i]);
+                sb.append(resources[i]);
             }
-            buf.append(')');
+            sb.append(')');
         }
 
-        buf.append(" {\n")
+        sb.append(" {\n")
            .append(indentLines(body.toString(), "  "))
            .append("\n}");
 
         for (BinaryAST catch_ : catches) {
-            buf.append(" catch (???) {\n")
+            sb.append(" catch (???) {\n")
                .append(indentLines(catch_.toString(), "  "))
                .append("\n}");
         }
-        return buf.toString();
+        return sb.toString();
     }
 }

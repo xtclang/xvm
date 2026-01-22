@@ -752,7 +752,7 @@ public final class DebugConsole
             default:
                 bp = parseBreakPoint(asParts[1], asParts[2], false);
                 if (bp != null) {
-                    StringBuilder sb = new StringBuilder();
+                    var sb = new StringBuilder();
                     for (int i = 3; i < cArgs + 1; i++) {
                         sb.append(asParts[i]).append(' ');
                     }
@@ -1017,7 +1017,7 @@ public final class DebugConsole
                 return Op.R_EXCEPTION;
             }
 
-            StringBuilder sb = new StringBuilder("{\nreturn {Object r__ = {\nreturn");
+            var sb = new StringBuilder("{\nreturn {Object r__ = {\nreturn");
             for (int i = 1; i < cArgs + 1; i++) {
                 sb.append(' ').append(asParts[i]);
             }
@@ -1040,7 +1040,7 @@ public final class DebugConsole
                 return Op.R_EXCEPTION;
             }
 
-            StringBuilder sb = new StringBuilder("{\nreturn {Tuple r__ = {\nreturn");
+            var sb = new StringBuilder("{\nreturn {Tuple r__ = {\nreturn");
             for (int i = 1; i < cArgs + 1; i++) {
                 sb.append(' ').append(asParts[i]);
             }
@@ -1197,7 +1197,7 @@ public final class DebugConsole
                         }
                     }
 
-                    StringBuilder sb = new StringBuilder();
+                    var sb = new StringBuilder();
 
                     renderVar(hVar, false, sb, "   +");
                     writer.println(sb);
@@ -1357,7 +1357,7 @@ public final class DebugConsole
             return "";
         }
 
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         boolean fFirst = true;
         for (BreakPoint bp : set) {
             if (bp.oneTime) {
@@ -1445,7 +1445,7 @@ public final class DebugConsole
         int    cTop    = Math.max(xTerminalConsole.CONSOLE_LOG.size(), 1) + 2;     // console at top
         int    cMid    = m_cHeight - cBot - cTop;                              // code in the middle
 
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append('\n');
         if (m_cHeight > 0 && m_frameFocus != null && m_frameFocus.f_function != null) {
             MethodStructure method   = m_frameFocus.f_function;
@@ -1869,7 +1869,7 @@ public final class DebugConsole
             return "(No breakpoints.)";
         }
 
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append("Breakpoint List:\n")
           .append("-------------------------");
 
@@ -1887,7 +1887,7 @@ public final class DebugConsole
         List<Frame.StackFrame> listFrames = new ArrayList<>();
         int                    ixFrame    = 0;
 
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         for (Container container : m_frame.f_context.getRuntime().containers()) {
             // for now, let's show all the containers, rather than the current one
             if (!sb.isEmpty()) {
@@ -1966,12 +1966,12 @@ public final class DebugConsole
         list.remove(sCommand);
         list.add(0, sCommand);
 
-        StringBuilder sbCommands = new StringBuilder();
+        var sb = new StringBuilder();
         for (String s : list) {
-            sbCommands.append('\n').append(s);
+            sb.append('\n').append(s);
         }
 
-        byte[] abHistory = sbCommands.substring(1).getBytes(StandardCharsets.UTF_8);
+        byte[] abHistory = sb.substring(1).getBytes(StandardCharsets.UTF_8);
         prefs.put("history", Base64.getEncoder().encodeToString(abHistory));
     }
 
@@ -2001,8 +2001,8 @@ public final class DebugConsole
     }
 
     private static String hruler(int c) {
-        StringBuilder sb1 = new StringBuilder(c*2+1);
-        StringBuilder sb2 = new StringBuilder(c);
+        var sb1 = new StringBuilder(c*2+1);
+        var sb2 = new StringBuilder(c);
         for (int i = 0; i < c; ++i) {
             sb1.append(i % 10 == 0 ? (char) ('0' + (i / 10 % 10)) : ' ');
             sb2.append(i % 10);
@@ -2015,7 +2015,7 @@ public final class DebugConsole
 
     private static String vruler(int c, int skip) {
         int digits = c > 100 ? 3 : c > 10 ? 2 : 1;
-        StringBuilder sb = new StringBuilder(c * (digits + 1));
+        var sb = new StringBuilder(c * (digits + 1));
         for (int i = skip; i < c; ++i) {
             sb.append(rjust(Integer.toString((i % 10) == 0 ? i : i % 10), digits)).append('\n');
         }
@@ -2179,7 +2179,7 @@ public final class DebugConsole
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             sb.append(lineNumber < 0
                     ? "*".equals(className)
                             ? "On ALL exceptions"
@@ -2199,7 +2199,7 @@ public final class DebugConsole
         }
 
         String toPrefString() {
-            StringBuilder sb = new StringBuilder(className);
+            var sb = new StringBuilder(className);
             sb.append(':');
             if (lineNumber >= 0) {
                 sb.append(lineNumber);
@@ -2293,7 +2293,7 @@ public final class DebugConsole
         }
 
         String render(int nIndex, int cchIndex) {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             sb.append(rjust(String.valueOf(nIndex), cchIndex))
               .append(dup(' ', indent*2 + 1))
               .append(canExpand ? (expanded ? '-' : '+') : ' ')

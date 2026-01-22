@@ -3374,7 +3374,7 @@ public class ClassStructure
 
     @Override
     public String getDescription() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append(super.getDescription())
           .append(", type-params=");
 

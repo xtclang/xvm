@@ -172,7 +172,7 @@ public class JumpInt
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         int cOps     = m_aOpCase == null ? 0 : m_aOpCase.length;
         int cOffsets = m_aofCase == null ? 0 : m_aofCase.length;

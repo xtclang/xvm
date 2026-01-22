@@ -2204,7 +2204,7 @@ public class TypeInfo {
      * @param fRuntime  if specified, optimize the method call chains
      */
     public String toString(boolean fRuntime) {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.append("TypeInfo: ")
           .append(f_type)

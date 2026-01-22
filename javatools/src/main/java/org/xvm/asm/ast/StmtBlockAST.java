@@ -93,15 +93,15 @@ public class StmtBlockAST
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
+        var sb = new StringBuilder();
         for (int i = 0, c = stmts.length; i < c; ++i) {
             BinaryAST stmt = stmts[i];
             if (i > 0) {
-                buf.append('\n');
+                sb.append('\n');
             }
-            buf.append(indentLines(stmt.toString(), "  "));
+            sb.append(indentLines(stmt.toString(), "  "));
         }
-        return buf.toString();
+        return sb.toString();
     }
 
     public static StmtBlockAST EMPTY = new StmtBlockAST(NO_ASTS, true);

@@ -271,7 +271,7 @@ public class ModuleConstant
 
     @Override
     public String getValueString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append(m_constName.getValue());
         if (m_constVersion != null) {
             sb.append(" v:")

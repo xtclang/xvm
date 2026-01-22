@@ -167,25 +167,25 @@ public class NewExprAST
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
+        var sb = new StringBuilder();
 
         if (isChild() || isVirtual()) {
-            buf.append(parent)
+            sb.append(parent)
                .append('.');
         }
-        buf.append("new");
+        sb.append("new");
         if (!isVirtual()) {
-            buf.append(' ')
+            sb.append(' ')
                .append(type.getValueString());
         }
-        buf.append('(');
+        sb.append('(');
         for (int i = 0, c = args.length; i < c; i++) {
             if (i > 0) {
-                buf.append(", ");
+                sb.append(", ");
             }
-            buf.append(args[i]);
+            sb.append(args[i]);
         }
-        buf.append(')');
-        return buf.toString();
+        sb.append(')');
+        return sb.toString();
     }
 }

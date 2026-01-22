@@ -147,7 +147,7 @@ public class Parser {
                         m_errorListener = new ErrorList(1);
                         List<Token> tokens = parseQualifiedName();
                         if (!m_errorListener.hasSeriousErrors()) {
-                            StringBuilder sb = new StringBuilder();
+                            var sb = new StringBuilder();
                             for (int i = 0, c = tokens.size(); i < c; ++i) {
                                 if (i > 0) {
                                     sb.append('.');
@@ -5588,7 +5588,7 @@ public class Parser {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         Source source = m_source;
         sb.append(source.getSimpleFileName());

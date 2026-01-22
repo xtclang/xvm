@@ -2798,7 +2798,7 @@ public class ConstantPool
 
     @Override
     public String getDescription() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append("module=")
           .append(getFileStructure().getModuleId().getName())
           .append(", size=")

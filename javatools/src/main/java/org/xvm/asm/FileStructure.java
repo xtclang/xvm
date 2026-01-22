@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
@@ -929,26 +930,20 @@ public class FileStructure
 
     @Override
     public String getDescription() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         String sName = getModuleId().getName();
         sb.append("main-module=")
           .append(sName);
 
-        boolean first = true;
-        for (ModuleConstant id : moduleIds()) {
-            if (!id.getName().equals(sName)) {
-                if (first) {
-                    sb.append(", other-modules={");
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(id.getName());
-            }
-        }
-        if (!first) {
-            sb.append('}');
+        String otherModules = moduleIds().stream()
+                .map(ModuleConstant::getName)
+                .filter(name -> !name.equals(sName))
+                .collect(Collectors.joining(", "));
+        if (!otherModules.isEmpty()) {
+            sb.append(", other-modules={")
+              .append(otherModules)
+              .append('}');
         }
 
         sb.append(", xvm-version=")

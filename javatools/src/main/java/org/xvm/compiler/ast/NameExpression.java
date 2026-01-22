@@ -3249,7 +3249,7 @@ public class NameExpression
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         if (left != null) {
             if (left instanceof NameExpression) {

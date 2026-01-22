@@ -691,7 +691,7 @@ public class SignatureConstant
 
     @Override
     public String getValueString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         switch (m_aconstReturns.length) {
         case 0:
@@ -901,7 +901,7 @@ public class SignatureConstant
      * @return a parenthesized, comma-delimited string of types
      */
     protected static String formatTypes(TypeConstant[] aconst) {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append('(');
         for (int i = 0, c = aconst.length; i < c; ++i) {
             if (i > 0) {

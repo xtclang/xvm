@@ -118,7 +118,7 @@ public class FiberQueue {
             return "";
         }
 
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         int cFrames = m_aFrame.length;
         int ixHead  = m_ixHead;
         for (int i = 0; i < cFrames; i++) {

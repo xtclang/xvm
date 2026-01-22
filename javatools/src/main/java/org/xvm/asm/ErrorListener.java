@@ -313,7 +313,7 @@ public interface ErrorListener {
          * @return an ID that allows redundant errors to be filtered out
          */
         public String genUID() {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             sb.append(m_severity.ordinal())
                     .append(':')
                     .append(m_sCode);
@@ -343,7 +343,7 @@ public interface ErrorListener {
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
 
             // source code location
             if (m_source != null) {

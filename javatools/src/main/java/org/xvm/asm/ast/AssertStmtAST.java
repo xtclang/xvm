@@ -88,17 +88,17 @@ public class AssertStmtAST
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append("assert");
+        var sb = new StringBuilder();
+        sb.append("assert");
         if (cond != null) {
-            buf.append(' ')
+            sb.append(' ')
                .append(cond);
         }
         if (message != null) {
-            buf.append(" as ")
+            sb.append(" as ")
                .append(message);
         }
-        buf.append(';');
-        return buf.toString();
+        sb.append(';');
+        return sb.toString();
     }
 }

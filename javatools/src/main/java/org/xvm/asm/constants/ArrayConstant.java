@@ -260,7 +260,7 @@ public class ArrayConstant
             throw new IllegalArgumentException("illegal format: " + f_fmt);
         }
 
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append(sStart);
 
         for (int i = 0; i < cConsts; ++i) {

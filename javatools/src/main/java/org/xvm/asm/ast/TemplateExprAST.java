@@ -66,12 +66,12 @@ public class TemplateExprAST
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append(exprs[0]);
+        var sb = new StringBuilder();
+        sb.append(exprs[0]);
         for (int i = 1, c = exprs.length; i < c; i++) {
-            buf.append(" + ")
+            sb.append(" + ")
                .append(exprs[i]);
         }
-        return buf.toString();
+        return sb.toString();
     }
 }

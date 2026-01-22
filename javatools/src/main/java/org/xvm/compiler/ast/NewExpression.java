@@ -1510,7 +1510,7 @@ public class NewExpression
      * @return the signature of the constructor invocation
      */
     public String toSignatureString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         if (left != null) {
             sb.append(left)
@@ -1547,7 +1547,7 @@ public class NewExpression
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.append(toSignatureString());
 

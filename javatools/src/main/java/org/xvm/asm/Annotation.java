@@ -265,7 +265,7 @@ public class Annotation
 
     @Override
     public String getValueString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.append('@')
           .append(getAnnotationClass().getValueString());
@@ -325,7 +325,7 @@ public class Annotation
 
     @Override
     public String getDescription() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         int cParams = m_aParams.length;
 
         sb.append("class=")

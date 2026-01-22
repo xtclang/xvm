@@ -328,37 +328,37 @@ public class SwitchAST
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder("switch (");
+        var sb = new StringBuilder("switch (");
         if (cond instanceof MultiExprAST meAst) {
             ExprAST[] exprs = meAst.getExprs();
             for (ExprAST expr : exprs) {
-                buf.append(expr);
-                buf.append(", ");
+                sb.append(expr);
+                sb.append(", ");
             }
-            buf.setLength(buf.length()-2);
+            sb.setLength(sb.length()-2);
         } else {
-            buf.append(cond);
+            sb.append(cond);
         }
-        buf.append(") {");
+        sb.append(") {");
 
         for (int row = 0, rowCount = cases.length; row < rowCount; ++row) {
-            buf.append("\ncase ");
-            buf.append(cases[row]);
-            buf.append(":");
+            sb.append("\ncase ");
+            sb.append(cases[row]);
+            sb.append(":");
 
             BinaryAST body = bodies[row];
             if (body != null) {
                 String text = body.toString();
                 if (text.indexOf('\n') < 0) {
-                    buf.append(' ')
+                    sb.append(' ')
                        .append(text);
                 } else {
-                    buf.append('\n')
+                    sb.append('\n')
                        .append(indentLines(text, "  "));
                 }
             }
         }
-        buf.append("\n}");
-        return buf.toString();
+        sb.append("\n}");
+        return sb.toString();
     }
 }

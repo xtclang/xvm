@@ -41,13 +41,13 @@ public class TupleExprAST
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append('(');
+        var sb = new StringBuilder();
+        sb.append('(');
         for (ExprAST value : getValues()) {
-            buf.append(value.toString()).append(", ");
+            sb.append(value.toString()).append(", ");
         }
-        buf.delete(buf.length()-2, buf.length())
+        sb.delete(sb.length()-2, sb.length())
            .append(')');
-        return buf.toString();
+        return sb.toString();
     }
 }

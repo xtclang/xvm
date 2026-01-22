@@ -287,7 +287,7 @@ public class MapConstant
         Constant[] aVals = m_aconstVal;
         int        cKeys = aKeys.length;
 
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append("Map:{");                     // TODO also implement MapEntry
 
         for (int i = 0; i < cKeys; ++i) {

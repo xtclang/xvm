@@ -663,14 +663,14 @@ public class Xvm {
         }
 
         modules = sorted(modules, StructureByModuleId);
-        StringBuilder buf = new StringBuilder();
-        buf.append('{')
+        var sb = new StringBuilder();
+        sb.append('{')
             .append(modules[0].getName());
         for (int i = 1; i < count; ++i) {
-            buf.append(',')
+            sb.append(',')
                 .append(modules[i].getName());
         }
-        return buf.append('}').toString();
+        return sb.append('}').toString();
     }
 
     /**

@@ -105,7 +105,7 @@ public abstract class CompositionNode
     }
 
     public String toStartString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         if (condition != null) {
             sb.append("if (")
@@ -160,7 +160,7 @@ public abstract class CompositionNode
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
 
             sb.append(toStartString());
 
@@ -213,7 +213,7 @@ public abstract class CompositionNode
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
 
             if (condition != null) {
                 sb.append("if (")
@@ -284,7 +284,7 @@ public abstract class CompositionNode
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
 
             if (condition != null) {
                 sb.append("if (")
@@ -502,7 +502,7 @@ public abstract class CompositionNode
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
 
             sb.append(keyword.getId().TEXT)
               .append(' ');
@@ -514,17 +514,11 @@ public abstract class CompositionNode
 
             sb.append(type);
 
-            if (vers != null) {
-                boolean first = true;
-                for (VersionOverride ver : vers) {
-                    if (first) {
-                        sb.append(' ');
-                        first = false;
-                    } else {
-                        sb.append("\n        ");
-                    }
-                    sb.append(ver);
-                }
+            if (vers != null && !vers.isEmpty()) {
+                sb.append(' ')
+                  .append(vers.stream()
+                          .map(VersionOverride::toString)
+                          .collect(Collectors.joining("\n        ")));
             }
 
             if (injects != null) {

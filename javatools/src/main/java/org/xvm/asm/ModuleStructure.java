@@ -787,7 +787,7 @@ public class ModuleStructure
 
     @Override
     public String getDescription() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append(super.getDescription());
 
         sb.append(", module type=")

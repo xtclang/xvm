@@ -2785,7 +2785,7 @@ public class MethodStructure
                 } else {
                     int nIndent = m_anIndents[iLine] - cTrim;
                     if (nIndent != 0) {
-                        StringBuilder sb = new StringBuilder();
+                        var sb = new StringBuilder();
 
                         char ch = nIndent < 0 ? '\t' : ' ';
                         for (int i = 0, c = nIndent < 0 ? -nIndent : nIndent; i < c; ++i) {
@@ -2845,7 +2845,7 @@ public class MethodStructure
          */
         protected void inflate() {
             if (m_sSrc == null && m_aconstSrc != null) {
-                StringBuilder sb = new StringBuilder();
+                var sb = new StringBuilder();
                 for (int iLine = 0, cLines = m_aconstSrc.length; iLine < cLines; ++iLine) {
                     if (iLine > 0) {
                         sb.append('\n');

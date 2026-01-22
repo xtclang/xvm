@@ -232,7 +232,7 @@ public abstract class OpTest
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append(super.toString())
           .append(' ');
         if (isBinaryOp()) {

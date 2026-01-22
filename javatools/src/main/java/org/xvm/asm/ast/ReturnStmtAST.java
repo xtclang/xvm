@@ -92,11 +92,11 @@ public class ReturnStmtAST
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder("return");
+        var sb = new StringBuilder("return");
         for (int i = 0, c = exprs.length; i < c; ++i) {
-            buf.append(i == 0 ? " " : ", ")
+            sb.append(i == 0 ? " " : ", ")
                .append(exprs[i].toString());
         }
-        return buf.append(";").toString();
+        return sb.append(";").toString();
     }
 }

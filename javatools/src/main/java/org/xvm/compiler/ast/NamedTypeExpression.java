@@ -1031,7 +1031,7 @@ public class NamedTypeExpression
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         if (module != null) {
             sb.append(getModule())

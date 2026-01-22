@@ -130,7 +130,7 @@ public class NameResolver
             if (m_stmtImport != null) {
                 if (m_stmtImport == m_node) {
                     // report a self-referencing import as a "name collision"
-                    StringBuilder sb = new StringBuilder(m_sName);
+                    var sb = new StringBuilder(m_sName);
                     while (m_iter.hasNext()) {
                         sb.append('.')
                           .append(m_iter.next());

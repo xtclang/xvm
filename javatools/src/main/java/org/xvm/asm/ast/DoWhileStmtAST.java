@@ -62,14 +62,14 @@ public class DoWhileStmtAST
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append("do {\n");
+        var sb = new StringBuilder();
+        sb.append("do {\n");
         if (body != null) {
-            buf.append(indentLines(body.toString(), "  "));
+            sb.append(indentLines(body.toString(), "  "));
         }
-        buf.append("\n} while (")
+        sb.append("\n} while (")
            .append(cond)
            .append(");");
-        return buf.toString();
+        return sb.toString();
     }
 }

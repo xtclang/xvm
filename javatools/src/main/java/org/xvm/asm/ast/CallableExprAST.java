@@ -77,13 +77,13 @@ public abstract class CallableExprAST
             return "()";
         }
 
-        StringBuilder buf = new StringBuilder();
-        buf.append('(');
+        var sb = new StringBuilder();
+        sb.append('(');
         for (ExprAST arg : args) {
-            buf.append(arg)
+            sb.append(arg)
                .append(", ");
         }
-        return buf.delete(buf.length()-2, buf.length())
+        return sb.delete(sb.length()-2, sb.length())
                   .append(')')
                   .toString();
     }

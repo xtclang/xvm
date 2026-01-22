@@ -357,7 +357,7 @@ public class IfStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.append("if (")
           .append(conds.get(0));

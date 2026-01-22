@@ -80,17 +80,17 @@ public class WhileStmtAST
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append("while (")
+        var sb = new StringBuilder();
+        sb.append("while (")
            .append(cond)
            .append(") ");
         if (body == null) {
-            buf.append("{}");
+            sb.append("{}");
         } else {
-            buf.append("{\n");
-            buf.append(indentLines(body.toString(), "  "));
-            buf.append("\n}");
+            sb.append("{\n");
+            sb.append(indentLines(body.toString(), "  "));
+            sb.append("\n}");
         }
-        return buf.toString();
+        return sb.toString();
     }
 }

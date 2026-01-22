@@ -71,12 +71,12 @@ public class MultiExprAST
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append('(');
+        var sb = new StringBuilder();
+        sb.append('(');
         for (ExprAST value : exprs) {
-            buf.append(value.toString()).append(", ");
+            sb.append(value.toString()).append(", ");
         }
-        buf.append(')');
-        return buf.toString();
+        sb.append(')');
+        return sb.toString();
     }
 }

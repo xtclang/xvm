@@ -391,7 +391,7 @@ public class ThrowExpression
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         if (isTodo() && message != null) {
             // the message contains "T0D0"

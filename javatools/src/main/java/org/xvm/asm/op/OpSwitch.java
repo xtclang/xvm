@@ -226,7 +226,7 @@ public abstract class OpSwitch
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.append(super.toString())
           .append(' ');

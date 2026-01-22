@@ -269,7 +269,7 @@ public abstract class OpInvocable extends Op {
         return "";
     }
     protected static String getParamsString(int[] anArgValue, Argument[] aArgValue) {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         int cArgNums = anArgValue == null ? 0 : anArgValue.length;
         int cArgRefs = aArgValue == null ? 0 : aArgValue.length;
         for (int i = 0, c = Math.max(cArgNums, cArgRefs); i < c; ++i) {
@@ -284,7 +284,7 @@ public abstract class OpInvocable extends Op {
     protected String getReturnsString() {
         if (m_anRetValue != null || m_aArgReturn != null) {
             // multi-return
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             int cArgNums = m_anRetValue == null ? 0 : m_anRetValue.length;
             int cArgRefs = m_aArgReturn == null ? 0 : m_aArgReturn.length;
             for (int i = 0, c = Math.max(cArgNums, cArgRefs); i < c; ++i) {

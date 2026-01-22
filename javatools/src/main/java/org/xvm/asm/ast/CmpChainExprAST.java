@@ -114,14 +114,14 @@ public class CmpChainExprAST
 
     @Override
     public String toString() {
-        StringBuilder buf = new StringBuilder();
-        buf.append(exprs[0]);
+        var sb = new StringBuilder();
+        sb.append(exprs[0]);
         for (int i = 1, c = exprs.length; i < c; i++) {
-            buf.append(' ')
+            sb.append(' ')
                .append(ops[i-1].text)
                .append(' ')
                .append(exprs[i]);
         }
-        return buf.toString();
+        return sb.toString();
     }
 }

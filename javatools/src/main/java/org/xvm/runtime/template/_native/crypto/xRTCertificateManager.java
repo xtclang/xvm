@@ -559,7 +559,7 @@ public class xRTCertificateManager
      */
     private String getOutput(InputStream streamIn) {
         BufferedReader reader = new BufferedReader(new InputStreamReader(streamIn));
-        StringBuilder  sb     = new StringBuilder();
+        var            sb     = new StringBuilder();
         try {
             String sLine;
             while ((sLine = reader.readLine()) != null) {
@@ -574,7 +574,7 @@ public class xRTCertificateManager
     }
 
     private String toString(String... cmd) {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         for (String s : cmd) {
             sb.append(' ')
               .append(s);

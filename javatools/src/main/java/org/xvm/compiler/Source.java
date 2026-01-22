@@ -82,7 +82,7 @@ public class Source
      */
     private static char[] fromInputStream(InputStream stream) {
         try {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             int n;
             while ((n = stream.read()) >= 0) {
                 sb.append((char) n);
@@ -510,7 +510,7 @@ public class Source
         String sPre = toString(lPre, lCur);
         String sPost = toString(lCur, lPost);
 
-        StringBuilder sb = new StringBuilder(sIntro);
+        var sb = new StringBuilder(sIntro);
         appendString(sb, sPre);
         char[] achIndent = new char[sb.length()];
         Arrays.fill(achIndent, ' ');
