@@ -71,7 +71,7 @@ public class AnnotationExpression
         NamedTypeExpression exprType = type;
         if (exprType == null) {
             assert m_node != null && m_anno != null;
-            List<Token> names = Collections.singletonList(new Token(lStartPos, lEndPos,
+            List<Token> names = List.of(new Token(lStartPos, lEndPos,
                     Id.IDENTIFIER, ((IdentityConstant) m_anno.getAnnotationClass()).getName()));
             exprType = new NamedTypeExpression(null, names, null, null, null, lEndPos);
             exprType.setParent(getParent());

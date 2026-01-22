@@ -2252,7 +2252,7 @@ public final class DebugConsole
          * @return read-only list of watches (never null)
          */
         List<Watch> getWatchList() {
-            return m_listWatches == null ? Collections.emptyList() : m_listWatches;
+            return m_listWatches == null ? List.of() : m_listWatches;
         }
 
         /**

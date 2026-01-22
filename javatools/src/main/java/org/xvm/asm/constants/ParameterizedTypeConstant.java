@@ -158,7 +158,7 @@ public class ParameterizedTypeConstant
     @Override
     public List<TypeConstant> getParamTypes() {
         return m_atypeParams.length == 0
-                ? Collections.emptyList()
+                ? List.of()
                 : Arrays.asList(m_atypeParams);
     }
 

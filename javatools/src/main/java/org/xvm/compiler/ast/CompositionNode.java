@@ -464,7 +464,7 @@ public abstract class CompositionNode
          */
         public List<Version> getPreferVersionList() {
             if (vers == null) {
-                return Collections.emptyList();
+                return List.of();
             }
 
             List<Version> list = new ArrayList<>();

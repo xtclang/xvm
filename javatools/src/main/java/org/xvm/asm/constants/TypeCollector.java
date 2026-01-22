@@ -90,7 +90,7 @@ public class TypeCollector {
         }
 
         assert m_listMulti == null;
-        return Collections.emptyList();
+        return List.of();
     }
 
     /**
@@ -123,7 +123,7 @@ public class TypeCollector {
         }
 
         return m_listSingle == null
-                ? Collections.emptyList()
+                ? List.of()
                 : ensureMulti();
     }
 

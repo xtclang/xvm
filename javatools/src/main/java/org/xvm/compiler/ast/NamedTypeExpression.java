@@ -93,7 +93,7 @@ public class NamedTypeExpression
         this.paramTypes = null;
         this.lStartPos  = exprSource.getStartPosition();
         this.lEndPos    = exprSource.getEndPosition();
-        this.names      = Collections.singletonList(new Token(lStartPos, lEndPos,
+        this.names      = List.of(new Token(lStartPos, lEndPos,
                             Token.Id.IDENTIFIER, type.getValueString())); // used for "toString" only
         setTypeConstant(type);
         setStage(Stage.Validated);

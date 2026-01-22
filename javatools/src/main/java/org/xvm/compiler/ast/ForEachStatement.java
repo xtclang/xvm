@@ -63,7 +63,7 @@ public class ForEachStatement
     // ----- constructors --------------------------------------------------------------------------
 
     public ForEachStatement(Token keyword, AssignmentStatement cond, StatementBlock block) {
-        super(keyword, Collections.singletonList(cond));
+        super(keyword, List.of(cond));
         this.block = block;
     }
 
@@ -295,7 +295,7 @@ public class ForEachStatement
             boolean fValid = true;
 
             // clone the condition(s) and the body
-            conds = Collections.singletonList(condOrig.clone());
+            conds = List.of(condOrig.clone());
             block = (StatementBlock) blockOrig.clone();
 
             // create a temporary error list

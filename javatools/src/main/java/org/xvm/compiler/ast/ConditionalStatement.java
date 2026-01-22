@@ -16,7 +16,7 @@ public abstract class ConditionalStatement
 
     public ConditionalStatement(Token keyword, List<AstNode> conds) {
         this.keyword = keyword;
-        this.conds   = conds  == null ? Collections.emptyList() : conds;
+        this.conds   = conds  == null ? List.of() : conds;
     }
 
 

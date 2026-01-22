@@ -561,7 +561,7 @@ public class ClassStructure
     public List<Map.Entry<StringConstant, TypeConstant>> getTypeParamsAsList() {
         ListMap<StringConstant, TypeConstant> mapThis = m_mapParams;
         return mapThis == null
-                ? Collections.emptyList()
+                ? List.of()
                 : mapThis.asList();
     }
 
@@ -916,7 +916,7 @@ public class ClassStructure
                 }
             }
         }
-        return Collections.emptyList();
+        return List.of();
     }
 
 
@@ -2616,7 +2616,7 @@ public class ClassStructure
                     }
 
                     if (!typeRight.containsSubstitutableMethod(sig,
-                            accessRight, false, Collections.emptyList())) {
+                            accessRight, false, List.of())) {
                         setMiss.add(sig);
                     }
                 }
@@ -2639,7 +2639,7 @@ public class ClassStructure
 
                         // funky interface scenario
                         if (!typeRight.containsSubstitutableMethod(sig,
-                                accessRight, true, Collections.emptyList())) {
+                                accessRight, true, List.of())) {
                             setMiss.add(sig);
                         }
                     } else {
@@ -2651,7 +2651,7 @@ public class ClassStructure
                         }
 
                         if (!typeRight.containsSubstitutableMethod(sig,
-                                accessRight, false, Collections.emptyList())) {
+                                accessRight, false, List.of())) {
                             setMiss.add(sig);
                         }
                     }
@@ -2782,7 +2782,7 @@ public class ClassStructure
                 typeContrib = contrib.resolveGenerics(pool, new SimpleTypeResolver(pool, listParams));
 
                 if (typeContrib.containsSubstitutableMethod(signature, access, fFunction,
-                        Collections.emptyList())) {
+                        List.of())) {
                     return true;
                 }
             }
@@ -2791,7 +2791,7 @@ public class ClassStructure
         // finally check for Object methods (since Object is always an implicit contribution)
         IdentityConstant idObject = pool.clzObject();
         return !idClass.equals(idObject) && ((ClassStructure) idObject.getComponent()).
-                containsSubstitutableMethod(pool, signature, access, fFunction, Collections.emptyList());
+                containsSubstitutableMethod(pool, signature, access, fFunction, List.of());
     }
 
 

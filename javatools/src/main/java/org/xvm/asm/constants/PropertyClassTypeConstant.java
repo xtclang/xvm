@@ -211,7 +211,7 @@ public class PropertyClassTypeConstant
                 : null;
         return type == null
                 // the passed in list represents the "child" and should not be used by the parent
-                ? m_typeParent.getGenericParamType(sName, Collections.emptyList())
+                ? m_typeParent.getGenericParamType(sName, List.of())
                 : type.containsGenericType(true)
                     ? type.resolveGenerics(getConstantPool(), m_typeParent)
                     : type;
@@ -373,7 +373,7 @@ public class PropertyClassTypeConstant
         return new TypeInfo(this, cInvals, infoBase.getClassStructure(),
                 idBase.getNestedDepth() + 1, false, mapTypeParams,
                 Annotation.NO_ANNOTATIONS, infoBase.getMixinAnnotations(), typeBase, null, null,
-                Collections.emptyList(), ListMap.EMPTY, ListMap.EMPTY,
+                List.of(), ListMap.EMPTY, ListMap.EMPTY,
                 mapProps, mapMethods, mapVirtProps, mapVirtMethods, mapChildren,
                 null, TypeInfo.Progress.Complete);
     }

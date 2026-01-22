@@ -1,19 +1,41 @@
-# String Building Modernization Plan
+# Code Modernization Plan
 
-This document catalogs occurrences of legacy string-building patterns in the XVM codebase that could be modernized using Java 8+ features like `String.join()`, `Collectors.joining()`, and `var` type inference.
+This document catalogs occurrences of legacy patterns in the XVM codebase that could be modernized using Java 8+ features. All patterns listed are **local replacements only** - no changes to fields or semantics, trivially equivalent but cleaner.
 
 ## Executive Summary
 
-| Pattern | Occurrences | Files Affected |
-|---------|-------------|----------------|
-| `boolean first` loop pattern | ~70+ | 30 |
-| Explicit `StringBuilder` declarations | 217 | ~80 |
+| Pattern | Occurrences | Files Affected | Priority | Status |
+|---------|-------------|----------------|----------|--------|
+| `boolean first` loop pattern | ~70+ | 30 | Medium | ~39 done |
+| Explicit `StringBuilder` declarations | 217 | ~80 | Low | Pending |
+| `Collections.emptyList()` → `List.of()` | 49 | 22 | **High** | **DONE** |
+| `Collections.singletonList()` → `List.of()` | 22 | 10 | **High** | **DONE** |
+| `Arrays.asList()` → `List.of()` | 19 | 12 | Medium | Pending (some need mutability) |
+| `System.arraycopy()` → `Arrays.copyOf()` | ~30 | 20 | Medium | Pending |
+| Lazy list instantiation (`List x = null`) | ~26 | ~15 | Medium | Pending |
+
+### 🐛 **CRITICAL BUG FOUND**
+
+**File:** `javatools/src/main/java/org/xvm/runtime/gc/MarkAndSweepGcSpace.java:291`
+
+```java
+int[] anWeaksNew = new int[anNotify.length * 2];
+System.arraycopy(anWeaksNew, 0, anWeaksNew, 0, anNotify.length);  // BUG: copies to itself!
+anNotify = anWeaksNew;
+```
+
+**Should be:**
+```java
+System.arraycopy(anNotify, 0, anWeaksNew, 0, anNotify.length);
+```
+
+This bug causes the array to copy itself (a no-op), leaving `anWeaksNew` uninitialized.
 
 ---
 
 ## Progress
 
-### Completed (29 occurrences)
+### Completed (39 occurrences)
 
 | File | Method | Status |
 |------|--------|--------|
@@ -47,6 +69,17 @@ This document catalogs occurrences of legacy string-building patterns in the XVM
 | `compiler/ast/CompositionNode.java:315` | `Incorporates.toString()` constraints | Done |
 | `compiler/ast/CompositionNode.java:332` | `Incorporates.toString()` args | Done |
 | `compiler/ast/CompositionNode.java:559` | `Import.toString()` injects | Done |
+| `compiler/ast/NameExpression.java:3271` | `toString()` params | Done |
+| `compiler/ast/NewExpression.java:1532` | `toSignatureString()` dimensions | Done |
+| `compiler/ast/NewExpression.java:1546` | `toSignatureString()` args | Done |
+| `compiler/ast/ForStatement.java:697` | `toString()` init | Done |
+| `compiler/ast/ForStatement.java:721` | `toString()` update | Done |
+| `compiler/ast/TypeCompositionStatement.java:2991` | `toString()` typeArgs | Done |
+| `compiler/ast/TypeCompositionStatement.java:3005` | `toString()` args | Done |
+| `compiler/ast/TypeCompositionStatement.java:3037` | `toString()` qualified | Done |
+| `compiler/ast/TypeCompositionStatement.java:3050` | `toString()` typeParams | Done |
+| `compiler/ast/TypeCompositionStatement.java:3064` | `toString()` constructorParams | Done |
+| `compiler/ast/ImportStatement.java:235` | `toString()` qualified | Done |
 
 ### Not Applicable (reclassified)
 
@@ -453,3 +486,224 @@ The ~10 "Hard" cases may be better left as-is if:
 - Test classes (GC tests) use `boolean first` for state tracking, not string building - these should be excluded
 - Some occurrences in `javatools_backend` are string literals being generated, not actual code patterns
 - The `CPool.java:271` declaration is a static final field, which should remain explicit
+
+---
+
+## Part 3: Collections Factory Methods Modernization
+
+### 3.1 `Collections.emptyList()` → `List.of()`
+
+**Total: 49 occurrences across 22 files**
+
+`List.of()` (Java 9+) is clearer, more idiomatic, and lighter weight than `Collections.emptyList()`. Both return immutable empty lists.
+
+#### All Occurrences
+
+| File | Count |
+|------|-------|
+| `asm/ConstantPool.java` | 3 |
+| `asm/ClassStructure.java` | 7 |
+| `asm/constants/AbstractDependantChildTypeConstant.java` | 1 |
+| `asm/constants/TypeConstant.java` | 9 |
+| `asm/constants/ParameterizedTypeConstant.java` | 1 |
+| `asm/constants/TypeCollector.java` | 2 |
+| `asm/constants/PropertyClassTypeConstant.java` | 2 |
+| `asm/constants/RelationalTypeConstant.java` | 1 |
+| `asm/Component.java` | 2 |
+| `compiler/Parser.java` | 6 |
+| `compiler/ast/ListExpression.java` | 2 |
+| `compiler/ast/AnonInnerClass.java` | 2 |
+| `compiler/ast/ForStatement.java` | 2 |
+| `compiler/ast/CompositionNode.java` | 1 |
+| Plus 8 more files with single occurrences |
+
+**Example transformation:**
+```java
+// Before
+return Collections.emptyList();
+
+// After
+return List.of();
+```
+
+### 3.2 `Collections.singletonList()` → `List.of()`
+
+**Total: 22 occurrences across 10 files**
+
+`List.of(element)` is more readable and consistent with modern Java idiom.
+
+#### All Occurrences
+
+| File | Count |
+|------|-------|
+| `compiler/Parser.java` | 11 |
+| `compiler/ast/ForEachStatement.java` | 2 |
+| `compiler/ast/AstNode.java` | 1 |
+| `compiler/ast/AnnotationExpression.java` | 1 |
+| `compiler/ast/NamedTypeExpression.java` | 1 |
+| `compiler/ast/MethodDeclarationStatement.java` | 1 |
+| `compiler/ast/TypeCompositionStatement.java` | 2 |
+| `compiler/ast/StageMgr.java` | 1 |
+| `asm/ConstantPool.java` | 1 |
+| `runtime/ObjectHandle.java` | 1 |
+
+**Example transformation:**
+```java
+// Before
+return Collections.singletonList(item);
+
+// After
+return List.of(item);
+```
+
+### 3.3 `Arrays.asList()` → `List.of()`
+
+**Total: 19 occurrences across 12 files**
+
+For fixed-size lists created from varargs, `List.of()` is more idiomatic and explicitly immutable.
+
+**Note:** Only applicable when the resulting list is not modified. `Arrays.asList()` allows `.set()` while `List.of()` does not.
+
+#### All Occurrences
+
+| File | Count |
+|------|-------|
+| `asm/MethodStructure.java` | 4 |
+| `asm/constants/SignatureConstant.java` | 2 |
+| `asm/ClassStructure.java` | 1 |
+| `asm/constants/PropertyInfo.java` | 1 |
+| `asm/constants/ParameterizedTypeConstant.java` | 1 |
+| `asm/constants/TypeConstant.java` | 1 |
+| `compiler/Parser.java` | 2 |
+| `compiler/ast/AstNode.java` | 2 |
+| `compiler/ast/TupleExpression.java` | 1 |
+| `compiler/ast/ReturnStatement.java` | 1 |
+| `runtime/template/reflect/xRef.java` | 1 |
+| `tool/LauncherOptions.java` | 2 |
+
+**Example transformation:**
+```java
+// Before
+return Arrays.asList(a, b, c);
+
+// After
+return List.of(a, b, c);
+```
+
+---
+
+## Part 4: Array Copy Modernization
+
+### `System.arraycopy()` → `Arrays.copyOf()`
+
+**Total: ~30 candidates for modernization**
+
+Many `System.arraycopy()` calls follow the pattern:
+```java
+T[] newArray = new T[newSize];
+System.arraycopy(oldArray, 0, newArray, 0, oldArray.length);
+```
+
+This can be simplified to:
+```java
+T[] newArray = Arrays.copyOf(oldArray, newSize);
+```
+
+#### Prime Candidates (copy from index 0 to index 0)
+
+| File | Line | Current Pattern |
+|------|------|-----------------|
+| `asm/Parameter.java` | 140 | Annotation array resize |
+| `asm/MethodStructure.java` | 1580 | Annotation array resize |
+| `asm/MethodStructure.java` | 2468 | Op array resize |
+| `asm/MethodStructure.java` | 2569 | Op array resize |
+| `asm/constants/MethodInfo.java` | 300 | MethodBody array merge |
+| `asm/constants/PropertyInfo.java` | 1277 | PropertyBody chain resize |
+| `asm/constants/AllCondition.java` | 122, 154 | Condition array manipulation |
+| `asm/Version.java` | 506 | Version parts trimming |
+| `asm/VersionTree.java` | 885 | Node array resize |
+| `runtime/FiberQueue.java` | 284 | Frame array resize |
+| `runtime/template/collections/xTuple.java` | 286, 296, 331, 341, 562 | Tuple manipulation |
+
+**Example transformation:**
+```java
+// Before
+int[] newState = new int[state.length * 2];
+System.arraycopy(state, 0, newState, 0, state.length);
+state = newState;
+
+// After
+state = Arrays.copyOf(state, state.length * 2);
+```
+
+#### NOT Candidates
+
+These use `System.arraycopy()` with non-zero offsets or for partial copies, which cannot be replaced:
+- Copies within the same array (shifting elements)
+- Copies to a specific offset in the destination
+- Partial array copies starting from non-zero index
+
+---
+
+## Part 5: Lazy List Instantiation (Needs Further Investigation)
+
+**Pattern:**
+```java
+List<X> items = null;
+// ... later in a loop ...
+if (items == null) {
+    items = new ArrayList<>();
+}
+items.add(item);
+// Later: return items; or if (items != null) { ... }
+```
+
+**Why this is an antipattern:**
+1. **Modern GC is fast** - Short-lived small objects are collected efficiently. Allocation cost is negligible.
+2. **Cognitive overhead** - Every reader must trace through null checks
+3. **Bug-prone** - Easy to forget a null check
+4. **Prevents functional composition** - Can't chain operations on potentially-null lists
+
+**Modern approach:**
+```java
+// Just allocate upfront - it's fine
+List<X> items = new ArrayList<>();
+// ... populate in loop ...
+// items is never null, may be empty - and that's fine
+```
+
+**Occurrences found:** ~26 in compiler/asm directories (local variables only)
+
+**Status:** Needs case-by-case review. Some may have legitimate null-vs-empty semantics in the API contract.
+
+---
+
+## Part 6: Patterns Already Done Well
+
+### 6.1 Index-based List Iteration
+
+The codebase already uses index-based loops appropriately - all occurrences examined need the index for:
+- Returning the found index position
+- Parallel iteration over multiple lists
+- Reverse iteration (`for (int i = size-1; i >= 0; i--)`)
+- Array assignment at position i
+- Printing index in debug output
+
+No unnecessary index-based iteration was found.
+
+### 6.2 `.isEmpty()` Usage
+
+The codebase already uses `.isEmpty()` extensively (370+ occurrences). The 14 occurrences of `.length == 0` for arrays are correct - arrays don't have `.isEmpty()`.
+
+---
+
+## Updated Recommended Priority
+
+1. **Critical**: Fix the `System.arraycopy` bug in `MarkAndSweepGcSpace.java:291`
+2. **High**: `Collections.emptyList()` → `List.of()` (49 occurrences) - Zero risk, clearer idiom
+3. **High**: `Collections.singletonList()` → `List.of()` (22 occurrences) - Zero risk, clearer idiom
+4. **Medium**: `Arrays.asList()` → `List.of()` (19 occurrences) - Verify immutability first
+5. **Medium**: `System.arraycopy()` → `Arrays.copyOf()` (~30 occurrences) - Simple pattern match
+6. **Medium**: Lazy list instantiation (~26 occurrences) - Simplifies null handling
+7. **Low**: `StringBuilder` → `var` (217 occurrences) - Stylistic preference
+8. **Low**: Remaining `boolean first` patterns - Evaluate case-by-case

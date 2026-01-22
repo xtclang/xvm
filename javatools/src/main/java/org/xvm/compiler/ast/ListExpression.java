@@ -132,7 +132,7 @@ public class ListExpression
         // an empty map looks like an empty list to the parser
         if (typeRequired.isA(pool.typeMap()) && exprs.isEmpty()) {
             MapExpression exprNew = new MapExpression(new NamedTypeExpression(this, typeRequired),
-                    Collections.emptyList(), Collections.emptyList(), getEndPosition());
+                    List.of(), List.of(), getEndPosition());
             exprNew.setParent(this);
             return exprNew.testFit(ctx, typeRequired, fExhaustive, errs);
         }
@@ -179,7 +179,7 @@ public class ListExpression
         // an empty map looks like an empty list to the parser
         if (typeRequired != null && typeRequired.isA(pool.typeMap()) && exprs.isEmpty()) {
             MapExpression exprNew = new MapExpression(new NamedTypeExpression(this, typeRequired),
-                    Collections.emptyList(), Collections.emptyList(), getEndPosition());
+                    List.of(), List.of(), getEndPosition());
             return replaceThisWith(exprNew).validate(ctx, typeRequired, errs);
         }
 

@@ -89,14 +89,14 @@ public class AnonInnerClass {
      * @return the Contributions suggested for the anonymous inner class
      */
     public List<CompositionNode> getCompositions() {
-        return m_listCompositions == null ? Collections.emptyList() : m_listCompositions;
+        return m_listCompositions == null ? List.of() : m_listCompositions;
     }
 
     /**
      * @return the Annotations suggested for the anonymous inner class
      */
     public List<AnnotationExpression> getAnnotations() {
-        return m_listAnnos == null ? Collections.emptyList() : m_listAnnos;
+        return m_listAnnos == null ? List.of() : m_listAnnos;
     }
 
 

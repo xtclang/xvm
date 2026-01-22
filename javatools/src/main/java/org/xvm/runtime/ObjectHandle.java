@@ -887,7 +887,7 @@ public abstract class ObjectHandle
 
         @Override
         public int proceed(Frame frameCaller, Frame.Continuation continuation) {
-            return Utils.initConstants(frameCaller, Collections.singletonList(f_constSingleton),
+            return Utils.initConstants(frameCaller, List.of(f_constSingleton),
                 frame -> {
                     frame.pushStack(f_constSingleton.getHandle());
                     return continuation.proceed(frame);

@@ -1748,7 +1748,7 @@ public abstract class AstNode
             }
             case null, default -> {
                 cKids = 1;
-                iterK = Collections.singletonList(value).iterator();
+                iterK = List.of(value).iterator();
             }
             }
 

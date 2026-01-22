@@ -9,6 +9,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import java.util.stream.Collectors;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
@@ -58,8 +60,8 @@ public class ForStatement
             List<Statement> update,
             StatementBlock  block) {
         super(keyword, conds);
-        this.init    = init   == null ? Collections.emptyList() : init;
-        this.update  = update == null ? Collections.emptyList() : update;
+        this.init    = init   == null ? List.of() : init;
+        this.update  = update == null ? List.of() : update;
         this.block   = block;
     }
 
@@ -694,39 +696,19 @@ public class ForStatement
         sb.append("for (");
 
         if (init != null) {
-            boolean first = true;
-            for (Statement stmt : init) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(stmt);
-            }
+            sb.append(init.stream().map(Object::toString).collect(Collectors.joining(", ")));
         }
 
         sb.append("; ");
 
         if (conds != null && !conds.isEmpty()) {
-            sb.append(conds.get(0));
-            for (int i = 1, c = conds.size(); i < c; ++i) {
-                sb.append(", ")
-                  .append(conds.get(i));
-            }
+            sb.append(conds.stream().map(Object::toString).collect(Collectors.joining(", ")));
         }
 
         sb.append("; ");
 
         if (update != null) {
-            boolean first = true;
-            for (Statement stmt : update) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(stmt);
-            }
+            sb.append(update.stream().map(Object::toString).collect(Collectors.joining(", ")));
         }
 
         sb.append(")\n")

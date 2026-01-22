@@ -428,7 +428,7 @@ public class Parser {
                                 paramnames  = new ArrayList<>();
                                 for (Parameter param : params) {
                                     Token       tokName       = param.getNameToken();
-                                    List<Token> listParamName = Collections.singletonList(tokName);
+                                    List<Token> listParamName = List.of(tokName);
                                     paramnames.add(new NamedTypeExpression(null, listParamName,
                                             null, null, null, tokName.getEndPosition()));
                                 }
@@ -942,7 +942,7 @@ public class Parser {
                 // '<' indicates redundant return type list
                 // '(' indicates parameters
                 return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc, modifiers,
-                        annotations, null, null, Collections.singletonList(new Parameter(type)), name);
+                        annotations, null, null, List.of(new Parameter(type)), name);
             } else {
                 if (fInMethod && modifiers == null) {
                     return parseVariableDeclarationAfterName(annotations, type, name);
@@ -1119,7 +1119,7 @@ public class Parser {
             MethodDeclarationStatement method = new MethodDeclarationStatement(
                     methodName.getStartPosition(), block.getEndPosition(), null, null, null, null,
                     null, null, methodName, null, params, block, null, null, null);
-            body    = new StatementBlock(Collections.singletonList(method),
+            body    = new StatementBlock(List.of(method),
                     method.getStartPosition(), method.getEndPosition());
             lEndPos = body.getEndPosition();
         } else if (peek(Id.L_CURLY)) {
@@ -3040,7 +3040,7 @@ public class Parser {
 
                     if (expr instanceof NamedTypeExpression) {
                         expr = new NamedTypeExpression((NamedTypeExpression) expr,
-                                Collections.singletonList(name), params, lEndPos);
+                                List.of(name), params, lEndPos);
                     } else {
                         expr = new NameExpression(expr, noDeRef, name, params, lEndPos);
                     }
@@ -3147,7 +3147,7 @@ public class Parser {
                     dims    = args.size();
                     lEndPos = prev().getEndPosition();
                 } else {
-                    args = Collections.emptyList();
+                    args = List.of();
                 }
 
                 // parenthesized arguments after the dims
@@ -3219,7 +3219,7 @@ public class Parser {
         case ANY: {
             IgnoredNameExpression exprIgnore = new IgnoredNameExpression(current());
             return peek(Id.LAMBDA)
-                    ? new LambdaExpression(Collections.singletonList(exprIgnore),
+                    ? new LambdaExpression(List.of(exprIgnore),
                         expect(Id.LAMBDA), parseLambdaBody(), exprIgnore.getStartPosition())
                     : exprIgnore;
         }
@@ -3321,7 +3321,7 @@ public class Parser {
 
             // test for single-param implicit lambda
             if (fNormal && peek(Id.LAMBDA)) {
-                return new LambdaExpression(Collections.singletonList(new NameExpression(name)),
+                return new LambdaExpression(List.of(new NameExpression(name)),
                         expect(Id.LAMBDA), parseLambdaBody(), name.getStartPosition());
             }
 
@@ -3442,7 +3442,7 @@ public class Parser {
                 Token lambdaOp = match(Id.LAMBDA);
                 if (lambdaOp != null) {
                     // zero-argument lambda
-                    return new LambdaExpression(Collections.emptyList(), lambdaOp,
+                    return new LambdaExpression(List.of(), lambdaOp,
                             parseLambdaBody(), tokLParen.getStartPosition());
                 } else {
                     // the empty tuple: "()" (or the empty tuple with a trailing comma: "(,)")
@@ -3475,7 +3475,7 @@ public class Parser {
                 // lambda (it's not a tuple literal)
                 expect(Id.R_PAREN);
                 if (peek(Id.LAMBDA)) {
-                    return new LambdaExpression(Collections.singletonList(expr),
+                    return new LambdaExpression(List.of(expr),
                             expect(Id.LAMBDA), parseLambdaBody(), tokLParen.getStartPosition());
                 } else {
                     // just a parenthesized expression
@@ -3642,7 +3642,7 @@ public class Parser {
 
     private static List<Token> toList(NameExpression left, Token name) {
         if (left == null) {
-            return Collections.singletonList(name);
+            return List.of(name);
         }
 
         List<Token> names = left.getNameTokens();
@@ -3777,7 +3777,7 @@ public class Parser {
 
         Token fakeReturn = new Token(firstToken.getStartPosition(), firstToken.getStartPosition(), Id.RETURN);
         ReturnStatement stmt = new ReturnStatement(fakeReturn, parseExpression());
-        return new StatementBlock(Collections.singletonList(stmt), stmt.getStartPosition(), stmt.getEndPosition());
+        return new StatementBlock(List.of(stmt), stmt.getStartPosition(), stmt.getEndPosition());
     }
 
     /**
@@ -3999,7 +3999,7 @@ public class Parser {
                             long           ofMap    = tokOpen.getStartPosition();
                             Token          tokName  = new Token(ofMap, ofMap, Id.IDENTIFIER, "Map");
                             TypeExpression exprType = new NamedTypeExpression(null,
-                                    Collections.singletonList(tokName), null, null, null, ofMap);
+                                    List.of(tokName), null, null, null, ofMap);
                             return new MapExpression(exprType, keys, values, prev().getEndPosition());
                         }
                     }
@@ -4485,7 +4485,7 @@ public class Parser {
         if (!fRequired) {
             Token tokTest = match(Id.IDENTIFIER);
             if (tokTest == null) {
-                return Collections.emptyList();
+                return List.of();
             } else {
                 putBack(tokTest);
             }
@@ -4726,7 +4726,7 @@ public class Parser {
         List<TypeExpression> types = null;
         if (match(Id.COMP_LT, required) != null) {
             if (match(Id.COMP_GT) != null) {
-                types = Collections.emptyList();
+                types = List.of();
             } else {
                 types = parseTypeExpressionList(fAllowTypeSequence);
                 expect(Id.COMP_GT);
@@ -4866,7 +4866,7 @@ public class Parser {
         List<TypeExpression> types = null;
         if (match(Id.L_PAREN, required) != null) {
             types = peek(Id.R_PAREN)
-                    ? Collections.emptyList()
+                    ? List.of()
                     : parseTypeExpressionList(false);
             expect(Id.R_PAREN);
         }
@@ -5011,9 +5011,9 @@ public class Parser {
     List<Parameter> parseReturnList() {
         List<Parameter> listReturn;
         if (match(Id.VOID) != null) {
-            listReturn = Collections.emptyList();
+            listReturn = List.of();
         } else if (match(Id.L_PAREN) == null) {
-            listReturn = Collections.singletonList(new Parameter(parseTypeExpression()));
+            listReturn = List.of(new Parameter(parseTypeExpression()));
         } else {
             listReturn = new ArrayList<>();
             do {

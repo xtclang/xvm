@@ -232,17 +232,11 @@ public class ImportStatement
 
         sb.append("import ");
 
-        boolean first = true;
-        String last = null;
-        for (Token name : qualifiedName) {
-            if (first) {
-                first = false;
-            } else {
-                sb.append('.');
-            }
-            last = String.valueOf(name.getValue());
-            sb.append(last);
-        }
+        String last = qualifiedName.isEmpty() ? null :
+            String.valueOf(qualifiedName.get(qualifiedName.size() - 1).getValue());
+        sb.append(qualifiedName.stream()
+            .map(token -> String.valueOf(token.getValue()))
+            .collect(Collectors.joining(".")));
 
         if (alias != null && !last.equals(alias.getValue())) {
             sb.append(" as ")

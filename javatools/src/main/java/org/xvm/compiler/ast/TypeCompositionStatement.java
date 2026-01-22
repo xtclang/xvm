@@ -1262,7 +1262,7 @@ public class TypeCompositionStatement
                     composition.log(errs, Severity.ERROR, Compiler.DUPLICATE_DEFAULT_VALUE, sName);
                 } else {
                     NamedTypeExpression typeDefault = new NamedTypeExpression(null,
-                            Collections.singletonList(name), null, null, null, name.getEndPosition());
+                            List.of(name), null, null, null, name.getEndPosition());
                     Expression exprValue = ((Default) composition).getValueExpression();
 
                     long lStartPos = composition.getStartPosition();
@@ -1270,7 +1270,7 @@ public class TypeCompositionStatement
                     PropertyDeclarationStatement propDefault = new PropertyDeclarationStatement(
                             lStartPos, lEndPos,
                             composition.getCondition(),
-                            Collections.singletonList(new Token(lStartPos, lStartPos, Id.STATIC)),
+                            List.of(new Token(lStartPos, lStartPos, Id.STATIC)),
                             null,
                             typeDefault,
                             composition.keyword,
@@ -2503,7 +2503,7 @@ public class TypeCompositionStatement
     private RootContext createConstructorContext(MethodStructure constructor) {
         StatementBlock blockBody = body;
         if (body == null) {
-            blockBody = adopt(new StatementBlock(Collections.emptyList()));
+            blockBody = adopt(new StatementBlock(List.of()));
         }
         return new RootContext(blockBody, constructor);
     }
@@ -2987,31 +2987,15 @@ public class TypeCompositionStatement
             sb.append(name.getValue());
 
             if (typeParams != null) {
-                sb.append('<');
-                boolean first = true;
-                for (TypeExpression typeParam : typeArgs) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append(", ");
-                    }
-                    sb.append(typeParam);
-                }
-                sb.append('>');
+                sb.append('<')
+                  .append(typeArgs.stream().map(Object::toString).collect(Collectors.joining(", ")))
+                  .append('>');
             }
 
             if (args != null) {
-                sb.append('(');
-                boolean first = true;
-                for (Expression arg : args) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append(", ");
-                    }
-                    sb.append(arg);
-                }
-                sb.append(')');
+                sb.append('(')
+                  .append(args.stream().map(Object::toString).collect(Collectors.joining(", ")))
+                  .append(')');
             }
         } else {
             if (modifiers != null) {
@@ -3034,43 +3018,23 @@ public class TypeCompositionStatement
             if (qualified == null) {
                 sb.append(name.getValue());
             } else {
-                boolean first = true;
-                for (Token token : qualified) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append('.');
-                    }
-                    sb.append(token.getValue());
-                }
+                sb.append(qualified.stream()
+                    .map(token -> String.valueOf(token.getValue()))
+                    .collect(Collectors.joining(".")));
             }
 
             if (typeParams != null) {
-                sb.append('<');
-                boolean first = true;
-                for (Parameter param : typeParams) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append(", ");
-                    }
-                    sb.append(param.toTypeParamString());
-                }
-                sb.append('>');
+                sb.append('<')
+                  .append(typeParams.stream()
+                      .map(Parameter::toTypeParamString)
+                      .collect(Collectors.joining(", ")))
+                  .append('>');
             }
 
             if (constructorParams != null) {
-                sb.append('(');
-                boolean first = true;
-                for (Parameter param : constructorParams) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append(", ");
-                    }
-                    sb.append(param);
-                }
-                sb.append(')');
+                sb.append('(')
+                  .append(constructorParams.stream().map(Object::toString).collect(Collectors.joining(", ")))
+                  .append(')');
             }
         }
 

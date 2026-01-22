@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
@@ -246,7 +247,7 @@ public class xContainerLinker
     private int completeResolveAndLink(Frame frame, Container container,
                                        ModuleStructure moduleApp, ObjectHandle hProvider, int iReturn) {
         NestedContainer containerNested = new NestedContainer(container,
-                moduleApp.getIdentityConstant(), hProvider, Collections.emptyList());
+                moduleApp.getIdentityConstant(), hProvider, List.of());
         return new CollectResources(containerNested, iReturn).doNext(frame);
     }
 

@@ -77,7 +77,7 @@ public class AssertStatement
 
         this.keyword  = keyword;
         this.interval = exprInterval;
-        this.conds    = conds == null ? Collections.emptyList() : conds;
+        this.conds    = conds == null ? List.of() : conds;
         this.message  = exprMsg;
         this.lEndPos  = lEndPos;
     }

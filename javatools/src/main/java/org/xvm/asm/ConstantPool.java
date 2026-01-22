@@ -2299,7 +2299,7 @@ public class ConstantPool
                 typeObject(), 0, null, 0, true, Collections.emptyMap(),
                 Annotation.NO_ANNOTATIONS, Annotation.NO_ANNOTATIONS,
                 typeObject(), null, typeObject(),
-                Collections.emptyList(), new ListMap<>(), new ListMap<>(),
+                List.of(), new ListMap<>(), new ListMap<>(),
                 Collections.emptyMap(), Collections.emptyMap(),
                 Collections.emptyMap(), Collections.emptyMap(),
                 ListMap.EMPTY, null, Progress.Building) {
@@ -2987,7 +2987,7 @@ public class ConstantPool
     List<TypeConstant> takeDeferredTypeInfo() {
         List<TypeConstant> list = f_tlolistDeferred.get();
         if (list == null) {
-            list = Collections.emptyList();
+            list = List.of();
         } else {
             f_tlolistDeferred.remove();
         }
@@ -3084,7 +3084,7 @@ public class ConstantPool
             // ConditionalTuple to Tuple<Boolean>
             List<TypeConstant> listRight = tupleRight.getParamsCount() > 0
                     ? tupleRight.getParamTypes()
-                    : Collections.singletonList(typeBoolean());
+                    : List.of(typeBoolean());
 
             return clzTuple.calculateAssignability(this, tupleLeft.getParamTypes(), Access.PUBLIC,
                     listRight);
@@ -3514,7 +3514,7 @@ public class ConstantPool
                 null,                   // typeExtends
                 null,                   // typeRebase
                 null,                   // typeInto
-                Collections.emptyList(), // listProcess,
+                List.of(), // listProcess,
                 ListMap.EMPTY,          // listmapClassChain
                 ListMap.EMPTY,          // listmapDefaultChain
                 Collections.emptyMap(),  // mapProps

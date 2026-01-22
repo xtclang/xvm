@@ -42,7 +42,7 @@ public class TupleExpression
 
     public TupleExpression(TypeExpression type, List<Expression> exprs, long lStartPos, long lEndPos) {
         this.type        = type;
-        this.exprs       = exprs == null ? Collections.emptyList() : exprs;
+        this.exprs       = exprs == null ? List.of() : exprs;
         this.m_lStartPos = lStartPos;
         this.m_lEndPos   = lEndPos;
     }

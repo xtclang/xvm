@@ -144,7 +144,7 @@ public abstract class TypeConstant
 
     @Override
     public TypeConstant resolveGenericType(String sFormalName) {
-        return getGenericParamType(sFormalName, Collections.emptyList());
+        return getGenericParamType(sFormalName, List.of());
     }
 
 
@@ -436,7 +436,7 @@ public abstract class TypeConstant
     public List<TypeConstant> getParamTypes() {
         return isModifyingType()
                 ? getUnderlyingType().getParamTypes()
-                : Collections.emptyList();
+                : List.of();
     }
 
     /**
@@ -4296,7 +4296,7 @@ public abstract class TypeConstant
                 }
             }
         }
-        return listMatch == null ? Collections.emptyList() : listMatch;
+        return listMatch == null ? List.of() : listMatch;
     }
 
     /**
@@ -4357,7 +4357,7 @@ public abstract class TypeConstant
                 }
             }
         }
-        return listMatch == null ? Collections.emptyList() : listMatch;
+        return listMatch == null ? List.of() : listMatch;
     }
 
     /**
@@ -5614,7 +5614,7 @@ public abstract class TypeConstant
 
         return typeLeftN.isDuckTypeAbleFrom(typeRightN) &&
                typeLeftN.isInterfaceAssignableFrom(
-                        typeRightN, accessRight, Collections.emptyList()).isEmpty()
+                        typeRightN, accessRight, List.of()).isEmpty()
                 ? Relation.IS_A
                 : Relation.INCOMPATIBLE;
     }
@@ -5872,7 +5872,7 @@ public abstract class TypeConstant
         if (usage == null) {
             mapUsage.put(sTypeName, Usage.IN_PROGRESS);
             try {
-                usage = checkConsumption(sTypeName, access, Collections.emptyList());
+                usage = checkConsumption(sTypeName, access, List.of());
             } catch (RuntimeException | Error e) {
                 mapUsage.remove(sTypeName);
                 throw e;
@@ -5918,7 +5918,7 @@ public abstract class TypeConstant
         if (usage == null) {
             mapUsage.put(sTypeName, Usage.IN_PROGRESS);
             try {
-                usage = checkProduction(sTypeName, access, Collections.emptyList());
+                usage = checkProduction(sTypeName, access, List.of());
             } catch (RuntimeException | Error e) {
                 mapUsage.remove(sTypeName);
                 throw e;
@@ -7120,8 +7120,8 @@ public abstract class TypeConstant
                         }
 
                         String       sName      = constName.getValue();
-                        TypeConstant typePLeft  = typeLeft.getGenericParamType(sName, Collections.emptyList());
-                        TypeConstant typePRight = typeRight.getGenericParamType(sName, Collections.emptyList());
+                        TypeConstant typePLeft  = typeLeft.getGenericParamType(sName, List.of());
+                        TypeConstant typePRight = typeRight.getGenericParamType(sName, List.of());
 
                         if (!Objects.equals(typePRight, typePLeft)) {
                             return false;
