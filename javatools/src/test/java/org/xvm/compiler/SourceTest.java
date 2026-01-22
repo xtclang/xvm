@@ -17,7 +17,7 @@ public class SourceTest {
     public void testSimple() {
         String sCode = "hello world!";
         Source source = new Source(sCode);
-        StringBuilder builder = new StringBuilder();
+        var builder = new StringBuilder();
         while (source.hasNext()) {
             builder.append(source.next());
         }
@@ -85,7 +85,7 @@ public class SourceTest {
 
         int iLinePre1     = source.getLine();
         int iOffsetPre1   = source.getOffset();
-        StringBuilder sb1 = new StringBuilder();
+        var sb1 = new StringBuilder();
         while (source.hasNext()) {
             sb1.append(source.next());
         }
@@ -96,7 +96,7 @@ public class SourceTest {
 
         int iLinePre2     = source.getLine();
         int iOffsetPre2   = source.getOffset();
-        StringBuilder sb2 = new StringBuilder();
+        var sb2 = new StringBuilder();
         while (source.hasNext()) {
             sb2.append(source.next());
         }

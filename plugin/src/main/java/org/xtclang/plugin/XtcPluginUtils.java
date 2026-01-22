@@ -274,7 +274,7 @@ public final class XtcPluginUtils {
                     md.update(buffer, 0, bytesRead);
                 }
                 final byte[] digest = md.digest();
-                final StringBuilder sb = new StringBuilder();
+                final var sb = new StringBuilder();
                 for (final byte b : digest) {
                     sb.append(String.format("%02x", b));
                 }

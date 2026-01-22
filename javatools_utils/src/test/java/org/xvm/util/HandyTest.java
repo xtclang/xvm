@@ -91,7 +91,7 @@ public class HandyTest {
 
     @Test
     public void testAppendByteAsHex() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.append("0x");
         assertSame(sb, appendByteAsHex(sb, 0x12345678));
@@ -107,7 +107,7 @@ public class HandyTest {
 
     @Test
     public void testAppendByteArrayAsHex() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         assertSame(sb, appendByteArrayAsHex(sb,
                 new byte[] {0x01, (byte) 0xFF, 0x78, 0x5A}));
         assertEquals("01ff785a", sb.toString());
@@ -115,7 +115,7 @@ public class HandyTest {
 
     @Test
     public void testAppendByteArrayAsHex2() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         assertSame(sb, appendByteArrayAsHex(sb, new byte[] {0x01, (byte) 0xFF, 0x78, 0x5A}, 1, 2));
         assertEquals("ff78", sb.toString());
     }
@@ -165,7 +165,7 @@ public class HandyTest {
 
     @Test
     public void testAppendIntAsHex() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         assertSame(sb, appendIntAsHex(sb, 0x12345678));
         assertEquals("12345678", sb.toString());
@@ -173,7 +173,7 @@ public class HandyTest {
 
     @Test
     public void testAppendIntAsHex2() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         assertSame(sb, appendIntAsHex(sb, 0x12345678, 4));
         assertEquals("5678", sb.toString());
@@ -208,7 +208,7 @@ public class HandyTest {
 
     @Test
     public void testAppendLongAsHex() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         assertSame(sb, appendLongAsHex(sb, 0x123456789ABCDEF0L));
         assertEquals("123456789abcdef0", sb.toString());
@@ -216,7 +216,7 @@ public class HandyTest {
 
     @Test
     public void testAppendLongAsHex2() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         assertSame(sb, appendLongAsHex(sb, 0x123456789ABCDEF0L, 9));
         assertEquals("89abcdef0", sb.toString());
@@ -409,7 +409,7 @@ public class HandyTest {
 
     @Test
     public void testAppendChar() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         assertSame(sb, appendChar(sb, 'x'));
         assertSame(sb, appendChar(sb, '\t'));
         assertSame(sb, appendChar(sb, '\n'));
@@ -427,7 +427,7 @@ public class HandyTest {
 
     @Test
     public void testAppendString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         assertSame(sb, appendString(sb, "hello\nworld"));
         assertEquals("hello\\nworld", sb.toString());
     }

@@ -90,7 +90,7 @@ public class ConsoleLog {
         int cchWide = width-2;
         int cHigh   = height-2;
 
-        StringBuilder sb = new StringBuilder(width);
+        var sb = new StringBuilder(width);
         sb.append('|')
           .append("-".repeat(Math.max(0, cchWide)))
           .append('|');

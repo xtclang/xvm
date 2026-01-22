@@ -71,7 +71,7 @@ public class Exception extends nConst {
         }
 
         // TODO: replace with ecstasy.StringBuffer and move to "toString(Ctx ctx)"
-        StringBuilder sb = new StringBuilder(className);
+        var sb = new StringBuilder(className);
         sb.append(": ")
           .append(text == Nullable.Null ? "" : text.toString($ctx()));
         for (StackTraceElement el : $exception.getStackTrace()) {

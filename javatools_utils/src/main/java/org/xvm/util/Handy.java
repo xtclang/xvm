@@ -203,7 +203,7 @@ public final class Handy {
         ach[cch-1]   = '\n';
 
         final int           cLines = Math.max((count + cBytesPerLine - 1) / cBytesPerLine, 1);
-        final StringBuilder sb     = new StringBuilder(cLines * cch);
+        final var           sb     = new StringBuilder(cLines * cch);
         final int           ofHex  = cchAddr + 2;
         final int           ofChar = ofHex + cBytesPerLine * 3;
 
@@ -624,7 +624,7 @@ public final class Handy {
 
         int cLines = countChar(sText, '\n') + 1;
         int cchNew = cchOld + cLines * sIndent.length();
-        StringBuilder sb = new StringBuilder(cchNew);
+        var sb = new StringBuilder(cchNew);
 
         int ofLine    = 0;
         int ofNewline = sText.indexOf('\n');
@@ -827,7 +827,7 @@ public final class Handy {
             return s;
         }
 
-        StringBuilder buf = new StringBuilder(cch-2);
+        var buf = new StringBuilder(cch-2);
         --cch;                              // don't process the closing quote
         for (int of = 1; of < cch; ++of) {  // don't process the opening quote
             char ch = s.charAt(of);
@@ -1157,7 +1157,7 @@ public final class Handy {
             throws IOException {
         int           cb  = readMagnitude(in);
         int           cch = cb - readMagnitude(in);
-        StringBuilder sb  = new StringBuilder(cch);
+        var           sb  = new StringBuilder(cch);
         for (int ofch = 0; ofch < cch; ++ofch) {
             int ch = readUtf8Char(in);
             if (ch >= 0xFFFF) {

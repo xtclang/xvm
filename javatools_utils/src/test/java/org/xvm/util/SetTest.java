@@ -529,7 +529,7 @@ public class SetTest {
             assert count > 0;
             HashSet<String> set = new HashSet<>(count);
             for (int i = 0; i < count; ++i) {
-                StringBuilder sb = new StringBuilder();
+                var sb = new StringBuilder();
                 do {
                     sb.append((char) ('A' + rnd.nextInt(26)));
                 } while (!set.add(sb.toString()));
@@ -591,7 +591,7 @@ public class SetTest {
         // 	at org.xvm.util.SetTest.randomTest(SetTest.java:147)
         // 	at org.xvm.util.SetTest.main(SetTest.java:119)
 
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append("[0] remove HTM -> false\n")
           .append("[1] add FQP -> true\n")
           .append("[2] add FQP -> false\n")
@@ -659,7 +659,7 @@ public class SetTest {
         // 	at org.xvm.util.SetTest.replayTest(SetTest.java:296)
         // 	at org.xvm.util.SetTest.repro2(SetTest.java:174)
 
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append("[0] add UAY -> true\n")
           .append("[1] add NBT -> true\n")
           .append("[2] size -> 2\n")
@@ -710,7 +710,7 @@ public class SetTest {
         //     at org.xvm.util.SetTest.replayTest(SetTest.java:388)
         //     at org.xvm.util.SetTest.repro3(SetTest.java:266)
 
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append("[0] size -> 0\n")
           .append("[1] add LA -> true\n")
           .append("[2] add HJZ -> true\n")
@@ -797,7 +797,7 @@ public class SetTest {
         //     at org.xvm.util.SetTest$OpAdd.test(SetTest.java:589)
         //     at org.xvm.util.SetTest.randomTest(SetTest.java:360)
 
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append("[0] add IL -> true\n")
           .append("[1] add IL -> false\n")
           .append("[2] add JP -> true\n")
@@ -921,7 +921,7 @@ public class SetTest {
     @Test
     public void repro5() {
         // Exception on set# 0 in step# 41: expected:<false> but was:<true>
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append("[0] size -> 0\n")
           .append("[1] iterate -> 0\n")
           .append("[2] iterate -> 0\n")
@@ -970,7 +970,7 @@ public class SetTest {
     @Test
     public void repro6() {
         // Exception on set# 0 in step# 34: expected:<true> but was:<false>
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append("[0] remove SD -> false\n")
           .append("[1] add DUM -> true\n")
           .append("[2] add IZE -> true\n")
@@ -1012,7 +1012,7 @@ public class SetTest {
     @Test
     public void repro7() {
         // Exception on set# 0 in step# 55: expected:<true> but was:<false>
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append("[0] add SAN -> true\n")
           .append("[1] iterate -> 1\n")
           .append("[2] add SAN -> false\n")
@@ -1075,7 +1075,7 @@ public class SetTest {
     @Test
     public void repro8() {
         // Exception on set# 0 in step# 39: expected:<true> but was:<false>
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append("[0] add JWD -> true\n")
           .append("[1] add JWD -> false\n")
           .append("[2] iterate -> 1\n")
@@ -1122,7 +1122,7 @@ public class SetTest {
     @Test
     public void repro9() {
         // Exception on set# 0 in step# 13: expected:<7> but was:<6>
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append("[0] iterate -> 0\n")
           .append("[1] add TV -> true\n")
           .append("[2] add BQK -> true\n")

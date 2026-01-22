@@ -510,7 +510,7 @@ public class PackedInteger
             return toString();
         }
 
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         if (isNegative()) {
             sb.append('-');
         }

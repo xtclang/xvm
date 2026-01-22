@@ -465,7 +465,7 @@ public class NonBlockingHashMap<TypeK, TypeV>
     if( !i.hasNext())
       return "{}";
 
-    StringBuilder sb = new StringBuilder();
+    var sb = new StringBuilder();
     sb.append('{');
     for (;;) {
       Entry<TypeK,TypeV> e = i.next();

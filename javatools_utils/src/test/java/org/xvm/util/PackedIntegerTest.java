@@ -35,7 +35,7 @@ public class PackedIntegerTest {
             throws IOException {
         // small
         for (int i = -64; i <= 127; ++i) {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             writeLong(dos(sb), i);
             assertEquals(2, sb.length(), "i=" + i);
         }
@@ -43,7 +43,7 @@ public class PackedIntegerTest {
         // medium
         for (int i = -4096; i <= 4095; ++i) {
             if (i < -64 || i > 127) {
-                StringBuilder sb = new StringBuilder();
+                var sb = new StringBuilder();
                 writeLong(dos(sb), i);
                 assertEquals(4, sb.length(), "i=" + i);
             }
@@ -52,7 +52,7 @@ public class PackedIntegerTest {
         // large 2-byte
         for (int i = -32768; i <= 32767; ++i) {
             if (i < -4096 || i > 4095) {
-                StringBuilder sb = new StringBuilder();
+                var sb = new StringBuilder();
                 writeLong(dos(sb), i);
                 assertEquals(6, sb.length(), "i=" + i);
             }
@@ -61,7 +61,7 @@ public class PackedIntegerTest {
         // large 3-byte
         for (int i = -1048576; i <= 1048575; ++i) {
             if (i < -32768 || i > 32767) {
-                StringBuilder sb = new StringBuilder();
+                var sb = new StringBuilder();
                 writeLong(dos(sb), i);
                 assertEquals(8, sb.length(), "i=" + i);
             }
@@ -214,7 +214,7 @@ public class PackedIntegerTest {
             throws IOException {
         BigInteger bigint = new BigInteger(ab);
         PackedInteger pint = new PackedInteger(bigint);
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         pint.writeObject(dos(sb));
         PackedInteger pint2 = new PackedInteger(dis(sb.toString()));
         assertEquals(pint, pint2);
