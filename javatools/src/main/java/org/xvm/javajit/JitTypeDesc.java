@@ -64,7 +64,7 @@ public class JitTypeDesc {
      * @return the primitive ClassDesc if the specified type is optimizable to a multi-slot
      *         primitive Java class; null otherwise
      */
-    public static ClassDesc getMultiSlotPrimitiveClass(TypeConstant type) {
+    public static ClassDesc getNullablePrimitiveClass(TypeConstant type) {
         return type.isNullable()
             ? getPrimitiveClass(type.removeNullable())
             : null;

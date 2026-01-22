@@ -28,18 +28,11 @@ import org.xvm.asm.constants.PropertyBody.Effect;
 
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
-import org.xvm.javajit.JitTypeDesc;
+import org.xvm.javajit.JitParamDesc.JitParams;
 import org.xvm.javajit.TypeSystem;
 
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
-
-import static java.lang.constant.ConstantDescs.CD_boolean;
-
-import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
-import static org.xvm.javajit.JitFlavor.Primitive;
-import static org.xvm.javajit.JitFlavor.Specific;
-import static org.xvm.javajit.JitFlavor.Widened;
 
 
 /**
@@ -1376,12 +1369,11 @@ public class PropertyInfo
     public JitMethodDesc getGetterJitDesc(TypeSystem ts) {
         JitMethodDesc jmd = m_jmdGetter;
         if (jmd == null) {
-            JitParams result = computeJitParams(ts);
+            JitParams params = JitParamDesc.computeJitParams(ts, getType());
 
-            JitParamDesc[] apdOptParam = result.apdOptParam();
             m_jmdGetter = jmd = new JitMethodDesc(
-                    result.apdStdParam(), JitParamDesc.NONE,
-                    apdOptParam, apdOptParam == null ? null : JitParamDesc.NONE);
+                    params.apdStdParam(), JitParamDesc.NONE,
+                    params.apdOptParam(), params.isOptimized() ? JitParamDesc.NONE : null);
         }
         return jmd;
     }
@@ -1392,51 +1384,14 @@ public class PropertyInfo
     public JitMethodDesc getSetterJitDesc(TypeSystem ts) {
         JitMethodDesc jmd = m_jmdSetter;
         if (jmd == null) {
-            JitParams result = computeJitParams(ts);
+            JitParams params = JitParamDesc.computeJitParams(ts, getType());
 
-            JitParamDesc[] apdOptParam = result.apdOptParam();
             m_jmdSetter = jmd = new JitMethodDesc(
-                JitParamDesc.NONE, result.apdStdParam(),
-                apdOptParam == null ? null : JitParamDesc.NONE, apdOptParam);
+                JitParamDesc.NONE,                               params.apdStdParam(),
+                params.isOptimized() ? JitParamDesc.NONE : null, params.apdOptParam());
         }
         return jmd;
     }
-
-    private JitParams computeJitParams(TypeSystem ts) {
-        TypeConstant   type        = getType();
-        JitParamDesc[] apdOptParam = null;
-        JitParamDesc[] apdStdParam;
-        ClassDesc cd;
-
-        if ((cd = JitTypeDesc.getPrimitiveClass(type)) != null) {
-            ClassDesc cdStd = type.ensureClassDesc(ts);
-
-            apdStdParam = new JitParamDesc[] {
-                new JitParamDesc(type, Specific, cdStd, 0, 0, false)};
-            apdOptParam = new JitParamDesc[] {
-                new JitParamDesc(type, Primitive, cd, 0, 0, false)};
-        } else if ((cd = JitTypeDesc.getMultiSlotPrimitiveClass(type)) != null) {
-            apdStdParam = new JitParamDesc[] {
-                new JitParamDesc(type, Widened, cd, 0, 0, false)};
-            apdOptParam = new JitParamDesc[] {
-                new JitParamDesc(type, MultiSlotPrimitive, cd, 0, 0, false),
-                new JitParamDesc(type, MultiSlotPrimitive, CD_boolean, 0, 1, true)
-            };
-        } else if ((cd = JitTypeDesc.getWidenedClass(type)) != null) {
-            apdStdParam = new JitParamDesc[] {
-                new JitParamDesc(type, Widened, cd, 0, 0, false)};
-        } else {
-            assert type.isSingleUnderlyingClass(true);
-
-            cd = type.ensureClassDesc(ts);
-            apdStdParam = new JitParamDesc[] {
-                new JitParamDesc(type, Specific, cd, 0, 0, false)};
-        }
-        JitParams result = new JitParams(apdStdParam, apdOptParam);
-        return result;
-    }
-
-    private record JitParams(JitParamDesc[] apdStdParam, JitParamDesc[] apdOptParam) {}
 
     // ----- Object methods ------------------------------------------------------------------------
 

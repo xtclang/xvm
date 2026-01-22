@@ -57,7 +57,7 @@ import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 
-import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
+import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 
 /**
  * Generic Java class builder.
@@ -321,7 +321,7 @@ public class CommonBuilder
             classBuilder.withField(jitName, jtd.cd, flags);
             break;
 
-        case MultiSlotPrimitive:
+        case NullablePrimitive:
             classBuilder.withField(jitName, jtd.cd, flags);
             classBuilder.withField(jitName+EXT, CD_boolean, flags);
             break;
@@ -358,7 +358,7 @@ public class CommonBuilder
                         RegisterInfo reg     = loadConstant(code, prop.getInitialValue());
                         String       jitName = prop.getIdentity().ensureJitPropertyName(ts);
                         if (reg instanceof DoubleSlot doubleSlot) {
-                            assert doubleSlot.flavor() == MultiSlotPrimitive;
+                            assert doubleSlot.flavor() == NullablePrimitive;
                             // loadConstant() has already loaded the value and the boolean
                             Label ifTrue = code.newLabel();
                             Label endIf  = code.newLabel();
@@ -443,7 +443,7 @@ public class CommonBuilder
                         RegisterInfo reg     = loadConstant(code, prop.getInitialValue());
                         String       jitName = prop.getIdentity().ensureJitPropertyName(typeSystem);
                         if (reg instanceof DoubleSlot doubleSlot) {
-                            assert doubleSlot.flavor() == MultiSlotPrimitive;
+                            assert doubleSlot.flavor() == NullablePrimitive;
                             // loadConstant() has already loaded the value and the boolean
                             Label ifTrue = code.newLabel();
                             Label endIf  = code.newLabel();
@@ -564,7 +564,7 @@ public class CommonBuilder
                     addReturn(code, cdOpt);
                     break;
 
-                case MultiSlotPrimitive:
+                case NullablePrimitive:
                     if (prop.isConstant()) {
                         code.getstatic(CD_this, jitFieldName, cdOpt)
                             .getstatic(CD_this, jitFieldName+EXT, CD_boolean);
@@ -631,7 +631,7 @@ public class CommonBuilder
                     }
                     break;
 
-                case MultiSlotPrimitive:
+                case NullablePrimitive:
                     int extSlot = argSlot + toTypeKind(cdOpt).slotSize();
                     if (prop.isConstant()) {
                         load(code, cdOpt, argSlot);
@@ -730,7 +730,7 @@ public class CommonBuilder
                         .getfield(CD_this, jitFieldName, cdOpt);
                     throw new UnsupportedOperationException("Primitive injection");
 
-                case MultiSlotPrimitive:
+                case NullablePrimitive:
                     code.aload(0)
                         .getfield(CD_this, jitFieldName, cdOpt)
                         .getfield(CD_this, jitFieldName+EXT, CD_boolean);
@@ -929,9 +929,9 @@ public class CommonBuilder
                         break;
                     }
 
-                    case MultiSlotPrimitive: {
+                    case NullablePrimitive: {
                         assert stdParamType.isNullable();
-                        TypeConstant primitiveType = stdParamType.getUnderlyingType();
+                        TypeConstant primitiveType = stdParamType.removeNullable();
                         // if the argument is Ecstasy `Null`, pass the default value for the type
                         // and `true`; otherwise the unboxed primitive value and `false`
                         Label ifNotNull = code.newLabel();
@@ -1017,7 +1017,7 @@ public class CommonBuilder
                     }
                     break;
 
-                case MultiSlotPrimitive:
+                case NullablePrimitive:
                     assert stdType.isNullable();
 
                     // if the extension is 'true', the return value is "Null", otherwise the

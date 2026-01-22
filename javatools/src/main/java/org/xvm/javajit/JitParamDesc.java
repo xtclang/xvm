@@ -4,6 +4,13 @@ import java.lang.constant.ClassDesc;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import static java.lang.constant.ConstantDescs.CD_boolean;
+
+import static org.xvm.javajit.JitFlavor.NullablePrimitive;
+import static org.xvm.javajit.JitFlavor.Primitive;
+import static org.xvm.javajit.JitFlavor.Specific;
+import static org.xvm.javajit.JitFlavor.Widened;
+
 /**
  * JIT specific information for a method parameter or return value
  */
@@ -25,4 +32,48 @@ public class JitParamDesc extends JitTypeDesc {
     public final boolean extension; // is this an additional Java parameter
 
     public static final JitParamDesc[] NONE = new JitParamDesc[0];
+
+    /**
+     * The combination of standard and optimized parameter descriptors.
+     */
+    public record JitParams(JitParamDesc[] apdStdParam, JitParamDesc[] apdOptParam) {
+        public boolean isOptimized() {
+            return apdOptParam != null;
+        }
+    }
+
+    /**
+     * @return the JitParams record for the specified parameter type.
+     */
+    public static JitParams computeJitParams(TypeSystem ts, TypeConstant type) {
+        JitParamDesc[] apdOptParam = null;
+        JitParamDesc[] apdStdParam;
+        ClassDesc cd;
+
+        if ((cd = JitTypeDesc.getPrimitiveClass(type)) != null) {
+            ClassDesc cdStd = type.ensureClassDesc(ts);
+
+            apdStdParam = new JitParamDesc[] {
+                new JitParamDesc(type, Specific, cdStd, 0, 0, false)};
+            apdOptParam = new JitParamDesc[] {
+                new JitParamDesc(type, Primitive, cd, 0, 0, false)};
+        } else if ((cd = JitTypeDesc.getNullablePrimitiveClass(type)) != null) {
+            apdStdParam = new JitParamDesc[] {
+                new JitParamDesc(type, Widened, cd, 0, 0, false)};
+            apdOptParam = new JitParamDesc[] {
+                new JitParamDesc(type, NullablePrimitive, cd, 0, 0, false),
+                new JitParamDesc(type, NullablePrimitive, CD_boolean, 0, 1, true)
+            };
+        } else if ((cd = JitTypeDesc.getWidenedClass(type)) != null) {
+            apdStdParam = new JitParamDesc[] {
+                new JitParamDesc(type, Widened, cd, 0, 0, false)};
+        } else {
+            assert type.isSingleUnderlyingClass(true);
+
+            cd = type.ensureClassDesc(ts);
+            apdStdParam = new JitParamDesc[] {
+                new JitParamDesc(type, Specific, cd, 0, 0, false)};
+        }
+        return new JitParams(apdStdParam, apdOptParam);
+    }
 }
