@@ -1,6 +1,5 @@
 package org.xtclang.plugin.internal;
 
-import java.util.Arrays;
 import java.util.List;
 
 import javax.inject.Inject;
@@ -53,7 +52,7 @@ public abstract class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskE
 
     @Override
     public void moduleNames(final String... names) {
-        Arrays.asList(names).forEach(this::moduleName);
+        List.of(names).forEach(this::moduleName);
     }
 
     @Override
@@ -69,7 +68,7 @@ public abstract class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskE
 
     @Override
     public void setModuleNames(final String... moduleNames) {
-        setModuleNames(Arrays.asList(moduleNames));
+        setModuleNames(List.of(moduleNames));
     }
 
     @Override
@@ -80,7 +79,7 @@ public abstract class DefaultXtcRuntimeExtension extends DefaultXtcLauncherTaskE
 
     @Override
     public void setModules(final XtcRunModule... modules) {
-        setModules(Arrays.asList(modules));
+        setModules(List.of(modules));
     }
 
     @Override

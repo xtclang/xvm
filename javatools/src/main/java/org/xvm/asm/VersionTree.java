@@ -2,6 +2,7 @@ package org.xvm.asm;
 
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -880,13 +881,8 @@ public class VersionTree<V>
             int c = nodes.length;
             if (nodes[c-1] != null) {
                 // allocate and copy to a new array
-                int    cNew     = c * 2;
-                Node[] nodesNew = new Node[cNew];
-                System.arraycopy(nodes, 0, nodesNew, 0, c);
-
-                // use the new array
-                nodes = nodesNew;
-                c     = cNew;
+                nodes = Arrays.copyOf(nodes, c * 2);
+                c     = nodes.length;
             }
 
             int nodePart = node.part;

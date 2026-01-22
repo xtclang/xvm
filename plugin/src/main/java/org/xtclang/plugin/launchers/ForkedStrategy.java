@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.gradle.api.logging.Logger;
@@ -145,7 +144,7 @@ public abstract class ForkedStrategy implements ExecutionStrategy {
         command.add("-cp");
         command.add(task.resolveJavaTools().getAbsolutePath());
         command.add(task.getJavaLauncherClassName());
-        command.addAll(Arrays.asList(programArgs));
+        command.addAll(List.of(programArgs));
         final ProcessBuilder pb = new ProcessBuilder(command).directory(projectDir);
         if (task.hasVerboseLogging()) {
             logger.lifecycle("[plugin] Forked process command: {}", String.join(" ", command));

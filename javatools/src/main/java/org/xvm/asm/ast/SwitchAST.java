@@ -85,9 +85,7 @@ public class SwitchAST
         // check bodies that are associated with some or all of the cases
         assert bodies != null && bodies.length <= rowCount;
         if (bodies.length < rowCount) {
-            BinaryAST[] newBodies = new BinaryAST[rowCount];
-            System.arraycopy(bodies, 0, newBodies, 0, bodies.length);
-            bodies = newBodies;
+            bodies = Arrays.copyOf(bodies, rowCount);
         }
 
         // check result types

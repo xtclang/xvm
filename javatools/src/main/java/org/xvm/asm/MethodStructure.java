@@ -2464,9 +2464,7 @@ public class MethodStructure
                 return false;
             }
 
-            Op[] aopNew = new Op[cNew];
-            System.arraycopy(aop, 0, aopNew, 0, cNew);
-            m_aop = aopNew;
+            m_aop = Arrays.copyOf(aop, cNew);
             return true;
         }
 
@@ -2565,9 +2563,7 @@ public class MethodStructure
             // there was redundant code; we should have seen code shrinkage
             assert cNew != cOld;
 
-            Op[] aopNew = new Op[cNew];
-            System.arraycopy(aop, 0, aopNew, 0, cNew);
-            m_aop = aopNew;
+            m_aop = Arrays.copyOf(aop, cNew);
             return true;
         }
 

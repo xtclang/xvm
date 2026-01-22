@@ -2,6 +2,7 @@ package org.xvm.asm;
 
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import static org.xvm.util.Handy.isDigit;
 import static org.xvm.util.Handy.quotedChar;
@@ -502,9 +503,7 @@ public class Version
             return this;
         }
 
-        int[] partsNew = new int[cParts - cZeros];
-        System.arraycopy(parts, 0, partsNew, 0, cParts - cZeros);
-        return new Version(partsNew, build);
+        return new Version(Arrays.copyOf(parts, cParts - cZeros), build);
     }
 
     /**
