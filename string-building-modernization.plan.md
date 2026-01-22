@@ -13,6 +13,7 @@ This document catalogs occurrences of legacy patterns in the XVM codebase that c
 | `Arrays.asList()` → `List.of()` | 19 | 12 | Medium | **DONE** |
 | `System.arraycopy()` → `Arrays.copyOf()` | ~30 | 20 | Medium | 5 done |
 | Lazy list instantiation (`List x = null`) | ~26 | ~15 | Medium | **20 done** |
+| Loop-to-lambda simplifications | 3 | 1 | Medium | **DONE** |
 
 ### 🐛 **CRITICAL BUG FOUND**
 
@@ -713,6 +714,91 @@ The codebase already uses `.isEmpty()` extensively (370+ occurrences). The 14 oc
 
 ---
 
+## Part 7: Loop-to-Lambda Simplifications
+
+### Pattern Description
+
+Several loops in the codebase can be further simplified using Java Stream API for counting, searching, and conditional checks. These are local transformations with identical semantics.
+
+### 7.1 Counting Loops → `stream().filter().count()`
+
+| File | Line | Current Pattern | Status |
+|------|------|-----------------|--------|
+| `asm/constants/TypeConstant.java` | 6330-6336 | Count ENUMVALUE children | **DONE** |
+
+**Example transformation:**
+```java
+// Before
+int c = 0;
+for (Component child : clzEnum.children()) {
+    if (child.getFormat() == Component.Format.ENUMVALUE) {
+        ++c;
+    }
+}
+return c;
+
+// After
+return (int) clzEnum.children().stream()
+    .filter(child -> child.getFormat() == Component.Format.ENUMVALUE)
+    .count();
+```
+
+### 7.2 Conditional Checks → `stream().anyMatch()` / `noneMatch()`
+
+| File | Line | Current Pattern | Status |
+|------|------|-----------------|--------|
+| `asm/constants/TypeConstant.java` | 828-832 | Check if any ENUMVALUE child matches | **DONE** |
+
+**Example transformation:**
+```java
+// Before
+for (Component child : clzThis.children()) {
+    if (child.getFormat() == Component.Format.ENUMVALUE &&
+            child.getIdentityConstant().getType().isA(that)) {
+        return false;
+    }
+}
+return true;
+
+// After
+return clzThis.children().stream()
+    .noneMatch(child -> child.getFormat() == Component.Format.ENUMVALUE &&
+                        child.getIdentityConstant().getType().isA(that));
+```
+
+### 7.3 Find-First Loops → `stream().filter().findFirst()`
+
+| File | Line | Current Pattern | Status |
+|------|------|-----------------|--------|
+| `asm/constants/TypeConstant.java` | 6387-6392 | Find first ENUMVALUE child | **DONE** |
+
+**Example transformation:**
+```java
+// Before
+for (Component child : clzEnum.children()) {
+    if (child.getFormat() == Component.Format.ENUMVALUE) {
+        return pool.ensureSingletonConstConstant(child.getIdentityConstant());
+    }
+}
+return null;
+
+// After
+return clzEnum.children().stream()
+    .filter(child -> child.getFormat() == Component.Format.ENUMVALUE)
+    .findFirst()
+    .map(child -> pool.ensureSingletonConstConstant(child.getIdentityConstant()))
+    .orElse(null);
+```
+
+### NOT Candidates for Conversion
+
+The following patterns should remain as loops (stream version would be more complex):
+- `EnumValueConstant.java:63-73` - Ordinal tracking with stateful counting
+- `EnumValueConstant.java:170-183` - ADD operation with "find next" state tracking
+- `EnumValueConstant.java:193-205` - SUB operation with "find previous" state tracking
+
+---
+
 ## Updated Recommended Priority
 
 1. **Critical**: Fix the `System.arraycopy` bug in `MarkAndSweepGcSpace.java:291`
@@ -721,5 +807,6 @@ The codebase already uses `.isEmpty()` extensively (370+ occurrences). The 14 oc
 4. **Medium**: `Arrays.asList()` → `List.of()` (19 occurrences) - Verify immutability first
 5. **Medium**: `System.arraycopy()` → `Arrays.copyOf()` (~30 occurrences) - Simple pattern match
 6. **Medium**: Lazy list instantiation (~26 occurrences) - Simplifies null handling
-7. **Low**: `StringBuilder` → `var` (217 occurrences) - Stylistic preference
-8. **Low**: Remaining `boolean first` patterns - Evaluate case-by-case
+7. **Medium**: Loop-to-lambda simplifications (3 occurrences) - More readable stream operations
+8. **Low**: `StringBuilder` → `var` (217 occurrences) - Stylistic preference
+9. **Low**: Remaining `boolean first` patterns - Evaluate case-by-case

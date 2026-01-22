@@ -822,17 +822,12 @@ public abstract class TypeConstant
                 // those can neither be extended, implemented nor mixed-in
                 return true;
 
-            case ENUM: {
+            case ENUM:
                 // most likely, it's not compatible either, but for extremely exoteric cases
                 // we need to scan every value to validate
-                for (Component child : clzThis.children()) {
-                    if (child.getFormat() == Component.Format.ENUMVALUE &&
-                            child.getIdentityConstant().getType().isA(that)) {
-                        return false;
-                    }
-                }
-                return true;
-            }
+                return clzThis.children().stream()
+                        .noneMatch(child -> child.getFormat() == Component.Format.ENUMVALUE &&
+                                            child.getIdentityConstant().getType().isA(that));
 
             case CLASS, CONST, SERVICE:
                 // we already tested "isA" relationship, so if "this" and "that" are both
@@ -6327,13 +6322,9 @@ public abstract class TypeConstant
             // count the enum values (each ordinal value)
             // (note: enum-to-int conversion is no longer used for compiling to JumpInt)
             ClassStructure clzEnum = (ClassStructure) getSingleUnderlyingClass(false).getComponent();
-            int c = 0;
-            for (Component child : clzEnum.children()) {
-                if (child.getFormat() == Component.Format.ENUMVALUE) {
-                    ++c;
-                }
-            }
-            return c;
+            return (int) clzEnum.children().stream()
+                    .filter(child -> child.getFormat() == Component.Format.ENUMVALUE)
+                    .count();
         }
     }
 
@@ -6384,13 +6375,12 @@ public abstract class TypeConstant
 
         default:
             ClassStructure clzEnum = (ClassStructure) getSingleUnderlyingClass(false).getComponent();
-            for (Component child : clzEnum.children()) {
-                if (child.getFormat() == Component.Format.ENUMVALUE) {
-                    return pool.ensureSingletonConstConstant(child.getIdentityConstant());
-                }
-            }
+            return clzEnum.children().stream()
+                    .filter(child -> child.getFormat() == Component.Format.ENUMVALUE)
+                    .findFirst()
+                    .map(child -> pool.ensureSingletonConstConstant(child.getIdentityConstant()))
+                    .orElse(null);
         }
-        return null;
     }
 
     /**
