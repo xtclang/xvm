@@ -102,7 +102,7 @@ public abstract class OpReturn
                 int          slotR  = bctx.scope.getSynthetic(sRetVal + i, true);
 
                 switch (pdRet.flavor) {
-                case MultiSlotPrimitive:
+                case NullablePrimitive:
                     assert fOptimized;
                     int slotValEx = bctx.scope.getSynthetic(sRetVal + (i + 1), true);
                     if (cd.isPrimitive()) {
@@ -137,7 +137,7 @@ public abstract class OpReturn
                 ClassDesc    cd     = regRet.cd();
                 if (i == 0) {
                     switch (pdRet.flavor) {
-                    case MultiSlotPrimitive:
+                    case NullablePrimitive:
                         assert fOptimized;
                         if (cd.isPrimitive()) {
                             // `false` at Ctx.i0 and return the actual primitive value
@@ -161,7 +161,7 @@ public abstract class OpReturn
                     }
                 } else {
                     switch (pdRet.flavor) {
-                    case MultiSlotPrimitive:
+                    case NullablePrimitive:
                         assert fOptimized;
                         JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
                         if (cd.isPrimitive()) {

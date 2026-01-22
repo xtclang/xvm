@@ -500,7 +500,7 @@ public abstract class OpCondJump
         ClassDesc    cd  = reg.cd();
         if (cd.isPrimitive()) {
             if (reg instanceof DoubleSlot doubleSlot) {
-                assert doubleSlot.flavor() == JitFlavor.MultiSlotPrimitive;
+                assert doubleSlot.flavor() == JitFlavor.NullablePrimitive;
                 code.iload(doubleSlot.extSlot()); // boolean Null indication
                 switch (op) {
                 case OP_JMP_NULL:

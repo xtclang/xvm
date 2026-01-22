@@ -173,7 +173,7 @@ public class FinallyEnd
                 // the code below is complementary to the code in OpReturn
                 if (i == 0) {
                     switch (pdRet.flavor) {
-                    case MultiSlotPrimitive:
+                    case NullablePrimitive:
                         assert fOptimized;
                         int slotEx = scopeGuard.getSynthetic(sRetVal + (i + 1), false);
                         code.iload(slotEx);
@@ -187,7 +187,7 @@ public class FinallyEnd
                     }
                 } else {
                     switch (pdRet.flavor) {
-                    case MultiSlotPrimitive:
+                    case NullablePrimitive:
                         assert fOptimized;
                         int slotEx = scopeGuard.getSynthetic(sRetVal + (i + 1), false);
                         code.iload(slotEx);

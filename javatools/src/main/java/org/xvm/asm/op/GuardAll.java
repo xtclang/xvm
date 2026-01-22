@@ -143,7 +143,7 @@ public class GuardAll
                 Builder.store(code, cd, slotR);
 
                 switch (pdRet.flavor) {
-                case MultiSlotPrimitive:
+                case NullablePrimitive:
                     int slotEx = scopeOuter.allocateSynthetic(sRetVal + (i + 1), TypeKind.BOOLEAN);
                     code.iconst_0()
                         .istore(slotEx);

@@ -387,7 +387,7 @@ public abstract class OpTest
         Label   labelEnd  = code.newLabel();
         boolean fNot      = getOpCode() == OP_IS_NNULL;
         if (regArg instanceof BuildContext.DoubleSlot slotMulti) {
-            assert slotMulti.flavor() == JitFlavor.MultiSlotPrimitive;
+            assert slotMulti.flavor() == JitFlavor.NullablePrimitive;
 
             code.iload(slotMulti.extSlot()); // True indicates Null
             if (fNot) {

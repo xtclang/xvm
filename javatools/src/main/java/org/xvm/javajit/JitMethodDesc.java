@@ -14,7 +14,7 @@ import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_nObj;
-import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
+import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
 import static org.xvm.javajit.JitFlavor.PrimitiveWithDefault;
 import static org.xvm.javajit.JitFlavor.Specific;
@@ -146,7 +146,7 @@ public class JitMethodDesc {
                 } else {
                     optParamList.add(new JitParamDesc(type, Primitive, cd, iOrig, iOpt++, false));
                 }
-            } else if ((cd = JitTypeDesc.getMultiSlotPrimitiveClass(type)) != null) {
+            } else if ((cd = JitTypeDesc.getNullablePrimitiveClass(type)) != null) {
                 JitFlavor stdFlavor = fDflt ? WidenedWithDefault : Widened;
                 stdParamList.add(
                     new JitParamDesc(type, stdFlavor, CD_nObj, iOrig, iStd++, false));
@@ -158,9 +158,9 @@ public class JitMethodDesc {
                 } else {
                     isOptimized = true;
                     optParamList.add(
-                        new JitParamDesc(type, MultiSlotPrimitive, cd, iOrig, iOpt++, false));
+                        new JitParamDesc(type, NullablePrimitive, cd, iOrig, iOpt++, false));
                     optParamList.add(
-                        new JitParamDesc(type, MultiSlotPrimitive, CD_boolean, iOrig, iOpt++, true));
+                        new JitParamDesc(type, NullablePrimitive, CD_boolean, iOrig, iOpt++, true));
                 }
             } else if ((cd = JitTypeDesc.getWidenedClass(type)) != null) {
                 JitFlavor flavor = fDflt ? WidenedWithDefault : Widened;
@@ -200,15 +200,15 @@ public class JitMethodDesc {
                 stdParamList.add(new JitParamDesc(type, Specific, cdStd, iOrig, ixStdObj++, false));
                 optParamList.add(new JitParamDesc(type, Primitive, cd,   iOrig, ixLong++, false));
                 isOptimized = true;
-            } else if ((cd = JitTypeDesc.getMultiSlotPrimitiveClass(type)) != null) {
+            } else if ((cd = JitTypeDesc.getNullablePrimitiveClass(type)) != null) {
                 TypeConstant typePrimitive = type.removeNullable();
                 TypeConstant typeBoolean   = pool.typeBoolean();
 
                 stdParamList.add(new JitParamDesc(type, Widened, CD_nObj, iOrig, ixStdObj++, false));
                 optParamList.add(new JitParamDesc(typePrimitive,
-                        MultiSlotPrimitive, cd,         iOrig, ixLong++, false));
+                    NullablePrimitive, cd,         iOrig, ixLong++, false));
                 optParamList.add(new JitParamDesc(typeBoolean,
-                        MultiSlotPrimitive, CD_boolean, iOrig, ixLong++, true));
+                    NullablePrimitive, CD_boolean, iOrig, ixLong++, true));
                 isOptimized = true;
             } else if ((cd = JitTypeDesc.getWidenedClass(type)) != null) {
                 stdParamList.add(new JitParamDesc(type, Widened, cd, iOrig, ixStdObj++, false));

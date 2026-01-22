@@ -10,7 +10,7 @@ public enum JitFlavor {
      * <p>
      * Implication is that it uses a single slot and no casts or transformations are required.
      */
-    Specific(false, false),
+    Specific(false, 1),
 
     /**
      * A widened Java type (nObj or below); most probably a
@@ -18,7 +18,7 @@ public enum JitFlavor {
      * <p>
      * Implication is that it uses a single slot and casts are required.
      */
-    Widened(false, false),
+    Widened(false, 1),
 
     /**
      * A Java primitive type (e.g. boolean, int, long) that represents an xtc value type (e.g.
@@ -27,7 +27,7 @@ public enum JitFlavor {
      * Implication is that it uses a single slot and transformations (boxing/unboxing) may be
      * required.
      */
-    Primitive(true, false),
+    Primitive(true, 1),
 
     /**
      * Multi-slot Java primitives (e.g. (boolean, boolean), (int, boolean), (long, boolean)) that
@@ -35,8 +35,10 @@ public enum JitFlavor {
      * <p>
      * Implication is that it uses multiple slots and transformations (boxing/unboxing) may be
      * required.
+     *
+     * TODO: we don't need two slots to represent an Int16? or Boolean?
      */
-    MultiSlotPrimitive(true, true),
+    NullablePrimitive(true, 2),
 
     /**
      * A parameter of the {@link #Specific} flavor with a default value.
@@ -44,7 +46,7 @@ public enum JitFlavor {
      * Implication is that a Java `null` value is allowed to passed in, indicating that the default
      * value should be used.
      */
-    SpecificWithDefault(false, false),
+    SpecificWithDefault(false, 1),
 
     /**
      * A parameter of the {@link #Widened} flavor with a default value.
@@ -52,7 +54,7 @@ public enum JitFlavor {
      * Implication is that a `null` value is allowed to passed in, indicating that the default
      * value should be used.
      */
-    WidenedWithDefault(false, false),
+    WidenedWithDefault(false, 1),
 
     /**
      * A parameter of the {@link #Primitive} flavor with a default value.
@@ -60,16 +62,16 @@ public enum JitFlavor {
      * Implication is that an additional `boolean` value is used, indicating that the default
      * value should be used.
      */
-    PrimitiveWithDefault(true, true),
+    PrimitiveWithDefault(true, 2),
 
-    AlwaysNull(false, false)           // Null TODO: do we need it?
+    AlwaysNull(false, 0)           // Null TODO: do we need it?
     ;
 
-    JitFlavor(boolean canOptimize, boolean multiSlot) {
+    JitFlavor(boolean canOptimize, int slotCount) {
         this.canOptimize = canOptimize;
-        this.multiSlot = multiSlot;
+        this.slotCount   = slotCount;
     }
 
     public final boolean canOptimize;
-    public final boolean multiSlot;
+    public final int slotCount;
 }

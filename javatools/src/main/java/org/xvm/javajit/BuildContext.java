@@ -73,7 +73,7 @@ import static org.xvm.javajit.Builder.CD_nObj;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.N_TypeMismatch;
 import static org.xvm.javajit.Builder.OPT;
-import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
+import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 import static org.xvm.javajit.TypeSystem.ID_NUM;
 
 /**
@@ -624,7 +624,7 @@ public class BuildContext {
                 registerInfos.put(varIndex, new SingleSlot(varIndex, slot, type, paramDesc.cd, name));
                 break;
 
-            case MultiSlotPrimitive, PrimitiveWithDefault:
+            case NullablePrimitive, PrimitiveWithDefault:
                 int extSlot = code.parameterSlot(extraArgs + i + 1);
 
                 registerInfos.put(varIndex,
@@ -830,7 +830,7 @@ public class BuildContext {
         RegisterInfo reg = loadArgument(code, argId);
         if (reg.cd().isPrimitive() && !targetDesc.cd.isPrimitive()) {
             if (reg instanceof DoubleSlot doubleSlot) {
-                assert doubleSlot.flavor == MultiSlotPrimitive;
+                assert doubleSlot.flavor == NullablePrimitive;
                 // loadArgument() has already loaded the value and the boolean
 
                 Label ifTrue = code.newLabel();
@@ -1070,14 +1070,14 @@ public class BuildContext {
 
         ClassDesc    cd;
         RegisterInfo reg;
-        if ((cd = JitTypeDesc.getMultiSlotPrimitiveClass(type)) != null) {
+        if ((cd = JitTypeDesc.getNullablePrimitiveClass(type)) != null) {
             int slotPrime = scope.allocateLocal(regId, cd);
             int slotExt   = scope.allocateLocal(regId, TypeKind.BOOLEAN);
 
             code.localVariable(slotPrime, name, cd, varStart, scope.endLabel);
             code.localVariable(slotExt,   name+EXT, CD_boolean, varStart, scope.endLabel);
 
-            reg = new DoubleSlot(this, regId, slotPrime, slotExt, MultiSlotPrimitive, type, cd, name);
+            reg = new DoubleSlot(this, regId, slotPrime, slotExt, NullablePrimitive, type, cd, name);
         } else {
             cd = JitParamDesc.getJitClass(typeSystem, type);
 
@@ -1423,7 +1423,7 @@ public class BuildContext {
 
             if (i == 0) {
                 switch (pdRet.flavor) {
-                case MultiSlotPrimitive:
+                case NullablePrimitive:
                     assert isOptimized;
                     JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
 
@@ -1451,7 +1451,7 @@ public class BuildContext {
                 }
             } else {
                 switch (pdRet.flavor) {
-                case MultiSlotPrimitive:
+                case NullablePrimitive:
                     assert isOptimized;
                     JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
 
@@ -1744,7 +1744,7 @@ public class BuildContext {
                 code.labelBinding(endIf);
                 return new SingleSlot(type(), cd, name());
 
-            case MultiSlotPrimitive:
+            case NullablePrimitive:
                 // load the "extension" boolean flag last
                 Builder.load(code, cd, slot);
                 Builder.load(code, CD_boolean, extSlot);

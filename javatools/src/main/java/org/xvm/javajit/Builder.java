@@ -42,7 +42,7 @@ import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 
-import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
+import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 import static org.xvm.javajit.JitFlavor.Specific;
 
 /**
@@ -187,7 +187,7 @@ public abstract class Builder {
                     ? jmd.optimizedReturns[0].type
                     : jmd.standardReturns[0].type;
             JitTypeDesc jtd = type.getJitDesc(typeSystem);
-            if (jtd.flavor == MultiSlotPrimitive) {
+            if (jtd.flavor == NullablePrimitive) {
                 throw new UnsupportedOperationException("TODO multislot property");
             }
             return new SingleSlot(type, jtd.cd, "");

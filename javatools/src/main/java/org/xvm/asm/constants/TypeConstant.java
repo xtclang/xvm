@@ -89,7 +89,7 @@ import org.xvm.util.TransientThreadLocal;
 
 import static org.xvm.javajit.Builder.CD_nObj;
 import static org.xvm.javajit.Builder.OPT;
-import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
+import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
 import static org.xvm.javajit.JitFlavor.Specific;
 import static org.xvm.javajit.JitFlavor.Widened;
@@ -6553,7 +6553,14 @@ public abstract class TypeConstant
     }
 
     /**
-     * @return true iff this type may represent a primitive JIT type
+     * @return true iff objects of this type can be represented by one or more primitive Java value
+     */
+    public boolean isPrimitivizable() {
+        return isPrimitive();
+    }
+
+    /**
+     * @return true iff objects of this type can be represented by a single primitive Java value
      */
     public boolean isPrimitive() {
         return false;
@@ -6567,8 +6574,8 @@ public abstract class TypeConstant
         if ((cd = JitTypeDesc.getPrimitiveClass(this)) != null) {
             return new JitTypeDesc(getCanonicalJitType(), Primitive, cd);
         }
-        if ((cd = JitTypeDesc.getMultiSlotPrimitiveClass(this)) != null) {
-            return new JitTypeDesc(this.removeNullable().getCanonicalJitType(), MultiSlotPrimitive, cd);
+        if ((cd = JitTypeDesc.getNullablePrimitiveClass(this)) != null) {
+            return new JitTypeDesc(this.removeNullable().getCanonicalJitType(), NullablePrimitive, cd);
         }
         if ((cd = JitTypeDesc.getWidenedClass(this)) != null) {
             return new JitTypeDesc(getCanonicalJitType(), Widened, cd);
