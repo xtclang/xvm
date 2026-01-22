@@ -20,6 +20,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
 import org.xvm.asm.Op.ConstantRegistry;
 import org.xvm.asm.Op.Prefix;
 
@@ -252,13 +255,10 @@ public class MethodStructure
      * @return the annotation of that annotation class, or null
      */
     public Annotation findAnnotation(ClassConstant clzClass) {
-        for (Annotation annotation : m_aAnnotations) {
-            if (annotation.getAnnotationClass().equals(clzClass)) {
-                return annotation;
-            }
-        }
-
-        return null;
+        return Arrays.stream(m_aAnnotations)
+                .filter(annotation -> annotation.getAnnotationClass().equals(clzClass))
+                .findFirst()
+                .orElse(null);
     }
 
     /**
@@ -733,16 +733,10 @@ public class MethodStructure
      * Collect a list of unresolved type parameter names. Used for error reporting only.
      */
     public List<String> collectUnresolvedTypeParameters(Set<String> setResolved) {
-        int          cTypeParams    = getTypeParamCount();
-        List<String> listUnresolved = new ArrayList<>(cTypeParams);
-
-        for (int iT = 0; iT < cTypeParams; iT++) {
-            String sName = getParam(iT).getName();
-            if (!setResolved.contains(sName)) {
-                listUnresolved.add(sName);
-            }
-        }
-        return listUnresolved;
+        return IntStream.range(0, getTypeParamCount())
+                .mapToObj(iT -> getParam(iT).getName())
+                .filter(sName -> !setResolved.contains(sName))
+                .collect(Collectors.toList());
     }
 
     /**

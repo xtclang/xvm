@@ -18,9 +18,12 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Set;
 
 import java.util.function.Consumer;
+
+import java.util.stream.Collectors;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
@@ -488,14 +491,12 @@ public abstract class Component
      */
     public Contribution findContribution(Composition composition) {
         List<Contribution> list = m_listContribs;
-        if (list != null) {
-            for (Contribution contrib : list) {
-                if (contrib.getComposition() == composition) {
-                    return contrib;
-                }
-            }
-        }
-        return null;
+        return list == null
+                ? null
+                : list.stream()
+                        .filter(contrib -> contrib.getComposition() == composition)
+                        .findFirst()
+                        .orElse(null);
     }
 
     /**
@@ -1573,16 +1574,10 @@ public abstract class Component
      * @return a list of the component's children
      */
     public List<Component> safeChildren() {
-        List<Component> list = new ArrayList<>();
-
-        for (String sName : getChildByNameMap().keySet()) {
-            Component child = getChild(sName);
-            if (child != null) {
-                list.add(child);
-            }
-        }
-
-        return list;
+        return getChildByNameMap().keySet().stream()
+                .map(this::getChild)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 
     protected List<Component> selectMatchingSiblings(Component firstSibling) {
