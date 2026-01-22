@@ -219,9 +219,9 @@ public class xConst
 
                 // remove all immutable and proxied (services and services' children);
                 // collect all freezable into a "freezable" list along with their names and types
-                List<ObjectHandle> listFreezable = null;
-                List<FieldInfo>    listInfo      = null;
-                List<TypeConstant> listTypes     = null;
+                List<ObjectHandle> listFreezable = new ArrayList<>();
+                List<FieldInfo>    listInfo      = new ArrayList<>();
+                List<TypeConstant> listTypes     = new ArrayList<>();
 
                 for (FieldInfo field : clz.getFieldLayout().values()) {
                     if (field.isTransient() || field.isSynthetic() || field.isLazy()) {
@@ -237,11 +237,6 @@ public class xConst
 
                     String sName = field.getName();
                     if (hField.getType().isA(frame.poolContext().typeFreezable())) {
-                        if (listFreezable == null) {
-                            listFreezable = new ArrayList<>();
-                            listInfo      = new ArrayList<>();
-                            listTypes     = new ArrayList<>();
-                        }
                         listFreezable.add(hField);
                         listInfo.add(field);
                         listTypes.add(hField.getType());
@@ -251,7 +246,7 @@ public class xConst
                     }
                 }
 
-                if (listFreezable != null) {
+                if (!listFreezable.isEmpty()) {
                     ObjectHandle[] ahFreezable = listFreezable.toArray(Utils.OBJECTS_NONE);
                     FieldInfo[]    aFieldInfo  = listInfo.toArray(NO_FIELDS);
                     ArrayHandle    haValues    =

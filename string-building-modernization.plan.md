@@ -11,8 +11,8 @@ This document catalogs occurrences of legacy patterns in the XVM codebase that c
 | `Collections.emptyList()` → `List.of()` | 49 | 22 | **High** | **DONE** |
 | `Collections.singletonList()` → `List.of()` | 22 | 10 | **High** | **DONE** |
 | `Arrays.asList()` → `List.of()` | 19 | 12 | Medium | **DONE** |
-| `System.arraycopy()` → `Arrays.copyOf()` | ~30 | 20 | Medium | 5 done |
-| Lazy list instantiation (`List x = null`) | ~26 | ~15 | Medium | **20 done** |
+| `System.arraycopy()` → `Arrays.copyOf()` | ~30 | 20 | Medium | 5 done (rest N/A) |
+| Lazy list instantiation (`List x = null`) | ~26 | ~15 | Medium | **21 done** (rest N/A) |
 | Loop-to-lambda simplifications | 9 | 5 | Medium | **DONE** |
 
 ### 🐛 **CRITICAL BUG FOUND**
@@ -676,10 +676,10 @@ List<X> items = new ArrayList<>();
 
 **Occurrences found:** ~26 in compiler/asm directories (local variables only)
 
-**Status:** 20 modernized across 10 files. Remaining patterns either:
+**Status:** 21 modernized across 11 files. Remaining patterns either:
 - Use helper methods that pass list through (MethodStructure.addSingleton)
 - Have null-vs-empty semantic meaning in API contracts (Parser.java parsing methods)
-- Use `startList()` helper for copy-on-write patterns (MethodInfo, PropertyInfo)
+- Use `startList()` or `ensureList()` helper for copy-on-write patterns (MethodInfo, PropertyInfo, TypeCompositionStatement)
 
 **Modernized files:**
 - ClassStructure.java (3 patterns)
@@ -692,6 +692,7 @@ List<X> items = new ArrayList<>();
 - DynamicFormalConstant.java (1 pattern)
 - InvocationExpression.java (1 pattern)
 - TypeCompositionStatement.java (1 pattern)
+- xConst.java (1 pattern)
 
 ---
 
