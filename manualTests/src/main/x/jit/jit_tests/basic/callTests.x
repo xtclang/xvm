@@ -31,13 +31,19 @@ package callTests {
             assert i3 == 33;
         }
 
-        console.print(call4(-1));
-        console.print(call4(1));
+        // static
+        assert call4(1);
+        assert !call4(-1);
 
-        // loops
-        for (Int i : 3..1) {
-            console.print(i);
-        }
+        // nullable
+        call5(1);
+        call5(Null);
+
+        Int? i5 = Null;
+        call5(i5);
+
+        i5 = 1;
+        call5(i5);
     }
 
     Int call1(Int i, Int j = 2) = i + j;
@@ -54,4 +60,14 @@ package callTests {
     }
 
     static Boolean call4(Int i) = i > 0;
+
+    void call5(Int? n) {
+        if (n.is(Int)) {
+            assert n > 0;
+        }
+
+        if (n != Null) {
+            assert n > 0;
+        }
+    }
 }

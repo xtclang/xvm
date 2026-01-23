@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
+import java.lang.classfile.TypeKind;
 
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
@@ -595,21 +596,70 @@ public abstract class OpCondJump
                 return;
             }
 
+            if (typeTarget.isNullable() && !typeTest.isOnlyNullable()) {
+                if (!typeTarget.removeNullable().isA(typeTest)) {
+                    // the result is always negative, which most probably means that a formal
+                    // type was narrowed for a particular class flavor and the corresponding code
+                    // can be safely eliminated
+                    if (getOpCode() == OP_JMP_NTYPE) {
+                        bctx.markDeadCode(nAddrThis + 1, nAddrJump);
+                    } else {
+                        bctx.markDeadCode(nAddrJump, -1);
+                    }
+                    return;
+                }
+            }
+
             RegisterInfo regTarget = bctx.loadArgument(code, m_nArg);
-            bctx.loadCtx(code);
-            code.invokevirtual(regTarget.cd(), "$xvmType", MD_xvmType); // target type
-            Builder.loadTypeConstant(code, bctx.typeSystem, typeTest);  // test type
-            code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
+            boolean      fInvert   = false;
+            if (regTarget instanceof DoubleSlot doubleSlot) {
+                assert doubleSlot.flavor() == JitFlavor.NullablePrimitive;
+
+                // the extension flag is at the stack top ("true" meaning "Null");
+                // discard the second value, and leave the boolean on the Java stack
+                ClassDesc cd   = regTarget.cd();
+                TypeKind  kind = Builder.toTypeKind(cd);
+                if (kind.slotSize() == 1) {
+                    code.swap()
+                        .pop();
+                } else {
+                    int slot = bctx.scope.allocateJavaSlot(kind);
+                    code.istore(slot)
+                        .pop2()
+                        .iload(slot);
+                }
+
+                if (!typeTest.isOnlyNullable()) {
+                    assert typeTarget.removeNullable().isA(typeTest);
+
+                    // testing X? for ".is(X)" is equivalent to testing it for "!= Null";
+                    // the inverted answer is on the Java stack
+                    fInvert = true;
+                }
+            } else {
+                bctx.loadCtx(code);
+                code.invokevirtual(regTarget.cd(), "$xvmType", MD_xvmType); // target type
+                Builder.loadTypeConstant(code, bctx.typeSystem, typeTest);  // test type
+                code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
+            }
 
             TypeConstant typeIs    = bctx.combine(typeTarget, typeTest);
             TypeConstant typeIsNot = bctx.andNot(typeTarget, typeTest);
             if (getOpCode() == OP_JMP_TYPE) {
                 bctx.narrowRegister(code, regTarget, nAddrJump, typeIs);
-                code.ifne(lblJump);
+                if (fInvert) {
+                    code.ifeq(lblJump);
+                } else {
+                    code.ifne(lblJump);
+                }
                 bctx.narrowRegister(code, regTarget, typeIsNot);
             } else {
                 bctx.narrowRegister(code, regTarget, nAddrJump, typeIsNot);
-                code.ifeq(lblJump);
+                if (fInvert) {
+                    code.ifne(lblJump);
+                } else {
+                    code.ifeq(lblJump);
+                }
                 bctx.narrowRegister(code, regTarget, typeIs);
             }
         } else {

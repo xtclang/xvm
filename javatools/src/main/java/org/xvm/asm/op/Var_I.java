@@ -108,7 +108,7 @@ public class Var_I
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         bctx.introduceVar(code, m_nVar, m_nType, 0);
-        bctx.loadArgument(code, m_nValueId);
+        bctx.moveVar(code, m_nValueId, m_nVar, false);
     }
 
     // ----- fields --------------------------------------------------------------------------------

@@ -910,9 +910,8 @@ public class CommonBuilder
                         Label ifNotNull = code.newLabel();
                         Label endIf     = code.newLabel();
 
-                        code
-                           .aload(stdParamSlot)
-                           .ifnonnull(ifNotNull);
+                        code.aload(stdParamSlot)
+                            .ifnonnull(ifNotNull);
                         // the value is `null`
                         Builder.defaultLoad(code, optParamDesc.cd); // default primitive
                         code.iconst_1();                            // true
@@ -944,10 +943,10 @@ public class CommonBuilder
                         Builder.defaultLoad(code, optParamDesc.cd);  // default primitive
                         code.iconst_1();                             // true
 
-                        code
-                            .goto_(endIf)
+                        code.goto_(endIf)
                             .labelBinding(ifNotNull)
-                            .aload(stdParamSlot);
+                            .aload(stdParamSlot)
+                            .checkcast(optParamDesc.type.removeNullable().ensureClassDesc(typeSystem));
                         unbox(code, primitiveType, optParamDesc.cd); // unboxed primitive
                         code.iconst_0();                             // false
 

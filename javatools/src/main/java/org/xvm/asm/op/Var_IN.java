@@ -116,9 +116,8 @@ public class Var_IN
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        RegisterInfo reg = bctx.introduceVar(code, m_nVar, m_nType, m_nNameId);
-        bctx.loadArgument(code, m_nValueId);
-        bctx.storeValue(code, reg);
+        bctx.introduceVar(code, m_nVar, m_nType, m_nNameId);
+        bctx.moveVar(code, m_nValueId, m_nVar, false);
     }
 
     // ----- fields --------------------------------------------------------------------------------
