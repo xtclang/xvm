@@ -1,0 +1,226 @@
+diff --git a/javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java b/javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java
+index 7f7d6ee8e..9a5fc7389 100644
+--- a/javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java
++++ b/javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java
+@@ -822,17 +822,12 @@ public abstract class TypeConstant
+                 // those can neither be extended, implemented nor mixed-in
+                 return true;
+ 
+-            case ENUM: {
++            case ENUM:
+                 // most likely, it's not compatible either, but for extremely exoteric cases
+                 // we need to scan every value to validate
+-                for (Component child : clzThis.children()) {
+-                    if (child.getFormat() == Component.Format.ENUMVALUE &&
+-                            child.getIdentityConstant().getType().isA(that)) {
+-                        return false;
+-                    }
+-                }
+-                return true;
+-            }
++                return clzThis.children().stream()
++                        .noneMatch(child -> child.getFormat() == Component.Format.ENUMVALUE &&
++                                            child.getIdentityConstant().getType().isA(that));
+ 
+             case CLASS, CONST, SERVICE:
+                 // we already tested "isA" relationship, so if "this" and "that" are both
+@@ -6327,13 +6322,9 @@ public abstract class TypeConstant
+             // count the enum values (each ordinal value)
+             // (note: enum-to-int conversion is no longer used for compiling to JumpInt)
+             ClassStructure clzEnum = (ClassStructure) getSingleUnderlyingClass(false).getComponent();
+-            int c = 0;
+-            for (Component child : clzEnum.children()) {
+-                if (child.getFormat() == Component.Format.ENUMVALUE) {
+-                    ++c;
+-                }
+-            }
+-            return c;
++            return (int) clzEnum.children().stream()
++                    .filter(child -> child.getFormat() == Component.Format.ENUMVALUE)
++                    .count();
+         }
+     }
+ 
+@@ -6384,13 +6375,12 @@ public abstract class TypeConstant
+ 
+         default:
+             ClassStructure clzEnum = (ClassStructure) getSingleUnderlyingClass(false).getComponent();
+-            for (Component child : clzEnum.children()) {
+-                if (child.getFormat() == Component.Format.ENUMVALUE) {
+-                    return pool.ensureSingletonConstConstant(child.getIdentityConstant());
+-                }
+-            }
++            return clzEnum.children().stream()
++                    .filter(child -> child.getFormat() == Component.Format.ENUMVALUE)
++                    .findFirst()
++                    .map(child -> pool.ensureSingletonConstConstant(child.getIdentityConstant()))
++                    .orElse(null);
+         }
+-        return null;
+     }
+ 
+     /**
+diff --git a/javatools/src/main/java/org/xvm/asm/Component.java b/javatools/src/main/java/org/xvm/asm/Component.java
+index 872d1d705..46ef84a58 100644
+--- a/javatools/src/main/java/org/xvm/asm/Component.java
++++ b/javatools/src/main/java/org/xvm/asm/Component.java
+@@ -18,10 +18,13 @@ import java.util.List;
+ import java.util.ListIterator;
+ import java.util.Map;
+ import java.util.NoSuchElementException;
++import java.util.Objects;
+ import java.util.Set;
+ 
+ import java.util.function.Consumer;
+ 
++import java.util.stream.Collectors;
++
+ import org.xvm.asm.constants.ClassConstant;
+ import org.xvm.asm.constants.ConditionalConstant;
+ import org.xvm.asm.constants.IdentityConstant;
+@@ -488,14 +491,12 @@ public abstract class Component
+      */
+     public Contribution findContribution(Composition composition) {
+         List<Contribution> list = m_listContribs;
+-        if (list != null) {
+-            for (Contribution contrib : list) {
+-                if (contrib.getComposition() == composition) {
+-                    return contrib;
+-                }
+-            }
+-        }
+-        return null;
++        return list == null
++                ? null
++                : list.stream()
++                        .filter(contrib -> contrib.getComposition() == composition)
++                        .findFirst()
++                        .orElse(null);
+     }
+ 
+     /**
+@@ -1573,16 +1574,10 @@ public abstract class Component
+      * @return a list of the component's children
+      */
+     public List<Component> safeChildren() {
+-        List<Component> list = new ArrayList<>();
+-
+-        for (String sName : getChildByNameMap().keySet()) {
+-            Component child = getChild(sName);
+-            if (child != null) {
+-                list.add(child);
+-            }
+-        }
+-
+-        return list;
++        return getChildByNameMap().keySet().stream()
++                .map(this::getChild)
++                .filter(Objects::nonNull)
++                .collect(Collectors.toList());
+     }
+ 
+     protected List<Component> selectMatchingSiblings(Component firstSibling) {
+diff --git a/javatools/src/main/java/org/xvm/asm/MethodStructure.java b/javatools/src/main/java/org/xvm/asm/MethodStructure.java
+index 55ac38d57..d0bde88be 100644
+--- a/javatools/src/main/java/org/xvm/asm/MethodStructure.java
++++ b/javatools/src/main/java/org/xvm/asm/MethodStructure.java
+@@ -20,6 +20,9 @@ import java.util.List;
+ import java.util.Map;
+ import java.util.Set;
+ 
++import java.util.stream.Collectors;
++import java.util.stream.IntStream;
++
+ import org.xvm.asm.Op.ConstantRegistry;
+ import org.xvm.asm.Op.Prefix;
+ 
+@@ -252,13 +255,10 @@ public class MethodStructure
+      * @return the annotation of that annotation class, or null
+      */
+     public Annotation findAnnotation(ClassConstant clzClass) {
+-        for (Annotation annotation : m_aAnnotations) {
+-            if (annotation.getAnnotationClass().equals(clzClass)) {
+-                return annotation;
+-            }
+-        }
+-
+-        return null;
++        return Arrays.stream(m_aAnnotations)
++                .filter(annotation -> annotation.getAnnotationClass().equals(clzClass))
++                .findFirst()
++                .orElse(null);
+     }
+ 
+     /**
+@@ -733,16 +733,10 @@ public class MethodStructure
+      * Collect a list of unresolved type parameter names. Used for error reporting only.
+      */
+     public List<String> collectUnresolvedTypeParameters(Set<String> setResolved) {
+-        int          cTypeParams    = getTypeParamCount();
+-        List<String> listUnresolved = new ArrayList<>(cTypeParams);
+-
+-        for (int iT = 0; iT < cTypeParams; iT++) {
+-            String sName = getParam(iT).getName();
+-            if (!setResolved.contains(sName)) {
+-                listUnresolved.add(sName);
+-            }
+-        }
+-        return listUnresolved;
++        return IntStream.range(0, getTypeParamCount())
++                .mapToObj(iT -> getParam(iT).getName())
++                .filter(sName -> !setResolved.contains(sName))
++                .collect(Collectors.toList());
+     }
+ 
+     /**
+diff --git a/javatools/src/main/java/org/xvm/asm/constants/MethodInfo.java b/javatools/src/main/java/org/xvm/asm/constants/MethodInfo.java
+index 913299474..6b4915e31 100644
+--- a/javatools/src/main/java/org/xvm/asm/constants/MethodInfo.java
++++ b/javatools/src/main/java/org/xvm/asm/constants/MethodInfo.java
+@@ -6,6 +6,7 @@ import java.util.Arrays;
+ import java.util.Collections;
+ import java.util.Comparator;
+ import java.util.Map;
++import java.util.Objects;
+ import java.util.Set;
+ 
+ import org.xvm.asm.ClassStructure;
+@@ -1082,14 +1083,12 @@ public class MethodInfo
+      * @return the access of the first method in the chain; Public if there are no "real" bodies
+      */
+     public Access getAccess() {
+-        for (MethodBody body : m_aBody) {
+-            MethodStructure struct = body.getMethodStructure();
+-            if (struct != null) {
+-                return struct.getAccess();
+-            }
+-        }
+-
+-        return Access.PUBLIC;
++        return Arrays.stream(m_aBody)
++                .map(MethodBody::getMethodStructure)
++                .filter(Objects::nonNull)
++                .findFirst()
++                .map(MethodStructure::getAccess)
++                .orElse(Access.PUBLIC);
+     }
+ 
+     /**
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/AstNode.java b/javatools/src/main/java/org/xvm/compiler/ast/AstNode.java
+index e111e3ac2..bd5dc9515 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/AstNode.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/AstNode.java
+@@ -1012,12 +1012,7 @@ public abstract class AstNode
+      * @return true iff the specified list contains a named argument
+      */
+     protected boolean containsNamedArgs(List<Expression> listExprArgs) {
+-        for (Expression exprArg : listExprArgs) {
+-            if (exprArg instanceof LabeledExpression) {
+-                return true;
+-            }
+-        }
+-        return false;
++        return listExprArgs.stream().anyMatch(LabeledExpression.class::isInstance);
+     }
+ 
+     /**

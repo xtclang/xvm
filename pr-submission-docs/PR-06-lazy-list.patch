@@ -1,0 +1,445 @@
+diff --git a/javatools/src/main/java/org/xvm/asm/ClassStructure.java b/javatools/src/main/java/org/xvm/asm/ClassStructure.java
+index 1bc103e5c..ffc4b8b21 100644
+@@ -202,21 +201,18 @@ public class ClassStructure
+     public Annotation[] collectAnnotations(boolean fIntoClass) {
+         Annotation[] annos = fIntoClass ? m_aAnnoClass : m_aAnnoMixin;
+         if (annos == null) {
+-            List<Annotation> listAnnos = null;
++            var listAnnos = new ArrayList<Annotation>();
+ 
+             for (Contribution contrib : getContributionsAsList()) {
+                 if (contrib.getComposition() == Composition.Annotation) {
+                     Annotation anno = contrib.getAnnotation();
+ 
+                     if (fIntoClass == anno.getAnnotationType().getExplicitClassInto().isIntoClassType()) {
+-                        if (listAnnos == null) {
+-                            listAnnos = new ArrayList<>();
+-                        }
+                         listAnnos.add(anno);
+                     }
+                 }
+             }
+-            annos = listAnnos == null
++            annos = listAnnos.isEmpty()
+                     ? Annotation.NO_ANNOTATIONS
+                     : listAnnos.toArray(Annotation.NO_ANNOTATIONS);
+             if (fIntoClass) {
+@@ -1419,7 +1415,7 @@ public class ClassStructure
+ 
+     @Override
+     protected Iterator<IdentityConstant> potentialVirtualChildContributors() {
+-        List<IdentityConstant> list = null;
++        var list = new ArrayList<IdentityConstant>();
+ 
+         for (Contribution contrib : getContributionsAsList()) {
+             TypeConstant type = contrib.getTypeConstant();
+@@ -1436,17 +1432,13 @@ public class ClassStructure
+                     return null;
+                 }
+                 if (type.isExplicitClassIdentity(true)) {
+-                    if (list == null) {
+-                        list = new ArrayList<>();
+-                    }
+-
+                     list.add(type.getSingleUnderlyingClass(true));
+                 }
+                 break;
+             }
+         }
+ 
+-        return list == null
++        return list.isEmpty()
+                 ? Collections.emptyIterator()
+                 : list.iterator();
+     }
+@@ -3356,17 +3348,14 @@ public class ClassStructure
+     public Iterator<? extends XvmStructure> getContained() {
+         // we cannot use the "collectAnnotations" API at this time, since our module may not yet
+         // be linked
+-        List<Annotation> listAnno = null;
++        var listAnno = new ArrayList<Annotation>();
+         for (Contribution contrib : getContributionsAsList()) {
+             if (contrib.getComposition() == Composition.Annotation) {
+-                if (listAnno == null) {
+-                    listAnno = new ArrayList<>();
+-                }
+                 listAnno.add(contrib.getAnnotation());
+             }
+         }
+ 
+-        return listAnno == null
++        return listAnno.isEmpty()
+                 ? super.getContained()
+                 : new LinkedIterator(
+                         super.getContained(),
+diff --git a/javatools/src/main/java/org/xvm/asm/Component.java b/javatools/src/main/java/org/xvm/asm/Component.java
+index f6f70ba6a..46ef84a58 100644
+@@ -1573,35 +1574,26 @@ public abstract class Component
+      * @return a list of the component's children
+      */
+     public List<Component> safeChildren() {
+-        List<Component> list = new ArrayList<>();
+-
+-        for (String sName : getChildByNameMap().keySet()) {
+-            Component child = getChild(sName);
+-            if (child != null) {
+-                list.add(child);
+-            }
+-        }
+-
+-        return list;
++        return getChildByNameMap().keySet().stream()
++                .map(this::getChild)
++                .filter(Objects::nonNull)
++                .collect(Collectors.toList());
+     }
+ 
+     protected List<Component> selectMatchingSiblings(Component firstSibling) {
+         AssemblerContext ctxAsm  = getFileStructure().getContext();
+         LinkerContext    ctxLink = ctxAsm == null ? null : ctxAsm.getLinkerContext();
+-        List<Component>  matches = null;
++        var              matches = new ArrayList<Component>();
+ 
+         // see which siblings will be present based on what has been required in the current
+         // assembler context
+         for (Component eachSibling = firstSibling; eachSibling != null; eachSibling = eachSibling.getNextSibling()) {
+             if (ctxLink == null || eachSibling.isPresent(ctxLink)) {
+-                if (matches == null) {
+-                    matches = new ArrayList<>();
+-                }
+                 matches.add(eachSibling);
+             }
+         }
+ 
+-        return matches == null ? Collections.emptyList() : matches;
++        return matches.isEmpty() ? List.of() : matches;
+     }
+ 
+     protected boolean canBeSeen(Access access) {
+diff --git a/javatools/src/main/java/org/xvm/asm/PropertyStructure.java b/javatools/src/main/java/org/xvm/asm/PropertyStructure.java
+index 8eb281fa6..bf978bf9b 100644
+@@ -292,8 +292,8 @@ public class PropertyStructure
+ 
+     private void buildAnnotationArrays() {
+         ConstantPool     pool         = getConstantPool();
+-        List<Annotation> listPropAnno = null;
+-        List<Annotation> listRefAnno  = null;
++        var              listPropAnno = new ArrayList<Annotation>();
++        var              listRefAnno  = new ArrayList<Annotation>();
+         for (Contribution contrib : getContributionsAsList()) {
+             if (contrib.getComposition() == Composition.Annotation) {
+                 Annotation   annotation = contrib.getAnnotation();
+@@ -303,23 +303,17 @@ public class PropertyStructure
+                         && typeAnno.getExplicitClassFormat() == Format.ANNOTATION
+                         && pool.typeProperty().equals(
+                                 typeAnno.getExplicitClassInto().getIntoPropertyType())) {
+-                    if (listPropAnno == null) {
+-                        listPropAnno = new ArrayList<>();
+-                    }
+                     listPropAnno.add(annotation);
+                 } else {
+-                    if (listRefAnno == null) {
+-                        listRefAnno = new ArrayList<>();
+-                    }
+                     listRefAnno.add(annotation);
+                 }
+             }
+         }
+ 
+-        m_aPropAnno = listPropAnno == null
++        m_aPropAnno = listPropAnno.isEmpty()
+                 ? Annotation.NO_ANNOTATIONS
+                 : listPropAnno.toArray(Annotation.NO_ANNOTATIONS);
+-        m_aRefAnno = listRefAnno == null
++        m_aRefAnno = listRefAnno.isEmpty()
+                 ? Annotation.NO_ANNOTATIONS
+                 : listRefAnno.toArray(Annotation.NO_ANNOTATIONS);
+     }
+@@ -482,7 +476,7 @@ public class PropertyStructure
+             return false;
+         }
+ 
+-        List<Contribution> listMove = null;
++        var listMove = new ArrayList<Contribution>();
+         for (Contribution contrib : listContribs) {
+             if (contrib.getComposition() == Composition.Annotation) {
+                 Annotation annotation = contrib.getAnnotation();
+@@ -526,16 +520,13 @@ public class PropertyStructure
+                 }
+ 
+                 if (fMove) {
+-                    if (listMove == null) {
+-                        listMove = new ArrayList<>();
+-                    }
+                     listMove.add(contrib);
+                 }
+             }
+         }
+ 
+         // now that everything is figured out, do the actual move of any selected contributions
+-        if (listMove != null) {
++        if (!listMove.isEmpty()) {
+             // go backwards to that the resulting type constant is built up (nested) correctly
+             ConstantPool pool = getConstantPool();
+             for (int i = listMove.size()-1; i >= 0; --i) {
+@@ -631,7 +622,7 @@ public class PropertyStructure
+ 
+     @Override
+     protected Iterator<IdentityConstant> potentialVirtualChildContributors() {
+-        List<IdentityConstant> list = null;
++        var list = new ArrayList<IdentityConstant>();
+ 
+         for (Contribution contrib : getContributionsAsList()) {
+             if (contrib.getComposition() == Composition.Annotation) {
+@@ -640,15 +631,12 @@ public class PropertyStructure
+                     return null;
+                 }
+                 if (typeAnno.isIntoVariableType()) {
+-                    if (list == null) {
+-                        list = new ArrayList<>();
+-                    }
+                     list.add(typeAnno.getSingleUnderlyingClass(true));
+                 }
+             }
+         }
+ 
+-        return list == null
++        return list.isEmpty()
+                 ? Collections.emptyIterator()
+                 : list.iterator();
+     }
+@@ -724,17 +712,14 @@ public class PropertyStructure
+     public Iterator<? extends XvmStructure> getContained() {
+         // we cannot use the "getPropertyAnnotation" API at this time, since our module may not yet
+         // be linked
+-        List<Annotation> listAnno = null;
++        var listAnno = new ArrayList<Annotation>();
+         for (Contribution contrib : getContributionsAsList()) {
+             if (contrib.getComposition() == Composition.Annotation) {
+-                if (listAnno == null) {
+-                    listAnno = new ArrayList<>();
+-                }
+                 listAnno.add(contrib.getAnnotation());
+             }
+         }
+ 
+-        return listAnno == null
++        return listAnno.isEmpty()
+                 ? super.getContained()
+                 : new LinkedIterator(
+                         super.getContained(),
+diff --git a/javatools/src/main/java/org/xvm/asm/constants/MethodInfo.java b/javatools/src/main/java/org/xvm/asm/constants/MethodInfo.java
+index dc71e7072..6b4915e31 100644
+@@ -202,13 +203,10 @@ public class MethodInfo
+                     continue NextLayer;
+                 }
+             }
+-            if (listMerge == null) {
+-                listMerge = new ArrayList<>();
+-            }
+             listMerge.add(bodyThat);
+         }
+ 
+-        if (listMerge == null) {
++        if (listMerge.isEmpty()) {
+             // all the bodies in "that" were duplicates of bodies in "this"
+             return this;
+         }
+@@ -255,13 +253,10 @@ public class MethodInfo
+                     continue NextLayer;
+                 }
+             }
+-            if (listMerge == null) {
+-                listMerge = new ArrayList<>();
+-            }
+             listMerge.add(bodyThat);
+         }
+ 
+-        if (listMerge == null) {
++        if (listMerge.isEmpty()) {
+             return this;
+         }
+ 
+@@ -332,14 +327,10 @@ public class MethodInfo
+                     continue NextLayer;
+                 }
+             }
+-
+-            if (listMerge == null) {
+-                listMerge = new ArrayList<>();
+-            }
+             listMerge.add(bodyAdd);
+         }
+ 
+-        if (listMerge == null) {
++        if (listMerge.isEmpty()) {
+             // all the bodies in "this" were duplicates of bodies in "base"
+             return that;
+         }
+diff --git a/javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java b/javatools/src/main/java/org/xvm/asm/constants/PropertyInfo.java
+index c37076fe4..579564699 100644
+@@ -156,13 +156,10 @@ public class PropertyInfo
+                     continue NextLayer;
+                 }
+             }
+-            if (listMerge == null) {
+-                listMerge = new ArrayList<>();
+-            }
+             listMerge.add(bodyAdd);
+         }
+ 
+-        if (listMerge == null) {
++        if (listMerge.isEmpty()) {
+             return this;
+         }
+ 
+diff --git a/javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java b/javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java
+index 90512a656..9a5fc7389 100644
+@@ -2120,7 +2114,7 @@ public abstract class TypeConstant
+      * Note: the annotations must be collected in the inverse order.
+      */
+     private Annotation[] collectMixinAnnotations(List<Contribution> listContrib) {
+-        List<Annotation> listAnnos = null;
++        var listAnnos = new ArrayList<Annotation>();
+         for (int c = listContrib.size(), i = c - 1; i >= 0; i--) {
+             Contribution contrib = listContrib.get(i);
+             switch (contrib.getComposition()) {
+@@ -2141,16 +2132,13 @@ public abstract class TypeConstant
+                 TypeInfo     infoExtend  = contrib.getTypeConstant().ensureTypeInfo();
+                 Annotation[] aAnnoExtend = infoExtend.getMixinAnnotations();
+                 if (aAnnoExtend.length > 0) {
+-                    if (listAnnos == null) {
+-                        listAnnos = new ArrayList<>();
+-                    }
+-                    listAnnos.addAll(Arrays.asList(aAnnoExtend));
++                    Collections.addAll(listAnnos, aAnnoExtend);
+                 }
+                 break;
+             }
+             }
+         }
+-        return listAnnos == null
++        return listAnnos.isEmpty()
+                 ? Annotation.NO_ANNOTATIONS
+                 : listAnnos.toArray(Annotation.NO_ANNOTATIONS);
+     }
+@@ -2699,7 +2687,7 @@ public abstract class TypeConstant
+             List<Contribution> listContribs,
+             TypeConstant[]     aContribType,
+             ErrorListener      errs) {
+-        List<TypeConstant> listCondContribs = null;
++        var listCondContribs = new ArrayList<TypeConstant>();
+ 
+         // process the annotations and conditional incorporates at the front of the contribution list
+         for (int iContrib = 0, cContribs = listContribs.size(); iContrib < cContribs; ++iContrib) {
+@@ -2754,7 +2738,7 @@ public abstract class TypeConstant
+             processMixins(constId, typeMixin, struct, new ArrayList<>(), errs);
+         }
+ 
+-        return listCondContribs == null
++        return listCondContribs.isEmpty()
+                 ? null
+                 : listCondContribs.toArray(TypeConstant.NO_TYPES);
+     }
+@@ -4265,7 +4249,7 @@ public abstract class TypeConstant
+         MethodStructure   method    = methodInfo.getHead().getMethodStructure();
+         SignatureConstant sigSub    = methodInfo.getSignature();
+         int               cDefaults = method == null ? 0 : method.getDefaultParamCount();
+-        List<Object>      listMatch = null;
++        var               listMatch = new ArrayList<Object>();
+ 
+         for (Entry<Object, MethodInfo> entry : mapSupers.entrySet()) {
+             Object nidCandidate = entry.getKey();
+@@ -4296,7 +4274,7 @@ public abstract class TypeConstant
+                 }
+             }
+         }
+-        return listMatch == null ? Collections.emptyList() : listMatch;
++        return listMatch.isEmpty() ? List.of() : listMatch;
+     }
+ 
+     /**
+@@ -4313,10 +4291,10 @@ public abstract class TypeConstant
+     protected List<MethodConstant> collectConstructors(
+                 MethodInfo                      infoConstruct,
+                 Map<MethodConstant, MethodInfo> mapMethods) {
+-        MethodStructure      method    = infoConstruct.getHead().getMethodStructure();
+-        SignatureConstant    sigSub    = infoConstruct.getSignature();
+-        List<MethodConstant> listMatch = null;
+-        boolean              fExact    = true;
++        MethodStructure   method    = infoConstruct.getHead().getMethodStructure();
++        SignatureConstant sigSub    = infoConstruct.getSignature();
++        var               listMatch = new ArrayList<MethodConstant>();
++        boolean           fExact    = true;
+ 
+         for (Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet()) {
+             MethodConstant idCandidate = entry.getKey();
+@@ -4329,15 +4307,12 @@ public abstract class TypeConstant
+ 
+             if (sigCandidate.getName().equals(sigSub.getName())) {
+                 if (sigSub.isSubstitutableFor(sigCandidate, this)) {
+-                    if (!fExact && listMatch != null) {
++                    if (!fExact && !listMatch.isEmpty()) {
+                         // we found an exact match; get rid of non-exact ones
+                         listMatch.clear();
+                     }
+-                    if (listMatch == null) {
+-                        listMatch = new ArrayList<>();
+-                    }
+                     listMatch.add(idCandidate);
+-                } else if (method != null && (listMatch == null || !fExact)) {
++                } else if (method != null && (listMatch.isEmpty() || !fExact)) {
+                     // allow default parameters (but only if there is no "exact" match)
+                     int cDefault = method.getDefaultParamCount();
+                     if (cDefault > 0) {
+@@ -4357,7 +4329,7 @@ public abstract class TypeConstant
+                 }
+             }
+         }
+-        return listMatch == null ? Collections.emptyList() : listMatch;
++        return listMatch.isEmpty() ? List.of() : listMatch;
+     }
+ 
+     /**
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/InvocationExpression.java b/javatools/src/main/java/org/xvm/compiler/ast/InvocationExpression.java
+index 1d835dafb..4772a9dad 100644
+@@ -832,13 +832,10 @@ public class InvocationExpression
+                     }
+ 
+                     Argument[]   aargTypeParam  = new Argument[mapTypeParams.size()];
+-                    List<String> listUnresolved = null;
++                    var          listUnresolved = new ArrayList<String>();
+                     int          iArg           = 0;
+                     for (TypeConstant typeArg : mapTypeParams.values()) {
+                         if (typeArg.containsUnresolved()) {
+-                            if (listUnresolved == null) {
+-                                listUnresolved = new ArrayList<>();
+-                            }
+                             listUnresolved.add(method.getParam(iArg++).getName());
+                             continue;
+                         }
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/TypeCompositionStatement.java b/javatools/src/main/java/org/xvm/compiler/ast/TypeCompositionStatement.java
+index 720561879..d4b06b2e9 100644
+@@ -1436,20 +1436,17 @@ public class TypeCompositionStatement
+     private void addImplicitTypeConstraints(ClassStructure component, ErrorListener errs) {
+         assert component.isParameterized();
+ 
+-        List<String> listUnconstrained = null;
++        var listUnconstrained = new ArrayList<String>();
+         for (Map.Entry<StringConstant, TypeConstant> entry : component.getTypeParams().entrySet()) {
+             String       sName          = entry.getKey().getValue();
+             TypeConstant typeConstraint = entry.getValue();
+ 
+             if (typeConstraint.equals(pool().typeObject())) {
+-                if (listUnconstrained == null) {
+-                    listUnconstrained = new ArrayList<>();
+-                }
+                 listUnconstrained.add(sName);
+             }
+         }
+ 
+-        if (listUnconstrained == null) {
++        if (listUnconstrained.isEmpty()) {
+             // call with non-existing name just to report missing type parameters
+             findImplicitConstraint(component, "", null, true, errs);
+             return;

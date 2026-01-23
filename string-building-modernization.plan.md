@@ -15,22 +15,12 @@ This document catalogs occurrences of legacy patterns in the XVM codebase that c
 | Lazy list instantiation (`List x = null`) | ~26 | ~15 | Medium | **21 done** (rest N/A) |
 | Loop-to-lambda simplifications | 9 | 5 | Medium | **DONE** |
 
-### 🐛 **CRITICAL BUG FOUND**
+### Bugs Discovered
 
-**File:** `javatools/src/main/java/org/xvm/runtime/gc/MarkAndSweepGcSpace.java:291`
+Two bugs were discovered during this work:
 
-```java
-int[] anWeaksNew = new int[anNotify.length * 2];
-System.arraycopy(anWeaksNew, 0, anWeaksNew, 0, anNotify.length);  // BUG: copies to itself!
-anNotify = anWeaksNew;
-```
-
-**Should be:**
-```java
-System.arraycopy(anNotify, 0, anWeaksNew, 0, anNotify.length);
-```
-
-This bug causes the array to copy itself (a no-op), leaving `anWeaksNew` uninitialized.
+- **FIXED** (this branch): `MarkAndSweepGcSpace.java` arraycopy bug - see `BUG-01-mark-and-sweep-arraycopy.md`
+- **Separate PR needed**: `xRef.java` Arrays.asList() crash - see `BUG-02-xref-arrays-aslist.md`
 
 ---
 
@@ -818,12 +808,109 @@ The following patterns should remain as loops (stream version would be more comp
 
 ## Updated Recommended Priority
 
-1. **Critical**: Fix the `System.arraycopy` bug in `MarkAndSweepGcSpace.java:291`
-2. **High**: `Collections.emptyList()` → `List.of()` (49 occurrences) - Zero risk, clearer idiom
-3. **High**: `Collections.singletonList()` → `List.of()` (22 occurrences) - Zero risk, clearer idiom
-4. **Medium**: `Arrays.asList()` → `List.of()` (19 occurrences) - Verify immutability first
-5. **Medium**: `System.arraycopy()` → `Arrays.copyOf()` (~30 occurrences) - Simple pattern match
-6. **Medium**: Lazy list instantiation (~26 occurrences) - Simplifies null handling
-7. **Medium**: Loop-to-lambda simplifications (3 occurrences) - More readable stream operations
-8. **Low**: `StringBuilder` → `var` (217 occurrences) - Stylistic preference
-9. **Low**: Remaining `boolean first` patterns - Evaluate case-by-case
+1. **High**: `Collections.emptyList()` → `List.of()` (49 occurrences) - Zero risk, clearer idiom
+2. **High**: `Collections.singletonList()` → `List.of()` (22 occurrences) - Zero risk, clearer idiom
+3. **Medium**: `Arrays.asList()` → `List.of()` (19 occurrences) - Verify immutability first
+4. **Medium**: `System.arraycopy()` → `Arrays.copyOf()` (~30 occurrences) - Simple pattern match
+5. **Medium**: Lazy list instantiation (~26 occurrences) - Simplifies null handling
+6. **Medium**: Loop-to-lambda simplifications (9 occurrences) - More readable stream operations
+7. **Low**: `StringBuilder` → `var` (217 occurrences) - Stylistic preference
+8. **Low**: Remaining `boolean first` patterns - Evaluate case-by-case
+
+---
+
+## Part 8: PR Submission Strategy
+
+### Overview
+
+All modernization work is **COMPLETE** on branch `lagergren/sb-simplify`. The changes span **149 files** with **~1542 insertions and ~1168 deletions**.
+
+### ⚠️ Commit Mixing Problem
+
+The existing commits are **NOT cleanly separated**. Two commits mix multiple change types:
+- `7278a9e54` - **MIXED**: Collections factory methods + Boolean First patterns
+- `e0dca6acc` - **MIXED**: Arrays.asList() + System.arraycopy()
+
+**Cherry-picking won't produce clean single-purpose PRs.** See detailed docs for extraction instructions.
+
+### 7 Single-Purpose PRs
+
+| PR # | Single Purpose | Files | Cherry-pickable? |
+|------|----------------|-------|------------------|
+| 1 | `Collections.emptyList/singletonList()` → `List.of()` | ~32 | ❌ Extract |
+| 2 | `Arrays.asList()` → `List.of()` | ~12 | ⚠️ Partial |
+| 3 | `StringBuilder` → `var` | ~126 | ✅ Yes |
+| 4 | `boolean first` → `Collectors.joining()` | ~19 | ⚠️ Partial |
+| 5 | `System.arraycopy()` → `Arrays.copyOf()` | 5 | ❌ Extract |
+| 6 | Lazy list `null` → upfront allocation | ~11 | ✅ Yes |
+| 7 | Loop → Stream API | ~5 | ✅ Yes |
+
+### Detailed Documentation
+
+Full PR documentation with exact file lists, diff examples, and recreate instructions:
+
+```
+pr-submission-docs/
+├── 00-pr-submission-strategy.md   # Overview, commit mixing, extraction patterns
+├── 01-pr-collections-empty-singleton.md
+├── 02-pr-arrays-aslist.md
+├── 03-pr-stringbuilder-var.md
+├── 04-pr-boolean-first-loop.md
+├── 05-pr-arraycopy.md
+├── 06-pr-lazy-list.md
+└── 07-pr-loop-to-lambda.md
+```
+
+### Pure Commits (Safe to Cherry-pick)
+
+```
+✅ StringBuilder: 21b1a2389, 6f0dda0df
+✅ Lazy List: c53d6ecde, 1e1561967
+✅ Loop-to-Lambda: 8530f5b56, 026695f31, 6a539dbe4
+✅ Boolean First (partial): 0b043626d, 87daf8b66
+```
+
+### Mixed Commits (Need Manual Extraction)
+
+```
+❌ 7278a9e54 - Collections + Boolean First (use grep to separate)
+❌ e0dca6acc - Arrays.asList + arraycopy (use grep to separate)
+```
+
+### Commit Mapping
+
+Current commits on `lagergren/sb-simplify` branch (12 total):
+
+| Commit | Primary Category | Secondary |
+|--------|-----------------|-----------|
+| `0b043626d` | Boolean First Loop (PR 4) | - |
+| `87daf8b66` | Boolean First Loop (PR 4) | - |
+| `7278a9e54` | Collections (PR 1) | Boolean First (PR 4) |
+| `868a7ca15` | Arrays.asList (PR 2) | - |
+| `e0dca6acc` | arraycopy (PR 5) | Arrays.asList (PR 2) |
+| `21b1a2389` | StringBuilder (PR 3) | - |
+| `c53d6ecde` | Lazy List (PR 6) | - |
+| `8530f5b56` | Loop-to-Lambda (PR 7) | - |
+| `026695f31` | Loop-to-Lambda (PR 7) | - |
+| `6a539dbe4` | Loop-to-Lambda (PR 7) | - |
+| `1e1561967` | Lazy List (PR 6) | - |
+| `6f0dda0df` | StringBuilder (PR 3) | - |
+
+### Recreating PRs from Scratch
+
+If context is lost, use the detailed documentation in `pr-submission-docs/` to:
+
+1. Identify exact files and patterns for each PR
+2. Apply transformations mechanically using the documented patterns
+3. Verify with `./gradlew test` and `./gradlew build`
+
+### Suggested Submission Order
+
+Since PRs have no dependencies, they can be submitted in parallel. Suggested order for sequential review:
+
+1. **PR 2** (StringBuilder) - Largest but trivially mechanical
+2. **PR 1** (Collections) - Clear pattern, familiar idiom
+3. **PR 4** (arraycopy) - Smallest, quick review
+4. **PR 6** (Loop-to-Lambda) - Small, localized
+5. **PR 5** (Lazy List) - Requires understanding context
+6. **PR 3** (Boolean First) - Most transformation complexity

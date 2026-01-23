@@ -3,6 +3,7 @@ package org.xvm.runtime.gc;
 
 import org.xvm.util.LongMuterator;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.LongConsumer;
@@ -286,10 +287,8 @@ public class MarkAndSweepGcSpace<V>
                     // enqueue the weak-ref
                     if (anNotify == null) {
                         anNotify = new int[8];
-                    } else if (nNotifyTop > anNotify.length) {
-                        int[] anWeaksNew = new int[anNotify.length * 2];
-                        System.arraycopy(anWeaksNew, 0, anWeaksNew, 0, anNotify.length);
-                        anNotify = anWeaksNew;
+                    } else if (nNotifyTop >= anNotify.length) {
+                        anNotify = Arrays.copyOf(anNotify, anNotify.length * 2);
                     }
                     anNotify[nNotifyTop] = nWeak;
                 }
