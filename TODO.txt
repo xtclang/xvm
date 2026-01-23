@@ -1,3 +1,0 @@
-* Clearly investigate exactly what API, as verbose as possible, is required from the XVM side.
-* Show how to hook it up to an ide, or ideally if there is stuff that can be tested from the CLI already
-* Cleanup research docs

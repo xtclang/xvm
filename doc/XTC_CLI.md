@@ -161,7 +161,6 @@ The `--multi-module` flag creates a project with multiple subprojects that can d
 **Generated structure:**
 ```
 myproject/
-├── build.gradle.kts      # Root build file aggregating subprojects
 ├── settings.gradle.kts   # Includes app and lib subprojects
 ├── gradle.properties
 ├── gradle/
@@ -176,6 +175,8 @@ myproject/
     └── src/main/x/
         └── lib.x         # Library module
 ```
+
+Note: Multi-module projects do not have a root `build.gradle.kts`. Each subproject is self-contained with its own build file, and `settings.gradle.kts` defines the project structure. This is the recommended modern Gradle style.
 
 **app.x imports lib:**
 ```ecstasy

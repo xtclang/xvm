@@ -85,9 +85,20 @@ val clean by tasks.existing {
 // IDE run tasks - convenience aliases for subproject tasks
 // =============================================================================
 
+// Access parent build's included builds for publishing before runIde.
+// This ensures the latest XTC Gradle plugin is available in local Maven before the sandbox IDE starts,
+// so Run Configurations can use the current --module, --method, --args command-line options.
+val parentPublishLocal = gradle.parent?.let { parent ->
+    listOf(
+        parent.includedBuild("xdk").task(":publishToMavenLocal"),
+        parent.includedBuild("plugin").task(":publishToMavenLocal")
+    )
+} ?: emptyList()
+
 val runIntellijPlugin by tasks.registering {
     group = "run"
     description = "Launch IntelliJ IDEA with the XTC plugin loaded for testing"
+    parentPublishLocal.forEach { dependsOn(it) }
     dependsOn(project(":intellij-plugin").tasks.named("runIde"))
 }
 

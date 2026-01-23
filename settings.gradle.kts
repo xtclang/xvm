@@ -1,3 +1,5 @@
+@file:Suppress("UnstableApiUsage")
+
 /**
  * Root settings file. Used for build aggregation, and configuring logic that must be ready
  * before we reach the root project build.
@@ -41,7 +43,10 @@ develocity {
     }
 }
 
-val xvmBuilds = listOf(
+/**
+ * Core XVM builds - always included.
+ */
+val coreBuilds = listOf(
     "javatools",
     "javatools_jitbridge",
     "javatools_utils",
@@ -51,66 +56,43 @@ val xvmBuilds = listOf(
     "docker"
 )
 
-xvmBuilds.forEach(::includeBuild)
+coreBuilds.forEach(::includeBuild)
 
 /**
- * Include lang (LSP server + IntelliJ plugin) if enabled.
- * Similar to manualTests - can be included for IDE visibility but not attached to root lifecycle.
+ * Optional builds controlled by gradle properties.
+ *
+ * Each entry maps a build name to its property name. All default to true.
+ * Properties can be set in gradle.properties, via -P on command line,
+ * or via environment variable (e.g., ORG_GRADLE_PROJECT_includeBuildLang).
+ *
+ * Setting a property to false excludes the build entirely, which means:
+ * - The build won't be visible in the IDE
+ * - Tasks can't be run via ./gradlew buildName:task
+ *
+ * It's generally recommended to keep these enabled - the overhead is minimal
+ * and negligible with configuration caching.
  */
-private fun includeLang(): Boolean {
-    val shouldInclude = providers.gradleProperty("includeBuildLang")
+val optionalBuilds = mapOf(
+    "lang" to "includeBuildLang",
+    "manualTests" to "includeBuildManualTests"
+)
+
+optionalBuilds.forEach { (buildName, propertyName) ->
+    val shouldInclude = providers.gradleProperty(propertyName)
         .orElse("true")
         .get()
         .toBoolean()
 
-    logger.info("[xvm] Build aggregator includeBuild(\"lang\"): $shouldInclude")
-    return shouldInclude
-}
+    logger.info("[xvm] Build aggregator includeBuild(\"$buildName\"): $shouldInclude")
 
-if (includeLang()) {
-    includeBuild("lang")
+    if (shouldInclude) {
+        includeBuild(buildName)
+    }
 }
 
 // Disable problematic test distribution websocket check task
 gradle.taskGraph.whenReady {
     allTasks.find { it.name == "testDistributionWebSocketCheck" }?.enabled = false
-}
-
-/**
- * Checks if the property "includeBuildManualTests" is present, which can be set in the gradle.properties
- * file, or passed on the command line with -P, or the environment variable ORG_GRADLE_PROJECT_includeBuildManualTests
- * set. The default value is true. False means that the XVM build won't even try to look for the manualTests
- * project. NOTE: This is a bad idea, since if you want to work with, or debug the manual tests inside IntelliJ,
- * the manualTests project will be completely invisible and not loaded. I would still strongly recommend
- * that the manualTests project is always included, but its tasks are not attached to the root project
- * lifecycle of the composite XDK build by default, as is currently the case. The manualTests configuration
- * does not add much to build time, and pretty much zero, if cached. When configuration caching is up and running,
- * it will be completely undetectable.
- *
- * Regardless of configuration, the manual tests can be run with ./gradlew manualTests:<task> from the command
- * line, but they may not show up in the IDE, and they will not be auto included in the build lifecycle for
- * the composite.
- */
-private fun includeManualTests(): Boolean {
-    val shouldInclude = providers.gradleProperty("includeBuildManualTests")
-        .orElse("true")  // Default to true as per gradle.properties
-        .get()
-        .toBoolean()
-    
-    logger.info("[xvm] Build aggregator includeBuild(\"manualTests\"): $shouldInclude")
-    return shouldInclude
-}
-
-if (includeManualTests()) {
-    logger.info(
-        """
-        [xvm] Tbe XDK build includes 'manualTests'
-        [xvm]
-        [xvm] This may cause additional overhead with an empty build cache, or after running a 'gradlew clean',
-        [xvm] but should not be otherwise significant.
-        """.trimIndent(),
-    )
-    includeBuild("manualTests")
 }
 
 rootProject.name = "xvm"

@@ -28,7 +28,7 @@ cd lang/dsl/build/generated
 
 ## Implementation Status
 
-> **Last Updated**: 2026-01-22
+> **Last Updated**: 2026-01-23
 
 ### Completed ✅
 - [x] LSP server converted from Java to Kotlin (better DSL support, null safety, coroutines)
@@ -42,7 +42,7 @@ cd lang/dsl/build/generated
 - [x] Grammar validation passes (`./gradlew :lang:dsl:validateTreeSitterGrammar`)
 
 ### In Progress 🔄
-- **Grammar coverage: 212/676 XTC files parse successfully (31%)**
+- **Grammar coverage: 325/691 XTC files parse successfully (47%)**
 - Native library compilation for target platforms
 
 ### Grammar Support Status (2026-01-23)
@@ -84,6 +84,31 @@ The following features have been added to `TreeSitterGenerator.kt`:
 | Tuple destructure for | `for ((K k, V v) : map)` | ✅ In for-each loops |
 | Tuple assignment | `(Int x, this.y) = expr;` | ✅ Destructuring assignment |
 | Array instantiation | `new Type[size]` | ✅ With size expression |
+| Reference operator | `&hasher`, `that.&hasher` | ✅ No-dereference access |
+| Non-null type modifier | `Type!` | ✅ No auto-narrowing |
+| Array with initializer | `new Type[size](i -> expr)` | ✅ With lambda initializer |
+| Conditional incorporates | `incorporates conditional Mixin<...>` | ✅ Conditional mixins |
+| Function type params | `function Type(ArgTypes)` | ✅ Just types, no names |
+| Conditional function type | `function conditional Type(Args)` | ✅ With conditional keyword |
+| Annotations after static | `static @Abstract class` | ✅ Flexible modifier order |
+| `this:` variants | `this:struct`, `this:private`, `this:class`, etc. | ✅ All 8 variants |
+| `super` expression | `super.method()` | ✅ As expression |
+| Tuple conditional decl | `(Type1 x, Type2 y) := expr` | ✅ Tuple destructuring |
+| Multi-condition if/while | `if (a, b := expr, c)` | ✅ Comma-separated conditions |
+| Not-null assignment | `Type x ?= expr` | ✅ In conditional contexts |
+| Named tuple types | `(Boolean found, Int index)` | ✅ For return types |
+| Doc comments in enum values | `/** doc */ Successful(True)` | ✅ With trailing commas |
+| Trailing comma in enum values | `Val1, Val2,` | ✅ Allowed |
+| Static interface | `static interface Foo` | ✅ Nested type modifier |
+| Static mixin | `static mixin Foo` | ✅ With constructor params |
+| Mixin constructor params | `mixin Foo(Type arg)` | ✅ |
+| Context keywords as identifiers | `for (val var : items)` | ✅ var/val as variable names |
+| Trailing comma in parameters | `(Type a, Type b,)` | ✅ |
+| Default clause for const | `const Foo default(x)` | ✅ Like enum default |
+| Property body | `Type prop { get() {...} }` | ✅ With accessor methods |
+| Assert expression | `value ?: assert` | ✅ For safe-call-else |
+| Anonymous inner class | `new Type() { ... }` | ✅ With class body |
+| Local variable visibility | `private Type x = val` | ✅ For captures |
 
 #### Still Needed (High Priority)
 
@@ -91,8 +116,6 @@ The following features have been added to `TreeSitterGenerator.kt`:
 |---------|---------|-------|
 | Multiline strings | `\| continuation` | Lexer: `eatMultilineLiteral()` |
 | String interpolation | `$"text {expr}"` | Lexer: `eatTemplateExpression()` |
-| `this:` variants | `this:struct`, `this:private` | Special member access |
-| Function type vars | `function Type(Args) name = expr;` | Function type declarations |
 
 #### Lower Priority
 
@@ -521,7 +544,7 @@ Need to implement `WorkspaceIndex` for cross-file symbol tracking.
 
 ## Grammar Coverage Progress
 
-The grammar validates and now supports many XTC language features. Coverage improved from 9% to 31% (212/676 files).
+The grammar validates and now supports many XTC language features. Coverage improved from 9% to 42.5% (294/691 files).
 
 ### Common Remaining Parse Errors
 
@@ -532,15 +555,14 @@ Files failing to parse typically use these advanced features (still being added)
 | Multiline strings | `\|...` continuation | Requires lexer-level handling |
 | String interpolation | `$"Hello {name}"` | Template expressions with `{expr}` |
 | `this:` variants | `this:private`, `this:struct` | Special member access forms |
-| Function type vars | `function Type(Args) name = ...` | Function type declarations |
-| `&` reference operator | `&hasher`, `that.&hasher` | Reference expressions |
 
 ### Improvement Path
 
 1. ✅ Added missing grammar rules to `TreeSitterGenerator.kt`
 2. ✅ Regenerate and validate grammar
-3. ✅ Coverage improved from 21% (144/675) to 31% (212/676)
-4. Target: 50%+ of XTC files parsing successfully for initial LSP release
+3. ✅ Coverage improved from 21% (144/675) to 42.5% (294/691)
+4. 🔄 Next: Implement safe-call-else pattern `expr?.method() : fallback`
+5. Target: 50%+ of XTC files parsing successfully for initial LSP release
 
 ---
 

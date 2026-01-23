@@ -14,35 +14,52 @@
 #
 
 [versions]
+
+# -----------------------------------------------------------------------------
+# Core XDK dependencies
+# -----------------------------------------------------------------------------
 apache-commons-cli = "1.11.0"
-assertj = "3.24.2"
-awaitility = "4.2.0"
-kotlin = "2.2.0"
-kotlinx-serialization = "1.7.3"
-download = "5.6.0"
 gson = "2.13.2"
-gradle-doctor = "0.12.1"
-gradle-portal-publish = "2.0.0"
-intellij-ide = "2025.1"
-intellij-jdk = "21"
-intellij-platform-gradle-plugin = "2.10.5"
 jakarta-activation = "2.1.4"
 jakarta-xml-bind-api = "4.0.4"
 jaxb-runtime = "4.0.6"
 jetbrains-annotations = "26.0.2-1"
 jline = "3.30.6"
+
+# -----------------------------------------------------------------------------
+# Build tooling & publishing
+# -----------------------------------------------------------------------------
+download = "5.6.0"
+gradle-doctor = "0.12.1"
+gradle-portal-publish = "2.0.0"
+palantir-git-version = "4.0.0"
+vanniktech-maven-publish = "0.34.0"
+
+# -----------------------------------------------------------------------------
+# Testing
+# -----------------------------------------------------------------------------
+assertj = "3.24.2"
+awaitility = "4.2.0"
 junit = "6.0.2"
 junit-platform = "1.11.4"
+mockito = "5.8.0"
+
+# -----------------------------------------------------------------------------
+# Lang tooling (LSP server, IntelliJ plugin, VS Code extension)
+# These are only used when includeBuildLang=true
+# -----------------------------------------------------------------------------
+intellij-ide = "2025.1"
+intellij-jdk = "21"
+intellij-platform-gradle-plugin = "2.10.5"
+jtreesitter = "0.25.3"
+kotlin = "2.2.0"
+kotlinx-serialization = "1.7.3"
 ktlint = "13.1.0"
 logback = "1.5.13"
 lsp4ij = "0.11.0"
-jtreesitter = "0.25.3"
-tree-sitter-cli = "0.22.6"
 lsp4j = "0.21.1"
-mockito = "5.8.0"
-palantir-git-version = "4.0.0"
 slf4j = "2.0.9"
-vanniktech-maven-publish = "0.34.0"
+tree-sitter-cli = "0.22.6"
 
 [plugins]
 # Included build plugins - no version (resolved from source)
