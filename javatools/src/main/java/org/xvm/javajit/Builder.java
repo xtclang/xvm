@@ -43,6 +43,7 @@ import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 
 import static org.xvm.javajit.JitFlavor.NullablePrimitive;
+import static org.xvm.javajit.JitFlavor.Primitive;
 import static org.xvm.javajit.JitFlavor.Specific;
 
 /**
@@ -98,24 +99,24 @@ public abstract class Builder {
         switch (constant) {
         case StringConstant stringConst:
             loadString(code, stringConst.getValue());
-            return new SingleSlot(stringConst.getType(), CD_String, "");
+            return new SingleSlot(stringConst.getType(), Specific, CD_String, "");
 
         case IntConstant intConstant:
             return switch (intConstant.getFormat()) {
                 case Int16, UInt16, Int32 -> {
                     code.ldc(intConstant.getValue().getInt());
-                    yield new SingleSlot(constant.getType(), CD_int, "");
+                    yield new SingleSlot(constant.getType(), Primitive, CD_int, "");
                 }
                 case UInt32 -> {
                     code.ldc(intConstant.getValue().getLong())
                         .ldc(0xFFFFFFFFL)
                         .land()
                         .l2i();
-                    yield new SingleSlot(constant.getType(), CD_int, "");
+                    yield new SingleSlot(constant.getType(), Primitive, CD_int, "");
                 }
                 case Int64, UInt64 -> {
                     code.ldc(intConstant.getValue().getLong());
-                    yield new SingleSlot(constant.getType(), CD_long, "");
+                    yield new SingleSlot(constant.getType(), Primitive, CD_long, "");
                 }
                 // TODO: Need to add Int128 and UInt128
                 default ->
@@ -125,7 +126,7 @@ public abstract class Builder {
 
         case ByteConstant byteConstant:
             code.ldc(byteConstant.getValue());
-            return new SingleSlot(constant.getType(), CD_int, "");
+            return new SingleSlot(constant.getType(), Primitive, CD_int, "");
 
         case LiteralConstant litConstant:
             switch (litConstant.getFormat()) {
@@ -143,7 +144,7 @@ public abstract class Builder {
                 ConstantPool pool = constant.getConstantPool();
                 if (enumConstant.getType().isOnlyNullable()) {
                     Builder.loadNull(code);
-                    return new SingleSlot(pool.typeNullable(), CD_Nullable, "");
+                    return new SingleSlot(pool.typeNullable(), Specific, CD_Nullable, "");
                 }
                 else if (enumConstant.getType().isA(pool.typeBoolean())) {
                     if (enumConstant.getIntValue().getInt() == 0) {
@@ -152,7 +153,7 @@ public abstract class Builder {
                     else {
                         code.iconst_1();
                     }
-                    return new SingleSlot(pool.typeBoolean(), CD_boolean, "");
+                    return new SingleSlot(pool.typeBoolean(), Primitive, CD_boolean, "");
                 }
             }
 
@@ -163,20 +164,20 @@ public abstract class Builder {
             // retrieve from Singleton.$INSTANCE (see CommonBuilder.assembleStaticInitializer)
             ClassDesc cd = jtd.cd;
             code.getstatic(cd, Instance, cd);
-            return new SingleSlot(type, cd, "");
+            return new SingleSlot(type, Specific, cd, "");
         }
 
         case CharConstant ch:
             code.loadConstant(ch.getValue());
-            return new SingleSlot(constant.getConstantPool().typeChar(), CD_char, "");
+            return new SingleSlot(constant.getConstantPool().typeChar(), Primitive, CD_char, "");
 
         case NamedCondition cond:
             code.loadConstant(cond.getName());
-            return new SingleSlot(cond.getConstantPool().typeString(), CD_String, "");
+            return new SingleSlot(cond.getConstantPool().typeString(), Specific, CD_String, "");
 
         case TypeConstant type:
             Builder.loadTypeConstant(code, typeSystem, type);
-            return new SingleSlot(type.getType(), CD_TypeConstant, "");
+            return new SingleSlot(type.getType(), Specific, CD_TypeConstant, "");
 
         case PropertyConstant propId: {
             // support for the "local property" mode
@@ -190,7 +191,7 @@ public abstract class Builder {
             if (jtd.flavor == NullablePrimitive) {
                 throw new UnsupportedOperationException("TODO multislot property");
             }
-            return new SingleSlot(type, jtd.cd, "");
+            return new SingleSlot(type, jtd.flavor, jtd.cd, "");
         }
 
         case MethodConstant methodId: {
@@ -254,7 +255,7 @@ public abstract class Builder {
                 code.iconst_1() // immutable = true
                     .invokespecial(cd, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant,
                         CD_MethodHandle, CD_MethodHandle, CD_boolean));
-                return new SingleSlot(type, cd, "");
+                return new SingleSlot(type, Specific, cd, "");
             } else {
                 // 3) instantiate an nMethod object
                 //      new nMethod(ctx, type, stdHandle, optHandle);
@@ -274,7 +275,7 @@ public abstract class Builder {
                 }
                 code.invokespecial(cd, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant,
                         CD_MethodHandle, CD_MethodHandle));
-                return new SingleSlot(type, cd, "");
+                return new SingleSlot(type, Specific, cd, "");
             }
         }
 

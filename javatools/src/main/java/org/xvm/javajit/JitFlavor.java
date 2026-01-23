@@ -30,7 +30,7 @@ public enum JitFlavor {
     Primitive(true, 1),
 
     /**
-     * Multi-slot Java primitives (e.g. (boolean, boolean), (int, boolean), (long, boolean)) that
+     * Double-slot Java primitives (e.g. (boolean, boolean), (int, boolean), (long, boolean)) that
      * represents a `Nullable` xtc value type (e.g. Boolean?, Char?, Int?)
      * <p>
      * Implication is that it uses multiple slots and transformations (boxing/unboxing) may be
@@ -39,6 +39,12 @@ public enum JitFlavor {
      * TODO: we don't need two slots to represent an Int16? or Boolean?
      */
     NullablePrimitive(true, 2),
+
+    /**
+     * Double-slot Java primitives that represent Int128, UInt128 or any other type that could be
+     * decomposed into two longs.
+     */
+    DoubleLong(true, 2),
 
     /**
      * A parameter of the {@link #Specific} flavor with a default value.

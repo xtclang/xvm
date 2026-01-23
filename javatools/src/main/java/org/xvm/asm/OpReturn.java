@@ -97,7 +97,7 @@ public abstract class OpReturn
             for (int i = 0; i < cRets; i++) {
                 int          iOpt   = fOptimized ? jmd.getOptimizedReturnIndex(i) : -1;
                 JitParamDesc pdRet  = fOptimized ? jmd.optimizedReturns[iOpt] : jmd.standardReturns[i];
-                RegisterInfo regRet = bctx.loadArgument(code, anRet[i], pdRet);
+                RegisterInfo regRet = bctx.loadArgument(code, anRet[i]);
                 ClassDesc    cd     = regRet.cd();
                 int          slotR  = bctx.scope.getSynthetic(sRetVal + i, true);
 
@@ -133,7 +133,7 @@ public abstract class OpReturn
             for (int i = cRets - 1; i >= 0; i--) {
                 int          iOpt   = fOptimized ? jmd.getOptimizedReturnIndex(i) : -1;
                 JitParamDesc pdRet  = fOptimized ? jmd.optimizedReturns[iOpt] : jmd.standardReturns[i];
-                RegisterInfo regRet = bctx.loadArgument(code, anRet[i], pdRet);
+                RegisterInfo regRet = bctx.loadArgument(code, anRet[i]);
                 ClassDesc    cd     = regRet.cd();
                 if (i == 0) {
                     switch (pdRet.flavor) {

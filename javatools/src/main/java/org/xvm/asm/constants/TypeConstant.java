@@ -6553,13 +6553,6 @@ public abstract class TypeConstant
     }
 
     /**
-     * @return true iff objects of this type can be represented by one or more primitive Java value
-     */
-    public boolean isPrimitivizable() {
-        return isPrimitive();
-    }
-
-    /**
      * @return true iff objects of this type can be represented by a single primitive Java value
      */
     public boolean isPrimitive() {
@@ -6580,6 +6573,10 @@ public abstract class TypeConstant
         if ((cd = JitTypeDesc.getWidenedClass(this)) != null) {
             return new JitTypeDesc(getCanonicalJitType(), Widened, cd);
         }
+// TODO JK: uncomment
+//        if (JitTypeDesc.isDoubleLong(this)) {
+//            return new JitTypeDesc(getCanonicalJitType(), DoubleLong, CD_long);
+//        }
         assert isSingleUnderlyingClass(true);
 
         return new JitTypeDesc(getCanonicalJitType(), Specific, ensureClassDesc(ts));

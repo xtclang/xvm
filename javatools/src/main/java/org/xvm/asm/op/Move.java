@@ -6,8 +6,6 @@ import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 
-import java.lang.constant.ClassDesc;
-
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
@@ -18,8 +16,6 @@ import org.xvm.asm.constants.CastTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.Builder;
-import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -111,38 +107,6 @@ public class Move
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        RegisterInfo regFrom  = bctx.loadArgument(code, m_nFromValue);
-        RegisterInfo regTo    = bctx.ensureRegInfo(m_nToValue, regFrom.type());
-        TypeConstant typeFrom = regFrom.type();
-        TypeConstant typeTo   = regTo.type();
-        ClassDesc    cdFrom   = regFrom.cd();
-        ClassDesc    cdTo     = regTo.cd();
-
-        if (!typeFrom.isA(typeTo)) {
-            regTo  = regTo.original();
-            typeTo = regTo.type();
-            if (!typeFrom.isA(typeTo)) {
-                if (cdFrom.isPrimitive()) {
-                    // this can only be caused by a dead/unreachable code
-                    bctx.ensureVarScope(code, regTo);
-                    bctx.throwTypeMismatch(code, "Unreconcilable types " +
-                            typeFrom.getValueString() + " -> " + typeTo.getValueString());
-                    return;
-                }
-
-                // this can happen sometimes (e.g.: assignment of narrowed properties)
-                // TODO: generateCheckCast()
-                code.checkcast(typeTo.ensureClassDesc(bctx.typeSystem));
-            }
-        }
-
-        if (cdFrom.isPrimitive()) {
-            if (!cdTo.isPrimitive()) {
-                Builder.box(code, typeFrom, cdFrom);
-            }
-        } else if (cdTo.isPrimitive()) {
-            Builder.unbox(code, typeTo, cdTo);
-        }
-        bctx.storeValue(code, regTo, typeTo);
+        bctx.moveVar(code, m_nFromValue, m_nToValue, true);
     }
 }
