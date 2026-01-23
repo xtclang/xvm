@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
@@ -128,20 +129,9 @@ public class NamedTypeExpression
         if (module == null) {
             return null;
         }
-
-        StringBuilder sb = new StringBuilder();
-
-        boolean first = true;
-        for (Token name : module) {
-            if (first) {
-                first = false;
-            } else {
-                sb.append('.');
-            }
-            sb.append(name.getValueText());
-        }
-
-        return sb.toString();
+        return module.stream()
+                .map(Token::getValueText)
+                .collect(Collectors.joining("."));
     }
 
     /**
@@ -153,20 +143,9 @@ public class NamedTypeExpression
         if (names == null) {
             return "";
         }
-
-        StringBuilder sb = new StringBuilder();
-
-        boolean first = true;
-        for (Token name : names) {
-            if (first) {
-                first = false;
-            } else {
-                sb.append('.');
-            }
-            sb.append(name.getValueText());
-        }
-
-        return sb.toString();
+        return names.stream()
+                .map(Token::getValueText)
+                .collect(Collectors.joining("."));
     }
 
     public String[] getNames() {
@@ -1052,7 +1031,7 @@ public class NamedTypeExpression
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         if (module != null) {
             sb.append(getModule())
@@ -1080,17 +1059,11 @@ public class NamedTypeExpression
         }
 
         if (paramTypes != null) {
-            sb.append('<');
-            boolean first = true;
-            for (TypeExpression type : paramTypes) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(type);
-            }
-            sb.append('>');
+            sb.append('<')
+              .append(paramTypes.stream()
+                      .map(TypeExpression::toString)
+                      .collect(Collectors.joining(", ")))
+              .append('>');
         }
 
         return sb.toString();

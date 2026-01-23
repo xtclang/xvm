@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Component.Contribution;
@@ -159,22 +160,16 @@ public abstract class CompositionNode
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
 
             sb.append(toStartString());
 
             if (args != null) {
-                sb.append('(');
-                boolean first = true;
-                for (Expression arg : args) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append(", ");
-                    }
-                    sb.append(arg);
-                }
-                  sb.append(')');
+                sb.append('(')
+                  .append(args.stream()
+                          .map(Expression::toString)
+                          .collect(Collectors.joining(", ")))
+                  .append(')');
             }
 
             sb.append(toEndString());
@@ -218,7 +213,7 @@ public abstract class CompositionNode
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
 
             if (condition != null) {
                 sb.append("if (")
@@ -231,17 +226,11 @@ public abstract class CompositionNode
               .append(annotation.type);
 
             if (annotation.args != null) {
-                sb.append('(');
-                boolean first = true;
-                for (Expression arg : annotation.args) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append(", ");
-                    }
-                    sb.append(arg);
-                }
-                sb.append(')');
+                sb.append('(')
+                  .append(annotation.args.stream()
+                          .map(Expression::toString)
+                          .collect(Collectors.joining(", ")))
+                  .append(')');
             }
 
             sb.append(toEndString());
@@ -295,7 +284,7 @@ public abstract class CompositionNode
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
 
             if (condition != null) {
                 sb.append("if (")
@@ -311,34 +300,22 @@ public abstract class CompositionNode
                 sb.append(" conditional ")
                   .append(sType, 0, sType.indexOf('<'));
 
-                sb.append('<');
-                boolean first = true;
-                for (Parameter param : constraints) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append(", ");
-                    }
-                    sb.append(param.toTypeParamString());
-                }
-                sb.append('>');
+                sb.append('<')
+                  .append(constraints.stream()
+                          .map(Parameter::toTypeParamString)
+                          .collect(Collectors.joining(", ")))
+                  .append('>');
             } else {
                 sb.append(' ')
                   .append(type);
             }
 
             if (args != null) {
-                sb.append('(');
-                boolean first = true;
-                for (Expression arg : args) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append(", ");
-                    }
-                    sb.append(arg);
-                }
-                sb.append(')');
+                sb.append('(')
+                  .append(args.stream()
+                          .map(Expression::toString)
+                          .collect(Collectors.joining(", ")))
+                  .append(')');
             }
 
             sb.append(toEndString());
@@ -525,7 +502,7 @@ public abstract class CompositionNode
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
 
             sb.append(keyword.getId().TEXT)
               .append(' ');
@@ -554,19 +531,11 @@ public abstract class CompositionNode
                 sb.append("\n        ")
                   .append(Token.Id.INJECT.TEXT)
                   .append(' ')
-                  .append('(');
-
-                boolean first = true;
-                for (Parameter injection : injects) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append(", ");
-                    }
-                    sb.append(injection);
-                }
-
-                sb.append(')');
+                  .append('(')
+                  .append(injects.stream()
+                          .map(Parameter::toString)
+                          .collect(Collectors.joining(", ")))
+                  .append(')');
             }
 
 

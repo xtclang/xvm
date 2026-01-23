@@ -3249,7 +3249,7 @@ public class NameExpression
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         if (left != null) {
             if (left instanceof NameExpression) {
@@ -3267,17 +3267,9 @@ public class NameExpression
         sb.append(name.getValueText());
 
         if (params != null) {
-            sb.append('<');
-            boolean first = true;
-            for (Expression param : params) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(param);
-            }
-            sb.append('>');
+            sb.append('<')
+              .append(params.stream().map(Object::toString).collect(Collectors.joining(", ")))
+              .append('>');
         }
 
         return sb.toString();

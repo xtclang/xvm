@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -112,17 +113,9 @@ public class ImportStatement
      * @return the imported name as a dot-delimited name
      */
     public String getQualifiedNameString() {
-        StringBuilder sb = new StringBuilder();
-        boolean first = true;
-        for (Token name : qualifiedName) {
-            if (first) {
-                first = false;
-            } else {
-                sb.append('.');
-            }
-            sb.append(name.getValueText());
-        }
-        return sb.toString();
+        return qualifiedName.stream()
+                .map(Token::getValueText)
+                .collect(Collectors.joining("."));
     }
 
     @Override
@@ -229,7 +222,7 @@ public class ImportStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         if (cond != null) {
             sb.append("if (")
@@ -239,17 +232,11 @@ public class ImportStatement
 
         sb.append("import ");
 
-        boolean first = true;
-        String last = null;
-        for (Token name : qualifiedName) {
-            if (first) {
-                first = false;
-            } else {
-                sb.append('.');
-            }
-            last = String.valueOf(name.getValue());
-            sb.append(last);
-        }
+        String last = qualifiedName.isEmpty() ? null :
+            String.valueOf(qualifiedName.get(qualifiedName.size() - 1).getValue());
+        sb.append(qualifiedName.stream()
+            .map(token -> String.valueOf(token.getValue()))
+            .collect(Collectors.joining(".")));
 
         if (alias != null && !last.equals(alias.getValue())) {
             sb.append(" as ")

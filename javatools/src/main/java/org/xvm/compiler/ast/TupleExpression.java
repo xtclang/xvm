@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -480,25 +481,9 @@ public class TupleExpression
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append('(');
-
-        if (!exprs.isEmpty()) {
-            boolean first = true;
-            for (Expression expr : exprs) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(expr);
-            }
-        }
-
-        sb.append(')');
-
-        return sb.toString();
+        return exprs.stream()
+                .map(Object::toString)
+                .collect(Collectors.joining(", ", "(", ")"));
     }
 
     @Override
