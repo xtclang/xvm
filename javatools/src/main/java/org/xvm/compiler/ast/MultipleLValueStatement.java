@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
@@ -225,24 +226,9 @@ public class MultipleLValueStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append('(');
-
-        boolean first = true;
-        for (AstNode node : LVals) {
-            if (first) {
-                first = false;
-            } else {
-                sb.append(", ");
-            }
-
-            sb.append(node);
-        }
-
-        sb.append(')');
-
-        return sb.toString();
+        return LVals.stream()
+                .map(Object::toString)
+                .collect(Collectors.joining(", ", "(", ")"));
     }
 
     @Override

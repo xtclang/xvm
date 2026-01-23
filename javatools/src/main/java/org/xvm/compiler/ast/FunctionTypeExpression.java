@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -139,7 +140,7 @@ public class FunctionTypeExpression
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.append("function ");
 
@@ -152,30 +153,16 @@ public class FunctionTypeExpression
         } else if (returnValues.size() == 1) {
             sb.append(returnValues.get(0));
         } else {
-            boolean first = true;
-            for (Parameter param : returnValues) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(param);
-            }
+            sb.append(returnValues.stream()
+                    .map(Parameter::toString)
+                    .collect(Collectors.joining(", ")));
         }
 
-        sb.append(" (");
-
-        boolean first = true;
-        for (TypeExpression type : paramTypes) {
-            if (first) {
-                first = false;
-            } else {
-                sb.append(", ");
-            }
-            sb.append(type);
-        }
-
-        sb.append(')');
+        sb.append(" (")
+          .append(paramTypes.stream()
+                  .map(TypeExpression::toString)
+                  .collect(Collectors.joining(", ")))
+          .append(')');
 
         return sb.toString();
     }

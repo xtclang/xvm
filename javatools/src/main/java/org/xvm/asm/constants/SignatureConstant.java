@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import java.util.concurrent.locks.StampedLock;
 
@@ -690,7 +691,7 @@ public class SignatureConstant
 
     @Override
     public String getValueString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         switch (m_aconstReturns.length) {
         case 0:
@@ -702,17 +703,11 @@ public class SignatureConstant
             break;
 
         default:
-            sb.append('(');
-            boolean first = true;
-            for (TypeConstant type : m_aconstReturns) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(type.getValueString());
-            }
-            sb.append(')');
+            sb.append('(')
+              .append(Arrays.stream(m_aconstReturns)
+                      .map(TypeConstant::getValueString)
+                      .collect(Collectors.joining(", ")))
+              .append(')');
             break;
         }
 
@@ -720,19 +715,11 @@ public class SignatureConstant
           .append(m_constName.getValue());
 
         if (!m_fProperty) {
-            sb.append('(');
-
-            boolean first = true;
-            for (TypeConstant type : m_aconstParams) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(type.getValueString());
-            }
-
-            sb.append(')');
+            sb.append('(')
+              .append(Arrays.stream(m_aconstParams)
+                      .map(TypeConstant::getValueString)
+                      .collect(Collectors.joining(", ")))
+              .append(')');
         }
 
         return sb.toString();

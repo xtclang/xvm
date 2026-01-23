@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
@@ -1280,24 +1281,11 @@ public class ArrayAccessExpression
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(expr)
-          .append('[');
-
-        boolean first = true;
-        for (Expression index : indexes) {
-            if (first) {
-                first = false;
-            } else {
-                sb.append(", ");
-            }
-            sb.append(index);
-        }
-
-        sb.append(tokClose.getId().TEXT);
-
-        return sb.toString();
+        return expr + "[" +
+                indexes.stream()
+                        .map(Object::toString)
+                        .collect(Collectors.joining(", ")) +
+                tokClose.getId().TEXT;
     }
 
     @Override

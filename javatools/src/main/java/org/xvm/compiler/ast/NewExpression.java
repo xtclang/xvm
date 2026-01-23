@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Argument;
@@ -1508,7 +1509,7 @@ public class NewExpression
      * @return the signature of the constructor invocation
      */
     public String toSignatureString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         if (left != null) {
             sb.append(left)
@@ -1528,32 +1529,16 @@ public class NewExpression
             if (hasSquareBrackets()) {
                 iFirst = getDimensionCount();
 
-                sb.append('[');
-                boolean first = true;
-                for (int i = 0; i < iFirst; ++i) {
-                    Expression arg = args.get(i);
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append(", ");
-                    }
-                    sb.append(arg);
-                }
-                sb.append(']');
+                sb.append('[')
+                  .append(args.subList(0, iFirst).stream()
+                      .map(Object::toString).collect(Collectors.joining(", ")))
+                  .append(']');
             }
 
-            sb.append('(');
-            boolean first = true;
-            for (int i = iFirst, c = args.size(); i < c; ++i) {
-                Expression arg = args.get(i);
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(arg);
-            }
-            sb.append(')');
+            sb.append('(')
+              .append(args.subList(iFirst, args.size()).stream()
+                  .map(Object::toString).collect(Collectors.joining(", ")))
+              .append(')');
         }
 
         return sb.toString();

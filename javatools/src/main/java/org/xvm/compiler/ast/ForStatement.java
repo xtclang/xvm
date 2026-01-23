@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -689,44 +690,24 @@ public class ForStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.append("for (");
 
         if (init != null) {
-            boolean first = true;
-            for (Statement stmt : init) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(stmt);
-            }
+            sb.append(init.stream().map(Object::toString).collect(Collectors.joining(", ")));
         }
 
         sb.append("; ");
 
         if (conds != null && !conds.isEmpty()) {
-            sb.append(conds.get(0));
-            for (int i = 1, c = conds.size(); i < c; ++i) {
-                sb.append(", ")
-                  .append(conds.get(i));
-            }
+            sb.append(conds.stream().map(Object::toString).collect(Collectors.joining(", ")));
         }
 
         sb.append("; ");
 
         if (update != null) {
-            boolean first = true;
-            for (Statement stmt : update) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(stmt);
-            }
+            sb.append(update.stream().map(Object::toString).collect(Collectors.joining(", ")));
         }
 
         sb.append(")\n")

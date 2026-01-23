@@ -11,6 +11,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.xvm.compiler.ast.FileExpression;
 
@@ -242,17 +243,9 @@ public class ResourceDir {
 
     @Override
     public String toString() {
-        final var buf = new StringBuilder().append("ResourceDir(");
-        boolean first = true;
-        for (File file : resourcePath) {
-            if (first) {
-                first = false;
-            } else {
-                buf.append(", ");
-            }
-            buf.append(file);
-        }
-        return buf.append(')').toString();
+        return resourcePath.stream()
+                .map(Object::toString)
+                .collect(Collectors.joining(", ", "ResourceDir(", ")"));
     }
 
     /**

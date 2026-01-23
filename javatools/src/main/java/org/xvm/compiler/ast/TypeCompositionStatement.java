@@ -2974,7 +2974,7 @@ public class TypeCompositionStatement
     // ----- debugging assistance ------------------------------------------------------------------
 
     public String toSignatureString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         if (category.getId() == Token.Id.ENUM_VAL) {
             if (annotations != null) {
@@ -2987,31 +2987,15 @@ public class TypeCompositionStatement
             sb.append(name.getValue());
 
             if (typeParams != null) {
-                sb.append('<');
-                boolean first = true;
-                for (TypeExpression typeParam : typeArgs) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append(", ");
-                    }
-                    sb.append(typeParam);
-                }
-                sb.append('>');
+                sb.append('<')
+                  .append(typeArgs.stream().map(Object::toString).collect(Collectors.joining(", ")))
+                  .append('>');
             }
 
             if (args != null) {
-                sb.append('(');
-                boolean first = true;
-                for (Expression arg : args) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append(", ");
-                    }
-                    sb.append(arg);
-                }
-                sb.append(')');
+                sb.append('(')
+                  .append(args.stream().map(Object::toString).collect(Collectors.joining(", ")))
+                  .append(')');
             }
         } else {
             if (modifiers != null) {
@@ -3034,43 +3018,23 @@ public class TypeCompositionStatement
             if (qualified == null) {
                 sb.append(name.getValue());
             } else {
-                boolean first = true;
-                for (Token token : qualified) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append('.');
-                    }
-                    sb.append(token.getValue());
-                }
+                sb.append(qualified.stream()
+                    .map(token -> String.valueOf(token.getValue()))
+                    .collect(Collectors.joining(".")));
             }
 
             if (typeParams != null) {
-                sb.append('<');
-                boolean first = true;
-                for (Parameter param : typeParams) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append(", ");
-                    }
-                    sb.append(param.toTypeParamString());
-                }
-                sb.append('>');
+                sb.append('<')
+                  .append(typeParams.stream()
+                      .map(Parameter::toTypeParamString)
+                      .collect(Collectors.joining(", ")))
+                  .append('>');
             }
 
             if (constructorParams != null) {
-                sb.append('(');
-                boolean first = true;
-                for (Parameter param : constructorParams) {
-                    if (first) {
-                        first = false;
-                    } else {
-                        sb.append(", ");
-                    }
-                    sb.append(param);
-                }
-                sb.append(')');
+                sb.append('(')
+                  .append(constructorParams.stream().map(Object::toString).collect(Collectors.joining(", ")))
+                  .append(')');
             }
         }
 
