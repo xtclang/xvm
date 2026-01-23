@@ -1,0 +1,1160 @@
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/ArrayAccessExpression.java b/javatools/src/main/java/org/xvm/compiler/ast/ArrayAccessExpression.java
+index 165c6dd3d..28d35b52e 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/ArrayAccessExpression.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/ArrayAccessExpression.java
+@@ -9,6 +9,7 @@ import java.util.HashSet;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.Set;
++import java.util.stream.Collectors;
+ 
+ import org.xvm.asm.Argument;
+ import org.xvm.asm.Constant;
+@@ -1280,24 +1281,11 @@ public class ArrayAccessExpression
+ 
+     @Override
+     public String toString() {
+-        StringBuilder sb = new StringBuilder();
+-
+-        sb.append(expr)
+-          .append('[');
+-
+-        boolean first = true;
+-        for (Expression index : indexes) {
+-            if (first) {
+-                first = false;
+-            } else {
+-                sb.append(", ");
+-            }
+-            sb.append(index);
+-        }
+-
+-        sb.append(tokClose.getId().TEXT);
+-
+-        return sb.toString();
++        return expr + "[" +
++                indexes.stream()
++                        .map(Object::toString)
++                        .collect(Collectors.joining(", ")) +
++                tokClose.getId().TEXT;
+     }
+ 
+     @Override
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/ImportStatement.java b/javatools/src/main/java/org/xvm/compiler/ast/ImportStatement.java
+index ab8efaae2..b0a91b640 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/ImportStatement.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/ImportStatement.java
+@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
+ import java.util.Iterator;
+ import java.util.List;
+ import java.util.Objects;
++import java.util.stream.Collectors;
+ 
+ import org.xvm.asm.ErrorListener;
+ import org.xvm.asm.MethodStructure.Code;
+@@ -112,17 +113,9 @@ public class ImportStatement
+      * @return the imported name as a dot-delimited name
+      */
+     public String getQualifiedNameString() {
+-        StringBuilder sb = new StringBuilder();
+-        boolean first = true;
+-        for (Token name : qualifiedName) {
+-            if (first) {
+-                first = false;
+-            } else {
+-                sb.append('.');
+-            }
+-            sb.append(name.getValueText());
+-        }
+-        return sb.toString();
++        return qualifiedName.stream()
++                .map(Token::getValueText)
++                .collect(Collectors.joining("."));
+     }
+ 
+     @Override
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/ListExpression.java b/javatools/src/main/java/org/xvm/compiler/ast/ListExpression.java
+index 51d459ce4..19d3d7b87 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/ListExpression.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/ListExpression.java
+@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
+ import java.util.Collections;
+ import java.util.List;
+ import java.util.Set;
++import java.util.stream.Collectors;
+ 
+ import org.xvm.asm.Argument;
+ import org.xvm.asm.Constant;
+@@ -401,23 +402,9 @@ public class ListExpression
+ 
+     @Override
+     public String toString() {
+-        StringBuilder sb = new StringBuilder();
+-
+-        sb.append('[');
+-
+-        boolean first = true;
+-        for (Expression expr : exprs) {
+-            if (first) {
+-                first = false;
+-            } else {
+-                sb.append(", ");
+-            }
+-            sb.append(expr);
+-        }
+-
+-        sb.append(']');
+-
+-        return sb.toString();
++        return exprs.stream()
++                .map(Object::toString)
++                .collect(Collectors.joining(", ", "[", "]"));
+     }
+ 
+     @Override
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/MultipleLValueStatement.java b/javatools/src/main/java/org/xvm/compiler/ast/MultipleLValueStatement.java
+index 9b3b033f4..576dd697d 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/MultipleLValueStatement.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/MultipleLValueStatement.java
+@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
+ 
+ import java.util.ArrayList;
+ import java.util.List;
++import java.util.stream.Collectors;
+ 
+ import org.xvm.asm.Argument;
+ import org.xvm.asm.ErrorListener;
+@@ -225,24 +226,9 @@ public class MultipleLValueStatement
+ 
+     @Override
+     public String toString() {
+-        StringBuilder sb = new StringBuilder();
+-
+-        sb.append('(');
+-
+-        boolean first = true;
+-        for (AstNode node : LVals) {
+-            if (first) {
+-                first = false;
+-            } else {
+-                sb.append(", ");
+-            }
+-
+-            sb.append(node);
+-        }
+-
+-        sb.append(')');
+-
+-        return sb.toString();
++        return LVals.stream()
++                .map(Object::toString)
++                .collect(Collectors.joining(", ", "(", ")"));
+     }
+ 
+     @Override
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/TupleExpression.java b/javatools/src/main/java/org/xvm/compiler/ast/TupleExpression.java
+index 9d70e0038..32068db41 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/TupleExpression.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/TupleExpression.java
+@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
+ import java.util.Arrays;
+ import java.util.Collections;
+ import java.util.List;
++import java.util.stream.Collectors;
+ 
+ import org.xvm.asm.Constant;
+ import org.xvm.asm.ConstantPool;
+@@ -480,25 +481,9 @@ public class TupleExpression
+ 
+     @Override
+     public String toString() {
+-        StringBuilder sb = new StringBuilder();
+-
+-        sb.append('(');
+-
+-        if (!exprs.isEmpty()) {
+-            boolean first = true;
+-            for (Expression expr : exprs) {
+-                if (first) {
+-                    first = false;
+-                } else {
+-                    sb.append(", ");
+-                }
+-                sb.append(expr);
+-            }
+-        }
+-
+-        sb.append(')');
+-
+-        return sb.toString();
++        return exprs.stream()
++                .map(Object::toString)
++                .collect(Collectors.joining(", ", "(", ")"));
+     }
+ 
+     @Override
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/TupleTypeExpression.java b/javatools/src/main/java/org/xvm/compiler/ast/TupleTypeExpression.java
+index 90d9e0653..0a957141d 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/TupleTypeExpression.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/TupleTypeExpression.java
+@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
+ import java.lang.reflect.Field;
+ 
+ import java.util.List;
++import java.util.stream.Collectors;
+ 
+ import org.xvm.asm.ErrorListener;
+ import org.xvm.asm.constants.TypeConstant;
+@@ -76,23 +77,9 @@ public class TupleTypeExpression
+ 
+     @Override
+     public String toString() {
+-        StringBuilder sb = new StringBuilder();
+-
+-        sb.append('<');
+-
+-        boolean first = true;
+-        for (TypeExpression type : paramTypes) {
+-            if (first) {
+-                first = false;
+-            } else {
+-                sb.append(", ");
+-            }
+-            sb.append(type);
+-        }
+-
+-        sb.append('>');
+-
+-        return sb.toString();
++        return paramTypes.stream()
++                .map(Object::toString)
++                .collect(Collectors.joining(", ", "<", ">"));
+     }
+ 
+     @Override
+diff --git a/javatools/src/main/java/org/xvm/tool/ResourceDir.java b/javatools/src/main/java/org/xvm/tool/ResourceDir.java
+index 6c8749266..71f166245 100644
+--- a/javatools/src/main/java/org/xvm/tool/ResourceDir.java
++++ b/javatools/src/main/java/org/xvm/tool/ResourceDir.java
+@@ -11,6 +11,7 @@ import java.util.Objects;
+ import java.util.Set;
+ import java.util.TreeMap;
+ import java.util.function.Function;
++import java.util.stream.Collectors;
+ 
+ import org.xvm.compiler.ast.FileExpression;
+ 
+@@ -242,17 +243,9 @@ public class ResourceDir {
+ 
+     @Override
+     public String toString() {
+-        final var buf = new StringBuilder().append("ResourceDir(");
+-        boolean first = true;
+-        for (File file : resourcePath) {
+-            if (first) {
+-                first = false;
+-            } else {
+-                buf.append(", ");
+-            }
+-            buf.append(file);
+-        }
+-        return buf.append(')').toString();
++        return resourcePath.stream()
++                .map(Object::toString)
++                .collect(Collectors.joining(", ", "ResourceDir(", ")"));
+     }
+ 
+     /**
+diff --git a/javatools/src/main/java/org/xvm/asm/Annotation.java b/javatools/src/main/java/org/xvm/asm/Annotation.java
+index ae7e2ddcf..9b2d0a219 100644
+--- a/javatools/src/main/java/org/xvm/asm/Annotation.java
++++ b/javatools/src/main/java/org/xvm/asm/Annotation.java
+@@ -7,6 +7,7 @@ import java.io.IOException;
+ 
+ import java.util.Arrays;
+ import java.util.Set;
++import java.util.stream.Collectors;
+ 
+ import java.util.function.Consumer;
+ 
+@@ -270,19 +271,11 @@ public class Annotation
+           .append(getAnnotationClass().getValueString());
+ 
+         if (m_aParams.length > 0) {
+-            sb.append('(');
+-
+-            boolean first = true;
+-            for (Constant param : m_aParams) {
+-                if (first) {
+-                    first = false;
+-                } else {
+-                    sb.append(", ");
+-                }
+-                sb.append(param.getValueString());
+-            }
+-
+-            sb.append(')');
++            sb.append('(')
++              .append(Arrays.stream(m_aParams)
++                      .map(Constant::getValueString)
++                      .collect(Collectors.joining(", ")))
++              .append(')');
+         }
+ 
+         return sb.toString();
+diff --git a/javatools/src/main/java/org/xvm/asm/constants/ParameterizedTypeConstant.java b/javatools/src/main/java/org/xvm/asm/constants/ParameterizedTypeConstant.java
+index 0ba085bac..706ccacb3 100644
+--- a/javatools/src/main/java/org/xvm/asm/constants/ParameterizedTypeConstant.java
++++ b/javatools/src/main/java/org/xvm/asm/constants/ParameterizedTypeConstant.java
+@@ -9,6 +9,7 @@ import java.util.Arrays;
+ import java.util.Collections;
+ import java.util.List;
+ import java.util.Set;
++import java.util.stream.Collectors;
+ 
+ import java.util.concurrent.locks.StampedLock;
+ 
+@@ -1052,19 +1053,11 @@ public class ParameterizedTypeConstant
+             sb.append(')');
+         } else {
+             sb.append(m_constType.getValueString())
+-              .append('<');
+-
+-            boolean first = true;
+-            for (TypeConstant type : m_atypeParams) {
+-                if (first) {
+-                    first = false;
+-                } else {
+-                    sb.append(", ");
+-                }
+-                sb.append(type.getValueString());
+-            }
+-
+-            sb.append('>');
++              .append('<')
++              .append(Arrays.stream(m_atypeParams)
++                      .map(TypeConstant::getValueString)
++                      .collect(Collectors.joining(", ")))
++              .append('>');
+         }
+ 
+         return sb.toString();
+diff --git a/javatools/src/main/java/org/xvm/asm/constants/SignatureConstant.java b/javatools/src/main/java/org/xvm/asm/constants/SignatureConstant.java
+index 18d6bd495..8c7512366 100644
+--- a/javatools/src/main/java/org/xvm/asm/constants/SignatureConstant.java
++++ b/javatools/src/main/java/org/xvm/asm/constants/SignatureConstant.java
+@@ -7,6 +7,7 @@ import java.io.IOException;
+ 
+ import java.util.Arrays;
+ import java.util.List;
++import java.util.stream.Collectors;
+ 
+ import java.util.concurrent.locks.StampedLock;
+ 
+@@ -702,17 +703,11 @@ public class SignatureConstant
+             break;
+ 
+         default:
+-            sb.append('(');
+-            boolean first = true;
+-            for (TypeConstant type : m_aconstReturns) {
+-                if (first) {
+-                    first = false;
+-                } else {
+-                    sb.append(", ");
+-                }
+-                sb.append(type.getValueString());
+-            }
+-            sb.append(')');
++            sb.append('(')
++              .append(Arrays.stream(m_aconstReturns)
++                      .map(TypeConstant::getValueString)
++                      .collect(Collectors.joining(", ")))
++              .append(')');
+             break;
+         }
+ 
+@@ -720,19 +715,11 @@ public class SignatureConstant
+           .append(m_constName.getValue());
+ 
+         if (!m_fProperty) {
+-            sb.append('(');
+-
+-            boolean first = true;
+-            for (TypeConstant type : m_aconstParams) {
+-                if (first) {
+-                    first = false;
+-                } else {
+-                    sb.append(", ");
+-                }
+-                sb.append(type.getValueString());
+-            }
+-
+-            sb.append(')');
++            sb.append('(')
++              .append(Arrays.stream(m_aconstParams)
++                      .map(TypeConstant::getValueString)
++                      .collect(Collectors.joining(", ")))
++              .append(')');
+         }
+ 
+         return sb.toString();
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/AnnotationExpression.java b/javatools/src/main/java/org/xvm/compiler/ast/AnnotationExpression.java
+index 078ee645a..bdb264366 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/AnnotationExpression.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/AnnotationExpression.java
+@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
+ import java.util.Collections;
+ import java.util.List;
+ import java.util.Map;
++import java.util.stream.Collectors;
+ 
+ import org.xvm.asm.Annotation;
+ import org.xvm.asm.Argument;
+@@ -436,19 +437,11 @@ public class AnnotationExpression
+           .append(type);
+ 
+         if (args != null) {
+-            sb.append('(');
+-
+-            boolean first = true;
+-            for (Expression expr : args) {
+-                if (first) {
+-                    first = false;
+-                } else {
+-                    sb.append(", ");
+-                }
+-                sb.append(expr);
+-            }
+-
+-            sb.append(')');
++            sb.append('(')
++              .append(args.stream()
++                      .map(Expression::toString)
++                      .collect(Collectors.joining(", ")))
++              .append(')');
+         }
+ 
+         return sb.toString();
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/CompositionNode.java b/javatools/src/main/java/org/xvm/compiler/ast/CompositionNode.java
+index 63b931c55..cea023dc0 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/CompositionNode.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/CompositionNode.java
+@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
+ import java.util.ArrayList;
+ import java.util.Collections;
+ import java.util.List;
++import java.util.stream.Collectors;
+ 
+ import org.xvm.asm.Annotation;
+ import org.xvm.asm.Component.Contribution;
+@@ -164,17 +165,11 @@ public abstract class CompositionNode
+             sb.append(toStartString());
+ 
+             if (args != null) {
+-                sb.append('(');
+-                boolean first = true;
+-                for (Expression arg : args) {
+-                    if (first) {
+-                        first = false;
+-                    } else {
+-                        sb.append(", ");
+-                    }
+-                    sb.append(arg);
+-                }
+-                  sb.append(')');
++                sb.append('(')
++                  .append(args.stream()
++                          .map(Expression::toString)
++                          .collect(Collectors.joining(", ")))
++                  .append(')');
+             }
+ 
+             sb.append(toEndString());
+@@ -231,17 +226,11 @@ public abstract class CompositionNode
+               .append(annotation.type);
+ 
+             if (annotation.args != null) {
+-                sb.append('(');
+-                boolean first = true;
+-                for (Expression arg : annotation.args) {
+-                    if (first) {
+-                        first = false;
+-                    } else {
+-                        sb.append(", ");
+-                    }
+-                    sb.append(arg);
+-                }
+-                sb.append(')');
++                sb.append('(')
++                  .append(annotation.args.stream()
++                          .map(Expression::toString)
++                          .collect(Collectors.joining(", ")))
++                  .append(')');
+             }
+ 
+             sb.append(toEndString());
+@@ -311,34 +300,22 @@ public abstract class CompositionNode
+                 sb.append(" conditional ")
+                   .append(sType, 0, sType.indexOf('<'));
+ 
+-                sb.append('<');
+-                boolean first = true;
+-                for (Parameter param : constraints) {
+-                    if (first) {
+-                        first = false;
+-                    } else {
+-                        sb.append(", ");
+-                    }
+-                    sb.append(param.toTypeParamString());
+-                }
+-                sb.append('>');
++                sb.append('<')
++                  .append(constraints.stream()
++                          .map(Parameter::toTypeParamString)
++                          .collect(Collectors.joining(", ")))
++                  .append('>');
+             } else {
+                 sb.append(' ')
+                   .append(type);
+             }
+ 
+             if (args != null) {
+-                sb.append('(');
+-                boolean first = true;
+-                for (Expression arg : args) {
+-                    if (first) {
+-                        first = false;
+-                    } else {
+-                        sb.append(", ");
+-                    }
+-                    sb.append(arg);
+-                }
+-                sb.append(')');
++                sb.append('(')
++                  .append(args.stream()
++                          .map(Expression::toString)
++                          .collect(Collectors.joining(", ")))
++                  .append(')');
+             }
+ 
+             sb.append(toEndString());
+@@ -554,19 +531,11 @@ public abstract class CompositionNode
+                 sb.append("\n        ")
+                   .append(Token.Id.INJECT.TEXT)
+                   .append(' ')
+-                  .append('(');
+-
+-                boolean first = true;
+-                for (Parameter injection : injects) {
+-                    if (first) {
+-                        first = false;
+-                    } else {
+-                        sb.append(", ");
+-                    }
+-                    sb.append(injection);
+-                }
+-
+-                sb.append(')');
++                  .append('(')
++                  .append(injects.stream()
++                          .map(Parameter::toString)
++                          .collect(Collectors.joining(", ")))
++                  .append(')');
+             }
+ 
+ 
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/FunctionTypeExpression.java b/javatools/src/main/java/org/xvm/compiler/ast/FunctionTypeExpression.java
+index e878660dc..d92dd044b 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/FunctionTypeExpression.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/FunctionTypeExpression.java
+@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
+ import java.lang.reflect.Field;
+ 
+ import java.util.List;
++import java.util.stream.Collectors;
+ 
+ import org.xvm.asm.ConstantPool;
+ import org.xvm.asm.ErrorListener;
+@@ -152,30 +153,16 @@ public class FunctionTypeExpression
+         } else if (returnValues.size() == 1) {
+             sb.append(returnValues.get(0));
+         } else {
+-            boolean first = true;
+-            for (Parameter param : returnValues) {
+-                if (first) {
+-                    first = false;
+-                } else {
+-                    sb.append(", ");
+-                }
+-                sb.append(param);
+-            }
+-        }
+-
+-        sb.append(" (");
+-
+-        boolean first = true;
+-        for (TypeExpression type : paramTypes) {
+-            if (first) {
+-                first = false;
+-            } else {
+-                sb.append(", ");
+-            }
+-            sb.append(type);
++            sb.append(returnValues.stream()
++                    .map(Parameter::toString)
++                    .collect(Collectors.joining(", ")));
+         }
+ 
+-        sb.append(')');
++        sb.append(" (")
++          .append(paramTypes.stream()
++                  .map(TypeExpression::toString)
++                  .collect(Collectors.joining(", ")))
++          .append(')');
+ 
+         return sb.toString();
+     }
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/InvocationExpression.java b/javatools/src/main/java/org/xvm/compiler/ast/InvocationExpression.java
+index 1d835dafb..55a50d67d 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/InvocationExpression.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/InvocationExpression.java
+@@ -3004,17 +3004,10 @@ public class InvocationExpression
+         }
+         sb.append('(');
+ 
+-        boolean first = true;
+-        for (Expression arg : args) {
+-            if (first) {
+-                first = false;
+-            } else {
+-                sb.append(", ");
+-            }
+-            sb.append(arg);
+-        }
+-
+-        sb.append(')');
++        sb.append(args.stream()
++                .map(Expression::toString)
++                .collect(Collectors.joining(", ")))
++          .append(')');
+         return sb.toString();
+     }
+ 
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/LambdaExpression.java b/javatools/src/main/java/org/xvm/compiler/ast/LambdaExpression.java
+index e1e4bd404..1d6bc58a0 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/LambdaExpression.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/LambdaExpression.java
+@@ -11,6 +11,7 @@ import java.util.List;
+ import java.util.Map;
+ import java.util.Map.Entry;
+ import java.util.Set;
++import java.util.stream.Collectors;
+ 
+ import org.xvm.asm.Argument;
+ import org.xvm.asm.Component;
+@@ -1267,18 +1268,12 @@ public class LambdaExpression
+     public String toSignatureString() {
+         StringBuilder sb = new StringBuilder();
+ 
+-        sb.append('(');
+-        boolean first = true;
+-        for (Object param : (params == null ? paramNames : params)) {
+-            if (first) {
+-                first = false;
+-            } else {
+-                sb.append(", ");
+-            }
+-            sb.append(param);
+-        }
+-
+-        sb.append(')')
++        List<?> source = params == null ? paramNames : params;
++        sb.append('(')
++          .append(source.stream()
++                  .map(Object::toString)
++                  .collect(Collectors.joining(", ")))
++          .append(')')
+           .append(' ')
+           .append(operator.getId().TEXT);
+ 
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/MethodDeclarationStatement.java b/javatools/src/main/java/org/xvm/compiler/ast/MethodDeclarationStatement.java
+index 4baef24f2..a3ea6ee34 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/MethodDeclarationStatement.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/MethodDeclarationStatement.java
+@@ -7,6 +7,7 @@ import java.util.Collections;
+ import java.util.HashSet;
+ import java.util.List;
+ import java.util.Set;
++import java.util.stream.Collectors;
+ 
+ import org.xvm.asm.Annotation;
+ import org.xvm.asm.ClassStructure;
+@@ -1134,17 +1135,11 @@ public class MethodDeclarationStatement
+         }
+ 
+         if (typeParams != null) {
+-            sb.append('<');
+-            boolean first = true;
+-            for (Parameter param : typeParams) {
+-                if (first) {
+-                    first = false;
+-                } else {
+-                    sb.append(", ");
+-                }
+-                sb.append(param.toTypeParamString());
+-            }
+-            sb.append("> ");
++            sb.append('<')
++              .append(typeParams.stream()
++                      .map(Parameter::toTypeParamString)
++                      .collect(Collectors.joining(", ")))
++              .append("> ");
+         }
+ 
+         if (returns == null) {
+@@ -1155,47 +1150,29 @@ public class MethodDeclarationStatement
+             sb.append(returns.get(0))
+                     .append(' ');
+         } else {
+-            sb.append(" (");
+-            boolean first = true;
+-            for (Parameter param : returns) {
+-                if (first) {
+-                    first = false;
+-                } else {
+-                    sb.append(", ");
+-                }
+-                sb.append(param);
+-            }
+-            sb.append(") ");
++            sb.append(" (")
++              .append(returns.stream()
++                      .map(Parameter::toString)
++                      .collect(Collectors.joining(", ")))
++              .append(") ");
+         }
+ 
+         sb.append(getName());
+ 
+         if (redundant != null) {
+-            sb.append('<');
+-            boolean first = true;
+-            for (TypeExpression type : redundant) {
+-                if (first) {
+-                    first = false;
+-                } else {
+-                    sb.append(", ");
+-                }
+-                sb.append(type);
+-            }
+-            sb.append('>');
++            sb.append('<')
++              .append(redundant.stream()
++                      .map(TypeExpression::toString)
++                      .collect(Collectors.joining(", ")))
++              .append('>');
+         }
+ 
+         if (params != null) {
+-            sb.append('(');
+-            boolean first = true;
+-            for (Parameter param : params) {
+-                if (first) {
+-                    first = false;
+-                } else {
+-                    sb.append(", ");
+-                }
+-                sb.append(param);
+-            }
+-            sb.append(')');
++            sb.append('(')
++              .append(params.stream()
++                      .map(Parameter::toString)
++                      .collect(Collectors.joining(", ")))
++              .append(')');
+         }
+ 
+         if (m_bodyFinally != null) {
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/NamedTypeExpression.java b/javatools/src/main/java/org/xvm/compiler/ast/NamedTypeExpression.java
+index a6b536eaf..4d4a38966 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/NamedTypeExpression.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/NamedTypeExpression.java
+@@ -7,6 +7,7 @@ import java.util.ArrayList;
+ import java.util.Arrays;
+ import java.util.Collections;
+ import java.util.List;
++import java.util.stream.Collectors;
+ 
+ import org.xvm.asm.Argument;
+ import org.xvm.asm.ClassStructure;
+@@ -128,20 +129,9 @@ public class NamedTypeExpression
+         if (module == null) {
+             return null;
+         }
+-
+-        StringBuilder sb = new StringBuilder();
+-
+-        boolean first = true;
+-        for (Token name : module) {
+-            if (first) {
+-                first = false;
+-            } else {
+-                sb.append('.');
+-            }
+-            sb.append(name.getValueText());
+-        }
+-
+-        return sb.toString();
++        return module.stream()
++                .map(Token::getValueText)
++                .collect(Collectors.joining("."));
+     }
+ 
+     /**
+@@ -153,20 +143,9 @@ public class NamedTypeExpression
+         if (names == null) {
+             return "";
+         }
+-
+-        StringBuilder sb = new StringBuilder();
+-
+-        boolean first = true;
+-        for (Token name : names) {
+-            if (first) {
+-                first = false;
+-            } else {
+-                sb.append('.');
+-            }
+-            sb.append(name.getValueText());
+-        }
+-
+-        return sb.toString();
++        return names.stream()
++                .map(Token::getValueText)
++                .collect(Collectors.joining("."));
+     }
+ 
+     public String[] getNames() {
+@@ -1080,17 +1059,11 @@ public class NamedTypeExpression
+         }
+ 
+         if (paramTypes != null) {
+-            sb.append('<');
+-            boolean first = true;
+-            for (TypeExpression type : paramTypes) {
+-                if (first) {
+-                    first = false;
+-                } else {
+-                    sb.append(", ");
+-                }
+-                sb.append(type);
+-            }
+-            sb.append('>');
++            sb.append('<')
++              .append(paramTypes.stream()
++                      .map(TypeExpression::toString)
++                      .collect(Collectors.joining(", ")))
++              .append('>');
+         }
+ 
+         return sb.toString();
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/ReturnStatement.java b/javatools/src/main/java/org/xvm/compiler/ast/ReturnStatement.java
+index 93f88e704..45dd0032a 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/ReturnStatement.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/ReturnStatement.java
+@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
+ 
+ import java.util.Arrays;
+ import java.util.List;
++import java.util.stream.Collectors;
+ 
+ import org.xvm.asm.Argument;
+ import org.xvm.asm.Constant;
+@@ -474,16 +475,10 @@ public class ReturnStatement
+                 break;
+ 
+             default:
+-                boolean first = true;
+-                for (Expression expr : exprs) {
+-                    if (first) {
+-                        first = false;
+-                        sb.append(" ");
+-                    } else {
+-                        sb.append(", ");
+-                    }
+-                    sb.append(expr);
+-                }
++                sb.append(" ")
++                  .append(exprs.stream()
++                          .map(Expression::toString)
++                          .collect(Collectors.joining(", ")));
+                 break;
+             }
+         }
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/TryStatement.java b/javatools/src/main/java/org/xvm/compiler/ast/TryStatement.java
+index 31a0e016a..32702bc25 100644
+--- a/javatools/src/main/java/org/xvm/compiler/ast/TryStatement.java
++++ b/javatools/src/main/java/org/xvm/compiler/ast/TryStatement.java
+@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
+ 
+ import java.util.List;
+ import java.util.Map;
++import java.util.stream.Collectors;
+ 
+ import org.xvm.asm.Argument;
+ import org.xvm.asm.Assignment;
+@@ -482,17 +483,11 @@ public class TryStatement
+         sb.append(keyword.getId().TEXT);
+ 
+         if (resources != null) {
+-            sb.append(" (");
+-            boolean first = true;
+-            for (Statement resource : resources) {
+-                if (first) {
+-                    first = false;
+-                } else {
+-                    sb.append(", ");
+-                }
+-                sb.append(resource);
+-            }
+-            sb.append(')');
++            sb.append(" (")
++              .append(resources.stream()
++                      .map(Statement::toString)
++                      .collect(Collectors.joining(", ")))
++              .append(')');
+         }
+ 
+         sb.append('\n')
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/ForStatement.java b/javatools/src/main/java/org/xvm/compiler/ast/ForStatement.java
+index 5b7b9aea6..162373f7d 100644
+@@ -694,39 +696,19 @@ public class ForStatement
+         sb.append("for (");
+ 
+         if (init != null) {
+-            boolean first = true;
+-            for (Statement stmt : init) {
+-                if (first) {
+-                    first = false;
+-                } else {
+-                    sb.append(", ");
+-                }
+-                sb.append(stmt);
+-            }
++            sb.append(init.stream().map(Object::toString).collect(Collectors.joining(", ")));
+         }
+ 
+         sb.append("; ");
+ 
+         if (conds != null && !conds.isEmpty()) {
+-            sb.append(conds.get(0));
+-            for (int i = 1, c = conds.size(); i < c; ++i) {
+-                sb.append(", ")
+-                  .append(conds.get(i));
+-            }
++            sb.append(conds.stream().map(Object::toString).collect(Collectors.joining(", ")));
+         }
+ 
+         sb.append("; ");
+ 
+         if (update != null) {
+-            boolean first = true;
+-            for (Statement stmt : update) {
+-                if (first) {
+-                    first = false;
+-                } else {
+-                    sb.append(", ");
+-                }
+-                sb.append(stmt);
+-            }
++            sb.append(update.stream().map(Object::toString).collect(Collectors.joining(", ")));
+         }
+ 
+         sb.append(")\n")
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/ImportStatement.java b/javatools/src/main/java/org/xvm/compiler/ast/ImportStatement.java
+index b0a91b640..f608a77c1 100644
+@@ -232,17 +232,11 @@ public class ImportStatement
+ 
+         sb.append("import ");
+ 
+-        boolean first = true;
+-        String last = null;
+-        for (Token name : qualifiedName) {
+-            if (first) {
+-                first = false;
+-            } else {
+-                sb.append('.');
+-            }
+-            last = String.valueOf(name.getValue());
+-            sb.append(last);
+-        }
++        String last = qualifiedName.isEmpty() ? null :
++            String.valueOf(qualifiedName.get(qualifiedName.size() - 1).getValue());
++        sb.append(qualifiedName.stream()
++            .map(token -> String.valueOf(token.getValue()))
++            .collect(Collectors.joining(".")));
+ 
+         if (alias != null && !last.equals(alias.getValue())) {
+             sb.append(" as ")
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/NameExpression.java b/javatools/src/main/java/org/xvm/compiler/ast/NameExpression.java
+index 3dcd5ac15..3c36736fb 100644
+@@ -3267,17 +3267,9 @@ public class NameExpression
+         sb.append(name.getValueText());
+ 
+         if (params != null) {
+-            sb.append('<');
+-            boolean first = true;
+-            for (Expression param : params) {
+-                if (first) {
+-                    first = false;
+-                } else {
+-                    sb.append(", ");
+-                }
+-                sb.append(param);
+-            }
+-            sb.append('>');
++            sb.append('<')
++              .append(params.stream().map(Object::toString).collect(Collectors.joining(", ")))
++              .append('>');
+         }
+ 
+         return sb.toString();
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/NewExpression.java b/javatools/src/main/java/org/xvm/compiler/ast/NewExpression.java
+index e6454adfd..16d7c4356 100644
+@@ -1528,32 +1530,16 @@ public class NewExpression
+             if (hasSquareBrackets()) {
+                 iFirst = getDimensionCount();
+ 
+-                sb.append('[');
+-                boolean first = true;
+-                for (int i = 0; i < iFirst; ++i) {
+-                    Expression arg = args.get(i);
+-                    if (first) {
+-                        first = false;
+-                    } else {
+-                        sb.append(", ");
+-                    }
+-                    sb.append(arg);
+-                }
+-                sb.append(']');
++                sb.append('[')
++                  .append(args.subList(0, iFirst).stream()
++                      .map(Object::toString).collect(Collectors.joining(", ")))
++                  .append(']');
+             }
+ 
+-            sb.append('(');
+-            boolean first = true;
+-            for (int i = iFirst, c = args.size(); i < c; ++i) {
+-                Expression arg = args.get(i);
+-                if (first) {
+-                    first = false;
+-                } else {
+-                    sb.append(", ");
+-                }
+-                sb.append(arg);
+-            }
+-            sb.append(')');
++            sb.append('(')
++              .append(args.subList(iFirst, args.size()).stream()
++                  .map(Object::toString).collect(Collectors.joining(", ")))
++              .append(')');
+         }
+ 
+         return sb.toString();
+diff --git a/javatools/src/main/java/org/xvm/compiler/ast/TypeCompositionStatement.java b/javatools/src/main/java/org/xvm/compiler/ast/TypeCompositionStatement.java
+index 720561879..9988027d7 100644
+@@ -2987,31 +2987,15 @@ public class TypeCompositionStatement
+             sb.append(name.getValue());
+ 
+             if (typeParams != null) {
+-                sb.append('<');
+-                boolean first = true;
+-                for (TypeExpression typeParam : typeArgs) {
+-                    if (first) {
+-                        first = false;
+-                    } else {
+-                        sb.append(", ");
+-                    }
+-                    sb.append(typeParam);
+-                }
+-                sb.append('>');
++                sb.append('<')
++                  .append(typeArgs.stream().map(Object::toString).collect(Collectors.joining(", ")))
++                  .append('>');
+             }
+ 
+             if (args != null) {
+-                sb.append('(');
+-                boolean first = true;
+-                for (Expression arg : args) {
+-                    if (first) {
+-                        first = false;
+-                    } else {
+-                        sb.append(", ");
+-                    }
+-                    sb.append(arg);
+-                }
+-                sb.append(')');
++                sb.append('(')
++                  .append(args.stream().map(Object::toString).collect(Collectors.joining(", ")))
++                  .append(')');
+             }
+         } else {
+             if (modifiers != null) {
+@@ -3034,43 +3018,23 @@ public class TypeCompositionStatement
+             if (qualified == null) {
+                 sb.append(name.getValue());
+             } else {
+-                boolean first = true;
+-                for (Token token : qualified) {
+-                    if (first) {
+-                        first = false;
+-                    } else {
+-                        sb.append('.');
+-                    }
+-                    sb.append(token.getValue());
+-                }
++                sb.append(qualified.stream()
++                    .map(token -> String.valueOf(token.getValue()))
++                    .collect(Collectors.joining(".")));
+             }
+ 
+             if (typeParams != null) {
+-                sb.append('<');
+-                boolean first = true;
+-                for (Parameter param : typeParams) {
+-                    if (first) {
+-                        first = false;
+-                    } else {
+-                        sb.append(", ");
+-                    }
+-                    sb.append(param.toTypeParamString());
+-                }
+-                sb.append('>');
++                sb.append('<')
++                  .append(typeParams.stream()
++                      .map(Parameter::toTypeParamString)
++                      .collect(Collectors.joining(", ")))
++                  .append('>');
+             }
+ 
+             if (constructorParams != null) {
+-                sb.append('(');
+-                boolean first = true;
+-                for (Parameter param : constructorParams) {
+-                    if (first) {
+-                        first = false;
+-                    } else {
+-                        sb.append(", ");
+-                    }
+-                    sb.append(param);
+-                }
+-                sb.append(')');
++                sb.append('(')
++                  .append(constructorParams.stream().map(Object::toString).collect(Collectors.joining(", ")))
++                  .append(')');
+             }
+         }
+ 

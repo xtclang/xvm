@@ -1,0 +1,92 @@
+diff --git a/javatools/src/main/java/org/xvm/asm/MethodStructure.java b/javatools/src/main/java/org/xvm/asm/MethodStructure.java
+index 079cb9a5c..d96f5c3c3 100644
+--- a/javatools/src/main/java/org/xvm/asm/MethodStructure.java
++++ b/javatools/src/main/java/org/xvm/asm/MethodStructure.java
+@@ -2464,9 +2464,7 @@ public class MethodStructure
+                 return false;
+             }
+ 
+-            Op[] aopNew = new Op[cNew];
+-            System.arraycopy(aop, 0, aopNew, 0, cNew);
+-            m_aop = aopNew;
++            m_aop = Arrays.copyOf(aop, cNew);
+             return true;
+         }
+ 
+@@ -2565,9 +2563,7 @@ public class MethodStructure
+             // there was redundant code; we should have seen code shrinkage
+             assert cNew != cOld;
+ 
+-            Op[] aopNew = new Op[cNew];
+-            System.arraycopy(aop, 0, aopNew, 0, cNew);
+-            m_aop = aopNew;
++            m_aop = Arrays.copyOf(aop, cNew);
+             return true;
+         }
+ 
+diff --git a/javatools/src/main/java/org/xvm/asm/Version.java b/javatools/src/main/java/org/xvm/asm/Version.java
+index cf3be8ec0..4816887f5 100644
+--- a/javatools/src/main/java/org/xvm/asm/Version.java
++++ b/javatools/src/main/java/org/xvm/asm/Version.java
+@@ -2,6 +2,7 @@ package org.xvm.asm;
+ 
+ 
+ import java.util.ArrayList;
++import java.util.Arrays;
+ 
+ import static org.xvm.util.Handy.isDigit;
+ import static org.xvm.util.Handy.quotedChar;
+@@ -502,9 +503,7 @@ public class Version
+             return this;
+         }
+ 
+-        int[] partsNew = new int[cParts - cZeros];
+-        System.arraycopy(parts, 0, partsNew, 0, cParts - cZeros);
+-        return new Version(partsNew, build);
++        return new Version(Arrays.copyOf(parts, cParts - cZeros), build);
+     }
+ 
+     /**
+diff --git a/javatools/src/main/java/org/xvm/asm/VersionTree.java b/javatools/src/main/java/org/xvm/asm/VersionTree.java
+index 8d8c1fa6d..b6af3d848 100644
+--- a/javatools/src/main/java/org/xvm/asm/VersionTree.java
++++ b/javatools/src/main/java/org/xvm/asm/VersionTree.java
+@@ -2,6 +2,7 @@ package org.xvm.asm;
+ 
+ 
+ import java.util.ArrayList;
++import java.util.Arrays;
+ import java.util.Iterator;
+ import java.util.NoSuchElementException;
+ 
+@@ -880,13 +881,8 @@ public class VersionTree<V>
+             int c = nodes.length;
+             if (nodes[c-1] != null) {
+                 // allocate and copy to a new array
+-                int    cNew     = c * 2;
+-                Node[] nodesNew = new Node[cNew];
+-                System.arraycopy(nodes, 0, nodesNew, 0, c);
+-
+-                // use the new array
+-                nodes = nodesNew;
+-                c     = cNew;
++                nodes = Arrays.copyOf(nodes, c * 2);
++                c     = nodes.length;
+             }
+ 
+             int nodePart = node.part;
+diff --git a/javatools/src/main/java/org/xvm/asm/ast/SwitchAST.java b/javatools/src/main/java/org/xvm/asm/ast/SwitchAST.java
+index 7aec34125..5da00bc5a 100644
+--- a/javatools/src/main/java/org/xvm/asm/ast/SwitchAST.java
++++ b/javatools/src/main/java/org/xvm/asm/ast/SwitchAST.java
+@@ -85,9 +85,7 @@ public class SwitchAST
+         // check bodies that are associated with some or all of the cases
+         assert bodies != null && bodies.length <= rowCount;
+         if (bodies.length < rowCount) {
+-            BinaryAST[] newBodies = new BinaryAST[rowCount];
+-            System.arraycopy(bodies, 0, newBodies, 0, bodies.length);
+-            bodies = newBodies;
++            bodies = Arrays.copyOf(bodies, rowCount);
+         }
+ 
+         // check result types
