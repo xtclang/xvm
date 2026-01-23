@@ -95,11 +95,6 @@ module.exports = grammar({
     [$.tuple_type_element, $.type_expression],
     [$.conditional_type, $.function_type],
     [$.incorporates_clause, $.conditional_type],
-    [$.safe_call_else_expression, $.member_expression],
-    [$.safe_call_else_expression, $.ternary_expression],
-    [$.safe_call_else_expression, $.member_expression, $.ternary_expression],
-    [$.safe_call_else_expression, $.call_expression],
-    [$.safe_call_else_expression, $.call_expression, $.member_expression],
     [$._non_bi_type, $.generic_type],
   ],
 
@@ -216,11 +211,12 @@ module.exports = grammar({
       $.class_body,
     ),
 
+    // Const declaration allows annotations to appear after static: static @Abstract const
     const_declaration: $ => seq(
       optional($.doc_comment),
       repeat($.annotation),
       optional($.visibility_modifier),
-      optional('static'),
+      optional(seq('static', repeat($.annotation))),
       'const',
       $.type_name,
       optional($.type_parameters),
@@ -725,7 +721,6 @@ module.exports = grammar({
       $.postfix_expression,
       $.call_expression,
       $.member_expression,
-      $.safe_call_else_expression,
       $.index_expression,
       $.new_expression,
       $.lambda_expression,
@@ -766,18 +761,6 @@ module.exports = grammar({
     // - Reference: expr.&name (no-dereference property access)
     member_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_2}}, seq($._expression, choice({{MEMBER_ACCESS_OPS}}), optional('&'), $.identifier)),
     index_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_2}}, seq($._expression, '[', commaSep1($._expression), ']')),
-
-    // Safe call else expression: expr?.member() : fallback
-    // If expr is not null, evaluate expr.member(), else return fallback
-    // Uses higher precedence than call_expression to ensure the `: fallback` binds correctly
-    safe_call_else_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_3}}, seq(
-      $._expression,
-      '?.',
-      $.identifier,
-      optional($.arguments),
-      ':',
-      $._expression,
-    )),
 
     // Reference expression: &name (creates a reference to a property/variable)
     reference_expression: $ => seq('&', $.identifier),
