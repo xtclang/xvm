@@ -96,6 +96,8 @@ module.exports = grammar({
     [$.conditional_type, $.function_type],
     [$.incorporates_clause, $.conditional_type],
     [$._non_bi_type, $.generic_type],
+    [$.named_argument, $._expression],
+    [$.switch_variable_declaration, $._expression],
   ],
 
   word: $ => $.identifier,
@@ -480,6 +482,21 @@ module.exports = grammar({
       $.const_declaration,
       $.enum_declaration,
       $.mixin_declaration,
+      // Local function declarations (functions defined inside method bodies)
+      $.local_function_declaration,
+    ),
+
+    // Local function declaration: visibility, static, return type, name, params, body
+    // Supports: private static (String, String) decode(Entry entry) { ... }
+    local_function_declaration: $ => seq(
+      repeat($.annotation),
+      optional($.visibility_modifier),
+      optional('static'),
+      optional($.type_parameters),
+      $.type_expression,
+      $.identifier,
+      $.parameters,
+      choice($.block, seq('=', $._expression, ';')),
     ),
 
     // Labeled statement: Label: for/while/do/switch/if/block
@@ -612,10 +629,11 @@ module.exports = grammar({
     do_statement: $ => seq('do', $._statement, 'while', '(', $._expression, ')', ';'),
 
     // Switch statement (traditional form with statements)
+    // Can have inline variable declarations: switch (Type name = expr)
     switch_statement: $ => seq(
       'switch',
       '(',
-      commaSep1($._expression),
+      commaSep1(choice($.switch_variable_declaration, $._expression)),
       ')',
       '{',
       repeat($.case_clause),
@@ -623,15 +641,19 @@ module.exports = grammar({
     ),
 
     // Switch expression (returns a value): switch (x) { case A: value; }
+    // Can have inline variable declarations: switch (Type name = expr)
     switch_expression: $ => seq(
       'switch',
       '(',
-      commaSep1($._expression),
+      commaSep1(choice($.switch_variable_declaration, $._expression)),
       ')',
       '{',
       repeat($.expression_case_clause),
       '}',
     ),
+
+    // Variable declaration inside switch expression: Type name = expr
+    switch_variable_declaration: $ => seq($.type_expression, $.identifier, '=', $._expression),
 
     // Case clause for switch statements (can contain statements)
     case_clause: $ => seq(
@@ -648,9 +670,10 @@ module.exports = grammar({
       ';',
     ),
 
-    // Case pattern: single expression, tuple pattern, or wildcard
+    // Case pattern: single expression, comma-separated expressions, or tuple pattern
+    // Supports: case 'P', 'p':  (multiple values in one case)
     case_pattern: $ => choice(
-      $._expression,
+      commaSep1($._expression),
       $.tuple_pattern,
     ),
 
@@ -765,12 +788,13 @@ module.exports = grammar({
     // Reference expression: &name (creates a reference to a property/variable)
     reference_expression: $ => seq('&', $.identifier),
 
-    // new Type(args), new Type[size], new Type[size](initializer), or expr.new(args) for virtual constructors
+    // new Type(args), new Type[size], new Type[], new Type[size](initializer), or expr.new(args)
     // Also supports anonymous inner classes: new Type(args) { body }
     // prec.left on the array form ensures the optional initializer arguments are greedily consumed
     new_expression: $ => choice(
       seq('new', $.type_expression, $.arguments, optional($.anonymous_inner_class_body)),
       prec.left(seq('new', $.type_expression, '[', $._expression, ']', optional($.arguments))),
+      seq('new', $.type_expression, '[', ']'),  // empty array: new Type[]
       seq($._expression, '.', 'new', $.arguments),
     ),
 
@@ -813,8 +837,10 @@ module.exports = grammar({
     // Tuple expression: (a, b) or (a, b, c) - at least 2 elements
     tuple_expression: $ => seq('(', $._expression, ',', commaSep1($._expression), ')'),
 
-    // Arguments can include expressions and type expressions (for .is(), .as(), etc.)
-    arguments: $ => seq('(', commaSep(choice($._expression, $.type_expression)), ')'),
+    // Arguments can include expressions, type expressions (for .is(), .as(), etc.), and named arguments
+    // Named arguments: name=value (e.g., entrySeparator='&')
+    arguments: $ => seq('(', commaSep(choice($.named_argument, $._expression, $.type_expression)), ')'),
+    named_argument: $ => seq($.identifier, '=', $._expression),
 
     // Literals
     _literal: $ => choice(
@@ -822,6 +848,8 @@ module.exports = grammar({
       $.float_literal,
       $.string_literal,
       $.template_string_literal,
+      $.multiline_template_literal,
+      $.multiline_literal,
       $.char_literal,
       $.boolean_literal,
       $.null_literal,
@@ -844,6 +872,13 @@ module.exports = grammar({
 
     string_literal: $ => /"([^"\\]|\\.)*"/,
     template_string_literal: $ => /\$"([^"\\]|\\.)*"/,
+    // Multiline template literal: $|content on first line
+    //                              | continuation line
+    // The pattern captures $| followed by content, with optional continuation lines starting with |
+    multiline_template_literal: $ => token(/\$\|[^\n]*(\\?\n[ \t]*\|[^\n]*)*/),
+    // Multiline plain literal: \|content on first line
+    //                           | continuation line
+    multiline_literal: $ => token(/\\\|[^\n]*(\\?\n[ \t]*\|[^\n]*)*/),
     char_literal: $ => /'([^'\\]|\\.)'/,
 
 {{BOOLEAN_LITERAL_RULE}}

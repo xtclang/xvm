@@ -42,10 +42,10 @@ cd lang/dsl/build/generated
 - [x] Grammar validation passes (`./gradlew :lang:dsl:validateTreeSitterGrammar`)
 
 ### In Progress 🔄
-- **Grammar coverage: 325/691 XTC files parse successfully (47%)**
+- **Grammar coverage: 381/691 XTC files parse successfully (55.1%)**
 - Native library compilation for target platforms
 
-### Grammar Support Status (2026-01-23)
+### Grammar Support Status (2026-01-24)
 
 The following features have been added to `TreeSitterGenerator.kt`:
 
@@ -109,12 +109,18 @@ The following features have been added to `TreeSitterGenerator.kt`:
 | Assert expression | `value ?: assert` | ✅ For safe-call-else |
 | Anonymous inner class | `new Type() { ... }` | ✅ With class body |
 | Local variable visibility | `private Type x = val` | ✅ For captures |
+| Multiline template literals | `$\|content\n \|more` | ✅ With continuation lines |
+| Multiline plain literals | `\\|content\n \|more` | ✅ With continuation lines |
+| Named arguments | `method(name=value)` | ✅ In function calls |
+| Local function declarations | `private static Type fn() {}` | ✅ Inside method bodies |
+| Switch variable declaration | `switch (Type x = expr)` | ✅ Inline variable in switch |
+| Multi-value case patterns | `case 'A', 'B':` | ✅ Comma-separated values |
 
 #### Still Needed (High Priority)
 
 | Feature | Example | Notes |
 |---------|---------|-------|
-| Multiline strings | `\| continuation` | Lexer: `eatMultilineLiteral()` |
+| Else expression | `expr?.method() : fallback` | Short-circuit else clause |
 | String interpolation | `$"text {expr}"` | Lexer: `eatTemplateExpression()` |
 
 #### Lower Priority
@@ -544,7 +550,7 @@ Need to implement `WorkspaceIndex` for cross-file symbol tracking.
 
 ## Grammar Coverage Progress
 
-The grammar validates and now supports many XTC language features. Coverage improved from 9% to 42.5% (294/691 files).
+The grammar validates and now supports many XTC language features. Coverage improved from 9% to 55.1% (381/691 files).
 
 ### Common Remaining Parse Errors
 
@@ -552,17 +558,16 @@ Files failing to parse typically use these advanced features (still being added)
 
 | Error Pattern | Example | Notes |
 |---------------|---------|-------|
-| Multiline strings | `\|...` continuation | Requires lexer-level handling |
+| Else expression | `expr?.method() : fallback` | Short-circuit else clause |
 | String interpolation | `$"Hello {name}"` | Template expressions with `{expr}` |
-| `this:` variants | `this:private`, `this:struct` | Special member access forms |
 
 ### Improvement Path
 
 1. ✅ Added missing grammar rules to `TreeSitterGenerator.kt`
 2. ✅ Regenerate and validate grammar
-3. ✅ Coverage improved from 21% (144/675) to 42.5% (294/691)
-4. 🔄 Next: Implement safe-call-else pattern `expr?.method() : fallback`
-5. Target: 50%+ of XTC files parsing successfully for initial LSP release
+3. ✅ Coverage improved from 21% (144/675) to 55.1% (381/691)
+4. 🔄 Next: Implement else expression pattern `expr?.method() : fallback`
+5. ✅ Target met: 55%+ of XTC files parsing successfully
 
 ---
 

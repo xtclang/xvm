@@ -5,9 +5,9 @@ import java.io.File;
 import java.io.IOException;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -23,7 +23,6 @@ import org.xvm.compiler.ast.*;
 import org.xvm.tool.ResourceDir;
 
 import org.xvm.util.Handy;
-import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
 
@@ -31,6 +30,13 @@ import org.xvm.util.Severity;
  * A recursive descent parser for Ecstasy source code.
  */
 public class Parser {
+    // ----- inner types ---------------------------------------------------------------------------
+
+    /**
+     * Result of parsing modifiers and annotations.
+     */
+    private record ParsedModifiers(List<Token> modifiers, List<AnnotationExpression> annotations) {}
+
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -75,7 +81,7 @@ public class Parser {
 
     /**
      * Parse the compilation unit.
-     *
+     * <p>
      * <p/><code><pre>
      * CompilationUnit
      *     AliasStatements-opt TypeDeclaration
@@ -94,7 +100,7 @@ public class Parser {
             // during parsing
             m_fDone = true;
 
-            List<Statement> stmts = parseTypeCompositionComponents(null, new ArrayList<>(), true);
+            var stmts = parseTypeCompositionComponents(null, new ArrayList<>(), true);
             m_root = new StatementBlock(stmts, m_source, stmts.getFirst().getStartPosition(),
                     stmts.getLast().getEndPosition());
 
@@ -112,10 +118,10 @@ public class Parser {
     /**
      * Parse the "implicits.x" file format.
      *
-     * @return a Map from String import name to qualified name (as a String[])
+     * @return a Map from String import name to qualified name (as a List of Strings)
      */
-    public Map<String, String[]> parseImplicits() {
-        Map<String, String[]> imports = new ListMap<>();
+    public Map<String, List<String>> parseImplicits() {
+        var imports = new LinkedHashMap<String, List<String>>();
 
         while (!eof()) {
             ImportStatement stmt = parseImportStatement(null);
@@ -148,7 +154,7 @@ public class Parser {
                         m_errorListener = new ErrorList(1);
                         List<Token> tokens = parseQualifiedName();
                         if (!m_errorListener.hasSeriousErrors()) {
-                            StringBuilder sb = new StringBuilder();
+                            var sb = new StringBuilder();
                             for (int i = 0, c = tokens.size(); i < c; ++i) {
                                 if (i > 0) {
                                     sb.append('.');
@@ -166,7 +172,8 @@ public class Parser {
                     }
                 }
             }
-        } catch (RuntimeException ignore) {
+        } catch (RuntimeException _) {
+            //TODO: Add debug log
         } finally {
             m_errorListener = errsPrev;
         }
@@ -176,7 +183,7 @@ public class Parser {
 
     /**
      * As part of the runtime (NOT compile-time), parse the name of the class that is in the source.
-     *
+     * <p>
      * <p/><code><pre>
      * ClassExpression
      *     AnnotationList-opt ModuleName-opt QualifiedName TypeParameterTypeList-opt ChildClasses-opt Modifiers-opt
@@ -206,7 +213,7 @@ public class Parser {
      *     "[" DimIndicators-opt "]"
      *     "..."
      * </pre></code>
-     *
+     * <p>
      * In the above BNF, the definitions are custom to this method, except for ArgumentList,
      * DimIndicators, and QualifiedName
      *
@@ -265,7 +272,7 @@ public class Parser {
 
     /**
      * Parse a type declaration
-     *
+     * <p>
      * <p/><code><pre>
      * TypeComposition
      *     Modifiers-opt Category QualifiedName TypeParameterList-opt     ->
@@ -310,11 +317,10 @@ public class Parser {
         List<Token>                modifiers   = null;
         List<AnnotationExpression> annotations = null;
 
-        List[] twoLists = parseModifiers();
-        if (twoLists != null) {
-            // note to self: this language needs multiple return values
-            modifiers   = twoLists[0];
-            annotations = twoLists[1];
+        var parsed = parseModifiers();
+        if (parsed != null) {
+            modifiers   = parsed.modifiers();
+            annotations = parsed.annotations();
         }
 
         return parseTypeDeclarationStatementAfterModifiers(lStartPos, null, doc, modifiers, annotations);
@@ -327,22 +333,15 @@ public class Parser {
                 Expression exprCondition, Token doc, List<Token> modifiers,
                 List<AnnotationExpression> annotations) {
         // category & name
-        Token category;
-        Token name;
+        Token       category  = matchAnyOf(TYPE_COMPOSITION_KEYWORDS_NO_MODULE);
+        Token       name;
         List<Token> qualified = null;
-        if (       (category = match(Id.PACKAGE   )) != null
-                || (category = match(Id.CLASS     )) != null
-                || (category = match(Id.INTERFACE )) != null
-                || (category = match(Id.SERVICE   )) != null
-                || (category = match(Id.CONST     )) != null
-                || (category = match(Id.ENUM      )) != null
-                || (category = match(Id.ANNOTATION)) != null
-                || (category = match(Id.MIXIN     )) != null) {
+        if (category != null) {
             name = expect(Id.IDENTIFIER);
         } else {
             category  = expect(Id.MODULE);
             qualified = parseQualifiedName();
-            name      = qualified.get(0);
+            name      = qualified.getFirst();
         }
 
         // optional type parameters
@@ -428,7 +427,7 @@ public class Parser {
                                 paramnames  = new ArrayList<>();
                                 for (Parameter param : params) {
                                     Token       tokName       = param.getNameToken();
-                                    List<Token> listParamName = Collections.singletonList(tokName);
+                                    List<Token> listParamName = List.of(tokName);
                                     paramnames.add(new NamedTypeExpression(null, listParamName,
                                             null, null, null, tokName.getEndPosition()));
                                 }
@@ -450,10 +449,9 @@ public class Parser {
                 case IMPORT: {
                     keyword = current();
                     Token modifier;
-                    if (   (modifier = match(Id.EMBEDDED)) != null
-                        || (modifier = match(Id.REQUIRED)) != null
-                        || (modifier = match(Id.DESIRED)) != null
-                        || (modifier = match(Id.OPTIONAL)) != null) {}
+                    if ((modifier = match(Id.EMBEDDED)) == null && (modifier = match(Id.REQUIRED)) == null && (modifier = match(Id.DESIRED)) == null) {
+                        modifier = match(Id.OPTIONAL);
+                    }
 
                     List<Token>           names    = parseQualifiedName();
                     NamedTypeExpression   module   = new ModuleTypeExpression(names);
@@ -486,7 +484,7 @@ public class Parser {
 
     /**
      * Parse the body of a type composition, including support for enum bodies.
-     *
+     * <p>
      * <p/><code><pre>
      * EnumList
      *     Enums ";"
@@ -499,7 +497,7 @@ public class Parser {
      *     Annotations-opt Name TypeParameterTypeList-opt ArgumentList-opt TypeCompositionBody-opt
      * </pre></code>
      *
-     * @return
+     * @return StatementBlock
      */
     StatementBlock parseTypeCompositionBody(Token category) {
         List<Statement> stmts = new ArrayList<>();
@@ -556,7 +554,7 @@ public class Parser {
 
     /**
      * Parse the components of a type composition.
-     *
+     * <p>
      * <p/><code><pre>
      * TypeCompositionComponents
      *     TypeCompositionComponent
@@ -573,7 +571,8 @@ public class Parser {
      *
      * @return a list of statements
      */
-    List<Statement> parseTypeCompositionComponents(Expression exprCondition, List<Statement> stmts,
+    List<Statement> parseTypeCompositionComponents(@SuppressWarnings("SameParameterValue") Expression exprCondition,
+                                                   List<Statement> stmts,
                                                    boolean fFileLevel) {
         boolean fFoundType = false;
         while (match(Id.R_CURLY) == null) {
@@ -637,7 +636,7 @@ public class Parser {
 
     /**
      * Parse the components of a type composition.
-     *
+     * <p>
      * <p/><code><pre>
      * TypeCompositionComponent
      *     [..]
@@ -646,9 +645,9 @@ public class Parser {
      *     MethodDeclaration
      *     ConstantDeclaration
      * </pre></code>
-     *
+     * <p>
      * And if other statements are allowed:
-     *
+     * <p>
      * <p/><code><pre>
      * VariableDeclarationStatement
      *     TypeExpression Name VariableInitializerFinish-opt ";"
@@ -698,11 +697,10 @@ public class Parser {
         List<Token>                modifiers   = null;
         List<AnnotationExpression> annotations = null;
 
-        List[] twoLists = parseModifiers(true);
-        if (twoLists != null) {
-            // note to self: this language needs multiple return values
-            modifiers   = twoLists[0];
-            annotations = twoLists[1];
+        var parsed = parseModifiers(true);
+        if (parsed != null) {
+            modifiers   = parsed.modifiers();
+            annotations = parsed.annotations();
         }
 
         // both constant and property have a TypeExpression next
@@ -874,17 +872,10 @@ public class Parser {
             restore(mark);
         }
         // fall through
-        default:
-            Token category;
-            if (       (category = match(Id.MODULE    )) != null
-                    || (category = match(Id.PACKAGE   )) != null
-                    || (category = match(Id.CLASS     )) != null
-                    || (category = match(Id.INTERFACE )) != null
-                    || (category = match(Id.SERVICE   )) != null
-                    || (category = match(Id.CONST     )) != null
-                    || (category = match(Id.ENUM      )) != null
-                    || (category = match(Id.ANNOTATION)) != null
-                    || (category = match(Id.MIXIN     )) != null) {
+        default: {
+            // check for type composition keywords (MODULE, PACKAGE, CLASS, etc.)
+            Token category = matchAnyOf(TYPE_COMPOSITION_KEYWORDS);
+            if (category != null) {
                 putBack(category);
                 if (fInMethod && (category.getId() == Id.MODULE || category.getId() == Id.PACKAGE)) {
                     log(Severity.ERROR, NO_TOP_LEVEL, peek().getStartPosition(), peek().getEndPosition());
@@ -894,10 +885,7 @@ public class Parser {
                                                                    modifiers, annotations);
             }
 
-        // the following two case options are listed here solely for doc purposes; while they
-        // can be "matched", they cannot be "peeked" (because they're context sensitive)
-        case VAL:
-        case VAR: {
+            // try to match var/val (context-sensitive keywords that appear as IDENTIFIER to peek())
             Token tokType = matchVarOrVal();
             if (tokType != null) {
                 if (!fInMethod) {
@@ -942,7 +930,7 @@ public class Parser {
                 // '<' indicates redundant return type list
                 // '(' indicates parameters
                 return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc, modifiers,
-                        annotations, null, null, Collections.singletonList(new Parameter(type)), name);
+                        annotations, null, null, List.of(new Parameter(type)), name);
             } else {
                 if (fInMethod && modifiers == null) {
                     return parseVariableDeclarationAfterName(annotations, type, name);
@@ -965,32 +953,15 @@ public class Parser {
      * @return a expression statement, an assignment statement, or null
      */
     Statement parsePossibleExpressionOrAssignmentStatement(Expression expr) {
-        switch (peek().getId()) {
-        case SEMICOLON:
+        if (peek(Id.SEMICOLON)) {
             expect(Id.SEMICOLON);
             return new ExpressionStatement(expr);
+        }
 
-        case ASN:
-        case ADD_ASN:
-        case SUB_ASN:
-        case MUL_ASN:
-        case DIV_ASN:
-        case MOD_ASN:
-        case SHL_ASN:
-        case SHR_ASN:
-        case USHR_ASN:
-        case BIT_AND_ASN:
-        case BIT_OR_ASN:
-        case BIT_XOR_ASN:
-        case COND_ASN:
-        case COND_AND_ASN:
-        case COND_OR_ASN:
-        case COND_NN_ASN:
-        case COND_ELSE_ASN: {
+        if (ALL_ASSIGNMENT_OPS.contains(peek().getId())) {
             AssignmentStatement stmt = new AssignmentStatement(expr, current(), parseExpression());
             expect(Id.SEMICOLON);
             return stmt;
-        }
         }
 
         return null;
@@ -1054,11 +1025,13 @@ public class Parser {
             break;
         case ASN:
             Token eq = expect(Id.ASN);
-            Expression expr = parseExpression();
+            var expr = parseExpression();
             Token semi = expect(Id.SEMICOLON);
-            ReturnStatement stmt = new ReturnStatement(eq, expr);
-            body = new StatementBlock(Arrays.asList(stmt), stmt.getStartPosition(),
-                                                           semi.getEndPosition());
+            var stmt = new ReturnStatement(eq, expr);
+            body = new StatementBlock(
+                    List.of(stmt),
+                    stmt.getStartPosition(),
+                    semi.getEndPosition());
             break;
         default:
             body = parseStatementBlock();
@@ -1084,7 +1057,7 @@ public class Parser {
 
     /**
      * Parse the remainder of a property statement.
-     *
+     * <p>
      * <p/><code><pre>
      * PropertyDeclarationFinish
      *     "=" Expression ";"
@@ -1102,25 +1075,24 @@ public class Parser {
         boolean        fNeedsSemi = false;
         if (match(Id.DOT) != null) {
             // "." Name Parameters MethodBody
-            Token           methodName = expect(Id.IDENTIFIER);
-            List<Parameter> params     = parseParameterList(true);
-            StatementBlock  block;
-            Token           eq         =  match(Id.ASN);
+            var methodName = expect(Id.IDENTIFIER);
+            var params     = parseParameterList(true);
+            var eq =  match(Id.ASN);
+
+            final StatementBlock block;
             if (eq != null) {
                 Expression expr = parseExpression();
                 ReturnStatement stmt = new ReturnStatement(eq, expr);
-                block = new StatementBlock(Arrays.asList(stmt), stmt.getStartPosition(),
-                                                                stmt.getEndPosition());
+                block = new StatementBlock(List.of(stmt), stmt.getStartPosition(), stmt.getEndPosition());
                 fNeedsSemi = true;
             } else {
-                block      = parseStatementBlock();
+                block = parseStatementBlock();
             }
 
             MethodDeclarationStatement method = new MethodDeclarationStatement(
                     methodName.getStartPosition(), block.getEndPosition(), null, null, null, null,
                     null, null, methodName, null, params, block, null, null, null);
-            body    = new StatementBlock(Collections.singletonList(method),
-                    method.getStartPosition(), method.getEndPosition());
+            body    = new StatementBlock(List.of(method), method.getStartPosition(), method.getEndPosition());
             lEndPos = body.getEndPosition();
         } else if (peek(Id.L_CURLY)) {
             // pretend we're parsing a class (use the property name token as the basis)
@@ -1146,7 +1118,7 @@ public class Parser {
 
     /**
      * Parse a block statement.
-     *
+     * <p>
      * <p/><code><pre>
      * </pre></code>
      *
@@ -1164,7 +1136,7 @@ public class Parser {
 
     /**
      * Parse an Ecstasy statement.
-     *
+     * <p>
      * <p/><code><pre>
      * Statement
      *     TypeComposition
@@ -1324,18 +1296,13 @@ public class Parser {
         case WHILE:
             return parseWhileStatement();
 
-        case IDENTIFIER:
-            Token decl;
-            if (       (decl = match(Id.CLASS     )) != null
-                    || (decl = match(Id.INTERFACE )) != null
-                    || (decl = match(Id.SERVICE   )) != null
-                    || (decl = match(Id.CONST     )) != null
-                    || (decl = match(Id.ENUM      )) != null
-                    || (decl = match(Id.ANNOTATION)) != null
-                    || (decl = match(Id.MIXIN     )) != null) {
+        case IDENTIFIER: {
+            // check for inner type composition keywords (CLASS, INTERFACE, etc. - no MODULE/PACKAGE)
+            Token decl = matchAnyOf(INNER_TYPE_KEYWORDS);
+            if (decl != null) {
                 putBack(decl);
                 return parseTypeCompositionStatement();
-            } {
+            }
             // check if it is a LabeledStatement
             Token name = expect(Id.IDENTIFIER);
             if (!name.hasTrailingWhitespace() && peek(Id.COLON) && peek().hasTrailingWhitespace()) {
@@ -1345,7 +1312,7 @@ public class Parser {
                 putBack(name);
             }
         }
-            // fall through
+        // fall through
         default:
             return parseTypeCompositionComponent(null, true);
         }
@@ -1353,7 +1320,7 @@ public class Parser {
 
     /**
      * Parse an "assert" statement.
-     *
+     * <p>
      * <p/><code><pre>
      * AssertStatement
      *     AssertInstruction ConditionList-opt AssertMessage-opt ";"
@@ -1413,7 +1380,7 @@ public class Parser {
 
     /**
      * Parse a "do" statement.
-     *
+     * <p>
      * <p/><code><pre>
      * DoStatement
      *     "do" StatementBlock "while" "(" ConditionList ")" ";"
@@ -1434,7 +1401,7 @@ public class Parser {
 
     /**
      * Parse a "for" statement.
-     *
+     * <p>
      * <p/><code><pre>
      * ForStatement
      *     "for" "(" ForCondition ")" StatementBlock
@@ -1476,7 +1443,7 @@ public class Parser {
         // figure out which form of the "for" statement this is:
         // 1) VariableInitializationList-opt ";" Expression-opt ";" VariableModificationList-opt
         // 2) OptionalDeclarationList ":" Expression
-        List<AstNode> init = new ArrayList<>();
+        List<Statement> init = new ArrayList<>();
         if (!peek(Id.SEMICOLON)) {
             boolean fFirst = true;
             do {
@@ -1532,49 +1499,29 @@ public class Parser {
             }
 
             Expression exprUpdate = parseExpression();
-            Token.Id   op         = Id.ASN;
-            switch (peek().getId()) {
-            case R_PAREN:
-            case COMMA:
-                update.add(new ExpressionStatement(exprUpdate, false));
-                break;
+            Id         peekId     = peek().getId();
 
-            case ADD_ASN:
-            case SUB_ASN:
-            case MUL_ASN:
-            case DIV_ASN:
-            case MOD_ASN:
-            case SHL_ASN:
-            case SHR_ASN:
-            case USHR_ASN:
-            case BIT_AND_ASN:
-            case BIT_OR_ASN:
-            case BIT_XOR_ASN:
-            case COND_ASN:
-            case COND_AND_ASN:
-            case COND_OR_ASN:
-            case COND_NN_ASN:
-            case COND_ELSE_ASN:
-                op = peek().getId();
-                // fall through
-            default:
+            if (peekId == Id.R_PAREN || peekId == Id.COMMA) {
+                update.add(new ExpressionStatement(exprUpdate, false));
+            } else {
+                // determine assignment operator (compound ops override default ASN)
+                Id op = ALL_ASSIGNMENT_OPS.contains(peekId) && peekId != Id.ASN ? peekId : Id.ASN;
                 // the expression has to be an L-Value
                 if (!exprUpdate.isLValueSyntax()) {
                     log(Severity.ERROR, NOT_ASSIGNABLE,
                             exprUpdate.getStartPosition(), exprUpdate.getEndPosition());
                 }
                 update.add(new AssignmentStatement(exprUpdate, expect(op), parseExpression(), false));
-                break;
             }
         }
 
         expect(Id.R_PAREN);
-        return new ForStatement(keyword, (List<Statement>) (List) init, conds, update, parseStatementBlock());
+        return new ForStatement(keyword, init, conds, update, parseStatementBlock());
     }
 
     /**
      * Parse an "if" statement.
-     *
+     * <p>
      * <p/><code><pre>
      * IfStatement
      *     "if" "(" ConditionList ")" StatementBlock ElseStatement-opt
@@ -1603,7 +1550,7 @@ public class Parser {
 
     /**
      * Parse a ConditionList, which is used in "assert", "if", "for", "while", and "do" statements.
-     *
+     * <p>
      * <p/><code><pre>
      * ConditionList
      *     Condition
@@ -1721,7 +1668,7 @@ public class Parser {
 
     /**
      * Parse an import statement.
-     *
+     * <p>
      * <p/><code><pre>
      * ImportStatement
      *     "import" QualifiedName ImportFinish
@@ -1766,7 +1713,7 @@ public class Parser {
 
     /**
      * Parse a return statement.
-     *
+     * <p>
      * <p/><code><pre>
      * ReturnStatement
      *     "return" ReturnValue-opt ";"
@@ -1794,7 +1741,7 @@ public class Parser {
 
     /**
      * Parse a "switch" statement.
-     *
+     * <p>
      * <p/><code><pre>
      * SwitchStatement
      *     switch "(" SwitchCondition-opt ")" "{" SwitchBlocks "}"
@@ -1923,7 +1870,7 @@ public class Parser {
 
     /**
      * Parse a "switch" condition.
-     *
+     * <p>
      * <p/><code><pre>
      * SwitchCondition
      *     SwitchConditionExpression
@@ -2013,7 +1960,7 @@ public class Parser {
 
     /**
      * Parse an expression list for a case label, but one that does not look for a trailing ':'.
-     *
+     * <p>
      * <p/><code><pre>
      * SwitchLabel
      *     "case" CaseOptionList ":"
@@ -2041,7 +1988,7 @@ public class Parser {
      *     TernaryExpression
      * </pre></code>
      *
-     * @return
+     * @return List of Expressions
      */
     private List<Expression> parseCaseOptionList() {
         ArrayList<Expression> listCaseOptions = new ArrayList<>();
@@ -2119,7 +2066,8 @@ public class Parser {
                 // assuming that we haven't already started building a list of declarations,
                 // encountering an expression followed by anything other than an identifier (for
                 // a declaration) or a comma indicates that we're going down the wrong path
-                // REVIEW does this correctly parse @annotated types? should "Annotations" be added to "PrimaryExpression"? (seems logical)
+                // REVIEW does this correctly parse @annotated types? should "Annotations" be added to
+                // "PrimaryExpression"? (seems logical)
                 Expression expr = parseExtendedExpression();
 
                 // next token   meaning
@@ -2165,7 +2113,7 @@ public class Parser {
 
     /**
      * Parse a "try" statement.
-     *
+     * <p>
      * <p/><code><pre>
      * TryStatement
      *     "try" ResourceDeclaration-opt StatementBlock TryFinish
@@ -2217,7 +2165,7 @@ public class Parser {
 
     /**
      * Parse a typedef statement.
-     *
+     * <p>
      * <p/><code><pre>
      * TypeDefStatement
      *     "typedef" Type Name ";"
@@ -2245,7 +2193,7 @@ public class Parser {
 
     /**
      * Parse a "using" statement.
-     *
+     * <p>
      * <p/><code><pre>
      * UsingStatement
      *     "using" ResourceDeclaration StatementBlock
@@ -2266,7 +2214,7 @@ public class Parser {
 
     /**
      * Parse a "while" statement.
-     *
+     * <p>
      * <p/><code><pre>
      * WhileStatement
      *     "while" "(" ConditionList ")" StatementBlock
@@ -2285,7 +2233,7 @@ public class Parser {
 
     /**
      * Parse a variable initializer:
-     *
+     * <p>
      * <p/><code><pre>
      * VariableInitializationList
      *     VariableInitializer
@@ -2303,7 +2251,7 @@ public class Parser {
      *
      * @return a statement representing the variable initializer
      */
-    List<AssignmentStatement> parseVariableInitializationList(boolean fRequired, boolean fAllowExpr) {
+    List<AssignmentStatement> parseVariableInitializationList(@SuppressWarnings("SameParameterValue") boolean fRequired, boolean fAllowExpr) {
         if (!fRequired) {
             switch (peek().getId()) {
             case COMMA:
@@ -2313,7 +2261,7 @@ public class Parser {
             }
         }
 
-        List<AssignmentStatement> list = new ArrayList<>();
+        var list = new ArrayList<AssignmentStatement>();
         do {
             list.add(parseVariableInitializer(fAllowExpr));
         } while (match(Id.COMMA) != null);
@@ -2322,7 +2270,7 @@ public class Parser {
 
     /**
      * Parse a variable initializer:
-     *
+     * <p>
      * <p/><code><pre>
      * VariableInitializer
      *     TypeExpression-opt Name VariableInitializerFinish
@@ -2385,7 +2333,7 @@ public class Parser {
 
     /**
      * Parse a condition expression.
-     *
+     * <p>
      * <p/><code><pre>
      * while parsing is of a generic Expression, there are only a few expression
      * forms that are permitted:
@@ -2398,6 +2346,7 @@ public class Parser {
      *
      * @return an expression
      */
+    @SuppressWarnings("unused")
     Expression parseLinkerCondition() {
         Expression expr = parseExpression();
         expr.validateCondition(m_errorListener);
@@ -2406,7 +2355,7 @@ public class Parser {
 
     /**
      * Parse a list of expressions.
-     *
+     * <p>
      * <p/><code><pre>
      * ExpressionList
      *     Expression
@@ -2443,7 +2392,7 @@ public class Parser {
 
     /**
      * Parse an "else" expression (the "grounding" expression for any short-circuit expressions).
-     *
+     * <p>
      * <p/><code><pre>
      * Expression
      *     TernaryExpression
@@ -2464,7 +2413,7 @@ public class Parser {
 
     /**
      * Parse a ternary expression, which is the "a ? b : c" expression.
-     *
+     * <p>
      * <p/><code><pre>
      * TernaryExpression
      *     OrExpression
@@ -2479,7 +2428,7 @@ public class Parser {
 
     /**
      * Parse a ternary expression, which is the "a ? b : c" expression.
-     *
+     * <p>
      * <p/><code><pre>
      * TernaryExpression
      *     OrExpression
@@ -2504,7 +2453,7 @@ public class Parser {
 
     /**
      * Parse a logical "or"/"xor" expression.
-     *
+     * <p>
      * <p/><code><pre>
      * OrExpression
      *     AndExpression
@@ -2536,7 +2485,7 @@ public class Parser {
 
     /**
      * Parse a logical "and" expression.
-     *
+     * <p>
      * <p/><code><pre>
      * AndExpression
      *     EqualityExpression
@@ -2557,7 +2506,7 @@ public class Parser {
 
     /**
      * Parse an equality/inequality expression.
-     *
+     * <p>
      * <p/><code><pre>
      * EqualityExpression
      *     RelationalExpression
@@ -2595,9 +2544,8 @@ public class Parser {
                 listExpr.add(exprNext);
 
                 Token.Id idCur = tokCmp.getId();
-                if (idPrev != null && idCur != idPrev && !fErr) {
-                    log(Severity.ERROR, BAD_CHAINED_EQ,
-                            tokCmp.getStartPosition(), tokCmp.getEndPosition());
+                if (idCur != idPrev && !fErr) {
+                    log(Severity.ERROR, BAD_CHAINED_EQ, tokCmp.getStartPosition(), tokCmp.getEndPosition());
                     fErr = true;
                 }
             }
@@ -2605,14 +2553,16 @@ public class Parser {
             idPrev = tokCmp.getId();
         }
 
-        return expr == null
-                ? new CmpChainExpression(listExpr, listOps.toArray(new Token[0]))
-                : expr;
+        if (expr == null) {
+            assert listExpr != null;
+            return new CmpChainExpression(listExpr, List.copyOf(listOps));
+        }
+        return expr;
     }
 
     /**
      * Parse a relational expression.
-     *
+     * <p>
      * <p/><code><pre>
      * RelationalExpression
      *     AssignmentExpression
@@ -2675,15 +2625,14 @@ public class Parser {
                 break;
 
             default:
-                return new CmpChainExpression(listExpr, listOps.toArray(new Token[0]));
+                return new CmpChainExpression(listExpr, List.copyOf(listOps));
             }
 
             listOps .add(current());
             listExpr.add(parseAssignmentExpression(false));
 
             if (fThisAscending != fFirstAscending && !fErr) {
-                log(Severity.ERROR, BAD_CHAINED_CMP,
-                        expr.getStartPosition(), expr.getEndPosition());
+                log(Severity.ERROR, BAD_CHAINED_CMP, expr.getStartPosition(), expr.getEndPosition());
                 fErr = true;
             }
         }
@@ -2691,7 +2640,7 @@ public class Parser {
 
     /**
      * Parse an assignment expression.
-     *
+     * <p>
      * <p/><code><pre>
      * AssignmentExpression
      *     RangeExpression
@@ -2736,7 +2685,7 @@ public class Parser {
 
     /**
      * Parse an interval or range expression.
-     *
+     * <p>
      * <p/><code><pre>
      * RangeExpression
      *     BitwiseExpression
@@ -2766,7 +2715,7 @@ public class Parser {
 
     /**
      * Parse a bitwise shift expression.
-     *
+     * <p>
      * <p/><code><pre>
      * ShiftExpression
      *     AdditiveExpression
@@ -2804,7 +2753,7 @@ public class Parser {
 
     /**
      * Parse an addition or subtraction expression.
-     *
+     * <p>
      * <p/><code><pre>
      * AdditiveExpression
      *     MultiplicativeExpression
@@ -2827,7 +2776,7 @@ public class Parser {
 
     /**
      * Parse a multiplication / division / modulo expression.
-     *
+     * <p>
      * <p/><code><pre>
      * MultiplicativeExpression
      *     ElvisExpression
@@ -2860,7 +2809,7 @@ public class Parser {
 
     /**
      * Parse an "elvis" expression, which is of the form "a ?: b".
-     *
+     * <p>
      * <p/><code><pre>
      * ElvisExpression
      *     PrefixExpression
@@ -2881,7 +2830,7 @@ public class Parser {
 
     /**
      * Parse a prefix expression.
-     *
+     * <p>
      * <p/><code><pre>
      * PrefixExpression
      *     PostfixExpression
@@ -2898,29 +2847,18 @@ public class Parser {
      * @return an expression
      */
     Expression parsePrefixExpression(boolean fExtended) {
-        switch (peek().getId()) {
-        case ADD:
-            return new UnaryPlusExpression(current(), parsePrefixExpression(false));
-
-        case SUB:
-            return new UnaryMinusExpression(current(), parsePrefixExpression(false));
-
-        case NOT:
-        case BIT_NOT:
-            return new UnaryComplementExpression(current(), parsePrefixExpression(false));
-
-        case INC:
-        case DEC:
-            return new SequentialAssignExpression(current(), parsePrefixExpression(false));
-
-        default:
-            return parsePostfixExpression(fExtended);
-        }
+        return switch (peek().getId()) {
+            case ADD -> new UnaryPlusExpression(current(), parsePrefixExpression(false));
+            case SUB -> new UnaryMinusExpression(current(), parsePrefixExpression(false));
+            case NOT, BIT_NOT -> new UnaryComplementExpression(current(), parsePrefixExpression(false));
+            case INC, DEC -> new SequentialAssignExpression(current(), parsePrefixExpression(false));
+            default -> parsePostfixExpression(fExtended);
+        };
     }
 
     /**
      * Parse a prefix expression.
-     *
+     * <p>
      * <p/><code><pre>
      * PostfixExpression
      *     PrimaryExpression
@@ -3001,6 +2939,7 @@ public class Parser {
                 case AS:
                 case IS: {
                     Token          keyword  = current();
+                    @SuppressWarnings("unused")
                     Token          tokOpen  = expect(Id.L_PAREN);
                     TypeExpression exprType = parseExtendedTypeExpression();
                     Token          tokClose = expect(Id.R_PAREN);
@@ -3040,7 +2979,7 @@ public class Parser {
 
                     if (expr instanceof NamedTypeExpression) {
                         expr = new NamedTypeExpression((NamedTypeExpression) expr,
-                                Collections.singletonList(name), params, lEndPos);
+                                List.of(name), params, lEndPos);
                     } else {
                         expr = new NameExpression(expr, noDeRef, name, params, lEndPos);
                     }
@@ -3147,7 +3086,7 @@ public class Parser {
                     dims    = args.size();
                     lEndPos = prev().getEndPosition();
                 } else {
-                    args = Collections.emptyList();
+                    args = List.of();
                 }
 
                 // parenthesized arguments after the dims
@@ -3219,7 +3158,7 @@ public class Parser {
         case ANY: {
             IgnoredNameExpression exprIgnore = new IgnoredNameExpression(current());
             return peek(Id.LAMBDA)
-                    ? new LambdaExpression(Collections.singletonList(exprIgnore),
+                    ? new LambdaExpression(List.of(exprIgnore),
                         expect(Id.LAMBDA), parseLambdaBody(), exprIgnore.getStartPosition())
                     : exprIgnore;
         }
@@ -3294,14 +3233,9 @@ public class Parser {
         case CONSTRUCT:
         case IDENTIFIER: {
             if (fExtended) {
-                Token decl;
-                if (       (decl = match(Id.CONST  )) != null
-                        || (decl = match(Id.ENUM   )) != null
-                        || (decl = match(Id.MODULE )) != null
-                        || (decl = match(Id.PACKAGE)) != null
-                        || (decl = match(Id.SERVICE)) != null
-                        || (decl = match(Id.CLASS  )) != null
-                        || (decl = match(Id.STRUCT )) != null) {
+                // check for type literal keywords
+                Token decl = matchAnyOf(TYPE_LITERAL_KEYWORDS);
+                if (decl != null) {
                     putBack(decl);
                     return parseExtendedTypeExpression();
                 }
@@ -3321,7 +3255,7 @@ public class Parser {
 
             // test for single-param implicit lambda
             if (fNormal && peek(Id.LAMBDA)) {
-                return new LambdaExpression(Collections.singletonList(new NameExpression(name)),
+                return new LambdaExpression(List.of(new NameExpression(name)),
                         expect(Id.LAMBDA), parseLambdaBody(), name.getStartPosition());
             }
 
@@ -3394,7 +3328,7 @@ public class Parser {
                 if (!colon.hasLeadingWhitespace()) {
                     switch (peek().getId()) {
                     case L_PAREN:
-                        if (left != null || !"Tuple".equals(name.getValueText())) {
+                        if (!"Tuple".equals(name.getValueText())) {
                             break;
                         }
                         // fall through
@@ -3442,7 +3376,7 @@ public class Parser {
                 Token lambdaOp = match(Id.LAMBDA);
                 if (lambdaOp != null) {
                     // zero-argument lambda
-                    return new LambdaExpression(Collections.emptyList(), lambdaOp,
+                    return new LambdaExpression(List.of(), lambdaOp,
                             parseLambdaBody(), tokLParen.getStartPosition());
                 } else {
                     // the empty tuple: "()" (or the empty tuple with a trailing comma: "(,)")
@@ -3475,7 +3409,7 @@ public class Parser {
                 // lambda (it's not a tuple literal)
                 expect(Id.R_PAREN);
                 if (peek(Id.LAMBDA)) {
-                    return new LambdaExpression(Collections.singletonList(expr),
+                    return new LambdaExpression(List.of(expr),
                             expect(Id.LAMBDA), parseLambdaBody(), tokLParen.getStartPosition());
                 } else {
                     // just a parenthesized expression
@@ -3595,7 +3529,7 @@ public class Parser {
 
             Token   tokFile  = parsePath();
             String  sFile    = (String) tokFile.getValue();
-            boolean fDir     = !fContents && sFile.endsWith("/");
+            //boolean fDir     = !fContents && sFile.endsWith("/");
             long    lEnd     = tokFile.getEndPosition();
             Object  resource = m_source.resolvePath(sFile);
 
@@ -3642,7 +3576,7 @@ public class Parser {
 
     private static List<Token> toList(NameExpression left, Token name) {
         if (left == null) {
-            return Collections.singletonList(name);
+            return List.of(name);
         }
 
         List<Token> names = left.getNameTokens();
@@ -3654,114 +3588,155 @@ public class Parser {
      * Starting with the current token, eat all tokens that are part of a potential file or
      * directory name, and return that file name as a "literal path" token.
      *
-     * @return  the file or directory name as a literal path token
+     * @return the file or directory name as a literal path token
      */
     Token parsePath() {
-        StringBuilder sb     = new StringBuilder();
-        Token         tokDiv = current();
-        long          lPos   = tokDiv.getStartPosition();
+        Token         tokStart = current();
+        long          lPos     = tokStart.getStartPosition();
+        Token         tokLast  = tokStart;
+
+        var sb = new StringBuilder();
+        sb.append(tokStart.getId().TEXT);
+        if (tokStart.hasTrailingWhitespace()) {
+            return new Token(lPos, tokStart.getEndPosition(), Id.LIT_PATH, sb.toString());
+        }
+
+        // DIV          -> DIR_CUR | DIR_PARENT | DOT | IDENTIFIER
+        // DIR_CUR      -> DIR_CUR | DIR_PARENT | DOT | IDENTIFIER
+        // DIR_PARENT   -> DIR_CUR | DIR_PARENT | DOT | IDENTIFIER
+        // IDENTIFIER   -> DOT | DIV
+        // DOT          -> IDENTIFIER
+        // note: there are no keywords in a path, so they're all treated as identifiers
         while (true) {
-            sb.append(tokDiv.getId().TEXT);
-
-            // whitespace after the divider indicates the end of the path
-            if (tokDiv.hasTrailingWhitespace()) {
-                return new Token(lPos, tokDiv.getEndPosition(), Id.LIT_PATH, sb.toString());
-            }
-
-            // DIV          -> DIR_CUR | DIR_PARENT | DOT | IDENTIFIER
-            // DIR_CUR      -> DIR_CUR | DIR_PARENT | DOT | IDENTIFIER
-            // DIR_PARENT   -> DIR_CUR | DIR_PARENT | DOT | IDENTIFIER
-            // IDENTIFIER   -> DOT | DIV
-            // DOT          -> IDENTIFIER
-            // note: there are no keywords in a path, so they're all treated as identifiers
-            switch (peek().getId()) {
-            case DOT:
-                Token tokDot = current();
-                sb.append('.');
-                if (tokDot.hasTrailingWhitespace()) {
-                    log(Severity.ERROR, INVALID_PATH, lPos, tokDot.getEndPosition(), sb.toString());
-                    throw new CompilerException("illegal include-file path: " + sb);
+            Id nextId = peek().getId();
+            switch (nextId) {
+                case DIR_CUR, DIR_PARENT -> {
+                    tokLast = current();
+                    sb.append(tokLast.getId().TEXT);
+                    if (tokLast.hasTrailingWhitespace()) {
+                        return new Token(lPos, tokLast.getEndPosition(), Id.LIT_PATH, sb.toString());
+                    }
                 }
-                // fall through
-            case ALLOW:
-            case ANNOTATION:  case AS:         case ASSERT:    case AVOID:
-            case BREAK:       case CASE:       case CATCH:     case CLASS:
-            case CONDITIONAL: case CONST:      case CONSTRUCT: case CONTINUE:
-            case DEFAULT:     case DELEGATES:  case DESIRED:   case DO:
-            case ELSE:        case EMBEDDED:   case ENUM:      case EXTENDS:
-            case FINALLY:     case FOR:        case FUNCTION:  case IF:
-            case IMMUTABLE:   case IMPLEMENTS: case IMPORT:    case INCORPORATES:
-            case INJECT:      case INTERFACE:  case INTO:      case IS:
-            case MIXIN:       case MODULE:     case NEW:       case OPTIONAL:
-            case OUTER:       case PACKAGE:    case PREFER:    case PRIVATE:
-            case PROTECTED:   case PUBLIC:     case REQUIRED:  case RETURN:
-            case SERVICE:     case STATIC:     case STRUCT:    case SUPER:
-            case SWITCH:      case THIS:       case THROW:     // no T0D0
-            case TRY:         case TYPEDEF:    case USING:     case VAL:
-            case VAR:         case VOID:       case WHILE:     case IDENTIFIER:
-                untilDiv: while (true) {
-                    Token tokName;
-                    switch (peek().getId()) {
-                    case ALLOW:
-                    case ANNOTATION:  case AS:         case ASSERT:    case AVOID:
-                    case BREAK:       case CASE:       case CATCH:     case CLASS:
-                    case CONDITIONAL: case CONST:      case CONSTRUCT: case CONTINUE:
-                    case DEFAULT:     case DELEGATES:  case DESIRED:   case DO:
-                    case ELSE:        case EMBEDDED:   case ENUM:      case EXTENDS:
-                    case FINALLY:     case FOR:        case FUNCTION:  case IF:
-                    case IMMUTABLE:   case IMPLEMENTS: case IMPORT:    case INCORPORATES:
-                    case INJECT:      case INTERFACE:  case INTO:      case IS:
-                    case MIXIN:       case MODULE:     case NEW:       case OPTIONAL:
-                    case OUTER:       case PACKAGE:    case PREFER:    case PRIVATE:
-                    case PROTECTED:   case PUBLIC:     case REQUIRED:  case RETURN:
-                    case SERVICE:     case STATIC:     case STRUCT:    case SUPER:
-                    case SWITCH:      case THIS:       case THROW:     // no T0D0
-                    case TRY:         case TYPEDEF:    case USING:     case VAL:
-                    case VAR:         case VOID:       case WHILE:     case IDENTIFIER:
-                        tokName = current();
-                        break;
-
-                    default:
-                        tokName = expect(Id.IDENTIFIER);
-                        break;
+                case DOT -> {
+                    tokLast = parsePathDotOrSeparator(sb, lPos);
+                    if (tokLast.hasTrailingWhitespace()) {
+                        log(Severity.ERROR, INVALID_PATH, lPos, tokLast.getEndPosition(), sb.toString());
+                        throw new CompilerException("illegal include-file path: " + sb);
                     }
-
-                    sb.append(tokName.getValue());
-                    if (tokName.hasTrailingWhitespace()) {
-                        return new Token(lPos, tokName.getEndPosition(), Id.LIT_PATH, sb.toString());
+                    tokLast = parsePathName(sb, lPos);
+                    if (tokLast == null || tokLast.hasTrailingWhitespace()) {
+                        return new Token(lPos, (tokLast != null ? tokLast : current()).getEndPosition(),
+                                Id.LIT_PATH, sb.toString());
                     }
-
-                    Token.Id id;
-                    switch (id = peek().getId()) {
-                    case DOT:
-                    case SUB:
-                        tokDot = current();
-                        sb.append(id.TEXT);
-                        if (tokDot.hasTrailingWhitespace()) {
-                            log(Severity.ERROR, INVALID_PATH, lPos, tokDot.getEndPosition(), sb.toString());
-                            throw new CompilerException("illegal include-file path: " + sb);
+                }
+                default -> {
+                    if (isPathNameComponent(nextId)) {
+                        tokLast = parsePathName(sb, lPos);
+                        if (tokLast == null || tokLast.hasTrailingWhitespace()) {
+                            return new Token(lPos, (tokLast != null ? tokLast : current()).getEndPosition(),
+                                    Id.LIT_PATH, sb.toString());
                         }
-                        break;
-
-                    case DIV:
-                        tokDiv = current();
-                        break untilDiv;
-
-                    default:
-                        return new Token(lPos, tokName.getEndPosition(), Id.LIT_PATH, sb.toString());
+                    } else {
+                        return new Token(lPos, tokLast.getEndPosition(), Id.LIT_PATH, sb.toString());
                     }
                 }
-                break;
-
-            case DIR_CUR:
-            case DIR_PARENT:
-                tokDiv = current();
-                break;
-
-            default:
-                return new Token(lPos, tokDiv.getEndPosition(), Id.LIT_PATH, sb.toString());
             }
         }
+    }
+
+    /**
+     * Parse the name portion of a path (e.g., "foo", "bar.x", "my-file.txt").
+     * Handles dot-separated and hyphen-separated components within a single filename.
+     *
+     * @param sb    the string builder to append the name to
+     * @param lPos  the start position of the overall path (for error reporting)
+     *
+     * @return the last token consumed, or null if no name was found; caller should check
+     *         for trailing whitespace to determine if path parsing should continue
+     */
+    private Token parsePathName(StringBuilder sb, long lPos) {
+        // Consume name components: identifier followed by optional (DOT|SUB identifier)*
+        while (true) {
+            Id nextId = peek().getId();
+            if (!isPathNameComponent(nextId)) {
+                expect(Id.IDENTIFIER);  // will produce appropriate error
+                return null;
+            }
+
+            Token tokName = current();
+            sb.append(tokName.getValue());
+
+            if (tokName.hasTrailingWhitespace()) {
+                return tokName;
+            }
+
+            // Check for continuation within filename (DOT or SUB) or directory separator (DIV)
+            Id followId = peek().getId();
+            switch (followId) {
+                case DOT, SUB -> {
+                    Token tokSep = parsePathDotOrSeparator(sb, lPos);
+                    if (tokSep.hasTrailingWhitespace()) {
+                        log(Severity.ERROR, INVALID_PATH, lPos, tokSep.getEndPosition(), sb.toString());
+                        throw new CompilerException("illegal include-file path: " + sb);
+                    }
+                    // continue loop to parse next name component
+                }
+                case DIV -> {
+                    Token tokDiv = current();
+                    sb.append('/');
+                    return tokDiv;
+                }
+                default -> {
+                    return tokName;
+                }
+            }
+        }
+    }
+
+    /**
+     * Consume a DOT or SUB token and append it to the path string.
+     *
+     * @param sb    the string builder to append to
+     * @param lPos  the start position (kept for compatibility)
+     *
+     * @return the consumed token
+     */
+    private Token parsePathDotOrSeparator(StringBuilder sb, @SuppressWarnings("unused") long lPos) {
+        Token tok = current();
+        sb.append(tok.getId().TEXT);
+        return tok;
+    }
+
+    /**
+     * Determine if a token ID can be used as a name component in a file path.
+     * Keywords are treated as valid identifiers in path contexts.
+     *
+     * @param id  the token ID to check
+     *
+     * @return true if the token can be used as a path name component
+     */
+    private static boolean isPathNameComponent(Id id) {
+        return switch (id) {
+            case IDENTIFIER,
+                 // All keywords are valid as path name components
+                 ALLOW, ANNOTATION, AS, ASSERT, AVOID,
+                 BREAK, CASE, CATCH, CLASS, CONDITIONAL, CONST, CONSTRUCT, CONTINUE,
+                 DEFAULT, DELEGATES, DESIRED, DO,
+                 ELSE, EMBEDDED, ENUM, EXTENDS,
+                 FINALLY, FOR, FUNCTION,
+                 IF, IMMUTABLE, IMPLEMENTS, IMPORT, INCORPORATES, INJECT, INTERFACE, INTO, IS,
+                 MIXIN, MODULE,
+                 NEW,
+                 OPTIONAL, OUTER,
+                 PACKAGE, PREFER, PRIVATE, PROTECTED, PUBLIC,
+                 REQUIRED, RETURN,
+                 SERVICE, STATIC, STRUCT, SUPER, SWITCH,
+                 THIS, THROW, TRY, TYPEDEF,
+                 USING,
+                 VAL, VAR, VOID,
+                 WHILE -> true;
+            default -> false;
+        };
     }
 
     /**
@@ -3777,12 +3752,12 @@ public class Parser {
 
         Token fakeReturn = new Token(firstToken.getStartPosition(), firstToken.getStartPosition(), Id.RETURN);
         ReturnStatement stmt = new ReturnStatement(fakeReturn, parseExpression());
-        return new StatementBlock(Collections.singletonList(stmt), stmt.getStartPosition(), stmt.getEndPosition());
+        return new StatementBlock(List.of(stmt), stmt.getStartPosition(), stmt.getEndPosition());
     }
 
     /**
      * Parse a "to-do" expression.
-     *
+     * <p>
      * <p/><code><pre>
      * "T0D0" TodoFinish-opt       (note: 'O' replaced with '0' to suppress IDE highlighting)
      *
@@ -3819,7 +3794,7 @@ public class Parser {
 
     /**
      * Parses a "switch" expression.
-     *
+     * <p>
      * <p/><code><pre>
      * SwitchExpression
      *     switch "(" SwitchCondition-opt ")" "{" SwitchExpressionBlocks "}"
@@ -3927,7 +3902,7 @@ public class Parser {
 
     /**
      * Parse a complex literal.
-     *
+     * <p>
      * <p/><code><pre>
      * TupleLiteral
      *     "(" ExpressionList "," Expression ")"                     # compile/runtime type is Tuple
@@ -3999,7 +3974,7 @@ public class Parser {
                             long           ofMap    = tokOpen.getStartPosition();
                             Token          tokName  = new Token(ofMap, ofMap, Id.IDENTIFIER, "Map");
                             TypeExpression exprType = new NamedTypeExpression(null,
-                                    Collections.singletonList(tokName), null, null, null, ofMap);
+                                    List.of(tokName), null, null, null, ofMap);
                             return new MapExpression(exprType, keys, values, prev().getEndPosition());
                         }
                     }
@@ -4071,9 +4046,9 @@ public class Parser {
             long    lEnd     = tokFile.getEndPosition();
             Object  resource = m_source.resolvePath(sFile);
 
+            // can't be both
             if (resource == null                                        // path must exist
-                    || fReqFile && fReqDir                              // can't be both
-                    || fReqDir  && !(resource instanceof ResourceDir)   // dir is expected
+                    || fReqDir && !(resource instanceof ResourceDir)   // dir is expected
                     || fReqFile && !(resource instanceof File)) {       // file is expected
                 log(Severity.ERROR, INVALID_PATH, lStart, lEnd, sFile);
                 if (resource == null) {
@@ -4093,7 +4068,7 @@ public class Parser {
 
     /**
      * Parse a type expression.
-     *
+     * <p>
      * <p/><code><pre>
      * TypeExpression
      *     IntersectingTypeExpression
@@ -4107,7 +4082,7 @@ public class Parser {
 
     /**
      * Parse an extended type expression.
-     *
+     * <p>
      * <p/><code><pre>
      * ExtendedTypeExpression
      *     ExtendedIntersectingTypeExpression
@@ -4121,7 +4096,7 @@ public class Parser {
 
     /**
      * Parse a type expression of the form "Type + Type" or "Type - Type".
-     *
+     * <p>
      * <p/><code><pre>
      * IntersectingTypeExpression
      *     UnionedTypeExpression
@@ -4151,7 +4126,7 @@ public class Parser {
 
     /**
      * Parse a type expression of the form "Type | Type", otherwise .
-     *
+     * <p>
      * <p/><code><pre>
      * UnionedTypeExpression
      *     NonBiTypeExpression
@@ -4176,7 +4151,7 @@ public class Parser {
 
     /**
      * Parse any type expression that does NOT look like "Type + Type" or "Type | Type".
-     *
+     * <p>
      * <p/><code><pre>
      * NonBiTypeExpression
      *     "(" TypeExpression ")"
@@ -4358,7 +4333,7 @@ public class Parser {
 
     /**
      * Parse a type expression that is preceded by an annotation.
-     *
+     * <p>
      * <p/><code><pre>
      * AnnotatedTypeExpression
      *     Annotation NonBiTypeExpression
@@ -4380,7 +4355,7 @@ public class Parser {
 
     /**
      * Parse a function type expression.
-     *
+     * <p>
      * <p/><code><pre>
      * FunctionTypeExpression
      *     "function" ReturnList FunctionTypeFinish
@@ -4416,9 +4391,9 @@ public class Parser {
 
     /**
      * Parse a type expression in the form:
-     *
+     * <p>
      *   "name.name.name<param, param>.name!<param, param>"
-     *
+     * <p>
      * <p/><code><pre>
      * NamedTypeExpression
      *     NamedTypeExpressionPart
@@ -4438,6 +4413,7 @@ public class Parser {
     NamedTypeExpression parseNamedTypeExpression(Token tokAccess) {
         NamedTypeExpression expr = null;
         do {
+            //noinspection StatementWithEmptyBody
             if (expr != null) {
                 // TODO check for annotations
             }
@@ -4481,11 +4457,11 @@ public class Parser {
      *
      * @return a list of zero or more identifier tokens
      */
-    List<Token> parseQualifiedName(boolean fRequired) {
+    List<Token> parseQualifiedName(@SuppressWarnings("SameParameterValue") boolean fRequired) {
         if (!fRequired) {
             Token tokTest = match(Id.IDENTIFIER);
             if (tokTest == null) {
-                return Collections.emptyList();
+                return List.of();
             } else {
                 putBack(tokTest);
             }
@@ -4496,7 +4472,7 @@ public class Parser {
 
     /**
      * Parse a dot-delimited list of names.
-     *
+     * <p>
      * <p/><code><pre>
      * QualifiedName
      *    Name
@@ -4515,7 +4491,7 @@ public class Parser {
 
     /**
      * Parse a sequence of modifiers, including annotations
-     *
+     * <p>
      * <p/><code><pre>
      * Modifiers
      *     Modifier
@@ -4535,29 +4511,30 @@ public class Parser {
      *     "@" NamedTypeExpression ArgumentList-opt
      * </pre></code>
      *
-     * @return a List&lt;Token | Annotation&gt;
+     * @return parsed modifiers and annotations, or null if neither present
      */
-    List[] parseModifiers() {
+    ParsedModifiers parseModifiers() {
         return parseModifiers(false);
     }
 
     /**
      * Mostly a continuation of the above, but also supporting the following parsing:
-     *
+     * <p>
      * <p/><code><pre>
      * PropertyAccessModifier
      *     AccessModifier
      *     AccessModifier "/" AccessModifier
      * </pre></code>
-     *
+     * <p>
      * Also verifies that modifiers are not repeated or obviously conflicting.
      *
-     * @param couldBeProperty
+     * @param couldBeProperty true if this is a potential property
      *
-     * @return a List&lt;Token | Annotation | '/'&gt; (in the case of a property, there could be
-     *         something like "static, public, '/', private")
+     * @return parsed modifiers and annotations, or null if neither present
+     *         (in the case of a property, modifiers could include '/' for dual visibility
+     *         like "public, '/', private")
      */
-    List[] parseModifiers(boolean couldBeProperty) {
+    ParsedModifiers parseModifiers(boolean couldBeProperty) {
         List<Token>                modifiers   = null;
         List<AnnotationExpression> annotations = null;
         boolean                    err         = false;
@@ -4615,7 +4592,7 @@ public class Parser {
 
             default:
                 return (modifiers != null || annotations != null)
-                        ? new List[] {modifiers, annotations}
+                        ? new ParsedModifiers(modifiers, annotations)
                         : null;
             }
         }
@@ -4623,7 +4600,7 @@ public class Parser {
 
     /**
      * Parse an annotation.
-     *
+     * <p>
      * <p/><code><pre>
      * Annotation
      *     "@" NamedTypeExpression ArgumentList-opt
@@ -4658,7 +4635,7 @@ public class Parser {
 
     /**
      * If the next token is a &quot;&lt;&quot;, then parse a list of formal type parameters.
-     *
+     * <p>
      * <p/><code><pre>
      * TypeParameterList
      *     "<" TypeParameters ">"
@@ -4705,7 +4682,7 @@ public class Parser {
      * For a parameterized type, parse the list of the types of its type parameters. For example,
      * for {@code Map<String, Int>}, this would parse the "{@code <String, Int>}" portion and
      * produce a list of two types: {@code String, Int}.
-     *
+     * <p>
      * <p/><code><pre>
      * TypeParameterTypeList
      *     "<" TypeParameterTypes ">"
@@ -4723,21 +4700,20 @@ public class Parser {
      * @return a list of zero or more types, or null if there were no angle brackets
      */
     List<TypeExpression> parseTypeParameterTypeList(boolean required, boolean fAllowTypeSequence) {
-        List<TypeExpression> types = null;
-        if (match(Id.COMP_LT, required) != null) {
-            if (match(Id.COMP_GT) != null) {
-                types = Collections.emptyList();
-            } else {
-                types = parseTypeExpressionList(fAllowTypeSequence);
-                expect(Id.COMP_GT);
-            }
+        if (match(Id.COMP_LT, required) == null) {
+            return null;
         }
+        if (match(Id.COMP_GT) != null) {
+            return List.of();
+        }
+        List<TypeExpression> types = parseTypeExpressionList(fAllowTypeSequence);
+        expect(Id.COMP_GT);
         return types;
     }
 
     /**
      * Parse a list of type expressions.
-     *
+     * <p>
      * <p/><code><pre>
      * TypeExpressionList
      *     TypeExpression
@@ -4767,7 +4743,7 @@ public class Parser {
 
     /**
      * Parse a list of package injections, starting with the opening parenthesis.
-     *
+     * <p>
      * <p/><code><pre>
      * ResourceList
      *     "inject" "(" ResourceListContents-opt ")"
@@ -4812,7 +4788,7 @@ public class Parser {
 
     /**
      * Parse a sequence of parameters, starting with the opening parenthesis.
-     *
+     * <p>
      * <p/><code><pre>
      * ParameterList
      *     "(" Parameters ")"
@@ -4853,20 +4829,20 @@ public class Parser {
 
     /**
      * Parse a list of parameter types (without parameter names).
-     *
+     * <p>
      * <p/><code><pre>
      * ParameterTypeList
      *     "(" TypeExpressionList-opt ")"
      * </pre></code>
      *
-     * @param required
-     * @return
+     * @param required Is the paremeter list required?
+     * @return List of TypeExpression for parameter list
      */
     List<TypeExpression> parseParameterTypeList(boolean required) {
         List<TypeExpression> types = null;
         if (match(Id.L_PAREN, required) != null) {
             types = peek(Id.R_PAREN)
-                    ? Collections.emptyList()
+                    ? List.of()
                     : parseTypeExpressionList(false);
             expect(Id.R_PAREN);
         }
@@ -4875,7 +4851,7 @@ public class Parser {
 
     /**
      * Parse an argument list.
-     *
+     * <p>
      * <p/><code><pre>
      * ArgumentList
      *     "(" Arguments-opt ")"
@@ -4964,10 +4940,11 @@ public class Parser {
                         break;
 
                     case COMP_LT: {
-                        Token          tokOpen    = expect(Id.COMP_LT);
-                        TypeExpression type       = parseTypeExpression();
-                        Token          tokClose   = expect(Id.COMP_GT);
-                        Token          tokUnbound = expect(Id.ANY);
+                        var tokOpen    = expect(Id.COMP_LT);
+                        var type       = parseTypeExpression();
+                        @SuppressWarnings("unused")
+                        var tokClose   = expect(Id.COMP_GT);
+                        var tokUnbound = expect(Id.ANY);
                         expr = new NonBindingExpression(tokOpen.getStartPosition(),
                                 tokUnbound.getEndPosition(), type);
                     }
@@ -4990,7 +4967,7 @@ public class Parser {
 
     /**
      * Parse a declared list of return types.
-     *
+     * <p>
      * <p/><code><pre>
      * ReturnList
      *     "void"
@@ -5011,9 +4988,9 @@ public class Parser {
     List<Parameter> parseReturnList() {
         List<Parameter> listReturn;
         if (match(Id.VOID) != null) {
-            listReturn = Collections.emptyList();
+            listReturn = List.of();
         } else if (match(Id.L_PAREN) == null) {
-            listReturn = Collections.singletonList(new Parameter(parseTypeExpression()));
+            listReturn = List.of(new Parameter(parseTypeExpression()));
         } else {
             listReturn = new ArrayList<>();
             do {
@@ -5025,7 +5002,7 @@ public class Parser {
 
     /**
      * Parse a sequence of version override clauses.
-     *
+     * <p>
      * <p/><code><pre>
      * VersionRequirement
      *     Version VersionOverrides-opt
@@ -5051,7 +5028,7 @@ public class Parser {
      *
      * @return a list of version overrides, or null if no version requirement is encountered
      */
-    List<VersionOverride> parseVersionRequirement(boolean required) {
+    List<VersionOverride> parseVersionRequirement(@SuppressWarnings("SameParameterValue") boolean required) {
         // start with the initial version requirement (no preceding verb)
         LiteralExpression exprVer = parseVersionLiteral(required);
         if (exprVer == null) {
@@ -5094,7 +5071,7 @@ public class Parser {
 
     /**
      * Parse a version literal.
-     *
+     * <p>
      * <p/><code><pre>
      * VersionString
      *     NonGASuffix
@@ -5174,16 +5151,9 @@ public class Parser {
                 return;
 
             default:
-                Token category;
-                if (       (category = match(Id.MODULE    )) != null
-                        || (category = match(Id.PACKAGE   )) != null
-                        || (category = match(Id.CLASS     )) != null
-                        || (category = match(Id.INTERFACE )) != null
-                        || (category = match(Id.SERVICE   )) != null
-                        || (category = match(Id.CONST     )) != null
-                        || (category = match(Id.ENUM      )) != null
-                        || (category = match(Id.ANNOTATION)) != null
-                        || (category = match(Id.MIXIN     )) != null) {
+                // check for type composition keywords
+                Token category = matchAnyOf(TYPE_COMPOSITION_KEYWORDS);
+                if (category != null) {
                     putBack(category);
                     return;
                 }
@@ -5452,6 +5422,25 @@ public class Parser {
     }
 
     /**
+     * Attempt to match the current token against any of the specified token IDs.
+     * If a match is found, the token is consumed and returned; otherwise null is returned
+     * and the token stream is not advanced.
+     *
+     * @param ids  the set of token IDs to match against
+     *
+     * @return the matched token, or null if none of the IDs matched
+     */
+    protected Token matchAnyOf(EnumSet<Id> ids) {
+        for (Id id : ids) {
+            Token token = match(id);
+            if (token != null) {
+                return token;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Return the most recently matched token.
      *
      * @return the token most recently returned from the match method
@@ -5497,6 +5486,7 @@ public class Parser {
     /**
      * @return true if the token stream is exhausted
      */
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     protected boolean eof() {
         return !(m_lexer.hasNext() || notEof(m_token) || notEof(m_tokenPutBack));
     }
@@ -5520,11 +5510,11 @@ public class Parser {
     /**
      * Log an error.
      *
-     * @param severity
-     * @param sCode
-     * @param lPosStart
-     * @param lPosEnd
-     * @param aoParam
+     * @param severity Log level Severity
+     * @param sCode Source code as String
+     * @param lPosStart Start position
+     * @param lPosEnd End position
+     * @param aoParam Parameters
      */
     protected void log(Severity severity, String sCode, long lPosStart, long lPosEnd, Object... aoParam) {
         if (m_lookAhead != null) {
@@ -5580,6 +5570,7 @@ public class Parser {
     /**
      * @return true iff it's ok to try to recover from a parsing error
      */
+    @SuppressWarnings("unused")
     protected boolean recoverable() {
         return !eof() && !m_fAvoidRecovery && m_lookAhead == null;
     }
@@ -5589,31 +5580,63 @@ public class Parser {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
         Source source = m_source;
-        sb.append(source.getSimpleFileName());
-
+        var sb = new StringBuilder(source.getSimpleFileName());
         Token token = peek();
         if (token == null) {
-            sb.append(' ')
-              .append(source.getLine()+1)
-              .append(':')
-              .append(source.getOffset()+1);
-        } else {
-            sb.append(' ')
-              .append(Source.calculateLine(token.getStartPosition())+1)
-              .append(':')
-              .append(Source.calculateOffset(token.getStartPosition())+1)
-              .append(' ')
-              .append(token);
+            return sb.append(' ')
+                    .append(source.getLine() + 1)
+                    .append(':')
+                    .append(source.getOffset() + 1)
+                    .toString();
         }
-
-        return sb.toString();
+        return sb.append(' ')
+                .append(Source.calculateLine(token.getStartPosition())+1)
+                .append(':')
+                .append(Source.calculateOffset(token.getStartPosition())+1)
+                .append(' ')
+                .append(token)
+                .toString();
     }
 
 
     // ----- constants -----------------------------------------------------------------------------
+
+    /**
+     * Type composition keywords including MODULE and PACKAGE.
+     */
+    private static final EnumSet<Id> TYPE_COMPOSITION_KEYWORDS = EnumSet.of(
+            Id.MODULE, Id.PACKAGE, Id.CLASS, Id.INTERFACE,
+            Id.SERVICE, Id.CONST, Id.ENUM, Id.ANNOTATION, Id.MIXIN);
+
+    /**
+     * Type composition keywords excluding MODULE (for file-level declarations).
+     */
+    private static final EnumSet<Id> TYPE_COMPOSITION_KEYWORDS_NO_MODULE = EnumSet.of(
+            Id.PACKAGE, Id.CLASS, Id.INTERFACE,
+            Id.SERVICE, Id.CONST, Id.ENUM, Id.ANNOTATION, Id.MIXIN);
+
+    /**
+     * Type composition keywords for inner type declarations (no MODULE or PACKAGE).
+     */
+    private static final EnumSet<Id> INNER_TYPE_KEYWORDS = EnumSet.of(
+            Id.CLASS, Id.INTERFACE, Id.SERVICE, Id.CONST, Id.ENUM, Id.ANNOTATION, Id.MIXIN);
+
+    /**
+     * Keywords used in type literal parsing.
+     */
+    private static final EnumSet<Id> TYPE_LITERAL_KEYWORDS = EnumSet.of(
+            Id.CONST, Id.ENUM, Id.MODULE, Id.PACKAGE, Id.SERVICE, Id.CLASS, Id.STRUCT);
+
+    /**
+     * All assignment operators including simple assignment.
+     */
+    private static final EnumSet<Id> ALL_ASSIGNMENT_OPS = EnumSet.of(
+            Id.ASN,
+            Id.ADD_ASN, Id.SUB_ASN, Id.MUL_ASN, Id.DIV_ASN, Id.MOD_ASN,
+            Id.SHL_ASN, Id.SHR_ASN, Id.USHR_ASN,
+            Id.BIT_AND_ASN, Id.BIT_OR_ASN, Id.BIT_XOR_ASN,
+            Id.COND_ASN, Id.COND_AND_ASN, Id.COND_OR_ASN, Id.COND_NN_ASN, Id.COND_ELSE_ASN);
 
     /**
      * Unknown fatal error.
@@ -5634,6 +5657,7 @@ public class Parser {
     /**
      * Bad hex value.
      */
+    @SuppressWarnings("unused")
     public static final String BAD_HEX_LITERAL   = "PARSER-05";
     /**
      * Unsupported custom literal type: {0}.
