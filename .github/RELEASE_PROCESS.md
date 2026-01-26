@@ -9,7 +9,7 @@ This document describes the automated release workflow for the XVM project.
 ```bash
 # 1. Prepare (creates PR with staged artifacts)
 # Version is automatically computed from version.properties on master
-gh workflow run "Prepare Release"
+gh workflow run prepare-release.yml
 
 # 2. Review staged artifacts (Maven Central, GitHub draft release)
 
@@ -21,7 +21,7 @@ gh pr merge <PR-NUMBER>
 
 ```bash
 # Re-promote after failure (selective targets)
-gh workflow run "Promote Release" \
+gh workflow run promote-release.yml \
   --field release-version=0.4.4 \
   --field promote-maven-central=false \
   --field publish-github-release=true \
@@ -176,10 +176,10 @@ Trigger the prepare-release workflow:
 
 ```bash
 # Simple - version computed from master
-gh workflow run "Prepare Release"
+gh workflow run prepare-release.yml
 
 # Test from a feature branch
-gh workflow run "Prepare Release" --field branch=lagergren/release-stage
+gh workflow run prepare-release.yml --field branch=lagergren/release-stage
 ```
 
 **What happens:**
@@ -393,7 +393,7 @@ The workflow supports releasing from any branch (not just master):
 
 ```bash
 # Prepare release from feature branch
-gh workflow run "Prepare Release" --field branch=feature/my-hotfix
+gh workflow run prepare-release.yml --field branch=feature/my-hotfix
 ```
 
 **Use cases:**
@@ -407,7 +407,7 @@ For selective re-promotion after partial failures:
 
 ```bash
 # Re-promote specific targets
-gh workflow run "Promote Release" \
+gh workflow run promote-release.yml \
   --field release-version=0.4.4 \
   --field promote-maven-central=false \
   --field publish-github-release=true \
@@ -418,7 +418,7 @@ gh workflow run "Promote Release" \
 
 **Maven Central Succeeded, GitHub Release Failed:**
 ```bash
-gh workflow run "Promote Release" \
+gh workflow run promote-release.yml \
   --field release-version=0.4.4 \
   --field promote-maven-central=false \
   --field publish-github-release=true \
@@ -427,7 +427,7 @@ gh workflow run "Promote Release" \
 
 **Only Publish Plugin Portal:**
 ```bash
-gh workflow run "Promote Release" \
+gh workflow run promote-release.yml \
   --field release-version=0.4.4 \
   --field promote-maven-central=false \
   --field publish-github-release=false \

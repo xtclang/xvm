@@ -427,7 +427,7 @@ brew reinstall xdk-latest               # Alternative: always gets latest
 
 1. **Prepare Release** (Manual trigger):
    ```bash
-   gh workflow run "Prepare Release" --field release-version=0.4.4
+   gh workflow run prepare-release.yml --field release-version=0.4.4
    ```
    - Creates `release/X.Y.Z` branch
    - Tags `vX.Y.Z`
@@ -480,7 +480,7 @@ brew reinstall xdk-latest               # Alternative: always gets latest
 
 **Manual Trigger**:
 ```bash
-gh workflow run "Dependency Updates"
+gh workflow run validate-dependabot.yml
 ```
 
 ---
