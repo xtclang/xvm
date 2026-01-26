@@ -382,7 +382,7 @@ jobs:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   echo "🚀 Triggering Publish Snapshots workflow..."
-                  gh workflow run "Publish Snapshots" --repo ${{ github.repository }} --ref ${{ github.ref_name }} --field ci-run-id=${{ github.run_id }}
+                  gh workflow run publish-snapshot.yml --repo ${{ github.repository }} --ref ${{ github.ref_name }} --field ci-run-id=${{ github.run_id }}
                   echo "✅ Snapshot publishing triggered"
 
             - name: Trigger Docker publishing
@@ -391,7 +391,7 @@ jobs:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   echo "🚀 Triggering Publish Docker Images workflow..."
-                  gh workflow run "Publish Docker Images" --repo ${{ github.repository }} --ref ${{ github.ref_name }} --field ci-run-id=${{ github.run_id }}
+                  gh workflow run publish-docker.yml --repo ${{ github.repository }} --ref ${{ github.ref_name }} --field ci-run-id=${{ github.run_id }}
                   echo "✅ Docker publishing triggered"
 
             - name: Trigger Homebrew update
@@ -400,7 +400,7 @@ jobs:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   echo "🚀 Triggering Update Homebrew workflow..."
-                  gh workflow run "Update Homebrew" --repo ${{ github.repository }} --ref ${{ github.ref_name }} --field ci-run-id=${{ github.run_id }}
+                  gh workflow run homebrew-update.yml --repo ${{ github.repository }} --ref ${{ github.ref_name }} --field ci-run-id=${{ github.run_id }}
                   echo "✅ Homebrew update triggered"
 
             - name: Summary - Snapshots Triggered
