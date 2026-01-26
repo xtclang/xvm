@@ -42,10 +42,10 @@ cd lang/dsl/build/generated
 - [x] Grammar validation passes (`./gradlew :lang:dsl:validateTreeSitterGrammar`)
 
 ### In Progress 🔄
-- **Grammar coverage: 381/691 XTC files parse successfully (55.1%)**
+- **Grammar coverage: 457/692 XTC files parse successfully (66.0%)**
 - Native library compilation for target platforms
 
-### Grammar Support Status (2026-01-24)
+### Grammar Support Status (2026-01-26)
 
 The following features have been added to `TreeSitterGenerator.kt`:
 
@@ -115,12 +115,19 @@ The following features have been added to `TreeSitterGenerator.kt`:
 | Local function declarations | `private static Type fn() {}` | ✅ Inside method bodies |
 | Switch variable declaration | `switch (Type x = expr)` | ✅ Inline variable in switch |
 | Multi-value case patterns | `case 'A', 'B':` | ✅ Comma-separated values |
+| Else expression | `expr?.method() : fallback` | ✅ Short-circuit else clause |
+| Short-circuit postfix | `expr?` | ✅ Null short-circuit operator |
+| TODO expression | `TODO`, `TODO(msg)`, `TODO text` | ✅ Placeholder for unimplemented code |
+| Type patterns in case | `case List<String>:` | ✅ Type matching in switch |
+| Package doc comments | `/** doc */ package foo {}` | ✅ Doc comments on packages |
+| Local fn doc comments | `/** doc */ private Type fn() {}` | ✅ Doc comments on local functions |
+| TODO statement | `TODO` (no semicolon) | ✅ Bare TODO as statement |
+| Statement expression | `Type x = { return val; };` | ✅ Block as expression initializer |
 
 #### Still Needed (High Priority)
 
 | Feature | Example | Notes |
 |---------|---------|-------|
-| Else expression | `expr?.method() : fallback` | Short-circuit else clause |
 | String interpolation | `$"text {expr}"` | Lexer: `eatTemplateExpression()` |
 
 #### Lower Priority
@@ -550,7 +557,7 @@ Need to implement `WorkspaceIndex` for cross-file symbol tracking.
 
 ## Grammar Coverage Progress
 
-The grammar validates and now supports many XTC language features. Coverage improved from 9% to 55.1% (381/691 files).
+The grammar validates and now supports many XTC language features. Coverage improved from 9% to 66.0% (457/692 files).
 
 ### Common Remaining Parse Errors
 
@@ -558,16 +565,20 @@ Files failing to parse typically use these advanced features (still being added)
 
 | Error Pattern | Example | Notes |
 |---------------|---------|-------|
-| Else expression | `expr?.method() : fallback` | Short-circuit else clause |
 | String interpolation | `$"Hello {name}"` | Template expressions with `{expr}` |
+| Multiple doc comments | `/** doc1 */ /** doc2 */ method()` | Only first doc comment allowed |
 
 ### Improvement Path
 
 1. ✅ Added missing grammar rules to `TreeSitterGenerator.kt`
 2. ✅ Regenerate and validate grammar
-3. ✅ Coverage improved from 21% (144/675) to 55.1% (381/691)
-4. 🔄 Next: Implement else expression pattern `expr?.method() : fallback`
-5. ✅ Target met: 55%+ of XTC files parsing successfully
+3. ✅ Coverage improved from 21% (144/675) to 60.5% (419/692)
+4. ✅ Implemented else expression pattern `expr?.method() : fallback`
+5. ✅ Implemented short-circuit postfix `expr?`, TODO expression, type case patterns
+6. ✅ Target exceeded: 60%+ of XTC files parsing successfully
+7. ✅ Implemented doc comments for packages, local functions, TODO statement, statement expressions
+8. ✅ Coverage improved from 60.5% to 66.0% (457/692)
+9. 🔄 Next: String interpolation `$"text {expr}"`
 
 ---
 
