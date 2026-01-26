@@ -11,6 +11,8 @@ import ecstasy.reflect.ModuleTemplate;
 
 import extensions.ExtensionRegistry;
 
+import executor.ResourceLookupProvider;
+
 import xunit.MethodOrFunction;
 
 import xunit.extensions.ExecutionContext;
@@ -23,7 +25,8 @@ import xunit.extensions.ResourceLookupCallback;
  * @param outDir  the XUnit root test output directory
  */
 service TestResourceProvider(Directory curDir, Directory outDir)
-        extends BasicResourceProvider {
+        extends BasicResourceProvider
+        implements ResourceLookupProvider {
 
     /**
      * The `FileStore` to use to access files.
@@ -46,20 +49,22 @@ service TestResourceProvider(Directory curDir, Directory outDir)
     /**
      * The current execution context.
      */
-    private ExecutionContext? context = Null;
+    @Override
+    public/private ExecutionContext? context = Null;
 
     /**
      * The current lookup callbacks.
      */
-    private ResourceLookupCallback[] lookupCallbacks = [];
+    @Override
+    public/private ResourceLookupCallback[] lookupCallbacks = [];
 
     @Override
     Supplier getResource(Type type, String name) {
         import Container.Linker;
 
         switch (type, name) {
-        case (TestResourceProvider, _):
-            return this;
+        case (ResourceLookupProvider, _):
+            return &this.maskAs(ResourceLookupProvider);
 
         case (ResourceProvider, _):
             return &this.maskAs(ResourceProvider);
@@ -147,8 +152,10 @@ service TestResourceProvider(Directory curDir, Directory outDir)
     /**
      * Set the current ExecutionContext.
      *
-     * @param context  the current ExecutionContext
+     * @param context    the current ExecutionContext, or Null if there is no current context
+     * @param callbacks  the current resource lookup callbacks
      */
+     @Override
     void setExecutionContext(ExecutionContext? context, ResourceLookupCallback[] callbacks) {
         this.context         = context;
         this.lookupCallbacks = callbacks;

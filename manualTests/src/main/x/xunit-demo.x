@@ -83,10 +83,8 @@ module xunit_demo {
         console.print($"  >>>> In Module AfterEach static");
         @Inject ExecutionContext context;
         console.print($"  >>>> In Module AfterEach static {context.testClass} {context.testMethod}");
-        @Inject Class? testClass;
-        console.print($"  >>>> In Module AfterEach static test class {testClass}");
-        @Inject Test? test;
-        console.print($"  >>>> In Module AfterEach static test {test}");
+        console.print($"  >>>> In Module AfterEach static test class {context.testClass}");
+        console.print($"  >>>> In Module AfterEach static test {context.testMethod}");
     }
 
     /**

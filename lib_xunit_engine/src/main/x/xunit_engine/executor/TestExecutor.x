@@ -182,8 +182,8 @@ const TestExecutor {
     }
 
     private void updateResourceProvider(EngineExecutionContext context, ExtensionRegistry registry) {
-        ResourceLookupCallback[]     callbacks = registry.get(ResourceLookupCallback, True);
-        @Inject TestResourceProvider provider;
+        @Inject ResourceLookupProvider provider;
+        ResourceLookupCallback[]       callbacks = registry.get(ResourceLookupCallback, True);
         provider.setExecutionContext(context, callbacks.freeze(True));
     }
 }

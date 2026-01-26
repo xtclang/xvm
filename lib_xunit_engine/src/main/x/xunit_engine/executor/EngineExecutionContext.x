@@ -158,9 +158,6 @@ service EngineExecutionContext
             case (MethodOrFunction?, "testMethod"):
                 return True, testMethod;
 
-            case (Test?, "test"):
-                return True, testMethod;
-
             case (String, "displayName"):
                 return True, displayName;
         }
