@@ -576,7 +576,15 @@ public class TypeSystem {
      * growth occurs, the old list still contains the corresponding entry at the right place.
      */
     public Constant getConstant(int index) {
-        return pool().getConstant(index);
+        // TODO: this is a temporary hack; remove
+        ConstantPool pool;
+        if (index >= 0) {
+            pool = pool();
+        } else {
+            pool  = xvm.ecstasyPool;
+            index = -index;
+        }
+        return pool.getConstant(index);
     }
 }
 

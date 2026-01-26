@@ -36,14 +36,14 @@ package callTests {
         assert !call4(-1);
 
         // nullable
-        call5(1);
-        call5(Null);
+        assert call5(1) == 6;
+        assert call5(Null) == -1;
 
         Int? i5 = Null;
-        call5(i5);
+        assert call5(i5) == -1;
 
         i5 = 1;
-        call5(i5);
+        assert call5(i5) == 6;
     }
 
     Int call1(Int i, Int j = 2) = i + j;
@@ -61,13 +61,16 @@ package callTests {
 
     static Boolean call4(Int i) = i > 0;
 
-    void call5(Int? n) {
+    Int call5(Int? n) {
         if (n.is(Int)) {
             assert n > 0;
+            n += 2;
         }
 
         if (n != Null) {
             assert n > 0;
+            n *= 2;
         }
+        return n ?: -1;
     }
 }
