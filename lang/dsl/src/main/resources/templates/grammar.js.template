@@ -185,6 +185,7 @@ module.exports = grammar({
         ),
 
         // Similar declarations
+        // Interfaces can end with either a body { } or semicolon ;
         interface_declaration: $ => seq(
             optional($.doc_comment),
             repeat($.annotation),
@@ -194,7 +195,7 @@ module.exports = grammar({
             $.type_name,
             optional($.type_parameters),
             repeat($.extends_clause),
-            $.class_body,
+            choice($.class_body, ';'),
         ),
 
         mixin_declaration: $ => seq(
@@ -328,8 +329,8 @@ module.exports = grammar({
         method_declaration: $ => seq(
             optional($.doc_comment),
             repeat($.annotation),
-            optional($.visibility_modifier),
-            optional('static'),
+            optional(seq($.visibility_modifier, repeat($.annotation))),
+            optional(seq('static', repeat($.annotation))),
             optional('abstract'),
             optional($.type_parameters),
             $.type_expression,
@@ -344,7 +345,7 @@ module.exports = grammar({
         property_getter_declaration: $ => seq(
             optional($.doc_comment),
             repeat($.annotation),
-            optional($.visibility_modifier),
+            optional(seq($.visibility_modifier, repeat($.annotation))),
             $.type_expression,
             $.identifier,
             '.',
@@ -499,11 +500,12 @@ module.exports = grammar({
         // Local function declaration: visibility, static, return type, name, params, body
         // Supports: private static (String, String) decode(Entry entry) { ... }
         // Also supports doc comments before local functions
+        // Annotations can appear after visibility modifier: private @Foo Type fn()
         local_function_declaration: $ => seq(
             optional($.doc_comment),
             repeat($.annotation),
-            optional($.visibility_modifier),
-            optional('static'),
+            optional(seq($.visibility_modifier, repeat($.annotation))),
+            optional(seq('static', repeat($.annotation))),
             optional($.type_parameters),
             $.type_expression,
             $.identifier,
@@ -621,10 +623,18 @@ module.exports = grammar({
                 // for (Type name : iterable)
                 prec(1, seq($.type_expression, $._identifier_or_context_keyword, ':', $._expression)),
                 seq($.for_tuple_destructure, ':', $._expression),
-                seq(optional($._expression), ';', optional($._expression), ';', optional($._expression)),
+                // Traditional for loop: for (init; condition; update)
+                // init can be a variable declaration (Type name = expr) or expression
+                seq(optional($.for_initializer), ';', optional($._expression), ';', optional($._expression)),
             ),
             ')',
             $._statement,
+        ),
+
+        // For loop initializer: either an expression or a variable declaration
+        for_initializer: $ => choice(
+            seq($.type_expression, $.identifier, '=', $._expression),
+            $._expression,
         ),
 
         // Tuple destructuring pattern for for-each: ((Type1 name1, Type2 name2))
@@ -816,7 +826,8 @@ module.exports = grammar({
         index_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_2}}, seq($._expression, '[', commaSep1($._expression), ']')),
 
         // Reference expression: &name (creates a reference to a property/variable)
-        reference_expression: $ => seq('&', $.identifier),
+        // Reference (no-dereference) expression: &identifier or &this:xxx
+        reference_expression: $ => seq('&', choice($.identifier, $.this_expression)),
 
         // new Type(args), new Type[size], new Type[], new Type[size](initializer), or expr.new(args)
         // Also supports anonymous inner classes: new Type(args) { body }
@@ -933,8 +944,23 @@ module.exports = grammar({
         map_literal: $ => seq('[', commaSep($.map_entry), ']'),
         map_entry: $ => seq($._expression, '=', $._expression),
 
-        // Typed literal: Type:[] or Type:[values...]
-        typed_literal: $ => seq($.type_expression, ':', choice($.list_literal, $.map_literal)),
+        // Typed literal: Type:value where value is a literal
+        // Examples: Duration:0S, Int:42, Map:[], List:[1,2,3], Date:2024-01-26
+        // Use higher precedence to prefer typed_literal interpretation
+        typed_literal: $ => prec(2, seq($.type_expression, ':', choice(
+            $.list_literal,
+            $.map_literal,
+            $.duration_literal,
+            $.integer_literal,
+            $.float_literal,
+            $.string_literal,
+            $.char_literal,
+            $.boolean_literal,
+        ))),
+
+        // Duration literal: ISO-8601 format (P prefix optional in XTC shorthand)
+        // Examples: PT1H30M (1 hour 30 min), P1D (1 day), 30S (30 seconds), PT0S (0 seconds)
+        duration_literal: $ => /P?T?[0-9]+[YMDHS]([0-9]+[YMDHS])*/i,
 
         // Identifiers and names
         // type_name can be a simple identifier or a qualified name (e.g., ecstasy.io.Channel)

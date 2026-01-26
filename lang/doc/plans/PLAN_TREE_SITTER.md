@@ -42,7 +42,7 @@ cd lang/dsl/build/generated
 - [x] Grammar validation passes (`./gradlew :lang:dsl:validateTreeSitterGrammar`)
 
 ### In Progress 🔄
-- **Grammar coverage: 457/692 XTC files parse successfully (66.0%)**
+- **Grammar coverage: 469/692 XTC files parse successfully (67.8%)**
 - Native library compilation for target platforms
 
 ### Grammar Support Status (2026-01-26)
@@ -123,6 +123,11 @@ The following features have been added to `TreeSitterGenerator.kt`:
 | Local fn doc comments | `/** doc */ private Type fn() {}` | ✅ Doc comments on local functions |
 | TODO statement | `TODO` (no semicolon) | ✅ Bare TODO as statement |
 | Statement expression | `Type x = { return val; };` | ✅ Block as expression initializer |
+| Annotations after visibility | `protected @Abstract Type m()` | ✅ Flexible modifier order |
+| For loop initializer | `for (Int i = 0; ...)` | ✅ Variable declaration in init |
+| Interface without body | `interface Foo extends Bar;` | ✅ Semicolon termination |
+| Typed duration literal | `Duration:0S` | ✅ Duration values in typed literals |
+| Reference this expression | `&this:service` | ✅ Reference with this variants |
 
 #### Still Needed (High Priority)
 
@@ -557,7 +562,7 @@ Need to implement `WorkspaceIndex` for cross-file symbol tracking.
 
 ## Grammar Coverage Progress
 
-The grammar validates and now supports many XTC language features. Coverage improved from 9% to 66.0% (457/692 files).
+The grammar validates and now supports many XTC language features. Coverage improved from 9% to 67.8% (469/692 files).
 
 ### Common Remaining Parse Errors
 
@@ -578,7 +583,9 @@ Files failing to parse typically use these advanced features (still being added)
 6. ✅ Target exceeded: 60%+ of XTC files parsing successfully
 7. ✅ Implemented doc comments for packages, local functions, TODO statement, statement expressions
 8. ✅ Coverage improved from 60.5% to 66.0% (457/692)
-9. 🔄 Next: String interpolation `$"text {expr}"`
+9. ✅ Implemented flexible modifier order, for initializer, interface semicolon, typed literals, reference expressions
+10. ✅ Coverage improved from 66.0% to 67.8% (469/692)
+11. 🔄 Next: String interpolation `$"text {expr}"`
 
 ---
 
