@@ -50,11 +50,6 @@ module xunit_engine.xtclang.org {
     /**
      * The injection name for the test build directory.
      */
-    static String ConfigTestBuildDir = ConfigPrefix + ".buildDir";
-
-    /**
-     * The injection name for the test build directory.
-     */
     static String ConfigTestOutputDir = ConfigPrefix + ".outputDir";
 
     /**
@@ -104,19 +99,17 @@ module xunit_engine.xtclang.org {
     }
 
     Int runTests(String moduleName, String? moduleVersion) {
-        @Inject(ConfigTestBuildDir)  String?          buildDirName;
         @Inject(ConfigTestOutputDir) String?          outDirName;
         @Inject("repository")        ModuleRepository coreRepo;
         @Inject                      Directory        curDir;
+        @Inject                      Directory        tmpDir;
         @Inject                      Console          console;
 
         Directory outDir   = outDirName.is(String)
                                     ? curDir.dirFor(outDirName)
                                     : curDir.dirFor(DefaultXUnitDir);
 
-        Directory buildDir = buildDirName.is(String)
-                                    ? curDir.dirFor(buildDirName)
-                                    : outDir;
+        Directory buildDir = tmpDir.dirFor("xunit");
 
         outDir.ensure();
         buildDir.ensure();
@@ -126,10 +119,10 @@ module xunit_engine.xtclang.org {
         ModuleRepository repo      = new LinkedRepository([buildRepo, coreRepo].freeze(True));
         Log              log       = new SimpleLog();
 
-        console.print($"XUnit: Creating test module for {moduleName} in {buildDir}");
+        console.print($"XUnit: Creating test module for {moduleName} in {tmpDir}");
         ModuleGenerator gen = new ModuleGenerator(moduleName, version);
         if (ModuleTemplate template := gen.ensureModule(repo, buildDir, log)) {
-            console.print($"XUnit: Created test module {template.qualifiedName} in {buildDir}");
+            console.print($"XUnit: Created test module {template.qualifiedName} in {tmpDir}");
             TestResourceProvider injector = new TestResourceProvider(curDir, outDir);
             Tuple t = new Container(template, Lightweight, repo, injector).invoke("run");
             // The temporary test module can now be deleted
