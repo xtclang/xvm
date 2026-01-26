@@ -20,16 +20,6 @@
 #
 name: Promote Release
 
-# ============================================================================
-# YAML Anchors - Reusable configuration snippets
-# ============================================================================
-x-checkout-config: &checkout-config
-    fetch-depth: 1
-    show-progress: true
-
-x-gh-token-env: &gh-token-env
-    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
 permissions:
     contents: write
     packages: write
@@ -149,7 +139,7 @@ jobs:
               uses: actions/checkout@v6
               with:
                   ref: v${{ steps.version.outputs.version }}
-                  <<: *checkout-config
+                  fetch-depth: 1
 
             - name: Setup XVM Project
               id: versions
@@ -232,7 +222,7 @@ jobs:
             - name: Publish GitHub release
               if: ${{ steps.targets.outputs.github-release == 'true' }}
               env:
-                  <<: *gh-token-env
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   VERSION="${{ steps.version.outputs.version }}"
 
@@ -378,7 +368,7 @@ jobs:
               # Only post comment if triggered by PR merge
               if: ${{ steps.version.outputs.trigger == 'pr-merge' }}
               env:
-                  <<: *gh-token-env
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   VERSION="${{ steps.version.outputs.version }}"
                   PR_NUMBER="${{ github.event.pull_request.number }}"

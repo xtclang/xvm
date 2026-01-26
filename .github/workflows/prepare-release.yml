@@ -14,16 +14,6 @@
 #
 name: Prepare Release
 
-# ============================================================================
-# YAML Anchors - Reusable configuration snippets
-# ============================================================================
-x-checkout-config: &checkout-config
-    fetch-depth: 1
-    show-progress: true
-
-x-gh-token-env: &gh-token-env
-    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
 permissions:
     contents: write
     packages: write
@@ -86,7 +76,7 @@ jobs:
 
             - name: Check if GitHub release already exists
               env:
-                  <<: *gh-token-env
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   VERSION="${{ steps.get-versions.outputs.xdk-version-release }}"
                   # Check GitHub release
@@ -164,7 +154,7 @@ jobs:
               uses: actions/checkout@v6
               with:
                   ref: v${{ needs.prepare-release.outputs.release-version }}
-                  <<: *checkout-config
+                  fetch-depth: 1
 
             - name: Setup XVM Project
               id: versions
@@ -284,7 +274,7 @@ jobs:
 
             - name: Create PR to master
               env:
-                  <<: *gh-token-env
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   VERSION="${{ needs.prepare-release.outputs.release-version }}"
                   NEXT_VERSION="${{ needs.prepare-release.outputs.next-version }}"

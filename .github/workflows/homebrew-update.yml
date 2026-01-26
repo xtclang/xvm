@@ -10,16 +10,6 @@
 #
 name: Update Homebrew
 
-# ============================================================================
-# YAML Anchors - Reusable configuration snippets
-# ============================================================================
-x-checkout-config: &checkout-config
-    fetch-depth: 1
-    show-progress: true
-
-x-gh-token-env: &gh-token-env
-    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
 permissions:
     contents: read
     actions: read
@@ -51,7 +41,8 @@ jobs:
             - name: Fetch Sources
               uses: actions/checkout@v6
               with:
-                  <<: *checkout-config
+                  fetch-depth: 1
+                  show-progress: true
 
             - name: Setup XVM Project
               id: versions
@@ -76,7 +67,7 @@ jobs:
               id: commit
               shell: bash
               env:
-                  <<: *gh-token-env
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   RUN_ID="${{ github.event.inputs.ci-run-id }}"
                   # Get commit from the specified run

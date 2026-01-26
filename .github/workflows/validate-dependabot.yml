@@ -1,11 +1,5 @@
 name: Validate Dependabot Configuration
 
-# ============================================================================
-# YAML Anchors - Reusable configuration snippets
-# ============================================================================
-x-gh-token-env: &gh-token-env
-    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
 on:
     workflow_dispatch:
 
@@ -34,7 +28,7 @@ jobs:
 
             - name: Validate team references
               env:
-                  <<: *gh-token-env
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   echo "🔍 Validating team references in dependabot.yml..."
 
@@ -111,7 +105,7 @@ jobs:
 
             - name: Test team assignment capability
               env:
-                  <<: *gh-token-env
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   echo "🧪 Testing if teams can be assigned to issues..."
                   echo ""

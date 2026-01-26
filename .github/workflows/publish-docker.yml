@@ -10,21 +10,6 @@
 #
 name: Publish Docker Images
 
-# ============================================================================
-# YAML Anchors - Reusable configuration snippets
-# ============================================================================
-x-checkout-config: &checkout-config
-    fetch-depth: 1
-    show-progress: true
-
-x-gh-token-env: &gh-token-env
-    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-x-ghcr-login: &ghcr-login
-    registry: ghcr.io
-    username: ${{ github.actor }}
-    password: ${{ secrets.GITHUB_TOKEN }}
-
 permissions:
     contents: read
     packages: write
@@ -75,7 +60,8 @@ jobs:
             - name: Fetch Sources
               uses: actions/checkout@v6
               with:
-                  <<: *checkout-config
+                  fetch-depth: 1
+                  show-progress: true
 
             - name: Setup XVM Project
               id: versions
@@ -126,7 +112,8 @@ jobs:
             - name: Fetch Sources
               uses: actions/checkout@v6
               with:
-                  <<: *checkout-config
+                  fetch-depth: 1
+                  show-progress: true
 
             - name: Setup XVM Project
               id: versions
@@ -142,13 +129,15 @@ jobs:
             - name: Log in to GitHub Container Registry
               uses: docker/login-action@v3
               with:
-                  <<: *ghcr-login
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Determine commit and run ID
               id: commit
               shell: bash
               env:
-                  <<: *gh-token-env
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   RUN_ID="${{ github.event.inputs.ci-run-id }}"
                   # Get commit from the specified run
@@ -241,7 +230,9 @@ jobs:
             - name: Log in to GitHub Container Registry
               uses: docker/login-action@v3
               with:
-                  <<: *ghcr-login
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Create and push manifests
               shell: bash
@@ -286,12 +277,15 @@ jobs:
             - name: Fetch Sources
               uses: actions/checkout@v6
               with:
-                  <<: *checkout-config
+                  fetch-depth: 1
+                  show-progress: true
 
             - name: Log in to GitHub Container Registry
               uses: docker/login-action@v3
               with:
-                  <<: *ghcr-login
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Test Docker image
               shell: bash

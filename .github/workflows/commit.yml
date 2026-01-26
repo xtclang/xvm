@@ -11,16 +11,6 @@
 #
 name: Verify Commit
 
-# ============================================================================
-# YAML Anchors - Reusable configuration snippets
-# ============================================================================
-x-checkout-config: &checkout-config
-    fetch-depth: 1
-    show-progress: true
-
-x-gh-token-env: &gh-token-env
-    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
 permissions:
     contents: write
     actions: write
@@ -116,7 +106,8 @@ jobs:
             - name: Fetch Sources
               uses: actions/checkout@v6
               with:
-                  <<: *checkout-config
+                  fetch-depth: 1
+                  show-progress: true
 
             - name: 🚀 Publishing Configuration
               shell: bash
@@ -288,7 +279,7 @@ jobs:
             - name: Checkout XVM
               uses: actions/checkout@v6
               with:
-                  <<: *checkout-config
+                  fetch-depth: 1
 
             - name: Setup XVM Project
               id: versions
@@ -388,7 +379,7 @@ jobs:
             - name: Trigger snapshot publishing
               if: steps.check-release.outputs.is-release != 'true'
               env:
-                  <<: *gh-token-env
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   echo "🚀 Triggering Publish Snapshots workflow..."
                   gh workflow run "Publish Snapshots" --repo ${{ github.repository }} --ref ${{ github.ref_name }} --field ci-run-id=${{ github.run_id }}
@@ -397,7 +388,7 @@ jobs:
             - name: Trigger Docker publishing
               if: steps.check-release.outputs.is-release != 'true'
               env:
-                  <<: *gh-token-env
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   echo "🚀 Triggering Publish Docker Images workflow..."
                   gh workflow run "Publish Docker Images" --repo ${{ github.repository }} --ref ${{ github.ref_name }} --field ci-run-id=${{ github.run_id }}
@@ -406,7 +397,7 @@ jobs:
             - name: Trigger Homebrew update
               if: steps.check-release.outputs.is-release != 'true'
               env:
-                  <<: *gh-token-env
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   echo "🚀 Triggering Update Homebrew workflow..."
                   gh workflow run "Update Homebrew" --repo ${{ github.repository }} --ref ${{ github.ref_name }} --field ci-run-id=${{ github.run_id }}
