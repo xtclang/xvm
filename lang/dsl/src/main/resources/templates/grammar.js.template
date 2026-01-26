@@ -170,6 +170,7 @@ module.exports = grammar({
         //   class Foo implements A implements B implements C
         // Also allows annotations to appear after static: protected static @Abstract class
         // The extends/implements/incorporates clauses can appear in any order
+        // Classes can end with either a body { } or semicolon ; (for simple extension classes)
         class_declaration: $ => seq(
             optional($.doc_comment),
             repeat($.annotation),
@@ -181,10 +182,11 @@ module.exports = grammar({
             optional($.type_parameters),
             optional($.constructor_parameters),
             repeat(choice($.extends_clause_with_args, $.implements_clause, $.incorporates_clause, $.delegates_clause)),
-            $.class_body,
+            choice($.class_body, ';'),
         ),
 
         // Similar declarations
+        // Interfaces can end with either a body { } or semicolon ;
         interface_declaration: $ => seq(
             optional($.doc_comment),
             repeat($.annotation),
@@ -194,9 +196,10 @@ module.exports = grammar({
             $.type_name,
             optional($.type_parameters),
             repeat($.extends_clause),
-            $.class_body,
+            choice($.class_body, ';'),
         ),
 
+        // Mixin can end with body or semicolon (for simple mixins)
         mixin_declaration: $ => seq(
             optional($.doc_comment),
             repeat($.annotation),
@@ -207,9 +210,10 @@ module.exports = grammar({
             optional($.type_parameters),
             optional($.constructor_parameters),
             repeat(choice($.into_clause, $.extends_clause, $.implements_clause, $.incorporates_clause, $.delegates_clause)),
-            $.class_body,
+            choice($.class_body, ';'),
         ),
 
+        // Service can end with body or semicolon
         service_declaration: $ => seq(
             optional($.doc_comment),
             repeat($.annotation),
@@ -219,7 +223,7 @@ module.exports = grammar({
             optional($.type_parameters),
             optional($.constructor_parameters),
             repeat(choice($.extends_clause, $.implements_clause, $.incorporates_clause, $.delegates_clause)),
-            $.class_body,
+            choice($.class_body, ';'),
         ),
 
         // Const declaration allows annotations to appear after static: static @Abstract const
@@ -328,8 +332,8 @@ module.exports = grammar({
         method_declaration: $ => seq(
             optional($.doc_comment),
             repeat($.annotation),
-            optional($.visibility_modifier),
-            optional('static'),
+            optional(seq($.visibility_modifier, repeat($.annotation))),
+            optional(seq('static', repeat($.annotation))),
             optional('abstract'),
             optional($.type_parameters),
             $.type_expression,
@@ -344,7 +348,7 @@ module.exports = grammar({
         property_getter_declaration: $ => seq(
             optional($.doc_comment),
             repeat($.annotation),
-            optional($.visibility_modifier),
+            optional(seq($.visibility_modifier, repeat($.annotation))),
             $.type_expression,
             $.identifier,
             '.',
@@ -447,8 +451,15 @@ module.exports = grammar({
         // Used in typedef Type<Key>.Orderer as Orderer
         member_type: $ => prec.left(seq(choice($.generic_type, $.type_name), '.', $.identifier)),
         // Type arguments can include constraints: <Key, Value extends Shareable>
-        type_arguments: $ => seq('<', commaSep1($.type_argument), '>'),
-        type_argument: $ => seq($.type_expression, optional(seq('extends', $.type_expression))),
+        // Can also include angle-bracket type lists for method signatures: Method<Target, <Params>, <Return>>
+        // Can be empty: Class<> for wildcard/inferred type arguments
+        type_arguments: $ => seq('<', commaSep($.type_argument), '>'),
+        type_argument: $ => choice(
+            $.angle_bracket_type_list,
+            seq($.type_expression, optional(seq('extends', $.type_expression))),
+        ),
+        // Angle bracket type list: <> or <Type> or <Type1, Type2> - used in method type signatures
+        angle_bracket_type_list: $ => seq('<', commaSep($.type_expression), '>'),
         array_type: $ => prec.left(seq($._non_bi_type, '[', ']')),
         nullable_type: $ => prec.left(seq($._non_bi_type, '?')),
         // Non-null type modifier (no auto-narrowing): Type!
@@ -499,11 +510,12 @@ module.exports = grammar({
         // Local function declaration: visibility, static, return type, name, params, body
         // Supports: private static (String, String) decode(Entry entry) { ... }
         // Also supports doc comments before local functions
+        // Annotations can appear after visibility modifier: private @Foo Type fn()
         local_function_declaration: $ => seq(
             optional($.doc_comment),
             repeat($.annotation),
-            optional($.visibility_modifier),
-            optional('static'),
+            optional(seq($.visibility_modifier, repeat($.annotation))),
+            optional(seq('static', repeat($.annotation))),
             optional($.type_parameters),
             $.type_expression,
             $.identifier,
@@ -621,10 +633,24 @@ module.exports = grammar({
                 // for (Type name : iterable)
                 prec(1, seq($.type_expression, $._identifier_or_context_keyword, ':', $._expression)),
                 seq($.for_tuple_destructure, ':', $._expression),
-                seq(optional($._expression), ';', optional($._expression), ';', optional($._expression)),
+                // Traditional for loop: for (init; condition; update)
+                // init can be a variable declaration (Type name = expr) or expression
+                seq(optional($.for_initializer), ';', optional($._expression), ';', optional($._expression)),
             ),
             ')',
             $._statement,
+        ),
+
+        // For loop initializer: either an expression or variable declaration(s)
+        // Supports multiple declarations: for (Int i = 0, Int c = size; ...)
+        for_initializer: $ => choice(
+            $.for_var_declarations,
+            $._expression,
+        ),
+        // Multiple variable declarations in for initializer
+        for_var_declarations: $ => seq(
+            $.type_expression, $.identifier, '=', $._expression,
+            repeat(seq(',', $.type_expression, $.identifier, '=', $._expression)),
         ),
 
         // Tuple destructuring pattern for for-each: ((Type1 name1, Type2 name2))
@@ -816,7 +842,8 @@ module.exports = grammar({
         index_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_2}}, seq($._expression, '[', commaSep1($._expression), ']')),
 
         // Reference expression: &name (creates a reference to a property/variable)
-        reference_expression: $ => seq('&', $.identifier),
+        // Reference (no-dereference) expression: &identifier or &this:xxx
+        reference_expression: $ => seq('&', choice($.identifier, $.this_expression)),
 
         // new Type(args), new Type[size], new Type[], new Type[size](initializer), or expr.new(args)
         // Also supports anonymous inner classes: new Type(args) { body }
@@ -933,8 +960,23 @@ module.exports = grammar({
         map_literal: $ => seq('[', commaSep($.map_entry), ']'),
         map_entry: $ => seq($._expression, '=', $._expression),
 
-        // Typed literal: Type:[] or Type:[values...]
-        typed_literal: $ => seq($.type_expression, ':', choice($.list_literal, $.map_literal)),
+        // Typed literal: Type:value where value is a literal
+        // Examples: Duration:0S, Int:42, Map:[], List:[1,2,3], Date:2024-01-26
+        // Use higher precedence to prefer typed_literal interpretation
+        typed_literal: $ => prec(2, seq($.type_expression, ':', choice(
+            $.list_literal,
+            $.map_literal,
+            $.duration_literal,
+            $.integer_literal,
+            $.float_literal,
+            $.string_literal,
+            $.char_literal,
+            $.boolean_literal,
+        ))),
+
+        // Duration literal: ISO-8601 format (P prefix optional in XTC shorthand)
+        // Examples: PT1H30M (1 hour 30 min), P1D (1 day), 30S (30 seconds), PT0S (0 seconds)
+        duration_literal: $ => /P?T?[0-9]+[YMDHS]([0-9]+[YMDHS])*/i,
 
         // Identifiers and names
         // type_name can be a simple identifier or a qualified name (e.g., ecstasy.io.Channel)
