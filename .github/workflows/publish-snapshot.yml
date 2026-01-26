@@ -13,6 +13,16 @@
 #
 name: Publish Snapshots
 
+# ============================================================================
+# YAML Anchors - Reusable configuration snippets
+# ============================================================================
+x-checkout-config: &checkout-config
+    fetch-depth: 1
+    show-progress: true
+
+x-gh-token-env: &gh-token-env
+    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 permissions:
     contents: write
     packages: write
@@ -42,8 +52,7 @@ jobs:
             - name: Fetch Sources
               uses: actions/checkout@v6
               with:
-                  fetch-depth: 1
-                  show-progress: true
+                  <<: *checkout-config
 
             - name: Setup XVM Project
               id: versions
@@ -73,7 +82,7 @@ jobs:
               id: commit
               shell: bash
               env:
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  <<: *gh-token-env
               run: |
                   # Use CI run ID from input if provided
                   if [ -n "${{ github.event.inputs.ci-run-id }}" ]; then

@@ -1,14 +1,21 @@
 # Dependabot configuration for dependabot inspections for the repo on GitHub.
 
 version: 2
+
+# ============================================================================
+# YAML Anchors - Reusable configuration snippets
+# ============================================================================
+x-weekly-schedule: &weekly-schedule
+    interval: "weekly"
+    day: "saturday"
+    time: "06:00"
+
 updates:
     # Enable version updates for GitHub Actions
     - package-ecosystem: "github-actions"
       directory: "/"
       schedule:
-          interval: "weekly"
-          day: "saturday"
-          time: "06:00"
+          <<: *weekly-schedule
       open-pull-requests-limit: 5
       commit-message:
           prefix: "ci"
@@ -18,9 +25,7 @@ updates:
     - package-ecosystem: "docker"
       directory: "/docker"
       schedule:
-          interval: "weekly"
-          day: "saturday"
-          time: "06:00"
+          <<: *weekly-schedule
       open-pull-requests-limit: 5
       commit-message:
           prefix: "docker"
@@ -34,9 +39,7 @@ updates:
     - package-ecosystem: "gradle"
       directory: "/"
       schedule:
-          interval: "weekly"
-          day: "saturday"
-          time: "06:00"
+          <<: *weekly-schedule
       open-pull-requests-limit: 3
       groups:
           # Group all dependency updates into a single PR
