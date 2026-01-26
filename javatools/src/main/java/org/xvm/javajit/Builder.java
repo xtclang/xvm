@@ -456,8 +456,14 @@ public abstract class Builder {
      * Out: TypeConstant
      */
     public static void loadTypeConstant(CodeBuilder code, TypeSystem ts, TypeConstant type) {
+        int index = ts.registerConstant(type);
+
+        // TODO: this is a temporary hack; remove!
+        if (ts instanceof NativeTypeSystem) {
+            index = -index;
+        }
         code.aload(code.parameterSlot(0)) // $ctx
-            .loadConstant(ts.registerConstant(type))
+            .loadConstant(index)
             .invokevirtual(CD_Ctx, "getConstant", Ctx.MD_getConstant) // <- const
             .checkcast(CD_TypeConstant);                              // <- type
     }

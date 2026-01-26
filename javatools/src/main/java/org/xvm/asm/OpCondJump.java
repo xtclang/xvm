@@ -497,12 +497,12 @@ public abstract class OpCondJump
             return;
         }
 
-        RegisterInfo reg = bctx.loadArgument(code, m_nArg);
+        RegisterInfo reg = bctx.ensureRegister(code, m_nArg);
         ClassDesc    cd  = reg.cd();
         if (cd.isPrimitive()) {
             if (reg instanceof DoubleSlot doubleSlot) {
                 assert doubleSlot.flavor() == JitFlavor.NullablePrimitive;
-                code.iload(doubleSlot.extSlot()); // boolean Null indication
+                code.iload(doubleSlot.extSlot());
                 switch (op) {
                 case OP_JMP_NULL:
                     code.ifne(lblJump);
@@ -512,8 +512,8 @@ public abstract class OpCondJump
 
                 case OP_JMP_NNULL:
                     code.ifeq(lblJump);
-                    bctx.narrowRegister(code, reg, nAddrJump, bctx.pool().typeNullable());
-                    bctx.narrowRegister(code, reg, reg.type().removeNullable());
+                    bctx.narrowRegister(code, reg, nAddrJump, reg.type().removeNullable());
+                    bctx.narrowRegister(code, reg, bctx.pool().typeNullable());
                     break;
 
                 default:
@@ -550,6 +550,7 @@ public abstract class OpCondJump
                 throw new IllegalStateException();
             }
         } else {
+            reg.load(code);
             switch (op) {
             case OP_JMP_NULL:
                 Builder.loadNull(code);
@@ -610,25 +611,11 @@ public abstract class OpCondJump
                 }
             }
 
-            RegisterInfo regTarget = bctx.loadArgument(code, m_nArg);
+            RegisterInfo regTarget = bctx.ensureRegister(code, m_nArg);
             boolean      fInvert   = false;
             if (regTarget instanceof DoubleSlot doubleSlot) {
                 assert doubleSlot.flavor() == JitFlavor.NullablePrimitive;
-
-                // the extension flag is at the stack top ("true" meaning "Null");
-                // discard the second value, and leave the boolean on the Java stack
-                ClassDesc cd   = regTarget.cd();
-                TypeKind  kind = Builder.toTypeKind(cd);
-                if (kind.slotSize() == 1) {
-                    code.swap()
-                        .pop();
-                } else {
-                    int slot = bctx.scope.allocateJavaSlot(kind);
-                    code.istore(slot)
-                        .pop2()
-                        .iload(slot);
-                }
-
+                code.iload(doubleSlot.extSlot());
                 if (!typeTest.isOnlyNullable()) {
                     assert typeTarget.removeNullable().isA(typeTest);
 
@@ -637,6 +624,7 @@ public abstract class OpCondJump
                     fInvert = true;
                 }
             } else {
+                regTarget.load(code);
                 bctx.loadCtx(code);
                 code.invokevirtual(regTarget.cd(), "$xvmType", MD_xvmType); // target type
                 Builder.loadTypeConstant(code, bctx.typeSystem, typeTest);  // test type

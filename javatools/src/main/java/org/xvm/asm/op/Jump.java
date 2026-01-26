@@ -161,7 +161,6 @@ public class Jump
         } else {
             assert ofJmp == 1;
         }
-        bctx.mergeTypes(code, nAddrJump);
     }
 
     // ----- fields --------------------------------------------------------------------------------

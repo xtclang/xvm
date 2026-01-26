@@ -60,6 +60,13 @@ public class Int64 extends nConst {
     }
 
     /**
+     * Int64 add(Int64! n)
+     */
+    public long addꖛ0$p(Ctx ctx, long n) {
+        return $value + n;
+    }
+
+    /**
      * Int64 mul(Int64! n)
      */
     public long mul$p(Ctx ctx, long n) {

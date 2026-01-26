@@ -805,6 +805,8 @@ public class CommonBuilder
 
         if (hasType) {
             classBuilder.withField("$type", CD_TypeConstant, ClassFile.ACC_PUBLIC);
+        } else {
+            // TODO: make it static!
         }
 
         classBuilder.withMethodBody("$xvmType", MD_xvmType,

@@ -682,33 +682,19 @@ public class BuildContext {
                 }
                 if (entry.getValue() instanceof Narrowed narrowedReg &&
                         narrowedReg.scopeDepth >= scope.depth) {
-                    // reset the register type
-                    entry.setValue(narrowedReg.origReg());
+                    // copy the data and reset the register type
+                    // TODO: track the data change to prevent unnecessary copy
+                    RegisterInfo origReg = narrowedReg.origReg();
+                    if (narrowedReg.slot() != origReg.slot()) {
+                        narrowedReg.load(code);
+                        moveVar(code, narrowedReg, origReg, false);
+                    }
+                    entry.setValue(origReg);
                 }
-            }
-
-
-            // there are scenarios when Exit is unreachable (e.g. following LoopEnd)
-            if (isReached) {
-                mergeTypes(code, currOpAddr + 1);
             }
         }
 
         return prevScope;
-    }
-
-    /**
-     * Merge the types for the specified address.
-     */
-    public void mergeTypes(CodeBuilder code, int jumpAddr) {
-        // collect the registered that need to be "widened"
-        for (int widenedId : typeMatrix.follow(currOpAddr, jumpAddr, -1)) {
-            if (registerInfos.get(widenedId) instanceof Narrowed narrowedReg) {
-                // TODO: if reg.changed
-                RegisterInfo reg = narrowedReg.widen(this, code, typeMatrix.getType(widenedId, jumpAddr));
-                registerInfos.put(widenedId, reg);
-            }
-        }
     }
 
     /**
@@ -834,12 +820,13 @@ public class BuildContext {
      * @param loaded  if true, the register value has been loaded on the Java stack
      */
     protected RegisterInfo adjustRegister(CodeBuilder code, RegisterInfo reg, boolean loaded) {
-        if (!reg.cd().isPrimitive()) {
+        if (!reg.type().isPrimitive()) {
             int          regId   = reg.regId();
             TypeConstant regType = reg.type().getCanonicalJitType();
             TypeConstant mtxType = typeMatrix.getType(regId, currOpAddr);
 
-            if (!mtxType.equals(regType)) {
+            // the types could be equivalent, but not equal
+            if (!mtxType.isA(regType) || !regType.isA(mtxType)) {
                 int depth = scope.depth;
                 if (reg instanceof Narrowed narrowedReg) {
                     reg     = narrowedReg.origReg();
@@ -848,6 +835,18 @@ public class BuildContext {
                     if (mtxType.equals(regType)) {
                         return reg;
                     }
+                } else if (reg.cd().isPrimitive()) {
+                    assert reg.flavor() == NullablePrimitive && mtxType.isPrimitive();
+
+                    // we need to narrow from X? to X, where X is primitive - that simply means
+                    // popping the nullable flag
+                    if (loaded) {
+                        code.pop();
+                    } else {
+                        // TODO: load should pop the nullable flag
+                        throw new UnsupportedOperationException();
+                    }
+                    return reg;
                 }
 
                 assert mtxType.isA(regType);
@@ -1076,26 +1075,47 @@ public class BuildContext {
      *
      * @param allowUpcast  if true, the destination type is allowed to be narrower and the
      *                     corresponding "checkcast" needs to be added, which can happen in some
-     *                     scenarious (e.g.: assignment of narrowed properties)
+     *                     scenarios (e.g.: assignment of narrowed properties)
      */
     public void moveVar(CodeBuilder code, int fromVarId, int toVarId, boolean allowUpcast) {
         RegisterInfo regFrom  = loadArgument(code, fromVarId);
         RegisterInfo regTo    = ensureRegInfo(toVarId, regFrom.type());
+
+        moveVar(code, regFrom, regTo, allowUpcast);
+    }
+
+    /**
+     * Build the code that moves the value between the vars represented by the corresponding
+     * registers.
+     *
+     * Note: the value of the "regFrom" has already been loaded on Java stack.
+     *
+     * @param allowUpcast  if true, the destination type is allowed to be narrower and the
+     *                     corresponding "checkcast" needs to be added, which can happen in some
+     *                     scenarios (e.g.: assignment of narrowed properties)
+     */
+    public void moveVar(CodeBuilder code, RegisterInfo regFrom, RegisterInfo regTo,
+                        boolean allowUpcast) {
         TypeConstant typeFrom = regFrom.type();
         TypeConstant typeTo   = regTo.type();
         ClassDesc    cdFrom   = regFrom.cd();
-        ClassDesc    cdTo     = regTo.cd();
 
         if (!typeFrom.isA(typeTo)) {
-            assert allowUpcast;
+            if (regTo instanceof Narrowed narrowedReg) {
+                regTo  = resetRegister(narrowedReg);
+                typeTo = regTo.type();
+            }
 
-            regTo  = regTo.original();
-            typeTo = regTo.type();
-            if (!typeFrom.isA(typeTo)) {
+            if (!typeFrom.isA(typeTo) && regFrom.flavor() != NullablePrimitive) {
+                assert allowUpcast;
                 if (cdFrom.isPrimitive()) {
                     // this can only be caused by a dead/unreachable code
                     ensureVarScope(code, regTo);
                     throwTypeMismatch(code, "Unreconcilable types " +
+                            typeFrom.getValueString() + " -> " + typeTo.getValueString());
+                    // unfortunately, if generated at reachable code, this will throw
+                    // during the verification phase without any useful information to debug
+                    System.err.println("*** Unreconcilable types " +
                             typeFrom.getValueString() + " -> " + typeTo.getValueString());
                     return;
                 }
@@ -1106,21 +1126,90 @@ public class BuildContext {
         }
 
         if (regFrom.flavor() != regTo.flavor()) {
-            if (cdFrom.isPrimitive()) {
-                if (regTo.flavor() == NullablePrimitive) {
-                    code.iconst_0();                 // "false" for "not Null"
-                } else if (!cdTo.isPrimitive()) {
-                    Builder.box(code, typeFrom, cdFrom);
-                }
-            } else if (cdTo.isPrimitive()) {
-                if (regTo.flavor() == NullablePrimitive) {
+            // additional transformations are required for these scenarios:
+            //  - Primitive -> Widened            (n = 5; where Int? n;)
+            //  - Specific  -> NullablePrimitive  (Int? n = 5; or Int? n = Null;)
+            //  - Specific  -> Primitive          (Int n := o.is(Int);)
+            //  - NullablePrimitive -> Specific   (Int? n = Null; assert call(n);)
+
+            JitFlavor srcFlavor = regFrom.flavor();
+            JitFlavor dstFlavor = regTo.flavor();
+            boolean   invalid   = false;
+
+            AddTransformation:
+            switch (srcFlavor) {
+            case Specific:
+                switch (dstFlavor) {
+                case Primitive:
+                    Builder.unbox(code, typeTo, regTo.cd());
+                    break AddTransformation;
+
+                case Widened:
+                    // nothing to do
+                    break AddTransformation;
+
+                case NullablePrimitive:
                     assert typeFrom.isOnlyNullable();
-                    code.pop();                      // throw away "Null"
-                    Builder.defaultLoad(code, cdTo); // default value into the main slot
-                    code.iconst_1();                 // "true" for "Null"
-                } else {
-                    Builder.unbox(code, typeTo, cdTo);
+                    code.pop(); // throw away Null; load the default value and "true"
+                    Builder.defaultLoad(code, regTo.cd());
+                    code.iconst_1();
+                    break AddTransformation;
+
+                default:
+                    invalid = true;
+                    break AddTransformation;
                 }
+
+            case Primitive:
+                switch (dstFlavor) {
+                case Specific, Widened:
+                    Builder.box(code, typeFrom, cdFrom);
+                    break AddTransformation;
+
+                case NullablePrimitive:
+                    // the value is already on Java stack; just load "false"
+                    code.iconst_0();
+                    break AddTransformation;
+
+                default:
+                    invalid = true;
+                    break AddTransformation;
+                }
+
+            case Widened:
+                switch (dstFlavor) {
+                case Specific:
+                    // we must have added "checkcast" above already
+                    assert allowUpcast;
+                    break AddTransformation;
+                }
+
+            case NullablePrimitive:
+                switch (dstFlavor) {
+                case Specific:
+                    assert typeTo.isOnlyNullable();
+                    code.pop();
+                    Builder.loadNull(code);
+                    break AddTransformation;
+
+                case Primitive:
+                    // the boolean and the value are on the Java stack; just pop the boolean
+                    code.pop();
+                    break AddTransformation;
+
+                default:
+                    invalid = true;
+                    break AddTransformation;
+                }
+
+            default:
+                invalid = true;
+                break;
+            }
+
+            if (invalid) {
+                throw new UnsupportedOperationException("Not implemented: src=" + srcFlavor +
+                                                        "; dst=" + dstFlavor);
             }
         }
         storeValue(code, regTo, typeTo);
