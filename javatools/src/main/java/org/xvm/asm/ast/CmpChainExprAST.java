@@ -5,13 +5,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 import java.util.Objects;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
-import org.jetbrains.annotations.NotNull;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -24,42 +20,40 @@ import static org.xvm.util.Handy.writePackedLong;
 /**
  * Comparison over a chain of expressions.
  */
-// TODO: make fields final once AST deserialization supports factory-based construction
 public class CmpChainExprAST
         extends ExprAST {
 
-    private List<ExprAST>  exprs;
-    private List<Operator> ops;
-    private MethodConstant method;
+    private ExprAST[]      exprs;
+    private Operator[]     ops;
+    private MethodConstant method; // the comparison method (same for all pairs)
 
     private transient TypeConstant booleanType;
 
     CmpChainExprAST() {}
 
-    public CmpChainExprAST(@NotNull List<ExprAST> exprs, @NotNull List<Operator> ops, @NotNull MethodConstant method) {
-        Objects.requireNonNull(exprs);
-        Objects.requireNonNull(ops);
-        Objects.requireNonNull(method);
+    public CmpChainExprAST(ExprAST[] exprs, Operator[] ops, MethodConstant method) {
+        assert exprs != null && Arrays.stream(exprs).allMatch(Objects::nonNull);
+        assert ops   != null && Arrays.stream(ops).allMatch(Objects::nonNull);
+        assert ops.length == exprs.length - 1;
+        assert method != null;
 
-        assert exprs.stream().allMatch(Objects::nonNull);
-        assert ops.stream().allMatch(Objects::nonNull);
-        assert ops.size() == exprs.size() - 1;
-
-        assert ops.stream().allMatch(op -> switch (op) {
-            case CompEq, CompNeq, CompLt, CompGt, CompLtEq, CompGtEq -> true;
-            default -> false;
-        });
-        this.exprs  = List.copyOf(exprs);
-        this.ops    = List.copyOf(ops);
+        for (Operator op : ops) {
+            assert switch (op) {
+                case CompEq, CompNeq, CompLt, CompGt, CompLtEq, CompGtEq -> true;
+                default -> false;
+            };
+        }
+        this.exprs  = exprs;
+        this.ops    = ops;
         this.method = method;
     }
 
-    public List<Operator> getOps() {
-        return ops;
+    public Operator[] getOps() {
+        return ops;  // note: caller must not modify returned array in any way
     }
 
-    public List<ExprAST> getExprs() {
-        return exprs;
+    public ExprAST[] getExprs() {
+        return exprs;  // note: caller must not modify returned array in any way
     }
 
     public MethodConstant getMethod() {
@@ -82,32 +76,33 @@ public class CmpChainExprAST
             throws IOException {
         int count = readMagnitude(in);
 
-        var exprs = new ArrayList<ExprAST>(count);
+        ExprAST[] exprs = new ExprAST[count];
         for (int i = 0; i < count; ++i) {
-            exprs.add(readExprAST(in, res));
+            exprs[i] = readExprAST(in, res);
         }
-        var ops = new ArrayList<Operator>(count - 1);
-        for (int i = 0; i < count - 1; ++i) {
-            ops.add(Operator.values()[readMagnitude(in)]);
+        Operator[] ops = new Operator[count-1];
+        for (int i = 0; i < count-1; ++i) {
+            ops[i] = Operator.values()[readMagnitude(in)];
         }
         MethodConstant method = res.getConstant(readMagnitude(in), MethodConstant.class);
 
-        this.exprs  = List.copyOf(exprs);
-        this.ops    = List.copyOf(ops);
+        this.exprs  = exprs;
+        this.ops    = ops;
         this.method = method;
         booleanType = res.typeForName("Boolean");
     }
 
     @Override
     public void prepareWrite(ConstantResolver res) {
-        exprs.forEach(expr -> expr.prepareWrite(res));
+        prepareASTArray(exprs, res);
         res.register(method);
     }
 
     @Override
     protected void writeBody(DataOutput out, ConstantResolver res)
             throws IOException {
-        writePackedLong(out, exprs.size());
+        int count = exprs.length;
+        writePackedLong(out, count);
         for (ExprAST expr : exprs) {
             expr.writeExpr(out, res);
         }
@@ -119,8 +114,14 @@ public class CmpChainExprAST
 
     @Override
     public String toString() {
-        return exprs.getFirst() + IntStream.range(1, exprs.size())
-                .mapToObj(i -> " " + ops.get(i - 1).text + " " + exprs.get(i))
-                .collect(Collectors.joining());
+        StringBuilder buf = new StringBuilder();
+        buf.append(exprs[0]);
+        for (int i = 1, c = exprs.length; i < c; i++) {
+            buf.append(' ')
+               .append(ops[i-1].text)
+               .append(' ')
+               .append(exprs[i]);
+        }
+        return buf.toString();
     }
 }

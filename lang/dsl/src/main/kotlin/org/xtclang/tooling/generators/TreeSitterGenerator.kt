@@ -22,6 +22,14 @@ import org.xtclang.tooling.model.OperatorCategory
  */
 class TreeSitterGenerator(private val model: LanguageModel) {
 
+    companion object {
+        /** Number of spaces per indentation level in generated grammar.js */
+        const val INDENT_SIZE = 4
+
+        /** Returns indentation string for the given nesting level */
+        fun indent(level: Int): String = " ".repeat(INDENT_SIZE * level)
+    }
+
     private fun loadTemplate(name: String): String =
         javaClass.getResourceAsStream("/templates/$name")
             ?.bufferedReader()
@@ -52,28 +60,29 @@ class TreeSitterGenerator(private val model: LanguageModel) {
             .filter { it.category == OperatorCategory.MEMBER_ACCESS }
             .joinToString(", ") { "'${escapeJsString(it.symbol)}'" }
 
+        val i2 = indent(2)
         val booleanRule = if (model.booleanLiterals.isNotEmpty()) {
-            "    boolean_literal: \$ => choice(${model.booleanLiterals.joinToString(", ") { "'$it'" }}),"
+            "${i2}boolean_literal: \$ => choice(${model.booleanLiterals.joinToString(", ") { "'$it'" }}),"
         } else {
-            "    boolean_literal: \$ => choice('True', 'False'),"
+            "${i2}boolean_literal: \$ => choice('True', 'False'),"
         }
 
         val nullRule = model.nullLiteral?.let {
-            "    null_literal: \$ => '$it',"
-        } ?: "    null_literal: \$ => 'Null',"
+            "${i2}null_literal: \$ => '$it',"
+        } ?: "${i2}null_literal: \$ => 'Null',"
 
         val visibilityRule = if (model.visibilityKeywords.isNotEmpty()) {
             val mods = model.visibilityKeywords.joinToString(", ") { "'$it'" }
-            """    // Visibility modifiers
-    // Supports single visibility (public, private, protected) and dual visibility (public/private)
-    visibility_modifier: $ => choice(
-      // Single visibility
-      $mods,
-      // Dual visibility: public/private, protected/private, etc.
-      seq(choice($mods), '/', choice($mods)),
-    ),"""
+            """${i2}// Visibility modifiers
+${i2}// Supports single visibility (public, private, protected) and dual visibility (public/private)
+${i2}visibility_modifier: $ => choice(
+${i2}    // Single visibility
+${i2}    $mods,
+${i2}    // Dual visibility: public/private, protected/private, etc.
+${i2}    seq(choice($mods), '/', choice($mods)),
+${i2}),"""
         } else {
-            "    visibility_modifier: \$ => choice('public', 'private', 'protected'),"
+            "${i2}visibility_modifier: \$ => choice('public', 'private', 'protected'),"
         }
 
         return template
@@ -194,6 +203,7 @@ class TreeSitterGenerator(private val model: LanguageModel) {
         }
 
         val byPrecedence = binaryOps.groupBy { it.precedence }.toSortedMap()
+        val i3 = indent(3)
 
         byPrecedence.entries.forEachIndexed { index, (precedence, ops) ->
             val precFn = when {
@@ -209,7 +219,7 @@ class TreeSitterGenerator(private val model: LanguageModel) {
             }
 
             val comma = if (index < byPrecedence.size - 1) "," else ""
-            appendLine("      $precFn($precedence, seq(\$._expression, $choiceExpr, \$._expression))$comma")
+            appendLine("$i3$precFn($precedence, seq(\$._expression, $choiceExpr, \$._expression))$comma")
         }
     }.trimEnd()
 

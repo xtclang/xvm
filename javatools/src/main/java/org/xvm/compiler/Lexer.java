@@ -1192,7 +1192,7 @@ public class Lexer
             log(Severity.ERROR, CHAR_NO_TERM, null, lInitPos);
         }
 
-        return new Token(lInitPos, source.getPosition(), Id.LIT_CHAR, ch);
+        return new Token(lInitPos, source.getPosition(), Id.LIT_CHAR, Character.valueOf(ch));
     }
 
     /**
@@ -1209,10 +1209,9 @@ public class Lexer
     protected Token eatStringChars(long lInitPos, boolean fTemplate, boolean fMultiline) {
         Source source = m_source;
 
-        var   sb        = new StringBuilder();
-        var   list      = fTemplate ? new ArrayList<>() : null;
-        long  lPosStart = lInitPos;
-
+        StringBuilder sb        = new StringBuilder();
+        ArrayList     list      = fTemplate ? new ArrayList<>() : null;
+        long          lPosStart = lInitPos;
         Appending: while (true) {
             if (source.hasNext()) {
                 char ch = source.next();
@@ -1512,7 +1511,7 @@ public class Lexer
                 dec = new BigDecimal(biWhole.multiply(BigInteger.TEN.pow(fractionalDigits))
                         .add(piFraction.getBigInteger()), fractionalDigits);
                 if (signScalar < 0) {
-                    // the unfortunate side effect of not having a -0
+                    // the unfortunate side-effect of not having a -0
                     dec = dec.negate();
                 }
             }
@@ -1907,7 +1906,7 @@ public class Lexer
 
     /**
      * Eat a literal version value.
-     * <p>
+     *
      * <p/><code><pre>
      * VersionString
      *     NonGASuffix
@@ -2620,7 +2619,6 @@ public class Lexer
      * @return true iff the specified character can be the start of an
      *         identifier
      */
-    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public static boolean isIdentifierStart(char ch) {
         return switch (Character.getType(ch)) {
             case Character.UPPERCASE_LETTER -> true;
@@ -2716,7 +2714,6 @@ public class Lexer
     /**
      * Unicode: Horizontal Tab.
      */
-    @SuppressWarnings("unused")
     public static final char HT  = 0x0009;
     /**
      * Unicode: Line Feed.
@@ -2725,12 +2722,10 @@ public class Lexer
     /**
      * Unicode: Vertical Tab.
      */
-    @SuppressWarnings("unused")
     public static final char VT  = 0x000B;
     /**
      * Unicode: Form Feed.
      */
-    @SuppressWarnings("unused")
     public static final char FF  = 0x000C;
     /**
      * Unicode: Carriage Return.
@@ -2743,42 +2738,34 @@ public class Lexer
     /**
      * Unicode: File Separator.
      */
-    @SuppressWarnings("unused")
     public static final char FS  = 0x001C;
     /**
      * Unicode: Group Separator.
      */
-    @SuppressWarnings("unused")
     public static final char GS  = 0x001D;
     /**
      * Unicode: Record Separator.
      */
-    @SuppressWarnings("unused")
     public static final char RS  = 0x001E;
     /**
      * Unicode: Unit Separator.
      */
-    @SuppressWarnings("unused")
     public static final char US  = 0x001F;
     /**
      * Unicode: Next Line.
      */
-    @SuppressWarnings("unused")
     public static final char NEL = 0x0085;
     /**
      * Unicode: Non-Breaking Space aka "&nbsp".
      */
-    @SuppressWarnings("unused")
     public static final char NBS = 0x00A0;
     /**
      * Unicode: Line Separator.
      */
-    @SuppressWarnings("unused")
     public static final char LS  = 0x2028;
     /**
      * Unicode: Paragraph Separator.
      */
-    @SuppressWarnings("unused")
     public static final char PS  = 0x2029;
 
     /**

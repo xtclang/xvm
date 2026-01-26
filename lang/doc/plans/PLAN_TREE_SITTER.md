@@ -42,7 +42,7 @@ cd lang/dsl/build/generated
 - [x] Grammar validation passes (`./gradlew :lang:dsl:validateTreeSitterGrammar`)
 
 ### In Progress 🔄
-- **Grammar coverage: 506/692 XTC files parse successfully (73.1%)**
+- **Grammar coverage: 555/692 XTC files parse successfully (80.2%)**
 - Native library compilation for target platforms
 
 ### Grammar Support Status (2026-01-26)
@@ -138,6 +138,11 @@ The following features have been added to `TreeSitterGenerator.kt`:
 | Assert expr with msg | `value ?: assert as $"error"` | ✅ Assert expression with message |
 | Method TODO body | `Int foo() = TODO text` | ✅ No semicolon after TODO text |
 | Try resource decl | `try (Type x = expr) {}` | ✅ Variable declaration in try |
+| Generic type patterns | `case List<String>:` | ✅ Type patterns with generics in switch |
+| Empty tuple expression | `args = ()` | ✅ Empty tuple as default value |
+| Annotation declarations | `annotation Foo into Bar` | ✅ XTC annotation types |
+| Annotated new expressions | `new @Mixin Type(args)` | ✅ Annotations on new |
+| Named function type params | `function Bool fn(Arg)` | ✅ Function params with names |
 
 #### Still Needed (High Priority)
 
@@ -600,7 +605,13 @@ Files failing to parse typically use these advanced features (still being added)
 13. ✅ Implemented local typedef, using explicit type, assert without conditions, assert expr with message
 14. ✅ Implemented method TODO body without semicolon, try resource declarations
 15. ✅ Coverage improved from 70.7% to 73.1% (506/692)
-16. 🔄 Next: String interpolation `$"text {expr}"`
+16. ✅ Implemented generic type patterns in switch `case List<String>:`, empty tuple expression `()`
+17. ✅ Coverage improved from 73.1% to 73.6% (509/692)
+18. ✅ Implemented annotation declarations (`annotation Foo into Bar implements Baz`)
+19. ✅ Coverage improved from 73.6% to 79.2% (548/692)
+20. ✅ Implemented annotated new expressions `new @Mixin Type(args)`, named function type params
+21. ✅ Coverage improved from 79.2% to 80.2% (555/692)
+22. 🔄 Next: String interpolation `$"text {expr}"`
 
 ---
 
