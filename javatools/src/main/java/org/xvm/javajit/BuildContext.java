@@ -1176,11 +1176,15 @@ public class BuildContext {
                     break AddTransformation;
                 }
 
-            case Widened:
+            case Widened, WidenedWithDefault:
                 switch (dstFlavor) {
                 case Specific:
                     // we must have added "checkcast" above already
                     assert allowUpcast;
+                    break AddTransformation;
+
+                case Widened:
+                    // nothing to do
                     break AddTransformation;
                 }
 
@@ -1317,7 +1321,7 @@ public class BuildContext {
             //  - Primitive -> NullablePrimitive  (Int n; f(n) with f(Int?))
             //  - NullablePrimitive -> Specific   (Int? n; f(n) with f(Object)
             switch (srcFlavor) {
-            case Specific:
+            case Specific, SpecificWithDefault:
                 switch (dstFlavor) {
                 case Specific, SpecificWithDefault, Widened, WidenedWithDefault:
                     // nothing to do

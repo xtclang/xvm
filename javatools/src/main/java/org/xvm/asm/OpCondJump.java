@@ -7,7 +7,6 @@ import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
-import java.lang.classfile.TypeKind;
 
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
