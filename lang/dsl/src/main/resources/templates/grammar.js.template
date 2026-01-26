@@ -340,7 +340,9 @@ module.exports = grammar({
             $.identifier,
             optional($.type_parameters),
             $.parameters,
-            choice($.block, seq('=', $._expression, ';'), ';'),
+            // Expression body can be: = expr; or = TODO text (no semicolon for TODO inline text)
+            // prec(2) ensures TODO form is tried first
+            choice($.block, prec(2, seq('=', $.todo_expression)), seq('=', $._expression, ';'), ';'),
         ),
 
         // Property accessor syntax: `Type propName.get() { ... }` or `Type propName.calc() = expr;`
@@ -505,6 +507,8 @@ module.exports = grammar({
             $.mixin_declaration,
             // Local function declarations (functions defined inside method bodies)
             $.local_function_declaration,
+            // Local typedef (type aliases inside method bodies)
+            $.typedef_declaration,
         ),
 
         // Local function declaration: visibility, static, return type, name, params, body
@@ -721,12 +725,20 @@ module.exports = grammar({
         pattern_element: $ => choice($._expression, $.wildcard),
         wildcard: $ => '_',
 
+        // Try statement can have resources: try (expr), try (Type var = expr), try (val var = expr)
         try_statement: $ => seq(
             'try',
-            optional(seq('(', commaSep1($._expression), ')')),
+            optional(seq('(', commaSep1($.try_resource), ')')),
             $.block,
             repeat($.catch_clause),
             optional(seq('finally', $.block)),
+        ),
+
+        // Try resource can be expression or variable declaration
+        // prec(2) ensures val/var form is preferred over expression
+        try_resource: $ => choice(
+            prec(2, seq(optional(choice('val', 'var')), $.type_expression, $.identifier, '=', $._expression)),
+            $._expression,
         ),
 
         catch_clause: $ => seq(
@@ -747,8 +759,12 @@ module.exports = grammar({
             $.block,
         ),
 
+        // Using resource can be:
+        // - val/var id = expr
+        // - val/var Type id = expr
+        // - Type id = expr (explicit type, no val/var)
         using_resource: $ => seq(
-            choice('val', 'var'),
+            optional(choice('val', 'var')),
             optional($.type_expression),
             $.identifier,
             '=',
@@ -762,13 +778,17 @@ module.exports = grammar({
 
         // Assert can have: assert cond1, cond2, ... as message;
         // Where conditions can be expressions or conditional declarations
-        assert_statement: $ => seq(
+        // Conditions are optional: `assert as message;` is valid (always true, just emits message)
+        // prec(2) ensures assert_statement is preferred over expression_statement with assert_expression
+        assert_statement: $ => prec(2, seq(
             choice('assert', $.assert_variant),
-            $.assert_condition,
-            repeat(seq(',', $.assert_condition)),
+            optional(seq(
+                $.assert_condition,
+                repeat(seq(',', $.assert_condition)),
+            )),
             optional(seq('as', $._expression)),
             ';',
-        ),
+        )),
         assert_condition: $ => choice($._expression, $.conditional_declaration),
         assert_variant: $ => choice('assert:rnd', 'assert:arg', 'assert:bounds', 'assert:TODO', 'assert:once', 'assert:test', 'assert:debug'),
 
@@ -863,7 +883,9 @@ module.exports = grammar({
 
         // Assert expression: assert can be used as an expression (e.g., in ?: or safe-call-else)
         // Used in patterns like: value?.method() : assert
-        assert_expression: $ => 'assert',
+        // Can include an optional message: `assert as $"error"` in expression context
+        // prec.left ensures `as` binds to assert (not an outer context)
+        assert_expression: $ => prec.left(seq('assert', optional(seq('as', $._expression)))),
 
         // TODO expression: placeholder for unimplemented code, throws UnsupportedOperation
         // Forms: TODO, TODO(), TODO(message), TODO message text
