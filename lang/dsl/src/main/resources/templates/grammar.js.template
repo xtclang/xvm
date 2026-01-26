@@ -42,6 +42,7 @@ module.exports = grammar({
         [$.intersection_type, $._non_bi_type],
         [$.difference_type, $._non_bi_type],
         [$.type_expression, $.tuple_type],
+        [$.tuple_expression, $.tuple_type],
         [$.parenthesized_type, $.tuple_type],
         [$.immutable_type, $.array_type],
         [$.immutable_type, $.nullable_type],
@@ -94,6 +95,8 @@ module.exports = grammar({
         [$.tuple_type_element, $.parameter],
         [$.tuple_type_element, $.type_expression],
         [$.conditional_type, $.function_type],
+        [$.conditional_type, $.named_function_type],
+        [$.parameter, $.named_function_type],
         [$.incorporates_clause, $.conditional_type],
         [$._non_bi_type, $.generic_type],
         [$.named_argument, $._expression],
@@ -126,6 +129,7 @@ module.exports = grammar({
             $.const_declaration,
             $.enum_declaration,
             $.typedef_declaration,
+            $.annotation_declaration,
         ),
 
         // Module declaration
@@ -271,6 +275,20 @@ module.exports = grammar({
             ';',
         ),
 
+        // Annotation declaration: annotation Name into TargetType implements Interface { ... }
+        // XTC annotations are similar to mixins but use 'annotation' keyword and 'into' clause
+        annotation_declaration: $ => seq(
+            optional($.doc_comment),
+            repeat($.annotation),
+            optional($.visibility_modifier),
+            'annotation',
+            $.type_name,
+            optional($.type_parameters),
+            optional($.constructor_parameters),
+            repeat(choice($.into_clause, $.extends_clause, $.implements_clause, $.incorporates_clause, $.delegates_clause)),
+            choice($.class_body, ';'),
+        ),
+
         // Class body
         class_body: $ => seq('{', repeat($._class_member), '}'),
 
@@ -340,7 +358,9 @@ module.exports = grammar({
             $.identifier,
             optional($.type_parameters),
             $.parameters,
-            choice($.block, seq('=', $._expression, ';'), ';'),
+            // Expression body can be: = expr; or = TODO text (no semicolon for TODO inline text)
+            // prec(2) ensures TODO form is tried first
+            choice($.block, prec(2, seq('=', $.todo_expression)), seq('=', $._expression, ';'), ';'),
         ),
 
         // Property accessor syntax: `Type propName.get() { ... }` or `Type propName.calc() = expr;`
@@ -399,10 +419,13 @@ module.exports = grammar({
 
         // Parameters (with optional trailing comma)
         parameters: $ => seq('(', commaSep($.parameter), optional(','), ')'),
-        parameter: $ => seq(
-            $.type_expression,
-            $.identifier,
-            optional(seq('=', $._expression)),
+        // Parameters can be:
+        // - Regular: Type name = default
+        // - Named function type: function ReturnType name(ParamTypes) = default
+        //   The named function type form includes the name already
+        parameter: $ => choice(
+            seq($.named_function_type, optional(seq('=', $._expression))),
+            seq($.type_expression, $.identifier, optional(seq('=', $._expression))),
         ),
 
         // Type expressions
@@ -466,8 +489,12 @@ module.exports = grammar({
         non_null_type: $ => prec.left(seq($._non_bi_type, token.immediate('!'))),
         conditional_type: $ => seq('conditional', $._non_bi_type),
         // Function type: function ReturnType(ParamTypes) - parameters are just types, no names
+        // Function type: function ReturnType(ParamTypes)
         function_type: $ => seq('function', optional('conditional'), $._non_bi_type, $.function_type_parameters),
         function_type_parameters: $ => seq('(', commaSep($.type_expression), ')'),
+        // Named function type: function ReturnType name(ParamTypes) - used only in parameter context
+        // The name appears between return type and parameters
+        named_function_type: $ => seq('function', optional('conditional'), $._non_bi_type, $.identifier, $.function_type_parameters),
         // Tuple type can be unnamed (Type1, Type2) or named (Type1 name1, Type2 name2)
         tuple_type: $ => seq('(', commaSep($.tuple_type_element), ')'),
         tuple_type_element: $ => seq($._non_bi_type, optional($.identifier)),
@@ -505,6 +532,8 @@ module.exports = grammar({
             $.mixin_declaration,
             // Local function declarations (functions defined inside method bodies)
             $.local_function_declaration,
+            // Local typedef (type aliases inside method bodies)
+            $.typedef_declaration,
         ),
 
         // Local function declaration: visibility, static, return type, name, params, body
@@ -694,26 +723,32 @@ module.exports = grammar({
         switch_variable_declaration: $ => seq($.type_expression, $.identifier, '=', $._expression),
 
         // Case clause for switch statements (can contain statements)
-        case_clause: $ => seq(
+        // prec(5) ensures the ':' is consumed by case_clause, not by typed_literal (prec(2))
+        // when the case pattern contains a generic type like 'case List<String>:'
+        case_clause: $ => prec(5, seq(
             choice(seq('case', $.case_pattern), 'default'),
             ':',
             repeat($._statement),
-        ),
+        )),
 
         // Expression case clause for switch expressions (returns value with semicolon)
-        expression_case_clause: $ => seq(
+        // prec(5) ensures the ':' is consumed by the clause, not by typed_literal (prec(2))
+        expression_case_clause: $ => prec(5, seq(
             choice(seq('case', $.case_pattern), 'default'),
             ':',
             $._expression,
             ';',
-        ),
+        )),
 
         // Case pattern: single expression, comma-separated expressions, type expression, or tuple pattern
         // Supports: case 'P', 'p':  (multiple values in one case)
         // Supports: case List<String>: (type pattern matching)
+        // Type patterns have highest precedence (prec(5)) to prevent conflicts with
+        // typed_literal (prec(2)) or else_expression interpreting List<String>: as Type:value
         case_pattern: $ => choice(
-            commaSep1(choice($._expression, $.type_expression)),
-            $.tuple_pattern,
+            prec(5, $.type_expression),     // Type pattern: case List<String>:
+            commaSep1($._expression),       // Value patterns: case 1, 2, 3:
+            $.tuple_pattern,                // Tuple pattern: case (a, b):
         ),
 
         // Tuple pattern for switch: case (Lesser, _):
@@ -721,12 +756,20 @@ module.exports = grammar({
         pattern_element: $ => choice($._expression, $.wildcard),
         wildcard: $ => '_',
 
+        // Try statement can have resources: try (expr), try (Type var = expr), try (val var = expr)
         try_statement: $ => seq(
             'try',
-            optional(seq('(', commaSep1($._expression), ')')),
+            optional(seq('(', commaSep1($.try_resource), ')')),
             $.block,
             repeat($.catch_clause),
             optional(seq('finally', $.block)),
+        ),
+
+        // Try resource can be expression or variable declaration
+        // prec(2) ensures val/var form is preferred over expression
+        try_resource: $ => choice(
+            prec(2, seq(optional(choice('val', 'var')), $.type_expression, $.identifier, '=', $._expression)),
+            $._expression,
         ),
 
         catch_clause: $ => seq(
@@ -747,8 +790,12 @@ module.exports = grammar({
             $.block,
         ),
 
+        // Using resource can be:
+        // - val/var id = expr
+        // - val/var Type id = expr
+        // - Type id = expr (explicit type, no val/var)
         using_resource: $ => seq(
-            choice('val', 'var'),
+            optional(choice('val', 'var')),
             optional($.type_expression),
             $.identifier,
             '=',
@@ -762,13 +809,17 @@ module.exports = grammar({
 
         // Assert can have: assert cond1, cond2, ... as message;
         // Where conditions can be expressions or conditional declarations
-        assert_statement: $ => seq(
+        // Conditions are optional: `assert as message;` is valid (always true, just emits message)
+        // prec(2) ensures assert_statement is preferred over expression_statement with assert_expression
+        assert_statement: $ => prec(2, seq(
             choice('assert', $.assert_variant),
-            $.assert_condition,
-            repeat(seq(',', $.assert_condition)),
+            optional(seq(
+                $.assert_condition,
+                repeat(seq(',', $.assert_condition)),
+            )),
             optional(seq('as', $._expression)),
             ';',
-        ),
+        )),
         assert_condition: $ => choice($._expression, $.conditional_declaration),
         assert_variant: $ => choice('assert:rnd', 'assert:arg', 'assert:bounds', 'assert:TODO', 'assert:once', 'assert:test', 'assert:debug'),
 
@@ -847,11 +898,12 @@ module.exports = grammar({
 
         // new Type(args), new Type[size], new Type[], new Type[size](initializer), or expr.new(args)
         // Also supports anonymous inner classes: new Type(args) { body }
+        // Also supports annotated new: new @Annotation Type(args) (applies mixin to new instance)
         // prec.left on the array form ensures the optional initializer arguments are greedily consumed
         new_expression: $ => choice(
-            seq('new', $.type_expression, $.arguments, optional($.anonymous_inner_class_body)),
-            prec.left(seq('new', $.type_expression, '[', $._expression, ']', optional($.arguments))),
-            seq('new', $.type_expression, '[', ']'),  // empty array: new Type[]
+            seq('new', repeat($.annotation), $.type_expression, $.arguments, optional($.anonymous_inner_class_body)),
+            prec.left(seq('new', repeat($.annotation), $.type_expression, '[', $._expression, ']', optional($.arguments))),
+            seq('new', repeat($.annotation), $.type_expression, '[', ']'),  // empty array: new Type[]
             seq($._expression, '.', 'new', $.arguments),
         ),
 
@@ -863,7 +915,9 @@ module.exports = grammar({
 
         // Assert expression: assert can be used as an expression (e.g., in ?: or safe-call-else)
         // Used in patterns like: value?.method() : assert
-        assert_expression: $ => 'assert',
+        // Can include an optional message: `assert as $"error"` in expression context
+        // prec.left ensures `as` binds to assert (not an outer context)
+        assert_expression: $ => prec.left(seq('assert', optional(seq('as', $._expression)))),
 
         // TODO expression: placeholder for unimplemented code, throws UnsupportedOperation
         // Forms: TODO, TODO(), TODO(message), TODO message text
@@ -906,8 +960,13 @@ module.exports = grammar({
         // The block must contain statements and typically ends with a return
         statement_expression: $ => $.block,
 
-        // Tuple expression: (a, b) or (a, b, c) - at least 2 elements
-        tuple_expression: $ => seq('(', $._expression, ',', commaSep1($._expression), ')'),
+        // Tuple expression: () or (a, b) or (a, b, c)
+        // Empty tuple () is a valid value (e.g., as default parameter)
+        // prec(1) to prefer empty_tuple over parenthesized_expression or tuple_type
+        tuple_expression: $ => choice(
+            prec(1, seq('(', ')')),  // Empty tuple
+            seq('(', $._expression, ',', commaSep1($._expression), ')'),  // 2+ elements
+        ),
 
         // Arguments can include expressions, type expressions (for .is(), .as(), etc.), and named arguments
         // Named arguments: name=value (e.g., entrySeparator='&')

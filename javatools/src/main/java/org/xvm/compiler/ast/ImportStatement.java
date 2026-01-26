@@ -98,19 +98,24 @@ public class ImportStatement
     }
 
     /**
-     * @return the imported name as a list of simple names
+     * @return the imported name as an array of simple names
      */
-    public List<String> getQualifiedName() {
-        return qualifiedName.stream()
-                .map(Token::getValueText)
-                .toList();
+    public String[] getQualifiedName() {
+        int      cNames = getQualifiedNameLength();
+        String[] asName = new String[cNames];
+        for (int i = 0; i < cNames; ++i) {
+            asName[i] = getQualifiedNamePart(i);
+        }
+        return asName;
     }
 
     /**
      * @return the imported name as a dot-delimited name
      */
     public String getQualifiedNameString() {
-        return String.join(".", getQualifiedName());
+        return qualifiedName.stream()
+                .map(Token::getValueText)
+                .collect(Collectors.joining("."));
     }
 
     @Override

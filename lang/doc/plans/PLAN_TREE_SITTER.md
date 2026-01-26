@@ -28,7 +28,7 @@ cd lang/dsl/build/generated
 
 ## Implementation Status
 
-> **Last Updated**: 2026-01-23
+> **Last Updated**: 2026-01-26
 
 ### Completed ✅
 - [x] LSP server converted from Java to Kotlin (better DSL support, null safety, coroutines)
@@ -42,7 +42,7 @@ cd lang/dsl/build/generated
 - [x] Grammar validation passes (`./gradlew :lang:dsl:validateTreeSitterGrammar`)
 
 ### In Progress 🔄
-- **Grammar coverage: 489/692 XTC files parse successfully (70.7%)**
+- **Grammar coverage: 555/692 XTC files parse successfully (80.2%)**
 - Native library compilation for target platforms
 
 ### Grammar Support Status (2026-01-26)
@@ -132,6 +132,17 @@ The following features have been added to `TreeSitterGenerator.kt`:
 | Empty type arguments | `Class<>` | ✅ Wildcard/inferred types |
 | Multiple for initializers | `for (Int i = 0, Int c = n; ...)` | ✅ Comma-separated declarations |
 | Type decl semicolon | `class Foo extends Bar;` | ✅ Class/mixin/service without body |
+| Local typedef | `typedef Type as Alias;` in method | ✅ Type aliases in method bodies |
+| Using explicit type | `using (Type x = expr) {}` | ✅ No val/var required |
+| Assert without cond | `assert as $"error";` | ✅ Message-only assert |
+| Assert expr with msg | `value ?: assert as $"error"` | ✅ Assert expression with message |
+| Method TODO body | `Int foo() = TODO text` | ✅ No semicolon after TODO text |
+| Try resource decl | `try (Type x = expr) {}` | ✅ Variable declaration in try |
+| Generic type patterns | `case List<String>:` | ✅ Type patterns with generics in switch |
+| Empty tuple expression | `args = ()` | ✅ Empty tuple as default value |
+| Annotation declarations | `annotation Foo into Bar` | ✅ XTC annotation types |
+| Annotated new expressions | `new @Mixin Type(args)` | ✅ Annotations on new |
+| Named function type params | `function Bool fn(Arg)` | ✅ Function params with names |
 
 #### Still Needed (High Priority)
 
@@ -566,7 +577,7 @@ Need to implement `WorkspaceIndex` for cross-file symbol tracking.
 
 ## Grammar Coverage Progress
 
-The grammar validates and now supports many XTC language features. Coverage improved from 9% to 70.7% (489/692 files).
+The grammar validates and now supports many XTC language features. Coverage improved from 9% to 73.1% (506/692 files).
 
 ### Common Remaining Parse Errors
 
@@ -591,7 +602,16 @@ Files failing to parse typically use these advanced features (still being added)
 10. ✅ Coverage improved from 66.0% to 67.8% (469/692)
 11. ✅ Implemented angle bracket type lists, empty type args, multiple for initializers, type decl semicolons
 12. ✅ Coverage improved from 67.8% to 70.7% (489/692)
-13. 🔄 Next: String interpolation `$"text {expr}"`
+13. ✅ Implemented local typedef, using explicit type, assert without conditions, assert expr with message
+14. ✅ Implemented method TODO body without semicolon, try resource declarations
+15. ✅ Coverage improved from 70.7% to 73.1% (506/692)
+16. ✅ Implemented generic type patterns in switch `case List<String>:`, empty tuple expression `()`
+17. ✅ Coverage improved from 73.1% to 73.6% (509/692)
+18. ✅ Implemented annotation declarations (`annotation Foo into Bar implements Baz`)
+19. ✅ Coverage improved from 73.6% to 79.2% (548/692)
+20. ✅ Implemented annotated new expressions `new @Mixin Type(args)`, named function type params
+21. ✅ Coverage improved from 79.2% to 80.2% (555/692)
+22. 🔄 Next: String interpolation `$"text {expr}"`
 
 ---
 
