@@ -71,6 +71,8 @@ class ModuleGenerator(String moduleName, Version? version = Null) {
 
         if (compileModule(repository, sourceFile, buildDir, errors)) {
             errors.add($"Info: Created a host module '{hostName}' for '{moduleName}'");
+            // clean up the temporary test module source file
+            sourceFile.delete();
             return repository.getModule(hostName);
         }
         return False;

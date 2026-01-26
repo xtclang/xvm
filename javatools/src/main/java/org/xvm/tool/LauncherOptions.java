@@ -99,7 +99,7 @@ public abstract class LauncherOptions {
             .desc("the name of a package to execute tests in").get())
         .addOption(builder("t").longOpt("test-method").argName("method").hasArg()
             .desc("the fully qualified name of a test method to execute").get())
-        .addOption(builder(OPTION_XUNIT_OUT).longOpt(OPTION_XUNIT_OUT).hasArg()
+        .addOption(builder("x").longOpt(OPTION_XUNIT_OUT).argName(OPTION_XUNIT_OUT).hasArg()
             .desc("The directory that XUnit will write any test output to").get());
 
     /**
