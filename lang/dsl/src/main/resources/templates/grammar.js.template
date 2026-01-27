@@ -1036,6 +1036,7 @@ module.exports = grammar({
             $.list_literal,
             $.map_literal,
             $.typed_literal,
+            $.file_literal,
         ),
 
         // Integer literals support magnitude suffixes: K, M, G, T, P, E, Z, Y (case insensitive)
@@ -1049,6 +1050,10 @@ module.exports = grammar({
         )),
 
         float_literal: $ => /[0-9][0-9_]*\.[0-9][0-9_]*([eE][+-]?[0-9]+)?/,
+
+        // File/resource literal: #path - embeds a file resource
+        // Examples: #./CharCats.dat, #../data/file.bin, #file.txt
+        file_literal: $ => /#\.{0,2}[/\w._-]+/,
 
         // String literals with Unicode escapes: \\uXXXX and \\UXXXXXXXX
         string_literal: $ => /"([^"\\]|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8}|\\.)*"/,
