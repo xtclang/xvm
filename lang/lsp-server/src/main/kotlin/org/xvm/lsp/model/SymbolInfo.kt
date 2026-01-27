@@ -10,7 +10,7 @@ data class SymbolInfo(
     val location: Location,
     val documentation: String? = null,
     val typeSignature: String? = null,
-    val children: List<SymbolInfo> = emptyList()
+    val children: List<SymbolInfo> = emptyList(),
 ) {
     enum class SymbolKind {
         MODULE,
@@ -25,20 +25,20 @@ data class SymbolInfo(
         PROPERTY,
         PARAMETER,
         TYPE_PARAMETER,
-        CONSTRUCTOR
+        CONSTRUCTOR,
     }
 
     companion object {
-        fun of(name: String, kind: SymbolKind, location: Location): SymbolInfo =
-            SymbolInfo(name, name, kind, location)
+        fun of(
+            name: String,
+            kind: SymbolKind,
+            location: Location,
+        ): SymbolInfo = SymbolInfo(name, name, kind, location)
     }
 
-    fun withChildren(newChildren: List<SymbolInfo>): SymbolInfo =
-        copy(children = newChildren)
+    fun withChildren(newChildren: List<SymbolInfo>): SymbolInfo = copy(children = newChildren)
 
-    fun withDocumentation(doc: String?): SymbolInfo =
-        copy(documentation = doc)
+    fun withDocumentation(doc: String?): SymbolInfo = copy(documentation = doc)
 
-    fun withTypeSignature(sig: String?): SymbolInfo =
-        copy(typeSignature = sig)
+    fun withTypeSignature(sig: String?): SymbolInfo = copy(typeSignature = sig)
 }

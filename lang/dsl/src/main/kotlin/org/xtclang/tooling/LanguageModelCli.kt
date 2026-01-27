@@ -13,21 +13,22 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
 import org.xtclang.tooling.generators.EmacsGenerator
-import java.lang.invoke.MethodHandles
 import org.xtclang.tooling.generators.SublimeSyntaxGenerator
 import org.xtclang.tooling.generators.TextMateGenerator
 import org.xtclang.tooling.generators.TreeSitterGenerator
-import org.xtclang.tooling.generators.VimGenerator
 import org.xtclang.tooling.generators.VSCodeConfigGenerator
+import org.xtclang.tooling.generators.VimGenerator
 import org.xtclang.tooling.model.LanguageModel
 import java.io.File
+import java.lang.invoke.MethodHandles
 
 private val logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
 
-private val json = Json {
-    prettyPrint = true
-    encodeDefaults = true
-}
+private val json =
+    Json {
+        prettyPrint = true
+        encodeDefaults = true
+    }
 
 fun main(args: Array<String>) {
     val command = args.firstOrNull() ?: "stats"
@@ -123,7 +124,11 @@ private fun generateVSCodeConfig(outputPath: String?) {
     writeOutput(config, outputPath, "VS Code config")
 }
 
-private fun writeOutput(content: String, outputPath: String?, name: String) {
+private fun writeOutput(
+    content: String,
+    outputPath: String?,
+    name: String,
+) {
     if (outputPath != null) {
         val file = File(outputPath)
         file.parentFile?.mkdirs()
@@ -169,13 +174,14 @@ private fun validateSources(paths: List<String>) {
             continue
         }
 
-        val xtcFiles = if (file.isDirectory) {
-            file.walkTopDown().filter { it.extension == "x" }.toList()
-        } else if (file.extension == "x") {
-            listOf(file)
-        } else {
-            emptyList()
-        }
+        val xtcFiles =
+            if (file.isDirectory) {
+                file.walkTopDown().filter { it.extension == "x" }.toList()
+            } else if (file.extension == "x") {
+                listOf(file)
+            } else {
+                emptyList()
+            }
 
         for (xtcFile in xtcFiles) {
             totalFiles++
@@ -214,7 +220,8 @@ private fun validateSources(paths: List<String>) {
 }
 
 private fun showHelp() {
-    println("""
+    println(
+        """
         |XTC Language Model CLI
         |
         |Usage: java -jar lang.jar <command> [args]
@@ -241,7 +248,8 @@ private fun showHelp() {
         |  ./gradlew generateTreeSitter   Generate Tree-sitter grammar
         |  ./gradlew generateVSCodeConfig Generate VS Code config
         |  ./gradlew generateAllEditorSupport  Generate all editor support files
-    """.trimMargin())
+        """.trimMargin(),
+    )
 }
 
 /**
@@ -255,12 +263,12 @@ data class ModelStatistics(
     val lexicalStats: Map<String, Int>,
     val semanticStats: Map<String, Int>,
     val operatorsByPrecedence: Map<Int, List<String>>,
-    val conceptHierarchy: List<ConceptNode>
+    val conceptHierarchy: List<ConceptNode>,
 ) {
     data class ConceptNode(
         val name: String,
         val isAbstract: Boolean,
-        val children: List<ConceptNode>
+        val children: List<ConceptNode>,
     )
 
     companion object {
@@ -269,13 +277,14 @@ data class ModelStatistics(
 
             fun buildNode(conceptName: String): ConceptNode {
                 val concept = model.getConcept(conceptName)
-                val children = model.concepts
-                    .filter { it.parentConcept == conceptName }
-                    .map { buildNode(it.name) }
+                val children =
+                    model.concepts
+                        .filter { it.parentConcept == conceptName }
+                        .map { buildNode(it.name) }
                 return ConceptNode(
                     name = conceptName,
                     isAbstract = concept?.isAbstract ?: false,
-                    children = children
+                    children = children,
                 )
             }
 
@@ -283,24 +292,27 @@ data class ModelStatistics(
                 name = model.name,
                 fileExtensions = model.fileExtensions,
                 scopeName = model.scopeName,
-                lexicalStats = mapOf(
-                    "Reserved Keywords" to model.keywords.size,
-                    "Context Keywords" to model.contextKeywords.size,
-                    "Token Rules" to model.tokens.size,
-                    "Operators" to model.operators.size,
-                    "Punctuation" to model.punctuation.size
-                ),
-                semanticStats = mapOf(
-                    "Scopes" to model.scopes.size,
-                    "Total AST Concepts" to model.concepts.size,
-                    "Abstract Concepts" to model.abstractConcepts.size,
-                    "Concrete Concepts" to model.concreteConcepts.size
-                ),
-                operatorsByPrecedence = model.operators
-                    .groupBy { it.precedence }
-                    .mapValues { (_, ops) -> ops.map { it.symbol } }
-                    .toSortedMap(),
-                conceptHierarchy = rootConcepts.map { buildNode(it.name) }
+                lexicalStats =
+                    mapOf(
+                        "Reserved Keywords" to model.keywords.size,
+                        "Context Keywords" to model.contextKeywords.size,
+                        "Token Rules" to model.tokens.size,
+                        "Operators" to model.operators.size,
+                        "Punctuation" to model.punctuation.size,
+                    ),
+                semanticStats =
+                    mapOf(
+                        "Scopes" to model.scopes.size,
+                        "Total AST Concepts" to model.concepts.size,
+                        "Abstract Concepts" to model.abstractConcepts.size,
+                        "Concrete Concepts" to model.concreteConcepts.size,
+                    ),
+                operatorsByPrecedence =
+                    model.operators
+                        .groupBy { it.precedence }
+                        .mapValues { (_, ops) -> ops.map { it.symbol } }
+                        .toSortedMap(),
+                conceptHierarchy = rootConcepts.map { buildNode(it.name) },
             )
         }
     }
@@ -313,44 +325,45 @@ data class ModelStatistics(
 object StatsRenderer {
     private const val BOX_WIDTH = 64
 
-    fun render(stats: ModelStatistics): String = buildString {
-        appendHeader("XTC (Ecstasy) Language Model Statistics")
-        appendSeparator()
+    fun render(stats: ModelStatistics): String =
+        buildString {
+            appendHeader("XTC (Ecstasy) Language Model Statistics")
+            appendSeparator()
 
-        // Metadata section
-        appendRow("Language", stats.name)
-        appendRow("File Extensions", stats.fileExtensions.joinToString(", "))
-        appendRow("Scope Name", stats.scopeName)
-        appendSeparator()
+            // Metadata section
+            appendRow("Language", stats.name)
+            appendRow("File Extensions", stats.fileExtensions.joinToString(", "))
+            appendRow("Scope Name", stats.scopeName)
+            appendSeparator()
 
-        // Lexical elements section
-        appendSectionHeader("LEXICAL ELEMENTS")
-        stats.lexicalStats.forEach { (label, value) ->
-            appendRow(label, value.toString())
+            // Lexical elements section
+            appendSectionHeader("LEXICAL ELEMENTS")
+            stats.lexicalStats.forEach { (label, value) ->
+                appendRow(label, value.toString())
+            }
+            appendSeparator()
+
+            // Semantic elements section
+            appendSectionHeader("SEMANTIC ELEMENTS")
+            stats.semanticStats.forEach { (label, value) ->
+                appendRow(label, value.toString())
+            }
+            appendSeparator()
+
+            // Operator precedence section
+            appendSectionHeader("OPERATOR PRECEDENCE LEVELS")
+            stats.operatorsByPrecedence.forEach { (prec, ops) ->
+                val opsStr = ops.joinToString(" ")
+                appendRow("Level $prec", opsStr.take(45))
+            }
+            appendSeparator()
+
+            // Concept hierarchy section
+            appendSectionHeader("AST CONCEPT HIERARCHY")
+            renderConceptHierarchy(stats.conceptHierarchy, maxRoots = 10, maxChildren = 5)
+
+            appendFooter()
         }
-        appendSeparator()
-
-        // Semantic elements section
-        appendSectionHeader("SEMANTIC ELEMENTS")
-        stats.semanticStats.forEach { (label, value) ->
-            appendRow(label, value.toString())
-        }
-        appendSeparator()
-
-        // Operator precedence section
-        appendSectionHeader("OPERATOR PRECEDENCE LEVELS")
-        stats.operatorsByPrecedence.forEach { (prec, ops) ->
-            val opsStr = ops.joinToString(" ")
-            appendRow("Level $prec", opsStr.take(45))
-        }
-        appendSeparator()
-
-        // Concept hierarchy section
-        appendSectionHeader("AST CONCEPT HIERARCHY")
-        renderConceptHierarchy(stats.conceptHierarchy, maxRoots = 10, maxChildren = 5)
-
-        appendFooter()
-    }
 
     private fun StringBuilder.appendHeader(title: String) {
         appendLine("╔${"═".repeat(BOX_WIDTH - 2)}╗")
@@ -370,7 +383,10 @@ object StatsRenderer {
         appendLine("║  ${"─".repeat(BOX_WIDTH - 6)}  ║")
     }
 
-    private fun StringBuilder.appendRow(label: String, value: String) {
+    private fun StringBuilder.appendRow(
+        label: String,
+        value: String,
+    ) {
         val content = "  $label: $value"
         appendLine("║${content.padEnd(BOX_WIDTH - 2)}║")
     }
@@ -378,7 +394,7 @@ object StatsRenderer {
     private fun StringBuilder.renderConceptHierarchy(
         roots: List<ModelStatistics.ConceptNode>,
         maxRoots: Int,
-        maxChildren: Int
+        maxChildren: Int,
     ) {
         val displayedRoots = roots.take(maxRoots)
         for (root in displayedRoots) {

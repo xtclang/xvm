@@ -31,28 +31,51 @@ import java.util.concurrent.CompletableFuture
  */
 @Suppress("unused")
 interface XtcCompilerAdapterFull {
-
     // ========================================================================
     // PHASE 1: Basic LSP (Current skeleton implements these)
     // ========================================================================
 
     /** Compile a source file and return diagnostics + symbols. */
-    fun compile(uri: String, content: String): CompilationResult
+    fun compile(
+        uri: String,
+        content: String,
+    ): CompilationResult
 
     /** Find the symbol at a specific position. */
-    fun findSymbolAt(uri: String, line: Int, column: Int): SymbolInfo?
+    fun findSymbolAt(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): SymbolInfo?
 
     /** Get hover information (type signature, documentation). */
-    fun getHoverInfo(uri: String, line: Int, column: Int): String?
+    fun getHoverInfo(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): String?
 
     /** Get completion suggestions at a position. */
-    fun getCompletions(uri: String, line: Int, column: Int): List<CompletionItem>
+    fun getCompletions(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): List<CompletionItem>
 
     /** Find the definition of the symbol at a position. */
-    fun findDefinition(uri: String, line: Int, column: Int): Location?
+    fun findDefinition(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): Location?
 
     /** Find all references to the symbol at a position. */
-    fun findReferences(uri: String, line: Int, column: Int, includeDeclaration: Boolean): List<Location>
+    fun findReferences(
+        uri: String,
+        line: Int,
+        column: Int,
+        includeDeclaration: Boolean,
+    ): List<Location>
 
     // ========================================================================
     // PHASE 2: Advanced LSP Features
@@ -67,19 +90,39 @@ interface XtcCompilerAdapterFull {
      * @param newName  the new name for the symbol
      * @return map of URI -> list of text edits, or null if rename not possible
      */
-    fun rename(uri: String, line: Int, column: Int, newName: String): Map<String, List<TextEdit>>?
+    fun rename(
+        uri: String,
+        line: Int,
+        column: Int,
+        newName: String,
+    ): Map<String, List<TextEdit>>?
 
     /** Check if rename is valid and return the current symbol name. */
-    fun prepareRename(uri: String, line: Int, column: Int): RenameInfo?
+    fun prepareRename(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): RenameInfo?
 
     /** Get available code actions (quick fixes, refactorings) at a position. */
-    fun getCodeActions(uri: String, range: Location, diagnostics: List<Diagnostic>): List<CodeAction>
+    fun getCodeActions(
+        uri: String,
+        range: Location,
+        diagnostics: List<Diagnostic>,
+    ): List<CodeAction>
 
     /** Format an entire document. */
-    fun formatDocument(uri: String, content: String): List<TextEdit>
+    fun formatDocument(
+        uri: String,
+        content: String,
+    ): List<TextEdit>
 
     /** Format a range within a document. */
-    fun formatRange(uri: String, content: String, range: Location): List<TextEdit>
+    fun formatRange(
+        uri: String,
+        content: String,
+        range: Location,
+    ): List<TextEdit>
 
     /**
      * Get semantic tokens for syntax highlighting beyond TextMate.
@@ -98,25 +141,50 @@ interface XtcCompilerAdapterFull {
      * //
      * // See: PLAN_LSP_PARALLEL_LEXER.md for semantic token integration
      */
-    fun getSemanticTokens(uri: String, content: String): SemanticTokens
+    fun getSemanticTokens(
+        uri: String,
+        content: String,
+    ): SemanticTokens
 
     /** Get signature help when typing function arguments. */
-    fun getSignatureHelp(uri: String, line: Int, column: Int): SignatureHelp?
+    fun getSignatureHelp(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): SignatureHelp?
 
     /** Get folding ranges for code folding. */
-    fun getFoldingRanges(uri: String, content: String): List<FoldingRange>
+    fun getFoldingRanges(
+        uri: String,
+        content: String,
+    ): List<FoldingRange>
 
     /** Get inlay hints (inline type hints, parameter names). */
-    fun getInlayHints(uri: String, range: Location): List<InlayHint>
+    fun getInlayHints(
+        uri: String,
+        range: Location,
+    ): List<InlayHint>
 
     /** Get call hierarchy - who calls this, what does this call. */
-    fun prepareCallHierarchy(uri: String, line: Int, column: Int): CallHierarchyItem?
+    fun prepareCallHierarchy(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): CallHierarchyItem?
+
     fun getIncomingCalls(item: CallHierarchyItem): List<CallHierarchyItem>
+
     fun getOutgoingCalls(item: CallHierarchyItem): List<CallHierarchyItem>
 
     /** Get type hierarchy - supertypes and subtypes. */
-    fun prepareTypeHierarchy(uri: String, line: Int, column: Int): TypeHierarchyItem?
+    fun prepareTypeHierarchy(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): TypeHierarchyItem?
+
     fun getSupertypes(item: TypeHierarchyItem): List<TypeHierarchyItem>
+
     fun getSubtypes(item: TypeHierarchyItem): List<TypeHierarchyItem>
 
     // ========================================================================
@@ -130,7 +198,10 @@ interface XtcCompilerAdapterFull {
     fun initializeWorkspace(workspaceFolders: List<String>)
 
     /** Handle file created/changed/deleted events. */
-    fun onFileChanged(uri: String, changeType: FileChangeType)
+    fun onFileChanged(
+        uri: String,
+        changeType: FileChangeType,
+    )
 
     /** Get project configuration (module dependencies, build settings). */
     fun getProjectInfo(uri: String): ProjectInfo?
@@ -148,7 +219,10 @@ interface XtcCompilerAdapterFull {
     fun startDebugSession(config: DebugConfig): CompletableFuture<DebugSession>
 
     /** Set breakpoints in a file. */
-    fun setBreakpoints(uri: String, breakpoints: List<SourceBreakpoint>): List<Breakpoint>
+    fun setBreakpoints(
+        uri: String,
+        breakpoints: List<SourceBreakpoint>,
+    ): List<Breakpoint>
 
     /** Set function breakpoints (break when entering a named function). */
     fun setFunctionBreakpoints(breakpoints: List<FunctionBreakpoint>): List<Breakpoint>
@@ -157,40 +231,79 @@ interface XtcCompilerAdapterFull {
     fun setExceptionBreakpoints(filters: List<String>)
 
     /** Continue execution (after hitting breakpoint). */
-    fun continueExecution(session: DebugSession, threadId: Long)
+    fun continueExecution(
+        session: DebugSession,
+        threadId: Long,
+    )
 
     /** Step over (next line). */
-    fun stepOver(session: DebugSession, threadId: Long)
+    fun stepOver(
+        session: DebugSession,
+        threadId: Long,
+    )
 
     /** Step into (enter function). */
-    fun stepInto(session: DebugSession, threadId: Long)
+    fun stepInto(
+        session: DebugSession,
+        threadId: Long,
+    )
 
     /** Step out (exit current function). */
-    fun stepOut(session: DebugSession, threadId: Long)
+    fun stepOut(
+        session: DebugSession,
+        threadId: Long,
+    )
 
     /** Pause execution. */
-    fun pause(session: DebugSession, threadId: Long)
+    fun pause(
+        session: DebugSession,
+        threadId: Long,
+    )
 
     /** Get all threads in the debug session. */
     fun getThreads(session: DebugSession): List<ThreadInfo>
 
     /** Get stack trace for a thread. */
-    fun getStackTrace(session: DebugSession, threadId: Long): List<StackFrame>
+    fun getStackTrace(
+        session: DebugSession,
+        threadId: Long,
+    ): List<StackFrame>
 
     /** Get scopes (local, closure, global) for a stack frame. */
-    fun getScopes(session: DebugSession, frameId: Long): List<Scope>
+    fun getScopes(
+        session: DebugSession,
+        frameId: Long,
+    ): List<Scope>
 
     /** Get variables in a scope or expand a structured variable. */
-    fun getVariables(session: DebugSession, variablesReference: Long): List<Variable>
+    fun getVariables(
+        session: DebugSession,
+        variablesReference: Long,
+    ): List<Variable>
 
     /** Evaluate an expression in the current debug context. */
-    fun evaluate(session: DebugSession, expression: String, frameId: Long?, context: EvaluateContext): EvaluateResult
+    fun evaluate(
+        session: DebugSession,
+        expression: String,
+        frameId: Long?,
+        context: EvaluateContext,
+    ): EvaluateResult
 
     /** Set the value of a variable. */
-    fun setVariable(session: DebugSession, variablesReference: Long, name: String, value: String): String?
+    fun setVariable(
+        session: DebugSession,
+        variablesReference: Long,
+        name: String,
+        value: String,
+    ): String?
 
     /** Get completions in the debug REPL. */
-    fun getDebugCompletions(session: DebugSession, frameId: Long?, text: String, column: Int): List<CompletionItem>
+    fun getDebugCompletions(
+        session: DebugSession,
+        frameId: Long?,
+        text: String,
+        column: Int,
+    ): List<CompletionItem>
 
     /** Terminate the debug session. */
     fun terminateDebugSession(session: DebugSession)
@@ -205,60 +318,99 @@ interface XtcCompilerAdapterFull {
         val detail: String,
         val insertText: String,
         val documentation: String? = null,
-        val additionalEdits: List<TextEdit>? = null
+        val additionalEdits: List<TextEdit>? = null,
     ) {
         enum class CompletionKind {
-            CLASS, INTERFACE, METHOD, PROPERTY, VARIABLE, KEYWORD, MODULE,
-            FIELD, CONSTRUCTOR, ENUM, ENUM_MEMBER, CONSTANT, FUNCTION,
-            SNIPPET, TYPE_PARAMETER, MIXIN, SERVICE
+            CLASS,
+            INTERFACE,
+            METHOD,
+            PROPERTY,
+            VARIABLE,
+            KEYWORD,
+            MODULE,
+            FIELD,
+            CONSTRUCTOR,
+            ENUM,
+            ENUM_MEMBER,
+            CONSTANT,
+            FUNCTION,
+            SNIPPET,
+            TYPE_PARAMETER,
+            MIXIN,
+            SERVICE,
         }
     }
 
-    data class TextEdit(val range: Location, val newText: String)
+    data class TextEdit(
+        val range: Location,
+        val newText: String,
+    )
 
-    data class RenameInfo(val range: Location, val placeholder: String)
+    data class RenameInfo(
+        val range: Location,
+        val placeholder: String,
+    )
 
     data class CodeAction(
         val title: String,
         val kind: CodeActionKind,
         val diagnostics: List<Diagnostic>? = null,
         val edit: Map<String, List<TextEdit>>? = null,
-        val command: String? = null
+        val command: String? = null,
     ) {
         enum class CodeActionKind {
-            QUICK_FIX, REFACTOR, REFACTOR_EXTRACT, REFACTOR_INLINE,
-            REFACTOR_REWRITE, SOURCE, SOURCE_ORGANIZE_IMPORTS
+            QUICK_FIX,
+            REFACTOR,
+            REFACTOR_EXTRACT,
+            REFACTOR_INLINE,
+            REFACTOR_REWRITE,
+            SOURCE,
+            SOURCE_ORGANIZE_IMPORTS,
         }
     }
 
-    data class SemanticTokens(val data: IntArray) {
+    data class SemanticTokens(
+        val data: IntArray,
+    ) {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (other !is SemanticTokens) return false
             return data.contentEquals(other.data)
         }
+
         override fun hashCode(): Int = data.contentHashCode()
     }
 
     data class SignatureHelp(
         val signatures: List<SignatureInfo>,
         val activeSignature: Int,
-        val activeParameter: Int
+        val activeParameter: Int,
     )
 
     data class SignatureInfo(
         val label: String,
         val documentation: String? = null,
-        val parameters: List<ParameterInfo>
+        val parameters: List<ParameterInfo>,
     )
 
-    data class ParameterInfo(val label: String, val documentation: String? = null)
+    data class ParameterInfo(
+        val label: String,
+        val documentation: String? = null,
+    )
 
-    data class FoldingRange(val startLine: Int, val endLine: Int, val kind: FoldingKind) {
+    data class FoldingRange(
+        val startLine: Int,
+        val endLine: Int,
+        val kind: FoldingKind,
+    ) {
         enum class FoldingKind { COMMENT, IMPORTS, REGION }
     }
 
-    data class InlayHint(val position: Location, val label: String, val kind: InlayKind) {
+    data class InlayHint(
+        val position: Location,
+        val label: String,
+        val kind: InlayKind,
+    ) {
         enum class InlayKind { TYPE, PARAMETER }
     }
 
@@ -267,7 +419,7 @@ interface XtcCompilerAdapterFull {
         val kind: SymbolInfo.SymbolKind,
         val uri: String,
         val range: Location,
-        val detail: String? = null
+        val detail: String? = null,
     )
 
     data class TypeHierarchyItem(
@@ -275,7 +427,7 @@ interface XtcCompilerAdapterFull {
         val kind: SymbolInfo.SymbolKind,
         val uri: String,
         val range: Location,
-        val detail: String? = null
+        val detail: String? = null,
     )
 
     enum class FileChangeType { CREATED, CHANGED, DELETED }
@@ -284,7 +436,7 @@ interface XtcCompilerAdapterFull {
         val moduleName: String,
         val dependencies: List<String>,
         val sourceRoot: String,
-        val buildDir: String? = null
+        val buildDir: String? = null,
     )
 
     // ========================================================================
@@ -292,27 +444,27 @@ interface XtcCompilerAdapterFull {
     // ========================================================================
 
     data class DebugConfig(
-        val type: String,            // "xtc"
-        val request: String,         // "launch" or "attach"
-        val program: String,         // module to debug
-        val args: List<String>? = null,    // program arguments
-        val cwd: String? = null,           // working directory
-        val env: Map<String, String>? = null,  // environment variables
-        val stopOnEntry: Boolean = false,  // break at first line
-        val noDebug: Boolean = false       // run without debugging
+        val type: String, // "xtc"
+        val request: String, // "launch" or "attach"
+        val program: String, // module to debug
+        val args: List<String>? = null, // program arguments
+        val cwd: String? = null, // working directory
+        val env: Map<String, String>? = null, // environment variables
+        val stopOnEntry: Boolean = false, // break at first line
+        val noDebug: Boolean = false, // run without debugging
     )
 
     data class DebugSession(
         val id: String,
         val name: String,
-        val isRunning: Boolean
+        val isRunning: Boolean,
     )
 
     data class Breakpoint(
         val id: Int,
         val verified: Boolean,
         val message: String? = null,
-        val location: Location
+        val location: Location,
     )
 
     data class SourceBreakpoint(
@@ -320,16 +472,19 @@ interface XtcCompilerAdapterFull {
         val column: Int? = null,
         val condition: String? = null,
         val hitCondition: String? = null,
-        val logMessage: String? = null
+        val logMessage: String? = null,
     )
 
     data class FunctionBreakpoint(
         val name: String,
         val condition: String? = null,
-        val hitCondition: String? = null
+        val hitCondition: String? = null,
     )
 
-    data class ThreadInfo(val id: Long, val name: String)
+    data class ThreadInfo(
+        val id: Long,
+        val name: String,
+    )
 
     data class StackFrame(
         val id: Long,
@@ -337,27 +492,27 @@ interface XtcCompilerAdapterFull {
         val uri: String,
         val line: Int,
         val column: Int,
-        val moduleId: String? = null
+        val moduleId: String? = null,
     )
 
     data class Scope(
         val name: String,
         val variablesReference: Long,
-        val expensive: Boolean  // true if fetching variables is slow
+        val expensive: Boolean, // true if fetching variables is slow
     )
 
     data class Variable(
         val name: String,
         val value: String,
         val type: String,
-        val variablesReference: Long,  // >0 if expandable
-        val evaluateName: String? = null  // expression to evaluate this variable
+        val variablesReference: Long, // >0 if expandable
+        val evaluateName: String? = null, // expression to evaluate this variable
     )
 
     data class EvaluateResult(
         val result: String,
         val type: String,
-        val variablesReference: Long
+        val variablesReference: Long,
     )
 
     enum class EvaluateContext { WATCH, REPL, HOVER, CLIPBOARD }

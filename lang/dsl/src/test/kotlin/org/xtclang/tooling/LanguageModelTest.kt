@@ -12,15 +12,14 @@ package org.xtclang.tooling
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.condition.EnabledIf
-import org.xtclang.tooling.model.Associativity
+import org.xtclang.tooling.generators.EmacsGenerator
+import org.xtclang.tooling.generators.TextMateGenerator
+import org.xtclang.tooling.generators.TreeSitterGenerator
+import org.xtclang.tooling.generators.VSCodeConfigGenerator
+import org.xtclang.tooling.generators.VimGenerator
 import org.xtclang.tooling.model.Cardinality
 import org.xtclang.tooling.model.KeywordCategory
 import org.xtclang.tooling.model.OperatorCategory
-import org.xtclang.tooling.generators.TextMateGenerator
-import org.xtclang.tooling.generators.VimGenerator
-import org.xtclang.tooling.generators.EmacsGenerator
-import org.xtclang.tooling.generators.TreeSitterGenerator
-import org.xtclang.tooling.generators.VSCodeConfigGenerator
 import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -28,7 +27,6 @@ import kotlin.test.assertTrue
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class LanguageModelTest {
-
     private val model = xtcLanguage
 
     // =========================================================================
@@ -219,7 +217,8 @@ class LanguageModelTest {
         val keywordCounts = mutableMapOf<String, Int>()
         var fileCount = 0
 
-        libEcstasy.walkTopDown()
+        libEcstasy
+            .walkTopDown()
             .filter { it.extension == "x" }
             .forEach { file ->
                 fileCount++
@@ -255,17 +254,29 @@ class LanguageModelTest {
         }
 
         // Extract built-in types from the token pattern
-        val builtinTypes = listOf(
-            "Int", "String", "Boolean", "Char", "Byte",
-            "Array", "List", "Map", "Set",
-            "Object", "Null", "True", "False"
-        )
+        val builtinTypes =
+            listOf(
+                "Int",
+                "String",
+                "Boolean",
+                "Char",
+                "Byte",
+                "Array",
+                "List",
+                "Map",
+                "Set",
+                "Object",
+                "Null",
+                "True",
+                "False",
+            )
 
         val typeCounts = mutableMapOf<String, Int>()
 
-        libEcstasy.walkTopDown()
+        libEcstasy
+            .walkTopDown()
             .filter { it.extension == "x" }
-            .take(50)  // Sample first 50 files for speed
+            .take(50) // Sample first 50 files for speed
             .forEach { file ->
                 val content = file.readText()
                 for (type in builtinTypes) {
@@ -302,7 +313,8 @@ class LanguageModelTest {
 
         val opCounts = mutableMapOf<String, Int>()
 
-        libEcstasy.walkTopDown()
+        libEcstasy
+            .walkTopDown()
             .filter { it.extension == "x" }
             .take(50)
             .forEach { file ->
@@ -335,7 +347,7 @@ class LanguageModelTest {
             if (concept.parentConcept != null) {
                 assertTrue(
                     concept.parentConcept in conceptNames,
-                    "Concept ${concept.name} has invalid parent: ${concept.parentConcept}"
+                    "Concept ${concept.name} has invalid parent: ${concept.parentConcept}",
                 )
             }
         }
@@ -362,7 +374,7 @@ class LanguageModelTest {
         for (op in model.operators) {
             assertTrue(
                 op.precedence in 0..15,
-                "Operator ${op.symbol} has invalid precedence: ${op.precedence}"
+                "Operator ${op.symbol} has invalid precedence: ${op.precedence}",
             )
         }
     }

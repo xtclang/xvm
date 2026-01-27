@@ -14,7 +14,6 @@ import javax.swing.Icon
  * Creates XTC projects by invoking the `xtc init` CLI command.
  */
 class XtcNewProjectWizard : GeneratorNewProjectWizard {
-
     override val id = "XTC"
     override val name = "XTC"
     override val icon: Icon = XtcIconProvider.XTC_ICON ?: com.intellij.icons.AllIcons.FileTypes.Any_type

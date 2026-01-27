@@ -1,6 +1,5 @@
 package org.xvm.runtime.gc;
 
-import org.xvm.runtime.template._native.mgmt.xCoreRepository;
 import org.xvm.util.ShallowSizeOf;
 
 import java.lang.ref.PhantomReference;
@@ -29,7 +28,7 @@ class CanaryCohortGcTest {
     static final long OBJ_SIZE = COH_SIZE + ShallowSizeOf.instanceOf(C.class);
     static final long LIST_SIZE = COH_SIZE + ShallowSizeOf.instanceOf(CollectibleList.class) + ShallowSizeOf.instanceOf(ArrayList.class) + ShallowSizeOf.arrayOf(C.class, 16);
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         // we'll need multiple threads
         // with each thread cycling through different container contexts
 
@@ -223,9 +222,7 @@ class CanaryCohortGcTest {
             boolean restoreInterrupt = Thread.interrupted();
             try {
                 while (queue.poll() instanceof CleanablePhantom ref) {
-                    if (first) {
-                        ++drains;
-                    }
+                    ++drains;
 
                     ref.clean(this);
                     if (ref instanceof Reclaim reclaim) {

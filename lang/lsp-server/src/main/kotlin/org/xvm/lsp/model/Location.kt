@@ -8,7 +8,7 @@ data class Location(
     val startLine: Int,
     val startColumn: Int,
     val endLine: Int,
-    val endColumn: Int
+    val endColumn: Int,
 ) {
     init {
         require(startLine >= 0) { "startLine must be non-negative" }
@@ -18,10 +18,15 @@ data class Location(
     }
 
     companion object {
-        fun of(uri: String, line: Int, column: Int): Location =
-            Location(uri, line, column, line, column)
+        fun of(
+            uri: String,
+            line: Int,
+            column: Int,
+        ): Location = Location(uri, line, column, line, column)
 
-        fun ofLine(uri: String, line: Int): Location =
-            Location(uri, line, 0, line, Int.MAX_VALUE)
+        fun ofLine(
+            uri: String,
+            line: Int,
+        ): Location = Location(uri, line, 0, line, Int.MAX_VALUE)
     }
 }

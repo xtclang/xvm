@@ -24,8 +24,9 @@ import kotlin.io.path.Path
  * in the chain, and adds XTC-specific options. Uses XtcProjectCreator directly
  * (synced from javatools and compiled for Java 21).
  */
-class XtcNewProjectWizardStep(parent: NewProjectWizardStep) : AbstractNewProjectWizardStep(parent) {
-
+class XtcNewProjectWizardStep(
+    parent: NewProjectWizardStep,
+) : AbstractNewProjectWizardStep(parent) {
     private val logger = logger<XtcNewProjectWizardStep>()
 
     private val projectTypeProperty = propertyGraph.property(XtcProjectCreator.ProjectType.APPLICATION)
@@ -43,16 +44,18 @@ class XtcNewProjectWizardStep(parent: NewProjectWizardStep) : AbstractNewProject
     }
 
     override fun setupProject(project: Project) {
-        val base = baseData ?: run {
-            logger.error("No base data available")
-            return
-        }
+        val base =
+            baseData ?: run {
+                logger.error("No base data available")
+                return
+            }
 
         val projectPath = Path(base.path).resolve(base.name)
 
         // Get XTC version from the plugin's own version (matches published artifacts)
-        val xtcVersion = PluginManagerCore.getPlugin(PluginId.getId("org.xtclang.idea"))?.version
-            ?: XtcProjectCreator.DEFAULT_XTC_VERSION
+        val xtcVersion =
+            PluginManagerCore.getPlugin(PluginId.getId("org.xtclang.idea"))?.version
+                ?: XtcProjectCreator.DEFAULT_XTC_VERSION
 
         logger.info("Creating XTC project: path=$projectPath, type=$projectType, multiModule=$multiModule, xtcVersion=$xtcVersion")
 
@@ -77,7 +80,7 @@ class XtcNewProjectWizardStep(parent: NewProjectWizardStep) : AbstractNewProject
             logger.error("Failed to create XTC project: ${result.message()}")
             Messages.showErrorDialog(
                 "Failed to create XTC project: ${result.message()}",
-                "XTC Project Creation Failed"
+                "XTC Project Creation Failed",
             )
         }
     }
@@ -86,7 +89,10 @@ class XtcNewProjectWizardStep(parent: NewProjectWizardStep) : AbstractNewProject
      * Create a default run configuration for the main module.
      * The module name is derived from the project name (same as XtcProjectCreator).
      */
-    private fun createDefaultRunConfiguration(project: Project, projectName: String) {
+    private fun createDefaultRunConfiguration(
+        project: Project,
+        projectName: String,
+    ) {
         try {
             val runManager = RunManager.getInstance(project)
             val configurationType = XtcRunConfigurationType()

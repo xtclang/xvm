@@ -5,6 +5,7 @@ import java.time.Instant
 plugins {
     alias(libs.plugins.xdk.build.properties)
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.ktlint)
     `java-library`
 }
 
@@ -32,7 +33,10 @@ plugins {
 // =============================================================================
 
 // IntelliJ 2025.1 runs on JDK 21, so LSP server must target JDK 21 for in-process execution
-val intellijJdkVersion = libs.versions.intellij.jdk.get().toInt()
+val intellijJdkVersion =
+    libs.versions.intellij.jdk
+        .get()
+        .toInt()
 
 // =============================================================================
 // LSP Adapter Selection
@@ -54,17 +58,19 @@ val lspAdapter = project.findProperty("lsp.adapter")?.toString() ?: "mock"
 val generateBuildInfo by tasks.registering {
     val outputDir = layout.buildDirectory.dir("generated/resources/buildinfo")
     val buildTime = Instant.now().toString()
-    val projectVersion = project.version.toString()  // Capture at configuration time
-    val adapter = lspAdapter  // Capture at configuration time
+    val projectVersion = project.version.toString() // Capture at configuration time
+    val adapter = lspAdapter // Capture at configuration time
     outputs.dir(outputDir)
     doLast {
         val outFile = outputDir.get().file("lsp-version.properties").asFile
         outFile.parentFile.mkdirs()
-        outFile.writeText("""
+        outFile.writeText(
+            """
             lsp.build.time=$buildTime
             lsp.version=$projectVersion
             lsp.adapter=$adapter
-        """.trimIndent() + "\n")
+            """.trimIndent() + "\n",
+        )
     }
 }
 
@@ -133,7 +139,7 @@ tasks.test {
 tasks.jar {
     manifest {
         attributes(
-            "Main-Class" to "org.xvm.lsp.server.XtcLanguageServerLauncherKt"
+            "Main-Class" to "org.xvm.lsp.server.XtcLanguageServerLauncherKt",
         )
     }
 }
@@ -152,7 +158,8 @@ val fatJar by tasks.registering(Jar::class) {
 
     dependsOn(configurations.runtimeClasspath)
     from({
-        configurations.runtimeClasspath.get()
+        configurations.runtimeClasspath
+            .get()
             .filter { it.name.endsWith("jar") }
             .map { zipTree(it) }
     })

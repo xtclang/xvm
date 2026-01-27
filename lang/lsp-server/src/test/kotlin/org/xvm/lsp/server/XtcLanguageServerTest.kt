@@ -21,7 +21,6 @@ import org.xvm.lsp.adapter.MockXtcCompilerAdapter
 
 @DisplayName("XtcLanguageServer")
 class XtcLanguageServerTest {
-
     private lateinit var server: XtcLanguageServer
     private lateinit var mockClient: LanguageClient
 
@@ -35,7 +34,6 @@ class XtcLanguageServerTest {
     @Nested
     @DisplayName("initialize()")
     inner class InitializeTests {
-
         @Test
         @DisplayName("should return server capabilities")
         fun shouldReturnServerCapabilities() {
@@ -56,16 +54,16 @@ class XtcLanguageServerTest {
     @Nested
     @DisplayName("TextDocumentService")
     inner class TextDocumentServiceTests {
-
         @Test
         @DisplayName("didOpen should compile and publish diagnostics")
         fun didOpenShouldCompileAndPublishDiagnostics() {
             val uri = "file:///test.x"
-            val content = """
+            val content =
+                """
                 module myapp {
                     // ERROR: test error
                 }
-            """.trimIndent()
+                """.trimIndent()
 
             val params = DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, content))
 
@@ -85,12 +83,13 @@ class XtcLanguageServerTest {
         @DisplayName("didOpen with valid code should have no diagnostics")
         fun didOpenWithValidCodeShouldHaveNoDiagnostics() {
             val uri = "file:///test.x"
-            val content = """
+            val content =
+                """
                 module myapp {
                     class Person {
                     }
                 }
-            """.trimIndent()
+                """.trimIndent()
 
             val params = DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, content))
 
@@ -107,15 +106,16 @@ class XtcLanguageServerTest {
         fun hoverShouldReturnMarkdownContent() {
             // First, open the document
             val uri = "file:///test.x"
-            val content = """
+            val content =
+                """
                 module myapp {
                     class Person {
                     }
                 }
-            """.trimIndent()
+                """.trimIndent()
 
             server.textDocumentService.didOpen(
-                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, content))
+                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, content)),
             )
 
             // Now request hover
@@ -132,13 +132,14 @@ class XtcLanguageServerTest {
         @DisplayName("completion should return items")
         fun completionShouldReturnItems() {
             val uri = "file:///test.x"
-            val content = """
+            val content =
+                """
                 module myapp {
                 }
-            """.trimIndent()
+                """.trimIndent()
 
             server.textDocumentService.didOpen(
-                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, content))
+                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, content)),
             )
 
             val params = CompletionParams(TextDocumentIdentifier(uri), Position(1, 0))
@@ -158,7 +159,6 @@ class XtcLanguageServerTest {
     @Nested
     @DisplayName("shutdown()")
     inner class ShutdownTests {
-
         @Test
         @DisplayName("should complete without error")
         fun shouldCompleteWithoutError() {

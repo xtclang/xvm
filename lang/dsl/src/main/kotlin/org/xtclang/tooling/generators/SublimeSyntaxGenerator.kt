@@ -15,54 +15,56 @@ import org.xtclang.tooling.model.OperatorCategory
  * This format is more powerful than TextMate grammars and supports
  * context-based parsing with push/pop/set operations.
  */
-class SublimeSyntaxGenerator(private val model: LanguageModel) {
+class SublimeSyntaxGenerator(
+    private val model: LanguageModel,
+) {
+    fun generate(): String =
+        buildString {
+            appendLine("%YAML 1.2")
+            appendLine("---")
+            appendLine("# ${model.name} language syntax for Sublime Text / bat")
+            appendLine("# Generated from XTC language model DSL")
+            appendLine("name: ${model.name}")
+            appendLine("file_extensions:")
+            model.fileExtensions.forEach { ext ->
+                appendLine("  - $ext")
+            }
+            appendLine("scope: ${model.scopeName}")
+            appendLine()
+            appendLine("contexts:")
 
-    fun generate(): String = buildString {
-        appendLine("%YAML 1.2")
-        appendLine("---")
-        appendLine("# ${model.name} language syntax for Sublime Text / bat")
-        appendLine("# Generated from XTC language model DSL")
-        appendLine("name: ${model.name}")
-        appendLine("file_extensions:")
-        model.fileExtensions.forEach { ext ->
-            appendLine("  - $ext")
+            // Main context
+            appendLine("  main:")
+            appendLine("    - include: comments")
+            appendLine("    - include: strings")
+            appendLine("    - include: numbers")
+            appendLine("    - include: annotations")
+            appendLine("    - include: keywords")
+            appendLine("    - include: types")
+            appendLine("    - include: operators")
+            appendLine()
+
+            // Comments context
+            generateCommentsContext()
+
+            // Strings context
+            generateStringsContext()
+
+            // Numbers context
+            generateNumbersContext()
+
+            // Annotations context
+            generateAnnotationsContext()
+
+            // Keywords context
+            generateKeywordsContext()
+
+            // Types context
+            generateTypesContext()
+
+            // Operators context
+            generateOperatorsContext()
         }
-        appendLine("scope: ${model.scopeName}")
-        appendLine()
-        appendLine("contexts:")
-
-        // Main context
-        appendLine("  main:")
-        appendLine("    - include: comments")
-        appendLine("    - include: strings")
-        appendLine("    - include: numbers")
-        appendLine("    - include: annotations")
-        appendLine("    - include: keywords")
-        appendLine("    - include: types")
-        appendLine("    - include: operators")
-        appendLine()
-
-        // Comments context
-        generateCommentsContext()
-
-        // Strings context
-        generateStringsContext()
-
-        // Numbers context
-        generateNumbersContext()
-
-        // Annotations context
-        generateAnnotationsContext()
-
-        // Keywords context
-        generateKeywordsContext()
-
-        // Types context
-        generateTypesContext()
-
-        // Operators context
-        generateOperatorsContext()
-    }
 
     private fun StringBuilder.generateCommentsContext() {
         appendLine("  comments:")
@@ -165,7 +167,8 @@ class SublimeSyntaxGenerator(private val model: LanguageModel) {
         appendLine("  keywords:")
 
         // Control flow keywords
-        val controlKeywords = model.keywordsByCategory(KeywordCategory.CONTROL) +
+        val controlKeywords =
+            model.keywordsByCategory(KeywordCategory.CONTROL) +
                 model.keywordsByCategory(KeywordCategory.EXCEPTION).filter { !it.contains(":") }
         if (controlKeywords.isNotEmpty()) {
             appendLine("    # Control flow")
@@ -182,7 +185,8 @@ class SublimeSyntaxGenerator(private val model: LanguageModel) {
         }
 
         // Modifier keywords
-        val modifierKeywords = model.keywordsByCategory(KeywordCategory.MODIFIER) +
+        val modifierKeywords =
+            model.keywordsByCategory(KeywordCategory.MODIFIER) +
                 model.keywordsByCategory(KeywordCategory.TYPE_RELATION)
         if (modifierKeywords.isNotEmpty()) {
             appendLine("    # Modifiers")
@@ -239,15 +243,16 @@ class SublimeSyntaxGenerator(private val model: LanguageModel) {
 
         // Generate operator patterns from the language model by category
         // Categories match OperatorCategory enum in LanguageModel.kt
-        val categoryToScope: Map<OperatorCategory, String> = mapOf(
-            OperatorCategory.COMPARISON to "keyword.operator.comparison.xtc",
-            OperatorCategory.ASSIGNMENT to "keyword.operator.assignment.xtc",
-            OperatorCategory.LOGICAL to "keyword.operator.logical.xtc",
-            OperatorCategory.BITWISE to "keyword.operator.bitwise.xtc",
-            OperatorCategory.ARITHMETIC to "keyword.operator.arithmetic.xtc",
-            OperatorCategory.MEMBER_ACCESS to "keyword.operator.access.xtc",
-            OperatorCategory.OTHER to "keyword.operator.other.xtc"  // includes range, elvis, etc.
-        )
+        val categoryToScope: Map<OperatorCategory, String> =
+            mapOf(
+                OperatorCategory.COMPARISON to "keyword.operator.comparison.xtc",
+                OperatorCategory.ASSIGNMENT to "keyword.operator.assignment.xtc",
+                OperatorCategory.LOGICAL to "keyword.operator.logical.xtc",
+                OperatorCategory.BITWISE to "keyword.operator.bitwise.xtc",
+                OperatorCategory.ARITHMETIC to "keyword.operator.arithmetic.xtc",
+                OperatorCategory.MEMBER_ACCESS to "keyword.operator.access.xtc",
+                OperatorCategory.OTHER to "keyword.operator.other.xtc", // includes range, elvis, etc.
+            )
 
         for ((category, scope) in categoryToScope) {
             val ops = operatorsByCategory(category)
@@ -263,6 +268,5 @@ class SublimeSyntaxGenerator(private val model: LanguageModel) {
         model.operators
             .filter { it.category == category }
             .map { escapeRegex(it.symbol) }
-            .sortedByDescending { it.length }  // Match longest first
-
+            .sortedByDescending { it.length } // Match longest first
 }

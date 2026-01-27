@@ -38,10 +38,12 @@ import kotlinx.serialization.Serializable
 enum class Associativity {
     /** Left-to-right: a op b op c = (a op b) op c */
     LEFT,
+
     /** Right-to-left: a op b op c = a op (b op c) */
     RIGHT,
+
     /** Cannot be chained */
-    NONE
+    NONE,
 }
 
 /**
@@ -50,18 +52,24 @@ enum class Associativity {
 enum class OperatorCategory {
     /** Assignment operators: =, +=, -=, etc. */
     ASSIGNMENT,
+
     /** Arithmetic operators: +, -, *, /, % */
     ARITHMETIC,
+
     /** Comparison operators: ==, !=, <, >, <=, >= */
     COMPARISON,
+
     /** Logical operators: &&, ||, !, ^^ */
     LOGICAL,
+
     /** Bitwise operators: &, |, ^, ~, <<, >> */
     BITWISE,
+
     /** Member access operators: ., ?. */
     MEMBER_ACCESS,
+
     /** Other operators: ->, ?:, .., etc. */
-    OTHER
+    OTHER,
 }
 
 /**
@@ -70,16 +78,21 @@ enum class OperatorCategory {
 enum class KeywordCategory {
     /** Control flow: if, else, for, while, switch, case, break, continue, return, etc. */
     CONTROL,
+
     /** Declarations: class, interface, module, package, import, etc. */
     DECLARATION,
+
     /** Modifiers: public, private, static, abstract, final, etc. */
     MODIFIER,
+
     /** Type-related: extends, implements, incorporates, into */
     TYPE_RELATION,
+
     /** Exception handling: try, catch, finally, throw */
     EXCEPTION,
+
     /** Other: new, this, super, is, as, etc. */
-    OTHER
+    OTHER,
 }
 
 /**
@@ -88,10 +101,12 @@ enum class KeywordCategory {
 enum class Cardinality {
     /** Exactly one child, must be present */
     REQUIRED,
+
     /** Zero or one child */
     OPTIONAL,
+
     /** Zero or more children */
-    ZERO_OR_MORE
+    ZERO_OR_MORE,
 }
 
 // =============================================================================
@@ -106,7 +121,7 @@ data class KeywordDefinition(
     val word: String,
     val category: KeywordCategory,
     /** True for reserved keywords, false for context-sensitive */
-    val reserved: Boolean
+    val reserved: Boolean,
 )
 
 /**
@@ -128,7 +143,7 @@ data class LanguageModel(
     val constants: List<ConstantDefinition>,
     val comments: CommentSyntax,
     val visibilityKeywords: List<String>,
-    val concepts: List<ConceptDefinition>
+    val concepts: List<ConceptDefinition>,
 ) {
     /**
      * Get all keywords (reserved + context-sensitive).
@@ -139,14 +154,12 @@ data class LanguageModel(
     /**
      * Get keywords by category.
      */
-    fun keywordsByCategory(category: KeywordCategory): List<String> =
-        categorizedKeywords.filter { it.category == category }.map { it.word }
+    fun keywordsByCategory(category: KeywordCategory): List<String> = categorizedKeywords.filter { it.category == category }.map { it.word }
 
     /**
      * Get a concept by name.
      */
-    fun getConcept(name: String): ConceptDefinition? =
-        concepts.find { it.name == name }
+    fun getConcept(name: String): ConceptDefinition? = concepts.find { it.name == name }
 
     /**
      * Get all concrete (non-abstract) concepts.
@@ -169,8 +182,7 @@ data class LanguageModel(
     /**
      * Get constants by category (e.g., "boolean", "null").
      */
-    fun constantsByCategory(category: String): List<ConstantDefinition> =
-        constants.filter { it.category == category }
+    fun constantsByCategory(category: String): List<ConstantDefinition> = constants.filter { it.category == category }
 
     /**
      * Get boolean constant literals (e.g., ["True", "False"]).
@@ -188,14 +200,14 @@ data class LanguageModel(
      * Get bracket pairs from punctuation (for editor config).
      */
     val bracketPairs: List<Pair<String, String>>
-        get() = listOf(
-            punctuation.find { it.name == "L_PAREN" }?.symbol to punctuation.find { it.name == "R_PAREN" }?.symbol,
-            punctuation.find { it.name == "L_SQUARE" }?.symbol to punctuation.find { it.name == "R_SQUARE" }?.symbol,
-            punctuation.find { it.name == "L_CURLY" }?.symbol to punctuation.find { it.name == "R_CURLY" }?.symbol,
-            punctuation.find { it.name == "L_ANGLE" }?.symbol to punctuation.find { it.name == "R_ANGLE" }?.symbol
-        ).filter { it.first != null && it.second != null }
-            .map { it.first!! to it.second!! }
-
+        get() =
+            listOf(
+                punctuation.find { it.name == "L_PAREN" }?.symbol to punctuation.find { it.name == "R_PAREN" }?.symbol,
+                punctuation.find { it.name == "L_SQUARE" }?.symbol to punctuation.find { it.name == "R_SQUARE" }?.symbol,
+                punctuation.find { it.name == "L_CURLY" }?.symbol to punctuation.find { it.name == "R_CURLY" }?.symbol,
+                punctuation.find { it.name == "L_ANGLE" }?.symbol to punctuation.find { it.name == "R_ANGLE" }?.symbol,
+            ).filter { it.first != null && it.second != null }
+                .map { it.first!! to it.second!! }
 }
 
 /**
@@ -219,7 +231,7 @@ data class ScopeDefinition(
     val semanticToken: String?,
     val vim: String?,
     val emacs: String?,
-    val treeSitter: String?
+    val treeSitter: String?,
 )
 
 /**
@@ -231,7 +243,7 @@ data class TokenRule(
     /** Regex pattern to match */
     val pattern: String,
     /** TextMate scope for syntax highlighting */
-    val textMateScope: String
+    val textMateScope: String,
 )
 
 /**
@@ -243,7 +255,7 @@ data class OperatorDefinition(
     /** Binding strength: 1 = lowest (binds last), 15 = highest (binds first) */
     val precedence: Int,
     val associativity: Associativity,
-    val category: OperatorCategory
+    val category: OperatorCategory,
 )
 
 /**
@@ -253,7 +265,7 @@ data class OperatorDefinition(
 data class PunctuationDefinition(
     val symbol: String,
     /** Token name for generated code (e.g., "COLON", "L_PAREN") */
-    val name: String
+    val name: String,
 )
 
 /**
@@ -265,7 +277,7 @@ data class ConstantDefinition(
     /** The literal text (e.g., "True", "False", "Null") */
     val literal: String,
     /** Category for grouping (e.g., "boolean", "null") */
-    val category: String
+    val category: String,
 )
 
 /**
@@ -282,7 +294,7 @@ data class CommentSyntax(
     /** Doc comment opening delimiter, e.g. slash-star-star */
     val docCommentStart: String,
     /** Doc comment closing delimiter, e.g. star-slash */
-    val docCommentEnd: String
+    val docCommentEnd: String,
 )
 
 /**
@@ -297,12 +309,15 @@ data class ConceptDefinition(
     val children: List<ChildDefinition>,
     val references: List<ReferenceDefinition>,
     /** Optional regex pattern for grammar generation */
-    val syntaxPattern: String?
+    val syntaxPattern: String?,
 ) {
     /**
      * Check if this concept extends another (directly or indirectly).
      */
-    fun extendsFrom(conceptName: String, model: LanguageModel): Boolean {
+    fun extendsFrom(
+        conceptName: String,
+        model: LanguageModel,
+    ): Boolean {
         if (parentConcept == conceptName) return true
         val parent = parentConcept?.let { model.getConcept(it) }
         return parent?.extendsFrom(conceptName, model) == true
@@ -317,7 +332,7 @@ data class PropertyDefinition(
     val name: String,
     val type: String,
     val default: String?,
-    val optional: Boolean
+    val optional: Boolean,
 )
 
 /**
@@ -327,7 +342,7 @@ data class PropertyDefinition(
 data class ChildDefinition(
     val name: String,
     val type: String,
-    val cardinality: Cardinality
+    val cardinality: Cardinality,
 )
 
 /**
@@ -337,7 +352,7 @@ data class ChildDefinition(
 data class ReferenceDefinition(
     val name: String,
     val type: String,
-    val optional: Boolean
+    val optional: Boolean,
 )
 
 // =============================================================================
@@ -347,38 +362,50 @@ data class ReferenceDefinition(
 /**
  * Builder for scope definitions.
  */
-class ScopeBuilder(private val name: String) {
+class ScopeBuilder(
+    private val name: String,
+) {
     /** TextMate scope name (e.g., "keyword.control.xtc") */
     var textMate: String = ""
+
     /** IntelliJ TextAttributesKey name (e.g., "KEYWORD") */
     var intellij: String = ""
+
     /** Eclipse color key (e.g., "keyword") */
     var eclipse: String = ""
+
     /** LSP semantic token type (e.g., "keyword") */
     var semanticToken: String? = null
+
     /** Vim highlight group (e.g., "Keyword") */
     var vim: String? = null
+
     /** Emacs face name (e.g., "font-lock-keyword-face") */
     var emacs: String? = null
+
     /** Tree-sitter capture name (e.g., "@keyword") */
     var treeSitter: String? = null
 
-    internal fun build(): ScopeDefinition = ScopeDefinition(
-        name = name,
-        textMate = textMate,
-        intellij = intellij,
-        eclipse = eclipse,
-        semanticToken = semanticToken,
-        vim = vim,
-        emacs = emacs,
-        treeSitter = treeSitter
-    )
+    internal fun build(): ScopeDefinition =
+        ScopeDefinition(
+            name = name,
+            textMate = textMate,
+            intellij = intellij,
+            eclipse = eclipse,
+            semanticToken = semanticToken,
+            vim = vim,
+            emacs = emacs,
+            treeSitter = treeSitter,
+        )
 }
 
 /**
  * Builder for concept definitions.
  */
-class ConceptBuilder(private val name: String, private val isAbstract: Boolean) {
+class ConceptBuilder(
+    private val name: String,
+    private val isAbstract: Boolean,
+) {
     private var parentConcept: String? = null
     private val properties = mutableListOf<PropertyDefinition>()
     private val children = mutableListOf<ChildDefinition>()
@@ -399,7 +426,7 @@ class ConceptBuilder(private val name: String, private val isAbstract: Boolean) 
         name: String,
         type: String,
         default: String? = null,
-        optional: Boolean = false
+        optional: Boolean = false,
     ) {
         properties.add(PropertyDefinition(name, type, default, optional))
     }
@@ -410,7 +437,7 @@ class ConceptBuilder(private val name: String, private val isAbstract: Boolean) 
     fun child(
         name: String,
         type: String,
-        cardinality: Cardinality = Cardinality.REQUIRED
+        cardinality: Cardinality = Cardinality.REQUIRED,
     ) {
         children.add(ChildDefinition(name, type, cardinality))
     }
@@ -418,14 +445,21 @@ class ConceptBuilder(private val name: String, private val isAbstract: Boolean) 
     /**
      * Add a collection of child nodes (zero or more).
      */
-    fun children(name: String, type: String) {
+    fun children(
+        name: String,
+        type: String,
+    ) {
         children.add(ChildDefinition(name, type, Cardinality.ZERO_OR_MORE))
     }
 
     /**
      * Add a reference to another node.
      */
-    fun reference(name: String, type: String, optional: Boolean = false) {
+    fun reference(
+        name: String,
+        type: String,
+        optional: Boolean = false,
+    ) {
         references.add(ReferenceDefinition(name, type, optional))
     }
 
@@ -436,15 +470,16 @@ class ConceptBuilder(private val name: String, private val isAbstract: Boolean) 
         syntaxPattern = pattern
     }
 
-    internal fun build(): ConceptDefinition = ConceptDefinition(
-        name = name,
-        isAbstract = isAbstract,
-        parentConcept = parentConcept,
-        properties = properties.toList(),
-        children = children.toList(),
-        references = references.toList(),
-        syntaxPattern = syntaxPattern
-    )
+    internal fun build(): ConceptDefinition =
+        ConceptDefinition(
+            name = name,
+            isAbstract = isAbstract,
+            parentConcept = parentConcept,
+            properties = properties.toList(),
+            children = children.toList(),
+            references = references.toList(),
+            syntaxPattern = syntaxPattern,
+        )
 }
 
 /**
@@ -453,7 +488,7 @@ class ConceptBuilder(private val name: String, private val isAbstract: Boolean) 
 class LanguageModelBuilder(
     private val name: String,
     private val fileExtensions: List<String>,
-    private val scopeName: String
+    private val scopeName: String,
 ) {
     private val scopes = mutableListOf<ScopeDefinition>()
     private val keywordsList = mutableListOf<String>()
@@ -471,7 +506,10 @@ class LanguageModelBuilder(
     /**
      * Define a scope mapping for editor styling.
      */
-    fun scope(name: String, block: ScopeBuilder.() -> Unit) {
+    fun scope(
+        name: String,
+        block: ScopeBuilder.() -> Unit,
+    ) {
         val builder = ScopeBuilder(name)
         builder.block()
         scopes.add(builder.build())
@@ -487,7 +525,10 @@ class LanguageModelBuilder(
     /**
      * Register reserved keywords with a category.
      */
-    fun keywords(category: KeywordCategory, vararg words: String) {
+    fun keywords(
+        category: KeywordCategory,
+        vararg words: String,
+    ) {
         keywordsList.addAll(words)
         words.forEach { word ->
             categorizedKeywordsList.add(KeywordDefinition(word, category, reserved = true))
@@ -504,7 +545,10 @@ class LanguageModelBuilder(
     /**
      * Register context-sensitive keywords with a category.
      */
-    fun contextKeywords(category: KeywordCategory, vararg words: String) {
+    fun contextKeywords(
+        category: KeywordCategory,
+        vararg words: String,
+    ) {
         contextKeywordsList.addAll(words)
         words.forEach { word ->
             categorizedKeywordsList.add(KeywordDefinition(word, category, reserved = false))
@@ -521,7 +565,11 @@ class LanguageModelBuilder(
     /**
      * Define a lexical token rule.
      */
-    fun token(name: String, pattern: String, textMateScope: String) {
+    fun token(
+        name: String,
+        pattern: String,
+        textMateScope: String,
+    ) {
         tokens.add(TokenRule(name, pattern, textMateScope))
     }
 
@@ -532,7 +580,7 @@ class LanguageModelBuilder(
         symbol: String,
         precedence: Int,
         associativity: Associativity,
-        category: OperatorCategory
+        category: OperatorCategory,
     ) {
         operators.add(OperatorDefinition(symbol, precedence, associativity, category))
     }
@@ -540,21 +588,31 @@ class LanguageModelBuilder(
     /**
      * Define a punctuation/delimiter token.
      */
-    fun punctuation(symbol: String, name: String) {
+    fun punctuation(
+        symbol: String,
+        name: String,
+    ) {
         punctuationList.add(PunctuationDefinition(symbol, name))
     }
 
     /**
      * Define a language constant (boolean, null, etc.).
      */
-    fun constant(name: String, literal: String, category: String) {
+    fun constant(
+        name: String,
+        literal: String,
+        category: String,
+    ) {
         constantsList.add(ConstantDefinition(name, literal, category))
     }
 
     /**
      * Define boolean constants.
      */
-    fun booleanConstants(trueLiteral: String, falseLiteral: String) {
+    fun booleanConstants(
+        trueLiteral: String,
+        falseLiteral: String,
+    ) {
         constantsList.add(ConstantDefinition("TRUE", trueLiteral, "boolean"))
         constantsList.add(ConstantDefinition("FALSE", falseLiteral, "boolean"))
     }
@@ -574,7 +632,7 @@ class LanguageModelBuilder(
         blockCommentStart: String = "/*",
         blockCommentEnd: String = "*/",
         docCommentStart: String = "/**",
-        docCommentEnd: String = "*/"
+        docCommentEnd: String = "*/",
     ) {
         commentSyntax = CommentSyntax(lineComment, blockCommentStart, blockCommentEnd, docCommentStart, docCommentEnd)
     }
@@ -590,7 +648,10 @@ class LanguageModelBuilder(
     /**
      * Define a concrete AST concept.
      */
-    fun concept(name: String, block: ConceptBuilder.() -> Unit = {}) {
+    fun concept(
+        name: String,
+        block: ConceptBuilder.() -> Unit = {},
+    ) {
         val builder = ConceptBuilder(name, isAbstract = false)
         builder.block()
         concepts.add(builder.build())
@@ -599,29 +660,33 @@ class LanguageModelBuilder(
     /**
      * Define an abstract AST concept (cannot be instantiated).
      */
-    fun abstractConcept(name: String, block: ConceptBuilder.() -> Unit = {}) {
+    fun abstractConcept(
+        name: String,
+        block: ConceptBuilder.() -> Unit = {},
+    ) {
         val builder = ConceptBuilder(name, isAbstract = true)
         builder.block()
         concepts.add(builder.build())
     }
 
-    internal fun build(): LanguageModel = LanguageModel(
-        name = name,
-        fileExtensions = fileExtensions,
-        scopeName = scopeName,
-        scopes = scopes.toList(),
-        keywords = keywordsList.toList(),
-        contextKeywords = contextKeywordsList.toList(),
-        categorizedKeywords = categorizedKeywordsList.toList(),
-        builtinTypes = builtinTypesList.toList(),
-        tokens = tokens.toList(),
-        operators = operators.toList(),
-        punctuation = punctuationList.toList(),
-        constants = constantsList.toList(),
-        comments = commentSyntax,
-        visibilityKeywords = visibilityKeywordsList.toList(),
-        concepts = concepts.toList()
-    )
+    internal fun build(): LanguageModel =
+        LanguageModel(
+            name = name,
+            fileExtensions = fileExtensions,
+            scopeName = scopeName,
+            scopes = scopes.toList(),
+            keywords = keywordsList.toList(),
+            contextKeywords = contextKeywordsList.toList(),
+            categorizedKeywords = categorizedKeywordsList.toList(),
+            builtinTypes = builtinTypesList.toList(),
+            tokens = tokens.toList(),
+            operators = operators.toList(),
+            punctuation = punctuationList.toList(),
+            constants = constantsList.toList(),
+            comments = commentSyntax,
+            visibilityKeywords = visibilityKeywordsList.toList(),
+            concepts = concepts.toList(),
+        )
 }
 
 // =============================================================================
@@ -641,7 +706,7 @@ fun language(
     name: String,
     fileExtensions: List<String>,
     scopeName: String,
-    block: LanguageModelBuilder.() -> Unit
+    block: LanguageModelBuilder.() -> Unit,
 ): LanguageModel {
     val builder = LanguageModelBuilder(name, fileExtensions, scopeName)
     builder.block()

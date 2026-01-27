@@ -6,13 +6,11 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 
-/**
+/*
  * Shared utilities for syntax generators.
+ *
+ * Regex/Pattern Escaping
  */
-
-// =============================================================================
-// Regex/Pattern Escaping
-// =============================================================================
 
 /** Characters that need escaping in standard regex patterns (TextMate, Sublime, etc.) */
 private const val REGEX_SPECIAL = """.+*?|\\^$()[]{}"""
@@ -40,14 +38,20 @@ fun escapeJsString(s: String) = s.replace("\\", "\\\\").replace("'", "\\'")
 /**
  * Add a JSON array with the given key using a builder block.
  */
-fun JsonObjectBuilder.putJsonArray(key: String, block: JsonArrayBuilder.() -> Unit) {
+fun JsonObjectBuilder.putJsonArray(
+    key: String,
+    block: JsonArrayBuilder.() -> Unit,
+) {
     put(key, buildJsonArray(block))
 }
 
 /**
  * Add a nested JSON object with the given key using a builder block.
  */
-fun JsonObjectBuilder.putJsonObject(key: String, block: JsonObjectBuilder.() -> Unit) {
+fun JsonObjectBuilder.putJsonObject(
+    key: String,
+    block: JsonObjectBuilder.() -> Unit,
+) {
     put(key, buildJsonObject(block))
 }
 

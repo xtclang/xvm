@@ -144,5 +144,5 @@ The LSP server is used by:
 ## Documentation
 
 - [Tree-sitter Integration Plan](../doc/plans/PLAN_TREE_SITTER.md) - Full details on tree-sitter backend
-- [Adapter Layer Design](../doc/3-lsp-solution/adapter-layer-design.md) - How the adapter pattern works
-- [Incremental Migration](../doc/3-lsp-solution/incremental-migration.md) - Path to restartable compiler
+
+The LSP server uses an adapter pattern to abstract the compiler backend, enabling future migration to a restartable/incremental compiler without changing the LSP protocol layer.

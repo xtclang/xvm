@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test
 
 @DisplayName("CompilationResult")
 class CompilationResultTest {
-
     @Test
     @DisplayName("success() should create successful result")
     fun successShouldCreateSuccessfulResult() {

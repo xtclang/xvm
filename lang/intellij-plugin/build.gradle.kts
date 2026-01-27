@@ -4,6 +4,7 @@ import java.io.File
 plugins {
     alias(libs.plugins.xdk.build.properties)
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.ktlint)
     alias(libs.plugins.intellij.platform)
 }
 
@@ -31,34 +32,36 @@ fun findLocalIntelliJ(): File? {
     }
 
     val osName = System.getProperty("os.name").lowercase()
-    val candidates = when {
-        osName.contains("mac") -> listOf(
-            "/Applications/IntelliJ IDEA CE.app",
-            "/Applications/IntelliJ IDEA.app",
-            "${System.getProperty("user.home")}/Applications/IntelliJ IDEA CE.app",
-            "${System.getProperty("user.home")}/Applications/IntelliJ IDEA.app"
-        )
-        osName.contains("linux") -> {
-            val home = System.getProperty("user.home")
-            listOf(
-                "/opt/idea-IC",
-                "/opt/intellij-idea-community",
-                "/usr/share/intellij-idea-community",
-                "$home/.local/share/JetBrains/Toolbox/apps/IDEA-C/ch-0",
-                "$home/idea-IC"
-            ) + (File("/opt").listFiles()?.filter { it.name.startsWith("idea-IC-") }?.map { it.path } ?: emptyList()) +
-              (File(home).listFiles()?.filter { it.name.startsWith("idea-IC-") }?.map { it.path } ?: emptyList())
+    val candidates =
+        when {
+            osName.contains("mac") ->
+                listOf(
+                    "/Applications/IntelliJ IDEA CE.app",
+                    "/Applications/IntelliJ IDEA.app",
+                    "${System.getProperty("user.home")}/Applications/IntelliJ IDEA CE.app",
+                    "${System.getProperty("user.home")}/Applications/IntelliJ IDEA.app",
+                )
+            osName.contains("linux") -> {
+                val home = System.getProperty("user.home")
+                listOf(
+                    "/opt/idea-IC",
+                    "/opt/intellij-idea-community",
+                    "/usr/share/intellij-idea-community",
+                    "$home/.local/share/JetBrains/Toolbox/apps/IDEA-C/ch-0",
+                    "$home/idea-IC",
+                ) + (File("/opt").listFiles()?.filter { it.name.startsWith("idea-IC-") }?.map { it.path } ?: emptyList()) +
+                    (File(home).listFiles()?.filter { it.name.startsWith("idea-IC-") }?.map { it.path } ?: emptyList())
+            }
+            osName.contains("windows") -> {
+                val programFiles = System.getenv("ProgramFiles") ?: "C:\\Program Files"
+                listOf(
+                    "$programFiles\\JetBrains\\IntelliJ IDEA Community Edition 2025.1",
+                    "$programFiles\\JetBrains\\IntelliJ IDEA Community Edition",
+                    "${System.getProperty("user.home")}\\AppData\\Local\\JetBrains\\Toolbox\\apps\\IDEA-C",
+                )
+            }
+            else -> emptyList()
         }
-        osName.contains("windows") -> {
-            val programFiles = System.getenv("ProgramFiles") ?: "C:\\Program Files"
-            listOf(
-                "$programFiles\\JetBrains\\IntelliJ IDEA Community Edition 2025.1",
-                "$programFiles\\JetBrains\\IntelliJ IDEA Community Edition",
-                "${System.getProperty("user.home")}\\AppData\\Local\\JetBrains\\Toolbox\\apps\\IDEA-C"
-            )
-        }
-        else -> emptyList()
-    }
 
     return candidates.map { File(it) }.firstOrNull { it.exists() }
 }
@@ -96,7 +99,7 @@ val syncXtcProjectCreator by tasks.registering(Copy::class) {
 // Sync gradle-wrapper resources needed by XtcProjectCreator
 // Source of truth is the repo root's gradle wrapper (same as what builds XVM)
 val syncedResourcesDir = layout.buildDirectory.dir("generated/synced-resources")
-val compositeRoot = rootProject.projectDir.parentFile  // /lang -> /
+val compositeRoot = rootProject.projectDir.parentFile // /lang -> /
 
 val syncGradleWrapperResources by tasks.registering(Copy::class) {
     description = "Sync gradle-wrapper resources from repo root (single source of truth)"
@@ -125,6 +128,11 @@ val processResources by tasks.existing {
     dependsOn(syncGradleWrapperResources)
 }
 
+// ktlint checks synced Java sources, so it must run after sync
+tasks.matching { it.name.startsWith("runKtlint") }.configureEach {
+    dependsOn(syncXtcProjectCreator)
+}
+
 // =============================================================================
 // Consumer configurations for artifacts from sibling projects
 // =============================================================================
@@ -139,7 +147,6 @@ val textMateGrammar by configurations.creating {
     }
 }
 
-
 dependencies {
     // LSP server for in-process execution (no subprocess needed)
     implementation(project(":lsp-server"))
@@ -149,7 +156,10 @@ dependencies {
         if (useLocalIde) {
             local(localIntelliJ!!.absolutePath)
         } else {
-            intellijIdeaCommunity(libs.versions.intellij.ide.get())
+            intellijIdeaCommunity(
+                libs.versions.intellij.ide
+                    .get(),
+            )
         }
         bundledPlugin("com.intellij.gradle")
         bundledPlugin("org.jetbrains.plugins.textmate")
@@ -161,7 +171,10 @@ dependencies {
 }
 
 // IntelliJ 2025.1 runs on JDK 21, so we must target JDK 21 (not the project's JDK 25)
-val intellijJdkVersion = libs.versions.intellij.jdk.get().toInt()
+val intellijJdkVersion =
+    libs.versions.intellij.jdk
+        .get()
+        .toInt()
 
 java {
     toolchain {
@@ -186,7 +199,8 @@ intellijPlatform {
             untilBuild = provider { null } // No upper bound - compatible with future versions
         }
 
-        changeNotes = """
+        changeNotes =
+            """
             <h2>$xdkVersion</h2>
             <ul>
                 <li>Initial alpha release</li>
@@ -195,7 +209,7 @@ intellijPlatform {
                 <li>File type support for .x files</li>
                 <li>LSP-based language features</li>
             </ul>
-        """.trimIndent()
+            """.trimIndent()
     }
 
     signing {
@@ -229,7 +243,7 @@ val publishCheck by tasks.registering {
                 |  JETBRAINS_CERTIFICATE_CHAIN - Base64-encoded certificate chain
                 |  JETBRAINS_PRIVATE_KEY - Base64-encoded private key
                 |  JETBRAINS_PRIVATE_KEY_PASSWORD - Private key password
-                """.trimMargin()
+                """.trimMargin(),
             )
         }
     }
@@ -292,11 +306,12 @@ val prepareJarSearchableOptions by tasks.existing {
 val sandboxConfigDir = prepareSandbox.map { it.destinationDir.parentFile.resolve("config") }
 
 // Plugins to disable in sandbox (Ultimate-only or problematic split-architecture plugins)
-val disabledSandboxPlugins = listOf(
-    "com.intellij.modules.ultimate",
-    "com.intellij.kubernetes",  // Split frontend/backend - partially loads even with ultimate disabled
-    "com.intellij.clouds.kubernetes"  // Another Kubernetes component
-)
+val disabledSandboxPlugins =
+    listOf(
+        "com.intellij.modules.ultimate",
+        "com.intellij.kubernetes", // Split frontend/backend - partially loads even with ultimate disabled
+        "com.intellij.clouds.kubernetes", // Another Kubernetes component
+    )
 
 val configureDisabledPlugins by tasks.registering {
     group = "intellij platform"
@@ -306,10 +321,10 @@ val configureDisabledPlugins by tasks.registering {
     dependsOn(prepareSandbox)
     mustRunAfter(prepareSandbox)
 
-    val configDir = sandboxConfigDir  // Capture for configuration cache
+    val configDir = sandboxConfigDir // Capture for configuration cache
     val pluginsList = disabledSandboxPlugins
     inputs.property("disabledPlugins", pluginsList)
-    outputs.dir(configDir)  // Output is the config directory
+    outputs.dir(configDir) // Output is the config directory
 
     doLast {
         val disabledPluginsFile = configDir.get().resolve("disabled_plugins.txt")

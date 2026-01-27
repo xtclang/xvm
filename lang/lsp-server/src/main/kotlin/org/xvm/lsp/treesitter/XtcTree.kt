@@ -12,9 +12,8 @@ import java.io.Closeable
  */
 class XtcTree internal constructor(
     internal val tsTree: Tree,
-    val source: String
+    val source: String,
 ) : Closeable {
-
     @Volatile
     private var closed = false
 
@@ -43,10 +42,14 @@ class XtcTree internal constructor(
      * @param column 0-based column number
      * @return the node at that position, or null if none
      */
-    fun nodeAt(line: Int, column: Int): XtcNode? {
+    fun nodeAt(
+        line: Int,
+        column: Int,
+    ): XtcNode? {
         checkNotClosed()
         val point = Point(line, column)
-        return tsTree.rootNode.getDescendant(point, point)
+        return tsTree.rootNode
+            .getDescendant(point, point)
             .map { XtcNode(it, source) }
             .orElse(null)
     }
@@ -61,7 +64,10 @@ class XtcTree internal constructor(
      * @param column 0-based column number
      * @return the named node at that position, or null if none
      */
-    fun namedNodeAt(line: Int, column: Int): XtcNode? {
+    fun namedNodeAt(
+        line: Int,
+        column: Int,
+    ): XtcNode? {
         var node = nodeAt(line, column)
         while (node != null && !node.isNamed) {
             node = node.parent

@@ -15,7 +15,10 @@ import javax.swing.Icon
  * 3. IconProvider lets us add custom icons without interfering with TextMate
  */
 class XtcIconProvider : IconProvider() {
-    override fun getIcon(element: PsiElement, flags: Int): Icon? {
+    override fun getIcon(
+        element: PsiElement,
+        flags: Int,
+    ): Icon? {
         if (element is PsiFile && element.name.endsWith(".x")) {
             return XTC_ICON
         }

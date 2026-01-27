@@ -21,15 +21,15 @@ package org.xtclang.tooling
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.condition.EnabledIf
+import org.xtclang.tooling.generators.EmacsGenerator
+import org.xtclang.tooling.generators.TextMateGenerator
+import org.xtclang.tooling.generators.TreeSitterGenerator
+import org.xtclang.tooling.generators.VimGenerator
 import org.xtclang.tooling.model.Associativity
 import org.xtclang.tooling.model.Cardinality
 import org.xtclang.tooling.model.KeywordCategory
 import org.xtclang.tooling.model.OperatorCategory
 import org.xtclang.tooling.model.language
-import org.xtclang.tooling.generators.TextMateGenerator
-import org.xtclang.tooling.generators.VimGenerator
-import org.xtclang.tooling.generators.EmacsGenerator
-import org.xtclang.tooling.generators.TreeSitterGenerator
 import java.io.File
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -37,7 +37,6 @@ import kotlin.test.assertTrue
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class DslPowerShowcaseTest {
-
     // =========================================================================
     // SHOWCASE 1: Define a Complete Mini-Language in ~50 Lines
     // =========================================================================
@@ -45,62 +44,63 @@ class DslPowerShowcaseTest {
     // This demonstrates the DSL's expressiveness - a complete language spec
     // that can generate TextMate, Vim, Emacs, and Tree-sitter support.
 
-    private val miniLang = language(
-        name = "MiniLang",
-        fileExtensions = listOf("mini"),
-        scopeName = "source.mini"
-    ) {
-        // Scopes map semantic elements to editor styling
-        scope("keyword") {
-            textMate = "keyword.control.mini"
-            intellij = "KEYWORD"
-            eclipse = "keyword"
-            semanticToken = "keyword"
-            vim = "Keyword"
-            emacs = "font-lock-keyword-face"
-            treeSitter = "@keyword"
+    private val miniLang =
+        language(
+            name = "MiniLang",
+            fileExtensions = listOf("mini"),
+            scopeName = "source.mini",
+        ) {
+            // Scopes map semantic elements to editor styling
+            scope("keyword") {
+                textMate = "keyword.control.mini"
+                intellij = "KEYWORD"
+                eclipse = "keyword"
+                semanticToken = "keyword"
+                vim = "Keyword"
+                emacs = "font-lock-keyword-face"
+                treeSitter = "@keyword"
+            }
+
+            scope("type") {
+                textMate = "entity.name.type.mini"
+                intellij = "CLASS_NAME"
+                eclipse = "class"
+                semanticToken = "type"
+            }
+
+            // Keywords with semantic categories
+            keywords(KeywordCategory.CONTROL, "if", "else", "while", "for", "return")
+            keywords(KeywordCategory.DECLARATION, "fn", "let", "const", "struct")
+            contextKeywords(KeywordCategory.MODIFIER, "pub", "mut", "async")
+
+            builtinTypes("Int", "Float", "String", "Bool", "Void")
+
+            // Operators with precedence (1=lowest, 15=highest)
+            operator("=", 1, Associativity.RIGHT, OperatorCategory.ASSIGNMENT)
+            operator("||", 3, Associativity.LEFT, OperatorCategory.LOGICAL)
+            operator("&&", 4, Associativity.LEFT, OperatorCategory.LOGICAL)
+            operator("==", 8, Associativity.LEFT, OperatorCategory.COMPARISON)
+            operator("+", 12, Associativity.LEFT, OperatorCategory.ARITHMETIC)
+            operator("*", 13, Associativity.LEFT, OperatorCategory.ARITHMETIC)
+            operator(".", 15, Associativity.LEFT, OperatorCategory.MEMBER_ACCESS)
+
+            // AST concepts with inheritance
+            abstractConcept("Expression")
+
+            concept("BinaryExpr") {
+                extends("Expression")
+                child("left", "Expression")
+                property("operator", "String")
+                child("right", "Expression")
+            }
+
+            concept("IfExpr") {
+                extends("Expression")
+                child("condition", "Expression")
+                child("thenBranch", "Expression")
+                child("elseBranch", "Expression", Cardinality.OPTIONAL)
+            }
         }
-
-        scope("type") {
-            textMate = "entity.name.type.mini"
-            intellij = "CLASS_NAME"
-            eclipse = "class"
-            semanticToken = "type"
-        }
-
-        // Keywords with semantic categories
-        keywords(KeywordCategory.CONTROL, "if", "else", "while", "for", "return")
-        keywords(KeywordCategory.DECLARATION, "fn", "let", "const", "struct")
-        contextKeywords(KeywordCategory.MODIFIER, "pub", "mut", "async")
-
-        builtinTypes("Int", "Float", "String", "Bool", "Void")
-
-        // Operators with precedence (1=lowest, 15=highest)
-        operator("=", 1, Associativity.RIGHT, OperatorCategory.ASSIGNMENT)
-        operator("||", 3, Associativity.LEFT, OperatorCategory.LOGICAL)
-        operator("&&", 4, Associativity.LEFT, OperatorCategory.LOGICAL)
-        operator("==", 8, Associativity.LEFT, OperatorCategory.COMPARISON)
-        operator("+", 12, Associativity.LEFT, OperatorCategory.ARITHMETIC)
-        operator("*", 13, Associativity.LEFT, OperatorCategory.ARITHMETIC)
-        operator(".", 15, Associativity.LEFT, OperatorCategory.MEMBER_ACCESS)
-
-        // AST concepts with inheritance
-        abstractConcept("Expression")
-
-        concept("BinaryExpr") {
-            extends("Expression")
-            child("left", "Expression")
-            property("operator", "String")
-            child("right", "Expression")
-        }
-
-        concept("IfExpr") {
-            extends("Expression")
-            child("condition", "Expression")
-            child("thenBranch", "Expression")
-            child("elseBranch", "Expression", Cardinality.OPTIONAL)
-        }
-    }
 
     @Test
     fun `mini-language demonstrates DSL expressiveness`() {
@@ -209,26 +209,38 @@ class DslPowerShowcaseTest {
         val model = xtcLanguage
 
         // Type declarations inherit from TypeDeclaration
-        val typeDecls = listOf(
-            "ClassDeclaration", "InterfaceDeclaration", "MixinDeclaration",
-            "ServiceDeclaration", "ConstDeclaration", "EnumDeclaration",
-            "TypedefDeclaration", "StructDeclaration"
-        )
+        val typeDecls =
+            listOf(
+                "ClassDeclaration",
+                "InterfaceDeclaration",
+                "MixinDeclaration",
+                "ServiceDeclaration",
+                "ConstDeclaration",
+                "EnumDeclaration",
+                "TypedefDeclaration",
+                "StructDeclaration",
+            )
 
         for (typeName in typeDecls) {
             val concept = model.getConcept(typeName)
             assertNotNull(concept, "Should have $typeName concept")
             assertTrue(
                 concept.extendsFrom("TypeDeclaration", model),
-                "$typeName should extend TypeDeclaration"
+                "$typeName should extend TypeDeclaration",
             )
         }
 
         // Statements extend Statement
-        val statements = listOf(
-            "IfStatement", "ForStatement", "WhileStatement", "TryStatement",
-            "ReturnStatement", "AssertStatement", "SwitchStatement"
-        )
+        val statements =
+            listOf(
+                "IfStatement",
+                "ForStatement",
+                "WhileStatement",
+                "TryStatement",
+                "ReturnStatement",
+                "AssertStatement",
+                "SwitchStatement",
+            )
 
         for (stmtName in statements) {
             val concept = model.getConcept(stmtName)
@@ -237,10 +249,15 @@ class DslPowerShowcaseTest {
         }
 
         // Expressions extend Expression
-        val expressions = listOf(
-            "BinaryExpression", "UnaryExpression", "LiteralExpression",
-            "InvocationExpression", "LambdaExpression", "TernaryExpression"
-        )
+        val expressions =
+            listOf(
+                "BinaryExpression",
+                "UnaryExpression",
+                "LiteralExpression",
+                "InvocationExpression",
+                "LambdaExpression",
+                "TernaryExpression",
+            )
 
         for (exprName in expressions) {
             val concept = model.getConcept(exprName)
@@ -248,8 +265,10 @@ class DslPowerShowcaseTest {
             assertEquals("Expression", concept.parentConcept)
         }
 
-        println("AST hierarchy: ${model.concepts.size} concepts, " +
-                "${model.abstractConcepts.size} abstract, ${model.concreteConcepts.size} concrete")
+        println(
+            "AST hierarchy: ${model.concepts.size} concepts, " +
+                "${model.abstractConcepts.size} abstract, ${model.concreteConcepts.size} concrete",
+        )
     }
 
     @Test
@@ -271,8 +290,11 @@ class DslPowerShowcaseTest {
         // MethodDeclaration supports multiple return types (XTC feature!)
         val methodDecl = model.getConcept("MethodDeclaration")!!
         val returnTypes = methodDecl.children.find { it.name == "returnTypes" }!!
-        assertEquals(Cardinality.ZERO_OR_MORE, returnTypes.cardinality,
-            "XTC methods can return multiple values")
+        assertEquals(
+            Cardinality.ZERO_OR_MORE,
+            returnTypes.cardinality,
+            "XTC methods can return multiple values",
+        )
 
         println("ClassDeclaration children: $childNames")
     }
@@ -291,8 +313,11 @@ class DslPowerShowcaseTest {
 
         val operands = chainExpr.children.find { it.name == "operands" }
         assertNotNull(operands)
-        assertEquals(Cardinality.ZERO_OR_MORE, operands.cardinality,
-            "Chain can have multiple operands")
+        assertEquals(
+            Cardinality.ZERO_OR_MORE,
+            operands.cardinality,
+            "Chain can have multiple operands",
+        )
 
         println("XTC comparison chains: 0 <= x < 10 means (0 <= x) && (x < 10)")
     }
@@ -430,18 +455,20 @@ class DslPowerShowcaseTest {
 
         // Find all declaration keywords used
         val declKeywords = model.keywordsByCategory(KeywordCategory.DECLARATION)
-        val foundDecls = declKeywords.filter { kw ->
-            Regex("\\b${Regex.escape(kw)}\\b").containsMatchIn(content)
-        }
+        val foundDecls =
+            declKeywords.filter { kw ->
+                Regex("\\b${Regex.escape(kw)}\\b").containsMatchIn(content)
+            }
 
         println("Declaration keywords found in ecstasy.x: $foundDecls")
         assertTrue(foundDecls.isNotEmpty(), "Should find declaration keywords")
 
         // Find type relation keywords
         val typeRelKeywords = model.keywordsByCategory(KeywordCategory.TYPE_RELATION)
-        val foundTypeRels = typeRelKeywords.filter { kw ->
-            Regex("\\b${Regex.escape(kw)}\\b").containsMatchIn(content)
-        }
+        val foundTypeRels =
+            typeRelKeywords.filter { kw ->
+                Regex("\\b${Regex.escape(kw)}\\b").containsMatchIn(content)
+            }
 
         println("Type relation keywords found: $foundTypeRels")
     }
@@ -458,7 +485,8 @@ class DslPowerShowcaseTest {
 
         val operatorCounts = mutableMapOf<String, Int>()
 
-        libEcstasy.walkTopDown()
+        libEcstasy
+            .walkTopDown()
             .filter { it.extension == "x" }
             .take(20)
             .forEach { file ->
@@ -496,7 +524,8 @@ class DslPowerShowcaseTest {
 
         val typeCounts = mutableMapOf<String, Int>()
 
-        libEcstasy.walkTopDown()
+        libEcstasy
+            .walkTopDown()
             .filter { it.extension == "x" }
             .take(30)
             .forEach { file ->
@@ -538,7 +567,8 @@ class DslPowerShowcaseTest {
         var conditionalAssignCount = 0
         var elvisCount = 0
 
-        libEcstasy.walkTopDown()
+        libEcstasy
+            .walkTopDown()
             .filter { it.extension == "x" }
             .forEach { file ->
                 val content = file.readText()

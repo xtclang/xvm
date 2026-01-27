@@ -9,7 +9,7 @@ import io.github.treesitter.jtreesitter.Node
  */
 class XtcNode internal constructor(
     private val tsNode: Node,
-    private val source: String
+    private val source: String,
 ) {
     /**
      * The type of this node (e.g., "class_declaration", "identifier").
@@ -104,20 +104,17 @@ class XtcNode internal constructor(
     /**
      * Get a child node by index.
      */
-    fun child(index: Int): XtcNode? =
-        tsNode.getChild(index).map { XtcNode(it, source) }.orElse(null)
+    fun child(index: Int): XtcNode? = tsNode.getChild(index).map { XtcNode(it, source) }.orElse(null)
 
     /**
      * Get a named child node by index.
      */
-    fun namedChild(index: Int): XtcNode? =
-        tsNode.getNamedChild(index).map { XtcNode(it, source) }.orElse(null)
+    fun namedChild(index: Int): XtcNode? = tsNode.getNamedChild(index).map { XtcNode(it, source) }.orElse(null)
 
     /**
      * Get a child node by field name.
      */
-    fun childByFieldName(fieldName: String): XtcNode? =
-        tsNode.getChildByFieldName(fieldName).map { XtcNode(it, source) }.orElse(null)
+    fun childByFieldName(fieldName: String): XtcNode? = tsNode.getChildByFieldName(fieldName).map { XtcNode(it, source) }.orElse(null)
 
     /**
      * Get all children of this node.
@@ -160,6 +157,5 @@ class XtcNode internal constructor(
      */
     internal fun getTsNode(): Node = tsNode
 
-    override fun toString(): String =
-        "XtcNode(type=$type, range=[$startLine:$startColumn-$endLine:$endColumn])"
+    override fun toString(): String = "XtcNode(type=$type, range=[$startLine:$startColumn-$endLine:$endColumn])"
 }

@@ -35,28 +35,32 @@ private val logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass(
 // Static initializer runs before any SLF4J initialization to suppress
 // SLF4J's informational messages that would otherwise go to stdout and
 // corrupt the JSON-RPC protocol stream.
-private val initBlock = run {
-    System.setProperty("slf4j.internal.verbosity", "WARN")
-}
+private val initBlock =
+    run {
+        System.setProperty("slf4j.internal.verbosity", "WARN")
+    }
 
 /**
  * Load build properties from the embedded lsp-version.properties file.
  */
-private fun loadBuildProperties(): Properties {
-    return Properties().apply {
-        Thread.currentThread().contextClassLoader
+private fun loadBuildProperties(): Properties =
+    Properties().apply {
+        Thread
+            .currentThread()
+            .contextClassLoader
             ?.getResourceAsStream("lsp-version.properties")
             ?.use { load(it) }
     }
-}
 
 /**
  * Adapter backend types for the LSP server.
  */
-private enum class AdapterBackend(val displayName: String) {
+private enum class AdapterBackend(
+    val displayName: String,
+) {
     MOCK("Mock"),
     TREE_SITTER("Tree-sitter"),
-    COMPILER("XTC Compiler")
+    COMPILER("XTC Compiler"),
 }
 
 /**
@@ -65,14 +69,14 @@ private enum class AdapterBackend(val displayName: String) {
  * @param adapterType The adapter type from build properties: "mock", "treesitter", or "compiler"
  * @return The configured adapter and which backend is active
  */
-private fun createAdapter(adapterType: String): Pair<XtcCompilerAdapter, AdapterBackend> {
-    return when (adapterType.lowercase()) {
+private fun createAdapter(adapterType: String): Pair<XtcCompilerAdapter, AdapterBackend> =
+    when (adapterType.lowercase()) {
         "compiler", "xtc", "full" -> {
             // TODO: Replace with XtcCompilerAdapter when parallel compiler integration is ready
             // See PLAN_LSP_PARALLEL_LEXER.md for the integration roadmap
             throw UnsupportedOperationException(
                 "XTC Compiler adapter not yet implemented. " +
-                "Use 'treesitter' for syntax-aware features or 'mock' for basic testing."
+                    "Use 'treesitter' for syntax-aware features or 'mock' for basic testing.",
             )
         }
         "treesitter", "tree-sitter" -> {
@@ -89,9 +93,10 @@ private fun createAdapter(adapterType: String): Pair<XtcCompilerAdapter, Adapter
         }
         else -> MockXtcCompilerAdapter() to AdapterBackend.MOCK
     }
-}
 
-fun main(@Suppress("UNUSED_PARAMETER") args: Array<String>) {
+fun main(
+    @Suppress("UNUSED_PARAMETER") args: Array<String>,
+) {
     // Ensure init block runs
     @Suppress("UNUSED_EXPRESSION")
     initBlock
@@ -136,12 +141,17 @@ fun main(@Suppress("UNUSED_PARAMETER") args: Array<String>) {
  * Launch the server using stdio for communication.
  * This is what VS Code and most editors use.
  */
-fun launchStdio(server: XtcLanguageServer, input: InputStream, output: OutputStream) {
-    val launcher: Launcher<LanguageClient> = LSPLauncher.createServerLauncher(
-        server,
-        input,
-        output
-    )
+fun launchStdio(
+    server: XtcLanguageServer,
+    input: InputStream,
+    output: OutputStream,
+) {
+    val launcher: Launcher<LanguageClient> =
+        LSPLauncher.createServerLauncher(
+            server,
+            input,
+            output,
+        )
 
     val client: LanguageClient = launcher.remoteProxy
     server.connect(client)

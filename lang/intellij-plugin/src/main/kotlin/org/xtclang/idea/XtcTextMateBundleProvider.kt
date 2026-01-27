@@ -24,7 +24,6 @@ import kotlin.io.path.exists
  * // See: XtcCompilerAdapterFull.getSemanticTokens()
  */
 class XtcTextMateBundleProvider : TextMateBundleProvider {
-
     private val logger = logger<XtcTextMateBundleProvider>()
 
     override fun getBundles(): List<TextMateBundleProvider.PluginBundle> {

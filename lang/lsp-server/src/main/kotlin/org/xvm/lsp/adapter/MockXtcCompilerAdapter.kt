@@ -28,7 +28,6 @@ import java.util.concurrent.ConcurrentHashMap
  * // - findReferences(): Only returns the declaration, not actual usages
  */
 class MockXtcCompilerAdapter : XtcCompilerAdapter {
-
     override val displayName: String = "Mock (regex-based)"
 
     private val compiledDocuments = ConcurrentHashMap<String, CompilationResult>()
@@ -39,28 +38,81 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
         private val CLASS_PATTERN = Regex("""^\s*(?:public\s+|private\s+|protected\s+)?class\s+(\w+)""", RegexOption.MULTILINE)
         private val INTERFACE_PATTERN = Regex("""^\s*(?:public\s+|private\s+|protected\s+)?interface\s+(\w+)""", RegexOption.MULTILINE)
         private val SERVICE_PATTERN = Regex("""^\s*(?:public\s+|private\s+|protected\s+)?service\s+(\w+)""", RegexOption.MULTILINE)
-        private val METHOD_PATTERN = Regex("""^\s*(?:public\s+|private\s+|protected\s+)?(?:static\s+)?(\w+(?:<[^>]+>)?(?:\s*\|\s*\w+)?)\s+(\w+)\s*\(""", RegexOption.MULTILINE)
-        private val PROPERTY_PATTERN = Regex("""^\s*(?:public\s+|private\s+|protected\s+)?(\w+(?:<[^>]+>)?)\s+(\w+)\s*[;=]""", RegexOption.MULTILINE)
+        private val METHOD_PATTERN =
+            Regex(
+                """^\s*(?:public\s+|private\s+|protected\s+)?(?:static\s+)?(\w+(?:<[^>]+>)?(?:\s*\|\s*\w+)?)\s+(\w+)\s*\(""",
+                RegexOption.MULTILINE,
+            )
+        private val PROPERTY_PATTERN =
+            Regex("""^\s*(?:public\s+|private\s+|protected\s+)?(\w+(?:<[^>]+>)?)\s+(\w+)\s*[;=]""", RegexOption.MULTILINE)
         private val ERROR_PATTERN = Regex("""ERROR:\s*(.+)""", RegexOption.MULTILINE)
 
-        private val KEYWORDS = listOf(
-            "module", "class", "interface", "service", "mixin", "enum", "const",
-            "public", "private", "protected", "static",
-            "if", "else", "while", "for", "switch", "case", "return",
-            "extends", "implements", "incorporates", "delegates", "into",
-            "true", "false", "null", "this", "super"
-        )
+        private val KEYWORDS =
+            listOf(
+                "module",
+                "class",
+                "interface",
+                "service",
+                "mixin",
+                "enum",
+                "const",
+                "public",
+                "private",
+                "protected",
+                "static",
+                "if",
+                "else",
+                "while",
+                "for",
+                "switch",
+                "case",
+                "return",
+                "extends",
+                "implements",
+                "incorporates",
+                "delegates",
+                "into",
+                "true",
+                "false",
+                "null",
+                "this",
+                "super",
+            )
 
-        private val BUILT_IN_TYPES = listOf(
-            "Int", "Int8", "Int16", "Int32", "Int64",
-            "UInt", "UInt8", "UInt16", "UInt32", "UInt64",
-            "String", "Boolean", "Char", "Bit", "Byte",
-            "Float", "Double", "Dec", "Dec64", "Dec128",
-            "Array", "List", "Map", "Set", "Iterator"
-        )
+        private val BUILT_IN_TYPES =
+            listOf(
+                "Int",
+                "Int8",
+                "Int16",
+                "Int32",
+                "Int64",
+                "UInt",
+                "UInt8",
+                "UInt16",
+                "UInt32",
+                "UInt64",
+                "String",
+                "Boolean",
+                "Char",
+                "Bit",
+                "Byte",
+                "Float",
+                "Double",
+                "Dec",
+                "Dec64",
+                "Dec128",
+                "Array",
+                "List",
+                "Map",
+                "Set",
+                "Iterator",
+            )
     }
 
-    override fun compile(uri: String, content: String): CompilationResult {
+    override fun compile(
+        uri: String,
+        content: String,
+    ): CompilationResult {
         val diagnostics = mutableListOf<Diagnostic>()
         val symbols = mutableListOf<SymbolInfo>()
 
@@ -82,8 +134,8 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
                     qualifiedName = moduleName,
                     kind = SymbolKind.MODULE,
                     location = Location(uri, line, 0, line, match.value.length),
-                    documentation = "Module $moduleName"
-                )
+                    documentation = "Module $moduleName",
+                ),
             )
         }
 
@@ -105,8 +157,8 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
                         qualifiedName = methodName,
                         kind = SymbolKind.METHOD,
                         location = Location(uri, line, 0, line, match.value.length),
-                        typeSignature = "$returnType $methodName(...)"
-                    )
+                        typeSignature = "$returnType $methodName(...)",
+                    ),
                 )
             }
         }
@@ -124,8 +176,8 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
                         qualifiedName = propName,
                         kind = SymbolKind.PROPERTY,
                         location = Location(uri, line, 0, line, match.value.length),
-                        typeSignature = "$propType $propName"
-                    )
+                        typeSignature = "$propType $propName",
+                    ),
                 )
             }
         }
@@ -135,8 +187,8 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
             diagnostics.add(
                 Diagnostic.error(
                     Location.ofLine(uri, lines.size - 1),
-                    "Unmatched opening brace"
-                )
+                    "Unmatched opening brace",
+                ),
             )
         }
 
@@ -145,13 +197,21 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
         return result
     }
 
-    override fun findSymbolAt(uri: String, line: Int, column: Int): SymbolInfo? {
+    override fun findSymbolAt(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): SymbolInfo? {
         val result = compiledDocuments[uri] ?: return null
         return result.symbols.find { containsPosition(it.location, line, column) }
     }
 
-    override fun getHoverInfo(uri: String, line: Int, column: Int): String? {
-        return findSymbolAt(uri, line, column)?.let { symbol ->
+    override fun getHoverInfo(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): String? =
+        findSymbolAt(uri, line, column)?.let { symbol ->
             buildString {
                 append("```xtc\n")
                 if (symbol.typeSignature != null) {
@@ -168,9 +228,12 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
                 }
             }
         }
-    }
 
-    override fun getCompletions(uri: String, line: Int, column: Int): List<XtcCompilerAdapter.CompletionItem> {
+    override fun getCompletions(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): List<XtcCompilerAdapter.CompletionItem> {
         // TODO LSP: This is completely context-unaware. A real implementation should:
         // 1. Determine context (after '.', inside type position, statement start, etc.)
         // 2. Filter completions by type compatibility
@@ -187,8 +250,8 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
                     label = keyword,
                     kind = XtcCompilerAdapter.CompletionItem.CompletionKind.KEYWORD,
                     detail = "keyword",
-                    insertText = keyword
-                )
+                    insertText = keyword,
+                ),
             )
         }
 
@@ -199,8 +262,8 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
                     label = type,
                     kind = XtcCompilerAdapter.CompletionItem.CompletionKind.CLASS,
                     detail = "built-in type",
-                    insertText = type
-                )
+                    insertText = type,
+                ),
             )
         }
 
@@ -211,15 +274,19 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
                     label = symbol.name,
                     kind = toCompletionKind(symbol.kind),
                     detail = symbol.typeSignature ?: symbol.kind.name,
-                    insertText = symbol.name
-                )
+                    insertText = symbol.name,
+                ),
             )
         }
 
         return completions
     }
 
-    override fun findDefinition(uri: String, line: Int, column: Int): Location? {
+    override fun findDefinition(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): Location? {
         // TODO LSP: This mock can only find definitions in the same file.
         // A real implementation needs:
         // 1. Cross-file resolution (imports, inherited members)
@@ -230,7 +297,12 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
         return findSymbolAt(uri, line, column)?.location
     }
 
-    override fun findReferences(uri: String, line: Int, column: Int, includeDeclaration: Boolean): List<Location> {
+    override fun findReferences(
+        uri: String,
+        line: Int,
+        column: Int,
+        includeDeclaration: Boolean,
+    ): List<Location> {
         // TODO LSP: This mock returns NO actual references - only the declaration!
         // A real implementation needs:
         // 1. SemanticModel.findReferences() from Phase 4 (Symbol Resolution)
@@ -245,27 +317,33 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
         return refs
     }
 
-    private fun countLines(content: String, position: Int): Int =
-        content.take(position).count { it == '\n' }
+    private fun countLines(
+        content: String,
+        position: Int,
+    ): Int = content.take(position).count { it == '\n' }
 
-    private fun containsPosition(loc: Location, line: Int, column: Int): Boolean {
+    private fun containsPosition(
+        loc: Location,
+        line: Int,
+        column: Int,
+    ): Boolean {
         if (line < loc.startLine || line > loc.endLine) return false
         if (line == loc.startLine && column < loc.startColumn) return false
         if (line == loc.endLine && column > loc.endColumn) return false
         return true
     }
 
-    private fun toCompletionKind(kind: SymbolKind): XtcCompilerAdapter.CompletionItem.CompletionKind {
-        return when (kind) {
+    private fun toCompletionKind(kind: SymbolKind): XtcCompilerAdapter.CompletionItem.CompletionKind =
+        when (kind) {
             SymbolKind.MODULE, SymbolKind.PACKAGE -> XtcCompilerAdapter.CompletionItem.CompletionKind.MODULE
             SymbolKind.CLASS, SymbolKind.ENUM, SymbolKind.CONST,
-            SymbolKind.MIXIN, SymbolKind.SERVICE -> XtcCompilerAdapter.CompletionItem.CompletionKind.CLASS
+            SymbolKind.MIXIN, SymbolKind.SERVICE,
+            -> XtcCompilerAdapter.CompletionItem.CompletionKind.CLASS
             SymbolKind.INTERFACE -> XtcCompilerAdapter.CompletionItem.CompletionKind.INTERFACE
             SymbolKind.METHOD, SymbolKind.CONSTRUCTOR -> XtcCompilerAdapter.CompletionItem.CompletionKind.METHOD
             SymbolKind.PROPERTY -> XtcCompilerAdapter.CompletionItem.CompletionKind.PROPERTY
             SymbolKind.PARAMETER, SymbolKind.TYPE_PARAMETER -> XtcCompilerAdapter.CompletionItem.CompletionKind.VARIABLE
         }
-    }
 
     private fun parseTypeDeclarations(
         pattern: Regex,
@@ -274,7 +352,7 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
         kind: SymbolKind,
         typeKeyword: String,
         kindLabel: String,
-        symbols: MutableList<SymbolInfo>
+        symbols: MutableList<SymbolInfo>,
     ) {
         pattern.findAll(content).forEach { match ->
             val line = countLines(content, match.range.first)
@@ -286,8 +364,8 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
                     kind = kind,
                     location = Location(uri, line, 0, line, match.value.length),
                     documentation = "$kindLabel $name",
-                    typeSignature = "$typeKeyword $name"
-                )
+                    typeSignature = "$typeKeyword $name",
+                ),
             )
         }
     }

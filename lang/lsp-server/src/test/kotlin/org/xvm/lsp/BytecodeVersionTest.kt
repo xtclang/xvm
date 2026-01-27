@@ -20,7 +20,6 @@ import java.io.DataInputStream
  */
 @DisplayName("Bytecode Version Compatibility")
 class BytecodeVersionTest {
-
     companion object {
         /**
          * Maximum allowed class file major version for IntelliJ compatibility.
@@ -49,12 +48,13 @@ class BytecodeVersionTest {
     @DisplayName("All LSP server classes must be loadable by JDK 21")
     fun allClassesMustBeCompatibleWithJdk21() {
         // Sample key classes from each package
-        val classesToCheck = listOf(
-            XtcLanguageServer::class.java,
-            org.xvm.lsp.adapter.XtcCompilerAdapter::class.java,
-            org.xvm.lsp.model.Location::class.java,
-            org.xvm.lsp.model.Diagnostic::class.java,
-        )
+        val classesToCheck =
+            listOf(
+                XtcLanguageServer::class.java,
+                org.xvm.lsp.adapter.XtcCompilerAdapter::class.java,
+                org.xvm.lsp.model.Location::class.java,
+                org.xvm.lsp.model.Diagnostic::class.java,
+            )
 
         for (clazz in classesToCheck) {
             val majorVersion = getClassFileMajorVersion(clazz)
@@ -74,8 +74,9 @@ class BytecodeVersionTest {
      */
     private fun getClassFileMajorVersion(clazz: Class<*>): Int {
         val classFileName = "/${clazz.name.replace('.', '/')}.class"
-        val classStream = clazz.getResourceAsStream(classFileName)
-            ?: throw IllegalStateException("Cannot find class file: $classFileName")
+        val classStream =
+            clazz.getResourceAsStream(classFileName)
+                ?: throw IllegalStateException("Cannot find class file: $classFileName")
 
         return DataInputStream(classStream).use { dis ->
             val magic = dis.readInt()

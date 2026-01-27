@@ -14,8 +14,9 @@ import java.io.Closeable
  * Uses Tree-sitter queries to find declarations, references, and other
  * language constructs in parsed source code.
  */
-class XtcQueryEngine(private val language: Language) : Closeable {
-
+class XtcQueryEngine(
+    private val language: Language,
+) : Closeable {
     private val allDeclarationsQuery: Query = Query(language, XtcQueries.ALL_DECLARATIONS)
     private val typeDeclarationsQuery: Query = Query(language, XtcQueries.TYPE_DECLARATIONS)
     private val methodDeclarationsQuery: Query = Query(language, XtcQueries.METHOD_DECLARATIONS)
@@ -27,30 +28,47 @@ class XtcQueryEngine(private val language: Language) : Closeable {
     /**
      * Find all declarations in the tree for document symbols.
      */
-    fun findAllDeclarations(tree: XtcTree, uri: String): List<SymbolInfo> {
+    fun findAllDeclarations(
+        tree: XtcTree,
+        uri: String,
+    ): List<SymbolInfo> {
         val symbols = mutableListOf<SymbolInfo>()
 
         executeQuery(allDeclarationsQuery, tree) { captures ->
             val name = captures["name"]?.text ?: return@executeQuery
-            val declaration = captures.entries.find { (key, _) ->
-                key in listOf("module", "package", "class", "interface", "mixin",
-                    "service", "const", "enum", "method", "constructor", "property")
-            } ?: return@executeQuery
+            val declaration =
+                captures.entries.find { (key, _) ->
+                    key in
+                        listOf(
+                            "module",
+                            "package",
+                            "class",
+                            "interface",
+                            "mixin",
+                            "service",
+                            "const",
+                            "enum",
+                            "method",
+                            "constructor",
+                            "property",
+                        )
+                } ?: return@executeQuery
 
-            val kind = when (declaration.key) {
-                "module" -> SymbolKind.MODULE
-                "package" -> SymbolKind.PACKAGE
-                "class" -> SymbolKind.CLASS
-                "interface" -> SymbolKind.INTERFACE
-                "mixin" -> SymbolKind.MIXIN
-                "service" -> SymbolKind.SERVICE
-                "const" -> SymbolKind.CONST
-                "enum" -> SymbolKind.ENUM
-                "method" -> SymbolKind.METHOD
-                "constructor" -> SymbolKind.CONSTRUCTOR
-                "property" -> SymbolKind.PROPERTY
-                else -> return@executeQuery
-            }
+            val kind =
+                when (declaration.key) {
+                    "module" -> SymbolKind.MODULE
+                    "package" -> SymbolKind.PACKAGE
+                    "class" -> SymbolKind.CLASS
+                    "interface" -> SymbolKind.INTERFACE
+                    "mixin" -> SymbolKind.MIXIN
+                    "service" -> SymbolKind.SERVICE
+                    "const" -> SymbolKind.CONST
+                    "enum" -> SymbolKind.ENUM
+                    "method" -> SymbolKind.METHOD
+                    "constructor" -> SymbolKind.CONSTRUCTOR
+                    "property" -> SymbolKind.PROPERTY
+                    else -> return@executeQuery
+                }
 
             val node = declaration.value
             symbols.add(
@@ -58,14 +76,15 @@ class XtcQueryEngine(private val language: Language) : Closeable {
                     name = name,
                     qualifiedName = name,
                     kind = kind,
-                    location = Location(
-                        uri = uri,
-                        startLine = node.startLine,
-                        startColumn = node.startColumn,
-                        endLine = node.endLine,
-                        endColumn = node.endColumn
-                    )
-                )
+                    location =
+                        Location(
+                            uri = uri,
+                            startLine = node.startLine,
+                            startColumn = node.startColumn,
+                            endLine = node.endLine,
+                            endColumn = node.endColumn,
+                        ),
+                ),
             )
         }
 
@@ -75,7 +94,10 @@ class XtcQueryEngine(private val language: Language) : Closeable {
     /**
      * Find all type declarations (classes, interfaces, etc.).
      */
-    fun findTypeDeclarations(tree: XtcTree, uri: String): List<SymbolInfo> {
+    fun findTypeDeclarations(
+        tree: XtcTree,
+        uri: String,
+    ): List<SymbolInfo> {
         val symbols = mutableListOf<SymbolInfo>()
 
         executeQuery(typeDeclarationsQuery, tree) { captures ->
@@ -92,7 +114,10 @@ class XtcQueryEngine(private val language: Language) : Closeable {
     /**
      * Find all method declarations.
      */
-    fun findMethodDeclarations(tree: XtcTree, uri: String): List<SymbolInfo> {
+    fun findMethodDeclarations(
+        tree: XtcTree,
+        uri: String,
+    ): List<SymbolInfo> {
         val symbols = mutableListOf<SymbolInfo>()
 
         executeQuery(methodDeclarationsQuery, tree) { captures ->
@@ -107,7 +132,10 @@ class XtcQueryEngine(private val language: Language) : Closeable {
     /**
      * Find all property declarations.
      */
-    fun findPropertyDeclarations(tree: XtcTree, uri: String): List<SymbolInfo> {
+    fun findPropertyDeclarations(
+        tree: XtcTree,
+        uri: String,
+    ): List<SymbolInfo> {
         val symbols = mutableListOf<SymbolInfo>()
 
         executeQuery(propertyDeclarationsQuery, tree) { captures ->
@@ -123,7 +151,11 @@ class XtcQueryEngine(private val language: Language) : Closeable {
     /**
      * Find all identifiers with a given name (for find references).
      */
-    fun findAllIdentifiers(tree: XtcTree, name: String, uri: String): List<Location> {
+    fun findAllIdentifiers(
+        tree: XtcTree,
+        name: String,
+        uri: String,
+    ): List<Location> {
         val locations = mutableListOf<Location>()
 
         executeQuery(identifiersQuery, tree) { captures ->
@@ -136,18 +168,24 @@ class XtcQueryEngine(private val language: Language) : Closeable {
         return locations
     }
 
-    private fun XtcNode.toLocation(uri: String) = Location(
-        uri = uri,
-        startLine = startLine,
-        startColumn = startColumn,
-        endLine = endLine,
-        endColumn = endColumn
-    )
+    private fun XtcNode.toLocation(uri: String) =
+        Location(
+            uri = uri,
+            startLine = startLine,
+            startColumn = startColumn,
+            endLine = endLine,
+            endColumn = endColumn,
+        )
 
     /**
      * Find the declaration containing a given position.
      */
-    fun findDeclarationAt(tree: XtcTree, line: Int, column: Int, uri: String): SymbolInfo? {
+    fun findDeclarationAt(
+        tree: XtcTree,
+        line: Int,
+        column: Int,
+        uri: String,
+    ): SymbolInfo? {
         val node = tree.nodeAt(line, column) ?: return null
 
         // Walk up to find enclosing declaration
@@ -163,29 +201,30 @@ class XtcQueryEngine(private val language: Language) : Closeable {
         return null
     }
 
-    private fun nodeTypeToSymbolKind(type: String): SymbolKind? = when (type) {
-        "class_declaration" -> SymbolKind.CLASS
-        "interface_declaration" -> SymbolKind.INTERFACE
-        "mixin_declaration" -> SymbolKind.MIXIN
-        "service_declaration" -> SymbolKind.SERVICE
-        "const_declaration" -> SymbolKind.CONST
-        "enum_declaration" -> SymbolKind.ENUM
-        "method_declaration" -> SymbolKind.METHOD
-        "property_declaration", "variable_declaration" -> SymbolKind.PROPERTY
-        else -> null
-    }
+    private fun nodeTypeToSymbolKind(type: String): SymbolKind? =
+        when (type) {
+            "class_declaration" -> SymbolKind.CLASS
+            "interface_declaration" -> SymbolKind.INTERFACE
+            "mixin_declaration" -> SymbolKind.MIXIN
+            "service_declaration" -> SymbolKind.SERVICE
+            "const_declaration" -> SymbolKind.CONST
+            "enum_declaration" -> SymbolKind.ENUM
+            "method_declaration" -> SymbolKind.METHOD
+            "property_declaration", "variable_declaration" -> SymbolKind.PROPERTY
+            else -> null
+        }
 
     private fun XtcNode.toSymbolInfo(
         name: String,
         kind: SymbolKind,
         uri: String,
-        typeSignature: String? = null
+        typeSignature: String? = null,
     ) = SymbolInfo(
         name = name,
         qualifiedName = name,
         kind = kind,
         location = toLocation(uri),
-        typeSignature = typeSignature
+        typeSignature = typeSignature,
     )
 
     /**
@@ -202,7 +241,11 @@ class XtcQueryEngine(private val language: Language) : Closeable {
         return imports
     }
 
-    private fun executeQuery(query: Query, tree: XtcTree, handler: (Map<String, XtcNode>) -> Unit) {
+    private fun executeQuery(
+        query: Query,
+        tree: XtcTree,
+        handler: (Map<String, XtcNode>) -> Unit,
+    ) {
         QueryCursor(query).use { cursor ->
             cursor.findMatches(tree.tsTree.rootNode).forEach { match ->
                 val captures = mutableMapOf<String, XtcNode>()

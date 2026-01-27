@@ -44,7 +44,6 @@ import org.xvm.lsp.model.SymbolInfo
  * @see XtcCompilerAdapterFull for extended interface
  */
 interface XtcCompilerAdapter {
-
     /**
      * Human-readable name of this adapter for display in logs and UI.
      * Examples: "Mock (regex)", "Tree-sitter", "XTC Compiler"
@@ -59,7 +58,10 @@ interface XtcCompilerAdapter {
      * @param content the source code content
      * @return compilation result with diagnostics and symbols
      */
-    fun compile(uri: String, content: String): CompilationResult
+    fun compile(
+        uri: String,
+        content: String,
+    ): CompilationResult
 
     /**
      * Find the symbol at a specific position.
@@ -69,7 +71,11 @@ interface XtcCompilerAdapter {
      * @param column 0-based column number
      * @return the symbol at that position, if any
      */
-    fun findSymbolAt(uri: String, line: Int, column: Int): SymbolInfo?
+    fun findSymbolAt(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): SymbolInfo?
 
     /**
      * Get hover information for a position.
@@ -79,7 +85,11 @@ interface XtcCompilerAdapter {
      * @param column 0-based column number
      * @return hover text (Markdown), if available
      */
-    fun getHoverInfo(uri: String, line: Int, column: Int): String?
+    fun getHoverInfo(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): String?
 
     /**
      * Get completion suggestions at a position.
@@ -89,7 +99,11 @@ interface XtcCompilerAdapter {
      * @param column 0-based column number
      * @return list of completion items
      */
-    fun getCompletions(uri: String, line: Int, column: Int): List<CompletionItem>
+    fun getCompletions(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): List<CompletionItem>
 
     /**
      * Find the definition of the symbol at a position.
@@ -99,7 +113,11 @@ interface XtcCompilerAdapter {
      * @param column 0-based column number
      * @return location of the definition, if found
      */
-    fun findDefinition(uri: String, line: Int, column: Int): Location?
+    fun findDefinition(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): Location?
 
     /**
      * Find all references to the symbol at a position.
@@ -110,7 +128,12 @@ interface XtcCompilerAdapter {
      * @param includeDeclaration whether to include the declaration itself
      * @return list of reference locations
      */
-    fun findReferences(uri: String, line: Int, column: Int, includeDeclaration: Boolean): List<Location>
+    fun findReferences(
+        uri: String,
+        line: Int,
+        column: Int,
+        includeDeclaration: Boolean,
+    ): List<Location>
 
     /**
      * Completion item for code completion.
@@ -119,10 +142,16 @@ interface XtcCompilerAdapter {
         val label: String,
         val kind: CompletionKind,
         val detail: String,
-        val insertText: String
+        val insertText: String,
     ) {
         enum class CompletionKind {
-            CLASS, INTERFACE, METHOD, PROPERTY, VARIABLE, KEYWORD, MODULE
+            CLASS,
+            INTERFACE,
+            METHOD,
+            PROPERTY,
+            VARIABLE,
+            KEYWORD,
+            MODULE,
         }
     }
 }

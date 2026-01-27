@@ -6,7 +6,9 @@ import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionOptions
 import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.DefinitionParams
+import org.eclipse.lsp4j.DidChangeConfigurationParams
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
+import org.eclipse.lsp4j.DidChangeWatchedFilesParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
@@ -34,8 +36,6 @@ import org.eclipse.lsp4j.services.LanguageClientAware
 import org.eclipse.lsp4j.services.LanguageServer
 import org.eclipse.lsp4j.services.TextDocumentService
 import org.eclipse.lsp4j.services.WorkspaceService
-import org.eclipse.lsp4j.DidChangeConfigurationParams
-import org.eclipse.lsp4j.DidChangeWatchedFilesParams
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.XtcCompilerAdapter
 import org.xvm.lsp.model.Diagnostic
@@ -68,8 +68,10 @@ import java.util.concurrent.ConcurrentHashMap
  * @see org.xvm.lsp.adapter.TreeSitterAdapter
  * @see PLAN_TREE_SITTER.md for Tree-sitter integration roadmap
  */
-class XtcLanguageServer(private val adapter: XtcCompilerAdapter) : LanguageServer, LanguageClientAware {
-
+class XtcLanguageServer(
+    private val adapter: XtcCompilerAdapter,
+) : LanguageServer,
+    LanguageClientAware {
     private var client: LanguageClient? = null
 
     @Suppress("unused")
@@ -81,11 +83,10 @@ class XtcLanguageServer(private val adapter: XtcCompilerAdapter) : LanguageServe
     companion object {
         private val logger = LoggerFactory.getLogger(XtcLanguageServer::class.java)
 
-        private fun loadBuildInfo(): Properties {
-            return Properties().apply {
+        private fun loadBuildInfo(): Properties =
+            Properties().apply {
                 XtcLanguageServer::class.java.getResourceAsStream("/lsp-version.properties")?.use { load(it) }
             }
-        }
     }
 
     private val buildInfo = loadBuildInfo()
@@ -111,44 +112,46 @@ class XtcLanguageServer(private val adapter: XtcCompilerAdapter) : LanguageServe
             logger.info("Initializing (no workspace folders provided)")
         }
 
-        val capabilities = ServerCapabilities().apply {
-            // Text document sync
-            // TODO LSP: Using Full sync is simpler but less efficient. For large files,
-            // incremental sync (TextDocumentSyncKind.Incremental) would be better.
-            // Requires the parallel lexer/parser to support incremental updates.
-            textDocumentSync = Either.forLeft(TextDocumentSyncKind.Full)
+        val capabilities =
+            ServerCapabilities().apply {
+                // Text document sync
+                // TODO LSP: Using Full sync is simpler but less efficient. For large files,
+                // incremental sync (TextDocumentSyncKind.Incremental) would be better.
+                // Requires the parallel lexer/parser to support incremental updates.
+                textDocumentSync = Either.forLeft(TextDocumentSyncKind.Full)
 
-            // Hover support
-            hoverProvider = Either.forLeft(true)
+                // Hover support
+                hoverProvider = Either.forLeft(true)
 
-            // Completion support
-            completionProvider = CompletionOptions().apply {
-                triggerCharacters = listOf(".", ":", "<")
-                resolveProvider = false
+                // Completion support
+                completionProvider =
+                    CompletionOptions().apply {
+                        triggerCharacters = listOf(".", ":", "<")
+                        resolveProvider = false
+                    }
+
+                // Definition support
+                definitionProvider = Either.forLeft(true)
+
+                // References support
+                referencesProvider = Either.forLeft(true)
+
+                // Document symbol support
+                documentSymbolProvider = Either.forLeft(true)
+
+                // TODO LSP: Missing capability registrations for advanced features:
+                // renameProvider = RenameOptions(true) // with prepareSupport
+                // codeActionProvider = CodeActionOptions(listOf(...))
+                // documentFormattingProvider = Either.forLeft(true)
+                // documentRangeFormattingProvider = Either.forLeft(true)
+                // semanticTokensProvider = semanticTokensOptions // Replace TextMate
+                // signatureHelpProvider = SignatureHelpOptions(listOf("(", ","))
+                // foldingRangeProvider = Either.forLeft(true)
+                // inlayHintProvider = Either.forLeft(true)
+                // callHierarchyProvider = Either.forLeft(true)
+                // typeHierarchyProvider = Either.forLeft(true)
+                // workspaceSymbolProvider = Either.forLeft(true)
             }
-
-            // Definition support
-            definitionProvider = Either.forLeft(true)
-
-            // References support
-            referencesProvider = Either.forLeft(true)
-
-            // Document symbol support
-            documentSymbolProvider = Either.forLeft(true)
-
-            // TODO LSP: Missing capability registrations for advanced features:
-            // renameProvider = RenameOptions(true) // with prepareSupport
-            // codeActionProvider = CodeActionOptions(listOf(...))
-            // documentFormattingProvider = Either.forLeft(true)
-            // documentRangeFormattingProvider = Either.forLeft(true)
-            // semanticTokensProvider = semanticTokensOptions // Replace TextMate
-            // signatureHelpProvider = SignatureHelpOptions(listOf("(", ","))
-            // foldingRangeProvider = Either.forLeft(true)
-            // inlayHintProvider = Either.forLeft(true)
-            // callHierarchyProvider = Either.forLeft(true)
-            // typeHierarchyProvider = Either.forLeft(true)
-            // workspaceSymbolProvider = Either.forLeft(true)
-        }
 
         initialized = true
         logger.info("XTC Language Server initialized")
@@ -174,15 +177,18 @@ class XtcLanguageServer(private val adapter: XtcCompilerAdapter) : LanguageServe
     /**
      * Publish diagnostics to the client.
      */
-    private fun publishDiagnostics(uri: String, diagnostics: List<Diagnostic>) {
+    private fun publishDiagnostics(
+        uri: String,
+        diagnostics: List<Diagnostic>,
+    ) {
         val currentClient = client ?: return
 
         val lspDiagnostics = diagnostics.map { toLspDiagnostic(it) }
         currentClient.publishDiagnostics(PublishDiagnosticsParams(uri, lspDiagnostics))
     }
 
-    private fun toLspDiagnostic(diag: Diagnostic): org.eclipse.lsp4j.Diagnostic {
-        return org.eclipse.lsp4j.Diagnostic().apply {
+    private fun toLspDiagnostic(diag: Diagnostic): org.eclipse.lsp4j.Diagnostic =
+        org.eclipse.lsp4j.Diagnostic().apply {
             range = toRange(diag.location)
             severity = toLspSeverity(diag.severity)
             message = diag.message
@@ -191,34 +197,28 @@ class XtcLanguageServer(private val adapter: XtcCompilerAdapter) : LanguageServe
                 code = Either.forLeft(diag.code)
             }
         }
-    }
 
-    private fun toLspSeverity(severity: Diagnostic.Severity): org.eclipse.lsp4j.DiagnosticSeverity {
-        return when (severity) {
+    private fun toLspSeverity(severity: Diagnostic.Severity): org.eclipse.lsp4j.DiagnosticSeverity =
+        when (severity) {
             Diagnostic.Severity.ERROR -> org.eclipse.lsp4j.DiagnosticSeverity.Error
             Diagnostic.Severity.WARNING -> org.eclipse.lsp4j.DiagnosticSeverity.Warning
             Diagnostic.Severity.INFORMATION -> org.eclipse.lsp4j.DiagnosticSeverity.Information
             Diagnostic.Severity.HINT -> org.eclipse.lsp4j.DiagnosticSeverity.Hint
         }
-    }
 
-    private fun toRange(loc: org.xvm.lsp.model.Location): Range {
-        return Range(
+    private fun toRange(loc: org.xvm.lsp.model.Location): Range =
+        Range(
             Position(loc.startLine, loc.startColumn),
-            Position(loc.endLine, loc.endColumn)
+            Position(loc.endLine, loc.endColumn),
         )
-    }
 
-    private fun toLspLocation(loc: org.xvm.lsp.model.Location): Location {
-        return Location(loc.uri, toRange(loc))
-    }
+    private fun toLspLocation(loc: org.xvm.lsp.model.Location): Location = Location(loc.uri, toRange(loc))
 
     // ========================================================================
     // Text Document Service
     // ========================================================================
 
     private inner class XtcTextDocumentService : TextDocumentService {
-
         private val openDocuments = ConcurrentHashMap<String, String>()
 
         override fun didOpen(params: DidOpenTextDocumentParams) {
@@ -273,10 +273,13 @@ class XtcLanguageServer(private val adapter: XtcCompilerAdapter) : LanguageServe
                 val hoverInfo = adapter.getHoverInfo(uri, line, column) ?: return@supplyAsync null
 
                 Hover().apply {
-                    contents = Either.forRight(MarkupContent().apply {
-                        kind = MarkupKind.MARKDOWN
-                        value = hoverInfo
-                    })
+                    contents =
+                        Either.forRight(
+                            MarkupContent().apply {
+                                kind = MarkupKind.MARKDOWN
+                                value = hoverInfo
+                            },
+                        )
                 }
             }
         }
@@ -289,20 +292,21 @@ class XtcLanguageServer(private val adapter: XtcCompilerAdapter) : LanguageServe
             return CompletableFuture.supplyAsync {
                 val completions = adapter.getCompletions(uri, line, column)
 
-                val items = completions.map { c ->
-                    CompletionItem(c.label).apply {
-                        kind = toCompletionItemKind(c.kind)
-                        detail = c.detail
-                        insertText = c.insertText
+                val items =
+                    completions.map { c ->
+                        CompletionItem(c.label).apply {
+                            kind = toCompletionItemKind(c.kind)
+                            detail = c.detail
+                            insertText = c.insertText
+                        }
                     }
-                }
 
                 Either.forLeft(items)
             }
         }
 
-        private fun toCompletionItemKind(kind: XtcCompilerAdapter.CompletionItem.CompletionKind): CompletionItemKind {
-            return when (kind) {
+        private fun toCompletionItemKind(kind: XtcCompilerAdapter.CompletionItem.CompletionKind): CompletionItemKind =
+            when (kind) {
                 XtcCompilerAdapter.CompletionItem.CompletionKind.CLASS -> CompletionItemKind.Class
                 XtcCompilerAdapter.CompletionItem.CompletionKind.INTERFACE -> CompletionItemKind.Interface
                 XtcCompilerAdapter.CompletionItem.CompletionKind.METHOD -> CompletionItemKind.Method
@@ -311,7 +315,6 @@ class XtcLanguageServer(private val adapter: XtcCompilerAdapter) : LanguageServe
                 XtcCompilerAdapter.CompletionItem.CompletionKind.KEYWORD -> CompletionItemKind.Keyword
                 XtcCompilerAdapter.CompletionItem.CompletionKind.MODULE -> CompletionItemKind.Module
             }
-        }
 
         override fun definition(params: DefinitionParams): CompletableFuture<Either<List<Location>, List<LocationLink>>> {
             val uri = params.textDocument.uri
@@ -319,8 +322,9 @@ class XtcLanguageServer(private val adapter: XtcCompilerAdapter) : LanguageServe
             val column = params.position.character
 
             return CompletableFuture.supplyAsync {
-                val definition = adapter.findDefinition(uri, line, column)
-                    ?: return@supplyAsync Either.forLeft(emptyList())
+                val definition =
+                    adapter.findDefinition(uri, line, column)
+                        ?: return@supplyAsync Either.forLeft(emptyList())
                 Either.forLeft(listOf(toLspLocation(definition)))
             }
         }
@@ -332,7 +336,8 @@ class XtcLanguageServer(private val adapter: XtcCompilerAdapter) : LanguageServe
             val includeDeclaration = params.context.isIncludeDeclaration
 
             return CompletableFuture.supplyAsync {
-                adapter.findReferences(uri, line, column, includeDeclaration)
+                adapter
+                    .findReferences(uri, line, column, includeDeclaration)
                     .map { toLspLocation(it) }
             }
         }
@@ -353,8 +358,8 @@ class XtcLanguageServer(private val adapter: XtcCompilerAdapter) : LanguageServe
             }
         }
 
-        private fun toDocumentSymbol(symbol: SymbolInfo): DocumentSymbol {
-            return DocumentSymbol().apply {
+        private fun toDocumentSymbol(symbol: SymbolInfo): DocumentSymbol =
+            DocumentSymbol().apply {
                 name = symbol.name
                 kind = toSymbolKind(symbol.kind)
                 range = toRange(symbol.location)
@@ -366,12 +371,11 @@ class XtcLanguageServer(private val adapter: XtcCompilerAdapter) : LanguageServe
                     children = symbol.children.map { toDocumentSymbol(it) }
                 }
             }
-        }
 
         // TODO LSP: MIXIN and SERVICE map to Class because LSP has no dedicated symbol kinds.
         //  Consider using custom symbol kind IDs (allowed in LSP 3.17+) for XTC-specific types.
-        private fun toSymbolKind(kind: SymbolInfo.SymbolKind): SymbolKind {
-            return when (kind) {
+        private fun toSymbolKind(kind: SymbolInfo.SymbolKind): SymbolKind =
+            when (kind) {
                 SymbolInfo.SymbolKind.MODULE -> SymbolKind.Module
                 SymbolInfo.SymbolKind.PACKAGE -> SymbolKind.Package
                 SymbolInfo.SymbolKind.CLASS, SymbolInfo.SymbolKind.MIXIN, SymbolInfo.SymbolKind.SERVICE -> SymbolKind.Class
@@ -384,7 +388,6 @@ class XtcLanguageServer(private val adapter: XtcCompilerAdapter) : LanguageServe
                 SymbolInfo.SymbolKind.TYPE_PARAMETER -> SymbolKind.TypeParameter
                 SymbolInfo.SymbolKind.CONSTRUCTOR -> SymbolKind.Constructor
             }
-        }
     }
 
     // ========================================================================

@@ -24,46 +24,52 @@ import kotlin.io.path.Path
 class XtcRunConfiguration(
     project: Project,
     factory: ConfigurationFactory,
-    name: String
+    name: String,
 ) : RunConfigurationBase<Any>(project, factory, name) {
-
     var moduleName = ""
-    var methodName = ""  // Empty means use default "run"
-    var moduleArguments = ""  // Comma-separated arguments passed to the module
+    var methodName = "" // Empty means use default "run"
+    var moduleArguments = "" // Comma-separated arguments passed to the module
     var useGradle = true
 
     override fun getConfigurationEditor(): SettingsEditor<out RunConfiguration> = XtcRunSettingsEditor()
 
-    override fun getState(executor: Executor, environment: ExecutionEnvironment): RunProfileState =
+    override fun getState(
+        executor: Executor,
+        environment: ExecutionEnvironment,
+    ): RunProfileState =
         object : CommandLineState(environment) {
-            override fun startProcess() = OSProcessHandler(
+            override fun startProcess() =
+                OSProcessHandler(
+                    when {
+                        useGradle -> createGradleCommandLine()
+                        else -> createXtcCommandLine()
+                    },
+                )
+        }
+
+    private fun createGradleCommandLine() =
+        GeneralCommandLine().apply {
+            exePath =
                 when {
-                    useGradle -> createGradleCommandLine()
-                    else -> createXtcCommandLine()
+                    "win" in System.getProperty("os.name").lowercase() -> "gradlew.bat"
+                    else -> "./gradlew"
                 }
-            )
+            addParameter("runXtc")
+            // Pass configuration as Gradle task options (--module, --method, --args)
+            moduleName.takeIf { it.isNotBlank() }?.let { addParameter("--module=$it") }
+            methodName.takeIf { it.isNotBlank() }?.let { addParameter("--method=$it") }
+            moduleArguments.takeIf { it.isNotBlank() }?.let { addParameter("--args=$it") }
+            workDirectory = project.basePath?.let { Path(it).toFile() }
         }
 
-    private fun createGradleCommandLine() = GeneralCommandLine().apply {
-        exePath = when {
-            "win" in System.getProperty("os.name").lowercase() -> "gradlew.bat"
-            else -> "./gradlew"
+    private fun createXtcCommandLine() =
+        GeneralCommandLine().apply {
+            exePath = "xtc"
+            addParameter("run")
+            moduleName.takeIf { it.isNotBlank() }?.let { addParameter(it) }
+            moduleArguments.split(",").filter { it.isNotBlank() }.forEach(::addParameter)
+            workDirectory = project.basePath?.let { Path(it).toFile() }
         }
-        addParameter("runXtc")
-        // Pass configuration as Gradle task options (--module, --method, --args)
-        moduleName.takeIf { it.isNotBlank() }?.let { addParameter("--module=$it") }
-        methodName.takeIf { it.isNotBlank() }?.let { addParameter("--method=$it") }
-        moduleArguments.takeIf { it.isNotBlank() }?.let { addParameter("--args=$it") }
-        workDirectory = project.basePath?.let { Path(it).toFile() }
-    }
-
-    private fun createXtcCommandLine() = GeneralCommandLine().apply {
-        exePath = "xtc"
-        addParameter("run")
-        moduleName.takeIf { it.isNotBlank() }?.let { addParameter(it) }
-        moduleArguments.split(",").filter { it.isNotBlank() }.forEach(::addParameter)
-        workDirectory = project.basePath?.let { Path(it).toFile() }
-    }
 
     override fun readExternal(element: Element) {
         super.readExternal(element)
@@ -86,7 +92,6 @@ class XtcRunConfiguration(
  * Settings editor for XTC run configuration using Kotlin UI DSL.
  */
 class XtcRunSettingsEditor : SettingsEditor<XtcRunConfiguration>() {
-
     private var moduleName = ""
     private var methodName = ""
     private var moduleArguments = ""
@@ -95,15 +100,18 @@ class XtcRunSettingsEditor : SettingsEditor<XtcRunConfiguration>() {
     private val editorPanel by lazy {
         panel {
             row("Module name:") {
-                textField().bindText(::moduleName)
+                textField()
+                    .bindText(::moduleName)
                     .comment("The XTC module to run (overrides build.gradle.kts default)")
             }
             row("Method name:") {
-                textField().bindText(::methodName)
+                textField()
+                    .bindText(::methodName)
                     .comment("Method to invoke (leave empty for default 'run')")
             }
             row("Module arguments:") {
-                textField().bindText(::moduleArguments)
+                textField()
+                    .bindText(::moduleArguments)
                     .comment("Comma-separated arguments passed to the module")
             }
             row { checkBox("Use Gradle (recommended)").bindSelected(::useGradle) }
@@ -113,7 +121,7 @@ class XtcRunSettingsEditor : SettingsEditor<XtcRunConfiguration>() {
     override fun createEditor() = editorPanel
 
     override fun applyEditorTo(config: XtcRunConfiguration) {
-        editorPanel.apply()  // Apply UI values to backing properties
+        editorPanel.apply() // Apply UI values to backing properties
         config.moduleName = moduleName
         config.methodName = methodName
         config.moduleArguments = moduleArguments
@@ -125,6 +133,6 @@ class XtcRunSettingsEditor : SettingsEditor<XtcRunConfiguration>() {
         methodName = config.methodName
         moduleArguments = config.moduleArguments
         useGradle = config.useGradle
-        editorPanel.reset()  // Reset UI from backing properties
+        editorPanel.reset() // Reset UI from backing properties
     }
 }

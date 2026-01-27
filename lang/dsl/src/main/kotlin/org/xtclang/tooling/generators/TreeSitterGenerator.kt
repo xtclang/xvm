@@ -20,8 +20,9 @@ import org.xtclang.tooling.model.OperatorCategory
  * - tree-sitter CLI (parsing and highlighting)
  * - Many LSP servers (for syntax-aware operations)
  */
-class TreeSitterGenerator(private val model: LanguageModel) {
-
+class TreeSitterGenerator(
+    private val model: LanguageModel,
+) {
     companion object {
         /** Number of spaces per indentation level in generated grammar.js */
         const val INDENT_SIZE = 4
@@ -31,7 +32,8 @@ class TreeSitterGenerator(private val model: LanguageModel) {
     }
 
     private fun loadTemplate(name: String): String =
-        javaClass.getResourceAsStream("/templates/$name")
+        javaClass
+            .getResourceAsStream("/templates/$name")
             ?.bufferedReader()
             ?.readText()
             ?: error("Template not found: $name")
@@ -42,48 +44,55 @@ class TreeSitterGenerator(private val model: LanguageModel) {
     fun generateGrammar(): String {
         val template = loadTemplate("grammar.js.template")
 
-        val assignmentOps = model.operators
-            .filter { it.category == OperatorCategory.ASSIGNMENT }
-            .joinToString(", ") { "'${escapeJsString(it.symbol)}'" }
+        val assignmentOps =
+            model.operators
+                .filter { it.category == OperatorCategory.ASSIGNMENT }
+                .joinToString(", ") { "'${escapeJsString(it.symbol)}'" }
 
         val maxPrecedence = model.operators.maxOfOrNull { it.precedence } ?: 15
 
-        val prefixUnaryOps = listOf("!", "~", "-", "+", "++", "--")
-            .filter { sym -> model.operators.any { it.symbol == sym } }
-            .joinToString(", ") { "'${escapeJsString(it)}'" }
+        val prefixUnaryOps =
+            listOf("!", "~", "-", "+", "++", "--")
+                .filter { sym -> model.operators.any { it.symbol == sym } }
+                .joinToString(", ") { "'${escapeJsString(it)}'" }
 
-        val postfixOps = listOf("++", "--", "!")
-            .filter { sym -> model.operators.any { it.symbol == sym } }
-            .joinToString(", ") { "'${escapeJsString(it)}'" }
+        val postfixOps =
+            listOf("++", "--", "!")
+                .filter { sym -> model.operators.any { it.symbol == sym } }
+                .joinToString(", ") { "'${escapeJsString(it)}'" }
 
-        val memberAccessOps = model.operators
-            .filter { it.category == OperatorCategory.MEMBER_ACCESS }
-            .joinToString(", ") { "'${escapeJsString(it.symbol)}'" }
+        val memberAccessOps =
+            model.operators
+                .filter { it.category == OperatorCategory.MEMBER_ACCESS }
+                .joinToString(", ") { "'${escapeJsString(it.symbol)}'" }
 
         val i2 = indent(2)
-        val booleanRule = if (model.booleanLiterals.isNotEmpty()) {
-            "${i2}boolean_literal: \$ => choice(${model.booleanLiterals.joinToString(", ") { "'$it'" }}),"
-        } else {
-            "${i2}boolean_literal: \$ => choice('True', 'False'),"
-        }
+        val booleanRule =
+            if (model.booleanLiterals.isNotEmpty()) {
+                "${i2}boolean_literal: \$ => choice(${model.booleanLiterals.joinToString(", ") { "'$it'" }}),"
+            } else {
+                "${i2}boolean_literal: \$ => choice('True', 'False'),"
+            }
 
-        val nullRule = model.nullLiteral?.let {
-            "${i2}null_literal: \$ => '$it',"
-        } ?: "${i2}null_literal: \$ => 'Null',"
+        val nullRule =
+            model.nullLiteral?.let {
+                "${i2}null_literal: \$ => '$it',"
+            } ?: "${i2}null_literal: \$ => 'Null',"
 
-        val visibilityRule = if (model.visibilityKeywords.isNotEmpty()) {
-            val mods = model.visibilityKeywords.joinToString(", ") { "'$it'" }
-            """${i2}// Visibility modifiers
-${i2}// Supports single visibility (public, private, protected) and dual visibility (public/private)
+        val visibilityRule =
+            if (model.visibilityKeywords.isNotEmpty()) {
+                val mods = model.visibilityKeywords.joinToString(", ") { "'$it'" }
+                """$i2// Visibility modifiers
+$i2// Supports single visibility (public, private, protected) and dual visibility (public/private)
 ${i2}visibility_modifier: $ => choice(
-${i2}    // Single visibility
-${i2}    $mods,
-${i2}    // Dual visibility: public/private, protected/private, etc.
-${i2}    seq(choice($mods), '/', choice($mods)),
-${i2}),"""
-        } else {
-            "${i2}visibility_modifier: \$ => choice('public', 'private', 'protected'),"
-        }
+$i2    // Single visibility
+$i2    $mods,
+$i2    // Dual visibility: public/private, protected/private, etc.
+$i2    seq(choice($mods), '/', choice($mods)),
+$i2),"""
+            } else {
+                "${i2}visibility_modifier: \$ => choice('public', 'private', 'protected'),"
+            }
 
         return template
             .replace("{{LANGUAGE_NAME}}", model.name)
@@ -107,77 +116,106 @@ ${i2}),"""
         val template = loadTemplate("highlights.scm.template")
 
         val controlKeywords = model.keywordsByCategory(KeywordCategory.CONTROL)
-        val controlSection = if (controlKeywords.isNotEmpty()) {
-            buildString {
-                appendLine("; Control flow keywords")
-                controlKeywords.forEach { appendLine("\"$it\" @keyword") }
+        val controlSection =
+            if (controlKeywords.isNotEmpty()) {
+                buildString {
+                    appendLine("; Control flow keywords")
+                    controlKeywords.forEach { appendLine("\"$it\" @keyword") }
+                }
+            } else {
+                ""
             }
-        } else ""
 
-        val exceptionKeywords = model.keywordsByCategory(KeywordCategory.EXCEPTION)
-            .filter { !it.contains(":") }
-        val exceptionSection = if (exceptionKeywords.isNotEmpty()) {
-            buildString {
-                appendLine("; Exception keywords")
-                exceptionKeywords.forEach { appendLine("\"$it\" @keyword") }
+        val exceptionKeywords =
+            model
+                .keywordsByCategory(KeywordCategory.EXCEPTION)
+                .filter { !it.contains(":") }
+        val exceptionSection =
+            if (exceptionKeywords.isNotEmpty()) {
+                buildString {
+                    appendLine("; Exception keywords")
+                    exceptionKeywords.forEach { appendLine("\"$it\" @keyword") }
+                }
+            } else {
+                ""
             }
-        } else ""
 
         val declarationKeywords = model.keywordsByCategory(KeywordCategory.DECLARATION)
-        val declarationSection = if (declarationKeywords.isNotEmpty()) {
-            buildString {
-                appendLine("; Declaration keywords")
-                declarationKeywords.forEach { appendLine("\"$it\" @keyword") }
+        val declarationSection =
+            if (declarationKeywords.isNotEmpty()) {
+                buildString {
+                    appendLine("; Declaration keywords")
+                    declarationKeywords.forEach { appendLine("\"$it\" @keyword") }
+                }
+            } else {
+                ""
             }
-        } else ""
 
         val modifierKeywords = model.keywordsByCategory(KeywordCategory.MODIFIER)
         val visibilityKeywords = model.visibilityKeywords
-        val modifierSection = if (modifierKeywords.isNotEmpty()) {
-            buildString {
-                appendLine("; Modifiers")
-                if (visibilityKeywords.isNotEmpty()) {
-                    appendLine("(visibility_modifier) @keyword.modifier")
+        val modifierSection =
+            if (modifierKeywords.isNotEmpty()) {
+                buildString {
+                    appendLine("; Modifiers")
+                    if (visibilityKeywords.isNotEmpty()) {
+                        appendLine("(visibility_modifier) @keyword.modifier")
+                    }
+                    modifierKeywords.filter { it !in visibilityKeywords }.forEach {
+                        appendLine("\"$it\" @keyword.modifier")
+                    }
                 }
-                modifierKeywords.filter { it !in visibilityKeywords }.forEach {
-                    appendLine("\"$it\" @keyword.modifier")
-                }
+            } else {
+                ""
             }
-        } else ""
 
         val typeRelationKeywords = model.keywordsByCategory(KeywordCategory.TYPE_RELATION)
-        val typeRelationSection = if (typeRelationKeywords.isNotEmpty()) {
-            buildString {
-                appendLine("; Type relation keywords")
-                typeRelationKeywords.forEach { appendLine("\"$it\" @keyword") }
+        val typeRelationSection =
+            if (typeRelationKeywords.isNotEmpty()) {
+                buildString {
+                    appendLine("; Type relation keywords")
+                    typeRelationKeywords.forEach { appendLine("\"$it\" @keyword") }
+                }
+            } else {
+                ""
             }
-        } else ""
 
         val operatorSymbols = model.operators.map { escapeTreeSitterSymbol(it.symbol) }
-        val operatorsSection = operatorSymbols.chunked(8).joinToString("\n") { chunk ->
-            "  ${chunk.joinToString(" ") { "\"$it\"" }}"
-        }
+        val operatorsSection =
+            operatorSymbols.chunked(8).joinToString("\n") { chunk ->
+                "  ${chunk.joinToString(" ") { "\"$it\"" }}"
+            }
 
-        val delimiters = model.punctuation
-            .filter { it.symbol in listOf(".", ",", ";", ":") }
-            .map { "\"${it.symbol}\"" }
-        val delimiterSection = if (delimiters.isNotEmpty()) {
-            "[${delimiters.joinToString(" ")}] @punctuation.delimiter"
-        } else ""
+        val delimiters =
+            model.punctuation
+                .filter { it.symbol in listOf(".", ",", ";", ":") }
+                .map { "\"${it.symbol}\"" }
+        val delimiterSection =
+            if (delimiters.isNotEmpty()) {
+                "[${delimiters.joinToString(" ")}] @punctuation.delimiter"
+            } else {
+                ""
+            }
 
-        val brackets = model.punctuation
-            .filter { it.symbol in listOf("(", ")", "[", "]", "{", "}", "<", ">") }
-            .map { "\"${it.symbol}\"" }
-        val bracketSection = if (brackets.isNotEmpty()) {
-            "[${brackets.joinToString(" ")}] @punctuation.bracket"
-        } else ""
+        val brackets =
+            model.punctuation
+                .filter { it.symbol in listOf("(", ")", "[", "]", "{", "}", "<", ">") }
+                .map { "\"${it.symbol}\"" }
+        val bracketSection =
+            if (brackets.isNotEmpty()) {
+                "[${brackets.joinToString(" ")}] @punctuation.bracket"
+            } else {
+                ""
+            }
 
-        val builtinSection = if (model.builtinTypes.isNotEmpty()) {
-            """; Built-in types
+        val builtinSection =
+            if (model.builtinTypes.isNotEmpty()) {
+                """; Built-in types
 ((type_name) @type.builtin
   (#match? @type.builtin "^(${model.builtinTypes.joinToString("|")})$"))
 """
-        } else ""
+            } else {
+                ""
+            }
 
         return template
             .replace("{{LANGUAGE_NAME}}", model.name)
@@ -196,32 +234,36 @@ ${i2}),"""
      * Generates binary expression rules from model operators, grouped by precedence.
      * Operators at the same precedence level are combined into a choice().
      */
-    private fun generateBinaryExpressionRules(): String = buildString {
-        val binaryOps = model.operators.filter { op ->
-            op.category !in listOf(OperatorCategory.ASSIGNMENT, OperatorCategory.MEMBER_ACCESS) &&
-                op.symbol !in listOf("!", "~", "++", "--")
-        }
+    private fun generateBinaryExpressionRules(): String =
+        buildString {
+            val binaryOps =
+                model.operators.filter { op ->
+                    op.category !in listOf(OperatorCategory.ASSIGNMENT, OperatorCategory.MEMBER_ACCESS) &&
+                        op.symbol !in listOf("!", "~", "++", "--")
+                }
 
-        val byPrecedence = binaryOps.groupBy { it.precedence }.toSortedMap()
-        val i3 = indent(3)
+            val byPrecedence = binaryOps.groupBy { it.precedence }.toSortedMap()
+            val i3 = indent(3)
 
-        byPrecedence.entries.forEachIndexed { index, (precedence, ops) ->
-            val precFn = when {
-                ops.all { it.associativity == Associativity.RIGHT } -> "prec.right"
-                else -> "prec.left"
+            byPrecedence.entries.forEachIndexed { index, (precedence, ops) ->
+                val precFn =
+                    when {
+                        ops.all { it.associativity == Associativity.RIGHT } -> "prec.right"
+                        else -> "prec.left"
+                    }
+
+                val symbols = ops.map { escapeJsString(it.symbol) }
+                val choiceExpr =
+                    if (symbols.size == 1) {
+                        "'${symbols.first()}'"
+                    } else {
+                        "choice(${symbols.joinToString(", ") { "'$it'" }})"
+                    }
+
+                val comma = if (index < byPrecedence.size - 1) "," else ""
+                appendLine("$i3$precFn($precedence, seq(\$._expression, $choiceExpr, \$._expression))$comma")
             }
-
-            val symbols = ops.map { escapeJsString(it.symbol) }
-            val choiceExpr = if (symbols.size == 1) {
-                "'${symbols.first()}'"
-            } else {
-                "choice(${symbols.joinToString(", ") { "'$it'" }})"
-            }
-
-            val comma = if (index < byPrecedence.size - 1) "," else ""
-            appendLine("$i3$precFn($precedence, seq(\$._expression, $choiceExpr, \$._expression))$comma")
-        }
-    }.trimEnd()
+        }.trimEnd()
 
     private fun escapeTreeSitterSymbol(s: String) = s.replace("\\", "\\\\").replace("\"", "\\\"")
 }

@@ -10,7 +10,6 @@ import org.xvm.lsp.model.SymbolInfo
 
 @DisplayName("MockXtcCompilerAdapter")
 class MockXtcCompilerAdapterTest {
-
     private lateinit var adapter: MockXtcCompilerAdapter
 
     @BeforeEach
@@ -21,14 +20,14 @@ class MockXtcCompilerAdapterTest {
     @Nested
     @DisplayName("compile()")
     inner class CompileTests {
-
         @Test
         @DisplayName("should parse module declaration")
         fun shouldParseModuleDeclaration() {
-            val source = """
+            val source =
+                """
                 module myapp {
                 }
-            """.trimIndent()
+                """.trimIndent()
 
             val result = adapter.compile("file:///test.x", source)
 
@@ -41,12 +40,13 @@ class MockXtcCompilerAdapterTest {
         @Test
         @DisplayName("should parse class declaration")
         fun shouldParseClassDeclaration() {
-            val source = """
+            val source =
+                """
                 module myapp {
                     class Person {
                     }
                 }
-            """.trimIndent()
+                """.trimIndent()
 
             val result = adapter.compile("file:///test.x", source)
 
@@ -58,12 +58,13 @@ class MockXtcCompilerAdapterTest {
         @Test
         @DisplayName("should parse interface declaration")
         fun shouldParseInterfaceDeclaration() {
-            val source = """
+            val source =
+                """
                 module myapp {
                     interface Runnable {
                     }
                 }
-            """.trimIndent()
+                """.trimIndent()
 
             val result = adapter.compile("file:///test.x", source)
 
@@ -74,12 +75,13 @@ class MockXtcCompilerAdapterTest {
         @Test
         @DisplayName("should parse service declaration")
         fun shouldParseServiceDeclaration() {
-            val source = """
+            val source =
+                """
                 module myapp {
                     service UserService {
                     }
                 }
-            """.trimIndent()
+                """.trimIndent()
 
             val result = adapter.compile("file:///test.x", source)
 
@@ -90,7 +92,8 @@ class MockXtcCompilerAdapterTest {
         @Test
         @DisplayName("should parse method declaration")
         fun shouldParseMethodDeclaration() {
-            val source = """
+            val source =
+                """
                 module myapp {
                     class Person {
                         String getName() {
@@ -98,7 +101,7 @@ class MockXtcCompilerAdapterTest {
                         }
                     }
                 }
-            """.trimIndent()
+                """.trimIndent()
 
             val result = adapter.compile("file:///test.x", source)
 
@@ -109,11 +112,12 @@ class MockXtcCompilerAdapterTest {
         @Test
         @DisplayName("should detect ERROR markers")
         fun shouldDetectErrorMarkers() {
-            val source = """
+            val source =
+                """
                 module myapp {
                     // ERROR: undefined variable 'x'
                 }
-            """.trimIndent()
+                """.trimIndent()
 
             val result = adapter.compile("file:///test.x", source)
 
@@ -127,10 +131,11 @@ class MockXtcCompilerAdapterTest {
         @Test
         @DisplayName("should detect unmatched braces")
         fun shouldDetectUnmatchedBraces() {
-            val source = """
+            val source =
+                """
                 module myapp {
                     class Person {
-            """.trimIndent()
+                """.trimIndent()
 
             val result = adapter.compile("file:///test.x", source)
 
@@ -142,16 +147,16 @@ class MockXtcCompilerAdapterTest {
     @Nested
     @DisplayName("getHoverInfo()")
     inner class HoverTests {
-
         @Test
         @DisplayName("should return hover info for class")
         fun shouldReturnHoverInfoForClass() {
-            val source = """
+            val source =
+                """
                 module myapp {
                     class Person {
                     }
                 }
-            """.trimIndent()
+                """.trimIndent()
 
             adapter.compile("file:///test.x", source)
             val hover = adapter.getHoverInfo("file:///test.x", 1, 10)
@@ -163,10 +168,11 @@ class MockXtcCompilerAdapterTest {
         @Test
         @DisplayName("should return null for unknown position")
         fun shouldReturnNullForUnknownPosition() {
-            val source = """
+            val source =
+                """
                 module myapp {
                 }
-            """.trimIndent()
+                """.trimIndent()
 
             adapter.compile("file:///test.x", source)
             val hover = adapter.getHoverInfo("file:///test.x", 100, 0)
@@ -178,7 +184,6 @@ class MockXtcCompilerAdapterTest {
     @Nested
     @DisplayName("getCompletions()")
     inner class CompletionTests {
-
         @Test
         @DisplayName("should return keywords")
         fun shouldReturnKeywords() {
@@ -204,12 +209,13 @@ class MockXtcCompilerAdapterTest {
         @Test
         @DisplayName("should include document symbols")
         fun shouldIncludeDocumentSymbols() {
-            val source = """
+            val source =
+                """
                 module myapp {
                     class Person {
                     }
                 }
-            """.trimIndent()
+                """.trimIndent()
 
             adapter.compile("file:///test.x", source)
             val completions = adapter.getCompletions("file:///test.x", 3, 0)
@@ -221,16 +227,16 @@ class MockXtcCompilerAdapterTest {
     @Nested
     @DisplayName("findDefinition()")
     inner class DefinitionTests {
-
         @Test
         @DisplayName("should find definition of class")
         fun shouldFindDefinitionOfClass() {
-            val source = """
+            val source =
+                """
                 module myapp {
                     class Person {
                     }
                 }
-            """.trimIndent()
+                """.trimIndent()
 
             adapter.compile("file:///test.x", source)
             val definition = adapter.findDefinition("file:///test.x", 1, 10)

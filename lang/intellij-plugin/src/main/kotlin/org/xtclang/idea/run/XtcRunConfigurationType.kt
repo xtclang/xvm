@@ -11,7 +11,6 @@ import javax.swing.Icon
  * Run configuration type for XTC applications.
  */
 class XtcRunConfigurationType : ConfigurationType {
-
     override fun getDisplayName() = "XTC Application"
 
     override fun getConfigurationTypeDescription() = "Run an XTC application"
@@ -20,21 +19,18 @@ class XtcRunConfigurationType : ConfigurationType {
 
     override fun getId() = "XtcRunConfiguration"
 
-    override fun getConfigurationFactories(): Array<ConfigurationFactory> {
-        return arrayOf(XtcConfigurationFactory(this))
-    }
+    override fun getConfigurationFactories(): Array<ConfigurationFactory> = arrayOf(XtcConfigurationFactory(this))
 }
 
 /**
  * Factory for creating XTC run configurations.
  */
-class XtcConfigurationFactory(type: ConfigurationType) : ConfigurationFactory(type) {
-
+class XtcConfigurationFactory(
+    type: ConfigurationType,
+) : ConfigurationFactory(type) {
     override fun getId() = "XtcConfigurationFactory"
 
     override fun getName() = "XTC Application"
 
-    override fun createTemplateConfiguration(project: Project): RunConfiguration {
-        return XtcRunConfiguration(project, this, "XTC Application")
-    }
+    override fun createTemplateConfiguration(project: Project): RunConfiguration = XtcRunConfiguration(project, this, "XTC Application")
 }

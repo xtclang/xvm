@@ -1,0 +1,6 @@
+#Tree-sitter native library build info
+#Wed Jan 28 10:45:32 CET 2026
+built.at=2026-01-28T09\:45\:32.207031Z
+git.commit=ac6e4cc34
+input.hash=3ed9091114fe5c3888ddd24d664ceaa05328bee8810b9022c373b16f4c7ebe92
+platform=darwin-arm64

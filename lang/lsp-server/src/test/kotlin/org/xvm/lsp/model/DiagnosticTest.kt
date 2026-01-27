@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test
 
 @DisplayName("Diagnostic")
 class DiagnosticTest {
-
     @Test
     @DisplayName("error() should create error diagnostic")
     fun errorShouldCreateErrorDiagnostic() {

@@ -382,18 +382,19 @@ Add `JETBRAINS_TOKEN` to GitHub repository secrets.
 ```
 intellij-plugin/
 ├── build.gradle.kts              # Plugin build configuration
-├── settings.gradle.kts           # Gradle settings
 ├── src/main/
 │   ├── kotlin/org/xtclang/idea/
-│   │   ├── XtcFileType.kt        # File type + language + icons
+│   │   ├── XtcIconProvider.kt            # Icon provider for .x files
+│   │   ├── XtcTextMateBundleProvider.kt  # TextMate grammar integration
 │   │   ├── lsp/
 │   │   │   └── XtcLspServerSupportProvider.kt  # LSP server integration
 │   │   ├── project/
-│   │   │   ├── XtcProjectGenerator.kt   # New Project wizard
-│   │   │   └── XtcProjectSettings.kt    # Project settings
+│   │   │   ├── XtcNewProjectWizard.kt    # New Project wizard entry
+│   │   │   └── XtcNewProjectWizardStep.kt # Wizard step implementation
 │   │   └── run/
-│   │       ├── XtcRunConfiguration.kt   # Run configuration
-│   │       └── XtcRunConfigurationType.kt
+│   │       ├── XtcRunConfiguration.kt         # Run configuration
+│   │       ├── XtcRunConfigurationProducer.kt # Auto-detect runnable files
+│   │       └── XtcRunConfigurationType.kt     # Run config type registration
 │   └── resources/
 │       ├── META-INF/plugin.xml   # Plugin manifest
 │       └── icons/xtc.svg         # Plugin icon

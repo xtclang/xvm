@@ -15,117 +15,121 @@ module.exports = grammar({
         $.block_comment,
     ],
 
-    externals: $ => [],
+    // External scanner tokens for template strings.
+    // DESIGN: Separate tokens for single-line vs multiline templates.
+    // The scanner is STATELESS - it uses valid_symbols to know which type.
+    // Order must match TokenType enum in ScannerSpec.kt
+    externals: $ => [
+        // Single-line template ($"...") tokens
+        $._singleline_content,       // Content in $"..." template
+        $._singleline_expr_start,    // { in $"..." template
+        $._singleline_end,           // " end of template
 
-    // Conflicts that need explicit declaration:
-    // 1. unary vs binary vs call: `+expr<T>()` - is `<` comparison or type arg?
-    // 2. binary vs call: `a..b<T>()` - `<` could be comparison or type arg
-    // 3. list vs map literal: `[]` could be empty list or empty map
-    // 4. array_type vs conditional_type: `conditional T[]` - is [] on conditional or on T?
-    // 5. _non_bi_type conflicts with union/intersection types
-    // 6. type_expression vs tuple_type in contexts like typedef (Type1 | Type2) as Name
-    // The parser resolves these by preferring the higher precedence rule
+        // Multiline template ($|...|) tokens
+        $._multiline_content,        // Content in $|...| template
+        $._multiline_expr_start,     // { in $|...| template
+        $._multiline_end,            // End (no | continuation)
+
+        // Shared token
+        $._template_expr_end,        // } end of expression (both types)
+
+        // Statement block tokens for {{...}} patterns
+        // These consume entire blocks including nested braces and | continuations
+        $._multiline_stmt_block,     // {{...}} in multiline template
+        $._singleline_stmt_block,    // {{...}} in single-line template
+
+        // TODO freeform text AFTER 'TODO' keyword: consumes " message text" to EOL
+        // The 'TODO' keyword is matched by tree-sitter's internal lexer.
+        // This external token matches the text that follows (space + message).
+        $._todo_freeform_text,
+
+        // TODO freeform text that stops at ';' (for expression context)
+        // Used in switch expressions where the ';' is required as terminator.
+        // If no ';' before EOL, this token fails (forcing switch_statement interpretation).
+        $._todo_freeform_until_semi,
+    ],
+
+    // Conflicts that require GLR parsing for disambiguation.
+    // Tree-sitter can resolve many conflicts automatically via precedence.
+    // Only conflicts that tree-sitter cannot resolve are declared here.
+    // Reduced from 133 to 49 necessary conflicts (2026-01-30).
     conflicts: $ => [
-        [$.binary_expression, $.unary_expression, $.call_expression],
+        // Expression vs type ambiguities
         [$.binary_expression, $.unary_expression, $.call_expression, $.async_call_expression],
-        [$.postfix_expression, $.call_expression],
-        [$.postfix_expression, $.safe_call_expression],
-        [$.postfix_expression, $.async_call_expression],
-        [$.binary_expression, $.safe_call_expression],
-        [$.binary_expression, $.unary_expression, $.safe_call_expression],
-        [$.binary_expression, $.unary_expression, $.async_call_expression],
-        [$.binary_expression, $.call_expression],
         [$.binary_expression, $.call_expression, $.async_call_expression],
-        [$.binary_expression, $.async_call_expression],
         [$.list_literal, $.map_literal],
         [$.array_type, $.conditional_type],
         [$.nullable_type, $.conditional_type],
-        [$._expression, $.type_name],
-        [$.member_expression, $.qualified_type_name],
         [$.type_name, $.qualified_type_name],
-        [$.member_type, $.qualified_type_name],
-        [$.generic_type, $.member_type],
         [$._expression, $.qualified_type_name],
         [$._expression, $.type_name, $.qualified_type_name],
-        [$.union_type, $._non_bi_type],
-        [$.intersection_type, $._non_bi_type],
-        [$.difference_type, $._non_bi_type],
-        [$.type_expression, $.tuple_type],
-        [$.tuple_expression, $.tuple_type],
-        [$.parenthesized_type, $.tuple_type],
-        [$.immutable_type, $.array_type],
-        [$.immutable_type, $.nullable_type],
         [$.non_null_type, $.conditional_type],
-        [$.immutable_type, $.non_null_type],
-        [$.non_null_type, $.postfix_expression],
-        [$.class_declaration, $.keyword_type],
-        [$.service_declaration, $.keyword_type],
-        [$.const_declaration, $.keyword_type],
-        [$.enum_declaration, $.keyword_type],
+
+        // Declaration keyword conflicts
+        [$.module_declaration, $.keyword_type],
+        [$.package_declaration, $.keyword_type],
+        [$.annotation_declaration, $.keyword_type],
         [$.conditional_declaration, $._expression],
-        [$.switch_statement, $.switch_expression],
-        [$.case_pattern, $._expression],
+
+        // Pattern matching conflicts
         [$.pattern_element, $._expression],
-        [$.tuple_pattern, $.parenthesized_expression],
         [$.pattern_element, $.parenthesized_expression],
-        [$.new_expression, $.member_expression],
+        [$.pattern_element, $.tuple_expression],
+
+        // New expression conflicts
         [$.unary_expression, $.member_expression, $.new_expression],
         [$.assignment_expression, $.member_expression, $.new_expression],
         [$.binary_expression, $.member_expression, $.new_expression],
-        [$.binary_expression, $.unary_expression, $.member_expression, $.new_expression],
-        [$.ternary_expression, $.member_expression, $.new_expression],
-        [$.expression_case_clause, $.case_clause],
-        [$.expression_case_clause, $.expression_statement],
-        [$.assert_condition, $._expression],
-        [$.pattern_element, $.tuple_expression],
+
+        // Throw expression conflicts
         [$.throw_expression, $.binary_expression],
         [$.throw_statement, $.throw_expression],
-        [$.assert_statement, $.assert_expression],
-        [$._expression, $.type_expression],
-        [$.variable_declaration, $.expression_statement],
+
+        // Variable/tuple declaration conflicts
         [$.variable_declaration, $._expression],
-        [$.labeled_statement, $.variable_declaration],
-        [$.labeled_statement, $.type_name],
-        [$.labeled_statement, $.qualified_type_name],
-        [$.tuple_assignment, $.expression_statement],
         [$.tuple_assignment_element, $._expression],
         [$.tuple_assignment_element, $.tuple_expression],
-        [$.tuple_assignment_element, $.parameter],
-        [$.for_tuple_destructure, $.tuple_expression],
-        [$.for_tuple_destructure, $.parameters],
-        [$.for_tuple_destructure, $.parameter],
-        [$.conditional_tuple_pattern, $.for_tuple_destructure],
-        [$.conditional_tuple_pattern, $.tuple_expression],
-        [$.conditional_tuple_pattern, $.parameters],
-        [$.conditional_tuple_pattern, $.parameter],
-        [$.if_condition, $._expression],
+
+        // Type expression conflicts
         [$.type_expression, $.array_type],
-        [$.function_type_parameters, $.tuple_type],
         [$.tuple_type_element, $.parameter],
-        [$.tuple_type_element, $.type_expression],
         [$.tuple_type_element, $.parenthesized_type],
         [$.tuple_type_element, $.parameter, $.tuple_assignment_element],
-        [$.tuple_type_element, $.parameter, $.conditional_tuple_pattern],
-        [$.tuple_type_element, $.parameter, $.for_tuple_destructure],
         [$.tuple_type_element, $.parameter, $.tuple_assignment_element, $.for_tuple_destructure],
         [$.tuple_type_element, $.parameter, $.conditional_tuple_element],
-        [$.tuple_type_element, $.parameter, $.tuple_assignment_element, $.conditional_tuple_element],
+
+        // Conditional tuple conflicts
         [$.conditional_tuple_element, $._expression],
+        [$.conditional_tuple_element, $._expression, $.type_name, $.qualified_type_name],
+
+        // Conditional type conflicts
         [$.conditional_type, $.function_type],
         [$.conditional_type, $.named_function_type],
-        [$.parameter, $.named_function_type],
         [$.incorporates_clause, $.conditional_type],
+
+        // Type system conflicts
         [$._non_bi_type, $.generic_type],
         [$.named_argument, $._expression],
         [$.switch_variable_declaration, $._expression],
-        [$.ternary_expression, $.else_expression],
+
+        // Else expression conflicts
         [$.else_expression, $.throw_expression],
-        [$.else_expression, $.ternary_expression, $.member_expression, $.new_expression],
         [$.case_pattern, $.else_expression],
-        [$.postfix_expression, $.ternary_expression],
-        [$.ternary_expression, $.binary_expression, $.postfix_expression],
-        [$.case_pattern, $.typed_literal],
+
+        // Statement/expression conflicts
         [$.statement_expression, $._statement],
+
+        // Arguments/tuple type conflicts
+        [$.tuple_type, $.arguments],
+        [$.tuple_type_element, $.arguments],
+        [$.parenthesized_type, $.arguments],
+        [$.parenthesized_type, $.tuple_type_element, $.arguments],
+
+        // Array type literal conflicts
+        [$._non_bi_type, $.array_type_literal],
+        [$._non_bi_type, $._expression],
+        [$.member_type, $._expression],
+        [$._non_bi_type, $._expression, $.array_type_literal],
     ],
 
     word: $ => $.identifier,
@@ -151,15 +155,19 @@ module.exports = grammar({
 
         // Module declaration
         // Note: doc_comment is optional prefix, not in extras, to avoid keyword recognition issues
+        // Modules can have delegates clause: module json.xtclang.org delegates TextFormat(Schema.DEFAULT) { ... }
         module_declaration: $ => seq(
             optional($.doc_comment),
             repeat($.annotation),
             'module',
             $.qualified_name,
+            repeat($.delegates_clause),
             optional($.module_body),
         ),
 
-        module_body: $ => seq('{', repeat($._definition), '}'),
+        // Module body can contain definitions and also properties/methods at module level
+        // Example: @Inject Console console; at module level
+        module_body: $ => seq('{', repeat(choice($._definition, $.property_declaration, $.method_declaration)), '}'),
 
         // Package declaration
         // Note: Package must end with either a body { } or semicolon ;
@@ -174,13 +182,23 @@ module.exports = grammar({
             choice($.package_body, ';'),
         ),
 
-        package_body: $ => seq('{', repeat($._definition), '}'),
+        // Package body can contain definitions and also top-level properties/methods
+        // Example: package http { static Boolean validExtension(String s) { ... } }
+        package_body: $ => seq('{', repeat(choice($._definition, $.property_declaration, $.method_declaration)), '}'),
 
         // Import
+        // Supports: import foo.bar.Baz; or import foo.bar.Baz as Alias; or import foo.bar.*;
+        // Star import uses token.immediate('.*') to avoid conflict with qualified_name
+        // Note: optional doc_comment allows file-level documentation before imports
+        // (e.g., /** The Runner singleton. */ import Scanner.CmdInfo; static service Runner {...})
         import_statement: $ => seq(
+            optional($.doc_comment),
             'import',
             $.qualified_name,
-            optional(seq('as', $.identifier)),
+            optional(choice(
+                token.immediate('.*'),   // Star import: import pkg.* (no space before .*)
+                seq('as', $.identifier), // Alias: import pkg.Type as Alias
+            )),
             ';',
         ),
 
@@ -195,7 +213,7 @@ module.exports = grammar({
         class_declaration: $ => seq(
             optional($.doc_comment),
             repeat($.annotation),
-            optional($.visibility_modifier),
+            optional(seq($.visibility_modifier, repeat($.annotation))),
             optional(seq('static', repeat($.annotation))),
             optional('abstract'),
             'class',
@@ -230,20 +248,22 @@ module.exports = grammar({
             $.type_name,
             optional($.type_parameters),
             optional($.constructor_parameters),
-            repeat(choice($.into_clause, $.extends_clause, $.implements_clause, $.incorporates_clause, $.delegates_clause)),
+            repeat(choice($.into_clause, $.extends_clause_with_args, $.implements_clause, $.incorporates_clause, $.delegates_clause)),
             choice($.class_body, ';'),
         ),
 
         // Service can end with body or semicolon
+        // Supports static service: static service Runner { ... }
         service_declaration: $ => seq(
             optional($.doc_comment),
             repeat($.annotation),
             optional($.visibility_modifier),
+            optional(seq('static', repeat($.annotation))),
             'service',
             $.type_name,
             optional($.type_parameters),
             optional($.constructor_parameters),
-            repeat(choice($.extends_clause, $.implements_clause, $.incorporates_clause, $.delegates_clause)),
+            repeat(choice($.extends_clause_with_args, $.implements_clause, $.incorporates_clause, $.delegates_clause)),
             choice($.class_body, ';'),
         ),
 
@@ -294,10 +314,12 @@ module.exports = grammar({
 
         // Annotation declaration: annotation Name into TargetType implements Interface { ... }
         // XTC annotations are similar to mixins but use 'annotation' keyword and 'into' clause
+        // Supports static annotation: static annotation Dedup into DBProcessor {}
         annotation_declaration: $ => seq(
             optional($.doc_comment),
             repeat($.annotation),
             optional($.visibility_modifier),
+            optional('static'),
             'annotation',
             $.type_name,
             optional($.type_parameters),
@@ -331,12 +353,16 @@ module.exports = grammar({
         enum_value_body: $ => seq('{', repeat($._class_member), '}'),
 
         // Class members
+        // Includes import_statement for imports inside type bodies (e.g., interface { import foo.bar; })
+        // Also includes standalone doc_comment to allow orphaned doc comments (e.g., doc for commented-out code)
+        // The standalone doc_comment has lower precedence (-1) so declarations are preferred when possible
         _class_member: $ => choice(
             $.property_declaration,
             $.method_declaration,
             $.property_getter_declaration,
             $.constructor_declaration,
             $.assert_block,
+            $.import_statement,
             $.class_declaration,
             $.interface_declaration,
             $.const_declaration,
@@ -344,37 +370,45 @@ module.exports = grammar({
             $.typedef_declaration,
             $.mixin_declaration,
             $.service_declaration,
+            $.annotation_declaration,
+            prec(-1, $.doc_comment),  // Allow orphaned doc comments (for commented-out code)
         ),
 
         // Property declaration supports annotations before and/or after visibility
         // e.g., @Override public Int x; OR public/protected @Unassigned Key key;
         // Properties can have: simple value (;), initializer (= expr;), or a body with accessors ({ ... })
+        // Properties with body can also have a default value: status { set(x) {...} } = Initial;
         // Also supports named function type properties: function Type propName(ParamTypes);
+        // Modifiers can appear in either order: "static protected" or "protected static"
         property_declaration: $ => choice(
             // Named function type form: function ReturnType propName(ParamTypes);
             // The property name is embedded in the function type syntax
             seq(
                 optional($.doc_comment),
                 repeat($.annotation),
-                optional(seq($.visibility_modifier, repeat($.annotation))),
-                optional(seq('static', repeat($.annotation))),
+                optional(choice(
+                    seq($.visibility_modifier, repeat($.annotation), optional(seq('static', repeat($.annotation)))),
+                    seq('static', repeat($.annotation), optional(seq($.visibility_modifier, repeat($.annotation)))),
+                )),
                 $.named_function_type,
                 choice(
                     seq(optional(seq('=', $._expression)), ';'),
-                    $.property_body,
+                    seq($.property_body, optional(seq('=', $._expression, ';'))),
                 ),
             ),
             // Regular form: Type propName = value;
             seq(
                 optional($.doc_comment),
                 repeat($.annotation),
-                optional(seq($.visibility_modifier, repeat($.annotation))),
-                optional(seq('static', repeat($.annotation))),
+                optional(choice(
+                    seq($.visibility_modifier, repeat($.annotation), optional(seq('static', repeat($.annotation)))),
+                    seq('static', repeat($.annotation), optional(seq($.visibility_modifier, repeat($.annotation)))),
+                )),
                 $.type_expression,
                 $.identifier,
                 choice(
                     seq(optional(seq('=', $._expression)), ';'),
-                    $.property_body,
+                    seq($.property_body, optional(seq('=', $._expression, ';'))),
                 ),
             ),
         ),
@@ -383,20 +417,29 @@ module.exports = grammar({
         // This is similar to a class body but for properties
         property_body: $ => seq('{', repeat($._class_member), '}'),
 
+        // Modifiers can appear in either order: "static protected" or "protected static"
         method_declaration: $ => seq(
             optional($.doc_comment),
             repeat($.annotation),
-            optional(seq($.visibility_modifier, repeat($.annotation))),
-            optional(seq('static', repeat($.annotation))),
+            optional(choice(
+                seq($.visibility_modifier, repeat($.annotation), optional(seq('static', repeat($.annotation)))),
+                seq('static', repeat($.annotation), optional(seq($.visibility_modifier, repeat($.annotation)))),
+            )),
             optional('abstract'),
             optional($.type_parameters),
             $.type_expression,
             $.identifier,
             optional($.type_parameters),
             $.parameters,
-            // Expression body can be: = expr; or = TODO text (no semicolon for TODO inline text)
-            // prec(2) ensures TODO form is tried first
-            choice($.block, prec(2, seq('=', $.todo_expression)), seq('=', $._expression, ';'), ';'),
+            // Expression body can be: = expr; or = TODO (no semicolon for bare TODO)
+            // prec(3) for TODO freeform, prec(2) for bare TODO ensures proper precedence
+            choice(
+                $.block,
+                prec(3, seq('=', 'TODO', $._todo_freeform_text)),  // = TODO freeform text (no ; needed)
+                prec(2, seq('=', $.todo_expression)),  // = TODO or = TODO(expr) (no ; needed)
+                seq('=', $._expression, ';'),
+                ';',
+            ),
         ),
 
         // Property accessor syntax: `Type propName.get() { ... }` or `Type propName.calc() = expr;`
@@ -436,7 +479,8 @@ module.exports = grammar({
         ),
 
         // Clauses
-        extends_clause: $ => seq('extends', $.type_expression),
+        // Interfaces can extend multiple types: extends Part, Freezable
+        extends_clause: $ => seq('extends', commaSep1($.type_expression)),
         extends_clause_with_args: $ => seq('extends', $.type_expression, optional($.arguments)),
         implements_clause: $ => seq('implements', commaSep1($.type_expression)),
         // Incorporates can be conditional: incorporates conditional Mixin<Type extends Constraint>
@@ -457,11 +501,12 @@ module.exports = grammar({
         parameters: $ => seq('(', commaSep($.parameter), optional(','), ')'),
         // Parameters can be:
         // - Regular: Type name = default
+        // - With annotations: @Desc("text") Type name = default
         // - Named function type: function ReturnType name(ParamTypes) = default
         //   The named function type form includes the name already
         parameter: $ => choice(
-            seq($.named_function_type, optional(seq('=', $._expression))),
-            seq($.type_expression, $.identifier, optional(seq('=', $._expression))),
+            seq(repeat($.annotation), $.named_function_type, optional(seq('=', $._expression))),
+            seq(repeat($.annotation), $.type_expression, $.identifier, optional(seq('=', $._expression))),
         ),
 
         // Type expressions
@@ -495,10 +540,16 @@ module.exports = grammar({
             $.immutable_type,
             $.parenthesized_type,
             $.keyword_type,
+            $.qualified_keyword_type,
         ),
 
         primitive_type: $ => 'void',
-        keyword_type: $ => choice('service', 'const', 'enum', 'module', 'package', 'class'),
+        // Keyword types: used in .is(service), .is(struct Type), etc.
+        // Simple form: .is(service), .is(struct)
+        keyword_type: $ => choice('service', 'const', 'enum', 'module', 'package', 'class', 'struct', 'annotation'),
+        // Qualified keyword type: struct Type, service Type - used in .is(struct SessionImpl)
+        // prec(3) to bind tighter than non_null_type and array_type which have precedence 0
+        qualified_keyword_type: $ => prec(3, seq(choice('struct', 'service', 'class', 'const', 'enum'), $.type_name)),
         // immutable can be standalone or with a type. prec.right makes it greedy.
         immutable_type: $ => prec.right(seq('immutable', optional($._non_bi_type))),
         parenthesized_type: $ => seq('(', $.type_expression, ')'),
@@ -511,9 +562,15 @@ module.exports = grammar({
             seq($.type_name, optional(token.immediate('!')), $.type_arguments),
             seq($.type_name, $.arguments),  // Type(expr) for conditional types like Iff
         ),
-        // Member type access: Type<Key>.MemberType or Package.TypeName
+        // Member type access: ONLY after generic types with type arguments
         // Used in typedef Type<Key>.Orderer as Orderer
-        member_type: $ => prec.left(seq(choice($.generic_type, $.type_name), '.', $.identifier)),
+        // Plain qualified names (a.b.c.d) use qualified_type_name instead
+        // Examples:
+        //   Map<K,V>.Entry → member_type(generic_type, Entry)
+        //   Map<K,V>.Entry<X>.Inner → member_type(member_type(...), Inner)
+        //   ecstasy.lang.src.Compiler → qualified_type_name (NOT member_type!)
+        // The base must have type arguments - this prevents ambiguity with qualified names
+        member_type: $ => prec.left(seq(choice($.generic_type, $.member_type), '.', $.identifier, optional($.type_arguments))),
         // Type arguments can include constraints: <Key, Value extends Shareable>
         // Can also include angle-bracket type lists for method signatures: Method<Target, <Params>, <Return>>
         // Can be empty: Class<> for wildcard/inferred type arguments
@@ -537,7 +594,8 @@ module.exports = grammar({
         // The name appears between return type and parameters
         named_function_type: $ => seq('function', optional('conditional'), $._non_bi_type, $.identifier, $.function_type_parameters),
         // Tuple type can be unnamed (Type1, Type2) or named (Type1 name1, Type2 name2)
-        tuple_type: $ => seq('(', commaSep($.tuple_type_element), ')'),
+        // Trailing comma is allowed: (Type1 name1, Type2 name2,)
+        tuple_type: $ => seq('(', commaSep($.tuple_type_element), optional(','), ')'),
         // Tuple type element can have union/intersection types: (Id id, IntLiteral|FPLiteral value)
         tuple_type_element: $ => seq($.type_expression, optional($.identifier)),
 
@@ -563,17 +621,21 @@ module.exports = grammar({
             $.throw_statement,
             $.construct_delegation,
             $.todo_statement,
+            $.todo_freeform_statement,  // Assignment ending with TODO freeform (x = TODO text)
             $.expression_statement,
             // Local imports (inside method bodies)
             $.import_statement,
-            // Local type declarations (inner classes, interfaces, etc.)
+            // Local type declarations (inner classes, interfaces, services, etc.)
             $.class_declaration,
             $.interface_declaration,
             $.const_declaration,
             $.enum_declaration,
             $.mixin_declaration,
+            $.service_declaration,
             // Local function declarations (functions defined inside method bodies)
             $.local_function_declaration,
+            // Local property getter declarations: private @Lazy Type propName.accessor() { ... }
+            $.local_property_getter_declaration,
             // Local typedef (type aliases inside method bodies)
             $.typedef_declaration,
         ),
@@ -594,12 +656,27 @@ module.exports = grammar({
             choice($.block, seq('=', $._expression, ';')),
         ),
 
-        // Labeled statement: Label: for/while/do/switch/if/block
+        // Local property getter declaration: private @Lazy Service propName.calc() { ... }
+        // Property accessor syntax inside method body: Type propName.accessor() { body } or = expr;
+        local_property_getter_declaration: $ => seq(
+            optional($.doc_comment),
+            repeat($.annotation),
+            optional(seq($.visibility_modifier, repeat($.annotation))),
+            $.type_expression,
+            $.identifier,
+            '.',
+            $.identifier,
+            $.parameters,
+            choice($.block, seq('=', $._expression, ';')),
+        ),
+
+        // Labeled statement: Label: for/while/do/switch/if/try/block
+        // Labeled try is used for exception reference: Recovery: try {...} then Recovery.exception
         // Higher precedence to prefer label interpretation over type_name
         labeled_statement: $ => prec(1, seq(
             $.identifier,
             ':',
-            choice($.for_statement, $.while_statement, $.do_statement, $.switch_statement, $.if_statement, $.block),
+            choice($.for_statement, $.while_statement, $.do_statement, $.switch_statement, $.if_statement, $.try_statement, $.block),
         )),
 
         // Constructor delegation: construct ConstructorName(args);
@@ -649,7 +726,8 @@ module.exports = grammar({
                 ';',
             ),
             // Typed form without val/var: @Annotation private static Type x = expr;
-            seq(
+            // prec(1) to prefer variable declaration over expression statement when ambiguous
+            prec(1, seq(
                 repeat($.annotation),
                 optional($.visibility_modifier),
                 optional('static'),
@@ -657,7 +735,7 @@ module.exports = grammar({
                 $.identifier,
                 optional(seq(choice('=', ':='), $._expression)),
                 ';',
-            ),
+            )),
             // Named function type form: function ReturnType varName(ParamTypes) = lambda;
             seq(
                 repeat($.annotation),
@@ -683,17 +761,21 @@ module.exports = grammar({
 
         // Tuple pattern for conditional declaration: (Type1 x, Type2 y) or (_, val x) or (val x, Int y)
         // Supports wildcards, val/var keywords, and explicit types
+        // Allows trailing comma: (Type1 x, Type2 y,) := expr
         conditional_tuple_pattern: $ => seq(
             '(',
             $.conditional_tuple_element,
             repeat1(seq(',', $.conditional_tuple_element)),
+            optional(','),  // Allow trailing comma
             ')',
         ),
-        // Element in conditional tuple pattern: wildcard, val/var identifier, or Type identifier
+        // Element in conditional tuple pattern: wildcard, val/var identifier, Type identifier, or bare identifier
+        // Bare identifier allows reassignment of existing variables: (Type1 new, existing) := expr
         conditional_tuple_element: $ => choice(
             $.wildcard,
             seq(choice('val', 'var'), optional($.type_expression), $.identifier),
             seq($.type_expression, $.identifier),
+            $.identifier,  // Bare identifier for reassigning existing variable
         ),
 
         // Dangling else: `if (a) if (b) x else y` - else binds to nearest if (right associativity)
@@ -773,7 +855,9 @@ module.exports = grammar({
 
         // Switch statement (traditional form with statements)
         // Can have inline variable declarations: switch (Type name = expr)
-        switch_statement: $ => seq(
+        // Much higher precedence than switch_expression (100 vs 1) to strongly prefer statements
+        // when both could match. This helps GLR resolve switch with break; as statement not expression.
+        switch_statement: $ => prec(100, seq(
             'switch',
             '(',
             commaSep1(choice($.switch_variable_declaration, $._expression)),
@@ -781,11 +865,12 @@ module.exports = grammar({
             '{',
             repeat($.case_clause),
             '}',
-        ),
+        )),
 
         // Switch expression (returns a value): switch (x) { case A: value; }
         // Can have inline variable declarations: switch (Type name = expr)
-        switch_expression: $ => seq(
+        // Very low precedence (-1000) to strongly prefer switch_statement when both could match
+        switch_expression: $ => prec(-1000, seq(
             'switch',
             '(',
             commaSep1(choice($.switch_variable_declaration, $._expression)),
@@ -793,16 +878,21 @@ module.exports = grammar({
             '{',
             repeat($.expression_case_clause),
             '}',
+        )),
+
+        // Variable declaration inside switch expression:
+        // - Type name = expr
+        // - val name = expr (or val Type name = expr)
+        switch_variable_declaration: $ => choice(
+            seq(choice('val', 'var'), optional($.type_expression), $.identifier, '=', $._expression),
+            seq($.type_expression, $.identifier, '=', $._expression),
         ),
 
-        // Variable declaration inside switch expression: Type name = expr
-        switch_variable_declaration: $ => seq($.type_expression, $.identifier, '=', $._expression),
-
         // Case clause for switch statements (can contain statements)
-        // prec(5) ensures the ':' is consumed by case_clause, not by typed_literal (prec(2))
-        // when the case pattern contains a generic type like 'case List<String>:'
+        // prec(7) > prec(5) to prefer statement case clauses over expression case clauses
+        // when both could match (e.g., case with TODO)
         // Supports fall-through cases: case 'A': case 'B': statements...
-        case_clause: $ => prec(5, seq(
+        case_clause: $ => prec(7, seq(
             choice(
                 seq(repeat(seq('case', $.case_pattern, ':')), choice(seq('case', $.case_pattern), 'default')),
             ),
@@ -813,25 +903,38 @@ module.exports = grammar({
         // Expression case clause for switch expressions (returns value with semicolon)
         // prec(5) ensures the ':' is consumed by the clause, not by typed_literal (prec(2))
         // Supports fall-through cases: case 'A': case 'B': value;
+        //
+        // CRITICAL: TODO handling is split between two scanner tokens:
+        // - _todo_freeform_text: consumes to EOL (used in statements via todo_statement)
+        // - _todo_freeform_until_semi: stops at ';' (used here in expressions)
+        //
+        // For expression_case_clause:
+        // - seq($._expression, ';') handles normal expressions
+        // - seq('TODO', ..., ';') handles TODO with freeform text
+        // - prec(-500, 'TODO') handles bare TODO as LAST RESORT (very low precedence)
+        //   This ensures switch_statement is preferred when there's ambiguity
         expression_case_clause: $ => prec(5, seq(
             choice(
                 seq(repeat(seq('case', $.case_pattern, ':')), choice(seq('case', $.case_pattern), 'default')),
             ),
             ':',
-            $._expression,
-            ';',
+            choice(
+                seq($._expression, ';'),
+                seq('TODO', optional($._todo_freeform_until_semi), ';'),
+                prec(-500, 'TODO'),  // Bare TODO - very low precedence, only as last resort
+            ),
         )),
 
         // Case pattern: single expression, comma-separated expressions, type expression, or tuple pattern
         // Supports: case 'P', 'p':  (multiple values in one case)
         // Supports: case List<String>: (type pattern matching)
-        // Type patterns have highest precedence (prec(5)) to prevent conflicts with
-        // typed_literal (prec(2)) or else_expression interpreting List<String>: as Type:value
-        case_pattern: $ => choice(
-            prec(5, $.type_expression),     // Type pattern: case List<String>:
+        // prec(5) on the entire pattern prevents else_expression (Expr:Fallback) from consuming
+        // the colon that should terminate the case pattern
+        case_pattern: $ => prec(5, choice(
+            $.type_expression,              // Type pattern: case List<String>:
             commaSep1($._expression),       // Value patterns: case 1, 2, 3:
             $.tuple_pattern,                // Tuple pattern: case (a, b):
-        ),
+        )),
 
         // Tuple pattern for switch: case (Lesser, _):
         tuple_pattern: $ => seq('(', commaSep1($.pattern_element), ')'),
@@ -849,8 +952,10 @@ module.exports = grammar({
 
         // Try resource can be expression or variable declaration
         // prec(2) ensures val/var form is preferred over expression
+        // Supports wildcard _ as identifier for discarding: try (val _ = new Timeout())
         try_resource: $ => choice(
-            prec(2, seq(optional(choice('val', 'var')), $.type_expression, $.identifier, '=', $._expression)),
+            prec(2, seq(optional(choice('val', 'var')), $.type_expression, choice($.identifier, '_'), '=', $._expression)),
+            prec(2, seq(choice('val', 'var'), choice($.identifier, '_'), '=', $._expression)),
             $._expression,
         ),
 
@@ -876,11 +981,16 @@ module.exports = grammar({
         // - val/var id = expr
         // - val/var Type id = expr
         // - Type id = expr (explicit type, no val/var)
-        using_resource: $ => seq(
-            optional(choice('val', 'var')),
-            optional($.type_expression),
-            $.identifier,
-            '=',
+        // - expr (bare expression, treated as val _ = expr)
+        // prec(2) on the variable declaration form to prefer it over bare expression
+        using_resource: $ => choice(
+            prec(2, seq(
+                optional(choice('val', 'var')),
+                optional($.type_expression),
+                $.identifier,
+                '=',
+                $._expression,
+            )),
             $._expression,
         ),
 
@@ -906,10 +1016,29 @@ module.exports = grammar({
         assert_variant: $ => choice('assert:rnd', 'assert:arg', 'assert:bounds', 'assert:TODO', 'assert:once', 'assert:test', 'assert:debug'),
 
         // TODO statement: standalone TODO without semicolon (XTC compiler injects semicolon)
-        // Allows: TODO, TODO(msg), TODO message text - all without trailing semicolon
-        todo_statement: $ => prec(1, seq($.todo_expression, optional(';'))),
+        // Allows: TODO, TODO(msg), TODO freeform text - all without trailing semicolon
+        // NOTE: Freeform text has its OWN rule with higher precedence to ensure it's tried first.
+        todo_statement: $ => choice(
+            $.todo_freeform_only,  // TODO with freeform text (must be tried first)
+            prec(1, seq($.todo_expression, optional(';'))),  // TODO or TODO(expr) as statement
+        ),
 
-        expression_statement: $ => seq($._expression, ';'),
+        // TODO with freeform text - separate rule with high precedence
+        // This ensures "TODO text" is parsed as freeform, not as bare TODO + something else
+        todo_freeform_only: $ => prec(10, seq('TODO', $._todo_freeform_text)),
+
+        // Self-terminating TODO assignment: x = TODO freeform text (no ; needed)
+        // In XTC, TODO freeform text consumes everything to EOL, so no ; is needed.
+        // This handles assignment expressions where RHS is TODO with freeform text.
+        // Bare TODO freeform is handled by todo_statement (which uses todo_expression).
+        todo_freeform_statement: $ => prec(4, seq(
+            $._expression, '=', 'TODO', $._todo_freeform_text,
+        )),
+
+        // prec(-100) makes expression_statement lower priority than switch_statement (prec(100))
+        // This ensures that `switch (...) {...}` in statement context is parsed as switch_statement,
+        // not as expression_statement containing switch_expression
+        expression_statement: $ => prec(-100, seq($._expression, ';')),
 
         // Expressions
         // Note: var/val are context keywords and can be used as variable names
@@ -925,6 +1054,7 @@ module.exports = grammar({
             $.async_call_expression,
             $.member_expression,
             $.index_expression,
+            $.safe_index_expression,
             $.new_expression,
             $.lambda_expression,
             $.switch_expression,
@@ -939,6 +1069,15 @@ module.exports = grammar({
             // Block expression: { statements; return expr; } used as expression
             // Example: Type x = { ... return value; };
             $.statement_expression,
+            // Array type literal as expression - for type comparisons like: type == Byte[], Element?[]
+            // Placed before identifier to give priority in ambiguous cases
+            $.array_type_literal,
+            // Generic type literal as expression - for type literals like: Type x = Map<Key, Value>
+            // Also handles qualified type names with type args: Map<Serializable.Key, Serializable.Value>
+            $.generic_type,
+            // Parenthesized type as expression - for type method calls: (immutable).and(type)
+            // In XTC, types are first-class values and methods can be called on them
+            $.parenthesized_type,
             $.identifier,
             // Context keywords as identifiers (variable names)
             alias('var', $.identifier),
@@ -946,6 +1085,8 @@ module.exports = grammar({
             $._literal,
             // Wildcard _ used as expression for partial function application
             $.wildcard,
+            // Template buffer $ reference (for $.addAll() etc. inside template expressions)
+            $.template_buffer,
         ),
 
         // Assignment expression - operators from model
@@ -974,32 +1115,44 @@ module.exports = grammar({
 
         // Member access
         // Call expression: regular call expr(args) or async call expr^(args)
-        // Async call uses ^( as a single token (ASYNC_PAREN in lexer)
         // Safe call: expr?(args) for null-safe invocation (if expr is null, returns null)
         call_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_2}}, seq($._expression, optional($.type_arguments), $.arguments)),
         safe_call_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_2}}, seq($._expression, $.safe_arguments)),
         safe_arguments: $ => seq('?(', commaSep(choice($.named_argument, $._expression, $.type_expression)), ')'),
+        // Async call: expr^(args) for fire-and-forget asynchronous invocation
+        // Uses token('^(') as a single lexer token to avoid conflict with ^ XOR operator
         async_call_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_2}}, seq($._expression, optional($.type_arguments), $.async_arguments)),
-        async_arguments: $ => seq('^(', commaSep(choice($.named_argument, $._expression, $.type_expression)), ')'),
+        async_arguments: $ => seq(token('^('), commaSep(choice($.named_argument, $._expression, $.type_expression)), ')'),
         // Member expression supports:
         // - Regular: expr.name
         // - Reference: expr.&name (no-dereference property access)
         member_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_2}}, seq($._expression, choice({{MEMBER_ACCESS_OPS}}), optional('&'), $.identifier)),
         index_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_2}}, seq($._expression, '[', commaSep1($._expression), ']')),
+        // Safe index expression: arr?[index] for null-safe indexing (if arr is null, returns null)
+        // Uses '?' followed by immediate '[' rather than '?[' as single token to avoid conflict with Type?[]
+        safe_index_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_2}}, seq($._expression, '?', token.immediate('['), commaSep1($._expression), ']')),
 
         // Reference expression: &name (creates a reference to a property/variable)
         // Reference (no-dereference) expression: &identifier or &this:xxx
         reference_expression: $ => seq('&', choice($.identifier, $.this_expression)),
 
+        // Array type literal as expression - for type comparisons like: type == Byte[]
+        // Also supports generic array types: type == Map<String, Int>[]
+        // Also supports nullable array types: Element?[]
+        array_type_literal: $ => seq(choice($.generic_type, $.type_name), optional('?'), '[', ']'),
+
         // new Type(args), new Type[size], new Type[], new Type[size](initializer), or expr.new(args)
         // Also supports anonymous inner classes: new Type(args) { body }
         // Also supports annotated new: new @Annotation Type(args) (applies mixin to new instance)
+        // Also supports outer new: expr.new TypeName(args) creates instance in outer context
         // prec.left on the array form ensures the optional initializer arguments are greedily consumed
         new_expression: $ => choice(
             seq('new', repeat($.annotation), $.type_expression, $.arguments, optional($.anonymous_inner_class_body)),
             prec.left(seq('new', repeat($.annotation), $.type_expression, '[', $._expression, ']', optional($.arguments))),
             seq('new', repeat($.annotation), $.type_expression, '[', ']'),  // empty array: new Type[]
-            seq($._expression, '.', 'new', $.arguments),
+            seq($._expression, '.', 'new', $.type_expression, $.arguments),  // outer new: expr.new Type(args)
+            seq($._expression, '.', 'new', $.arguments),  // expr.new(args) - outer copy
+            seq('new', $.arguments),  // new(args) - copy constructor (virtual new)
         ),
 
         // Anonymous inner class body
@@ -1011,17 +1164,22 @@ module.exports = grammar({
         // Assert expression: assert can be used as an expression (e.g., in ?: or safe-call-else)
         // Used in patterns like: value?.method() : assert
         // Can include an optional message: `assert as $"error"` in expression context
+        // Also supports assert variants: assert:bounds, assert:arg, etc.
         // prec.left ensures `as` binds to assert (not an outer context)
-        assert_expression: $ => prec.left(seq('assert', optional(seq('as', $._expression)))),
+        assert_expression: $ => prec.left(seq(choice('assert', $.assert_variant), optional(seq('as', $._expression)))),
 
         // TODO expression: placeholder for unimplemented code, throws UnsupportedOperation
-        // Forms: TODO, TODO(), TODO(message), TODO message text
-        // The inline text form (TODO message text) consumes rest of line
+        // Forms: TODO, TODO(), TODO(message) - NO freeform text here!
+        //
+        // NOTE: Freeform text (`TODO some text`) is NOT included in todo_expression.
+        // It's only available in todo_statement (for statement context) and
+        // expression_case_clause (with _todo_freeform_until_semi for expression context).
+        // This prevents freeform from consuming ';' that expression contexts need.
+        //
         // prec.left ensures parens are greedily consumed
         todo_expression: $ => prec.left(choice(
-            seq('TODO', '(', optional($._expression), ')'),
-            /TODO[ \t]+[^\n]+/,  // TODO with inline text message (rest of line)
-            'TODO',
+            prec(2, seq('TODO', '(', optional($._expression), ')')),  // TODO(expr)
+            prec(1, 'TODO'),  // Standalone TODO
         )),
 
         // Lambda needs high precedence to resolve conflict: when seeing `identifier ->`,
@@ -1050,6 +1208,13 @@ module.exports = grammar({
         // super expression: super
         super_expression: $ => 'super',
 
+        // Template buffer reference: $ inside template expressions refers to the StringBuffer
+        // Example: {{if (cond) {$.addAll("text");}}}
+        // This is a standalone $ that can be used with member access ($.method())
+        // Safe because: $" matches template, $| matches multiline, $./ and $/ match file literals
+        // Only bare $ followed by . (member access) needs this rule
+        template_buffer: $ => '$',
+
         // Statement expression: a block used as an expression
         // Example: Type x = { var y = compute(); return y + 1; };
         // The block must contain statements and typically ends with a return
@@ -1065,7 +1230,8 @@ module.exports = grammar({
 
         // Arguments can include expressions, type expressions (for .is(), .as(), etc.), and named arguments
         // Named arguments: name=value (e.g., entrySeparator='&')
-        arguments: $ => seq('(', commaSep(choice($.named_argument, $._expression, $.type_expression)), ')'),
+        // Trailing comma is allowed: method(arg1, arg2,)
+        arguments: $ => seq('(', commaSep(choice($.named_argument, $._expression, $.type_expression)), optional(','), ')'),
         named_argument: $ => seq($.identifier, '=', $._expression),
 
         // Literals
@@ -1083,6 +1249,7 @@ module.exports = grammar({
             $.map_literal,
             $.typed_literal,
             $.file_literal,
+            $.string_file_literal,
         ),
 
         // Integer literals support magnitude suffixes: K, M, G, T, P, E, Z, Y (case insensitive)
@@ -1097,19 +1264,81 @@ module.exports = grammar({
 
         float_literal: $ => /[0-9][0-9_]*\.[0-9][0-9_]*([eE][+-]?[0-9]+)?/,
 
-        // File/resource literal: #path - embeds a file resource
+        // Binary file/resource literal: #path - embeds a file as binary
         // Examples: #./CharCats.dat, #../data/file.bin, #file.txt
         file_literal: $ => /#\.{0,2}[/\w._-]+/,
 
+        // String file/resource literal: $./path or $/path - embeds file contents as string
+        // Examples: $./templates/file.txt, $/implicit.x, $../shared/data.txt
+        // This is different from template strings ($"...") - it's a compile-time file include
+        string_file_literal: $ => /\$\.{0,2}\/[\w._/-]+/,
+
         // String literals with Unicode escapes: \\uXXXX and \\UXXXXXXXX
         string_literal: $ => /"([^"\\]|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8}|\\.)*"/,
-        template_string_literal: $ => /\$"([^"\\]|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8}|\\.)*"/,
-        // Multiline template literal: $|content on first line
-        //                              | continuation line
-        // The pattern captures $| followed by content, with optional continuation lines starting with |
-        multiline_template_literal: $ => token(/\$\|[^\n]*(\\?\n[ \t]*\|[^\n]*)*/),
-        // Multiline plain literal: \|content on first line
-        //                           | continuation line
+
+        // Template string literal: $"Hello {name}!"
+        // $" is a regular token; content/delimiters use external scanner
+        template_string_literal: $ => seq(
+            '$"',  // Regular token - tree-sitter lexer matches this
+            repeat(choice(
+                alias($._singleline_content, $.template_content),
+                $.singleline_expression,
+            )),
+            alias($._singleline_end, $.template_end),
+        ),
+
+        // Embedded expression in single-line template: {expr} or {name=} shorthand or {{statements}}
+        // The {name=} shorthand is XTC-specific: displays "name={value}" for debugging
+        // Statement blocks: {{...}} - scanner handles entire block including nested braces
+        singleline_expression: $ => choice(
+            // Statement block {{...}} - scanner consumes entire block as single token
+            alias($._singleline_stmt_block, $.template_statement_block),
+            // Simple expression or shorthand
+            seq(
+                alias($._singleline_expr_start, $.interpolation_start),
+                choice(
+                    seq($._expression, '='),  // Shorthand: {name=} or {obj.prop=} shows "name={value}"
+                    $._expression,
+                ),
+                alias($._template_expr_end, $.interpolation_end),
+            ),
+        ),
+
+        // Multiline template literal: $|line {expr}
+        //                              |continuation
+        // $| is a regular token; content/delimiters use external scanner
+        multiline_template_literal: $ => seq(
+            '$|',  // Regular token - tree-sitter lexer matches this
+            repeat(choice(
+                alias($._multiline_content, $.template_content),
+                $.multiline_expression,
+            )),
+            alias($._multiline_end, $.template_end),
+        ),
+
+        // Embedded expression in multiline template: {expr} or {name=} shorthand or {{statements}}
+        // Statement blocks: {{...}} - scanner handles entire block including nested braces and | continuations
+        multiline_expression: $ => choice(
+            // Statement block {{...}} - scanner consumes entire block as single token
+            alias($._multiline_stmt_block, $.template_statement_block),
+            // Simple expression or shorthand
+            seq(
+                alias($._multiline_expr_start, $.interpolation_start),
+                choice(
+                    seq($._expression, '='),  // Shorthand: {name=} or {obj.prop=} shows "name={value}"
+                    $._expression,
+                ),
+                alias($._template_expr_end, $.interpolation_end),
+            ),
+        ),
+
+        // Template statement block: content inside {{...}} in templates
+        // The scanner handles brace depth tracking and | continuation markers
+        // This rule just provides a named node for the aliased content
+        template_statement_block: $ => 'PLACEHOLDER_NEVER_MATCHED',
+
+        // Multiline plain literal (no interpolation): \|content
+        //                                              | continuation
         multiline_literal: $ => token(/\\\|[^\n]*(\\?\n[ \t]*\|[^\n]*)*/),
         // Character literal: 'c', '\\n', '\\u0000', '\\U00010000'
         // Supports Unicode escapes: \\uXXXX (4 hex digits) and \\UXXXXXXXX (8 hex digits)
@@ -1118,16 +1347,18 @@ module.exports = grammar({
 {{BOOLEAN_LITERAL_RULE}}
 {{NULL_LITERAL_RULE}}
 
-        list_literal: $ => seq('[', commaSep($._expression), ']'),
-        map_literal: $ => seq('[', commaSep($.map_entry), ']'),
+        // Array/list literals allow trailing comma: [A, B, C,]
+        list_literal: $ => seq('[', commaSep($._expression), optional(','), ']'),
+        map_literal: $ => seq('[', commaSep($.map_entry), optional(','), ']'),
         map_entry: $ => seq($._expression, '=', $._expression),
 
         // Typed literal: Type:value where value is a literal
-        // Examples: Duration:0S, Int:42, Map:[], List:[1,2,3], Date:2024-01-26
+        // Examples: Duration:0S, Int:42, Map:[], List:[1,2,3], Date:2024-01-26, Path:/sys/info
         // Use higher precedence to prefer typed_literal interpretation
         typed_literal: $ => prec(2, seq($.type_expression, ':', choice(
             $.list_literal,
             $.map_literal,
+            $.path_literal,
             $.duration_literal,
             $.integer_literal,
             $.float_literal,
@@ -1135,6 +1366,10 @@ module.exports = grammar({
             $.char_literal,
             $.boolean_literal,
         ))),
+
+        // Path literal: /path/to/something or /path/to/file.ext
+        // Used with typed literals like Path:/sys/info
+        path_literal: $ => /\/[a-zA-Z0-9_\-\.\/]*/,
 
         // Duration literal: ISO-8601 format (P prefix optional in XTC shorthand)
         // Examples: PT1H30M (1 hour 30 min), P1D (1 day), 30S (30 seconds), PT0S (0 seconds)

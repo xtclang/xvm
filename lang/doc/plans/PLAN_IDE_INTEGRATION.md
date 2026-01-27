@@ -143,7 +143,7 @@ Full tree-sitter support for fast, incremental parsing:
    - **Quick Path**: State externalization (~4-6 weeks)
    - **Parallel Path**: Modern rewrite / parallel implementation of needed components (~3 months, recommended)
 
-   See [xtc-language-support-research](https://github.com/xtclang/xtc-language-support-research) for detailed plans.
+   See *Internal documentation* for detailed plans.
 
 6. **Hybrid adapter strategy**
    - Use tree-sitter for fast syntax feedback
@@ -204,4 +204,4 @@ Full tree-sitter support for fast, incremental parsing:
 ## Related Documentation
 
 - **[PLAN_TREE_SITTER.md](./PLAN_TREE_SITTER.md)** - Tree-sitter grammar status and development guide
-- **[xtc-language-support-research](https://github.com/xtclang/xtc-language-support-research)** - Comprehensive architecture analysis and compiler modification plans
+- *Internal documentation* - Comprehensive architecture analysis and compiler modification plans
