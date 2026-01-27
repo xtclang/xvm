@@ -2,15 +2,38 @@
  * Auto generated module to execute XUnit tests.
  */
 module %appName%_xunit%qualifier% {
-    package xunit     import xunit.xtclang.org;
-    package engine    import xunit_engine.xtclang.org;
-    package %appName% import %appName%%qualifier%;
+    package xunit     import xunit.xtclang.org        inject() using SimpleInjector;
+    package engine    import xunit_engine.xtclang.org inject() using SimpleInjector;
+    package %appName% import %appName%%qualifier%     inject() using SimpleInjector;
+
+    import ecstasy.mgmt.*;
+
+    import ecstasy.reflect.ModuleTemplate;
 
     import engine.console.ConsoleRunner;
 
     Boolean run(String[] args) {
+        @Inject ModuleRepository repository;
+        @Inject Directory        curDir;
+        @Inject Directory        xunitOutDir;
+
+        ModuleTemplate template  = repository.getResolvedModule(this.qualifiedName);
+        Container      container = new Container(template, Lightweight, repository, SimpleInjector);
+
+        Tuple t = container.invoke("executeTests", ());
+        return t[0].as(Boolean);
+    }
+
+    Boolean executeTests() {
         Module m = %appName%.as(Module);
         ConsoleRunner runner = new ConsoleRunner();
         return runner.run(m);
+    }
+
+    /**
+     * A singleton service to inject resources into XUnit tests.
+     */
+    static service SimpleInjector
+            extends engine.executor.TestInjector {
     }
 }

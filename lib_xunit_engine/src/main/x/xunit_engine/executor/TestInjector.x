@@ -1,50 +1,30 @@
 import ecstasy.annotations.Inject.Options;
 
-import ecstasy.fs.DirectoryFileStore;
-import ecstasy.fs.FileNode;
-
-import ecstasy.lang.src.Compiler;
-
-import ecstasy.mgmt.*;
-
-import ecstasy.reflect.ModuleTemplate;
-
-import extensions.ExtensionRegistry;
+import ecstasy.mgmt.BasicResourceProvider;
+import ecstasy.mgmt.ModuleRepository;
+import ecstasy.mgmt.ResourceProvider;
+import ecstasy.mgmt.Container.Linker;
 
 import executor.ResourceLookupProvider;
-
-import xunit.MethodOrFunction;
 
 import xunit.extensions.ExecutionContext;
 import xunit.extensions.ResourceLookupCallback;
 
 /**
- * A `ResourceProvider` implementation that can provide resources to inject into tests.
+ * A resource provider use in the generated test module.
  *
- * @param curDir  the current working directory
- * @param outDir  the XUnit root test output directory
+ * This provider tracks the current ExecutionContext so that it can inject resources based on the
+ * currently executing test.
  */
-service TestResourceProvider(Directory curDir, Directory outDir)
-        extends BasicResourceProvider
+service TestInjector
+        extends BaseResourceProvider
         implements ResourceLookupProvider {
 
-    /**
-     * The `FileStore` to use to access files.
-     */
-    @Lazy FileStore store.calc() {
-        @Inject FileStore storage;
-        return storage;
+    construct () {
+        @Inject Directory curDir;
+        @Inject ModuleRepository repository;
+        construct BaseResourceProvider(curDir, repository);
     }
-
-    /**
-     * The build output directory.
-     */
-    @Lazy Directory buildDir.calc() = curDir.dirFor(DefaultXUnitDir);
-
-    /**
-     * The test output root directory directory.
-     */
-    @Lazy Directory testOutputRootDir.calc() = outDir.dirFor(TestOutputRootDir);
 
     /**
      * The current execution context.
@@ -59,8 +39,7 @@ service TestResourceProvider(Directory curDir, Directory outDir)
     public/private ResourceLookupCallback[] lookupCallbacks = [];
 
     @Override
-    Supplier getResource(Type type, String name) {
-        import Container.Linker;
+    ResourceProvider.Supplier getResource(Type type, String name) {
 
         switch (type, name) {
         case (ResourceLookupProvider, _):
@@ -72,28 +51,14 @@ service TestResourceProvider(Directory curDir, Directory outDir)
         case (ExecutionContext, _):
             return getExecutionContext;
 
-        case (FileStore, "storage"):
-            return &store.maskAs(FileStore);
-
         case (Directory, _):
             switch (name) {
-            case "rootDir":
-                return curDir;
-
-            case "homeDir":
-                return curDir;
-
-            case "curDir":
-                return curDir;
-
             case "tmpDir":
                 return tempDir;
 
-            case "buildDir":
-                return buildDir;
-
             case "testOutputRoot":
-                return testOutputRootDir;
+                @Inject Directory testOutputRoot;
+                return testOutputRoot;
 
             case "testOutput":
                 return getTestDirectory;
@@ -101,22 +66,6 @@ service TestResourceProvider(Directory curDir, Directory outDir)
             default:
                 return super(type, name);
             }
-
-        case (Console, _):
-            @Inject Console console;
-            return console;
-
-        case (Compiler, "compiler"):
-            @Inject Compiler compiler;
-            return compiler;
-
-        case (Linker, "linker"):
-            @Inject Linker linker;
-            return linker;
-
-        case (ModuleRepository, "repository"):
-            @Inject ModuleRepository repository;
-            return repository;
         }
 
         Supplier supplier = super(type, name);
@@ -174,8 +123,9 @@ service TestResourceProvider(Directory curDir, Directory outDir)
      * Returns the directory to for any files specific for the current test.
      */
     Directory getTestDirectory(Options opts) {
-        Directory testDir = testOutputRootDir.ensure();
-        return testDirectoryUnder(testDir);
+        @Inject Directory testOutputRoot;
+        testOutputRoot.ensure();
+        return testDirectoryUnder(testOutputRoot);
     }
 
     /**

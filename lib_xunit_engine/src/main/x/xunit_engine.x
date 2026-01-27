@@ -119,11 +119,11 @@ module xunit_engine.xtclang.org {
         ModuleRepository repo      = new LinkedRepository([buildRepo, coreRepo].freeze(True));
         Log              log       = new SimpleLog();
 
-        console.print($"XUnit: Creating test module for {moduleName} in {tmpDir}");
+        console.print($"XUnit: Creating test module for {moduleName} in {buildDir}");
         ModuleGenerator gen = new ModuleGenerator(moduleName, version);
         if (ModuleTemplate template := gen.ensureModule(repo, buildDir, log)) {
-            console.print($"XUnit: Created test module {template.qualifiedName} in {tmpDir}");
-            TestResourceProvider injector = new TestResourceProvider(curDir, outDir);
+            console.print($"XUnit: Created test module {template.qualifiedName} in {buildDir}");
+            EngineResourceProvider injector = new EngineResourceProvider(curDir, outDir, repo);
             Tuple t = new Container(template, Lightweight, repo, injector).invoke("run");
             // The temporary test module can now be deleted
             if (File moduleFile := buildDir.findFile(template.parent.name)) {
