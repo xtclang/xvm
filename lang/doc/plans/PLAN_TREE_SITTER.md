@@ -42,7 +42,7 @@ cd lang/dsl/build/generated
 - [x] Grammar validation passes (`./gradlew :lang:dsl:validateTreeSitterGrammar`)
 
 ### In Progress 🔄
-- **Grammar coverage: 555/692 XTC files parse successfully (80.2%)**
+- **Grammar coverage: 568/692 XTC files parse successfully (82.1%)**
 - Native library compilation for target platforms
 
 ### Grammar Support Status (2026-01-26)
@@ -143,6 +143,12 @@ The following features have been added to `TreeSitterGenerator.kt`:
 | Annotation declarations | `annotation Foo into Bar` | ✅ XTC annotation types |
 | Annotated new expressions | `new @Mixin Type(args)` | ✅ Annotations on new |
 | Named function type params | `function Bool fn(Arg)` | ✅ Function params with names |
+| Wildcard expressions | `accumulate(_, sum, _)` | ✅ Partial function application |
+| Async call expression | `write^(buffer)` | ✅ `^(` as async invocation token |
+| Enum value type arguments | `Colon<Object>(":")` | ✅ Type args in enum values |
+| Tuple union type elements | `(Id, IntLiteral\|FPLiteral)` | ✅ Union types in tuples |
+| Fall-through switch cases | `case 'A': case 'B': val;` | ✅ Multiple case labels |
+| Function variable declaration | `function Int sum(Int, Int) = lambda` | ✅ Named function type as var |
 
 #### Still Needed (High Priority)
 
@@ -157,7 +163,6 @@ The following features have been added to `TreeSitterGenerator.kt`:
 | `@:` syntax | `@:annotate` | Annotation with colon |
 | Dir/path literals | `./`, `../` | Special literals |
 | Binary file literal | `#file.bin` | Resource embedding |
-| Async invocation | `^(expr)` | Future/async call |
 
 > **Ground Truth**: The authoritative sources for XTC syntax are:
 > - `javatools/src/main/java/org/xvm/compiler/Lexer.java` - Token definitions
@@ -611,7 +616,11 @@ Files failing to parse typically use these advanced features (still being added)
 19. ✅ Coverage improved from 73.6% to 79.2% (548/692)
 20. ✅ Implemented annotated new expressions `new @Mixin Type(args)`, named function type params
 21. ✅ Coverage improved from 79.2% to 80.2% (555/692)
-22. 🔄 Next: String interpolation `$"text {expr}"`
+22. ✅ Implemented wildcard expressions (`_` for partial application), async call `^(`, enum type args
+23. ✅ Implemented tuple union types, fall-through switch cases, function variable declarations
+24. ✅ Fixed ternary vs postfix `?` conflict
+25. ✅ Coverage improved from 80.2% to 82.1% (568/692)
+26. 🔄 Next: String interpolation `$"text {expr}"`
 
 ---
 

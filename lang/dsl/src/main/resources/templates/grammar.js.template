@@ -603,6 +603,7 @@ module.exports = grammar({
         // - @Annotation Type x = expr;  (with annotations)
         // - private Type x = expr;  (with visibility modifier for local captures)
         // - static Type x = expr;  (local static property)
+        // - function ReturnType varName(ParamTypes) = expr;  (function variable)
         variable_declaration: $ => choice(
             // val/var form: val x = expr or var Type x = expr
             seq(
@@ -622,6 +623,14 @@ module.exports = grammar({
                 $.type_expression,
                 $.identifier,
                 optional(seq(choice('=', ':='), $._expression)),
+                ';',
+            ),
+            // Named function type form: function ReturnType varName(ParamTypes) = lambda;
+            seq(
+                repeat($.annotation),
+                optional($.visibility_modifier),
+                $.named_function_type,
+                optional(seq('=', $._expression)),
                 ';',
             ),
         ),
@@ -890,7 +899,9 @@ module.exports = grammar({
         // Binds looser than ternary - parseElseExpression wraps parseTernaryExpression
         else_expression: $ => prec.right(0, seq($._expression, ':', $._expression)),
 
-        ternary_expression: $ => prec.right(2, seq($._expression, '?', $._expression, ':', $._expression)),
+        // Ternary needs high precedence to compete with postfix ? operator
+        // When we see expr ? expr : expr, prefer ternary over expr? followed by partial parse
+        ternary_expression: $ => prec.right({{MAX_PRECEDENCE_PLUS_2}}, seq($._expression, '?', $._expression, ':', $._expression)),
 
         // Binary expression - generate from model operators grouped by precedence
         binary_expression: $ => choice(
