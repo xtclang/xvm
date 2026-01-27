@@ -28,6 +28,11 @@ module.exports = grammar({
     conflicts: $ => [
         [$.binary_expression, $.unary_expression, $.call_expression],
         [$.binary_expression, $.unary_expression, $.call_expression, $.async_call_expression],
+        [$.postfix_expression, $.call_expression],
+        [$.postfix_expression, $.safe_call_expression],
+        [$.postfix_expression, $.async_call_expression],
+        [$.binary_expression, $.safe_call_expression],
+        [$.binary_expression, $.unary_expression, $.safe_call_expression],
         [$.binary_expression, $.unary_expression, $.async_call_expression],
         [$.binary_expression, $.call_expression],
         [$.binary_expression, $.call_expression, $.async_call_expression],
@@ -865,6 +870,7 @@ module.exports = grammar({
             $.unary_expression,
             $.postfix_expression,
             $.call_expression,
+            $.safe_call_expression,
             $.async_call_expression,
             $.member_expression,
             $.index_expression,
@@ -918,7 +924,10 @@ module.exports = grammar({
         // Member access
         // Call expression: regular call expr(args) or async call expr^(args)
         // Async call uses ^( as a single token (ASYNC_PAREN in lexer)
+        // Safe call: expr?(args) for null-safe invocation (if expr is null, returns null)
         call_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_2}}, seq($._expression, optional($.type_arguments), $.arguments)),
+        safe_call_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_2}}, seq($._expression, $.safe_arguments)),
+        safe_arguments: $ => seq('?(', commaSep(choice($.named_argument, $._expression, $.type_expression)), ')'),
         async_call_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_2}}, seq($._expression, optional($.type_arguments), $.async_arguments)),
         async_arguments: $ => seq('^(', commaSep(choice($.named_argument, $._expression, $.type_expression)), ')'),
         // Member expression supports:
