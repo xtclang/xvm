@@ -403,7 +403,6 @@ public class FBind
             .ifeq(labelEnd);
         regArg.load(code);
         code.invokevirtual(CD_nObj, "$isImmut", MethodTypeDesc.of(CD_boolean))
-            .iand()
             .istore(slotImm)
             .labelBinding(labelEnd);
     }
