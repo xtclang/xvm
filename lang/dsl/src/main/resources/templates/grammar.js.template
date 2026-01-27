@@ -107,6 +107,10 @@ module.exports = grammar({
         [$.tuple_type_element, $.parameter, $.tuple_assignment_element],
         [$.tuple_type_element, $.parameter, $.conditional_tuple_pattern],
         [$.tuple_type_element, $.parameter, $.for_tuple_destructure],
+        [$.tuple_type_element, $.parameter, $.tuple_assignment_element, $.for_tuple_destructure],
+        [$.tuple_type_element, $.parameter, $.conditional_tuple_element],
+        [$.tuple_type_element, $.parameter, $.tuple_assignment_element, $.conditional_tuple_element],
+        [$.conditional_tuple_element, $._expression],
         [$.conditional_type, $.function_type],
         [$.conditional_type, $.named_function_type],
         [$.parameter, $.named_function_type],
@@ -345,16 +349,33 @@ module.exports = grammar({
         // Property declaration supports annotations before and/or after visibility
         // e.g., @Override public Int x; OR public/protected @Unassigned Key key;
         // Properties can have: simple value (;), initializer (= expr;), or a body with accessors ({ ... })
-        property_declaration: $ => seq(
-            optional($.doc_comment),
-            repeat($.annotation),
-            optional(seq($.visibility_modifier, repeat($.annotation))),
-            optional(seq('static', repeat($.annotation))),
-            $.type_expression,
-            $.identifier,
-            choice(
-                seq(optional(seq('=', $._expression)), ';'),
-                $.property_body,
+        // Also supports named function type properties: function Type propName(ParamTypes);
+        property_declaration: $ => choice(
+            // Named function type form: function ReturnType propName(ParamTypes);
+            // The property name is embedded in the function type syntax
+            seq(
+                optional($.doc_comment),
+                repeat($.annotation),
+                optional(seq($.visibility_modifier, repeat($.annotation))),
+                optional(seq('static', repeat($.annotation))),
+                $.named_function_type,
+                choice(
+                    seq(optional(seq('=', $._expression)), ';'),
+                    $.property_body,
+                ),
+            ),
+            // Regular form: Type propName = value;
+            seq(
+                optional($.doc_comment),
+                repeat($.annotation),
+                optional(seq($.visibility_modifier, repeat($.annotation))),
+                optional(seq('static', repeat($.annotation))),
+                $.type_expression,
+                $.identifier,
+                choice(
+                    seq(optional(seq('=', $._expression)), ';'),
+                    $.property_body,
+                ),
             ),
         ),
 
@@ -600,8 +621,10 @@ module.exports = grammar({
             ';',
         ),
 
-        // Element in tuple assignment: can be typed (Type x) or untyped (x, this.y)
+        // Element in tuple assignment: can be typed (Type x), untyped (x, this.y), or val/var
+        // Examples: (Type x, Int y), (x, this.y), (val x, Int y), (var Type x, val y)
         tuple_assignment_element: $ => choice(
+            seq(choice('val', 'var'), optional($.type_expression), $.identifier),
             seq($.type_expression, $.identifier),
             $._expression,
         ),
@@ -658,12 +681,19 @@ module.exports = grammar({
             $._expression,
         ),
 
-        // Tuple pattern for conditional declaration: (Type1 x, Type2 y)
+        // Tuple pattern for conditional declaration: (Type1 x, Type2 y) or (_, val x) or (val x, Int y)
+        // Supports wildcards, val/var keywords, and explicit types
         conditional_tuple_pattern: $ => seq(
             '(',
-            $.type_expression, $.identifier,
-            repeat1(seq(',', $.type_expression, $.identifier)),
+            $.conditional_tuple_element,
+            repeat1(seq(',', $.conditional_tuple_element)),
             ')',
+        ),
+        // Element in conditional tuple pattern: wildcard, val/var identifier, or Type identifier
+        conditional_tuple_element: $ => choice(
+            $.wildcard,
+            seq(choice('val', 'var'), optional($.type_expression), $.identifier),
+            seq($.type_expression, $.identifier),
         ),
 
         // Dangling else: `if (a) if (b) x else y` - else binds to nearest if (right associativity)
@@ -691,19 +721,34 @@ module.exports = grammar({
                 prec(2, seq('var', $._identifier_or_context_keyword, ':', $._expression)),
                 // for (Type name : iterable)
                 prec(1, seq($.type_expression, $._identifier_or_context_keyword, ':', $._expression)),
+                // for (name : iterable) - bare identifier, type inferred
+                // Higher precedence to prefer this over type_expression interpretation
+                prec(3, seq($.identifier, ':', $._expression)),
                 seq($.for_tuple_destructure, ':', $._expression),
                 // Traditional for loop: for (init; condition; update)
                 // init can be a variable declaration (Type name = expr) or expression
-                seq(optional($.for_initializer), ';', optional($._expression), ';', optional($._expression)),
+                // update can have multiple comma-separated expressions: for (i = 0; i < n; i++, j++)
+                seq(optional($.for_initializer), ';', optional($._expression), ';', optional(commaSep1($._expression))),
             ),
             ')',
             $._statement,
         ),
 
-        // For loop initializer: either an expression or variable declaration(s)
+        // For loop initializer: either an expression, variable declaration(s), or tuple assignment
         // Supports multiple declarations: for (Int i = 0, Int c = size; ...)
+        // Supports tuple assignment: for ((Type1 x, Type2 y) = expr; ...)
         for_initializer: $ => choice(
+            $.for_tuple_assignment,
             $.for_var_declarations,
+            $._expression,
+        ),
+        // Tuple assignment in for initializer: (Type1 x, Type2 y) = expr
+        for_tuple_assignment: $ => seq(
+            '(',
+            $.tuple_assignment_element,
+            repeat1(seq(',', $.tuple_assignment_element)),
+            ')',
+            '=',
             $._expression,
         ),
         // Multiple variable declarations in for initializer
@@ -723,7 +768,8 @@ module.exports = grammar({
         // Supports conditional declaration: while (Element x := expr)
         // Supports multiple conditions: while (cond1, cond2)
         while_statement: $ => seq('while', '(', $.if_condition, repeat(seq(',', $.if_condition)), ')', $._statement),
-        do_statement: $ => seq('do', $._statement, 'while', '(', $._expression, ')', ';'),
+        // Do-while supports multiple conditions: do { } while (cond1, cond2 := expr);
+        do_statement: $ => seq('do', $._statement, 'while', '(', $.if_condition, repeat(seq(',', $.if_condition)), ')', ';'),
 
         // Switch statement (traditional form with statements)
         // Can have inline variable declarations: switch (Type name = expr)

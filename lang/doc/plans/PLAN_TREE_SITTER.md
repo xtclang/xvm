@@ -42,10 +42,10 @@ cd lang/dsl/build/generated
 - [x] Grammar validation passes (`./gradlew :lang:dsl:validateTreeSitterGrammar`)
 
 ### In Progress 🔄
-- **Grammar coverage: 585/692 XTC files parse successfully (84.5%)**
+- **Grammar coverage: 595/692 XTC files parse successfully (86.0%)**
 - Native library compilation for target platforms
 
-### Grammar Support Status (2026-01-26)
+### Grammar Support Status (2026-01-27)
 
 The following features have been added to `TreeSitterGenerator.kt`:
 
@@ -153,6 +153,13 @@ The following features have been added to `TreeSitterGenerator.kt`:
 | Type expression arguments | `Iff("debug".defined)` | ✅ Conditional types |
 | File/resource literals | `#./CharCats.dat` | ✅ Embedded resources |
 | Unicode escapes | `'\u0000'`, `"\U00010000"` | ✅ In char/string literals |
+| Named fn type properties | `function Type propName(Args);` | ✅ Function-typed properties |
+| Tuple elem val/var | `(val x, Int y) = expr;` | ✅ In tuple assignments |
+| Do-while multi-cond | `do {} while (c1, c2 := expr);` | ✅ Multiple conditions |
+| For tuple init | `for ((T1 x, T2 y) = e; ...)` | ✅ Tuple assignment in for |
+| For multi-update | `for (...; ...; i++, j++)` | ✅ Multiple update exprs |
+| Conditional tuple wildcard | `(_, val x) := expr` | ✅ Wildcards and val/var |
+| For-each bare identifier | `for (ch : host)` | ✅ Type inferred |
 
 #### Still Needed (High Priority)
 
@@ -627,7 +634,11 @@ Files failing to parse typically use these advanced features (still being added)
 26. ✅ Implemented safe call `?(`, types with expression args `Iff(expr)`, file literals `#./file.dat`
 27. ✅ Fixed Unicode escapes in char/string literals (`\uXXXX`, `\UXXXXXXXX`)
 28. ✅ Coverage improved from 82.1% to 84.5% (585/692)
-29. 🔄 Next: String interpolation `$"text {expr}"`
+29. ✅ Implemented named function type properties, tuple elements with val/var
+30. ✅ Implemented do-while multi-conditions, for tuple initializers, for multi-update expressions
+31. ✅ Implemented conditional tuple wildcards/val/var, for-each bare identifier
+32. ✅ Coverage improved from 84.5% to 86.0% (595/692)
+33. 🔄 Next: String interpolation `$"text {expr}"`
 
 ---
 
