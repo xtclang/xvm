@@ -43,6 +43,7 @@ cd lang/dsl/build/generated
 
 ### In Progress 🔄
 - **Grammar coverage: 595/692 XTC files parse successfully (86.0%)**
+- **Template Scanner**: Kotlin implementation complete (30 tests), C port pending
 - Native library compilation for target platforms
 
 ### Grammar Support Status (2026-01-27)
@@ -165,7 +166,127 @@ The following features have been added to `TreeSitterGenerator.kt`:
 
 | Feature | Example | Notes |
 |---------|---------|-------|
-| String interpolation | `$"text {expr}"` | Lexer: `eatTemplateExpression()` |
+| String interpolation | `$"text {expr}"` | See "String Interpolation Strategy" section below |
+
+---
+
+## String Interpolation Strategy
+
+### The Challenge
+
+String interpolation (`$"Hello {name}"`) requires stateful lexing because:
+1. The lexer must track when it's inside a template string vs normal code
+2. Expressions inside `{...}` can contain nested braces, strings, and even nested templates
+3. Tree-sitter's grammar.js alone cannot express this - it requires an **external scanner**
+
+### Proposed Approach: Kotlin-First Scanner
+
+Rather than writing C directly, we'll implement a **stateless Kotlin scanner** that can be:
+1. Thoroughly tested with JUnit alongside the existing test suite
+2. Used as reference implementation for correctness
+3. Ported to C for tree-sitter's external scanner (mechanical translation)
+
+**Phase 1: Kotlin Scanner (testable)** ✅ COMPLETE
+```
+lang/lsp-server/src/main/kotlin/org/xvm/lsp/lexer/
+├── TemplateScanner.kt          # Stateless scanner for template strings
+├── TemplateScannerState.kt     # Immutable state (position, depth, mode)
+└── TemplateScannerToken.kt     # Token boundaries (start, end, type)
+```
+
+30 unit tests covering:
+- Simple template strings with/without expressions
+- Nested braces and lambdas in expressions
+- Escape sequences (`\{`, `\\`, `\"`, etc.)
+- Multiline templates with `|` continuation
+- Error handling (unterminated strings, unclosed expressions)
+- Thread safety and immutability
+
+**Phase 2: C External Scanner (for tree-sitter)** - TODO
+```
+lang/dsl/build/generated/
+├── grammar.js              # Updated with externals array
+└── src/scanner.c           # Ported from Kotlin logic
+```
+
+### Scanner Requirements
+
+The scanner only needs to identify **token boundaries** within template strings:
+
+| Token Type | Example | Purpose |
+|------------|---------|---------|
+| `TEMPLATE_START` | `$"` | Start of template literal |
+| `TEMPLATE_CONTENT` | `Hello ` | String content between expressions |
+| `TEMPLATE_EXPR_START` | `{` | Start of embedded expression |
+| `TEMPLATE_EXPR_END` | `}` | End of embedded expression |
+| `TEMPLATE_END` | `"` | End of template literal |
+
+Tree-sitter's grammar then parses the expression content using existing rules.
+
+### State Machine
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         NORMAL                                   │
+│   (tree-sitter handles everything except template strings)       │
+└─────────────────────┬───────────────────────────────────────────┘
+                      │ sees $"
+                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    IN_TEMPLATE_STRING                            │
+│   - Emit TEMPLATE_CONTENT for string chars                       │
+│   - Handle escape sequences (\{, \\, \n, etc.)                   │
+│   - On { → push state, emit TEMPLATE_EXPR_START                  │
+│   - On " → emit TEMPLATE_END, return to NORMAL                   │
+└─────────────────────┬───────────────────────────────────────────┘
+                      │ sees {
+                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    IN_EXPRESSION (depth=1)                       │
+│   - Track brace depth                                            │
+│   - Handle nested strings (don't count their braces)             │
+│   - On { → depth++                                               │
+│   - On } → depth--; if depth==0, emit TEMPLATE_EXPR_END          │
+│   - Return to IN_TEMPLATE_STRING when expression ends            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Design Principles
+
+1. **Stateless/Immutable**: Scanner functions take `(source: String, state: ScannerState)` and return `(token: ScannerToken, newState: ScannerState)`. Thread-safe, testable, no side effects.
+
+2. **Only Lexer, Not Parser**: We only identify token boundaries. Tree-sitter's grammar handles parsing the expressions.
+
+3. **Reference: `Lexer.java`**: The authoritative implementation is `eatTemplateExpression()` in `javatools/src/main/java/org/xvm/compiler/Lexer.java:342`. Our Kotlin scanner must match its behavior.
+
+### Future: Full XTC Lexer Integration
+
+A future enhancement could port the entire XTC lexer to Kotlin with clean, stateless semantics:
+
+**Benefits of full lexer port:**
+- Single source of truth for all token definitions
+- Handles edge cases: multiline strings, complex numeric literals, nested comments
+- Reusable for syntax highlighting, code formatting, other tools
+- Future language changes easier to support
+
+**Architecture for full lexer:**
+```kotlin
+// Stateless, immutable, thread-safe
+data class LexerState(
+    val position: Int,
+    val line: Int,
+    val column: Int,
+    val mode: LexerMode  // NORMAL, IN_TEMPLATE, IN_EXPRESSION, etc.
+)
+
+interface XtcLexer {
+    fun nextToken(source: CharSequence, state: LexerState): Pair<Token, LexerState>
+}
+```
+
+This would be a larger undertaking but provides a clean foundation for all lexer-dependent features.
+
+---
 
 #### Lower Priority
 
