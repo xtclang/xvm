@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import java.lang.classfile.ClassFile;
+import java.lang.classfile.ClassHierarchyResolver;
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.Interfaces;
 import java.lang.classfile.Superclass;
@@ -165,9 +166,12 @@ public class NativeTypeSystem
      * Augment the existing native class with the Ecstasy methods.
      */
     private byte[] augmentNativeClass(ClassModel model, String className, TypeConstant type) {
-        Builder builder = ensureBuilder(type, model);
-
-        return ClassFile.of().transformClass(model, (classBuilder, element) -> {
+        ClassFile classFile = ClassFile.of(
+                ClassFile.ClassHierarchyResolverOption.of(
+                    ClassHierarchyResolver.ofClassLoading(loader)),
+                ClassFile.ShortJumpsOption.FIX_SHORT_JUMPS,
+                ClassFile.StackMapsOption.GENERATE_STACK_MAPS);
+        return classFile.transformClass(model, (classBuilder, element) -> {
             if (element instanceof Interfaces) {
                 // don't copy an interface list; it would prevent the builder to add any;
                 // NOTE: any "implements" declared by the native classes will be removed
@@ -181,7 +185,7 @@ public class NativeTypeSystem
 
             if (element instanceof Superclass) {
                 // augment the new classfile using the Ecstasy class structure (just once!)
-                builder.assembleImpl(className, classBuilder);
+                ensureBuilder(type, model).assembleImpl(className, classBuilder);
             }
         });
     }

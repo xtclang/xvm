@@ -1186,6 +1186,10 @@ public class BuildContext {
                 case Widened:
                     // nothing to do
                     break AddTransformation;
+
+                default:
+                    invalid = true;
+                    break AddTransformation;
                 }
 
             case NullablePrimitive:
