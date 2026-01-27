@@ -1,10 +1,13 @@
 # XTC Language Tooling
 
-Language tooling for the Ecstasy/XTC programming language, including LSP server, IDE plugins, and editor support.
+Language tooling for the Ecstasy/XTC programming language, including LSP server, IDE plugins, 
+and editor support.
 
 ## Status: Alpha
 
-> **Note:** This code is currently in **alpha status** and is **unsupported**. It is under active development with the goal of reaching beta quality. You are welcome to evaluate and test it, but please be aware that:
+> **Note:** This code is currently in **alpha status** and is **unsupported**. It is under 
+> active development with the goal of reaching beta quality. You are welcome to evaluate 
+> and test it, but please be aware that:
 >
 > - APIs and functionality may change without notice
 > - Some features may be incomplete or unstable

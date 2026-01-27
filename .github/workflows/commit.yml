@@ -56,9 +56,11 @@ on:
                 default: true
 
 env:
-    # Add manual tests as an included build to the composite build configuration
+    # Add manual tests and lang as included builds in the composite build configuration
     ORG_GRADLE_PROJECT_includeBuildManualTests: true
     ORG_GRADLE_PROJECT_includeBuildAttachManualTests: true
+    ORG_GRADLE_PROJECT_includeBuildLang: true
+    ORG_GRADLE_PROJECT_includeBuildAttachLang: true
     ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
 
     skip_manual_tests: ${{ github.event.inputs.skip-tests == true || github.event.inputs.skip-tests == 'true' }}
