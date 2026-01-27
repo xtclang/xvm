@@ -1,17 +1,23 @@
 package org.xvm.util;
 
-import java.util.Objects;
+import org.jetbrains.annotations.NotNull;
+
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.function.Supplier;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Guava-style lazy value holders for thread-safe deferred initialization.
  * Use these instead of "if (field == null) { field = compute(); }" patterns.
  *
- * <p>This class provides a richer API than {@link Suppliers#memoize} with additional
- * methods like {@link #isComputed()}, {@link #orElse}, and {@link #map}. For a
- * simpler API that just returns {@code Supplier<T>}, use {@link Suppliers}.
+ * <p>Since {@code Lazy<T>} implements {@code Supplier<T>}, it can be used anywhere
+ * a supplier is expected. Additional methods like {@link #isComputed()}, {@link #orElse},
+ * and {@link #map} provide a richer API for working with lazy values.
  *
  * <h3>Real-world example from ClassStructure.collectAnnotations():</h3>
  * <pre>{@code
@@ -55,7 +61,6 @@ import java.util.function.Supplier;
  * }</pre>
  *
  * @param <T> the type of the lazily computed value
- * @see Suppliers#memoize for a simpler memoizing supplier
  */
 public abstract class Lazy<T> implements Supplier<T> {
 
@@ -79,6 +84,7 @@ public abstract class Lazy<T> implements Supplier<T> {
      * @param <T> the type of the value
      * @return a lazy holder for the value
      */
+    @SuppressWarnings("unused")
     public static <T> Lazy<T> ofUnsynchronized(Supplier<T> supplier) {
         return new UnsynchronizedLazy<>(supplier);
     }
@@ -90,6 +96,7 @@ public abstract class Lazy<T> implements Supplier<T> {
      * @param <T> the type of the value
      * @return a lazy holder containing the value
      */
+    @SuppressWarnings("unused")
     public static <T> Lazy<T> ofValue(T value) {
         return new Resolved<>(value);
     }
@@ -130,8 +137,9 @@ public abstract class Lazy<T> implements Supplier<T> {
      * @param <T> the type of the value
      * @return a lazy holder for the Optional value
      */
+    @SuppressWarnings("unused") // TODO: Will be used in compiler
     public static <T> Lazy<Optional<T>> ofNullable(Supplier<T> supplier) {
-        Objects.requireNonNull(supplier, "supplier");
+        requireNonNull(supplier, "supplier");
         return of(() -> Optional.ofNullable(supplier.get()));
     }
 
@@ -143,12 +151,50 @@ public abstract class Lazy<T> implements Supplier<T> {
      * @param <T> the type of the value inside the Optional
      * @return a lazy holder for the Optional value
      */
+    @SuppressWarnings("unused") // TODO: Will be used in the compiler
     public static <T> Lazy<Optional<T>> ofOptional(Supplier<Optional<T>> supplier) {
-        Objects.requireNonNull(supplier, "supplier");
-        return of(() -> {
-            Optional<T> result = supplier.get();
-            return result != null ? result : Optional.empty();
-        });
+        return of(requireNonNull(supplier, "supplier"));
+    }
+
+    /**
+     * Creates a supplier that caches the result for a specified duration.
+     * After the duration expires, the next call will recompute the value.
+     *
+     * <p>This is useful for values that should be refreshed periodically,
+     * such as configuration or external resource state.
+     *
+     * <p>Note: This returns a {@code Supplier<T>} rather than {@code Lazy<T>}
+     * because the value can be recomputed multiple times.
+     *
+     * @param supplier the supplier whose result should be cached
+     * @param duration the length of time to cache
+     * @param unit the time unit of the duration
+     * @param <T> the type of the supplied value
+     * @return a time-limited memoizing supplier
+     */
+    @SuppressWarnings("unused") // TODO: Will be used in the compiler
+    public static <T> Supplier<T> ofExpiring(Supplier<T> supplier, long duration, TimeUnit unit) {
+        if (duration <= 0) {
+            throw new IllegalArgumentException("duration must be positive: " + duration);
+        }
+        return new ExpiringSupplier<>(
+                requireNonNull(supplier, "supplier"),
+                requireNonNull(unit, "unit").toNanos(duration));
+    }
+
+    /**
+     * Synchronizes access to the given supplier, ensuring that only one thread
+     * can call {@link Supplier#get()} at a time.
+     *
+     * <p>Note: This does NOT memoize the result. Use {@link #of} for caching.
+     *
+     * @param supplier the supplier to synchronize
+     * @param <T> the type of the supplied value
+     * @return a synchronized supplier
+     */
+    @SuppressWarnings("unused") // TODO: Will be used in the compiler
+    public static <T> Supplier<T> synchronizedSupplier(Supplier<T> supplier) {
+        return new SynchronizedSupplier<>(requireNonNull(supplier, "supplier"));
     }
 
     /**
@@ -183,7 +229,7 @@ public abstract class Lazy<T> implements Supplier<T> {
      * @param <U> the result type
      * @return a new Lazy that maps this value
      */
-    public <U> Lazy<U> map(java.util.function.Function<? super T, ? extends U> mapper) {
+    public <U> Lazy<U> map(Function<? super T, ? extends U> mapper) {
         return of(() -> mapper.apply(get()));
     }
 
@@ -201,24 +247,26 @@ public abstract class Lazy<T> implements Supplier<T> {
         private volatile Supplier<T> supplier;
 
         ThreadSafeLazy(Supplier<T> supplier) {
-            this.supplier = Objects.requireNonNull(supplier, "supplier");
+            this.supplier = requireNonNull(supplier, "supplier");
         }
 
         @Override
         @SuppressWarnings("unchecked")
         public T get() {
             Object value = valueRef.get();
-            if (value == UNSET) {
-                synchronized (this) {
-                    value = valueRef.get();
-                    if (value == UNSET) {
-                        value = supplier.get();
-                        valueRef.set(value);
-                        supplier = null; // Allow GC of the supplier
-                    }
-                }
+            if (value != UNSET) {
+                return (T) value;
             }
-            return (T) value;
+            synchronized (this) {
+                value = valueRef.get();
+                if (value != UNSET) {
+                    return (T) value;
+                }
+                value = supplier.get();
+                valueRef.set(value);
+                supplier = null; // Allow GC of the supplier
+                return (T) value;
+            }
         }
 
         @Override
@@ -237,7 +285,7 @@ public abstract class Lazy<T> implements Supplier<T> {
         private boolean computed;
 
         UnsynchronizedLazy(Supplier<T> supplier) {
-            this.supplier = Objects.requireNonNull(supplier, "supplier");
+            this.supplier = requireNonNull(supplier, "supplier");
         }
 
         @Override
@@ -274,6 +322,62 @@ public abstract class Lazy<T> implements Supplier<T> {
         @Override
         public boolean isComputed() {
             return true;
+        }
+    }
+
+    /**
+     * Memoizing supplier with time-based expiration.
+     */
+    private static final class ExpiringSupplier<T> implements Supplier<T> {
+        private final Supplier<T> delegate;
+        private final long durationNanos;
+        private final AtomicReference<T> value = new AtomicReference<>();
+        private final AtomicLong expirationNanos = new AtomicLong();
+
+        ExpiringSupplier(Supplier<T> delegate, long durationNanos) {
+            this.delegate = delegate;
+            this.durationNanos = durationNanos;
+        }
+
+        @Override
+        public T get() {
+            long now = System.nanoTime();
+            long expiration = expirationNanos.get();
+
+            if (expiration != 0 && now < expiration) {
+                return value.get();
+            }
+            synchronized (this) {
+                expiration = expirationNanos.get();
+                if (expiration != 0 && now < expiration) {
+                    return value.get();
+                }
+                T newValue = delegate.get();
+                value.set(newValue);
+                // NOTE: Set expiration post value to avoid other threads seeing new expiration with old value.
+                expirationNanos.set(now + durationNanos);
+                return newValue;
+            }
+        }
+
+        @Override
+        public String toString() {
+            return "Lazy.ofExpiring(" + delegate + ", " + durationNanos + " ns)";
+        }
+    }
+
+    /**
+     * Simple synchronized wrapper around a supplier.
+     */
+    private record SynchronizedSupplier<T>(Supplier<T> delegate) implements Supplier<T> {
+        @Override
+        public synchronized T get() {
+            return delegate.get();
+        }
+
+        @Override
+        public @NotNull String toString() {
+            return "Lazy.synchronizedSupplier(" + delegate + ")";
         }
     }
 }

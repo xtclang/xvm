@@ -71,11 +71,11 @@ All generators read from this model. To modify the language:
 
 ### Layer Responsibilities
 
-| Layer | File | Role |
-|-------|------|------|
-| **Language Spec** | `XtcLanguage.kt` | Defines ALL keywords, operators, types, precedence using the DSL |
-| **Data Model** | `LanguageModel.kt` | Data classes + DSL builders that XtcLanguage.kt uses |
-| **Generators** | `*Generator.kt` | Transform LanguageModel → editor-specific files |
+| Layer             | File               | Role                                                             |
+|-------------------|--------------------|------------------------------------------------------------------|
+| **Language Spec** | `XtcLanguage.kt`   | Defines ALL keywords, operators, types, precedence using the DSL |
+| **Data Model**    | `LanguageModel.kt` | Data classes + DSL builders that XtcLanguage.kt uses             |
+| **Generators**    | `*Generator.kt`    | Transform LanguageModel → editor-specific files                  |
 
 ### Dependency Direction
 
@@ -141,27 +141,27 @@ VimGenerator(xtcLanguage).generate()  // → "syn keyword xtcControl if else for
 
 ## Files in This Directory
 
-| File | Purpose |
-|------|---------|
-| `XtcLanguage.kt` | **The source of truth** - Complete language model definition |
-| `LspServerGenerator.kt` | Generates LSP server implementation (Java) |
-| `VSCodeExtensionGenerator.kt` | Generates VS Code extension files |
-| `EclipseGenerator.kt` | Generates Eclipse plugin components |
-| `IntellijGenerator.kt` | Generates IntelliJ IDEA plugin components |
-| `TextMateGenerator.kt` | Generates TextMate grammar (used by VS Code, Sublime, etc.) |
-| `TreeSitterGenerator.kt` | Generates Tree-sitter grammar (used by Zed, Neovim, GitHub) |
-| `AdditionalGenerators.kt` | Vim, Emacs, Monaco editor support |
+| File                          | Purpose                                                      |
+|-------------------------------|--------------------------------------------------------------|
+| `XtcLanguage.kt`              | **The source of truth** - Complete language model definition |
+| `LspServerGenerator.kt`       | Generates LSP server implementation (Java)                   |
+| `VSCodeExtensionGenerator.kt` | Generates VS Code extension files                            |
+| `EclipseGenerator.kt`         | Generates Eclipse plugin components                          |
+| `IntellijGenerator.kt`        | Generates IntelliJ IDEA plugin components                    |
+| `TextMateGenerator.kt`        | Generates TextMate grammar (used by VS Code, Sublime, etc.)  |
+| `TreeSitterGenerator.kt`      | Generates Tree-sitter grammar (used by Zed, Neovim, GitHub)  |
+| `AdditionalGenerators.kt`     | Vim, Emacs, Monaco editor support                            |
 
 ### Pre-Generated Files
 
-| File | Format | Used By |
-|------|--------|---------|
-| `xtc.tmLanguage.json` | TextMate Grammar | VS Code, Cursor, Sublime Text |
-| `highlights.scm` | Tree-sitter Queries | Zed, Neovim, Helix, GitHub |
-| `xtc.vim` | Vim Syntax | Vim, Neovim |
-| `xtc-mode.el` | Emacs Lisp | Emacs |
-| `xtc.ts` | TypeScript/Monarch | Monaco Editor, VS Code Web |
-| `language-configuration.json` | VS Code Config | VS Code, Cursor |
+| File                          | Format              | Used By                       |
+|-------------------------------|---------------------|-------------------------------|
+| `xtc.tmLanguage.json`         | TextMate Grammar    | VS Code, Cursor, Sublime Text |
+| `highlights.scm`              | Tree-sitter Queries | Zed, Neovim, Helix, GitHub    |
+| `xtc.vim`                     | Vim Syntax          | Vim, Neovim                   |
+| `xtc-mode.el`                 | Emacs Lisp          | Emacs                         |
+| `xtc.ts`                      | TypeScript/Monarch  | Monaco Editor, VS Code Web    |
+| `language-configuration.json` | VS Code Config      | VS Code, Cursor               |
 
 ---
 
@@ -169,7 +169,7 @@ VimGenerator(xtcLanguage).generate()  // → "syn keyword xtcControl if else for
 
 The language model captures everything about Ecstasy's syntax:
 
-```kotlin
+```code
 val XtcLanguage = language(
     name = "Ecstasy",
     fileExtensions = listOf("x", "xtc"),
@@ -232,7 +232,7 @@ vscode-xtc/
 
 The generated TypeScript connects VS Code to the LSP server:
 
-```typescript
+```code
 import * as path from 'path';
 import { workspace, ExtensionContext } from 'vscode';
 import {
@@ -336,7 +336,7 @@ org.xtclang.eclipse/
 
 Eclipse supports LSP via LSP4E. The generator creates a connection provider:
 
-```java
+```code
 package org.xtclang.eclipse.lsp;
 
 import org.eclipse.lsp4e.server.ProcessStreamConnectionProvider;
@@ -407,7 +407,7 @@ public class XtcLanguageServerConnectionProvider extends ProcessStreamConnection
 
 While LSP provides semantic tokens, the generator also creates a fast rule-based scanner for immediate feedback:
 
-```java
+```code
 // Generated from XtcLanguage model - see EclipseGenerator.kt
 public class EcstasyCodeScanner extends RuleBasedScanner {
 
@@ -541,7 +541,7 @@ WHITESPACE = [ \t\r\n]+
 
 IntelliJ supports LSP via the LSP4IJ plugin (since 2023.2+):
 
-```kotlin
+```code
 // LSP Server Descriptor
 package org.xtclang.intellij.lsp
 
@@ -595,7 +595,7 @@ class EcstasyServerConnectionProvider : ProcessStreamConnectionProvider() {
 
 ### plugin.xml Registration
 
-```xml
+```code
 <idea-plugin>
     <id>org.xtclang.intellij</id>
     <name>Ecstasy Language Support</name>
@@ -655,14 +655,14 @@ All three IDEs connect to the same LSP server, which lives in `lang/src/main/jav
 
 ### Key Components
 
-| File | Purpose |
-|------|---------|
-| `XtcLanguageServer.java` | Main server implementing LSP protocol |
+| File                          | Purpose                                          |
+|-------------------------------|--------------------------------------------------|
+| `XtcLanguageServer.java`      | Main server implementing LSP protocol            |
 | `XtcTextDocumentService.java` | Handles document operations (open, change, save) |
-| `XtcWorkspaceService.java` | Handles workspace operations |
-| `XtcCompilerAdapter.java` | Interface to actual XTC compiler |
-| `XtcDiagnosticProvider.java` | Produces error/warning diagnostics |
-| `XtcCompletionProvider.java` | Provides code completion suggestions |
+| `XtcWorkspaceService.java`    | Handles workspace operations                     |
+| `XtcCompilerAdapter.java`     | Interface to actual XTC compiler                 |
+| `XtcDiagnosticProvider.java`  | Produces error/warning diagnostics               |
+| `XtcCompletionProvider.java`  | Provides code completion suggestions             |
 
 ### LSP Capabilities Provided
 
@@ -685,7 +685,7 @@ All three IDEs connect to the same LSP server, which lives in `lang/src/main/jav
 
 ### 1. Build Configuration
 
-```kotlin
+```code
 // lang/build.gradle.kts
 plugins {
     java
@@ -713,7 +713,7 @@ kotlin {
 
 ### 2. Generation Tasks
 
-```kotlin
+```code
 // lang/build.gradle.kts
 
 val generateVSCodeExtension by tasks.registering {
@@ -766,18 +766,18 @@ val generateAll by tasks.registering {
 
 ## The Power of This Approach
 
-| Traditional Approach | Model-Driven Approach |
-|---------------------|----------------------|
-| Write TextMate grammar manually | Define model once |
-| Write Eclipse scanner manually | Generate TextMate from model |
-| Write IntelliJ lexer manually | Generate Eclipse from model |
-| Write Vim syntax manually | Generate IntelliJ from model |
-| Update each file when language changes | Generate Vim from model |
-| 5x maintenance burden | Re-generate all from updated model |
+| Traditional Approach                   | Model-Driven Approach              |
+|----------------------------------------|------------------------------------|
+| Write TextMate grammar manually        | Define model once                  |
+| Write Eclipse scanner manually         | Generate TextMate from model       |
+| Write IntelliJ lexer manually          | Generate Eclipse from model        |
+| Write Vim syntax manually              | Generate IntelliJ from model       |
+| Update each file when language changes | Generate Vim from model            |
+| 5x maintenance burden                  | Re-generate all from updated model |
 
 ### Adding a New Keyword
 
-```kotlin
+```code
 // 1. Add to XtcLanguage.kt
 keywords(
     "module", "class", "interface", ...,
@@ -883,16 +883,16 @@ performance and complexity.
 
 A lexer (tokenizer) breaks source code into tokens but doesn't understand structure. Use **lexer-only** when you need:
 
-| Scenario | Use Case | Why Lexer is Sufficient |
-|----------|----------|------------------------|
-| **Basic Syntax Highlighting** | TextMate, JFlex, Sublime | Coloring keywords, strings, comments doesn't need AST |
-| **Bracket Matching** | All editors | `{` matches `}` - just token pairs, no tree needed |
-| **Comment Extraction** | Documentation generators | Find all `//` and `/* */` tokens |
-| **String Extraction (i18n)** | Internationalization tools | Find all `"..."` tokens for translation |
-| **Code Formatting (Simple)** | Indentation based on braces | Count `{` and `}` tokens to determine indent level |
-| **Error Recovery Display** | Show where parsing failed | Lexer continues tokenizing even with syntax errors |
-| **Token Counting** | Code metrics (LOC, comments ratio) | Count token types without structure |
-| **Fast Navigation** | Jump to next/prev keyword | Token stream is enough |
+| Scenario                      | Use Case                           | Why Lexer is Sufficient                               |
+|-------------------------------|------------------------------------|-------------------------------------------------------|
+| **Basic Syntax Highlighting** | TextMate, JFlex, Sublime           | Coloring keywords, strings, comments doesn't need AST |
+| **Bracket Matching**          | All editors                        | `{` matches `}` - just token pairs, no tree needed    |
+| **Comment Extraction**        | Documentation generators           | Find all `//` and `/* */` tokens                      |
+| **String Extraction (i18n)**  | Internationalization tools         | Find all `"..."` tokens for translation               |
+| **Code Formatting (Simple)**  | Indentation based on braces        | Count `{` and `}` tokens to determine indent level    |
+| **Error Recovery Display**    | Show where parsing failed          | Lexer continues tokenizing even with syntax errors    |
+| **Token Counting**            | Code metrics (LOC, comments ratio) | Count token types without structure                   |
+| **Fast Navigation**           | Jump to next/prev keyword          | Token stream is enough                                |
 
 **Example: IntelliJ Syntax Highlighter**
 ```java
@@ -919,17 +919,17 @@ public class EcstasySyntaxHighlighter extends SyntaxHighlighterBase {
 A parser consumes tokens to build an AST (Abstract Syntax Tree). Use **parser with AST** when you need to understand
 code structure:
 
-| Scenario | Use Case | Why Parser is Required |
-|----------|----------|----------------------|
-| **Go-to-Definition** | Navigate to declarations | Must resolve names through scope hierarchy |
-| **Find References** | Find all usages | Must match symbol definitions to usages |
-| **Code Completion** | Context-aware suggestions | Need to know: Am I in a class? Method? What's in scope? |
-| **Refactoring** | Rename, Extract Method | Must understand what is being renamed and all its usages |
-| **Type Checking** | Error diagnostics | Must resolve types through the AST |
-| **Semantic Highlighting** | Color by meaning, not syntax | `foo` could be variable, parameter, or type - need context |
-| **Code Folding** | Collapse regions | Need to identify class/method/block boundaries |
-| **Outline View** | Symbol tree in sidebar | Requires AST to show class→method→field hierarchy |
-| **Quick Fixes** | "Add import", "Implement method" | Must understand what's missing from AST |
+| Scenario                  | Use Case                         | Why Parser is Required                                     |
+|---------------------------|----------------------------------|------------------------------------------------------------|
+| **Go-to-Definition**      | Navigate to declarations         | Must resolve names through scope hierarchy                 |
+| **Find References**       | Find all usages                  | Must match symbol definitions to usages                    |
+| **Code Completion**       | Context-aware suggestions        | Need to know: Am I in a class? Method? What's in scope?    |
+| **Refactoring**           | Rename, Extract Method           | Must understand what is being renamed and all its usages   |
+| **Type Checking**         | Error diagnostics                | Must resolve types through the AST                         |
+| **Semantic Highlighting** | Color by meaning, not syntax     | `foo` could be variable, parameter, or type - need context |
+| **Code Folding**          | Collapse regions                 | Need to identify class/method/block boundaries             |
+| **Outline View**          | Symbol tree in sidebar           | Requires AST to show class→method→field hierarchy          |
+| **Quick Fixes**           | "Add import", "Implement method" | Must understand what's missing from AST                    |
 
 **Example: LSP Document Symbols**
 ```java
@@ -998,15 +998,15 @@ connects.
 3. **Performance**: Lexer-based highlighting handles rapid keystrokes smoothly. Semantic tokens are updated less
 frequently.
 
-4. **Incremental Parsing**: Some systems use incremental parsing - re-lex and re-parse only changed regions.
+4. **Incremental Parsing**: Some systems use incremental parsing - re-lex and reparse only changed regions.
 
 ### Performance Trade-offs
 
-| Approach | Speed | Accuracy | Use When |
-|----------|-------|----------|----------|
-| **Lexer Only** | ⚡ Instant | 🔶 Token-level | Syntax highlighting, bracket matching |
-| **Lexer + Shallow Parse** | ⚡ Fast | 🔷 Structure-level | Outline, folding, basic navigation |
-| **Full Parse + Type Resolution** | 🐌 Slower | ✅ Semantic | Go-to-def, completion, refactoring |
+| Approach                         | Speed     | Accuracy           | Use When                              |
+|----------------------------------|-----------|--------------------|---------------------------------------|
+| **Lexer Only**                   | ⚡ Instant | 🔶 Token-level     | Syntax highlighting, bracket matching |
+| **Lexer + Shallow Parse**        | ⚡ Fast    | 🔷 Structure-level | Outline, folding, basic navigation    |
+| **Full Parse + Type Resolution** | 🐌 Slower | ✅ Semantic         | Go-to-def, completion, refactoring    |
 
 ### Practical Example: Highlighting `class`
 
@@ -1019,26 +1019,26 @@ class Foo {           // `class` = keyword (lexer knows)
 }
 ```
 
-| Layer | What it sees | Result |
-|-------|-------------|--------|
-| **Lexer** | Token `class` at position 0 | Color: keyword blue |
-| **Lexer** | Token `Class` (identifier) | Color: default |
-| **Parser** | `Class` is a type reference | Color: type teal |
+| Layer        | What it sees                        | Result                                |
+|--------------|-------------------------------------|---------------------------------------|
+| **Lexer**    | Token `class` at position 0         | Color: keyword blue                   |
+| **Lexer**    | Token `Class` (identifier)          | Color: default                        |
+| **Parser**   | `Class` is a type reference         | Color: type teal                      |
 | **Semantic** | `Foo` resolves to class declaration | Color: class teal, link to definition |
 
 ---
 
 ## Summary
 
-| Component | Source | Outputs |
-|-----------|--------|---------|
-| **XtcLanguage.kt** | Language model definition | - |
-| **LspServerGenerator** | Model | LSP server (Java) |
-| **VSCodeExtensionGenerator** | Model | package.json, extension.ts, snippets |
-| **TextMateGenerator** | Model | xtc.tmLanguage.json |
-| **EclipseGenerator** | Model | plugin.xml, CodeScanner.java |
-| **IntellijGenerator** | Model | plugin.xml, JFlex lexer, TokenTypes |
-| **TreeSitterGenerator** | Model | grammar.js, highlights.scm |
-| **AdditionalGenerators** | Model | Vim, Emacs, Monaco |
+| Component                    | Source                    | Outputs                              |
+|------------------------------|---------------------------|--------------------------------------|
+| **XtcLanguage.kt**           | Language model definition | -                                    |
+| **LspServerGenerator**       | Model                     | LSP server (Java)                    |
+| **VSCodeExtensionGenerator** | Model                     | package.json, extension.ts, snippets |
+| **TextMateGenerator**        | Model                     | xtc.tmLanguage.json                  |
+| **EclipseGenerator**         | Model                     | plugin.xml, CodeScanner.java         |
+| **IntellijGenerator**        | Model                     | plugin.xml, JFlex lexer, TokenTypes  |
+| **TreeSitterGenerator**      | Model                     | grammar.js, highlights.scm           |
+| **AdditionalGenerators**     | Model                     | Vim, Emacs, Monaco                   |
 
 **Result**: One source of truth, consistent support across all editors, minimal maintenance.
