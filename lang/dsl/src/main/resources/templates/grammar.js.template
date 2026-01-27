@@ -27,7 +27,11 @@ module.exports = grammar({
     // The parser resolves these by preferring the higher precedence rule
     conflicts: $ => [
         [$.binary_expression, $.unary_expression, $.call_expression],
+        [$.binary_expression, $.unary_expression, $.call_expression, $.async_call_expression],
+        [$.binary_expression, $.unary_expression, $.async_call_expression],
         [$.binary_expression, $.call_expression],
+        [$.binary_expression, $.call_expression, $.async_call_expression],
+        [$.binary_expression, $.async_call_expression],
         [$.list_literal, $.map_literal],
         [$.array_type, $.conditional_type],
         [$.nullable_type, $.conditional_type],
@@ -94,6 +98,10 @@ module.exports = grammar({
         [$.function_type_parameters, $.tuple_type],
         [$.tuple_type_element, $.parameter],
         [$.tuple_type_element, $.type_expression],
+        [$.tuple_type_element, $.parenthesized_type],
+        [$.tuple_type_element, $.parameter, $.tuple_assignment_element],
+        [$.tuple_type_element, $.parameter, $.conditional_tuple_pattern],
+        [$.tuple_type_element, $.parameter, $.for_tuple_destructure],
         [$.conditional_type, $.function_type],
         [$.conditional_type, $.named_function_type],
         [$.parameter, $.named_function_type],
@@ -301,10 +309,12 @@ module.exports = grammar({
 
         enum_values: $ => seq($.enum_value, repeat(seq(',', $.enum_value)), optional(',')),
 
-        // Enum values can have doc comments, arguments, and/or a body with methods
+        // Enum values can have doc comments, type arguments, regular arguments, and/or a body
+        // Example: Colon<Object>(":") or EnumName<Type>(arg1, arg2) { body }
         enum_value: $ => seq(
             optional($.doc_comment),
             $.identifier,
+            optional($.type_arguments),
             optional($.arguments),
             optional($.enum_value_body),
         ),
@@ -497,7 +507,8 @@ module.exports = grammar({
         named_function_type: $ => seq('function', optional('conditional'), $._non_bi_type, $.identifier, $.function_type_parameters),
         // Tuple type can be unnamed (Type1, Type2) or named (Type1 name1, Type2 name2)
         tuple_type: $ => seq('(', commaSep($.tuple_type_element), ')'),
-        tuple_type_element: $ => seq($._non_bi_type, optional($.identifier)),
+        // Tuple type element can have union/intersection types: (Id id, IntLiteral|FPLiteral value)
+        tuple_type_element: $ => seq($.type_expression, optional($.identifier)),
 
         // Statements
         block: $ => seq('{', repeat($._statement), '}'),
@@ -725,16 +736,22 @@ module.exports = grammar({
         // Case clause for switch statements (can contain statements)
         // prec(5) ensures the ':' is consumed by case_clause, not by typed_literal (prec(2))
         // when the case pattern contains a generic type like 'case List<String>:'
+        // Supports fall-through cases: case 'A': case 'B': statements...
         case_clause: $ => prec(5, seq(
-            choice(seq('case', $.case_pattern), 'default'),
+            choice(
+                seq(repeat(seq('case', $.case_pattern, ':')), choice(seq('case', $.case_pattern), 'default')),
+            ),
             ':',
             repeat($._statement),
         )),
 
         // Expression case clause for switch expressions (returns value with semicolon)
         // prec(5) ensures the ':' is consumed by the clause, not by typed_literal (prec(2))
+        // Supports fall-through cases: case 'A': case 'B': value;
         expression_case_clause: $ => prec(5, seq(
-            choice(seq('case', $.case_pattern), 'default'),
+            choice(
+                seq(repeat(seq('case', $.case_pattern, ':')), choice(seq('case', $.case_pattern), 'default')),
+            ),
             ':',
             $._expression,
             ';',
@@ -839,6 +856,7 @@ module.exports = grammar({
             $.unary_expression,
             $.postfix_expression,
             $.call_expression,
+            $.async_call_expression,
             $.member_expression,
             $.index_expression,
             $.new_expression,
@@ -860,6 +878,8 @@ module.exports = grammar({
             alias('var', $.identifier),
             alias('val', $.identifier),
             $._literal,
+            // Wildcard _ used as expression for partial function application
+            $.wildcard,
         ),
 
         // Assignment expression - operators from model
@@ -885,7 +905,11 @@ module.exports = grammar({
         postfix_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_1}}, seq($._expression, choice({{POSTFIX_OPS}}, '?'))),
 
         // Member access
+        // Call expression: regular call expr(args) or async call expr^(args)
+        // Async call uses ^( as a single token (ASYNC_PAREN in lexer)
         call_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_2}}, seq($._expression, optional($.type_arguments), $.arguments)),
+        async_call_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_2}}, seq($._expression, optional($.type_arguments), $.async_arguments)),
+        async_arguments: $ => seq('^(', commaSep(choice($.named_argument, $._expression, $.type_expression)), ')'),
         // Member expression supports:
         // - Regular: expr.name
         // - Reference: expr.&name (no-dereference property access)
