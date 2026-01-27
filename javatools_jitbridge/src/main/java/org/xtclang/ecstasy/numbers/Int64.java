@@ -3,6 +3,7 @@ package org.xtclang.ecstasy.numbers;
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.nConst;
 import org.xtclang.ecstasy.OutOfBounds;
+import org.xtclang.ecstasy.nType;
 
 import org.xtclang.ecstasy.text.String;
 
@@ -265,6 +266,27 @@ public class Int64 extends nConst {
         }
         return new UInt128($value, $value >= 0L ? 0L : -1L);
     }
+
+    // ----- Orderable interface -------------------------------------------------------------------
+
+    /**
+     * The primitive implementation of:
+     *
+     *  static <CompileType extends Orderable> CompileType maxOf(CompileType value1, CompileType value2)
+     */
+    public static long maxOf$p(Ctx ctx, nType type, long value1, long value2) {
+        return Math.max(value1, value2);
+    }
+
+    /**
+     * The primitive implementation of:
+     *
+     *  static <CompileType extends Orderable> CompileType notLessThan(CompileType value1, CompileType value2)
+     */
+    public static long notLessThan$p(Ctx ctx, nType type, long value1, long value2) {
+        return Math.max(value1, value2);
+    }
+
 
     // ----- debugging support ---------------------------------------------------------------------
 

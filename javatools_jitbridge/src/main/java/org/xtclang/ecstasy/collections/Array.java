@@ -274,6 +274,10 @@ public abstract class Array
     }
 
     /**
+     * Native implementation of:
+     *
+     *   Boolean empty;
+     *
      * @return `true` iff the array contains no elements
      */
     public boolean empty$get$p(Ctx ctx) {
@@ -282,6 +286,10 @@ public abstract class Array
     }
 
     /**
+     * Native implementation of:
+     *
+     *   Int size;
+     *
      * @return the length of the string in characters
      */
     public long size$get$p(Ctx ctx) {
@@ -290,6 +298,11 @@ public abstract class Array
     }
 
     /**
+     * Native implementation of:
+     *
+     *   Element getElement(Int index)
+     *
+     *
      * Obtain the element at the specified index.
      *
      * @param index the element index
@@ -301,6 +314,10 @@ public abstract class Array
     }
 
     /**
+     * Native implementation of:
+     *
+     *   void setElement(Int index, Element value)
+     *
      * Store the specified element value at the specified index.
      *
      * If the Array is immutable, this method must throw an exception without mutating the array.
@@ -313,6 +330,10 @@ public abstract class Array
     }
 
     /**
+     * Native implementation of:
+     *
+     *   Var<Element> elementAt(Int index)
+     *
      * Obtain the Var for the specified index in the array.
      *
      * @param index  the element index
@@ -325,7 +346,7 @@ public abstract class Array
     }
 
     /**
-     * Freeze:
+     * Native implementation of:
      *
      *   immutable Array freeze(Boolean inPlace = False)
      */
@@ -334,7 +355,7 @@ public abstract class Array
     }
 
     /**
-     * Make immutable:
+     * Native implementation of:
      *
      *   immutable Array makeImmutable()
      */
@@ -343,7 +364,7 @@ public abstract class Array
     }
 
     /**
-     * Add:
+     * Native implementation of:
      *
      *   Array add(Element element)
      */
@@ -352,15 +373,36 @@ public abstract class Array
     }
 
     /*
+     * Native implementation of:
      *
      *   Array addAll(Iterable<Element> values)
-     *   Array insert(Int index, Element value)
-     *   Array insertAll(Int index, Iterable<Element> values)
      *
      */
+    public Array addAll$p(Ctx ctx, long index, Iterable values) {
+        throw new UnsupportedOperationException("TODO");
+    }
 
     /**
-     * Insert:
+     * Native implementation of:
+     *
+     *    Array reversed(Boolean inPlace = False) {
+     */
+    public Array reversedꖛ0$p(Ctx ctx, boolean inPlace, boolean inPlace$dflt) {
+        throw new UnsupportedOperationException("TODO");
+    }
+
+
+    /**
+     * Native implementation of:
+     *
+     *   Array replace(Int index, Element value)
+     */
+    public Array replaceꖛ0$p(Ctx ctx, long index, nObj value) {
+        throw new UnsupportedOperationException("TODO");
+    }
+
+    /**
+     * Native implementation of:
      *
      *   Array insert(Int index, Element value)
      */
@@ -369,7 +411,16 @@ public abstract class Array
     }
 
     /**
-     * Delete:
+     * Native implementation of:
+     *
+     *   Array insertAll(Int index, Iterable<Element> values)
+     */
+    public Array insertAll$p(Ctx ctx, long index, Iterable values) {
+        throw new UnsupportedOperationException("TODO");
+    }
+
+    /**
+     * Native implementation of:
      *
      *   Array delete(Int index)
      */
@@ -378,7 +429,7 @@ public abstract class Array
     }
 
     /**
-     * Delete multi:
+     * Native implementation of:
      *
      *   Array deleteAll(Interval<Int> indexes)
      */
@@ -387,7 +438,7 @@ public abstract class Array
     }
 
     /**
-     * Clear the array:
+     * Native implementation of:
      *
      *   Array clear()
      */
@@ -396,9 +447,11 @@ public abstract class Array
     }
 
     /**
-     * Reify the array, i.e. make sure it's not a view of a different mutable array:
+     * Native implementation of:
      *
      *   Array! reify(Mutability? mutability = Null) {
+     *
+     * Reify the array, i.e. make sure it's not a view of a different mutable array:
      *
      * @param mutability
      *
@@ -409,6 +462,10 @@ public abstract class Array
     }
 
     /**
+     * Native implementation of:
+     *
+     *   Array slice(Range<Int> indexes)
+     *
      * Obtain a slice of this array.
      *
      * @param ctx    the XVM context
@@ -579,7 +636,7 @@ public abstract class Array
      */
     protected abstract void $delete(Ctx ctx, long index, long count);
 
-    private static interface ArrayDelegate {
+    public interface ArrayDelegate {
     }
 
     // ----- exception helpers ---------------------------------------------------------------------
