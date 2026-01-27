@@ -484,7 +484,12 @@ module.exports = grammar({
 
         // Generic type: Map<Key> or Map!<Key> (non-null generic)
         // The ! must come before type arguments: Name!<Args>, not Name<Args>!
-        generic_type: $ => seq($.type_name, optional(token.immediate('!')), $.type_arguments),
+        // Generic type: Type<Args> or Type!(no auto-narrow)<Args>
+        // Type with expression args: Iff("debug".defined) - for conditional types/annotations
+        generic_type: $ => choice(
+            seq($.type_name, optional(token.immediate('!')), $.type_arguments),
+            seq($.type_name, $.arguments),  // Type(expr) for conditional types like Iff
+        ),
         // Member type access: Type<Key>.MemberType or Package.TypeName
         // Used in typedef Type<Key>.Orderer as Orderer
         member_type: $ => prec.left(seq(choice($.generic_type, $.type_name), '.', $.identifier)),
