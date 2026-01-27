@@ -88,6 +88,7 @@ import org.xvm.util.TransientThreadLocal;
 
 
 import static org.xvm.javajit.Builder.CD_nObj;
+import static org.xvm.javajit.Builder.N_nRangeInt64;
 import static org.xvm.javajit.Builder.OPT;
 import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
@@ -6514,6 +6515,10 @@ public abstract class TypeConstant
                 // REVIEW CP: this is wrong
                 return Builder.N_nArrayObj;
             }
+        }
+
+        if (this.isA(pool.ensureRangeType(pool.typeInt64()))) {
+            return N_nRangeInt64;
         }
 
         if (id.equals(pool.clzClass())) {
