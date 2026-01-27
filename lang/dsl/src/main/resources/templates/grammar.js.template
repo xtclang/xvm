@@ -484,7 +484,12 @@ module.exports = grammar({
 
         // Generic type: Map<Key> or Map!<Key> (non-null generic)
         // The ! must come before type arguments: Name!<Args>, not Name<Args>!
-        generic_type: $ => seq($.type_name, optional(token.immediate('!')), $.type_arguments),
+        // Generic type: Type<Args> or Type!(no auto-narrow)<Args>
+        // Type with expression args: Iff("debug".defined) - for conditional types/annotations
+        generic_type: $ => choice(
+            seq($.type_name, optional(token.immediate('!')), $.type_arguments),
+            seq($.type_name, $.arguments),  // Type(expr) for conditional types like Iff
+        ),
         // Member type access: Type<Key>.MemberType or Package.TypeName
         // Used in typedef Type<Key>.Orderer as Orderer
         member_type: $ => prec.left(seq(choice($.generic_type, $.type_name), '.', $.identifier)),
@@ -1031,6 +1036,7 @@ module.exports = grammar({
             $.list_literal,
             $.map_literal,
             $.typed_literal,
+            $.file_literal,
         ),
 
         // Integer literals support magnitude suffixes: K, M, G, T, P, E, Z, Y (case insensitive)
@@ -1045,8 +1051,13 @@ module.exports = grammar({
 
         float_literal: $ => /[0-9][0-9_]*\.[0-9][0-9_]*([eE][+-]?[0-9]+)?/,
 
-        string_literal: $ => /"([^"\\]|\\.)*"/,
-        template_string_literal: $ => /\$"([^"\\]|\\.)*"/,
+        // File/resource literal: #path - embeds a file resource
+        // Examples: #./CharCats.dat, #../data/file.bin, #file.txt
+        file_literal: $ => /#\.{0,2}[/\w._-]+/,
+
+        // String literals with Unicode escapes: \\uXXXX and \\UXXXXXXXX
+        string_literal: $ => /"([^"\\]|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8}|\\.)*"/,
+        template_string_literal: $ => /\$"([^"\\]|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8}|\\.)*"/,
         // Multiline template literal: $|content on first line
         //                              | continuation line
         // The pattern captures $| followed by content, with optional continuation lines starting with |
@@ -1054,7 +1065,9 @@ module.exports = grammar({
         // Multiline plain literal: \|content on first line
         //                           | continuation line
         multiline_literal: $ => token(/\\\|[^\n]*(\\?\n[ \t]*\|[^\n]*)*/),
-        char_literal: $ => /'([^'\\]|\\.)'/,
+        // Character literal: 'c', '\\n', '\\u0000', '\\U00010000'
+        // Supports Unicode escapes: \\uXXXX (4 hex digits) and \\UXXXXXXXX (8 hex digits)
+        char_literal: $ => /'([^'\\]|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8}|\\.)'/,
 
 {{BOOLEAN_LITERAL_RULE}}
 {{NULL_LITERAL_RULE}}
