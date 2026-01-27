@@ -42,7 +42,7 @@ cd lang/dsl/build/generated
 - [x] Grammar validation passes (`./gradlew :lang:dsl:validateTreeSitterGrammar`)
 
 ### In Progress 🔄
-- **Grammar coverage: 568/692 XTC files parse successfully (82.1%)**
+- **Grammar coverage: 585/692 XTC files parse successfully (84.5%)**
 - Native library compilation for target platforms
 
 ### Grammar Support Status (2026-01-26)
@@ -149,6 +149,10 @@ The following features have been added to `TreeSitterGenerator.kt`:
 | Tuple union type elements | `(Id, IntLiteral\|FPLiteral)` | ✅ Union types in tuples |
 | Fall-through switch cases | `case 'A': case 'B': val;` | ✅ Multiple case labels |
 | Function variable declaration | `function Int sum(Int, Int) = lambda` | ✅ Named function type as var |
+| Safe call expression | `report?($"error")` | ✅ Null-safe invocation with `?(` |
+| Type expression arguments | `Iff("debug".defined)` | ✅ Conditional types |
+| File/resource literals | `#./CharCats.dat` | ✅ Embedded resources |
+| Unicode escapes | `'\u0000'`, `"\U00010000"` | ✅ In char/string literals |
 
 #### Still Needed (High Priority)
 
@@ -620,7 +624,10 @@ Files failing to parse typically use these advanced features (still being added)
 23. ✅ Implemented tuple union types, fall-through switch cases, function variable declarations
 24. ✅ Fixed ternary vs postfix `?` conflict
 25. ✅ Coverage improved from 80.2% to 82.1% (568/692)
-26. 🔄 Next: String interpolation `$"text {expr}"`
+26. ✅ Implemented safe call `?(`, types with expression args `Iff(expr)`, file literals `#./file.dat`
+27. ✅ Fixed Unicode escapes in char/string literals (`\uXXXX`, `\UXXXXXXXX`)
+28. ✅ Coverage improved from 82.1% to 84.5% (585/692)
+29. 🔄 Next: String interpolation `$"text {expr}"`
 
 ---
 
