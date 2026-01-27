@@ -1050,8 +1050,9 @@ module.exports = grammar({
 
         float_literal: $ => /[0-9][0-9_]*\.[0-9][0-9_]*([eE][+-]?[0-9]+)?/,
 
-        string_literal: $ => /"([^"\\]|\\.)*"/,
-        template_string_literal: $ => /\$"([^"\\]|\\.)*"/,
+        // String literals with Unicode escapes: \\uXXXX and \\UXXXXXXXX
+        string_literal: $ => /"([^"\\]|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8}|\\.)*"/,
+        template_string_literal: $ => /\$"([^"\\]|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8}|\\.)*"/,
         // Multiline template literal: $|content on first line
         //                              | continuation line
         // The pattern captures $| followed by content, with optional continuation lines starting with |
@@ -1059,7 +1060,9 @@ module.exports = grammar({
         // Multiline plain literal: \|content on first line
         //                           | continuation line
         multiline_literal: $ => token(/\\\|[^\n]*(\\?\n[ \t]*\|[^\n]*)*/),
-        char_literal: $ => /'([^'\\]|\\.)'/,
+        // Character literal: 'c', '\\n', '\\u0000', '\\U00010000'
+        // Supports Unicode escapes: \\uXXXX (4 hex digits) and \\UXXXXXXXX (8 hex digits)
+        char_literal: $ => /'([^'\\]|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8}|\\.)'/,
 
 {{BOOLEAN_LITERAL_RULE}}
 {{NULL_LITERAL_RULE}}
