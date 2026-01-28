@@ -14,11 +14,18 @@ intelligence, without requiring compiler modifications.
 
 ```bash
 # Generate, validate, and test grammar in one command
-./gradlew :lang:dsl:generateTreeSitter :lang:dsl:validateTreeSitterGrammar :lang:dsl:testTreeSitterParse
+# (dependencies are wired: testTreeSitterParse → validateTreeSitterGrammar
+#  → copyGrammarFiles → generateTreeSitter + generateScannerC)
+./gradlew :lang:tree-sitter:testTreeSitterParse
 
 # Test a specific file manually
-cd lang/dsl/build/generated
+cd lang/tree-sitter/build/generated
 ../tree-sitter-cli/tree-sitter parse /path/to/file.x
+
+# Run individual stages if needed
+./gradlew :lang:dsl:generateTreeSitter      # Generate grammar.js
+./gradlew :lang:dsl:generateScannerC        # Generate scanner.c
+./gradlew :lang:tree-sitter:validateTreeSitterGrammar  # Compile grammar
 
 # Run full build (includes all generators)
 ./gradlew build
@@ -44,7 +51,7 @@ cd lang/dsl/build/generated
 - [x] **String interpolation support** - `$"text {expr}"` parses correctly with embedded expressions
 
 ### In Progress 🔄
-- **Grammar coverage: 567/691 XTC files parse successfully (82.0%)**
+- **Grammar coverage: 593/691 XTC files parse successfully (85.8%)**
 - Native library compilation for target platforms
 
 ### Grammar Support Status (2026-01-27)
@@ -173,119 +180,60 @@ The following features have been added to `TreeSitterGenerator.kt`:
 
 ## String Interpolation Strategy
 
-### The Challenge
+### Implementation ✅ COMPLETE
 
-String interpolation (`$"Hello {name}"`) requires stateful lexing because:
-1. The lexer must track when it's inside a template string vs normal code
-2. Expressions inside `{...}` can contain nested braces, strings, and even nested templates
-3. Tree-sitter's grammar.js alone cannot express this - it requires an **external scanner**
+String interpolation and multiline templates are now fully supported:
+- `$"Hello {name}!"` - Single-line template strings
+- `$|Line 1\n |Line 2` - Multiline template strings with `|` continuation
 
-### Proposed Approach: Kotlin-First Scanner
+### Stateless Scanner Design
 
-Rather than writing C directly, we'll implement a **stateless Kotlin scanner** that can be:
-1. Thoroughly tested with JUnit alongside the existing test suite
-2. Used as reference implementation for correctness
-3. Ported to C for tree-sitter's external scanner (mechanical translation)
+The scanner is **STATELESS** - it uses tree-sitter's `valid_symbols` to determine context.
+Tree-sitter's grammar uses **different external tokens** for single-line vs multiline templates:
 
-**Phase 1: Kotlin Scanner (testable)** ✅ COMPLETE
 ```
-lang/lsp-server/src/main/kotlin/org/xvm/lsp/lexer/
-├── TemplateScanner.kt          # Stateless scanner for template strings
-├── TemplateScannerState.kt     # Immutable state (position, depth, mode)
-└── TemplateScannerToken.kt     # Token boundaries (start, end, type)
-```
+Grammar structure:
+  template_string_literal: '$"' + SINGLELINE_CONTENT* + SINGLELINE_END
+  multiline_template_literal: '$|' + MULTILINE_CONTENT* + MULTILINE_END
 
-30 unit tests covering:
-- Simple template strings with/without expressions
-- Nested braces and lambdas in expressions
-- Escape sequences (`\{`, `\\`, `\"`, etc.)
-- Multiline templates with `|` continuation
-- Error handling (unterminated strings, unclosed expressions)
-- Thread safety and immutability
-
-**Phase 2: C External Scanner (for tree-sitter)** - TODO
-```
-lang/dsl/build/generated/
-├── grammar.js              # Updated with externals array
-└── src/scanner.c           # Ported from Kotlin logic
+Scanner checks valid_symbols:
+  - SINGLELINE_* valid → in single-line template, end at "
+  - MULTILINE_* valid → in multiline template, end at newline without |
 ```
 
-### Scanner Requirements
+### External Token Types
 
-The scanner only needs to identify **token boundaries** within template strings:
-
-| Token Type | Example | Purpose |
+| Token Type | Context | Purpose |
 |------------|---------|---------|
-| `TEMPLATE_START` | `$"` | Start of template literal |
-| `TEMPLATE_CONTENT` | `Hello ` | String content between expressions |
-| `TEMPLATE_EXPR_START` | `{` | Start of embedded expression |
-| `TEMPLATE_EXPR_END` | `}` | End of embedded expression |
-| `TEMPLATE_END` | `"` | End of template literal |
+| `SINGLELINE_CONTENT` | `$"..."` | String content in single-line template |
+| `SINGLELINE_EXPR_START` | `$"..."` | `{` in single-line template |
+| `SINGLELINE_END` | `$"..."` | `"` end delimiter |
+| `MULTILINE_CONTENT` | `$\|...\|` | String content in multiline template |
+| `MULTILINE_EXPR_START` | `$\|...\|` | `{` in multiline template |
+| `MULTILINE_END` | `$\|...\|` | End when no `\|` continuation |
+| `TEMPLATE_EXPR_END` | Both | `}` end of expression |
 
-Tree-sitter's grammar then parses the expression content using existing rules.
-
-### State Machine
+### Scanner Files
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         NORMAL                                   │
-│   (tree-sitter handles everything except template strings)       │
-└─────────────────────┬───────────────────────────────────────────┘
-                      │ sees $"
-                      ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    IN_TEMPLATE_STRING                            │
-│   - Emit TEMPLATE_CONTENT for string chars                       │
-│   - Handle escape sequences (\{, \\, \n, etc.)                   │
-│   - On { → push state, emit TEMPLATE_EXPR_START                  │
-│   - On " → emit TEMPLATE_END, return to NORMAL                   │
-└─────────────────────┬───────────────────────────────────────────┘
-                      │ sees {
-                      ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    IN_EXPRESSION (depth=1)                       │
-│   - Track brace depth                                            │
-│   - Handle nested strings (don't count their braces)             │
-│   - On { → depth++                                               │
-│   - On } → depth--; if depth==0, emit TEMPLATE_EXPR_END          │
-│   - Return to IN_TEMPLATE_STRING when expression ends            │
-└─────────────────────────────────────────────────────────────────┘
+lang/dsl/src/main/kotlin/org/xtclang/tooling/scanner/
+├── ScannerSpec.kt          # Token definitions and rules
+└── ScannerCGenerator.kt    # Generates scanner.c from spec
+
+lang/dsl/build/generated/src/
+└── scanner.c               # Generated C code for tree-sitter
 ```
 
-### Design Principles
+### Key Design Decisions
 
-1. **Stateless/Immutable**: Scanner functions take `(source: String, state: ScannerState)` and return `(token: ScannerToken, newState: ScannerState)`. Thread-safe, testable, no side effects.
+1. **Stateless**: No state to serialize/deserialize. Tree-sitter's grammar tracks context.
 
-2. **Only Lexer, Not Parser**: We only identify token boundaries. Tree-sitter's grammar handles parsing the expressions.
+2. **Separate tokens**: Different tokens for single-line vs multiline allows stateless detection.
 
-3. **Reference: `Lexer.java`**: The authoritative implementation is `eatTemplateExpression()` in `javatools/src/main/java/org/xvm/compiler/Lexer.java:342`. Our Kotlin scanner must match its behavior.
+3. **Regular start tokens**: `$"` and `$|` are regular grammar tokens (not external).
+   Tree-sitter's lexer matches them, then calls the external scanner for content.
 
-### Future: Full XTC Lexer Integration
-
-A future enhancement could port the entire XTC lexer to Kotlin with clean, stateless semantics:
-
-**Benefits of full lexer port:**
-- Single source of truth for all token definitions
-- Handles edge cases: multiline strings, complex numeric literals, nested comments
-- Reusable for syntax highlighting, code formatting, other tools
-- Future language changes easier to support
-
-**Architecture for full lexer:**
-```kotlin
-// Stateless, immutable, thread-safe
-data class LexerState(
-    val position: Int,
-    val line: Int,
-    val column: Int,
-    val mode: LexerMode  // NORMAL, IN_TEMPLATE, IN_EXPRESSION, etc.
-)
-
-interface XtcLexer {
-    fun nextToken(source: CharSequence, state: LexerState): Pair<Token, LexerState>
-}
-```
-
-This would be a larger undertaking but provides a clean foundation for all lexer-dependent features.
+4. **Error recovery guard**: Scanner returns false when all tokens are valid (error recovery mode).
 
 ---
 
@@ -717,14 +665,35 @@ Need to implement `WorkspaceIndex` for cross-file symbol tracking.
 
 The grammar validates and now supports many XTC language features. Coverage improved from 9% to 73.1% (506/692 files).
 
-### Common Remaining Parse Errors
+### Remaining Parse Failures (98 files)
 
-Files failing to parse typically use these advanced features (still being added):
+Current status: **593/691 files (85.8%)** parse successfully.
 
-| Error Pattern | Example | Notes |
-|---------------|---------|-------|
-| String interpolation | `$"Hello {name}"` | Template expressions with `{expr}` |
-| Multiple doc comments | `/** doc1 */ /** doc2 */ method()` | Only first doc comment allowed |
+**Failing files by library:**
+
+| Library | Files | Example Errors |
+|---------|-------|----------------|
+| lib_xenia | 7 | SessionImpl.x, ChainBundle.x, CookieBroker.x |
+| lib_jsondb | 10 | Catalog.x, TxManager.x, Client.x |
+| lib_json | 10 | Schema.x, ObjectOutputStream.x, mappings.x |
+| lib_web | 15 | http.x, MediaType.x, Protocol.x |
+| lib_xunit_engine | 7 | discovery.x, models.x, utils.x |
+| lib_ecstasy | 10 | TypeTemplate.x, StringBuffer.x, Char.x |
+| lib_xml | 7 | Parser.x, Attribute.x, Document.x |
+| lib_sec | 5 | Group.x, Principal.x, Entitlement.x |
+| lib_oodb | 4 | oodb.x, DBProcessor.x, model/User.x |
+| lib_convert | 3 | Base64Format.x, CodecFormat.x, Registry.x |
+| lib_crypto | 2 | NamedPassword.x, CertificateManager.x |
+| Others | 18 | Various files |
+
+**Common error patterns:**
+
+| Error Type | Count | Example |
+|------------|-------|---------|
+| `MISSING "module"` | ~15 | Type params with `module` keyword |
+| `MISSING identifier` | ~10 | Complex type expressions |
+| `MISSING ";"` | ~3 | Statement termination edge cases |
+| `ERROR` (various) | ~70 | Other grammar constructs |
 
 ### Improvement Path
 
@@ -760,7 +729,10 @@ Files failing to parse typically use these advanced features (still being added)
 30. ✅ Implemented do-while multi-conditions, for tuple initializers, for multi-update expressions
 31. ✅ Implemented conditional tuple wildcards/val/var, for-each bare identifier
 32. ✅ Coverage improved from 84.5% to 86.0% (595/692)
-33. 🔄 Next: String interpolation `$"text {expr}"`
+33. ✅ String interpolation `$"text {expr}"` - external scanner with stateless design
+34. ✅ Multiline templates `$|line\n |continuation` - scanner detects end via valid_symbols
+35. ✅ Coverage: 593/691 files (85.8%) parse successfully
+36. 🔄 Next: Investigate remaining 98 failures (module keyword, identifier issues)
 
 ---
 

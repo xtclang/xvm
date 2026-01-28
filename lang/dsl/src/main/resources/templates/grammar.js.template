@@ -15,14 +15,23 @@ module.exports = grammar({
         $.block_comment,
     ],
 
-    // External scanner tokens for template string content/delimiters.
-    // Template START is a regular token so tree-sitter's lexer can see it.
+    // External scanner tokens for template strings.
+    // DESIGN: Separate tokens for single-line vs multiline templates.
+    // The scanner is STATELESS - it uses valid_symbols to know which type.
     // Order must match TokenType enum in ScannerSpec.kt
     externals: $ => [
-        $._template_content,         // String content between expressions
-        $._template_expr_start,      // { (start of embedded expression)
-        $._template_expr_end,        // } (end of embedded expression)
-        $._template_end,             // " or end of multiline
+        // Single-line template ($"...") tokens
+        $._singleline_content,       // Content in $"..." template
+        $._singleline_expr_start,    // { in $"..." template
+        $._singleline_end,           // " end of template
+
+        // Multiline template ($|...|) tokens
+        $._multiline_content,        // Content in $|...| template
+        $._multiline_expr_start,     // { in $|...| template
+        $._multiline_end,            // End (no | continuation)
+
+        // Shared token
+        $._template_expr_end,        // } end of expression (both types)
     ],
 
     // Conflicts that need explicit declaration:
@@ -1112,33 +1121,41 @@ module.exports = grammar({
         // String literals with Unicode escapes: \\uXXXX and \\UXXXXXXXX
         string_literal: $ => /"([^"\\]|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8}|\\.)*"/,
 
-        // Template string literal with interpolation: $"Hello {name}!"
-        // Start is regular token, content/delimiters use external scanner
+        // Template string literal: $"Hello {name}!"
+        // $" is a regular token; content/delimiters use external scanner
         template_string_literal: $ => seq(
-            '$"',  // Regular token - tree-sitter lexer handles this
+            '$"',  // Regular token - tree-sitter lexer matches this
             repeat(choice(
-                alias($._template_content, $.template_content),
-                $.template_expression,
+                alias($._singleline_content, $.template_content),
+                $.singleline_expression,
             )),
-            alias($._template_end, $.template_end),
+            alias($._singleline_end, $.template_end),
         ),
 
-        // Embedded expression in template string: {expr}
-        template_expression: $ => seq(
-            alias($._template_expr_start, $.interpolation_start),
+        // Embedded expression in single-line template: {expr}
+        singleline_expression: $ => seq(
+            alias($._singleline_expr_start, $.interpolation_start),
             $._expression,
             alias($._template_expr_end, $.interpolation_end),
         ),
 
-        // Multiline template literal with interpolation: $|line {expr}
-        //                                                 |continuation
+        // Multiline template literal: $|line {expr}
+        //                              |continuation
+        // $| is a regular token; content/delimiters use external scanner
         multiline_template_literal: $ => seq(
-            '$|',  // Regular token - tree-sitter lexer handles this
+            '$|',  // Regular token - tree-sitter lexer matches this
             repeat(choice(
-                alias($._template_content, $.template_content),
-                $.template_expression,
+                alias($._multiline_content, $.template_content),
+                $.multiline_expression,
             )),
-            alias($._template_end, $.template_end),
+            alias($._multiline_end, $.template_end),
+        ),
+
+        // Embedded expression in multiline template: {expr}
+        multiline_expression: $ => seq(
+            alias($._multiline_expr_start, $.interpolation_start),
+            $._expression,
+            alias($._template_expr_end, $.interpolation_end),
         ),
 
         // Multiline plain literal (no interpolation): \|content
