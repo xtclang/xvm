@@ -93,6 +93,38 @@ import static org.xvm.util.Handy.checkElementsNonNull;
  */
 public abstract class Expression
         extends AstNode {
+    // ----- constructors --------------------------------------------------------------------------
+
+    /**
+     * Default constructor.
+     */
+    protected Expression() {
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the Expression to copy from
+     */
+    protected Expression(Expression original) {
+        super(original);
+        // Transient fields (m_fit, m_oType, m_oConst, m_nFlags) are NOT copied - they start fresh
+        // These are all post-validation state that will be recomputed
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p/>
+     * Subclasses should override this method with a covariant return type and use a copy
+     * constructor for better performance and type safety. The default implementation delegates
+     * to {@link #clone()} for backward compatibility during the transition period.
+     */
+    @Override
+    public Expression copy() {
+        return (Expression) clone();
+    }
+
+
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override

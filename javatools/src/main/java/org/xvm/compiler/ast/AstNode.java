@@ -6,6 +6,8 @@ import java.io.StringWriter;
 
 import java.lang.reflect.Field;
 
+import java.util.Objects;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -20,6 +22,8 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 import java.util.stream.Collectors;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
@@ -208,7 +212,110 @@ public abstract class AstNode
         return NO_FIELDS;
     }
 
+    // ----- constructors --------------------------------------------------------------------------
+
+    /**
+     * Default constructor.
+     */
+    protected AstNode() {
+    }
+
+    // ----- copy support -------------------------------------------------------------------------
+
+    /**
+     * Create a deep copy of this AST node. Subclasses should override this method using a copy
+     * constructor pattern for better performance and type safety.
+     * <p/>
+     * The default implementation delegates to clone() for backward compatibility during
+     * the transition period. New code should implement explicit copy constructors.
+     *
+     * @return a deep copy of this node
+     */
+    public AstNode copy() {
+        return clone();
+    }
+
+    /**
+     * Copy constructor for the base AstNode class. Subclasses should call this constructor and
+     * then deep-copy their own child fields.
+     * <p/>
+     * Both the compilation stage and parent reference are copied to match the original clone()
+     * behavior (super.clone() shallow-copied all fields). The parent may be overwritten later
+     * when the copy is adopted into a new tree.
+     *
+     * @param original  the node to copy from
+     */
+    protected AstNode(@NotNull AstNode original) {
+        Objects.requireNonNull(original);
+        // Copy both stage and parent to match original clone() behavior (super.clone() copied all fields)
+        this.m_stage  = original.m_stage;
+        this.m_parent = original.m_parent;
+    }
+
+    /**
+     * Helper for copying a list of Statement nodes.
+     *
+     * @param list  the list to copy, may be null or empty
+     *
+     * @return a new list with deep copies of the statements, or the same list if null/empty
+     */
+    protected static List<Statement> copyStatements(List<Statement> list) {
+        if (list == null || list.isEmpty()) {
+            return list;
+        }
+        List<Statement> result = new ArrayList<>(list.size());
+        for (Statement stmt : list) {
+            result.add((Statement) stmt.copy());
+        }
+        return result;
+    }
+
+    /**
+     * Helper for copying a list of AstNode subclass instances.
+     *
+     * @param list  the list to copy, may be null or empty
+     * @param <T>   the type of nodes in the list
+     *
+     * @return a new list with deep copies of the nodes, or the same list if null/empty
+     */
+    protected static <T extends AstNode> List<T> copyNodes(List<T> list) {
+        if (list == null || list.isEmpty()) {
+            return list;
+        }
+        List<T> result = new ArrayList<>(list.size());
+        for (T node : list) {
+            @SuppressWarnings("unchecked")
+            T nodeCopy = (T) node.copy();
+            result.add(nodeCopy);
+        }
+        return result;
+    }
+
+    /**
+     * Helper for copying a list of Expression nodes.
+     *
+     * @param list  the list to copy, may be null or empty
+     *
+     * @return a new list with deep copies of the expressions, or the same list if null/empty
+     */
+    protected static List<Expression> copyExpressions(List<Expression> list) {
+        if (list == null || list.isEmpty()) {
+            return list;
+        }
+        List<Expression> result = new ArrayList<>(list.size());
+        for (Expression expr : list) {
+            result.add((Expression) expr.copy());
+        }
+        return result;
+    }
+
+    /**
+     * Creates a deep copy using reflection. Subclasses that override this method must call
+     * super.clone() to get a shallow copy first (which invokes Object.clone()), then handle
+     * their own non-child fields.
+     */
     @Override
+    @SuppressWarnings("unchecked")
     public AstNode clone() {
         AstNode that;
         try {
@@ -217,7 +324,7 @@ public abstract class AstNode
             throw new IllegalStateException(e);
         }
 
-        for (Field field : getChildFields()) {
+        for (var field : getChildFields()) {
             Object oVal;
             try {
                 oVal = field.get(this);
@@ -229,16 +336,13 @@ public abstract class AstNode
 
             if (oVal != null) {
                 if (oVal instanceof AstNode node) {
-                    AstNode nodeNew = node.clone();
-
+                    var nodeNew = node.copy();
                     that.adopt(nodeNew);
                     oVal = nodeNew;
-                } else if (oVal instanceof List list) {
-                    ArrayList<AstNode> listNew = new ArrayList<>();
-                    for (AstNode node : (List<AstNode>) list) {
-                        listNew.add(node.clone());
-                    }
-
+                } else if (oVal instanceof List<?> list) {
+                    var listNew = ((List<AstNode>) list).stream()
+                            .map(AstNode::copy)
+                            .collect(Collectors.toCollection(ArrayList::new));
                     that.adopt(listNew);
                     oVal = listNew;
                 } else {

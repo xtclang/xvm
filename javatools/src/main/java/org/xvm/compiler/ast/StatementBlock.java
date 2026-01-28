@@ -7,7 +7,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -103,6 +106,35 @@ public class StatementBlock
         this.source    = source;
         this.lStartPos = lStartPos;
         this.lEndPos   = lEndPos;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the StatementBlock to copy from
+     */
+    protected StatementBlock(@NotNull StatementBlock original) {
+        super(Objects.requireNonNull(original));
+
+        // Deep copy child fields
+        this.stmts = copyStatements(original.stmts);
+        adopt(this.stmts);
+
+        // Copy non-child structural fields (not transient compilation state)
+        this.source    = original.source;
+        this.lStartPos = original.lStartPos;
+        this.lEndPos   = original.lEndPos;
+        this.boundary  = original.boundary;
+        // Note: containsEnclosed is derived from stmts content, imports/importsWild are registration state
+
+        // Transient fields NOT copied (they start fresh):
+        // - m_fSuppressScope, m_fTerminatedAbnormally
+        // - imports, importsWild (populated during registerStructures phase)
+    }
+
+    @Override
+    public StatementBlock copy() {
+        return new StatementBlock(this);
     }
 
 

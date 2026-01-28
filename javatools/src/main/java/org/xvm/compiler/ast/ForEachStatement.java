@@ -8,7 +8,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -65,6 +68,30 @@ public class ForEachStatement
     public ForEachStatement(Token keyword, AssignmentStatement cond, StatementBlock block) {
         super(keyword, Collections.singletonList(cond));
         this.block = block;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the ForEachStatement to copy from
+     */
+    protected ForEachStatement(@NotNull ForEachStatement original) {
+        super(Objects.requireNonNull(original));
+
+        // Deep copy child fields
+        this.block = original.block == null ? null : original.block.copy();
+        adopt(this.block);
+
+        // Transient fields NOT copied (they start fresh):
+        // m_labelContinue, m_exprLValue, m_exprRValue, m_plan, m_ctxLabelVars,
+        // m_errsLabelVars, m_regFirst, m_regLast, m_regCount, m_regEntry,
+        // m_regKeyType, m_regValType, m_fTupleLValue, m_aidConvKey, m_atypeConv,
+        // m_listContinues
+    }
+
+    @Override
+    public ForEachStatement copy() {
+        return new ForEachStatement(this);
     }
 
 

@@ -8,7 +8,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -62,6 +65,34 @@ public class ForStatement
         this.init    = init   == null ? Collections.emptyList() : init;
         this.update  = update == null ? Collections.emptyList() : update;
         this.block   = block;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the ForStatement to copy from
+     */
+    protected ForStatement(@NotNull ForStatement original) {
+        super(Objects.requireNonNull(original));
+
+        // Deep copy child fields
+        this.init   = copyStatements(original.init);
+        this.update = copyStatements(original.update);
+        this.block  = original.block == null ? null : original.block.copy();
+
+        // Adopt copied children
+        adopt(this.init);
+        adopt(this.update);
+        adopt(this.block);
+
+        // Transient fields NOT copied (they start fresh):
+        // m_labelContinue, m_ctxLabelVars, m_errsLabelVars, m_regFirst, m_regCount,
+        // m_listContinues, m_listShorts, m_alabelInitGround, m_alabelUpdateGround
+    }
+
+    @Override
+    public ForStatement copy() {
+        return new ForStatement(this);
     }
 
 

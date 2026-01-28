@@ -7,6 +7,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -46,12 +50,50 @@ public class IfStatement
         this.stmtElse = stmtElse;
     }
 
+    /**
+     * Copy constructor.
+     *
+     * @param original  the IfStatement to copy from
+     */
+    protected IfStatement(@NotNull IfStatement original) {
+        super(Objects.requireNonNull(original));
+
+        // Deep copy child fields using Optional to avoid null checks
+        this.stmtThen = Optional.ofNullable(original.stmtThen).map(Statement::copy).orElse(null);
+        this.stmtElse = Optional.ofNullable(original.stmtElse).map(Statement::copy).orElse(null);
+
+        // Adopt copied children
+        getThen().ifPresent(this::adopt);
+        getElse().ifPresent(this::adopt);
+
+        // Transient fields NOT copied: m_labelElse, m_listShorts
+    }
+
+    @Override
+    public IfStatement copy() {
+        return new IfStatement(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return the "then" statement (the block executed when the condition is true)
+     */
+    public Optional<Statement> getThen() {
+        return Optional.ofNullable(stmtThen);
+    }
+
+    /**
+     * @return the "else" statement, if present
+     */
+    public Optional<Statement> getElse() {
+        return Optional.ofNullable(stmtElse);
+    }
+
     @Override
     public long getEndPosition() {
-        return stmtElse == null ? stmtThen.getEndPosition() : stmtElse.getEndPosition();
+        return getElse().orElse(stmtThen).getEndPosition();
     }
 
     /**

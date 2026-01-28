@@ -6,6 +6,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -22,6 +25,37 @@ import org.xvm.asm.op.Label;
  */
 public abstract class Statement
         extends AstNode {
+    // ----- constructors --------------------------------------------------------------------------
+
+    /**
+     * Default constructor.
+     */
+    protected Statement() {
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the statement to copy from
+     */
+    protected Statement(@NotNull Statement original) {
+        super(Objects.requireNonNull(original));
+        // Transient fields (m_labelEnd, m_ctx, m_listBreaks) are NOT copied - they start fresh
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p/>
+     * Subclasses should override this method with a covariant return type and use a copy
+     * constructor for better performance and type safety. The default implementation delegates
+     * to {@link #clone()} for backward compatibility during the transition period.
+     */
+    @Override
+    public Statement copy() {
+        return (Statement) clone();
+    }
+
+
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override

@@ -3,6 +3,9 @@ package org.xvm.compiler.ast;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.compiler.Token;
 
@@ -17,6 +20,24 @@ public abstract class ConditionalStatement
     public ConditionalStatement(Token keyword, List<AstNode> conds) {
         this.keyword = keyword;
         this.conds   = conds  == null ? Collections.emptyList() : conds;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the ConditionalStatement to copy from
+     */
+    protected ConditionalStatement(@NotNull ConditionalStatement original) {
+        super(Objects.requireNonNull(original));
+
+        // Copy non-child structural fields (Token is immutable, safe to share)
+        this.keyword = original.keyword;
+
+        // Deep copy child fields
+        this.conds = copyNodes(original.conds);
+        adopt(this.conds);
+
+        // Transient fields NOT copied: m_nLabel (starts fresh)
     }
 
 

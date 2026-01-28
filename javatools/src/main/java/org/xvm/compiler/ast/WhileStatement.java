@@ -8,6 +8,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -62,6 +65,31 @@ public class WhileStatement
         super(keyword, conds);
         this.block   = block;
         this.lEndPos = lEndPos;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the WhileStatement to copy from
+     */
+    protected WhileStatement(@NotNull WhileStatement original) {
+        super(Objects.requireNonNull(original));
+
+        // Deep copy child fields
+        this.block = original.block == null ? null : original.block.copy();
+        adopt(this.block);
+
+        // Copy non-child structural fields
+        this.lEndPos = original.lEndPos;
+
+        // Transient fields NOT copied (they start fresh):
+        // m_labelContinue, m_ctxLabelVars, m_errsLabelVars, m_regFirst, m_regCount,
+        // m_listContinues, m_astCond, m_aAllocSpecial
+    }
+
+    @Override
+    public WhileStatement copy() {
+        return new WhileStatement(this);
     }
 
 
