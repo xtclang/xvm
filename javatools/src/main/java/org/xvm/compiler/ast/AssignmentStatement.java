@@ -4,6 +4,9 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -67,6 +70,37 @@ public class AssignmentStatement
         this.op     = op;
         this.rvalue = rvalue;
         this.term   = standalone;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the AssignmentStatement to copy from
+     */
+    protected AssignmentStatement(@NotNull AssignmentStatement original) {
+        super(Objects.requireNonNull(original));
+
+        // Copy non-child structural fields (Token is immutable, safe to share)
+        this.op        = original.op;
+        this.term      = original.term;
+        this.tokNegate = original.tokNegate;
+        this.endNegate = original.endNegate;
+
+        // Deep copy child fields
+        this.lvalue = original.lvalue == null ? null : original.lvalue.copy();
+        this.rvalue = original.rvalue == null ? null : original.rvalue.copy();
+        // lvalueExpr is a transient derived value - not copied
+
+        // Adopt copied children
+        adopt(this.lvalue);
+        adopt(this.rvalue);
+
+        // Transient fields NOT copied: m_decls, m_labelCondFalse, m_fCondFalseLabelTaken
+    }
+
+    @Override
+    public AssignmentStatement copy() {
+        return new AssignmentStatement(this);
     }
 
 
@@ -1157,10 +1191,10 @@ public class AssignmentStatement
     protected Token      tokNegate;
     protected long       endNegate;
 
-    private transient VariableDeclarationStatement[] m_decls;
+    @NotCopied private VariableDeclarationStatement[] m_decls;
 
-    private transient Label   m_labelCondFalse;
-    private transient boolean m_fCondFalseLabelTaken; // used for verifying code-gen
+    @NotCopied private Label   m_labelCondFalse;
+    @NotCopied private boolean m_fCondFalseLabelTaken; // used for verifying code-gen
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(AssignmentStatement.class, "lvalue", "lvalueExpr", "rvalue");
 }

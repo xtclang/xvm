@@ -3,6 +3,10 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
@@ -27,6 +31,27 @@ public class ExpressionStatement
     public ExpressionStatement(Expression expr, boolean standalone) {
         this.expr = expr;
         this.term = standalone;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the ExpressionStatement to copy from
+     */
+    protected ExpressionStatement(@NotNull ExpressionStatement original) {
+        super(Objects.requireNonNull(original));
+
+        // Deep copy child field
+        this.expr = original.expr == null ? null : original.expr.copy();
+        adopt(this.expr);
+
+        // Copy non-child structural fields
+        this.term = original.term;
+    }
+
+    @Override
+    public ExpressionStatement copy() {
+        return new ExpressionStatement(this);
     }
 
 

@@ -4,6 +4,9 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.Arrays;
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -58,6 +61,29 @@ public class ReturnStatement
     public ReturnStatement(Token keyword, List<Expression> exprs) {
         this.keyword = keyword;
         this.exprs   = exprs;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the ReturnStatement to copy from
+     */
+    protected ReturnStatement(@NotNull ReturnStatement original) {
+        super(Objects.requireNonNull(original));
+
+        // Copy non-child structural fields (Token is immutable, safe to share)
+        this.keyword = original.keyword;
+
+        // Deep copy child fields
+        this.exprs = copyExpressions(original.exprs);
+        adopt(this.exprs);
+
+        // Transient fields NOT copied: m_fConditionalTernary, m_fTupleReturn, m_fFutureReturn
+    }
+
+    @Override
+    public ReturnStatement copy() {
+        return new ReturnStatement(this);
     }
 
 
@@ -497,9 +523,9 @@ public class ReturnStatement
     protected Token             keyword;
     protected List<Expression>  exprs;
 
-    protected transient boolean m_fConditionalTernary;
-    protected transient boolean m_fTupleReturn;
-    protected transient boolean m_fFutureReturn;
+    @NotCopied protected boolean m_fConditionalTernary;
+    @NotCopied protected boolean m_fTupleReturn;
+    @NotCopied protected boolean m_fFutureReturn;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ReturnStatement.class, "exprs");
 }

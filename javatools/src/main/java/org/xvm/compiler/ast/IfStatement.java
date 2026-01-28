@@ -432,12 +432,12 @@ public class IfStatement
     /**
      * The "else" label.
      */
-    private transient Label m_labelElse;
+    @NotCopied private Label m_labelElse;
 
     /**
      * Generally null, unless there is a short-circuit that jumps to this statement's else label.
      */
-    private transient List<Break> m_listShorts;
+    @NotCopied private List<Break> m_listShorts;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(IfStatement.class, "conds", "stmtThen", "stmtElse");
 }

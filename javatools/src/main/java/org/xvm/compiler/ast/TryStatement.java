@@ -4,6 +4,9 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.List;
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -68,6 +71,38 @@ public class TryStatement
         this.block     = block;
         this.catches   = catches == null || catches.isEmpty() ? null : catches;
         this.catchall  = catchall;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the TryStatement to copy from
+     */
+    @SuppressWarnings("unchecked")
+    protected TryStatement(@NotNull TryStatement original) {
+        super(Objects.requireNonNull(original));
+
+        // Copy non-child structural fields (Token is immutable, safe to share)
+        this.keyword = original.keyword;
+
+        // Deep copy child fields
+        this.resources = (List<AssignmentStatement>) copyNodes(original.resources);
+        this.block     = original.block == null ? null : original.block.copy();
+        this.catches   = (List<CatchStatement>) copyNodes(original.catches);
+        this.catchall  = original.catchall == null ? null : original.catchall.copy();
+
+        // Adopt copied children
+        adopt(this.resources);
+        adopt(this.block);
+        adopt(this.catches);
+        adopt(this.catchall);
+
+        // Transient fields NOT copied: m_ctxValidatingFinally, m_errsValidatingFinally, m_regFinallyException
+    }
+
+    @Override
+    public TryStatement copy() {
+        return new TryStatement(this);
     }
 
 
@@ -564,9 +599,9 @@ public class TryStatement
     protected List<CatchStatement>      catches;
     protected StatementBlock            catchall;
 
-    private transient Context       m_ctxValidatingFinally;
-    private transient ErrorListener m_errsValidatingFinally;
-    private transient Register      m_regFinallyException;
+    @NotCopied private Context       m_ctxValidatingFinally;
+    @NotCopied private ErrorListener m_errsValidatingFinally;
+    @NotCopied private Register      m_regFinallyException;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TryStatement.class,
             "resources", "block", "catches", "catchall");

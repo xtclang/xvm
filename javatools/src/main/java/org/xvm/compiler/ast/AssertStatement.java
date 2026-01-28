@@ -4,6 +4,9 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -80,6 +83,36 @@ public class AssertStatement
         this.conds    = conds == null ? Collections.emptyList() : conds;
         this.message  = exprMsg;
         this.lEndPos  = lEndPos;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the AssertStatement to copy from
+     */
+    protected AssertStatement(@NotNull AssertStatement original) {
+        super(Objects.requireNonNull(original));
+
+        // Copy non-child structural fields (Token is immutable, safe to share)
+        this.keyword = original.keyword;
+        this.lEndPos = original.lEndPos;
+
+        // Deep copy child fields
+        this.interval = original.interval == null ? null : original.interval.copy();
+        this.conds    = copyNodes(original.conds);
+        this.message  = original.message == null ? null : original.message.copy();
+
+        // Adopt copied children
+        adopt(this.interval);
+        adopt(this.conds);
+        adopt(this.message);
+
+        // Transient fields NOT copied: m_listTexts
+    }
+
+    @Override
+    public AssertStatement copy() {
+        return new AssertStatement(this);
     }
 
 
@@ -661,7 +694,7 @@ public class AssertStatement
     protected Expression    message;
     protected long          lEndPos;
 
-    private List<String> m_listTexts;
+    @NotCopied private List<String> m_listTexts;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(AssertStatement.class, "interval", "conds", "message");
 }

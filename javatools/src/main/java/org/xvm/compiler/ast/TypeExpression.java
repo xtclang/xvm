@@ -1,6 +1,10 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 
@@ -27,6 +31,37 @@ import org.xvm.util.Severity;
  */
 public abstract class TypeExpression
         extends Expression {
+    // ----- constructors --------------------------------------------------------------------------
+
+    /**
+     * Default constructor.
+     */
+    protected TypeExpression() {
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the TypeExpression to copy from
+     */
+    protected TypeExpression(@NotNull TypeExpression original) {
+        super(Objects.requireNonNull(original));
+        // m_constType and m_ctxPrev are NOT copied - they're cached values computed during validation
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p/>
+     * Subclasses should override this method with a covariant return type and use a copy
+     * constructor for better performance and type safety. The default implementation delegates
+     * to {@link #clone()} for backward compatibility during the transition period.
+     */
+    @Override
+    public TypeExpression copy() {
+        return (TypeExpression) clone();
+    }
+
+
     // ----- type specific functionality -----------------------------------------------------------
 
     @Override

@@ -3,6 +3,10 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -32,6 +36,33 @@ public class CatchStatement
         this.target    = target;
         this.block     = block;
         this.lStartPos = lStartPos;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the CatchStatement to copy from
+     */
+    protected CatchStatement(@NotNull CatchStatement original) {
+        super(Objects.requireNonNull(original));
+
+        // Copy non-child structural fields
+        this.lStartPos = original.lStartPos;
+
+        // Deep copy child fields
+        this.target = original.target == null ? null : original.target.copy();
+        this.block  = original.block == null ? null : original.block.copy();
+
+        // Adopt copied children
+        adopt(this.target);
+        adopt(this.block);
+
+        // Transient fields NOT copied: m_opCatch, m_labelEndCatch
+    }
+
+    @Override
+    public CatchStatement copy() {
+        return new CatchStatement(this);
     }
 
 
@@ -154,8 +185,8 @@ public class CatchStatement
     protected StatementBlock               block;
     protected long                         lStartPos;
 
-    private transient CatchStart m_opCatch;
-    private transient Label      m_labelEndCatch;
+    @NotCopied private CatchStart m_opCatch;
+    @NotCopied private Label      m_labelEndCatch;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(CatchStatement.class, "target", "block");
 }

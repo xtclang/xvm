@@ -4,6 +4,9 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.List;
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Argument;
@@ -48,6 +51,30 @@ public class VariableDeclarationStatement
         this.name = name;
         this.type = type;
         this.term = term;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the VariableDeclarationStatement to copy from
+     */
+    protected VariableDeclarationStatement(@NotNull VariableDeclarationStatement original) {
+        super(Objects.requireNonNull(original));
+
+        // Copy non-child structural fields (Token is immutable, safe to share)
+        this.name = original.name;
+        this.term = original.term;
+
+        // Deep copy child fields
+        this.type = original.type == null ? null : original.type.copy();
+        adopt(this.type);
+
+        // Transient fields NOT copied: m_reg, m_exprName, m_fConstAnno
+    }
+
+    @Override
+    public VariableDeclarationStatement copy() {
+        return new VariableDeclarationStatement(this);
     }
 
 
@@ -334,9 +361,9 @@ public class VariableDeclarationStatement
     protected Token          name;
     protected boolean        term;
 
-    private transient Register       m_reg;
-    private transient NameExpression m_exprName;
-    private transient boolean        m_fConstAnno;
+    @NotCopied private Register       m_reg;
+    @NotCopied private NameExpression m_exprName;
+    @NotCopied private boolean        m_fConstAnno;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(VariableDeclarationStatement.class, "type");
 }

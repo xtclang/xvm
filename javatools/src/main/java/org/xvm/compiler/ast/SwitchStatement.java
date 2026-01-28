@@ -4,6 +4,9 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -45,6 +48,27 @@ public class SwitchStatement
     public SwitchStatement(Token keyword, List<AstNode> conds, StatementBlock block) {
         super(keyword, conds);
         this.block   = block;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the SwitchStatement to copy from
+     */
+    protected SwitchStatement(@NotNull SwitchStatement original) {
+        super(Objects.requireNonNull(original));
+
+        // Deep copy child fields
+        this.block = original.block == null ? null : original.block.copy();
+        adopt(this.block);
+
+        // Transient fields NOT copied: m_casemgr, m_listGroups, m_labelContinue,
+        // m_listContinues, m_listBreaks
+    }
+
+    @Override
+    public SwitchStatement copy() {
+        return new SwitchStatement(this);
     }
 
 
@@ -655,31 +679,31 @@ public class SwitchStatement
     /**
      * The manager that collects all of the case information.
      */
-    private transient CaseManager<CaseGroup> m_casemgr;
+    @NotCopied private CaseManager<CaseGroup> m_casemgr;
 
     /**
      * Information about each group that begins with one or more CaseStatements and is followed by
      * other statements.
      */
-    private transient List<CaseGroup> m_listGroups;
+    @NotCopied private List<CaseGroup> m_listGroups;
 
     /**
      * For a given case group, this is the label that each "continue" statement within that group
      * will jump to; it's null until the first continue statement is encountered in the group.
      */
-    private transient Label m_labelContinue;
+    @NotCopied private Label m_labelContinue;
 
     /**
      * For a given case group, this collects the assignment information that comes from each
      * "continue" statement within that group; it's null until the first continue statement is
      * encountered in the group.
      */
-    private transient List<Break> m_listContinues;
+    @NotCopied private List<Break> m_listContinues;
 
     /**
      * This collects the assignment information that comes from each "break" statement.
      */
-    private final transient List<Map<String, Assignment>> m_listBreaks = new ArrayList<>();
+    @NotCopied private final List<Map<String, Assignment>> m_listBreaks = new ArrayList<>();
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchStatement.class, "conds", "block");
 }
