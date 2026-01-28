@@ -51,10 +51,10 @@ cd lang/tree-sitter/build/generated
 - [x] **String interpolation support** - `$"text {expr}"` parses correctly with embedded expressions
 
 ### In Progress 🔄
-- **Grammar coverage: 593/691 XTC files parse successfully (85.8%)**
+- **Grammar coverage: 634/691 XTC files parse successfully (91.8%)**
 - Native library compilation for target platforms
 
-### Grammar Support Status (2026-01-27)
+### Grammar Support Status (2026-01-28)
 
 The following features have been added to `TreeSitterGenerator.kt`:
 
@@ -428,7 +428,7 @@ cp lang/lsp-server/build/libs/*-all.jar /tmp/xtc-lsp-treesitter.jar
 | Nested symbols | ❌ Limited | ✅ Full hierarchy |
 | Syntax errors | ❌ Basic patterns | ✅ Precise location |
 | Error recovery | ❌ None | ✅ Continues parsing |
-| Performance | Fast | Fast (incremental)
+| Performance | Fast | Fast (incremental) |
 
 ---
 
@@ -663,11 +663,11 @@ Need to implement `WorkspaceIndex` for cross-file symbol tracking.
 
 ## Grammar Coverage Progress
 
-The grammar validates and now supports many XTC language features. Coverage improved from 9% to 73.1% (506/692 files).
+The grammar validates and now supports many XTC language features. Coverage improved from 9% to 91.8% (634/691 files).
 
-### Remaining Parse Failures (98 files)
+### Remaining Parse Failures (57 files)
 
-Current status: **593/691 files (85.8%)** parse successfully.
+Current status: **634/691 files (91.8%)** parse successfully.
 
 **Failing files by library:**
 
@@ -686,14 +686,85 @@ Current status: **593/691 files (85.8%)** parse successfully.
 | lib_crypto | 2 | NamedPassword.x, CertificateManager.x |
 | Others | 18 | Various files |
 
-**Common error patterns:**
+**Common error patterns (analyzed 2026-01-28):**
 
-| Error Type | Count | Example |
-|------------|-------|---------|
-| `MISSING "module"` | ~15 | Type params with `module` keyword |
-| `MISSING identifier` | ~10 | Complex type expressions |
-| `MISSING ";"` | ~3 | Statement termination edge cases |
-| `ERROR` (various) | ~70 | Other grammar constructs |
+| # | Pattern | Files | Example | Status |
+|---|---------|-------|---------|--------|
+| 1 | Star imports (`import pkg.*`) | ~10+ | `import web.*;` | ✅ Fixed |
+| 2 | Trailing commas in array/map literals | ~5+ | `[A, B, C, ]` | ✅ Fixed |
+| 3 | Trailing commas in arguments | ~15+ | `method(a, b,)` | ✅ Fixed |
+| 4 | Import inside type bodies | ~3+ | `interface I { import pkg.Type; }` | ✅ Fixed |
+| 5 | Properties/methods in module body | ~5+ | `@Inject Console console;` | ✅ Fixed |
+| 6 | Static service declarations | ~3+ | `static service Runner { }` | ✅ Fixed |
+| 7 | Assert variants as expressions | ~5+ | `?: assert:bounds as msg` | ✅ Fixed |
+| 8 | Multiple types in extends clause | ~10+ | `extends Part, Freezable` | ✅ Fixed |
+| 9 | Doc comment before import | ~5 | `/** doc */ import ...; service` | Pending |
+| 10 | File path literals (`$./path`) | ~3+ | `$./templates/_module.txt` | Pending |
+
+#### Pattern Details
+
+**1. Star imports** - Files: Parser.x, CookieBroker.x, Catalog.x, json.x, mappings.x
+```xtc
+import impl.*;           // ❌ Wildcard imports not supported
+import web.*;
+```
+
+**2. Trailing commas** - Files: MediaType.x, Nibble.x, Protocol.x, Scheme.x, Registry.x
+```xtc
+static MediaType[] Predefined = [A, B, C, ];  // ❌ Trailing comma before ]
+```
+
+**3. Annotation `into` with body** - Files: cli.x, ObjectOutputStream.x, WebApp.x, oodb.x
+```xtc
+annotation TerminalApp
+        into module {     // ❌ "into" clause with body not supported
+    construct(...) { }
+}
+```
+
+**4. `const` class declarations** - Files: NamedPassword.x, KeyPair.x, PlainTextCredential.x
+```xtc
+const NamedPassword(String name, String password)   // ❌ "const" type not recognized
+        implements CryptoPassword { }
+```
+
+**5. File path literals** - Files: ModuleGenerator.x (jsondb & xunit_engine)
+```xtc
+String template = $./templates/_module.txt;  // ❌ Path literal $./... not supported
+```
+
+**6. Import inside type bodies** - Files: ResourceProvider.x, Schema.x
+```xtc
+interface ResourceProvider {
+    import annotations.Inject.Options;  // ❌ Import inside interface body
+}
+```
+
+**7. Nested service with generics** - Files: ConcurrentHasherMap.x
+```xtc
+protected static service Partition<Key extends immutable Object>  // ❌
+        extends HasherMap<Key, Value> { }
+```
+
+**8. TODO in statement block** - Files: ConcurrentHasherMap.x
+```xtc
+construct() {
+    this.partitions = TODO copy the partitions    // ❌ Missing ";" in block context
+}
+```
+
+### Recommended Fix Order
+
+Fix patterns in this order to maximize coverage improvement:
+
+1. **Star imports** - High impact, simple: add `.*` to import grammar
+2. **Trailing commas in arrays** - High impact, simple: make comma optional before `]`
+3. **Annotation `into` clause with body** - Medium-high impact, medium complexity
+4. **`const` type declarations** - Medium impact, add `const` as type keyword
+5. **File path literals (`$./`)** - Medium impact, add path literal rule
+6. **Import inside type bodies** - Low impact, allow imports in type body
+7. **Nested service/class with generics** - Lower impact, grammar conflict resolution
+8. **TODO statement in blocks** - Edge case, statement termination fix
 
 ### Improvement Path
 
@@ -732,7 +803,19 @@ Current status: **593/691 files (85.8%)** parse successfully.
 33. ✅ String interpolation `$"text {expr}"` - external scanner with stateless design
 34. ✅ Multiline templates `$|line\n |continuation` - scanner detects end via valid_symbols
 35. ✅ Coverage: 593/691 files (85.8%) parse successfully
-36. 🔄 Next: Investigate remaining 98 failures (module keyword, identifier issues)
+36. ✅ Implemented star imports (`import pkg.*`) with token.immediate('.*')
+37. ✅ Implemented trailing commas in array/map literals
+38. ✅ Implemented imports inside type bodies (added to _class_member)
+39. ✅ Implemented properties/methods in module bodies
+40. ✅ Added module/package declaration conflicts with keyword_type
+41. ✅ Implemented assert variants as expressions (`assert:bounds`, etc.)
+42. ✅ Implemented multiple types in extends clause (`extends A, B`)
+43. ✅ Implemented static service declarations
+44. ✅ Implemented trailing commas in arguments
+45. ✅ Coverage improved from 85.8% to 91.8% (634/691 files)
+46. 🔄 Next: Fix doc comment before import pattern
+47. ⏳ Fix file path literals (`$./path`)
+48. ⏳ Target: 95%+ coverage (656+ files)
 
 ---
 

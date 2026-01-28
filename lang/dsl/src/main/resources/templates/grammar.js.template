@@ -79,6 +79,8 @@ module.exports = grammar({
         [$.service_declaration, $.keyword_type],
         [$.const_declaration, $.keyword_type],
         [$.enum_declaration, $.keyword_type],
+        [$.module_declaration, $.keyword_type],
+        [$.package_declaration, $.keyword_type],
         [$.conditional_declaration, $._expression],
         [$.switch_statement, $.switch_expression],
         [$.case_pattern, $._expression],
@@ -176,7 +178,9 @@ module.exports = grammar({
             optional($.module_body),
         ),
 
-        module_body: $ => seq('{', repeat($._definition), '}'),
+        // Module body can contain definitions and also properties/methods at module level
+        // Example: @Inject Console console; at module level
+        module_body: $ => seq('{', repeat(choice($._definition, $.property_declaration, $.method_declaration)), '}'),
 
         // Package declaration
         // Note: Package must end with either a body { } or semicolon ;
@@ -194,10 +198,15 @@ module.exports = grammar({
         package_body: $ => seq('{', repeat($._definition), '}'),
 
         // Import
+        // Supports: import foo.bar.Baz; or import foo.bar.Baz as Alias; or import foo.bar.*;
+        // Star import uses token.immediate('.*') to avoid conflict with qualified_name
         import_statement: $ => seq(
             'import',
             $.qualified_name,
-            optional(seq('as', $.identifier)),
+            optional(choice(
+                token.immediate('.*'),   // Star import: import pkg.* (no space before .*)
+                seq('as', $.identifier), // Alias: import pkg.Type as Alias
+            )),
             ';',
         ),
 
@@ -252,10 +261,12 @@ module.exports = grammar({
         ),
 
         // Service can end with body or semicolon
+        // Supports static service: static service Runner { ... }
         service_declaration: $ => seq(
             optional($.doc_comment),
             repeat($.annotation),
             optional($.visibility_modifier),
+            optional(seq('static', repeat($.annotation))),
             'service',
             $.type_name,
             optional($.type_parameters),
@@ -348,12 +359,14 @@ module.exports = grammar({
         enum_value_body: $ => seq('{', repeat($._class_member), '}'),
 
         // Class members
+        // Includes import_statement for imports inside type bodies (e.g., interface { import foo.bar; })
         _class_member: $ => choice(
             $.property_declaration,
             $.method_declaration,
             $.property_getter_declaration,
             $.constructor_declaration,
             $.assert_block,
+            $.import_statement,
             $.class_declaration,
             $.interface_declaration,
             $.const_declaration,
@@ -453,7 +466,8 @@ module.exports = grammar({
         ),
 
         // Clauses
-        extends_clause: $ => seq('extends', $.type_expression),
+        // Interfaces can extend multiple types: extends Part, Freezable
+        extends_clause: $ => seq('extends', commaSep1($.type_expression)),
         extends_clause_with_args: $ => seq('extends', $.type_expression, optional($.arguments)),
         implements_clause: $ => seq('implements', commaSep1($.type_expression)),
         // Incorporates can be conditional: incorporates conditional Mixin<Type extends Constraint>
@@ -1028,8 +1042,9 @@ module.exports = grammar({
         // Assert expression: assert can be used as an expression (e.g., in ?: or safe-call-else)
         // Used in patterns like: value?.method() : assert
         // Can include an optional message: `assert as $"error"` in expression context
+        // Also supports assert variants: assert:bounds, assert:arg, etc.
         // prec.left ensures `as` binds to assert (not an outer context)
-        assert_expression: $ => prec.left(seq('assert', optional(seq('as', $._expression)))),
+        assert_expression: $ => prec.left(seq(choice('assert', $.assert_variant), optional(seq('as', $._expression)))),
 
         // TODO expression: placeholder for unimplemented code, throws UnsupportedOperation
         // Forms: TODO, TODO(), TODO(message), TODO message text
@@ -1082,7 +1097,8 @@ module.exports = grammar({
 
         // Arguments can include expressions, type expressions (for .is(), .as(), etc.), and named arguments
         // Named arguments: name=value (e.g., entrySeparator='&')
-        arguments: $ => seq('(', commaSep(choice($.named_argument, $._expression, $.type_expression)), ')'),
+        // Trailing comma is allowed: method(arg1, arg2,)
+        arguments: $ => seq('(', commaSep(choice($.named_argument, $._expression, $.type_expression)), optional(','), ')'),
         named_argument: $ => seq($.identifier, '=', $._expression),
 
         // Literals
@@ -1168,8 +1184,9 @@ module.exports = grammar({
 {{BOOLEAN_LITERAL_RULE}}
 {{NULL_LITERAL_RULE}}
 
-        list_literal: $ => seq('[', commaSep($._expression), ']'),
-        map_literal: $ => seq('[', commaSep($.map_entry), ']'),
+        // Array/list literals allow trailing comma: [A, B, C,]
+        list_literal: $ => seq('[', commaSep($._expression), optional(','), ']'),
+        map_literal: $ => seq('[', commaSep($.map_entry), optional(','), ']'),
         map_entry: $ => seq($._expression, '=', $._expression),
 
         // Typed literal: Type:value where value is a literal
