@@ -433,6 +433,6 @@ Tree-sitter should be treated as a *performance and UX layer*, not as a replacem
 ## Documentation
 
 Architecture analysis and research documentation is in a separate repository:
-[xtc-language-support-research](https://github.com/xtclang/xtc-language-support-research)
+[xtc-language-support-research](https://github.com/lagergren/xtc-language-support-research)
 
 Implementation plans are in [doc/plans/](./doc/plans/).

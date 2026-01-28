@@ -6,29 +6,54 @@ intelligence, without requiring compiler modifications.
 **Timeline**: 2-3 weeks for core functionality
 **Risk**: Low (additive, no compiler changes)
 **Prerequisites**: Working `TreeSitterGenerator` in `lang/dsl/` (already exists)
-**Complements**: [Adapter Layer Design](../3-lsp-solution/adapter-layer-design.md) (can add later for semantic features)
 
 ---
 
 ## Quick Reference: Testing the Grammar
 
+**IMPORTANT**: All commands below assume you are in the **project root directory** (`xtc-init-wizard/`).
+The tree-sitter CLI must be run from the `lang/tree-sitter/build/generated/` directory (where `grammar.js` lives).
+
 ```bash
 # Generate, validate, and test grammar in one command
 # (dependencies are wired: testTreeSitterParse → validateTreeSitterGrammar
 #  → copyGrammarFiles → generateTreeSitter + generateScannerC)
+# RUN FROM PROJECT ROOT:
 ./gradlew :lang:tree-sitter:testTreeSitterParse
 
-# Test a specific file manually
+# Test a specific file manually (MUST run from generated directory):
 cd lang/tree-sitter/build/generated
-../tree-sitter-cli/tree-sitter parse /path/to/file.x
+../tree-sitter-cli/tree-sitter parse /absolute/path/to/file.x
+# Example:
+../tree-sitter-cli/tree-sitter parse /Users/marcus/src/xtc-init-wizard/lib_ecstasy/src/main/x/ecstasy/Enum.x
 
-# Run individual stages if needed
+# Check for errors only:
+../tree-sitter-cli/tree-sitter parse /path/to/file.x 2>&1 | grep -E "(ERROR|MISSING)"
+
+# Run individual stages if needed (from project root):
 ./gradlew :lang:dsl:generateTreeSitter      # Generate grammar.js
 ./gradlew :lang:dsl:generateScannerC        # Generate scanner.c
 ./gradlew :lang:tree-sitter:validateTreeSitterGrammar  # Compile grammar
 
 # Run full build (includes all generators)
 ./gradlew build
+```
+
+**Directory Structure:**
+```
+xtc-init-wizard/              # Project root - run ./gradlew from here
+├── lang/
+│   ├── tree-sitter/
+│   │   └── build/
+│   │       ├── generated/    # Run tree-sitter CLI from HERE
+│   │       │   ├── grammar.js
+│   │       │   ├── src/parser.c
+│   │       │   └── src/scanner.c
+│   │       └── tree-sitter-cli/
+│   │           └── tree-sitter  # The CLI binary
+│   └── dsl/
+│       └── src/main/resources/templates/
+│           └── grammar.js.template  # Source template to edit
 ```
 
 ---
@@ -51,7 +76,7 @@ cd lang/tree-sitter/build/generated
 - [x] **String interpolation support** - `$"text {expr}"` parses correctly with embedded expressions
 
 ### In Progress 🔄
-- **Grammar coverage: 634/691 XTC files parse successfully (91.8%)**
+e- **Grammar coverage: 653/691 XTC files parse successfully (94.5%)**
 - Native library compilation for target platforms
 
 ### Grammar Support Status (2026-01-28)
@@ -663,28 +688,11 @@ Need to implement `WorkspaceIndex` for cross-file symbol tracking.
 
 ## Grammar Coverage Progress
 
-The grammar validates and now supports many XTC language features. Coverage improved from 9% to 91.8% (634/691 files).
+The grammar validates and now supports many XTC language features. Coverage improved from 9% to 94.5% (653/691 files).
 
-### Remaining Parse Failures (57 files)
+### Remaining Parse Failures (38 files)
 
-Current status: **634/691 files (91.8%)** parse successfully.
-
-**Failing files by library:**
-
-| Library | Files | Example Errors |
-|---------|-------|----------------|
-| lib_xenia | 7 | SessionImpl.x, ChainBundle.x, CookieBroker.x |
-| lib_jsondb | 10 | Catalog.x, TxManager.x, Client.x |
-| lib_json | 10 | Schema.x, ObjectOutputStream.x, mappings.x |
-| lib_web | 15 | http.x, MediaType.x, Protocol.x |
-| lib_xunit_engine | 7 | discovery.x, models.x, utils.x |
-| lib_ecstasy | 10 | TypeTemplate.x, StringBuffer.x, Char.x |
-| lib_xml | 7 | Parser.x, Attribute.x, Document.x |
-| lib_sec | 5 | Group.x, Principal.x, Entitlement.x |
-| lib_oodb | 4 | oodb.x, DBProcessor.x, model/User.x |
-| lib_convert | 3 | Base64Format.x, CodecFormat.x, Registry.x |
-| lib_crypto | 2 | NamedPassword.x, CertificateManager.x |
-| Others | 18 | Various files |
+Current status: **653/691 files (94.5%)** parse successfully.
 
 **Common error patterns (analyzed 2026-01-28):**
 
@@ -698,8 +706,14 @@ Current status: **634/691 files (91.8%)** parse successfully.
 | 6 | Static service declarations | ~3+ | `static service Runner { }` | ✅ Fixed |
 | 7 | Assert variants as expressions | ~5+ | `?: assert:bounds as msg` | ✅ Fixed |
 | 8 | Multiple types in extends clause | ~10+ | `extends Part, Freezable` | ✅ Fixed |
-| 9 | Doc comment before import | ~5 | `/** doc */ import ...; service` | Pending |
-| 10 | File path literals (`$./path`) | ~3+ | `$./templates/_module.txt` | Pending |
+| 9 | Doc comment before import | ~5 | `/** doc */ import ...; service` | ✅ Fixed |
+| 10 | Package-level functions | ~11 | `package foo { static func() }` | ✅ Fixed |
+| 11 | Safe index access | ~5 | `arr?[index] = value` | ✅ Fixed |
+| 12 | Template shorthand | ~5 | `$"{name=}"` (shows name=value) | ✅ Fixed |
+| 13 | Tuple reassignment | ~3 | `(Type x, existing) := expr` | ✅ Fixed |
+| 14 | Type comparisons | ~10 | `type == Byte[]` | ⏳ Requires grammar changes |
+| 15 | Consecutive doc comments | ~5 | Two `/** */` before one decl | ⏳ Rare edge case |
+| 16 | File path literals (`$./path`) | ~3+ | `$./templates/_module.txt` | ⏳ Needs scanner update |
 
 #### Pattern Details
 

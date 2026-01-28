@@ -75,7 +75,7 @@ class TreeSitterAdapter : XtcCompilerAdapter, Closeable {
             "Tuple", "Function", "Method", "Property", "Type", "Class",
             "Nullable", "Orderable", "Hashable", "Stringable",
             "Iterator", "Iterable", "Collection", "Sequence",
-            "Void", "Null", "True", "False"
+            "void", "Null", "True", "False"
         )
     }
 

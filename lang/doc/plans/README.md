@@ -19,7 +19,7 @@ This directory contains implementation plans and status documentation for XTC la
 
 For detailed plans on compiler modifications to enable full semantic LSP support, see the research repository:
 
-**[xtc-language-support-research](https://github.com/xtclang/xtc-language-support-research)**
+**[xtc-language-support-research](https://github.com/lagergren/xtc-language-support-research)**
 
 That repository contains:
 - Architecture analysis of the XTC compiler

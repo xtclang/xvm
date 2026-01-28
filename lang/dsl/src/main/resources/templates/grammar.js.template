@@ -130,6 +130,9 @@ module.exports = grammar({
         [$.tuple_type_element, $.parameter, $.conditional_tuple_element],
         [$.tuple_type_element, $.parameter, $.tuple_assignment_element, $.conditional_tuple_element],
         [$.conditional_tuple_element, $._expression],
+        [$.conditional_tuple_element, $._expression, $.type_name],
+        [$.conditional_tuple_element, $._expression, $.qualified_type_name],
+        [$.conditional_tuple_element, $._expression, $.type_name, $.qualified_type_name],
         [$.conditional_type, $.function_type],
         [$.conditional_type, $.named_function_type],
         [$.parameter, $.named_function_type],
@@ -145,6 +148,8 @@ module.exports = grammar({
         [$.ternary_expression, $.binary_expression, $.postfix_expression],
         [$.case_pattern, $.typed_literal],
         [$.statement_expression, $._statement],
+        [$.singleline_expression, $._expression],
+        [$.multiline_expression, $._expression],
     ],
 
     word: $ => $.identifier,
@@ -195,12 +200,17 @@ module.exports = grammar({
             choice($.package_body, ';'),
         ),
 
-        package_body: $ => seq('{', repeat($._definition), '}'),
+        // Package body can contain definitions and also top-level properties/methods
+        // Example: package http { static Boolean validExtension(String s) { ... } }
+        package_body: $ => seq('{', repeat(choice($._definition, $.property_declaration, $.method_declaration)), '}'),
 
         // Import
         // Supports: import foo.bar.Baz; or import foo.bar.Baz as Alias; or import foo.bar.*;
         // Star import uses token.immediate('.*') to avoid conflict with qualified_name
+        // Note: optional doc_comment allows file-level documentation before imports
+        // (e.g., /** The Runner singleton. */ import Scanner.CmdInfo; static service Runner {...})
         import_statement: $ => seq(
+            optional($.doc_comment),
             'import',
             $.qualified_name,
             optional(choice(
@@ -720,11 +730,13 @@ module.exports = grammar({
             repeat1(seq(',', $.conditional_tuple_element)),
             ')',
         ),
-        // Element in conditional tuple pattern: wildcard, val/var identifier, or Type identifier
+        // Element in conditional tuple pattern: wildcard, val/var identifier, Type identifier, or bare identifier
+        // Bare identifier allows reassignment of existing variables: (Type1 new, existing) := expr
         conditional_tuple_element: $ => choice(
             $.wildcard,
             seq(choice('val', 'var'), optional($.type_expression), $.identifier),
             seq($.type_expression, $.identifier),
+            $.identifier,  // Bare identifier for reassigning existing variable
         ),
 
         // Dangling else: `if (a) if (b) x else y` - else binds to nearest if (right associativity)
@@ -956,6 +968,7 @@ module.exports = grammar({
             $.async_call_expression,
             $.member_expression,
             $.index_expression,
+            $.safe_index_expression,
             $.new_expression,
             $.lambda_expression,
             $.switch_expression,
@@ -1017,6 +1030,8 @@ module.exports = grammar({
         // - Reference: expr.&name (no-dereference property access)
         member_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_2}}, seq($._expression, choice({{MEMBER_ACCESS_OPS}}), optional('&'), $.identifier)),
         index_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_2}}, seq($._expression, '[', commaSep1($._expression), ']')),
+        // Safe index expression: arr?[index] for null-safe indexing (if arr is null, returns null)
+        safe_index_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_2}}, seq($._expression, '?[', commaSep1($._expression), ']')),
 
         // Reference expression: &name (creates a reference to a property/variable)
         // Reference (no-dereference) expression: &identifier or &this:xxx
@@ -1148,10 +1163,14 @@ module.exports = grammar({
             alias($._singleline_end, $.template_end),
         ),
 
-        // Embedded expression in single-line template: {expr}
+        // Embedded expression in single-line template: {expr} or {name=} shorthand
+        // The {name=} shorthand is XTC-specific: displays "name={value}" for debugging
         singleline_expression: $ => seq(
             alias($._singleline_expr_start, $.interpolation_start),
-            $._expression,
+            choice(
+                seq($.identifier, '='),  // Shorthand: {name=} shows "name={value}"
+                $._expression,
+            ),
             alias($._template_expr_end, $.interpolation_end),
         ),
 
@@ -1167,10 +1186,13 @@ module.exports = grammar({
             alias($._multiline_end, $.template_end),
         ),
 
-        // Embedded expression in multiline template: {expr}
+        // Embedded expression in multiline template: {expr} or {name=} shorthand
         multiline_expression: $ => seq(
             alias($._multiline_expr_start, $.interpolation_start),
-            $._expression,
+            choice(
+                seq($.identifier, '='),  // Shorthand: {name=} shows "name={value}"
+                $._expression,
+            ),
             alias($._template_expr_end, $.interpolation_end),
         ),
 
