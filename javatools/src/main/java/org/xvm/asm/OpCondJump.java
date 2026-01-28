@@ -9,15 +9,16 @@ import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
 
 import java.lang.constant.ClassDesc;
-import java.lang.constant.MethodTypeDesc;
 
 import java.util.List;
 
+import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.BuildContext.DoubleSlot;
 import org.xvm.javajit.Builder;
+import org.xvm.javajit.Ctx;
 import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeMatrix;
@@ -27,11 +28,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
 
-import static java.lang.constant.ConstantDescs.CD_boolean;
-
-import static org.xvm.javajit.Builder.CD_Container;
-import static org.xvm.javajit.Builder.CD_Ctx;
-import static org.xvm.javajit.Builder.CD_JavaString;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.MD_TypeIsA;
@@ -473,21 +469,17 @@ public abstract class OpCondJump
     }
 
     protected void buildUnary(BuildContext bctx, CodeBuilder code) {
-        int   nAddrJump = getAddress() + m_ofJmp;
-        Label lblJump   = bctx.ensureLabel(code, nAddrJump);
-        int   op        = getOpCode();
+        int nAddrThis = getAddress();
+        int nAddrJump = nAddrThis + m_ofJmp;
+        int op        = getOpCode();
 
         switch (op) {
         case OP_JMP_COND, OP_JMP_NCOND:
-            bctx.loadCtx(code);
-            code.getfield(CD_Ctx, "container", CD_Container);
-            bctx.loadArgument(code, m_nArg);
-            code.invokevirtual(CD_Container, "isSpecified",
-                               MethodTypeDesc.of(CD_boolean, CD_JavaString));
-            if (op == OP_JMP_COND) {
-                code.ifne(lblJump);
-            } else {
-                code.ifeq(lblJump);
+            // conditional constants are evaluated during the link time
+            ConditionalConstant cond   = bctx.getConstant(m_nArg, ConditionalConstant.class);
+            boolean             fValid = cond.evaluate(Ctx.get().container);
+            if ((op == OP_JMP_COND) == fValid) {
+                bctx.markDeadCode(nAddrThis + 1, nAddrJump);
             }
             return;
 
@@ -496,8 +488,9 @@ public abstract class OpCondJump
             return;
         }
 
-        RegisterInfo reg = bctx.ensureRegister(code, m_nArg);
-        ClassDesc    cd  = reg.cd();
+        Label        lblJump = bctx.ensureLabel(code, nAddrJump);
+        RegisterInfo reg     = bctx.ensureRegister(code, m_nArg);
+        ClassDesc    cd      = reg.cd();
         if (cd.isPrimitive()) {
             if (reg instanceof DoubleSlot doubleSlot) {
                 assert doubleSlot.flavor() == JitFlavor.NullablePrimitive;

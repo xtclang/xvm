@@ -22,7 +22,6 @@ import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
-import org.xvm.asm.constants.NamedCondition;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SingletonConstant;
@@ -170,10 +169,6 @@ public abstract class Builder {
         case CharConstant ch:
             code.loadConstant(ch.getValue());
             return new SingleSlot(constant.getConstantPool().typeChar(), Primitive, CD_char, "");
-
-        case NamedCondition cond:
-            code.loadConstant(cond.getName());
-            return new SingleSlot(cond.getConstantPool().typeString(), Specific, CD_String, "");
 
         case TypeConstant type:
             Builder.loadTypeConstant(code, typeSystem, type);
