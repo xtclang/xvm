@@ -15,7 +15,15 @@ module.exports = grammar({
         $.block_comment,
     ],
 
-    externals: $ => [],
+    // External scanner tokens for template string content/delimiters.
+    // Template START is a regular token so tree-sitter's lexer can see it.
+    // Order must match TokenType enum in ScannerSpec.kt
+    externals: $ => [
+        $._template_content,         // String content between expressions
+        $._template_expr_start,      // { (start of embedded expression)
+        $._template_expr_end,        // } (end of embedded expression)
+        $._template_end,             // " or end of multiline
+    ],
 
     // Conflicts that need explicit declaration:
     // 1. unary vs binary vs call: `+expr<T>()` - is `<` comparison or type arg?
@@ -1103,13 +1111,38 @@ module.exports = grammar({
 
         // String literals with Unicode escapes: \\uXXXX and \\UXXXXXXXX
         string_literal: $ => /"([^"\\]|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8}|\\.)*"/,
-        template_string_literal: $ => /\$"([^"\\]|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8}|\\.)*"/,
-        // Multiline template literal: $|content on first line
-        //                              | continuation line
-        // The pattern captures $| followed by content, with optional continuation lines starting with |
-        multiline_template_literal: $ => token(/\$\|[^\n]*(\\?\n[ \t]*\|[^\n]*)*/),
-        // Multiline plain literal: \|content on first line
-        //                           | continuation line
+
+        // Template string literal with interpolation: $"Hello {name}!"
+        // Start is regular token, content/delimiters use external scanner
+        template_string_literal: $ => seq(
+            '$"',  // Regular token - tree-sitter lexer handles this
+            repeat(choice(
+                alias($._template_content, $.template_content),
+                $.template_expression,
+            )),
+            alias($._template_end, $.template_end),
+        ),
+
+        // Embedded expression in template string: {expr}
+        template_expression: $ => seq(
+            alias($._template_expr_start, $.interpolation_start),
+            $._expression,
+            alias($._template_expr_end, $.interpolation_end),
+        ),
+
+        // Multiline template literal with interpolation: $|line {expr}
+        //                                                 |continuation
+        multiline_template_literal: $ => seq(
+            '$|',  // Regular token - tree-sitter lexer handles this
+            repeat(choice(
+                alias($._template_content, $.template_content),
+                $.template_expression,
+            )),
+            alias($._template_end, $.template_end),
+        ),
+
+        // Multiline plain literal (no interpolation): \|content
+        //                                              | continuation
         multiline_literal: $ => token(/\\\|[^\n]*(\\?\n[ \t]*\|[^\n]*)*/),
         // Character literal: 'c', '\\n', '\\u0000', '\\U00010000'
         // Supports Unicode escapes: \\uXXXX (4 hex digits) and \\UXXXXXXXX (8 hex digits)

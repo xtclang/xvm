@@ -28,7 +28,7 @@ cd lang/dsl/build/generated
 
 ## Implementation Status
 
-> **Last Updated**: 2026-01-26
+> **Last Updated**: 2026-01-28
 
 ### Completed ✅
 - [x] LSP server converted from Java to Kotlin (better DSL support, null safety, coroutines)
@@ -40,10 +40,11 @@ cd lang/dsl/build/generated
 - [x] Test corpus uses 675+ real XTC files from `lib_*` directories
 - [x] Grammar conflicts resolved (lambda, annotation, dangling else, list/map literals)
 - [x] Grammar validation passes (`./gradlew :lang:dsl:validateTreeSitterGrammar`)
+- [x] **Template string external scanner** - C scanner generated from Kotlin spec (`ScannerSpec.kt`)
+- [x] **String interpolation support** - `$"text {expr}"` parses correctly with embedded expressions
 
 ### In Progress 🔄
-- **Grammar coverage: 595/692 XTC files parse successfully (86.0%)**
-- **Template Scanner**: Kotlin implementation complete (30 tests), C port pending
+- **Grammar coverage: 567/691 XTC files parse successfully (82.0%)**
 - Native library compilation for target platforms
 
 ### Grammar Support Status (2026-01-27)
@@ -162,11 +163,11 @@ The following features have been added to `TreeSitterGenerator.kt`:
 | Conditional tuple wildcard | `(_, val x) := expr` | ✅ Wildcards and val/var |
 | For-each bare identifier | `for (ch : host)` | ✅ Type inferred |
 
-#### Still Needed (High Priority)
+#### Recently Completed (String Interpolation) ✅
 
 | Feature | Example | Notes |
 |---------|---------|-------|
-| String interpolation | `$"text {expr}"` | See "String Interpolation Strategy" section below |
+| String interpolation | `$"text {expr}"` | External scanner generates from `ScannerSpec.kt` |
 
 ---
 
