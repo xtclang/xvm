@@ -1,5 +1,7 @@
 package org.xvm.lsp.lexer
 
+import org.xvm.lsp.lexer.TemplateTokenType.*
+
 /**
  * Token types emitted by the template scanner.
  *
@@ -46,24 +48,24 @@ data class TemplateScannerToken(
 
     companion object {
         fun templateStart(start: Int, end: Int) =
-            TemplateScannerToken(TemplateTokenType.TEMPLATE_START, start, end)
+            TemplateScannerToken(TEMPLATE_START, start, end)
 
         fun templateMultilineStart(start: Int, end: Int) =
-            TemplateScannerToken(TemplateTokenType.TEMPLATE_MULTILINE_START, start, end)
+            TemplateScannerToken(TEMPLATE_MULTILINE_START, start, end)
 
         fun content(start: Int, end: Int, value: String) =
-            TemplateScannerToken(TemplateTokenType.TEMPLATE_CONTENT, start, end, value)
+            TemplateScannerToken(TEMPLATE_CONTENT, start, end, value)
 
         fun exprStart(start: Int, end: Int) =
-            TemplateScannerToken(TemplateTokenType.TEMPLATE_EXPR_START, start, end)
+            TemplateScannerToken(TEMPLATE_EXPR_START, start, end)
 
         fun exprEnd(start: Int, end: Int) =
-            TemplateScannerToken(TemplateTokenType.TEMPLATE_EXPR_END, start, end)
+            TemplateScannerToken(TEMPLATE_EXPR_END, start, end)
 
         fun templateEnd(start: Int, end: Int) =
-            TemplateScannerToken(TemplateTokenType.TEMPLATE_END, start, end)
+            TemplateScannerToken(TEMPLATE_END, start, end)
 
         fun error(start: Int, end: Int, message: String) =
-            TemplateScannerToken(TemplateTokenType.ERROR, start, end, message)
+            TemplateScannerToken(ERROR, start, end, message)
     }
 }
