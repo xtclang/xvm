@@ -432,7 +432,8 @@ Tree-sitter should be treated as a *performance and UX layer*, not as a replacem
 
 ## Documentation
 
-Architecture analysis and research documentation is in a separate repository:
-[xtc-language-support-research](https://github.com/lagergren/xtc-language-support-research)
+- [Language Support Overview](./doc/LANGUAGE_SUPPORT.md) - Comprehensive guide to implementing LSP and DAP support for Ecstasy
+- [LSP Implementation Survey](./doc/LSP_IMPLEMENTATIONS_SURVEY.md) - Survey of how other languages implement language server support
+- [Implementation Plans](./doc/plans/) - Detailed implementation plans for IDE integration and Tree-sitter grammar
 
-Implementation plans are in [doc/plans/](./doc/plans/).
+Architecture analysis and research documentation: *Internal documentation*

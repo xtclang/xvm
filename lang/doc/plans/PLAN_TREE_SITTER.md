@@ -960,7 +960,7 @@ lang/
 2. **Build Native Library** - Compile grammar for all platforms
 3. **Enable TreeSitterAdapter** - Switch launcher to use tree-sitter
 4. **IDE Integration** - VS Code extension, IntelliJ plugin per [PLAN_IDE_INTEGRATION.md](./PLAN_IDE_INTEGRATION.md)
-5. **Compiler Adapter** - Add semantic features (see [xtc-language-support-research](https://github.com/xtclang/xtc-language-support-research))
+5. **Compiler Adapter** - Add semantic features (*Internal documentation*)
 
 ---
 
