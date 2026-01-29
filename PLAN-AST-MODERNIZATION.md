@@ -552,6 +552,9 @@ Added `@NotNull` annotations to list fields that have null-to-empty conversion i
 
 NOTE: Some list fields preserve null because null has semantic meaning distinct from empty (e.g., `CaseStatement.exprs` where null means "default:" case)
 
+**@ChildNode Annotations** - COMPLETE
+Applied `@ChildNode(index, description)` annotation to ALL child node fields across 44+ AST classes. This annotation marks fields that are in `CHILD_FIELDS` and documents the child ordering. Classes that inherit from annotated parent classes (BiExpression, PrefixExpression, DelegatingExpression) inherit the annotations.
+
 ### 5.2 Classes with copy() - 53 total
 
 ```
@@ -776,57 +779,43 @@ The annotation serves two purposes:
 
 ### Phase 5c: Add @ChildNode Annotation
 
-**Status:** NOT STARTED
+**Status:** COMPLETE
 
-Create a `@ChildNode` annotation to explicitly mark child node fields, eventually replacing the reflection-based `CHILD_FIELDS` arrays.
+Created and applied `@ChildNode` annotation to ALL child node fields across 44+ AST classes.
 
-**Annotation Design:**
+**Annotation (in org.xvm.compiler.ast):**
 ```java
-@Retention(RetentionPolicy.RUNTIME)  // or SOURCE if only for documentation
+@Retention(RetentionPolicy.SOURCE)
 @Target(ElementType.FIELD)
 public @interface ChildNode {
-    /**
-     * Index of this child in the parent's child list (for ordering).
-     * Children are visited in ascending index order.
-     */
     int index();
-
-    /**
-     * Optional description of this child's role in the AST structure.
-     */
     String description() default "";
 }
 ```
 
-**Usage Example:**
-```java
-public class ForStatement extends ConditionalStatement {
-    @ChildNode(index = 0, description = "Initialization statements")
-    protected List<Statement> init;
+**Applied to all classes with CHILD_FIELDS:**
+- Base expression classes: BiExpression (expr1, expr2), PrefixExpression (expr), DelegatingExpression (expr), SyntheticExpression (expr)
+- Type expressions: BiTypeExpression, AnnotatedTypeExpression, ArrayTypeExpression, FunctionTypeExpression, NamedTypeExpression, NullableTypeExpression, DecoratedTypeExpression, BadTypeExpression, TupleTypeExpression
+- Control flow: IfStatement, ForStatement, ForEachStatement, WhileStatement, SwitchStatement, SwitchExpression, TryStatement, CatchStatement
+- Expressions: TernaryExpression, ThrowExpression, ListExpression, TupleExpression, MapExpression, TemplateExpression, LambdaExpression, StatementExpression, NotNullExpression, NonBindingExpression, ArrayAccessExpression, NameExpression, InvocationExpression, AnnotationExpression, CmpChainExpression, NewExpression, FileExpression
+- Statements: CaseStatement, ReturnStatement, AssertStatement, AssignmentStatement, LabeledStatement, ExpressionStatement, ImportStatement, VariableDeclarationStatement, TypedefStatement
+- Declarations: MethodDeclarationStatement, PropertyDeclarationStatement, TypeCompositionStatement, Parameter, VersionOverride
+- CompositionNode and all inner classes: Extends, Annotates, Incorporates, Delegates, Import, Default
+- StatementBlock
 
-    @ChildNode(index = 1, description = "Loop condition expressions")
-    protected List<AstNode> conds;
+**Classes that inherit annotations from parents (no separate annotations needed):**
+- BiExpression subclasses: AsExpression, ElvisExpression, RelOpExpression, CmpExpression, CondOpExpression, IsExpression, ElseExpression
+- PrefixExpression subclasses: UnaryMinusExpression, UnaryPlusExpression, UnaryComplementExpression, SequentialAssignExpression
+- DelegatingExpression subclasses: LabeledExpression, ParenthesizedExpression
 
-    @ChildNode(index = 2, description = "Update statements")
-    protected List<Statement> update;
+**Classes with no child nodes (correctly have no annotations):**
+- BreakStatement, ContinueStatement, GotoStatement
+- KeywordTypeExpression, VariableTypeExpression, LiteralExpression
+- Base classes: Expression, Statement, TypeExpression, ComponentStatement
 
-    @ChildNode(index = 3, description = "Loop body")
-    protected StatementBlock block;
-}
-```
-
-**Benefits:**
-1. Self-documenting: Clear which fields are children vs computed/auxiliary
-2. Type-safe: Compiler checks annotation usage
-3. IDE support: Can generate navigation, refactoring hints
-4. Foundation for visitor pattern: Explicit child ordering
-5. Eventually replaces `CHILD_FIELDS` reflection
-
-**Migration Strategy:**
-1. Create the annotation
-2. Add `@ChildNode` to all child fields (matching `CHILD_FIELDS` entries)
-3. Keep `CHILD_FIELDS` arrays during transition
-4. After visitor pattern is in place, remove `CHILD_FIELDS` reflection
+**Next Steps:**
+1. Keep `CHILD_FIELDS` arrays during transition
+2. After visitor pattern is in place, remove `CHILD_FIELDS` reflection
 
 ### Phase 6: Visitor Pattern (This PR)
 
