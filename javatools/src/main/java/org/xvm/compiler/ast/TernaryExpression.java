@@ -3,6 +3,8 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.Arrays;
+
 import java.util.Objects;
 
 import org.jetbrains.annotations.NotNull;
@@ -583,7 +585,7 @@ public class TernaryExpression
                  : typeElse.isAssignableTo(typeThen) ? atypeThen
                                                      : atypeRequired;
         } else {
-            TypeConstant[] atypeResult = atypeRequired.clone();
+            TypeConstant[] atypeResult = Arrays.copyOf(atypeRequired, atypeRequired.length);
 
             for (int i = 0; i < cRequired; i++) {
                 TypeConstant typeReq  = atypeRequired[i];

@@ -967,14 +967,21 @@ The codebase should migrate from legacy collection patterns to modern immutable 
 | `Collections.unmodifiableList(list)` | `List.copyOf(list)` | Creates truly immutable copy |
 | `Arrays.asList(a, b, c)` | `List.of(a, b, c)` | When immutability is acceptable |
 
-### Array Operations (Keep These)
+### Array Operations
 
-| Pattern | Recommendation |
-|---------|---------------|
-| `System.arraycopy()` | Keep - efficient for mutation-in-place |
-| `Arrays.copyOf()` | Keep - creates new array efficiently |
-| `Arrays.copyOfRange()` | Keep - creates new subarray efficiently |
-| `array.clone()` | Replace with `Arrays.copyOf()` for clarity |
+| Pattern | Recommendation | Status |
+|---------|---------------|--------|
+| `System.arraycopy()` | Keep - efficient for mutation-in-place | ✅ |
+| `Arrays.copyOf()` | Preferred - creates new array efficiently | ✅ |
+| `Arrays.copyOfRange()` | Keep - creates new subarray efficiently | ✅ |
+| `array.clone()` | **Replaced** with `Arrays.copyOf()` | ✅ COMPLETE |
+
+**Array Clone Modernization - COMPLETE**
+All 18 `array.clone()` calls in AST code replaced with `Arrays.copyOf(array, array.length)`:
+- Expression.java, TernaryExpression.java, InvocationExpression.java
+- ReturnStatement.java, LambdaExpression.java, ForEachStatement.java
+- SwitchExpression.java, AssignmentStatement.java, CaseManager.java
+- ConvertExpression.java
 
 ### Locations Requiring Updates
 

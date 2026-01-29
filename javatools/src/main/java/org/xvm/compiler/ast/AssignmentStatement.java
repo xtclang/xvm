@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Objects;
 
 import org.jetbrains.annotations.NotNull;
@@ -1016,7 +1017,7 @@ public class AssignmentStatement
             if (aAstLVal[i] == BinaryAST.POISON) {
                 if (!fReplaced) {
                     fReplaced = true;
-                    aAstLVal  = aAstLVal.clone();
+                    aAstLVal  = Arrays.copyOf(aAstLVal, aAstLVal.length);
                 }
                 aAstLVal[i] = aAstLValExpr[i];
             }

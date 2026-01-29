@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -205,7 +206,7 @@ public class SwitchExpression
                 if (fValid && mgr.hasTypeConditions() && cCases == 1 &&
                         mgr.addTypeInference(ctxScope, stmtPrev, errs)) {
                     if (atypeReqScoped != null && atypeReqScoped.length > 0) {
-                        atypeReqScoped = atypeReqScoped.clone();
+                        atypeReqScoped = Arrays.copyOf(atypeReqScoped, atypeReqScoped.length);
 
                         for (int i = 0, c = atypeReqScoped.length; i < c; i++) {
                             atypeReqScoped[i] = ctxScope.resolveFormalType(atypeReqScoped[i]);

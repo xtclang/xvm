@@ -164,7 +164,7 @@ public class ReturnStatement
             TypeConstant typeRet = aRetTypes[i];
             if (typeRet.containsAutoNarrowing(false)) {
                 if (fClone) {
-                    aRetTypes = aRetTypes.clone();
+                    aRetTypes = Arrays.copyOf(aRetTypes, aRetTypes.length);
                     fClone    = false;
                 }
                 aRetTypes[i] = typeRet.resolveAutoNarrowing(pool, false, ctx.getThisType(), null);

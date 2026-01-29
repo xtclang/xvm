@@ -48,6 +48,21 @@ Added convenience constructors:
 - `MapExpression(type, lEndPos)` - constructor for empty maps
 - `Break.withNarrow(node, mapNarrow, label)` - factory method with empty mapAssign
 
+### Array Clone Modernization - COMPLETE
+Replaced all `array.clone()` calls with explicit `Arrays.copyOf(array, array.length)`:
+- Expression.java (3 replacements)
+- TernaryExpression.java (1 replacement)
+- InvocationExpression.java (5 replacements)
+- ReturnStatement.java (1 replacement)
+- LambdaExpression.java (1 replacement)
+- ForEachStatement.java (1 replacement)
+- SwitchExpression.java (1 replacement)
+- AssignmentStatement.java (1 replacement)
+- CaseManager.java (1 replacement)
+- ConvertExpression.java (3 replacements)
+
+**Total: 18 array clone() calls replaced** - All for shallow array copies (TypeConstant[], Assignable[], ExprAST[])
+
 ### @ComputedState Annotation - COMPLETE
 Created and applied across all AST classes with transient fields (29+ classes total).
 
@@ -120,19 +135,19 @@ Still have ~16 `Collections.` usages remaining in:
 ## Recent Commits
 
 ```
-[pending] Complete @ChildNode annotations across all 44+ AST classes
+[pending] Replace array.clone() with Arrays.copyOf() across AST classes
+04f7d0a84 Modernize AST with List.of() patterns and convenience constructors
+a2fbe38b3 Update plan to mark @ChildNode annotation phase as complete
+8aa8c99b5 Complete @ChildNode annotations across all AST classes
 3d75dabe4 Add @ChildNode annotation and apply @ComputedState across AST classes
 50089d50d Modernize AST copy constructors with stream patterns and @NotNull
-410470680 Add copy constructors to remaining AST classes
-aba4d7b8e Replace @NotCopied with @ComputedState annotation
-9760ba083 Add copy constructors to BiExpression and TypeExpression subclasses
 ```
 
 ## Suggested Next Step
 
-1. **Convert remaining null collections to empty** - Where semantically appropriate
-2. **Replace clone() call sites with copy()** - If any AST node clones exist
-3. **Begin visitor pattern implementation** - Design and implement the visitor interface to replace CHILD_FIELDS iteration
+1. **Begin visitor pattern implementation** - Design and implement the visitor interface to replace CHILD_FIELDS iteration
+2. **Replace AstNode clone() call sites with copy()** - Migrate remaining clone() usages to explicit copy()
+3. **Remove reflection infrastructure** - Once visitor pattern is in place, remove CHILD_FIELDS arrays
 
 To verify current state:
 ```bash

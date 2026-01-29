@@ -1291,7 +1291,7 @@ public class LambdaExpression
             }
             if (typeNew != typeOld) {
                 if (atypeRets == atype) {
-                    atypeRets = atype.clone();
+                    atypeRets = Arrays.copyOf(atype, atype.length);
                 }
                 atypeRets[i] = typeNew;
             }

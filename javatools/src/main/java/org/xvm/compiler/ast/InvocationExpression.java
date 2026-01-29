@@ -596,7 +596,7 @@ public class InvocationExpression
             }
         } else {
             typeFn      = null;
-            atypeReturn = atypeRequired == null ? TypeConstant.NO_TYPES : atypeRequired.clone();
+            atypeReturn = atypeRequired == null ? TypeConstant.NO_TYPES : Arrays.copyOf(atypeRequired, atypeRequired.length);
         }
 
         int     cRequired  = atypeReturn.length;
@@ -713,7 +713,7 @@ public class InvocationExpression
                         TypeConstant typeRetR = typeRet.resolveGenerics(pool, ctx.getThisType());
                         if (typeRetR != typeRet) {
                             if (atypeReturn == atypeRequired) {
-                                atypeReturn = atypeRequired.clone();
+                                atypeReturn = Arrays.copyOf(atypeRequired, atypeRequired.length);
                             }
                             atypeReturn[i] = typeRetR;
                         }
@@ -837,7 +837,7 @@ public class InvocationExpression
 
                         atypeParams = resolveTypes(resolver, atype);
                     } else {
-                        atypeParams = atypeParams.clone();
+                        atypeParams = Arrays.copyOf(atypeParams, atypeParams.length);
                     }
                 } else {
                     atypeParams = TypeConstant.NO_TYPES;
@@ -1113,7 +1113,7 @@ public class InvocationExpression
                 // this expression will produce the result as "@Future Var<T>"
                 m_fAutoFuture = true;
                 if (atypeResult.length > 0) {
-                    atypeResult = atypeResult.clone(); // don't mess up the actual types
+                    atypeResult = Arrays.copyOf(atypeResult, atypeResult.length); // don't mess up the actual types
                     for (int i = 0, c = atypeResult.length; i < c; i++) {
                         atypeResult[i] = pool.ensureFuture(atypeResult[i]);
                     }
@@ -2968,7 +2968,7 @@ public class InvocationExpression
                 TypeConstant typeResolved = typeOriginal.resolveGenerics(pool, resolver);
                 if (typeResolved != typeOriginal) {
                     if (atypeResolved == atype) {
-                        atypeResolved = atype.clone();
+                        atypeResolved = Arrays.copyOf(atype, atype.length);
                     }
                     atypeResolved[i] = typeResolved;
                 }

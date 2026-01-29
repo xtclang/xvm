@@ -4,6 +4,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -518,7 +519,7 @@ public class ForEachStatement
                         assert atypeRVals.length >= cLVals;
 
                         if (fConvert) {
-                            atypeRVals = atypeRVals.clone();
+                            atypeRVals = Arrays.copyOf(atypeRVals, atypeRVals.length);
                             for (int i = 0; i < cLVals; i++) {
                                 TypeConstant typeR = atypeRVals[i];
                                 TypeConstant typeL = atypeLVals[i];
