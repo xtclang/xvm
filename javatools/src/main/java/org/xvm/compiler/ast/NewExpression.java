@@ -105,35 +105,18 @@ public class NewExpression
      *   <li>Custom clone() override: deep copies "body" (NOT a child field)</li>
      *   <li>All other fields: shallow copied via Object.clone() bitwise copy</li>
      * </ul>
+     * <p>
+     * Order matches master clone(): all non-child fields FIRST, then children.
      *
      * @param original  the NewExpression to copy from
      */
     protected NewExpression(@NotNull NewExpression original) {
         super(Objects.requireNonNull(original));
 
-        // Token, dims, and position are immutable, safe to share
-        this.operator = original.operator;
-        this.dims     = original.dims;
-        this.lEndPos  = original.lEndPos;
-
-        // Deep copy child fields (per CHILD_FIELDS)
-        this.left = copyNode(original.left);
-        this.type = copyNode(original.type);
-        this.args = copyExpressions(original.args);
-        this.anon = copyNode(original.anon);
-        adopt(this.left);
-        adopt(this.type);
-        adopt(this.args);
-        adopt(this.anon);
-
-        // "body" is NOT a child but is deep copied by custom clone() override in master
-        if (original.body != null) {
-            this.body = this.anon == null
-                    ? original.body.copy()
-                    : this.anon.body;
-        }
-
-        // Shallow copy all transient fields (matching Object.clone() semantics)
+        // Step 1: Copy ALL non-child fields FIRST (matches super.clone() behavior)
+        this.operator            = original.operator;
+        this.dims                = original.dims;
+        this.lEndPos             = original.lEndPos;
         this.m_constructor       = original.m_constructor;
         this.m_fTupleArg         = original.m_fTupleArg;
         this.m_purposeCurrent    = original.m_purposeCurrent;
@@ -150,6 +133,31 @@ public class NewExpression
         this.m_fInstanceChild    = original.m_fInstanceChild;
         this.m_fDynamicAnno      = original.m_fDynamicAnno;
         this.m_astNew            = original.m_astNew;
+
+        // Step 2: Deep copy children explicitly (CHILD_FIELDS: left, type, args, anon)
+        this.left = original.left == null ? null : original.left.copy();
+        this.type = original.type == null ? null : original.type.copy();
+        this.args = original.args.stream().map(Expression::copy).collect(Collectors.toCollection(ArrayList::new));
+        this.anon = original.anon == null ? null : original.anon.copy();
+
+        // Step 3: Adopt copied children
+        if (this.left != null) {
+            this.left.setParent(this);
+        }
+        if (this.type != null) {
+            this.type.setParent(this);
+        }
+        adopt(this.args);
+        if (this.anon != null) {
+            this.anon.setParent(this);
+        }
+
+        // "body" is NOT a child but is deep copied by custom clone() override in master
+        if (original.body != null) {
+            this.body = this.anon == null
+                    ? original.body.copy()
+                    : this.anon.body;
+        }
     }
 
     @Override
@@ -209,18 +217,6 @@ public class NewExpression
 
 
     // ----- AstNode methods -----------------------------------------------------------------------
-
-    @Override
-    public AstNode clone() {
-        NewExpression that = (NewExpression) super.clone();
-        // the "body" is not a child and has to be handled manually
-        if (body != null) {
-            that.body = anon == null
-                    ? (StatementBlock) body.clone()
-                    : that.anon.body;
-        }
-        return that;
-    }
 
     @Override
     protected void discard(boolean fRecurse) {
@@ -435,7 +431,7 @@ public class NewExpression
                     // now try to use the NameTypeExpression validation logic for a fully qualified
                     // type scenario, such as:
                     //      parent.new [@Mixin] Parent.Child<...>(...)
-                    TypeExpression exprTest = (TypeExpression) type.clone();
+                    TypeExpression exprTest = type.copy();
                     Context        ctxTest  = ctx.enter();
                     boolean        fValid   = true;
                     if (exprTest.validate(ctxTest, pool.typeType(), errs) == null) {
@@ -1190,13 +1186,13 @@ public class NewExpression
             assert m_purposeCurrent == AnonPurpose.None;
             anon = adopt(new TypeCompositionStatement(
                     this,
-                    clone(inner.getAnnotations()),
+                    copyList(inner.getAnnotations()),
                     inner.getCategory(),
                     tokName,
                     null,
-                    clone(inner.getCompositions()),
-                    clone(args),
-                    (StatementBlock) body.clone(),
+                    copyList(inner.getCompositions()),
+                    copyList(args),
+                    body.copy(),
                     type.getStartPosition(),
                     body.getEndPosition()));
             break;
@@ -1220,7 +1216,7 @@ public class NewExpression
         case CaptureAnalysis:
             // the current inner class composition statement MUST be the "actual" one
             assert m_purposeCurrent == AnonPurpose.Actual;
-            anon = (TypeCompositionStatement) adopt(anon.clone());
+            anon = adopt(anon.copy());
             anon.setComponent(m_clzActualBackup.replaceWithTemporary());
             break;
         }
@@ -1287,20 +1283,21 @@ public class NewExpression
     }
 
     /**
-     * Helper to clone a list of AST nodes.
+     * Helper to copy a list of AST nodes.
      *
      * @param list  the list of AST nodes (may be null)
      *
-     * @return a deeply cloned list
+     * @return a deeply copied list
      */
-    private <T extends AstNode> List<T> clone(List<? extends AstNode> list) {
+    @SuppressWarnings("unchecked")
+    private <T extends AstNode> List<T> copyList(List<T> list) {
         if (list == null || list.isEmpty()) {
-            return (List<T>) list;
+            return list;
         }
 
-        List listCopy = new ArrayList<>(list.size());
-        for (AstNode node : list) {
-            listCopy.add(node.clone());
+        List<T> listCopy = new ArrayList<>(list.size());
+        for (T node : list) {
+            listCopy.add((T) node.copy());
         }
         return listCopy;
     }
@@ -1690,7 +1687,7 @@ public class NewExpression
     protected Expression               left;
     protected Token                    operator;
     protected TypeExpression           type;
-    protected List<Expression>         args;
+    @NotNull protected List<Expression> args;
     protected int                      dims;        // -1 == no [dims]
     protected StatementBlock           body;        // NOT a child
     protected TypeCompositionStatement anon;        // synthetic, added as a child

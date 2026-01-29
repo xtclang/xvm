@@ -3,8 +3,11 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.constants.TypeConstant;
@@ -18,30 +21,27 @@ public class TupleTypeExpression
     // ----- constructors --------------------------------------------------------------------------
 
     public TupleTypeExpression(List<TypeExpression> params, long lStartPos, long lEndPos) {
-        this.paramTypes   = params;
-        this.lStartPos    = lStartPos;
-        this.lEndPos      = lEndPos;
+        this.paramTypes = params == null ? new ArrayList<>() : params;
+        this.lStartPos  = lStartPos;
+        this.lEndPos    = lEndPos;
     }
 
     /**
      * Copy constructor.
-     * <p>
-     * Master clone() semantics:
-     * <ul>
-     *   <li>CHILD_FIELDS: "paramTypes" - deep copied by AstNode.clone()</li>
-     *   <li>No transient fields in this class</li>
-     * </ul>
      *
      * @param original  the TupleTypeExpression to copy from
      */
     protected TupleTypeExpression(TupleTypeExpression original) {
         super(original);
 
+        // Non-child fields first
         this.lStartPos = original.lStartPos;
         this.lEndPos   = original.lEndPos;
 
         // Deep copy children
-        this.paramTypes = copyNodes(original.paramTypes);
+        this.paramTypes = original.paramTypes.stream().map(TypeExpression::copy).collect(Collectors.toCollection(ArrayList::new));
+
+        // Adopt
         adopt(this.paramTypes);
     }
 
@@ -117,7 +117,7 @@ public class TupleTypeExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected List<TypeExpression> paramTypes;
+    @NotNull protected List<TypeExpression> paramTypes;
     protected long                 lStartPos;
     protected long                 lEndPos;
 

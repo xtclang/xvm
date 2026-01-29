@@ -35,18 +35,28 @@ public class Parameter
      *   <li>Deep copy (from CHILD_FIELDS): type, value</li>
      *   <li>Shallow copy (same reference): name</li>
      * </ul>
+     * <p>
+     * Order matches master clone(): all non-child fields FIRST, then children.
      *
      * @param original  the Parameter to copy
      */
     protected Parameter(Parameter original) {
         super(original);
 
-        // Deep copy child fields (from CHILD_FIELDS)
-        this.type  = adopt(copyNode(original.type));
-        this.value = adopt(copyNode(original.value));
-
-        // Shallow copy non-child fields
+        // Step 1: Copy non-child fields FIRST
         this.name = original.name;
+
+        // Step 2: Deep copy children explicitly
+        this.type  = original.type == null ? null : original.type.copy();
+        this.value = original.value == null ? null : original.value.copy();
+
+        // Step 3: Adopt copied children
+        if (this.type != null) {
+            this.type.setParent(this);
+        }
+        if (this.value != null) {
+            this.value.setParent(this);
+        }
     }
 
     @Override

@@ -42,14 +42,20 @@ public class BiTypeExpression
     protected BiTypeExpression(BiTypeExpression original) {
         super(original);
 
+        // Step 1: Copy ALL non-child fields FIRST (matches super.clone() behavior)
         this.operator = original.operator;  // Token is immutable
 
-        // Deep copy children
-        this.type1 = copyNode(original.type1);
-        this.type2 = copyNode(original.type2);
+        // Step 2: Deep copy children explicitly
+        this.type1 = original.type1 == null ? null : original.type1.copy();
+        this.type2 = original.type2 == null ? null : original.type2.copy();
 
-        adopt(this.type1);
-        adopt(this.type2);
+        // Step 3: Adopt copied children
+        if (this.type1 != null) {
+            this.type1.setParent(this);
+        }
+        if (this.type2 != null) {
+            this.type2.setParent(this);
+        }
     }
 
     @Override

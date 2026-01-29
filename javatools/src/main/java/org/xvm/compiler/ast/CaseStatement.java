@@ -2,9 +2,11 @@ package org.xvm.compiler.ast;
 
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -38,28 +40,24 @@ public class CaseStatement
 
     /**
      * Copy constructor.
-     * <p>
-     * Master clone() semantics:
-     * <ul>
-     *   <li>CHILD_FIELDS: "exprs" - deep copied by AstNode.clone()</li>
-     *   <li>Computed state: {@code m_label} - shallow copied via Object.clone() bitwise copy</li>
-     * </ul>
      *
      * @param original  the CaseStatement to copy from
      */
     protected CaseStatement(@NotNull CaseStatement original) {
         super(Objects.requireNonNull(original));
 
-        // Copy non-child structural fields (Token is immutable, safe to share)
+        // Non-child fields first
         this.keyword = original.keyword;
         this.lEndPos = original.lEndPos;
-
-        // Deep copy child fields
-        this.exprs = copyExpressions(original.exprs);
-        adopt(this.exprs);
-
-        // Shallow copy transient fields (matching Object.clone() semantics)
         this.m_label = original.m_label;
+
+        // Deep copy children
+        // NOTE: null vs empty is semantically significant - null means "default:" case (see isDefault())
+        this.exprs = original.exprs == null ? null
+                : original.exprs.stream().map(Expression::copy).collect(Collectors.toCollection(ArrayList::new));
+
+        // Adopt
+        adopt(this.exprs);
     }
 
     @Override

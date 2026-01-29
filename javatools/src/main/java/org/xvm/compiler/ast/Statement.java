@@ -39,9 +39,7 @@ public abstract class Statement
      * Master clone() semantics:
      * <ul>
      *   <li>No CHILD_FIELDS - base class for statements</li>
-     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
-     *   <li>Transient: m_ctx (validation context), m_listBreaks (break info list)</li>
-     *   <li>Non-transient: m_labelEnd (end label) - not copied, created on demand</li>
+     *   <li>All fields shallow copied via Object.clone() bitwise copy</li>
      * </ul>
      *
      * @param original  the Statement to copy from
@@ -49,24 +47,22 @@ public abstract class Statement
     protected Statement(@NotNull Statement original) {
         super(Objects.requireNonNull(original));
 
-        // Shallow copy transient fields to match Object.clone() semantics
+        // Shallow copy ALL fields to match Object.clone() (super.clone()) semantics
+        this.m_labelEnd   = original.m_labelEnd;
         this.m_ctx        = original.m_ctx;
         this.m_listBreaks = original.m_listBreaks;
-
-        // Note: m_labelEnd is not transient but is created on demand via getEndLabel(),
-        // so it is intentionally not copied
     }
 
     /**
      * {@inheritDoc}
      * <p/>
-     * Subclasses should override this method with a covariant return type and use a copy
-     * constructor for better performance and type safety. The default implementation delegates
-     * to {@link #clone()} for backward compatibility during the transition period.
+     * Subclasses MUST override this method with a covariant return type and use a copy
+     * constructor. The default implementation throws to catch any missing override.
      */
     @Override
     public Statement copy() {
-        return (Statement) clone();
+        throw new UnsupportedOperationException(
+            "Statement subclass " + getClass().getSimpleName() + " must override copy()");
     }
 
 

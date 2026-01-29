@@ -32,6 +32,23 @@ public class TraceExpression
                 ErrorListener.BLACKHOLE);
     }
 
+    /**
+     * Copy constructor.
+     *
+     * @param original  the expression to copy
+     */
+    protected TraceExpression(TraceExpression original) {
+        super(original);
+
+        // Shallow copy transient computed state
+        this.m_aArgs = original.m_aArgs;
+    }
+
+    @Override
+    public TraceExpression copy() {
+        return new TraceExpression(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 

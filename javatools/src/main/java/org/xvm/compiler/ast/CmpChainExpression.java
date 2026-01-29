@@ -3,7 +3,9 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.stream.Collectors;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -70,35 +72,29 @@ public class CmpChainExpression
     // ----- constructors --------------------------------------------------------------------------
 
     public CmpChainExpression(List<Expression> expressions, Token[] operators) {
-        this.expressions = expressions;
+        this.expressions = expressions == null ? new ArrayList<>() : expressions;
         this.operators   = operators;
     }
 
     /**
      * Copy constructor.
-     * <p>
-     * Master clone() semantics:
-     * <ul>
-     *   <li>CHILD_FIELDS: "expressions" - deep copied by AstNode.clone()</li>
-     *   <li>All other fields (including transient): shallow copied via Object.clone() bitwise copy</li>
-     * </ul>
      *
      * @param original  the CmpChainExpression to copy from
      */
     protected CmpChainExpression(@NotNull CmpChainExpression original) {
         super(Objects.requireNonNull(original));
 
-        // Token array is immutable, safe to share
-        this.operators = original.operators;
-
-        // Deep copy child field (per CHILD_FIELDS)
-        this.expressions = copyExpressions(original.expressions);
-        adopt(this.expressions);
-
-        // Shallow copy non-child fields (matching Object.clone() semantics)
+        // Non-child fields first
+        this.operators    = original.operators;
         this.m_typeCommon = original.m_typeCommon;
         this.m_idCmp      = original.m_idCmp;
         this.m_constEq    = original.m_constEq;
+
+        // Deep copy children
+        this.expressions = original.expressions.stream().map(Expression::copy).collect(Collectors.toCollection(ArrayList::new));
+
+        // Adopt
+        adopt(this.expressions);
     }
 
     @Override
@@ -606,7 +602,7 @@ public class CmpChainExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected List<Expression> expressions;
+    @NotNull protected List<Expression> expressions;
     protected Token[]          operators;
 
     /**

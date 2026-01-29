@@ -69,15 +69,19 @@ public class StatementExpression
     protected StatementExpression(@NotNull StatementExpression original) {
         super(Objects.requireNonNull(original));
 
-        // Deep copy child field (per CHILD_FIELDS)
-        this.body = copyNode(original.body);
-        adopt(this.body);
-
-        // Shallow copy all transient fields (matching Object.clone() semantics)
+        // Step 1: Copy ALL non-child fields FIRST (matches super.clone() behavior)
         this.m_atypeRequired = original.m_atypeRequired;
         this.m_collector     = original.m_collector;
         this.m_aLVal         = original.m_aLVal;
         this.m_astBody       = original.m_astBody;
+
+        // Step 2: Deep copy children explicitly
+        this.body = original.body == null ? null : original.body.copy();
+
+        // Step 3: Adopt copied children
+        if (this.body != null) {
+            this.body.setParent(this);
+        }
     }
 
     @Override
@@ -147,7 +151,7 @@ public class StatementExpression
         }
 
         // clone the body (to avoid damaging the original) and validate it to calculate its type
-        StatementBlock blockTempOld = (StatementBlock) body.clone();
+        StatementBlock blockTempOld = body.copy();
         blockTempOld.suppressScope();
         ctx = enterStatementContext(ctx);
 
@@ -194,7 +198,7 @@ public class StatementExpression
         m_atypeRequired = atypeRequired;
 
         // clone the body and validate it using the requested type to test if that type will work
-        StatementBlock blockTempOld = (StatementBlock) body.clone();
+        StatementBlock blockTempOld = body.copy();
         blockTempOld.suppressScope();
         ctx = enterStatementContext(ctx);
 

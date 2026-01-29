@@ -64,6 +64,23 @@ public class ToIntExpression
         finishValidation(null, null, expr.pool().typeInt64(), expr.getTypeFit().addConversion(), val, errs);
     }
 
+    /**
+     * Copy constructor.
+     *
+     * @param original  the expression to copy
+     */
+    protected ToIntExpression(ToIntExpression original) {
+        super(original);
+
+        // Shallow copy non-child field (immutable)
+        this.m_pintOffset = original.m_pintOffset;
+    }
+
+    @Override
+    public ToIntExpression copy() {
+        return new ToIntExpression(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 

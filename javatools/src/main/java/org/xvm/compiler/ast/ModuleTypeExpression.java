@@ -24,6 +24,21 @@ public class ModuleTypeExpression
         super(null, names, null, null, null, names.get(names.size()-1).getEndPosition());
     }
 
+    /**
+     * Copy constructor.
+     *
+     * @param original  the expression to copy
+     */
+    protected ModuleTypeExpression(ModuleTypeExpression original) {
+        super(original);
+        // No additional fields to copy
+    }
+
+    @Override
+    public ModuleTypeExpression copy() {
+        return new ModuleTypeExpression(this);
+    }
+
 
     // ----- compile phases ------------------------------------------------------------------------
 

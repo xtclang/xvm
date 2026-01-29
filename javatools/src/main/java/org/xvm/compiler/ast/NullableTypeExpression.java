@@ -39,11 +39,16 @@ public class NullableTypeExpression
     protected NullableTypeExpression(NullableTypeExpression original) {
         super(original);
 
+        // Step 1: Copy ALL non-child fields FIRST (matches super.clone() behavior)
         this.lEndPos = original.lEndPos;
 
-        // Deep copy child
-        this.type = copyNode(original.type);
-        adopt(this.type);
+        // Step 2: Deep copy children explicitly
+        this.type = original.type == null ? null : original.type.copy();
+
+        // Step 3: Adopt copied children
+        if (this.type != null) {
+            this.type.setParent(this);
+        }
     }
 
     @Override

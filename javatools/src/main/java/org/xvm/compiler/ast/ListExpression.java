@@ -3,13 +3,15 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Objects;
-
-import org.jetbrains.annotations.NotNull;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Collectors;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
@@ -55,33 +57,31 @@ public class ListExpression
 
     public ListExpression(TypeExpression type, List<Expression> exprs, long lStartPos, long lEndPos) {
         this.type      = type;
-        this.exprs     = exprs;
+        this.exprs     = exprs == null ? new ArrayList<>() : exprs;
         this.lStartPos = lStartPos;
         this.lEndPos   = lEndPos;
     }
 
     /**
      * Copy constructor.
-     * <p>
-     * Master clone() semantics:
-     * <ul>
-     *   <li>CHILD_FIELDS: "type", "exprs" - deep copied by AstNode.clone()</li>
-     *   <li>No transient fields in this class</li>
-     * </ul>
      *
      * @param original  the ListExpression to copy from
      */
     protected ListExpression(@NotNull ListExpression original) {
         super(Objects.requireNonNull(original));
 
-        // Primitive fields - shallow copy
+        // Non-child fields first
         this.lStartPos = original.lStartPos;
         this.lEndPos   = original.lEndPos;
 
-        // Deep copy child fields (per CHILD_FIELDS)
-        this.type  = copyNode(original.type);
-        this.exprs = copyExpressions(original.exprs);
-        adopt(this.type);
+        // Deep copy children
+        this.type  = original.type == null ? null : original.type.copy();
+        this.exprs = original.exprs.stream().map(Expression::copy).collect(Collectors.toCollection(ArrayList::new));
+
+        // Adopt
+        if (this.type != null) {
+            this.type.setParent(this);
+        }
         adopt(this.exprs);
     }
 
@@ -448,10 +448,10 @@ public class ListExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected TypeExpression   type;
-    protected List<Expression> exprs;
-    protected long             lStartPos;
-    protected long             lEndPos;
+    protected TypeExpression            type;
+    @NotNull protected List<Expression> exprs;
+    protected long                      lStartPos;
+    protected long                      lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ListExpression.class, "type", "exprs");
 }

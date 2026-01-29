@@ -48,13 +48,21 @@ public class TypedefStatement
     protected TypedefStatement(TypedefStatement original) {
         super(original);
 
-        // Deep copy child fields (from CHILD_FIELDS)
-        this.cond = adopt(copyNode(original.cond));
-        this.type = adopt(copyNode(original.type));
-
-        // Shallow copy non-child fields
+        // Step 1: Copy ALL non-child fields FIRST (matches super.clone() behavior)
         this.modifier = original.modifier;
         this.alias    = original.alias;
+
+        // Step 2: Deep copy children explicitly
+        this.cond = original.cond == null ? null : original.cond.copy();
+        this.type = original.type == null ? null : original.type.copy();
+
+        // Step 3: Adopt copied children
+        if (this.cond != null) {
+            this.cond.setParent(this);
+        }
+        if (this.type != null) {
+            this.type.setParent(this);
+        }
     }
 
     @Override

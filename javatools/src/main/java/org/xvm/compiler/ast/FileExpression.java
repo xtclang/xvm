@@ -76,16 +76,18 @@ public class FileExpression
     protected FileExpression(@NotNull FileExpression original) {
         super(Objects.requireNonNull(original));
 
-        // Token is immutable, safe to share
-        this.path = original.path;
-
-        // Shallow copy non-child fields (matching Object.clone() semantics)
+        // Step 1: Copy ALL non-child fields FIRST (matches super.clone() behavior)
+        this.path   = original.path;  // Token is immutable
         this.m_file = original.m_file;
         this.m_dir  = original.m_dir;
 
-        // Deep copy child field (per CHILD_FIELDS)
-        this.type = copyNode(original.type);
-        adopt(this.type);
+        // Step 2: Deep copy children explicitly
+        this.type = original.type == null ? null : original.type.copy();
+
+        // Step 3: Adopt copied children
+        if (this.type != null) {
+            this.type.setParent(this);
+        }
     }
 
     @Override

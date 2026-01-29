@@ -6,7 +6,10 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Component.Contribution;
@@ -29,6 +32,39 @@ public abstract class CompositionNode
         this.condition = condition;
         this.keyword   = keyword;
         this.type      = type;
+    }
+
+    /**
+     * Copy constructor for CompositionNode.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "condition", "type" - deep copied by AstNode.clone()</li>
+     *   <li>All other fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
+     * <p>
+     * Order matches master clone(): all non-child fields FIRST, then children.
+     *
+     * @param original  the node to copy from
+     */
+    protected CompositionNode(@NotNull CompositionNode original) {
+        super(Objects.requireNonNull(original));
+
+        // Step 1: Copy ALL non-child fields FIRST (matches super.clone() behavior)
+        this.keyword        = original.keyword;
+        this.m_contribution = original.m_contribution;
+
+        // Step 2: Deep copy children explicitly (CHILD_FIELDS: condition, type)
+        this.condition = original.condition == null ? null : original.condition.copy();
+        this.type      = original.type == null ? null : original.type.copy();
+
+        // Step 3: Adopt copied children
+        if (this.condition != null) {
+            this.condition.setParent(this);
+        }
+        if (this.type != null) {
+            this.type.setParent(this);
+        }
     }
 
 
@@ -148,6 +184,38 @@ public abstract class CompositionNode
             this.lEndPos = lEndPos;
         }
 
+        /**
+         * Copy constructor.
+         * <p>
+         * Master clone() semantics:
+         * <ul>
+         *   <li>CHILD_FIELDS: "condition", "type", "args" - deep copied</li>
+         *   <li>All other fields: shallow copied</li>
+         * </ul>
+         * <p>
+         * Order matches master clone(): all non-child fields FIRST, then children.
+         *
+         * @param original  the Extends to copy from
+         */
+        protected Extends(@NotNull Extends original) {
+            super(Objects.requireNonNull(original));
+
+            // Step 1: Copy non-child fields FIRST
+            this.lEndPos = original.lEndPos;
+
+            // Step 2: Deep copy children explicitly (args - condition and type handled by super)
+            this.args = original.args == null ? null
+                    : original.args.stream().map(Expression::copy).collect(Collectors.toCollection(ArrayList::new));
+
+            // Step 3: Adopt copied children
+            adopt(this.args);
+        }
+
+        @Override
+        public Extends copy() {
+            return new Extends(this);
+        }
+
         @Override
         public long getEndPosition() {
             return lEndPos == 0 ? super.getEndPosition() : lEndPos;
@@ -192,6 +260,34 @@ public abstract class CompositionNode
             super(null, new Token(annotation.getStartPosition(), annotation.getStartPosition(),
                     Token.Id.ANNOTATION), annotation.type);
             this.annotation = annotation;
+        }
+
+        /**
+         * Copy constructor.
+         * <p>
+         * Master clone() semantics:
+         * <ul>
+         *   <li>CHILD_FIELDS: "annotation" - deep copied</li>
+         *   <li>All other fields: shallow copied (none in this class)</li>
+         * </ul>
+         *
+         * @param original  the Annotates to copy from
+         */
+        protected Annotates(@NotNull Annotates original) {
+            super(Objects.requireNonNull(original));
+
+            // Deep copy child (annotation)
+            this.annotation = original.annotation == null ? null : original.annotation.copy();
+
+            // Adopt copied child
+            if (this.annotation != null) {
+                this.annotation.setParent(this);
+            }
+        }
+
+        @Override
+        public Annotates copy() {
+            return new Annotates(this);
         }
 
         public Annotation ensureAnnotation(ConstantPool pool) {
@@ -253,6 +349,36 @@ public abstract class CompositionNode
             super(condition, keyword, type);
             this.args        = args;
             this.constraints = constraints;
+        }
+
+        /**
+         * Copy constructor.
+         * <p>
+         * Master clone() semantics:
+         * <ul>
+         *   <li>CHILD_FIELDS: "condition", "type", "args", "constraints" - deep copied</li>
+         *   <li>All other fields: shallow copied (none in this class)</li>
+         * </ul>
+         *
+         * @param original  the Incorporates to copy from
+         */
+        protected Incorporates(@NotNull Incorporates original) {
+            super(Objects.requireNonNull(original));
+
+            // Deep copy children explicitly
+            this.args = original.args == null ? null
+                    : original.args.stream().map(Expression::copy).collect(Collectors.toCollection(ArrayList::new));
+            this.constraints = original.constraints == null ? null
+                    : original.constraints.stream().map(Parameter::copy).collect(Collectors.toCollection(ArrayList::new));
+
+            // Adopt copied children
+            adopt(this.args);
+            adopt(this.constraints);
+        }
+
+        @Override
+        public Incorporates copy() {
+            return new Incorporates(this);
         }
 
         /**
@@ -337,6 +463,26 @@ public abstract class CompositionNode
         public Implements(Expression condition, Token keyword, TypeExpression type) {
             super(condition, keyword, type);
         }
+
+        /**
+         * Copy constructor.
+         * <p>
+         * Master clone() semantics:
+         * <ul>
+         *   <li>CHILD_FIELDS: "condition", "type" - deep copied via base class</li>
+         *   <li>All other fields: shallow copied</li>
+         * </ul>
+         *
+         * @param original  the Implements to copy from
+         */
+        protected Implements(@NotNull Implements original) {
+            super(Objects.requireNonNull(original));
+        }
+
+        @Override
+        public Implements copy() {
+            return new Implements(this);
+        }
     }
 
 
@@ -349,6 +495,40 @@ public abstract class CompositionNode
             super(condition, keyword, type);
             this.delegatee = delegatee;
             this.lEndPos   = lEndPos;
+        }
+
+        /**
+         * Copy constructor.
+         * <p>
+         * Master clone() semantics:
+         * <ul>
+         *   <li>CHILD_FIELDS: "condition", "type", "delegatee" - deep copied</li>
+         *   <li>All other fields: shallow copied</li>
+         * </ul>
+         * <p>
+         * Order matches master clone(): all non-child fields FIRST, then children.
+         *
+         * @param original  the Delegates to copy from
+         */
+        protected Delegates(@NotNull Delegates original) {
+            super(Objects.requireNonNull(original));
+
+            // Step 1: Copy non-child fields FIRST
+            this.lEndPos = original.lEndPos;
+            this.name    = original.name;
+
+            // Step 2: Deep copy child explicitly
+            this.delegatee = original.delegatee == null ? null : original.delegatee.copy();
+
+            // Step 3: Adopt copied child
+            if (this.delegatee != null) {
+                this.delegatee.setParent(this);
+            }
+        }
+
+        @Override
+        public Delegates copy() {
+            return new Delegates(this);
         }
 
         /**
@@ -401,6 +581,26 @@ public abstract class CompositionNode
         public Into(Expression condition, Token keyword, TypeExpression type) {
             super(condition, keyword, type);
         }
+
+        /**
+         * Copy constructor.
+         * <p>
+         * Master clone() semantics:
+         * <ul>
+         *   <li>CHILD_FIELDS: "condition", "type" - deep copied via base class</li>
+         *   <li>All other fields: shallow copied</li>
+         * </ul>
+         *
+         * @param original  the Into to copy from
+         */
+        protected Into(@NotNull Into original) {
+            super(Objects.requireNonNull(original));
+        }
+
+        @Override
+        public Into copy() {
+            return new Into(this);
+        }
     }
 
 
@@ -420,6 +620,46 @@ public abstract class CompositionNode
             this.injects  = injects;
             this.injector = injector;
             this.lEndPos  = lEndPos;
+        }
+
+        /**
+         * Copy constructor.
+         * <p>
+         * Master clone() semantics:
+         * <ul>
+         *   <li>CHILD_FIELDS: "condition", "type", "vers", "injects", "injector" - deep copied</li>
+         *   <li>All other fields: shallow copied</li>
+         * </ul>
+         * <p>
+         * Order matches master clone(): all non-child fields FIRST, then children.
+         *
+         * @param original  the Import to copy from
+         */
+        protected Import(@NotNull Import original) {
+            super(Objects.requireNonNull(original));
+
+            // Step 1: Copy non-child fields FIRST
+            this.modifier = original.modifier;
+            this.lEndPos  = original.lEndPos;
+
+            // Step 2: Deep copy children explicitly
+            this.vers = original.vers == null ? null
+                    : original.vers.stream().map(VersionOverride::copy).collect(Collectors.toCollection(ArrayList::new));
+            this.injects = original.injects == null ? null
+                    : original.injects.stream().map(Parameter::copy).collect(Collectors.toCollection(ArrayList::new));
+            this.injector = original.injector == null ? null : original.injector.copy();
+
+            // Step 3: Adopt copied children
+            adopt(this.vers);
+            adopt(this.injects);
+            if (this.injector != null) {
+                this.injector.setParent(this);
+            }
+        }
+
+        @Override
+        public Import copy() {
+            return new Import(this);
         }
 
         /**
@@ -584,6 +824,39 @@ public abstract class CompositionNode
             super(condition, keyword, null);
             this.expr    = expr;
             this.lEndPos = lEndPos;
+        }
+
+        /**
+         * Copy constructor.
+         * <p>
+         * Master clone() semantics:
+         * <ul>
+         *   <li>CHILD_FIELDS: "condition", "expr" - deep copied</li>
+         *   <li>All other fields: shallow copied</li>
+         * </ul>
+         * <p>
+         * Order matches master clone(): all non-child fields FIRST, then children.
+         *
+         * @param original  the Default to copy from
+         */
+        protected Default(@NotNull Default original) {
+            super(Objects.requireNonNull(original));
+
+            // Step 1: Copy non-child fields FIRST
+            this.lEndPos = original.lEndPos;
+
+            // Step 2: Deep copy child explicitly
+            this.expr = original.expr == null ? null : original.expr.copy();
+
+            // Step 3: Adopt copied child
+            if (this.expr != null) {
+                this.expr.setParent(this);
+            }
+        }
+
+        @Override
+        public Default copy() {
+            return new Default(this);
         }
 
         /**

@@ -3,7 +3,9 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
@@ -40,26 +42,26 @@ public class ArrayTypeExpression
 
     /**
      * Copy constructor.
-     * <p>
-     * Master clone() semantics:
-     * <ul>
-     *   <li>CHILD_FIELDS: "type", "indexes" - deep copied by AstNode.clone()</li>
-     *   <li>No transient fields in this class</li>
-     * </ul>
      *
      * @param original  the ArrayTypeExpression to copy from
      */
     protected ArrayTypeExpression(ArrayTypeExpression original) {
         super(original);
 
+        // Non-child fields first
         this.dims    = original.dims;
         this.lEndPos = original.lEndPos;
 
         // Deep copy children
-        this.type    = copyNode(original.type);
-        this.indexes = copyExpressions(original.indexes);
+        // NOTE: indexes can be null when dims is specified via ArrayTypeExpression(type, dims, lEndPos)
+        this.type    = original.type == null ? null : original.type.copy();
+        this.indexes = original.indexes == null ? null
+                : original.indexes.stream().map(Expression::copy).collect(Collectors.toCollection(ArrayList::new));
 
-        adopt(this.type);
+        // Adopt
+        if (this.type != null) {
+            this.type.setParent(this);
+        }
         adopt(this.indexes);
     }
 

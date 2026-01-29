@@ -339,9 +339,9 @@ public class ForEachStatement
         while (true) {
             boolean fValid = true;
 
-            // clone the condition(s) and the body
-            conds = Collections.singletonList(condOrig.clone());
-            block = (StatementBlock) blockOrig.clone();
+            // copy the condition(s) and the body
+            conds = Collections.singletonList(condOrig.copy());
+            block = blockOrig.copy();
 
             // create a temporary error list
             errs = errsOrig.branch(this);

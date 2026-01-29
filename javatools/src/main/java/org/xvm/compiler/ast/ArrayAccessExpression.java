@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -10,6 +11,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
@@ -56,34 +59,33 @@ public class ArrayAccessExpression
 
     public ArrayAccessExpression(Expression expr, List<Expression> indexes, Token tokClose) {
         this.expr     = expr;
-        this.indexes  = indexes;
+        this.indexes  = indexes == null ? new ArrayList<>() : indexes;
         this.tokClose = tokClose;
     }
 
     /**
      * Copy constructor.
      *
-     * <p><b>Master clone() semantics:</b>
-     * <ul>
-     *   <li>Deep copy (from CHILD_FIELDS): expr, indexes</li>
-     *   <li>Shallow copy (same reference): tokClose, m_idGet, m_idSet, m_fSlice</li>
-     * </ul>
-     *
      * @param original  the expression to copy
      */
     protected ArrayAccessExpression(ArrayAccessExpression original) {
         super(original);
 
-        // Deep copy child fields (from CHILD_FIELDS)
-        this.expr    = adopt(copyNode(original.expr));
-        this.indexes = copyExpressions(original.indexes);
-        adopt(this.indexes);
-
-        // Shallow copy non-child fields (including transient computed state)
+        // Non-child fields first
         this.tokClose = original.tokClose;
         this.m_idGet  = original.m_idGet;
         this.m_idSet  = original.m_idSet;
         this.m_fSlice = original.m_fSlice;
+
+        // Deep copy children
+        this.expr    = original.expr == null ? null : original.expr.copy();
+        this.indexes = original.indexes.stream().map(Expression::copy).collect(Collectors.toCollection(ArrayList::new));
+
+        // Adopt
+        if (this.expr != null) {
+            this.expr.setParent(this);
+        }
+        adopt(this.indexes);
     }
 
     @Override
@@ -1328,7 +1330,7 @@ public class ArrayAccessExpression
     // ----- fields --------------------------------------------------------------------------------
 
     protected Expression       expr;
-    protected List<Expression> indexes;
+    @NotNull protected List<Expression> indexes;
     protected Token            tokClose;
 
     private transient MethodConstant m_idGet;

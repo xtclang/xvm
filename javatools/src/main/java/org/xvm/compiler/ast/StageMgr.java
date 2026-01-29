@@ -170,7 +170,20 @@ public class StageMgr {
             m_nFlags = 0;
 
             Stage stageCur = node.getStage();
-            stageCur.ensureValid();
+            try {
+                stageCur.ensureValid();
+            } catch (IllegalStateException e) {
+                AstNode parent = node.getParent();
+                String parentInfo = parent == null ? "null" : parent.getClass().getSimpleName();
+                String parentDesc = parent == null ? "N/A" : parent.getDumpDesc();
+                AstNode grandparent = parent == null ? null : parent.getParent();
+                String gpInfo = grandparent == null ? "null" : grandparent.getClass().getSimpleName();
+                throw new IllegalStateException("Node has Discarded stage: "
+                        + node.getClass().getSimpleName() + " - " + node.getDumpDesc()
+                        + ", parent=" + parentInfo + " - " + parentDesc
+                        + ", parent.stage=" + (parent == null ? "N/A" : parent.getStage())
+                        + ", grandparent=" + gpInfo, e);
+            }
 
             Stage stageTarget = m_target;
             if (stageCur.compareTo(stageTarget) < 0) {

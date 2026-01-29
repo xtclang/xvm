@@ -4,12 +4,13 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
-import java.util.Objects;
-
-import org.jetbrains.annotations.NotNull;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -87,34 +88,30 @@ public class AssertStatement
 
     /**
      * Copy constructor.
-     * <p>
-     * Master clone() semantics:
-     * <ul>
-     *   <li>CHILD_FIELDS: "interval", "conds", "message" - deep copied by AstNode.clone()</li>
-     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
-     * </ul>
      *
      * @param original  the AssertStatement to copy from
      */
     protected AssertStatement(@NotNull AssertStatement original) {
         super(Objects.requireNonNull(original));
 
-        // Copy non-child structural fields (Token is immutable, safe to share)
-        this.keyword = original.keyword;
-        this.lEndPos = original.lEndPos;
+        // Non-child fields first
+        this.keyword     = original.keyword;
+        this.lEndPos     = original.lEndPos;
+        this.m_listTexts = original.m_listTexts;
 
-        // Deep copy child fields
+        // Deep copy children (conds never null due to primary constructor)
         this.interval = original.interval == null ? null : original.interval.copy();
-        this.conds    = copyNodes(original.conds);
+        this.conds    = original.conds.stream().map(AstNode::copy).collect(Collectors.toCollection(ArrayList::new));
         this.message  = original.message == null ? null : original.message.copy();
 
-        // Adopt copied children
-        adopt(this.interval);
+        // Adopt
+        if (this.interval != null) {
+            this.interval.setParent(this);
+        }
         adopt(this.conds);
-        adopt(this.message);
-
-        // Shallow copy transient fields (matching Object.clone() semantics)
-        this.m_listTexts = original.m_listTexts;
+        if (this.message != null) {
+            this.message.setParent(this);
+        }
     }
 
     @Override
@@ -601,7 +598,7 @@ public class AssertStatement
             Expression exprSub = exprNot.expr;
             if (exprSub instanceof BiExpression exprOr
                     && exprOr.operator.getId() == Id.COND_OR) {
-                UnaryComplementExpression exprNot2 = (UnaryComplementExpression) exprNot.clone();
+                UnaryComplementExpression exprNot2 = (UnaryComplementExpression) exprNot.copy();
 
                 exprNot .expr = exprOr.expr1;
                 exprNot2.expr = exprOr.expr2;

@@ -1,9 +1,11 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -24,27 +26,21 @@ public abstract class ConditionalStatement
 
     /**
      * Copy constructor.
-     * <p>
-     * Master clone() semantics:
-     * <ul>
-     *   <li>CHILD_FIELDS: subclasses define their own - "conds" copied here for subclasses</li>
-     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
-     * </ul>
      *
      * @param original  the ConditionalStatement to copy from
      */
     protected ConditionalStatement(@NotNull ConditionalStatement original) {
         super(Objects.requireNonNull(original));
 
-        // Copy non-child structural fields (Token is immutable, safe to share)
-        this.keyword = original.keyword;
-
-        // Deep copy child fields
-        this.conds = copyNodes(original.conds);
-        adopt(this.conds);
-
-        // Shallow copy transient fields (matching Object.clone() semantics)
+        // Non-child fields first
+        this.keyword  = original.keyword;
         this.m_nLabel = original.m_nLabel;
+
+        // Deep copy children (conds never null due to primary constructor)
+        this.conds = original.conds.stream().map(AstNode::copy).collect(Collectors.toCollection(ArrayList::new));
+
+        // Adopt
+        adopt(this.conds);
     }
 
 

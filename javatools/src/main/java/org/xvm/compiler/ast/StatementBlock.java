@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -114,30 +115,34 @@ public class StatementBlock
      * Master clone() semantics:
      * <ul>
      *   <li>CHILD_FIELDS: "stmts" - deep copied by AstNode.clone()</li>
-     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     *   <li>All other fields: shallow copied via Object.clone() bitwise copy</li>
      * </ul>
+     * <p>
+     * Order matches master clone(): all non-child fields set FIRST (via super.clone()),
+     * then children are deep copied and adopted.
      *
      * @param original  the StatementBlock to copy from
      */
     protected StatementBlock(@NotNull StatementBlock original) {
         super(Objects.requireNonNull(original));
 
-        // Deep copy child fields
-        this.stmts = copyStatements(original.stmts);
-        adopt(this.stmts);
-
-        // Copy non-child structural fields (not transient compilation state)
-        this.source          = original.source;
-        this.lStartPos       = original.lStartPos;
-        this.lEndPos         = original.lEndPos;
-        this.boundary        = original.boundary;
-        this.containsEnclosed = original.containsEnclosed;
-
-        // Shallow copy transient fields (matching Object.clone() semantics)
-        this.imports      = original.imports;
-        this.importsWild  = original.importsWild;
+        // Step 1: Copy ALL non-child fields FIRST (matches super.clone() behavior)
+        this.source                  = original.source;
+        this.lStartPos               = original.lStartPos;
+        this.lEndPos                 = original.lEndPos;
+        this.boundary                = original.boundary;
+        this.containsEnclosed        = original.containsEnclosed;
+        this.imports                 = original.imports;
+        this.importsWild             = original.importsWild;
         this.m_fSuppressScope        = original.m_fSuppressScope;
         this.m_fTerminatedAbnormally = original.m_fTerminatedAbnormally;
+
+        // Step 2: Deep copy children explicitly (CHILD_FIELDS: stmts)
+        this.stmts = original.stmts == null ? null
+                : original.stmts.stream().map(Statement::copy).collect(Collectors.toCollection(ArrayList::new));
+
+        // Step 3: Adopt copied children
+        adopt(this.stmts);
     }
 
     @Override

@@ -37,6 +37,21 @@ public class UnpackExpression
         }
     }
 
+    /**
+     * Copy constructor.
+     *
+     * @param original  the expression to copy
+     */
+    protected UnpackExpression(UnpackExpression original) {
+        super(original);
+        // No additional fields to copy
+    }
+
+    @Override
+    public UnpackExpression copy() {
+        return new UnpackExpression(this);
+    }
+
 
     // ----- Expression compilation ----------------------------------------------------------------
 

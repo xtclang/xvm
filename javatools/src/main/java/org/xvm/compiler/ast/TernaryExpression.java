@@ -51,17 +51,25 @@ public class TernaryExpression
     protected TernaryExpression(@NotNull TernaryExpression original) {
         super(Objects.requireNonNull(original));
 
-        // Deep copy child fields (per CHILD_FIELDS)
-        this.cond     = copyNode(original.cond);
-        this.exprThen = copyNode(original.exprThen);
-        this.exprElse = copyNode(original.exprElse);
-        adopt(this.cond);
-        adopt(this.exprThen);
-        adopt(this.exprElse);
-
-        // Shallow copy transient fields (matching Object.clone() semantics)
+        // Step 1: Copy ALL non-child fields FIRST (matches super.clone() behavior)
         this.m_fConditional = original.m_fConditional;
         this.m_plan         = original.m_plan;
+
+        // Step 2: Deep copy children explicitly
+        this.cond     = original.cond == null ? null : original.cond.copy();
+        this.exprThen = original.exprThen == null ? null : original.exprThen.copy();
+        this.exprElse = original.exprElse == null ? null : original.exprElse.copy();
+
+        // Step 3: Adopt copied children
+        if (this.cond != null) {
+            this.cond.setParent(this);
+        }
+        if (this.exprThen != null) {
+            this.exprThen.setParent(this);
+        }
+        if (this.exprElse != null) {
+            this.exprElse.setParent(this);
+        }
     }
 
     @Override

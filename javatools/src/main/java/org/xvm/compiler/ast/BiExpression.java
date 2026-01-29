@@ -68,20 +68,28 @@ public abstract class BiExpression
      *   <li>CHILD_FIELDS: "expr1", "expr2" - deep copied by AstNode.clone()</li>
      *   <li>No transient fields in this class</li>
      * </ul>
+     * <p>
+     * Order matches master clone(): all non-child fields FIRST, then children.
      *
      * @param original  the BiExpression to copy from
      */
     protected BiExpression(@NotNull BiExpression original) {
         super(Objects.requireNonNull(original));
 
-        // Token is immutable, safe to share
+        // Step 1: Copy non-child fields FIRST (Token is immutable, safe to share)
         this.operator = original.operator;
 
-        // Deep copy child fields (per CHILD_FIELDS)
-        this.expr1 = copyNode(original.expr1);
-        this.expr2 = copyNode(original.expr2);
-        adopt(this.expr1);
-        adopt(this.expr2);
+        // Step 2: Deep copy children explicitly (CHILD_FIELDS: expr1, expr2)
+        this.expr1 = original.expr1 == null ? null : original.expr1.copy();
+        this.expr2 = original.expr2 == null ? null : original.expr2.copy();
+
+        // Step 3: Adopt copied children
+        if (this.expr1 != null) {
+            this.expr1.setParent(this);
+        }
+        if (this.expr2 != null) {
+            this.expr2.setParent(this);
+        }
     }
 
 

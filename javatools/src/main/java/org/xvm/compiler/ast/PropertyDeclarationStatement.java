@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
@@ -115,29 +116,52 @@ public class PropertyDeclarationStatement
      *       assignment</li>
      *   <li>Shallow copy (same reference): modifiers, name, tokAsn, doc, m_fSynthetic, m_counter</li>
      * </ul>
+     * <p>
+     * Order matches master clone(): all non-child fields FIRST, then children.
      *
      * @param original  the statement to copy
      */
     protected PropertyDeclarationStatement(PropertyDeclarationStatement original) {
         super(original);
 
-        // Deep copy child fields (from CHILD_FIELDS)
-        this.condition   = adopt(copyNode(original.condition));
-        this.annotations = copyNodes(original.annotations);
-        this.type        = adopt(copyNode(original.type));
-        this.value       = adopt(copyNode(original.value));
-        this.body        = adopt(copyNode(original.body));
-        this.initializer = adopt(copyNode(original.initializer));
-        this.assignment  = adopt(copyNode(original.assignment));
-        adopt(this.annotations);
-
-        // Shallow copy non-child fields (including transient computed state)
-        this.modifiers   = original.modifiers;
-        this.name        = original.name;
-        this.tokAsn      = original.tokAsn;
-        this.doc         = original.doc;
+        // Step 1: Copy ALL non-child fields FIRST (matches super.clone() behavior)
+        this.modifiers    = original.modifiers;
+        this.name         = original.name;
+        this.tokAsn       = original.tokAsn;
+        this.doc          = original.doc;
         this.m_fSynthetic = original.m_fSynthetic;
-        this.m_counter   = original.m_counter;
+        this.m_counter    = original.m_counter;
+
+        // Step 2: Deep copy children explicitly
+        this.condition   = original.condition == null ? null : original.condition.copy();
+        this.annotations = original.annotations == null ? null
+                : original.annotations.stream().map(AnnotationExpression::copy).collect(Collectors.toCollection(ArrayList::new));
+        this.type        = original.type == null ? null : original.type.copy();
+        this.value       = original.value == null ? null : original.value.copy();
+        this.body        = original.body == null ? null : original.body.copy();
+        this.initializer = original.initializer == null ? null : original.initializer.copy();
+        this.assignment  = original.assignment == null ? null : original.assignment.copy();
+
+        // Step 3: Adopt copied children
+        if (this.condition != null) {
+            this.condition.setParent(this);
+        }
+        adopt(this.annotations);
+        if (this.type != null) {
+            this.type.setParent(this);
+        }
+        if (this.value != null) {
+            this.value.setParent(this);
+        }
+        if (this.body != null) {
+            this.body.setParent(this);
+        }
+        if (this.initializer != null) {
+            this.initializer.setParent(this);
+        }
+        if (this.assignment != null) {
+            this.assignment.setParent(this);
+        }
     }
 
     @Override

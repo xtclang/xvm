@@ -107,10 +107,7 @@ public abstract class Expression
      * Master clone() semantics:
      * <ul>
      *   <li>No CHILD_FIELDS - base class for expressions</li>
-     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
-     *   <li>Transient: m_nFlags (temporary flags)</li>
-     *   <li>Post-validation state (m_fit, m_oType, m_oConst) are NOT transient but are
-     *       NOT copied - they will be recomputed during validation of the copy</li>
+     *   <li>All fields shallow copied via Object.clone() bitwise copy</li>
      * </ul>
      *
      * @param original  the Expression to copy from
@@ -118,23 +115,23 @@ public abstract class Expression
     protected Expression(Expression original) {
         super(original);
 
-        // Shallow copy transient fields to match Object.clone() semantics
+        // Shallow copy ALL fields to match Object.clone() (super.clone()) semantics
+        this.m_fit    = original.m_fit;
+        this.m_oType  = original.m_oType;
+        this.m_oConst = original.m_oConst;
         this.m_nFlags = original.m_nFlags;
-
-        // Note: m_fit, m_oType, m_oConst are post-validation state that will be
-        // recomputed during validation, so they are intentionally not copied
     }
 
     /**
      * {@inheritDoc}
      * <p/>
-     * Subclasses should override this method with a covariant return type and use a copy
-     * constructor for better performance and type safety. The default implementation delegates
-     * to {@link #clone()} for backward compatibility during the transition period.
+     * Subclasses MUST override this method with a covariant return type and use a copy
+     * constructor. The default implementation throws to catch any missing override.
      */
     @Override
     public Expression copy() {
-        return (Expression) clone();
+        throw new UnsupportedOperationException(
+            "Expression subclass " + getClass().getSimpleName() + " must override copy()");
     }
 
 

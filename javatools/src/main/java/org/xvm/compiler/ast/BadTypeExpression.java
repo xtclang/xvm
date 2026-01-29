@@ -40,9 +40,15 @@ public class BadTypeExpression
     protected BadTypeExpression(BadTypeExpression original) {
         super(original);
 
-        // Deep copy child
-        this.nonType = copyNode(original.nonType);
-        adopt(this.nonType);
+        // Step 1: No non-child fields in this class
+
+        // Step 2: Deep copy children explicitly
+        this.nonType = original.nonType == null ? null : original.nonType.copy();
+
+        // Step 3: Adopt copied children
+        if (this.nonType != null) {
+            this.nonType.setParent(this);
+        }
     }
 
     @Override

@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -31,33 +32,29 @@ public class FunctionTypeExpression
             List<TypeExpression> params, long lEndPos) {
         this.function     = function;
         this.conditional  = conditional;
-        this.returnValues = returnValues;
-        this.paramTypes   = params;
+        this.returnValues = returnValues == null ? new ArrayList<>() : returnValues;
+        this.paramTypes   = params == null ? new ArrayList<>() : params;
         this.lEndPos      = lEndPos;
     }
 
     /**
      * Copy constructor.
-     * <p>
-     * Master clone() semantics:
-     * <ul>
-     *   <li>CHILD_FIELDS: "returnValues", "paramTypes" - deep copied by AstNode.clone()</li>
-     *   <li>No transient fields in this class</li>
-     * </ul>
      *
      * @param original  the FunctionTypeExpression to copy from
      */
     protected FunctionTypeExpression(@NotNull FunctionTypeExpression original) {
         super(Objects.requireNonNull(original));
 
-        this.function    = original.function;      // Token is immutable
-        this.conditional = original.conditional;   // Token is immutable
+        // Non-child fields first
+        this.function    = original.function;
+        this.conditional = original.conditional;
         this.lEndPos     = original.lEndPos;
 
         // Deep copy children
-        this.returnValues = copyNodes(original.returnValues);
-        this.paramTypes   = copyNodes(original.paramTypes);
+        this.returnValues = original.returnValues.stream().map(Parameter::copy).collect(Collectors.toCollection(ArrayList::new));
+        this.paramTypes   = original.paramTypes.stream().map(TypeExpression::copy).collect(Collectors.toCollection(ArrayList::new));
 
+        // Adopt
         adopt(this.returnValues);
         adopt(this.paramTypes);
     }
@@ -212,7 +209,7 @@ public class FunctionTypeExpression
     protected Token                function;
     protected Token                conditional;
     protected List<Parameter>      returnValues;
-    protected List<TypeExpression> paramTypes;
+    @NotNull protected List<TypeExpression> paramTypes;
     protected long                 lEndPos;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(FunctionTypeExpression.class, "returnValues", "paramTypes");

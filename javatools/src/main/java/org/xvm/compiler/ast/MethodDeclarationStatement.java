@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -139,34 +140,49 @@ public class MethodDeclarationStatement
      *   <li>Shallow copy (same reference): modifiers, conditional, name, doc, m_tokFinally,
      *       m_bodyFinally, m_stmtComplement</li>
      * </ul>
+     * <p>
+     * Order matches master clone(): all non-child fields FIRST, then children.
      *
      * @param original  the statement to copy
      */
     protected MethodDeclarationStatement(MethodDeclarationStatement original) {
         super(original);
 
-        // Deep copy child fields (from CHILD_FIELDS)
-        this.condition   = adopt(copyNode(original.condition));
-        this.annotations = copyNodes(original.annotations);
-        this.typeParams  = copyNodes(original.typeParams);
-        this.returns     = copyNodes(original.returns);
-        this.redundant   = copyNodes(original.redundant);
-        this.params      = copyNodes(original.params);
-        this.body        = adopt(copyNode(original.body));
+        // Step 1: Copy ALL non-child fields FIRST (matches super.clone() behavior)
+        this.modifiers        = original.modifiers;
+        this.conditional      = original.conditional;
+        this.name             = original.name;
+        this.doc              = original.doc;
+        this.m_tokFinally     = original.m_tokFinally;
+        this.m_bodyFinally    = original.m_bodyFinally;
+        this.m_stmtComplement = original.m_stmtComplement;
+
+        // Step 2: Deep copy children explicitly
+        this.condition = original.condition == null ? null : original.condition.copy();
+        this.annotations = original.annotations == null ? null
+                : original.annotations.stream().map(AnnotationExpression::copy).collect(Collectors.toCollection(ArrayList::new));
+        this.typeParams = original.typeParams == null ? null
+                : original.typeParams.stream().map(Parameter::copy).collect(Collectors.toCollection(ArrayList::new));
+        this.returns = original.returns == null ? null
+                : original.returns.stream().map(Parameter::copy).collect(Collectors.toCollection(ArrayList::new));
+        this.redundant = original.redundant == null ? null
+                : original.redundant.stream().map(TypeExpression::copy).collect(Collectors.toCollection(ArrayList::new));
+        this.params = original.params == null ? null
+                : original.params.stream().map(Parameter::copy).collect(Collectors.toCollection(ArrayList::new));
+        this.body = original.body == null ? null : original.body.copy();
+
+        // Step 3: Adopt copied children
+        if (this.condition != null) {
+            this.condition.setParent(this);
+        }
         adopt(this.annotations);
         adopt(this.typeParams);
         adopt(this.returns);
         adopt(this.redundant);
         adopt(this.params);
-
-        // Shallow copy non-child fields (including transient computed state)
-        this.modifiers       = original.modifiers;
-        this.conditional     = original.conditional;
-        this.name            = original.name;
-        this.doc             = original.doc;
-        this.m_tokFinally    = original.m_tokFinally;
-        this.m_bodyFinally   = original.m_bodyFinally;
-        this.m_stmtComplement = original.m_stmtComplement;
+        if (this.body != null) {
+            this.body.setParent(this);
+        }
     }
 
     @Override

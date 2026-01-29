@@ -269,12 +269,12 @@ public class WhileStatement
             boolean fValid  = true;
             boolean fRepeat = false;
 
-            // clone the condition(s) and the body
+            // copy the condition(s) and the body
             conds = new ArrayList<>(cConds);
             for (AstNode cond : condsOrig) {
-                conds.add(cond.clone());
+                conds.add(cond.copy());
             }
-            block = (StatementBlock) blockOrig.clone();
+            block = blockOrig.copy();
 
             // create a temporary error list
             errs = errsOrig.branch(this);

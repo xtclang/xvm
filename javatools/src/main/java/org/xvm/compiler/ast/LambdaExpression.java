@@ -104,36 +104,16 @@ public class LambdaExpression
 
     /**
      * Copy constructor.
-     * <p>
-     * Master clone() semantics:
-     * <ul>
-     *   <li>CHILD_FIELDS: "params", "paramNames", "body" - deep copied by AstNode.clone()</li>
-     *   <li>Custom clone() override: sets m_lambda to null (MethodStructure belongs to original)</li>
-     *   <li>All other transient fields: shallow copied via Object.clone() bitwise copy</li>
-     * </ul>
      *
      * @param original  the LambdaExpression to copy from
      */
     protected LambdaExpression(@NotNull LambdaExpression original) {
         super(Objects.requireNonNull(original));
 
-        // Token and position are immutable, safe to share
-        this.operator  = original.operator;
-        this.lStartPos = original.lStartPos;
-
-        // Deep copy child fields (per CHILD_FIELDS)
-        this.params     = copyNodes(original.params);
-        this.paramNames = copyExpressions(original.paramNames);
-        this.body       = copyNode(original.body);
-        adopt(this.params);
-        adopt(this.paramNames);
-        adopt(this.body);
-
-        // m_lambda must NOT be copied - matches custom clone() behavior in master
-        // The MethodStructure belongs to the original, not the copy
-        this.m_lambda = null;
-
-        // Shallow copy all other transient fields (matching Object.clone() semantics)
+        // Non-child fields first
+        this.operator       = original.operator;
+        this.lStartPos      = original.lStartPos;
+        this.m_lambda       = null;  // MethodStructure belongs to original, must NOT be copied
         this.m_fPrepared    = original.m_fPrepared;
         this.m_typeRequired = original.m_typeRequired;
         this.m_collector    = original.m_collector;
@@ -141,6 +121,21 @@ public class LambdaExpression
         this.m_aBindArgs    = original.m_aBindArgs;
         this.m_astLambda    = original.m_astLambda;
         this.m_aAstBind     = original.m_aAstBind;
+
+        // Deep copy children
+        // NOTE: params and paramNames are mutually exclusive - exactly one is non-null
+        this.params     = original.params == null ? null
+                : original.params.stream().map(Parameter::copy).collect(Collectors.toCollection(ArrayList::new));
+        this.paramNames = original.paramNames == null ? null
+                : original.paramNames.stream().map(Expression::copy).collect(Collectors.toCollection(ArrayList::new));
+        this.body       = original.body == null ? null : original.body.copy();
+
+        // Adopt
+        adopt(this.params);
+        adopt(this.paramNames);
+        if (this.body != null) {
+            this.body.setParent(this);
+        }
     }
 
     @Override
@@ -756,7 +751,7 @@ public class LambdaExpression
     private LambdaContext createContext(Context ctx, TypeConstant typeRequired,
                                         TypeConstant[] atypeParams, String[] asParams,
                                         ErrorListener errs) {
-        StatementBlock blockTemp = (StatementBlock) body.clone();
+        StatementBlock blockTemp = body.copy();
         if (!new StageMgr(blockTemp, Stage.Validated, errs).fastForward(20)) {
             blockTemp.discard(true);
             return null;
@@ -777,8 +772,8 @@ public class LambdaExpression
         while (true) {
             boolean fValid = true;
 
-            // clone the condition(s) and the body
-            blockTemp = (StatementBlock) blockOrig.clone();
+            // copy the condition(s) and the body
+            blockTemp = blockOrig.copy();
 
             // create a temporary error list
             ErrorListener errsTemp = errs.branch(this);
@@ -904,14 +899,6 @@ public class LambdaExpression
             m_lambda.getParent().removeChild(m_lambda);
             m_lambda = null;
         }
-    }
-
-    @Override
-    public AstNode clone() {
-        // the reference to the lambda's method structure should not be a part of the cloned state
-        LambdaExpression that = (LambdaExpression) super.clone();
-        that.m_lambda = null;
-        return that;
     }
 
     @Override

@@ -54,11 +54,16 @@ public class VersionOverride
     protected VersionOverride(VersionOverride original) {
         super(original);
 
-        // Deep copy child fields (from CHILD_FIELDS)
-        this.exprVer = adopt(copyNode(original.exprVer));
-
-        // Shallow copy non-child fields
+        // Step 1: Copy ALL non-child fields FIRST (matches super.clone() behavior)
         this.verb = original.verb;
+
+        // Step 2: Deep copy children explicitly
+        this.exprVer = original.exprVer == null ? null : original.exprVer.copy();
+
+        // Step 3: Adopt copied children
+        if (this.exprVer != null) {
+            this.exprVer.setParent(this);
+        }
     }
 
     @Override

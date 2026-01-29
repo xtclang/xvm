@@ -247,30 +247,38 @@ public class NameExpression
      *       m_idBjarnLambda, m_propAccessPlan, m_idSingletonParent, m_fClassAttribute,
      *       m_fAssignable, m_astRefTarget, m_astResult</li>
      * </ul>
+     * <p>
+     * Order matches master clone(): all non-child fields FIRST, then children.
      *
      * @param original  the expression to copy
      */
     protected NameExpression(NameExpression original) {
         super(original);
 
-        // Deep copy child fields (from CHILD_FIELDS)
-        this.left   = adopt(copyNode(original.left));
-        this.params = copyNodes(original.params);
-        adopt(this.params);
-
-        // Shallow copy non-child fields (including transient computed state)
-        this.amp                = original.amp;
-        this.name               = original.name;
-        this.lEndPos            = original.lEndPos;
-        this.m_targetInfo       = original.m_targetInfo;
-        this.m_arg              = original.m_arg;
-        this.m_idBjarnLambda    = original.m_idBjarnLambda;
-        this.m_propAccessPlan   = original.m_propAccessPlan;
+        // Step 1: Copy ALL non-child fields FIRST (matches super.clone() behavior)
+        this.amp                 = original.amp;
+        this.name                = original.name;
+        this.lEndPos             = original.lEndPos;
+        this.m_targetInfo        = original.m_targetInfo;
+        this.m_arg               = original.m_arg;
+        this.m_idBjarnLambda     = original.m_idBjarnLambda;
+        this.m_propAccessPlan    = original.m_propAccessPlan;
         this.m_idSingletonParent = original.m_idSingletonParent;
-        this.m_fClassAttribute  = original.m_fClassAttribute;
-        this.m_fAssignable      = original.m_fAssignable;
-        this.m_astRefTarget     = original.m_astRefTarget;
-        this.m_astResult        = original.m_astResult;
+        this.m_fClassAttribute   = original.m_fClassAttribute;
+        this.m_fAssignable       = original.m_fAssignable;
+        this.m_astRefTarget      = original.m_astRefTarget;
+        this.m_astResult         = original.m_astResult;
+
+        // Step 2: Deep copy children explicitly (CHILD_FIELDS: left, params)
+        this.left = original.left == null ? null : original.left.copy();
+        this.params = original.params == null ? null
+                : original.params.stream().map(TypeExpression::copy).collect(Collectors.toCollection(ArrayList::new));
+
+        // Step 3: Adopt copied children
+        if (this.left != null) {
+            this.left.setParent(this);
+        }
+        adopt(this.params);
     }
 
     @Override

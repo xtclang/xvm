@@ -46,9 +46,13 @@ public abstract class SyntheticExpression
     protected SyntheticExpression(@NotNull SyntheticExpression original) {
         super(Objects.requireNonNull(original));
 
-        // Deep copy child field (per CHILD_FIELDS)
-        this.expr = copyNode(original.expr);
-        adopt(this.expr);
+        // Deep copy child explicitly
+        this.expr = original.expr == null ? null : original.expr.copy();
+
+        // Adopt copied child
+        if (this.expr != null) {
+            this.expr.setParent(this);
+        }
     }
 
 

@@ -66,16 +66,18 @@ public class NotNullExpression
     protected NotNullExpression(@NotNull NotNullExpression original) {
         super(Objects.requireNonNull(original));
 
-        // Token is immutable, safe to share
-        this.operator = original.operator;
-
-        // Deep copy child field (per CHILD_FIELDS)
-        this.expr = copyNode(original.expr);
-        adopt(this.expr);
-
-        // Shallow copy transient fields (matching Object.clone() semantics)
+        // Step 1: Copy ALL non-child fields FIRST (matches super.clone() behavior)
+        this.operator     = original.operator;  // Token is immutable
         this.m_fCond      = original.m_fCond;
         this.m_labelShort = original.m_labelShort;
+
+        // Step 2: Deep copy children explicitly
+        this.expr = original.expr == null ? null : original.expr.copy();
+
+        // Step 3: Adopt copied children
+        if (this.expr != null) {
+            this.expr.setParent(this);
+        }
     }
 
     @Override

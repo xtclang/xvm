@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.stream.Collectors;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -69,38 +70,34 @@ public class ForStatement
 
     /**
      * Copy constructor.
-     * <p>
-     * Master clone() semantics:
-     * <ul>
-     *   <li>CHILD_FIELDS: "init", "conds", "update", "block" - deep copied by AstNode.clone()</li>
-     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
-     * </ul>
      *
      * @param original  the ForStatement to copy from
      */
     protected ForStatement(@NotNull ForStatement original) {
         super(Objects.requireNonNull(original));
 
-        // Deep copy child fields
-        this.init   = copyStatements(original.init);
-        this.update = copyStatements(original.update);
+        // Non-child fields first
+        this.m_labelContinue      = original.m_labelContinue;
+        this.m_ctxLabelVars       = original.m_ctxLabelVars;
+        this.m_errsLabelVars      = original.m_errsLabelVars;
+        this.m_regFirst           = original.m_regFirst;
+        this.m_regCount           = original.m_regCount;
+        this.m_listContinues      = original.m_listContinues;
+        this.m_listShorts         = original.m_listShorts;
+        this.m_alabelInitGround   = original.m_alabelInitGround;
+        this.m_alabelUpdateGround = original.m_alabelUpdateGround;
+
+        // Deep copy children (init/update never null due to primary constructor)
+        this.init   = original.init.stream().map(Statement::copy).collect(Collectors.toCollection(ArrayList::new));
+        this.update = original.update.stream().map(Statement::copy).collect(Collectors.toCollection(ArrayList::new));
         this.block  = original.block == null ? null : original.block.copy();
 
-        // Adopt copied children
+        // Adopt
         adopt(this.init);
         adopt(this.update);
-        adopt(this.block);
-
-        // Shallow copy transient fields (matching Object.clone() semantics)
-        this.m_labelContinue     = original.m_labelContinue;
-        this.m_ctxLabelVars      = original.m_ctxLabelVars;
-        this.m_errsLabelVars     = original.m_errsLabelVars;
-        this.m_regFirst          = original.m_regFirst;
-        this.m_regCount          = original.m_regCount;
-        this.m_listContinues     = original.m_listContinues;
-        this.m_listShorts        = original.m_listShorts;
-        this.m_alabelInitGround  = original.m_alabelInitGround;
-        this.m_alabelUpdateGround = original.m_alabelUpdateGround;
+        if (this.block != null) {
+            this.block.setParent(this);
+        }
     }
 
     @Override
@@ -366,16 +363,16 @@ public class ForStatement
         while (true) {
             boolean fValid = true;
 
-            // clone the condition(s), updates and the body
+            // copy the condition(s), updates and the body
             conds = new ArrayList<>(cConds);
             for (AstNode cond : condsOrig) {
-                conds.add(cond.clone());
+                conds.add(cond.copy());
             }
             update = new ArrayList<>(cUpdates);
             for (Statement stmt : updateOrig) {
-                update.add((Statement) stmt.clone());
+                update.add(stmt.copy());
             }
-            block = (StatementBlock) blockOrig.clone();
+            block = blockOrig.copy();
 
             // create a temporary error list
             errs = errsOrig.branch(this);

@@ -104,6 +104,23 @@ public class ConvertExpression
         }
     }
 
+    /**
+     * Copy constructor.
+     *
+     * @param original  the expression to copy
+     */
+    protected ConvertExpression(ConvertExpression original) {
+        super(original);
+
+        // Shallow copy non-child field (immutable array reference)
+        this.m_aidConv = original.m_aidConv;
+    }
+
+    @Override
+    public ConvertExpression copy() {
+        return new ConvertExpression(this);
+    }
+
 
     // ----- Expression compilation ----------------------------------------------------------------
 

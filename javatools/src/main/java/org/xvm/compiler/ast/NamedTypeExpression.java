@@ -130,27 +130,38 @@ public class NamedTypeExpression
      *       m_exprDynamic, m_constUnresolved, m_typeUnresolved</li>
      *   <li>Special: m_exprDynamic is deep copied (same as custom clone() in master)</li>
      * </ul>
+     * <p>
+     * Order matches master clone(): all non-child fields FIRST, then children.
      *
      * @param original  the NamedTypeExpression to copy from
      */
     protected NamedTypeExpression(@NotNull NamedTypeExpression original) {
         super(Objects.requireNonNull(original));
 
-        // Tokens, Lists of Tokens, and positions are immutable, safe to share
-        this.module    = original.module;
-        this.immutable = original.immutable;
-        this.names     = original.names;
-        this.access    = original.access;
-        this.nonnarrow = original.nonnarrow;
-        this.lStartPos = original.lStartPos;
-        this.lEndPos   = original.lEndPos;
+        // Step 1: Copy ALL non-child fields FIRST (matches super.clone() behavior)
+        this.module             = original.module;
+        this.immutable          = original.immutable;
+        this.names              = original.names;
+        this.access             = original.access;
+        this.nonnarrow          = original.nonnarrow;
+        this.lStartPos          = original.lStartPos;
+        this.lEndPos            = original.lEndPos;
+        this.m_constId          = original.m_constId;
+        this.m_fVirtualChild    = original.m_fVirtualChild;
+        this.m_fExternalTypedef = original.m_fExternalTypedef;
+        this.m_constUnresolved  = original.m_constUnresolved;
+        this.m_typeUnresolved   = original.m_typeUnresolved;
+        this.m_resolver         = original.m_resolver;
 
-        // Deep copy child fields (CHILD_FIELDS: "left", "paramTypes")
-        this.left       = original.left == null ? null : original.left.copy();
-        this.paramTypes = copyNodes(original.paramTypes);
+        // Step 2: Deep copy children explicitly (CHILD_FIELDS: "left", "paramTypes")
+        this.left = original.left == null ? null : original.left.copy();
+        this.paramTypes = original.paramTypes == null ? null
+                : original.paramTypes.stream().map(TypeExpression::copy).collect(Collectors.toCollection(ArrayList::new));
 
-        // Adopt copied children
-        adopt(this.left);
+        // Step 3: Adopt copied children
+        if (this.left != null) {
+            this.left.setParent(this);
+        }
         adopt(this.paramTypes);
 
         // Special handling: m_exprDynamic is NOT a child but is deep copied
@@ -158,14 +169,6 @@ public class NamedTypeExpression
         if (original.m_exprDynamic != null) {
             this.m_exprDynamic = (NameExpression) original.m_exprDynamic.copy();
         }
-
-        // Shallow copy ALL transient fields to match Object.clone() semantics
-        this.m_constId          = original.m_constId;
-        this.m_fVirtualChild    = original.m_fVirtualChild;
-        this.m_fExternalTypedef = original.m_fExternalTypedef;
-        this.m_constUnresolved  = original.m_constUnresolved;
-        this.m_typeUnresolved   = original.m_typeUnresolved;
-        this.m_resolver         = original.m_resolver;
     }
 
     @Override
@@ -1034,16 +1037,6 @@ public class NamedTypeExpression
 
 
     // ----- AstNode methods -----------------------------------------------------------------------
-
-    @Override
-    public AstNode clone() {
-        NamedTypeExpression that = (NamedTypeExpression) super.clone();
-        // the "m_exprDynamic" is not a child and has to be handled manually
-        if (m_exprDynamic != null) {
-            that.m_exprDynamic = (NameExpression) m_exprDynamic.clone();
-        }
-        return that;
-    }
 
     @Override
     protected void discard(boolean fRecurse) {

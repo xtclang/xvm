@@ -3,11 +3,13 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.NotNull;
-import java.util.Map;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
@@ -41,44 +43,38 @@ public class MapExpression
         extends Expression {
     // ----- constructors --------------------------------------------------------------------------
 
-    public MapExpression(TypeExpression type, List<Expression> keys, List<Expression> values,
+    public MapExpression(@NotNull TypeExpression type, List<Expression> keys, List<Expression> values,
                          long lEndPos) {
-        assert type != null;
-
-        this.type    = type;
-        this.keys    = keys;
-        this.values  = values;
+        this.type    = Objects.requireNonNull(type);
+        this.keys    = keys == null ? new ArrayList<>() : keys;
+        this.values  = values == null ? new ArrayList<>() : values;
         this.lEndPos = lEndPos;
     }
 
     /**
      * Copy constructor.
-     * <p>
-     * Master clone() semantics:
-     * <ul>
-     *   <li>CHILD_FIELDS: "type", "keys", "values" - deep copied by AstNode.clone()</li>
-     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
-     * </ul>
      *
      * @param original  the MapExpression to copy from
      */
     protected MapExpression(@NotNull MapExpression original) {
         super(Objects.requireNonNull(original));
 
-        // Primitive field - shallow copy
-        this.lEndPos = original.lEndPos;
-
-        // Deep copy child fields (per CHILD_FIELDS)
-        this.type   = copyNode(original.type);
-        this.keys   = copyExpressions(original.keys);
-        this.values = copyExpressions(original.values);
-        adopt(this.type);
-        adopt(this.keys);
-        adopt(this.values);
-
-        // Shallow copy transient fields (matching Object.clone() semantics)
+        // Non-child fields first
+        this.lEndPos     = original.lEndPos;
         this.m_aKeyAST   = original.m_aKeyAST;
         this.m_aValueAST = original.m_aValueAST;
+
+        // Deep copy children
+        this.type   = original.type == null ? null : original.type.copy();
+        this.keys   = original.keys.stream().map(Expression::copy).collect(Collectors.toCollection(ArrayList::new));
+        this.values = original.values.stream().map(Expression::copy).collect(Collectors.toCollection(ArrayList::new));
+
+        // Adopt
+        if (this.type != null) {
+            this.type.setParent(this);
+        }
+        adopt(this.keys);
+        adopt(this.values);
     }
 
     @Override
@@ -489,10 +485,10 @@ public class MapExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected TypeExpression   type;
-    protected List<Expression> keys;
-    protected List<Expression> values;
-    protected long             lEndPos;
+    protected TypeExpression           type;
+    @NotNull protected List<Expression> keys;
+    @NotNull protected List<Expression> values;
+    protected long                     lEndPos;
 
     private transient ExprAST[] m_aKeyAST;
     private transient ExprAST[] m_aValueAST;

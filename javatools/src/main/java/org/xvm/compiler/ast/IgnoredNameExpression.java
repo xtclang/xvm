@@ -35,6 +35,21 @@ public class IgnoredNameExpression
         super(name);
     }
 
+    /**
+     * Copy constructor.
+     *
+     * @param original  the expression to copy
+     */
+    protected IgnoredNameExpression(IgnoredNameExpression original) {
+        super(original);
+        // No additional fields to copy
+    }
+
+    @Override
+    public IgnoredNameExpression copy() {
+        return new IgnoredNameExpression(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 

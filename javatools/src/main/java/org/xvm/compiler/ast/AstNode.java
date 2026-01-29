@@ -208,7 +208,13 @@ public abstract class AstNode
         m_stage = Stage.Discarded;
         if (fRecurse) {
             for (AstNode node : children()) {
-                node.discard(true);
+                // Safety check: only discard if this node is the child's actual parent
+                // This guards against copy constructors that don't properly adopt all children
+                if (node.getParent() == this) {
+                    node.discard(true);
+                }
+                // Note: In the future, replace children() with visitor pattern
+                // so each concrete node explicitly provides its children
             }
         }
     }
@@ -238,105 +244,36 @@ public abstract class AstNode
     // ----- copy support -------------------------------------------------------------------------
 
     /**
-     * Create a deep copy of this AST node. Subclasses should override this method using a copy
-     * constructor pattern for better performance and type safety.
+     * Create a deep copy of this AST node. Subclasses MUST override this method using a copy
+     * constructor pattern for proper behavior.
      * <p/>
-     * The default implementation delegates to clone() for backward compatibility during
-     * the transition period. New code should implement explicit copy constructors.
+     * The default implementation throws to catch any missing override.
      *
      * @return a deep copy of this node
      */
     public AstNode copy() {
-        return clone();
+        throw new UnsupportedOperationException(
+            "AstNode subclass " + getClass().getSimpleName() + " must override copy()");
     }
 
     /**
      * Copy constructor for the base AstNode class. Subclasses should call this constructor and
      * then deep-copy their own child fields.
      * <p/>
-     * Both the compilation stage and parent reference are copied to match the original clone()
-     * behavior (super.clone() shallow-copied all fields). The parent may be overwritten later
-     * when the copy is adopted into a new tree.
+     * Both the compilation stage and parent reference are copied. The parent reference is needed
+     * so the copy can access pool() and other parent-chain services during temporary validation.
+     * When the copy is adopted into a new tree, its parent will be overwritten by adopt().
      *
      * @param original  the node to copy from
      */
     protected AstNode(@NotNull AstNode original) {
         Objects.requireNonNull(original);
-        // Copy both stage and parent to match original clone() behavior (super.clone() copied all fields)
-        this.m_stage  = original.m_stage;
+        // A copy should never inherit the Discarded stage - that would cause adopt() assertions
+        // to fail. The copy is a new node that needs to start fresh with Initial stage.
+        // We preserve other stages to maintain compilation progress.
+        this.m_stage  = original.m_stage == Stage.Discarded ? Stage.Initial : original.m_stage;
+        // Parent is needed for pool() access during temp validation; will be reset by adopt()
         this.m_parent = original.m_parent;
-    }
-
-    /**
-     * Helper for copying a list of Statement nodes.
-     *
-     * @param list  the list to copy, may be null or empty
-     *
-     * @return a new list with deep copies of the statements, or the same list if null/empty
-     */
-    protected static List<Statement> copyStatements(List<Statement> list) {
-        if (list == null || list.isEmpty()) {
-            return list;
-        }
-        List<Statement> result = new ArrayList<>(list.size());
-        for (Statement stmt : list) {
-            result.add((Statement) stmt.copy());
-        }
-        return result;
-    }
-
-    /**
-     * Helper for copying a list of AstNode subclass instances.
-     *
-     * @param list  the list to copy, may be null or empty
-     * @param <T>   the type of nodes in the list
-     *
-     * @return a new list with deep copies of the nodes, or the same list if null/empty
-     */
-    protected static <T extends AstNode> List<T> copyNodes(List<T> list) {
-        if (list == null || list.isEmpty()) {
-            return list;
-        }
-        List<T> result = new ArrayList<>(list.size());
-        for (T node : list) {
-            @SuppressWarnings("unchecked")
-            T nodeCopy = (T) node.copy();
-            result.add(nodeCopy);
-        }
-        return result;
-    }
-
-    /**
-     * Helper for copying a list of Expression nodes.
-     *
-     * @param list  the list to copy, may be null or empty
-     *
-     * @return a new list with deep copies of the expressions, or the same list if null/empty
-     */
-    protected static List<Expression> copyExpressions(List<Expression> list) {
-        if (list == null || list.isEmpty()) {
-            return list;
-        }
-        List<Expression> result = new ArrayList<>(list.size());
-        for (Expression expr : list) {
-            result.add((Expression) expr.copy());
-        }
-        return result;
-    }
-
-    /**
-     * Copy a single nullable AstNode. Returns null if the input is null, otherwise returns
-     * a copy of the node with proper covariant typing.
-     *
-     * @param node  the node to copy, may be null
-     * @param <T>   the specific AstNode subtype
-     *
-     * @return a copy of the node, or null if the input was null
-     */
-    @SuppressWarnings("unchecked")
-    @Nullable
-    protected static <T extends AstNode> T copyNode(@Nullable T node) {
-        return node == null ? null : (T) node.copy();
     }
 
     /**

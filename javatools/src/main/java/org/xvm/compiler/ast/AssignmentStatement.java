@@ -405,7 +405,7 @@ public class AssignmentStatement
                 return null;
             }
 
-            exprLeftCopy = (Expression) nodeLeft.getLValueExpression().clone();
+            exprLeftCopy = nodeLeft.getLValueExpression().copy();
             break;
         }
 

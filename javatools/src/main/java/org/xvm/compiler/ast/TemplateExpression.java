@@ -3,8 +3,10 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -47,37 +49,33 @@ public class TemplateExpression
     // ----- constructors --------------------------------------------------------------------------
 
     public TemplateExpression(List<Expression> exprs, long lStartPos, long lEndPos) {
-        this.exprs     = exprs;
+        this.exprs     = exprs == null ? new ArrayList<>() : exprs;
         this.lStartPos = lStartPos;
         this.lEndPos   = lEndPos;
     }
 
     /**
      * Copy constructor.
-     * <p>
-     * Master clone() semantics:
-     * <ul>
-     *   <li>CHILD_FIELDS: "type", "exprs" - deep copied by AstNode.clone()</li>
-     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
-     * </ul>
      *
      * @param original  the TemplateExpression to copy from
      */
     protected TemplateExpression(@NotNull TemplateExpression original) {
         super(Objects.requireNonNull(original));
 
-        // Primitive fields - shallow copy
+        // Non-child fields first
         this.lStartPos = original.lStartPos;
         this.lEndPos   = original.lEndPos;
+        this.m_reg$    = original.m_reg$;
 
-        // Deep copy child fields (per CHILD_FIELDS; type is always null but copy for safety)
-        this.type  = copyNode(original.type);
-        this.exprs = copyExpressions(original.exprs);
-        adopt(this.type);
+        // Deep copy children
+        this.type  = original.type == null ? null : original.type.copy();
+        this.exprs = original.exprs.stream().map(Expression::copy).collect(Collectors.toCollection(ArrayList::new));
+
+        // Adopt
+        if (this.type != null) {
+            this.type.setParent(this);
+        }
         adopt(this.exprs);
-
-        // Shallow copy transient fields (matching Object.clone() semantics)
-        this.m_reg$ = original.m_reg$;
     }
 
     @Override
@@ -342,7 +340,7 @@ public class TemplateExpression
     // ----- fields --------------------------------------------------------------------------------
 
     protected TypeExpression   type;
-    protected List<Expression> exprs;
+    @NotNull protected List<Expression> exprs;
     protected long             lStartPos;
     protected long             lEndPos;
 

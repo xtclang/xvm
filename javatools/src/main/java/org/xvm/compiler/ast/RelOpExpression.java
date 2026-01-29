@@ -460,7 +460,7 @@ public class RelOpExpression
         if (type1Req == null) {
             // since we couldn't figure out the required type,
             // create a backup copy just in case we need to re-validate
-            expr1Copy = (Expression) expr1.clone();
+            expr1Copy = expr1.copy();
         }
 
         boolean      fValid   = true;

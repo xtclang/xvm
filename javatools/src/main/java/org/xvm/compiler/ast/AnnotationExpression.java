@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -71,23 +72,31 @@ public class AnnotationExpression
      *   <li>Deep copy (from CHILD_FIELDS): type, args</li>
      *   <li>Shallow copy (same reference): lStartPos, lEndPos, m_node, m_anno, m_fConst</li>
      * </ul>
+     * <p>
+     * Order matches master clone(): all non-child fields FIRST, then children.
      *
      * @param original  the expression to copy
      */
     protected AnnotationExpression(AnnotationExpression original) {
         super(original);
 
-        // Deep copy child fields (from CHILD_FIELDS)
-        this.type = adopt(copyNode(original.type));
-        this.args = copyExpressions(original.args);
-        adopt(this.args);
-
-        // Shallow copy non-child fields (including transient computed state)
+        // Step 1: Copy ALL non-child fields FIRST (matches super.clone() behavior)
         this.lStartPos = original.lStartPos;
         this.lEndPos   = original.lEndPos;
         this.m_node    = original.m_node;
         this.m_anno    = original.m_anno;
         this.m_fConst  = original.m_fConst;
+
+        // Step 2: Deep copy children explicitly (CHILD_FIELDS: type, args)
+        this.type = original.type == null ? null : original.type.copy();
+        this.args = original.args == null ? null
+                : original.args.stream().map(Expression::copy).collect(Collectors.toCollection(ArrayList::new));
+
+        // Step 3: Adopt copied children
+        if (this.type != null) {
+            this.type.setParent(this);
+        }
+        adopt(this.args);
     }
 
     @Override

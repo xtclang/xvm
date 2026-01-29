@@ -39,32 +39,28 @@ public class MultipleLValueStatement
      * @param LVals a list of statements and expressions representing LValues
      */
     public MultipleLValueStatement(List<AstNode> LVals) {
-        assert LVals.stream().allMatch(AstNode::isLValueSyntax);
+        assert LVals != null && LVals.stream().allMatch(AstNode::isLValueSyntax);
 
         this.LVals = LVals;
     }
 
     /**
      * Copy constructor.
-     * <p>
-     * Master clone() semantics:
-     * <ul>
-     *   <li>CHILD_FIELDS: "LVals" - deep copied by AstNode.clone()</li>
-     *   <li>Computed state: {@code aGroundLabels}, {@code expr} - shallow copied via Object.clone() bitwise copy</li>
-     * </ul>
      *
      * @param original  the MultipleLValueStatement to copy from
      */
     protected MultipleLValueStatement(@NotNull MultipleLValueStatement original) {
         super(Objects.requireNonNull(original));
 
-        // Deep copy child fields
-        this.LVals = copyNodes(original.LVals);
-        adopt(this.LVals);
-
-        // Shallow copy transient fields (matching Object.clone() semantics)
+        // Non-child fields first
         this.aGroundLabels = original.aGroundLabels;
         this.expr          = original.expr;
+
+        // Deep copy children (LVals never null due to primary constructor assert)
+        this.LVals = original.LVals.stream().map(AstNode::copy).collect(Collectors.toCollection(ArrayList::new));
+
+        // Adopt
+        adopt(this.LVals);
     }
 
     @Override

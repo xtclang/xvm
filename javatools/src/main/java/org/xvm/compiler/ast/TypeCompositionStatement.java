@@ -208,38 +208,54 @@ public class TypeCompositionStatement
      *   <li>Shallow copy (same reference): source, modifiers, category, name, qualified, doc,
      *       enclosed, m_fAnon, m_fVirtChild</li>
      * </ul>
+     * <p>
+     * Order matches master clone(): all non-child fields FIRST, then children.
      *
      * @param original  the statement to copy
      */
     protected TypeCompositionStatement(TypeCompositionStatement original) {
         super(original);
 
-        // Deep copy child fields (from CHILD_FIELDS)
-        this.condition         = adopt(copyNode(original.condition));
-        this.annotations       = copyNodes(original.annotations);
-        this.typeParams        = copyNodes(original.typeParams);
-        this.constructorParams = copyNodes(original.constructorParams);
-        this.typeArgs          = copyNodes(original.typeArgs);
-        this.args              = copyExpressions(original.args);
-        this.compositions      = copyNodes(original.compositions);
-        this.body              = adopt(copyNode(original.body));
+        // Step 1: Copy ALL non-child fields FIRST (matches super.clone() behavior)
+        this.source       = original.source;
+        this.modifiers    = original.modifiers;
+        this.category     = original.category;
+        this.name         = original.name;
+        this.qualified    = original.qualified;
+        this.doc          = original.doc;
+        this.enclosed     = original.enclosed;
+        this.m_fAnon      = original.m_fAnon;
+        this.m_fVirtChild = original.m_fVirtChild;
+
+        // Step 2: Deep copy children explicitly
+        this.condition = original.condition == null ? null : original.condition.copy();
+        this.annotations = original.annotations == null ? null
+                : original.annotations.stream().map(AnnotationExpression::copy).collect(Collectors.toCollection(ArrayList::new));
+        this.typeParams = original.typeParams == null ? null
+                : original.typeParams.stream().map(Parameter::copy).collect(Collectors.toCollection(ArrayList::new));
+        this.constructorParams = original.constructorParams == null ? null
+                : original.constructorParams.stream().map(Parameter::copy).collect(Collectors.toCollection(ArrayList::new));
+        this.typeArgs = original.typeArgs == null ? null
+                : original.typeArgs.stream().map(TypeExpression::copy).collect(Collectors.toCollection(ArrayList::new));
+        this.args = original.args == null ? null
+                : original.args.stream().map(Expression::copy).collect(Collectors.toCollection(ArrayList::new));
+        this.compositions = original.compositions == null ? null
+                : original.compositions.stream().map(c -> (CompositionNode) c.copy()).collect(Collectors.toCollection(ArrayList::new));
+        this.body = original.body == null ? null : original.body.copy();
+
+        // Step 3: Adopt copied children
+        if (this.condition != null) {
+            this.condition.setParent(this);
+        }
         adopt(this.annotations);
         adopt(this.typeParams);
         adopt(this.constructorParams);
         adopt(this.typeArgs);
         adopt(this.args);
         adopt(this.compositions);
-
-        // Shallow copy non-child fields (including transient computed state)
-        this.source     = original.source;
-        this.modifiers  = original.modifiers;
-        this.category   = original.category;
-        this.name       = original.name;
-        this.qualified  = original.qualified;
-        this.doc        = original.doc;
-        this.enclosed   = original.enclosed;
-        this.m_fAnon    = original.m_fAnon;
-        this.m_fVirtChild = original.m_fVirtChild;
+        if (this.body != null) {
+            this.body.setParent(this);
+        }
     }
 
     @Override

@@ -33,6 +33,21 @@ public class PackExpression
         finishValidation(null, null, type, expr.getTypeFit().addPack(), val, errs);
     }
 
+    /**
+     * Copy constructor.
+     *
+     * @param original  the expression to copy
+     */
+    protected PackExpression(PackExpression original) {
+        super(original);
+        // No additional fields to copy
+    }
+
+    @Override
+    public PackExpression copy() {
+        return new PackExpression(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 

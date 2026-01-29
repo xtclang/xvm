@@ -3,8 +3,10 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -41,41 +43,33 @@ public class SwitchExpression
 
     public SwitchExpression(Token keyword, List<AstNode> cond, List<AstNode> contents, long lEndPos) {
         this.keyword  = keyword;
-        this.cond     = cond;
-        this.contents = contents;
+        this.cond     = cond == null ? new ArrayList<>() : cond;
+        this.contents = contents == null ? new ArrayList<>() : contents;
         this.lEndPos  = lEndPos;
     }
 
     /**
      * Copy constructor.
-     * <p>
-     * Master clone() semantics:
-     * <ul>
-     *   <li>CHILD_FIELDS: "cond", "contents" - deep copied by AstNode.clone()</li>
-     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
-     * </ul>
      *
      * @param original  the SwitchExpression to copy from
      */
     protected SwitchExpression(@NotNull SwitchExpression original) {
         super(Objects.requireNonNull(original));
 
-        // Token is immutable, safe to share
-        this.keyword = original.keyword;
-
-        // Primitive field - shallow copy
-        this.lEndPos = original.lEndPos;
-
-        // Deep copy child fields (per CHILD_FIELDS)
-        this.cond     = copyNodes(original.cond);
-        this.contents = copyNodes(original.contents);
-        adopt(this.cond);
-        adopt(this.contents);
-
-        // Shallow copy transient fields (matching Object.clone() semantics)
+        // Non-child fields first
+        this.keyword       = original.keyword;
+        this.lEndPos       = original.lEndPos;
         this.m_casemgr     = original.m_casemgr;
         this.m_aconstCases = original.m_aconstCases;
         this.m_abastBody   = original.m_abastBody;
+
+        // Deep copy children
+        this.cond     = original.cond.stream().map(AstNode::copy).collect(Collectors.toCollection(ArrayList::new));
+        this.contents = original.contents.stream().map(AstNode::copy).collect(Collectors.toCollection(ArrayList::new));
+
+        // Adopt
+        adopt(this.cond);
+        adopt(this.contents);
     }
 
     @Override
@@ -409,8 +403,8 @@ public class SwitchExpression
     // ----- fields --------------------------------------------------------------------------------
 
     protected Token         keyword;
-    protected List<AstNode> cond;
-    protected List<AstNode> contents;
+    @NotNull protected List<AstNode> cond;
+    @NotNull protected List<AstNode> contents;
     protected long          lEndPos;
 
     private transient CaseManager<Expression> m_casemgr;

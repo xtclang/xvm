@@ -45,9 +45,7 @@ public abstract class TypeExpression
      * Master clone() semantics:
      * <ul>
      *   <li>No CHILD_FIELDS - base class for type expressions</li>
-     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
-     *   <li>Non-transient cached state: m_constType, m_ctxPrev - not copied,
-     *       recomputed via ensureTypeConstant()</li>
+     *   <li>All fields shallow copied via Object.clone() bitwise copy</li>
      * </ul>
      *
      * @param original  the TypeExpression to copy from
@@ -55,21 +53,21 @@ public abstract class TypeExpression
     protected TypeExpression(@NotNull TypeExpression original) {
         super(Objects.requireNonNull(original));
 
-        // Note: m_constType and m_ctxPrev are not transient but are cached values
-        // computed during validation via ensureTypeConstant(), so they are
-        // intentionally not copied
+        // Shallow copy ALL fields to match Object.clone() (super.clone()) semantics
+        this.m_constType = original.m_constType;
+        this.m_ctxPrev   = original.m_ctxPrev;
     }
 
     /**
      * {@inheritDoc}
      * <p/>
-     * Subclasses should override this method with a covariant return type and use a copy
-     * constructor for better performance and type safety. The default implementation delegates
-     * to {@link #clone()} for backward compatibility during the transition period.
+     * Subclasses MUST override this method with a covariant return type and use a copy
+     * constructor. The default implementation throws to catch any missing override.
      */
     @Override
     public TypeExpression copy() {
-        return (TypeExpression) clone();
+        throw new UnsupportedOperationException(
+            "TypeExpression subclass " + getClass().getSimpleName() + " must override copy()");
     }
 
 

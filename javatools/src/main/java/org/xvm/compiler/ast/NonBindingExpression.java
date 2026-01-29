@@ -46,13 +46,17 @@ public class NonBindingExpression
     protected NonBindingExpression(@NotNull NonBindingExpression original) {
         super(Objects.requireNonNull(original));
 
-        // Primitive fields - shallow copy
+        // Step 1: Copy ALL non-child fields FIRST (matches super.clone() behavior)
         this.lStartPos = original.lStartPos;
         this.lEndPos   = original.lEndPos;
 
-        // Deep copy child field (per CHILD_FIELDS)
-        this.type = copyNode(original.type);
-        adopt(this.type);
+        // Step 2: Deep copy children explicitly
+        this.type = original.type == null ? null : original.type.copy();
+
+        // Step 3: Adopt copied children
+        if (this.type != null) {
+            this.type.setParent(this);
+        }
     }
 
     @Override

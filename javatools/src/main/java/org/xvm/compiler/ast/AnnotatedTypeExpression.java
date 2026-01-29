@@ -52,20 +52,25 @@ public class AnnotatedTypeExpression
     protected AnnotatedTypeExpression(AnnotatedTypeExpression original) {
         super(original);
 
-        // Deep copy children
-        this.annotation = copyNode(original.annotation);
-        this.type       = copyNode(original.type);
-
-        adopt(this.annotation);
-        adopt(this.type);
-
-        // Shallow copy transient fields to match Object.clone() behavior
+        // Step 1: Copy ALL non-child fields FIRST (matches super.clone() behavior)
         this.m_fDisassociateRef   = original.m_fDisassociateRef;
         this.m_fDisassociateClass = original.m_fDisassociateClass;
         this.m_fAnonInner         = original.m_fAnonInner;
         this.m_fVar               = original.m_fVar;
         this.m_fInjected          = original.m_fInjected;
         this.m_typeUnresolved     = original.m_typeUnresolved;
+
+        // Step 2: Deep copy children explicitly
+        this.annotation = original.annotation == null ? null : original.annotation.copy();
+        this.type       = original.type == null ? null : original.type.copy();
+
+        // Step 3: Adopt copied children
+        if (this.annotation != null) {
+            this.annotation.setParent(this);
+        }
+        if (this.type != null) {
+            this.type.setParent(this);
+        }
     }
 
     @Override

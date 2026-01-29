@@ -3,12 +3,13 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.NotNull;
-import java.util.List;
-import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
@@ -60,34 +61,28 @@ public class ReturnStatement
 
     public ReturnStatement(Token keyword, List<Expression> exprs) {
         this.keyword = keyword;
-        this.exprs   = exprs;
+        this.exprs   = exprs == null ? new ArrayList<>() : exprs;
     }
 
     /**
      * Copy constructor.
-     * <p>
-     * Master clone() semantics:
-     * <ul>
-     *   <li>CHILD_FIELDS: "exprs" - deep copied by AstNode.clone()</li>
-     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
-     * </ul>
      *
      * @param original  the ReturnStatement to copy from
      */
     protected ReturnStatement(@NotNull ReturnStatement original) {
         super(Objects.requireNonNull(original));
 
-        // Copy non-child structural fields (Token is immutable, safe to share)
-        this.keyword = original.keyword;
-
-        // Deep copy child fields
-        this.exprs = copyExpressions(original.exprs);
-        adopt(this.exprs);
-
-        // Shallow copy transient fields (matching Object.clone() semantics)
+        // Non-child fields first
+        this.keyword               = original.keyword;
         this.m_fConditionalTernary = original.m_fConditionalTernary;
         this.m_fTupleReturn        = original.m_fTupleReturn;
         this.m_fFutureReturn       = original.m_fFutureReturn;
+
+        // Deep copy children
+        this.exprs = original.exprs.stream().map(Expression::copy).collect(Collectors.toCollection(ArrayList::new));
+
+        // Adopt
+        adopt(this.exprs);
     }
 
     @Override
@@ -530,7 +525,7 @@ public class ReturnStatement
     // ----- fields --------------------------------------------------------------------------------
 
     protected Token             keyword;
-    protected List<Expression>  exprs;
+    @NotNull protected List<Expression> exprs;
 
     @ComputedState("Whether this is a conditional ternary return")
     protected boolean m_fConditionalTernary;

@@ -3,12 +3,13 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.NotNull;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -67,6 +68,7 @@ public class TryStatement
         assert block != null;
 
         this.keyword   = keyword;
+        // NOTE: null vs empty is semantically significant - null means "no using clause" / "no catches"
         this.resources = resources == null || resources.isEmpty() ? null : resources;
         this.block     = block;
         this.catches   = catches == null || catches.isEmpty() ? null : catches;
@@ -75,38 +77,36 @@ public class TryStatement
 
     /**
      * Copy constructor.
-     * <p>
-     * Master clone() semantics:
-     * <ul>
-     *   <li>CHILD_FIELDS: "resources", "block", "catches", "catchall" - deep copied by AstNode.clone()</li>
-     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
-     * </ul>
      *
      * @param original  the TryStatement to copy from
      */
-    @SuppressWarnings("unchecked")
     protected TryStatement(@NotNull TryStatement original) {
         super(Objects.requireNonNull(original));
 
-        // Copy non-child structural fields (Token is immutable, safe to share)
-        this.keyword = original.keyword;
-
-        // Deep copy child fields
-        this.resources = (List<AssignmentStatement>) copyNodes(original.resources);
-        this.block     = original.block == null ? null : original.block.copy();
-        this.catches   = (List<CatchStatement>) copyNodes(original.catches);
-        this.catchall  = original.catchall == null ? null : original.catchall.copy();
-
-        // Adopt copied children
-        adopt(this.resources);
-        adopt(this.block);
-        adopt(this.catches);
-        adopt(this.catchall);
-
-        // Shallow copy transient fields (matching Object.clone() semantics)
+        // Non-child fields first
+        this.keyword                 = original.keyword;
         this.m_ctxValidatingFinally  = original.m_ctxValidatingFinally;
         this.m_errsValidatingFinally = original.m_errsValidatingFinally;
         this.m_regFinallyException   = original.m_regFinallyException;
+
+        // Deep copy children
+        // NOTE: resources/catches use null to mean "not present" (primary constructor converts empty to null)
+        this.resources = original.resources == null ? null
+                : original.resources.stream().map(s -> (AssignmentStatement) s.copy()).collect(Collectors.toCollection(ArrayList::new));
+        this.block     = original.block == null ? null : original.block.copy();
+        this.catches   = original.catches == null ? null
+                : original.catches.stream().map(s -> (CatchStatement) s.copy()).collect(Collectors.toCollection(ArrayList::new));
+        this.catchall  = original.catchall == null ? null : original.catchall.copy();
+
+        // Adopt
+        adopt(this.resources);
+        if (this.block != null) {
+            this.block.setParent(this);
+        }
+        adopt(this.catches);
+        if (this.catchall != null) {
+            this.catchall.setParent(this);
+        }
     }
 
     @Override

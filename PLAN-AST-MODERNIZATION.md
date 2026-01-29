@@ -473,7 +473,7 @@ Beyond raw performance, reflection has critical implications for GraalVM:
 
 ## Part 5: Current Implementation Status
 
-### 3.1 Completed Work
+### 5.1 Completed Work
 
 **Phase 1: Foundation** - COMPLETE
 - Added helper methods to `AstNode`: `copyStatements()`, `copyNodes()`, `copyExpressions()`
@@ -509,7 +509,50 @@ Beyond raw performance, reflection has critical implications for GraalVM:
 - `DecoratedTypeExpression`, `KeywordTypeExpression`, `FunctionTypeExpression`
 - `VariableTypeExpression`, `BadTypeExpression`, `AnnotatedTypeExpression`
 
-### 3.2 Classes with copy() - 53 total
+**Stream-Based Copy Patterns** - COMPLETE
+All copy constructors with list copying have been converted from verbose null-checking for-loops to clean stream-based copying pattern:
+```java
+// Before (verbose for-loop)
+if (original.list != null) {
+    this.list = new ArrayList<>(original.list.size());
+    for (T item : original.list) {
+        this.list.add((T) item.copy());
+    }
+} else {
+    this.list = null;
+}
+
+// After (stream-based)
+this.list = original.list == null ? null
+        : original.list.stream().map(T::copy).collect(Collectors.toCollection(ArrayList::new));
+```
+
+Files updated with stream-based patterns:
+- `StatementBlock.java` - stmts list
+- `NewExpression.java` - args list
+- `AnnotationExpression.java` - args list
+- `CompositionNode.java` - args, constraints, vers, injects lists (Incorporates and Import inner classes)
+- `InvocationExpression.java` - args list
+- `NameExpression.java` - params list
+- `MethodDeclarationStatement.java` - annotations, typeParams, returns, redundant, params lists
+- `PropertyDeclarationStatement.java` - annotations list
+- `TypeCompositionStatement.java` - annotations, typeParams, constructorParams, typeArgs, args, compositions lists
+- `NamedTypeExpression.java` - paramTypes list
+
+**@NotNull Annotations for Collection Fields** - IN PROGRESS
+Added `@NotNull` annotations to list fields that have null-to-empty conversion in their primary constructors (making null semantically equivalent to empty):
+- `NewExpression.java` - `@NotNull protected List<Expression> args`
+- `TupleTypeExpression.java` - `@NotNull protected List<TypeExpression> paramTypes`
+- `SwitchExpression.java` - `@NotNull protected List<AstNode> cond`, `@NotNull protected List<AstNode> contents`
+- `TemplateExpression.java` - `@NotNull protected List<Expression> exprs`
+- `CmpChainExpression.java` - `@NotNull protected List<Expression> expressions`
+- `FunctionTypeExpression.java` - `@NotNull protected List<TypeExpression> paramTypes`
+- `ArrayAccessExpression.java` - `@NotNull protected List<Expression> indexes`
+- `ReturnStatement.java` - `@NotNull protected List<Expression> exprs`
+
+NOTE: Some list fields preserve null because null has semantic meaning distinct from empty (e.g., `CaseStatement.exprs` where null means "default:" case)
+
+### 5.2 Classes with copy() - 53 total
 
 ```
 # Base classes (8)
@@ -539,7 +582,7 @@ DecoratedTypeExpression, KeywordTypeExpression, FunctionTypeExpression
 VariableTypeExpression, BadTypeExpression, AnnotatedTypeExpression
 ```
 
-### 3.3 Classes Still Needing copy() - ~32 remaining
+### 5.3 Classes Still Needing copy() - ~32 remaining
 
 **Expression Subclasses (~20 remaining)**
 - Binary/Relational (~1): `CmpChainExpression`
@@ -556,9 +599,9 @@ VariableTypeExpression, BadTypeExpression, AnnotatedTypeExpression
 
 ---
 
-## Part 4: Copy Constructor Pattern (Corrected)
+## Part 6: Copy Constructor Pattern (Corrected)
 
-### 4.1 Standard Pattern
+### 6.1 Standard Pattern
 
 ```java
 protected MyClass(MyClass original) {
@@ -592,7 +635,7 @@ public MyClass copy() {
 - `copyExpressions(List<Expression>)` - Copy list of expressions
 - `copyNodes(List<T extends AstNode>)` - Copy list of any AstNode subtype
 
-### 4.2 Pattern for Custom Clone Overrides
+### 6.2 Pattern for Custom Clone Overrides
 
 When the original class has a custom `clone()` that clears fields:
 
@@ -623,7 +666,7 @@ protected LambdaExpression(@NotNull LambdaExpression original) {
 }
 ```
 
-### 4.3 Pattern for Non-Child Fields That Need Deep Copy
+### 6.3 Pattern for Non-Child Fields That Need Deep Copy
 
 Some fields are not in CHILD_FIELDS but still need special handling:
 
@@ -664,7 +707,7 @@ protected NamedTypeExpression(@NotNull NamedTypeExpression original) {
 
 ---
 
-## Part 5: Next Steps
+## Part 7: Next Steps
 
 ### Phase 3: Remaining Expressions
 
@@ -730,6 +773,60 @@ A new `@ComputedState` annotation has been created to replace the meaningless `t
 The annotation serves two purposes:
 1. Documents which fields are candidates for extraction to semantic model
 2. Documents copy constructor semantics (shallow copy)
+
+### Phase 5c: Add @ChildNode Annotation
+
+**Status:** NOT STARTED
+
+Create a `@ChildNode` annotation to explicitly mark child node fields, eventually replacing the reflection-based `CHILD_FIELDS` arrays.
+
+**Annotation Design:**
+```java
+@Retention(RetentionPolicy.RUNTIME)  // or SOURCE if only for documentation
+@Target(ElementType.FIELD)
+public @interface ChildNode {
+    /**
+     * Index of this child in the parent's child list (for ordering).
+     * Children are visited in ascending index order.
+     */
+    int index();
+
+    /**
+     * Optional description of this child's role in the AST structure.
+     */
+    String description() default "";
+}
+```
+
+**Usage Example:**
+```java
+public class ForStatement extends ConditionalStatement {
+    @ChildNode(index = 0, description = "Initialization statements")
+    protected List<Statement> init;
+
+    @ChildNode(index = 1, description = "Loop condition expressions")
+    protected List<AstNode> conds;
+
+    @ChildNode(index = 2, description = "Update statements")
+    protected List<Statement> update;
+
+    @ChildNode(index = 3, description = "Loop body")
+    protected StatementBlock block;
+}
+```
+
+**Benefits:**
+1. Self-documenting: Clear which fields are children vs computed/auxiliary
+2. Type-safe: Compiler checks annotation usage
+3. IDE support: Can generate navigation, refactoring hints
+4. Foundation for visitor pattern: Explicit child ordering
+5. Eventually replaces `CHILD_FIELDS` reflection
+
+**Migration Strategy:**
+1. Create the annotation
+2. Add `@ChildNode` to all child fields (matching `CHILD_FIELDS` entries)
+3. Keep `CHILD_FIELDS` arrays during transition
+4. After visitor pattern is in place, remove `CHILD_FIELDS` reflection
 
 ### Phase 6: Visitor Pattern (This PR)
 
