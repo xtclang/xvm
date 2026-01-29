@@ -40,6 +40,32 @@ public class VersionOverride
         this.exprVer = exprVer;
     }
 
+    /**
+     * Copy constructor.
+     *
+     * <p><b>Master clone() semantics:</b>
+     * <ul>
+     *   <li>Deep copy (from CHILD_FIELDS): exprVer</li>
+     *   <li>Shallow copy (same reference): verb</li>
+     * </ul>
+     *
+     * @param original  the VersionOverride to copy
+     */
+    protected VersionOverride(VersionOverride original) {
+        super(original);
+
+        // Deep copy child fields (from CHILD_FIELDS)
+        this.exprVer = adopt(copyNode(original.exprVer));
+
+        // Shallow copy non-child fields
+        this.verb = original.verb;
+    }
+
+    @Override
+    public VersionOverride copy() {
+        return new VersionOverride(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 

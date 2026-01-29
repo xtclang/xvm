@@ -63,6 +63,38 @@ public class AnnotationExpression
         this.lEndPos   = node.getEndPosition();
     }
 
+    /**
+     * Copy constructor.
+     *
+     * <p><b>Master clone() semantics:</b>
+     * <ul>
+     *   <li>Deep copy (from CHILD_FIELDS): type, args</li>
+     *   <li>Shallow copy (same reference): lStartPos, lEndPos, m_node, m_anno, m_fConst</li>
+     * </ul>
+     *
+     * @param original  the expression to copy
+     */
+    protected AnnotationExpression(AnnotationExpression original) {
+        super(original);
+
+        // Deep copy child fields (from CHILD_FIELDS)
+        this.type = adopt(copyNode(original.type));
+        this.args = copyExpressions(original.args);
+        adopt(this.args);
+
+        // Shallow copy non-child fields (including transient computed state)
+        this.lStartPos = original.lStartPos;
+        this.lEndPos   = original.lEndPos;
+        this.m_node    = original.m_node;
+        this.m_anno    = original.m_anno;
+        this.m_fConst  = original.m_fConst;
+    }
+
+    @Override
+    public AnnotationExpression copy() {
+        return new AnnotationExpression(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 

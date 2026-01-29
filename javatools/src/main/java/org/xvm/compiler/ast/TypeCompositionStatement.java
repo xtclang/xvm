@@ -199,6 +199,55 @@ public class TypeCompositionStatement
     }
 
     /**
+     * Copy constructor.
+     *
+     * <p><b>Master clone() semantics:</b>
+     * <ul>
+     *   <li>Deep copy (from CHILD_FIELDS): condition, annotations, typeParams, constructorParams,
+     *       typeArgs, args, compositions, body</li>
+     *   <li>Shallow copy (same reference): source, modifiers, category, name, qualified, doc,
+     *       enclosed, m_fAnon, m_fVirtChild</li>
+     * </ul>
+     *
+     * @param original  the statement to copy
+     */
+    protected TypeCompositionStatement(TypeCompositionStatement original) {
+        super(original);
+
+        // Deep copy child fields (from CHILD_FIELDS)
+        this.condition         = adopt(copyNode(original.condition));
+        this.annotations       = copyNodes(original.annotations);
+        this.typeParams        = copyNodes(original.typeParams);
+        this.constructorParams = copyNodes(original.constructorParams);
+        this.typeArgs          = copyNodes(original.typeArgs);
+        this.args              = copyExpressions(original.args);
+        this.compositions      = copyNodes(original.compositions);
+        this.body              = adopt(copyNode(original.body));
+        adopt(this.annotations);
+        adopt(this.typeParams);
+        adopt(this.constructorParams);
+        adopt(this.typeArgs);
+        adopt(this.args);
+        adopt(this.compositions);
+
+        // Shallow copy non-child fields (including transient computed state)
+        this.source     = original.source;
+        this.modifiers  = original.modifiers;
+        this.category   = original.category;
+        this.name       = original.name;
+        this.qualified  = original.qualified;
+        this.doc        = original.doc;
+        this.enclosed   = original.enclosed;
+        this.m_fAnon    = original.m_fAnon;
+        this.m_fVirtChild = original.m_fVirtChild;
+    }
+
+    @Override
+    public TypeCompositionStatement copy() {
+        return new TypeCompositionStatement(this);
+    }
+
+    /**
      * Create a fake module statement that holds onto a compiled module and uses it as the basis for
      * resolving some other AST node. This is used by the runtime, not by the compiler.
      *

@@ -106,6 +106,45 @@ public class PropertyDeclarationStatement
         this.doc         = doc;
     }
 
+    /**
+     * Copy constructor.
+     *
+     * <p><b>Master clone() semantics:</b>
+     * <ul>
+     *   <li>Deep copy (from CHILD_FIELDS): condition, annotations, type, value, body, initializer,
+     *       assignment</li>
+     *   <li>Shallow copy (same reference): modifiers, name, tokAsn, doc, m_fSynthetic, m_counter</li>
+     * </ul>
+     *
+     * @param original  the statement to copy
+     */
+    protected PropertyDeclarationStatement(PropertyDeclarationStatement original) {
+        super(original);
+
+        // Deep copy child fields (from CHILD_FIELDS)
+        this.condition   = adopt(copyNode(original.condition));
+        this.annotations = copyNodes(original.annotations);
+        this.type        = adopt(copyNode(original.type));
+        this.value       = adopt(copyNode(original.value));
+        this.body        = adopt(copyNode(original.body));
+        this.initializer = adopt(copyNode(original.initializer));
+        this.assignment  = adopt(copyNode(original.assignment));
+        adopt(this.annotations);
+
+        // Shallow copy non-child fields (including transient computed state)
+        this.modifiers   = original.modifiers;
+        this.name        = original.name;
+        this.tokAsn      = original.tokAsn;
+        this.doc         = original.doc;
+        this.m_fSynthetic = original.m_fSynthetic;
+        this.m_counter   = original.m_counter;
+    }
+
+    @Override
+    public PropertyDeclarationStatement copy() {
+        return new PropertyDeclarationStatement(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 

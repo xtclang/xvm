@@ -23,6 +23,26 @@ public abstract class ComponentStatement
         this.lEndPos   = lEndPos;
     }
 
+    /**
+     * Copy constructor.
+     *
+     * <p><b>Master clone() semantics:</b>
+     * <ul>
+     *   <li>Deep copy: (none - abstract class has no CHILD_FIELDS)</li>
+     *   <li>Shallow copy (same reference): component, lStartPos, lEndPos</li>
+     * </ul>
+     *
+     * @param original  the statement to copy
+     */
+    protected ComponentStatement(ComponentStatement original) {
+        super(original);
+
+        // Shallow copy all fields (matching Object.clone() behavior)
+        this.component  = original.component;
+        this.lStartPos  = original.lStartPos;
+        this.lEndPos    = original.lEndPos;
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 

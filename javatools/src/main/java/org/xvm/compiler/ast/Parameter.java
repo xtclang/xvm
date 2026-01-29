@@ -27,6 +27,33 @@ public class Parameter
         this.value = value;
     }
 
+    /**
+     * Copy constructor.
+     *
+     * <p><b>Master clone() semantics:</b>
+     * <ul>
+     *   <li>Deep copy (from CHILD_FIELDS): type, value</li>
+     *   <li>Shallow copy (same reference): name</li>
+     * </ul>
+     *
+     * @param original  the Parameter to copy
+     */
+    protected Parameter(Parameter original) {
+        super(original);
+
+        // Deep copy child fields (from CHILD_FIELDS)
+        this.type  = adopt(copyNode(original.type));
+        this.value = adopt(copyNode(original.value));
+
+        // Shallow copy non-child fields
+        this.name = original.name;
+    }
+
+    @Override
+    public Parameter copy() {
+        return new Parameter(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 

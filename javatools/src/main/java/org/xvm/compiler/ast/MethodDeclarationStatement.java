@@ -130,6 +130,50 @@ public class MethodDeclarationStatement
         adopt(body);
     }
 
+    /**
+     * Copy constructor.
+     *
+     * <p><b>Master clone() semantics:</b>
+     * <ul>
+     *   <li>Deep copy (from CHILD_FIELDS): condition, annotations, typeParams, returns, redundant, params, body</li>
+     *   <li>Shallow copy (same reference): modifiers, conditional, name, doc, m_tokFinally,
+     *       m_bodyFinally, m_stmtComplement</li>
+     * </ul>
+     *
+     * @param original  the statement to copy
+     */
+    protected MethodDeclarationStatement(MethodDeclarationStatement original) {
+        super(original);
+
+        // Deep copy child fields (from CHILD_FIELDS)
+        this.condition   = adopt(copyNode(original.condition));
+        this.annotations = copyNodes(original.annotations);
+        this.typeParams  = copyNodes(original.typeParams);
+        this.returns     = copyNodes(original.returns);
+        this.redundant   = copyNodes(original.redundant);
+        this.params      = copyNodes(original.params);
+        this.body        = adopt(copyNode(original.body));
+        adopt(this.annotations);
+        adopt(this.typeParams);
+        adopt(this.returns);
+        adopt(this.redundant);
+        adopt(this.params);
+
+        // Shallow copy non-child fields (including transient computed state)
+        this.modifiers       = original.modifiers;
+        this.conditional     = original.conditional;
+        this.name            = original.name;
+        this.doc             = original.doc;
+        this.m_tokFinally    = original.m_tokFinally;
+        this.m_bodyFinally   = original.m_bodyFinally;
+        this.m_stmtComplement = original.m_stmtComplement;
+    }
+
+    @Override
+    public MethodDeclarationStatement copy() {
+        return new MethodDeclarationStatement(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 

@@ -19,6 +19,29 @@ public class LabeledExpression
         this.name = name;
     }
 
+    /**
+     * Copy constructor.
+     *
+     * <p><b>Master clone() semantics:</b>
+     * <ul>
+     *   <li>Deep copy (from CHILD_FIELDS): expr (handled by parent)</li>
+     *   <li>Shallow copy (same reference): name</li>
+     * </ul>
+     *
+     * @param original  the expression to copy
+     */
+    protected LabeledExpression(LabeledExpression original) {
+        super(original);  // Deep copies expr
+
+        // Shallow copy non-child fields
+        this.name = original.name;
+    }
+
+    @Override
+    public LabeledExpression copy() {
+        return new LabeledExpression(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 

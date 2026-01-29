@@ -60,6 +60,37 @@ public class ArrayAccessExpression
         this.tokClose = tokClose;
     }
 
+    /**
+     * Copy constructor.
+     *
+     * <p><b>Master clone() semantics:</b>
+     * <ul>
+     *   <li>Deep copy (from CHILD_FIELDS): expr, indexes</li>
+     *   <li>Shallow copy (same reference): tokClose, m_idGet, m_idSet, m_fSlice</li>
+     * </ul>
+     *
+     * @param original  the expression to copy
+     */
+    protected ArrayAccessExpression(ArrayAccessExpression original) {
+        super(original);
+
+        // Deep copy child fields (from CHILD_FIELDS)
+        this.expr    = adopt(copyNode(original.expr));
+        this.indexes = copyExpressions(original.indexes);
+        adopt(this.indexes);
+
+        // Shallow copy non-child fields (including transient computed state)
+        this.tokClose = original.tokClose;
+        this.m_idGet  = original.m_idGet;
+        this.m_idSet  = original.m_idSet;
+        this.m_fSlice = original.m_fSlice;
+    }
+
+    @Override
+    public ArrayAccessExpression copy() {
+        return new ArrayAccessExpression(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 

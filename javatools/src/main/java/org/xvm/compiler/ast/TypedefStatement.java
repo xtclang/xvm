@@ -34,6 +34,34 @@ public class TypedefStatement
         this.alias    = alias;
     }
 
+    /**
+     * Copy constructor.
+     *
+     * <p><b>Master clone() semantics:</b>
+     * <ul>
+     *   <li>Deep copy (from CHILD_FIELDS): cond, type</li>
+     *   <li>Shallow copy (same reference): modifier, alias</li>
+     * </ul>
+     *
+     * @param original  the statement to copy
+     */
+    protected TypedefStatement(TypedefStatement original) {
+        super(original);
+
+        // Deep copy child fields (from CHILD_FIELDS)
+        this.cond = adopt(copyNode(original.cond));
+        this.type = adopt(copyNode(original.type));
+
+        // Shallow copy non-child fields
+        this.modifier = original.modifier;
+        this.alias    = original.alias;
+    }
+
+    @Override
+    public TypedefStatement copy() {
+        return new TypedefStatement(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 

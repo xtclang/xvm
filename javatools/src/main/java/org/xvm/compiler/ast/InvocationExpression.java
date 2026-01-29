@@ -223,6 +223,53 @@ public class InvocationExpression
         this.lEndPos = lEndPos;
     }
 
+    /**
+     * Copy constructor.
+     *
+     * <p><b>Master clone() semantics:</b>
+     * <ul>
+     *   <li>Deep copy (from CHILD_FIELDS): expr, args</li>
+     *   <li>Shallow copy (same reference): async, lEndPos, all transient computed state fields</li>
+     * </ul>
+     *
+     * @param original  the expression to copy
+     */
+    protected InvocationExpression(InvocationExpression original) {
+        super(original);
+
+        // Deep copy child fields (from CHILD_FIELDS)
+        this.expr = adopt(copyNode(original.expr));
+        this.args = copyExpressions(original.args);
+        adopt(this.args);
+
+        // Shallow copy non-child fields (including transient computed state)
+        this.async           = original.async;
+        this.lEndPos         = original.lEndPos;
+        this.m_fBindTarget   = original.m_fBindTarget;
+        this.m_fBindParams   = original.m_fBindParams;
+        this.m_fCall         = original.m_fCall;
+        this.m_fTupleArg     = original.m_fTupleArg;
+        this.m_fNamedArgs    = original.m_fNamedArgs;
+        this.m_targetInfo    = original.m_targetInfo;
+        this.m_argMethod     = original.m_argMethod;
+        this.m_method        = original.m_method;
+        this.m_typeTarget    = original.m_typeTarget;
+        this.m_fCondResult   = original.m_fCondResult;
+        this.m_fBjarne       = original.m_fBjarne;
+        this.m_fPack         = original.m_fPack;
+        this.m_idFormal      = original.m_idFormal;
+        this.m_aargTypeParams = original.m_aargTypeParams;
+        this.m_idConvert     = original.m_idConvert;
+        this.m_fAutoFuture   = original.m_fAutoFuture;
+        this.m_astTarget     = original.m_astTarget;
+        this.m_astInvoke     = original.m_astInvoke;
+    }
+
+    @Override
+    public InvocationExpression copy() {
+        return new InvocationExpression(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 

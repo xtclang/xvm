@@ -136,6 +136,20 @@ public abstract class AstNode
     }
 
     /**
+     * Helper: Adopt multiple child nodes. Null values are safely ignored.
+     *
+     * @param children  vararg of AstNode instances (nulls allowed)
+     */
+    @SafeVarargs
+    protected final <T extends AstNode> void adoptAll(T... children) {
+        for (T child : children) {
+            if (child != null) {
+                child.setParent(this);
+            }
+        }
+    }
+
+    /**
      * Return an Iterable/Iterator that represents all the child nodes of this node.
      *
      * @return an Iterable of child nodes (from whence an Iterator can be obtained)

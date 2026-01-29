@@ -237,6 +237,47 @@ public class NameExpression
         this.lEndPos = lEndPos;
     }
 
+    /**
+     * Copy constructor.
+     *
+     * <p><b>Master clone() semantics:</b>
+     * <ul>
+     *   <li>Deep copy (from CHILD_FIELDS): left, params</li>
+     *   <li>Shallow copy (same reference): amp, name, lEndPos, m_targetInfo, m_arg,
+     *       m_idBjarnLambda, m_propAccessPlan, m_idSingletonParent, m_fClassAttribute,
+     *       m_fAssignable, m_astRefTarget, m_astResult</li>
+     * </ul>
+     *
+     * @param original  the expression to copy
+     */
+    protected NameExpression(NameExpression original) {
+        super(original);
+
+        // Deep copy child fields (from CHILD_FIELDS)
+        this.left   = adopt(copyNode(original.left));
+        this.params = copyNodes(original.params);
+        adopt(this.params);
+
+        // Shallow copy non-child fields (including transient computed state)
+        this.amp                = original.amp;
+        this.name               = original.name;
+        this.lEndPos            = original.lEndPos;
+        this.m_targetInfo       = original.m_targetInfo;
+        this.m_arg              = original.m_arg;
+        this.m_idBjarnLambda    = original.m_idBjarnLambda;
+        this.m_propAccessPlan   = original.m_propAccessPlan;
+        this.m_idSingletonParent = original.m_idSingletonParent;
+        this.m_fClassAttribute  = original.m_fClassAttribute;
+        this.m_fAssignable      = original.m_fAssignable;
+        this.m_astRefTarget     = original.m_astRefTarget;
+        this.m_astResult        = original.m_astResult;
+    }
+
+    @Override
+    public NameExpression copy() {
+        return new NameExpression(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 
