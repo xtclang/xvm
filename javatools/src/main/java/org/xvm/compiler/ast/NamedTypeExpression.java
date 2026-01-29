@@ -7,7 +7,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
@@ -114,6 +117,53 @@ public class NamedTypeExpression
         this.paramTypes = params;
         this.lStartPos  = (module == null ? names : module).get(0).getStartPosition();
         this.lEndPos    = lEndPos;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the NamedTypeExpression to copy from
+     */
+    protected NamedTypeExpression(@NotNull NamedTypeExpression original) {
+        super(Objects.requireNonNull(original));
+
+        // Tokens, Lists of Tokens, and positions are immutable, safe to share
+        this.module    = original.module;
+        this.immutable = original.immutable;
+        this.names     = original.names;
+        this.access    = original.access;
+        this.nonnarrow = original.nonnarrow;
+        this.lStartPos = original.lStartPos;
+        this.lEndPos   = original.lEndPos;
+
+        // Deep copy child fields
+        this.left       = original.left == null ? null : original.left.copy();
+        this.paramTypes = copyNodes(original.paramTypes);
+
+        // Adopt copied children
+        adopt(this.left);
+        adopt(this.paramTypes);
+
+        // The "m_exprDynamic" is NOT a child and must be handled manually (same logic as clone())
+        if (original.m_exprDynamic != null) {
+            this.m_exprDynamic = (NameExpression) original.m_exprDynamic.copy();
+        }
+
+        // Shallow-copy ALL transient resolution state to match original Object.clone() behavior.
+        // Object.clone() shallow-copies ALL fields including transient.
+        // These are computed during name resolution and need to be preserved when
+        // cloning a resolved type expression for validation testing.
+        this.m_constId          = original.m_constId;
+        this.m_fVirtualChild    = original.m_fVirtualChild;
+        this.m_fExternalTypedef = original.m_fExternalTypedef;
+        this.m_constUnresolved  = original.m_constUnresolved;
+        this.m_typeUnresolved   = original.m_typeUnresolved;
+        this.m_resolver         = original.m_resolver;  // Must copy - Object.clone() copies all fields
+    }
+
+    @Override
+    public NamedTypeExpression copy() {
+        return new NamedTypeExpression(this);
     }
 
 
@@ -1087,14 +1137,21 @@ public class NamedTypeExpression
     protected long                 lStartPos;
     protected long                 lEndPos;
 
+    @ComputedState("Name resolver for this type expression")
     protected transient NameResolver   m_resolver;
+    @ComputedState("Resolved identity constant")
     protected transient Constant       m_constId;
+    @ComputedState("Whether this is a virtual child type")
     protected transient boolean        m_fVirtualChild;
+    @ComputedState("Whether this refers to an external typedef")
     protected transient boolean        m_fExternalTypedef;
+    @ComputedState("Dynamic expression for runtime type resolution")
     private   transient NameExpression m_exprDynamic;
 
     // unresolved constant that may have been created by this statement
+    @ComputedState("Unresolved name constant pending resolution")
     protected transient UnresolvedNameConstant m_constUnresolved;
+    @ComputedState("Unresolved type constant pending resolution")
     protected transient UnresolvedTypeConstant m_typeUnresolved;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NamedTypeExpression.class, "left", "paramTypes");

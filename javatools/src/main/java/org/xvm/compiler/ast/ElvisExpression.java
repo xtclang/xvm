@@ -41,6 +41,22 @@ public class ElvisExpression
         super(expr1, operator, expr2);
     }
 
+    /**
+     * Copy constructor.
+     */
+    protected ElvisExpression(ElvisExpression original) {
+        super(original);
+
+        // Shallow copy transient fields to match Object.clone() behavior
+        this.m_fCond    = original.m_fCond;
+        this.m_labelEnd = original.m_labelEnd;
+    }
+
+    @Override
+    public ElvisExpression copy() {
+        return new ElvisExpression(this);
+    }
+
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -327,7 +343,9 @@ public class ElvisExpression
     /**
      * True iff the short-circuit operator is used to convert a "(Boolean, T)" into a "T".
      */
+    @ComputedState("Whether using conditional (Boolean, T) form")
     private transient boolean m_fCond;
 
+    @ComputedState("Generated end label for elvis operator")
     private transient Label m_labelEnd;
 }

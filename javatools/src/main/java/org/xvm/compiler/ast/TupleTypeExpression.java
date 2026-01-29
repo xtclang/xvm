@@ -23,6 +23,25 @@ public class TupleTypeExpression
         this.lEndPos      = lEndPos;
     }
 
+    /**
+     * Copy constructor.
+     */
+    protected TupleTypeExpression(TupleTypeExpression original) {
+        super(original);
+
+        this.lStartPos = original.lStartPos;
+        this.lEndPos   = original.lEndPos;
+
+        // Deep copy children
+        this.paramTypes = copyNodes(original.paramTypes);
+        adopt(this.paramTypes);
+    }
+
+    @Override
+    public TupleTypeExpression copy() {
+        return new TupleTypeExpression(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 

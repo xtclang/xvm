@@ -4,7 +4,10 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -31,6 +34,29 @@ public class FunctionTypeExpression
         this.returnValues = returnValues;
         this.paramTypes   = params;
         this.lEndPos      = lEndPos;
+    }
+
+    /**
+     * Copy constructor.
+     */
+    protected FunctionTypeExpression(@NotNull FunctionTypeExpression original) {
+        super(Objects.requireNonNull(original));
+
+        this.function    = original.function;      // Token is immutable
+        this.conditional = original.conditional;   // Token is immutable
+        this.lEndPos     = original.lEndPos;
+
+        // Deep copy children
+        this.returnValues = copyNodes(original.returnValues);
+        this.paramTypes   = copyNodes(original.paramTypes);
+
+        adopt(this.returnValues);
+        adopt(this.paramTypes);
+    }
+
+    @Override
+    public FunctionTypeExpression copy() {
+        return new FunctionTypeExpression(this);
     }
 
 

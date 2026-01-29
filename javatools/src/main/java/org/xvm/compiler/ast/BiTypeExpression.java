@@ -28,6 +28,27 @@ public class BiTypeExpression
         this.type2    = type2;
     }
 
+    /**
+     * Copy constructor.
+     */
+    protected BiTypeExpression(BiTypeExpression original) {
+        super(original);
+
+        this.operator = original.operator;  // Token is immutable
+
+        // Deep copy children
+        this.type1 = copyNode(original.type1);
+        this.type2 = copyNode(original.type2);
+
+        adopt(this.type1);
+        adopt(this.type2);
+    }
+
+    @Override
+    public BiTypeExpression copy() {
+        return new BiTypeExpression(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 

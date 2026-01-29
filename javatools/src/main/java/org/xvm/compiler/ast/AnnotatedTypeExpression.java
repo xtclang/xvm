@@ -38,6 +38,33 @@ public class AnnotatedTypeExpression
         this.type       = type;
     }
 
+    /**
+     * Copy constructor.
+     */
+    protected AnnotatedTypeExpression(AnnotatedTypeExpression original) {
+        super(original);
+
+        // Deep copy children
+        this.annotation = copyNode(original.annotation);
+        this.type       = copyNode(original.type);
+
+        adopt(this.annotation);
+        adopt(this.type);
+
+        // Shallow copy transient fields to match Object.clone() behavior
+        this.m_fDisassociateRef   = original.m_fDisassociateRef;
+        this.m_fDisassociateClass = original.m_fDisassociateClass;
+        this.m_fAnonInner         = original.m_fAnonInner;
+        this.m_fVar               = original.m_fVar;
+        this.m_fInjected          = original.m_fInjected;
+        this.m_typeUnresolved     = original.m_typeUnresolved;
+    }
+
+    @Override
+    public AnnotatedTypeExpression copy() {
+        return new AnnotatedTypeExpression(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -388,13 +415,19 @@ public class AnnotatedTypeExpression
     protected AnnotationExpression annotation;
     protected TypeExpression       type;
 
+    @ComputedState("Whether annotation applies to Ref rather than underlying type")
     private transient boolean m_fDisassociateRef;
+    @ComputedState("Whether annotation applies to Class rather than underlying type")
     private transient boolean m_fDisassociateClass;
+    @ComputedState("Whether this is part of an anonymous inner class")
     private transient boolean m_fAnonInner;
+    @ComputedState("Whether annotation refers to Var (read/write)")
     private transient boolean m_fVar;
+    @ComputedState("Whether this is an @Inject annotation")
     private transient boolean m_fInjected;
 
     // unresolved constant that may have been created by this expression
+    @ComputedState("Unresolved type constant pending resolution")
     private transient UnresolvedTypeConstant m_typeUnresolved;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(AnnotatedTypeExpression.class,

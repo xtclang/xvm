@@ -25,6 +25,20 @@ public class KeywordTypeExpression
         this.keyword  = keyword;
     }
 
+    /**
+     * Copy constructor.
+     */
+    protected KeywordTypeExpression(KeywordTypeExpression original) {
+        super(original);
+
+        this.keyword = original.keyword;  // Token is immutable
+    }
+
+    @Override
+    public KeywordTypeExpression copy() {
+        return new KeywordTypeExpression(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 

@@ -38,6 +38,28 @@ public class ArrayTypeExpression
         this.lEndPos = lEndPos;
     }
 
+    /**
+     * Copy constructor.
+     */
+    protected ArrayTypeExpression(ArrayTypeExpression original) {
+        super(original);
+
+        this.dims    = original.dims;
+        this.lEndPos = original.lEndPos;
+
+        // Deep copy children
+        this.type    = copyNode(original.type);
+        this.indexes = copyExpressions(original.indexes);
+
+        adopt(this.type);
+        adopt(this.indexes);
+    }
+
+    @Override
+    public ArrayTypeExpression copy() {
+        return new ArrayTypeExpression(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 

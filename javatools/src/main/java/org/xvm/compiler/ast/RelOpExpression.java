@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -121,6 +123,26 @@ public class RelOpExpression
 
         f_tokBefore = tokBefore;
         f_tokAfter  = tokAfter;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the RelOpExpression to copy from
+     */
+    protected RelOpExpression(@NotNull RelOpExpression original) {
+        super(Objects.requireNonNull(original));
+
+        // Tokens are immutable, safe to share
+        this.f_tokBefore = original.f_tokBefore;
+        this.f_tokAfter  = original.f_tokAfter;
+
+        // m_idOp is transient (post-validation state), starts fresh
+    }
+
+    @Override
+    public RelOpExpression copy() {
+        return new RelOpExpression(this);
     }
 
 
@@ -1083,5 +1105,6 @@ public class RelOpExpression
     /**
      * The method used for the operation.
      */
+    @ComputedState("Resolved operator method")
     protected transient MethodConstant m_idOp;
 }

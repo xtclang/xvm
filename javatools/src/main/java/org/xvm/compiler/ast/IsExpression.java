@@ -40,6 +40,20 @@ public class IsExpression
         lEndPos = tokClose.getEndPosition();
     }
 
+    /**
+     * Copy constructor.
+     */
+    protected IsExpression(IsExpression original) {
+        super(original);
+
+        this.lEndPos = original.lEndPos;
+    }
+
+    @Override
+    public IsExpression copy() {
+        return new IsExpression(this);
+    }
+
 
     // ----- compilation ---------------------------------------------------------------------------
 

@@ -26,6 +26,22 @@ public class BadTypeExpression
         this.nonType = nonType;
     }
 
+    /**
+     * Copy constructor.
+     */
+    protected BadTypeExpression(BadTypeExpression original) {
+        super(original);
+
+        // Deep copy child
+        this.nonType = copyNode(original.nonType);
+        adopt(this.nonType);
+    }
+
+    @Override
+    public BadTypeExpression copy() {
+        return new BadTypeExpression(this);
+    }
+
 
     // ----- TypeExpression methods ----------------------------------------------------------------
 

@@ -24,6 +24,24 @@ public class DecoratedTypeExpression
         this.type    = type;
     }
 
+    /**
+     * Copy constructor.
+     */
+    protected DecoratedTypeExpression(DecoratedTypeExpression original) {
+        super(original);
+
+        this.keyword = original.keyword;  // Token is immutable
+
+        // Deep copy child
+        this.type = copyNode(original.type);
+        adopt(this.type);
+    }
+
+    @Override
+    public DecoratedTypeExpression copy() {
+        return new DecoratedTypeExpression(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 

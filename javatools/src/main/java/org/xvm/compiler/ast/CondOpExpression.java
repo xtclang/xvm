@@ -51,6 +51,19 @@ public class CondOpExpression
         }
     }
 
+    /**
+     * Copy constructor.
+     */
+    protected CondOpExpression(CondOpExpression original) {
+        super(original);
+        // No additional instance fields to copy (only static constants)
+    }
+
+    @Override
+    public CondOpExpression copy() {
+        return new CondOpExpression(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 

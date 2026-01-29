@@ -34,6 +34,24 @@ public class ElseExpression
         super(expr1, operator, expr2);
     }
 
+    /**
+     * Copy constructor.
+     */
+    protected ElseExpression(ElseExpression original) {
+        super(original);
+
+        // Shallow copy transient fields to match Object.clone() behavior
+        this.m_nLabel     = original.m_nLabel;
+        this.m_labelElse  = original.m_labelElse;
+        this.m_mapElse    = original.m_mapElse;
+        this.m_fCondFalse = original.m_fCondFalse;
+    }
+
+    @Override
+    public ElseExpression copy() {
+        return new ElseExpression(this);
+    }
+
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -209,8 +227,12 @@ public class ElseExpression
     // ----- fields --------------------------------------------------------------------------------
 
     private static    int                   s_nCounter;
+    @ComputedState("Label counter for this else expression")
     private transient int                   m_nLabel;
+    @ComputedState("Generated label for else branch")
     private transient Label                 m_labelElse;
+    @ComputedState("Type narrowing map for else branch")
     private transient Map<String, Argument> m_mapElse;
+    @ComputedState("Whether expr2 is conditional False")
     private transient boolean               m_fCondFalse;
 }

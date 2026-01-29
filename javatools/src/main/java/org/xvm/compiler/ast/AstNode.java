@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
@@ -307,6 +308,21 @@ public abstract class AstNode
             result.add((Expression) expr.copy());
         }
         return result;
+    }
+
+    /**
+     * Copy a single nullable AstNode. Returns null if the input is null, otherwise returns
+     * a copy of the node with proper covariant typing.
+     *
+     * @param node  the node to copy, may be null
+     * @param <T>   the specific AstNode subtype
+     *
+     * @return a copy of the node, or null if the input was null
+     */
+    @SuppressWarnings("unchecked")
+    @Nullable
+    protected static <T extends AstNode> T copyNode(@Nullable T node) {
+        return node == null ? null : (T) node.copy();
     }
 
     /**

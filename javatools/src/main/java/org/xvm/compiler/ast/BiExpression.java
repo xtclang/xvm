@@ -2,6 +2,9 @@ package org.xvm.compiler.ast;
 
 
 import java.lang.reflect.Field;
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.ast.BiExprAST.Operator;
 import org.xvm.asm.ast.CondOpExprAST;
@@ -55,6 +58,26 @@ public abstract class BiExpression
         this.expr1    = expr1;
         this.operator = operator;
         this.expr2    = expr2;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the BiExpression to copy from
+     */
+    protected BiExpression(@NotNull BiExpression original) {
+        super(Objects.requireNonNull(original));
+
+        // Token is immutable, safe to share
+        this.operator = original.operator;
+
+        // Deep copy child expressions
+        this.expr1 = original.expr1 == null ? null : original.expr1.copy();
+        this.expr2 = original.expr2 == null ? null : original.expr2.copy();
+
+        // Adopt copied children
+        adopt(this.expr1);
+        adopt(this.expr2);
     }
 
 

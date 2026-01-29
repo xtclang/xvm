@@ -7,7 +7,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.stream.Collectors;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Argument;
@@ -91,6 +94,46 @@ public class NewExpression
         this.dims     = dims;
         this.body     = body;
         this.lEndPos  = lEndPos;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the NewExpression to copy from
+     */
+    protected NewExpression(@NotNull NewExpression original) {
+        super(Objects.requireNonNull(original));
+
+        // Token, dims, and position are immutable, safe to share
+        this.operator = original.operator;
+        this.dims     = original.dims;
+        this.lEndPos  = original.lEndPos;
+
+        // Deep copy child fields
+        this.left = original.left == null ? null : original.left.copy();
+        this.type = original.type == null ? null : original.type.copy();
+        this.args = copyExpressions(original.args);
+        this.anon = original.anon == null ? null : (TypeCompositionStatement) original.anon.copy();
+
+        // Adopt copied children
+        adopt(this.left);
+        adopt(this.type);
+        adopt(this.args);
+        adopt(this.anon);
+
+        // The "body" is NOT a child and must be handled manually (same logic as clone())
+        if (original.body != null) {
+            this.body = this.anon == null
+                    ? original.body.copy()
+                    : this.anon.body;
+        }
+
+        // Transient fields start fresh
+    }
+
+    @Override
+    public NewExpression copy() {
+        return new NewExpression(this);
     }
 
 

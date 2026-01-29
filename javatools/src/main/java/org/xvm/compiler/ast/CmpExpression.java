@@ -121,6 +121,24 @@ public class CmpExpression
         }
     }
 
+    /**
+     * Copy constructor.
+     */
+    protected CmpExpression(CmpExpression original) {
+        super(original);
+
+        // Shallow copy transient fields to match Object.clone() behavior
+        this.m_typeCommon = original.m_typeCommon;
+        this.m_idCmp      = original.m_idCmp;
+        this.m_fArg1Null  = original.m_fArg1Null;
+        this.m_fArg2Null  = original.m_fArg2Null;
+    }
+
+    @Override
+    public CmpExpression copy() {
+        return new CmpExpression(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -700,12 +718,16 @@ public class CmpExpression
     /**
      * The common type used for the comparison.
      */
+    @ComputedState("Common type for comparison")
     protected transient TypeConstant m_typeCommon;
     /**
      * The method used for the comparison.
      */
+    @ComputedState("Resolved comparison method")
     protected transient MethodConstant m_idCmp;
 
-    private transient boolean m_fArg1Null; // is the first arg equal to "Null"
-    private transient boolean m_fArg2Null; // is the second arg equal to "Null"
+    @ComputedState("First argument is null literal")
+    private transient boolean m_fArg1Null;
+    @ComputedState("Second argument is null literal")
+    private transient boolean m_fArg2Null;
 }

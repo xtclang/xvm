@@ -25,6 +25,24 @@ public class NullableTypeExpression
         this.lEndPos = lEndPos;
     }
 
+    /**
+     * Copy constructor.
+     */
+    protected NullableTypeExpression(NullableTypeExpression original) {
+        super(original);
+
+        this.lEndPos = original.lEndPos;
+
+        // Deep copy child
+        this.type = copyNode(original.type);
+        adopt(this.type);
+    }
+
+    @Override
+    public NullableTypeExpression copy() {
+        return new NullableTypeExpression(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 

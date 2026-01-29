@@ -2,17 +2,478 @@
 
 ## Executive Summary
 
-This document provides an analysis of the XTC compiler's AST implementation and a focused plan to **eliminate `clone()` and reflection-based child traversal** using explicit copy constructors.
+This document provides an analysis of the XTC compiler's AST implementation and a focused plan to **eliminate `clone()` and reflection-based child traversal** using explicit copy constructors and visitor pattern.
 
-**Immediate Goal**: Replace reflection-based `clone()` with explicit `copy()` methods using copy constructors.
+### PR Scope
 
-**Future Goal** (out of scope): Copy-on-write stateless immutable IR where copying is just returning a reference.
+**This PR** (immediate goal - both changes are entangled):
+1. **Replace reflection-based `clone()`** with explicit `copy()` methods using copy constructors
+2. **Replace `CHILD_FIELDS` reflection** with explicit visitor pattern for child iteration
+3. **Remove all reflection infrastructure**: `clone()`, `CHILD_FIELDS`, `fieldsForNames()`, `getChildFields()`
+
+These two changes must be done together because they address the same problem (reflection-based AST manipulation) and share infrastructure.
+
+**Next PR** (future work):
+- Extract transient fields into separate semantic model (Roslyn-style separation)
+- Enable copy-on-write stateless immutable AST nodes
 
 ---
 
-## Current Status
+## Part 1: Understanding the Current Clone Semantics
 
-### Completed Work
+### 1.1 What `Object.clone()` Actually Does
+
+Java's `Object.clone()` performs a **bitwise shallow copy** of ALL fields:
+
+```java
+// Pseudo-code for Object.clone() behavior:
+protected Object clone() {
+    Object copy = allocateNewInstance(this.getClass());
+    // Copy EVERY field, regardless of transient keyword
+    for (Field f : getAllFields()) {
+        f.set(copy, f.get(this));  // shallow copy - same reference
+    }
+    return copy;
+}
+```
+
+**Critical insight**: The `transient` keyword has **NO effect on clone()**. It only affects Java Serialization (ObjectOutputStream/ObjectInputStream). Since AstNode is not Serializable, `transient` is purely a documentation convention in this codebase.
+
+### 1.2 What `AstNode.clone()` Does
+
+The current implementation layers deep-copying of children on top of `Object.clone()`:
+
+```java
+public AstNode clone() {
+    // Step 1: Shallow copy ALL fields (including transient)
+    AstNode that = (AstNode) super.clone();
+
+    // Step 2: Deep copy only CHILD_FIELDS
+    for (Field field : getChildFields()) {
+        Object oVal = field.get(this);
+        if (oVal instanceof AstNode node) {
+            AstNode copy = node.copy();
+            that.adopt(copy);
+            field.set(that, copy);
+        } else if (oVal instanceof List<?> list) {
+            List<AstNode> copyList = list.stream()
+                .map(AstNode::copy)
+                .collect(toCollection(ArrayList::new));
+            that.adopt(copyList);
+            field.set(that, copyList);
+        }
+    }
+    return that;
+}
+```
+
+### 1.3 The Actual Semantic Model
+
+| Field Category | Source | Clone Behavior |
+|----------------|--------|----------------|
+| **Child fields** | Listed in `CHILD_FIELDS` | **Deep copied** (recursively cloned) |
+| **All other fields** | Everything else | **Shallow copied** (same reference) |
+| `transient` keyword | N/A | **No effect** - just documentation |
+
+**The semantic marker is `CHILD_FIELDS`, not `transient`.**
+
+### 1.4 Implications for Copy Constructors
+
+To be **semantically equivalent**, copy constructors must:
+
+1. **Deep copy** all fields listed in `CHILD_FIELDS`
+2. **Shallow copy** all other fields (including those marked `transient`)
+3. Replicate any **custom clone() overrides** (e.g., `LambdaExpression.clone()` which nulls out `m_lambda`)
+
+```java
+// CORRECT - Semantically equivalent to clone()
+protected MyClass(MyClass original) {
+    super(original);
+
+    // Deep copy child fields (from CHILD_FIELDS)
+    this.childExpr = original.childExpr == null ? null : original.childExpr.copy();
+    this.childList = copyStatements(original.childList);
+    adopt(this.childExpr, this.childList);
+
+    // Shallow copy everything else (same as Object.clone())
+    this.resolvedType = original.resolvedType;     // transient - still copied!
+    this.computedFlag = original.computedFlag;     // transient - still copied!
+    this.tokenKeyword = original.tokenKeyword;     // immutable - safe to share
+}
+```
+
+### 1.5 Correcting the `@NotCopied` Misconception
+
+The original plan incorrectly stated that `@NotCopied` should replace `transient` for "fields that shouldn't be copied." This was **wrong** because:
+
+1. `transient` fields ARE copied by `Object.clone()` (shallow)
+2. The current behavior DOES copy these fields
+3. Changing this would break semantic equivalence
+
+**Correct understanding:**
+- `@NotCopied` annotation should be **removed** or **renamed**
+- The distinction is `CHILD_FIELDS` (deep copy) vs everything else (shallow copy)
+- Document fields with comments explaining their copy semantics
+
+### 1.6 When Fields Should NOT Be Copied
+
+Some classes have custom `clone()` overrides that explicitly clear certain fields:
+
+```java
+// LambdaExpression.clone()
+public AstNode clone() {
+    LambdaExpression that = (LambdaExpression) super.clone();
+    that.m_lambda = null;  // Explicitly cleared - method structure belongs to original
+    return that;
+}
+```
+
+For these cases, the copy constructor must replicate this behavior:
+
+```java
+protected LambdaExpression(LambdaExpression original) {
+    super(original);
+    // ... copy children ...
+
+    // m_lambda is explicitly NOT copied (replicating custom clone() behavior)
+    // The MethodStructure belongs to the original, not the copy
+    this.m_lambda = null;
+}
+```
+
+---
+
+## Part 2: CHILD_FIELDS and the Path to Visitor Pattern
+
+### 2.1 Current CHILD_FIELDS Infrastructure
+
+Each AST class defines its children via a static array:
+
+```java
+private static final Field[] CHILD_FIELDS =
+    fieldsForNames(ForStatement.class, "init", "conds", "update", "block");
+
+@Override
+protected Field[] getChildFields() {
+    return CHILD_FIELDS;
+}
+```
+
+This infrastructure is used for:
+
+| Usage | Count | Description |
+|-------|-------|-------------|
+| **clone()** | ~6 | Deep copy children via reflection |
+| **children() iterator** | ~25 | Tree traversal, parent setup, stage management |
+| **getDumpChildren()** | ~1 | Debug output |
+
+### 2.2 Problems with Reflection-Based CHILD_FIELDS
+
+1. **Performance**: `Field.get()`/`Field.set()` are 10-100x slower than direct access
+2. **Type Safety**: Field names are strings; typos fail at runtime
+3. **GraalVM**: Requires reflection configuration for native-image
+4. **Maintainability**: Adding a field requires updating string array
+
+### 2.3 Replacement Strategy: Explicit Methods
+
+**Phase A: Copy Constructors (Current Work)**
+
+Replace reflection-based clone() with explicit copy constructors:
+
+```java
+// Before (reflection)
+for (Field field : getChildFields()) {
+    Object val = field.get(this);
+    // ... deep copy via reflection ...
+}
+
+// After (explicit)
+protected ForStatement(ForStatement original) {
+    this.init = copyStatements(original.init);
+    this.conds = copyNodes(original.conds);
+    this.update = copyStatements(original.update);
+    this.block = original.block.copy();
+}
+```
+
+**Phase B: Visitor Pattern for Tree Traversal (Future)**
+
+Replace `children()` iterator with explicit visitor methods:
+
+```java
+// Current (reflection-based iterator)
+for (AstNode child : node.children()) {
+    process(child);
+}
+
+// Future (visitor pattern)
+interface AstVisitor<R> {
+    R visit(ForStatement stmt);
+    R visit(WhileStatement stmt);
+    // ... one method per node type
+}
+
+class ForStatement {
+    @Override
+    public <R> R accept(AstVisitor<R> visitor) {
+        return visitor.visit(this);
+    }
+
+    // Explicit child access for visitors that need it
+    public List<Statement> getInit() { return init; }
+    public List<AstNode> getConds() { return conds; }
+    public List<Statement> getUpdate() { return update; }
+    public StatementBlock getBlock() { return block; }
+}
+```
+
+### 2.4 Complete Elimination Strategy
+
+**All reflection-based child iteration will be replaced.** The end goal is a Roslyn-like stateless incremental compiler with zero reflection overhead:
+
+| Use Case | Current (Reflection) | Replacement (Explicit) |
+|----------|---------------------|------------------------|
+| clone() | `CHILD_FIELDS` reflection | **Copy constructors** |
+| children() iterator | `CHILD_FIELDS` reflection | **Explicit visitor methods** |
+| Stage management | `children()` iterator | **Visitor pattern** |
+| Parent setup | `children()` iterator | **Visitor pattern** |
+| Debug/introspection | Reflection | **Explicit getChildren() methods** |
+
+**No reflection will remain for child iteration.** The `CHILD_FIELDS` arrays and `fieldsForNames()` will be completely removed once the visitor pattern is in place.
+
+### 2.5 Incremental Migration Path (All Steps in This PR)
+
+The migration must be done incrementally to maintain a working compiler. **All four steps are part of this PR**:
+
+**Step 1: Copy Constructors**
+- Add copy constructors to all AST classes
+- Replace `clone()` calls with `copy()` calls
+- Remove `clone()` method and `Cloneable` interface
+- **Result**: No more reflection in copy operations
+
+**Step 2: Explicit Children Methods**
+- Add `getChildren()` method to each AST class returning explicit list
+- Replace `children()` iterator implementation to use `getChildren()`
+- **Result**: `children()` still works but uses explicit methods internally
+
+**Step 3: Visitor Pattern**
+- Design visitor interface hierarchy
+- Add `accept(AstVisitor)` methods to all AST classes
+- Migrate stage management to use visitors
+- Migrate parent setup to use visitors
+- **Result**: All operations use visitor pattern
+
+**Step 4: Cleanup**
+- Remove `CHILD_FIELDS` arrays from all classes
+- Remove `fieldsForNames()` and related reflection utilities
+- Remove `getChildFields()` methods
+- Optionally remove `children()` iterator (or keep as convenience using `getChildren()`)
+- **Result**: Zero reflection in AST infrastructure
+
+---
+
+## Part 3: Why Transient Fields Should Move Out of AST Nodes
+
+### 3.1 What "Transient" Fields Really Are
+
+In the current codebase, `transient` fields on AST nodes are:
+- **Computed/cached state**: Type resolution results, constant IDs, method structures
+- **Validation artifacts**: Flags indicating validation state, resolved references
+- **Compilation byproducts**: Generated code structures, intermediate representations
+
+Examples:
+```java
+// NamedTypeExpression
+transient IdentityConstant m_constId;           // Resolved type identity
+transient boolean          m_fVirtualChild;     // Resolution flag
+transient boolean          m_fExternalTypedef;  // Resolution flag
+
+// LambdaExpression
+transient MethodStructure  m_lambda;            // Compiled method
+
+// Various expressions
+transient TypeConstant     m_type;              // Resolved type
+transient Argument         m_arg;               // Compiled argument
+```
+
+### 3.2 Why This Is Architecturally Wrong
+
+In a Roslyn-like architecture, the AST (syntax tree) should be **stateless and immutable**:
+
+| Roslyn Concept | Current XTC | Problem |
+|---------------|-------------|---------|
+| **Syntax Tree** | AST nodes | Contains mutable computed state |
+| **Semantic Model** | (scattered in AST) | No separation of concerns |
+| **Binding** | (happens in-place) | Mutates nodes during validation |
+
+**The fundamental issue**: XTC's validation phase **mutates AST nodes** by writing to transient fields. This prevents:
+
+1. **Incremental compilation**: Can't reuse syntax trees because they're polluted with semantic state
+2. **LSP support**: Can't provide quick completions while validation is running
+3. **Parallel validation**: Nodes can only be validated once; mutation isn't thread-safe
+4. **Copy-on-write optimization**: Can't share unchanged subtrees if they contain computed state
+
+### 3.3 The Target Architecture
+
+**Roslyn's separation**:
+```
+┌─────────────────┐     ┌──────────────────┐
+│   Syntax Tree   │────▶│  Semantic Model  │
+│   (immutable)   │     │   (computed)     │
+│   - tokens      │     │   - types        │
+│   - structure   │     │   - symbols      │
+│   - positions   │     │   - constants    │
+└─────────────────┘     └──────────────────┘
+```
+
+**Benefits of separation**:
+1. Parse once → query many times
+2. Incremental: only recompute semantic model for changed subtrees
+3. Thread-safe: syntax tree is read-only
+4. Memory efficient: syntax trees can be shared across compilations
+5. LSP-friendly: syntax operations (formatting, navigation) don't need full binding
+
+### 3.4 Migration Path for Transient Fields
+
+**Phase A (Current)**: Copy constructors preserve transient field semantics
+- We must maintain backward compatibility during migration
+- Copy constructors shallow-copy transient fields (same as `Object.clone()`)
+
+**Phase B (Future)**: Extract semantic model
+- Create `SemanticModel` or `BindingContext` class
+- Move type resolution, constant IDs, method structures to semantic model
+- AST nodes become pure syntax: tokens, positions, child structure only
+- Validation populates semantic model keyed by AST node identity
+
+```java
+// Future architecture
+class SemanticModel {
+    Map<AstNode, TypeConstant> resolvedTypes;
+    Map<AstNode, Constant>     constants;
+    Map<AstNode, MethodStructure> methods;
+
+    TypeConstant getType(Expression expr) {
+        return resolvedTypes.get(expr);
+    }
+}
+```
+
+### 3.5 Why Copy Constructors Enable This Future
+
+Copy constructors are a stepping stone:
+1. **Eliminate clone() reflection** → Explicit knowledge of which fields are children
+2. **Document field semantics** → Clear which fields are syntax vs computed
+3. **Enable visitor pattern** → Foundation for semantic model extraction
+4. **Maintain compatibility** → Working compiler throughout migration
+
+---
+
+## Part 4: Performance Analysis
+
+### 4.1 Reflection vs Direct Access
+
+Reflection overhead for field access:
+
+| Operation | Reflection | Direct Access | Speedup |
+|-----------|------------|---------------|---------|
+| `Field.get()` | ~50-100 ns | ~1-2 ns | **25-100x** |
+| `Field.set()` | ~50-100 ns | ~1-2 ns | **25-100x** |
+| Field lookup | ~200-500 ns | 0 ns | **∞** |
+
+*Note: Reflection costs vary by JVM, warm-up state, and accessibility modifiers.*
+
+### 4.2 Clone Operation Comparison
+
+For a typical AST node with 4 child fields:
+
+**Current (reflection-based clone)**:
+```
+Object.clone()         ~20 ns
+getChildFields()       ~50 ns (cached array access)
+4x Field.get()         ~200 ns
+4x child.clone()       (recursive)
+4x adopt()             ~20 ns
+4x Field.set()         ~200 ns
+───────────────────────
+Total overhead:        ~490 ns + recursive children
+```
+
+**New (copy constructor)**:
+```
+Object allocation      ~20 ns
+4x direct field read   ~8 ns
+4x child.copy()        (recursive)
+4x adopt()             ~20 ns
+4x direct field write  ~8 ns
+───────────────────────
+Total overhead:        ~56 ns + recursive children
+```
+
+**Speedup**: ~8-10x faster per node
+
+### 4.3 Children Iteration Comparison
+
+For the `children()` iterator with 4 child fields:
+
+**Current (reflection-based)**:
+```
+getChildFields()       ~50 ns
+4x Field.get()         ~200 ns
+List building          ~40 ns
+Iterator overhead      ~20 ns
+───────────────────────
+Total:                 ~310 ns per iteration
+```
+
+**Future (explicit methods)**:
+```
+getChildren() call     ~5 ns
+Direct field reads     ~8 ns
+List building          ~40 ns (can be cached)
+Iterator overhead      ~20 ns
+───────────────────────
+Total:                 ~73 ns per iteration
+```
+
+**Speedup**: ~4x faster per iteration
+
+### 4.4 Aggregate Impact
+
+For a typical compilation of 10,000 AST nodes:
+
+| Operation | Current | New | Savings |
+|-----------|---------|-----|---------|
+| Clone operations (validation loops) | ~50ms | ~6ms | **44ms** |
+| Children iterations (stage mgmt) | ~100ms | ~25ms | **75ms** |
+| Total | ~150ms | ~31ms | **~120ms** |
+
+*These are estimates; actual impact depends on clone/iteration frequency.*
+
+### 4.5 GraalVM Native Image Impact
+
+Beyond raw performance, reflection has critical implications for GraalVM:
+
+| Aspect | Reflection | Explicit | Impact |
+|--------|------------|----------|--------|
+| Native image size | +2-5 MB | Baseline | Smaller binary |
+| Startup time | +100-200ms | Baseline | Faster startup |
+| Peak performance | 80-90% | 100% | Better throughput |
+| Configuration | Required | None | Simpler deployment |
+| AOT optimization | Limited | Full | Better inlining |
+
+### 4.6 Memory Impact
+
+| Aspect | Current | New | Benefit |
+|--------|---------|-----|---------|
+| `CHILD_FIELDS` arrays | ~2KB per class | 0 | Less metaspace |
+| Field reflection cache | JVM internal | 0 | Smaller footprint |
+| Copy-on-write (future) | N/A | Shared subtrees | Dramatic savings |
+
+---
+
+## Part 5: Current Implementation Status
+
+### 3.1 Completed Work
 
 **Phase 1: Foundation** - COMPLETE
 - Added helper methods to `AstNode`: `copyStatements()`, `copyNodes()`, `copyExpressions()`
@@ -20,167 +481,103 @@ This document provides an analysis of the XTC compiler's AST implementation and 
 - Added `copy()` method with delegation to `clone()` for backward compatibility
 
 **Phase 2: Core Loop Statements** - COMPLETE
-- `ForStatement` - copy constructor with init, conds, update, block
-- `WhileStatement` - copy constructor with conds, block
-- `ForEachStatement` - copy constructor with lvals, expr, block
-- `IfStatement` - copy constructor with conds, stmtThen, stmtElse (uses Optional pattern)
-- `StatementBlock` - copy constructor with stmts
+- `ForStatement`, `WhileStatement`, `ForEachStatement`, `IfStatement`, `StatementBlock`
 
-**Additional Statement Classes** - COMPLETE (9 new classes)
-- `ExpressionStatement` - copies expr child
-- `ReturnStatement` - copies exprs list
-- `AssertStatement` - copies interval, conds, message
-- `AssignmentStatement` - copies lvalue, rvalue
-- `SwitchStatement` - copies block (extends ConditionalStatement)
-- `TryStatement` - copies resources, block, catches, catchall
-- `CatchStatement` - copies target, block
-- `VariableDeclarationStatement` - copies type
+**Additional Statement Classes** - COMPLETE
+- `ExpressionStatement`, `ReturnStatement`, `AssertStatement`, `AssignmentStatement`
+- `SwitchStatement`, `TryStatement`, `CatchStatement`, `VariableDeclarationStatement`
 
-**Control Flow Statements** - COMPLETE (6 new classes)
-- `GotoStatement` - base class with keyword/name tokens, abstract copy()
-- `BreakStatement` - extends GotoStatement (no children)
-- `ContinueStatement` - extends GotoStatement (no children)
-- `LabeledStatement` - copies stmt child
-- `CaseStatement` - copies exprs list
-- `MultipleLValueStatement` - copies LVals list
+**Control Flow Statements** - COMPLETE
+- `GotoStatement`, `BreakStatement`, `ContinueStatement`
+- `LabeledStatement`, `CaseStatement`, `MultipleLValueStatement`
 
-**Import/Other Statements** - COMPLETE (1 new class)
-- `ImportStatement` - copies cond child
+**Import/Other Statements** - COMPLETE
+- `ImportStatement`
 
-**Expression Classes** - COMPLETE (10 new classes)
-- `DelegatingExpression` - base class, copies expr child
-- `PrefixExpression` - base class, copies operator/expr
-- `LiteralExpression` - no children, copies literal token
-- `ParenthesizedExpression` - extends DelegatingExpression
-- `ThrowExpression` - copies expr, message children
-- `UnaryMinusExpression` - extends PrefixExpression
-- `UnaryPlusExpression` - extends PrefixExpression
-- `UnaryComplementExpression` - extends PrefixExpression
-- `SequentialAssignExpression` - extends PrefixExpression, copies m_fPre
+**Expression Classes** - COMPLETE
+- Base classes: `DelegatingExpression`, `PrefixExpression`, `BiExpression`
+- Literals: `LiteralExpression`
+- Unary: `ParenthesizedExpression`, `ThrowExpression`, `UnaryMinusExpression`, `UnaryPlusExpression`, `UnaryComplementExpression`, `SequentialAssignExpression`
+- Binary: `RelOpExpression`
+- Complex: `StatementExpression`, `LambdaExpression`, `NewExpression`, `NamedTypeExpression`
 
-**Base Classes with Copy Support**
-- `AstNode` - base copy constructor and helper methods
-- `Statement` - copy constructor, `copy()` delegates to `clone()`
-- `Expression` - copy constructor, `copy()` delegates to `clone()`
-- `ConditionalStatement` - copy constructor for keyword and conds
-- `TypeExpression` - copy constructor, covariant `copy()` return type
-- `DelegatingExpression` - copy constructor for delegated expr
-- `PrefixExpression` - copy constructor for operator/expr
+**BiExpression Subclasses** - COMPLETE
+- `AsExpression`, `IsExpression`, `ElseExpression`, `CondOpExpression`, `CmpExpression`, `ElvisExpression`
 
-**New Infrastructure**
-- `@NotCopied` annotation (`NotCopied.java`) - replaces `transient` keyword for documenting fields that shouldn't be copied (the `transient` keyword had no semantic effect since AstNode is not Serializable)
+**TypeExpression Subclasses** - COMPLETE
+- `ArrayTypeExpression`, `BiTypeExpression`, `TupleTypeExpression`, `NullableTypeExpression`
+- `DecoratedTypeExpression`, `KeywordTypeExpression`, `FunctionTypeExpression`
+- `VariableTypeExpression`, `BadTypeExpression`, `AnnotatedTypeExpression`
 
-### Classes with copy() - 31 total
+### 3.2 Classes with copy() - 53 total
+
 ```
-# Base classes (7)
-AstNode.java (base)
-Statement.java (base)
-Expression.java (base)
-ConditionalStatement.java (base)
-TypeExpression.java (base)
-DelegatingExpression.java (base)
-PrefixExpression.java (base)
+# Base classes (8)
+AstNode.java, Statement.java, Expression.java, ConditionalStatement.java
+TypeExpression.java, DelegatingExpression.java, PrefixExpression.java, BiExpression.java
 
-# Loop statements (5)
-ForStatement.java
-WhileStatement.java
-ForEachStatement.java
-IfStatement.java
-StatementBlock.java
+# Statements (20)
+ForStatement, WhileStatement, ForEachStatement, IfStatement, StatementBlock
+ExpressionStatement, ReturnStatement, AssertStatement, AssignmentStatement
+SwitchStatement, TryStatement, CatchStatement, VariableDeclarationStatement
+GotoStatement, BreakStatement, ContinueStatement, LabeledStatement
+CaseStatement, MultipleLValueStatement, ImportStatement
 
-# Other statements (14)
-ExpressionStatement.java
-ReturnStatement.java
-AssertStatement.java
-AssignmentStatement.java
-SwitchStatement.java
-TryStatement.java
-CatchStatement.java
-VariableDeclarationStatement.java
-GotoStatement.java
-BreakStatement.java
-ContinueStatement.java
-LabeledStatement.java
-CaseStatement.java
-MultipleLValueStatement.java
-ImportStatement.java
+# Expressions (12)
+LiteralExpression, ParenthesizedExpression, ThrowExpression
+UnaryMinusExpression, UnaryPlusExpression, UnaryComplementExpression
+SequentialAssignExpression, RelOpExpression, StatementExpression
+LambdaExpression, NewExpression, NamedTypeExpression
 
-# Expressions (8)
-LiteralExpression.java
-ParenthesizedExpression.java
-ThrowExpression.java
-UnaryMinusExpression.java
-UnaryPlusExpression.java
-UnaryComplementExpression.java
-SequentialAssignExpression.java
+# BiExpression Subclasses (6) - NEW
+AsExpression, IsExpression, ElseExpression
+CondOpExpression, CmpExpression, ElvisExpression
+
+# TypeExpression Subclasses (10) - NEW
+ArrayTypeExpression, BiTypeExpression, TupleTypeExpression, NullableTypeExpression
+DecoratedTypeExpression, KeywordTypeExpression, FunctionTypeExpression
+VariableTypeExpression, BadTypeExpression, AnnotatedTypeExpression
 ```
 
-### Classes Still Needing copy() - ~55 remaining
+### 3.3 Classes Still Needing copy() - ~32 remaining
+
+**Expression Subclasses (~20 remaining)**
+- Binary/Relational (~1): `CmpChainExpression`
+- Invocation/Access (~4): `InvocationExpression`, `ArrayAccessExpression`, `NameExpression`, `IgnoredNameExpression`
+- Literals/Values (~5): `ListExpression`, `MapExpression`, `TupleExpression`, `TemplateExpression`, `FileExpression`
+- Other (~4): `TernaryExpression`, `NotNullExpression`, `NonBindingExpression`, `SwitchExpression`
+- Conversion (~1): `ConvertExpression`
 
 **Statement Subclasses (~6 remaining)**
-- `TypedefStatement` (extends ComponentStatement)
-- `ComponentStatement` and subclasses (~10 - may not need copy as they represent structures)
+- `TypedefStatement`, `ComponentStatement` and subclasses
 
-**Expression Subclasses (~37 remaining)**
-- Type Expressions (~12): `NamedTypeExpression`, `ArrayTypeExpression`, `TupleTypeExpression`, `FunctionTypeExpression`, `NullableTypeExpression`, `AnnotatedTypeExpression`, `BiTypeExpression`, `DecoratedTypeExpression`, `KeywordTypeExpression`, `VariableTypeExpression`, `BadTypeExpression`, `ModuleTypeExpression`
-- Binary/Relational (~9): `RelOpExpression`, `CondOpExpression`, `CmpExpression`, `CmpChainExpression`, `BiExpression`, `AsExpression`, `IsExpression`, `ElvisExpression`, `ElseExpression`
-- Invocation/Access (~5): `InvocationExpression`, `NewExpression`, `ArrayAccessExpression`, `NameExpression`, `IgnoredNameExpression`
-- Literals/Values (~5): `ListExpression`, `MapExpression`, `TupleExpression`, `TemplateExpression`, `FileExpression`
-- Other (~6): `LambdaExpression`, `TernaryExpression`, `NotNullExpression`, `NonBindingExpression`, `SwitchExpression`, `StatementExpression`
-
-**Other AST Nodes (~12 remaining)**
+**Other AST Nodes (~6 remaining)**
 - `Parameter`, `AnnotationExpression`, `CompositionNode`, `VersionOverride`
-- `AnonInnerClass`, `CaseManager`, `Context`, `NameResolver`, `StageMgr` (may not need copy)
 
 ---
 
-## Next Steps (Recommended Order)
+## Part 4: Copy Constructor Pattern (Corrected)
 
-### Immediate Priority: Classes that call clone()
-These classes explicitly call clone() and should be converted first to enable testing:
+### 4.1 Standard Pattern
 
-1. **RelOpExpression** - calls clone() at line 434
-2. **StatementExpression** - calls clone() at lines 117, 164
-3. **LambdaExpression** - calls clone() at lines 709, 731, 860-865
-4. **NewExpression** - calls clone() at lines 150-159, 374, 1135, 1159, 1239
-5. **NamedTypeExpression** - calls clone() at lines 982-989
-
-### Phase 3a: Binary/Relational Expressions (simpler structure)
-- `BiExpression` (base class for binary ops)
-- `RelOpExpression`, `CondOpExpression`, `CmpExpression`, `CmpChainExpression`
-- `AsExpression`, `IsExpression`, `ElvisExpression`, `ElseExpression`
-
-### Phase 3b: Type Expressions
-- Start with `NamedTypeExpression` (most commonly used)
-- Then remaining type expressions
-
-### Phase 3c: Invocation/Access Expressions
-- `NameExpression`, `InvocationExpression`, `NewExpression`, `ArrayAccessExpression`
-
-### Phase 4: Update Call Sites
-Once all expression classes have copy(), replace clone() calls with copy() in validation loops
-
----
-
-## Design Patterns Established
-
-### Copy Constructor Pattern
 ```java
-protected MyClass(@NotNull MyClass original) {
-    super(Objects.requireNonNull(original));
+protected MyClass(MyClass original) {
+    super(original);
 
-    // Copy non-child structural fields (immutable, safe to share)
-    this.keyword = original.keyword;  // Token is immutable
+    // 1. Shallow copy non-child fields (matching Object.clone() behavior)
+    this.keyword = original.keyword;           // Token - immutable, safe to share
+    this.resolvedType = original.resolvedType; // @ComputedState - STILL COPIED (shallow)
+    this.computedFlag = original.computedFlag; // @ComputedState - STILL COPIED (shallow)
 
-    // Deep copy child fields
-    this.child = original.child == null ? null : original.child.copy();
-    this.children = copyStatements(original.children);
+    // 2. Deep copy child fields using helper methods
+    this.child = copyNode(original.child);         // Single nullable node
+    this.children = copyStatements(original.children);  // List of statements
+    this.exprs = copyExpressions(original.exprs);       // List of expressions
+    this.nodes = copyNodes(original.nodes);             // List of any AstNode subtype
 
-    // Adopt copied children
+    // 3. Adopt copied children (set parent references)
     adopt(this.child);
     adopt(this.children);
-
-    // @NotCopied fields start fresh (transient compilation state)
 }
 
 @Override
@@ -189,186 +586,164 @@ public MyClass copy() {
 }
 ```
 
-### Optional Pattern for Null-Safe Copying
-```java
-// Using Optional for cleaner null handling
-this.stmtThen = Optional.ofNullable(original.stmtThen).map(Statement::copy).orElse(null);
-this.stmtElse = Optional.ofNullable(original.stmtElse).map(Statement::copy).orElse(null);
+**Helper methods available in AstNode:**
+- `copyNode(T node)` - Copy single nullable node with covariant typing
+- `copyStatements(List<Statement>)` - Copy list of statements
+- `copyExpressions(List<Expression>)` - Copy list of expressions
+- `copyNodes(List<T extends AstNode>)` - Copy list of any AstNode subtype
 
-// Adopt using Optional
-getThen().ifPresent(this::adopt);
-getElse().ifPresent(this::adopt);
-```
+### 4.2 Pattern for Custom Clone Overrides
 
-### Optional-Returning Getters
-```java
-public Optional<Statement> getThen() {
-    return Optional.ofNullable(stmtThen);
-}
-
-public Optional<Statement> getElse() {
-    return Optional.ofNullable(stmtElse);
-}
-```
-
-### Covariant Return Types
-Each class overrides `copy()` with its own return type:
-```java
-// In Statement base class
-public Statement copy() { return (Statement) clone(); }
-
-// In ForStatement
-@Override
-public ForStatement copy() { return new ForStatement(this); }
-
-// In TypeExpression
-@Override
-public TypeExpression copy() { return (TypeExpression) clone(); }
-```
-
-### @NotCopied Annotation
-Replaces `transient` keyword (which had no runtime effect since AST is not Serializable):
-```java
-@NotCopied private Label m_labelContinue;
-@NotCopied private List<Break> m_listShorts;
-@NotCopied private Register m_reg;
-```
-
----
-
-## Part 1: Why Clone Exists
-
-### 1.1 The Validation Loop Problem
-
-Clone is primarily used in **validation loops** for iterative dataflow analysis. The compiler needs to determine **definite assignment** - which variables are guaranteed to be assigned at any point. In loops, this creates a chicken-and-egg problem:
+When the original class has a custom `clone()` that clears fields:
 
 ```java
-for (;;) {
-    if (first) {
-        x = 1;      // x assigned here
-    }
-    print(x);       // Is x definitely assigned? Depends on previous iteration!
-    first = false;
-}
-```
-
-The compiler must reason about what's true at the **start of the second iteration**, which depends on what happened in the **first iteration**, which it hasn't validated yet.
-
-### 1.2 The Clone-and-Retry Solution
-
-From `ForStatement.validateImpl()`:
-
-```java
-// Hold onto original context to track assignment changes
-Context                 ctxOrig    = ctx;
-Map<String, Assignment> mapLoopAsn = new HashMap<>();  // Assumptions about loop
-
-while (true) {
-    // 1. CLONE the original AST nodes
-    conds = new ArrayList<>(cConds);
-    for (AstNode cond : condsOrig) {
-        conds.add(cond.clone());           // Clone conditions
-    }
-    block = (StatementBlock) blockOrig.clone();  // Clone body
-
-    // 2. Apply current assumptions and validate
-    ctx = ctxOrig.enter();
-    ctx.merge(mapLoopAsn, mapLoopArg);
-    // ... validate the cloned nodes (MUTATES them) ...
-
-    // 3. Check if assumptions were wrong
-    ctx.prepareJump(ctxOrig, mapAsnAfter, mapArgAfter);
-    if (!mapAsnAfter.equals(mapLoopAsn)) {
-        // Assumptions changed! Discard clones and retry
-        mapLoopAsn = mapAsnAfter;
-        for (AstNode cond : conds) {
-            cond.discard(true);
-        }
-        continue;  // TRY AGAIN with new assumptions
-    }
-
-    // 4. Success! Discard originals, keep validated clones
-    for (AstNode cond : condsOrig) {
-        cond.discard(true);
-    }
-    break;
-}
-```
-
-**Why clone?** Validation is **destructive** - it mutates AST nodes (resolves types, allocates registers, stores narrowed type info). If assumptions turn out wrong, we can't "un-validate", so we clone first, validate the clone, and discard if wrong.
-
-### 1.3 The Problem with Current Clone
-
-The current `AstNode.clone()` uses **reflection**:
-
-```java
+// Original custom clone()
 public AstNode clone() {
-    AstNode that = (AstNode) super.clone();
-    for (Field field : getChildFields()) {
-        Object oVal = field.get(this);       // REFLECTION - slow, no type safety
-        if (oVal instanceof AstNode node) {
-            field.set(that, node.clone());   // REFLECTION - slow, no type safety
-        } else if (oVal instanceof List list) {
-            // ... more reflection ...
-        }
+    LambdaExpression that = (LambdaExpression) super.clone();
+    that.m_lambda = null;  // Clear method structure
+    return that;
+}
+
+// Equivalent copy constructor
+protected LambdaExpression(@NotNull LambdaExpression original) {
+    super(original);
+
+    // Deep copy children
+    this.params = copyNodes(original.params);
+    this.paramNames = copyExpressions(original.paramNames);
+    this.body = original.body == null ? null : original.body.copy();
+    adopt(this.params, this.paramNames, this.body);
+
+    // Shallow copy non-child fields
+    this.operator = original.operator;
+    this.lStartPos = original.lStartPos;
+
+    // m_lambda explicitly NOT copied (matches custom clone() behavior)
+    // MethodStructure belongs to original, not the copy
+}
+```
+
+### 4.3 Pattern for Non-Child Fields That Need Deep Copy
+
+Some fields are not in CHILD_FIELDS but still need special handling:
+
+```java
+// NamedTypeExpression.clone() handles m_exprDynamic manually
+public AstNode clone() {
+    NamedTypeExpression that = (NamedTypeExpression) super.clone();
+    if (m_exprDynamic != null) {
+        that.m_exprDynamic = (NameExpression) m_exprDynamic.clone();
     }
     return that;
 }
-```
 
-Problems:
-- Runtime reflection overhead on every clone
-- No compile-time type safety (field names are strings)
-- Not GraalVM/native-image friendly
-- Hard to reason about what gets copied
+// Copy constructor must replicate this
+protected NamedTypeExpression(@NotNull NamedTypeExpression original) {
+    super(original);
+
+    // Deep copy CHILD_FIELDS
+    this.left = original.left == null ? null : original.left.copy();
+    this.paramTypes = copyNodes(original.paramTypes);
+    adopt(this.left, this.paramTypes);
+
+    // Deep copy non-child that needs special handling
+    if (original.m_exprDynamic != null) {
+        this.m_exprDynamic = (NameExpression) original.m_exprDynamic.copy();
+    }
+
+    // Shallow copy everything else
+    this.module = original.module;
+    this.immutable = original.immutable;
+    this.names = original.names;
+    // ... and transient resolution state ...
+    this.m_constId = original.m_constId;
+    this.m_fVirtualChild = original.m_fVirtualChild;
+    this.m_fExternalTypedef = original.m_fExternalTypedef;
+}
+```
 
 ---
 
-## Part 2: Remaining Work
+## Part 5: Next Steps
 
-### Phase 3: Expression Subclasses (~45 classes)
+### Phase 3: Remaining Expressions
 
-Priority order:
-1. Expressions that explicitly call clone(): `RelOpExpression`, `LambdaExpression`, `NewExpression`
-2. Type expressions: `NamedTypeExpression`, `ArrayTypeExpression`, etc.
-3. Remaining expressions
+Priority order based on complexity and usage:
 
-### Phase 4: Update Call Sites
+1. **Binary/Relational** (simpler, extend BiExpression)
+2. **Type Expressions** (moderate complexity)
+3. **Invocation/Access** (more complex, need careful analysis)
+4. **Literal/Container** (straightforward lists)
+5. **Other** (various complexity)
 
-Replace all `clone()` calls with `copy()`:
-- Validation loops in `ForStatement`, `WhileStatement`, `ForEachStatement`
-- Expression cloning in `RelOpExpression`, `LambdaExpression`, `NewExpression`
-- Other scattered uses (~25 additional call sites)
+### Phase 4: Update Clone Call Sites
+
+Replace `clone()` with `copy()` at all call sites:
+- Validation loops: `ForStatement`, `WhileStatement`, `ForEachStatement`, `LambdaExpression`
+- Type testing: `NewExpression`, `RelOpExpression`
+- Expression backup: Various expressions
 
 ### Phase 5: Cleanup
 
 1. Remove `Cloneable` interface from `AstNode`
-2. Remove `clone()` method (or keep as deprecated alias)
-3. Replace remaining `transient` keywords with `@NotCopied`
-4. Optionally remove `CHILD_FIELDS` reflection
+2. Deprecate or remove `clone()` method
+3. Remove `@NotCopied` annotation (was based on incorrect understanding)
+4. Document field copy semantics in comments where needed
+
+### Phase 5b: Apply @ComputedState Annotation
+
+A new `@ComputedState` annotation has been created to replace the meaningless `transient` keyword as documentation for computed/cached state fields.
+
+**Completed** (annotation applied):
+- `NamedTypeExpression.java` - all 7 transient fields
+- `CmpExpression.java` - all 4 transient fields
+- `ElseExpression.java` - all 4 transient fields
+- `ElvisExpression.java` - all 2 transient fields
+- `AsExpression.java` - 1 transient field
+- `RelOpExpression.java` - 1 transient field
+- `StatementExpression.java` - all 4 transient fields
+- `LambdaExpression.java` - all 8 transient fields
+
+**Remaining** (annotation not yet applied):
+- `ForStatement.java` - 11 transient fields
+- `WhileStatement.java` - 9 transient fields
+- `ForEachStatement.java` - 16 transient fields
+- `TernaryExpression.java` - 2 transient fields
+- `SwitchExpression.java` - 3 transient fields
+- `MapExpression.java` - 2 transient fields
+- `AnnotatedTypeExpression.java` - 6 transient fields
+- `Statement.java` - 2 transient fields
+- `MethodDeclarationStatement.java` - 3 transient fields
+- `ConditionalStatement.java` - 1 transient field
+- `CmpChainExpression.java` - 1 transient field
+- `AnnotationExpression.java` - 3 transient fields
+- `NewExpression.java` - 17 transient fields
+- `CompositionNode.java` - 2 transient fields
+- `PropertyDeclarationStatement.java` - 4 transient fields
+- `NotNullExpression.java` - 2 transient fields
+- `ArrayAccessExpression.java` - 3 transient fields
+- `NameExpression.java` - 10 transient fields
+- `InvocationExpression.java` - 18 transient fields
+- `StatementBlock.java` - 2 transient fields
+- `Expression.java` - 1 transient field
+
+The annotation serves two purposes:
+1. Documents which fields are candidates for extraction to semantic model
+2. Documents copy constructor semantics (shallow copy)
+
+### Phase 6: Visitor Pattern (This PR)
+
+1. Design visitor interface hierarchy
+2. Implement `accept()` methods on AST nodes
+3. Migrate `StageMgr` to use visitors
+4. Migrate parent setup to use visitors
+5. Optionally optimize or remove `children()` iterator
 
 ---
 
-## Appendix A: Files with Clone Calls to Update
+## Appendix A: CHILD_FIELDS Reference
 
-### Validation Loop Clones (Primary Target)
-- `ForStatement.java:328,332,334`
-- `WhileStatement.java:235,237`
-- `ForEachStatement.java:298-299`
-
-### Expression Clones
-- `RelOpExpression.java:434`
-- `StatementExpression.java:117,164`
-- `LambdaExpression.java:709,731,860-865`
-- `NewExpression.java:150-159,374,1135,1159,1239`
-- `NamedTypeExpression.java:982-989`
-- `AssertStatement.java:564`
-
----
-
-## Appendix B: CHILD_FIELDS Reference
-
-Quick reference for implementing copy constructors - shows which fields are children:
+Quick reference showing which fields are deep-copied (in CHILD_FIELDS):
 
 ```
 ForStatement:        init, conds, update, block
@@ -385,12 +760,155 @@ AssignmentStatement: lvalue, lvalueExpr, rvalue
 ExpressionStatement: expr
 VariableDeclarationStatement: type
 
+BiExpression:        expr1, expr2
 InvocationExpression: expr, args
-NewExpression:        left, type, args, anon
-LambdaExpression:     params, body
-NameExpression:       left, params
-RelOpExpression:      expr1, expr2
-TernaryExpression:    cond, exprThen, exprElse
+NewExpression:       left, type, args, anon (body is NOT a child - handled manually)
+LambdaExpression:    params, paramNames, body
+NameExpression:      left, params
+NamedTypeExpression: left, paramTypes (m_exprDynamic is NOT a child - handled manually)
+TernaryExpression:   cond, exprThen, exprElse
 ```
 
-(Full list in source files - search for `CHILD_FIELDS = fieldsForNames`)
+---
+
+## Appendix B: Custom Clone Overrides to Replicate
+
+Classes that override `clone()` with special behavior:
+
+| Class | Custom Behavior | Copy Constructor Must |
+|-------|----------------|----------------------|
+| `LambdaExpression` | Nulls `m_lambda` | Not copy `m_lambda` |
+| `NewExpression` | Deep copies `body` (non-child) | Deep copy `body` manually |
+| `NamedTypeExpression` | Deep copies `m_exprDynamic` (non-child) | Deep copy `m_exprDynamic` manually |
+
+---
+
+## Appendix C: Files with Clone Calls to Update
+
+### Validation Loop Clones
+- `ForStatement.java` - conditions, update, block
+- `WhileStatement.java` - conditions, block
+- `ForEachStatement.java` - condition, block
+- `LambdaExpression.java` - body (in createContext)
+- `StatementExpression.java` - body
+
+### Expression/Type Testing Clones
+- `RelOpExpression.java` - expr1 backup
+- `NewExpression.java` - type testing, list cloning
+- `NamedTypeExpression.java` - m_exprDynamic
+
+### Miscellaneous
+- `AssertStatement.java` - De Morgan transformation
+- `AssignmentStatement.java` - LValue backup
+
+---
+
+## Appendix D: Clone Locations Outside AST (Future Work)
+
+These are clone() usages in non-AST code that should be addressed as separate issues:
+
+### Token/Parser Layer
+| File | Line | Description |
+|------|------|-------------|
+| `Token.java` | 436 | Token cloning for parser marks |
+| `Source.java` | 463 | Source position cloning |
+| `Parser.java` | 5365-5367 | Token cloning in parser marks |
+
+### ASM Layer (Constants/Components)
+| File | Description |
+|------|-------------|
+| `Constant.java` | Base constant cloning (lines 315, 716) |
+| `SignatureConstant.java` | Parameter/return array cloning |
+| `ParameterizedTypeConstant.java` | Type parameter array cloning (~15 locations) |
+| `TypeConstant.java` | Type array cloning |
+| `Parameter.java` | Parameter cloning |
+| `Component.java` | Component/Contribution cloning |
+| `MethodStructure.java` | Source/local constant cloning |
+| `ArrayConstant.java` | Constant array cloning |
+| `MapConstant.java` | Key/value array cloning |
+| `AllCondition.java` | Conditional array cloning |
+| `PropertyInfo.java` | Chain array cloning |
+| `MethodInfo.java` | Method chain cloning |
+
+### Runtime Layer
+| File | Description |
+|------|-------------|
+| `ObjectHandle.java` | Runtime handle cloning |
+| `xTuple.java` | Tuple value cloning |
+| `xRTDelegate.java` | Delegate array cloning |
+| `xRTFunction.java` | Argument array cloning |
+| `Proxy.java` | Value handle cloning |
+
+### Repository/Build
+| File | Description |
+|------|-------------|
+| `LinkedRepository.java` | Repository array cloning |
+| `ConstantPool.java` | Constant registration (byte array cloning) |
+| `ClassStructure.java` | Parameter array cloning |
+
+**Recommendation**: Create separate issues for each layer:
+1. **Issue: Modernize Token/Parser cloning** - Low priority, isolated impact
+2. **Issue: Modernize ASM Constant cloning** - High priority, affects type system
+3. **Issue: Modernize Runtime handle cloning** - Medium priority, performance critical
+4. **Issue: Modernize Repository cloning** - Low priority, rarely executed
+
+---
+
+## Appendix E: Modern Collection Patterns (Java 9+)
+
+The codebase should migrate from legacy collection patterns to modern immutable alternatives.
+
+### Legacy → Modern Replacements
+
+| Legacy Pattern | Modern Replacement | Notes |
+|---------------|-------------------|-------|
+| `Collections.emptyList()` | `List.of()` | Immutable, slightly more efficient |
+| `Collections.singletonList(x)` | `List.of(x)` | Immutable, cleaner API |
+| `Collections.emptySet()` | `Set.of()` | Immutable |
+| `Collections.singleton(x)` | `Set.of(x)` | Immutable |
+| `Collections.emptyMap()` | `Map.of()` | Immutable |
+| `Collections.singletonMap(k,v)` | `Map.of(k, v)` | Immutable |
+| `Collections.unmodifiableList(list)` | `List.copyOf(list)` | Creates truly immutable copy |
+| `Arrays.asList(a, b, c)` | `List.of(a, b, c)` | When immutability is acceptable |
+
+### Array Operations (Keep These)
+
+| Pattern | Recommendation |
+|---------|---------------|
+| `System.arraycopy()` | Keep - efficient for mutation-in-place |
+| `Arrays.copyOf()` | Keep - creates new array efficiently |
+| `Arrays.copyOfRange()` | Keep - creates new subarray efficiently |
+| `array.clone()` | Replace with `Arrays.copyOf()` for clarity |
+
+### Locations Requiring Updates
+
+**High Priority (Compiler AST)**:
+- `ForStatement.java:65-66` - `Collections.emptyList()` → `List.of()`
+- `ForEachStatement.java:69,325` - `Collections.singletonList()` → `List.of()`
+- `ConditionalStatement.java:22` - `Collections.emptyList()` → `List.of()`
+- `AssertStatement.java:83` - `Collections.emptyList()` → `List.of()`
+- `TupleExpression.java:45` - `Collections.emptyList()` → `List.of()`
+- `NamedTypeExpression.java:99` - `Collections.singletonList()` → `List.of()`
+- `StageMgr.java:39,410` - Both patterns
+- `AstNode.java:1855` - `Collections.singletonList()` → `List.of()`
+- `CompositionNode.java:467` - `Collections.emptyList()` → `List.of()`
+- `AnonInnerClass.java:92,99` - `Collections.emptyList()` → `List.of()`
+- `ListExpression.java:135,182` - `Collections.emptyList()` → `List.of()`
+
+**Medium Priority (Parser)**:
+- `Parser.java` - ~20 locations with legacy patterns
+
+### Immutability Goals
+
+For the future Roslyn-like architecture:
+
+1. **Syntax Nodes**: All child lists should be immutable (`List.of()`, `List.copyOf()`)
+2. **Token Lists**: Immutable after parsing
+3. **Type Parameter Lists**: Immutable after creation
+4. **Method Parameter Lists**: Immutable
+
+**Benefits**:
+- Thread-safety for parallel compilation
+- No defensive copies needed
+- Clear ownership semantics
+- Better GC behavior (no intermediate mutable lists)

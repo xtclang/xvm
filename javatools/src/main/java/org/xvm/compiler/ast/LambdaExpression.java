@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -10,8 +11,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
@@ -96,6 +100,37 @@ public class LambdaExpression
         this.operator  = operator;
         this.body      = body;
         this.lStartPos = lStartPos;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the LambdaExpression to copy from
+     */
+    protected LambdaExpression(@NotNull LambdaExpression original) {
+        super(Objects.requireNonNull(original));
+
+        // Token and position are immutable, safe to share
+        this.operator  = original.operator;
+        this.lStartPos = original.lStartPos;
+
+        // Deep copy child lists (params is List<Parameter>, paramNames is List<Expression>)
+        this.params     = copyNodes(original.params);
+        this.paramNames = copyExpressions(original.paramNames);
+        this.body       = original.body == null ? null : original.body.copy();
+
+        // Adopt copied children
+        adopt(this.params);
+        adopt(this.paramNames);
+        adopt(this.body);
+
+        // m_lambda (transient) must NOT be copied - the lambda structure belongs to the original
+        // All other transient fields start fresh
+    }
+
+    @Override
+    public LambdaExpression copy() {
+        return new LambdaExpression(this);
     }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -1515,36 +1550,44 @@ public class LambdaExpression
     /**
      * Set to true after the expression prepares.
      */
+    @ComputedState("Whether expression has been prepared")
     private transient boolean m_fPrepared;
     /**
      * The required type (stored here so that it can be picked up by other nodes below this node in
      * the AST).
      */
+    @ComputedState("Required type for lambda")
     private transient TypeConstant m_typeRequired;
     /**
      * A list of types from various return statements (collected here from information provided by
      * other nodes below this node in the AST).
      */
+    @ComputedState("Type collector for return statements")
     private transient TypeCollector m_collector;
     /**
      * The lambda structure itself.
      */
+    @ComputedState("Compiled lambda method structure")
     private transient MethodStructure m_lambda;
     /**
      * The LambdaContext that collected all the necessary information during validation.
      */
+    @ComputedState("Validation context for lambda")
     private transient LambdaContext m_ctxLambda;
     /**
      * A cached array of bound arguments. Private to calculateBindings().
      */
+    @ComputedState("Cached bound arguments")
     private transient Argument[] m_aBindArgs = NO_RVALUES;
     /**
      * The ExprAST node for the lambda.
      */
+    @ComputedState("Generated AST for lambda")
     private transient ExprAST m_astLambda;
     /**
      * An array of ExprAST bindings computed by {@link #calculateBindings}.
      */
+    @ComputedState("Generated AST bindings")
     private transient ExprAST[] m_aAstBind;
 
     private static final Field[] CHILD_FIELDS =

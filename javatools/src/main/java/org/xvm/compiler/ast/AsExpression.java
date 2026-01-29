@@ -32,6 +32,21 @@ public class AsExpression
         lEndPos = tokClose.getEndPosition();
     }
 
+    /**
+     * Copy constructor.
+     */
+    protected AsExpression(AsExpression original) {
+        super(original);
+
+        this.lEndPos        = original.lEndPos;
+        this.m_fCastRequired = original.m_fCastRequired;
+    }
+
+    @Override
+    public AsExpression copy() {
+        return new AsExpression(this);
+    }
+
 
     // ----- compilation ---------------------------------------------------------------------------
 
@@ -146,5 +161,6 @@ public class AsExpression
 
     protected long lEndPos;
 
+    @ComputedState("Whether runtime cast is required")
     private transient boolean m_fCastRequired = true;
 }

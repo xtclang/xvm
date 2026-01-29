@@ -22,6 +22,20 @@ public class VariableTypeExpression
         this.token = token;
     }
 
+    /**
+     * Copy constructor.
+     */
+    protected VariableTypeExpression(VariableTypeExpression original) {
+        super(original);
+
+        this.token = original.token;  // Token is immutable
+    }
+
+    @Override
+    public VariableTypeExpression copy() {
+        return new VariableTypeExpression(this);
+    }
+
 
     // ----- accessors -----------------------------------------------------------------------------
 

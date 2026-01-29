@@ -2,6 +2,9 @@ package org.xvm.compiler.ast;
 
 
 import java.lang.reflect.Field;
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
@@ -50,6 +53,28 @@ public class StatementExpression
      */
     public StatementExpression(StatementBlock body) {
         this.body = body;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the StatementExpression to copy from
+     */
+    protected StatementExpression(@NotNull StatementExpression original) {
+        super(Objects.requireNonNull(original));
+
+        // Deep copy child
+        this.body = original.body == null ? null : original.body.copy();
+
+        // Adopt copied child
+        adopt(this.body);
+
+        // Transient fields start fresh (post-validation state)
+    }
+
+    @Override
+    public StatementExpression copy() {
+        return new StatementExpression(this);
     }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -314,9 +339,13 @@ public class StatementExpression
 
     protected StatementBlock body;
 
+    @ComputedState("Required types for expression")
     private transient TypeConstant[] m_atypeRequired;
+    @ComputedState("Type collector for body returns")
     private transient TypeCollector  m_collector;
+    @ComputedState("Left values for assignment")
     private transient Assignable[]   m_aLVal;
+    @ComputedState("Generated AST for body")
     private transient BinaryAST      m_astBody;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(StatementExpression.class, "body");
