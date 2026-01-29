@@ -150,6 +150,7 @@ module.exports = grammar({
         [$.statement_expression, $._statement],
         [$.singleline_expression, $._expression],
         [$.multiline_expression, $._expression],
+        [$.template_statement_block, $._expression],
     ],
 
     word: $ => $.identifier,
@@ -175,11 +176,13 @@ module.exports = grammar({
 
         // Module declaration
         // Note: doc_comment is optional prefix, not in extras, to avoid keyword recognition issues
+        // Modules can have delegates clause: module json.xtclang.org delegates TextFormat(Schema.DEFAULT) { ... }
         module_declaration: $ => seq(
             optional($.doc_comment),
             repeat($.annotation),
             'module',
             $.qualified_name,
+            repeat($.delegates_clause),
             optional($.module_body),
         ),
 
@@ -539,7 +542,8 @@ module.exports = grammar({
         ),
 
         primitive_type: $ => 'void',
-        keyword_type: $ => choice('service', 'const', 'enum', 'module', 'package', 'class'),
+        // Keyword types: used in .is(service), .is(struct Type), etc.
+        keyword_type: $ => choice('service', 'const', 'enum', 'module', 'package', 'class', 'struct'),
         // immutable can be standalone or with a type. prec.right makes it greedy.
         immutable_type: $ => prec.right(seq('immutable', optional($._non_bi_type))),
         parenthesized_type: $ => seq('(', $.type_expression, ')'),
@@ -990,6 +994,8 @@ module.exports = grammar({
             $._literal,
             // Wildcard _ used as expression for partial function application
             $.wildcard,
+            // Template buffer $ reference (for $.addAll() etc. inside template expressions)
+            $.template_buffer,
         ),
 
         // Assignment expression - operators from model
@@ -1097,6 +1103,13 @@ module.exports = grammar({
         // super expression: super
         super_expression: $ => 'super',
 
+        // Template buffer reference: $ inside template expressions refers to the StringBuffer
+        // Example: {{if (cond) {$.addAll("text");}}}
+        // This is a standalone $ that can be used with member access ($.method())
+        // Safe because: $" matches template, $| matches multiline, $./ and $/ match file literals
+        // Only bare $ followed by . (member access) needs this rule
+        template_buffer: $ => '$',
+
         // Statement expression: a block used as an expression
         // Example: Type x = { var y = compute(); return y + 1; };
         // The block must contain statements and typically ends with a return
@@ -1131,6 +1144,7 @@ module.exports = grammar({
             $.map_literal,
             $.typed_literal,
             $.file_literal,
+            $.string_file_literal,
         ),
 
         // Integer literals support magnitude suffixes: K, M, G, T, P, E, Z, Y (case insensitive)
@@ -1145,9 +1159,14 @@ module.exports = grammar({
 
         float_literal: $ => /[0-9][0-9_]*\.[0-9][0-9_]*([eE][+-]?[0-9]+)?/,
 
-        // File/resource literal: #path - embeds a file resource
+        // Binary file/resource literal: #path - embeds a file as binary
         // Examples: #./CharCats.dat, #../data/file.bin, #file.txt
         file_literal: $ => /#\.{0,2}[/\w._-]+/,
+
+        // String file/resource literal: $./path or $/path - embeds file contents as string
+        // Examples: $./templates/file.txt, $/implicit.x, $../shared/data.txt
+        // This is different from template strings ($"...") - it's a compile-time file include
+        string_file_literal: $ => /\$\.{0,2}\/[\w._/-]+/,
 
         // String literals with Unicode escapes: \\uXXXX and \\UXXXXXXXX
         string_literal: $ => /"([^"\\]|\\u[0-9a-fA-F]{4}|\\U[0-9a-fA-F]{8}|\\.)*"/,
@@ -1163,12 +1182,14 @@ module.exports = grammar({
             alias($._singleline_end, $.template_end),
         ),
 
-        // Embedded expression in single-line template: {expr} or {name=} shorthand
+        // Embedded expression in single-line template: {expr} or {name=} shorthand or {statements}
         // The {name=} shorthand is XTC-specific: displays "name={value}" for debugging
+        // Statement blocks allow: {{if (cond) {...}}} - outer { starts interpolation, inner {...} is if body
         singleline_expression: $ => seq(
             alias($._singleline_expr_start, $.interpolation_start),
             choice(
-                seq($.identifier, '='),  // Shorthand: {name=} shows "name={value}"
+                seq($._expression, '='),  // Shorthand: {name=} or {obj.prop=} shows "name={value}"
+                $.template_statement_block,  // Statement block: {if (...) {...}}
                 $._expression,
             ),
             alias($._template_expr_end, $.interpolation_end),
@@ -1186,15 +1207,22 @@ module.exports = grammar({
             alias($._multiline_end, $.template_end),
         ),
 
-        // Embedded expression in multiline template: {expr} or {name=} shorthand
+        // Embedded expression in multiline template: {expr} or {name=} shorthand or {statements}
+        // Statement blocks allow: {{if (cond) {...}}} - outer { starts interpolation, inner {...} is if body
         multiline_expression: $ => seq(
             alias($._multiline_expr_start, $.interpolation_start),
             choice(
-                seq($.identifier, '='),  // Shorthand: {name=} shows "name={value}"
+                seq($._expression, '='),  // Shorthand: {name=} or {obj.prop=} shows "name={value}"
+                $.template_statement_block,  // Statement block: {if (...) {...}}
                 $._expression,
             ),
             alias($._template_expr_end, $.interpolation_end),
         ),
+
+        // Statement block inside template interpolation: {if (cond) { $.addAll(...); }}
+        // The $ in templates refers to a StringBuffer that accumulates the output
+        // These blocks can contain if, for, while, switch statements with $.addAll() or $.append() calls
+        template_statement_block: $ => repeat1($._statement),
 
         // Multiline plain literal (no interpolation): \|content
         //                                              | continuation

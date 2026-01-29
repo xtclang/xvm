@@ -76,10 +76,10 @@ xtc-init-wizard/              # Project root - run ./gradlew from here
 - [x] **String interpolation support** - `$"text {expr}"` parses correctly with embedded expressions
 
 ### In Progress 🔄
-e- **Grammar coverage: 653/691 XTC files parse successfully (94.5%)**
+- **Grammar coverage: 657/691 XTC files parse successfully (95.1%)**
 - Native library compilation for target platforms
 
-### Grammar Support Status (2026-01-28)
+### Grammar Support Status (2026-01-29)
 
 The following features have been added to `TreeSitterGenerator.kt`:
 
@@ -688,11 +688,11 @@ Need to implement `WorkspaceIndex` for cross-file symbol tracking.
 
 ## Grammar Coverage Progress
 
-The grammar validates and now supports many XTC language features. Coverage improved from 9% to 94.5% (653/691 files).
+The grammar validates and now supports many XTC language features. Coverage improved from 9% to 95.1% (657/691 files).
 
-### Remaining Parse Failures (38 files)
+### Remaining Parse Failures (34 files)
 
-Current status: **653/691 files (94.5%)** parse successfully.
+Current status: **657/691 files (95.1%)** parse successfully.
 
 **Common error patterns (analyzed 2026-01-28):**
 
@@ -713,7 +713,15 @@ Current status: **653/691 files (94.5%)** parse successfully.
 | 13 | Tuple reassignment | ~3 | `(Type x, existing) := expr` | ✅ Fixed |
 | 14 | Type comparisons | ~10 | `type == Byte[]` | ⏳ Requires grammar changes |
 | 15 | Consecutive doc comments | ~5 | Two `/** */` before one decl | ⏳ Rare edge case |
-| 16 | File path literals (`$./path`) | ~3+ | `$./templates/_module.txt` | ⏳ Needs scanner update |
+| 16 | File path literals (`$./path`) | ~3+ | `$./templates/_module.txt` | ✅ Fixed |
+| 17 | `{{if...}}` in templates | ~10 | `$\|{{if (c) {...}}}` | ✅ Fixed |
+| 18 | `$.addAll()` in templates | ~5 | `{$.addAll("text")}` | ✅ Fixed |
+| 19 | Module delegates clause | ~2 | `module delegates Type(expr)` | ✅ Fixed |
+| 20 | Template shorthand with member | ~3 | `{obj.prop=}` shows value | ✅ Fixed |
+| 21 | `.is(struct Type)` | ~3 | `x.is(struct Session)` | ✅ Fixed |
+| 22 | `new(args)` without type | ~2 | `new(this)` copy constructor | ⏳ Grammar conflicts |
+| 23 | 4-part qualified names | ~3 | `ecstasy.lang.src.Compiler` | ⏳ GLR conflict |
+| 24 | Named tuple return types | ~5 | `conditional (T a, T b) fn()` | ⏳ Complex pattern |
 
 #### Pattern Details
 
@@ -827,9 +835,15 @@ Fix patterns in this order to maximize coverage improvement:
 43. ✅ Implemented static service declarations
 44. ✅ Implemented trailing commas in arguments
 45. ✅ Coverage improved from 85.8% to 91.8% (634/691 files)
-46. 🔄 Next: Fix doc comment before import pattern
-47. ⏳ Fix file path literals (`$./path`)
-48. ⏳ Target: 95%+ coverage (656+ files)
+46. ✅ Coverage improved from 91.8% to 94.5% (653/691 files)
+47. ✅ Implemented string file literals (`$./path`, `$/path`)
+48. ✅ Implemented template statement blocks (`{{if...}}` patterns)
+49. ✅ Implemented template buffer reference (`$` for StringBuffer)
+50. ✅ Added `struct` to keyword_type for `.is(struct Type)`
+51. ✅ Added `delegates` clause to module declarations
+52. ✅ Extended template shorthand to member expressions (`{obj.prop=}`)
+53. ✅ **Coverage: 657/691 files (95.1%)** - Target exceeded!
+54. ⏳ Remaining: `new(args)` without type, 4-part qualified names, complex method signatures
 
 ---
 
