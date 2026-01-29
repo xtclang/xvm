@@ -31,6 +31,8 @@ import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SourceSet;
+import org.gradle.api.tasks.options.Option;
+import org.gradle.api.tasks.options.OptionValues;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -270,16 +272,50 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         return verbose;
     }
 
+    /**
+     * Enable verbose output from command line.
+     * Example: ./gradlew runXtc --verbose
+     */
+    @Option(option = "verbose", description = "Enable verbose output")
+    public void setVerboseOption(final boolean verbose) {
+        this.verbose.set(verbose);
+    }
 
     @Input
     public Property<@NotNull Boolean> getShowVersion() {
         return showVersion;
     }
 
+    /**
+     * Show XTC version before execution from command line.
+     * Example: ./gradlew runXtc --show-version
+     */
+    @Option(option = "show-version", description = "Show XTC version before execution")
+    public void setShowVersionOption(final boolean showVersion) {
+        this.showVersion.set(showVersion);
+    }
+
     @Input
     @Override
     public Property<@NotNull ExecutionMode> getExecutionMode() {
         return executionMode;
+    }
+
+    /**
+     * Set execution mode from command line.
+     * Example: ./gradlew runXtc --mode=DETACHED
+     */
+    @Option(option = "mode", description = "Execution mode: DIRECT, ATTACHED, or DETACHED")
+    public void setExecutionModeOption(final ExecutionMode mode) {
+        this.executionMode.set(mode);
+    }
+
+    /**
+     * Lists available execution modes for command line help.
+     */
+    @OptionValues("mode")
+    public List<ExecutionMode> getAvailableExecutionModes() {
+        return List.of(ExecutionMode.values());
     }
 
     @Optional

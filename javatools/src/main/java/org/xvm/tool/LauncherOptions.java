@@ -111,6 +111,21 @@ public abstract class LauncherOptions {
             .desc("File to search for in the module").get());
 
     /**
+     * Apache Commons CLI Options schema for the initializer.
+     */
+    private static final Options INITIALIZER_OPTIONS = copyOptions(COMMON_OPTIONS)
+        .addOption(builder("t").longOpt("type").argName("type").hasArg()
+            .desc("Project type: application (default), library, or service").get())
+        .addOption(builder("m").longOpt("multi-module")
+            .desc("Create a multi-module project structure").get())
+        .addOption(builder().longOpt("dir").argName("directory").hasArg()
+            .desc("Directory to create the project in (default: current directory)").get())
+        .addOption(builder().longOpt("local-and-snapshot-repos")
+            .desc("Include mavenLocal() and maven-snapshots repository in settings.gradle.kts (default: true)").get())
+        .addOption(builder().longOpt("no-local-and-snapshot-repos")
+            .desc("Exclude mavenLocal() and maven-snapshots repository from settings.gradle.kts").get());
+
+    /**
      * Parsed command line from Apache Commons CLI.
      * Provides direct access to all parsed options.
      */
@@ -1277,6 +1292,189 @@ public abstract class LauncherOptions {
             @Override
             public TestRunnerOptions build() {
                 return TestRunnerOptions.parse(args.toArray(String[]::new));
+            }
+        }
+    }
+
+
+    // ----- InitializerOptions -------------------------------------------------------------------
+
+    /**
+     * Initializer (xtc init) command-line options.
+     */
+    public static class InitializerOptions extends LauncherOptions {
+
+        InitializerOptions(final CommandLine commandLine) {
+            super(commandLine, INITIALIZER_OPTIONS, "init");
+        }
+
+        /**
+         * Parse command-line arguments into InitializerOptions.
+         */
+        public static InitializerOptions parse(final String[] args) {
+            return new InitializerOptions(parseCommandLine(INITIALIZER_OPTIONS, args));
+        }
+
+        /**
+         * Create a builder for programmatically constructing InitializerOptions.
+         */
+        public static Builder builder() {
+            return new Builder();
+        }
+
+        @Override
+        protected String buildUsageLine(final String cmdName) {
+            return cmdName + " [options] <project-name>";
+        }
+
+        /**
+         * Get the project name (first trailing argument).
+         */
+        public Optional<String> getProjectName() {
+            final var trailing = getTrailingArgs();
+            return trailing.isEmpty() ? Optional.empty() : Optional.of(trailing.getFirst());
+        }
+
+        /**
+         * Get the project type (application, library, service).
+         */
+        public String getProjectType() {
+            return optionValue("type").orElse("application");
+        }
+
+        /**
+         * Check if multi-module project structure is requested.
+         */
+        public boolean isMultiModule() {
+            return hasOption("multi-module");
+        }
+
+        /**
+         * Get the output directory (where the project folder will be created).
+         * If not specified, returns empty (meaning current directory).
+         */
+        public Optional<String> getOutputDirectory() {
+            return optionValue("dir");
+        }
+
+        /**
+         * Check if mavenLocal() and maven-snapshots repository should be included.
+         * Default is true unless --no-local-and-snapshot-repos is specified.
+         */
+        public boolean isUseLocalAndSnapshotRepos() {
+            return !hasOption("no-local-and-snapshot-repos");
+        }
+
+        @Override
+        public String[] toCommandLine() {
+            final List<String> args = new ArrayList<>();
+            Collections.addAll(args, super.toCommandLine());
+            args.addAll(List.of("-t", getProjectType()));
+            if (isMultiModule()) {
+                args.add("-m");
+            }
+            getOutputDirectory().ifPresent(dir -> args.addAll(List.of("--dir", dir)));
+            if (!isUseLocalAndSnapshotRepos()) {
+                args.add("--no-local-and-snapshot-repos");
+            }
+            getProjectName().ifPresent(args::add);
+            return args.toArray(String[]::new);
+        }
+
+        /**
+         * Create InitializerOptions from JSON string.
+         *
+         * @param jsonString the JSON configuration
+         * @return InitializerOptions instance
+         */
+        public static InitializerOptions fromJson(final String jsonString) {
+            return InitializerOptions.parse(jsonToArgs(jsonString, INITIALIZER_OPTIONS));
+        }
+
+        /**
+         * Builder for constructing InitializerOptions programmatically.
+         */
+        public static class Builder extends AbstractBuilder<Builder> {
+
+            /**
+             * Set the project type.
+             *
+             * @param type the project type (application, library, service)
+             */
+            public Builder setProjectType(final String type) {
+                removeeArgsAndValues("-t");
+                args.addAll(List.of("-t", type));
+                return this;
+            }
+
+            /**
+             * Enable multi-module project structure.
+             */
+            public Builder enableMultiModule() {
+                return enableMultiModule(true);
+            }
+
+            /**
+             * Enable or disable multi-module project structure.
+             *
+             * @param multiModule true to enable multi-module structure
+             */
+            public Builder enableMultiModule(final boolean multiModule) {
+                args.remove("-m");
+                if (multiModule) {
+                    args.add("-m");
+                }
+                return this;
+            }
+
+            /**
+             * Set the output directory.
+             *
+             * @param directory the directory to create the project in
+             */
+            public Builder setOutputDirectory(final String directory) {
+                args.removeIf(arg -> arg.equals("--dir"));
+                // Remove the value after --dir if present
+                for (int i = 0; i < args.size() - 1; i++) {
+                    if (args.get(i).equals("--dir")) {
+                        args.remove(i + 1);
+                        args.remove(i);
+                        break;
+                    }
+                }
+                args.addAll(List.of("--dir", directory));
+                return this;
+            }
+
+            /**
+             * Set the project name.
+             *
+             * @param name the project name/path
+             */
+            public Builder setProjectName(final String name) {
+                args.add(name);
+                return this;
+            }
+
+            /**
+             * Enable or disable mavenLocal() and maven-snapshots repository.
+             *
+             * @param useLocalAndSnapshotRepos true to include these repositories (default)
+             */
+            public Builder setUseLocalAndSnapshotRepos(final boolean useLocalAndSnapshotRepos) {
+                args.remove("--local-and-snapshot-repos");
+                args.remove("--no-local-and-snapshot-repos");
+                if (!useLocalAndSnapshotRepos) {
+                    args.add("--no-local-and-snapshot-repos");
+                }
+                return this;
+            }
+
+            /**
+             * Build the InitializerOptions by parsing the accumulated arguments.
+             */
+            public InitializerOptions build() {
+                return InitializerOptions.parse(args.toArray(String[]::new));
             }
         }
     }

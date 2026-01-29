@@ -517,6 +517,15 @@ public class XtcProjectDelegate {
      * The test task depends on compile tasks and is wired into the Gradle check lifecycle.
      * <p>
      * The task can be skipped by setting the project property {@code -PskipXtcTests}.
+     * <p>
+     * <b>Lifecycle Design Note:</b> We intentionally wire {@code testXtc} to the {@code check}
+     * task rather than making the Java plugin's {@code test} task depend on it. This provides
+     * granularity for projects that have both Java and XTC tests:
+     * <ul>
+     *   <li>{@code ./gradlew testXtc} - runs only XTC tests</li>
+     *   <li>{@code ./gradlew test} - runs only Java tests</li>
+     *   <li>{@code ./gradlew check} or {@code ./gradlew build} - runs both</li>
+     * </ul>
      */
     private void createDefaultTestTask(final Project project) {
         final var compileTaskNames = getSourceSets(project).stream()
@@ -542,7 +551,7 @@ public class XtcProjectDelegate {
             logger.info("[plugin] Configured test task with dependency on: {}", compileTaskNames);
         });
 
-        // Wire testXtc into the check lifecycle
+        // Wire testXtc into the check lifecycle (not the Java test task - see Javadoc above)
         tasks.named(LifecycleBasePlugin.CHECK_TASK_NAME).configure(checkTask ->
             checkTask.dependsOn(testTask)
         );

@@ -1,0 +1,155 @@
+%YAML 1.2
+---
+# Ecstasy language syntax for Sublime Text / bat
+# Generated from XTC language model DSL
+name: Ecstasy
+file_extensions:
+  - x
+  - xtc
+scope: source.xtc
+
+contexts:
+  main:
+    - include: comments
+    - include: strings
+    - include: numbers
+    - include: annotations
+    - include: keywords
+    - include: types
+    - include: operators
+
+  comments:
+    # Doc comments
+    - match: '/\*\*'
+      scope: punctuation.definition.comment.begin.xtc
+      push:
+        - meta_scope: comment.block.documentation.xtc
+        - match: '@\w+'
+          scope: keyword.other.documentation.xtc
+        - match: '\*/'
+          scope: punctuation.definition.comment.end.xtc
+          pop: true
+    # Block comments
+    - match: '/\*'
+      scope: punctuation.definition.comment.begin.xtc
+      push:
+        - meta_scope: comment.block.xtc
+        - match: '\*/'
+          scope: punctuation.definition.comment.end.xtc
+          pop: true
+    # Line comments
+    - match: '//'
+      scope: punctuation.definition.comment.xtc
+      push:
+        - meta_scope: comment.line.double-slash.xtc
+        - match: $
+          pop: true
+
+  strings:
+    # Template strings
+    - match: '\$"'
+      scope: punctuation.definition.string.begin.xtc
+      push:
+        - meta_scope: string.interpolated.xtc
+        - match: '\\.'
+          scope: constant.character.escape.xtc
+        - match: '\{'
+          scope: punctuation.section.interpolation.begin.xtc
+          push:
+            - meta_scope: meta.interpolation.xtc
+            - match: '\}'
+              scope: punctuation.section.interpolation.end.xtc
+              pop: true
+            - include: main
+        - match: '"'
+          scope: punctuation.definition.string.end.xtc
+          pop: true
+    # Regular strings
+    - match: '"'
+      scope: punctuation.definition.string.begin.xtc
+      push:
+        - meta_scope: string.quoted.double.xtc
+        - match: '\\.'
+          scope: constant.character.escape.xtc
+        - match: '"'
+          scope: punctuation.definition.string.end.xtc
+          pop: true
+    # Character literals
+    - match: "'"
+      scope: punctuation.definition.string.begin.xtc
+      push:
+        - meta_scope: string.quoted.single.xtc
+        - match: '\\.'
+          scope: constant.character.escape.xtc
+        - match: "'"
+          scope: punctuation.definition.string.end.xtc
+          pop: true
+
+  numbers:
+    # Hex
+    - match: '\b0[xX][0-9a-fA-F][0-9a-fA-F_]*\b'
+      scope: constant.numeric.hex.xtc
+    # Binary
+    - match: '\b0[bB][01][01_]*\b'
+      scope: constant.numeric.binary.xtc
+    # Float
+    - match: '\b[0-9][0-9_]*\.[0-9][0-9_]*([eE][+-]?[0-9]+)?\b'
+      scope: constant.numeric.float.xtc
+    # Integer
+    - match: '\b[0-9][0-9_]*\b'
+      scope: constant.numeric.integer.xtc
+
+  annotations:
+    - match: '@[a-zA-Z_][a-zA-Z0-9_]*'
+      scope: storage.type.annotation.xtc
+
+  keywords:
+    # Control flow
+    - match: '\b(if|else|switch|case|default|for|while|do|break|continue|return|try|catch|finally|throw|using|assert)\b'
+      scope: keyword.control.xtc
+    # Declarations
+    - match: '\b(construct|function|typedef|import|module|package|class|interface|mixin|service|const|enum|struct|val|var)\b'
+      scope: keyword.declaration.xtc
+    # Modifiers
+    - match: '\b(public|protected|private|static|immutable|conditional|allow|avoid|prefer|desired|required|optional|embedded|inject|extends|implements|delegates|incorporates|into)\b'
+      scope: storage.modifier.xtc
+    # Other keywords
+    - match: '\b(is|as|new|void|TODO|annotation|this|super|outer|this:class|this:module|this:private|this:protected|this:public|this:service|this:struct|this:target)\b'
+      scope: keyword.other.xtc
+    # Boolean constants
+    - match: '\b(True|False)\b'
+      scope: constant.language.boolean.xtc
+    # Null
+    - match: '\bNull\b'
+      scope: constant.language.null.xtc
+
+  types:
+    # Built-in types
+    - match: '\b(Bit|Boolean|Byte|Char|Int|Int8|Int16|Int32|Int64|Int128|IntN|UInt|UInt8|UInt16|UInt32|UInt64|UInt128|UIntN|Dec|Dec32|Dec64|Dec128|DecN|Float|Float8e4|Float8e5|Float16|Float32|Float64|Float128|FloatN|BFloat16|String|Char|Object|Enum|Exception|Const|Service|Module|Package|Array|List|Set|Map|Range|Interval|Tuple|Function|Method|Property|Type|Class|Nullable|Orderable|Hashable|Stringable|Iterator|Iterable|Collection|Sequence|Void|Null|True|False)\b'
+      scope: support.type.builtin.xtc
+    # Type names (PascalCase)
+    - match: '\b[A-Z][a-zA-Z0-9_]*\b'
+      scope: entity.name.type.xtc
+
+  operators:
+    # Comparison
+    - match: '<=>|==|!=|<=|>=|<|>'
+      scope: keyword.operator.comparison.xtc
+    # Assignment
+    - match: '\|\|=|>>>=|\?:=|\+=|\*=|\|=|\^=|<<=|>>=|\?=|&&=|-=|/=|%=|&=|:=|='
+      scope: keyword.operator.assignment.xtc
+    # Logical
+    - match: '\|\||\^\^|&&|!'
+      scope: keyword.operator.logical.xtc
+    # Bitwise
+    - match: '>>>|\||\^|<<|>>|&|~'
+      scope: keyword.operator.bitwise.xtc
+    # Arithmetic
+    - match: '\+\+|\+|\*|/%|--|-|/|%'
+      scope: keyword.operator.arithmetic.xtc
+    # Member_access
+    - match: '\?\.|\.'
+      scope: keyword.operator.access.xtc
+    # Other
+    - match: '>\.\.<|>\.\.|\.\.<|\.\.|\^\(|\?:|->|<-|_'
+      scope: keyword.operator.other.xtc

@@ -1,0 +1,15 @@
+# npm
+node_modules/
+package-lock.json
+
+# TypeScript compiled output
+out/
+
+# Packaged extension
+*.vsix
+
+# Generated/copied files from Gradle build
+language-configuration.json
+syntaxes/xtc.tmLanguage.json
+server/
+icons/

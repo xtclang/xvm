@@ -54,6 +54,21 @@ val copyEcstasyResources by tasks.registering(Copy::class) {
     into(layout.buildDirectory.dir("generated/resources/main"))
 }
 
+/**
+ * Copy gradle wrapper files to resources for use by XtcProjectCreator.
+ * This allows generated XTC projects to have a working gradle wrapper out of the box.
+ */
+val compositeRoot = XdkPropertiesService.compositeRootRelativeFile(projectDir, ".")
+val copyGradleWrapper by tasks.registering(Copy::class) {
+    description = "Copy gradle wrapper files for embedding in generated projects"
+    from(File(compositeRoot, "gradlew"))
+    from(File(compositeRoot, "gradlew.bat"))
+    from(File(compositeRoot, "gradle/wrapper")) {
+        into("gradle/wrapper")
+    }
+    into(layout.buildDirectory.dir("generated/resources/main/gradle-wrapper"))
+}
+
 // Path to your static base properties
 val versionPropsFile = layout.projectDirectory.file(
     XdkPropertiesService.compositeRootRelativeFile(projectDir, "version.properties").absolutePath
@@ -128,6 +143,8 @@ sourceSets {
             srcDir(copyEcstasyResources.map { it.destinationDir })
             // Include generated build info so IntelliJ can find it
             srcDir(generateBuildInfo.map { it.outputFile.get().asFile.parentFile })
+            // Include gradle wrapper for XtcProjectCreator
+            srcDir(copyGradleWrapper.map { it.destinationDir })
         }
     }
 }
@@ -148,7 +165,7 @@ tasks.compileTestJava {
 
 // Use the copied ecstasy resources as before
 tasks.processResources {
-    dependsOn(copyEcstasyResources, generateBuildInfo)
+    dependsOn(copyEcstasyResources, generateBuildInfo, copyGradleWrapper)
     // Include the generated build-info.properties
     from(generateBuildInfo.map { it.outputFile }) {
         into("") // at root of resources in the jar
