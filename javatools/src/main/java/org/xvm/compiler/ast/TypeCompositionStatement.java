@@ -262,6 +262,14 @@ public class TypeCompositionStatement
         return new TypeCompositionStatement(this);
     }
 
+
+    // ----- visitor pattern -----------------------------------------------------------------------
+
+    @Override
+    public <R> R accept(AstVisitor<R> visitor) {
+        return visitor.visit(this);
+    }
+
     /**
      * Create a fake module statement that holds onto a compiled module and uses it as the basis for
      * resolving some other AST node. This is used by the runtime, not by the compiler.

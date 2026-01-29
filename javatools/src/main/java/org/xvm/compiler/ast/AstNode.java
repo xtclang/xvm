@@ -153,11 +153,32 @@ public abstract class AstNode
      * Return an Iterable/Iterator that represents all the child nodes of this node.
      *
      * @return an Iterable of child nodes (from whence an Iterator can be obtained)
+     *
+     * @deprecated Use the visitor pattern with {@link #accept(AstVisitor)} instead. Each concrete
+     *             class should provide explicit typed getters for its children, and visitors should
+     *             use those getters to traverse children explicitly.
      */
+    @Deprecated
     public ChildIterator children() {
         Field[] fields = getChildFields();
         return fields.length == 0 ? ChildIterator.EMPTY : new ChildIteratorImpl(fields);
     }
+
+    // ----- visitor pattern -------------------------------------------------------------------
+
+    /**
+     * Accept a visitor. Each concrete AST node class implements this method to call the
+     * appropriate visit method on the visitor with {@code this} as the argument.
+     * <p/>
+     * This is the entry point for the visitor pattern that replaces reflection-based child
+     * iteration. Visitors access children through explicit typed getters on each node type,
+     * giving full control over traversal order and which children to visit.
+     *
+     * @param visitor the visitor to accept
+     * @param <R>     the return type of the visitor
+     * @return the result from the visitor
+     */
+    public abstract <R> R accept(AstVisitor<R> visitor);
 
     /**
      * Replace the specified child of this AstNode with a new child.

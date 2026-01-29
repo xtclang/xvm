@@ -104,6 +104,42 @@ public class ForStatement
     }
 
 
+    // ----- visitor pattern -----------------------------------------------------------------------
+
+    @Override
+    public <R> R accept(AstVisitor<R> visitor) {
+        return visitor.visit(this);
+    }
+
+    /**
+     * @return the list of initialization statements (never null, may be empty)
+     */
+    public List<Statement> getInit() {
+        return init;
+    }
+
+    /**
+     * @return the list of condition nodes (never null, may be empty)
+     */
+    public List<AstNode> getConds() {
+        return conds;
+    }
+
+    /**
+     * @return the list of update statements (never null, may be empty)
+     */
+    public List<Statement> getUpdate() {
+        return update;
+    }
+
+    /**
+     * @return the loop body block (may be null)
+     */
+    public StatementBlock getBlock() {
+        return block;
+    }
+
+
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override

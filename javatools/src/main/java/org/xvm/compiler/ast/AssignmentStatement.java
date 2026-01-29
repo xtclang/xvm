@@ -115,6 +115,14 @@ public class AssignmentStatement
     }
 
 
+    // ----- visitor pattern -----------------------------------------------------------------------
+
+    @Override
+    public <R> R accept(AstVisitor<R> visitor) {
+        return visitor.visit(this);
+    }
+
+
     // ----- accessors -----------------------------------------------------------------------------
 
     /**

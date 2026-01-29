@@ -113,6 +113,14 @@ public class ForEachStatement
     }
 
 
+    // ----- visitor pattern -----------------------------------------------------------------------
+
+    @Override
+    public <R> R accept(AstVisitor<R> visitor) {
+        return visitor.visit(this);
+    }
+
+
     // ----- accessors -----------------------------------------------------------------------------
 
     public AssignmentStatement getCondition() {

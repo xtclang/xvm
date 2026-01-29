@@ -69,6 +69,14 @@ public class MultipleLValueStatement
     }
 
 
+    // ----- visitor pattern -----------------------------------------------------------------------
+
+    @Override
+    public <R> R accept(AstVisitor<R> visitor) {
+        return visitor.visit(this);
+    }
+
+
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
@@ -548,6 +556,20 @@ public class MultipleLValueStatement
                 }
             }
             return -1;
+        }
+
+        @Override
+        public Expression copy() {
+            // This synthetic expression is tightly bound to its parent statement
+            // and should not be copied independently
+            throw new UnsupportedOperationException(
+                "MultipleLValueExpression cannot be copied independently of its parent statement");
+        }
+
+        @Override
+        public <R> R accept(AstVisitor<R> visitor) {
+            // Delegate to the expression visitor since this is a synthetic expression
+            return visitor.visitExpression(this);
         }
 
         @Override

@@ -216,6 +216,11 @@ public abstract class CompositionNode
         }
 
         @Override
+        public <R> R accept(AstVisitor<R> visitor) {
+            return visitor.visit(this);
+        }
+
+        @Override
         public long getEndPosition() {
             return lEndPos == 0 ? super.getEndPosition() : lEndPos;
         }
@@ -288,6 +293,11 @@ public abstract class CompositionNode
         @Override
         public Annotates copy() {
             return new Annotates(this);
+        }
+
+        @Override
+        public <R> R accept(AstVisitor<R> visitor) {
+            return visitor.visit(this);
         }
 
         public Annotation ensureAnnotation(ConstantPool pool) {
@@ -380,6 +390,11 @@ public abstract class CompositionNode
         @Override
         public Incorporates copy() {
             return new Incorporates(this);
+        }
+
+        @Override
+        public <R> R accept(AstVisitor<R> visitor) {
+            return visitor.visit(this);
         }
 
         /**
@@ -486,6 +501,11 @@ public abstract class CompositionNode
         public Implements copy() {
             return new Implements(this);
         }
+
+        @Override
+        public <R> R accept(AstVisitor<R> visitor) {
+            return visitor.visit(this);
+        }
     }
 
 
@@ -532,6 +552,11 @@ public abstract class CompositionNode
         @Override
         public Delegates copy() {
             return new Delegates(this);
+        }
+
+        @Override
+        public <R> R accept(AstVisitor<R> visitor) {
+            return visitor.visit(this);
         }
 
         /**
@@ -606,6 +631,11 @@ public abstract class CompositionNode
         public Into copy() {
             return new Into(this);
         }
+
+        @Override
+        public <R> R accept(AstVisitor<R> visitor) {
+            return visitor.visit(this);
+        }
     }
 
 
@@ -665,6 +695,11 @@ public abstract class CompositionNode
         @Override
         public Import copy() {
             return new Import(this);
+        }
+
+        @Override
+        public <R> R accept(AstVisitor<R> visitor) {
+            return visitor.visit(this);
         }
 
         /**
@@ -865,6 +900,11 @@ public abstract class CompositionNode
         @Override
         public Default copy() {
             return new Default(this);
+        }
+
+        @Override
+        public <R> R accept(AstVisitor<R> visitor) {
+            return visitor.visit(this);
         }
 
         /**

@@ -253,23 +253,23 @@ The migration must be done incrementally to maintain a working compiler. **All f
 - ✅ Convert `Token` and `Source` to use `copy()` instead of `clone()`
 - **Result**: No more reflection in copy operations, no Cloneable in compiler
 
-**Step 2: Explicit Children Methods**
-- Add `getChildren()` method to each AST class returning explicit list
-- Replace `children()` iterator implementation to use `getChildren()`
-- **Result**: `children()` still works but uses explicit methods internally
+**Step 2: Explicit Children Methods** - IN PROGRESS
+- ✅ Add explicit typed getters to ForStatement (`getInit()`, `getConds()`, `getUpdate()`, `getBlock()`)
+- ⏳ Add explicit typed getters to remaining AST classes
+- **Result**: Each class explicitly provides access to its children via typed getters
 
-**Step 3: Visitor Pattern**
-- Design visitor interface hierarchy
-- Add `accept(AstVisitor)` methods to all AST classes
-- Migrate stage management to use visitors
-- Migrate parent setup to use visitors
+**Step 3: Visitor Pattern** - IN PROGRESS
+- ✅ Design visitor interface hierarchy (`AstVisitor<R>`)
+- ✅ Add `accept(AstVisitor)` methods to all ~75 concrete AST classes
+- ⏳ Migrate stage management to use visitors
+- ⏳ Migrate parent setup to use visitors
 - **Result**: All operations use visitor pattern
 
 **Step 4: Cleanup**
 - Remove `CHILD_FIELDS` arrays from all classes
 - Remove `fieldsForNames()` and related reflection utilities
 - Remove `getChildFields()` methods
-- Optionally remove `children()` iterator (or keep as convenience using `getChildren()`)
+- Remove `children()` iterator
 - **Result**: Zero reflection in AST infrastructure
 
 ---
@@ -829,13 +829,35 @@ public @interface ChildNode {
 1. Keep `CHILD_FIELDS` arrays during transition
 2. After visitor pattern is in place, remove `CHILD_FIELDS` reflection
 
-### Phase 6: Visitor Pattern (This PR)
+### Phase 6: Visitor Pattern (This PR) - IN PROGRESS
 
-1. Design visitor interface hierarchy
-2. Implement `accept()` methods on AST nodes
-3. Migrate `StageMgr` to use visitors
-4. Migrate parent setup to use visitors
-5. Optionally optimize or remove `children()` iterator
+**Completed:**
+1. ✅ Design visitor interface hierarchy - Created `AstVisitor<R>` interface
+2. ✅ Implement `accept()` methods on AST nodes - All ~75 concrete classes have `accept()`
+3. ✅ Add explicit child getters to ForStatement as pattern example
+
+**AstVisitor Interface Design:**
+```java
+public interface AstVisitor<R> {
+    // Specific visit methods for each concrete type (with @NotNull)
+    default R visit(@NotNull ForStatement stmt) { return visitStatement(stmt); }
+    default R visit(@NotNull WhileStatement stmt) { return visitStatement(stmt); }
+    // ... ~75 concrete node types
+
+    // Category fallback methods
+    default R visitStatement(@NotNull Statement stmt) { return visitNode(stmt); }
+    default R visitExpression(@NotNull Expression expr) { return visitNode(expr); }
+    default R visitTypeExpression(@NotNull TypeExpression type) { return visitNode(type); }
+    default R visitCompositionNode(@NotNull CompositionNode node) { return visitNode(node); }
+    default R visitNode(@NotNull AstNode node) { return null; }
+}
+```
+
+**Remaining:**
+1. Add explicit child getters to remaining AST classes (follow ForStatement pattern)
+2. Migrate `StageMgr` to use visitors instead of `children()` iterator
+3. Migrate parent setup (`introduceParentage()`) to use visitors
+4. Remove `children()` iterator and CHILD_FIELDS reflection infrastructure
 
 ---
 

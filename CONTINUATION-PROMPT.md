@@ -116,27 +116,64 @@ public @interface ChildNode {
 - KeywordTypeExpression, VariableTypeExpression, LiteralExpression
 - Base classes: Expression, Statement, TypeExpression, ComponentStatement
 
+### Visitor Pattern - IN PROGRESS
+Created `AstVisitor<R>` interface with visit methods for all concrete AST node types:
+```java
+public interface AstVisitor<R> {
+    // Specific visit methods (with @NotNull parameters)
+    default R visit(@NotNull ForStatement stmt) { return visitStatement(stmt); }
+    default R visit(@NotNull WhileStatement stmt) { return visitStatement(stmt); }
+    // ... one method per concrete node type
+
+    // Category fallback methods
+    default R visitStatement(@NotNull Statement stmt) { return visitNode(stmt); }
+    default R visitExpression(@NotNull Expression expr) { return visitNode(expr); }
+    default R visitTypeExpression(@NotNull TypeExpression type) { return visitNode(type); }
+    default R visitCompositionNode(@NotNull CompositionNode node) { return visitNode(node); }
+    default R visitNode(@NotNull AstNode node) { return null; }
+}
+```
+
+**Completed:**
+- Created `AstVisitor.java` with visit methods for all concrete AST types
+- Added abstract `accept(AstVisitor<R>)` method to `AstNode`
+- Implemented `accept()` in ALL concrete AST classes (~75 classes)
+- Added explicit child getters to ForStatement: `getInit()`, `getConds()`, `getUpdate()`, `getBlock()`
+- Added `@NotNull` annotations to all visitor method parameters
+
+**Pattern for visitors:**
+- Each concrete class calls `visitor.visit(this)` in accept()
+- Visitors use explicit typed getters to access children (no reflection)
+- Visitor controls child traversal, not the node
+
 ## Remaining Work
 
-### 1. Continue Modern Collection Patterns
+### 1. Add Explicit Child Getters to All Classes
+ForStatement already has getters. Need to add typed getters to remaining classes:
+- Statements: IfStatement, WhileStatement, ForEachStatement, TryStatement, etc.
+- Expressions: NewExpression, LambdaExpression, InvocationExpression, etc.
+- Type expressions: NamedTypeExpression, FunctionTypeExpression, etc.
+
+### 2. Continue Modern Collection Patterns
 Still have ~16 `Collections.` usages remaining in:
 - AstNode.java (emptyMap, singletonList)
 - Context.java (emptyMap)
 - AssertStatement.java (addAll - legitimate usage)
 - NameResolver.java (emptyIterator - no direct replacement)
 
-### 2. Implement Visitor Pattern
-1. Design visitor interface hierarchy
-2. Implement `accept()` methods on AST nodes
-3. Migrate `StageMgr` to use visitors
-4. Migrate parent setup to use visitors
-5. Remove `CHILD_FIELDS` reflection infrastructure
+### 3. Migrate Usages to Visitor Pattern
+1. Migrate `StageMgr` to use visitors instead of `children()` iterator
+2. Migrate `introduceParentage()` to use visitor pattern
+3. Migrate `discard()` to use visitor pattern
+4. Migrate other `children()` usages
 
-### 3. Final Cleanup (CHILD_FIELDS removal)
+### 4. Final Cleanup (CHILD_FIELDS removal)
 1. ~~Remove `Cloneable` interface from `AstNode`~~ - DONE
 2. ~~Remove `clone()` method~~ - DONE
-3. Remove `fieldsForNames()` and `getChildFields()` methods (after visitor pattern)
-4. Remove `CHILD_FIELDS` arrays from all classes (after visitor pattern)
+3. Remove `children()` iterator (after all usages migrated)
+4. Remove `fieldsForNames()` and `getChildFields()` methods
+5. Remove `CHILD_FIELDS` arrays from all classes
+6. Remove `ChildIterator` and `ChildIteratorImpl` inner classes
 
 ## Key Technical Details
 
@@ -165,9 +202,11 @@ a2fbe38b3 Update plan to mark @ChildNode annotation phase as complete
 
 ## Suggested Next Step
 
-1. **Begin visitor pattern implementation** - Design and implement the visitor interface to replace CHILD_FIELDS iteration
+1. ~~Begin visitor pattern implementation~~ - DONE (AstVisitor interface and accept() methods complete)
 2. ~~Replace AstNode clone() call sites with copy()~~ - DONE
-3. **Remove reflection infrastructure** - Once visitor pattern is in place, remove CHILD_FIELDS arrays
+3. **Add explicit child getters** - Add typed getters to remaining AST classes (follow ForStatement pattern)
+4. **Migrate StageMgr** - Replace `children()` usage with visitor pattern
+5. **Remove reflection infrastructure** - Once all usages migrated, remove CHILD_FIELDS arrays
 
 ## Build Verification
 

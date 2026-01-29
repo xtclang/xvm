@@ -78,6 +78,14 @@ public class TupleExpression
         return new TupleExpression(this);
     }
 
+
+    // ----- visitor pattern -----------------------------------------------------------------------
+
+    @Override
+    public <R> R accept(AstVisitor<R> visitor) {
+        return visitor.visit(this);
+    }
+
     /**
      * Constructs a "synthetic" Tuple Expression out of multiple expressions.
      *
