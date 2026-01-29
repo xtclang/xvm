@@ -90,6 +90,27 @@ public class TernaryExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return the condition expression
+     */
+    public Expression getCondition() {
+        return cond;
+    }
+
+    /**
+     * @return the "then" branch expression
+     */
+    public Expression getThenExpression() {
+        return exprThen;
+    }
+
+    /**
+     * @return the "else" branch expression
+     */
+    public Expression getElseExpression() {
+        return exprElse;
+    }
+
     @Override
     public long getStartPosition() {
         return cond.getStartPosition();

@@ -92,6 +92,13 @@ public class SwitchStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return the switch body block
+     */
+    public StatementBlock getBlock() {
+        return block;
+    }
+
     @Override
     public boolean isNaturalGotoStatementTarget() {
         return true;

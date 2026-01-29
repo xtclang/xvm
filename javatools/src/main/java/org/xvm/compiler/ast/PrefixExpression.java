@@ -64,6 +64,20 @@ public abstract class PrefixExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return the operator token
+     */
+    public Token getOperator() {
+        return operator;
+    }
+
+    /**
+     * @return the operand expression
+     */
+    public Expression getExpression() {
+        return expr;
+    }
+
     @Override
     public boolean validateCondition(ErrorListener errs) {
         return operator.getId() == Token.Id.NOT

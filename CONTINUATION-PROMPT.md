@@ -11,7 +11,8 @@ This is ongoing work on branch `lagergren/ccl2` to modernize the XTC compiler AS
 3. **Maintain semantic equivalence with master** - All copy behavior must match original clone() semantics
 4. **Use `@ComputedState` annotation** - Replace meaningless `transient` keyword for computed/cached state
 5. **Add `@ChildNode` annotation** - Mark child node fields with index and optional description
-6. **Prefer empty collections over null** - Where semantically equivalent, convert null to empty collections
+6. **Add explicit typed getters** - Provide typed access to child fields with Optional for nullable, @NotNull for non-null
+7. **Prefer empty collections over null** - Where semantically equivalent, convert null to empty collections
 
 ## Completed Work
 
@@ -116,7 +117,7 @@ public @interface ChildNode {
 - KeywordTypeExpression, VariableTypeExpression, LiteralExpression
 - Base classes: Expression, Statement, TypeExpression, ComponentStatement
 
-### Visitor Pattern - IN PROGRESS
+### Visitor Pattern - COMPLETE (Infrastructure)
 Created `AstVisitor<R>` interface with visit methods for all concrete AST node types:
 ```java
 public interface AstVisitor<R> {
@@ -138,21 +139,64 @@ public interface AstVisitor<R> {
 - Created `AstVisitor.java` with visit methods for all concrete AST types
 - Added abstract `accept(AstVisitor<R>)` method to `AstNode`
 - Implemented `accept()` in ALL concrete AST classes (~75 classes)
-- Added explicit child getters to ForStatement: `getInit()`, `getConds()`, `getUpdate()`, `getBlock()`
-- Added `@NotNull` annotations to all visitor method parameters
 
-**Pattern for visitors:**
-- Each concrete class calls `visitor.visit(this)` in accept()
-- Visitors use explicit typed getters to access children (no reflection)
-- Visitor controls child traversal, not the node
+### Explicit Typed Getters - IN PROGRESS
+Added explicit typed getters with Optional/NotNull annotations to AST classes.
+
+**Pattern:**
+- Nullable fields → `Optional<T>` return type
+- Non-null fields → `@NotNull` annotation on getter
+- Nullability determined by constructor semantics (direct method calls on field = non-null)
+
+**Completed (23 classes modified in this session):**
+
+| Class | Getters Added |
+|-------|---------------|
+| LambdaExpression | `getParameters()` (Optional), `getParameterNameExpressions()` (Optional), `getOperator()`, `getBody()` (@NotNull) |
+| MapExpression | `getTypeExpression()` (@NotNull), `getKeys()` (@NotNull), `getValues()` (@NotNull) |
+| ArrayAccessExpression | `getArrayExpression()`, `getIndexes()` (@NotNull) |
+| StatementExpression | `getBody()` (@NotNull) |
+| WhileStatement | `getBlock()` (@NotNull) |
+| SwitchExpression | `getKeyword()`, `getCondition()` (@NotNull), `getContents()` (@NotNull) |
+| ListExpression | `getTypeExpression()` (Optional), `getExpressions()` (@NotNull) |
+| ForEachStatement | `getBlock()` (@NotNull) |
+| NotNullExpression | `getExpression()` (@NotNull), `getOperator()` (@NotNull) |
+| BiTypeExpression | `getType1()` (@NotNull), `getOperator()` (@NotNull), `getType2()` (@NotNull) |
+| TemplateExpression | `getTypeExpression()` (Optional), `getExpressions()` (@NotNull) |
+| AnnotationExpression | `getTypeExpression()` (Optional), `getArguments()` (Optional) |
+
+**Already had getters (no changes needed):**
+- ForStatement - `getInit()`, `getConds()`, `getUpdate()`, `getBlock()`
+- IfStatement - `getThen()` (Optional), `getElse()` (Optional)
+- DelegatingExpression - `getUnderlyingExpression()`
+- NameExpression - `getLeftExpression()`, `getTrailingTypeParams()`
+- TupleExpression - `getTypeExpression()`, `getExpressions()`
+- BiExpression - `getExpression1()`, `getOperator()`, `getExpression2()`
+- PrefixExpression - `getOperator()`, `getExpression()`
+- TernaryExpression - `getCondition()`, `getThenExpression()`, `getElseExpression()`
+- AssignmentStatement - `getLValue()`, `getOp()`, `getRValue()`
+- ReturnStatement - `getExpressions()`
+- CaseStatement - `getExpressions()`, `getLabel()`
+- ImportStatement - `getCondition()` (Optional)
+- TryStatement - `getKeyword()`, `getResources()` (Optional), `getBlock()` (@NotNull), `getCatches()` (Optional), `getFinally()` (Optional)
+- AssertStatement - `getKeyword()`, `getInterval()` (Optional), `getConditions()`, `getMessage()` (Optional)
+- LabeledStatement - `getLabel()`, `getStatement()`
+- CatchStatement - `getTarget()`, `getBlock()`
+- SwitchStatement - `getBlock()`
+- NewExpression - `getLeft()` (Optional), `getTypeExpression()` (Optional), `getArguments()` (@NotNull), `getBody()` (Optional), `getAnon()` (Optional)
+- InvocationExpression - `getExpression()`, `getArguments()`
+- VariableDeclarationStatement - `getTypeExpression()`
 
 ## Remaining Work
 
-### 1. Add Explicit Child Getters to All Classes
-ForStatement already has getters. Need to add typed getters to remaining classes:
-- Statements: IfStatement, WhileStatement, ForEachStatement, TryStatement, etc.
-- Expressions: NewExpression, LambdaExpression, InvocationExpression, etc.
-- Type expressions: NamedTypeExpression, FunctionTypeExpression, etc.
+### 1. Add Explicit Child Getters to Remaining Classes
+Still need getters for:
+- TypeCompositionStatement (complex - many child fields)
+- MethodDeclarationStatement
+- PropertyDeclarationStatement
+- CompositionNode and inner classes
+- Parameter
+- Various type expressions (FunctionTypeExpression, etc.)
 
 ### 2. Continue Modern Collection Patterns
 Still have ~16 `Collections.` usages remaining in:
@@ -188,23 +232,27 @@ Still have ~16 `Collections.` usages remaining in:
 - `@ChildNode(index, description)` - For child node fields (replaces CHILD_FIELDS)
 - `@NotNull` - For collection fields guaranteed non-null
 
+### Getter Patterns
+- Nullable fields: `public Optional<T> getField() { return Optional.ofNullable(field); }`
+- Non-null fields: `@NotNull public T getField() { return field; }`
+- Determine nullability from constructor semantics (direct field dereference = non-null)
+
 ## Recent Commits
 
 ```
-[pending] Remove Cloneable/clone() from compiler, add Copyable interface
+[pending] Add explicit typed getters to AST classes (23 files)
+359b100cd Add AstVisitor interface and accept() methods to all AST classes
+248a9c18e Remove Cloneable/clone() from compiler, add Copyable interface
 6f6321b36 Replace array.clone() with Arrays.copyOf() across AST classes
 04f7d0a84 Modernize AST with List.of() patterns and convenience constructors
 a2fbe38b3 Update plan to mark @ChildNode annotation phase as complete
-8aa8c99b5 Complete @ChildNode annotations across all AST classes
-3d75dabe4 Add @ChildNode annotation and apply @ComputedState across AST classes
-50089d50d Modernize AST copy constructors with stream patterns and @NotNull
 ```
 
 ## Suggested Next Step
 
 1. ~~Begin visitor pattern implementation~~ - DONE (AstVisitor interface and accept() methods complete)
 2. ~~Replace AstNode clone() call sites with copy()~~ - DONE
-3. **Add explicit child getters** - Add typed getters to remaining AST classes (follow ForStatement pattern)
+3. ~~Add explicit child getters~~ - IN PROGRESS (~25+ classes done, ~15 remaining)
 4. **Migrate StageMgr** - Replace `children()` usage with visitor pattern
 5. **Remove reflection infrastructure** - Once all usages migrated, remove CHILD_FIELDS arrays
 

@@ -104,6 +104,29 @@ public class SwitchExpression
         return CHILD_FIELDS;
     }
 
+    /**
+     * @return the switch keyword token
+     */
+    public Token getKeyword() {
+        return keyword;
+    }
+
+    /**
+     * @return the switch condition nodes
+     */
+    @NotNull
+    public List<AstNode> getCondition() {
+        return cond;
+    }
+
+    /**
+     * @return the case expressions and results
+     */
+    @NotNull
+    public List<AstNode> getContents() {
+        return contents;
+    }
+
 
     // ----- compilation ---------------------------------------------------------------------------
 

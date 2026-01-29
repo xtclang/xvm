@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.xvm.asm.Annotation;
@@ -156,6 +157,20 @@ public class AnnotationExpression
     @Override
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
+    }
+
+    /**
+     * @return the annotation type expression (may be absent when created from compiled Annotation)
+     */
+    public Optional<NamedTypeExpression> getTypeExpression() {
+        return Optional.ofNullable(type);
+    }
+
+    /**
+     * @return the annotation arguments (may be absent)
+     */
+    public Optional<List<Expression>> getArguments() {
+        return Optional.ofNullable(args);
     }
 
     /**

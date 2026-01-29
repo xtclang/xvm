@@ -115,6 +115,30 @@ public class MapExpression
         return CHILD_FIELDS;
     }
 
+    /**
+     * @return the map type expression
+     */
+    @NotNull
+    public TypeExpression getTypeExpression() {
+        return type;
+    }
+
+    /**
+     * @return the key expressions
+     */
+    @NotNull
+    public List<Expression> getKeys() {
+        return keys;
+    }
+
+    /**
+     * @return the value expressions
+     */
+    @NotNull
+    public List<Expression> getValues() {
+        return values;
+    }
+
 
     // ----- compilation ---------------------------------------------------------------------------
 

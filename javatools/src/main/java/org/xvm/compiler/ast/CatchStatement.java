@@ -85,6 +85,20 @@ public class CatchStatement
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
+     * @return the exception variable declaration
+     */
+    public VariableDeclarationStatement getTarget() {
+        return target;
+    }
+
+    /**
+     * @return the catch block
+     */
+    public StatementBlock getBlock() {
+        return block;
+    }
+
+    /**
      * @return the exception type
      */
     public TypeConstant getCatchType() {

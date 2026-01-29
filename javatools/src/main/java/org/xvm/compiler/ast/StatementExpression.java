@@ -114,6 +114,14 @@ public class StatementExpression
         return CHILD_FIELDS;
     }
 
+    /**
+     * @return the statement body
+     */
+    @NotNull
+    public StatementBlock getBody() {
+        return body;
+    }
+
 
     // ----- code container methods ----------------------------------------------------------------
 

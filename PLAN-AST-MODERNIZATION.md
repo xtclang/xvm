@@ -255,8 +255,14 @@ The migration must be done incrementally to maintain a working compiler. **All f
 
 **Step 2: Explicit Children Methods** - IN PROGRESS
 - ✅ Add explicit typed getters to ForStatement (`getInit()`, `getConds()`, `getUpdate()`, `getBlock()`)
-- ⏳ Add explicit typed getters to remaining AST classes
+- ✅ Add explicit typed getters to 23+ additional AST classes with proper Optional/NotNull
+- ⏳ Add explicit typed getters to remaining ~15 classes (TypeCompositionStatement, MethodDeclarationStatement, etc.)
 - **Result**: Each class explicitly provides access to its children via typed getters
+
+**Getter Pattern Standards:**
+- Nullable fields → `public Optional<T> getField() { return Optional.ofNullable(field); }`
+- Non-null fields → `@NotNull public T getField() { return field; }`
+- Nullability determined by constructor semantics (direct dereference in constructor = non-null)
 
 **Step 3: Visitor Pattern** - IN PROGRESS
 - ✅ Design visitor interface hierarchy (`AstVisitor<R>`)

@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.NotNull;
@@ -109,6 +110,13 @@ public class ImportStatement
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    /**
+     * @return the condition expression (for conditional imports)
+     */
+    public Optional<Expression> getCondition() {
+        return Optional.ofNullable(cond);
+    }
 
     /**
      * @return the import alias

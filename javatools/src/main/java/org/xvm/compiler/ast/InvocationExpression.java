@@ -290,6 +290,20 @@ public class InvocationExpression
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
+     * @return the expression being invoked (never null)
+     */
+    public Expression getExpression() {
+        return expr;
+    }
+
+    /**
+     * @return the invocation arguments (never null, may be empty)
+     */
+    public List<Expression> getArguments() {
+        return args;
+    }
+
+    /**
      * @return true iff this invocation is marked as asynchronous
      */
     public boolean isAsync() {

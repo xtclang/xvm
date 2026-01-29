@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.NotNull;
@@ -175,6 +176,42 @@ public class NewExpression
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    /**
+     * @return the left expression (for virtual new, e.g., "target.new(...)")
+     */
+    public Optional<Expression> getLeft() {
+        return Optional.ofNullable(left);
+    }
+
+    /**
+     * @return the type being instantiated (null for virtual new)
+     */
+    public Optional<TypeExpression> getTypeExpression() {
+        return Optional.ofNullable(type);
+    }
+
+    /**
+     * @return the constructor arguments (never null, may be empty)
+     */
+    @NotNull
+    public List<Expression> getArguments() {
+        return args;
+    }
+
+    /**
+     * @return the anonymous inner class body (NOT a child node)
+     */
+    public Optional<StatementBlock> getBody() {
+        return Optional.ofNullable(body);
+    }
+
+    /**
+     * @return the synthetic anonymous inner class type composition
+     */
+    public Optional<TypeCompositionStatement> getAnon() {
+        return Optional.ofNullable(anon);
+    }
 
     @Override
     public boolean isComponentNode() {

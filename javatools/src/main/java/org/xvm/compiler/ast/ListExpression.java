@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -99,6 +100,17 @@ public class ListExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return the list element type expression (may be absent for untyped lists)
+     */
+    public Optional<TypeExpression> getTypeExpression() {
+        return Optional.ofNullable(type);
+    }
+
+    /**
+     * @return the element expressions
+     */
+    @NotNull
     public List<Expression> getExpressions() {
         return exprs;
     }

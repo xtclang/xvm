@@ -98,6 +98,13 @@ public class VariableDeclarationStatement
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
+     * @return the type expression for this variable declaration
+     */
+    public TypeExpression getTypeExpression() {
+        return type;
+    }
+
+    /**
      * @return the name being assigned to
      */
     public String getName() {

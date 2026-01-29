@@ -124,6 +124,22 @@ public class NotNullExpression
         return CHILD_FIELDS;
     }
 
+    /**
+     * @return the expression being tested for null
+     */
+    @NotNull
+    public Expression getExpression() {
+        return expr;
+    }
+
+    /**
+     * @return the operator token
+     */
+    @NotNull
+    public Token getOperator() {
+        return operator;
+    }
+
 
     // ----- compilation ---------------------------------------------------------------------------
 

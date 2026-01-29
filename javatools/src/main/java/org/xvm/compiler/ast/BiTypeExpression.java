@@ -3,6 +3,8 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
@@ -93,6 +95,30 @@ public class BiTypeExpression
     @Override
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
+    }
+
+    /**
+     * @return the first type operand (left side)
+     */
+    @NotNull
+    public TypeExpression getType1() {
+        return type1;
+    }
+
+    /**
+     * @return the operator token (union, intersection, or difference)
+     */
+    @NotNull
+    public Token getOperator() {
+        return operator;
+    }
+
+    /**
+     * @return the second type operand (right side)
+     */
+    @NotNull
+    public TypeExpression getType2() {
+        return type2;
     }
 
 

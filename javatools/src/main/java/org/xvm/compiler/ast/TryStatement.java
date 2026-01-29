@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.NotNull;
@@ -124,6 +125,42 @@ public class TryStatement
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    /**
+     * @return the keyword token ("try" or "using")
+     */
+    public Token getKeyword() {
+        return keyword;
+    }
+
+    /**
+     * @return the resource declarations (empty if no "using" clause)
+     */
+    public Optional<List<AssignmentStatement>> getResources() {
+        return Optional.ofNullable(resources);
+    }
+
+    /**
+     * @return the try/using body block (never null)
+     */
+    @NotNull
+    public StatementBlock getBlock() {
+        return block;
+    }
+
+    /**
+     * @return the catch statements (empty if no catch clauses)
+     */
+    public Optional<List<CatchStatement>> getCatches() {
+        return Optional.ofNullable(catches);
+    }
+
+    /**
+     * @return the finally block
+     */
+    public Optional<StatementBlock> getFinally() {
+        return Optional.ofNullable(catchall);
+    }
 
     @Override
     public long getStartPosition() {

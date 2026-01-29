@@ -6,6 +6,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.NotNull;
@@ -94,6 +95,17 @@ public class TemplateExpression
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return the string template type (may be absent for untyped templates)
+     */
+    public Optional<TypeExpression> getTypeExpression() {
+        return Optional.ofNullable(type);
+    }
+
+    /**
+     * @return the template part expressions
+     */
+    @NotNull
     public List<Expression> getExpressions() {
         return exprs;
     }

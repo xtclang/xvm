@@ -256,6 +256,14 @@ public class ForEachStatement
         return CHILD_FIELDS;
     }
 
+    /**
+     * @return the loop body block
+     */
+    @NotNull
+    public StatementBlock getBlock() {
+        return block;
+    }
+
 
     // ----- LabelAble methods ---------------------------------------------------------------------
 

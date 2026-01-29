@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -228,6 +229,35 @@ public class LambdaExpression
      */
     public boolean hasOnlyParamNames() {
         return paramNames != null && !paramNames.isEmpty();
+    }
+
+    /**
+     * @return the typed parameters list (mutually exclusive with {@link #getParameterNameExpressions()})
+     */
+    public Optional<List<Parameter>> getParameters() {
+        return Optional.ofNullable(params);
+    }
+
+    /**
+     * @return the untyped parameter name expressions (mutually exclusive with {@link #getParameters()})
+     */
+    public Optional<List<Expression>> getParameterNameExpressions() {
+        return Optional.ofNullable(paramNames);
+    }
+
+    /**
+     * @return the lambda operator token
+     */
+    public Token getOperator() {
+        return operator;
+    }
+
+    /**
+     * @return the lambda body
+     */
+    @NotNull
+    public StatementBlock getBody() {
+        return body;
     }
 
     @Override

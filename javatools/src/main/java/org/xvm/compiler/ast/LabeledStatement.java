@@ -69,10 +69,24 @@ public class LabeledStatement
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
+     * @return the label token
+     */
+    public Token getLabel() {
+        return label;
+    }
+
+    /**
      * @return the label name
      */
     public String getName() {
         return label.getValueText();
+    }
+
+    /**
+     * @return the labeled statement
+     */
+    public Statement getStatement() {
+        return stmt;
     }
 
     @Override

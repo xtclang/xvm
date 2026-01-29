@@ -129,6 +129,21 @@ public class ArrayAccessExpression
     }
 
     /**
+     * @return the array/target expression being accessed
+     */
+    public Expression getArrayExpression() {
+        return expr;
+    }
+
+    /**
+     * @return the index expressions
+     */
+    @NotNull
+    public List<Expression> getIndexes() {
+        return indexes;
+    }
+
+    /**
      * @return true iff the array indexes indicate a slice operation
      */
     boolean isSliceOp() {

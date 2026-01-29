@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.NotNull;
@@ -129,6 +130,34 @@ public class AssertStatement
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    /**
+     * @return the keyword token (assert, assert:arg, etc.)
+     */
+    public Token getKeyword() {
+        return keyword;
+    }
+
+    /**
+     * @return the sample interval expression (for assert:rnd)
+     */
+    public Optional<Expression> getInterval() {
+        return Optional.ofNullable(interval);
+    }
+
+    /**
+     * @return the list of assertion conditions (never null, may be empty)
+     */
+    public List<AstNode> getConditions() {
+        return conds;
+    }
+
+    /**
+     * @return the custom message expression
+     */
+    public Optional<Expression> getMessage() {
+        return Optional.ofNullable(message);
+    }
 
     @Override
     public long getStartPosition() {
