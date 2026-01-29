@@ -1709,6 +1709,7 @@ public class StatementBlock
     // ----- fields --------------------------------------------------------------------------------
 
     protected Source          source;
+    @ChildNode(index = 0, description = "Statements in this block")
     protected List<Statement> stmts;
     protected long            lStartPos;
     protected long            lEndPos;
@@ -1718,8 +1719,10 @@ public class StatementBlock
     protected Map<String, ImportStatement> imports;
     protected List<ImportStatement>        importsWild;
 
-    private transient boolean m_fSuppressScope;
-    private transient boolean m_fTerminatedAbnormally;
+    @ComputedState
+    private boolean m_fSuppressScope;
+    @ComputedState
+    private boolean m_fTerminatedAbnormally;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(StatementBlock.class, "stmts");
 }

@@ -407,9 +407,12 @@ public class SwitchExpression
     @NotNull protected List<AstNode> contents;
     protected long          lEndPos;
 
-    private transient CaseManager<Expression> m_casemgr;
-    private transient Constant[]              m_aconstCases;
-    private transient ExprAST[]               m_abastBody;
+    @ComputedState
+    private CaseManager<Expression> m_casemgr;
+    @ComputedState
+    private Constant[]              m_aconstCases;
+    @ComputedState
+    private ExprAST[]               m_abastBody;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchExpression.class, "cond", "contents");
 }

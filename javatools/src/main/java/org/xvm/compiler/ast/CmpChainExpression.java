@@ -602,22 +602,26 @@ public class CmpChainExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "Expressions being compared")
     @NotNull protected List<Expression> expressions;
     protected Token[]          operators;
 
     /**
      * The common type used for the comparison.
      */
+    @ComputedState
     private TypeConstant m_typeCommon;
     /**
      * The method used for the comparison.
      */
-    protected transient MethodConstant m_idCmp;
+    @ComputedState
+    protected MethodConstant m_idCmp;
 
     /**
      * The constant value that all other expressions are compared to for equality; often
      * {@link ConstantPool#valNull()}.
      */
+    @ComputedState
     private Constant m_constEq;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(CmpChainExpression.class, "expressions");

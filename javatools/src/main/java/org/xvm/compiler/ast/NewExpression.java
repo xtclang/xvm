@@ -1684,36 +1684,47 @@ public class NewExpression
 
     private enum AnonPurpose {None, RoughDraft, CaptureAnalysis, Actual}
 
+    @ChildNode(index = 0, description = "Left expression for virtual new")
     protected Expression               left;
     protected Token                    operator;
+    @ChildNode(index = 1, description = "Type being instantiated")
     protected TypeExpression           type;
+    @ChildNode(index = 2, description = "Constructor arguments")
     @NotNull protected List<Expression> args;
     protected int                      dims;        // -1 == no [dims]
     protected StatementBlock           body;        // NOT a child
+    @ChildNode(index = 3, description = "Anonymous inner class")
     protected TypeCompositionStatement anon;        // synthetic, added as a child
     protected long                     lEndPos;
 
-    private transient MethodStructure m_constructor;
-    private transient boolean         m_fTupleArg;  // indicates that arguments come from a tuple
-                                                    // (currently not implemented)
+    @ComputedState
+    private MethodStructure m_constructor;
+    @ComputedState("Indicates that arguments come from a tuple (currently not implemented)")
+    private boolean         m_fTupleArg;
 
-    private transient AnonPurpose              m_purposeCurrent = AnonPurpose.None;
-    private transient TypeCompositionStatement m_anonActualBackup;
-    private transient ClassStructure           m_clzActualBackup;
+    @ComputedState
+    private AnonPurpose              m_purposeCurrent = AnonPurpose.None;
+    @ComputedState
+    private TypeCompositionStatement m_anonActualBackup;
+    @ComputedState
+    private ClassStructure           m_clzActualBackup;
 
     /**
      * The capture context, while it is active.
      */
-    private transient AnonInnerClassContext m_ctxCapture;
+    @ComputedState
+    private AnonInnerClassContext m_ctxCapture;
     /**
      * The variables captured by the anonymous inner class, with an associated "true" flag if the
      * inner class needs to capture the variable in a read/write mode.
      */
-    private transient Map<String, Boolean>  m_mapCapture;
+    @ComputedState
+    private Map<String, Boolean>  m_mapCapture;
     /**
      * A map from variable name to register, built by the anonymous inner class context.
      */
-    private transient Map<String, Register> m_mapRegisters;
+    @ComputedState
+    private Map<String, Register> m_mapRegisters;
 
     /**
      * The construction plan:
@@ -1723,36 +1734,44 @@ public class NewExpression
      *  - Formal  - formal type constructor; use NEWV_* op-codes
      */
     enum Plan{Regular, Child, Virtual, Formal}
-    private transient Plan m_plan;
+    @ComputedState
+    private Plan m_plan;
 
     /**
      * In the case of "m_plan == Plan.Child" and "left == null", steps to the child's parent.
      */
-    private transient int m_nParentSteps;
+    @ComputedState
+    private int m_nParentSteps;
     /**
      * In the case of "m_plan == Plan.Formal" and the formal type is generic, the formal property id.
      */
-    private transient PropertyConstant m_idFormal;
+    @ComputedState
+    private PropertyConstant m_idFormal;
     /**
      * In the case of "m_plan == Plan.Formal" and the formal type is parameter, the corresponding register.
      */
-    private transient Register m_regFormal;
+    @ComputedState
+    private Register m_regFormal;
     /**
      * True if the class is a fixed size array to be filled with the corresponding default value.
      */
-    private transient boolean m_fFixedSizeArray;
+    @ComputedState
+    private boolean m_fFixedSizeArray;
     /**
      * True if the inner class captures "this" (i.e. not static).
      */
-    private transient boolean m_fInstanceChild;
+    @ComputedState
+    private boolean m_fInstanceChild;
     /**
      * True if the newable type has non-constant annotation parameters.
      */
-    private transient boolean m_fDynamicAnno;
+    @ComputedState
+    private boolean m_fDynamicAnno;
     /**
      * Cached NewExprAST node.
      */
-    private transient ExprAST m_astNew;
+    @ComputedState
+    private ExprAST m_astNew;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NewExpression.class, "left", "type", "args", "anon");
 }

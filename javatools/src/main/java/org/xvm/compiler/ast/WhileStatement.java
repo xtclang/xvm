@@ -797,26 +797,34 @@ public class WhileStatement
     protected StatementBlock block;
     protected long           lEndPos;
 
-    private transient Label         m_labelContinue;
-    private transient Context       m_ctxLabelVars;
-    private transient ErrorListener m_errsLabelVars;
-    private transient Register      m_regFirst;
-    private transient Register      m_regCount;
+    @ComputedState
+    private Label         m_labelContinue;
+    @ComputedState
+    private Context       m_ctxLabelVars;
+    @ComputedState
+    private ErrorListener m_errsLabelVars;
+    @ComputedState
+    private Register      m_regFirst;
+    @ComputedState
+    private Register      m_regCount;
 
     /**
      * Generally null, unless there is a "continue" that jumps to this statement.
      */
-    private transient List<Break> m_listContinues;
+    @ComputedState
+    private List<Break> m_listContinues;
 
     /**
      * ExprAST produced by {@link #emitConditionTest}.
      */
-    private transient ExprAST m_astCond;
+    @ComputedState
+    private ExprAST m_astCond;
 
     /**
      * An array of RegAllocAST produced by {@link #emitLabelVarCreation}.
      */
-    private transient RegAllocAST[] m_aAllocSpecial;
+    @ComputedState
+    private RegAllocAST[] m_aAllocSpecial;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(WhileStatement.class, "conds", "block");
 }

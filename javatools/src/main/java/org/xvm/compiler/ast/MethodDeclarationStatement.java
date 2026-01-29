@@ -1300,23 +1300,33 @@ public class MethodDeclarationStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "Conditional compilation expression")
     protected Expression                 condition;
     protected List<Token>                modifiers;
+    @ChildNode(index = 1, description = "Method annotations")
     protected List<AnnotationExpression> annotations;
+    @ChildNode(index = 2, description = "Type parameters")
     protected List<Parameter>            typeParams;
     protected Token                      conditional;
+    @ChildNode(index = 3, description = "Return parameters")
     protected List<Parameter>            returns;
     protected Token                      name;
+    @ChildNode(index = 4, description = "Redundant type expressions")
     protected List<TypeExpression>       redundant;
+    @ChildNode(index = 5, description = "Method parameters")
     protected List<Parameter>            params;
+    @ChildNode(index = 6, description = "Method body")
     protected StatementBlock             body;
     protected Token                      doc;
 
-    private transient Token          m_tokFinally;
-    private transient StatementBlock m_bodyFinally;
+    @ComputedState
+    private Token          m_tokFinally;
+    @ComputedState
+    private StatementBlock m_bodyFinally;
 
     // complementary statement for the constructor points to the finalizer and vice versa
-    private transient MethodDeclarationStatement m_stmtComplement;
+    @ComputedState
+    private MethodDeclarationStatement m_stmtComplement;
 
     /**
      * A unique counter with the context of this method.

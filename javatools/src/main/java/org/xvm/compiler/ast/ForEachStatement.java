@@ -1403,28 +1403,44 @@ public class ForEachStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
-    protected StatementBlock           block;
+    protected StatementBlock block;
 
-    private transient Label            m_labelContinue;
-    private transient Expression       m_exprLValue;
-    private transient Expression       m_exprRValue;
-    private transient Plan             m_plan;
-    private transient Context          m_ctxLabelVars;
-    private transient ErrorListener    m_errsLabelVars;
-    private transient Register         m_regFirst;
-    private transient Register         m_regLast;
-    private transient Register         m_regCount;
-    private transient Register         m_regEntry;
-    private transient Register         m_regKeyType;
-    private transient Register         m_regValType;
-    private transient boolean          m_fTupleLValue;
-    private transient MethodConstant[] m_aidConvKey;
-    private transient TypeConstant[]   m_atypeConv;
+    @ComputedState
+    private Label            m_labelContinue;
+    @ComputedState
+    private Expression       m_exprLValue;
+    @ComputedState
+    private Expression       m_exprRValue;
+    @ComputedState
+    private Plan             m_plan;
+    @ComputedState
+    private Context          m_ctxLabelVars;
+    @ComputedState
+    private ErrorListener    m_errsLabelVars;
+    @ComputedState
+    private Register         m_regFirst;
+    @ComputedState
+    private Register         m_regLast;
+    @ComputedState
+    private Register         m_regCount;
+    @ComputedState
+    private Register         m_regEntry;
+    @ComputedState
+    private Register         m_regKeyType;
+    @ComputedState
+    private Register         m_regValType;
+    @ComputedState
+    private boolean          m_fTupleLValue;
+    @ComputedState
+    private MethodConstant[] m_aidConvKey;
+    @ComputedState
+    private TypeConstant[]   m_atypeConv;
 
     /**
      * Generally null, unless there is a "continue" that jumps to this statement.
      */
-    private transient List<Break> m_listContinues;
+    @ComputedState
+    private List<Break> m_listContinues;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ForEachStatement.class, "conds", "block");
 }

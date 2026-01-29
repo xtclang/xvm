@@ -605,16 +605,21 @@ public class AnnotationExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "Annotation type")
     protected NamedTypeExpression type;
+    @ChildNode(index = 1, description = "Annotation arguments")
     protected List<Expression>    args;
     protected long                lStartPos;
     protected long                lEndPos;
 
     // these fields allow us to pretend to be an Annotation by generating a type on the fly, if
     // necessary
-    private transient AstNode    m_node;
-    private transient Annotation m_anno;
-    private transient boolean    m_fConst;
+    @ComputedState
+    private AstNode    m_node;
+    @ComputedState
+    private Annotation m_anno;
+    @ComputedState
+    private boolean    m_fConst;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(AnnotationExpression.class, "type", "args");
 }

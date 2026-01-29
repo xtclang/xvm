@@ -3332,9 +3332,11 @@ public class NameExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "Left-side expression")
     protected Expression           left;
     protected Token                amp;
     protected Token                name;
+    @ChildNode(index = 1, description = "Type parameters")
     protected List<TypeExpression> params;
     protected long                 lEndPos;
 
@@ -3364,23 +3366,27 @@ public class NameExpression
      * Cached validation info: The optional TargetInfo that provides context for the initial name,
      * if the initial name is related to "this".
      */
-    private transient TargetInfo m_targetInfo;
+    @ComputedState
+    private TargetInfo m_targetInfo;
 
     /**
      * Cached validation info: The raw argument that the name refers to.
      */
-    private transient Argument m_arg;
+    @ComputedState
+    private Argument m_arg;
 
     /**
      * Cached validation info: What has to be done with either the "R Value" or "L Value" in order
      * to implement the behavior implied by the name.
      */
-    private transient Plan m_plan = Plan.None;
+    @ComputedState
+    private Plan m_plan = Plan.None;
 
     /**
      * If the plan is {@link Plan#BjarneLambda}, the corresponding lambda id.
      */
-    private transient MethodConstant m_idBjarnLambda;
+    @ComputedState
+    private MethodConstant m_idBjarnLambda;
 
     /**
      * There are three possible scenarios getting to a property represented by this expression:
@@ -3399,34 +3405,40 @@ public class NameExpression
     /**
      * The chosen property access plan.
      */
-    private transient PropertyAccess m_propAccessPlan;
+    @ComputedState
+    private PropertyAccess m_propAccessPlan;
 
     /**
      * If the property access plan is {@link PropertyAccess#SingletonParent}, the identity of the
      * parent.
      */
-    private transient IdentityConstant m_idSingletonParent;
+    @ComputedState
+    private IdentityConstant m_idSingletonParent;
 
     /**
      * If true, indicates that the argument refers to a property or method for a class of Class
      * specified by the "left" expression.
      */
-    private transient boolean m_fClassAttribute;
+    @ComputedState
+    private boolean m_fClassAttribute;
 
     /**
      * Cached validation info: Can the name be used as an "L value"?
      */
-    private transient boolean m_fAssignable;
+    @ComputedState
+    private boolean m_fAssignable;
 
     /**
      * A cached ExprAST node for the result of {@link #generateRefTarget}.
      */
-    private transient ExprAST m_astRefTarget;
+    @ComputedState
+    private ExprAST m_astRefTarget;
 
     /**
      * A cached ExprAST node for this expression.
      */
-    private transient ExprAST m_astResult;
+    @ComputedState
+    private ExprAST m_astResult;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NameExpression.class, "left", "params");
 }

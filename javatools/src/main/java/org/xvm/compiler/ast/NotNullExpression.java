@@ -315,14 +315,17 @@ public class NotNullExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "Expression to check for null")
     protected Expression expr;
     protected Token      operator;
 
     /**
      * True iff the short-circuit operator is used to convert a "(Boolean, T)" into a "T".
      */
-    private transient boolean m_fCond;
-    private transient Label   m_labelShort;
+    @ComputedState
+    private boolean m_fCond;
+    @ComputedState
+    private Label   m_labelShort;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NotNullExpression.class, "expr");
 }

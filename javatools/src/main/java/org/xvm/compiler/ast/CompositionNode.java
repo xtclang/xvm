@@ -564,10 +564,12 @@ public abstract class CompositionNode
             return toStartString() + '(' + delegatee + ')' + toEndString();
         }
 
+        @ChildNode(index = 2, description = "Delegatee expression")
         protected Expression delegatee;
         protected long       lEndPos;
 
-        protected transient String name;
+        @ComputedState
+        protected String name;
 
         private static final Field[] CHILD_FIELDS =
                 fieldsForNames(Delegates.class, "condition", "type", "delegatee");
@@ -890,11 +892,14 @@ public abstract class CompositionNode
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "Conditional expression")
     protected Expression     condition;
     protected Token          keyword;
+    @ChildNode(index = 1, description = "Type being composed")
     protected TypeExpression type;
 
-    private transient Contribution m_contribution;
+    @ComputedState
+    private Contribution m_contribution;
 
     private static final Field[] CHILD_FIELDS =
             fieldsForNames(CompositionNode.class, "condition", "type");

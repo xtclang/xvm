@@ -314,15 +314,18 @@ public abstract class Statement
     /**
      * The label representing the end of the statement, or null if it has not been requested.
      */
+    @ComputedState
     private Label m_labelEnd;
 
     /**
      * The Context that contains this statement temporarily during validation.
      */
-    private transient Context m_ctx;
+    @ComputedState
+    private Context m_ctx;
 
     /**
      * Generally null, unless there is a break that jumps to this statement's exit label.
      */
-    private transient List<Break> m_listBreaks;
+    @ComputedState
+    private List<Break> m_listBreaks;
 }

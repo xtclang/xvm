@@ -3147,5 +3147,6 @@ public abstract class Expression
     /**
      * Various temporary flags.
      */
-    private transient int m_nFlags;
+    @ComputedState
+    private int m_nFlags;
 }

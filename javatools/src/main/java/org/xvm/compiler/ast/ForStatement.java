@@ -764,32 +764,41 @@ public class ForStatement
     protected List<Statement> update;
     protected StatementBlock  block;
 
-    private transient Label m_labelContinue;
+    @ComputedState
+    private Label m_labelContinue;
 
-    private transient Context       m_ctxLabelVars;
-    private transient ErrorListener m_errsLabelVars;
-    private transient Register      m_regFirst;
-    private transient Register      m_regCount;
+    @ComputedState
+    private Context       m_ctxLabelVars;
+    @ComputedState
+    private ErrorListener m_errsLabelVars;
+    @ComputedState
+    private Register      m_regFirst;
+    @ComputedState
+    private Register      m_regCount;
 
     /**
      * Generally null, unless there is a "continue" that jumps to this statement.
      */
-    private transient List<Break> m_listContinues;
+    @ComputedState
+    private List<Break> m_listContinues;
 
     /**
      * The short-circuits from inside of the most recent "init" or "update".
      */
-    private transient List<Break> m_listShorts;
+    @ComputedState
+    private List<Break> m_listShorts;
 
     /**
      * The short-circuit grounding label for each "init". (Array or elements may be null.)
      */
-    private transient Label[] m_alabelInitGround;
+    @ComputedState
+    private Label[] m_alabelInitGround;
 
     /**
      * The short-circuit grounding label for each "update". (Array or elements may be null.)
      */
-    private transient Label[] m_alabelUpdateGround;
+    @ComputedState
+    private Label[] m_alabelUpdateGround;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ForStatement.class, "init", "conds", "update", "block");
 }

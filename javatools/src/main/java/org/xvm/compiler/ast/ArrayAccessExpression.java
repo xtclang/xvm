@@ -1329,13 +1329,18 @@ public class ArrayAccessExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "Array/target expression")
     protected Expression       expr;
+    @ChildNode(index = 1, description = "Index expressions")
     @NotNull protected List<Expression> indexes;
     protected Token            tokClose;
 
-    private transient MethodConstant m_idGet;
-    private transient MethodConstant m_idSet;
-    private transient boolean        m_fSlice;
+    @ComputedState
+    private MethodConstant m_idGet;
+    @ComputedState
+    private MethodConstant m_idSet;
+    @ComputedState
+    private boolean        m_fSlice;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ArrayAccessExpression.class, "expr", "indexes");
 }

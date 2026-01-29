@@ -688,10 +688,12 @@ public class TernaryExpression
     protected Expression exprThen;
     protected Expression exprElse;
 
-    private transient boolean m_fConditional;
+    @ComputedState
+    private boolean m_fConditional;
 
     public enum Plan {Symmetrical, ThenIsFalse, ElseIsFalse}
-    private transient Plan m_plan = Plan.Symmetrical;
+    @ComputedState
+    private Plan m_plan = Plan.Symmetrical;
 
     private enum Usage {Required, Any, Then, Else, Union}
 

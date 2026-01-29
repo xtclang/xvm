@@ -99,8 +99,11 @@ public abstract class ConditionalStatement
     // ----- fields --------------------------------------------------------------------------------
 
     protected Token         keyword;
+    @ChildNode(index = 0, description = "Condition expressions/assignments")
     protected List<AstNode> conds;
 
     private static    int   s_nLabelCounter;
-    private transient int   m_nLabel;
+    @ComputedState
+    private int   m_nLabel;
 }
+

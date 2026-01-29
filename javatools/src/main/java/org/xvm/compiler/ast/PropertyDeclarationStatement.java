@@ -893,28 +893,37 @@ public class PropertyDeclarationStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "Conditional expression")
     protected Expression                 condition;
     protected List<Token>                modifiers;
+    @ChildNode(index = 1, description = "Property annotations")
     protected List<AnnotationExpression> annotations;
+    @ChildNode(index = 2, description = "Property type")
     protected TypeExpression             type;
     protected Token                      name;
     protected Token                      tokAsn;
+    @ChildNode(index = 3, description = "Initial value expression")
     protected Expression                 value;
+    @ChildNode(index = 4, description = "Property body")
     protected StatementBlock             body;
     protected Token                      doc;
 
-    protected transient MethodDeclarationStatement initializer;
-    protected transient AssignmentStatement        assignment;
+    @ChildNode(index = 5, description = "Property initializer method")
+    protected MethodDeclarationStatement initializer;
+    @ChildNode(index = 6, description = "Assignment statement for in-method properties")
+    protected AssignmentStatement        assignment;
 
     /**
      * Indicates that this property declaration is "synthetic".
      */
-    protected transient boolean m_fSynthetic;
+    @ComputedState
+    protected boolean m_fSynthetic;
 
     /**
      * A unique counter with the context of this property.
      */
-    protected transient int m_counter;
+    @ComputedState
+    protected int m_counter;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(PropertyDeclarationStatement.class,
             "condition", "annotations", "type", "value", "body", "initializer", "assignment");

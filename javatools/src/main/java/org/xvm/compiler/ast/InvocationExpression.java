@@ -3098,47 +3098,67 @@ public class InvocationExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "Target expression being invoked")
     protected Expression       expr;
     protected boolean          async;
+    @ChildNode(index = 1, description = "Invocation arguments")
     protected List<Expression> args;
     protected long             lEndPos;
 
-    private transient boolean         m_fBindTarget;     // do we require a target
-    private transient boolean         m_fBindParams;     // do we need to bind any parameters
-    private transient boolean         m_fCall;           // do we need to call/invoke
-    private transient boolean         m_fTupleArg;       // indicates that arguments come from a tuple
-                                                         // (currently not supported)
-    private transient boolean         m_fNamedArgs;      // are there named arguments
-    private transient TargetInfo      m_targetInfo;      // for left==null with prop or method name
-    private transient Argument        m_argMethod;
-    private transient MethodStructure m_method;          // if m_argMethod is a MethodConstant,
-                                                         // this holds the corresponding structure
-    private transient TypeConstant    m_typeTarget;      // if m_argMethod is a PropertyConstant,
-                                                         // referring to a function and the target
-                                                         // is not "this context", it holds the
-                                                         // target type;
-                                                         // if m_argMethod is a MethodConstant for
-                                                         // a function, then it holds an explicitly
-                                                         // specified target type to be used by
-                                                         // formal type parameters resolution
-    private transient boolean         m_fCondResult;     // indicates that the invocation expression
-                                                         // produces a conditional result
-    private transient boolean         m_fBjarne;         // indicates that the invocation expression
-                                                         // was Bjarne-transformed from x.f() to X.f(x)
-    private transient boolean         m_fPack;           // indicates that invocation return(s) should
-                                                         // be "packed" into a Tuple
-    private transient FormalConstant  m_idFormal;        // if not null, indicates that the invocation
-                                                         // expression applies to a function on a formal
-                                                         // type (e.g. Value.hashCode(value))
-    private transient Argument[]      m_aargTypeParams;  // "hidden" type parameters
-    private transient MethodConstant  m_idConvert;       // conversion method
-    private transient boolean         m_fAutoFuture;     // implicit Future
+    @ComputedState
+    private boolean         m_fBindTarget;     // do we require a target
+    @ComputedState
+    private boolean         m_fBindParams;     // do we need to bind any parameters
+    @ComputedState
+    private boolean         m_fCall;           // do we need to call/invoke
+    @ComputedState
+    private boolean         m_fTupleArg;       // indicates that arguments come from a tuple
+                                               // (currently not supported)
+    @ComputedState
+    private boolean         m_fNamedArgs;      // are there named arguments
+    @ComputedState
+    private TargetInfo      m_targetInfo;      // for left==null with prop or method name
+    @ComputedState
+    private Argument        m_argMethod;
+    @ComputedState
+    private MethodStructure m_method;          // if m_argMethod is a MethodConstant,
+                                               // this holds the corresponding structure
+    @ComputedState
+    private TypeConstant    m_typeTarget;      // if m_argMethod is a PropertyConstant,
+                                               // referring to a function and the target
+                                               // is not "this context", it holds the
+                                               // target type;
+                                               // if m_argMethod is a MethodConstant for
+                                               // a function, then it holds an explicitly
+                                               // specified target type to be used by
+                                               // formal type parameters resolution
+    @ComputedState
+    private boolean         m_fCondResult;     // indicates that the invocation expression
+                                               // produces a conditional result
+    @ComputedState
+    private boolean         m_fBjarne;         // indicates that the invocation expression
+                                               // was Bjarne-transformed from x.f() to X.f(x)
+    @ComputedState
+    private boolean         m_fPack;           // indicates that invocation return(s) should
+                                               // be "packed" into a Tuple
+    @ComputedState
+    private FormalConstant  m_idFormal;        // if not null, indicates that the invocation
+                                               // expression applies to a function on a formal
+                                               // type (e.g. Value.hashCode(value))
+    @ComputedState
+    private Argument[]      m_aargTypeParams;  // "hidden" type parameters
+    @ComputedState
+    private MethodConstant  m_idConvert;       // conversion method
+    @ComputedState
+    private boolean         m_fAutoFuture;     // implicit Future
 
     /**
      * Cached ExprAST nodes for the target and the invocation.
      */
-    private transient ExprAST m_astTarget;
-    private transient ExprAST m_astInvoke;
+    @ComputedState
+    private ExprAST m_astTarget;
+    @ComputedState
+    private ExprAST m_astInvoke;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(InvocationExpression.class, "expr", "args");
 }

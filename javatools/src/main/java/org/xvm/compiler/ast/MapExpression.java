@@ -490,8 +490,10 @@ public class MapExpression
     @NotNull protected List<Expression> values;
     protected long                     lEndPos;
 
-    private transient ExprAST[] m_aKeyAST;
-    private transient ExprAST[] m_aValueAST;
+    @ComputedState
+    private ExprAST[] m_aKeyAST;
+    @ComputedState
+    private ExprAST[] m_aValueAST;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(MapExpression.class, "type", "keys", "values");
 }
