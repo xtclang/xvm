@@ -1,6 +1,10 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -20,6 +24,20 @@ public class UnaryPlusExpression
 
     public UnaryPlusExpression(Token operator, Expression expr) {
         super(operator, expr);
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the UnaryPlusExpression to copy from
+     */
+    protected UnaryPlusExpression(@NotNull UnaryPlusExpression original) {
+        super(Objects.requireNonNull(original));
+    }
+
+    @Override
+    public UnaryPlusExpression copy() {
+        return new UnaryPlusExpression(this);
     }
 
 

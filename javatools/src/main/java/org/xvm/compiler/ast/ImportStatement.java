@@ -2,11 +2,12 @@ package org.xvm.compiler.ast;
 
 
 import java.lang.reflect.Field;
-
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -62,6 +63,32 @@ public class ImportStatement
         this.keyword       = keyword;
         this.qualifiedName = qualifiedName;
         this.star          = star;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the ImportStatement to copy from
+     */
+    protected ImportStatement(@NotNull ImportStatement original) {
+        super(Objects.requireNonNull(original));
+
+        // Copy non-child structural fields (Tokens are immutable, safe to share)
+        this.keyword       = original.keyword;
+        this.alias         = original.alias;
+        this.qualifiedName = original.qualifiedName;  // List<Token> is immutable
+        this.star          = original.star;
+
+        // Deep copy child fields
+        this.cond = original.cond == null ? null : original.cond.copy();
+        adopt(this.cond);
+
+        // @NotCopied fields (m_resolver, m_fImportRegistered) start fresh
+    }
+
+    @Override
+    public ImportStatement copy() {
+        return new ImportStatement(this);
     }
 
 
@@ -263,8 +290,10 @@ public class ImportStatement
     protected List<Token> qualifiedName;
     protected Token       star;
 
-    private transient NameResolver m_resolver;
-    private transient boolean      m_fImportRegistered;
+    @NotCopied
+    private NameResolver m_resolver;
+    @NotCopied
+    private boolean      m_fImportRegistered;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ImportStatement.class, "cond");
 }

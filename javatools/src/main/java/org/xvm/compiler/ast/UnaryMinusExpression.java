@@ -1,6 +1,10 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
@@ -22,6 +26,20 @@ public class UnaryMinusExpression
 
     public UnaryMinusExpression(Token operator, Expression expr) {
         super(operator, expr);
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the UnaryMinusExpression to copy from
+     */
+    protected UnaryMinusExpression(@NotNull UnaryMinusExpression original) {
+        super(Objects.requireNonNull(original));
+    }
+
+    @Override
+    public UnaryMinusExpression copy() {
+        return new UnaryMinusExpression(this);
     }
 
 

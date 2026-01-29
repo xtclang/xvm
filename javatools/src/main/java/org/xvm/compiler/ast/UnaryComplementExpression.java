@@ -1,6 +1,10 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
@@ -23,6 +27,20 @@ public class UnaryComplementExpression
 
     public UnaryComplementExpression(Token operator, Expression expr) {
         super(operator, expr);
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the UnaryComplementExpression to copy from
+     */
+    protected UnaryComplementExpression(@NotNull UnaryComplementExpression original) {
+        super(Objects.requireNonNull(original));
+    }
+
+    @Override
+    public UnaryComplementExpression copy() {
+        return new UnaryComplementExpression(this);
     }
 
 

@@ -1,6 +1,10 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -21,6 +25,19 @@ public abstract class DelegatingExpression
 
     protected DelegatingExpression(Expression expr) {
         this.expr = expr;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the DelegatingExpression to copy from
+     */
+    protected DelegatingExpression(@NotNull DelegatingExpression original) {
+        super(Objects.requireNonNull(original));
+
+        // Deep copy child fields
+        this.expr = original.expr == null ? null : original.expr.copy();
+        adopt(this.expr);
     }
 
     /**

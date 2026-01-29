@@ -1,10 +1,12 @@
 package org.xvm.compiler.ast;
 
 
+import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
-import java.lang.reflect.Field;
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
@@ -32,6 +34,30 @@ public class CaseStatement
         this.keyword = keyword;
         this.exprs   = exprs;
         this.lEndPos = tokColon.getEndPosition();
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the CaseStatement to copy from
+     */
+    protected CaseStatement(@NotNull CaseStatement original) {
+        super(Objects.requireNonNull(original));
+
+        // Copy non-child structural fields (Token is immutable, safe to share)
+        this.keyword = original.keyword;
+        this.lEndPos = original.lEndPos;
+
+        // Deep copy child fields
+        this.exprs = copyExpressions(original.exprs);
+        adopt(this.exprs);
+
+        // @NotCopied fields (m_label) start fresh
+    }
+
+    @Override
+    public CaseStatement copy() {
+        return new CaseStatement(this);
     }
 
 
@@ -167,7 +193,8 @@ public class CaseStatement
     protected List<Expression> exprs;
     protected long             lEndPos;
 
-    private transient Label m_label;
+    @NotCopied
+    private Label m_label;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(CaseStatement.class, "exprs");
 }

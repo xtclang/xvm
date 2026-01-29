@@ -2,8 +2,10 @@ package org.xvm.compiler.ast;
 
 
 import java.lang.reflect.Field;
-
+import java.util.Objects;
 import java.util.Set;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
@@ -35,6 +37,22 @@ public abstract class PrefixExpression
     protected PrefixExpression(Token operator, Expression expr) {
         this.operator = operator;
         this.expr     = expr;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the PrefixExpression to copy from
+     */
+    protected PrefixExpression(@NotNull PrefixExpression original) {
+        super(Objects.requireNonNull(original));
+
+        // Copy non-child structural fields (Token is immutable, safe to share)
+        this.operator = original.operator;
+
+        // Deep copy child fields
+        this.expr = original.expr == null ? null : original.expr.copy();
+        adopt(this.expr);
     }
 
 

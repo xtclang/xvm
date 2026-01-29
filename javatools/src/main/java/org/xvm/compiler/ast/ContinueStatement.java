@@ -1,6 +1,10 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
@@ -23,6 +27,20 @@ public class ContinueStatement
 
     public ContinueStatement(Token keyword, Token name) {
         super(keyword, name);
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the ContinueStatement to copy from
+     */
+    protected ContinueStatement(@NotNull ContinueStatement original) {
+        super(Objects.requireNonNull(original));
+    }
+
+    @Override
+    public ContinueStatement copy() {
+        return new ContinueStatement(this);
     }
 
 

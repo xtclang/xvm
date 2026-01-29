@@ -2,10 +2,12 @@ package org.xvm.compiler.ast;
 
 
 import java.lang.reflect.Field;
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
@@ -40,6 +42,26 @@ public class MultipleLValueStatement
         assert LVals.stream().allMatch(AstNode::isLValueSyntax);
 
         this.LVals = LVals;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the MultipleLValueStatement to copy from
+     */
+    protected MultipleLValueStatement(@NotNull MultipleLValueStatement original) {
+        super(Objects.requireNonNull(original));
+
+        // Deep copy child fields
+        this.LVals = copyNodes(original.LVals);
+        adopt(this.LVals);
+
+        // @NotCopied fields (aGroundLabels, expr) start fresh
+    }
+
+    @Override
+    public MultipleLValueStatement copy() {
+        return new MultipleLValueStatement(this);
     }
 
 
@@ -543,12 +565,14 @@ public class MultipleLValueStatement
     /**
      * Grounding labels for LValue expressions that can short-circuit.
      */
-    protected transient Label[] aGroundLabels;
+    @NotCopied
+    protected Label[] aGroundLabels;
 
     /**
      * Lazily instantiated expression that represents the multiple underlying LValue expressions.
      */
-    protected transient MultipleLValueExpression expr;
+    @NotCopied
+    protected MultipleLValueExpression expr;
 
     private static final Field[] STMT_FIELDS = fieldsForNames(MultipleLValueStatement.class, "LVals");
     private static final Field[] EXPR_FIELDS = fieldsForNames(MultipleLValueExpression.class, "exprs");

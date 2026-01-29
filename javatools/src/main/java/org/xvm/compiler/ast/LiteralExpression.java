@@ -2,6 +2,9 @@ package org.xvm.compiler.ast;
 
 
 import java.math.BigDecimal;
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
@@ -32,6 +35,23 @@ public class LiteralExpression
 
     public LiteralExpression(Token literal) {
         this.literal = literal;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the LiteralExpression to copy from
+     */
+    protected LiteralExpression(@NotNull LiteralExpression original) {
+        super(Objects.requireNonNull(original));
+
+        // Copy non-child structural fields (Token is immutable, safe to share)
+        this.literal = original.literal;
+    }
+
+    @Override
+    public LiteralExpression copy() {
+        return new LiteralExpression(this);
     }
 
 

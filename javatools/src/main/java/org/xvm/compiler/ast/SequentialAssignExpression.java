@@ -2,6 +2,9 @@ package org.xvm.compiler.ast;
 
 
 import java.util.Map;
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
@@ -38,6 +41,25 @@ public class SequentialAssignExpression
         super(operator, expr);
         assert operator.getId() == Id.INC || operator.getId() == Id.DEC;
         m_fPre = false;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the SequentialAssignExpression to copy from
+     */
+    protected SequentialAssignExpression(@NotNull SequentialAssignExpression original) {
+        super(Objects.requireNonNull(original));
+
+        // Copy non-child structural fields
+        this.m_fPre = original.m_fPre;
+
+        // @NotCopied fields (m_LValTarget) start fresh
+    }
+
+    @Override
+    public SequentialAssignExpression copy() {
+        return new SequentialAssignExpression(this);
     }
 
 
@@ -188,5 +210,6 @@ public class SequentialAssignExpression
 
     private final boolean m_fPre;
 
-    private transient Assignable m_LValTarget;
+    @NotCopied
+    private Assignable m_LValTarget;
 }

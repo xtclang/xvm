@@ -2,6 +2,9 @@ package org.xvm.compiler.ast;
 
 
 import java.lang.reflect.Field;
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -52,6 +55,30 @@ public class ThrowExpression
         } else {
             lEndPos = keyword.getEndPosition();
         }
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the ThrowExpression to copy from
+     */
+    protected ThrowExpression(@NotNull ThrowExpression original) {
+        super(Objects.requireNonNull(original));
+
+        // Copy non-child structural fields (Token is immutable, safe to share)
+        this.keyword = original.keyword;
+        this.lEndPos = original.lEndPos;
+
+        // Deep copy child fields
+        this.expr = original.expr == null ? null : original.expr.copy();
+        this.message = original.message == null ? null : original.message.copy();
+        adopt(this.expr);
+        adopt(this.message);
+    }
+
+    @Override
+    public ThrowExpression copy() {
+        return new ThrowExpression(this);
     }
 
 

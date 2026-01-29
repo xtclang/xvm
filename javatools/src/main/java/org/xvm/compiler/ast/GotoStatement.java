@@ -1,6 +1,10 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Token;
@@ -25,6 +29,21 @@ public abstract class GotoStatement
     public GotoStatement(Token keyword, Token name) {
         this.keyword = keyword;
         this.name    = name;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the GotoStatement to copy from
+     */
+    protected GotoStatement(@NotNull GotoStatement original) {
+        super(Objects.requireNonNull(original));
+
+        // Copy non-child structural fields (Tokens are immutable, safe to share)
+        this.keyword = original.keyword;
+        this.name    = original.name;
+
+        // @NotCopied fields (m_label) start fresh
     }
 
 
@@ -73,6 +92,9 @@ public abstract class GotoStatement
         assert m_label == null;
         m_label = label;
     }
+
+    @Override
+    public abstract GotoStatement copy();
 
     /**
      * @return the statement that this "goto" statement refers to
@@ -177,5 +199,6 @@ public abstract class GotoStatement
     protected Token keyword;
     protected Token name;
 
-    protected transient Label m_label;
+    @NotCopied
+    protected Label m_label;
 }

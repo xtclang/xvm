@@ -1,6 +1,10 @@
 package org.xvm.compiler.ast;
 
 
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
@@ -23,6 +27,20 @@ public class BreakStatement
 
     public BreakStatement(Token keyword, Token name) {
         super(keyword, name);
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the BreakStatement to copy from
+     */
+    protected BreakStatement(@NotNull BreakStatement original) {
+        super(Objects.requireNonNull(original));
+    }
+
+    @Override
+    public BreakStatement copy() {
+        return new BreakStatement(this);
     }
 
 

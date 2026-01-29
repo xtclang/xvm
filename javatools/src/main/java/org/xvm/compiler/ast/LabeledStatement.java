@@ -2,6 +2,9 @@ package org.xvm.compiler.ast;
 
 
 import java.lang.reflect.Field;
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -25,6 +28,27 @@ public class LabeledStatement
     public LabeledStatement(Token label, Statement stmt) {
         this.label = label;
         this.stmt  = stmt;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the LabeledStatement to copy from
+     */
+    protected LabeledStatement(@NotNull LabeledStatement original) {
+        super(Objects.requireNonNull(original));
+
+        // Copy non-child structural fields (Token is immutable, safe to share)
+        this.label = original.label;
+
+        // Deep copy child fields
+        this.stmt = original.stmt == null ? null : original.stmt.copy();
+        adopt(this.stmt);
+    }
+
+    @Override
+    public LabeledStatement copy() {
+        return new LabeledStatement(this);
     }
 
 

@@ -2,9 +2,11 @@ package org.xvm.compiler.ast;
 
 
 import java.lang.reflect.Field;
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.ErrorListener;
 
@@ -24,6 +26,24 @@ public class ParenthesizedExpression
 
         m_lStartPos = lStartPos;
         m_lEndPos   = lEndPos;
+    }
+
+    /**
+     * Copy constructor.
+     *
+     * @param original  the ParenthesizedExpression to copy from
+     */
+    protected ParenthesizedExpression(@NotNull ParenthesizedExpression original) {
+        super(Objects.requireNonNull(original));
+
+        // Copy non-child structural fields
+        this.m_lStartPos = original.m_lStartPos;
+        this.m_lEndPos   = original.m_lEndPos;
+    }
+
+    @Override
+    public ParenthesizedExpression copy() {
+        return new ParenthesizedExpression(this);
     }
 
 

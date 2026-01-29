@@ -36,28 +36,59 @@ This document provides an analysis of the XTC compiler's AST implementation and 
 - `CatchStatement` - copies target, block
 - `VariableDeclarationStatement` - copies type
 
+**Control Flow Statements** - COMPLETE (6 new classes)
+- `GotoStatement` - base class with keyword/name tokens, abstract copy()
+- `BreakStatement` - extends GotoStatement (no children)
+- `ContinueStatement` - extends GotoStatement (no children)
+- `LabeledStatement` - copies stmt child
+- `CaseStatement` - copies exprs list
+- `MultipleLValueStatement` - copies LVals list
+
+**Import/Other Statements** - COMPLETE (1 new class)
+- `ImportStatement` - copies cond child
+
+**Expression Classes** - COMPLETE (10 new classes)
+- `DelegatingExpression` - base class, copies expr child
+- `PrefixExpression` - base class, copies operator/expr
+- `LiteralExpression` - no children, copies literal token
+- `ParenthesizedExpression` - extends DelegatingExpression
+- `ThrowExpression` - copies expr, message children
+- `UnaryMinusExpression` - extends PrefixExpression
+- `UnaryPlusExpression` - extends PrefixExpression
+- `UnaryComplementExpression` - extends PrefixExpression
+- `SequentialAssignExpression` - extends PrefixExpression, copies m_fPre
+
 **Base Classes with Copy Support**
 - `AstNode` - base copy constructor and helper methods
 - `Statement` - copy constructor, `copy()` delegates to `clone()`
 - `Expression` - copy constructor, `copy()` delegates to `clone()`
 - `ConditionalStatement` - copy constructor for keyword and conds
 - `TypeExpression` - copy constructor, covariant `copy()` return type
+- `DelegatingExpression` - copy constructor for delegated expr
+- `PrefixExpression` - copy constructor for operator/expr
 
 **New Infrastructure**
 - `@NotCopied` annotation (`NotCopied.java`) - replaces `transient` keyword for documenting fields that shouldn't be copied (the `transient` keyword had no semantic effect since AstNode is not Serializable)
 
-### Classes with copy() - 17 total
+### Classes with copy() - 31 total
 ```
+# Base classes (7)
 AstNode.java (base)
 Statement.java (base)
 Expression.java (base)
 ConditionalStatement.java (base)
 TypeExpression.java (base)
+DelegatingExpression.java (base)
+PrefixExpression.java (base)
+
+# Loop statements (5)
 ForStatement.java
 WhileStatement.java
 ForEachStatement.java
 IfStatement.java
 StatementBlock.java
+
+# Other statements (14)
 ExpressionStatement.java
 ReturnStatement.java
 AssertStatement.java
@@ -66,28 +97,68 @@ SwitchStatement.java
 TryStatement.java
 CatchStatement.java
 VariableDeclarationStatement.java
+GotoStatement.java
+BreakStatement.java
+ContinueStatement.java
+LabeledStatement.java
+CaseStatement.java
+MultipleLValueStatement.java
+ImportStatement.java
+
+# Expressions (8)
+LiteralExpression.java
+ParenthesizedExpression.java
+ThrowExpression.java
+UnaryMinusExpression.java
+UnaryPlusExpression.java
+UnaryComplementExpression.java
+SequentialAssignExpression.java
 ```
 
-### Classes Still Needing copy() - ~77 remaining
+### Classes Still Needing copy() - ~55 remaining
 
-**Statement Subclasses (~15 remaining)**
-- `BreakStatement`, `ContinueStatement`, `GotoStatement` (no children)
-- `LabeledStatement`
-- `ImportStatement`, `TypedefStatement`
-- `ComponentStatement` and subclasses (~10)
-- `MultipleLValueStatement`
-- `CaseStatement`
+**Statement Subclasses (~6 remaining)**
+- `TypedefStatement` (extends ComponentStatement)
+- `ComponentStatement` and subclasses (~10 - may not need copy as they represent structures)
 
-**Expression Subclasses (~45 remaining)**
-- Type Expressions: `NamedTypeExpression`, `ArrayTypeExpression`, `TupleTypeExpression`, `FunctionTypeExpression`, `NullableTypeExpression`, `AnnotatedTypeExpression`, `BiTypeExpression`, `DecoratedTypeExpression`, `KeywordTypeExpression`, `VariableTypeExpression`, `BadTypeExpression`, `ModuleTypeExpression`
-- Binary/Relational: `RelOpExpression`, `CondOpExpression`, `CmpExpression`, `CmpChainExpression`, `BiExpression`, `AsExpression`, `IsExpression`, `ElvisExpression`, `ElseExpression`
-- Invocation/Access: `InvocationExpression`, `NewExpression`, `ArrayAccessExpression`, `NameExpression`, `IgnoredNameExpression`
-- Literals/Values: `LiteralExpression`, `ListExpression`, `MapExpression`, `TupleExpression`, `TemplateExpression`, `FileExpression`
-- Other: `LambdaExpression`, `TernaryExpression`, `ParenthesizedExpression`, `UnaryMinusExpression`, `UnaryPlusExpression`, `UnaryComplementExpression`, `PrefixExpression`, `NotNullExpression`, `NonBindingExpression`, `PackExpression`, `UnpackExpression`, `LabeledExpression`, `ThrowExpression`, `ConvertExpression`, `DelegatingExpression`, `SyntheticExpression`, `StatementExpression`, `SequentialAssignExpression`, `ToIntExpression`, `TraceExpression`, `SwitchExpression`
+**Expression Subclasses (~37 remaining)**
+- Type Expressions (~12): `NamedTypeExpression`, `ArrayTypeExpression`, `TupleTypeExpression`, `FunctionTypeExpression`, `NullableTypeExpression`, `AnnotatedTypeExpression`, `BiTypeExpression`, `DecoratedTypeExpression`, `KeywordTypeExpression`, `VariableTypeExpression`, `BadTypeExpression`, `ModuleTypeExpression`
+- Binary/Relational (~9): `RelOpExpression`, `CondOpExpression`, `CmpExpression`, `CmpChainExpression`, `BiExpression`, `AsExpression`, `IsExpression`, `ElvisExpression`, `ElseExpression`
+- Invocation/Access (~5): `InvocationExpression`, `NewExpression`, `ArrayAccessExpression`, `NameExpression`, `IgnoredNameExpression`
+- Literals/Values (~5): `ListExpression`, `MapExpression`, `TupleExpression`, `TemplateExpression`, `FileExpression`
+- Other (~6): `LambdaExpression`, `TernaryExpression`, `NotNullExpression`, `NonBindingExpression`, `SwitchExpression`, `StatementExpression`
 
-**Other AST Nodes (~13 remaining)**
+**Other AST Nodes (~12 remaining)**
 - `Parameter`, `AnnotationExpression`, `CompositionNode`, `VersionOverride`
 - `AnonInnerClass`, `CaseManager`, `Context`, `NameResolver`, `StageMgr` (may not need copy)
+
+---
+
+## Next Steps (Recommended Order)
+
+### Immediate Priority: Classes that call clone()
+These classes explicitly call clone() and should be converted first to enable testing:
+
+1. **RelOpExpression** - calls clone() at line 434
+2. **StatementExpression** - calls clone() at lines 117, 164
+3. **LambdaExpression** - calls clone() at lines 709, 731, 860-865
+4. **NewExpression** - calls clone() at lines 150-159, 374, 1135, 1159, 1239
+5. **NamedTypeExpression** - calls clone() at lines 982-989
+
+### Phase 3a: Binary/Relational Expressions (simpler structure)
+- `BiExpression` (base class for binary ops)
+- `RelOpExpression`, `CondOpExpression`, `CmpExpression`, `CmpChainExpression`
+- `AsExpression`, `IsExpression`, `ElvisExpression`, `ElseExpression`
+
+### Phase 3b: Type Expressions
+- Start with `NamedTypeExpression` (most commonly used)
+- Then remaining type expressions
+
+### Phase 3c: Invocation/Access Expressions
+- `NameExpression`, `InvocationExpression`, `NewExpression`, `ArrayAccessExpression`
+
+### Phase 4: Update Call Sites
+Once all expression classes have copy(), replace clone() calls with copy() in validation loops
 
 ---
 
