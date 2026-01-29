@@ -98,6 +98,13 @@ public class NewExpression
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "left", "type", "args", "anon" - deep copied by AstNode.clone()</li>
+     *   <li>Custom clone() override: deep copies "body" (NOT a child field)</li>
+     *   <li>All other fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
      *
      * @param original  the NewExpression to copy from
      */
@@ -109,26 +116,40 @@ public class NewExpression
         this.dims     = original.dims;
         this.lEndPos  = original.lEndPos;
 
-        // Deep copy child fields
-        this.left = original.left == null ? null : original.left.copy();
-        this.type = original.type == null ? null : original.type.copy();
+        // Deep copy child fields (per CHILD_FIELDS)
+        this.left = copyNode(original.left);
+        this.type = copyNode(original.type);
         this.args = copyExpressions(original.args);
-        this.anon = original.anon == null ? null : (TypeCompositionStatement) original.anon.copy();
-
-        // Adopt copied children
+        this.anon = copyNode(original.anon);
         adopt(this.left);
         adopt(this.type);
         adopt(this.args);
         adopt(this.anon);
 
-        // The "body" is NOT a child and must be handled manually (same logic as clone())
+        // "body" is NOT a child but is deep copied by custom clone() override in master
         if (original.body != null) {
             this.body = this.anon == null
                     ? original.body.copy()
                     : this.anon.body;
         }
 
-        // Transient fields start fresh
+        // Shallow copy all transient fields (matching Object.clone() semantics)
+        this.m_constructor       = original.m_constructor;
+        this.m_fTupleArg         = original.m_fTupleArg;
+        this.m_purposeCurrent    = original.m_purposeCurrent;
+        this.m_anonActualBackup  = original.m_anonActualBackup;
+        this.m_clzActualBackup   = original.m_clzActualBackup;
+        this.m_ctxCapture        = original.m_ctxCapture;
+        this.m_mapCapture        = original.m_mapCapture;
+        this.m_mapRegisters      = original.m_mapRegisters;
+        this.m_plan              = original.m_plan;
+        this.m_nParentSteps      = original.m_nParentSteps;
+        this.m_idFormal          = original.m_idFormal;
+        this.m_regFormal         = original.m_regFormal;
+        this.m_fFixedSizeArray   = original.m_fFixedSizeArray;
+        this.m_fInstanceChild    = original.m_fInstanceChild;
+        this.m_fDynamicAnno      = original.m_fDynamicAnno;
+        this.m_astNew            = original.m_astNew;
     }
 
     @Override

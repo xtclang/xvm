@@ -47,11 +47,18 @@ public class SwitchStatement
 
     public SwitchStatement(Token keyword, List<AstNode> conds, StatementBlock block) {
         super(keyword, conds);
-        this.block   = block;
+        this.block        = block;
+        this.m_listBreaks = new ArrayList<>();
     }
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "conds", "block" - deep copied by AstNode.clone()</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
      *
      * @param original  the SwitchStatement to copy from
      */
@@ -62,8 +69,12 @@ public class SwitchStatement
         this.block = original.block == null ? null : original.block.copy();
         adopt(this.block);
 
-        // Transient fields NOT copied: m_casemgr, m_listGroups, m_labelContinue,
-        // m_listContinues, m_listBreaks
+        // Shallow copy transient fields (matching Object.clone() semantics)
+        this.m_casemgr       = original.m_casemgr;
+        this.m_listGroups    = original.m_listGroups;
+        this.m_labelContinue = original.m_labelContinue;
+        this.m_listContinues = original.m_listContinues;
+        this.m_listBreaks    = original.m_listBreaks;
     }
 
     @Override
@@ -679,31 +690,36 @@ public class SwitchStatement
     /**
      * The manager that collects all of the case information.
      */
-    @NotCopied private CaseManager<CaseGroup> m_casemgr;
+    @ComputedState("Case manager for switch validation")
+    private CaseManager<CaseGroup> m_casemgr;
 
     /**
      * Information about each group that begins with one or more CaseStatements and is followed by
      * other statements.
      */
-    @NotCopied private List<CaseGroup> m_listGroups;
+    @ComputedState("Case groups for switch")
+    private List<CaseGroup> m_listGroups;
 
     /**
      * For a given case group, this is the label that each "continue" statement within that group
      * will jump to; it's null until the first continue statement is encountered in the group.
      */
-    @NotCopied private Label m_labelContinue;
+    @ComputedState("Continue label for current case group")
+    private Label m_labelContinue;
 
     /**
      * For a given case group, this collects the assignment information that comes from each
      * "continue" statement within that group; it's null until the first continue statement is
      * encountered in the group.
      */
-    @NotCopied private List<Break> m_listContinues;
+    @ComputedState("Continue statements in current case group")
+    private List<Break> m_listContinues;
 
     /**
      * This collects the assignment information that comes from each "break" statement.
      */
-    @NotCopied private final List<Map<String, Assignment>> m_listBreaks = new ArrayList<>();
+    @ComputedState("Break statement assignments")
+    private List<Map<String, Assignment>> m_listBreaks;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchStatement.class, "conds", "block");
 }

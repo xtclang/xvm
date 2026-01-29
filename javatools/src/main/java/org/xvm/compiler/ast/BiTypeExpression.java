@@ -30,6 +30,14 @@ public class BiTypeExpression
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "type1", "type2" - deep copied by AstNode.clone()</li>
+     *   <li>No transient fields in this class</li>
+     * </ul>
+     *
+     * @param original  the BiTypeExpression to copy from
      */
     protected BiTypeExpression(BiTypeExpression original) {
         super(original);

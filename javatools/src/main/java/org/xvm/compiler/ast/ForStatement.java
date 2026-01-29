@@ -69,6 +69,12 @@ public class ForStatement
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "init", "conds", "update", "block" - deep copied by AstNode.clone()</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
      *
      * @param original  the ForStatement to copy from
      */
@@ -85,9 +91,16 @@ public class ForStatement
         adopt(this.update);
         adopt(this.block);
 
-        // Transient fields NOT copied (they start fresh):
-        // m_labelContinue, m_ctxLabelVars, m_errsLabelVars, m_regFirst, m_regCount,
-        // m_listContinues, m_listShorts, m_alabelInitGround, m_alabelUpdateGround
+        // Shallow copy transient fields (matching Object.clone() semantics)
+        this.m_labelContinue     = original.m_labelContinue;
+        this.m_ctxLabelVars      = original.m_ctxLabelVars;
+        this.m_errsLabelVars     = original.m_errsLabelVars;
+        this.m_regFirst          = original.m_regFirst;
+        this.m_regCount          = original.m_regCount;
+        this.m_listContinues     = original.m_listContinues;
+        this.m_listShorts        = original.m_listShorts;
+        this.m_alabelInitGround  = original.m_alabelInitGround;
+        this.m_alabelUpdateGround = original.m_alabelUpdateGround;
     }
 
     @Override

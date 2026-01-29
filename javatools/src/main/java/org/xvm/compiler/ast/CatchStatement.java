@@ -40,6 +40,12 @@ public class CatchStatement
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "target", "block" - deep copied by AstNode.clone()</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
      *
      * @param original  the CatchStatement to copy from
      */
@@ -57,7 +63,9 @@ public class CatchStatement
         adopt(this.target);
         adopt(this.block);
 
-        // Transient fields NOT copied: m_opCatch, m_labelEndCatch
+        // Shallow copy transient fields (matching Object.clone() semantics)
+        this.m_opCatch      = original.m_opCatch;
+        this.m_labelEndCatch = original.m_labelEndCatch;
     }
 
     @Override
@@ -185,8 +193,10 @@ public class CatchStatement
     protected StatementBlock               block;
     protected long                         lStartPos;
 
-    @NotCopied private CatchStart m_opCatch;
-    @NotCopied private Label      m_labelEndCatch;
+    @ComputedState("CatchStart op for code generation")
+    private CatchStart m_opCatch;
+    @ComputedState("End label for catch block")
+    private Label      m_labelEndCatch;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(CatchStatement.class, "target", "block");
 }

@@ -75,6 +75,12 @@ public class TryStatement
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "resources", "block", "catches", "catchall" - deep copied by AstNode.clone()</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
      *
      * @param original  the TryStatement to copy from
      */
@@ -97,7 +103,10 @@ public class TryStatement
         adopt(this.catches);
         adopt(this.catchall);
 
-        // Transient fields NOT copied: m_ctxValidatingFinally, m_errsValidatingFinally, m_regFinallyException
+        // Shallow copy transient fields (matching Object.clone() semantics)
+        this.m_ctxValidatingFinally  = original.m_ctxValidatingFinally;
+        this.m_errsValidatingFinally = original.m_errsValidatingFinally;
+        this.m_regFinallyException   = original.m_regFinallyException;
     }
 
     @Override
@@ -599,9 +608,12 @@ public class TryStatement
     protected List<CatchStatement>      catches;
     protected StatementBlock            catchall;
 
-    @NotCopied private Context       m_ctxValidatingFinally;
-    @NotCopied private ErrorListener m_errsValidatingFinally;
-    @NotCopied private Register      m_regFinallyException;
+    @ComputedState("Context during finally validation")
+    private Context       m_ctxValidatingFinally;
+    @ComputedState("Error listener during finally validation")
+    private ErrorListener m_errsValidatingFinally;
+    @ComputedState("Register for finally exception")
+    private Register      m_regFinallyException;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TryStatement.class,
             "resources", "block", "catches", "catchall");

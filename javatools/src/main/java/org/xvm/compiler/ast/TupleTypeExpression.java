@@ -25,6 +25,14 @@ public class TupleTypeExpression
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "paramTypes" - deep copied by AstNode.clone()</li>
+     *   <li>No transient fields in this class</li>
+     * </ul>
+     *
+     * @param original  the TupleTypeExpression to copy from
      */
     protected TupleTypeExpression(TupleTypeExpression original) {
         super(original);

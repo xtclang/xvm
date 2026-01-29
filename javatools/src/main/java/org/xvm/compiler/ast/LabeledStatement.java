@@ -32,6 +32,12 @@ public class LabeledStatement
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "stmt" - deep copied by AstNode.clone()</li>
+     *   <li>No transient fields in this class</li>
+     * </ul>
      *
      * @param original  the LabeledStatement to copy from
      */

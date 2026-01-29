@@ -3,6 +3,10 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -46,6 +50,37 @@ public class NotNullExpression
     public NotNullExpression(Expression expr, Token operator) {
         this.expr     = expr;
         this.operator = operator;
+    }
+
+    /**
+     * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "expr" - deep copied by AstNode.clone()</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
+     *
+     * @param original  the NotNullExpression to copy from
+     */
+    protected NotNullExpression(@NotNull NotNullExpression original) {
+        super(Objects.requireNonNull(original));
+
+        // Token is immutable, safe to share
+        this.operator = original.operator;
+
+        // Deep copy child field (per CHILD_FIELDS)
+        this.expr = copyNode(original.expr);
+        adopt(this.expr);
+
+        // Shallow copy transient fields (matching Object.clone() semantics)
+        this.m_fCond      = original.m_fCond;
+        this.m_labelShort = original.m_labelShort;
+    }
+
+    @Override
+    public NotNullExpression copy() {
+        return new NotNullExpression(this);
     }
 
 

@@ -38,6 +38,12 @@ public class CaseStatement
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "exprs" - deep copied by AstNode.clone()</li>
+     *   <li>Computed state: {@code m_label} - shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
      *
      * @param original  the CaseStatement to copy from
      */
@@ -52,7 +58,8 @@ public class CaseStatement
         this.exprs = copyExpressions(original.exprs);
         adopt(this.exprs);
 
-        // @NotCopied fields (m_label) start fresh
+        // Shallow copy transient fields (matching Object.clone() semantics)
+        this.m_label = original.m_label;
     }
 
     @Override
@@ -193,7 +200,7 @@ public class CaseStatement
     protected List<Expression> exprs;
     protected long             lEndPos;
 
-    @NotCopied
+    @ComputedState("Label for this case statement")
     private Label m_label;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(CaseStatement.class, "exprs");

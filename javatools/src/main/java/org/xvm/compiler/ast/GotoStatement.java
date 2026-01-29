@@ -33,6 +33,12 @@ public abstract class GotoStatement
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>No CHILD_FIELDS in this class</li>
+     *   <li>Computed state: {@code m_label} - shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
      *
      * @param original  the GotoStatement to copy from
      */
@@ -43,7 +49,8 @@ public abstract class GotoStatement
         this.keyword = original.keyword;
         this.name    = original.name;
 
-        // @NotCopied fields (m_label) start fresh
+        // Shallow copy transient fields (matching Object.clone() semantics)
+        this.m_label = original.m_label;
     }
 
 
@@ -199,6 +206,6 @@ public abstract class GotoStatement
     protected Token keyword;
     protected Token name;
 
-    @NotCopied
+    @ComputedState("Jump target label")
     protected Label m_label;
 }

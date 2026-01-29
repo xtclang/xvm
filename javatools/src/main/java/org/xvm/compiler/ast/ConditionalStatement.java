@@ -24,6 +24,12 @@ public abstract class ConditionalStatement
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: subclasses define their own - "conds" copied here for subclasses</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
      *
      * @param original  the ConditionalStatement to copy from
      */
@@ -37,7 +43,8 @@ public abstract class ConditionalStatement
         this.conds = copyNodes(original.conds);
         adopt(this.conds);
 
-        // Transient fields NOT copied: m_nLabel (starts fresh)
+        // Shallow copy transient fields (matching Object.clone() semantics)
+        this.m_nLabel = original.m_nLabel;
     }
 
 

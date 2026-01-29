@@ -29,6 +29,12 @@ public abstract class DelegatingExpression
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>No CHILD_FIELDS in this class (subclasses define their own)</li>
+     *   <li>No transient fields in this class</li>
+     * </ul>
      *
      * @param original  the DelegatingExpression to copy from
      */

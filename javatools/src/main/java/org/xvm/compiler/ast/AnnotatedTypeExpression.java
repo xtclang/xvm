@@ -40,6 +40,14 @@ public class AnnotatedTypeExpression
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "annotation", "type" - deep copied by AstNode.clone()</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
+     *
+     * @param original  the AnnotatedTypeExpression to copy from
      */
     protected AnnotatedTypeExpression(AnnotatedTypeExpression original) {
         super(original);

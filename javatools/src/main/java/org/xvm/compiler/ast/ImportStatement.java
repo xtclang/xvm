@@ -67,6 +67,12 @@ public class ImportStatement
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "cond" - deep copied by AstNode.clone()</li>
+     *   <li>Computed state: {@code m_resolver}, {@code m_fImportRegistered} - shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
      *
      * @param original  the ImportStatement to copy from
      */
@@ -83,7 +89,9 @@ public class ImportStatement
         this.cond = original.cond == null ? null : original.cond.copy();
         adopt(this.cond);
 
-        // @NotCopied fields (m_resolver, m_fImportRegistered) start fresh
+        // Shallow copy computed state (matching Object.clone() semantics)
+        this.m_resolver          = original.m_resolver;
+        this.m_fImportRegistered = original.m_fImportRegistered;
     }
 
     @Override
@@ -290,9 +298,9 @@ public class ImportStatement
     protected List<Token> qualifiedName;
     protected Token       star;
 
-    @NotCopied
+    @ComputedState("Name resolver for import resolution")
     private NameResolver m_resolver;
-    @NotCopied
+    @ComputedState("Whether import has been registered")
     private boolean      m_fImportRegistered;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ImportStatement.class, "cond");

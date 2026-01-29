@@ -36,6 +36,14 @@ public class ElseExpression
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "expr1", "expr2" - deep copied by AstNode.clone()</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
+     *
+     * @param original  the ElseExpression to copy from
      */
     protected ElseExpression(ElseExpression original) {
         super(original);

@@ -52,6 +52,12 @@ public class IfStatement
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "conds", "stmtThen", "stmtElse" - deep copied by AstNode.clone()</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
      *
      * @param original  the IfStatement to copy from
      */
@@ -66,7 +72,9 @@ public class IfStatement
         getThen().ifPresent(this::adopt);
         getElse().ifPresent(this::adopt);
 
-        // Transient fields NOT copied: m_labelElse, m_listShorts
+        // Shallow copy transient fields (matching Object.clone() semantics)
+        this.m_labelElse  = original.m_labelElse;
+        this.m_listShorts = original.m_listShorts;
     }
 
     @Override
@@ -432,12 +440,14 @@ public class IfStatement
     /**
      * The "else" label.
      */
-    @NotCopied private Label m_labelElse;
+    @ComputedState("Label for else branch")
+    private Label m_labelElse;
 
     /**
      * Generally null, unless there is a short-circuit that jumps to this statement's else label.
      */
-    @NotCopied private List<Break> m_listShorts;
+    @ComputedState("Short-circuit breaks from condition")
+    private List<Break> m_listShorts;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(IfStatement.class, "conds", "stmtThen", "stmtElse");
 }

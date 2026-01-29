@@ -121,6 +121,15 @@ public class NamedTypeExpression
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "left", "paramTypes" - deep copied by AstNode.clone()</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     *   <li>Transient: m_resolver, m_constId, m_fVirtualChild, m_fExternalTypedef,
+     *       m_exprDynamic, m_constUnresolved, m_typeUnresolved</li>
+     *   <li>Special: m_exprDynamic is deep copied (same as custom clone() in master)</li>
+     * </ul>
      *
      * @param original  the NamedTypeExpression to copy from
      */
@@ -136,7 +145,7 @@ public class NamedTypeExpression
         this.lStartPos = original.lStartPos;
         this.lEndPos   = original.lEndPos;
 
-        // Deep copy child fields
+        // Deep copy child fields (CHILD_FIELDS: "left", "paramTypes")
         this.left       = original.left == null ? null : original.left.copy();
         this.paramTypes = copyNodes(original.paramTypes);
 
@@ -144,21 +153,19 @@ public class NamedTypeExpression
         adopt(this.left);
         adopt(this.paramTypes);
 
-        // The "m_exprDynamic" is NOT a child and must be handled manually (same logic as clone())
+        // Special handling: m_exprDynamic is NOT a child but is deep copied
+        // (same logic as custom clone() in master)
         if (original.m_exprDynamic != null) {
             this.m_exprDynamic = (NameExpression) original.m_exprDynamic.copy();
         }
 
-        // Shallow-copy ALL transient resolution state to match original Object.clone() behavior.
-        // Object.clone() shallow-copies ALL fields including transient.
-        // These are computed during name resolution and need to be preserved when
-        // cloning a resolved type expression for validation testing.
+        // Shallow copy ALL transient fields to match Object.clone() semantics
         this.m_constId          = original.m_constId;
         this.m_fVirtualChild    = original.m_fVirtualChild;
         this.m_fExternalTypedef = original.m_fExternalTypedef;
         this.m_constUnresolved  = original.m_constUnresolved;
         this.m_typeUnresolved   = original.m_typeUnresolved;
-        this.m_resolver         = original.m_resolver;  // Must copy - Object.clone() copies all fields
+        this.m_resolver         = original.m_resolver;
     }
 
     @Override

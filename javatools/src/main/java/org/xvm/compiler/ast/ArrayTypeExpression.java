@@ -40,6 +40,14 @@ public class ArrayTypeExpression
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "type", "indexes" - deep copied by AstNode.clone()</li>
+     *   <li>No transient fields in this class</li>
+     * </ul>
+     *
+     * @param original  the ArrayTypeExpression to copy from
      */
     protected ArrayTypeExpression(ArrayTypeExpression original) {
         super(original);

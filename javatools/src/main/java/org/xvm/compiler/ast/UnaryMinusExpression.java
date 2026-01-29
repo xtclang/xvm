@@ -30,6 +30,12 @@ public class UnaryMinusExpression
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: inherited from PrefixExpression</li>
+     *   <li>No transient fields in this class</li>
+     * </ul>
      *
      * @param original  the UnaryMinusExpression to copy from
      */

@@ -31,6 +31,12 @@ public class BreakStatement
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>No CHILD_FIELDS in this class (inherited fields handled by GotoStatement)</li>
+     *   <li>No transient fields in this class</li>
+     * </ul>
      *
      * @param original  the BreakStatement to copy from
      */

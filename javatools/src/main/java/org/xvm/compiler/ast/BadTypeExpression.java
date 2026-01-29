@@ -28,6 +28,14 @@ public class BadTypeExpression
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "nonType" - deep copied by AstNode.clone()</li>
+     *   <li>No transient fields in this class</li>
+     * </ul>
+     *
+     * @param original  the BadTypeExpression to copy from
      */
     protected BadTypeExpression(BadTypeExpression original) {
         super(original);

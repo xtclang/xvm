@@ -127,6 +127,12 @@ public class RelOpExpression
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "expr1", "expr2" - deep copied by AstNode.clone()</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
      *
      * @param original  the RelOpExpression to copy from
      */
@@ -137,7 +143,8 @@ public class RelOpExpression
         this.f_tokBefore = original.f_tokBefore;
         this.f_tokAfter  = original.f_tokAfter;
 
-        // m_idOp is transient (post-validation state), starts fresh
+        // Shallow copy transient fields to match Object.clone() behavior
+        this.m_idOp = original.m_idOp;
     }
 
     @Override

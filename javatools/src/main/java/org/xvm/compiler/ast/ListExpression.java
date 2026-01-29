@@ -4,6 +4,9 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.Collections;
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -55,6 +58,36 @@ public class ListExpression
         this.exprs     = exprs;
         this.lStartPos = lStartPos;
         this.lEndPos   = lEndPos;
+    }
+
+    /**
+     * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "type", "exprs" - deep copied by AstNode.clone()</li>
+     *   <li>No transient fields in this class</li>
+     * </ul>
+     *
+     * @param original  the ListExpression to copy from
+     */
+    protected ListExpression(@NotNull ListExpression original) {
+        super(Objects.requireNonNull(original));
+
+        // Primitive fields - shallow copy
+        this.lStartPos = original.lStartPos;
+        this.lEndPos   = original.lEndPos;
+
+        // Deep copy child fields (per CHILD_FIELDS)
+        this.type  = copyNode(original.type);
+        this.exprs = copyExpressions(original.exprs);
+        adopt(this.type);
+        adopt(this.exprs);
+    }
+
+    @Override
+    public ListExpression copy() {
+        return new ListExpression(this);
     }
 
 

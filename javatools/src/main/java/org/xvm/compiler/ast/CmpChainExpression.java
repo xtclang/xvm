@@ -5,7 +5,10 @@ import java.lang.reflect.Field;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
@@ -69,6 +72,38 @@ public class CmpChainExpression
     public CmpChainExpression(List<Expression> expressions, Token[] operators) {
         this.expressions = expressions;
         this.operators   = operators;
+    }
+
+    /**
+     * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "expressions" - deep copied by AstNode.clone()</li>
+     *   <li>All other fields (including transient): shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
+     *
+     * @param original  the CmpChainExpression to copy from
+     */
+    protected CmpChainExpression(@NotNull CmpChainExpression original) {
+        super(Objects.requireNonNull(original));
+
+        // Token array is immutable, safe to share
+        this.operators = original.operators;
+
+        // Deep copy child field (per CHILD_FIELDS)
+        this.expressions = copyExpressions(original.expressions);
+        adopt(this.expressions);
+
+        // Shallow copy non-child fields (matching Object.clone() semantics)
+        this.m_typeCommon = original.m_typeCommon;
+        this.m_idCmp      = original.m_idCmp;
+        this.m_constEq    = original.m_constEq;
+    }
+
+    @Override
+    public CmpChainExpression copy() {
+        return new CmpChainExpression(this);
     }
 
 

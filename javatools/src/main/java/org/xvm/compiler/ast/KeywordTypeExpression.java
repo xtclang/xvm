@@ -27,6 +27,14 @@ public class KeywordTypeExpression
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>No CHILD_FIELDS in this class (leaf node)</li>
+     *   <li>No transient fields in this class</li>
+     * </ul>
+     *
+     * @param original  the KeywordTypeExpression to copy from
      */
     protected KeywordTypeExpression(KeywordTypeExpression original) {
         super(original);

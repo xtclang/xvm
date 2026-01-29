@@ -103,13 +103,26 @@ public abstract class Expression
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>No CHILD_FIELDS - base class for expressions</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     *   <li>Transient: m_nFlags (temporary flags)</li>
+     *   <li>Post-validation state (m_fit, m_oType, m_oConst) are NOT transient but are
+     *       NOT copied - they will be recomputed during validation of the copy</li>
+     * </ul>
      *
      * @param original  the Expression to copy from
      */
     protected Expression(Expression original) {
         super(original);
-        // Transient fields (m_fit, m_oType, m_oConst, m_nFlags) are NOT copied - they start fresh
-        // These are all post-validation state that will be recomputed
+
+        // Shallow copy transient fields to match Object.clone() semantics
+        this.m_nFlags = original.m_nFlags;
+
+        // Note: m_fit, m_oType, m_oConst are post-validation state that will be
+        // recomputed during validation, so they are intentionally not copied
     }
 
     /**

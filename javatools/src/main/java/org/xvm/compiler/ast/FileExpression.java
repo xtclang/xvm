@@ -7,6 +7,9 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 
 import java.nio.file.Files;
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
 
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
@@ -57,6 +60,37 @@ public class FileExpression
         } else if (resource instanceof ResourceDir dir) {
             m_dir = dir;
         }
+    }
+
+    /**
+     * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "type" - deep copied by AstNode.clone()</li>
+     *   <li>All other fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
+     *
+     * @param original  the FileExpression to copy from
+     */
+    protected FileExpression(@NotNull FileExpression original) {
+        super(Objects.requireNonNull(original));
+
+        // Token is immutable, safe to share
+        this.path = original.path;
+
+        // Shallow copy non-child fields (matching Object.clone() semantics)
+        this.m_file = original.m_file;
+        this.m_dir  = original.m_dir;
+
+        // Deep copy child field (per CHILD_FIELDS)
+        this.type = copyNode(original.type);
+        adopt(this.type);
+    }
+
+    @Override
+    public FileExpression copy() {
+        return new FileExpression(this);
     }
 
 

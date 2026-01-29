@@ -3,6 +3,10 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 
@@ -26,6 +30,25 @@ public abstract class SyntheticExpression
 
         expr.getParent().adopt(this);
         this.adopt(expr);
+    }
+
+    /**
+     * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "expr" - deep copied by AstNode.clone()</li>
+     *   <li>No transient fields in this base class</li>
+     * </ul>
+     *
+     * @param original  the SyntheticExpression to copy from
+     */
+    protected SyntheticExpression(@NotNull SyntheticExpression original) {
+        super(Objects.requireNonNull(original));
+
+        // Deep copy child field (per CHILD_FIELDS)
+        this.expr = copyNode(original.expr);
+        adopt(this.expr);
     }
 
 

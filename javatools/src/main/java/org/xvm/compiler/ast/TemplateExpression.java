@@ -4,6 +4,9 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.List;
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -47,6 +50,39 @@ public class TemplateExpression
         this.exprs     = exprs;
         this.lStartPos = lStartPos;
         this.lEndPos   = lEndPos;
+    }
+
+    /**
+     * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "type", "exprs" - deep copied by AstNode.clone()</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
+     *
+     * @param original  the TemplateExpression to copy from
+     */
+    protected TemplateExpression(@NotNull TemplateExpression original) {
+        super(Objects.requireNonNull(original));
+
+        // Primitive fields - shallow copy
+        this.lStartPos = original.lStartPos;
+        this.lEndPos   = original.lEndPos;
+
+        // Deep copy child fields (per CHILD_FIELDS; type is always null but copy for safety)
+        this.type  = copyNode(original.type);
+        this.exprs = copyExpressions(original.exprs);
+        adopt(this.type);
+        adopt(this.exprs);
+
+        // Shallow copy transient fields (matching Object.clone() semantics)
+        this.m_reg$ = original.m_reg$;
+    }
+
+    @Override
+    public TemplateExpression copy() {
+        return new TemplateExpression(this);
     }
 
 

@@ -87,6 +87,12 @@ public class AssertStatement
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "interval", "conds", "message" - deep copied by AstNode.clone()</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
      *
      * @param original  the AssertStatement to copy from
      */
@@ -107,7 +113,8 @@ public class AssertStatement
         adopt(this.conds);
         adopt(this.message);
 
-        // Transient fields NOT copied: m_listTexts
+        // Shallow copy transient fields (matching Object.clone() semantics)
+        this.m_listTexts = original.m_listTexts;
     }
 
     @Override
@@ -694,7 +701,8 @@ public class AssertStatement
     protected Expression    message;
     protected long          lEndPos;
 
-    @NotCopied private List<String> m_listTexts;
+    @ComputedState("Assertion message texts")
+    private List<String> m_listTexts;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(AssertStatement.class, "interval", "conds", "message");
 }

@@ -39,6 +39,12 @@ public class LiteralExpression
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>No CHILD_FIELDS in this class</li>
+     *   <li>No transient fields in this class</li>
+     * </ul>
      *
      * @param original  the LiteralExpression to copy from
      */

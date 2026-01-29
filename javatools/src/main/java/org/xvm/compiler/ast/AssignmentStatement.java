@@ -74,6 +74,12 @@ public class AssignmentStatement
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "lvalue", "lvalueExpr", "rvalue" - deep copied by AstNode.clone()</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
      *
      * @param original  the AssignmentStatement to copy from
      */
@@ -87,15 +93,19 @@ public class AssignmentStatement
         this.endNegate = original.endNegate;
 
         // Deep copy child fields
-        this.lvalue = original.lvalue == null ? null : original.lvalue.copy();
-        this.rvalue = original.rvalue == null ? null : original.rvalue.copy();
-        // lvalueExpr is a transient derived value - not copied
+        this.lvalue     = original.lvalue == null ? null : original.lvalue.copy();
+        this.lvalueExpr = original.lvalueExpr == null ? null : original.lvalueExpr.copy();
+        this.rvalue     = original.rvalue == null ? null : original.rvalue.copy();
 
         // Adopt copied children
         adopt(this.lvalue);
+        adopt(this.lvalueExpr);
         adopt(this.rvalue);
 
-        // Transient fields NOT copied: m_decls, m_labelCondFalse, m_fCondFalseLabelTaken
+        // Shallow copy transient fields (matching Object.clone() semantics)
+        this.m_decls               = original.m_decls;
+        this.m_labelCondFalse      = original.m_labelCondFalse;
+        this.m_fCondFalseLabelTaken = original.m_fCondFalseLabelTaken;
     }
 
     @Override
@@ -1191,10 +1201,13 @@ public class AssignmentStatement
     protected Token      tokNegate;
     protected long       endNegate;
 
-    @NotCopied private VariableDeclarationStatement[] m_decls;
+    @ComputedState("Variable declarations for multi-assignment")
+    private VariableDeclarationStatement[] m_decls;
 
-    @NotCopied private Label   m_labelCondFalse;
-    @NotCopied private boolean m_fCondFalseLabelTaken; // used for verifying code-gen
+    @ComputedState("Label for conditional false branch")
+    private Label   m_labelCondFalse;
+    @ComputedState("Whether conditional false label was used")
+    private boolean m_fCondFalseLabelTaken; // used for verifying code-gen
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(AssignmentStatement.class, "lvalue", "lvalueExpr", "rvalue");
 }

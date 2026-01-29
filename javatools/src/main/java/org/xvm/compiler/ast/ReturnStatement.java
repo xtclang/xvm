@@ -65,6 +65,12 @@ public class ReturnStatement
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "exprs" - deep copied by AstNode.clone()</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
      *
      * @param original  the ReturnStatement to copy from
      */
@@ -78,7 +84,10 @@ public class ReturnStatement
         this.exprs = copyExpressions(original.exprs);
         adopt(this.exprs);
 
-        // Transient fields NOT copied: m_fConditionalTernary, m_fTupleReturn, m_fFutureReturn
+        // Shallow copy transient fields (matching Object.clone() semantics)
+        this.m_fConditionalTernary = original.m_fConditionalTernary;
+        this.m_fTupleReturn        = original.m_fTupleReturn;
+        this.m_fFutureReturn       = original.m_fFutureReturn;
     }
 
     @Override
@@ -523,9 +532,12 @@ public class ReturnStatement
     protected Token             keyword;
     protected List<Expression>  exprs;
 
-    @NotCopied protected boolean m_fConditionalTernary;
-    @NotCopied protected boolean m_fTupleReturn;
-    @NotCopied protected boolean m_fFutureReturn;
+    @ComputedState("Whether this is a conditional ternary return")
+    protected boolean m_fConditionalTernary;
+    @ComputedState("Whether this is a tuple return")
+    protected boolean m_fTupleReturn;
+    @ComputedState("Whether this is a future return")
+    protected boolean m_fFutureReturn;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(ReturnStatement.class, "exprs");
 }

@@ -45,6 +45,12 @@ public class SequentialAssignExpression
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "expr" - deep copied by AstNode.clone()</li>
+     *   <li>Computed state: {@code m_LValTarget} - shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
      *
      * @param original  the SequentialAssignExpression to copy from
      */
@@ -54,7 +60,8 @@ public class SequentialAssignExpression
         // Copy non-child structural fields
         this.m_fPre = original.m_fPre;
 
-        // @NotCopied fields (m_LValTarget) start fresh
+        // Shallow copy transient fields (matching Object.clone() semantics)
+        this.m_LValTarget = original.m_LValTarget;
     }
 
     @Override
@@ -210,6 +217,6 @@ public class SequentialAssignExpression
 
     private final boolean m_fPre;
 
-    @NotCopied
+    @ComputedState("Cached LValue target for code generation")
     private Assignable m_LValTarget;
 }

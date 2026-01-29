@@ -41,12 +41,23 @@ public abstract class TypeExpression
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>No CHILD_FIELDS - base class for type expressions</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     *   <li>Non-transient cached state: m_constType, m_ctxPrev - not copied,
+     *       recomputed via ensureTypeConstant()</li>
+     * </ul>
      *
      * @param original  the TypeExpression to copy from
      */
     protected TypeExpression(@NotNull TypeExpression original) {
         super(Objects.requireNonNull(original));
-        // m_constType and m_ctxPrev are NOT copied - they're cached values computed during validation
+
+        // Note: m_constType and m_ctxPrev are not transient but are cached values
+        // computed during validation via ensureTypeConstant(), so they are
+        // intentionally not copied
     }
 
     /**

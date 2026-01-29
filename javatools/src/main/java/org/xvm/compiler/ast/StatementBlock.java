@@ -110,6 +110,12 @@ public class StatementBlock
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "stmts" - deep copied by AstNode.clone()</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
      *
      * @param original  the StatementBlock to copy from
      */
@@ -121,15 +127,17 @@ public class StatementBlock
         adopt(this.stmts);
 
         // Copy non-child structural fields (not transient compilation state)
-        this.source    = original.source;
-        this.lStartPos = original.lStartPos;
-        this.lEndPos   = original.lEndPos;
-        this.boundary  = original.boundary;
-        // Note: containsEnclosed is derived from stmts content, imports/importsWild are registration state
+        this.source          = original.source;
+        this.lStartPos       = original.lStartPos;
+        this.lEndPos         = original.lEndPos;
+        this.boundary        = original.boundary;
+        this.containsEnclosed = original.containsEnclosed;
 
-        // Transient fields NOT copied (they start fresh):
-        // - m_fSuppressScope, m_fTerminatedAbnormally
-        // - imports, importsWild (populated during registerStructures phase)
+        // Shallow copy transient fields (matching Object.clone() semantics)
+        this.imports      = original.imports;
+        this.importsWild  = original.importsWild;
+        this.m_fSuppressScope        = original.m_fSuppressScope;
+        this.m_fTerminatedAbnormally = original.m_fTerminatedAbnormally;
     }
 
     @Override

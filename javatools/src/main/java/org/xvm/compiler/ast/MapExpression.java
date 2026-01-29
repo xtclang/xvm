@@ -4,6 +4,9 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.List;
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
 import java.util.Map;
 
 import org.xvm.asm.Argument;
@@ -46,6 +49,41 @@ public class MapExpression
         this.keys    = keys;
         this.values  = values;
         this.lEndPos = lEndPos;
+    }
+
+    /**
+     * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "type", "keys", "values" - deep copied by AstNode.clone()</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
+     *
+     * @param original  the MapExpression to copy from
+     */
+    protected MapExpression(@NotNull MapExpression original) {
+        super(Objects.requireNonNull(original));
+
+        // Primitive field - shallow copy
+        this.lEndPos = original.lEndPos;
+
+        // Deep copy child fields (per CHILD_FIELDS)
+        this.type   = copyNode(original.type);
+        this.keys   = copyExpressions(original.keys);
+        this.values = copyExpressions(original.values);
+        adopt(this.type);
+        adopt(this.keys);
+        adopt(this.values);
+
+        // Shallow copy transient fields (matching Object.clone() semantics)
+        this.m_aKeyAST   = original.m_aKeyAST;
+        this.m_aValueAST = original.m_aValueAST;
+    }
+
+    @Override
+    public MapExpression copy() {
+        return new MapExpression(this);
     }
 
 

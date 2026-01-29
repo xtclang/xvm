@@ -72,6 +72,12 @@ public class ForEachStatement
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "conds", "block" - deep copied by AstNode.clone()</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
      *
      * @param original  the ForEachStatement to copy from
      */
@@ -82,11 +88,23 @@ public class ForEachStatement
         this.block = original.block == null ? null : original.block.copy();
         adopt(this.block);
 
-        // Transient fields NOT copied (they start fresh):
-        // m_labelContinue, m_exprLValue, m_exprRValue, m_plan, m_ctxLabelVars,
-        // m_errsLabelVars, m_regFirst, m_regLast, m_regCount, m_regEntry,
-        // m_regKeyType, m_regValType, m_fTupleLValue, m_aidConvKey, m_atypeConv,
-        // m_listContinues
+        // Shallow copy transient fields (matching Object.clone() semantics)
+        this.m_labelContinue = original.m_labelContinue;
+        this.m_exprLValue    = original.m_exprLValue;
+        this.m_exprRValue    = original.m_exprRValue;
+        this.m_plan          = original.m_plan;
+        this.m_ctxLabelVars  = original.m_ctxLabelVars;
+        this.m_errsLabelVars = original.m_errsLabelVars;
+        this.m_regFirst      = original.m_regFirst;
+        this.m_regLast       = original.m_regLast;
+        this.m_regCount      = original.m_regCount;
+        this.m_regEntry      = original.m_regEntry;
+        this.m_regKeyType    = original.m_regKeyType;
+        this.m_regValType    = original.m_regValType;
+        this.m_fTupleLValue  = original.m_fTupleLValue;
+        this.m_aidConvKey    = original.m_aidConvKey;
+        this.m_atypeConv     = original.m_atypeConv;
+        this.m_listContinues = original.m_listContinues;
     }
 
     @Override

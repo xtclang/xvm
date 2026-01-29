@@ -62,6 +62,12 @@ public abstract class BiExpression
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "expr1", "expr2" - deep copied by AstNode.clone()</li>
+     *   <li>No transient fields in this class</li>
+     * </ul>
      *
      * @param original  the BiExpression to copy from
      */
@@ -71,11 +77,9 @@ public abstract class BiExpression
         // Token is immutable, safe to share
         this.operator = original.operator;
 
-        // Deep copy child expressions
-        this.expr1 = original.expr1 == null ? null : original.expr1.copy();
-        this.expr2 = original.expr2 == null ? null : original.expr2.copy();
-
-        // Adopt copied children
+        // Deep copy child fields (per CHILD_FIELDS)
+        this.expr1 = copyNode(original.expr1);
+        this.expr2 = copyNode(original.expr2);
         adopt(this.expr1);
         adopt(this.expr2);
     }

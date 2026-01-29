@@ -3,6 +3,10 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -26,6 +30,34 @@ public class NonBindingExpression
         this.lStartPos = lStartPos;
         this.lEndPos   = lEndPos;
         this.type      = type;
+    }
+
+    /**
+     * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "type" - deep copied by AstNode.clone()</li>
+     *   <li>No transient fields in this class</li>
+     * </ul>
+     *
+     * @param original  the NonBindingExpression to copy from
+     */
+    protected NonBindingExpression(@NotNull NonBindingExpression original) {
+        super(Objects.requireNonNull(original));
+
+        // Primitive fields - shallow copy
+        this.lStartPos = original.lStartPos;
+        this.lEndPos   = original.lEndPos;
+
+        // Deep copy child field (per CHILD_FIELDS)
+        this.type = copyNode(original.type);
+        adopt(this.type);
+    }
+
+    @Override
+    public NonBindingExpression copy() {
+        return new NonBindingExpression(this);
     }
 
 

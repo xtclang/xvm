@@ -3,6 +3,10 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -31,6 +35,38 @@ public class TernaryExpression
         this.cond     = cond;
         this.exprThen = exprThen;
         this.exprElse = exprElse;
+    }
+
+    /**
+     * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "cond", "exprThen", "exprElse" - deep copied by AstNode.clone()</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
+     *
+     * @param original  the TernaryExpression to copy from
+     */
+    protected TernaryExpression(@NotNull TernaryExpression original) {
+        super(Objects.requireNonNull(original));
+
+        // Deep copy child fields (per CHILD_FIELDS)
+        this.cond     = copyNode(original.cond);
+        this.exprThen = copyNode(original.exprThen);
+        this.exprElse = copyNode(original.exprElse);
+        adopt(this.cond);
+        adopt(this.exprThen);
+        adopt(this.exprElse);
+
+        // Shallow copy transient fields (matching Object.clone() semantics)
+        this.m_fConditional = original.m_fConditional;
+        this.m_plan         = original.m_plan;
+    }
+
+    @Override
+    public TernaryExpression copy() {
+        return new TernaryExpression(this);
     }
 
 

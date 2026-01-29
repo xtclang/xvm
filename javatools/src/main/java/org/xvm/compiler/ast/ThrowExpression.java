@@ -59,6 +59,12 @@ public class ThrowExpression
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "expr", "message" - deep copied by AstNode.clone()</li>
+     *   <li>No transient fields in this class</li>
+     * </ul>
      *
      * @param original  the ThrowExpression to copy from
      */

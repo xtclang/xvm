@@ -69,6 +69,12 @@ public class WhileStatement
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "conds", "block" - deep copied by AstNode.clone()</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
      *
      * @param original  the WhileStatement to copy from
      */
@@ -82,9 +88,15 @@ public class WhileStatement
         // Copy non-child structural fields
         this.lEndPos = original.lEndPos;
 
-        // Transient fields NOT copied (they start fresh):
-        // m_labelContinue, m_ctxLabelVars, m_errsLabelVars, m_regFirst, m_regCount,
-        // m_listContinues, m_astCond, m_aAllocSpecial
+        // Shallow copy transient fields (matching Object.clone() semantics)
+        this.m_labelContinue = original.m_labelContinue;
+        this.m_ctxLabelVars  = original.m_ctxLabelVars;
+        this.m_errsLabelVars = original.m_errsLabelVars;
+        this.m_regFirst      = original.m_regFirst;
+        this.m_regCount      = original.m_regCount;
+        this.m_listContinues = original.m_listContinues;
+        this.m_astCond       = original.m_astCond;
+        this.m_aAllocSpecial = original.m_aAllocSpecial;
     }
 
     @Override

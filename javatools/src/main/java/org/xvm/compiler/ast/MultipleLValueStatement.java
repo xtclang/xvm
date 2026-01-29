@@ -46,6 +46,12 @@ public class MultipleLValueStatement
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "LVals" - deep copied by AstNode.clone()</li>
+     *   <li>Computed state: {@code aGroundLabels}, {@code expr} - shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
      *
      * @param original  the MultipleLValueStatement to copy from
      */
@@ -56,7 +62,9 @@ public class MultipleLValueStatement
         this.LVals = copyNodes(original.LVals);
         adopt(this.LVals);
 
-        // @NotCopied fields (aGroundLabels, expr) start fresh
+        // Shallow copy transient fields (matching Object.clone() semantics)
+        this.aGroundLabels = original.aGroundLabels;
+        this.expr          = original.expr;
     }
 
     @Override
@@ -565,13 +573,13 @@ public class MultipleLValueStatement
     /**
      * Grounding labels for LValue expressions that can short-circuit.
      */
-    @NotCopied
+    @ComputedState("Grounding labels for short-circuit expressions")
     protected Label[] aGroundLabels;
 
     /**
      * Lazily instantiated expression that represents the multiple underlying LValue expressions.
      */
-    @NotCopied
+    @ComputedState("Lazily instantiated expression for LValues")
     protected MultipleLValueExpression expr;
 
     private static final Field[] STMT_FIELDS = fieldsForNames(MultipleLValueStatement.class, "LVals");

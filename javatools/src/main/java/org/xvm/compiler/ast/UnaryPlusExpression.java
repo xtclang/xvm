@@ -28,6 +28,12 @@ public class UnaryPlusExpression
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: inherited from PrefixExpression</li>
+     *   <li>No transient fields in this class</li>
+     * </ul>
      *
      * @param original  the UnaryPlusExpression to copy from
      */

@@ -57,19 +57,27 @@ public class StatementExpression
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "body" - deep copied by AstNode.clone()</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
      *
      * @param original  the StatementExpression to copy from
      */
     protected StatementExpression(@NotNull StatementExpression original) {
         super(Objects.requireNonNull(original));
 
-        // Deep copy child
-        this.body = original.body == null ? null : original.body.copy();
-
-        // Adopt copied child
+        // Deep copy child field (per CHILD_FIELDS)
+        this.body = copyNode(original.body);
         adopt(this.body);
 
-        // Transient fields start fresh (post-validation state)
+        // Shallow copy all transient fields (matching Object.clone() semantics)
+        this.m_atypeRequired = original.m_atypeRequired;
+        this.m_collector     = original.m_collector;
+        this.m_aLVal         = original.m_aLVal;
+        this.m_astBody       = original.m_astBody;
     }
 
     @Override

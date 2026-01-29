@@ -123,6 +123,14 @@ public class CmpExpression
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "expr1", "expr2" - deep copied by AstNode.clone()</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
+     *
+     * @param original  the CmpExpression to copy from
      */
     protected CmpExpression(CmpExpression original) {
         super(original);

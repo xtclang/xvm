@@ -26,6 +26,14 @@ public class DecoratedTypeExpression
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "type" - deep copied by AstNode.clone()</li>
+     *   <li>No transient fields in this class</li>
+     * </ul>
+     *
+     * @param original  the DecoratedTypeExpression to copy from
      */
     protected DecoratedTypeExpression(DecoratedTypeExpression original) {
         super(original);

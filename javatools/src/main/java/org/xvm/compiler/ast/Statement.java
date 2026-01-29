@@ -35,12 +35,26 @@ public abstract class Statement
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>No CHILD_FIELDS - base class for statements</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     *   <li>Transient: m_ctx (validation context), m_listBreaks (break info list)</li>
+     *   <li>Non-transient: m_labelEnd (end label) - not copied, created on demand</li>
+     * </ul>
      *
-     * @param original  the statement to copy from
+     * @param original  the Statement to copy from
      */
     protected Statement(@NotNull Statement original) {
         super(Objects.requireNonNull(original));
-        // Transient fields (m_labelEnd, m_ctx, m_listBreaks) are NOT copied - they start fresh
+
+        // Shallow copy transient fields to match Object.clone() semantics
+        this.m_ctx        = original.m_ctx;
+        this.m_listBreaks = original.m_listBreaks;
+
+        // Note: m_labelEnd is not transient but is created on demand via getEndLabel(),
+        // so it is intentionally not copied
     }
 
     /**

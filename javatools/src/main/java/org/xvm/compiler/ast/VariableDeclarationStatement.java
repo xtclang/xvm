@@ -55,6 +55,12 @@ public class VariableDeclarationStatement
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "type" - deep copied by AstNode.clone()</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
      *
      * @param original  the VariableDeclarationStatement to copy from
      */
@@ -69,7 +75,10 @@ public class VariableDeclarationStatement
         this.type = original.type == null ? null : original.type.copy();
         adopt(this.type);
 
-        // Transient fields NOT copied: m_reg, m_exprName, m_fConstAnno
+        // Shallow copy transient fields (matching Object.clone() semantics)
+        this.m_reg       = original.m_reg;
+        this.m_exprName  = original.m_exprName;
+        this.m_fConstAnno = original.m_fConstAnno;
     }
 
     @Override
@@ -361,9 +370,12 @@ public class VariableDeclarationStatement
     protected Token          name;
     protected boolean        term;
 
-    @NotCopied private Register       m_reg;
-    @NotCopied private NameExpression m_exprName;
-    @NotCopied private boolean        m_fConstAnno;
+    @ComputedState("Register for this variable")
+    private Register       m_reg;
+    @ComputedState("Name expression for this variable")
+    private NameExpression m_exprName;
+    @ComputedState("Whether this has a @Const annotation")
+    private boolean        m_fConstAnno;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(VariableDeclarationStatement.class, "type");
 }

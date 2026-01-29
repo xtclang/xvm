@@ -42,6 +42,14 @@ public class IsExpression
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "expr1", "expr2" - deep copied by AstNode.clone()</li>
+     *   <li>No transient fields in this class</li>
+     * </ul>
+     *
+     * @param original  the IsExpression to copy from
      */
     protected IsExpression(IsExpression original) {
         super(original);

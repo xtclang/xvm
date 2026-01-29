@@ -4,6 +4,9 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.List;
+import java.util.Objects;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -41,6 +44,43 @@ public class SwitchExpression
         this.cond     = cond;
         this.contents = contents;
         this.lEndPos  = lEndPos;
+    }
+
+    /**
+     * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "cond", "contents" - deep copied by AstNode.clone()</li>
+     *   <li>All transient fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
+     *
+     * @param original  the SwitchExpression to copy from
+     */
+    protected SwitchExpression(@NotNull SwitchExpression original) {
+        super(Objects.requireNonNull(original));
+
+        // Token is immutable, safe to share
+        this.keyword = original.keyword;
+
+        // Primitive field - shallow copy
+        this.lEndPos = original.lEndPos;
+
+        // Deep copy child fields (per CHILD_FIELDS)
+        this.cond     = copyNodes(original.cond);
+        this.contents = copyNodes(original.contents);
+        adopt(this.cond);
+        adopt(this.contents);
+
+        // Shallow copy transient fields (matching Object.clone() semantics)
+        this.m_casemgr     = original.m_casemgr;
+        this.m_aconstCases = original.m_aconstCases;
+        this.m_abastBody   = original.m_abastBody;
+    }
+
+    @Override
+    public SwitchExpression copy() {
+        return new SwitchExpression(this);
     }
 
 

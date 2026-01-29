@@ -104,6 +104,13 @@ public class LambdaExpression
 
     /**
      * Copy constructor.
+     * <p>
+     * Master clone() semantics:
+     * <ul>
+     *   <li>CHILD_FIELDS: "params", "paramNames", "body" - deep copied by AstNode.clone()</li>
+     *   <li>Custom clone() override: sets m_lambda to null (MethodStructure belongs to original)</li>
+     *   <li>All other transient fields: shallow copied via Object.clone() bitwise copy</li>
+     * </ul>
      *
      * @param original  the LambdaExpression to copy from
      */
@@ -114,18 +121,26 @@ public class LambdaExpression
         this.operator  = original.operator;
         this.lStartPos = original.lStartPos;
 
-        // Deep copy child lists (params is List<Parameter>, paramNames is List<Expression>)
+        // Deep copy child fields (per CHILD_FIELDS)
         this.params     = copyNodes(original.params);
         this.paramNames = copyExpressions(original.paramNames);
-        this.body       = original.body == null ? null : original.body.copy();
-
-        // Adopt copied children
+        this.body       = copyNode(original.body);
         adopt(this.params);
         adopt(this.paramNames);
         adopt(this.body);
 
-        // m_lambda (transient) must NOT be copied - the lambda structure belongs to the original
-        // All other transient fields start fresh
+        // m_lambda must NOT be copied - matches custom clone() behavior in master
+        // The MethodStructure belongs to the original, not the copy
+        this.m_lambda = null;
+
+        // Shallow copy all other transient fields (matching Object.clone() semantics)
+        this.m_fPrepared    = original.m_fPrepared;
+        this.m_typeRequired = original.m_typeRequired;
+        this.m_collector    = original.m_collector;
+        this.m_ctxLambda    = original.m_ctxLambda;
+        this.m_aBindArgs    = original.m_aBindArgs;
+        this.m_astLambda    = original.m_astLambda;
+        this.m_aAstBind     = original.m_aAstBind;
     }
 
     @Override
