@@ -6,6 +6,8 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
@@ -90,10 +92,19 @@ public class AnnotatedTypeExpression
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
-     * @return the annotation
+     * @return the annotation expression
      */
-    AnnotationExpression getAnnotation() {
+    @NotNull
+    public AnnotationExpression getAnnotation() {
         return annotation;
+    }
+
+    /**
+     * @return the underlying type being annotated
+     */
+    @NotNull
+    public TypeExpression getUnderlyingType() {
+        return type;
     }
 
     /**

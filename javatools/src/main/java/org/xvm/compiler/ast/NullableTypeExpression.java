@@ -3,6 +3,8 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 
@@ -66,6 +68,14 @@ public class NullableTypeExpression
 
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    /**
+     * @return the underlying nullable type expression
+     */
+    @NotNull
+    public TypeExpression getUnderlyingType() {
+        return type;
+    }
 
     @Override
     protected boolean canResolveNames() {

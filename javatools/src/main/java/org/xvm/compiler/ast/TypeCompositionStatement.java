@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import java.util.stream.Collectors;
 
@@ -1038,13 +1039,13 @@ public class TypeCompositionStatement
                         fAlreadyExtends = composition.condition == null;
                         typeDefaultInto = null;
 
-                        TypeConstant type = composition.getType().ensureTypeConstant();
-                        Extends      node = (Extends) composition;
+                        var type = composition.getType().ensureTypeConstant();
+                        var node = (Extends) composition;
                         for (ClassStructure struct : componentList) {
                             // register the class that the component extends
-                            Contribution contrib = struct.addContribution(Composition.Extends, type);
+                            var contrib = struct.addContribution(Composition.Extends, type);
                             composition.setContribution(contrib);
-                            m_mapContribArgs.put(contrib, node.args);
+                            m_mapContribArgs.put(contrib, node.getArgs());
                         }
                     }
                 }
@@ -1310,6 +1311,7 @@ public class TypeCompositionStatement
                     ListMap<String, TypeConstant> mapConstraints = null;
                     if (incorp.isConditional()) {
                         mapConstraints = new ListMap<>();
+                        // isConditional() guarantees constraints is present
                         for (Parameter constraint : incorp.getConstraints()) {
                             // type is null means no constraint
                             TypeExpression type = constraint.getType();
@@ -1320,10 +1322,10 @@ public class TypeCompositionStatement
 
                     for (ClassStructure struct : componentList) {
                         // register the mixin that the component incorporates
-                        Contribution contrib = struct.addIncorporates(
+                        var contrib = struct.addIncorporates(
                                 composition.getType().ensureTypeConstant(), mapConstraints);
                         composition.setContribution(contrib);
-                        m_mapContribArgs.put(contrib, incorp.args);
+                        m_mapContribArgs.put(contrib, incorp.getArgs());
                     }
                 }
                 break;
@@ -1652,8 +1654,9 @@ public class TypeCompositionStatement
 
                     // now that names have been resolved, if an injector and any injection list are
                     // specified, we can add them to the package import
-                    NamedTypeExpression exprInjector = compImport.getInjector();
-                    if (exprInjector != null) {
+                    Optional<NamedTypeExpression> optInjector = compImport.getInjector();
+                    if (optInjector.isPresent()) {
+                        NamedTypeExpression exprInjector = optInjector.get();
                         Constant idInjector = exprInjector.getIdentityConstant();
                         if (idInjector.containsUnresolved()) {
                             mgr.requestRevisit();
@@ -1666,20 +1669,18 @@ public class TypeCompositionStatement
                                 && clz.isSingleton()) {
                             ConstantPool      pool          = pool();
                             SingletonConstant constInjector = pool.ensureSingletonConstConstant(id);
-                            List<Injection>   listInject    = null;
-                            List<Parameter>   listParam     = compImport.getSpecificInjections();
-                            if (listParam != null) {
-                                listInject = new ArrayList<>(listParam.size());
-                                for (Parameter param : listParam) {
-                                    TypeConstant   constType = param.getType().ensureTypeConstant();
-                                    String         sName     = param.getName();
-                                    StringConstant constName = sName == null
-                                            ? null
-                                            : pool.ensureStringConstant(sName);
-                                    listInject.add(new Injection(constType, constName));
-                                }
+                            var listParam  = compImport.getSpecificInjections();
+                            var listInject = new ArrayList<Injection>(listParam.size());
+                            for (Parameter param : listParam) {
+                                TypeConstant   constType = param.getType().ensureTypeConstant();
+                                String         sName     = param.getName();
+                                StringConstant constName = sName == null
+                                        ? null
+                                        : pool.ensureStringConstant(sName);
+                                listInject.add(new Injection(constType, constName));
                             }
-                            structPkg.setImportedModuleInjector(constInjector, listInject);
+                            structPkg.setImportedModuleInjector(constInjector,
+                                    listInject.isEmpty() ? null : listInject);
                         } else {
                             exprInjector.log(errs, Severity.ERROR, Compiler.SINGLETON_REQUIRED);
                             break;
@@ -2050,15 +2051,15 @@ public class TypeCompositionStatement
         if (fExplicitDefault || fExplicitShorthand) {
             // when there is an explicit shorthand or default constructor, we don't allow
             // parameterized contributions ("extends" or "incorporates")
-            for (CompositionNode composition : compositions) {
-                List<Expression> listArgs =
+            for (var composition : compositions) {
+                var listArgs =
                         composition instanceof Extends nodeExtends
-                            ? nodeExtends.args :
+                            ? nodeExtends.getArgs() :
                         composition instanceof Incorporates nodeIncorp
-                            ? nodeIncorp.args
-                            : null;
+                            ? nodeIncorp.getArgs()
+                            : List.<Expression>of();
 
-                if (listArgs != null && !listArgs.isEmpty()) {
+                if (!listArgs.isEmpty()) {
                     composition.log(errs, Severity.ERROR, Compiler.CONTRIBUTION_PARAMS_UNEXPECTED);
                 }
             }

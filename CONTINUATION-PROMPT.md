@@ -36,6 +36,14 @@ Added `@NotNull` to list fields with null-to-empty conversion in primary constru
 - ConditionalStatement.conds, AssertStatement.conds
 - TupleExpression.exprs, MapExpression.keys/values
 
+### @Unmodifiable Annotations - IN PROGRESS
+Added `@Unmodifiable` to list fields that are never modified after construction:
+- CompositionNode.Extends.args
+- CompositionNode.Incorporates.args, constraints
+- CompositionNode.Import.vers, injects
+
+Also converted copy constructors to use `.toList()` instead of `Collectors.toCollection(ArrayList::new)`.
+
 ### Modern Collection Patterns - IN PROGRESS
 Replaced legacy `Collections.emptyList()`/`Collections.singletonList()` with `List.of()`:
 - ForStatement, ConditionalStatement, AssertStatement, TupleExpression
@@ -198,6 +206,12 @@ Still need getters for:
 - Parameter
 - Various type expressions (FunctionTypeExpression, etc.)
 
+### 1b. Analyze and Apply @Unmodifiable to More Classes
+For each class with list fields, investigate mutability and apply @Unmodifiable where appropriate:
+1. Search for mutations: `grep -E '\.(add|remove|set|clear)\(' <file>`
+2. If no mutations after construction, apply `@Unmodifiable` pattern
+3. Convert copy constructors to use `.toList()` instead of `ArrayList::new`
+
 ### 2. Continue Modern Collection Patterns
 Still have ~16 `Collections.` usages remaining in:
 - AstNode.java (emptyMap, singletonList)
@@ -231,11 +245,34 @@ Still have ~16 `Collections.` usages remaining in:
 - `@ComputedState` - For computed/cached state fields (formerly transient)
 - `@ChildNode(index, description)` - For child node fields (replaces CHILD_FIELDS)
 - `@NotNull` - For collection fields guaranteed non-null
+- `@Unmodifiable` - For collection fields that are immutable after construction
 
 ### Getter Patterns
 - Nullable fields: `public Optional<T> getField() { return Optional.ofNullable(field); }`
 - Non-null fields: `@NotNull public T getField() { return field; }`
 - Determine nullability from constructor semantics (direct field dereference = non-null)
+
+### Immutability Patterns
+When analyzing fields, investigate BOTH nullness AND mutability:
+1. **Nullness**: Can the field be null? → Use `Optional<T>` for nullable, `@NotNull` for non-null
+2. **Mutability**: Is the collection ever modified after construction? → Use `@Unmodifiable` and `.toList()` for immutable
+
+**Prefer immutable collections where possible:**
+```java
+// In copy constructor - use toList() for immutable collections
+this.args = original.args.stream().map(Expression::copy).toList();
+
+// In primary constructor - use List.of() for empty
+this.args = args == null ? List.of() : args;
+
+// Field declaration
+@NotNull @Unmodifiable protected List<Expression> args;
+
+// Getter
+@NotNull @Unmodifiable public List<Expression> getArgs() { return args; }
+```
+
+This enables future copy-on-write optimization and moves toward the Roslyn-like stateless AST goal.
 
 ## Recent Commits
 

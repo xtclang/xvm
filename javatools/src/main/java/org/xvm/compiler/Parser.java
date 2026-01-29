@@ -383,10 +383,10 @@ public class Parser {
             Token keyword;
             if ((keyword = match(Id.EXTENDS)) != null) {
                 do {
-                    TypeExpression   type = parseExtendedTypeExpression();
-                    List<Expression> args = parseArgumentList(false, false, false);
-                    compositions.add(new CompositionNode.Extends(null, keyword, type, args,
-                            prev().getEndPosition()));
+                    var type = parseExtendedTypeExpression();
+                    var args = parseArgumentList(false, false, false);
+                    compositions.add(new CompositionNode.Extends(null, keyword, type,
+                            args == null ? List.of() : args, prev().getEndPosition()));
                 } while (match(Id.COMMA) != null);
             } else if ((keyword = match(Id.IMPLEMENTS)) != null) {
                 do {
@@ -440,8 +440,10 @@ public class Parser {
                         } while (match(Id.DOT) != null);
                     }
 
-                    List<Expression> args = parseArgumentList(false, false, false);
-                    compositions.add(new CompositionNode.Incorporates(null, keyword, type, args, constraints));
+                    var args = parseArgumentList(false, false, false);
+                    compositions.add(new CompositionNode.Incorporates(null, keyword, type,
+                            args == null ? List.of() : args,
+                            constraints == null ? List.of() : constraints));
                 } while (match(Id.COMMA) != null);
             } else if ((keyword = match(Id.INTO)) != null) {
                 compositions.add(new CompositionNode.Into(null, keyword, parseExtendedTypeExpression()));
@@ -465,7 +467,10 @@ public class Parser {
                         injector = parseNamedTypeExpression(null);
                     }
                     compositions.add(new CompositionNode.Import(null, keyword, modifier,
-                            module,versions, injects, injector, prev().getEndPosition()));
+                            module,
+                            versions == null ? List.of() : versions,
+                            injects == null ? List.of() : injects,
+                            injector, prev().getEndPosition()));
                 }
                 break;
 

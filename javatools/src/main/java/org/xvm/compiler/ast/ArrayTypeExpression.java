@@ -5,7 +5,10 @@ import java.lang.reflect.Field;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
@@ -82,10 +85,25 @@ public class ArrayTypeExpression
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
+     * @return the element type expression
+     */
+    @NotNull
+    public TypeExpression getElementType() {
+        return type;
+    }
+
+    /**
      * @return the number of array dimensions, 0 or more
      */
     public int getDimensions() {
         return dims;
+    }
+
+    /**
+     * @return the list of index expressions (may be absent if only dims was specified)
+     */
+    public Optional<List<Expression>> getIndexes() {
+        return Optional.ofNullable(indexes);
     }
 
     @Override

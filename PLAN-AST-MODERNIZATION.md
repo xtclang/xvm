@@ -262,7 +262,15 @@ The migration must be done incrementally to maintain a working compiler. **All f
 **Getter Pattern Standards:**
 - Nullable fields → `public Optional<T> getField() { return Optional.ofNullable(field); }`
 - Non-null fields → `@NotNull public T getField() { return field; }`
+- Immutable collections → `@NotNull @Unmodifiable public List<T> getField() { return field; }`
 - Nullability determined by constructor semantics (direct dereference in constructor = non-null)
+- Mutability determined by searching for mutations (`.add()`, `.remove()`, `.set()`, `.clear()`) after construction
+
+**Mutability Analysis Pattern:**
+When modernizing a class, investigate both nullness AND mutability:
+1. Search for mutations: `grep -E '\.(add|remove|set|clear)\(' <file>`
+2. If no mutations found after construction, use `@Unmodifiable` and `.toList()` in copy constructors
+3. Empty list pattern: Use `List.of()` instead of `new ArrayList<>()` for empty collections
 
 **Step 3: Visitor Pattern** - IN PROGRESS
 - ✅ Design visitor interface hierarchy (`AstVisitor<R>`)
@@ -562,8 +570,36 @@ Added `@NotNull` annotations to list fields that have null-to-empty conversion i
 - `AssertStatement.java` - `@NotNull protected List<AstNode> conds`
 - `TupleExpression.java` - `@NotNull protected List<Expression> exprs`
 - `MapExpression.java` - `@NotNull protected List<Expression> keys`, `@NotNull protected List<Expression> values`
+- `CompositionNode.Extends.java` - `@NotNull @Unmodifiable protected List<Expression> args`
+- `CompositionNode.Incorporates.java` - `@NotNull @Unmodifiable protected List<Expression> args`, `@NotNull @Unmodifiable protected List<Parameter> constraints`
+- `CompositionNode.Import.java` - `@NotNull @Unmodifiable protected List<VersionOverride> vers`, `@NotNull @Unmodifiable protected List<Parameter> injects`
 
 NOTE: Some list fields preserve null because null has semantic meaning distinct from empty (e.g., `CaseStatement.exprs` where null means "default:" case)
+
+**@Unmodifiable Annotations for Immutable Collections** - IN PROGRESS
+When analyzing fields, investigate BOTH nullness AND mutability. Use `@Unmodifiable` for collections that are never modified after construction:
+- Use `.toList()` in copy constructors to create immutable lists
+- Use `List.of()` for empty collections in primary constructors
+- Add `@Unmodifiable` annotation to both field declaration and getter
+
+Pattern:
+```java
+// Field declaration
+@NotNull @Unmodifiable protected List<Expression> args;
+
+// Copy constructor
+this.args = original.args.stream().map(Expression::copy).toList();
+
+// Getter
+@NotNull @Unmodifiable public List<Expression> getArgs() { return args; }
+```
+
+Applied to:
+- `CompositionNode.Extends.args`
+- `CompositionNode.Incorporates.args`, `CompositionNode.Incorporates.constraints`
+- `CompositionNode.Import.vers`, `CompositionNode.Import.injects`
+
+Goal: Move toward immutable AST node fields wherever possible to enable future copy-on-write optimization and Roslyn-like stateless architecture.
 
 **Convenience Constructors Added**:
 - `StatementBlock()` - no-arg constructor for empty statement blocks

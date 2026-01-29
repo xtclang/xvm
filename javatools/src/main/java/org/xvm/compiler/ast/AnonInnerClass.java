@@ -253,7 +253,7 @@ public class AnonInnerClass {
 
             case MIXIN:
                 ensureCompositions().add(new Incorporates(null,
-                        genKeyword(exprType, Id.INCORPORATES), exprType, null, null));
+                        genKeyword(exprType, Id.INCORPORATES), exprType));
                 return;
 
             case INTERFACE:

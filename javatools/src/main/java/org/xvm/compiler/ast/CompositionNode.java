@@ -6,9 +6,11 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Unmodifiable;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Component.Contribution;
@@ -174,12 +176,13 @@ public abstract class CompositionNode
             extends CompositionNode {
         public Extends(Expression condition, Token keyword, TypeExpression type) {
             super(condition, keyword, type);
+            this.args = List.of();
         }
 
         public Extends(Expression condition, Token keyword, TypeExpression type,
-                       List<Expression> args, long lEndPos) {
+                       @NotNull List<Expression> args, long lEndPos) {
             super(condition, keyword, type);
-            this.args    = args;
+            this.args    = Objects.requireNonNull(args);
             this.lEndPos = lEndPos;
         }
 
@@ -203,8 +206,7 @@ public abstract class CompositionNode
             this.lEndPos = original.lEndPos;
 
             // Step 2: Deep copy children explicitly (args - condition and type handled by super)
-            this.args = original.args == null ? null
-                    : original.args.stream().map(Expression::copy).collect(Collectors.toCollection(ArrayList::new));
+            this.args = original.args.stream().map(Expression::copy).toList();
 
             // Step 3: Adopt copied children
             adopt(this.args);
@@ -218,6 +220,15 @@ public abstract class CompositionNode
         @Override
         public <R> R accept(AstVisitor<R> visitor) {
             return visitor.visit(this);
+        }
+
+        /**
+         * @return the list of constructor arguments (empty if none)
+         */
+        @NotNull
+        @Unmodifiable
+        public List<Expression> getArgs() {
+            return args;
         }
 
         @Override
@@ -236,7 +247,7 @@ public abstract class CompositionNode
 
             sb.append(toStartString());
 
-            if (args != null) {
+            if (!args.isEmpty()) {
                 sb.append('(')
                   .append(args.stream()
                           .map(Expression::toString)
@@ -249,7 +260,7 @@ public abstract class CompositionNode
         }
 
         @ChildNode(index = 2, description = "Constructor arguments")
-        protected List<Expression> args;
+        @NotNull @Unmodifiable protected List<Expression> args;
         protected long             lEndPos;
 
         private static final Field[] CHILD_FIELDS = fieldsForNames(Extends.class,
@@ -298,6 +309,14 @@ public abstract class CompositionNode
         @Override
         public <R> R accept(AstVisitor<R> visitor) {
             return visitor.visit(this);
+        }
+
+        /**
+         * @return the annotation expression
+         */
+        @NotNull
+        public AnnotationExpression getAnnotation() {
+            return annotation;
         }
 
         public Annotation ensureAnnotation(ConstantPool pool) {
@@ -355,11 +374,18 @@ public abstract class CompositionNode
 
     public static class Incorporates
             extends CompositionNode {
+        /**
+         * Convenience constructor for non-conditional incorporates without arguments.
+         */
+        public Incorporates(Expression condition, Token keyword, TypeExpression type) {
+            this(condition, keyword, type, List.of(), List.of());
+        }
+
         public Incorporates(Expression condition, Token keyword, TypeExpression type,
-                            List<Expression> args, List<Parameter> constraints) {
+                            @NotNull List<Expression> args, @NotNull List<Parameter> constraints) {
             super(condition, keyword, type);
-            this.args        = args;
-            this.constraints = constraints;
+            this.args        = Objects.requireNonNull(args);
+            this.constraints = Objects.requireNonNull(constraints);
         }
 
         /**
@@ -377,10 +403,8 @@ public abstract class CompositionNode
             super(Objects.requireNonNull(original));
 
             // Deep copy children explicitly
-            this.args = original.args == null ? null
-                    : original.args.stream().map(Expression::copy).collect(Collectors.toCollection(ArrayList::new));
-            this.constraints = original.constraints == null ? null
-                    : original.constraints.stream().map(Parameter::copy).collect(Collectors.toCollection(ArrayList::new));
+            this.args = original.args.stream().map(Expression::copy).toList();
+            this.constraints = original.constraints.stream().map(Parameter::copy).toList();
 
             // Adopt copied children
             adopt(this.args);
@@ -398,24 +422,35 @@ public abstract class CompositionNode
         }
 
         /**
+         * @return the list of constructor arguments (empty if none)
+         */
+        @NotNull
+        @Unmodifiable
+        public List<Expression> getArgs() {
+            return args;
+        }
+
+        /**
          * @return true iff the incorporates clause is conditional based on the generic parameters
          *         of the specified type
          */
         public boolean isConditional() {
-            return constraints != null;
+            return !constraints.isEmpty();
         }
 
         /**
-         * @return list of constraints for conditional incorporates; null otherwise
+         * @return list of constraints for conditional incorporates (empty if not conditional)
          */
+        @NotNull
+        @Unmodifiable
         public List<Parameter> getConstraints() {
             return constraints;
         }
 
         @Override
         public long getEndPosition() {
-            return condition == null && args != null && !args.isEmpty()
-                    ? args.get(args.size()-1).getEndPosition()
+            return condition == null && !args.isEmpty()
+                    ? args.getLast().getEndPosition()
                     : super.getEndPosition();
         }
 
@@ -438,7 +473,7 @@ public abstract class CompositionNode
 
             if (isConditional()) {
                 // special handling for "incorporates conditional <T1 extends T2, ..>"
-                String sType = type.toString();
+                var sType = type.toString();
                 sb.append(" conditional ")
                   .append(sType, 0, sType.indexOf('<'));
 
@@ -452,7 +487,7 @@ public abstract class CompositionNode
                   .append(type);
             }
 
-            if (args != null) {
+            if (!args.isEmpty()) {
                 sb.append('(')
                   .append(args.stream()
                           .map(Expression::toString)
@@ -465,9 +500,9 @@ public abstract class CompositionNode
         }
 
         @ChildNode(index = 2, description = "Constructor arguments")
-        protected List<Expression> args;
+        @NotNull @Unmodifiable protected List<Expression> args;
         @ChildNode(index = 3, description = "Conditional constraints")
-        protected List<Parameter>  constraints;
+        @NotNull @Unmodifiable protected List<Parameter>  constraints;
 
         private static final Field[] CHILD_FIELDS = fieldsForNames(Incorporates.class,
                 "condition", "type", "args", "constraints");
@@ -646,13 +681,21 @@ public abstract class CompositionNode
      */
     public static class Import
             extends CompositionNode {
+        /**
+         * Convenience constructor for imports without version overrides or injections.
+         */
         public Import(Expression condition, Token keyword, Token modifier, NamedTypeExpression type,
-                      List<VersionOverride> vers, List<Parameter> injects,
+                      long lEndPos) {
+            this(condition, keyword, modifier, type, List.of(), List.of(), null, lEndPos);
+        }
+
+        public Import(Expression condition, Token keyword, Token modifier, NamedTypeExpression type,
+                      @NotNull List<VersionOverride> vers, @NotNull List<Parameter> injects,
                       NamedTypeExpression injector, long lEndPos) {
             super(condition, keyword, type);
             this.modifier = modifier;
-            this.vers     = vers;
-            this.injects  = injects;
+            this.vers     = Objects.requireNonNull(vers);
+            this.injects  = Objects.requireNonNull(injects);
             this.injector = injector;
             this.lEndPos  = lEndPos;
         }
@@ -678,10 +721,8 @@ public abstract class CompositionNode
             this.lEndPos  = original.lEndPos;
 
             // Step 2: Deep copy children explicitly
-            this.vers = original.vers == null ? null
-                    : original.vers.stream().map(VersionOverride::copy).collect(Collectors.toCollection(ArrayList::new));
-            this.injects = original.injects == null ? null
-                    : original.injects.stream().map(Parameter::copy).collect(Collectors.toCollection(ArrayList::new));
+            this.vers = original.vers.stream().map(VersionOverride::copy).toList();
+            this.injects = original.injects.stream().map(Parameter::copy).toList();
             this.injector = original.injector == null ? null : original.injector.copy();
 
             // Step 3: Adopt copied children
@@ -723,17 +764,15 @@ public abstract class CompositionNode
          */
         public VersionTree<Boolean> getAllowVersionTree() {
             VersionTree<Boolean> vtree = new VersionTree<>();
-            if (vers != null) {
-                for (VersionOverride override : vers) {
-                    Version ver = override.getVersion();
-                    Boolean BPrevAllow = vtree.get(ver);
-                    boolean fAllow = override.isAllowed();
-                    if (BPrevAllow != null && fAllow != BPrevAllow.booleanValue()) {
-                        throw new IllegalStateException(
-                                "version " + ver + " is both allowed and disallowed");
-                    } else {
-                        vtree.put(ver, fAllow);
-                    }
+            for (VersionOverride override : vers) {
+                Version ver = override.getVersion();
+                Boolean BPrevAllow = vtree.get(ver);
+                boolean fAllow = override.isAllowed();
+                if (BPrevAllow != null && fAllow != BPrevAllow.booleanValue()) {
+                    throw new IllegalStateException(
+                            "version " + ver + " is both allowed and disallowed");
+                } else {
+                    vtree.put(ver, fAllow);
                 }
             }
             return vtree;
@@ -743,7 +782,7 @@ public abstract class CompositionNode
          * @return the list of preferred versions
          */
         public List<Version> getPreferVersionList() {
-            if (vers == null) {
+            if (vers.isEmpty()) {
                 return List.of();
             }
 
@@ -757,16 +796,28 @@ public abstract class CompositionNode
         }
 
         /**
-         * @return the name of the singleton injector class
+         * @return the version overrides for this import (empty if none)
          */
-        NamedTypeExpression getInjector() {
-            return injector;
+        @NotNull
+        @Unmodifiable
+        public List<VersionOverride> getVersionOverrides() {
+            return vers;
+        }
+
+        /**
+         * @return the name of the singleton injector class, if specified
+         */
+        public Optional<NamedTypeExpression> getInjector() {
+            return Optional.ofNullable(injector);
         }
 
         /**
          * @return the types and names of injections that will get handled by the specified injector
+         *         (empty if none)
          */
-        List<Parameter> getSpecificInjections() {
+        @NotNull
+        @Unmodifiable
+        public List<Parameter> getSpecificInjections() {
             return injects;
         }
 
@@ -794,7 +845,7 @@ public abstract class CompositionNode
 
             sb.append(type);
 
-            if (vers != null) {
+            if (!vers.isEmpty()) {
                 boolean first = true;
                 for (VersionOverride ver : vers) {
                     if (first) {
@@ -807,7 +858,7 @@ public abstract class CompositionNode
                 }
             }
 
-            if (injects != null) {
+            if (!injects.isEmpty()) {
                 sb.append("\n        ")
                   .append(Token.Id.INJECT.TEXT)
                   .append(' ')
@@ -817,7 +868,6 @@ public abstract class CompositionNode
                           .collect(Collectors.joining(", ")))
                   .append(')');
             }
-
 
             if (injector != null) {
                 sb.append("\n        ")
@@ -835,16 +885,16 @@ public abstract class CompositionNode
         protected Token modifier;
 
         /**
-         * The version overrides; could be null.
+         * The version overrides (empty if none).
          */
         @ChildNode(index = 2, description = "Version overrides")
-        protected List<VersionOverride> vers;
+        @NotNull @Unmodifiable protected List<VersionOverride> vers;
 
         /**
-         * The injection list; could be null.
+         * The injection list (empty if none).
          */
         @ChildNode(index = 3, description = "Injection list")
-        protected List<Parameter> injects;
+        @NotNull @Unmodifiable protected List<Parameter> injects;
 
         /**
          * The injector specifier; could be null.
