@@ -4,7 +4,6 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -710,7 +709,7 @@ public abstract class CompositionNode
          */
         public List<Version> getPreferVersionList() {
             if (vers == null) {
-                return Collections.emptyList();
+                return List.of();
             }
 
             List<Version> list = new ArrayList<>();

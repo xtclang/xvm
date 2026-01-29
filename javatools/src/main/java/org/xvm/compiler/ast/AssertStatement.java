@@ -81,7 +81,7 @@ public class AssertStatement
 
         this.keyword  = keyword;
         this.interval = exprInterval;
-        this.conds    = conds == null ? Collections.emptyList() : conds;
+        this.conds    = conds == null ? List.of() : conds;
         this.message  = exprMsg;
         this.lEndPos  = lEndPos;
     }
@@ -696,7 +696,7 @@ public class AssertStatement
     @ChildNode(index = 0, description = "Sample interval expression")
     protected Expression    interval;
     @ChildNode(index = 1, description = "Assertion conditions")
-    protected List<AstNode> conds;
+    @NotNull protected List<AstNode> conds;
     @ChildNode(index = 2, description = "Custom message expression")
     protected Expression    message;
     protected long          lEndPos;

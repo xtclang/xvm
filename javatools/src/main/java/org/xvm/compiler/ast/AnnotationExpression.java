@@ -4,7 +4,6 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -112,7 +111,7 @@ public class AnnotationExpression
         NamedTypeExpression exprType = type;
         if (exprType == null) {
             assert m_node != null && m_anno != null;
-            List<Token> names = Collections.singletonList(new Token(lStartPos, lEndPos,
+            List<Token> names = List.of(new Token(lStartPos, lEndPos,
                     Id.IDENTIFIER, ((IdentityConstant) m_anno.getAnnotationClass()).getName()));
             exprType = new NamedTypeExpression(null, names, null, null, null, lEndPos);
             exprType.setParent(getParent());
@@ -596,7 +595,7 @@ public class AnnotationExpression
 
         @Override
         public Map<String, Assignment> prepareJump(Context ctxDest) {
-            return Collections.emptyMap();
+            return Map.of();
         }
 
         private final ClassStructure f_clzContainer;

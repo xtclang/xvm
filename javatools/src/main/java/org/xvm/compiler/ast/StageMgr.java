@@ -2,7 +2,6 @@ package org.xvm.compiler.ast;
 
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import java.util.function.Predicate;
@@ -36,7 +35,7 @@ public class StageMgr {
         assert node != null;
         assert stageTarget != null && stageTarget.isTargetable();
 
-        m_listRevisit = Collections.singletonList(node);
+        m_listRevisit = List.of(node);
         m_target      = stageTarget;
         m_errs        = errs == null ? ErrorListener.BLACKHOLE : errs;
     }
@@ -420,7 +419,7 @@ public class StageMgr {
         List<AstNode> listPrevious = m_listRevisit;
         m_listRevisit = null;
         return listPrevious == null
-                ? Collections.emptyList()
+                ? List.of()
                 : listPrevious;
     }
 

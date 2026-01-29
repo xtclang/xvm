@@ -31,6 +31,22 @@ Added `@NotNull` to list fields with null-to-empty conversion in primary constru
 - SwitchExpression.cond/contents, TemplateExpression.exprs
 - CmpChainExpression.expressions, FunctionTypeExpression.paramTypes
 - ArrayAccessExpression.indexes, ReturnStatement.exprs
+- ForStatement.init, ForStatement.update
+- ConditionalStatement.conds, AssertStatement.conds
+- TupleExpression.exprs, MapExpression.keys/values
+
+### Modern Collection Patterns - IN PROGRESS
+Replaced legacy `Collections.emptyList()`/`Collections.singletonList()` with `List.of()`:
+- ForStatement, ConditionalStatement, AssertStatement, TupleExpression
+- ForEachStatement, ListExpression, NamedTypeExpression
+- MethodDeclarationStatement, SwitchStatement, TypeCompositionStatement
+- StageMgr, AnonInnerClass, VersionOverride, IgnoredNameExpression
+- CompositionNode, InvocationExpression, MapExpression
+
+Added convenience constructors:
+- `StatementBlock()` - no-arg constructor for empty blocks
+- `MapExpression(type, lEndPos)` - constructor for empty maps
+- `Break.withNarrow(node, mapNarrow, label)` - factory method with empty mapAssign
 
 ### @ComputedState Annotation - COMPLETE
 Created and applied across all AST classes with transient fields (29+ classes total).
@@ -68,26 +84,21 @@ public @interface ChildNode {
 
 ## Remaining Work
 
-### 1. Convert Remaining Null Collections to Empty
-Analyze each nullable collection field:
-- If null has distinct semantic meaning (e.g., CaseStatement.exprs for "default:"), add `// NOTE:` comment
-- If null is equivalent to empty, update primary constructor to convert null→empty and add @NotNull
+### 1. Continue Modern Collection Patterns
+Still have ~16 `Collections.` usages remaining in:
+- AstNode.java (emptyMap, singletonList)
+- Context.java (emptyMap)
+- AssertStatement.java (addAll - legitimate usage)
+- NameResolver.java (emptyIterator - no direct replacement)
 
-### 2. Replace Clone Call Sites
-Replace `clone()` with `copy()` at all call sites. First verify what clone calls exist:
-```bash
-grep -rn "\.clone()" javatools/src/main/java/org/xvm/compiler/ast/
-```
-Note: Investigation showed most `.clone()` calls in AST are for arrays (TypeConstant[], etc.), NOT AST nodes.
-
-### 3. Implement Visitor Pattern
+### 2. Implement Visitor Pattern
 1. Design visitor interface hierarchy
 2. Implement `accept()` methods on AST nodes
 3. Migrate `StageMgr` to use visitors
 4. Migrate parent setup to use visitors
 5. Remove `CHILD_FIELDS` reflection infrastructure
 
-### 4. Final Cleanup
+### 3. Final Cleanup
 1. Remove `Cloneable` interface from `AstNode`
 2. Remove `clone()` method
 3. Remove `fieldsForNames()` and `getChildFields()` methods

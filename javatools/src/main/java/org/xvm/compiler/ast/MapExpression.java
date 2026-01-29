@@ -46,9 +46,16 @@ public class MapExpression
     public MapExpression(@NotNull TypeExpression type, List<Expression> keys, List<Expression> values,
                          long lEndPos) {
         this.type    = Objects.requireNonNull(type);
-        this.keys    = keys == null ? new ArrayList<>() : keys;
-        this.values  = values == null ? new ArrayList<>() : values;
+        this.keys    = keys == null ? List.of() : keys;
+        this.values  = values == null ? List.of() : values;
         this.lEndPos = lEndPos;
+    }
+
+    /**
+     * Construct an empty MapExpression.
+     */
+    MapExpression(@NotNull TypeExpression type, long lEndPos) {
+        this(type, List.of(), List.of(), lEndPos);
     }
 
     /**

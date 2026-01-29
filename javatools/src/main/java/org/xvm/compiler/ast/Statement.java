@@ -273,7 +273,14 @@ public abstract class Statement
      * The "break" info (also used for "continue" and "short circuit" info).
      */
     public record Break(AstNode node, Map<String, Assignment> mapAssign,
-                         Map<String, Argument> mapNarrow, Label label) {}
+                         Map<String, Argument> mapNarrow, Label label) {
+        /**
+         * Create a Break with empty assignment map.
+         */
+        public static Break withNarrow(AstNode node, Map<String, Argument> mapNarrow, Label label) {
+            return new Break(node, Map.of(), mapNarrow, label);
+        }
+    }
 
     /**
      * Holder for BinaryAST objects as they percolate up the emit() call tree.

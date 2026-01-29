@@ -2,7 +2,6 @@ package org.xvm.compiler.ast;
 
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -21,7 +20,7 @@ public abstract class ConditionalStatement
 
     public ConditionalStatement(Token keyword, List<AstNode> conds) {
         this.keyword = keyword;
-        this.conds   = conds  == null ? Collections.emptyList() : conds;
+        this.conds   = conds  == null ? List.of() : conds;
     }
 
     /**
@@ -100,7 +99,7 @@ public abstract class ConditionalStatement
 
     protected Token         keyword;
     @ChildNode(index = 0, description = "Condition expressions/assignments")
-    protected List<AstNode> conds;
+    @NotNull protected List<AstNode> conds;
 
     private static    int   s_nLabelCounter;
     @ComputedState

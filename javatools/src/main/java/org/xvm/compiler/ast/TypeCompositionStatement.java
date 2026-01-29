@@ -7,7 +7,6 @@ import java.lang.reflect.Field;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -993,7 +992,7 @@ public class TypeCompositionStatement
         // "siblings" of itself based on any conditionals that are encountered in the processing of
         // the "Composition" objects)
         for (CompositionNode composition :
-                    compositions == null ? Collections.<CompositionNode>emptyList() : compositions) {
+                    compositions == null ? List.<CompositionNode>of() : compositions) {
             // most compositions are allowed to be conditional; conditional compositions will
             // bifurcate the component
             Expression          exprCond = composition.getCondition();
@@ -1327,7 +1326,7 @@ public class TypeCompositionStatement
                     composition.log(errs, Severity.ERROR, Compiler.DUPLICATE_DEFAULT_VALUE, sName);
                 } else {
                     NamedTypeExpression typeDefault = new NamedTypeExpression(null,
-                            Collections.singletonList(name), null, null, null, name.getEndPosition());
+                            List.of(name), null, null, null, name.getEndPosition());
                     Expression exprValue = ((Default) composition).getValueExpression();
 
                     long lStartPos = composition.getStartPosition();
@@ -1335,7 +1334,7 @@ public class TypeCompositionStatement
                     PropertyDeclarationStatement propDefault = new PropertyDeclarationStatement(
                             lStartPos, lEndPos,
                             composition.getCondition(),
-                            Collections.singletonList(new Token(lStartPos, lStartPos, Id.STATIC)),
+                            List.of(new Token(lStartPos, lStartPos, Id.STATIC)),
                             null,
                             typeDefault,
                             composition.keyword,
@@ -2568,7 +2567,7 @@ public class TypeCompositionStatement
     private RootContext createConstructorContext(MethodStructure constructor) {
         StatementBlock blockBody = body;
         if (body == null) {
-            blockBody = adopt(new StatementBlock(Collections.emptyList()));
+            blockBody = adopt(new StatementBlock());
         }
         return new RootContext(blockBody, constructor);
     }
@@ -2740,7 +2739,7 @@ public class TypeCompositionStatement
             // compute default values at run-time (see TypeConstant#mergeMixinTypeInfo)
             constructor.setShorthandInitialization(idSuper, aconstSuper);
         }
-        return listSuperArgs == null ? Collections.EMPTY_LIST : listSuperArgs;
+        return listSuperArgs == null ? List.of() : listSuperArgs;
     }
 
     private void disallowTypeParams(ErrorListener errs) {

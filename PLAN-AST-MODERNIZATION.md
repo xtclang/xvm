@@ -549,8 +549,18 @@ Added `@NotNull` annotations to list fields that have null-to-empty conversion i
 - `FunctionTypeExpression.java` - `@NotNull protected List<TypeExpression> paramTypes`
 - `ArrayAccessExpression.java` - `@NotNull protected List<Expression> indexes`
 - `ReturnStatement.java` - `@NotNull protected List<Expression> exprs`
+- `ForStatement.java` - `@NotNull protected List<Statement> init`, `@NotNull protected List<Statement> update`
+- `ConditionalStatement.java` - `@NotNull protected List<AstNode> conds`
+- `AssertStatement.java` - `@NotNull protected List<AstNode> conds`
+- `TupleExpression.java` - `@NotNull protected List<Expression> exprs`
+- `MapExpression.java` - `@NotNull protected List<Expression> keys`, `@NotNull protected List<Expression> values`
 
 NOTE: Some list fields preserve null because null has semantic meaning distinct from empty (e.g., `CaseStatement.exprs` where null means "default:" case)
+
+**Convenience Constructors Added**:
+- `StatementBlock()` - no-arg constructor for empty statement blocks
+- `MapExpression(type, lEndPos)` - simplified constructor for empty maps
+- `Break.withNarrow(node, mapNarrow, label)` - factory method with empty mapAssign
 
 **@ChildNode Annotations** - COMPLETE
 Applied `@ChildNode(index, description)` annotation to ALL child node fields across 44+ AST classes. This annotation marks fields that are in `CHILD_FIELDS` and documents the child ordering. Classes that inherit from annotated parent classes (BiExpression, PrefixExpression, DelegatingExpression) inherit the annotations.
@@ -968,18 +978,27 @@ The codebase should migrate from legacy collection patterns to modern immutable 
 
 ### Locations Requiring Updates
 
-**High Priority (Compiler AST)**:
-- `ForStatement.java:65-66` - `Collections.emptyList()` → `List.of()`
-- `ForEachStatement.java:69,325` - `Collections.singletonList()` → `List.of()`
-- `ConditionalStatement.java:22` - `Collections.emptyList()` → `List.of()`
-- `AssertStatement.java:83` - `Collections.emptyList()` → `List.of()`
-- `TupleExpression.java:45` - `Collections.emptyList()` → `List.of()`
-- `NamedTypeExpression.java:99` - `Collections.singletonList()` → `List.of()`
-- `StageMgr.java:39,410` - Both patterns
-- `AstNode.java:1855` - `Collections.singletonList()` → `List.of()`
-- `CompositionNode.java:467` - `Collections.emptyList()` → `List.of()`
-- `AnonInnerClass.java:92,99` - `Collections.emptyList()` → `List.of()`
-- `ListExpression.java:135,182` - `Collections.emptyList()` → `List.of()`
+**High Priority (Compiler AST)** - MOSTLY COMPLETE:
+- ✅ `ForStatement.java` - `Collections.emptyList()` → `List.of()`
+- ✅ `ForEachStatement.java` - `Collections.singletonList()` → `List.of()`
+- ✅ `ConditionalStatement.java` - `Collections.emptyList()` → `List.of()`
+- ✅ `AssertStatement.java` - `Collections.emptyList()` → `List.of()`
+- ✅ `TupleExpression.java` - `Collections.emptyList()` → `List.of()`
+- ✅ `NamedTypeExpression.java` - `Collections.singletonList()` → `List.of()`
+- ✅ `StageMgr.java` - Both patterns converted
+- ⏳ `AstNode.java` - Still has `Collections.emptyMap()`, `Collections.singletonList()`
+- ✅ `CompositionNode.java` - `Collections.emptyList()` → `List.of()`
+- ✅ `AnonInnerClass.java` - `Collections.emptyList()` → `List.of()`
+- ✅ `ListExpression.java` - `Collections.emptyList()` → `List.of()`
+- ✅ `MethodDeclarationStatement.java` - Both patterns converted
+- ✅ `TypeCompositionStatement.java` - All patterns converted
+- ✅ `SwitchStatement.java` - `Collections.emptyMap()` → `Map.of()`
+- ✅ `InvocationExpression.java` - `Collections.emptyMap()` → `Map.of()`
+- ✅ `VersionOverride.java` - `Collections.emptyMap()` → `Map.of()`
+- ✅ `IgnoredNameExpression.java` - `Collections.emptyMap()` → `Map.of()`
+- ✅ `AnnotationExpression.java` - Both patterns converted
+- ✅ `MapExpression.java` - Added convenience constructor for empty maps
+- ⏳ `Context.java` - Still has multiple `Collections.emptyMap()` usages
 
 **Medium Priority (Parser)**:
 - `Parser.java` - ~20 locations with legacy patterns

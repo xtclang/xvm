@@ -92,6 +92,13 @@ public class StatementBlock
         extends Statement {
     // ----- constructors --------------------------------------------------------------------------
 
+    /**
+     * Construct an empty StatementBlock.
+     */
+    public StatementBlock() {
+        this(List.of(), null, 0L, 0L);
+    }
+
     public StatementBlock(List<Statement> stmts) {
         this(stmts, null,
                 stmts.isEmpty() ? 0L : stmts.getFirst().getStartPosition(),

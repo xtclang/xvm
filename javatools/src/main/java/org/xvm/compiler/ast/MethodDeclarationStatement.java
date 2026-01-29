@@ -4,7 +4,6 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -108,7 +107,7 @@ public class MethodDeclarationStatement
         Token fakeReturn = new Token(expr.getStartPosition(), expr.getStartPosition(), Id.RETURN);
         ReturnStatement stmt = new ReturnStatement(fakeReturn, expr);
         stmt.adopt(expr);
-        body = new StatementBlock(Collections.singletonList(stmt), expr.getStartPosition(), expr.getEndPosition());
+        body = new StatementBlock(List.of(stmt), expr.getStartPosition(), expr.getEndPosition());
         body.adopt(stmt);
 
         adopt(body);
@@ -949,7 +948,7 @@ public class MethodDeclarationStatement
 
         int cDefaults = method.getDefaultParamCount();
         if (cDefaults > 0) {
-            StatementBlock block = adopt(new StatementBlock(Collections.emptyList()));
+            StatementBlock block = adopt(new StatementBlock());
 
             RootContext ctxMethod = new RootContext(block, method);
             Context     ctx       = ctxMethod.validatingContext();

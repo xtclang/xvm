@@ -5,7 +5,6 @@ import java.lang.reflect.Field;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -96,7 +95,7 @@ public class NamedTypeExpression
         this.paramTypes = null;
         this.lStartPos  = exprSource.getStartPosition();
         this.lEndPos    = exprSource.getEndPosition();
-        this.names      = Collections.singletonList(new Token(lStartPos, lEndPos,
+        this.names      = List.of(new Token(lStartPos, lEndPos,
                             Token.Id.IDENTIFIER, type.getValueString())); // used for "toString" only
         setTypeConstant(type);
         setStage(Stage.Validated);

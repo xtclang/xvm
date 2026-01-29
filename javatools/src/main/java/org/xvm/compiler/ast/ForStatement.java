@@ -4,8 +4,6 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.stream.Collectors;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,8 +61,8 @@ public class ForStatement
             List<Statement> update,
             StatementBlock  block) {
         super(keyword, conds);
-        this.init    = init   == null ? Collections.emptyList() : init;
-        this.update  = update == null ? Collections.emptyList() : update;
+        this.init    = init   == null ? List.of() : init;
+        this.update  = update == null ? List.of() : update;
         this.block   = block;
     }
 
@@ -734,10 +732,7 @@ public class ForStatement
         var sb = new StringBuilder();
 
         sb.append("for (");
-
-        if (init != null) {
-            sb.append(init.stream().map(Object::toString).collect(Collectors.joining(", ")));
-        }
+        sb.append(init.stream().map(Object::toString).collect(Collectors.joining(", ")));
 
         sb.append("; ");
 
@@ -746,10 +741,7 @@ public class ForStatement
         }
 
         sb.append("; ");
-
-        if (update != null) {
-            sb.append(update.stream().map(Object::toString).collect(Collectors.joining(", ")));
-        }
+        sb.append(update.stream().map(Object::toString).collect(Collectors.joining(", ")));
 
         sb.append(")\n")
           .append(indentLines(block.toString(), "    "));
@@ -761,9 +753,9 @@ public class ForStatement
     // ----- fields --------------------------------------------------------------------------------
 
     @ChildNode(index = 0, description = "Initialization statements")
-    protected List<Statement> init;
+    @NotNull protected List<Statement> init;
     @ChildNode(index = 2, description = "Update statements")
-    protected List<Statement> update;
+    @NotNull protected List<Statement> update;
     @ChildNode(index = 3, description = "Loop body")
     protected StatementBlock  block;
 

@@ -5,7 +5,6 @@ import java.lang.reflect.Field;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -46,7 +45,7 @@ public class TupleExpression
 
     public TupleExpression(TypeExpression type, List<Expression> exprs, long lStartPos, long lEndPos) {
         this.type        = type;
-        this.exprs       = exprs == null ? Collections.emptyList() : exprs;
+        this.exprs       = exprs == null ? List.of() : exprs;
         this.m_lStartPos = lStartPos;
         this.m_lEndPos   = lEndPos;
     }
@@ -529,7 +528,7 @@ public class TupleExpression
     @ChildNode(index = 0, description = "Tuple type")
     protected TypeExpression   type;
     @ChildNode(index = 1, description = "Element expressions")
-    protected List<Expression> exprs;
+    @NotNull protected List<Expression> exprs;
     protected long             m_lStartPos;
     protected long             m_lEndPos;
 

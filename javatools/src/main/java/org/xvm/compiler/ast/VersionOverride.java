@@ -3,7 +3,6 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.Collections;
 import java.util.Map;
 
 import org.xvm.asm.Version;
@@ -127,7 +126,7 @@ public class VersionOverride
 
     @Override
     public Map<String, Object> getDumpChildren() {
-        return Collections.emptyMap();
+        return Map.of();
     }
 
 

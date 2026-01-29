@@ -4,7 +4,6 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,7 +65,7 @@ public class ForEachStatement
     // ----- constructors --------------------------------------------------------------------------
 
     public ForEachStatement(Token keyword, AssignmentStatement cond, StatementBlock block) {
-        super(keyword, Collections.singletonList(cond));
+        super(keyword, List.of(cond));
         this.block = block;
     }
 
@@ -340,7 +339,7 @@ public class ForEachStatement
             boolean fValid = true;
 
             // copy the condition(s) and the body
-            conds = Collections.singletonList(condOrig.copy());
+            conds = List.of(condOrig.copy());
             block = blockOrig.copy();
 
             // create a temporary error list

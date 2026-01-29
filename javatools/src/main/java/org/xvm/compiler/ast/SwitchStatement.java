@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.Objects;
 
 import org.jetbrains.annotations.NotNull;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -300,8 +299,7 @@ public class SwitchStatement
         // we will process the assignments ourselves; see SwitchContext.mergeBreaks()
         m_listBreaks.add(breakInfo.mapAssign());
 
-        super.addBreak(new Break(breakInfo.node(), Collections.emptyMap(),
-                                 breakInfo.mapNarrow(), breakInfo.label()));
+        super.addBreak(Break.withNarrow(breakInfo.node(), breakInfo.mapNarrow(), breakInfo.label()));
     }
 
     @Override

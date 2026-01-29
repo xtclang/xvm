@@ -1,7 +1,6 @@
 package org.xvm.compiler.ast;
 
 
-import java.util.Collections;
 import java.util.Map;
 
 import org.xvm.asm.Argument;
@@ -116,6 +115,6 @@ public class IgnoredNameExpression
 
     @Override
     public Map<String, Object> getDumpChildren() {
-        return Collections.emptyMap();
+        return Map.of();
     }
 }
