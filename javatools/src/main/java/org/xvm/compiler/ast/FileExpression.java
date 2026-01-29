@@ -496,6 +496,7 @@ public class FileExpression
     /**
      * The (optional) type for the expression.
      */
+    @ChildNode(index = 0, description = "Optional type")
     protected TypeExpression type;
 
     /**

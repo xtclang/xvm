@@ -139,8 +139,10 @@ public class Parameter
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "Parameter type")
     protected TypeExpression type;
     protected Token          name;
+    @ChildNode(index = 1, description = "Default value")
     protected Expression     value;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(Parameter.class, "type", "value");

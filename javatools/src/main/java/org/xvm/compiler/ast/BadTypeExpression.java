@@ -112,6 +112,7 @@ public class BadTypeExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "Non-type expression")
     protected Expression nonType;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(BadTypeExpression.class, "nonType");

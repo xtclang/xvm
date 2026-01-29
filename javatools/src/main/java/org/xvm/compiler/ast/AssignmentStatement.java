@@ -1193,9 +1193,12 @@ public class AssignmentStatement
         CondRight,
     }
 
+    @ChildNode(index = 0, description = "Left-hand side")
     protected AstNode    lvalue;
+    @ChildNode(index = 1, description = "L-value expression form")
     protected Expression lvalueExpr;
     protected Token      op;
+    @ChildNode(index = 2, description = "Right-hand side")
     protected Expression rvalue;
     protected boolean    term;
     protected Token      tokNegate;

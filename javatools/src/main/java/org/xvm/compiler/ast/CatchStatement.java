@@ -189,7 +189,9 @@ public class CatchStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "Exception variable declaration")
     protected VariableDeclarationStatement target;
+    @ChildNode(index = 1, description = "Catch body")
     protected StatementBlock               block;
     protected long                         lStartPos;
 

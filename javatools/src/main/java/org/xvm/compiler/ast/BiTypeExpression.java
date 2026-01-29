@@ -166,8 +166,10 @@ public class BiTypeExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "First type operand")
     protected TypeExpression type1;
     protected Token          operator;
+    @ChildNode(index = 1, description = "Second type operand")
     protected TypeExpression type2;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(BiTypeExpression.class, "type1", "type2");

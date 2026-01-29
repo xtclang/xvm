@@ -3190,17 +3190,25 @@ public class TypeCompositionStatement
     // ----- fields --------------------------------------------------------------------------------
 
     protected Source                     source;
+    @ChildNode(index = 0, description = "Conditional compilation expression")
     protected Expression                 condition;
     protected List<Token>                modifiers;
+    @ChildNode(index = 1, description = "Type annotations")
     protected List<AnnotationExpression> annotations;
     protected Token                      category;
     protected Token                      name;
     protected List<Token>                qualified;
+    @ChildNode(index = 2, description = "Type parameters")
     protected List<Parameter>            typeParams;
+    @ChildNode(index = 3, description = "Constructor parameters")
     protected List<Parameter>            constructorParams;
+    @ChildNode(index = 4, description = "Type arguments")
     protected List<TypeExpression>       typeArgs;
+    @ChildNode(index = 5, description = "Constructor arguments")
     protected List<Expression>           args;
+    @ChildNode(index = 6, description = "Composition clauses")
     protected List<CompositionNode>      compositions;
+    @ChildNode(index = 7, description = "Type body")
     protected StatementBlock             body;
     protected Token                      doc;
     protected StatementBlock             enclosed;

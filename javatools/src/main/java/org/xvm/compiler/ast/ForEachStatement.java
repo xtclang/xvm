@@ -1403,6 +1403,7 @@ public class ForEachStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 1, description = "Loop body")
     protected StatementBlock block;
 
     @ComputedState

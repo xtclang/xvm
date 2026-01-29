@@ -238,8 +238,10 @@ public abstract class BiExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "Left operand")
     protected Expression expr1;
     protected Token      operator;
+    @ChildNode(index = 1, description = "Right operand")
     protected Expression expr2;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(BiExpression.class, "expr1", "expr2");

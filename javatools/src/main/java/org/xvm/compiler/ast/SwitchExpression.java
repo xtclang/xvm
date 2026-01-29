@@ -403,7 +403,9 @@ public class SwitchExpression
     // ----- fields --------------------------------------------------------------------------------
 
     protected Token         keyword;
+    @ChildNode(index = 0, description = "Switch condition")
     @NotNull protected List<AstNode> cond;
+    @ChildNode(index = 1, description = "Case expressions")
     @NotNull protected List<AstNode> contents;
     protected long          lEndPos;
 

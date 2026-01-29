@@ -208,7 +208,9 @@ public class FunctionTypeExpression
 
     protected Token                function;
     protected Token                conditional;
+    @ChildNode(index = 0, description = "Return type parameters")
     protected List<Parameter>      returnValues;
+    @ChildNode(index = 1, description = "Parameter types")
     @NotNull protected List<TypeExpression> paramTypes;
     protected long                 lEndPos;
 

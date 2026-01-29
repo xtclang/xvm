@@ -137,6 +137,7 @@ public class DecoratedTypeExpression
     // ----- fields --------------------------------------------------------------------------------
 
     protected Token          keyword;
+    @ChildNode(index = 0, description = "Decorated type")
     protected TypeExpression type;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(DecoratedTypeExpression.class, "type");

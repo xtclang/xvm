@@ -425,7 +425,9 @@ public class AnnotatedTypeExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "Annotation")
     protected AnnotationExpression annotation;
+    @ChildNode(index = 1, description = "Underlying type")
     protected TypeExpression       type;
 
     @ComputedState("Whether annotation applies to Ref rather than underlying type")

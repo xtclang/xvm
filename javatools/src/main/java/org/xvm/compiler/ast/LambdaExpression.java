@@ -1543,9 +1543,12 @@ public class LambdaExpression
     private static final String[] NO_NAMES    = Handy.NO_ARGS;
     private static final String   METHOD_NAME = "->";
 
+    @ChildNode(index = 0, description = "Typed parameters")
     protected List<Parameter>  params;
+    @ChildNode(index = 1, description = "Untyped parameter names")
     protected List<Expression> paramNames;
     protected Token            operator;
+    @ChildNode(index = 2, description = "Lambda body")
     protected StatementBlock   body;
     protected long             lStartPos;
 

@@ -485,8 +485,11 @@ public class MapExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "Map type")
     protected TypeExpression           type;
+    @ChildNode(index = 1, description = "Key expressions")
     @NotNull protected List<Expression> keys;
+    @ChildNode(index = 2, description = "Value expressions")
     @NotNull protected List<Expression> values;
     protected long                     lEndPos;
 

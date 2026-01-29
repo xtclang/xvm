@@ -760,8 +760,11 @@ public class ForStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "Initialization statements")
     protected List<Statement> init;
+    @ChildNode(index = 2, description = "Update statements")
     protected List<Statement> update;
+    @ChildNode(index = 3, description = "Loop body")
     protected StatementBlock  block;
 
     @ComputedState

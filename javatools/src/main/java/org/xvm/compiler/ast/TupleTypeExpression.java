@@ -117,6 +117,7 @@ public class TupleTypeExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "Type parameters")
     @NotNull protected List<TypeExpression> paramTypes;
     protected long                 lStartPos;
     protected long                 lEndPos;

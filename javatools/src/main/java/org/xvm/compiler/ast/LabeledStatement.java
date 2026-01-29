@@ -193,6 +193,7 @@ public class LabeledStatement
     // ----- fields --------------------------------------------------------------------------------
 
     protected Token     label;
+    @ChildNode(index = 0, description = "Labeled statement")
     protected Statement stmt;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(LabeledStatement.class, "stmt");

@@ -434,7 +434,9 @@ public class IfStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 1, description = "Then branch")
     protected Statement stmtThen;
+    @ChildNode(index = 2, description = "Else branch")
     protected Statement stmtElse;
 
     /**

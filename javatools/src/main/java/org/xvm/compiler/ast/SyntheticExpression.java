@@ -155,6 +155,7 @@ public abstract class SyntheticExpression
     /**
      * The modified expression.
      */
+    @ChildNode(index = 0, description = "Underlying expression")
     protected Expression expr;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SyntheticExpression.class, "expr");

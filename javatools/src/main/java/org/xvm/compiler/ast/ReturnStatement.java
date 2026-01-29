@@ -525,6 +525,7 @@ public class ReturnStatement
     // ----- fields --------------------------------------------------------------------------------
 
     protected Token             keyword;
+    @ChildNode(index = 0, description = "Return expressions")
     @NotNull protected List<Expression> exprs;
 
     @ComputedState("Whether this is a conditional ternary return")

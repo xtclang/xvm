@@ -244,6 +244,7 @@ public abstract class CompositionNode
             return sb.toString();
         }
 
+        @ChildNode(index = 2, description = "Constructor arguments")
         protected List<Expression> args;
         protected long             lEndPos;
 
@@ -333,6 +334,7 @@ public abstract class CompositionNode
             return sb.toString();
         }
 
+        @ChildNode(index = 0, description = "Annotation expression")
         protected AnnotationExpression annotation;
 
         private static final Field[] CHILD_FIELDS = fieldsForNames(Annotates.class,
@@ -448,7 +450,9 @@ public abstract class CompositionNode
             return sb.toString();
         }
 
+        @ChildNode(index = 2, description = "Constructor arguments")
         protected List<Expression> args;
+        @ChildNode(index = 3, description = "Conditional constraints")
         protected List<Parameter>  constraints;
 
         private static final Field[] CHILD_FIELDS = fieldsForNames(Incorporates.class,
@@ -799,16 +803,19 @@ public abstract class CompositionNode
         /**
          * The version overrides; could be null.
          */
+        @ChildNode(index = 2, description = "Version overrides")
         protected List<VersionOverride> vers;
 
         /**
          * The injection list; could be null.
          */
+        @ChildNode(index = 3, description = "Injection list")
         protected List<Parameter> injects;
 
         /**
          * The injector specifier; could be null.
          */
+        @ChildNode(index = 4, description = "Injector specifier")
         protected NamedTypeExpression injector;
 
         protected long lEndPos;
@@ -883,6 +890,7 @@ public abstract class CompositionNode
             return toStartString() + '(' + expr + ')' + toEndString();
         }
 
+        @ChildNode(index = 1, description = "Default value expression")
         protected Expression expr;
         protected long       lEndPos;
 

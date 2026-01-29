@@ -685,6 +685,7 @@ public class SwitchStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 1, description = "Switch body block")
     protected StatementBlock block;
 
     /**

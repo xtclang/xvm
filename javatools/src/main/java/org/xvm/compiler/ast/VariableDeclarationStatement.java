@@ -366,6 +366,7 @@ public class VariableDeclarationStatement
 
     public static final VariableDeclarationStatement[] NONE = new VariableDeclarationStatement[0];
 
+    @ChildNode(index = 0, description = "Variable type")
     protected TypeExpression type;
     protected Token          name;
     protected boolean        term;

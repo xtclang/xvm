@@ -693,8 +693,11 @@ public class AssertStatement
     // ----- fields --------------------------------------------------------------------------------
 
     protected Token         keyword;
+    @ChildNode(index = 0, description = "Sample interval expression")
     protected Expression    interval;
+    @ChildNode(index = 1, description = "Assertion conditions")
     protected List<AstNode> conds;
+    @ChildNode(index = 2, description = "Custom message expression")
     protected Expression    message;
     protected long          lEndPos;
 

@@ -195,6 +195,7 @@ public class CaseStatement
     // ----- fields --------------------------------------------------------------------------------
 
     protected Token            keyword;
+    @ChildNode(index = 0, description = "Case value expressions")
     protected List<Expression> exprs;
     protected long             lEndPos;
 

@@ -684,8 +684,11 @@ public class TernaryExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "Condition expression")
     protected Expression cond;
+    @ChildNode(index = 1, description = "Then branch expression")
     protected Expression exprThen;
+    @ChildNode(index = 2, description = "Else branch expression")
     protected Expression exprElse;
 
     @ComputedState

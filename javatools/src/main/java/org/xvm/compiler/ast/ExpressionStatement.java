@@ -158,6 +158,7 @@ public class ExpressionStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "Expression")
     protected Expression expr;
     protected boolean    term;
 

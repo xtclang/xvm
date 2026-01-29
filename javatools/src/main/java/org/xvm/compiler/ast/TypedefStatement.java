@@ -163,9 +163,11 @@ public class TypedefStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "Conditional expression")
     protected Expression     cond;
     protected Token          modifier;
     protected Token          alias;
+    @ChildNode(index = 1, description = "Aliased type")
     protected TypeExpression type;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TypedefStatement.class, "cond", "type");

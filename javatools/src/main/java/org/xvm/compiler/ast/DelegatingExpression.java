@@ -216,5 +216,6 @@ public abstract class DelegatingExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "Delegated expression")
     protected Expression expr;
 }

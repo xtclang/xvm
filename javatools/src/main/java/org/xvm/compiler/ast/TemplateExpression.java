@@ -339,7 +339,9 @@ public class TemplateExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "String template type")
     protected TypeExpression   type;
+    @ChildNode(index = 1, description = "Template parts")
     @NotNull protected List<Expression> exprs;
     protected long             lStartPos;
     protected long             lEndPos;

@@ -1128,11 +1128,13 @@ public class NamedTypeExpression
     // ----- fields --------------------------------------------------------------------------------
 
     protected List<Token>          module;
+    @ChildNode(index = 0, description = "Qualifying type expression")
     protected TypeExpression       left;
     protected Token                immutable;
     protected List<Token>          names;
     protected Token                access;
     protected Token                nonnarrow;
+    @ChildNode(index = 1, description = "Type parameters")
     protected List<TypeExpression> paramTypes;
     protected long                 lStartPos;
     protected long                 lEndPos;

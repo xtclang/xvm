@@ -143,6 +143,7 @@ public class VersionOverride
     /**
      * The version literal expression.
      */
+    @ChildNode(index = 0, description = "Version expression")
     protected LiteralExpression exprVer;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(VersionOverride.class, "exprVer");

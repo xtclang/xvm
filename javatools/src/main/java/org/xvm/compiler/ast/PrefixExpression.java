@@ -259,6 +259,7 @@ public abstract class PrefixExpression
     // ----- fields --------------------------------------------------------------------------------
 
     protected Token      operator;
+    @ChildNode(index = 0, description = "Operand expression")
     protected Expression expr;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(PrefixExpression.class, "expr");

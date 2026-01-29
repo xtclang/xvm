@@ -128,6 +128,7 @@ public class NullableTypeExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "Nullable type")
     protected TypeExpression type;
     protected long           lEndPos;
 

@@ -175,6 +175,7 @@ public class NonBindingExpression
 
     protected long           lStartPos;
     protected long           lEndPos;
+    @ChildNode(index = 0, description = "Optional type")
     protected TypeExpression type;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NonBindingExpression.class, "type");

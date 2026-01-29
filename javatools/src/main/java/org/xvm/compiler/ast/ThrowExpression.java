@@ -456,7 +456,9 @@ public class ThrowExpression
     // ----- fields --------------------------------------------------------------------------------
 
     protected Token      keyword;
+    @ChildNode(index = 0, description = "Exception expression")
     protected Expression expr;
+    @ChildNode(index = 1, description = "Error message")
     protected Expression message;
     private final long   lEndPos;
 

@@ -603,9 +603,13 @@ public class TryStatement
     // ----- fields --------------------------------------------------------------------------------
 
     protected Token                     keyword;
+    @ChildNode(index = 0, description = "Using/try-with-resources")
     protected List<AssignmentStatement> resources;
+    @ChildNode(index = 1, description = "Try block")
     protected StatementBlock            block;
+    @ChildNode(index = 2, description = "Catch clauses")
     protected List<CatchStatement>      catches;
+    @ChildNode(index = 3, description = "Finally block")
     protected StatementBlock            catchall;
 
     @ComputedState("Context during finally validation")

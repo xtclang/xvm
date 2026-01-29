@@ -526,7 +526,9 @@ public class TupleExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "Tuple type")
     protected TypeExpression   type;
+    @ChildNode(index = 1, description = "Element expressions")
     protected List<Expression> exprs;
     protected long             m_lStartPos;
     protected long             m_lEndPos;

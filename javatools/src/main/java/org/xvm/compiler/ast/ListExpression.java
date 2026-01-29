@@ -448,7 +448,9 @@ public class ListExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "List element type")
     protected TypeExpression            type;
+    @ChildNode(index = 1, description = "Element expressions")
     @NotNull protected List<Expression> exprs;
     protected long                      lStartPos;
     protected long                      lEndPos;

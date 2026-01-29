@@ -183,8 +183,10 @@ public class ArrayTypeExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "Element type")
     protected TypeExpression   type;
     protected int              dims;
+    @ChildNode(index = 1, description = "Dimension expressions")
     protected List<Expression> indexes;
     protected long             lEndPos;
 

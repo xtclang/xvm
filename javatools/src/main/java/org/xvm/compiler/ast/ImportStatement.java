@@ -292,6 +292,7 @@ public class ImportStatement
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "Conditional expression")
     protected Expression  cond;
     protected Token       keyword;
     protected Token       alias;

@@ -349,6 +349,7 @@ public class StatementExpression
 
     // ----- fields --------------------------------------------------------------------------------
 
+    @ChildNode(index = 0, description = "Statement body")
     protected StatementBlock body;
 
     @ComputedState("Required types for expression")
