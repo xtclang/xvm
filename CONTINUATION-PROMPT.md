@@ -66,6 +66,25 @@ Replaced all `array.clone()` calls with explicit `Arrays.copyOf(array, array.len
 ### @ComputedState Annotation - COMPLETE
 Created and applied across all AST classes with transient fields (29+ classes total).
 
+### Clone Elimination - COMPLETE
+Removed all Cloneable interfaces and clone() methods from compiler code:
+- **AstNode**: Removed `Cloneable` interface and `clone()` method; added `Copyable<AstNode>` interface
+- **Token**: Removed `Cloneable`; added copy constructor and `copy()` method
+- **Source** (compiler): Removed `Cloneable`; added copy constructor and `copy()` method
+- **MethodStructure.Source** (nested class): Removed `Cloneable`; added copy constructor and `copy()` method
+- **Parser**: Updated to use `Token.copy()` instead of `clone()`
+- **Expression.testFitMultiExhaustive()**: Updated to use `copy()` instead of `clone()`
+- **PropertyDeclarationStatement**: Updated to use `copy()` instead of `clone()`
+
+Created `Copyable<T>` interface in `org.xvm.compiler.ast`:
+```java
+public interface Copyable<T extends Copyable<T>> {
+    T copy();
+}
+```
+
+**Note**: Cloneable remains in ASM layer (Constant, Component, Parameter, ObjectHandle) - out of scope per plan Appendix D.
+
 ### @ChildNode Annotation - COMPLETE
 Created annotation and applied to ALL child node fields across 44+ AST classes:
 ```java
@@ -113,11 +132,11 @@ Still have ~16 `Collections.` usages remaining in:
 4. Migrate parent setup to use visitors
 5. Remove `CHILD_FIELDS` reflection infrastructure
 
-### 3. Final Cleanup
-1. Remove `Cloneable` interface from `AstNode`
-2. Remove `clone()` method
-3. Remove `fieldsForNames()` and `getChildFields()` methods
-4. Remove `CHILD_FIELDS` arrays from all classes
+### 3. Final Cleanup (CHILD_FIELDS removal)
+1. ~~Remove `Cloneable` interface from `AstNode`~~ - DONE
+2. ~~Remove `clone()` method~~ - DONE
+3. Remove `fieldsForNames()` and `getChildFields()` methods (after visitor pattern)
+4. Remove `CHILD_FIELDS` arrays from all classes (after visitor pattern)
 
 ## Key Technical Details
 
@@ -135,7 +154,8 @@ Still have ~16 `Collections.` usages remaining in:
 ## Recent Commits
 
 ```
-[pending] Replace array.clone() with Arrays.copyOf() across AST classes
+[pending] Remove Cloneable/clone() from compiler, add Copyable interface
+6f6321b36 Replace array.clone() with Arrays.copyOf() across AST classes
 04f7d0a84 Modernize AST with List.of() patterns and convenience constructors
 a2fbe38b3 Update plan to mark @ChildNode annotation phase as complete
 8aa8c99b5 Complete @ChildNode annotations across all AST classes
@@ -146,10 +166,24 @@ a2fbe38b3 Update plan to mark @ChildNode annotation phase as complete
 ## Suggested Next Step
 
 1. **Begin visitor pattern implementation** - Design and implement the visitor interface to replace CHILD_FIELDS iteration
-2. **Replace AstNode clone() call sites with copy()** - Migrate remaining clone() usages to explicit copy()
+2. ~~Replace AstNode clone() call sites with copy()~~ - DONE
 3. **Remove reflection infrastructure** - Once visitor pattern is in place, remove CHILD_FIELDS arrays
 
-To verify current state:
+## Build Verification
+
+**IMPORTANT**: Always verify changes with a full build from the project root:
+```bash
+# Step 1: Clean (must run alone, never combined with other tasks)
+./gradlew clean
+
+# Step 2: Full build
+./gradlew build
+
+# Step 3 (optional): Run manual tests for additional verification
+./gradlew manualTests
+```
+
+To verify current state of modernization:
 ```bash
 # Count classes with CHILD_FIELDS (should all have @ChildNode now)
 grep -l "CHILD_FIELDS" javatools/src/main/java/org/xvm/compiler/ast/*.java | wc -l
@@ -158,4 +192,7 @@ grep -l "CHILD_FIELDS" javatools/src/main/java/org/xvm/compiler/ast/*.java | wc 
 for f in $(grep -l "CHILD_FIELDS" javatools/src/main/java/org/xvm/compiler/ast/*.java); do
   if ! grep -q "@ChildNode" "$f"; then echo "Missing: $f"; fi
 done
+
+# Verify no Cloneable in compiler
+grep -r "implements.*Cloneable" javatools/src/main/java/org/xvm/compiler/
 ```

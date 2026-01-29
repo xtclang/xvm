@@ -475,8 +475,8 @@ public class PropertyDeclarationStatement
                     // clear the "has initial value" setting
                     prop.setInitialValue(null);
                 } else {
-                    // create a clone of ourselves
-                    PropertyDeclarationStatement stmtClone = (PropertyDeclarationStatement) clone();
+                    // create a copy of ourselves
+                    PropertyDeclarationStatement stmtClone = copy();
 
                     // create an initializer function
                     MethodStructure            methodInit = stmtClone.createInitializer();

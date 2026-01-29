@@ -1709,7 +1709,7 @@ public class MethodStructure
         that.m_structFinally = null;
 
         if (this.m_source != null) {
-            that.m_source = this.m_source.clone();
+            that.m_source = this.m_source.copy();
         }
 
         return that;
@@ -2685,8 +2685,7 @@ public class MethodStructure
     /**
      * The Source class represents the source code that was used to compile the method code.
      */
-    protected class Source
-            implements Cloneable {
+    protected class Source {
         // ----- constructors -----------------------------------------------------------------
 
         /**
@@ -2873,16 +2872,27 @@ public class MethodStructure
         }
 
         /**
-         * Create a clone of this source.
+         * Copy constructor.
          *
-         * @return the new Source clone
+         * @param original  the Source to copy
          */
-        protected Source clone() {
-            try {
-                return (Source) super.clone();
-            } catch (CloneNotSupportedException e) {
-                throw new IllegalStateException();
-            }
+        private Source(Source original) {
+            this.m_iFirstLine = original.m_iFirstLine;
+            this.m_sSrc       = original.m_sSrc;
+            // Shallow copy arrays - StringConstants are immutable, int arrays are safely shared
+            this.m_aconstSrc  = original.m_aconstSrc == null ? null
+                    : Arrays.copyOf(original.m_aconstSrc, original.m_aconstSrc.length);
+            this.m_anIndents  = original.m_anIndents == null ? null
+                    : Arrays.copyOf(original.m_anIndents, original.m_anIndents.length);
+        }
+
+        /**
+         * Create a copy of this source.
+         *
+         * @return the new Source copy
+         */
+        protected Source copy() {
+            return MethodStructure.this.new Source(this);
         }
 
         protected void disassemble(DataInput in)

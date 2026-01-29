@@ -25,7 +25,7 @@ import static org.xvm.util.Handy.readFileChars;
  * (line termination, location and Unicode escapes).
  */
 public class Source
-        implements Constants, Cloneable {
+        implements Constants {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -455,17 +455,26 @@ public class Source
     }
 
     /**
-     * @return a clone of this Source, but with the position reset to the beginning of the source
+     * Copy constructor. Creates a copy of this Source with position reset to the beginning.
+     *
+     * @param original  the Source to copy
+     */
+    private Source(Source original) {
+        this.m_ach   = original.m_ach;
+        this.m_cch   = original.m_cch;
+        this.m_node  = original.m_node;
+        this.m_sFile = original.m_sFile;
+        this.m_file  = original.m_file;
+        // Position fields reset to start (m_of, m_iLine, m_iLineOffset default to 0)
+        // m_fEscapesEncountered defaults to false
+    }
+
+    /**
+     * @return a copy of this Source, but with the position reset to the beginning of the source
      *         code
      */
-    public Source clone() {
-        try {
-            Source that = (Source) super.clone();
-            that.reset();
-            return that;
-        } catch (CloneNotSupportedException e) {
-            throw new RuntimeException(e);
-        }
+    public Source copy() {
+        return new Source(this);
     }
 
     /**

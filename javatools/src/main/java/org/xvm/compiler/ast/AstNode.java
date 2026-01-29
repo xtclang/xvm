@@ -73,7 +73,7 @@ import static org.xvm.util.Handy.indentLines;
  * Common base class for all statements and expressions.
  */
 public abstract class AstNode
-        implements Cloneable {
+        implements Copyable<AstNode> {
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
@@ -251,6 +251,7 @@ public abstract class AstNode
      *
      * @return a deep copy of this node
      */
+    @Override
     public AstNode copy() {
         throw new UnsupportedOperationException(
             "AstNode subclass " + getClass().getSimpleName() + " must override copy()");
@@ -274,58 +275,6 @@ public abstract class AstNode
         this.m_stage  = original.m_stage == Stage.Discarded ? Stage.Initial : original.m_stage;
         // Parent is needed for pool() access during temp validation; will be reset by adopt()
         this.m_parent = original.m_parent;
-    }
-
-    /**
-     * Creates a deep copy using reflection. Subclasses that override this method must call
-     * super.clone() to get a shallow copy first (which invokes Object.clone()), then handle
-     * their own non-child fields.
-     */
-    @Override
-    @SuppressWarnings("unchecked")
-    public AstNode clone() {
-        AstNode that;
-        try {
-            that = (AstNode) super.clone();
-        } catch (CloneNotSupportedException e) {
-            throw new IllegalStateException(e);
-        }
-
-        for (var field : getChildFields()) {
-            Object oVal;
-            try {
-                oVal = field.get(this);
-            } catch (NullPointerException e) {
-                throw new IllegalStateException("class=" + this.getClass().getSimpleName(), e);
-            } catch (IllegalAccessException e) {
-                throw new IllegalStateException(e);
-            }
-
-            if (oVal != null) {
-                if (oVal instanceof AstNode node) {
-                    var nodeNew = node.copy();
-                    that.adopt(nodeNew);
-                    oVal = nodeNew;
-                } else if (oVal instanceof List<?> list) {
-                    var listNew = ((List<AstNode>) list).stream()
-                            .map(AstNode::copy)
-                            .collect(Collectors.toCollection(ArrayList::new));
-                    that.adopt(listNew);
-                    oVal = listNew;
-                } else {
-                    throw new IllegalStateException(
-                            "unsupported container type: " + oVal.getClass().getSimpleName());
-                }
-
-                try {
-                    field.set(that, oVal);
-                } catch (IllegalAccessException e) {
-                    throw new IllegalStateException(e);
-                }
-            }
-        }
-
-        return that;
     }
 
     /**

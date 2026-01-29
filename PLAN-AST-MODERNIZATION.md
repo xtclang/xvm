@@ -245,11 +245,13 @@ class ForStatement {
 
 The migration must be done incrementally to maintain a working compiler. **All four steps are part of this PR**:
 
-**Step 1: Copy Constructors**
-- Add copy constructors to all AST classes
-- Replace `clone()` calls with `copy()` calls
-- Remove `clone()` method and `Cloneable` interface
-- **Result**: No more reflection in copy operations
+**Step 1: Copy Constructors** - COMPLETE
+- ✅ Add copy constructors to all AST classes
+- ✅ Replace `clone()` calls with `copy()` calls
+- ✅ Remove `clone()` method and `Cloneable` interface from compiler
+- ✅ Add `Copyable<T>` interface implemented by `AstNode`
+- ✅ Convert `Token` and `Source` to use `copy()` instead of `clone()`
+- **Result**: No more reflection in copy operations, no Cloneable in compiler
 
 **Step 2: Explicit Children Methods**
 - Add `getChildren()` method to each AST class returning explicit list

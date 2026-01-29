@@ -5362,9 +5362,9 @@ public class Parser {
     protected Mark mark() {
         Mark mark = new Mark();
         mark.pos       = m_lexer.mark();
-        mark.token     = m_token        == null ? null : m_token       .clone();
-        mark.putBack   = m_tokenPutBack == null ? null : m_tokenPutBack.clone();
-        mark.lastMatch = m_tokenPrev    == null ? null : m_tokenPrev   .clone();
+        mark.token     = m_token        == null ? null : m_token       .copy();
+        mark.putBack   = m_tokenPutBack == null ? null : m_tokenPutBack.copy();
+        mark.lastMatch = m_tokenPrev    == null ? null : m_tokenPrev   .copy();
         mark.doc       = m_doc;
         mark.noRec     = m_fAvoidRecovery;
         return mark;

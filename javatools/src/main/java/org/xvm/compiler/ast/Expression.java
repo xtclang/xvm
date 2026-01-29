@@ -340,13 +340,13 @@ public abstract class Expression
     }
 
     /**
-     * An implementation of the "tesFit" API via the validation of the cloned expression.
+     * An implementation of the "testFit" API via the validation of a copied expression.
      *
      * This implementation could be computationally expensive and should be used sparingly.
      */
     protected TypeFit testFitMultiExhaustive(Context ctx, TypeConstant[] atypeRequired,
                                              ErrorListener errs) {
-        Expression exprTemp = (Expression) clone();
+        Expression exprTemp = copy();
         Context    ctxTemp  = ctx.enter();
         Expression exprNew  = exprTemp.validateMulti(ctxTemp, atypeRequired,
                                         errs == null ? ErrorListener.BLACKHOLE : errs);
