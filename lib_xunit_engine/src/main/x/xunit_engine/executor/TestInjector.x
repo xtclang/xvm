@@ -5,6 +5,8 @@ import ecstasy.mgmt.ModuleRepository;
 import ecstasy.mgmt.ResourceProvider;
 import ecstasy.mgmt.Container.Linker;
 
+import ecstasy.reflect.Injector;
+
 import executor.ResourceLookupProvider;
 
 import xunit.extensions.ExecutionContext;
@@ -68,15 +70,14 @@ service TestInjector
             }
         }
 
-        Supplier supplier = super(type, name);
         return (Options opts) -> {
             if (Object o := contextLookup(type, name, opts)) {
+                // the context has on override for this injectable
                 return o;
             }
-            if (supplier.is(ResourceSupplier)) {
-                return supplier(opts);
-            }
-            return supplier;
+            // no override found, use the parent injector
+            @Inject Injector injector;
+            return injector.inject(type, name, opts);
         };
     }
 

@@ -39,6 +39,11 @@ const TestExecutor {
     ExecutionLifecycle lifecycle;
 
     /**
+     * The `ResourceLookupProvider` to update with the execution context.
+     */
+    @Inject ResourceLookupProvider provider;
+
+    /**
      * Execute the tests in this executor's `Model` including recursively
      * executing tests in any child `Model's.
      *
@@ -182,8 +187,7 @@ const TestExecutor {
     }
 
     private void updateResourceProvider(EngineExecutionContext context, ExtensionRegistry registry) {
-        @Inject ResourceLookupProvider provider;
-        ResourceLookupCallback[]       callbacks = registry.get(ResourceLookupCallback, True);
+        ResourceLookupCallback[] callbacks = registry.get(ResourceLookupCallback, True);
         provider.setExecutionContext(context, callbacks.freeze(True));
     }
 }

@@ -48,8 +48,9 @@ public class MainContainer
 
         ConstantPool pool             = frame.poolContext();
         TypeConstant typeDestringable = pool.ensureEcstasyTypeConstant("text.Destringable");
+        TypeConstant typeList         = pool.typeList();
         TypeConstant typeString       = pool.typeString();
-        TypeConstant typeStrings      = pool.ensureArrayType(typeString);
+        TypeConstant typeStrings      = pool.ensureParameterizedTypeConstant(typeList, typeString);
         TypeConstant typeRequired     = type;
 
         if (typeRequired.isNullable()) {

@@ -53,12 +53,30 @@ service BasicResourceProvider
                 return random;
             };
 
+        case (String, _):
+            // ToDo This will return ANY string injectable from the parent, we might want to think
+            // about this and maybe filter them in some way as we would not necessarily want to pass
+            // down some injected information that the child container should not be able to see
+            return (Inject.Options opts) -> {
+                @Inject(resourceName=name, opts=opts) String value;
+                return value;
+            };
+
         case (String?, _):
             // ToDo This will return ANY string injectable from the parent, we might want to think
             // about this and maybe filter them in some way as we would not necessarily want to pass
             // down some injected information that the child container should not be able to see
             return (Inject.Options opts) -> {
                 @Inject(resourceName=name, opts=opts) String? value;
+                return value;
+            };
+
+        case (List<String>, _):
+            // ToDo This will return ANY string injectable from the parent, we might want to think
+            // about this and maybe filter them in some way as we would not necessarily want to pass
+            // down some injected information that the child container should not be able to see
+            return (Inject.Options opts) -> {
+                @Inject(resourceName=name, opts=opts) List<String> value;
                 return value;
             };
 
@@ -72,6 +90,9 @@ service BasicResourceProvider
             };
 
         default:
+            if (Supplier supp := getDestringableResource(type, name)) {
+                return supp;
+            }
             // if the type is Nullable, no need to complain; just return Null, otherwise
             // return a deferred exception (thrown only if the container actually asks for the
             // resource at run time)
@@ -92,5 +113,36 @@ service BasicResourceProvider
         }
 
         return supplier.as(InjectionType);
+    }
+
+    /**
+     * Returns a supplier that constructs a Destringable resource for a string injection.
+     *
+     * @return `True` iff the injection type is a Destringable or nullable Destringable
+     * @return a supplier that constructs a Destringable resource for a string injection
+     */
+    conditional Supplier getDestringableResource(Type type, String name) {
+        Type    baseType   = type;
+        Boolean isNullable = Nullable.as(Type).isA(type);
+        if (isNullable) {
+            baseType = type.underlyingTypes[1];
+        }
+        if (baseType.is(Type<Destringable>)) {
+            // the requested type is Destringable so it may be possible to construct it from a
+            // string injection
+            @Inject Injector injector;
+            return True, (Inject.Options opts) -> {
+                var value = injector.inject(String?, name, opts);
+                if (value.is(String)) {
+                    return new baseType.DataType(value);
+                }
+                if (isNullable) {
+                    return Null;
+                }
+                throw new Exception($|Unsupported resource: type="{type}", name="{name}"
+                                   );
+            };
+        }
+        return False;
     }
 }
