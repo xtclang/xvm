@@ -161,7 +161,7 @@ public class MBind
         code.new_(cdFn)
             .dup()
             .aload(code.parameterSlot(0)); // ctx
-        Builder.loadTypeConstant(code, bctx.typeSystem, typeFn);
+        bctx.loadTypeConstant(code, typeFn);
         code.aload(slotStd)
             .aload(slotOpt)
             .iload(slotImm)

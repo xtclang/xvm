@@ -76,6 +76,14 @@ public abstract class Builder {
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * Generate a "load" for the specified TypeConstant.
+     * Out: TypeConstant on Java stack
+     */
+    protected void loadTypeConstant(CodeBuilder code, String className, TypeConstant type) {
+        throw new UnsupportedOperationException();
+    }
+
     // ----- helper methods ------------------------------------------------------------------------
 
     /**
@@ -171,8 +179,8 @@ public abstract class Builder {
             return new SingleSlot(constant.getConstantPool().typeChar(), Primitive, CD_char, "");
 
         case TypeConstant type:
-            Builder.loadTypeConstant(code, typeSystem, type);
-            return new SingleSlot(type.getType(), Specific, CD_TypeConstant, "");
+            bctx.loadType(code, type);
+            return new SingleSlot(type.getType(), Specific, CD_nType, "");
 
         case PropertyConstant propId: {
             // support for the "local property" mode
@@ -240,7 +248,7 @@ public abstract class Builder {
                 code.new_(cd)
                     .dup()
                     .aload(code.parameterSlot(0)); // ctx
-                loadTypeConstant(code, typeSystem, type);
+                bctx.loadTypeConstant(code, type);
                 code.ldc(stdMD);
                 if (optMD == null) {
                     code.aconst_null();
@@ -261,7 +269,7 @@ public abstract class Builder {
                 code.new_(cd)
                     .dup()
                     .aload(code.parameterSlot(0)); // ctx
-                loadTypeConstant(code, typeSystem, type);
+                bctx.loadTypeConstant(code, type);
                 code.ldc(stdMD);
                 if (optMD == null) {
                     code.aconst_null();
@@ -444,34 +452,6 @@ public abstract class Builder {
      */
     public static void loadNull(CodeBuilder code) {
         code.getstatic(CD_Nullable, "Null", CD_Nullable);
-    }
-
-    /**
-     * Generate a "load" for the specified TypeConstant.
-     * Out: TypeConstant
-     */
-    public static void loadTypeConstant(CodeBuilder code, TypeSystem ts, TypeConstant type) {
-        int index = ts.registerConstant(type);
-
-        // TODO: this is a temporary hack; remove!
-        if (ts instanceof NativeTypeSystem) {
-            index = -index;
-        }
-        code.aload(code.parameterSlot(0)) // $ctx
-            .loadConstant(index)
-            .invokevirtual(CD_Ctx, "getConstant", Ctx.MD_getConstant) // <- const
-            .checkcast(CD_TypeConstant);                              // <- type
-    }
-
-    /**
-     * Generate a "load" for an nType object for the specified TypeConstant.
-     * Out: xType instance
-     */
-    public static void loadType(CodeBuilder code, TypeSystem ts, TypeConstant type) {
-        code.aload(code.parameterSlot(0)); // ctx
-        loadTypeConstant(code, ts, type);
-        code.invokestatic(CD_nType, "$ensureType",
-                          MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
     }
 
     /**

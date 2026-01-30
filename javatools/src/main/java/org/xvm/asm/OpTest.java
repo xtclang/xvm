@@ -432,7 +432,7 @@ public abstract class OpTest
                 RegisterInfo regTarget = bctx.loadArgument(code, m_nValue1);
                 bctx.loadCtx(code);
                 code.invokevirtual(regTarget.cd(), "$xvmType", MD_xvmType); // target type
-                Builder.loadTypeConstant(code, bctx.typeSystem, typeTest);   // test type
+                bctx.loadTypeConstant(code, typeTest);                      // test type
             }
         } else {
             RegisterInfo regType = bctx.loadArgument(code, m_nValue2); // xType

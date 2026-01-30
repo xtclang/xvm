@@ -7,7 +7,10 @@ import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassHierarchyResolver;
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.Interfaces;
+import java.lang.classfile.MethodModel;
 import java.lang.classfile.Superclass;
+
+import java.lang.constant.ConstantDescs;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -181,6 +184,13 @@ public class NativeTypeSystem
                 return;
             }
 
+            if (element instanceof MethodModel methodModel &&
+                    methodModel.methodName().stringValue().equals(ConstantDescs.CLASS_INIT_NAME)) {
+                // skip the static initializer for now; we will re-incorporate it later;
+                // see AugmentingBuilder.augmentStaticInitializer()
+                return;
+            }
+
             classBuilder.with(element); // copy everything else "as is"
 
             if (element instanceof Superclass) {
@@ -195,7 +205,7 @@ public class NativeTypeSystem
 
         if (nativeBuilders.get(type) instanceof Class builderClass) {
             try {
-                return (Builder) builderClass.getDeclaredConstructor(
+                return (AugmentingBuilder) builderClass.getDeclaredConstructor(
                     TypeSystem.class, TypeConstant.class, ClassModel.class).
                         newInstance(this, type, model);
             } catch (Exception e) {

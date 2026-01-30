@@ -11,7 +11,6 @@ import java.lang.constant.ClassDesc;
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ModuleStructure;
 
@@ -555,36 +554,6 @@ public class TypeSystem {
             }
         }
         return buf == null ? name : buf.toString();
-    }
-
-    /**
-     * Register a constant to be used by the runtime. The returned index is going to be stable for
-     * the lifetime of the TypeSystem.
-     *
-     * @param constant  the constant to register
-     *
-     * @return the index of the constant
-     */
-    public int registerConstant(Constant constant) {
-        return pool().register(constant).getPosition();
-    }
-
-    /**
-     * Retrieve a constant at the specified index.
-     *
-     * Note: this operation doesn't have to be synchronized since even when the underlying array
-     * growth occurs, the old list still contains the corresponding entry at the right place.
-     */
-    public Constant getConstant(int index) {
-        // TODO: this is a temporary hack; remove
-        ConstantPool pool;
-        if (index >= 0) {
-            pool = pool();
-        } else {
-            pool  = xvm.ecstasyPool;
-            index = -index;
-        }
-        return pool.getConstant(index);
     }
 }
 

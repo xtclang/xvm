@@ -38,11 +38,11 @@ public class PackageBuilder
     }
 
     @Override
-    protected void callSuperInitializer(CodeBuilder code) {
+    protected void callSuperInitializer(CodeBuilder code, String className) {
         // super($ctx, type);
         code.aload(0)
             .aload(code.parameterSlot(0));
-        loadTypeConstant(code, typeSystem, typeInfo.getType());
+        loadTypeConstant(code, className, typeInfo.getType());
         code.invokespecial(getSuperCD(), INIT_NAME,
                 MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant));
     }

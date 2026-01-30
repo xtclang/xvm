@@ -619,7 +619,7 @@ public abstract class OpCondJump
                 regTarget.load(code);
                 bctx.loadCtx(code);
                 code.invokevirtual(regTarget.cd(), "$xvmType", MD_xvmType); // target type
-                Builder.loadTypeConstant(code, bctx.typeSystem, typeTest);  // test type
+                bctx.loadTypeConstant(code, typeTest);                      // test type
                 code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
             }
 

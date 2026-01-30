@@ -991,7 +991,7 @@ public class UnionTypeConstant
         regTest.load(code);
         bctx.loadCtx(code);
         code.invokevirtual(CD_nObj, "$xvmType", MD_xvmType);
-        Builder.loadTypeConstant(code, bctx.typeSystem, typeTest);
+        bctx.loadTypeConstant(code, typeTest);
         code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
     }
 

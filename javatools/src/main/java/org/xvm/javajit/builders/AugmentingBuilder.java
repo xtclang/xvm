@@ -3,10 +3,12 @@ package org.xvm.javajit.builders;
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
+import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.FieldModel;
 import java.lang.classfile.MethodModel;
 
 import java.lang.constant.ClassDesc;
+import java.lang.constant.ConstantDescs;
 import java.lang.constant.MethodTypeDesc;
 
 import java.util.List;
@@ -21,6 +23,7 @@ import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.TypeSystem;
 
 import static java.lang.constant.ConstantDescs.INIT_NAME;
+import static java.lang.constant.ConstantDescs.MTD_void;
 
 /**
  * The builder for native types that uses an existing Java class to augment with the Ecstasy natural
@@ -62,6 +65,17 @@ public class AugmentingBuilder extends CommonBuilder {
         TypeConstant T_EXCEPTION = type.getConstantPool().typeException();
         if (type.isA(T_EXCEPTION) && !type.removeAccess().equals(T_EXCEPTION)) {
             new ExceptionBuilder(typeSystem, type).assembleCreateException(className, classBuilder);
+        }
+    }
+
+    @Override
+    protected void augmentStaticInitializer(String className, CodeBuilder code) {
+        MethodModel model = findMethod(ConstantDescs.CLASS_INIT_NAME, MTD_void);
+
+        if (model != null) {
+            // the native class had the static initializer, which was skipped during the "copy"
+            // phase and now needs to be incorporated
+            model.code().ifPresent(oldCode -> oldCode.forEach(code::with));
         }
     }
 

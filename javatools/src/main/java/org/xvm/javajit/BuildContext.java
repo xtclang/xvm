@@ -70,6 +70,7 @@ import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nException;
 import static org.xvm.javajit.Builder.CD_nFunction;
 import static org.xvm.javajit.Builder.CD_nObj;
+import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.N_TypeMismatch;
 import static org.xvm.javajit.Builder.OPT;
@@ -907,6 +908,25 @@ public class BuildContext {
     }
 
     /**
+     * Generate a "load" for the specified TypeConstant.
+     * Out: TypeConstant on Java stack
+     */
+    public void loadTypeConstant(CodeBuilder code, TypeConstant type) {
+        builder.loadTypeConstant(code, className, type);
+    }
+
+    /**
+     * Generate a "load" for an nType object for the specified TypeConstant.
+     * Out: xType instance
+     */
+    public void loadType(CodeBuilder code, TypeConstant type) {
+        loadCtx(code);
+        loadTypeConstant(code, type);
+        code.invokestatic(CD_nType, "$ensureType",
+                          MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
+    }
+
+    /**
      * Build the code to load a value for a predefine constant on the Java stack.
      */
     public RegisterInfo loadPredefineArgument(CodeBuilder code, int argId) {
@@ -971,7 +991,7 @@ public class BuildContext {
         code.new_(cd)
             .dup()
             .aload(code.parameterSlot(0)); // ctx
-        Builder.loadTypeConstant(code, typeSystem, fnType);
+        loadTypeConstant(code, fnType);
         code.ldc(stdMD)
             .aload(0)
             .invokevirtual(CD_MethodHandle, "bindTo", bindDesc);
@@ -1267,7 +1287,7 @@ public class BuildContext {
                 registerInfos.put(regId, reg);
 
                 loadCtx(code);
-                Builder.loadTypeConstant(code, typeSystem, resourceType);
+                loadTypeConstant(code, resourceType);
                 code.ldc(resourceName)
                     .aconst_null() // opts
                     .invokevirtual(CD_Ctx, "inject", Ctx.MD_inject);
@@ -1618,7 +1638,7 @@ public class BuildContext {
 
         loadCtx(code);
         if (infoTarget.hasGenericTypes()) {
-            Builder.loadTypeConstant(code, typeSystem, infoTarget.getType());
+            loadTypeConstant(code, infoTarget.getType());
         }
         loadCallArguments(code, jmdNew, anArgValue);
 

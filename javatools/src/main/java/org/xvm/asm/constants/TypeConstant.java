@@ -6694,7 +6694,7 @@ public abstract class TypeConstant
             String        sJitName = method.ensureJitMethodName(ts);
 
             bctx.loadCtx(code);
-            Builder.loadType(code, ts, this);
+            bctx.loadType(code, this);
             reg1.load(code);
             reg2.load(code);
 
