@@ -1,4 +1,6 @@
 import de.undercouch.gradle.tasks.download.Download
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
+import org.apache.commons.compress.compressors.xz.XZCompressorInputStream
 import java.security.MessageDigest
 import java.time.Instant
 import java.util.Properties
@@ -48,11 +50,12 @@ val nativeLibExt: String = when {
 }
 
 val nativePlatformDir: String = when {
-    osName.contains("windows") -> "windows-x64"
+    osName.contains("windows") && osArch in listOf("amd64", "x86_64") -> "windows-x64"
     osName.contains("mac") && osArch in listOf("aarch64", "arm64") -> "darwin-arm64"
-    osName.contains("mac") -> "darwin-x64"
-    osArch in listOf("aarch64", "arm64") -> "linux-arm64"
-    else -> "linux-x64"
+    osName.contains("mac") && osArch in listOf("amd64", "x86_64") -> "darwin-x64"
+    osName.contains("linux") && osArch in listOf("aarch64", "arm64") -> "linux-arm64"
+    osName.contains("linux") && osArch in listOf("amd64", "x86_64") -> "linux-x64"
+    else -> throw GradleException("Unsupported platform: $osName/$osArch")
 }
 
 // =============================================================================
@@ -127,6 +130,126 @@ val extractTreeSitterCli by tasks.registering {
         output.setExecutable(true)
         logger.lifecycle("Extracted tree-sitter CLI to: ${output.absolutePath}")
     }
+}
+
+// =============================================================================
+// Zig Compiler Download (for Cross-Compilation)
+// =============================================================================
+// Zig enables building native libraries for ALL platforms from ANY host machine.
+// Download once, build everywhere - no platform-specific toolchains needed.
+
+val zigVersion = "0.13.0"
+val zigDir: Provider<Directory> = layout.buildDirectory.dir("zig")
+
+// Detect host platform for Zig download (format: {os}-{arch})
+val zigPlatform: String = when {
+    osName.contains("mac") && osArch in listOf("aarch64", "arm64") -> "macos-aarch64"
+    osName.contains("mac") && osArch in listOf("amd64", "x86_64") -> "macos-x86_64"
+    osName.contains("linux") && osArch in listOf("amd64", "x86_64") -> "linux-x86_64"
+    osName.contains("linux") && osArch in listOf("aarch64", "arm64") -> "linux-aarch64"
+    osName.contains("windows") && osArch in listOf("amd64", "x86_64") -> "windows-x86_64"
+    else -> "unsupported"
+}
+
+val zigPlatformSupported = zigPlatform != "unsupported"
+val zigArchiveExt = if (osName.contains("windows")) "zip" else "tar.xz"
+val zigExeName = if (osName.contains("windows")) "zig.exe" else "zig"
+
+/**
+ * Download Zig compiler archive for the current platform.
+ */
+val downloadZig by tasks.registering(Download::class) {
+    group = "zig"
+    description = "Download Zig compiler for cross-compilation"
+    enabled = zigPlatformSupported
+
+    src("https://ziglang.org/download/$zigVersion/zig-$zigPlatform-$zigVersion.$zigArchiveExt")
+    dest(zigDir.map { it.file("zig-$zigPlatform-$zigVersion.$zigArchiveExt") })
+    overwrite(false)
+    onlyIfModified(true)
+    quiet(false)
+}
+
+/**
+ * Extract the Zig compiler from the downloaded archive.
+ * Uses Gradle's zipTree for .zip files, and Apache Commons Compress for .tar.xz files.
+ * Pure Java implementation - no system executables required.
+ */
+abstract class ExtractZigTask @Inject constructor(
+    private val fsOps: FileSystemOperations,
+    private val archiveOps: ArchiveOperations
+) : DefaultTask() {
+
+    @get:InputFile
+    abstract val archiveFile: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @get:Input
+    abstract val archiveExt: Property<String>
+
+    @TaskAction
+    fun extract() {
+        val archive = archiveFile.get().asFile
+        val outDir = outputDir.get().asFile
+
+        if (archiveExt.get() == "zip") {
+            fsOps.copy {
+                from(archiveOps.zipTree(archive))
+                into(outDir)
+            }
+        } else {
+            // Use Apache Commons Compress for .tar.xz extraction (pure Java)
+            extractTarXz(archive, outDir)
+        }
+
+        logger.lifecycle("Extracted Zig compiler to: ${outDir.absolutePath}")
+    }
+
+    private fun extractTarXz(archive: File, outDir: File) {
+        outDir.mkdirs()
+
+        archive.inputStream().buffered().use { fileIn ->
+            XZCompressorInputStream(fileIn).use { xzIn ->
+                TarArchiveInputStream(xzIn).use { tarIn ->
+                    var entry = tarIn.nextEntry
+                    while (entry != null) {
+                        val outFile = File(outDir, entry.name)
+
+                        if (entry.isDirectory) {
+                            outFile.mkdirs()
+                        } else {
+                            outFile.parentFile.mkdirs()
+                            outFile.outputStream().buffered().use { out ->
+                                tarIn.copyTo(out)
+                            }
+                            // Preserve executable permission
+                            if (entry.mode and 0b001_000_000 != 0) {
+                                outFile.setExecutable(true)
+                            }
+                        }
+                        entry = tarIn.nextEntry
+                    }
+                }
+            }
+        }
+    }
+}
+
+val extractZig by tasks.registering(ExtractZigTask::class) {
+    group = "zig"
+    description = "Extract Zig compiler from archive"
+    dependsOn(downloadZig)
+    enabled = zigPlatformSupported
+
+    archiveFile.set(layout.file(downloadZig.map { it.dest }))
+    outputDir.set(zigDir)
+    archiveExt.set(zigArchiveExt)
+}
+
+val zigExe: Provider<String> = zigDir.map {
+    it.dir("zig-$zigPlatform-$zigVersion").file(zigExeName).asFile.absolutePath
 }
 
 // =============================================================================
@@ -392,6 +515,185 @@ val buildTreeSitterLibrary by tasks.registering(BuildNativeLibraryTask::class) {
 }
 
 // =============================================================================
+// Zig Cross-Compilation
+// =============================================================================
+// Build native libraries for all platforms from any host using Zig.
+
+/**
+ * Task to cross-compile native library using Zig.
+ */
+abstract class ZigCrossCompileTask @Inject constructor(
+    private val execOps: ExecOperations
+) : DefaultTask() {
+
+    @get:Input
+    abstract val zigPath: Property<String>
+
+    @get:Input
+    abstract val targetTriple: Property<String> // e.g., "aarch64-macos"
+
+    @get:Input
+    abstract val targetPlatform: Property<String> // e.g., "darwin-arm64"
+
+    @get:InputFile
+    abstract val parserC: RegularFileProperty
+
+    @get:InputFile
+    abstract val scannerC: RegularFileProperty
+
+    @get:InputDirectory
+    abstract val includeDir: DirectoryProperty
+
+    @get:OutputFile
+    abstract val outputLib: RegularFileProperty
+
+    @TaskAction
+    fun compile() {
+        val ext = when {
+            targetTriple.get().contains("macos") -> "dylib"
+            targetTriple.get().contains("windows") -> "dll"
+            else -> "so"
+        }
+
+        val outputFile = outputLib.get().asFile
+        outputFile.parentFile.mkdirs()
+
+        logger.lifecycle("Cross-compiling for ${targetPlatform.get()} (${targetTriple.get()})...")
+
+        execOps.exec {
+            executable(zigPath.get())
+            args(
+                "cc",
+                "-shared",
+                "-fPIC",
+                "-target", targetTriple.get(),
+                "-I", includeDir.get().asFile.absolutePath,
+                parserC.get().asFile.absolutePath,
+                scannerC.get().asFile.absolutePath,
+                "-o", outputFile.absolutePath
+            )
+        }
+
+        logger.lifecycle("Built: ${outputFile.absolutePath}")
+    }
+}
+
+// Cross-compilation target mapping
+val crossCompileTargets = mapOf(
+    "darwin-arm64" to "aarch64-macos",
+    "darwin-x64" to "x86_64-macos",
+    "linux-x64" to "x86_64-linux-gnu",
+    "linux-arm64" to "aarch64-linux-gnu",
+    "windows-x64" to "x86_64-windows-gnu"
+)
+
+// Library extension for each platform
+fun libExtForPlatform(platform: String): String = when {
+    platform.startsWith("darwin") -> "dylib"
+    platform.startsWith("windows") -> "dll"
+    else -> "so"
+}
+
+// Register cross-compile tasks for all platforms
+crossCompileTargets.forEach { (platform, zigTarget) ->
+    val ext = libExtForPlatform(platform)
+    val taskName = "buildNativeLibrary_${platform.replace("-", "_")}"
+
+    tasks.register<ZigCrossCompileTask>(taskName) {
+        group = "tree-sitter"
+        description = "Cross-compile native library for $platform using Zig"
+        dependsOn(extractZig, validateTreeSitterGrammar)
+        enabled = zigPlatformSupported
+
+        zigPath.set(zigExe)
+        targetTriple.set(zigTarget)
+        targetPlatform.set(platform)
+        parserC.set(generatedDir.map { it.file("src/parser.c") })
+        scannerC.set(generatedDir.map { it.file("src/scanner.c") })
+        includeDir.set(generatedDir.map { it.dir("src") })
+        outputLib.set(layout.buildDirectory.file("native-cross/$platform/libtree-sitter-xtc.$ext"))
+    }
+}
+
+/**
+ * Build native libraries for all platforms using Zig.
+ */
+val buildAllNativeLibraries by tasks.registering {
+    group = "tree-sitter"
+    description = "Build native libraries for all platforms using Zig"
+    enabled = zigPlatformSupported
+
+    crossCompileTargets.keys.forEach { platform ->
+        dependsOn("buildNativeLibrary_${platform.replace("-", "_")}")
+    }
+}
+
+/**
+ * Copy all cross-compiled libraries to resources directories for committing to source control.
+ */
+val copyAllNativeLibrariesToResources by tasks.registering {
+    group = "tree-sitter"
+    description = "Copy all cross-compiled native libraries to resources"
+    dependsOn(buildAllNativeLibraries)
+
+    // Capture values at configuration time
+    val crossBuildDir = layout.buildDirectory.dir("native-cross")
+    val resourcesNativeDir = layout.projectDirectory.dir("src/main/resources/native")
+    val grammarFileValue = grammarJsFile.map { it.asFile }
+    val scannerFileValue = scannerCFile.map { it.asFile }
+
+    inputs.dir(crossBuildDir)
+    outputs.dir(resourcesNativeDir)
+
+    doLastTask {
+        crossCompileTargets.keys.forEach { platform ->
+            val ext = libExtForPlatform(platform)
+            val srcLib = crossBuildDir.get().dir(platform).file("libtree-sitter-xtc.$ext").asFile
+            val destDir = resourcesNativeDir.dir(platform).asFile
+            val destLib = File(destDir, "libtree-sitter-xtc.$ext")
+            val hashFile = File(destDir, "libtree-sitter-xtc.inputs.sha256")
+            val versionFile = File(destDir, "libtree-sitter-xtc.version")
+
+            if (srcLib.exists()) {
+                destDir.mkdirs()
+                srcLib.copyTo(destLib, overwrite = true)
+
+                // Compute and write hash
+                val digest = MessageDigest.getInstance("SHA-256")
+                listOf(grammarFileValue.get(), scannerFileValue.get()).forEach { file ->
+                    if (file.exists()) digest.update(file.readBytes())
+                }
+                val hash = digest.digest().joinToString("") { "%02x".format(it) }
+                hashFile.writeText(hash)
+
+                // Write version info
+                val gitCommit = try {
+                    val process = ProcessBuilder("git", "rev-parse", "--short", "HEAD")
+                        .redirectErrorStream(true).start()
+                    val result = process.inputStream.bufferedReader().readText().trim()
+                    if (process.waitFor() == 0) result else "unknown"
+                } catch (_: Exception) { "unknown" }
+
+                Properties().apply {
+                    setProperty("input.hash", hash)
+                    setProperty("git.commit", gitCommit)
+                    setProperty("built.at", Instant.now().toString())
+                    setProperty("platform", platform)
+                    setProperty("cross.compiled", "true")
+                    versionFile.outputStream().use { store(it, "Tree-sitter native library build info") }
+                }
+
+                logger.lifecycle("Copied: $platform -> ${destLib.absolutePath}")
+            } else {
+                logger.warn("Not found: ${srcLib.absolutePath}")
+            }
+        }
+
+        logger.lifecycle("Commit the updated libraries to source control!")
+    }
+}
+
+// =============================================================================
 // Staleness Detection
 // =============================================================================
 
@@ -510,9 +812,7 @@ val copyNativeLibraryToResources by tasks.registering(Copy::class) {
  *
  * This is the task that consumers should depend on.
  */
-abstract class EnsureNativeLibraryTask @Inject constructor(
-    private val execOps: ExecOperations
-) : DefaultTask() {
+abstract class EnsureNativeLibraryTask : DefaultTask() {
 
     @get:InputFile
     abstract val grammarFile: RegularFileProperty
@@ -528,21 +828,6 @@ abstract class EnsureNativeLibraryTask @Inject constructor(
 
     @get:Input
     abstract val versionFilePath: Property<String>
-
-    @get:Input
-    abstract val treeSitterCli: Property<String>
-
-    @get:Input
-    abstract val workDir: Property<File>
-
-    @get:Input
-    abstract val nativeOutputPath: Property<String>
-
-    @get:Input
-    abstract val platformSupported: Property<Boolean>
-
-    @get:Input
-    abstract val platform: Property<String>
 
     private fun computeHash(): String {
         val digest = MessageDigest.getInstance("SHA-256")
@@ -566,23 +851,6 @@ abstract class EnsureNativeLibraryTask @Inject constructor(
         }
     }
 
-    private fun writeVersionInfo(versionFile: File, hash: String) {
-        val gitCommit = try {
-            val process = ProcessBuilder("git", "rev-parse", "--short", "HEAD")
-                .redirectErrorStream(true).start()
-            val result = process.inputStream.bufferedReader().readText().trim()
-            if (process.waitFor() == 0) result else "unknown"
-        } catch (_: Exception) { "unknown" }
-
-        Properties().apply {
-            setProperty("input.hash", hash)
-            setProperty("git.commit", gitCommit)
-            setProperty("built.at", Instant.now().toString())
-            setProperty("platform", platform.get())
-            versionFile.outputStream().use { store(it, "Tree-sitter native library build info") }
-        }
-    }
-
     @TaskAction
     fun execute() {
         val prebuiltLib = File(prebuiltLibPath.get())
@@ -599,79 +867,43 @@ abstract class EnsureNativeLibraryTask @Inject constructor(
             return
         }
 
-        // Need to rebuild - check for compiler
-        val osName = System.getProperty("os.name").lowercase()
-        val cmd = if (osName.contains("windows")) "where" else "which"
-        val compiler = listOf("cc", "clang", "gcc").firstOrNull { c ->
-            try { ProcessBuilder(cmd, c).start().waitFor() == 0 } catch (_: Exception) { false }
-        }
-
-        if (compiler == null) {
-            val reason = when {
-                !prebuiltLib.exists() -> "Pre-built native library is MISSING"
-                !hashFile.exists() -> "Pre-built native library has no hash file (cannot verify)"
-                else -> "Pre-built native library is STALE (inputs changed)"
+        // Library is stale or missing - fail with helpful message
+        // We don't auto-rebuild because that would require downloading Zig
+        val storedHash = if (hashFile.exists()) hashFile.readText().trim() else "none"
+        val message = buildString {
+            appendLine("Pre-built tree-sitter native library is STALE or MISSING!")
+            appendLine()
+            if (!prebuiltLib.exists()) {
+                appendLine("  Library not found: ${prebuiltLib.absolutePath}")
+            } else {
+                appendLine("  Input hash changed: $storedHash -> $currentHash")
             }
-            throw GradleException("""
-                $reason and no C compiler is available.
-
-                Either:
-                1. Install a C compiler:
-                   - macOS: xcode-select --install
-                   - Linux: apt install build-essential
-                   - Windows: Install Visual Studio Build Tools or MinGW
-
-                2. Or update pre-built libraries from someone who has a compiler:
-                   git pull  # Get updated pre-built libraries
-
-                Pre-built library: ${prebuiltLib.absolutePath}
-            """.trimIndent())
+            appendLine()
+            appendLine("To rebuild all platform libraries, run:")
+            appendLine("  ./gradlew :lang:tree-sitter:copyAllNativeLibrariesToResources")
+            appendLine()
+            appendLine("Then commit the updated libraries to source control.")
         }
-
-        if (!platformSupported.get()) {
-            throw GradleException("Cannot build native library: unsupported platform")
-        }
-
-        // Rebuild
-        logger.lifecycle("Native library needs rebuilding, using compiler: $compiler")
-
-        execOps.exec {
-            workingDir(workDir.get())
-            environment("CC", compiler)
-            executable(treeSitterCli.get())
-            args("build", "--output", nativeOutputPath.get())
-        }
-
-        // Copy to pre-built location
-        val builtLib = File(nativeOutputPath.get())
-        prebuiltLib.parentFile.mkdirs()
-        builtLib.copyTo(prebuiltLib, overwrite = true)
-
-        // Write hash and version info
-        hashFile.writeText(currentHash)
-        writeVersionInfo(versionFile, currentHash)
-
-        logger.lifecycle("Rebuilt and updated pre-built library: ${prebuiltLib.absolutePath}")
-        logVersionInfo(versionFile, currentHash)
-        logger.warn("NOTE: Commit the updated library to source control!")
+        throw GradleException(message)
     }
 }
 
+// Map platform directory name to Zig target triple
+val currentZigTarget: String = crossCompileTargets[nativePlatformDir] ?: "unsupported"
+
 val ensureNativeLibraryUpToDate by tasks.registering(EnsureNativeLibraryTask::class) {
     group = "tree-sitter"
-    description = "Ensure native library is up-to-date, rebuilding if necessary"
-    dependsOn(validateTreeSitterGrammar)
+    description = "Ensure native library is up-to-date, failing if stale"
+    // Only depend on copyGrammarFiles to get files for hashing
+    // Do NOT depend on extractZig - we don't want to download Zig unless we actually need to rebuild
+    dependsOn(copyGrammarFiles)
+    enabled = treeSitterPlatformSupported
 
     grammarFile.set(grammarJsFile)
     scannerFile.set(scannerCFile)
     prebuiltLibPath.set(prebuiltLibrary.asFile.absolutePath)
     hashFilePath.set(prebuiltHashFile.asFile.absolutePath)
     versionFilePath.set(prebuiltVersionFile.asFile.absolutePath)
-    treeSitterCli.set(treeSitterCliExe)
-    workDir.set(generatedDir.map { it.asFile })
-    nativeOutputPath.set(nativeLibFile.map { it.asFile.absolutePath })
-    platformSupported.set(treeSitterPlatformSupported)
-    platform.set(nativePlatformDir)
 }
 
 // =============================================================================

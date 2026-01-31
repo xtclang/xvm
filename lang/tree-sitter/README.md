@@ -147,6 +147,99 @@ The grammar uses 49 conflict declarations for genuinely ambiguous XTC constructs
 
 **100% coverage** - All 692 XTC files from `lib_*` directories parse successfully.
 
+## Native Library Build
+
+The tree-sitter grammar must be compiled into a native shared library (`.dylib`, `.so`, or `.dll`) for use
+by the JVM-based LSP server. We use **Zig** for cross-compilation, enabling builds for all platforms from
+any development machine.
+
+### Why Zig for Cross-Compilation?
+
+Traditional C/C++ cross-compilation requires platform-specific toolchains:
+- macOS → Xcode Command Line Tools
+- Linux → GCC/Clang with appropriate sysroot
+- Windows → MSVC or MinGW
+- Cross-platform → Docker containers, CI matrix builds, or complex SDK installations
+
+**Zig solves this** by bundling a complete C/C++ toolchain with cross-compilation support for all major platforms:
+- Single ~45MB download works everywhere
+- No SDK, sysroot, or platform-specific setup required
+- Deterministic builds across host platforms
+- Drop-in replacement for `cc`/`clang`/`gcc`
+
+This means a developer on macOS can build Windows and Linux binaries locally, without Docker or CI.
+
+### Native Library Outputs
+
+| Platform | Zig Target | Output File | Architecture |
+|----------|------------|-------------|--------------|
+| darwin-arm64 | `aarch64-macos` | `libtree-sitter-xtc.dylib` | Mach-O arm64 |
+| darwin-x64 | `x86_64-macos` | `libtree-sitter-xtc.dylib` | Mach-O x86_64 |
+| linux-x64 | `x86_64-linux-gnu` | `libtree-sitter-xtc.so` | ELF x86-64 |
+| linux-arm64 | `aarch64-linux-gnu` | `libtree-sitter-xtc.so` | ELF aarch64 |
+| windows-x64 | `x86_64-windows-gnu` | `libtree-sitter-xtc.dll` | PE32+ x86-64 |
+
+Each library exports the `tree_sitter_xtc` function symbol, which the JVM loads via Java's Foreign Function & Memory API.
+
+### Building Native Libraries
+
+Pre-built libraries are committed to source control. The build **verifies** they are up-to-date
+but does **not** auto-rebuild (to avoid downloading Zig in CI).
+
+```bash
+# Verify pre-built libraries are up-to-date (FAILS if stale)
+./gradlew :lang:tree-sitter:ensureNativeLibraryUpToDate
+
+# Rebuild ALL platforms (downloads Zig, cross-compiles, updates resources)
+./gradlew :lang:tree-sitter:copyAllNativeLibrariesToResources
+
+# Build for a specific platform only
+./gradlew :lang:tree-sitter:buildNativeLibrary_linux_x64
+```
+
+If `ensureNativeLibraryUpToDate` fails with a "STALE" error, run `copyAllNativeLibrariesToResources`
+to rebuild, then commit the updated libraries.
+
+### Gradle Tasks
+
+| Task | Description |
+|------|-------------|
+| `ensureNativeLibraryUpToDate` | **Verify** pre-built library matches grammar inputs (fails if stale) |
+| `copyAllNativeLibrariesToResources` | Rebuild all platforms and copy to resources (downloads Zig) |
+| `buildAllNativeLibraries` | Build for all 5 platforms (downloads Zig) |
+| `buildNativeLibrary_<platform>` | Cross-compile for specific platform |
+| `checkNativeLibraryStaleness` | Report if pre-built libraries need updating |
+| `downloadZig` | Download Zig compiler (called automatically by build tasks) |
+| `extractZig` | Extract Zig from archive (pure Java) |
+
+### How It Works
+
+1. **Grammar Generation**: `grammar.js` and `scanner.c` are generated from `XtcLanguage.kt` and `ScannerSpec.kt`
+2. **Tree-sitter Generate**: The tree-sitter CLI compiles `grammar.js` → `parser.c`
+3. **Zig Compilation**: Zig compiles `parser.c` + `scanner.c` → shared library
+4. **Resource Bundling**: Libraries are copied to `src/main/resources/native/<platform>/`
+5. **JAR Packaging**: The lsp-server JAR includes native libraries for the current platform
+
+### Pre-built Libraries
+
+Pre-built libraries are committed to source control at:
+```
+tree-sitter/src/main/resources/native/
+├── darwin-arm64/
+│   ├── libtree-sitter-xtc.dylib
+│   ├── libtree-sitter-xtc.inputs.sha256
+│   └── libtree-sitter-xtc.version
+├── darwin-x64/
+├── linux-arm64/
+├── linux-x64/
+└── windows-x64/
+```
+
+Each platform directory includes:
+- The native library file
+- `.inputs.sha256` - Hash of `grammar.js` + `scanner.c` for staleness detection
+- `.version` - Build metadata (git commit, timestamp, compiler used)
+
 ## LSP Integration
 
 The tree-sitter grammar powers the LSP server's syntax features:
@@ -160,6 +253,54 @@ The tree-sitter grammar powers the LSP server's syntax features:
 | Completions | Keywords + visible declarations |
 
 See `lang/lsp-server/src/main/kotlin/org/xvm/lsp/treesitter/` for implementation.
+
+### Native Library Loading
+
+The `TreeSitterAdapter` uses `XtcParser` to load the native library and parse XTC source code:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    TreeSitterAdapter                             │
+│  (implements XtcCompilerAdapter for LSP)                        │
+└────────────────────────────┬────────────────────────────────────┘
+                             │ uses
+┌────────────────────────────▼────────────────────────────────────┐
+│                      XtcParser                                   │
+│  - Extracts native library from JAR resources                   │
+│  - Loads via Java Foreign Function & Memory API                 │
+│  - Wraps jtreesitter Parser with XTC Language                   │
+└────────────────────────────┬────────────────────────────────────┘
+                             │ loads
+┌────────────────────────────▼────────────────────────────────────┐
+│              libtree-sitter-xtc.{dylib,so,dll}                  │
+│  - Exports: tree_sitter_xtc() → Language pointer                │
+│  - Exports: tree_sitter_xtc_external_scanner_*() functions      │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Loading sequence:**
+
+1. `XtcParser` detects the current platform (OS + architecture)
+2. Looks for `/native/<platform>/libtree-sitter-xtc.<ext>` in JAR resources
+3. Extracts to a temp file (required for `System.load()`)
+4. Creates a `SymbolLookup` via Java's Foreign Function API
+5. Calls `Language.load(symbols, "tree_sitter_xtc")` to get the language
+6. Creates a `Parser` instance configured with the XTC language
+
+**Adapter switching:**
+
+The LSP server supports multiple adapters, selected via Gradle property:
+
+```bash
+# Use tree-sitter adapter (syntax-level intelligence)
+./gradlew :lang:intellij-plugin:runIde -Plsp.adapter=treesitter
+
+# Use mock adapter (regex-based, no native dependencies)
+./gradlew :lang:intellij-plugin:runIde -Plsp.adapter=mock
+```
+
+The adapter is configured at build time in `lsp-server/build.gradle.kts` and written to
+`lsp-version.properties` in the JAR.
 
 ## Reference
 

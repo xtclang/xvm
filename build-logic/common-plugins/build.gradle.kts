@@ -40,4 +40,8 @@ dependencies {
 
     // Publishing plugin dependencies - versions from libs.versions.toml
     implementation("com.vanniktech:gradle-maven-publish-plugin:${libs.versions.vanniktech.maven.publish.get()}")
+
+    // Archive handling for native library builds (XZ/tar support)
+    implementation("org.apache.commons:commons-compress:${libs.versions.apache.commons.compress.get()}")
+    implementation("org.tukaani:xz:${libs.versions.tukaani.xz.get()}")
 }

@@ -113,6 +113,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         this.cliModuleName.set(moduleName);
     }
 
+    @SuppressWarnings("unused") // NOTE: Optional, so IntelliJ doesn't see it in use
     @Internal
     public Property<String> getCliModuleName() {
         return cliModuleName;
@@ -127,6 +128,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         this.cliMethodName.set(methodName);
     }
 
+    @SuppressWarnings("unused") // NOTE: Optional, so IntelliJ doesn't see it in use
     @Internal
     public Property<String> getCliMethodName() {
         return cliMethodName;
@@ -143,12 +145,14 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         }
     }
 
+    @SuppressWarnings("unused") // NOTE: Optional, so IntelliJ doesn't see it in use
     @Internal
     public ListProperty<String> getCliModuleArgs() {
         return cliModuleArgs;
     }
 
 
+    @SuppressWarnings("unused") // NOTE: Optional, so IntelliJ doesn't see it in use
     @Internal
     @Override
     public String getJavaLauncherClassName() {

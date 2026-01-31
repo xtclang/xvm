@@ -29,7 +29,9 @@ jline = "3.30.6"
 # -----------------------------------------------------------------------------
 # Build tooling & publishing
 # -----------------------------------------------------------------------------
+apache-commons-compress = "1.26.0"
 download = "5.6.0"
+tukaani-xz = "1.9"
 gradle-doctor = "0.12.1"
 gradle-portal-publish = "2.0.0"
 palantir-git-version = "4.0.0"
@@ -113,6 +115,8 @@ javatools-utils = { group = "org.xtclang", name = "javatools-utils" }
 
 # Third party
 apache-commons-cli = { module = "commons-cli:commons-cli", version.ref = "apache-commons-cli" }
+apache-commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "apache-commons-compress" }
+tukaani-xz = { module = "org.tukaani:xz", version.ref = "tukaani-xz" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 jakarta-activation-api = { module = "jakarta.activation:jakarta.activation-api", version.ref = "jakarta-activation" }
 jakarta-xml-bind-api = { module = "jakarta.xml.bind:jakarta.xml.bind-api", version.ref = "jakarta-xml-bind-api" }

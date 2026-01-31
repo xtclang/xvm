@@ -38,6 +38,38 @@ and editor support.
 ./gradlew :vscode-extension:build
 ```
 
+## Native Library Build (Tree-sitter)
+
+The LSP server uses tree-sitter for fast, incremental parsing. This requires a native shared library
+compiled from the generated grammar. We use **Zig** for cross-compilation, enabling builds for all
+platforms from any development machine.
+
+### Quick Commands
+
+```bash
+# Build native library for current platform (auto-downloads Zig)
+./gradlew :lang:tree-sitter:ensureNativeLibraryUpToDate
+
+# Build for ALL platforms
+./gradlew :lang:tree-sitter:buildAllNativeLibraries
+
+# Run IDE with tree-sitter adapter
+./gradlew :lang:intellij-plugin:runIde -Plsp.adapter=treesitter
+```
+
+### Supported Platforms
+
+| Platform | Output | Architecture |
+|----------|--------|--------------|
+| darwin-arm64 | `libtree-sitter-xtc.dylib` | Mach-O arm64 |
+| darwin-x64 | `libtree-sitter-xtc.dylib` | Mach-O x86_64 |
+| linux-x64 | `libtree-sitter-xtc.so` | ELF x86-64 |
+| linux-arm64 | `libtree-sitter-xtc.so` | ELF aarch64 |
+| windows-x64 | `libtree-sitter-xtc.dll` | PE32+ x86-64 |
+
+For detailed documentation on native library builds, Zig cross-compilation, and LSP adapter integration,
+see **[tree-sitter/README.md → Native Library Build](./tree-sitter/README.md#native-library-build)**.
+
 ## IntelliJ Plugin Development
 
 ### Running the Plugin in a Sandbox IDE

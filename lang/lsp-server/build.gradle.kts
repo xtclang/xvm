@@ -74,6 +74,23 @@ val generateBuildInfo by tasks.registering {
     }
 }
 
+// Detect platform for native library directory
+val osName: String = System.getProperty("os.name").lowercase()
+val osArch: String = System.getProperty("os.arch")
+
+val nativePlatformDir: String =
+    when {
+        osName.contains("windows") && osArch in listOf("amd64", "x86_64") -> "windows-x64"
+        osName.contains("mac") && osArch in listOf("aarch64", "arm64") -> "darwin-arm64"
+        osName.contains("mac") && osArch in listOf("amd64", "x86_64") -> "darwin-x64"
+        osName.contains("linux") && osArch in listOf("aarch64", "arm64") -> "linux-arm64"
+        osName.contains("linux") && osArch in listOf("amd64", "x86_64") -> "linux-x64"
+        else -> throw GradleException(
+            "Unsupported platform: $osName/$osArch. " +
+                "Supported: darwin-arm64, darwin-x64, linux-arm64, linux-x64, windows-x64",
+        )
+    }
+
 sourceSets.main {
     resources.srcDir(generateBuildInfo.map { layout.buildDirectory.dir("generated/resources/buildinfo") })
 }
@@ -96,7 +113,24 @@ repositories {
     mavenCentral()
 }
 
+// =============================================================================
+// Native Library from Tree-sitter
+// =============================================================================
+// Consume the tree-sitter native library for the current platform.
+// This library is built on-demand using Zig cross-compilation.
+
+val treeSitterNativeLib by configurations.creating {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+    attributes {
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+        attribute(Usage.USAGE_ATTRIBUTE, objects.named("native-library"))
+    }
+}
+
 dependencies {
+    // Native library from tree-sitter project
+    treeSitterNativeLib(project(path = ":tree-sitter", configuration = "nativeLibraryElements"))
     // LSP4J - Eclipse LSP implementation for Java
     // Use compileOnly because LSP4IJ provides LSP4J at runtime.
     // Bundling our own version causes ClassCastException due to classloader conflicts.
@@ -123,6 +157,30 @@ dependencies {
     testImplementation(libs.assertj)
     testImplementation(libs.mockito)
     testImplementation(libs.awaitility)
+}
+
+// =============================================================================
+// Copy Native Library to Resources
+// =============================================================================
+// Copy the tree-sitter native library to the resources directory so it can be
+// bundled in the JAR and loaded at runtime.
+
+val copyNativeLibToResources by tasks.registering(Copy::class) {
+    group = "build"
+    description = "Copy tree-sitter native library to resources"
+
+    from(treeSitterNativeLib)
+    into(layout.buildDirectory.dir("generated/resources/native/$nativePlatformDir"))
+}
+
+// Add native library resources to source sets
+sourceSets.main {
+    resources.srcDir(copyNativeLibToResources.map { layout.buildDirectory.dir("generated/resources") })
+}
+
+// Ensure native library is copied before processResources
+val processResources by tasks.existing {
+    dependsOn(copyNativeLibToResources)
 }
 
 tasks.withType<JavaCompile>().configureEach {

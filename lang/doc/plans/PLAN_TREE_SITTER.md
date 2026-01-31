@@ -14,7 +14,7 @@ intelligence, without requiring compiler modifications.
 
 ## Implementation Status
 
-> **Last Updated**: 2026-01-30
+> **Last Updated**: 2026-01-31
 
 ### Grammar (Phase 1) - COMPLETE
 
@@ -24,87 +24,39 @@ intelligence, without requiring compiler modifications.
 - [x] External scanner for TODO freeform text (`TODO message`)
 - [x] Conflict optimization: 49 necessary conflicts, 0 warnings
 
-### JVM Integration (Phase 2) - IN PROGRESS
+### JVM Integration (Phase 2) - COMPLETE
 
 - [x] `jtreesitter` dependency added to `lang/lsp-server/build.gradle.kts`
 - [x] Parser wrappers implemented (`XtcParser`, `XtcTree`, `XtcNode`)
 - [x] IntelliJ plugin supports adapter switching via `-Plsp.adapter=treesitter`
 - [x] Native library build infrastructure (`tree-sitter/build.gradle.kts`)
-- [x] Pre-built library for darwin-arm64 (built 2026-01-28)
-- [ ] **`XtcParser.loadLanguageFromPath()` implemented** (currently throws `UnsupportedOperationException`)
-- [ ] Pre-built libraries for other platforms (darwin-x64, linux-x64, linux-arm64, windows-x64)
-- [ ] End-to-end test parsing `.x` file in JVM
+- [x] **Zig cross-compilation** for all 5 platforms (darwin-arm64, darwin-x64, linux-x64, linux-arm64, windows-x64)
+- [x] **`XtcParser.loadLanguageFromPath()` implemented** using jtreesitter's Foreign Function API
+- [x] Pre-built libraries for all platforms committed to source control
+- [x] lsp-server wired to consume native library from tree-sitter project
 
-#### Task: Complete Native Library Loading in XtcParser
+#### Task: Native Library Loading in XtcParser
 
-**Status**: READY TO IMPLEMENT - native library exists, just need loader code
+**Status**: COMPLETE
 
-**What exists** (in `lsp-server/src/main/kotlin/org/xvm/lsp/treesitter/`):
-- `XtcParser.kt` - Parser wrapper, detects platform, extracts library from resources
-- `XtcTree.kt` - Tree wrapper with node access and position lookup
-- `XtcNode.kt` - Node wrapper with full traversal API
-- `XtcQueryEngine.kt` - Query execution against parsed trees
-- `XtcQueries.kt` - S-expression query patterns for declarations, references, etc.
+**Implementation** (in `lsp-server/src/main/kotlin/org/xvm/lsp/treesitter/XtcParser.kt`):
 
-**What's missing in `XtcParser.kt`**:
-
-1. **`loadLanguageFromPath(path: Path)`** (line 145-153):
-   ```kotlin
-   // Currently throws UnsupportedOperationException
-   // Needs to:
-   // 1. Call System.load(path) to load the native library
-   // 2. Use jtreesitter's Language.load() or similar to get the tree_sitter_xtc symbol
-   // 3. Return the Language instance
-   ```
-
-2. **`loadLanguageFromSystemPath()`** (line 156-160):
-   ```kotlin
-   // Currently throws UnsupportedOperationException
-   // Needs to:
-   // 1. Use System.loadLibrary("tree-sitter-xtc")
-   // 2. Get the language symbol
-   ```
-
-**jtreesitter API for loading languages**:
-
-Looking at jtreesitter 0.25.x, the `Language` class can be loaded via:
 ```kotlin
-// Option 1: From a native library path
-val language = Language.load(libraryPath, "tree_sitter_xtc")
-
-// Option 2: If library is already loaded
-val language = Language.load("tree_sitter_xtc")
+private fun loadLanguageFromPath(path: Path): Language {
+    val symbols = SymbolLookup.libraryLookup(path, arena)
+    return Language.load(symbols, LANGUAGE_FUNCTION)
+}
 ```
 
-**Prerequisites**:
-1. ~~Build native library~~ ✅ Already exists at `tree-sitter/src/main/resources/native/darwin-arm64/`
-2. **Wire lsp-server to consume the native library** (missing!)
-   - Option A: Add to `lsp-server/build.gradle.kts`:
-     ```kotlin
-     val nativeLib by configurations.creating {
-         isCanBeConsumed = false
-         isCanBeResolved = true
-         attributes {
-             attribute(Usage.USAGE_ATTRIBUTE, objects.named("native-library"))
-         }
-     }
-     dependencies {
-         nativeLib(project(path = ":tree-sitter", configuration = "nativeLibraryElements"))
-     }
-     // Copy to processResources or add to sourceSets.main.resources
-     ```
-   - Option B: Have tree-sitter copy library to lsp-server's resources
-3. Implement the two loader methods in `XtcParser.kt`
+Uses jtreesitter's Foreign Function API:
+1. `SymbolLookup.libraryLookup()` loads the native library into the process
+2. `Language.load()` resolves the `tree_sitter_xtc` function symbol
+3. Returns a `Language` instance for parser configuration
 
 **Testing**:
 ```bash
 # Run IntelliJ with tree-sitter adapter
 ./gradlew :lang:intellij-plugin:runIde -Plsp.adapter=treesitter
-
-# Check logs for:
-# - "XTC LSP Server started (in-process) with adapter: TreeSitterAdapter"
-# vs fallback:
-# - "XTC LSP Server started (in-process) with adapter: MockXtcCompilerAdapter (fallback...)"
 ```
 
 ### Query Engine (Phase 3) - COMPLETE
@@ -147,14 +99,13 @@ The LSP server uses a pluggable adapter pattern:
         ┌────────────────────┼────────────────────┐
         │                    │                    │
         ▼                    ▼                    ▼
-┌───────────────┐    ┌───────────────┐    ┌───────────────┐
-│ MockXtc-      │    │ TreeSitter-   │    │ (Future)      │
-│ Compiler-     │    │ Adapter       │    │ Compiler-     │
-│ Adapter       │    │               │    │ Adapter       │
-│               │    │               │    │               │
-│ - Regex-based │    │ - Tree-sitter │    │ - Full XTC    │
-│ - For testing │    │ - Syntax only │    │   compiler    │
-└───────────────┘    └───────────────┘    └───────────────┘
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│ MockXtcCompiler │  │ TreeSitter      │  │ (Future)        │
+│ Adapter         │  │ Adapter         │  │ CompilerAdapter │
+│                 │  │                 │  │                 │
+│ - Regex-based   │  │ - Tree-sitter   │  │ - Full XTC      │
+│ - For testing   │  │ - Syntax only   │  │   compiler      │
+└─────────────────┘  └─────────────────┘  └─────────────────┘
 ```
 
 ### Switching Adapters
@@ -171,252 +122,82 @@ The LSP server uses a pluggable adapter pattern:
 
 ## Task: Build Native Tree-sitter Library
 
-**Status**: COMPLETE for darwin-arm64, PENDING for other platforms
+**Status**: COMPLETE
 
-The native library build infrastructure is fully implemented in `tree-sitter/build.gradle.kts`:
+Native library build infrastructure is fully implemented using Zig cross-compilation.
+See [tree-sitter/README.md → Native Library Build](../../tree-sitter/README.md#native-library-build).
 
-### Available Gradle Tasks
+### Pre-built Libraries
 
-| Task | Description |
-|------|-------------|
-| `buildTreeSitterLibrary` | Build native library for current platform |
-| `copyNativeLibraryToResources` | Copy to `src/main/resources/native/{platform}/` with hash |
-| `ensureNativeLibraryUpToDate` | Check staleness, rebuild if needed |
-| `checkNativeLibraryStaleness` | Report if pre-built library needs updating |
+All platforms built and committed to source control:
 
-### Current Pre-built Libraries
+| Platform | Zig Target | Output |
+|----------|------------|--------|
+| darwin-arm64 | `aarch64-macos` | `libtree-sitter-xtc.dylib` |
+| darwin-x64 | `x86_64-macos` | `libtree-sitter-xtc.dylib` |
+| linux-x64 | `x86_64-linux-gnu` | `libtree-sitter-xtc.so` |
+| linux-arm64 | `aarch64-linux-gnu` | `libtree-sitter-xtc.so` |
+| windows-x64 | `x86_64-windows-gnu` | `libtree-sitter-xtc.dll` |
 
-| Platform | Status | Location |
-|----------|--------|----------|
-| darwin-arm64 | ✅ Built 2026-01-28 | `tree-sitter/src/main/resources/native/darwin-arm64/` |
-| darwin-x64 | ❌ Not built | - |
-| linux-x64 | ❌ Not built | - |
-| linux-arm64 | ❌ Not built | - |
-| windows-x64 | ❌ Not built | - |
-
-### Building for Current Platform
-
-```bash
-# Build and copy to resources (auto-detects platform)
-./gradlew :lang:tree-sitter:buildTreeSitterLibrary :lang:tree-sitter:copyNativeLibraryToResources
-
-# Verify it's up-to-date
-./gradlew :lang:tree-sitter:checkNativeLibraryStaleness
-```
-
-### Cross-Platform Building with Zig
-
-**Zig** enables building ALL platform binaries from ANY host machine. No need for platform-specific
-CI runners or Docker. See [Zig cc as Drop-In Replacement](https://andrewkelley.me/post/zig-cc-powerful-drop-in-replacement-gcc-clang.html).
-
-#### Why Zig?
-
-1. **Single binary** - Download ~45MB, works immediately
-2. **All targets from any host** - Build macOS from Linux, Windows from macOS, etc.
-3. **Bundles libc** - Ships libc implementations for all platforms
-4. **No SDK/sysroot needed** - Even macOS targets work without Xcode
-
-#### Target Matrix
-
-| Target | Zig Target Triple | Output |
-|--------|-------------------|--------|
-| macOS arm64 | `aarch64-macos` | `libtree-sitter-xtc.dylib` |
-| macOS x64 | `x86_64-macos` | `libtree-sitter-xtc.dylib` |
-| Linux x64 | `x86_64-linux-gnu` | `libtree-sitter-xtc.so` |
-| Linux arm64 | `aarch64-linux-gnu` | `libtree-sitter-xtc.so` |
-| Windows x64 | `x86_64-windows-gnu` | `tree-sitter-xtc.dll` |
-
-#### Implementation Plan
-
-See **Task: Zig Cross-Compilation for All Platforms** below.
+Location: `tree-sitter/src/main/resources/native/<platform>/`
 
 ---
 
 ## Task: Zig Cross-Compilation for All Platforms
 
-**Status**: NOT STARTED
-**Priority**: MEDIUM - Enables local testing of all platforms
-**References**:
-- [Zig Saves the Day for Tree-sitter](https://www.deusinmachina.net/p/zig-saves-the-day-for-cross-platform)
-- [Cross-compile C/C++ with Zig](https://zig.news/kristoff/cross-compile-a-c-c-project-with-zig-3599)
+**Status**: COMPLETE (2026-01-31)
 
 ### Overview
 
-Replace platform-specific `cc`/`clang`/`gcc` with `zig cc` to build all native libraries
-from any single machine. A developer on macOS can build Linux and Windows binaries locally.
+Zig cross-compilation enables building native libraries for all 5 platforms from any development machine.
+A developer on macOS can build Windows and Linux binaries locally without Docker or platform-specific toolchains.
 
-### Prior Art
+### Implementation
 
-- **[ensody/native-builds](https://github.com/ensody/native-builds)** - Gradle plugin using Zig, but requires manual `PATH` install
-- **No Gradle plugin** exists for auto-downloading Zig
-- **Our tree-sitter CLI pattern** - We already auto-download in `tree-sitter/build.gradle.kts`
+See [tree-sitter/README.md → Native Library Build](../../tree-sitter/README.md#native-library-build) for full documentation.
 
-### Implementation Steps
+#### Gradle Tasks
 
-#### 1. Add Zig Download Task (Same Pattern as tree-sitter CLI)
+| Task | Description |
+|------|-------------|
+| `ensureNativeLibraryUpToDate` | **Verify** pre-built library matches grammar (fails if stale) |
+| `copyAllNativeLibrariesToResources` | Rebuild all platforms and copy to resources |
+| `buildAllNativeLibraries` | Build for all 5 platforms |
+| `buildNativeLibrary_<platform>` | Cross-compile for specific platform |
+| `downloadZig` | Download Zig compiler (~45MB, cached) |
+| `extractZig` | Extract using Apache Commons Compress (pure Java) |
 
-```kotlin
-// In tree-sitter/build.gradle.kts
+#### Platform Outputs
 
-val zigVersion = "0.13.0"
-val zigDir: Provider<Directory> = layout.buildDirectory.dir("zig")
+| Platform | Zig Target | Output |
+|----------|------------|--------|
+| darwin-arm64 | `aarch64-macos` | `libtree-sitter-xtc.dylib` |
+| darwin-x64 | `x86_64-macos` | `libtree-sitter-xtc.dylib` |
+| linux-x64 | `x86_64-linux-gnu` | `libtree-sitter-xtc.so` |
+| linux-arm64 | `aarch64-linux-gnu` | `libtree-sitter-xtc.so` |
+| windows-x64 | `x86_64-windows-gnu` | `libtree-sitter-xtc.dll` |
 
-// Zig distributes as .tar.xz (Linux/macOS) or .zip (Windows)
-val zigPlatform = when {
-    osName.contains("mac") && osArch in listOf("aarch64", "arm64") -> "aarch64-macos"
-    osName.contains("mac") -> "x86_64-macos"
-    osName.contains("linux") && osArch in listOf("amd64", "x86_64") -> "x86_64-linux"
-    osName.contains("linux") && osArch in listOf("aarch64", "arm64") -> "aarch64-linux"
-    osName.contains("windows") -> "x86_64-windows"
-    else -> "unsupported"
-}
-
-val zigArchiveExt = if (osName.contains("windows")) "zip" else "tar.xz"
-val zigExeName = if (osName.contains("windows")) "zig.exe" else "zig"
-
-val downloadZig by tasks.registering(Download::class) {
-    group = "zig"
-    description = "Download Zig compiler for cross-compilation"
-
-    src("https://ziglang.org/download/$zigVersion/zig-$zigPlatform-$zigVersion.$zigArchiveExt")
-    dest(zigDir.map { it.file("zig-$zigPlatform-$zigVersion.$zigArchiveExt") })
-    overwrite(false)
-    onlyIfModified(true)
-}
-
-val extractZig by tasks.registering(Copy::class) {
-    group = "zig"
-    description = "Extract Zig compiler"
-    dependsOn(downloadZig)
-
-    // For .tar.xz, use tarTree with xz decompression
-    // For .zip, use zipTree
-    from(
-        if (zigArchiveExt == "zip") {
-            zipTree(downloadZig.map { it.dest })
-        } else {
-            tarTree(resources.xz(downloadZig.map { it.dest }))
-        }
-    )
-    into(zigDir)
-}
-
-val zigExe: Provider<String> = zigDir.map {
-    it.dir("zig-$zigPlatform-$zigVersion").file(zigExeName).asFile.absolutePath
-}
-```
-
-#### 2. Add Cross-Compile Task
-
-```kotlin
-abstract class ZigCrossCompileTask @Inject constructor(
-    private val execOps: ExecOperations
-) : DefaultTask() {
-
-    @get:Input
-    abstract val zigPath: Property<String>
-
-    @get:Input
-    abstract val targetTriple: Property<String>  // e.g., "aarch64-macos"
-
-    @get:InputFile
-    abstract val parserC: RegularFileProperty
-
-    @get:InputFile
-    abstract val scannerC: RegularFileProperty
-
-    @get:OutputFile
-    abstract val outputLib: RegularFileProperty
-
-    @TaskAction
-    fun compile() {
-        val ext = when {
-            targetTriple.get().contains("macos") -> "dylib"
-            targetTriple.get().contains("windows") -> "dll"
-            else -> "so"
-        }
-
-        execOps.exec {
-            executable(zigPath.get())
-            args(
-                "cc",
-                "-shared", "-fPIC",
-                "-target", targetTriple.get(),
-                "-I", parserC.get().asFile.parentFile.absolutePath,
-                parserC.get().asFile.absolutePath,
-                scannerC.get().asFile.absolutePath,
-                "-o", outputLib.get().asFile.absolutePath
-            )
-        }
-    }
-}
-```
-
-#### 3. Register Tasks for All Targets
-
-```kotlin
-val crossCompileTargets = mapOf(
-    "darwin-arm64" to "aarch64-macos",
-    "darwin-x64" to "x86_64-macos",
-    "linux-x64" to "x86_64-linux-gnu",
-    "linux-arm64" to "aarch64-linux-gnu",
-    "windows-x64" to "x86_64-windows-gnu"
-)
-
-crossCompileTargets.forEach { (platform, zigTarget) ->
-    tasks.register<ZigCrossCompileTask>("buildNativeLibrary_$platform") {
-        group = "tree-sitter"
-        description = "Cross-compile native library for $platform using Zig"
-        dependsOn(extractZig, validateTreeSitterGrammar)
-
-        zigPath.set(/* path to zig executable */)
-        targetTriple.set(zigTarget)
-        parserC.set(generatedDir.map { it.file("src/parser.c") })
-        scannerC.set(generatedDir.map { it.file("src/scanner.c") })
-        outputLib.set(layout.buildDirectory.file("native/$platform/libtree-sitter-xtc.${ext}"))
-    }
-}
-
-val buildAllNativeLibraries by tasks.registering {
-    group = "tree-sitter"
-    description = "Build native libraries for all platforms using Zig"
-    dependsOn(crossCompileTargets.keys.map { "buildNativeLibrary_$it" })
-}
-```
-
-#### 4. Usage
+#### Usage
 
 ```bash
-# Build all platforms from any machine
-./gradlew :lang:tree-sitter:buildAllNativeLibraries
+# Verify pre-built libraries are up-to-date (fails if stale)
+./gradlew :lang:tree-sitter:ensureNativeLibraryUpToDate
 
-# Build specific platform
-./gradlew :lang:tree-sitter:buildNativeLibrary_linux-x64
-
-# Copy all to resources for committing
+# Rebuild all platforms (if stale) and copy to resources
 ./gradlew :lang:tree-sitter:copyAllNativeLibrariesToResources
+
+# Run IDE with tree-sitter adapter
+./gradlew :lang:intellij-plugin:runIde -Plsp.adapter=treesitter
 ```
 
-### Caveats
+### Notes
 
-1. **macOS Code Signing** - Binaries work but aren't signed. Fine for development;
-   CI/release builds on actual macOS may want native compile + signing.
-
-2. **Zig Download Size** - ~45MB tarball, but only downloaded once and cached.
-
-3. **Windows DLLs** - May need `mingw` target variant (`x86_64-windows-gnu`) for
-   compatibility with JVM's native loading.
-
-### Alternative: Docker for Linux Only
-
-If Zig proves problematic, Docker can cross-compile Linux targets:
-
-```bash
-docker run --rm -v $(pwd):/work -w /work gcc:latest \
-    cc -shared -fPIC -o libtree-sitter-xtc.so src/parser.c src/scanner.c
-```
-
-But this doesn't help with macOS/Windows targets from Linux.
+- Pure Java extraction using Apache Commons Compress (no shell commands)
+- Pre-built binaries committed to source control (~6MB total)
+- Staleness detection via SHA-256 hash of grammar inputs
+- Build **fails** if stale (no auto-rebuild) to avoid Zig download in CI
+- Zig only downloaded when explicitly running rebuild tasks
+- macOS binaries work but aren't signed (fine for development)
 
 ---
 
@@ -441,8 +222,8 @@ later for semantic features.
 
 ### Phase 1-2 Complete When:
 - [x] `tree-sitter generate` succeeds (grammar validates)
-- [ ] Native library compiled for all platforms
-- [ ] Kotlin test can parse `.x` file and traverse AST
+- [x] Native library compiled for all platforms
+- [x] JVM can load native library and parse `.x` files
 
 ### Phase 3-4 Complete When:
 - [x] Query engine implemented
@@ -461,29 +242,206 @@ later for semantic features.
 
 ## Next Steps
 
-1. **Implement Language Loading** (BLOCKING - single remaining blocker!)
-   - Complete `XtcParser.loadLanguageFromPath()` using jtreesitter API
-   - The native library exists at `tree-sitter/src/main/resources/native/darwin-arm64/`
-   - See "Task: Complete Native Library Loading in XtcParser" above
-   - Estimated: ~50 lines of code using jtreesitter's `Language` API
+1. ~~**Implement Language Loading**~~ ✅ COMPLETE
+2. ~~**Enable TreeSitterAdapter**~~ ✅ COMPLETE
+3. ~~**Build Libraries for All Platforms**~~ ✅ COMPLETE
 
-2. **Enable TreeSitterAdapter**
-   - Already done: IntelliJ plugin reads `-Plsp.adapter=treesitter`
-   - Test: `./gradlew :lang:intellij-plugin:runIde -Plsp.adapter=treesitter`
-   - Verify logs show "TreeSitterAdapter" (not fallback to Mock)
+4. **Add LSP Server Logging** (HIGH PRIORITY)
+   - Add structured logging throughout LSP server core (common to all adapters)
+   - Log parse times, query execution, symbol resolution
+   - Enable debugging of tree-sitter behavior in the plugin
+   - See "Task: LSP Server Logging" below
 
-3. **Build Libraries for Other Platforms** (choose one approach)
-   - **Option A: Zig cross-compile** (preferred for local dev)
-     - Implement "Task: Zig Cross-Compilation" above
-     - `./gradlew :lang:tree-sitter:buildAllNativeLibraries` from any machine
-   - **Option B: Native compile on each platform**
-     - Run `buildTreeSitterLibrary` + `copyNativeLibraryToResources` on each
-   - **Option C: GitHub Actions matrix** (for CI/releases)
-     - Build on `macos-latest`, `ubuntu-latest`, `windows-latest`
+5. ~~**Add Native Library Rebuild Verification**~~ ✅ COMPLETE
+   - Build fails if libraries are stale (no auto-rebuild)
+   - Avoids downloading Zig in CI
+   - See "Task: Native Library Staleness Verification" below
 
-4. **End-to-End Testing** - Verify LSP features work in IntelliJ/VS Code
-5. **IDE Integration** - See [PLAN_IDE_INTEGRATION.md](./PLAN_IDE_INTEGRATION.md)
-6. **Compiler Adapter** - Add semantic features (future)
+6. **Conditional Tree-sitter Dependency** (MEDIUM PRIORITY)
+   - When `lsp.adapter=mock`, skip all tree-sitter build tasks
+   - Native library should not be built/bundled for mock adapter
+   - Reduces build time for non-tree-sitter development
+   - See "Task: Conditional Tree-sitter Build" below
+
+7. **End-to-End Testing** - Verify LSP features work in IntelliJ/VS Code
+8. **IDE Integration** - See [PLAN_IDE_INTEGRATION.md](./PLAN_IDE_INTEGRATION.md)
+9. **Compiler Adapter** - Add semantic features (future)
+
+---
+
+## Task: LSP Server Logging
+
+**Status**: PENDING
+
+**Goal**: Add comprehensive logging to the LSP server core, common to ALL adapters (Mock, TreeSitter, future Compiler).
+
+### Core Logging (XtcLanguageServer)
+
+These logging points apply regardless of which adapter is used:
+
+1. **Server Lifecycle**
+   - Server initialization: adapter type, configuration
+   - Client capabilities received
+   - Workspace folder changes
+   - Server shutdown
+
+2. **Document Events**
+   - File open: URI, size, detected language version
+   - File change: URI, change type (full/incremental)
+   - File close: URI, session duration
+   - File save: URI
+
+3. **LSP Request/Response**
+   - Request received: method, params summary
+   - Response sent: method, result count, timing
+   - Errors: method, error code, message
+
+### Adapter-Specific Logging
+
+Additional logging in each adapter implementation:
+
+**MockXtcCompilerAdapter**:
+- Regex pattern matches
+- Declaration extraction
+
+**TreeSitterAdapter**:
+- Native library loading: path, platform, load time
+- Parse operations: file path, source size, parse time, error count
+- Query execution: query name, execution time, match count
+
+**Future CompilerAdapter**:
+- Type resolution, semantic analysis timing
+
+### Implementation
+
+Use SLF4J (already a dependency) with appropriate log levels:
+- `DEBUG`: Detailed operation info (parse times, query results)
+- `INFO`: High-level operations (server started, file opened)
+- `WARN`: Recoverable issues (parse errors, missing symbols)
+- `ERROR`: Failures (initialization failed, unhandled exceptions)
+
+### Example Output
+
+```
+INFO  [XtcLanguageServer] Started with adapter: TreeSitterAdapter
+INFO  [XtcLanguageServer] Client capabilities: completion, hover, definition
+DEBUG [XtcLanguageServer] textDocument/didOpen: file:///project/MyClass.x (2,450 bytes)
+DEBUG [TreeSitterAdapter] Parsed in 3.2ms, 0 errors
+DEBUG [XtcLanguageServer] textDocument/documentSymbol: 12 symbols in 4.1ms
+```
+
+### Testing
+
+```bash
+# Run with debug logging (works with any adapter)
+./gradlew :lang:intellij-plugin:runIde
+
+# In IntelliJ: Help → Diagnostic Tools → Debug Log Settings
+# Add: org.xvm.lsp
+```
+
+---
+
+## Task: Native Library Staleness Verification
+
+**Status**: COMPLETE (2026-01-31)
+
+**Goal**: Verify the native library build system correctly detects when rebuild is needed.
+
+### Behavior
+
+The `ensureNativeLibraryUpToDate` task:
+1. Computes SHA-256 hash of `grammar.js` + `scanner.c`
+2. Compares to stored hash in `.inputs.sha256`
+3. If match: logs version info and succeeds
+4. If mismatch: **FAILS** with instructions to rebuild
+
+This design avoids downloading Zig in CI (where libraries should always be up-to-date).
+
+### Test Cases
+
+1. **Fail on hash mismatch**
+   - Corrupt the `.inputs.sha256` file
+   - Run `ensureNativeLibraryUpToDate`
+   - Verify task FAILS with "STALE" message
+
+2. **Success when up-to-date**
+   - Run `ensureNativeLibraryUpToDate` with correct hash
+   - Verify task succeeds and logs version info
+
+### Manual Testing
+
+```bash
+# Verify current libraries are up-to-date
+./gradlew :lang:tree-sitter:ensureNativeLibraryUpToDate
+
+# Simulate stale library (corrupt hash)
+echo "0000" > lang/tree-sitter/src/main/resources/native/darwin-arm64/libtree-sitter-xtc.inputs.sha256
+./gradlew :lang:tree-sitter:ensureNativeLibraryUpToDate  # Should FAIL
+
+# Rebuild to fix
+./gradlew :lang:tree-sitter:copyAllNativeLibrariesToResources
+```
+
+---
+
+## Task: Conditional Tree-sitter Build
+
+**Status**: PENDING
+
+**Goal**: Skip tree-sitter native library build when using mock adapter, reducing build time.
+
+### Current Behavior
+
+- `lsp-server` always depends on `tree-sitter` native library
+- Native library is always built/copied to resources
+- Build time cost even when not using tree-sitter adapter
+
+### Desired Behavior
+
+When `lsp.adapter=mock` (default):
+- Skip `ensureNativeLibraryUpToDate` task
+- Skip `copyNativeLibToResources` task
+- lsp-server JAR includes tree-sitter code but no native library
+- Runtime gracefully handles missing native library (already does - falls back to mock)
+
+When `lsp.adapter=treesitter`:
+- Current behavior (build/bundle native library)
+
+### Implementation Options
+
+**Option A: Conditional task dependency**
+```kotlin
+// In lsp-server/build.gradle.kts
+val copyNativeLibToResources by tasks.existing {
+    onlyIf { lspAdapter == "treesitter" }
+}
+```
+
+**Option B: Separate source sets**
+- Create `treesitter` source set with native resources
+- Only include when adapter is treesitter
+
+**Option C: Feature flag in fat JAR**
+- Always include code, conditionally include native library
+- Use `fatJar` exclusion patterns based on adapter
+
+### Recommendation
+
+Option A is simplest. The tree-sitter Kotlin code is small (~50KB) and harmless to include.
+Only skip the native library bundling (~1.2MB per platform).
+
+### Testing
+
+```bash
+# Fast build for mock adapter (no native library)
+./gradlew :lang:intellij-plugin:runIde
+# JAR should NOT contain native/ directory
+
+# Full build with tree-sitter
+./gradlew :lang:intellij-plugin:runIde -Plsp.adapter=treesitter
+# JAR should contain native/<platform>/libtree-sitter-xtc.*
+```
 
 ---
 

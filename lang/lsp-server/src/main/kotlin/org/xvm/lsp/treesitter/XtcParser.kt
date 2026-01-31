@@ -4,6 +4,8 @@ import io.github.treesitter.jtreesitter.Language
 import io.github.treesitter.jtreesitter.Parser
 import org.slf4j.LoggerFactory
 import java.io.Closeable
+import java.lang.foreign.Arena
+import java.lang.foreign.SymbolLookup
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -83,34 +85,40 @@ class XtcParser : Closeable {
     companion object {
         private val logger = LoggerFactory.getLogger(XtcParser::class.java)
         private const val GRAMMAR_LIBRARY_NAME = "tree-sitter-xtc"
+        private const val LANGUAGE_FUNCTION = "tree_sitter_xtc"
+
+        // Arena for native library - must remain open while language is in use
+        private val arena: Arena = Arena.global()
 
         /**
          * Load the XTC tree-sitter language from native library.
          *
          * The library is expected to be in the native resources directory:
-         * - darwin-aarch64/libtree-sitter-xtc.dylib
-         * - darwin-x86_64/libtree-sitter-xtc.dylib
-         * - linux-x86_64/libtree-sitter-xtc.so
+         * - darwin-arm64/libtree-sitter-xtc.dylib
+         * - darwin-x64/libtree-sitter-xtc.dylib
+         * - linux-x64/libtree-sitter-xtc.so
+         * - linux-arm64/libtree-sitter-xtc.so
+         * - windows-x64/tree-sitter-xtc.dll
          */
         private fun loadXtcLanguage(): Language {
             val osName = System.getProperty("os.name").lowercase()
             val osArch = System.getProperty("os.arch").lowercase()
 
-            val (platform, extension) =
+            val (platform, extension, libPrefix) =
                 when {
                     osName.contains("mac") || osName.contains("darwin") -> {
-                        val arch = if (osArch.contains("aarch64") || osArch.contains("arm64")) "darwin-aarch64" else "darwin-x86_64"
-                        arch to ".dylib"
+                        val arch = if (osArch.contains("aarch64") || osArch.contains("arm64")) "darwin-arm64" else "darwin-x64"
+                        Triple(arch, ".dylib", "lib")
                     }
                     osName.contains("linux") -> {
-                        val arch = if (osArch.contains("aarch64") || osArch.contains("arm64")) "linux-aarch64" else "linux-x86_64"
-                        arch to ".so"
+                        val arch = if (osArch.contains("aarch64") || osArch.contains("arm64")) "linux-arm64" else "linux-x64"
+                        Triple(arch, ".so", "lib")
                     }
-                    osName.contains("windows") -> "windows-x86_64" to ".dll"
+                    osName.contains("windows") -> Triple("windows-x64", ".dll", "")
                     else -> throw IllegalStateException("Unsupported platform: $osName/$osArch")
                 }
 
-            val libraryFileName = "lib$GRAMMAR_LIBRARY_NAME$extension"
+            val libraryFileName = "$libPrefix$GRAMMAR_LIBRARY_NAME$extension"
             val resourcePath = "/native/$platform/$libraryFileName"
 
             logger.debug("Loading XTC grammar from: {}", resourcePath)
@@ -121,42 +129,60 @@ class XtcParser : Closeable {
                 tempFile.toFile().deleteOnExit()
                 Files.copy(inputStream, tempFile, StandardCopyOption.REPLACE_EXISTING)
 
+                logger.info("Extracted XTC grammar to: {}", tempFile)
                 return loadLanguageFromPath(tempFile)
             }
 
             // Fallback: try to load from system library path
-            logger.debug("Trying to load XTC grammar from system library path")
+            logger.debug("Resource not found, trying system library path")
             try {
                 return loadLanguageFromSystemPath()
             } catch (e: Exception) {
                 logger.error(
                     "Failed to load XTC tree-sitter grammar. " +
                         "The native library is not available. " +
-                        "Run './gradlew :lang:dsl:buildTreeSitterLibrary' to compile it.",
+                        "Run './gradlew :lang:tree-sitter:ensureNativeLibraryUpToDate' to compile it.",
                 )
                 throw IllegalStateException(
-                    "XTC tree-sitter grammar not available. Build it with: " +
-                        "./gradlew :lang:dsl:buildTreeSitterLibrary",
+                    "XTC tree-sitter grammar not available at $resourcePath. Build it with: " +
+                        "./gradlew :lang:tree-sitter:ensureNativeLibraryUpToDate",
                     e,
                 )
             }
         }
 
+        /**
+         * Load the XTC language from a native library at the given path.
+         *
+         * Uses Java's Foreign Function & Memory API to load the library and
+         * look up the tree_sitter_xtc language function symbol.
+         */
         private fun loadLanguageFromPath(path: Path): Language {
-            // Use System.load() to load the native library, then get the language
-            System.load(path.toAbsolutePath().toString())
-            // The language function should be available as tree_sitter_xtc
-            // For now, throw an error indicating manual setup is needed
-            throw UnsupportedOperationException(
-                "Tree-sitter grammar loading from path not yet implemented. " +
-                    "This requires native library setup. See PLAN_TREE_SITTER.md for details.",
-            )
+            logger.debug("Loading language from path: {}", path)
+
+            // Create a symbol lookup for the library
+            val symbols = SymbolLookup.libraryLookup(path, arena)
+
+            // Load the language using jtreesitter's Language.load() API
+            return Language.load(symbols, LANGUAGE_FUNCTION)
         }
 
-        private fun loadLanguageFromSystemPath(): Language =
-            throw UnsupportedOperationException(
-                "Tree-sitter grammar loading from system path not yet implemented. " +
-                    "This requires native library setup. See PLAN_TREE_SITTER.md for details.",
-            )
+        /**
+         * Load the XTC language from the system library path.
+         *
+         * This assumes the library is installed in a standard system location
+         * or in java.library.path.
+         */
+        private fun loadLanguageFromSystemPath(): Language {
+            logger.debug("Loading language from system path")
+
+            // Map to platform-specific library name
+            val libraryName = System.mapLibraryName(GRAMMAR_LIBRARY_NAME)
+
+            // Try to load from system library path
+            val symbols = SymbolLookup.libraryLookup(libraryName, arena)
+
+            return Language.load(symbols, LANGUAGE_FUNCTION)
+        }
     }
 }
