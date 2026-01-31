@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.Map;
 
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.LiteralConstant;
@@ -435,9 +437,9 @@ public class ModuleStructure
      * @return a VersionTree that provides a catalog of all versions of this module that are present
      */
     public VersionTree<Boolean> getVersions() {
-        VersionTree vtree = m_vtree;
+        VersionTree<Boolean> vtree = m_vtree;
         if (vtree == null) {
-            collectVersions(m_vtree = vtree = new VersionTree());
+            collectVersions(m_vtree = vtree = new VersionTree<>());
         }
         return vtree;
     }
@@ -445,7 +447,7 @@ public class ModuleStructure
     /**
      * An implementation for {@link #getVersions()}
      */
-    protected void collectVersions(VersionTree vtree) {
+    protected void collectVersions(VersionTree<Boolean> vtree) {
         ModuleStructure module = this;
         do {
             Version version = module.getVersion();
@@ -735,13 +737,8 @@ public class ModuleStructure
         super.registerConstants(pool);
 
         if (isFingerprint()) {
-            for (Version ver : m_vtreeImportAllowVers) {
-                pool.ensureVersionConstant(ver);
-            }
-
-            for (Version ver : m_listImportPreferVers) {
-                pool.ensureVersionConstant(ver);
-            }
+            m_vtreeImportAllowVers.forEach(ver -> pool.ensureVersionConstant(ver));
+            m_listImportPreferVers.forEach(ver -> pool.ensureVersionConstant(ver));
         } else if (m_constVersion != null) {
             m_constVersion = pool.register(m_constVersion);
         }
@@ -799,30 +796,12 @@ public class ModuleStructure
             VersionTree<Boolean> vtreeAllow = m_vtreeImportAllowVers;
             List<Version>        listPrefer = m_listImportPreferVers;
             if (!vtreeAllow.isEmpty() || !listPrefer.isEmpty()) {
-                sb.append(", version={");
-                boolean fFirst = true;
-
-                for (Version ver : vtreeAllow) {
-                    if (fFirst) {
-                        sb.append(", ");
-                        fFirst = false;
-                    }
-
-                    sb.append(vtreeAllow.get(ver) ? "allow " : "avoid ")
-                      .append(ver);
-                }
-
-                for (Version ver : listPrefer) {
-                    if (fFirst) {
-                        sb.append(", ");
-                        fFirst = false;
-                    }
-
-                    sb.append("prefer ")
-                      .append(ver);
-                }
-
-                sb.append('}');
+                var versions = Stream.concat(
+                        vtreeAllow.entryStream().map(e ->
+                                (e.getValue() ? "allow " : "avoid ") + e.getKey()),
+                        listPrefer.stream().map(ver -> "prefer " + ver))
+                    .collect(Collectors.joining(", "));
+                sb.append(", version={").append(versions).append('}');
             }
         } else {
             if (m_constVersion != null) {

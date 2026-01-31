@@ -1192,7 +1192,7 @@ public class Lexer
             log(Severity.ERROR, CHAR_NO_TERM, null, lInitPos);
         }
 
-        return new Token(lInitPos, source.getPosition(), Id.LIT_CHAR, Character.valueOf(ch));
+        return new Token(lInitPos, source.getPosition(), Id.LIT_CHAR, ch);
     }
 
     /**
@@ -1209,9 +1209,9 @@ public class Lexer
     protected Token eatStringChars(long lInitPos, boolean fTemplate, boolean fMultiline) {
         Source source = m_source;
 
-        StringBuilder sb        = new StringBuilder();
-        ArrayList     list      = fTemplate ? new ArrayList<>() : null;
-        long          lPosStart = lInitPos;
+        var   sb        = new StringBuilder();
+        var   list      = fTemplate ? new ArrayList<>() : null;
+        long  lPosStart = lInitPos;
         Appending: while (true) {
             if (source.hasNext()) {
                 char ch = source.next();
@@ -1906,7 +1906,7 @@ public class Lexer
 
     /**
      * Eat a literal version value.
-     *
+     * <p>
      * <p/><code><pre>
      * VersionString
      *     NonGASuffix
@@ -1925,7 +1925,7 @@ public class Lexer
      * NonGAPrefix:
      *     "dev"           # developer build (default compiler stamp)
      *     "ci"            # continuous integration build (automated build, automated test)
-     *     "qc"            # build selected for internal Quality Control
+     *     "qa"            # build selected for internal Quality Assurance
      *     "alpha"         # build selected for external alpha test (pre-release)
      *     "beta"          # build selected for external beta test (pre-release)
      *     "rc"            # build selected as a release candidate (pre-release; GA pending)
@@ -1936,158 +1936,85 @@ public class Lexer
      * @return the literal as a Token
      */
     protected Token eatVersion(long lInitPos) {
-        Source             source    = m_source;
-        ArrayList<Integer> listParts = new ArrayList<>();
+        var     source      = m_source;
+        var     parts       = new ArrayList<Integer>();
+        boolean overflow    = false;
+        long    mark        = 0L;
 
-        // eat the VersionNumbers
-        boolean fSep  = true;
-        boolean fErr  = false;
-        long    lPrev = 0;          // a point that can be backed up to if lexing went too far
+        // Phase 1: Numeric version parts (e.g., "1.2.3")
+        boolean trailingSep = true;
         while (isNextCharDigit(10)) {
-            long lNum = eatUnsignedLong();
-            if (lNum < 0 || lNum > Integer.MAX_VALUE) {
-                if (!fErr) {
-                    log(Severity.ERROR, Parser.BAD_VERSION, null, lInitPos);
-                    fErr = true;
-                }
-                lNum = 0;
+            long num = eatUnsignedLong();
+            overflow |= num < 0 || num > Integer.MAX_VALUE;
+            parts.add(overflow ? 0 : (int) num);
+            mark = mark();
+            trailingSep = match('.') || match('-');
+            if (!trailingSep || peekChar() == '-') {
+                break;
             }
-
-            listParts.add((int) lNum);
-
-            // this position is where we would fall back to if the next part doesn't end up being
-            // part of the version
-            lPrev = mark();
-
-            if (match('.')) {
-                fSep = true;
-                continue;
-            }
-
-            fSep = match('-');
-            break;
         }
 
-        int nNonGA = 0;
-        char chAlpha = peekChar();
-        switch (chAlpha) {
-        case 'A':
-        case 'a':
-            if (matchCaseInsens("alpha")) {
-                nNonGA = -3;
-            }
-            break;
+        // Phase 2: Pre-release indicator (alpha, beta, rc, etc.)
+        char ch         = peekChar();
+        int  preRelease = matchPrerelease(ch);
 
-        case 'B':
-        case 'b':
-            if (matchCaseInsens("beta")) {
-                nNonGA = -2;
-            }
-            break;
-
-        case 'C':
-        case 'c':
-            if (matchCaseInsens("ci")) {
-                nNonGA = -6;
-            }
-            break;
-
-        case 'D':
-        case 'd':
-            if (matchCaseInsens("dev")) {
-                nNonGA = -5;
-            }
-            break;
-
-        case 'Q':
-        case 'q':
-            if (matchCaseInsens("qa")) {
-                nNonGA = -4;
-            }
-            break;
-
-        case 'R':
-        case 'r':
-            if (matchCaseInsens("rc")) {
-                nNonGA = -1;
-            }
-            break;
-        }
-
-        if (nNonGA == 0) {
-            // it's an error if there is no version info, or if a version number is followed
-            // immediately by an identifier character
-            if (!fErr && (listParts.isEmpty() || !fSep && isIdentifierPart(chAlpha))) {
-                log(Severity.ERROR, Parser.BAD_VERSION, null, lInitPos);
-                fErr = true;
-            }
-
-            if (lPrev != 0) {
-                restore(lPrev);
+        if (preRelease == 0) {
+            if (mark != 0) {
+                restore(mark);
             }
         } else {
-            listParts.add(nNonGA);
-            lPrev = mark();
-
-            fSep = match('.') || match('-');
+            parts.add(preRelease);
+            mark = mark();
+            match('.'); // optional separator before trailing number
+            match('-');
             if (isNextCharDigit(10)) {
-                long lNum = eatUnsignedLong();
-                if (lNum < 0 || lNum > Integer.MAX_VALUE || isIdentifierPart(peekChar())) {
-                    if (!fErr) {
-                        log(Severity.ERROR, Parser.BAD_VERSION, null, lInitPos);
-                        fErr = true;
-                    }
-                    lNum = 0;
-                }
-                listParts.add((int) lNum);
+                long num = eatUnsignedLong();
+                overflow |= num < 0 || num > Integer.MAX_VALUE || isIdentifierPart(peekChar());
+                parts.add(overflow ? 0 : (int) num);
             } else {
-                restore(lPrev);
+                restore(mark);
             }
         }
 
-        String sBuild = null;
-        if (!fErr) {
-            lPrev = mark();
-            if (match('+')) {
-                long lBuildPos = source.getPosition();
-                // skip over the build metadata
-                while (source.hasNext()) {
-                    char ch = nextChar();
-                    if (!(     ch >= 'A' && ch <= 'Z'
-                            || ch >= 'a' && ch <= 'z'
-                            || ch >= '0' && ch <= '9'
-                            || ch == '-'
-                            || ch == '.')) {
-                        source.rewind();
-                        break;
-                    }
-                }
-                long lBuildEnd = source.getPosition();
-                if (lBuildPos == lBuildEnd || isIdentifierPart(peekChar())) {
-                    // it must not have been a build string
-                    restore(lPrev);
-                } else {
-                    sBuild = extractSource(lBuildPos, lBuildEnd);
-                }
-            } else if (isIdentifierPart(peekChar())) {
-                log(Severity.ERROR, Parser.BAD_VERSION, null, lInitPos);
-                fErr = true;
+        // Phase 3: Build metadata (e.g., "+build.123")
+        String build = null;
+        mark = mark();
+        if (match('+')) {
+            long start = source.getPosition();
+            while (source.hasNext() && isBuildChar(peekChar())) {
+                nextChar();
+            }
+            long end = source.getPosition();
+            if (start != end && !isIdentifierPart(peekChar())) {
+                build = extractSource(start, end);
+            } else {
+                restore(mark);
             }
         }
 
-        Version ver;
+        // Validate and return
+        boolean fErr = overflow
+                || parts.isEmpty()
+                || (preRelease == 0 && !trailingSep && isIdentifierPart(ch))
+                || (build == null && isIdentifierPart(peekChar()));
+
         if (fErr) {
-            ver = new Version("0");
-        } else {
-            int   c     = listParts.size();
-            int[] parts = new int[c];
-            for (int i = 0; i < c; ++i) {
-                parts[i] = listParts.get(i);
-            }
-            ver = new Version(parts, sBuild);
+            log(Severity.ERROR, Parser.BAD_VERSION, null, lInitPos);
         }
+        return new Token(lInitPos, source.getPosition(), Id.LIT_VERSION,
+                fErr ? Version.DEFAULT : new Version(parts, build));
+    }
 
-        return new Token(lInitPos, source.getPosition(), Id.LIT_VERSION, ver);
+    private int matchPrerelease(char ch) {
+        var category = Version.ReleaseCategory.fromChar(ch);  // returns pre-release category or null
+        return category != null && matchCaseInsens(category.word) ? category.code : 0;
+    }
+
+    private static boolean isBuildChar(char ch) {
+        return ch >= 'A' && ch <= 'Z'
+            || ch >= 'a' && ch <= 'z'
+            || ch >= '0' && ch <= '9'
+            || ch == '-' || ch == '.';
     }
 
     /**
@@ -2619,6 +2546,7 @@ public class Lexer
      * @return true iff the specified character can be the start of an
      *         identifier
      */
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public static boolean isIdentifierStart(char ch) {
         return switch (Character.getType(ch)) {
             case Character.UPPERCASE_LETTER -> true;

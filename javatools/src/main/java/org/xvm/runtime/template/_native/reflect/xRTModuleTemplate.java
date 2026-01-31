@@ -6,6 +6,7 @@ import java.util.Map;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.Version;
 import org.xvm.asm.VersionTree;
 
 import org.xvm.asm.constants.ModuleConstant;
@@ -68,19 +69,14 @@ public class xRTModuleTemplate
         }
 
         case "versionString": {
-            ModuleStructure module   = (ModuleStructure) hTemplate.getComponent();
-            String          sVersion;
-            if (module.isFingerprint()) {
-                VersionTree vtree = module.getFingerprintVersions();
-                sVersion = vtree.isEmpty()
-                        ? null
-                        : vtree.findLowestVersion().toString();
-            } else {
-                sVersion = module.getVersionString();
-            }
-            return frame.assignValue(iReturn, sVersion == null
+            var module    = (ModuleStructure) hTemplate.getComponent();
+            var lowestVer = module.isFingerprint() ? module.getFingerprintVersions().findLowestVersion() : null;
+            var version   = lowestVer != null
+                ? lowestVer.toString()
+                : !module.isFingerprint() ? module.getVersionString() : null;
+            return frame.assignValue(iReturn, version == null
                 ? xNullable.NULL
-                : xString.makeHandle(sVersion));
+                : xString.makeHandle(version));
         }
 
         case "modulesByPath":

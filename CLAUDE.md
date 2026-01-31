@@ -36,6 +36,10 @@ Most other task combinations work fine - the restriction only applies to `clean`
 1. ALWAYS add a newline at the end of every file
 2. NEVER use star imports (import foo.*) - always use explicit imports
 3. NEVER use fully qualified Java package names in the Java code. Always import, so that i.e `org.gradle.api.model.ObjectFactory` is just `ObjectFactory`
+4. Use `var` declarations when the type is a class/interface and 100% clear from a constructor or factory method on the right-hand side
+   - `var x = new ArrayList<String>();` instead of `List<String> x = new ArrayList<>();`
+   - `var map = new HashMap<String, Integer>();` instead of `Map<String, Integer> map = new HashMap<>();`
+   - Do NOT use `var` for primitives or when the RHS is an expression: use `int count = list.size();` not `var count = list.size();`
 
 ### Task Execution Patterns:
 

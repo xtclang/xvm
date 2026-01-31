@@ -3,6 +3,7 @@ package org.xvm.asm;
 
 import java.io.IOException;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -82,12 +83,10 @@ public class LinkedRepository
 
     @Override
     public VersionTree<Boolean> getAvailableVersions(String sModule) {
-        VersionTree<Boolean> vers = new VersionTree<>();
-        for (ModuleRepository repo : repos) {
-            for (Version ver : repo.getAvailableVersions(sModule)) {
-                vers.put(ver, true);
-            }
-        }
+        var vers = new VersionTree<Boolean>();
+        Arrays.stream(repos)
+              .flatMap(repo -> repo.getAvailableVersions(sModule).stream())
+              .forEach(ver -> vers.put(ver, true));
         return vers;
     }
 

@@ -3,22 +3,24 @@ package org.xvm.asm;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.BiConsumer;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
-import org.xvm.util.Handy;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 
 /**
  * A data structure that holds values associated with versions.
  */
-public class VersionTree<V>
+public final class VersionTree<V>
         implements Iterable<Version> {
-    // ----- constructors --------------------------------------------------------------------------
-
-    public VersionTree() {
-        clear();
-    }
-
 
     // ----- VersionTree API -----------------------------------------------------------------------
 
@@ -26,7 +28,7 @@ public class VersionTree<V>
      * @return true iff the tree is empty
      */
     public boolean isEmpty() {
-        return count == 0;
+        return root.kids.isEmpty();
     }
 
     /**
@@ -35,7 +37,7 @@ public class VersionTree<V>
      * @return the number of nodes that are present in the tree
      */
     public int size() {
-        return count;
+        return (int) stream().count();
     }
 
     /**
@@ -43,8 +45,13 @@ public class VersionTree<V>
      *
      * @return an iterator of the versions that act as the keys in the tree
      */
+    @Override
+    @NotNull
     public Iterator<Version> iterator() {
         return new Iterator<>() {
+            private Node<V> prev = root;
+            private Node<V> next = null;
+
             @Override
             public boolean hasNext() {
                 return loadNext() != null;
@@ -52,12 +59,12 @@ public class VersionTree<V>
 
             @Override
             public Version next() {
-                Node node = loadNext();
-                this.prev = node;
-                this.next = null;
+                var node = loadNext();
                 if (node == null) {
                     throw new NoSuchElementException();
                 }
+                prev = node;
+                next = null;
                 return node.getVersion();
             }
 
@@ -66,38 +73,60 @@ public class VersionTree<V>
              *
              * @return the next node, or null if the tree is exhausted
              */
-            private Node loadNext() {
+            private Node<V> loadNext() {
                 if (next != null) {
                     return next;
                 }
-
                 if (prev == null) {
                     return null;
                 }
 
-                // first check if the previous node has any children to iterate
-                Node[] kids = prev.kids;
-                if (kids != null && kids[0] != null) {
-                    return next = kids[0].firstContainedPresent();
+                // Check children first
+                if (!prev.kids.isEmpty()) {
+                    return next = prev.kids.getFirst().firstPresent();
                 }
 
-                // next check for a sibling of the previous node
-                Node nodeRewind = prev;
-                while (nodeRewind != null) {
-                    Node nodeSibling = nodeRewind.nextSibling();
-                    if (nodeSibling != null) {
-                        return next = nodeSibling.firstContainedPresent();
+                // Then check siblings going up
+                for (var node = prev; node != null; node = node.parent) {
+                    var sibling = node.nextSibling();
+                    if (sibling != null) {
+                        return next = sibling.firstPresent();
                     }
-
-                    nodeRewind = nodeRewind.parent;
                 }
-
                 return null;
             }
-
-            private Node prev = root;
-            private Node next = null;
         };
+    }
+
+    /**
+     * Obtain a stream of versions in this tree.
+     *
+     * @return a stream of the versions that act as the keys in the tree
+     */
+    @NotNull
+    public Stream<Version> stream() {
+        return StreamSupport.stream(spliterator(), false);
+    }
+
+    /**
+     * Perform an action for each version-value pair in this tree.
+     *
+     * @param action  the action to perform for each version-value pair
+     */
+    public void forEach(BiConsumer<Version, V> action) {
+        for (var ver : this) {
+            action.accept(ver, Objects.requireNonNull(get(ver)));
+        }
+    }
+
+    /**
+     * Obtain a stream of version-value entries in this tree.
+     *
+     * @return a stream of the version-value entries in the tree
+     */
+    @NotNull
+    public Stream<Map.Entry<Version, V>> entryStream() {
+        return stream().map(ver -> Map.entry(ver, Objects.requireNonNull(get(ver))));
     }
 
     /**
@@ -107,24 +136,19 @@ public class VersionTree<V>
      *
      * @return true iff the version exists in this tree
      */
-    public boolean contains(Version ver) {
-        return findNode(ver) != null;
+    public boolean contains(@NotNull Version ver) {
+        return findNode(Objects.requireNonNull(ver)).isPresent();
     }
 
     /**
-     * Test for the presence of all of the version from the specified tree in this tree.
+     * Test for the presence of all the version from the specified tree in this tree.
      *
      * @param that  the VersionTree of versions to test for; the values in the tree are ignored
      *
-     * @return true iff all of the versions from that tree exist in this tree
+     * @return true iff all the versions from that tree exist in this tree
      */
-    public boolean containsAll(VersionTree<?> that) {
-        for (Version ver : that) {
-            if (!contains(ver)) {
-                return false;
-            }
-        }
-        return true;
+    public boolean containsAll(@NotNull VersionTree<?> that) {
+        return Objects.requireNonNull(that).stream().allMatch(this::contains);
     }
 
     /**
@@ -134,9 +158,9 @@ public class VersionTree<V>
      *
      * @return the value, or null if that version is not present
      */
-    public V get(Version ver) {
-        Node<V> node = findNode(ver);
-        return node == null ? null : node.value;
+    @Nullable
+    public V get(@NotNull Version ver) {
+        return findNode(Objects.requireNonNull(ver)).map(n -> n.value).orElse(null);
     }
 
     /**
@@ -179,33 +203,33 @@ public class VersionTree<V>
      *
      * @param ver  the version to search for
      *
-     * @return the closest version that is present in the tree
+     * @return the closest version that is present in the tree, or null if none found
      */
-    public Version findClosestVersion(Version ver) {
-        int[] parts = ver.getIntArray();
-        Node  node  = root.findClosestNode(parts, 0);
-        return node == null ? null : node.getVersion();
+    @Nullable
+    public Version findClosestVersion(@NotNull Version ver) {
+        return Optional.ofNullable(root.findClosestNode(Objects.requireNonNull(ver), 0))
+                .map(Node::getVersion)
+                .orElse(null);
     }
 
     /**
      * Retrieve the lowest version in the tree.
      *
-     * @return the lowest version, or null
+     * @return the lowest version, or null if the tree is empty
      */
+    @Nullable
     public Version findLowestVersion() {
-        return isEmpty()
-                ? null
-                : root.kids[0].firstContainedPresent().getVersion();
+        return isEmpty() ? null : root.kids.getFirst().firstPresent().getVersion();
     }
 
     /**
      * Find the latest (preferably GA) version in the tree.
      *
-     * @return the latest version, or null
+     * @return the latest version, or null if none found
      */
+    @Nullable
     public Version findHighestVersion() {
-        Node node = root.findHighestNode();
-        return node == null ? null : node.getVersion();
+        return Optional.ofNullable(root.findHighestNode()).map(Node::getVersion).orElse(null);
     }
 
     /**
@@ -213,12 +237,13 @@ public class VersionTree<V>
      *
      * @param ver  the version requirement
      *
-     * @return the latest version, or null
+     * @return the latest version, or null if none found
      */
-    public Version findHighestVersion(Version ver) {
-        int[] parts = ver.getIntArray();
-        Node  node  = root.findHighestNode(parts, 0);
-        return node == null ? null : node.getVersion();
+    @Nullable
+    public Version findHighestVersion(@NotNull Version ver) {
+        return Optional.ofNullable(root.findHighestNode(Objects.requireNonNull(ver), 0))
+                .map(Node::getVersion)
+                .orElse(null);
     }
 
     /**
@@ -227,27 +252,19 @@ public class VersionTree<V>
      * @param ver    the version
      * @param value  the value to store for that version
      */
-    public void put(Version ver, V value) {
-        if (value == null) {
-            throw new IllegalArgumentException("value cannot be null");
-        }
-
-        Node node = ensureNode(ver);
-        if (!node.isPresent()) {
-            ++count;
-        }
-        node.value = value;
+    public void put(@NotNull Version ver, @NotNull V value) {
+        var node = ensureNode(Objects.requireNonNull(ver));
+        node.version = ver;
+        node.value = Objects.requireNonNull(value);
     }
 
     /**
-     * Copy all of the data from that tree into this tree.
+     * Copy all the data from that tree into this tree.
      *
      * @param that  another version tree with the same associated value type
      */
-    public void putAll(VersionTree<V> that) {
-        for (Version ver : that) {
-            put(ver, that.get(ver));
-        }
+    public void putAll(@NotNull VersionTree<V> that) {
+        Objects.requireNonNull(that).forEach(this::put);
     }
 
     /**
@@ -255,26 +272,17 @@ public class VersionTree<V>
      *
      * @param ver  the version to remove
      */
-    public void remove(Version ver) {
-        Node<V> node = findNode(ver);
-        if (node != null) {
-            if (node.isPresent()) {
-                --count;
-            }
-
-            node.remove();
-        }
+    public void remove(@NotNull Version ver) {
+        findNode(Objects.requireNonNull(ver)).filter(Node::isPresent).ifPresent(Node::remove);
     }
 
     /**
-     * Remove all of the version in the specified tree from this tree.
+     * Remove all the version in the specified tree from this tree.
      *
      * @param that  the VersionTree of versions to remove; the values in the tree are ignored
      */
-    public void removeAll(VersionTree<?> that) {
-        for (Version ver : that) {
-            remove(ver);
-        }
+    public void removeAll(@NotNull VersionTree<?> that) {
+        Objects.requireNonNull(that).stream().forEach(this::remove);
     }
 
     /**
@@ -282,31 +290,16 @@ public class VersionTree<V>
      *
      * @param that  the VersionTree of versions to retain; the values in the tree are ignored
      */
-    public void retainAll(VersionTree<?> that) {
-        // first, collect a list of versions to remove, so that removal (in the middle of our
-        // iteration) does not cause instability in the iterator
-        ArrayList<Version> listRemove = null;
-        for (Version ver : this) {
-            if (that.get(ver) == null) {
-                if (listRemove == null) {
-                    listRemove = new ArrayList<>();
-                }
-                listRemove.add(ver);
-            }
-        }
-        if (listRemove != null) {
-            for (Version ver : listRemove) {
-                remove(ver);
-            }
-        }
+    public void retainAll(@NotNull VersionTree<?> that) {
+        Objects.requireNonNull(that);
+        stream().filter(ver -> !that.contains(ver)).toList().forEach(this::remove);
     }
 
     /**
      * Clear the tree entirely.
      */
     public void clear() {
-        root  = new Node<>(null, 0);
-        count = 0;
+        root = new Node<>(null, 0);
     }
 
     /**
@@ -316,84 +309,68 @@ public class VersionTree<V>
      *
      * @return a new VersionTree, which is not affected by changes to this tree, nor vice versa
      */
-    public VersionTree<V> subTree(Version ver) {
-        VersionTree<V> that = new VersionTree<>();
-        Node node = findNode(ver);
-        if (node != null) {
-            node.copyTo(that);
-        }
-        return that;
+    @NotNull
+    public VersionTree<V> subTree(@NotNull Version ver) {
+        var result = new VersionTree<V>();
+        findNode(Objects.requireNonNull(ver)).ifPresent(node -> node.copyTo(result));
+        return result;
     }
 
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
     public boolean equals(Object o) {
-        if (o == this) {
-            return true;
-        }
+        return o == this ||
+               o instanceof VersionTree<?> that &&
+               size() == that.size() &&
+               entryStream().allMatch(e -> Objects.equals(e.getValue(), that.get(e.getKey())));
+    }
 
-        if (o instanceof VersionTree<?> that) {
-            if (this.size() == that.size()) {
-                for (Iterator<Version> iterThis = this.iterator(), iterThat = that.iterator();
-                        iterThis.hasNext(); ) {
-                    Version verThis = iterThis.next();
-                    Version verThat = iterThat.next();
-                    if (!verThis.equals(verThat) || !Handy.equals(this.get(verThis), that.get(verThat))) {
-                        return false;
-                    }
-                }
-                return true;
-            }
-        }
-
-        return false;
+    @Override
+    public int hashCode() {
+        return entryStream().mapToInt(e -> Objects.hash(e.getKey(), e.getValue())).reduce(1, (h, v) -> 31 * h + v);
     }
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("VersionTree");
-        root.render(sb, "", "");
-        return sb.toString();
+        return root.render(new StringBuilder("VersionTree"), "", "").toString();
     }
-
 
     // ----- internal ------------------------------------------------------------------------------
 
     /**
-     * Find the node corresponding to the specified version. Only used internally.
+     * Find the node corresponding to the specified version.
      *
      * @param ver  the version to search for in the tree
      *
-     * @return the node iff it exists in the tree (whether or not it is "present"), otherwise null
+     * @return the node if it exists in the tree (whether it is "present"), otherwise empty
      */
-    private Node<V> findNode(Version ver) {
-        Node<V> node  = root;
-        int[]   parts = ver.getIntArray();
-        for (int i = 0, c = parts.length; i < c && node != null; ++i) {
-            node = node.getChild(parts[i]);
+    private Optional<Node<V>> findNode(Version ver) {
+        var node = root;
+        for (int part : ver.asList()) {
+            node = node.getChild(part);
+            if (node == null) {
+                return Optional.empty();
+            }
         }
-        return node;
+        return Optional.of(node);
     }
 
     /**
-     * Find the node corresponding to the specified version, creating it if necessary. Only used
-     * internally.
+     * Find the node corresponding to the specified version, creating it if necessary.
      *
      * @param ver  the version to search for in the tree
      *
      * @return the specified node; never null
      */
+    @NotNull
     private Node<V> ensureNode(Version ver) {
-        Node<V> node  = root;
-        for (int part : ver.getIntArray()) {
+        var node = root;
+        for (int part : ver.asList()) {
             node = node.ensureChild(part);
         }
-        node.version = ver;
         return node;
     }
-
 
     // ----- inner class: Node ---------------------------------------------------------------------
 
@@ -404,14 +381,42 @@ public class VersionTree<V>
      */
     private static class Node<V> {
         /**
-         * Construct a node.
-         *
-         * @param parent
-         * @param part
+         * The parent of this node; all nodes have a parent, except for the root node.
          */
-        Node(Node parent, int part) {
+        @Nullable
+        private final Node<V> parent;
+
+        /**
+         * The version part that this node represents. The root node does not have a version part.
+         */
+        private final int part;
+
+        /**
+         * The child nodes of this node. Children are kept in sorted order by their version part.
+         * Unlike the original implementation which used a sparse array, this uses a List that
+         * grows/shrinks as needed.
+         */
+        @NotNull
+        private final List<Node<V>> kids = new ArrayList<>();
+
+        /**
+         * The cached version (the key) of this node. The root node does not have a version.
+         * This is lazily computed from the chain of parent nodes if not explicitly set.
+         */
+        @Nullable
+        private Version version;
+
+        /**
+         * The value that this node holds, if the version for this node is associated with a value.
+         * The root node does not have a value. Nodes without values are used for hierarchical
+         * organization of the tree, but are not considered to be "present" in the tree.
+         */
+        @Nullable
+        private V value;
+
+        Node(@Nullable Node<V> parent, int part) {
             this.parent = parent;
-            this.part   = part;
+            this.part = part;
         }
 
         /**
@@ -419,24 +424,15 @@ public class VersionTree<V>
          *
          * @return the version that this node represents
          */
+        @NotNull
         Version getVersion() {
             if (version == null) {
-                int cDepth = 0;
-                Node node = this;
-                while (node.parent != null) {
-                    ++cDepth;
-                    node = node.parent;
-                }
-
-                int[] parts = new int[cDepth];
-                node = this;
-                for (int i = cDepth - 1; i >= 0; --i) {
-                    parts[i] = node.part;
-                    node = node.parent;
-                }
-                version = new Version(parts, null);
+                var parts = Stream.iterate(this, n -> n.parent != null, n -> n.parent)
+                        .map(n -> n.part)
+                        .toList()
+                        .reversed();
+                version = new Version(parts);
             }
-
             return version;
         }
 
@@ -453,35 +449,27 @@ public class VersionTree<V>
         /**
          * @return this node, if it is present, otherwise the first contained node that is present
          */
-        Node firstContainedPresent() {
+        @NotNull
+        Node<V> firstPresent() {
             if (isPresent()) {
                 return this;
             }
-
-            if (kids == null) {
+            if (kids.isEmpty()) {
                 throw new IllegalStateException(toString());
             }
-
-            Node first = kids[0];
-            return first == null ? null : first.firstContainedPresent();
+            return kids.getFirst().firstPresent();
         }
 
         /**
          * @return the next sibling of this node
          */
-        Node nextSibling() {
+        @Nullable
+        Node<V> nextSibling() {
             if (parent == null) {
                 return null;
             }
-
-            Node[] siblings = parent.kids;
-            for (int i = 0, c = siblings.length; i < c; ++i) {
-                if (siblings[i] == this) {
-                    return i < c-1 ? siblings[i+1] : null;
-                }
-            }
-
-            throw new IllegalStateException(toString());
+            int index = parent.kids.indexOf(this);
+            return index >= 0 && index < parent.kids.size() - 1 ? parent.kids.get(index + 1) : null;
         }
 
         /**
@@ -491,10 +479,9 @@ public class VersionTree<V>
          *
          * @return the child, iff it exists, otherwise null
          */
-        Node getChild(int part) {
-            Node[] kids = this.kids;
-            int i = indexOf(kids, part);
-            return i < 0 ? null : kids[i];
+        @Nullable
+        Node<V> getChild(int part) {
+            return kids.stream().filter(k -> k.part == part).findFirst().orElse(null);
         }
 
         /**
@@ -504,69 +491,45 @@ public class VersionTree<V>
          *
          * @return the child node
          */
-        Node ensureChild(int part) {
-            Node node = getChild(part);
-            if (node == null) {
-                // node wasn't found; create a new one
-                node = new Node(this, part);
-                this.kids = addNode(kids, node);
-            }
-            return node;
+        @NotNull
+        Node<V> ensureChild(int part) {
+            return kids.stream().filter(k -> k.part == part).findFirst().orElseGet(() -> {
+                var node = new Node<>(this, part);
+                int index = (int) kids.stream().takeWhile(k -> k.part < part).count();
+                kids.add(index, node);
+                return node;
+            });
         }
 
         /**
          * Find a node (from this point down in the tree) that represents the "closest derivative"
          * of the specified version.
          *
-         * @param parts  the parts of the version being searched for
+         * @param ver    the version being searched for
          * @param iPart  the index of the part that potentially corresponds to a child of this node
          *
          * @return the node that most closely derives from the specified version, or null if none
          */
-        Node findClosestNode(int[] parts, int iPart) {
-            // what is the part that this node is looking for?
-            int nPart  = iPart >= parts.length ? 0 : parts[iPart];
+        @Nullable
+        Node<V> findClosestNode(Version ver, int iPart) {
+            int     nPart = iPart >= ver.size() ? 0 : ver.getPart(iPart);
+            Node<V> best  = isPresent() && nPart >= 0 ? this : null;
 
-            // keep track of the best match that we've found; note that if the next part indicates a
-            // pre-release, that means that this part can't match, because it's a pre-release of
-            // this version (e.g. version 1.2.beta comes before version 1.2)
-            Node nodeBestMatch = isPresent() && nPart >= 0 ? this : null;
-
-            // go through the kids, looking for something that works, until we've passed the kids
-            // that match
-            Node[] kids = this.kids;
-            if (kids != null) {
-                for (Node kid : kids) {
-                    if (kid == null) {
-                        // no more kids
-                        break;
+            for (var kid : kids) {
+                if (kid.part == nPart) {
+                    var node = kid.findClosestNode(ver, iPart + 1);
+                    if (node != null) {
+                        return node;
                     }
-
-                    if (kid.part == nPart) {
-                        // this is very good! we found a match
-                        Node node = kid.findClosestNode(parts, iPart + 1);
-                        if (node != null) {
-                            return node;
-                        }
-
-                        // we're not going to find a better match than an exact match
-                        break;
-                    }
-
-                    if (kid.part < nPart) {
-                        if (kid.isPresent()) {
-                            // it's not the exact version that we're looking for, but it is a
-                            // "direct ancestor" version
-                            nodeBestMatch = kid;
-                        }
-                    } else {
-                        // we've past the version range that could match
-                        break;
-                    }
+                    break;
+                }
+                if (kid.part < nPart && kid.isPresent()) {
+                    best = kid;
+                } else if (kid.part > nPart) {
+                    break;
                 }
             }
-
-            return nodeBestMatch;
+            return best;
         }
 
         /**
@@ -579,100 +542,59 @@ public class VersionTree<V>
          *     a provably later version.</li>
          * </ul>
          *
-         * @param parts  the parts of the version being searched for
+         * @param ver    the version being searched for
          * @param iPart  the index of the part that potentially corresponds to a child of this node
          *
          * @return the node that represents the highest version, using the rules defined by this
          *         method, or null if no node is present from this point down in the tree
          */
-        Node findHighestNode(int[] parts, int iPart) {
-            // the search is split into three modes:
-            // 1. exact: for every version part except the last (or the last two in the case of a
-            //    version ending with something like ".beta2")
-            // 2. for the last version part, any substitutable version will work, so either an
-            //    increment of the last part (e.g. 2.2 instead of 2.1), or a sub-version thereof
-            //    (e.g. 2.1.1 instead of 2.1), with the highest being searched for left-to-right
-            // 3. for any children beyond that, looking for the latest (since they are all
-            //    substitutable at that point)
-
-            Node[]  kids   = this.kids;
-            int     cParts = parts.length;
+        @Nullable
+        Node<V> findHighestNode(Version ver, int iPart) {
+            int     cParts = ver.size();
             int     cMatch = cParts - 1;
-            boolean fGA    = !(cParts >= 1 && parts[cParts - 1] < 0
-                            || cParts >= 2 && parts[cParts - 2] < 0);
+            boolean fGA    = !(cParts >= 1 && ver.getPart(cParts - 1) < 0 ||
+                              cParts >= 2 && ver.getPart(cParts - 2) < 0);
             if (!fGA) {
-                cMatch -= parts[cParts - 1] < 0 ? 1 : 2;
+                cMatch -= ver.getPart(cParts - 1) < 0 ? 1 : 2;
             }
 
             if (iPart < cMatch) {
-                // this part needs to be an exact match
-                int  nPart = parts[iPart];
-                Node kid   = getChild(nPart);
+                int nPart = ver.getPart(iPart);
+                var kid   = getChild(nPart);
                 if (kid != null) {
-                    return kid.findHighestNode(parts, iPart + 1);
+                    return kid.findHighestNode(ver, iPart + 1);
                 }
-
-                // it's possible that the request is for a .0.0.0 version of this node
                 if (nPart == 0 && isPresent()) {
-                    while (++iPart < cParts) {
-                        if (parts[iPart] != 0) {
-                            return null;
-                        }
+                    // remaining parts must all be zero for this node to match
+                    if (ver.asList().subList(iPart + 1, cParts).stream().anyMatch(p -> p != 0)) {
+                        return null;
                     }
                     return this;
                 }
-
                 return null;
             }
 
             if (iPart < cParts) {
-                // find the highest substitutable version; this is the difficult part of the
-                // algorithm, because if they ask for 1.2.beta (fGA==false, cParts==3) and there is
-                // a 1.2.beta1 and a 1.3, it needs to take the 1.3; in a sense, it's like the
-                // request was actually for 1.2, with the additional information being "but we'll
-                // accept a beta or later of 1.2 itself"
-
-                // go through the kids from newest to oldest, looking for a GA release (and keeping
-                // track of the newest non-GA release, just in case)
-                int  nPart     = parts[iPart];
-                Node nodeNonGA = null;
-                if (kids != null) {
-                    for (int i = kids.length - 1; i >= 0; --i) {
-                        Node kid = kids[i];
-                        if (kid != null) {
-                            // make sure that the child meets the version requirement
-                            if (kid.part < nPart) {
-                                // we've looked too far; this child's version is too early to meet the
-                                // requirement, and all of the rest of the children will be even earlier
-                                break;
-                            }
-
-                            Node node = kid.part == nPart
-                                    ? kid.findHighestNode(parts, i+1)
-                                    : kid.findHighestNode();
-                            if (node != null) {
-                                if (node.getVersion().isGARelease()) {
-                                    return node;
-                                }
-
-                                if (nodeNonGA == null || nodeNonGA.getVersion().getReleaseCategory()
-                                        < node.getVersion().getReleaseCategory()) {
-                                    nodeNonGA = node;
-                                }
-                            }
+                int     nPart     = ver.getPart(iPart);
+                Node<V> nodeNonGA = null;
+                for (var kid : kids.reversed()) {
+                    if (kid.part < nPart) {
+                        break;
+                    }
+                    var node = kid.part == nPart ? kid.findHighestNode(ver, iPart + 1) : kid.findHighestNode();
+                    if (node != null) {
+                        if (node.getVersion().isGARelease()) {
+                            return node;
+                        }
+                        if (nodeNonGA == null || node.getVersion().getReleaseCategory().isMoreStableThan(nodeNonGA.getVersion().getReleaseCategory())) {
+                            nodeNonGA = node;
                         }
                     }
                 }
-
-                // return this node, if it is present and substitutable for the requested version,
-                // if there is no child that matches, or this node is a GA release
-                return this.isPresent() && (nodeNonGA == null || this.getVersion().isGARelease())
-                    && this.getVersion().isSubstitutableFor(new Version(parts, null))
-                        ? this
-                        : nodeNonGA;
+                return isPresent() && (nodeNonGA == null || getVersion().isGARelease()) && getVersion().isSubstitutableFor(ver)
+                        ? this : nodeNonGA;
             }
 
-            // otherwise, find the highest version available
             return findHighestNode();
         }
 
@@ -689,281 +611,80 @@ public class VersionTree<V>
          * @return the node that represents the highest version, using the rules defined by this
          *         method, or null if no node is present from this point down in the tree
          */
-        Node findHighestNode() {
-            // go through the kids from newest to oldest, looking for a GA release (and keeping
-            // track of the newest non-GA release, just in case)
-            Node nodeBestMatch = null;
-            Node[] kids = this.kids;
-            if (kids != null) {
-                for (int i = kids.length - 1; i >= 0; --i) {
-                    Node kid = kids[i];
-                    if (kid != null) {
-                        Node node = kid.findHighestNode();
-                        if (node != null) {
-                            if (node.getVersion().isGARelease()) {
-                                return node;
-                            }
-
-                            if (nodeBestMatch == null) {
-                                nodeBestMatch = node;
-                            }
-                        }
+        @Nullable
+        Node<V> findHighestNode() {
+            // Find first GA release among children, or first candidate if no GA exists
+            Node<V> best = null;
+            for (var kid : kids.reversed()) {
+                var candidate = kid.findHighestNode();
+                if (candidate != null) {
+                    if (candidate.getVersion().isGARelease()) {
+                        return candidate;
+                    }
+                    if (best == null) {
+                        best = candidate;
                     }
                 }
             }
 
-            return this.isPresent() && (nodeBestMatch == null || this.getVersion().isGARelease())
-                    ? this
-                    : nodeBestMatch;
+            // Prefer this node if it's a GA release, otherwise return best non-GA candidate
+            return isPresent() && (best == null || getVersion().isGARelease()) ? this : best;
         }
 
         /**
          * Get rid of this node.
          */
         void remove() {
-            // nulling the value causes the node to no longer be present
-            this.value = null;
-            if (kids == null || kids[0] == null) {
-                // there are no kids; delete the node
-                if (parent != null) {
-                    parent.removeChild(this);
-                }
-            }
-        }
-
-        /**
-         * Remove the specified child node from this node. Only used internally.
-         *
-         * @param child  the child node to remove
-         */
-        private void removeChild(Node child) {
-            Node[] kids = this.kids;
-            int iKid = indexOf(kids, child);
-            assert iKid >= 0;
-            deleteNode(kids, iKid);
-            if (kids[0] == null) {
-                this.kids = null;
-                if (value == null) {
-                    // no kids left, no value on this node, so get rid of the node altogether
-                    remove();
+            value = null;
+            version = null;
+            if (kids.isEmpty() && parent != null) {
+                parent.kids.remove(this);
+                if (parent.kids.isEmpty() && parent.value == null) {
+                    parent.remove();
                 }
             }
         }
 
         /**
          * Recursively copy this node and its children to the specified tree.
-         *
-         * @param tree  the tree to copy to
          */
         void copyTo(VersionTree<V> tree) {
-            if (isPresent()) {
-                tree.put(version, value);
+            var v = value;
+            if (v != null) {
+                tree.put(getVersion(), v);
             }
-
-            if (kids != null) {
-                for (Node kid : kids) {
-                    if (kid == null) {
-                        return;
-                    } else {
-                        kid.copyTo(tree);
-                    }
-                }
-            }
+            kids.forEach(kid -> kid.copyTo(tree));
         }
 
         @Override
         public String toString() {
-            return parent == null ? "root" : getVersion() + "=" + value;
+            return parent == null ? "root" : "%s=%s".formatted(getVersion(), value);
         }
 
-        void render(StringBuilder sb, String sIndentFirst, String sIndent) {
+        StringBuilder render(StringBuilder sb, String indentFirst, String indent) {
             if (parent != null) {
-                sb.append('\n')
-                  .append(sIndentFirst)
-                        .append(part);
-
+                sb.append('\n').append(indentFirst).append(part);
                 if (isPresent()) {
-                    sb.append(":  ")
-                      .append(this);
+                    sb.append(":  ").append(this);
                 }
             }
-
-            if (kids != null) {
-                String sIndentNext = sIndent + "|- ";
-                String sIndentKids = sIndent + "|  ";
-                String sIndentLast = sIndent + "   ";
-                for (int i = 0, c = kids.length; i < c; ++i) {
-                    Node cur = kids[i];
-                    if (cur == null) {
-                        return;
-                    }
-
-                    boolean fLast = (i == c-1 || kids[i+1] == null);
-                    cur.render(sb, sIndentNext, fLast ? sIndentLast : sIndentKids);
-                }
+            if (!kids.isEmpty()) {
+                var nextIndent = indent + "|- ";
+                var kidsIndent = indent + "|  ";
+                var lastIndent = indent + "   ";
+                var lastKid = kids.getLast();
+                kids.forEach(kid -> kid.render(sb, nextIndent, kid == lastKid ? lastIndent : kidsIndent));
             }
+            return sb;
         }
-
-        // ----- helpers -----------------------------------------------------------------------
-
-        /**
-         * Find the specified node instance in the array of nodes passed in. Only used internally.
-         *
-         * @param nodes  the array of nodes
-         * @param node   the node to look for
-         *
-         * @return the index of the node in the array, or -1 if it could not be found
-         */
-        private static int indexOf(Node[] nodes, Node node) {
-            if (nodes == null) {
-                return -1;
-            }
-
-            for (int i = 0, c = nodes.length; i < c; ++i) {
-                Node cur = nodes[i];
-                if (cur == null) {
-                    return -1;
-                }
-
-                if (cur == node) {
-                    return i;
-                }
-            }
-
-            return -1;
-        }
-
-        /**
-         * Find the specified version part number in the array of nodes. Only used internally.
-         *
-         * @param nodes  the array of nodes
-         * @param part   the part to look for in the array
-         *
-         * @return the index of the node in the array, or -1 if it could not be found
-         */
-        private static int indexOf(Node[] nodes, int part) {
-            if (nodes == null) {
-                return -1;
-            }
-
-            for (int i = 0, c = nodes.length; i < c; ++i) {
-                Node cur = nodes[i];
-                if (cur == null) {
-                    return -1;
-                }
-
-                if (cur.part == part) {
-                    return i;
-                }
-            }
-
-            return -1;
-        }
-
-        /**
-         * Insert the specified node in the ordered array of nodes passed in. Only used internally.
-         *
-         * @param nodes  the old array of nodes
-         * @param node   the node to add
-         *
-         * @return a new array of nodes (it may be a different array from the one passed in)
-         */
-        private static Node[] addNode(Node[] nodes, Node node) {
-            if (nodes == null) {
-                // most common case: the node has no children yet
-                nodes = new Node[4];
-                nodes[0] = node;
-                return nodes;
-            }
-
-            // make sure that there's room in the array
-            int c = nodes.length;
-            if (nodes[c-1] != null) {
-                // allocate and copy to a new array
-                int    cNew     = c * 2;
-                Node[] nodesNew = new Node[cNew];
-                System.arraycopy(nodes, 0, nodesNew, 0, c);
-
-                // use the new array
-                nodes = nodesNew;
-                c     = cNew;
-            }
-
-            int nodePart = node.part;
-            for (int i = 0; i < c; ++i) {
-                Node cur = nodes[i];
-                if (cur == null) {
-                    // append to the end of the array
-                    nodes[i] = node;
-                    return nodes;
-                }
-
-                if (nodePart <= cur.part) {
-                    assert nodePart != cur.part;
-                    System.arraycopy(nodes, i, nodes, i+1, c-i-1);
-                    nodes[i] = node;
-                    return nodes;
-                }
-            }
-
-            throw new IllegalStateException();
-        }
-
-        /**
-         * Delete the node at the specified location in the array of nodes passed in. Only used
-         * internally.
-         *
-         * @param nodes  an array of nodes to delete from
-         * @param iNode  the index of the node to delete
-         */
-        private static void deleteNode(Node[] nodes, int iNode) {
-            int iLast = nodes.length - 1;
-            System.arraycopy(nodes, iNode + 1, nodes, iNode, iLast - iNode);
-            nodes[iLast] = null;
-        }
-
-        // ----- fields ------------------------------------------------------------------------
-
-        /**
-         * The parent of this node; all nodes have a parent, except for the root node.
-         */
-        Node    parent;
-
-        /**
-         * The cached version (the key) of this node. The root node does not have a version.
-         */
-        Version version;
-
-        /**
-         * The version part that this node represents. The root node does not have a version part.
-         */
-        int     part;
-
-        /**
-         * The value that this node holds, if the version for this node is associated with a value.
-         * The root node does not have a value. Nodes without values are used for hierarchical
-         * organization of the tree, but are not considered to be "present" in the tree.
-         */
-        V       value;
-
-        /**
-         * The child nodes of this node. May be null, which indicates no children. May contain
-         * nulls, but the non-null child references always start at index zero and occur in order
-         * of the version part represented by each child.
-         */
-        Node[]  kids;
     }
-
 
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * The root node of the tree.
+     * The root node of the tree. The root itself never holds a value; it is only a container
+     * for the top-level version nodes.
      */
-    Node<V> root;
-
-    /**
-     * The number of values in the tree.
-     */
-    int     count;
+    @NotNull
+    private Node<V> root = new Node<>(null, 0);
 }

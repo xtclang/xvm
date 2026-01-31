@@ -2,8 +2,15 @@ package org.xvm.asm;
 
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.OptionalInt;
+import java.util.stream.IntStream;
 
-import static org.xvm.util.Handy.isDigit;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import static org.xvm.util.Handy.quotedChar;
 import static org.xvm.util.Handy.quotedString;
 
@@ -13,260 +20,85 @@ import static org.xvm.util.Handy.quotedString;
  */
 public class Version
         implements Comparable<Version> {
+
+    // ----- ReleaseCategory enum -----------------------------------------------------------------
+
+    /**
+     * Release category indicators, ordered from least stable (CI) to most stable (GA).
+     * Pre-release categories are encoded as negative integers in version part lists.
+     */
+    public enum ReleaseCategory {
+        CI(-6, "ci", "CI"), DEV(-5, "dev", "Dev"), QA(-4, "qa", "QA"),
+        ALPHA(-3, "alpha"), BETA(-2, "beta"), RC(-1, "rc"), GA(0, "ga", "GA");
+
+        public final int    code;    // negative for pre-release, 0 for GA
+        public final String word;    // lowercase form for parsing
+        public final String display; // display form
+
+        ReleaseCategory(int code, String word)                 { this(code, word, word); }
+        ReleaseCategory(int code, String word, String display) { this.code = code; this.word = word; this.display = display; }
+
+        public boolean isPreRelease()                       { return code < 0; }
+        public boolean isMoreStableThan(ReleaseCategory o)  { return compareTo(o) > 0; }
+
+        private static final ReleaseCategory[] BY_CODE = new ReleaseCategory[7]; // codes -6 to 0
+        static { for (var rc : values()) BY_CODE[rc.code + 6] = rc; }
+
+        public static ReleaseCategory fromCode(int code) {
+            return code >= -6 && code <= 0 ? BY_CODE[code + 6] : null;
+        }
+
+        public static ReleaseCategory fromChar(char ch) {
+            return switch (Character.toLowerCase(ch)) {
+                case 'a' -> ALPHA; case 'b' -> BETA; case 'c' -> CI;
+                case 'd' -> DEV;   case 'q' -> QA;   case 'r' -> RC;
+                default  -> null;
+            };
+        }
+    }
+
+    // ----- constants -----------------------------------------------------------------------------
+
+    /**
+     * Default version used for error recovery or when no version is specified.
+     */
+    public static final Version DEFAULT = new Version("0");
+
     // ----- constructors --------------------------------------------------------------------------
 
     /**
      * Construct a Version from a version string.
      *
-     * @param sLiteral  the version string
+     * @param literal  the version string
      */
-    public Version(String sLiteral) {
-        ArrayList<Integer> listParts = new ArrayList<>();
-        String             sBuild    = null;
-        int                cLen      = sLiteral.length();
-        int                ix        = 0;
-        String             sErr      = null;
-
-        boolean requiredNumber = false;
-        Numbers: while (ix < cLen) {
-            char ch = sLiteral.charAt(ix);
-            switch (ch) {
-            case '0': case '1': case '2': case '3': case '4':
-            case '5': case '6': case '7': case '8': case '9':
-                int n = 0;
-                do {
-                    if (n > 200000000) {
-                        sErr = "version number overflow";
-                        break Numbers;
-                    }
-                    n = n * 10 + (sLiteral.charAt(ix++) - '0');
-                } while (ix < cLen && isDigit(sLiteral.charAt(ix)));
-                listParts.add(n);
-                requiredNumber = false;
-                break;
-
-            case '.':
-            case '-':
-                if (requiredNumber || ix == 0) {
-                    sErr = "number expected; '" + ch + "' found";
-                    break Numbers;
-                }
-                ix++;
-                requiredNumber = true;
-                break;
-
-            case 'A':
-            case 'a':
-            case 'B':
-            case 'b':
-            case 'C':
-            case 'c':
-            case 'D':
-            case 'd':
-            case 'Q':
-            case 'q':
-            case 'R':
-            case 'r':
-                requiredNumber = false;
-                break Numbers;
-
-            case '+':
-                break Numbers;
-
-            default:
-                sErr = "unknown version component " + quotedString(sLiteral.substring(ix));
-                break Numbers;
-            }
-        }
-
-        if (requiredNumber && sErr == null) {
-            sErr = "number expected; " + quotedString(sLiteral.substring(ix) + " found");
-        }
-
-        if (sErr == null && ix < cLen) {
-            String expectedWord = null;
-            switch (sLiteral.charAt(ix)) {
-            case 'A':
-            case 'a':
-                listParts.add(-3);
-                expectedWord = "alpha";
-                break;
-
-            case 'B':
-            case 'b':
-                listParts.add(-2);
-                expectedWord = "beta";
-                break;
-
-            case 'C':
-            case 'c':
-                listParts.add(-6);
-                expectedWord = "ci";
-                break;
-
-            case 'D':
-            case 'd':
-                listParts.add(-5);
-                expectedWord = "dev";
-                break;
-
-            case 'Q':
-            case 'q':
-                listParts.add(-4);
-                expectedWord = "qa";
-                break;
-
-            case 'R':
-            case 'r':
-                listParts.add(-1);
-                expectedWord = "rc";
-                break;
-
-            case '+':
-                // the "build string" is handled later
-                break;
-
-            default:
-                sErr = "illegal character " + quotedChar(sLiteral.charAt(ix));
-                break;
-            }
-
-            if (expectedWord != null) {
-                String word    = grabLetters(sLiteral, ix);
-                int    wordlen = word.length();
-                ix += wordlen;
-                if (wordlen > 1 && !word.equalsIgnoreCase(expectedWord)) {
-                    sErr = "expected \"" + expectedWord + "\" but encountered \"" + word + "\"";
-                } else if (ix < cLen) {
-                    boolean requireDigits = false;
-                    char ch = sLiteral.charAt(ix);
-                    if (ch == '.' || ch == '-') {
-                        ++ix;
-                        requireDigits = true;
-                        ch = ix < cLen ? sLiteral.charAt(ix) : '?';
-                    }
-
-                    if (isDigit(ch)) {
-                        int n = 0;
-                        do {
-                            if (n > 200000000) {
-                                sErr = "version number overflow";
-                                break;
-                            }
-                            n = n * 10 + (ch - '0');
-                            ++ix;
-                        } while (ix < cLen && isDigit(ch = sLiteral.charAt(ix)));
-                        listParts.add(n);
-                    } else if (requireDigits) {
-                        sErr = "expected trailing version; " + quotedChar(ch) + " found";
-                    }
-                }
-            }
-        }
-
-        if (sErr == null && ix < cLen) {
-            if (sLiteral.charAt(ix) == '+') {
-                // parse the build string, which must be the remainder of the version
-                sBuild = sLiteral.substring(ix + 1);
-
-                // semver states that only A..Z, a..z, 0..9, and '-' may occur in the build
-                // metadata, but the examples given also include '.', so Ecstasy considers the
-                // '.' to be legal
-                if (!sBuild.matches("[A-Za-z0-9\\-.]*")) {
-                    sErr = "illegal build string \"" + sBuild + "\"; only A-Z, a-z, 0-9, '-', and '.' are permitted";
-                }
-            } else {
-                sErr = "invalid trailing string: " + quotedString(sLiteral.substring(ix));
-            }
-        }
-
-        if (sErr == null && listParts.isEmpty()) {
-            sErr = "no version number";
-        }
-
-        if (sErr != null) {
-            throw new IllegalStateException("illegal version string \"" + sLiteral + "\": " + sErr);
-        }
-
-        int   cParts  = listParts.size();
-        int[] aiParts = new int[cParts];
-        for (int i = 0; i < cParts; ++i) {
-            aiParts[i] = listParts.get(i);
-        }
-
-        this.literal = sLiteral;
-        this.ints    = aiParts;
-        this.build   = sBuild;
+    public Version(@NotNull String literal) {
+        var parts    = new ArrayList<Integer>();
+        this.build   = parse(Objects.requireNonNull(literal), parts);
+        this.literal = literal;
+        this.parts   = List.copyOf(parts);
     }
 
     /**
-     * Construct a Version from an array of version indicators and an optional description.
+     * Construct a Version from a list of version indicators.
      *
-     * @param aiParts  the array of version indicators
-     * @param sBuild  an optional build description
+     * @param parts  the list of version indicators
      */
-    public Version(int[] aiParts, String sBuild) {
-        assert aiParts != null;
-
-        // each version indicator must be >= 0, except the second-to-the-last or last, which may be
-        // between -1 and -5
-        StringBuilder sb  = new StringBuilder();
-        boolean       err = aiParts.length == 0;
-        boolean       fGA = true;
-        for (int i = 0, c = aiParts.length; i < c; ++i) {
-            int part = aiParts[i];
-            if (aiParts[i] >= 0) {
-                if (i > 0 && fGA) {
-                    sb.append('.');
-                }
-                sb.append(part);
-            } else if (part >= -PREFIX.length) {
-                fGA = false;
-                switch (c - i) {
-                case 1:
-                    // last element; ok
-                    break;
-                case 2:
-                    // second to last element; last must be >= 0
-                    if (aiParts[i+1] < 0) {
-                        err = true;
-                    }
-                    break;
-                default:
-                    err = true;
-                    break;
-                }
-                if (i > 0 && aiParts[i-1] == 0) {
-                    // previous part must > 0
-                    err = true;
-                }
-
-                if (i > 0) {
-                    sb.append('-');
-                }
-                sb.append(PREFIX[part + PREFIX.length]);
-            } else {
-                sb.append(".illegal(")
-                  .append(i)
-                  .append(')');
-                err = true;
-            }
-        }
-
-        if (sBuild != null && !sBuild.isEmpty()) {
-            sb.append('+')
-              .append(sBuild);
-        }
-
-        this.literal = sb.toString();
-        this.ints    = aiParts;
-        this.build   = sBuild;
-
-        if (err) {
-            throw new IllegalStateException("illegal version: " + literal);
-        }
+    public Version(@NotNull List<Integer> parts) {
+        this(parts, null);
     }
 
+    /**
+     * Construct a Version from a list of version indicators and an optional build description.
+     *
+     * @param parts  the list of version indicators
+     * @param build  optional build metadata
+     */
+    public Version(@NotNull List<Integer> parts, @Nullable String build) {
+        Objects.requireNonNull(parts);
+        this.literal = buildLiteral(parts, build);
+        this.parts   = List.copyOf(parts);
+        this.build   = build;
+    }
 
     // ----- accessors -----------------------------------------------------------------------------
 
@@ -276,32 +108,22 @@ public class Version
      *         beta release, or a release candidate
      */
     public boolean isGARelease() {
-        for (int part : getIntArray()) {
-            if (part < 0) {
-                return false;
-            }
-        }
-        return true;
+        return parts.stream().allMatch(p -> p >= 0);
     }
 
     /**
-     * @return a value between -5 and 0, representing "dev", "ci", "alpha", "beta", "rc", or "ga"
+     * @return the release category of this version
      */
-    public int getReleaseCategory() {
-        for (int part : getIntArray()) {
-            if (part < 0) {
-                return part;
-            }
-        }
-        return 0;
+    public ReleaseCategory getReleaseCategory() {
+        int code = parts.stream().filter(p -> p < 0).findFirst().orElse(0);
+        return ReleaseCategory.fromCode(code);
     }
 
     /**
-     * @return one of "dev", "ci", "alpha", "beta", "rc", or "ga"
+     * @return one of "CI", "Dev", "QA", "alpha", "beta", "rc", or "GA"
      */
     public String getReleaseCategoryString() {
-        int n = getReleaseCategory();
-        return n < 0 ? PREFIX[n + PREFIX.length] : "ga";
+        return getReleaseCategory().display;
     }
 
     /**
@@ -346,43 +168,37 @@ public class Version
             return true;
         }
 
-        // check all of the shared version parts (except for the last shared version part) to make
+        // check all the shared version parts (except for the last shared version part) to make
         // sure that they are identical; for example, when comparing "1.2.3" and "1.2.4", this would
         // compare both the "1" and the "2" parts, but when comparing "1.2.3" and "1.2", this would
         // only check the "1" part.
-        int[] thisInts = this.getIntArray();
-        int[] thatInts = that.getIntArray();
-        int   cThis    = thisInts.length;
-        int   cThisGA  = thisInts[cThis - 1] < 0 ? cThis - 1 : cThis >= 2 && thisInts[cThis - 2] < 0 ? cThis - 2 : cThis;
-        int   cThat    = thatInts.length;
-        int   cThatGA  = thatInts[cThat - 1] < 0 ? cThat - 1 : cThat >= 2 && thatInts[cThat - 2] < 0 ? cThat - 2 : cThat;
-        int   iLastGA  = Math.min(cThisGA, cThatGA) - 1;
-        for (int i = 0; i < iLastGA; ++i) {
-            if (thisInts[i] != thatInts[i]) {
-                return false;
-            }
+        int cThis   = this.size();
+        int cThisGA = gaSize(this.parts);
+        int cThat   = that.size();
+        int cThatGA = gaSize(that.parts);
+        int iLastGA = Math.min(cThisGA, cThatGA) - 1;
+        if (iLastGA > 0 && !this.parts.subList(0, iLastGA).equals(that.parts.subList(0, iLastGA))) {
+            return false;
         }
 
         // if this was a smaller version than that, then this cannot substitute for that
-        int nVerDif = iLastGA >= 0 ? thisInts[iLastGA] - thatInts[iLastGA] : 0;
-        if (nVerDif < 0) {
+        int verDiff = iLastGA >= 0 ? this.parts.get(iLastGA) - that.parts.get(iLastGA) : 0;
+        if (verDiff < 0) {
             return false;
         }
 
         // if this was a larger version than that, then this can sub for that if we're comparing
         // the last digit of that
-        if (nVerDif > 0) {
+        if (verDiff > 0) {
             return cThisGA >= cThatGA;
         }
 
-        // all of the shared GA digits are identical; check the non-shared digits
+        // all the shared GA digits are identical; check the non-shared digits
         if (cThisGA > cThatGA) {
             // any remaining version part number in this version higher than zero indicates this
             // could sub for that
-            for (int i = cThatGA; i < cThisGA; ++i) {
-                if (thisInts[i] > 0) {
-                    return true;
-                }
+            if (this.parts.subList(cThatGA, cThisGA).stream().anyMatch(p -> p > 0)) {
+                return true;
             }
             // this could still be substitutable for that, because the GA versions are the same
         } else if (cThisGA < cThatGA) {
@@ -390,10 +206,8 @@ public class Version
             // can NOT sub for that; the number of version parts in this is fewer than the number of
             // version parts in that, so the only way that this is substitutable for that is if all
             // subsequent version parts of that are "0"; for example, "1.2" can sub for "1.2.0.0.0"
-            for (int i = cThisGA; i < cThatGA; ++i) {
-                if (thatInts[i] > 0) {
-                    return false;
-                }
+            if (that.parts.subList(cThisGA, cThatGA).stream().anyMatch(p -> p > 0)) {
+                return false;
             }
             // this could still be substitutable for that, because the GA versions are the same
         }
@@ -413,16 +227,9 @@ public class Version
             int cThisNonGA   = cThis - cThisGA;
             int cThatNonGA   = cThat - cThatGA;
             int cSharedNonGA = Math.min(cThisNonGA, cThatNonGA);
-            assert cSharedNonGA == 1 || cSharedNonGA == 2;
-            for (int of = 0; of < cSharedNonGA; ++of) {
-                nVerDif = thisInts[cThisGA + of] - thatInts[cThatGA + of];
-                if (nVerDif < 0) {
-                    // this is an older pre-release
-                    return false;
-                } else if (nVerDif > 0) {
-                    // this is a newer pre-release
-                    return true;
-                }
+            var preReleaseDiff = comparePreReleaseParts(this.parts, cThisGA, that.parts, cThatGA, cSharedNonGA);
+            if (preReleaseDiff.isPresent()) {
+                return preReleaseDiff.getAsInt() > 0;
             }
 
             // all the shared digits of the pre-release matched; check for non-shared digits of
@@ -455,29 +262,15 @@ public class Version
             return true;
         }
 
-        // check all of the shared version parts to make sure that they are identical
-        int[] thisInts = this.getIntArray();
-        int[] thatInts = that.getIntArray();
-        int   cThis    = thisInts.length;
-        int   cThat    = thatInts.length;
-        int   cShared  = Math.min(cThis, cThat);
-        for (int i = 0; i < cShared; ++i) {
-            if (thisInts[i] != thatInts[i]) {
-                return false;
-            }
+        // check all the shared version parts to make sure that they are identical
+        int cShared = Math.min(this.size(), that.size());
+        if (!this.parts.subList(0, cShared).equals(that.parts.subList(0, cShared))) {
+            return false;
         }
 
         // all remaining parts need to be "0"
-        if (cThis != cThat) {
-            int[] remaining = cThis > cThat ? thisInts : thatInts;
-            for (int i = cShared, c = remaining.length; i < c; ++i) {
-                if (thatInts[i] != 0) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
+        var remaining = this.size() > that.size() ? this.parts : that.parts;
+        return remaining.subList(cShared, remaining.size()).stream().allMatch(p -> p == 0);
     }
 
     /**
@@ -487,31 +280,18 @@ public class Version
      * @return a normalized version
      */
     public Version normalize() {
-        int[] parts  = getIntArray();
-        int   cParts = parts.length;
-        int   cZeros = 0;
-        for (int i = cParts - 1; i > 0; --i) {
-            if (parts[i] == 0) {
-                ++cZeros;
-            } else {
-                break;
-            }
-        }
-
-        if (cZeros == 0) {
-            return this;
-        }
-
-        int[] partsNew = new int[cParts - cZeros];
-        System.arraycopy(parts, 0, partsNew, 0, cParts - cZeros);
-        return new Version(partsNew, build);
+        int lastNonZero = IntStream.iterate(parts.size() - 1, i -> i > 0, i -> i - 1)
+                .filter(i -> parts.get(i) != 0)
+                .findFirst()
+                .orElse(0);
+        return lastNonZero == parts.size() - 1 ? this : new Version(parts.subList(0, lastNonZero + 1), build);
     }
 
     /**
      * @return the number of parts of the version
      */
-    public int getPartCount() {
-        return ints.length;
+    public int size() {
+        return parts.size();
     }
 
     /**
@@ -520,41 +300,43 @@ public class Version
      * @return the i-th part of the version
      */
     public int getPart(int i) {
-        assert i >= 0 && i < getPartCount();
-        return ints[i];
+        return parts.get(i);
     }
 
     /**
-     * @return the optional build string; may be `null`
+     * @return the build string if present
      */
-    public String getBuildString() {
-        return build;
+    @SuppressWarnings("unused")
+    public Optional<String> getBuildString() {
+        return Optional.ofNullable(build);
     }
 
     /**
-     * @return this Version but with a `null` build string
+     * @return this Version but without build metadata
      */
     public Version withoutBuildString() {
-        return build == null ? this : new Version(ints, null);
+        return build == null ? this : new Version(parts);
     }
 
+    /**
+     * @return the parts as an immutable list
+     */
+    @NotNull
+    public List<Integer> asList() {
+        return parts;
+    }
 
     // ----- Comparable methods --------------------------------------------------------------------
 
     @Override
-    public int compareTo(Version that) {
-        int[] thisParts = this.getIntArray();
-        int[] thatParts = that.getIntArray();
-        int   nDefault  = thisParts.length - thatParts.length;
-        for (int i = 0, c = Math.min(thisParts.length, thatParts.length); i < c; ++i) {
-            if (thisParts[i] != thatParts[i]) {
-                return thisParts[i] - thatParts[i];
-            }
-        }
-
-        return nDefault;
+    public int compareTo(@NotNull Version that) {
+        Objects.requireNonNull(that);
+        return IntStream.range(0, Math.min(this.size(), that.size()))
+                .map(i -> this.parts.get(i) - that.parts.get(i))
+                .filter(diff -> diff != 0)
+                .findFirst()
+                .orElseGet(() -> this.size() - that.size());
     }
-
 
     // ----- Object methods ------------------------------------------------------------------------
 
@@ -570,37 +352,208 @@ public class Version
 
     @Override
     public boolean equals(Object obj) {
-        return obj instanceof Version && literal.equals(((Version) obj).literal);
+        return obj instanceof Version v && literal.equals(v.literal);
     }
-
 
     // ----- internal ------------------------------------------------------------------------------
 
     /**
-     * @return the string of letters starting at the specified offset
+     * Build the literal string representation from parts.
      */
-    private String grabLetters(String sLiteral, int of) {
-        int start  = of;
-        int strlen = sLiteral.length();
-        while (of < strlen && Character.isLetter(sLiteral.charAt(of))) {
-            ++of;
+    private static String buildLiteral(List<Integer> parts, @Nullable String build) {
+        var sb   = new StringBuilder();
+        int size = parts.size();
+
+        for (int i = 0; i < size; i++) {
+            int part = parts.get(i);
+            if (part < 0) {
+                // Pre-release indicator
+                var category = ReleaseCategory.fromCode(part);
+                if (i > 0) {
+                    sb.append('-');
+                }
+                sb.append(category != null ? category.word : "?");
+                if (i + 1 < size) {
+                    sb.append(parts.get(++i));
+                }
+            } else {
+                if (i > 0) {
+                    sb.append('.');
+                }
+                sb.append(part);
+            }
         }
-        return sLiteral.substring(start, of);
+
+        if (build != null && !build.isEmpty()) {
+            sb.append('+').append(build);
+        }
+        return sb.toString();
+    }
+
+    // ----- parsing -------------------------------------------------------------------------------
+    // TODO: IllegalStateException is wrong for parse errors - should be IllegalArgumentException or
+    //       a custom ParseException. Also, parsing logic should be delegated to a separate parser
+    //       class rather than embedded in Version itself.
+
+    /** Shared parsing state to avoid returning multiple values. */
+    private static int parseIndex;
+
+    @Nullable
+    private static String parse(String literal, List<Integer> parts) {
+        int len = literal.length();
+        parseIndex = 0;
+
+        // Parse numeric version parts (e.g., "1.2.3")
+        boolean needNumber = false;
+        while (parseIndex < len) {
+            char ch = literal.charAt(parseIndex);
+            if (Character.isDigit(ch)) {
+                parts.add(parseNumber(literal));
+                needNumber = false;
+            } else if (ch == '.' || ch == '-') {
+                if (needNumber || parseIndex == 0) {
+                    throw error(literal, "number expected; '%c' found".formatted(ch));
+                }
+                parseIndex++;
+                needNumber = true;
+            } else if (Character.isLetter(ch) || ch == '+') {
+                needNumber = false;
+                break;
+            } else {
+                throw error(literal, "unknown version component " + quotedString(literal.substring(parseIndex)));
+            }
+        }
+
+        if (needNumber) {
+            throw error(literal, "number expected; " + quotedString(literal.substring(parseIndex) + " found"));
+        }
+
+        // Parse pre-release indicator (alpha, beta, rc, etc.)
+        if (parseIndex < len && literal.charAt(parseIndex) != '+') {
+            var category = ReleaseCategory.fromChar(literal.charAt(parseIndex));
+            if (category == null) {
+                throw error(literal, "illegal character " + quotedChar(literal.charAt(parseIndex)));
+            }
+
+            // Extract the word and validate
+            int wordStart = parseIndex;
+            while (parseIndex < len && Character.isLetter(literal.charAt(parseIndex))) {
+                parseIndex++;
+            }
+            var word = literal.substring(wordStart, parseIndex);
+            if (word.length() > 1 && !word.equalsIgnoreCase(category.word)) {
+                throw error(literal, "expected \"%s\" but encountered \"%s\"".formatted(category.word, word));
+            }
+            parts.add(category.code);
+
+            // Optional trailing number (e.g., "beta2")
+            if (parseIndex < len && (literal.charAt(parseIndex) == '.' || literal.charAt(parseIndex) == '-')) {
+                parseIndex++;
+                if (parseIndex >= len || !Character.isDigit(literal.charAt(parseIndex))) {
+                    throw error(literal, "expected trailing version; " +
+                            (parseIndex < len ? quotedChar(literal.charAt(parseIndex)) : "end of string") + " found");
+                }
+            }
+            if (parseIndex < len && Character.isDigit(literal.charAt(parseIndex))) {
+                parts.add(parseNumber(literal));
+            }
+        }
+
+        // Parse build string (e.g., "+build.123")
+        String build = null;
+        if (parseIndex < len) {
+            if (literal.charAt(parseIndex) == '+') {
+                build = literal.substring(parseIndex + 1);
+                if (!build.matches("[A-Za-z0-9\\-.]*")) {
+                    throw error(literal, "illegal build string \"%s\"; only A-Z, a-z, 0-9, '-', and '.' are permitted".formatted(build));
+                }
+            } else {
+                throw error(literal, "invalid trailing string: " + quotedString(literal.substring(parseIndex)));
+            }
+        }
+
+        if (parts.isEmpty()) {
+            throw error(literal, "no version number");
+        }
+
+        return build;
+    }
+
+    private static int parseNumber(String literal) {
+        int n = 0;
+        while (parseIndex < literal.length() && Character.isDigit(literal.charAt(parseIndex))) {
+            if (n > MAX_VERSION_NUMBER) {
+                throw error(literal, "version number overflow");
+            }
+            n = n * 10 + (literal.charAt(parseIndex++) - '0');
+        }
+        return n;
+    }
+
+    private static IllegalStateException error(String literal, String message) {
+        return new IllegalStateException("illegal version string \"%s\": %s".formatted(literal, message));
     }
 
     /**
-     * @return the version as an array of ints
+     * Calculate the number of GA (generally available) version parts. Non-GA indicators like
+     * alpha, beta, rc are represented by negative numbers and appear at the end of the parts list,
+     * possibly followed by a numeric sub-version (e.g., "beta2" is [-2, 2]).
+     *
+     * @param parts  the version parts list
+     *
+     * @return the number of GA parts (excluding any trailing pre-release indicator and its version)
      */
-    protected int[] getIntArray() {
-        return ints;
+    private static int gaSize(List<Integer> parts) {
+        for (int i = 0, size = parts.size(); i < size; i++) {
+            if (parts.get(i) < 0) {
+                return i;
+            }
+        }
+        return parts.size();
     }
 
+    /**
+     * Compare pre-release parts between two version part lists.
+     *
+     * @param thisParts   the first version's parts list
+     * @param thisOffset  the starting index in thisParts
+     * @param thatParts   the second version's parts list
+     * @param thatOffset  the starting index in thatParts
+     * @param count       the number of parts to compare
+     *
+     * @return the first non-zero difference, or empty if all compared parts are equal
+     */
+    private static OptionalInt comparePreReleaseParts(List<Integer> thisParts, int thisOffset,
+                                                      List<Integer> thatParts, int thatOffset, int count) {
+        for (int i = 0; i < count; i++) {
+            int diff = thisParts.get(thisOffset + i) - thatParts.get(thatOffset + i);
+            if (diff != 0) {
+                return OptionalInt.of(diff);
+            }
+        }
+        return OptionalInt.empty();
+    }
 
     // ----- fields --------------------------------------------------------------------------------
 
-    private static final String[] PREFIX = {"CI", "Dev", "QC", "alpha", "beta", "rc"};
+    private static final int MAX_VERSION_NUMBER = 200_000_000;
 
-    protected String literal;
-    protected int[]  ints;
-    protected String build;
+    /**
+     * The original version string literal as provided to the constructor or reconstructed from parts.
+     */
+    @NotNull
+    private final String literal;
+
+    /**
+     * The version parts as an immutable list of integers. Positive values are version numbers,
+     * negative values are pre-release indicators (see PREFIX).
+     */
+    @NotNull
+    private final List<Integer> parts;
+
+    /**
+     * The build string (the part after '+' in semver), or null if none.
+     */
+    @Nullable
+    private final String build;
 }

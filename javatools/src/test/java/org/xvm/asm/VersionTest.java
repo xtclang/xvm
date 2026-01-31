@@ -64,7 +64,7 @@ public class VersionTest {
 
     @Test
     public void testEmptyTree() {
-        VersionTree<String> tree = new VersionTree<>();
+        var tree = new VersionTree<String>();
         assertTrue(tree.isEmpty());
         assertEquals(0, tree.size());
         assertFalse(tree.iterator().hasNext());
@@ -210,7 +210,7 @@ public class VersionTest {
 
     @Test
     public void testClosestVersion() {
-        VersionTree<String> tree = new VersionTree<>();
+        var tree = new VersionTree<String>();
         tree.put(new Version("1"          ), "1"          );
         tree.put(new Version("2"          ), "2"          );
         tree.put(new Version("2.0"        ), "2.0"        );
@@ -291,7 +291,7 @@ public class VersionTest {
     }
 
     static VersionTree<String> genTree() {
-        VersionTree<String> tree = new VersionTree<>();
+        var tree = new VersionTree<String>();
         tree.put(new Version("1.0"), "one-oh");
         tree.put(new Version("2.0"), "two-oh");
         tree.put(new Version("2.1"), "two-one");
@@ -299,6 +299,224 @@ public class VersionTest {
         tree.put(new Version("2.2.0.1"), "two-two-oh-one");
         tree.put(new Version("3.0"), "three-oh");
         return tree;
+    }
+
+    // ----- ReleaseCategory tests -----------------------------------------------------------------
+
+    @Test
+    public void testReleaseCategoryEnum() {
+        // Test enum ordering (least stable to most stable)
+        assertTrue(Version.ReleaseCategory.CI.compareTo(Version.ReleaseCategory.GA) < 0);
+        assertTrue(Version.ReleaseCategory.DEV.compareTo(Version.ReleaseCategory.GA) < 0);
+        assertTrue(Version.ReleaseCategory.ALPHA.compareTo(Version.ReleaseCategory.BETA) < 0);
+        assertTrue(Version.ReleaseCategory.BETA.compareTo(Version.ReleaseCategory.RC) < 0);
+        assertTrue(Version.ReleaseCategory.RC.compareTo(Version.ReleaseCategory.GA) < 0);
+
+        // Test isPreRelease
+        assertTrue(Version.ReleaseCategory.CI.isPreRelease());
+        assertTrue(Version.ReleaseCategory.DEV.isPreRelease());
+        assertTrue(Version.ReleaseCategory.QA.isPreRelease());
+        assertTrue(Version.ReleaseCategory.ALPHA.isPreRelease());
+        assertTrue(Version.ReleaseCategory.BETA.isPreRelease());
+        assertTrue(Version.ReleaseCategory.RC.isPreRelease());
+        assertFalse(Version.ReleaseCategory.GA.isPreRelease());
+
+        // Test fromCode
+        assertEquals(Version.ReleaseCategory.CI, Version.ReleaseCategory.fromCode(-6));
+        assertEquals(Version.ReleaseCategory.DEV, Version.ReleaseCategory.fromCode(-5));
+        assertEquals(Version.ReleaseCategory.QA, Version.ReleaseCategory.fromCode(-4));
+        assertEquals(Version.ReleaseCategory.ALPHA, Version.ReleaseCategory.fromCode(-3));
+        assertEquals(Version.ReleaseCategory.BETA, Version.ReleaseCategory.fromCode(-2));
+        assertEquals(Version.ReleaseCategory.RC, Version.ReleaseCategory.fromCode(-1));
+        assertEquals(Version.ReleaseCategory.GA, Version.ReleaseCategory.fromCode(0));
+        assertNull(Version.ReleaseCategory.fromCode(-7));
+        assertNull(Version.ReleaseCategory.fromCode(1));
+
+        // Test fromChar (only for pre-release)
+        assertEquals(Version.ReleaseCategory.CI, Version.ReleaseCategory.fromChar('c'));
+        assertEquals(Version.ReleaseCategory.CI, Version.ReleaseCategory.fromChar('C'));
+        assertEquals(Version.ReleaseCategory.DEV, Version.ReleaseCategory.fromChar('d'));
+        assertEquals(Version.ReleaseCategory.QA, Version.ReleaseCategory.fromChar('q'));
+        assertEquals(Version.ReleaseCategory.ALPHA, Version.ReleaseCategory.fromChar('a'));
+        assertEquals(Version.ReleaseCategory.BETA, Version.ReleaseCategory.fromChar('b'));
+        assertEquals(Version.ReleaseCategory.RC, Version.ReleaseCategory.fromChar('r'));
+        assertNull(Version.ReleaseCategory.fromChar('g')); // GA not parseable from char
+        assertNull(Version.ReleaseCategory.fromChar('x'));
+    }
+
+    @Test
+    public void testVersionReleaseCategory() {
+        assertEquals(Version.ReleaseCategory.GA, new Version("1.0").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.GA, new Version("2.3.4").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.ALPHA, new Version("1.0.alpha").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.ALPHA, new Version("1.0.alpha2").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.BETA, new Version("1.0.beta").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.BETA, new Version("2.1.beta3").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.RC, new Version("1.0.rc").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.RC, new Version("3.0.rc1").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.DEV, new Version("dev").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.DEV, new Version("1.0.dev").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.CI, new Version("ci").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.QA, new Version("1.0.qa").getReleaseCategory());
+
+        // Test getReleaseCategoryString (display format from master)
+        assertEquals("GA", new Version("1.0").getReleaseCategoryString());
+        assertEquals("alpha", new Version("1.0.alpha").getReleaseCategoryString());
+        assertEquals("beta", new Version("1.0.beta").getReleaseCategoryString());
+        assertEquals("rc", new Version("1.0.rc").getReleaseCategoryString());
+        assertEquals("Dev", new Version("1.0.dev").getReleaseCategoryString());
+        assertEquals("CI", new Version("ci").getReleaseCategoryString());
+        assertEquals("QA", new Version("1.0.qa").getReleaseCategoryString());
+    }
+
+    // ----- VersionTree with pre-release versions ------------------------------------------------
+
+    @Test
+    public void testVersionTreeWithPreRelease() {
+        var tree = new VersionTree<String>();
+        tree.put(new Version("1.0.alpha"), "alpha");
+        tree.put(new Version("1.0.beta"), "beta");
+        tree.put(new Version("1.0.rc"), "rc");
+        tree.put(new Version("1.0"), "ga");
+
+        assertEquals(4, tree.size());
+        assertTrue(tree.contains(new Version("1.0.alpha")));
+        assertTrue(tree.contains(new Version("1.0.beta")));
+        assertTrue(tree.contains(new Version("1.0.rc")));
+        assertTrue(tree.contains(new Version("1.0")));
+
+        // Test iteration order
+        var iter = tree.iterator();
+        assertEquals(new Version("1.0"), iter.next());          // GA comes first (lower parts)
+        assertEquals(new Version("1.0.alpha"), iter.next());    // Then alpha (-3)
+        assertEquals(new Version("1.0.beta"), iter.next());     // Then beta (-2)
+        assertEquals(new Version("1.0.rc"), iter.next());       // Then rc (-1)
+    }
+
+    @Test
+    public void testFindHighestVersionPrefersGA() {
+        var tree = new VersionTree<String>();
+        tree.put(new Version("1.0.alpha"), "alpha");
+        tree.put(new Version("1.0.beta"), "beta");
+        tree.put(new Version("1.0.rc"), "rc");
+        tree.put(new Version("1.0"), "ga");
+
+        // Should prefer GA over pre-release
+        assertEquals(new Version("1.0"), tree.findHighestVersion());
+    }
+
+    @Test
+    public void testFindHighestVersionWithOnlyPreRelease() {
+        var tree = new VersionTree<String>();
+        tree.put(new Version("1.0.alpha"), "alpha");
+        tree.put(new Version("1.0.beta"), "beta");
+        tree.put(new Version("1.0.rc"), "rc");
+
+        // Should prefer RC (most stable pre-release)
+        assertEquals(new Version("1.0.rc"), tree.findHighestVersion());
+    }
+
+    @Test
+    public void testFindHighestVersionMixedMajorVersions() {
+        var tree = new VersionTree<String>();
+        tree.put(new Version("1.0"), "1.0 ga");
+        tree.put(new Version("2.0.beta"), "2.0 beta");
+
+        // Should prefer 1.0 GA over 2.0 beta
+        assertEquals(new Version("1.0"), tree.findHighestVersion());
+    }
+
+    @Test
+    public void testFindHighestVersionWithConstraint() {
+        var tree = new VersionTree<String>();
+        tree.put(new Version("1.0"), "1.0");
+        tree.put(new Version("1.1.alpha"), "1.1 alpha");
+        tree.put(new Version("1.1.beta"), "1.1 beta");
+        tree.put(new Version("1.1"), "1.1");
+        tree.put(new Version("2.0.alpha"), "2.0 alpha");
+
+        // Find highest >= 1.1
+        assertEquals(new Version("1.1"), tree.findHighestVersion(new Version("1.1")));
+
+        // Find highest >= 2.0 (only alpha available)
+        assertEquals(new Version("2.0.alpha"), tree.findHighestVersion(new Version("2.0")));
+    }
+
+    @Test
+    public void testClosestVersionWithPreRelease() {
+        var tree = new VersionTree<String>();
+        tree.put(new Version("1.0"), "1.0");
+        tree.put(new Version("1.1.beta"), "1.1 beta");
+        tree.put(new Version("1.1"), "1.1");
+        tree.put(new Version("2.0"), "2.0");
+
+        // Looking for 1.1.alpha: beta (-2) > alpha (-3) in tree order, so falls back to 1.0
+        assertEquals(new Version("1.0"), tree.findClosestVersion(new Version("1.1.alpha")));
+
+        // Looking for 1.1.rc: beta (-2) < rc (-1) in tree order, so finds beta as closest predecessor
+        // Note: This is tree proximity, not substitutability - beta is NOT substitutable for rc
+        assertEquals(new Version("1.1.beta"), tree.findClosestVersion(new Version("1.1.rc")));
+
+        // Looking for 1.2 should find 1.1
+        assertEquals(new Version("1.1"), tree.findClosestVersion(new Version("1.2")));
+    }
+
+    // ----- Lexer edge cases (via Version parsing) -----------------------------------------------
+
+    @Test
+    public void testAllPreReleaseCategories() {
+        // Test all pre-release categories parse correctly
+        assertEquals(Version.ReleaseCategory.CI, new Version("ci").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.CI, new Version("1.0.ci").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.DEV, new Version("dev").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.DEV, new Version("1.0.dev2").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.QA, new Version("qa").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.QA, new Version("1.0.qa1").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.ALPHA, new Version("alpha").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.ALPHA, new Version("1.0.alpha3").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.BETA, new Version("beta").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.BETA, new Version("1.0.beta4").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.RC, new Version("rc").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.RC, new Version("1.0.rc5").getReleaseCategory());
+    }
+
+    @Test
+    public void testVersionNormalize() {
+        assertEquals(new Version("1"), new Version("1.0.0.0").normalize());
+        assertEquals(new Version("1.2"), new Version("1.2.0.0").normalize());
+        assertEquals(new Version("1.2.3"), new Version("1.2.3.0").normalize());
+        assertEquals(new Version("1.2.3"), new Version("1.2.3").normalize());
+
+        // Pre-release versions
+        assertEquals(new Version("1.beta"), new Version("1.beta").normalize());
+        assertEquals(new Version("1.beta2"), new Version("1.beta2").normalize());
+    }
+
+    @Test
+    public void testVersionComparison() {
+        // GA versions compare by numeric parts
+        assertTrue(new Version("1.0").compareTo(new Version("2.0")) < 0);
+        assertTrue(new Version("1.1").compareTo(new Version("1.2")) < 0);
+        assertTrue(new Version("1.0.0").compareTo(new Version("1.0.1")) < 0);
+
+        // Pre-release codes are negative, so alpha (-3) < beta (-2) < rc (-1)
+        assertTrue(new Version("1.0.alpha").compareTo(new Version("1.0.beta")) < 0);
+        assertTrue(new Version("1.0.beta").compareTo(new Version("1.0.rc")) < 0);
+
+        // Note: compareTo is lexicographic by parts, not semantic stability ordering.
+        // "1.0.rc" has 3 parts [1, 0, -1], "1.0" has 2 parts [1, 0].
+        // After comparing shared parts (equal), the longer version is "greater".
+        // Use isGARelease() and getReleaseCategory() for stability comparison.
+        assertTrue(new Version("1.0.rc").compareTo(new Version("1.0")) > 0);
+        assertTrue(new Version("1.0").compareTo(new Version("1.0.rc")) < 0);
+
+        // But rc is still a pre-release
+        assertFalse(new Version("1.0.rc").isGARelease());
+        assertTrue(new Version("1.0").isGARelease());
+
+        // And GA is more stable than RC
+        assertTrue(new Version("1.0").getReleaseCategory().compareTo(
+                new Version("1.0.rc").getReleaseCategory()) > 0);
     }
 
     static void out() {

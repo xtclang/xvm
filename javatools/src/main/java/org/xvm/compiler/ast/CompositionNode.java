@@ -446,9 +446,9 @@ public abstract class CompositionNode
             if (vers != null) {
                 for (VersionOverride override : vers) {
                     Version ver = override.getVersion();
-                    Boolean BPrevAllow = vtree.get(ver);
+                    Boolean prevAllow = vtree.get(ver);
                     boolean fAllow = override.isAllowed();
-                    if (BPrevAllow != null && fAllow != BPrevAllow.booleanValue()) {
+                    if (prevAllow != null && fAllow != prevAllow) {
                         throw new IllegalStateException(
                                 "version " + ver + " is both allowed and disallowed");
                     } else {

@@ -1,8 +1,10 @@
 package org.xvm.javajit;
 
 
-import java.util.Iterator;
+import java.util.Comparator;
 import java.util.List;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.Version;
 import org.xvm.asm.VersionTree;
@@ -33,29 +35,17 @@ public class Refiner {
      *
      * @return the Version of the Module to use
      */
-    public Version whichVersion(ModuleConstant module, VersionTree versions, List<Version> prefs) {
+    @NotNull
+    public Version whichVersion(ModuleConstant module, VersionTree<?> versions, List<Version> prefs) {
         require("module", module);
         require("versions", versions);
         require("prefs", prefs);
 
-        Version ver = versions.findHighestVersion();
-        if (ver.isGARelease()) {
-            return ver;
-        }
-
-        // select the highest GA version, or failing that, the highest version closest to GA
-        Version[] best = new Version[6];
-        for (Iterator<Version> iter = versions.iterator(); iter.hasNext(); ) {
-            ver = iter.next();
-            best[-ver.getReleaseCategory()] = ver;
-        }
-        for (int i = 0, c = best.length; i < c; ++i) {
-            ver = best[i];
-            if (ver != null) {
-                return ver;
-            }
-        }
-        throw new IllegalStateException();
+        // Select the version with the best release category. Categories are ordered by stability:
+        // CI < Dev < QA < alpha < beta < rc < GA (most stable)
+        return versions.stream()
+                       .max(Comparator.comparing(Version::getReleaseCategory))
+                       .orElseThrow();
     }
 
     /**
@@ -83,3 +73,4 @@ public class Refiner {
         return desired;
     }
 }
+

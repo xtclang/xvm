@@ -1013,7 +1013,7 @@ public class TypeCompositionStatement
                 FileStructure        fileStruct = component.getFileStructure();
                 List<Version>        listPrefer = compImport.getPreferVersionList();
                 VersionTree<Boolean> vtreeAllow = compImport.getAllowVersionTree();
-                Version              version    = vtreeAllow.isEmpty() ? null : vtreeAllow.findLowestVersion();
+                Version              version    = vtreeAllow.findLowestVersion();
 
                 boolean         fNewFingerprint = false;
                 ModuleStructure moduleImport    = fileStruct.findModule(sModule);
