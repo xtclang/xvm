@@ -7,17 +7,8 @@ IntelliJ IDEA plugin for XTC (Ecstasy) language support.
 - **New Project Wizard** - Create XTC projects directly from IntelliJ (File → New → Project → XTC)
 - **Run Configurations** - Run XTC applications via Gradle or `xtc run`
 - **Syntax Highlighting** - Full syntax highlighting for `.x` files (via TextMate grammar)
-- **Language Features via LSP** (currently mocked - real compiler integration coming):
-  - Hover information
-  - Code completion
-  - Go to definition
-  - Find references
-  - Document outline
-  - Diagnostics
-
-> **Note**: The LSP server currently uses a mock adapter with basic regex-based parsing.
-> Full semantic features (accurate go-to-definition, type-aware completion, etc.) will
-> be available once the real XTC compiler is integrated.
+- **Language Features via LSP** - hover, completion, go-to-definition, find references, outline
+  (see [LSP Server README](../lsp-server/README.md) for adapter details)
 
 ## Installation
 
@@ -176,17 +167,23 @@ feature:
 
 #### Testing LSP Features (Language Server)
 
-> **Note**: The LSP currently uses mock responses based on regex pattern matching.
-> Features like go-to-definition will show plausible results but are not semantically accurate.
+The LSP server supports multiple adapters. See [LSP Server README](../lsp-server/README.md) for details.
+
+```bash
+# Run with default adapter (mock - regex-based)
+./gradlew :lang:intellij-plugin:runIde
+
+# Run with tree-sitter adapter (AST-based, more accurate)
+./gradlew :lang:intellij-plugin:runIde -Plsp.adapter=treesitter
+```
 
 1. Open a `.x` file in an XTC project
-2. Test hover: Move cursor over a symbol - you should see type information (mocked)
-3. Test completion: Type and trigger completion (Ctrl+Space) - shows keyword/symbol suggestions
-4. Test go-to-definition: Ctrl+Click on a symbol - navigates based on pattern matching
+2. Test hover: Move cursor over a symbol
+3. Test completion: Type and trigger completion (Ctrl+Space)
+4. Test go-to-definition: Ctrl+Click on a symbol
 5. If LSP isn't working:
-   - Check **Help → Show Log in Finder** for `XtcStreamConnectionProvider` messages
-   - Look for "XTC LSP server started with PID:" in the log
-   - Verify `xtc-lsp.jar` exists in the plugin's lib folder
+   - Check **Help → Show Log in Finder** for LSP messages
+   - Look for "XTC LSP Server started" in the log
 
 #### Viewing Plugin Logs
 

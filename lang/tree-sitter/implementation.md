@@ -398,9 +398,12 @@ bool tree_sitter_xtc_external_scanner_scan(void *payload, TSLexer *lexer, const 
 ## Test Files for Specific Patterns
 
 ```bash
+# Test specific files (timing shown by default)
 ./gradlew :lang:tree-sitter:testTreeSitterParse \
-  -PtestFiles="UriTemplate,TypeTemplate,Client,Random,BFloat16,Float128" \
-  -PshowTiming=true
+  -PtestFiles="UriTemplate,TypeTemplate,Client,Random,BFloat16,Float128"
+
+# To disable timing output
+./gradlew :lang:tree-sitter:testTreeSitterParse -PshowTiming=false
 ```
 
 | File | Patterns Tested |

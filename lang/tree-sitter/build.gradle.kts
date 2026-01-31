@@ -389,7 +389,7 @@ abstract class TreeSitterParseTestTask @Inject constructor(
     @TaskAction
     fun run() {
         val filter = fileFilter.orNull
-        val showTimingInfo = showTiming.getOrElse(false)
+        val showTimingInfo = showTiming.getOrElse(true)
 
         var xtcFiles = libDirs.get().flatMap { libDir ->
             libDir.walkTopDown()
@@ -415,33 +415,35 @@ abstract class TreeSitterParseTestTask @Inject constructor(
             return
         }
 
+        // Warmup: parse the first file once to factor out tree-sitter CLI startup time.
+        // The CLI loads the grammar shared library and initializes internal state on first run,
+        // which adds ~1 second overhead that would skew timing for the first file.
+        val warmupFile = xtcFiles.first()
+        execOps.exec {
+            workingDir(workDir.get())
+            executable(cliPath.get())
+            args("parse", "--quiet", warmupFile.absolutePath)
+            isIgnoreExitValue = true
+        }
+
         logger.lifecycle("Testing tree-sitter parser on ${xtcFiles.size} XTC files...")
 
-        val results = mutableListOf<ParseResult>()
-        var passed = 0
-        var failed = 0
-        val failures = mutableListOf<String>()
-
-        for (file in xtcFiles) {
-            val startTime = System.currentTimeMillis()
+        val results = xtcFiles.map { file ->
+            val startNanos = System.nanoTime()
             val result = execOps.exec {
                 workingDir(workDir.get())
                 executable(cliPath.get())
                 args("parse", "--quiet", file.absolutePath)
                 isIgnoreExitValue = true
             }
-            val elapsedMs = System.currentTimeMillis() - startTime
+            val elapsedMs = (System.nanoTime() - startNanos) / 1_000_000
             val relativePath = file.relativeTo(rootDir.get()).path
-
-            results.add(ParseResult(relativePath, result.exitValue == 0, elapsedMs))
-
-            if (result.exitValue == 0) {
-                passed++
-            } else {
-                failed++
-                failures.add(relativePath)
-            }
+            ParseResult(relativePath, result.exitValue == 0, elapsedMs)
         }
+
+        val passed = results.count { it.success }
+        val failed = results.size - passed
+        val failures = results.filter { !it.success }.map { it.relativePath }
 
         logger.lifecycle("Tree-sitter parse results: $passed passed, $failed failed")
 
@@ -457,21 +459,26 @@ abstract class TreeSitterParseTestTask @Inject constructor(
         if (showTimingInfo || (!filter.isNullOrBlank() && xtcFiles.size <= 50)) {
             logger.lifecycle("")
             logger.lifecycle("Parse timing (slowest first):")
-            results.sortedByDescending { it.timeMs }.take(30).forEach { r ->
+            results.sortedByDescending { it.timeMs }.forEach { r ->
                 val status = if (r.success) "OK" else "FAIL"
                 logger.lifecycle("  %5dms [%4s] %s".format(r.timeMs, status, r.relativePath))
             }
             val totalMs = results.sumOf { it.timeMs }
             val avgMs = if (results.isNotEmpty()) totalMs / results.size else 0
+            val sortedTimes = results.map { it.timeMs }.sorted()
+            val medianMs = if (sortedTimes.isNotEmpty()) {
+                val mid = sortedTimes.size / 2
+                if (sortedTimes.size % 2 == 0) (sortedTimes[mid - 1] + sortedTimes[mid]) / 2 else sortedTimes[mid]
+            } else 0
             logger.lifecycle("")
-            logger.lifecycle("Total: ${totalMs}ms, Average: ${avgMs}ms per file")
+            logger.lifecycle("Total: ${totalMs}ms, Average: ${avgMs}ms, Median: ${medianMs}ms per file")
         }
     }
 }
 
 val testTreeSitterParse by tasks.registering(TreeSitterParseTestTask::class) {
     group = "tree-sitter"
-    description = "Test tree-sitter parsing on XDK library files. Use -PtestFiles=pattern to filter, -PshowTiming=true for timing."
+    description = "Test tree-sitter parsing on XDK library files. Use -PtestFiles=pattern to filter. Timing shown by default; use -PshowTiming=false to disable."
     dependsOn(validateTreeSitterGrammar)
     enabled = treeSitterPlatformSupported
 

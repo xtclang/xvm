@@ -201,8 +201,8 @@ public class XtcProjectCreator {
         Path srcDir = projectPath.resolve("src/main/x");
         Files.createDirectories(srcDir);
 
-        // Create disabled test source set (pending plugin fix for test auto-resolution)
-        Path testDir = projectPath.resolve("src/test.disabled/x");
+        // Create test source set
+        Path testDir = projectPath.resolve("src/test/x");
         Files.createDirectories(testDir);
 
         // Create version catalog
@@ -232,18 +232,18 @@ public class XtcProjectCreator {
         // Create app subproject (depends on lib)
         Path appDir = projectPath.resolve("app");
         Files.createDirectories(appDir.resolve("src/main/x"));
-        Files.createDirectories(appDir.resolve("src/test.disabled/x"));
+        Files.createDirectories(appDir.resolve("src/test/x"));
         writeFile(appDir.resolve("build.gradle.kts"), generateBuildGradle("app", type, true, true));
         writeFile(appDir.resolve("src/main/x/app.x"), generateAppWithLibImport());
-        writeFile(appDir.resolve("src/test.disabled/x/appTest.x"), generateAppTestSource());
+        writeFile(appDir.resolve("src/test/x/appTest.x"), generateAppTestSource());
 
         // Create lib subproject
         Path libDir = projectPath.resolve("lib");
         Files.createDirectories(libDir.resolve("src/main/x"));
-        Files.createDirectories(libDir.resolve("src/test.disabled/x"));
+        Files.createDirectories(libDir.resolve("src/test/x"));
         writeFile(libDir.resolve("build.gradle.kts"), generateBuildGradle("lib", ProjectType.LIBRARY, true, false));
         writeFile(libDir.resolve("src/main/x/lib.x"), generateModuleSource("lib", ProjectType.LIBRARY));
-        writeFile(libDir.resolve("src/test.disabled/x/libTest.x"), generateLibTestSource());
+        writeFile(libDir.resolve("src/test/x/libTest.x"), generateLibTestSource());
 
         createGradleWrapper();
     }
@@ -461,20 +461,6 @@ public class XtcProjectCreator {
 
     // ---- Test source generation ----
 
-    private static final String TEST_DISABLED_NOTICE = """
-        /*
-         * NOTE: This test module is in src/test.disabled/ because the XTC Gradle plugin
-         * test auto-resolution feature is pending. Once the plugin fix is released:
-         *
-         *   1. Rename src/test.disabled/ to src/test/
-         *   2. Run: ./gradlew build
-         *
-         * The test module will then be automatically discovered and executed.
-         * See: https://github.com/xtclang/xvm/pull/373
-         */
-
-        """;
-
     private String generateTestSource(String moduleName, ProjectType projectType) {
         return switch (projectType) {
             case APPLICATION -> generateApplicationTestSource(moduleName);
@@ -484,7 +470,7 @@ public class XtcProjectCreator {
     }
 
     private String generateApplicationTestSource(String moduleName) {
-        return TEST_DISABLED_NOTICE + """
+        return """
             /**
              * Unit tests for the %s application module.
              */
@@ -506,7 +492,7 @@ public class XtcProjectCreator {
     }
 
     private String generateLibraryTestSource(String moduleName) {
-        return TEST_DISABLED_NOTICE + """
+        return """
             /**
              * Unit tests for the %s library module.
              */
@@ -536,7 +522,7 @@ public class XtcProjectCreator {
     }
 
     private String generateServiceTestSource(String moduleName) {
-        return TEST_DISABLED_NOTICE + """
+        return """
             /**
              * Unit tests for the %s service module.
              */
@@ -558,7 +544,7 @@ public class XtcProjectCreator {
     }
 
     private String generateAppTestSource() {
-        return TEST_DISABLED_NOTICE + """
+        return """
             /**
              * Unit tests for the app module.
              */
@@ -582,7 +568,7 @@ public class XtcProjectCreator {
     }
 
     private String generateLibTestSource() {
-        return TEST_DISABLED_NOTICE + """
+        return """
             /**
              * Unit tests for the lib module.
              */

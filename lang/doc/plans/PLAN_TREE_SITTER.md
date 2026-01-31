@@ -218,6 +218,50 @@ later for semantic features.
 
 ---
 
+## Not-Yet-Implemented Features: Tree-sitter vs Compiler
+
+The following LSP features are not yet implemented. This table shows which can be done with
+tree-sitter alone vs which require the full compiler adapter.
+
+| Feature | Tree-sitter | Compiler | Notes |
+|---------|:-----------:|:--------:|-------|
+| **Rename/prepareRename** | ❌ | ✅ | Requires semantic analysis to identify all references to the same symbol across scopes |
+| **Code actions** | ⚠️ Partial | ✅ | Structural fixes (missing braces, formatting) with tree-sitter; semantic fixes (import, type) require compiler |
+| **Document formatting** | ✅ | ✅ | Syntax-based formatting works with tree-sitter; type-aware formatting needs compiler |
+| **Semantic tokens** | ⚠️ Partial | ✅ | Keyword/syntax highlighting with tree-sitter; type-based coloring (method vs property) needs compiler |
+| **Signature help** | ⚠️ Partial | ✅ | Can show signature syntax with tree-sitter; parameter types and overload resolution need compiler |
+| **Folding ranges** | ✅ | ✅ | Structural folding (blocks, functions, comments) is purely syntactic |
+| **Inlay hints** | ⚠️ Partial | ✅ | Structural hints possible; type inference hints (`val x = ...` → `: Int`) require compiler |
+| **Call hierarchy** | ❌ | ✅ | Requires semantic analysis to resolve function references across files |
+| **Type hierarchy** | ❌ | ✅ | Requires type system to understand inheritance relationships |
+| **Workspace symbols** | ⚠️ Partial | ✅ | Same-file with tree-sitter; cross-file requires indexing or compiler integration |
+
+**Legend:**
+- ✅ = Full support possible
+- ⚠️ Partial = Basic functionality possible, advanced features need compiler
+- ❌ = Requires compiler
+
+### Recommended Implementation Order (Tree-sitter First)
+
+Features that can be fully implemented with tree-sitter should be prioritized:
+
+1. **Folding ranges** - Pure syntax, easy win
+2. **Document formatting** - Syntax-based, high value
+3. **Semantic tokens** (basic) - Better highlighting than TextMate
+4. **Code actions** (structural) - Missing semicolons, brace fixes
+5. **Signature help** (basic) - Show parameter names from syntax
+6. **Workspace symbols** (same-file) - Index declarations per file
+
+Features requiring compiler should wait for `XtcCompilerAdapterFull`:
+
+1. Rename/prepareRename
+2. Call hierarchy
+3. Type hierarchy
+4. Semantic code actions (imports, type fixes)
+5. Type-aware inlay hints
+
+---
+
 ## Success Criteria
 
 ### Phase 1-2 Complete When:
@@ -246,10 +290,9 @@ later for semantic features.
 2. ~~**Enable TreeSitterAdapter**~~ ✅ COMPLETE
 3. ~~**Build Libraries for All Platforms**~~ ✅ COMPLETE
 
-4. **Add LSP Server Logging** (HIGH PRIORITY)
-   - Add structured logging throughout LSP server core (common to all adapters)
-   - Log parse times, query execution, symbol resolution
-   - Enable debugging of tree-sitter behavior in the plugin
+4. ~~**Add LSP Server Logging**~~ ✅ COMPLETE
+   - Added structured logging throughout LSP server core (common to all adapters)
+   - Logs parse times, query execution, symbol resolution with sub-ms precision
    - See "Task: LSP Server Logging" below
 
 5. ~~**Add Native Library Rebuild Verification**~~ ✅ COMPLETE
@@ -271,7 +314,7 @@ later for semantic features.
 
 ## Task: LSP Server Logging
 
-**Status**: PENDING
+**Status**: COMPLETE (2026-01-31)
 
 **Goal**: Add comprehensive logging to the LSP server core, common to ALL adapters (Mock, TreeSitter, future Compiler).
 

@@ -57,29 +57,26 @@ val updateGeneratedExamples by tasks.registering(Copy::class) {
 // Aggregate subproject tasks
 // =============================================================================
 
-val build by tasks.existing {
-    dependsOn(project(":dsl").tasks.named("build"))
-    dependsOn(project(":lsp-server").tasks.named("build"))
-    dependsOn(project(":intellij-plugin").tasks.named("buildPlugin"))
-}
+// Projects to aggregate standard lifecycle tasks from
+val coreProjects = listOf(":dsl", ":lsp-server", ":intellij-plugin")
+val allProjects = coreProjects + ":vscode-extension"
 
-val assemble by tasks.existing {
-    dependsOn(project(":dsl").tasks.named("assemble"))
-    dependsOn(project(":lsp-server").tasks.named("assemble"))
-    dependsOn(project(":intellij-plugin").tasks.named("assemble"))
-}
+// Map of aggregate task -> subproject task (null means same name)
+val taskMappings = mapOf(
+    "build" to mapOf(":intellij-plugin" to "buildPlugin"),  // intellij uses buildPlugin
+    "assemble" to emptyMap(),
+    "check" to emptyMap(),
+    "clean" to emptyMap()
+)
 
-val check by tasks.existing {
-    dependsOn(project(":dsl").tasks.named("check"))
-    dependsOn(project(":lsp-server").tasks.named("check"))
-    dependsOn(project(":intellij-plugin").tasks.named("check"))
-}
-
-val clean by tasks.existing {
-    dependsOn(project(":dsl").tasks.named("clean"))
-    dependsOn(project(":lsp-server").tasks.named("clean"))
-    dependsOn(project(":intellij-plugin").tasks.named("clean"))
-    dependsOn(project(":vscode-extension").tasks.named("clean"))
+taskMappings.forEach { (aggregateTask, overrides) ->
+    val projects = if (aggregateTask == "clean") allProjects else coreProjects
+    tasks.named(aggregateTask) {
+        projects.forEach { proj ->
+            val subTask = overrides[proj] ?: aggregateTask
+            dependsOn(project(proj).tasks.named(subTask))
+        }
+    }
 }
 
 // =============================================================================

@@ -31,65 +31,62 @@ class XtcQueryEngine(
     fun findAllDeclarations(
         tree: XtcTree,
         uri: String,
-    ): List<SymbolInfo> {
-        val symbols = mutableListOf<SymbolInfo>()
+    ): List<SymbolInfo> =
+        buildList {
+            executeQuery(allDeclarationsQuery, tree) { captures ->
+                val name = captures["name"]?.text ?: return@executeQuery
+                val declaration =
+                    captures.entries.find { (key, _) ->
+                        key in
+                            listOf(
+                                "module",
+                                "package",
+                                "class",
+                                "interface",
+                                "mixin",
+                                "service",
+                                "const",
+                                "enum",
+                                "method",
+                                "constructor",
+                                "property",
+                            )
+                    } ?: return@executeQuery
 
-        executeQuery(allDeclarationsQuery, tree) { captures ->
-            val name = captures["name"]?.text ?: return@executeQuery
-            val declaration =
-                captures.entries.find { (key, _) ->
-                    key in
-                        listOf(
-                            "module",
-                            "package",
-                            "class",
-                            "interface",
-                            "mixin",
-                            "service",
-                            "const",
-                            "enum",
-                            "method",
-                            "constructor",
-                            "property",
-                        )
-                } ?: return@executeQuery
+                val kind =
+                    when (declaration.key) {
+                        "module" -> SymbolKind.MODULE
+                        "package" -> SymbolKind.PACKAGE
+                        "class" -> SymbolKind.CLASS
+                        "interface" -> SymbolKind.INTERFACE
+                        "mixin" -> SymbolKind.MIXIN
+                        "service" -> SymbolKind.SERVICE
+                        "const" -> SymbolKind.CONST
+                        "enum" -> SymbolKind.ENUM
+                        "method" -> SymbolKind.METHOD
+                        "constructor" -> SymbolKind.CONSTRUCTOR
+                        "property" -> SymbolKind.PROPERTY
+                        else -> return@executeQuery
+                    }
 
-            val kind =
-                when (declaration.key) {
-                    "module" -> SymbolKind.MODULE
-                    "package" -> SymbolKind.PACKAGE
-                    "class" -> SymbolKind.CLASS
-                    "interface" -> SymbolKind.INTERFACE
-                    "mixin" -> SymbolKind.MIXIN
-                    "service" -> SymbolKind.SERVICE
-                    "const" -> SymbolKind.CONST
-                    "enum" -> SymbolKind.ENUM
-                    "method" -> SymbolKind.METHOD
-                    "constructor" -> SymbolKind.CONSTRUCTOR
-                    "property" -> SymbolKind.PROPERTY
-                    else -> return@executeQuery
-                }
-
-            val node = declaration.value
-            symbols.add(
-                SymbolInfo(
-                    name = name,
-                    qualifiedName = name,
-                    kind = kind,
-                    location =
-                        Location(
-                            uri = uri,
-                            startLine = node.startLine,
-                            startColumn = node.startColumn,
-                            endLine = node.endLine,
-                            endColumn = node.endColumn,
-                        ),
-                ),
-            )
+                val node = declaration.value
+                add(
+                    SymbolInfo(
+                        name = name,
+                        qualifiedName = name,
+                        kind = kind,
+                        location =
+                            Location(
+                                uri = uri,
+                                startLine = node.startLine,
+                                startColumn = node.startColumn,
+                                endLine = node.endLine,
+                                endColumn = node.endColumn,
+                            ),
+                    ),
+                )
+            }
         }
-
-        return symbols
-    }
 
     /**
      * Find all type declarations (classes, interfaces, etc.).
@@ -97,19 +94,15 @@ class XtcQueryEngine(
     fun findTypeDeclarations(
         tree: XtcTree,
         uri: String,
-    ): List<SymbolInfo> {
-        val symbols = mutableListOf<SymbolInfo>()
-
-        executeQuery(typeDeclarationsQuery, tree) { captures ->
-            val name = captures["name"]?.text ?: return@executeQuery
-            val declaration = captures["declaration"] ?: return@executeQuery
-            val kind = nodeTypeToSymbolKind(declaration.type) ?: SymbolKind.CLASS
-
-            symbols.add(declaration.toSymbolInfo(name, kind, uri))
+    ): List<SymbolInfo> =
+        buildList {
+            executeQuery(typeDeclarationsQuery, tree) { captures ->
+                val name = captures["name"]?.text ?: return@executeQuery
+                val declaration = captures["declaration"] ?: return@executeQuery
+                val kind = nodeTypeToSymbolKind(declaration.type) ?: SymbolKind.CLASS
+                add(declaration.toSymbolInfo(name, kind, uri))
+            }
         }
-
-        return symbols
-    }
 
     /**
      * Find all method declarations.
@@ -117,17 +110,14 @@ class XtcQueryEngine(
     fun findMethodDeclarations(
         tree: XtcTree,
         uri: String,
-    ): List<SymbolInfo> {
-        val symbols = mutableListOf<SymbolInfo>()
-
-        executeQuery(methodDeclarationsQuery, tree) { captures ->
-            val name = captures["name"]?.text ?: return@executeQuery
-            val declaration = captures["declaration"] ?: return@executeQuery
-            symbols.add(declaration.toSymbolInfo(name, SymbolKind.METHOD, uri))
+    ): List<SymbolInfo> =
+        buildList {
+            executeQuery(methodDeclarationsQuery, tree) { captures ->
+                val name = captures["name"]?.text ?: return@executeQuery
+                val declaration = captures["declaration"] ?: return@executeQuery
+                add(declaration.toSymbolInfo(name, SymbolKind.METHOD, uri))
+            }
         }
-
-        return symbols
-    }
 
     /**
      * Find all property declarations.
@@ -135,18 +125,15 @@ class XtcQueryEngine(
     fun findPropertyDeclarations(
         tree: XtcTree,
         uri: String,
-    ): List<SymbolInfo> {
-        val symbols = mutableListOf<SymbolInfo>()
-
-        executeQuery(propertyDeclarationsQuery, tree) { captures ->
-            val name = captures["name"]?.text ?: return@executeQuery
-            val type = captures["type"]?.text
-            val declaration = captures["declaration"] ?: return@executeQuery
-            symbols.add(declaration.toSymbolInfo(name, SymbolKind.PROPERTY, uri, type?.let { "$it $name" }))
+    ): List<SymbolInfo> =
+        buildList {
+            executeQuery(propertyDeclarationsQuery, tree) { captures ->
+                val name = captures["name"]?.text ?: return@executeQuery
+                val type = captures["type"]?.text
+                val declaration = captures["declaration"] ?: return@executeQuery
+                add(declaration.toSymbolInfo(name, SymbolKind.PROPERTY, uri, type?.let { "$it $name" }))
+            }
         }
-
-        return symbols
-    }
 
     /**
      * Find all identifiers with a given name (for find references).
@@ -155,18 +142,15 @@ class XtcQueryEngine(
         tree: XtcTree,
         name: String,
         uri: String,
-    ): List<Location> {
-        val locations = mutableListOf<Location>()
-
-        executeQuery(identifiersQuery, tree) { captures ->
-            val id = captures["id"] ?: return@executeQuery
-            if (id.text == name) {
-                locations.add(id.toLocation(uri))
+    ): List<Location> =
+        buildList {
+            executeQuery(identifiersQuery, tree) { captures ->
+                val id = captures["id"] ?: return@executeQuery
+                if (id.text == name) {
+                    add(id.toLocation(uri))
+                }
             }
         }
-
-        return locations
-    }
 
     private fun XtcNode.toLocation(uri: String) =
         Location(
@@ -230,16 +214,13 @@ class XtcQueryEngine(
     /**
      * Find imports in the tree.
      */
-    fun findImports(tree: XtcTree): List<String> {
-        val imports = mutableListOf<String>()
-
-        executeQuery(importsQuery, tree) { captures ->
-            val importNode = captures["import"] ?: return@executeQuery
-            imports.add(importNode.text)
+    fun findImports(tree: XtcTree): List<String> =
+        buildList {
+            executeQuery(importsQuery, tree) { captures ->
+                val importNode = captures["import"] ?: return@executeQuery
+                add(importNode.text)
+            }
         }
-
-        return imports
-    }
 
     private fun executeQuery(
         query: Query,
@@ -248,12 +229,10 @@ class XtcQueryEngine(
     ) {
         QueryCursor(query).use { cursor ->
             cursor.findMatches(tree.tsTree.rootNode).forEach { match ->
-                val captures = mutableMapOf<String, XtcNode>()
-
-                for (capture in match.captures()) {
-                    captures[capture.name()] = XtcNode(capture.node(), tree.source)
-                }
-
+                val captures =
+                    match.captures().associate { capture ->
+                        capture.name() to XtcNode(capture.node(), tree.source)
+                    }
                 handler(captures)
             }
         }

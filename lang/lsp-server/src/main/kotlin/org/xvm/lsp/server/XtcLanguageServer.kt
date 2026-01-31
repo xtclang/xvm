@@ -43,6 +43,7 @@ import org.xvm.lsp.model.SymbolInfo
 import java.util.Properties
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.system.measureNanoTime
 
 /**
  * XTC Language Server implementation using LSP4J.
@@ -87,6 +88,15 @@ class XtcLanguageServer(
             Properties().apply {
                 XtcLanguageServer::class.java.getResourceAsStream("/lsp-version.properties")?.use { load(it) }
             }
+
+        /**
+         * Execute a block and return its result along with elapsed time in milliseconds (with sub-ms precision).
+         */
+        private inline fun <T> timed(block: () -> T): Pair<T, Double> {
+            var result: T
+            val nanos = measureNanoTime { result = block() }
+            return result to (nanos / 1_000_000.0)
+        }
     }
 
     private val buildInfo = loadBuildInfo()
@@ -110,6 +120,26 @@ class XtcLanguageServer(
             logger.info("Initializing for workspace folders: {}", folders.map { it.uri })
         } else {
             logger.info("Initializing (no workspace folders provided)")
+        }
+
+        // Log client capabilities
+        val clientCapabilities = params.capabilities
+        val supportedFeatures =
+            buildList {
+                clientCapabilities?.textDocument?.let { td ->
+                    if (td.hover != null) add("hover")
+                    if (td.completion != null) add("completion")
+                    if (td.definition != null) add("definition")
+                    if (td.references != null) add("references")
+                    if (td.documentSymbol != null) add("documentSymbol")
+                    if (td.formatting != null) add("formatting")
+                    if (td.rename != null) add("rename")
+                    if (td.codeAction != null) add("codeAction")
+                    if (td.semanticTokens != null) add("semanticTokens")
+                }
+            }
+        if (supportedFeatures.isNotEmpty()) {
+            logger.info("Client capabilities: {}", supportedFeatures.joinToString(", "))
         }
 
         val capabilities =
@@ -225,11 +255,12 @@ class XtcLanguageServer(
             val uri = params.textDocument.uri
             val content = params.textDocument.text
 
-            logger.debug("Document opened: {}", uri)
+            logger.info("textDocument/didOpen: {} ({} bytes)", uri, content.length)
             openDocuments[uri] = content
 
             // Compile and publish diagnostics
-            val result = adapter.compile(uri, content)
+            val (result, elapsed) = timed { adapter.compile(uri, content) }
+            logger.info("textDocument/didOpen: compiled in {:.1f}ms, {} diagnostics", elapsed, result.diagnostics.size)
             publishDiagnostics(uri, result.diagnostics)
         }
 
@@ -237,23 +268,24 @@ class XtcLanguageServer(
             val uri = params.textDocument.uri
             val changes = params.contentChanges
             if (changes.isNullOrEmpty()) {
-                logger.warn("didChange received with no content changes for: {}", uri)
+                logger.warn("textDocument/didChange: no content changes for: {}", uri)
                 return
             }
             // We use full sync, so there's only one change with the full content
             val content = changes.first().text
 
-            logger.debug("Document changed: {}", uri)
+            logger.info("textDocument/didChange: {} ({} bytes)", uri, content.length)
             openDocuments[uri] = content
 
             // Recompile and publish diagnostics
-            val result = adapter.compile(uri, content)
+            val (result, elapsed) = timed { adapter.compile(uri, content) }
+            logger.info("textDocument/didChange: compiled in {:.1f}ms, {} diagnostics", elapsed, result.diagnostics.size)
             publishDiagnostics(uri, result.diagnostics)
         }
 
         override fun didClose(params: DidCloseTextDocumentParams) {
             val uri = params.textDocument.uri
-            logger.debug("Document closed: {}", uri)
+            logger.info("textDocument/didClose: {}", uri)
             openDocuments.remove(uri)
 
             // Clear diagnostics
@@ -261,7 +293,7 @@ class XtcLanguageServer(
         }
 
         override fun didSave(params: DidSaveTextDocumentParams) {
-            logger.debug("Document saved: {}", params.textDocument.uri)
+            logger.info("textDocument/didSave: {}", params.textDocument.uri)
         }
 
         override fun hover(params: HoverParams): CompletableFuture<Hover?> {
@@ -269,9 +301,16 @@ class XtcLanguageServer(
             val line = params.position.line
             val column = params.position.character
 
+            logger.info("textDocument/hover: {} at {}:{}", uri, line, column)
             return CompletableFuture.supplyAsync {
-                val hoverInfo = adapter.getHoverInfo(uri, line, column) ?: return@supplyAsync null
+                val (hoverInfo, elapsed) = timed { adapter.getHoverInfo(uri, line, column) }
 
+                if (hoverInfo == null) {
+                    logger.info("textDocument/hover: no result in {:.1f}ms", elapsed)
+                    return@supplyAsync null
+                }
+
+                logger.info("textDocument/hover: found symbol in {:.1f}ms", elapsed)
                 Hover().apply {
                     contents =
                         Either.forRight(
@@ -289,8 +328,9 @@ class XtcLanguageServer(
             val line = params.position.line
             val column = params.position.character
 
+            logger.info("textDocument/completion: {} at {}:{}", uri, line, column)
             return CompletableFuture.supplyAsync {
-                val completions = adapter.getCompletions(uri, line, column)
+                val (completions, elapsed) = timed { adapter.getCompletions(uri, line, column) }
 
                 val items =
                     completions.map { c ->
@@ -301,6 +341,7 @@ class XtcLanguageServer(
                         }
                     }
 
+                logger.info("textDocument/completion: {} items in {:.1f}ms", items.size, elapsed)
                 Either.forLeft(items)
             }
         }
@@ -321,10 +362,16 @@ class XtcLanguageServer(
             val line = params.position.line
             val column = params.position.character
 
+            logger.info("textDocument/definition: {} at {}:{}", uri, line, column)
             return CompletableFuture.supplyAsync {
-                val definition =
-                    adapter.findDefinition(uri, line, column)
-                        ?: return@supplyAsync Either.forLeft(emptyList())
+                val (definition, elapsed) = timed { adapter.findDefinition(uri, line, column) }
+
+                if (definition == null) {
+                    logger.info("textDocument/definition: no result in {:.1f}ms", elapsed)
+                    return@supplyAsync Either.forLeft(emptyList())
+                }
+
+                logger.info("textDocument/definition: found in {:.1f}ms", elapsed)
                 Either.forLeft(listOf(toLspLocation(definition)))
             }
         }
@@ -335,10 +382,11 @@ class XtcLanguageServer(
             val column = params.position.character
             val includeDeclaration = params.context.isIncludeDeclaration
 
+            logger.info("textDocument/references: {} at {}:{}", uri, line, column)
             return CompletableFuture.supplyAsync {
-                adapter
-                    .findReferences(uri, line, column, includeDeclaration)
-                    .map { toLspLocation(it) }
+                val (refs, elapsed) = timed { adapter.findReferences(uri, line, column, includeDeclaration) }
+                logger.info("textDocument/references: {} references in {:.1f}ms", refs.size, elapsed)
+                refs.map { toLspLocation(it) }
             }
         }
 
@@ -346,12 +394,15 @@ class XtcLanguageServer(
             val uri = params.textDocument.uri
             val content = openDocuments[uri]
 
+            logger.info("textDocument/documentSymbol: {}", uri)
             return CompletableFuture.supplyAsync {
                 if (content == null) {
+                    logger.info("textDocument/documentSymbol: no content cached")
                     return@supplyAsync emptyList()
                 }
 
-                val result = adapter.compile(uri, content)
+                val (result, elapsed) = timed { adapter.compile(uri, content) }
+                logger.info("textDocument/documentSymbol: {} symbols in {:.1f}ms", result.symbols.size, elapsed)
                 result.symbols.map { symbol ->
                     Either.forRight(toDocumentSymbol(symbol))
                 }
@@ -396,11 +447,11 @@ class XtcLanguageServer(
 
     private class XtcWorkspaceService : WorkspaceService {
         override fun didChangeConfiguration(params: DidChangeConfigurationParams) {
-            logger.debug("Configuration changed")
+            logger.info("workspace/didChangeConfiguration")
         }
 
         override fun didChangeWatchedFiles(params: DidChangeWatchedFilesParams) {
-            logger.debug("Watched files changed: {}", params.changes.size)
+            logger.info("workspace/didChangeWatchedFiles: {} changes", params.changes.size)
         }
 
         companion object {

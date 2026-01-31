@@ -12,7 +12,9 @@ This project provides the LSP server that powers IDE features like:
 - Find references
 - Document outline
 
-## Architecture
+The server is used by both the [IntelliJ plugin](../intellij-plugin/) and [VS Code extension](../vscode-extension/).
+
+## Adapter Architecture
 
 The LSP server uses a pluggable adapter pattern to support different parsing backends:
 
@@ -34,33 +36,47 @@ The LSP server uses a pluggable adapter pattern to support different parsing bac
         │                   │                   │
 ┌───────┴───────┐   ┌───────┴───────┐   ┌───────┴───────┐
 │ MockXtc-      │   │ TreeSitter-   │   │ (Future)      │
-│ CompilerAdapter│   │ Adapter       │   │ RealCompiler- │
-│               │   │               │   │ Adapter       │
+│ Compiler-     │   │ Adapter       │   │ Compiler-     │
+│ Adapter       │   │               │   │ Adapter       │
+│               │   │               │   │               │
 │ - Regex-based │   │ - Tree-sitter │   │ - Full XTC    │
-│ - For testing │   │ - Syntax only │   │   compiler    │
+│ - Default     │   │ - Syntax AST  │   │   compiler    │
 └───────────────┘   └───────────────┘   └───────────────┘
 ```
 
-## Selecting the Backend
+## Adapter Selection
 
-The adapter is selected at **build time** via a Gradle property. The launcher reads this from
-the embedded `lsp-version.properties` file.
+The adapter is selected at **build time** via the `lsp.adapter` Gradle property.
+The selection is embedded in `lsp-version.properties` inside the JAR.
+
+### Available Adapters
+
+| Adapter | Value | Description |
+|---------|-------|-------------|
+| **Mock** (default) | `mock` | Regex-based parsing. No native dependencies. Good for testing and basic features. |
+| **Tree-sitter** | `treesitter` | AST-based parsing using tree-sitter. Requires native library. Accurate syntax analysis. |
 
 ### Build Commands
 
-**Build with Mock adapter (default):**
 ```bash
+# Build with Mock adapter (default)
 ./gradlew :lang:lsp-server:build
-```
 
-**Build with Tree-sitter adapter:**
-```bash
+# Build with Tree-sitter adapter
 ./gradlew :lang:lsp-server:build -Plsp.adapter=treesitter
+
+# Run IntelliJ with specific adapter
+./gradlew :lang:intellij-plugin:runIde -Plsp.adapter=treesitter
+
+# Run VS Code with specific adapter
+./gradlew :lang:vscode-extension:runIde -Plsp.adapter=treesitter
 ```
 
-**Set default in gradle.properties:**
+### Setting a Default Adapter
+
+Create or edit `gradle.properties` in the project root or `lang/` directory:
+
 ```properties
-# In lang/lsp-server/gradle.properties (create if needed)
 lsp.adapter=mock
 # or
 lsp.adapter=treesitter
@@ -68,17 +84,17 @@ lsp.adapter=treesitter
 
 ### Verifying the Active Backend
 
-The server logs the active backend prominently at startup:
+The server logs the active backend at startup:
 
 ```
 ========================================
 XTC Language Server v1.0.0
-Backend: Tree-sitter (syntax-aware)
-Built: 2026-01-21T15:30:00Z
+Backend: MockXtcCompilerAdapter
+Built: 2026-01-31T15:30:00Z
 ========================================
 ```
 
-In IntelliJ: View → Tool Windows → Language Servers (LSP4IJ) to see server logs.
+In IntelliJ: **View → Tool Windows → Language Servers** (LSP4IJ) to see server logs.
 
 ### Backend Comparison
 
@@ -88,15 +104,18 @@ In IntelliJ: View → Tool Windows → Language Servers (LSP4IJ) to see server l
 | Nested symbols | ❌ Limited | ✅ Full hierarchy |
 | Syntax errors | ❌ Basic patterns | ✅ Precise location |
 | Error recovery | ❌ None | ✅ Continues parsing |
+| Native library | Not needed | Required |
 | Performance | Fast | Fast (incremental) |
 
-### Enabling Tree-sitter
+### Tree-sitter Native Library
 
-To use the Tree-sitter backend:
+The tree-sitter adapter requires a native library (`libtree-sitter-xtc`). Pre-built libraries
+for all platforms are committed to source control. See [tree-sitter/README.md](../tree-sitter/README.md)
+for details on building and managing native libraries.
 
-1. Build the native library: `./gradlew :lang:dsl:buildTreeSitterLibrary`
-2. Copy to resources: `lang/lsp-server/src/main/resources/native/<platform>/`
-3. Build with tree-sitter: `./gradlew :lang:lsp-server:build -Plsp.adapter=treesitter`
+> **Note**: The `lsp.adapter` property only affects which adapter is used at runtime.
+> The tree-sitter native library build is **always** verified regardless of adapter selection,
+> to ensure pre-built libraries stay up-to-date with grammar changes.
 
 ## Key Components
 

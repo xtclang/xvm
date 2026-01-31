@@ -36,6 +36,7 @@ Most other task combinations work fine - the restriction only applies to `clean`
 1. ALWAYS add a newline at the end of every file
 2. NEVER use star imports (import foo.*) - always use explicit imports
 3. NEVER use fully qualified Java package names in the Java code. Always import, so that i.e `org.gradle.api.model.ObjectFactory` is just `ObjectFactory`
+4. ALWAYS use `var` declarations when the type is clear from the right-hand side (e.g., `var x = new ArrayList<String>()` not `List<String> x = new ArrayList<>()`)
 
 ### Task Execution Patterns:
 
@@ -106,6 +107,7 @@ val taskName by tasks.registering {
 # important-instruction-reminders
 - Do what has been asked; nothing more, nothing less.
 - NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+- NEVER add "Co-Authored-By" lines to commit messages or pull request descriptions.
 
 # CRITICAL GRADLE RULE - CONFIGURATION CACHE COMPATIBILITY
 **NEVER WRITE GRADLE CODE THAT IS INCOMPATIBLE WITH THE CONFIGURATION CACHE**

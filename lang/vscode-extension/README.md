@@ -5,17 +5,8 @@ Visual Studio Code extension for XTC (Ecstasy) language support.
 ## Features
 
 - **Syntax highlighting** for `.x` files (via TextMate grammar)
-- **Language features via LSP** (currently mocked - real compiler integration coming):
-  - Hover information
-  - Code completion
-  - Go to definition
-  - Find references
-  - Document outline
-  - Diagnostics
-
-> **Note**: The LSP server currently uses a mock adapter with basic regex-based parsing.
-> Full semantic features (accurate go-to-definition, type-aware completion, etc.) will
-> be available once the real XTC compiler is integrated.
+- **Language features via LSP** - hover, completion, go-to-definition, find references, outline
+  (see [LSP Server README](../lsp-server/README.md) for adapter details)
 - **Create Project** command to scaffold new XTC projects
 
 ## Requirements
@@ -124,7 +115,18 @@ Once VS Code launches with the extension:
 - Follow the prompts (name, type, folder)
 - This runs `xtc init` in a terminal
 
-**3. LSP Features** (mocked, but functional)
+**3. LSP Features**
+
+The LSP server supports multiple adapters. See [LSP Server README](../lsp-server/README.md) for details.
+
+```bash
+# Build with default adapter (mock)
+./gradlew :lang:vscode-extension:build
+
+# Build with tree-sitter adapter
+./gradlew :lang:vscode-extension:build -Plsp.adapter=treesitter
+```
+
 - **Hover**: Move cursor over symbols for type info
 - **Completion**: `Ctrl+Space` to trigger suggestions
 - **Go to Definition**: `Cmd+Click` or `F12`

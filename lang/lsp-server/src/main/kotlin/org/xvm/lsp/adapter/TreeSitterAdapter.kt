@@ -14,6 +14,7 @@ import org.xvm.lsp.treesitter.XtcQueryEngine
 import org.xvm.lsp.treesitter.XtcTree
 import java.io.Closeable
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.system.measureNanoTime
 
 /**
  * XTC Compiler Adapter implementation using Tree-sitter for fast, syntax-level intelligence.
@@ -49,6 +50,15 @@ class TreeSitterAdapter :
 
     companion object {
         private val logger = LoggerFactory.getLogger(TreeSitterAdapter::class.java)
+
+        /**
+         * Execute a block and return its result along with elapsed time in milliseconds (with sub-ms precision).
+         */
+        private inline fun <T> timed(block: () -> T): Pair<T, Double> {
+            var result: T
+            val nanos = measureNanoTime { result = block() }
+            return result to (nanos / 1_000_000.0)
+        }
 
         // XTC keywords for completion
         private val KEYWORDS =
@@ -177,15 +187,17 @@ class TreeSitterAdapter :
         uri: String,
         content: String,
     ): CompilationResult {
-        logger.debug("Parsing document: {}", uri)
+        logger.info("TreeSitterAdapter: parsing {} ({} bytes)", uri, content.length)
 
         // Parse the content (with incremental parsing if we have an old tree)
         val oldTree = parsedTrees[uri]
-        val tree =
+        val isIncremental = oldTree != null
+
+        val (tree, parseElapsed) =
             try {
-                parser.parse(content, oldTree)
+                timed { parser.parse(content, oldTree) }
             } catch (e: Exception) {
-                logger.error("Failed to parse document: {}", uri, e)
+                logger.error("TreeSitterAdapter: parse failed for {}: {}", uri, e.message)
                 return CompilationResult.failure(
                     uri,
                     listOf(
@@ -199,16 +211,23 @@ class TreeSitterAdapter :
         parsedTrees[uri] = tree
 
         // Extract diagnostics from syntax errors
-        val diagnostics = mutableListOf<Diagnostic>()
-        if (tree.hasErrors) {
-            collectSyntaxErrors(tree.root, uri, diagnostics)
-        }
+        val diagnostics = if (tree.hasErrors) collectSyntaxErrors(tree.root, uri) else emptyList()
 
         // Extract symbols for document outline
-        val symbols = queryEngine.findAllDeclarations(tree, uri)
+        val (symbols, queryElapsed) = timed { queryEngine.findAllDeclarations(tree, uri) }
 
         val result = CompilationResult.withDiagnostics(uri, diagnostics, symbols)
         compilationResults[uri] = result
+
+        logger.info(
+            "TreeSitterAdapter: parsed in {:.1f}ms ({}), {} errors, {} symbols (query: {:.1f}ms)",
+            parseElapsed,
+            if (isIncremental) "incremental" else "full",
+            diagnostics.size,
+            symbols.size,
+            queryElapsed,
+        )
+
         return result
     }
 
@@ -249,66 +268,63 @@ class TreeSitterAdapter :
         uri: String,
         line: Int,
         column: Int,
-    ): List<CompletionItem> {
-        val completions = mutableListOf<CompletionItem>()
-
-        // Add keywords
-        KEYWORDS.forEach { keyword ->
-            completions.add(
-                CompletionItem(
-                    label = keyword,
-                    kind = CompletionKind.KEYWORD,
-                    detail = "keyword",
-                    insertText = keyword,
-                ),
-            )
-        }
-
-        // Add built-in types
-        BUILT_IN_TYPES.forEach { type ->
-            completions.add(
-                CompletionItem(
-                    label = type,
-                    kind = CompletionKind.CLASS,
-                    detail = "built-in type",
-                    insertText = type,
-                ),
-            )
-        }
-
-        // Add symbols from current document
-        val tree = parsedTrees[uri]
-        if (tree != null) {
-            val symbols = queryEngine.findAllDeclarations(tree, uri)
-            symbols.forEach { symbol ->
-                completions.add(
+    ): List<CompletionItem> =
+        buildList {
+            // Add keywords
+            KEYWORDS.forEach { keyword ->
+                add(
                     CompletionItem(
-                        label = symbol.name,
-                        kind = toCompletionKind(symbol.kind),
-                        detail = symbol.typeSignature ?: symbol.kind.name.lowercase(),
-                        insertText = symbol.name,
+                        label = keyword,
+                        kind = CompletionKind.KEYWORD,
+                        detail = "keyword",
+                        insertText = keyword,
                     ),
                 )
             }
-        }
 
-        // Add imports from current document
-        tree?.let {
-            queryEngine.findImports(it).forEach { importPath ->
-                val simpleName = importPath.substringAfterLast(".")
-                completions.add(
+            // Add built-in types
+            BUILT_IN_TYPES.forEach { type ->
+                add(
                     CompletionItem(
-                        label = simpleName,
+                        label = type,
                         kind = CompletionKind.CLASS,
-                        detail = "import: $importPath",
-                        insertText = simpleName,
+                        detail = "built-in type",
+                        insertText = type,
                     ),
                 )
             }
-        }
 
-        return completions
-    }
+            // Add symbols from current document
+            val tree = parsedTrees[uri]
+            if (tree != null) {
+                val symbols = queryEngine.findAllDeclarations(tree, uri)
+                symbols.forEach { symbol ->
+                    add(
+                        CompletionItem(
+                            label = symbol.name,
+                            kind = toCompletionKind(symbol.kind),
+                            detail = symbol.typeSignature ?: symbol.kind.name.lowercase(),
+                            insertText = symbol.name,
+                        ),
+                    )
+                }
+            }
+
+            // Add imports from current document
+            tree?.let {
+                queryEngine.findImports(it).forEach { importPath ->
+                    val simpleName = importPath.substringAfterLast(".")
+                    add(
+                        CompletionItem(
+                            label = simpleName,
+                            kind = CompletionKind.CLASS,
+                            detail = "import: $importPath",
+                            insertText = simpleName,
+                        ),
+                    )
+                }
+            }
+        }
 
     override fun findDefinition(
         uri: String,
@@ -363,31 +379,29 @@ class TreeSitterAdapter :
     private fun collectSyntaxErrors(
         node: XtcNode,
         uri: String,
-        diagnostics: MutableList<Diagnostic>,
-    ) {
-        val message =
-            when {
-                node.isError -> "Syntax error: unexpected '${node.text.take(20)}${if (node.text.length > 20) "..." else ""}'"
-                node.isMissing -> "Syntax error: missing ${node.type}"
-                else -> null
+    ): List<Diagnostic> =
+        buildList {
+            val message =
+                when {
+                    node.isError -> "Syntax error: unexpected '${node.text.take(20)}${if (node.text.length > 20) "..." else ""}'"
+                    node.isMissing -> "Syntax error: missing ${node.type}"
+                    else -> null
+                }
+
+            if (message != null) {
+                add(
+                    Diagnostic.error(
+                        Location(uri, node.startLine, node.startColumn, node.endLine, node.endColumn),
+                        message,
+                    ),
+                )
             }
 
-        if (message != null) {
-            diagnostics.add(
-                Diagnostic.error(
-                    Location(uri, node.startLine, node.startColumn, node.endLine, node.endColumn),
-                    message,
-                ),
-            )
+            // Recursively check children
+            node.children
+                .filter { it.hasError }
+                .forEach { addAll(collectSyntaxErrors(it, uri)) }
         }
-
-        // Recursively check children
-        for (child in node.children) {
-            if (child.hasError) {
-                collectSyntaxErrors(child, uri, diagnostics)
-            }
-        }
-    }
 
     private fun findIdentifierNode(node: XtcNode): XtcNode? =
         if (node.type == "identifier" || node.type == "type_name") {
