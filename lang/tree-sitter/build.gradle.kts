@@ -5,22 +5,18 @@ import java.security.MessageDigest
 import java.time.Instant
 import java.util.Properties
 import java.util.zip.GZIPInputStream
+import kotlin.system.measureNanoTime
 
 plugins {
     alias(libs.plugins.xdk.build.properties)
     alias(libs.plugins.download)
-    alias(libs.plugins.palantir.git.version)
     base
 }
 
-// Git version info from Palantir plugin (config-cache safe)
-// Uses the same pattern as javatools/build.gradle.kts
-val gitCommitShort: Provider<String> = providers.provider {
-    @Suppress("UNCHECKED_CAST")
-    val versionDetails = (project.extensions.extraProperties["versionDetails"] as groovy.lang.Closure<*>).call()
-    // Use reflection to get gitHash since the class isn't on the compile classpath
-    versionDetails?.javaClass?.getMethod("getGitHash")?.invoke(versionDetails)?.toString() ?: "unknown"
-}
+// Git commit hash (configuration-cache safe using providers.exec)
+val gitCommitShort: Provider<String> = providers.exec {
+    commandLine("git", "rev-parse", "--short", "HEAD")
+}.standardOutput.asText.map { it.trim() }
 
 // =============================================================================
 // Tree-sitter Native Library Management
@@ -569,23 +565,28 @@ abstract class ZigCrossCompileTask @Inject constructor(
         val outputFile = outputLib.get().asFile
         outputFile.parentFile.mkdirs()
 
-        logger.lifecycle("Cross-compiling for ${targetPlatform.get()} (${targetTriple.get()})...")
+        val platform = targetPlatform.get()
+        val triple = targetTriple.get()
+        logger.lifecycle("[zig] Starting cross-compile for $platform ($triple)...")
 
-        execOps.exec {
-            executable(zigPath.get())
-            args(
-                "cc",
-                "-shared",
-                "-fPIC",
-                "-target", targetTriple.get(),
-                "-I", includeDir.get().asFile.absolutePath,
-                parserC.get().asFile.absolutePath,
-                scannerC.get().asFile.absolutePath,
-                "-o", outputFile.absolutePath
-            )
+        val nanos = measureNanoTime {
+            execOps.exec {
+                executable(zigPath.get())
+                args(
+                    "cc",
+                    "-shared",
+                    "-fPIC",
+                    "-target", triple,
+                    "-I", includeDir.get().asFile.absolutePath,
+                    parserC.get().asFile.absolutePath,
+                    scannerC.get().asFile.absolutePath,
+                    "-o", outputFile.absolutePath
+                )
+            }
         }
+        val elapsedMs = nanos / 1_000_000.0
 
-        logger.lifecycle("Built: ${outputFile.absolutePath}")
+        logger.lifecycle("[zig] Finished $platform in %.1fms -> ${outputFile.name}".format(elapsedMs))
     }
 }
 
@@ -647,18 +648,19 @@ val copyAllNativeLibrariesToResources by tasks.registering {
     description = "Copy all cross-compiled native libraries to resources"
     dependsOn(buildAllNativeLibraries)
 
-    // Capture values at configuration time
+    // Capture providers at configuration time (not their values)
     val crossBuildDir = layout.buildDirectory.dir("native-cross")
     val resourcesNativeDir = layout.projectDirectory.dir("src/main/resources/native")
     val grammarFileValue = grammarJsFile.map { it.asFile }
     val scannerFileValue = scannerCFile.map { it.asFile }
     val cliVersionValue = treeSitterCliVersion
-    val gitCommitValue = gitCommitShort.get()
+    val gitCommitProvider = gitCommitShort
 
     inputs.dir(crossBuildDir)
     outputs.dir(resourcesNativeDir)
 
-    doLastTask {
+    doLast {
+        val gitCommitValue = gitCommitProvider.get()
         crossCompileTargets.keys.forEach { platform ->
             val ext = libExtForPlatform(platform)
             val srcLib = crossBuildDir.get().dir(platform).file("libtree-sitter-xtc.$ext").asFile
@@ -680,7 +682,7 @@ val copyAllNativeLibrariesToResources by tasks.registering {
                 val hash = digest.digest().joinToString("") { "%02x".format(it) }
                 hashFile.writeText(hash)
 
-                // Write version info (gitCommitValue from Palantir plugin, captured at config time)
+                // Write version info
                 Properties().apply {
                     setProperty("input.hash", hash)
                     setProperty("git.commit", gitCommitValue)
@@ -766,17 +768,21 @@ val copyNativeLibraryToResources by tasks.registering(Copy::class) {
     from(nativeLibFile)
     into(prebuiltNativeDir)
 
-    // Capture values at configuration time for doLast
-    val grammarFileValue = grammarJsFile.map { it.asFile }.get()
-    val scannerFileValue = scannerCFile.map { it.asFile }.get()
+    // Capture providers at configuration time (not their values)
+    val grammarFileProvider = grammarJsFile.map { it.asFile }
+    val scannerFileProvider = scannerCFile.map { it.asFile }
     val hashFileValue = prebuiltHashFile.asFile
     val versionFileValue = prebuiltVersionFile.asFile
     val destDirValue = prebuiltNativeDir.asFile
     val platformValue = nativePlatformDir
     val cliVersionValue = treeSitterCliVersion
-    val gitCommitValue = gitCommitShort.get()
+    val gitCommitProvider = gitCommitShort
 
-    doLastTask {
+    doLast {
+        val grammarFileValue = grammarFileProvider.get()
+        val scannerFileValue = scannerFileProvider.get()
+        val gitCommitValue = gitCommitProvider.get()
+
         // Compute hash (include CLI version - different versions produce different output)
         val digest = MessageDigest.getInstance("SHA-256")
         digest.update(cliVersionValue.toByteArray())
@@ -789,7 +795,7 @@ val copyNativeLibraryToResources by tasks.registering(Copy::class) {
         hashFileValue.parentFile.mkdirs()
         hashFileValue.writeText(hash)
 
-        // Write version file (gitCommitValue from Palantir plugin, captured at config time)
+        // Write version file
         Properties().apply {
             setProperty("input.hash", hash)
             setProperty("git.commit", gitCommitValue)

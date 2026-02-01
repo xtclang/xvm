@@ -1,5 +1,4 @@
 import org.gradle.jvm.toolchain.JavaLanguageVersion
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.time.Instant
 
 plugins {
@@ -32,11 +31,18 @@ plugins {
 // The Kotlin stdlib (~1.5MB) is bundled in the fat JAR automatically.
 // =============================================================================
 
-// IntelliJ 2025.1 runs on JDK 21, so LSP server must target JDK 21 for in-process execution
-val intellijJdkVersion =
-    libs.versions.intellij.jdk
-        .get()
-        .toInt()
+// =============================================================================
+// OUT-OF-PROCESS EXECUTION
+// =============================================================================
+// The LSP server runs as a SEPARATE PROCESS from IntelliJ, with its own JRE.
+// This allows using jtreesitter 0.26+ (requires Java 23+) even though IntelliJ
+// uses JBR 21. The intellij-plugin spawns this server and communicates via stdio.
+//
+// See doc/plans/PLAN_OUT_OF_PROCESS_LSP.md for architecture details.
+// =============================================================================
+
+// Use the same Kotlin JDK version as the rest of the XDK (from version.properties)
+val kotlinJdkVersion = xdkProperties.int("org.xtclang.kotlin.jdk")
 
 // =============================================================================
 // LSP Adapter Selection
@@ -102,15 +108,13 @@ sourceSets.main {
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(intellijJdkVersion))
+        languageVersion.set(kotlinJdkVersion.map { JavaLanguageVersion.of(it) })
     }
 }
 
 kotlin {
-    jvmToolchain(intellijJdkVersion)
-    compilerOptions {
-        jvmTarget.set(JvmTarget.fromTarget(intellijJdkVersion.toString()))
-        freeCompilerArgs.add("-Xjsr305=strict")
+    jvmToolchain {
+        languageVersion.set(kotlinJdkVersion.map { JavaLanguageVersion.of(it) })
     }
 }
 
@@ -136,26 +140,24 @@ val treeSitterNativeLib by configurations.creating {
 dependencies {
     // Native library from tree-sitter project
     treeSitterNativeLib(project(path = ":tree-sitter", configuration = "nativeLibraryElements"))
+
     // LSP4J - Eclipse LSP implementation for Java
-    // Use compileOnly because LSP4IJ provides LSP4J at runtime.
-    // Bundling our own version causes ClassCastException due to classloader conflicts.
-    compileOnly(libs.lsp4j)
-    compileOnly(libs.lsp4j.jsonrpc)
+    // Bundled in fat JAR for out-of-process execution (not provided by IntelliJ)
+    implementation(libs.lsp4j)
+    implementation(libs.lsp4j.jsonrpc)
 
     // JetBrains annotations for nullability (Kotlin uses these automatically)
     compileOnly(libs.jetbrains.annotations)
 
-    // Logging - compileOnly since IntelliJ provides SLF4J
-    compileOnly(libs.slf4j.api)
+    // Logging - bundled in fat JAR for out-of-process execution
+    implementation(libs.slf4j.api)
+    implementation(libs.logback)
 
     // Tree-sitter JVM bindings for fast, incremental, error-tolerant parsing
-    // This provides syntax-level intelligence (symbols, completion, folding) without compiler
+    // Requires Java 23+ (uses FFM API) - runs out-of-process with its own JRE
     implementation(libs.jtreesitter)
 
-    // Testing - LSP4J and SLF4J needed for test compilation/runtime (compileOnly doesn't expose to tests)
-    testImplementation(libs.lsp4j)
-    testImplementation(libs.lsp4j.jsonrpc)
-    testRuntimeOnly(libs.slf4j.simple)
+    // Testing
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)

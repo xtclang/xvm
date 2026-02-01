@@ -1,8 +1,8 @@
 #Tree-sitter native library build info
-#Sun Feb 01 21:31:09 CET 2026
-built.at=2026-02-01T20\:31\:09.562851Z
+#Sun Feb 01 23:04:28 CET 2026
+built.at=2026-02-01T22\:04\:28.126614Z
 cross.compiled=true
-git.commit=aba5dd45d
-input.hash=aace704403eef192757412d97a5b7e8504a82b1d5ba87361247b9f0b885f7433
+git.commit=4c57525f1
+input.hash=8047a83de65ad86d41cb1621176e534910b8774fad605465676b0aa4a5de48ca
 platform=darwin-arm64
-tree.sitter.cli.version=0.24.3
+tree.sitter.cli.version=0.26.5

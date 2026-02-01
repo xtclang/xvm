@@ -53,22 +53,19 @@ mockito = "5.8.0"
 intellij-ide = "2025.1"
 intellij-jdk = "21"
 intellij-platform-gradle-plugin = "2.10.5"
-# IMPORTANT: jtreesitter version is constrained by IntelliJ's JBR (JetBrains Runtime)
-# - IntelliJ 2025.1 ships with JBR 21 (Java 21)
-# - jtreesitter 0.25.x requires Java 22
-# - jtreesitter 0.26.x requires Java 23
-# - We must use 0.24.x until IntelliJ ships with JBR 22+ (expected: IntelliJ 2026.x)
-# Track: https://github.com/JetBrains/JetBrainsRuntime/releases
-jtreesitter = "0.24.1"
+# jtreesitter 0.26.x requires Java 23+ (FFM API)
+# The LSP server runs OUT-OF-PROCESS with its own JRE (Java 24), not IntelliJ's JBR 21.
+# See lang/doc/plans/PLAN_OUT_OF_PROCESS_LSP.md for architecture details.
+jtreesitter = "0.26.0"
 kotlin = "2.2.0"
 kotlinx-serialization = "1.7.3"
 ktlint = "14.0.1"
 logback = "1.5.13"
 lsp4ij = "0.19.1"
-lsp4j = "0.21.1"
+lsp4j = "0.24.0"
 slf4j = "2.0.9"
 # tree-sitter-cli must match jtreesitter major.minor for ABI compatibility
-tree-sitter-cli = "0.24.3"
+tree-sitter-cli = "0.26.5"
 
 [plugins]
 # Included build plugins - no version (resolved from source)

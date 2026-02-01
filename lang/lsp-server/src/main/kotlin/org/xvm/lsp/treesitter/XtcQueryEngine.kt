@@ -2,6 +2,7 @@ package org.xvm.lsp.treesitter
 
 import io.github.treesitter.jtreesitter.Language
 import io.github.treesitter.jtreesitter.Query
+import io.github.treesitter.jtreesitter.QueryCursor
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.model.SymbolInfo.SymbolKind
@@ -16,15 +17,13 @@ import java.io.Closeable
 class XtcQueryEngine(
     private val language: Language,
 ) : Closeable {
-    // Note: In jtreesitter 0.24.x, Query constructor is package-private.
-    // Use Language.query() factory method instead.
-    private val allDeclarationsQuery: Query = language.query(XtcQueries.ALL_DECLARATIONS)
-    private val typeDeclarationsQuery: Query = language.query(XtcQueries.TYPE_DECLARATIONS)
-    private val methodDeclarationsQuery: Query = language.query(XtcQueries.METHOD_DECLARATIONS)
-    private val propertyDeclarationsQuery: Query = language.query(XtcQueries.PROPERTY_DECLARATIONS)
-    private val identifiersQuery: Query = language.query(XtcQueries.IDENTIFIERS)
-    private val variableDeclarationsQuery: Query = language.query(XtcQueries.VARIABLE_DECLARATIONS)
-    private val importsQuery: Query = language.query(XtcQueries.IMPORTS)
+    private val allDeclarationsQuery: Query = Query(language, XtcQueries.ALL_DECLARATIONS)
+    private val typeDeclarationsQuery: Query = Query(language, XtcQueries.TYPE_DECLARATIONS)
+    private val methodDeclarationsQuery: Query = Query(language, XtcQueries.METHOD_DECLARATIONS)
+    private val propertyDeclarationsQuery: Query = Query(language, XtcQueries.PROPERTY_DECLARATIONS)
+    private val identifiersQuery: Query = Query(language, XtcQueries.IDENTIFIERS)
+    private val variableDeclarationsQuery: Query = Query(language, XtcQueries.VARIABLE_DECLARATIONS)
+    private val importsQuery: Query = Query(language, XtcQueries.IMPORTS)
 
     /**
      * Find all declarations in the tree for document symbols.
@@ -228,13 +227,14 @@ class XtcQueryEngine(
         tree: XtcTree,
         handler: (Map<String, XtcNode>) -> Unit,
     ) {
-        // In jtreesitter 0.24.x, Query.findMatches() executes directly (no QueryCursor)
-        query.findMatches(tree.tsTree.rootNode).forEach { match ->
-            val captures =
-                match.captures().associate { capture ->
-                    capture.name() to XtcNode(capture.node(), tree.source)
-                }
-            handler(captures)
+        QueryCursor(query).use { cursor ->
+            cursor.findMatches(tree.tsTree.rootNode).forEach { match ->
+                val captures =
+                    match.captures().associate { capture ->
+                        capture.name() to XtcNode(capture.node(), tree.source)
+                    }
+                handler(captures)
+            }
         }
     }
 

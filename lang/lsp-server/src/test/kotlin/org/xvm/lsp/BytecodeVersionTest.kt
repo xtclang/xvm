@@ -7,36 +7,38 @@ import org.xvm.lsp.server.XtcLanguageServer
 import java.io.DataInputStream
 
 /**
- * Verifies that compiled bytecode is compatible with IntelliJ IDEA's JDK requirements.
+ * Verifies that compiled bytecode targets the correct JDK version.
  *
- * IntelliJ 2025.1 runs on JDK 21, so the LSP server bytecode must target JDK 21 or lower.
- * This ensures the IntelliJ plugin can load and use the LSP server classes in-process.
+ * The LSP server runs OUT-OF-PROCESS with its own JRE (Java 24), NOT inside IntelliJ.
+ * This allows using jtreesitter 0.26+ which requires the FFM API (Java 22+).
+ *
+ * See doc/plans/PLAN_OUT_OF_PROCESS_LSP.md for architecture details.
  *
  * Class file major versions:
+ * - JDK 24 = 68
+ * - JDK 23 = 67
+ * - JDK 22 = 66
  * - JDK 21 = 65
- * - JDK 17 = 61
- * - JDK 11 = 55
- * - JDK 8  = 52
  */
 @DisplayName("Bytecode Version Compatibility")
 class BytecodeVersionTest {
     companion object {
         /**
-         * Maximum allowed class file major version for IntelliJ compatibility.
-         * JDK 21 = major version 65
+         * Expected class file major version (JDK 24).
+         * The build is configured to target org.xtclang.kotlin.jdk from version.properties.
          */
-        private const val MAX_ALLOWED_VERSION = 65
+        private const val EXPECTED_VERSION = 68
 
         /**
-         * Expected class file major version (JDK 21).
-         * The build is configured to target JDK 21 for IntelliJ 2025.1 compatibility.
+         * Maximum allowed class file major version for the LSP server.
+         * Must match the JRE version used for out-of-process execution.
          */
-        private const val EXPECTED_VERSION = 65
+        private const val MAX_ALLOWED_VERSION = 68
     }
 
     @Test
-    @DisplayName("XtcLanguageServer bytecode should target JDK 21")
-    fun serverBytecodeTargetsJdk21() {
+    @DisplayName("XtcLanguageServer bytecode should target JDK 24")
+    fun serverBytecodeTargetsJdk24() {
         val majorVersion = getClassFileMajorVersion(XtcLanguageServer::class.java)
 
         assertThat(majorVersion)
@@ -45,8 +47,8 @@ class BytecodeVersionTest {
     }
 
     @Test
-    @DisplayName("All LSP server classes must be loadable by JDK 21")
-    fun allClassesMustBeCompatibleWithJdk21() {
+    @DisplayName("All LSP server classes must target JDK 24 for out-of-process execution")
+    fun allClassesMustTargetOutOfProcessJdk() {
         // Sample key classes from each package
         val classesToCheck =
             listOf(
