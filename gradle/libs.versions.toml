@@ -53,15 +53,22 @@ mockito = "5.8.0"
 intellij-ide = "2025.1"
 intellij-jdk = "21"
 intellij-platform-gradle-plugin = "2.10.5"
-jtreesitter = "0.25.3"
+# IMPORTANT: jtreesitter version is constrained by IntelliJ's JBR (JetBrains Runtime)
+# - IntelliJ 2025.1 ships with JBR 21 (Java 21)
+# - jtreesitter 0.25.x requires Java 22
+# - jtreesitter 0.26.x requires Java 23
+# - We must use 0.24.x until IntelliJ ships with JBR 22+ (expected: IntelliJ 2026.x)
+# Track: https://github.com/JetBrains/JetBrainsRuntime/releases
+jtreesitter = "0.24.1"
 kotlin = "2.2.0"
 kotlinx-serialization = "1.7.3"
 ktlint = "14.0.1"
 logback = "1.5.13"
-lsp4ij = "0.11.0"
+lsp4ij = "0.19.1"
 lsp4j = "0.21.1"
 slf4j = "2.0.9"
-tree-sitter-cli = "0.22.6"
+# tree-sitter-cli must match jtreesitter major.minor for ABI compatibility
+tree-sitter-cli = "0.24.3"
 
 [plugins]
 # Included build plugins - no version (resolved from source)
@@ -115,8 +122,6 @@ javatools-utils = { group = "org.xtclang", name = "javatools-utils" }
 
 # Third party
 apache-commons-cli = { module = "commons-cli:commons-cli", version.ref = "apache-commons-cli" }
-apache-commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "apache-commons-compress" }
-tukaani-xz = { module = "org.tukaani:xz", version.ref = "tukaani-xz" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 jakarta-activation-api = { module = "jakarta.activation:jakarta.activation-api", version.ref = "jakarta-activation" }
 jakarta-xml-bind-api = { module = "jakarta.xml.bind:jakarta.xml.bind-api", version.ref = "jakarta-xml-bind-api" }
@@ -126,6 +131,9 @@ jline = { module = "org.jline:jline", version.ref = "jline" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
+# Used for downloading zipped Zig and TreeSitter native artifacts.
+apache-commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "apache-commons-compress" }
+tukaani-xz = { module = "org.tukaani:xz", version.ref = "tukaani-xz" }
 
 # Testing utilities
 assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }

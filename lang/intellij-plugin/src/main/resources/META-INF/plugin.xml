@@ -29,6 +29,11 @@
     <depends>com.redhat.devtools.lsp4ij</depends>
 
     <extensions defaultExtensionNs="com.intellij">
+        <!-- Notification group for LSP status messages -->
+        <notificationGroup id="XTC Language Server"
+                           displayType="BALLOON"
+                           isLogByDefault="true"/>
+
         <!-- Project Generator for New Project wizard (IntelliJ IDEA) -->
         <newProjectWizard.generator
             implementation="org.xtclang.idea.project.XtcNewProjectWizard"/>

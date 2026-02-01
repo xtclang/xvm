@@ -9,7 +9,17 @@ import java.util.zip.GZIPInputStream
 plugins {
     alias(libs.plugins.xdk.build.properties)
     alias(libs.plugins.download)
+    alias(libs.plugins.palantir.git.version)
     base
+}
+
+// Git version info from Palantir plugin (config-cache safe)
+// Uses the same pattern as javatools/build.gradle.kts
+val gitCommitShort: Provider<String> = providers.provider {
+    @Suppress("UNCHECKED_CAST")
+    val versionDetails = (project.extensions.extraProperties["versionDetails"] as groovy.lang.Closure<*>).call()
+    // Use reflection to get gitHash since the class isn't on the compile classpath
+    versionDetails?.javaClass?.getMethod("getGitHash")?.invoke(versionDetails)?.toString() ?: "unknown"
 }
 
 // =============================================================================
@@ -24,7 +34,7 @@ plugins {
 // =============================================================================
 
 // Depend on DSL project for generated grammar.js and scanner.c
-val dslProject = project(":dsl")
+val dslProject: Project = project(":dsl")
 
 // =============================================================================
 // Platform Detection
@@ -556,12 +566,6 @@ abstract class ZigCrossCompileTask @Inject constructor(
 
     @TaskAction
     fun compile() {
-        val ext = when {
-            targetTriple.get().contains("macos") -> "dylib"
-            targetTriple.get().contains("windows") -> "dll"
-            else -> "so"
-        }
-
         val outputFile = outputLib.get().asFile
         outputFile.parentFile.mkdirs()
 
@@ -648,6 +652,8 @@ val copyAllNativeLibrariesToResources by tasks.registering {
     val resourcesNativeDir = layout.projectDirectory.dir("src/main/resources/native")
     val grammarFileValue = grammarJsFile.map { it.asFile }
     val scannerFileValue = scannerCFile.map { it.asFile }
+    val cliVersionValue = treeSitterCliVersion
+    val gitCommitValue = gitCommitShort.get()
 
     inputs.dir(crossBuildDir)
     outputs.dir(resourcesNativeDir)
@@ -665,28 +671,23 @@ val copyAllNativeLibrariesToResources by tasks.registering {
                 destDir.mkdirs()
                 srcLib.copyTo(destLib, overwrite = true)
 
-                // Compute and write hash
+                // Compute and write hash (include CLI version - different versions produce different output)
                 val digest = MessageDigest.getInstance("SHA-256")
+                digest.update(cliVersionValue.toByteArray())
                 listOf(grammarFileValue.get(), scannerFileValue.get()).forEach { file ->
                     if (file.exists()) digest.update(file.readBytes())
                 }
                 val hash = digest.digest().joinToString("") { "%02x".format(it) }
                 hashFile.writeText(hash)
 
-                // Write version info
-                val gitCommit = try {
-                    val process = ProcessBuilder("git", "rev-parse", "--short", "HEAD")
-                        .redirectErrorStream(true).start()
-                    val result = process.inputStream.bufferedReader().readText().trim()
-                    if (process.waitFor() == 0) result else "unknown"
-                } catch (_: Exception) { "unknown" }
-
+                // Write version info (gitCommitValue from Palantir plugin, captured at config time)
                 Properties().apply {
                     setProperty("input.hash", hash)
-                    setProperty("git.commit", gitCommit)
+                    setProperty("git.commit", gitCommitValue)
                     setProperty("built.at", Instant.now().toString())
                     setProperty("platform", platform)
                     setProperty("cross.compiled", "true")
+                    setProperty("tree.sitter.cli.version", cliVersionValue)
                     versionFile.outputStream().use { store(it, "Tree-sitter native library build info") }
                 }
 
@@ -772,10 +773,13 @@ val copyNativeLibraryToResources by tasks.registering(Copy::class) {
     val versionFileValue = prebuiltVersionFile.asFile
     val destDirValue = prebuiltNativeDir.asFile
     val platformValue = nativePlatformDir
+    val cliVersionValue = treeSitterCliVersion
+    val gitCommitValue = gitCommitShort.get()
 
     doLastTask {
-        // Inline hash computation (can't use top-level functions for config cache compatibility)
+        // Compute hash (include CLI version - different versions produce different output)
         val digest = MessageDigest.getInstance("SHA-256")
+        digest.update(cliVersionValue.toByteArray())
         listOf(grammarFileValue, scannerFileValue).forEach { file ->
             if (file.exists()) digest.update(file.readBytes())
         }
@@ -785,25 +789,20 @@ val copyNativeLibraryToResources by tasks.registering(Copy::class) {
         hashFileValue.parentFile.mkdirs()
         hashFileValue.writeText(hash)
 
-        // Inline git commit (can't use top-level functions for config cache compatibility)
-        val gitCommit = try {
-            val process = ProcessBuilder("git", "rev-parse", "--short", "HEAD")
-                .redirectErrorStream(true).start()
-            val result = process.inputStream.bufferedReader().readText().trim()
-            if (process.waitFor() == 0) result else "unknown"
-        } catch (_: Exception) { "unknown" }
-
-        // Write version file
+        // Write version file (gitCommitValue from Palantir plugin, captured at config time)
         Properties().apply {
             setProperty("input.hash", hash)
-            setProperty("git.commit", gitCommit)
+            setProperty("git.commit", gitCommitValue)
             setProperty("built.at", Instant.now().toString())
             setProperty("platform", platformValue)
-            versionFileValue.outputStream().use { store(it, "Tree-sitter native library build info") }
+            setProperty("tree.sitter.cli.version", cliVersionValue)
+            versionFileValue.outputStream().use {
+                store(it, "Tree-sitter native library build info")
+            }
         }
 
         logger.lifecycle("Copied library to: ${destDirValue.absolutePath}")
-        logger.lifecycle("Tree-sitter native library: hash=${hash.take(12)}... commit=$gitCommit platform=$platformValue")
+        logger.lifecycle("Tree-sitter native library: hash=${hash.take(12)}... commit=$gitCommitValue platform=$platformValue")
         logger.lifecycle("  Commit these files to source control!")
     }
 }
@@ -836,8 +835,13 @@ abstract class EnsureNativeLibraryTask : DefaultTask() {
     @get:Input
     abstract val versionFilePath: Property<String>
 
+    @get:Input
+    abstract val treeSitterCliVersion: Property<String>
+
     private fun computeHash(): String {
         val digest = MessageDigest.getInstance("SHA-256")
+        // Include CLI version in hash - different CLI versions produce different compiled output
+        digest.update(treeSitterCliVersion.get().toByteArray())
         listOf(grammarFile.get().asFile, scannerFile.get().asFile).forEach { file ->
             if (file.exists()) {
                 digest.update(file.readBytes())
@@ -911,6 +915,7 @@ val ensureNativeLibraryUpToDate by tasks.registering(EnsureNativeLibraryTask::cl
     prebuiltLibPath.set(prebuiltLibrary.asFile.absolutePath)
     hashFilePath.set(prebuiltHashFile.asFile.absolutePath)
     versionFilePath.set(prebuiltVersionFile.asFile.absolutePath)
+    this.treeSitterCliVersion.set(libs.versions.tree.sitter.cli)
 }
 
 // =============================================================================

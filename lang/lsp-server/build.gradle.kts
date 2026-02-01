@@ -60,7 +60,12 @@ val generateBuildInfo by tasks.registering {
     val buildTime = Instant.now().toString()
     val projectVersion = project.version.toString() // Capture at configuration time
     val adapter = lspAdapter // Capture at configuration time
+
+    // Declare inputs so task re-runs when adapter changes
+    inputs.property("adapter", adapter)
+    inputs.property("version", projectVersion)
     outputs.dir(outputDir)
+
     doLast {
         val outFile = outputDir.get().file("lsp-version.properties").asFile
         outFile.parentFile.mkdirs()

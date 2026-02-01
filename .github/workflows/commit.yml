@@ -54,14 +54,22 @@ on:
                 type: boolean
                 required: false
                 default: true
+            include-lang:
+                description: 'Include lang projects in build and run tree-sitter validation'
+                type: boolean
+                required: false
+                default: true
 
 env:
-    # Add manual tests and lang as included builds in the composite build configuration
+    # Add manual tests as included builds in the composite build configuration
     ORG_GRADLE_PROJECT_includeBuildManualTests: true
     ORG_GRADLE_PROJECT_includeBuildAttachManualTests: true
-    ORG_GRADLE_PROJECT_includeBuildLang: true
-    ORG_GRADLE_PROJECT_includeBuildAttachLang: true
     ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
+
+    # Lang build inclusion - defaults to true for push/PR, configurable for workflow_dispatch
+    # These env vars override gradle.properties settings (which may have lang disabled)
+    ORG_GRADLE_PROJECT_includeBuildLang: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.include-lang == true || github.event.inputs.include-lang == 'true' }}
+    ORG_GRADLE_PROJECT_includeBuildAttachLang: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.include-lang == true || github.event.inputs.include-lang == 'true' }}
 
     skip_manual_tests: ${{ github.event.inputs.skip-tests == true || github.event.inputs.skip-tests == 'true' }}
     # Default to parallel mode (true) for push/PR events; for workflow_dispatch, use the input value
@@ -226,6 +234,53 @@ jobs:
                 inspect_gradle_cache "after manual tests"
                 echo "✅ Manual tests completed"
 
+            - name: Validate Tree-sitter Grammar and LSP Adapters
+              if: success() && matrix.os == 'ubuntu-latest' && env.ORG_GRADLE_PROJECT_includeBuildLang == 'true'
+              shell: bash
+              env:
+                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+              run: |
+                  GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }}"
+
+                  echo ""
+                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                  echo "🌳 TREE-SITTER GRAMMAR VALIDATION"
+                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+                  echo "📋 Validating grammar compiles (tree-sitter generate)..."
+                  ./gradlew $GRADLE_OPTIONS :lang:tree-sitter:validateTreeSitterGrammar
+                  echo "✅ Grammar: VALID"
+
+                  echo ""
+                  echo "📋 Testing parser on XDK corpus (with timing)..."
+                  ./gradlew $GRADLE_OPTIONS :lang:tree-sitter:testTreeSitterParse
+                  echo "✅ Corpus parsing: PASSED"
+
+                  echo ""
+                  echo "📋 Verifying native library freshness..."
+                  ./gradlew $GRADLE_OPTIONS :lang:tree-sitter:ensureNativeLibraryUpToDate
+                  echo "✅ Native library: UP-TO-DATE"
+
+                  echo ""
+                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                  echo "🔌 LSP ADAPTER TESTS"
+                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+                  echo ""
+                  echo "📋 Running LSP tests with MOCK adapter (-Plsp.adapter=mock)..."
+                  ./gradlew $GRADLE_OPTIONS :lang:lsp-server:test -Plsp.adapter=mock
+                  echo "✅ Mock adapter tests: PASSED"
+
+                  echo ""
+                  echo "📋 Running LSP tests with TREESITTER adapter (-Plsp.adapter=treesitter)..."
+                  ./gradlew $GRADLE_OPTIONS :lang:lsp-server:test -Plsp.adapter=treesitter
+                  echo "✅ Tree-sitter adapter tests: PASSED"
+
+                  echo ""
+                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                  echo "🎉 ALL LANG VALIDATION COMPLETE"
+                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
             # TODO:
             # name: XTC App Template Integration Test
             #  if: success() && matrix.os == 'ubuntu-latest'
@@ -267,7 +322,7 @@ jobs:
                     echo "❌ Build failed or was cancelled"
                     exit 1
                   fi
-                  echo "✅ All builds completed successfully"                      
+                  echo "✅ All builds completed successfully"
 
     # Integration test: verify the XTC plugin works with external projects
     # Clones xtc-app-template, publishes XDK locally, and runs the template app

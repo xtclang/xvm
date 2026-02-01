@@ -1,5 +1,7 @@
 package org.xvm.asm;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -20,7 +22,7 @@ public final class BuildInfo {
             if (is != null) {
                 props.load(is);
             }
-        } catch (IOException e) {
+        } catch (IOException _) {
             // Ignore - will use fallback values from version.properties if available
         }
 
@@ -41,8 +43,10 @@ public final class BuildInfo {
     /**
      * Get the XDK version string (e.g., "0.4.4-SNAPSHOT").
      * Used by xcc --version, xec --version, xtc --version, and build system.
+     *
+     * @return XDK version or "0.0.0-unknown" if not available
      */
-    public static String getXdkVersion() {
+    public static @NotNull String getXdkVersion() {
         return BUILD_INFO.getProperty("xdk.version", "0.0.0-unknown");
     }
 
@@ -66,7 +70,7 @@ public final class BuildInfo {
      * Get the git commit hash, if available.
      * @return git commit hash or empty string if not available
      */
-    public static String getGitCommit() {
+    public static @NotNull String getGitCommit() {
         // Use full commit ID instead of abbreviated version
         return BUILD_INFO.getProperty("git.commit.id", BUILD_INFO.getProperty("git.commit", ""));
     }
@@ -75,7 +79,7 @@ public final class BuildInfo {
      * Get the git status, if available.
      * @return git status ("clean" or "detached-head") or empty string if not available
      */
-    public static String getGitStatus() {
+    public static @NotNull String getGitStatus() {
         return BUILD_INFO.getProperty("git.status", "");
     }
 }

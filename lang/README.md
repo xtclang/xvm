@@ -463,6 +463,62 @@ Tree-sitter should be treated as a *performance and UX layer*, not as a replacem
 
 ---
 
+## Dependency Versions & Compatibility
+
+The lang tooling uses several interdependent libraries. This section documents version constraints and compatibility.
+
+### LSP Stack
+
+| Library | Version | Purpose | Notes |
+|---------|---------|---------|-------|
+| **lsp4j** | 0.21.1 | LSP protocol types & JSON-RPC | Eclipse's Java LSP implementation |
+| **lsp4ij** | 0.19.1 | IntelliJ LSP client plugin | Red Hat's plugin, uses lsp4j internally |
+
+**How they work together:**
+- **lsp4j** provides the LSP protocol implementation (types, JSON-RPC, message handling)
+- **lsp4ij** is an IntelliJ plugin that provides LSP client support for any language
+- Our `XtcLanguageServerFactory` creates an in-process LSP server using lsp4j
+- lsp4ij connects to it via piped streams
+
+### Tree-sitter Stack
+
+| Library | Version | Purpose | Notes |
+|---------|---------|---------|-------|
+| **jtreesitter** | 0.24.1 | Java bindings for tree-sitter | JVM FFI to native tree-sitter |
+| **tree-sitter-cli** | 0.24.3 | Parser generator CLI | Must match jtreesitter major.minor |
+
+**Version Constraint (Java 21):**
+```
+⚠️  jtreesitter 0.25+ requires Java 22
+⚠️  jtreesitter 0.26+ requires Java 23
+✅  jtreesitter 0.24.x works with Java 21
+```
+
+IntelliJ 2025.1 ships with JBR 21 (JetBrains Runtime = Java 21), so we must use jtreesitter 0.24.x
+until IntelliJ ships with JBR 22+ (expected: IntelliJ 2026.x).
+
+Track JBR releases: https://github.com/JetBrains/JetBrainsRuntime/releases
+
+### IntelliJ Platform
+
+| Library | Version | Purpose |
+|---------|---------|---------|
+| **intellij-ide** | 2025.1 | Target IDE version |
+| **intellij-jdk** | 21 | Plugin JDK requirement |
+| **intellij-platform-gradle-plugin** | 2.10.5 | Build plugin for IntelliJ plugins |
+
+### Compatibility Matrix
+
+| Component | Requires | Provides |
+|-----------|----------|----------|
+| IntelliJ 2025.1 | JBR 21 | Plugin runtime |
+| lsp4ij 0.19.1 | IntelliJ 2023.2+ | LSP client |
+| lsp4j 0.21.1 | Java 11+ | LSP protocol |
+| jtreesitter 0.24.1 | Java 21 | Native parsing |
+| tree-sitter-cli 0.24.3 | - | Parser generation |
+
+All versions are defined in `/gradle/libs.versions.toml`.
+
 ## Documentation
 
 - [Language Support Overview](./doc/LANGUAGE_SUPPORT.md) - Comprehensive guide to implementing LSP and DAP support for Ecstasy

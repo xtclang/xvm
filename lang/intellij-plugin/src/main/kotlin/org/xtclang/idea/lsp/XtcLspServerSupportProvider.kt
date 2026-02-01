@@ -1,5 +1,7 @@
 package org.xtclang.idea.lsp
 
+import com.intellij.notification.NotificationGroupManager
+import com.intellij.notification.NotificationType
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.redhat.devtools.lsp4ij.LanguageServerFactory
@@ -109,9 +111,9 @@ class XtcLspConnectionProvider : StreamConnectionProvider {
         clientOutput = PipedOutputStream(serverInput)
         clientInput = PipedInputStream(serverOutput)
 
-        // Create adapter - currently hardcoded to Mock, will support tree-sitter later
-        val adapter = MockXtcCompilerAdapter()
-        val adapterName = adapter::class.simpleName ?: "Unknown"
+        // Create adapter based on build-time configuration (-Plsp.adapter=treesitter|mock)
+        val (adapter, adapterName) = createAdapter()
+        logger.info("Selected adapter: $adapterName (from lsp.adapter=${buildProps.getProperty("lsp.adapter", "mock")})")
 
         // Create and start the language server
         server =
@@ -124,6 +126,21 @@ class XtcLspConnectionProvider : StreamConnectionProvider {
         alive = true
 
         logger.info("XTC LSP Server started (in-process) with adapter: $adapterName")
+
+        // Show notification so user knows which adapter is active
+        val version = buildProps.getProperty("lsp.version", "?")
+        showNotification(
+            title = "XTC Language Server Started",
+            content = "$adapterName (v$version)",
+            type = if (adapterName.contains("fallback")) NotificationType.WARNING else NotificationType.INFORMATION,
+        )
+    }
+
+    private fun showNotification(title: String, content: String, type: NotificationType) {
+        NotificationGroupManager.getInstance()
+            .getNotificationGroup("XTC Language Server")
+            .createNotification(title, content, type)
+            .notify(null) // null = IDE-level notification (no specific project)
     }
 
     override fun getInputStream(): InputStream = clientInput

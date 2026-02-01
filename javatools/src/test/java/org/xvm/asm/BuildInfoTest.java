@@ -3,9 +3,12 @@ package org.xvm.asm;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.xvm.asm.Constants.VERSION_MAJOR_CUR;
+import static org.xvm.asm.Constants.VERSION_MINOR_CUR;
 
 /**
  * Tests for BuildInfo functionality and version information.
@@ -17,7 +20,7 @@ public class BuildInfoTest {
         String xdkVersion = BuildInfo.getXdkVersion();
         assertNotNull(xdkVersion, "XDK version should not be null");
         assertFalse(xdkVersion.isEmpty(), "XDK version should not be empty");
-        assertFalse(xdkVersion.equals("0.0.0-unknown"), "XDK version should not be default fallback");
+        assertNotEquals("0.0.0-unknown", xdkVersion, "XDK version should not be default fallback");
     }
 
     @Test
@@ -48,19 +51,18 @@ public class BuildInfoTest {
             assertTrue(gitCommit.matches("[a-f0-9]+"), "Git commit should be hexadecimal");
         }
 
-        // Git status now contains branch name or "detached-head"
-        if (!gitStatus.isEmpty()) {
-            assertNotNull(gitStatus, "Git status should not be null");
-            assertFalse(gitStatus.isEmpty(), "Git status should not be empty");
+        // If git commit is available, git status (branch name or "detached-head") should also be
+        if (!gitCommit.isEmpty()) {
+            assertFalse(gitStatus.isEmpty(), "Git status should be available when git commit is available");
         }
     }
 
     @Test
     public void testConstantsUseBuildInfo() {
         // Test that Constants properly uses BuildInfo values
-        assertEquals(BuildInfo.getXvmVersionMajor(), Constants.VERSION_MAJOR_CUR,
+        assertEquals(VERSION_MAJOR_CUR, BuildInfo.getXvmVersionMajor(),
                     "Constants should use BuildInfo for major version");
-        assertEquals(BuildInfo.getXvmVersionMinor(), Constants.VERSION_MINOR_CUR,
+        assertEquals(VERSION_MINOR_CUR, BuildInfo.getXvmVersionMinor(),
                     "Constants should use BuildInfo for minor version");
     }
 }
