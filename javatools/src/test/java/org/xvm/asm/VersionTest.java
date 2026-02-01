@@ -1,6 +1,7 @@
 package org.xvm.asm;
 
-import java.util.Iterator;
+import java.util.List;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 
@@ -16,50 +17,33 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class VersionTest {
     @Test
     public void testSubstitutables() {
-        assertTrue(new Version("0"        ).isSubstitutableFor(new Version("beta"     )));
-        assertTrue(new Version("1"        ).isSubstitutableFor(new Version("beta"     )));
-        assertTrue(new Version("0"        ).isSubstitutableFor(new Version("0"        )));
-        assertTrue(new Version("1"        ).isSubstitutableFor(new Version("0"        )));
-        assertTrue(new Version("1"        ).isSubstitutableFor(new Version("1"        )));
-        assertTrue(new Version("1.2.3.4.5").isSubstitutableFor(new Version("1"        )));
-        assertTrue(new Version("2.1.rc"   ).isSubstitutableFor(new Version("2.1.beta3")));
-        assertTrue(new Version("2.1.rc2"  ).isSubstitutableFor(new Version("2.1.beta3")));
-        assertTrue(new Version("2.1"      ).isSubstitutableFor(new Version("2.1.beta" )));
-        assertTrue(new Version("2.1"      ).isSubstitutableFor(new Version("2.1.beta3")));
-        assertTrue(new Version("2.2"      ).isSubstitutableFor(new Version("2.1.beta3")));
-        assertTrue(new Version("2.1.beta3").isSubstitutableFor(new Version("2.1.beta" )));
-        assertTrue(new Version("2.1.beta3").isSubstitutableFor(new Version("2.1.beta3")));
-        assertTrue(new Version("1.2"      ).isSubstitutableFor(new Version("1.beta"   )));
-        assertTrue(new Version("1.2.alpha").isSubstitutableFor(new Version("1.beta"   )));
-        assertTrue(new Version("1.2.beta" ).isSubstitutableFor(new Version("1.beta"   )));
-        assertTrue(new Version("1.2.beta1").isSubstitutableFor(new Version("1.beta"   )));
-        assertTrue(new Version("1.2"      ).isSubstitutableFor(new Version("1.beta1"  )));
-        assertTrue(new Version("1.2.alpha").isSubstitutableFor(new Version("1.beta1"  )));
-        assertTrue(new Version("1.2.beta1").isSubstitutableFor(new Version("1.beta1"  )));
-        assertTrue(new Version("1.2.beta2").isSubstitutableFor(new Version("1.2.beta1")));
-        assertTrue(new Version("1.2.beta" ).isSubstitutableFor(new Version("1.2.alpha")));
-        assertTrue(new Version("beta"     ).isSubstitutableFor(new Version("alpha"    )));
+        // Pairs where first isSubstitutableFor second
+        Stream.of(
+                "0:beta", "1:beta", "0:0", "1:0", "1:1", "1.2.3.4.5:1",
+                "2.1.rc:2.1.beta3", "2.1.rc2:2.1.beta3", "2.1:2.1.beta", "2.1:2.1.beta3",
+                "2.2:2.1.beta3", "2.1.beta3:2.1.beta", "2.1.beta3:2.1.beta3",
+                "1.2:1.beta", "1.2.alpha:1.beta", "1.2.beta:1.beta", "1.2.beta1:1.beta",
+                "1.2:1.beta1", "1.2.alpha:1.beta1", "1.2.beta1:1.beta1",
+                "1.2.beta2:1.2.beta1", "1.2.beta:1.2.alpha", "beta:alpha"
+        ).forEach(pair -> {
+            String[] parts = pair.split(":");
+            assertTrue(Version.of(parts[0]).isSubstitutableFor(Version.of(parts[1])),
+                    () -> parts[0] + " should be substitutable for " + parts[1]);
+        });
 
-        assertFalse(new Version("beta").isSubstitutableFor(new Version("0")));
-        assertFalse(new Version("beta").isSubstitutableFor(new Version("1")));
-        assertFalse(new Version("0").isSubstitutableFor(new Version("1")));
-        assertFalse(new Version("1").isSubstitutableFor(new Version("1.2.3.4.5")));
-        assertFalse(new Version("2.1.beta3").isSubstitutableFor(new Version("2.1.rc")));
-        assertFalse(new Version("2.1.beta3").isSubstitutableFor(new Version("2.1.rc2")));
-        assertFalse(new Version("2.1.beta").isSubstitutableFor(new Version("2.1")));
-        assertFalse(new Version("2.1.beta3").isSubstitutableFor(new Version("2.1")));
-        assertFalse(new Version("2.1.beta3").isSubstitutableFor(new Version("2.2")));
-        assertFalse(new Version("2.1.beta").isSubstitutableFor(new Version("2.1.beta3")));
-        assertFalse(new Version("1.beta").isSubstitutableFor(new Version("1.2")));
-        assertFalse(new Version("1.beta").isSubstitutableFor(new Version("1.2.alpha")));
-        assertFalse(new Version("1.beta").isSubstitutableFor(new Version("1.2.beta")));
-        assertFalse(new Version("1.beta").isSubstitutableFor(new Version("1.2.beta1")));
-        assertFalse(new Version("1.beta1").isSubstitutableFor(new Version("1.2")));
-        assertFalse(new Version("1.beta1").isSubstitutableFor(new Version("1.2.alpha")));
-        assertFalse(new Version("1.beta1").isSubstitutableFor(new Version("1.2.beta1")));
-        assertFalse(new Version("1.2.beta1").isSubstitutableFor(new Version("1.2.beta2")));
-        assertFalse(new Version("1.2.alpha").isSubstitutableFor(new Version("1.2.beta")));
-        assertFalse(new Version("alpha").isSubstitutableFor(new Version("beta")));
+        // Pairs where first is NOT substitutable for second
+        Stream.of(
+                "beta:0", "beta:1", "0:1", "1:1.2.3.4.5",
+                "2.1.beta3:2.1.rc", "2.1.beta3:2.1.rc2", "2.1.beta:2.1", "2.1.beta3:2.1",
+                "2.1.beta3:2.2", "2.1.beta:2.1.beta3",
+                "1.beta:1.2", "1.beta:1.2.alpha", "1.beta:1.2.beta", "1.beta:1.2.beta1",
+                "1.beta1:1.2", "1.beta1:1.2.alpha", "1.beta1:1.2.beta1",
+                "1.2.beta1:1.2.beta2", "1.2.alpha:1.2.beta", "alpha:beta"
+        ).forEach(pair -> {
+            String[] parts = pair.split(":");
+            assertFalse(Version.of(parts[0]).isSubstitutableFor(Version.of(parts[1])),
+                    () -> parts[0] + " should NOT be substitutable for " + parts[1]);
+        });
     }
 
     @Test
@@ -72,84 +56,41 @@ public class VersionTest {
 
     @Test
     public void testDefaultTree() {
-        VersionTree<String> tree = genTree();
+        var tree = genTree();
         assertFalse(tree.isEmpty());
         assertEquals(6, tree.size());
     }
 
     @Test
     public void testDefaultTreeIterator() {
-        VersionTree<String> tree = genTree();
-        Iterator<Version> iter = tree.iterator();
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("1.0"), iter.next());
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("2.0"), iter.next());
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("2.1"), iter.next());
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("2.2"), iter.next());
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("2.2.0.1"), iter.next());
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("3.0"), iter.next());
-        assertFalse(iter.hasNext());
+        var tree = genTree();
+        assertIteratorContains(tree, "1.0", "2.0", "2.1", "2.2", "2.2.0.1", "3.0");
     }
 
     @Test
     public void testDefaultTreeSnipe() {
-        VersionTree<String> tree = genTree();
-        tree.remove(new Version("2.2"));
+        var tree = genTree();
+        tree.remove(Version.of("2.2"));
 
         assertFalse(tree.isEmpty());
         assertEquals(5, tree.size());
-
-        Iterator<Version> iter = tree.iterator();
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("1.0"), iter.next());
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("2.0"), iter.next());
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("2.1"), iter.next());
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("2.2.0.1"), iter.next());
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("3.0"), iter.next());
-        assertFalse(iter.hasNext());
+        assertIteratorContains(tree, "1.0", "2.0", "2.1", "2.2.0.1", "3.0");
     }
 
     @Test
     public void testDefaultTreePrune() {
-        VersionTree<String> tree = genTree();
-        tree.remove(new Version("2.2.0.1"));
+        var tree = genTree();
+        tree.remove(Version.of("2.2.0.1"));
 
         assertFalse(tree.isEmpty());
         assertEquals(5, tree.size());
-
-        Iterator<Version> iter = tree.iterator();
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("1.0"), iter.next());
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("2.0"), iter.next());
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("2.1"), iter.next());
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("2.2"), iter.next());
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("3.0"), iter.next());
-        assertFalse(iter.hasNext());
+        assertIteratorContains(tree, "1.0", "2.0", "2.1", "2.2", "3.0");
     }
 
     @Test
     public void testDefaultTreeClear() {
-        VersionTree<String> tree = genTree();
-
-        tree.remove(new Version("1.0"));
-        tree.remove(new Version("2.0"));
-        tree.remove(new Version("2.1"));
-        tree.remove(new Version("2.2"));
-        tree.remove(new Version("2.2.0.1"));
-        tree.remove(new Version("3.0"));
+        var tree = genTree();
+        tree.removeAll("1.0", "2.0", "2.1", "2.2", "2.2.0.1", "3.0");
 
         assertTrue(tree.isEmpty());
         assertEquals(0, tree.size());
@@ -158,51 +99,26 @@ public class VersionTest {
 
     @Test
     public void testDefaultTreePlus() {
-        VersionTree<String> tree = genTree();
-        tree.put(new Version("2.0"), "overwrite 2.0");
-        tree.put(new Version("3.1"), "three-one");
+        var tree = genTree();
+        tree.put("2.0", "overwrite 2.0");
+        tree.put("3.1", "three-one");
 
         assertFalse(tree.isEmpty());
         assertEquals(7, tree.size());
-
-        Iterator<Version> iter = tree.iterator();
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("1.0"), iter.next());
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("2.0"), iter.next());
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("2.1"), iter.next());
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("2.2"), iter.next());
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("2.2.0.1"), iter.next());
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("3.0"), iter.next());
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("3.1"), iter.next());
-        assertFalse(iter.hasNext());
+        assertIteratorContains(tree, "1.0", "2.0", "2.1", "2.2", "2.2.0.1", "3.0", "3.1");
     }
 
     @Test
     public void testDefaultSubTree() {
-        VersionTree<String> tree = genTree().subTree(new Version("2"));
+        var tree = genTree().subTree(Version.of("2"));
         assertFalse(tree.isEmpty());
         assertEquals(4, tree.size());
-        Iterator<Version> iter = tree.iterator();
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("2.0"), iter.next());
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("2.1"), iter.next());
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("2.2"), iter.next());
-        assertTrue(iter.hasNext());
-        assertEquals(new Version("2.2.0.1"), iter.next());
-        assertFalse(iter.hasNext());
+        assertIteratorContains(tree, "2.0", "2.1", "2.2", "2.2.0.1");
     }
 
     @Test
     public void testDefaultSubTreeEmpty() {
-        VersionTree<String> tree = genTree().subTree(new Version("2.3"));
+        var tree = genTree().subTree(Version.of("2.3"));
         assertTrue(tree.isEmpty());
         assertEquals(0, tree.size());
         assertFalse(tree.iterator().hasNext());
@@ -211,93 +127,83 @@ public class VersionTest {
     @Test
     public void testClosestVersion() {
         var tree = new VersionTree<String>();
-        tree.put(new Version("1"          ), "1"          );
-        tree.put(new Version("2"          ), "2"          );
-        tree.put(new Version("2.0"        ), "2.0"        );
-        tree.put(new Version("2.1"        ), "2.1"        );
-        tree.put(new Version("2.1.0"      ), "2.1.0"      );
-        tree.put(new Version("2.1.0.0"    ), "2.1.0.0"    );
-        tree.put(new Version("2.1.0.1"    ), "2.1.0.1"    );
-        tree.put(new Version("2.1.0.1.0"  ), "2.1.0.1.0"  );
-        tree.put(new Version("2.1.0.1.0.0"), "2.1.0.1.beta");
-        tree.put(new Version("2.1.0.1.0.0"), "2.1.0.1.0.0");
-        tree.put(new Version("2.2"        ), "2.2"        );
-        tree.put(new Version("4"          ), "4"          );
+        tree.put("1"          , "1"          );
+        tree.put("2"          , "2"          );
+        tree.put("2.0"        , "2.0"        );
+        tree.put("2.1"        , "2.1"        );
+        tree.put("2.1.0"      , "2.1.0"      );
+        tree.put("2.1.0.0"    , "2.1.0.0"    );
+        tree.put("2.1.0.1"    , "2.1.0.1"    );
+        tree.put("2.1.0.1.0"  , "2.1.0.1.0"  );
+        tree.put("2.1.0.1.0.0", "2.1.0.1.beta");
+        tree.put("2.1.0.1.0.0", "2.1.0.1.0.0");
+        tree.put("2.2"        , "2.2"        );
+        tree.put("4"          , "4"          );
 
-        assertNull(tree.findClosestVersion(new Version("beta")));
-        assertNull(tree.findClosestVersion(new Version("beta2")));
-        assertEquals(new Version("1"          ), tree.findClosestVersion(new Version("1")));
-        assertEquals(new Version("2.0"        ), tree.findClosestVersion(new Version("2")));
-        assertEquals(new Version("2"          ), tree.findClosestVersion(new Version("3")));
-        assertEquals(new Version("4"          ), tree.findClosestVersion(new Version("4")));
-        assertEquals(new Version("4"          ), tree.findClosestVersion(new Version("5")));
-        assertEquals(new Version("1"          ), tree.findClosestVersion(new Version("1.5")));
-        assertEquals(new Version("1"          ), tree.findClosestVersion(new Version("2.beta")));
-        assertEquals(new Version("2.0"        ), tree.findClosestVersion(new Version("2.1.beta")));
-        assertEquals(new Version("2.1.0.0"    ), tree.findClosestVersion(new Version("2.1")));
-        assertEquals(new Version("2.1.0.0"    ), tree.findClosestVersion(new Version("2.1.0")));
-        assertEquals(new Version("2.1.0"      ), tree.findClosestVersion(new Version("2.1.1")));
-        assertEquals(new Version("2.1.0.1.0.0"), tree.findClosestVersion(new Version("2.1.0.1")));
-        assertEquals(new Version("2.1.0.1.0"  ), tree.findClosestVersion(new Version("2.1.0.1.1")));
-        assertEquals(new Version("2.1.0.1"    ), tree.findClosestVersion(new Version("2.1.0.2")));
-        assertEquals(new Version("2.2"        ), tree.findClosestVersion(new Version("2.5.1.3")));
+        assertNull(tree.findClosestVersion(Version.of("beta")));
+        assertNull(tree.findClosestVersion(Version.of("beta2")));
+        assertEquals(Version.of("1"          ), tree.findClosestVersion(Version.of("1")));
+        assertEquals(Version.of("2.0"        ), tree.findClosestVersion(Version.of("2")));
+        assertEquals(Version.of("2"          ), tree.findClosestVersion(Version.of("3")));
+        assertEquals(Version.of("4"          ), tree.findClosestVersion(Version.of("4")));
+        assertEquals(Version.of("4"          ), tree.findClosestVersion(Version.of("5")));
+        assertEquals(Version.of("1"          ), tree.findClosestVersion(Version.of("1.5")));
+        assertEquals(Version.of("1"          ), tree.findClosestVersion(Version.of("2.beta")));
+        assertEquals(Version.of("2.0"        ), tree.findClosestVersion(Version.of("2.1.beta")));
+        assertEquals(Version.of("2.1.0.0"    ), tree.findClosestVersion(Version.of("2.1")));
+        assertEquals(Version.of("2.1.0.0"    ), tree.findClosestVersion(Version.of("2.1.0")));
+        assertEquals(Version.of("2.1.0"      ), tree.findClosestVersion(Version.of("2.1.1")));
+        assertEquals(Version.of("2.1.0.1.0.0"), tree.findClosestVersion(Version.of("2.1.0.1")));
+        assertEquals(Version.of("2.1.0.1.0"  ), tree.findClosestVersion(Version.of("2.1.0.1.1")));
+        assertEquals(Version.of("2.1.0.1"    ), tree.findClosestVersion(Version.of("2.1.0.2")));
+        assertEquals(Version.of("2.2"        ), tree.findClosestVersion(Version.of("2.5.1.3")));
     }
 
     @Test
     public void testHighestVersion() {
-        VersionTree<String> tree = genTree();
-        assertEquals(new Version("3.0"), tree.findHighestVersion());
-        assertEquals(new Version("3.0"), tree.findHighestVersion(new Version("3.0.0.0")));
-        assertEquals(new Version("2.1"), tree.findHighestVersion(new Version("2.1.0")));
-        assertEquals(new Version("2.2.0.1"), tree.findHighestVersion(new Version("2.1")));
+        var tree = genTree();
+        assertEquals(Version.of("3.0"), tree.findHighestVersion());
+        assertEquals(Version.of("3.0"), tree.findHighestVersion(Version.of("3.0.0.0")));
+        assertEquals(Version.of("2.1"), tree.findHighestVersion(Version.of("2.1.0")));
+        assertEquals(Version.of("2.2.0.1"), tree.findHighestVersion(Version.of("2.1")));
     }
 
     @Test
     public void testBuildString() {
-        assertTrue(new Version("1.2.3").isSameAs(new Version("1.2.3+this-is.a-Build.string-4.5.6")));
+        assertTrue(Version.of("1.2.3").isSameAs(Version.of("1.2.3+this-is.a-Build.string-4.5.6")));
     }
 
     @Test
     public void testMnemonics() {
-        assertTrue(new Version("1.2.3.alpha").isSameAs(new Version("1.2.3.Alpha")));
-        assertTrue(new Version("1.2.3.alpha").isSameAs(new Version("1.2.3.A")));
-        assertTrue(new Version("1.2.3.alpha").isSameAs(new Version("1.2.3.a")));
-        assertTrue(new Version("1.2.3.alpha").isSameAs(new Version("1.2.3.aLpHa")));
-        assertTrue(new Version("1.2.3.alpha2").isSameAs(new Version("1.2.3.Alpha2")));
-        assertTrue(new Version("1.2.3.alpha3").isSameAs(new Version("1.2.3.A3")));
-        assertTrue(new Version("1.2.3.alpha4").isSameAs(new Version("1.2.3.a4")));
-        assertTrue(new Version("1.2.3.alpha5").isSameAs(new Version("1.2.3.aLpHa5")));
-        assertTrue(new Version("1.2.3.alpha2").isSameAs(new Version("1.2.3.alpha.2")));
-        assertTrue(new Version("1.2.3.alpha2").isSameAs(new Version("1.2.3.Alpha.2")));
-        assertTrue(new Version("1.2.3.alpha3").isSameAs(new Version("1.2.3.A.3")));
-        assertTrue(new Version("1.2.3.alpha4").isSameAs(new Version("1.2.3.a.4")));
-        assertTrue(new Version("1.2.3.alpha5").isSameAs(new Version("1.2.3.aLpHa.5")));
-        assertTrue(new Version("1.2.beta3").isSameAs(new Version("1.2.B3")));
-        assertTrue(new Version("1.2.3rc").isSameAs(new Version("1.2.3R")));
-        assertTrue(new Version("ci").isSameAs(new Version("C")));
-        assertTrue(new Version("1.2.qa3").isSameAs(new Version("1.2.Q-3")));
+        // Pairs of versions that should be equivalent (isSameAs)
+        Stream.of(
+                "1.2.3.alpha:1.2.3.Alpha", "1.2.3.alpha:1.2.3.A", "1.2.3.alpha:1.2.3.a",
+                "1.2.3.alpha:1.2.3.aLpHa", "1.2.3.alpha2:1.2.3.Alpha2", "1.2.3.alpha3:1.2.3.A3",
+                "1.2.3.alpha4:1.2.3.a4", "1.2.3.alpha5:1.2.3.aLpHa5", "1.2.3.alpha2:1.2.3.alpha.2",
+                "1.2.3.alpha2:1.2.3.Alpha.2", "1.2.3.alpha3:1.2.3.A.3", "1.2.3.alpha4:1.2.3.a.4",
+                "1.2.3.alpha5:1.2.3.aLpHa.5", "1.2.beta3:1.2.B3", "1.2.3rc:1.2.3R",
+                "ci:C", "1.2.qa3:1.2.Q-3"
+        ).forEach(pair -> {
+            String[] parts = pair.split(":");
+            assertTrue(Version.of(parts[0]).isSameAs(Version.of(parts[1])),
+                    () -> parts[0] + " should be same as " + parts[1]);
+        });
     }
 
     @Test
     public void testBadVersions() {
-        assertThrows(IllegalStateException.class, () -> { new Version(""); });
-        assertThrows(IllegalStateException.class, () -> { new Version("1."); });
-        assertThrows(IllegalStateException.class, () -> { new Version(".1"); });
-        assertThrows(IllegalStateException.class, () -> { new Version("1.alpha.beta"); });
-        assertThrows(IllegalStateException.class, () -> { new Version("1.0alph"); });
-        assertThrows(IllegalStateException.class, () -> { new Version("1.0be"); });
-        assertThrows(IllegalStateException.class, () -> { new Version("1.0+^"); });
-        assertThrows(IllegalStateException.class, () -> { new Version("1.2.3B4+build!12345"); });
+        Stream.of("", "1.", ".1", "1.alpha.beta", "1.0alph", "1.0be", "1.0+^", "1.2.3B4+build!12345")
+                .forEach(bad -> assertThrows(IllegalStateException.class, () -> Version.of(bad)));
     }
 
     static VersionTree<String> genTree() {
         var tree = new VersionTree<String>();
-        tree.put(new Version("1.0"), "one-oh");
-        tree.put(new Version("2.0"), "two-oh");
-        tree.put(new Version("2.1"), "two-one");
-        tree.put(new Version("2.2"), "two-two");
-        tree.put(new Version("2.2.0.1"), "two-two-oh-one");
-        tree.put(new Version("3.0"), "three-oh");
+        tree.put("1.0", "one-oh");
+        tree.put("2.0", "two-oh");
+        tree.put("2.1", "two-one");
+        tree.put("2.2", "two-two");
+        tree.put("2.2.0.1", "two-two-oh-one");
+        tree.put("3.0", "three-oh");
         return tree;
     }
 
@@ -346,27 +252,27 @@ public class VersionTest {
 
     @Test
     public void testVersionReleaseCategory() {
-        assertEquals(Version.ReleaseCategory.GA, new Version("1.0").getReleaseCategory());
-        assertEquals(Version.ReleaseCategory.GA, new Version("2.3.4").getReleaseCategory());
-        assertEquals(Version.ReleaseCategory.ALPHA, new Version("1.0.alpha").getReleaseCategory());
-        assertEquals(Version.ReleaseCategory.ALPHA, new Version("1.0.alpha2").getReleaseCategory());
-        assertEquals(Version.ReleaseCategory.BETA, new Version("1.0.beta").getReleaseCategory());
-        assertEquals(Version.ReleaseCategory.BETA, new Version("2.1.beta3").getReleaseCategory());
-        assertEquals(Version.ReleaseCategory.RC, new Version("1.0.rc").getReleaseCategory());
-        assertEquals(Version.ReleaseCategory.RC, new Version("3.0.rc1").getReleaseCategory());
-        assertEquals(Version.ReleaseCategory.DEV, new Version("dev").getReleaseCategory());
-        assertEquals(Version.ReleaseCategory.DEV, new Version("1.0.dev").getReleaseCategory());
-        assertEquals(Version.ReleaseCategory.CI, new Version("ci").getReleaseCategory());
-        assertEquals(Version.ReleaseCategory.QA, new Version("1.0.qa").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.GA, Version.of("1.0").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.GA, Version.of("2.3.4").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.ALPHA, Version.of("1.0.alpha").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.ALPHA, Version.of("1.0.alpha2").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.BETA, Version.of("1.0.beta").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.BETA, Version.of("2.1.beta3").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.RC, Version.of("1.0.rc").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.RC, Version.of("3.0.rc1").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.DEV, Version.of("dev").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.DEV, Version.of("1.0.dev").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.CI, Version.of("ci").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.QA, Version.of("1.0.qa").getReleaseCategory());
 
         // Test getReleaseCategoryString (display format from master)
-        assertEquals("GA", new Version("1.0").getReleaseCategoryString());
-        assertEquals("alpha", new Version("1.0.alpha").getReleaseCategoryString());
-        assertEquals("beta", new Version("1.0.beta").getReleaseCategoryString());
-        assertEquals("rc", new Version("1.0.rc").getReleaseCategoryString());
-        assertEquals("Dev", new Version("1.0.dev").getReleaseCategoryString());
-        assertEquals("CI", new Version("ci").getReleaseCategoryString());
-        assertEquals("QA", new Version("1.0.qa").getReleaseCategoryString());
+        assertEquals("GA", Version.of("1.0").getReleaseCategoryString());
+        assertEquals("alpha", Version.of("1.0.alpha").getReleaseCategoryString());
+        assertEquals("beta", Version.of("1.0.beta").getReleaseCategoryString());
+        assertEquals("rc", Version.of("1.0.rc").getReleaseCategoryString());
+        assertEquals("Dev", Version.of("1.0.dev").getReleaseCategoryString());
+        assertEquals("CI", Version.of("ci").getReleaseCategoryString());
+        assertEquals("QA", Version.of("1.0.qa").getReleaseCategoryString());
     }
 
     // ----- VersionTree with pre-release versions ------------------------------------------------
@@ -374,91 +280,198 @@ public class VersionTest {
     @Test
     public void testVersionTreeWithPreRelease() {
         var tree = new VersionTree<String>();
-        tree.put(new Version("1.0.alpha"), "alpha");
-        tree.put(new Version("1.0.beta"), "beta");
-        tree.put(new Version("1.0.rc"), "rc");
-        tree.put(new Version("1.0"), "ga");
+        tree.put("1.0.alpha", "alpha");
+        tree.put("1.0.beta", "beta");
+        tree.put("1.0.rc", "rc");
+        tree.put("1.0", "ga");
 
         assertEquals(4, tree.size());
-        assertTrue(tree.contains(new Version("1.0.alpha")));
-        assertTrue(tree.contains(new Version("1.0.beta")));
-        assertTrue(tree.contains(new Version("1.0.rc")));
-        assertTrue(tree.contains(new Version("1.0")));
+        assertTrue(tree.contains(Version.of("1.0.alpha")));
+        assertTrue(tree.contains(Version.of("1.0.beta")));
+        assertTrue(tree.contains(Version.of("1.0.rc")));
+        assertTrue(tree.contains(Version.of("1.0")));
 
         // Test iteration order
         var iter = tree.iterator();
-        assertEquals(new Version("1.0"), iter.next());          // GA comes first (lower parts)
-        assertEquals(new Version("1.0.alpha"), iter.next());    // Then alpha (-3)
-        assertEquals(new Version("1.0.beta"), iter.next());     // Then beta (-2)
-        assertEquals(new Version("1.0.rc"), iter.next());       // Then rc (-1)
+        assertEquals(Version.of("1.0"), iter.next());          // GA comes first (lower parts)
+        assertEquals(Version.of("1.0.alpha"), iter.next());    // Then alpha (-3)
+        assertEquals(Version.of("1.0.beta"), iter.next());     // Then beta (-2)
+        assertEquals(Version.of("1.0.rc"), iter.next());       // Then rc (-1)
     }
 
     @Test
     public void testFindHighestVersionPrefersGA() {
         var tree = new VersionTree<String>();
-        tree.put(new Version("1.0.alpha"), "alpha");
-        tree.put(new Version("1.0.beta"), "beta");
-        tree.put(new Version("1.0.rc"), "rc");
-        tree.put(new Version("1.0"), "ga");
+        tree.put("1.0.alpha", "alpha");
+        tree.put("1.0.beta", "beta");
+        tree.put("1.0.rc", "rc");
+        tree.put("1.0", "ga");
 
         // Should prefer GA over pre-release
-        assertEquals(new Version("1.0"), tree.findHighestVersion());
+        assertEquals(Version.of("1.0"), tree.findHighestVersion());
     }
 
     @Test
     public void testFindHighestVersionWithOnlyPreRelease() {
         var tree = new VersionTree<String>();
-        tree.put(new Version("1.0.alpha"), "alpha");
-        tree.put(new Version("1.0.beta"), "beta");
-        tree.put(new Version("1.0.rc"), "rc");
+        tree.put("1.0.alpha", "alpha");
+        tree.put("1.0.beta", "beta");
+        tree.put("1.0.rc", "rc");
 
         // Should prefer RC (most stable pre-release)
-        assertEquals(new Version("1.0.rc"), tree.findHighestVersion());
+        assertEquals(Version.of("1.0.rc"), tree.findHighestVersion());
     }
 
     @Test
     public void testFindHighestVersionMixedMajorVersions() {
         var tree = new VersionTree<String>();
-        tree.put(new Version("1.0"), "1.0 ga");
-        tree.put(new Version("2.0.beta"), "2.0 beta");
+        tree.put("1.0", "1.0 ga");
+        tree.put("2.0.beta", "2.0 beta");
 
         // Should prefer 1.0 GA over 2.0 beta
-        assertEquals(new Version("1.0"), tree.findHighestVersion());
+        assertEquals(Version.of("1.0"), tree.findHighestVersion());
     }
 
     @Test
     public void testFindHighestVersionWithConstraint() {
         var tree = new VersionTree<String>();
-        tree.put(new Version("1.0"), "1.0");
-        tree.put(new Version("1.1.alpha"), "1.1 alpha");
-        tree.put(new Version("1.1.beta"), "1.1 beta");
-        tree.put(new Version("1.1"), "1.1");
-        tree.put(new Version("2.0.alpha"), "2.0 alpha");
+        tree.put("1.0", "1.0");
+        tree.put("1.1.alpha", "1.1 alpha");
+        tree.put("1.1.beta", "1.1 beta");
+        tree.put("1.1", "1.1");
+        tree.put("2.0.alpha", "2.0 alpha");
 
         // Find highest >= 1.1
-        assertEquals(new Version("1.1"), tree.findHighestVersion(new Version("1.1")));
+        assertEquals(Version.of("1.1"), tree.findHighestVersion(Version.of("1.1")));
 
         // Find highest >= 2.0 (only alpha available)
-        assertEquals(new Version("2.0.alpha"), tree.findHighestVersion(new Version("2.0")));
+        assertEquals(Version.of("2.0.alpha"), tree.findHighestVersion(Version.of("2.0")));
     }
 
     @Test
     public void testClosestVersionWithPreRelease() {
         var tree = new VersionTree<String>();
-        tree.put(new Version("1.0"), "1.0");
-        tree.put(new Version("1.1.beta"), "1.1 beta");
-        tree.put(new Version("1.1"), "1.1");
-        tree.put(new Version("2.0"), "2.0");
+        tree.put("1.0", "1.0");
+        tree.put("1.1.beta", "1.1 beta");
+        tree.put("1.1", "1.1");
+        tree.put("2.0", "2.0");
 
         // Looking for 1.1.alpha: beta (-2) > alpha (-3) in tree order, so falls back to 1.0
-        assertEquals(new Version("1.0"), tree.findClosestVersion(new Version("1.1.alpha")));
+        assertEquals(Version.of("1.0"), tree.findClosestVersion(Version.of("1.1.alpha")));
 
         // Looking for 1.1.rc: beta (-2) < rc (-1) in tree order, so finds beta as closest predecessor
         // Note: This is tree proximity, not substitutability - beta is NOT substitutable for rc
-        assertEquals(new Version("1.1.beta"), tree.findClosestVersion(new Version("1.1.rc")));
+        assertEquals(Version.of("1.1.beta"), tree.findClosestVersion(Version.of("1.1.rc")));
 
         // Looking for 1.2 should find 1.1
-        assertEquals(new Version("1.1"), tree.findClosestVersion(new Version("1.2")));
+        assertEquals(Version.of("1.1"), tree.findClosestVersion(Version.of("1.2")));
+    }
+
+    // ----- findLowestSubstitutable tests ---------------------------------------------------------
+
+    @Test
+    public void testLowestSubstitutable() {
+        var tree = new VersionTree<String>();
+        tree.put("1.0", "1.0");
+        tree.put("2.0", "2.0");
+        tree.put("2.1", "2.1");
+        tree.put("2.2", "2.2");
+        tree.put("3.0", "3.0");
+
+        // Exact match
+        assertEquals(Version.of("2.0"), tree.findLowestSubstitutable(Version.of("2.0")));
+
+        // Same version (normalized)
+        assertEquals(Version.of("2.0"), tree.findLowestSubstitutable(Version.of("2.0.0")));
+
+        // 2.0 is substitutable for 2 (derives from it)
+        assertEquals(Version.of("2.0"), tree.findLowestSubstitutable(Version.of("2")));
+
+        // Nothing substitutable for 4.0
+        assertNull(tree.findLowestSubstitutable(Version.of("4.0")));
+
+        // 2.0 is NOT substitutable for 1.5 (different branch)
+        // The lowest substitutable would be... nothing, since nothing derives from 1.5
+        assertNull(tree.findLowestSubstitutable(Version.of("1.5")));
+    }
+
+    @Test
+    public void testLowestSubstitutableWithPreRelease() {
+        var tree = new VersionTree<String>();
+        tree.put("1.0.beta", "1.0.beta");
+        tree.put("1.0.rc", "1.0.rc");
+        tree.put("1.0", "1.0");
+
+        // Tree iteration order: 1.0, 1.0.beta, 1.0.rc
+        // GA (1.0) is substitutable for all pre-release versions of 1.0.x
+        // So findLowestSubstitutable returns the lowest, which is 1.0
+        assertEquals(Version.of("1.0"), tree.findLowestSubstitutable(Version.of("1.0.beta")));
+        assertEquals(Version.of("1.0"), tree.findLowestSubstitutable(Version.of("1.0.rc")));
+        assertEquals(Version.of("1.0"), tree.findLowestSubstitutable(Version.of("1.0")));
+        assertEquals(Version.of("1.0"), tree.findLowestSubstitutable(Version.of("1.0.alpha")));
+
+        // When there's only pre-release versions
+        var preReleaseTree = new VersionTree<String>();
+        preReleaseTree.put("1.0.beta", "1.0.beta");
+        preReleaseTree.put("1.0.rc", "1.0.rc");
+
+        // beta is substitutable for alpha (comes after alpha in release cycle)
+        assertEquals(Version.of("1.0.beta"), preReleaseTree.findLowestSubstitutable(Version.of("1.0.alpha")));
+        // rc is substitutable for beta (comes after beta)
+        assertEquals(Version.of("1.0.beta"), preReleaseTree.findLowestSubstitutable(Version.of("1.0.beta")));
+        assertEquals(Version.of("1.0.rc"), preReleaseTree.findLowestSubstitutable(Version.of("1.0.rc")));
+    }
+
+    // ----- Version resolution tests (for ModuleRepository use case) ------------------------------
+
+    @Test
+    public void testVersionResolutionExactMatch() {
+        var tree = new VersionTree<String>();
+        tree.put("1.0", "1.0");
+        tree.put("2.0", "2.0");
+
+        // When requested version exists exactly
+        assertEquals(Version.of("2.0"), tree.findLowestSubstitutable(Version.of("2.0")));
+    }
+
+    @Test
+    public void testVersionResolutionNormalizedMatch() {
+        var tree = new VersionTree<String>();
+        tree.put("2.0", "2.0");
+
+        // 2.0 and 2.0.0 are the "same" version
+        assertEquals(Version.of("2.0"), tree.findLowestSubstitutable(Version.of("2.0.0")));
+    }
+
+    @Test
+    public void testVersionResolutionSubstituteWhenNotExact() {
+        var tree = new VersionTree<String>();
+        tree.put("2.0", "2.0");
+        tree.put("2.1", "2.1");
+
+        // 2.0 and 2.1 are both substitutable for version "2"
+        // findLowestSubstitutable returns the LOWEST one that works
+        assertEquals(Version.of("2.0"), tree.findLowestSubstitutable(Version.of("2")));
+    }
+
+    @Test
+    public void testVersionResolutionNoMatch() {
+        var tree = new VersionTree<String>();
+        tree.put("1.0", "1.0");
+
+        // Nothing substitutable for 2.0
+        assertNull(tree.findLowestSubstitutable(Version.of("2.0")));
+    }
+
+    @Test
+    public void testVersionResolutionWithIsSameAs() {
+        // Tests that isSameAs works correctly for normalized versions
+        assertTrue(Version.of("2.0").isSameAs(Version.of("2.0.0")));
+        assertTrue(Version.of("2.0.0").isSameAs(Version.of("2.0")));
+
+        // And mutual substitutability
+        assertTrue(Version.of("2.0").isSubstitutableFor(Version.of("2.0.0")));
+        assertTrue(Version.of("2.0.0").isSubstitutableFor(Version.of("2.0")));
     }
 
     // ----- Lexer edge cases (via Version parsing) -----------------------------------------------
@@ -466,57 +479,63 @@ public class VersionTest {
     @Test
     public void testAllPreReleaseCategories() {
         // Test all pre-release categories parse correctly
-        assertEquals(Version.ReleaseCategory.CI, new Version("ci").getReleaseCategory());
-        assertEquals(Version.ReleaseCategory.CI, new Version("1.0.ci").getReleaseCategory());
-        assertEquals(Version.ReleaseCategory.DEV, new Version("dev").getReleaseCategory());
-        assertEquals(Version.ReleaseCategory.DEV, new Version("1.0.dev2").getReleaseCategory());
-        assertEquals(Version.ReleaseCategory.QA, new Version("qa").getReleaseCategory());
-        assertEquals(Version.ReleaseCategory.QA, new Version("1.0.qa1").getReleaseCategory());
-        assertEquals(Version.ReleaseCategory.ALPHA, new Version("alpha").getReleaseCategory());
-        assertEquals(Version.ReleaseCategory.ALPHA, new Version("1.0.alpha3").getReleaseCategory());
-        assertEquals(Version.ReleaseCategory.BETA, new Version("beta").getReleaseCategory());
-        assertEquals(Version.ReleaseCategory.BETA, new Version("1.0.beta4").getReleaseCategory());
-        assertEquals(Version.ReleaseCategory.RC, new Version("rc").getReleaseCategory());
-        assertEquals(Version.ReleaseCategory.RC, new Version("1.0.rc5").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.CI, Version.of("ci").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.CI, Version.of("1.0.ci").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.DEV, Version.of("dev").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.DEV, Version.of("1.0.dev2").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.QA, Version.of("qa").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.QA, Version.of("1.0.qa1").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.ALPHA, Version.of("alpha").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.ALPHA, Version.of("1.0.alpha3").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.BETA, Version.of("beta").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.BETA, Version.of("1.0.beta4").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.RC, Version.of("rc").getReleaseCategory());
+        assertEquals(Version.ReleaseCategory.RC, Version.of("1.0.rc5").getReleaseCategory());
     }
 
     @Test
     public void testVersionNormalize() {
-        assertEquals(new Version("1"), new Version("1.0.0.0").normalize());
-        assertEquals(new Version("1.2"), new Version("1.2.0.0").normalize());
-        assertEquals(new Version("1.2.3"), new Version("1.2.3.0").normalize());
-        assertEquals(new Version("1.2.3"), new Version("1.2.3").normalize());
+        assertEquals(Version.of("1"), Version.of("1.0.0.0").normalize());
+        assertEquals(Version.of("1.2"), Version.of("1.2.0.0").normalize());
+        assertEquals(Version.of("1.2.3"), Version.of("1.2.3.0").normalize());
+        assertEquals(Version.of("1.2.3"), Version.of("1.2.3").normalize());
 
         // Pre-release versions
-        assertEquals(new Version("1.beta"), new Version("1.beta").normalize());
-        assertEquals(new Version("1.beta2"), new Version("1.beta2").normalize());
+        assertEquals(Version.of("1.beta"), Version.of("1.beta").normalize());
+        assertEquals(Version.of("1.beta2"), Version.of("1.beta2").normalize());
     }
 
     @Test
     public void testVersionComparison() {
         // GA versions compare by numeric parts
-        assertTrue(new Version("1.0").compareTo(new Version("2.0")) < 0);
-        assertTrue(new Version("1.1").compareTo(new Version("1.2")) < 0);
-        assertTrue(new Version("1.0.0").compareTo(new Version("1.0.1")) < 0);
+        assertTrue(Version.of("1.0").compareTo(Version.of("2.0")) < 0);
+        assertTrue(Version.of("1.1").compareTo(Version.of("1.2")) < 0);
+        assertTrue(Version.of("1.0.0").compareTo(Version.of("1.0.1")) < 0);
 
         // Pre-release codes are negative, so alpha (-3) < beta (-2) < rc (-1)
-        assertTrue(new Version("1.0.alpha").compareTo(new Version("1.0.beta")) < 0);
-        assertTrue(new Version("1.0.beta").compareTo(new Version("1.0.rc")) < 0);
+        assertTrue(Version.of("1.0.alpha").compareTo(Version.of("1.0.beta")) < 0);
+        assertTrue(Version.of("1.0.beta").compareTo(Version.of("1.0.rc")) < 0);
 
         // Note: compareTo is lexicographic by parts, not semantic stability ordering.
         // "1.0.rc" has 3 parts [1, 0, -1], "1.0" has 2 parts [1, 0].
         // After comparing shared parts (equal), the longer version is "greater".
         // Use isGARelease() and getReleaseCategory() for stability comparison.
-        assertTrue(new Version("1.0.rc").compareTo(new Version("1.0")) > 0);
-        assertTrue(new Version("1.0").compareTo(new Version("1.0.rc")) < 0);
+        assertTrue(Version.of("1.0.rc").compareTo(Version.of("1.0")) > 0);
+        assertTrue(Version.of("1.0").compareTo(Version.of("1.0.rc")) < 0);
 
         // But rc is still a pre-release
-        assertFalse(new Version("1.0.rc").isGARelease());
-        assertTrue(new Version("1.0").isGARelease());
+        assertFalse(Version.of("1.0.rc").isGARelease());
+        assertTrue(Version.of("1.0").isGARelease());
 
         // And GA is more stable than RC
-        assertTrue(new Version("1.0").getReleaseCategory().compareTo(
-                new Version("1.0.rc").getReleaseCategory()) > 0);
+        assertTrue(Version.of("1.0").getReleaseCategory().compareTo(
+                Version.of("1.0.rc").getReleaseCategory()) > 0);
+    }
+
+    static void assertIteratorContains(VersionTree<?> tree, String... expectedVersions) {
+        List<Version> expected = Stream.of(expectedVersions).map(Version::of).toList();
+        List<Version> actual = tree.stream().toList();
+        assertEquals(expected, actual);
     }
 
     static void out() {

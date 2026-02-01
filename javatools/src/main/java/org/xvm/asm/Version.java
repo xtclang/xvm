@@ -100,6 +100,20 @@ public class Version
         this.build   = build;
     }
 
+    // ----- factory methods -----------------------------------------------------------------------
+
+    /**
+     * Create a Version from a version string.
+     *
+     * @param literal  the version string (e.g., "2.1.0", "1.0.beta3")
+     *
+     * @return the Version
+     */
+    @NotNull
+    public static Version of(@NotNull String literal) {
+        return new Version(literal);
+    }
+
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
@@ -504,12 +518,10 @@ public class Version
      * @return the number of GA parts (excluding any trailing pre-release indicator and its version)
      */
     private static int gaSize(List<Integer> parts) {
-        for (int i = 0, size = parts.size(); i < size; i++) {
-            if (parts.get(i) < 0) {
-                return i;
-            }
-        }
-        return parts.size();
+        return IntStream.range(0, parts.size())
+                .filter(i -> parts.get(i) < 0)
+                .findFirst()
+                .orElse(parts.size());
     }
 
     /**
@@ -525,13 +537,10 @@ public class Version
      */
     private static OptionalInt comparePreReleaseParts(List<Integer> thisParts, int thisOffset,
                                                       List<Integer> thatParts, int thatOffset, int count) {
-        for (int i = 0; i < count; i++) {
-            int diff = thisParts.get(thisOffset + i) - thatParts.get(thatOffset + i);
-            if (diff != 0) {
-                return OptionalInt.of(diff);
-            }
-        }
-        return OptionalInt.empty();
+        return IntStream.range(0, count)
+                .map(i -> thisParts.get(thisOffset + i) - thatParts.get(thatOffset + i))
+                .filter(diff -> diff != 0)
+                .findFirst();
     }
 
     // ----- fields --------------------------------------------------------------------------------

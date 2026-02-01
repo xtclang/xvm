@@ -114,9 +114,7 @@ public final class VersionTree<V>
      * @param action  the action to perform for each version-value pair
      */
     public void forEach(BiConsumer<Version, V> action) {
-        for (var ver : this) {
-            action.accept(ver, Objects.requireNonNull(get(ver)));
-        }
+        entryStream().forEach(e -> action.accept(e.getKey(), e.getValue()));
     }
 
     /**
@@ -138,17 +136,6 @@ public final class VersionTree<V>
      */
     public boolean contains(@NotNull Version ver) {
         return findNode(Objects.requireNonNull(ver)).isPresent();
-    }
-
-    /**
-     * Test for the presence of all the version from the specified tree in this tree.
-     *
-     * @param that  the VersionTree of versions to test for; the values in the tree are ignored
-     *
-     * @return true iff all the versions from that tree exist in this tree
-     */
-    public boolean containsAll(@NotNull VersionTree<?> that) {
-        return Objects.requireNonNull(that).stream().allMatch(this::contains);
     }
 
     /**
@@ -247,6 +234,35 @@ public final class VersionTree<V>
     }
 
     /**
+     * Find the lowest (oldest) version in the tree that is substitutable for the specified version.
+     * A version is substitutable if it is the same as or derives from the requested version.
+     * <p/>
+     * This is useful for dependency resolution where you need version X or any compatible
+     * newer version, preferring the oldest match for stability.
+     * <p/>
+     * Examples (given tree contains: 1.0, 2.0, 2.1, 2.2, 3.0):
+     * <ul>
+     * <li>findLowestSubstitutable(2.0) -> 2.0 (exact match)</li>
+     * <li>findLowestSubstitutable(2.0.0) -> 2.0 (same version, normalized)</li>
+     * <li>findLowestSubstitutable(1.5) -> 2.0 (lowest version >= 1.5)</li>
+     * <li>findLowestSubstitutable(2) -> 2.0 (2.0 is substitutable for 2)</li>
+     * <li>findLowestSubstitutable(4.0) -> null (nothing >= 4.0)</li>
+     * </ul>
+     *
+     * @param ver  the minimum version requirement
+     *
+     * @return the lowest version that is substitutable for the requested version, or null if none
+     */
+    @Nullable
+    public Version findLowestSubstitutable(@NotNull Version ver) {
+        Objects.requireNonNull(ver);
+        return stream()
+                .filter(v -> v.isSubstitutableFor(ver))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
      * Store the specified value for the specified version.
      *
      * @param ver    the version
@@ -256,6 +272,16 @@ public final class VersionTree<V>
         var node = ensureNode(Objects.requireNonNull(ver));
         node.version = ver;
         node.value = Objects.requireNonNull(value);
+    }
+
+    /**
+     * Convenience method to store a value for a version specified as a string.
+     *
+     * @param ver    the version string
+     * @param value  the value to store for that version
+     */
+    public void put(@NotNull String ver, @NotNull V value) {
+        put(Version.of(ver), value);
     }
 
     /**
@@ -277,22 +303,21 @@ public final class VersionTree<V>
     }
 
     /**
-     * Remove all the version in the specified tree from this tree.
+     * Remove all the specified versions from this tree.
      *
-     * @param that  the VersionTree of versions to remove; the values in the tree are ignored
+     * @param versions  the versions to remove
      */
-    public void removeAll(@NotNull VersionTree<?> that) {
-        Objects.requireNonNull(that).stream().forEach(this::remove);
+    public void removeAll(@NotNull Version... versions) {
+        Stream.of(versions).forEach(this::remove);
     }
 
     /**
-     * Retain only the versions in this tree that exist in the specified tree.
+     * Remove all the specified versions (as strings) from this tree.
      *
-     * @param that  the VersionTree of versions to retain; the values in the tree are ignored
+     * @param versions  the version strings to remove
      */
-    public void retainAll(@NotNull VersionTree<?> that) {
-        Objects.requireNonNull(that);
-        stream().filter(ver -> !that.contains(ver)).toList().forEach(this::remove);
+    public void removeAll(@NotNull String... versions) {
+        Stream.of(versions).map(Version::of).forEach(this::remove);
     }
 
     /**
@@ -512,24 +537,15 @@ public final class VersionTree<V>
          */
         @Nullable
         Node<V> findClosestNode(Version ver, int iPart) {
-            int     nPart = iPart >= ver.size() ? 0 : ver.getPart(iPart);
-            Node<V> best  = isPresent() && nPart >= 0 ? this : null;
+            int     nPart    = iPart >= ver.size() ? 0 : ver.getPart(iPart);
+            Node<V> fallback = isPresent() && nPart >= 0 ? this : null;
 
-            for (var kid : kids) {
-                if (kid.part == nPart) {
-                    var node = kid.findClosestNode(ver, iPart + 1);
-                    if (node != null) {
-                        return node;
-                    }
-                    break;
-                }
-                if (kid.part < nPart && kid.isPresent()) {
-                    best = kid;
-                } else if (kid.part > nPart) {
-                    break;
-                }
-            }
-            return best;
+            return Optional.ofNullable(getChild(nPart))
+                    .map(kid -> kid.findClosestNode(ver, iPart + 1))
+                    .or(() -> kids.reversed().stream()
+                            .filter(k -> k.part < nPart && k.isPresent())
+                            .findFirst())
+                    .orElse(fallback);
         }
 
         /**
@@ -560,39 +576,28 @@ public final class VersionTree<V>
 
             if (iPart < cMatch) {
                 int nPart = ver.getPart(iPart);
-                var kid   = getChild(nPart);
-                if (kid != null) {
-                    return kid.findHighestNode(ver, iPart + 1);
-                }
-                if (nPart == 0 && isPresent()) {
-                    // remaining parts must all be zero for this node to match
-                    if (ver.asList().subList(iPart + 1, cParts).stream().anyMatch(p -> p != 0)) {
-                        return null;
-                    }
-                    return this;
-                }
-                return null;
+                return Optional.ofNullable(getChild(nPart))
+                        .map(kid -> kid.findHighestNode(ver, iPart + 1))
+                        .orElseGet(() -> nPart == 0 && isPresent() &&
+                                ver.asList().subList(iPart + 1, cParts).stream().allMatch(p -> p == 0) ? this : null);
             }
 
             if (iPart < cParts) {
-                int     nPart     = ver.getPart(iPart);
-                Node<V> nodeNonGA = null;
-                for (var kid : kids.reversed()) {
-                    if (kid.part < nPart) {
-                        break;
-                    }
-                    var node = kid.part == nPart ? kid.findHighestNode(ver, iPart + 1) : kid.findHighestNode();
-                    if (node != null) {
-                        if (node.getVersion().isGARelease()) {
-                            return node;
-                        }
-                        if (nodeNonGA == null || node.getVersion().getReleaseCategory().isMoreStableThan(nodeNonGA.getVersion().getReleaseCategory())) {
-                            nodeNonGA = node;
-                        }
-                    }
-                }
-                return isPresent() && (nodeNonGA == null || getVersion().isGARelease()) && getVersion().isSubstitutableFor(ver)
-                        ? this : nodeNonGA;
+                int nPart = ver.getPart(iPart);
+                var best = kids.reversed().stream()
+                        .takeWhile(kid -> kid.part >= nPart)
+                        .map(kid -> kid.part == nPart ? kid.findHighestNode(ver, iPart + 1) : kid.findHighestNode())
+                        .filter(Objects::nonNull)
+                        .reduce((acc, node) ->
+                                acc.getVersion().isGARelease() ? acc :
+                                node.getVersion().isGARelease() ? node :
+                                node.getVersion().getReleaseCategory().isMoreStableThan(acc.getVersion().getReleaseCategory()) ? node : acc)
+                        .orElse(null);
+
+                // GA from children wins; otherwise prefer this if GA, substitutable, and no better candidate
+                return best != null && best.getVersion().isGARelease() ? best :
+                       isPresent() && (best == null || getVersion().isGARelease()) && getVersion().isSubstitutableFor(ver)
+                        ? this : best;
             }
 
             return findHighestNode();
@@ -613,22 +618,18 @@ public final class VersionTree<V>
          */
         @Nullable
         Node<V> findHighestNode() {
-            // Find first GA release among children, or first candidate if no GA exists
-            Node<V> best = null;
-            for (var kid : kids.reversed()) {
-                var candidate = kid.findHighestNode();
-                if (candidate != null) {
-                    if (candidate.getVersion().isGARelease()) {
-                        return candidate;
-                    }
-                    if (best == null) {
-                        best = candidate;
-                    }
-                }
-            }
+            // Find first GA among children, or keep first non-GA as fallback
+            var best = kids.reversed().stream()
+                    .map(Node::findHighestNode)
+                    .filter(Objects::nonNull)
+                    .reduce((first, next) ->
+                            first.getVersion().isGARelease() ? first :
+                            next.getVersion().isGARelease() ? next : first)
+                    .orElse(null);
 
-            // Prefer this node if it's a GA release, otherwise return best non-GA candidate
-            return isPresent() && (best == null || getVersion().isGARelease()) ? this : best;
+            // GA from children wins; otherwise prefer this if GA or no candidate
+            return best != null && best.getVersion().isGARelease() ? best :
+                   isPresent() && (best == null || getVersion().isGARelease()) ? this : best;
         }
 
         /**
@@ -649,10 +650,7 @@ public final class VersionTree<V>
          * Recursively copy this node and its children to the specified tree.
          */
         void copyTo(VersionTree<V> tree) {
-            var v = value;
-            if (v != null) {
-                tree.put(getVersion(), v);
-            }
+            Optional.ofNullable(value).ifPresent(v -> tree.put(getVersion(), v));
             kids.forEach(kid -> kid.copyTo(tree));
         }
 

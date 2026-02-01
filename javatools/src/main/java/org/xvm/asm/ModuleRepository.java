@@ -93,34 +93,25 @@ public interface ModuleRepository {
             return module;
         }
 
-        Version useVersion = null;
+        // First check for exact containment
         if (module.containsVersion(version)) {
-            useVersion = version;
-        } else {
-            // check each version in the module to see if it would work; keep the most appropriate one
-            for (Version possibleVer : module.getVersions()) {
-                if (possibleVer.isSubstitutableFor(version)) {
-                    if (version.isSubstitutableFor(possibleVer)) {
-                        // use that version; it's the same as this version (except for .0 etc.)
-                        useVersion = possibleVer;
-                        break;
-                    }
-
-                    if (!fExact) {
-                        if (useVersion == null || useVersion.isSubstitutableFor(possibleVer)) {
-                            // use the oldest available version that matches
-                            useVersion = possibleVer;
-                        }
-                    }
-                }
-            }
-
-            if (useVersion == null) {
-                return null;
-            }
+            return module.extractVersion(version);
         }
 
-        return module.extractVersion(useVersion);
+        // Find the lowest (oldest) version that is substitutable for the requested version
+        Version useVersion = module.getVersions().findLowestSubstitutable(version);
+        if (useVersion == null) {
+            return null;
+        }
+
+        // Check if it's a "same version" match (mutually substitutable, e.g., 2.0 vs 2.0.0)
+        boolean sameVersion = version.isSubstitutableFor(useVersion);
+        if (sameVersion || !fExact) {
+            return module.extractVersion(useVersion);
+        }
+
+        // fExact was requested but only a non-exact substitute was found
+        return null;
     }
 
     /**
