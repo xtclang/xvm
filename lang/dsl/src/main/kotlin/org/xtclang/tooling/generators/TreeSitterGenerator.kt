@@ -109,31 +109,34 @@ class TreeSitterGenerator(
                 .joinToString(", ") { "'${escapeJsString(it.symbol)}'" }
 
         val i2 = indent(2)
+        val d = '$' // JavaScript's $ for tree-sitter DSL
         val booleanRule =
             if (model.booleanLiterals.isNotEmpty()) {
-                "${i2}boolean_literal: \$ => choice(${model.booleanLiterals.joinToString(", ") { "'$it'" }}),"
+                "${i2}boolean_literal: $d => choice(${model.booleanLiterals.joinToString(", ") { "'$it'" }}),"
             } else {
-                "${i2}boolean_literal: \$ => choice('True', 'False'),"
+                "${i2}boolean_literal: $d => choice('True', 'False'),"
             }
 
         val nullRule =
             model.nullLiteral?.let {
-                "${i2}null_literal: \$ => '$it',"
-            } ?: "${i2}null_literal: \$ => 'Null',"
+                "${i2}null_literal: $d => '$it',"
+            } ?: "${i2}null_literal: $d => 'Null',"
 
         val visibilityRule =
             if (model.visibilityKeywords.isNotEmpty()) {
                 val mods = model.visibilityKeywords.joinToString(", ") { "'$it'" }
-                """$i2// Visibility modifiers
-$i2// Supports single visibility (public, private, protected) and dual visibility (public/private)
-${i2}visibility_modifier: $ => choice(
-$i2    // Single visibility
-$i2    $mods,
-$i2    // Dual visibility: public/private, protected/private, etc.
-$i2    seq(choice($mods), '/', choice($mods)),
-$i2),"""
+                """
+                |// Visibility modifiers
+                |// Supports single visibility (public, private, protected) and dual visibility (public/private)
+                |visibility_modifier: $d => choice(
+                |    // Single visibility
+                |    $mods,
+                |    // Dual visibility: public/private, protected/private, etc.
+                |    seq(choice($mods), '/', choice($mods)),
+                |),
+                """.trimMargin().prependIndent(i2)
             } else {
-                "${i2}visibility_modifier: \$ => choice('public', 'private', 'protected'),"
+                "${i2}visibility_modifier: $d => choice('public', 'private', 'protected'),"
             }
 
         return template
@@ -286,6 +289,7 @@ $i2),"""
 
             val byPrecedence = binaryOps.groupBy { it.precedence }.toSortedMap()
             val i3 = indent(3)
+            val d = '$' // JavaScript's $ for tree-sitter DSL
 
             byPrecedence.entries.forEachIndexed { index, (precedence, ops) ->
                 val precFn =
@@ -303,7 +307,7 @@ $i2),"""
                     }
 
                 val comma = if (index < byPrecedence.size - 1) "," else ""
-                appendLine("$i3$precFn($precedence, seq(\$._expression, $choiceExpr, \$._expression))$comma")
+                appendLine("$i3$precFn($precedence, seq($d._expression, $choiceExpr, $d._expression))$comma")
             }
         }.trimEnd()
 

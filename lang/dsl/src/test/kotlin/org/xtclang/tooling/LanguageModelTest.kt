@@ -201,6 +201,7 @@ class LanguageModelTest {
         return null
     }
 
+    @Suppress("UNUSED") // NOTE: Called implicitly
     private fun xvmRootExists(): Boolean = findXvmRoot() != null
 
     @Test

@@ -61,10 +61,10 @@ object TemplateScannerSpec {
      * Scanner logic - determined by which tokens are valid:
      *
      * 1. If SINGLELINE_CONTENT or SINGLELINE_EXPR_START or SINGLELINE_END valid:
-     *    → In single-line template: scan until { or ", handle escapes
+     *    → In single-line template: scan until '{' or ", handle escapes
      *
      * 2. If MULTILINE_CONTENT or MULTILINE_EXPR_START or MULTILINE_END valid:
-     *    → In multiline template: scan until { or newline-without-continuation
+     *    → In multiline template: scan until '{' or newline-without-continuation
      *
      * 3. If TEMPLATE_EXPR_END valid and see }:
      *    → End of embedded expression

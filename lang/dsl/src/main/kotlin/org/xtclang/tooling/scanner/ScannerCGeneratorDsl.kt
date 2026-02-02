@@ -601,7 +601,7 @@ object ScannerCGeneratorDsl {
                 emptyLine()
 
                 // Single-line template section
-                sectionComment("""Single-line template (${'$'}"...")""")
+                sectionComment($"""Single-line template ($"...")""")
                 ifBlock("in_singleline") {
                     variable("bool", "has_content", "false")
                     emptyLine()
@@ -637,7 +637,7 @@ object ScannerCGeneratorDsl {
                 emptyLine()
 
                 // Multiline template section
-                sectionComment("""Multiline template (${'$'}|...|)""")
+                sectionComment($"""Multiline template ($|...|)""")
                 ifBlock("in_multiline") {
                     variable("bool", "has_content", "false")
                     emptyLine()

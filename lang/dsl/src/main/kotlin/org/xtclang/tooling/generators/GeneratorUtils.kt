@@ -89,22 +89,3 @@ fun JsonArrayBuilder.include(ref: String) {
 fun JsonArrayBuilder.includeAll(vararg refs: String) {
     refs.forEach { include(it) }
 }
-
-// =============================================================================
-// StringBuilder Helpers for Code Generation
-// =============================================================================
-
-/**
- * Append multiple lines at once.
- */
-fun StringBuilder.appendLines(vararg lines: String) {
-    lines.forEach { appendLine(it) }
-}
-
-/**
- * Append a blank line followed by the given lines.
- */
-fun StringBuilder.appendSection(vararg lines: String) {
-    appendLine()
-    lines.forEach { appendLine(it) }
-}
