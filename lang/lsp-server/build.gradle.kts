@@ -178,6 +178,18 @@ tasks.withType<JavaCompile>().configureEach {
     options.compilerArgs.add("-Xlint:deprecation")
 }
 
+// =============================================================================
+// Ensure ktlint runs during normal development
+// =============================================================================
+// By default, ktlint only runs as part of 'check', not during compilation.
+// This means running 'runIde', 'jar', or 'assemble' skips ktlint entirely.
+// We fix this by making compileKotlin depend on ktlintCheck, so any build
+// that compiles code also verifies formatting.
+val ktlintCheck by tasks.existing
+val compileKotlin by tasks.existing {
+    dependsOn(ktlintCheck)
+}
+
 tasks.test {
     useJUnitPlatform()
     testLogging {

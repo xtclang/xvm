@@ -36,6 +36,12 @@ tasks.test {
     useJUnitPlatform()
 }
 
+// Ensure ktlint runs during normal development (not just 'check')
+val ktlintCheck by tasks.existing
+val compileKotlin by tasks.existing {
+    dependsOn(ktlintCheck)
+}
+
 // =============================================================================
 // Editor Support Generation
 // =============================================================================

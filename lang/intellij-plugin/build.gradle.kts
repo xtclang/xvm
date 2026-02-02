@@ -121,8 +121,12 @@ val compileJava by tasks.existing {
     dependsOn(syncXtcProjectCreator)
 }
 
+// Ensure ktlint runs during normal development (not just 'check')
+val ktlintCheck by tasks.existing
+
 val compileKotlin by tasks.existing {
     dependsOn(syncXtcProjectCreator)
+    dependsOn(ktlintCheck)
 }
 
 // Copy LSP version properties to plugin resources so the plugin can display version info
