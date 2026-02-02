@@ -14,10 +14,8 @@ import org.xvm.lsp.treesitter.XtcQueryEngine
 import org.xvm.lsp.treesitter.XtcTree
 import java.io.Closeable
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.system.measureNanoTime
-
-/** Format a Double with 1 decimal place for logging */
-private fun Double.ms() = "%.1f".format(this)
+import kotlin.time.Duration
+import kotlin.time.measureTime
 
 /**
  * XTC Compiler Adapter implementation using Tree-sitter for fast, syntax-level intelligence.
@@ -84,12 +82,12 @@ class TreeSitterAdapter :
         const val MIN_JAVA_VERSION = 23
 
         /**
-         * Execute a block and return its result along with elapsed time in milliseconds (with sub-ms precision).
+         * Execute a block and return its result along with elapsed duration.
          */
-        private inline fun <T> timed(block: () -> T): Pair<T, Double> {
+        private inline fun <T> timed(block: () -> T): Pair<T, Duration> {
             var result: T
-            val nanos = measureNanoTime { result = block() }
-            return result to (nanos / 1_000_000.0)
+            val duration = measureTime { result = block() }
+            return result to duration
         }
 
         // XTC keywords for completion
@@ -252,12 +250,12 @@ class TreeSitterAdapter :
         compilationResults[uri] = result
 
         logger.info(
-            "TreeSitterAdapter: parsed in {}ms ({}), {} errors, {} symbols (query: {}ms)",
-            parseElapsed.ms(),
+            "TreeSitterAdapter: parsed in {} ({}), {} errors, {} symbols (query: {})",
+            parseElapsed,
             if (isIncremental) "incremental" else "full",
             diagnostics.size,
             symbols.size,
-            queryElapsed.ms(),
+            queryElapsed,
         )
 
         return result

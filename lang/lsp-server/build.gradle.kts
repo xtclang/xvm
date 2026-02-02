@@ -85,23 +85,6 @@ val generateBuildInfo by tasks.registering {
     }
 }
 
-// Detect platform for native library directory
-val osName: String = System.getProperty("os.name").lowercase()
-val osArch: String = System.getProperty("os.arch")
-
-val nativePlatformDir: String =
-    when {
-        osName.contains("windows") && osArch in listOf("amd64", "x86_64") -> "windows-x64"
-        osName.contains("mac") && osArch in listOf("aarch64", "arm64") -> "darwin-arm64"
-        osName.contains("mac") && osArch in listOf("amd64", "x86_64") -> "darwin-x64"
-        osName.contains("linux") && osArch in listOf("aarch64", "arm64") -> "linux-arm64"
-        osName.contains("linux") && osArch in listOf("amd64", "x86_64") -> "linux-x64"
-        else -> throw GradleException(
-            "Unsupported platform: $osName/$osArch. " +
-                "Supported: darwin-arm64, darwin-x64, linux-arm64, linux-x64, windows-x64",
-        )
-    }
-
 sourceSets.main {
     resources.srcDir(generateBuildInfo.map { layout.buildDirectory.dir("generated/resources/buildinfo") })
 }
@@ -167,17 +150,18 @@ dependencies {
 }
 
 // =============================================================================
-// Copy Native Library to Resources
+// Copy Native Libraries to Resources
 // =============================================================================
-// Copy the tree-sitter native library to the resources directory so it can be
-// bundled in the JAR and loaded at runtime.
+// Copy tree-sitter native libraries for ALL platforms to the resources directory
+// so they can be bundled in the JAR. The runtime loader will select the appropriate
+// library based on the current platform.
 
 val copyNativeLibToResources by tasks.registering(Copy::class) {
     group = "build"
-    description = "Copy tree-sitter native library to resources"
+    description = "Copy tree-sitter native libraries for all platforms to resources"
 
     from(treeSitterNativeLib)
-    into(layout.buildDirectory.dir("generated/resources/native/$nativePlatformDir"))
+    into(layout.buildDirectory.dir("generated/resources/native"))
 }
 
 // Add native library resources to source sets

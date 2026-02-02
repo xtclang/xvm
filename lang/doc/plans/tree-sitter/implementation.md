@@ -3,8 +3,8 @@
 This document captures the implementation history, challenges encountered, and solutions
 developed while building the XTC tree-sitter grammar.
 
-> **See also**: [PLAN_TREE_SITTER.md](./PLAN_TREE_SITTER.md) for current status and next steps.
-> **See also**: [lang/tree-sitter/README.md](../../tree-sitter/README.md) for usage documentation.
+> **See also**: [PLAN_TREE_SITTER.md](../PLAN_TREE_SITTER.md) for current status and next steps.
+> **See also**: [tree-sitter/README.md](../../../tree-sitter/README.md) for usage documentation.
 
 ---
 
@@ -414,3 +414,12 @@ bool tree_sitter_xtc_external_scanner_scan(void *payload, TSLexer *lexer, const 
 | Random.x | Shorthand function body with TODO freeform |
 | BFloat16.x | Bare TODOs and freeform TODOs |
 | Float128.x | Bare TODOs and freeform TODOs |
+
+---
+
+## Related Documentation
+
+See also:
+- [adapter-rebuild.md](./adapter-rebuild.md) - Adapter selection and rebuild behavior
+- [lsp-logging.md](./lsp-logging.md) - LSP server logging
+- [native-library-staleness.md](./native-library-staleness.md) - Staleness verification

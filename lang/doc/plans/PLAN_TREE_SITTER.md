@@ -123,7 +123,7 @@ The IntelliJ plugin:
 
 > **Documentation**:
 > - [lang/tree-sitter/README.md](../../tree-sitter/README.md) - Usage and architecture
-> - [TREE_SITTER_IMPLEMENTATION_NOTES.md](./TREE_SITTER_IMPLEMENTATION_NOTES.md) - Implementation history
+> - [tree-sitter/implementation.md](./tree-sitter/implementation.md) - Implementation history and challenges
 
 ---
 
@@ -147,7 +147,8 @@ The IntelliJ plugin:
 - [x] Native library build infrastructure (`tree-sitter/build.gradle.kts`)
 - [x] **Zig cross-compilation** for all 5 platforms (darwin-arm64, darwin-x64, linux-x64, linux-arm64, windows-x64)
 - [x] **`XtcParser.loadLanguageFromPath()` implemented** using jtreesitter's Foreign Function API
-- [x] Pre-built libraries for all platforms committed to source control
+- [x] **On-demand native library build** with persistent caching in `~/.gradle/caches/tree-sitter-xtc/`
+- [x] All platforms bundled in fatJar (cross-compiled from any host using Zig)
 - [x] lsp-server wired to consume native library from tree-sitter project
 
 #### Task: Native Library Loading in XtcParser
@@ -242,9 +243,9 @@ The LSP server uses a pluggable adapter pattern:
 Native library build infrastructure is fully implemented using Zig cross-compilation.
 See [tree-sitter/README.md → Native Library Build](../../tree-sitter/README.md#native-library-build).
 
-### Pre-built Libraries
+### Native Libraries (On-Demand Build)
 
-Two native libraries are built for each platform and committed to source control:
+Two native libraries are built for each platform using Zig cross-compilation:
 
 1. **XTC Grammar Library** (`libtree-sitter-xtc.*`) - The compiled XTC grammar
 2. **Tree-sitter Runtime** (`libtree-sitter.*`) - The tree-sitter core library (required by jtreesitter)
@@ -257,7 +258,9 @@ Two native libraries are built for each platform and committed to source control
 | linux-arm64 | `libtree-sitter-xtc.so` | `libtree-sitter.so` |
 | windows-x64 | `libtree-sitter-xtc.dll` | `libtree-sitter.dll` |
 
-Location: `tree-sitter/src/main/resources/native/<platform>/`
+**Build Strategy**: Libraries are built on-demand and cached in `~/.gradle/caches/tree-sitter-xtc/<hash>/<platform>/`.
+No binaries are committed to source control. First build downloads Zig (~45MB) and compiles (~3s for all platforms).
+Subsequent builds use the cache (instant).
 
 The runtime library is loaded via `TreeSitterLibraryLookup` which provides a custom
 `NativeLibraryLookup` implementation for jtreesitter's FFM API.
@@ -266,7 +269,7 @@ The runtime library is loaded via `TreeSitterLibraryLookup` which provides a cus
 
 ## Task: Zig Cross-Compilation for All Platforms
 
-**Status**: COMPLETE (2026-01-31)
+**Status**: COMPLETE (2026-02-02)
 
 ### Overview
 
@@ -276,16 +279,16 @@ A developer on macOS can build Windows and Linux binaries locally without Docker
 ### Implementation
 
 See [tree-sitter/README.md → Native Library Build](../../tree-sitter/README.md#native-library-build) for full documentation.
+See [tree-sitter/native-build-strategy.md](./tree-sitter/native-build-strategy.md) for the build strategy decision.
 
 #### Gradle Tasks
 
 | Task | Description |
 |------|-------------|
-| `ensureNativeLibraryUpToDate` | **Verify** pre-built library matches grammar (fails if stale) |
-| `copyAllNativeLibrariesToResources` | Rebuild all platforms and copy to resources |
-| `buildAllNativeLibraries` | Build for all 5 platforms |
-| `buildNativeLibrary_<platform>` | Cross-compile for specific platform |
-| `downloadZig` | Download Zig compiler (~45MB, cached) |
+| `buildAllNativeLibrariesOnDemand` | **Build all 5 platforms** with caching (main task for lsp-server) |
+| `populateNativeLibraryCache` | Pre-warm cache for all platforms (for CI) |
+| `buildNativeLibrary_<platform>` | Cross-compile for specific platform (individual tasks) |
+| `downloadZig` | Download Zig compiler (~45MB, cached in `~/.gradle/caches/zig/`) |
 | `extractZig` | Extract using Apache Commons Compress (pure Java) |
 
 #### Platform Outputs
@@ -301,24 +304,23 @@ See [tree-sitter/README.md → Native Library Build](../../tree-sitter/README.md
 #### Usage
 
 ```bash
-# Verify pre-built libraries are up-to-date (fails if stale)
-./gradlew :lang:tree-sitter:ensureNativeLibraryUpToDate
-
-# Rebuild all platforms (if stale) and copy to resources
-./gradlew :lang:tree-sitter:copyAllNativeLibrariesToResources
+# Build lsp-server fatJar (automatically builds all platform native libs)
+./gradlew :lang:lsp-server:fatJar
 
 # Run IDE with tree-sitter adapter
 ./gradlew :lang:intellij-plugin:runIde -Plsp.adapter=treesitter
 ```
 
-### Notes
+### Build Strategy: On-Demand with Persistent Caching
 
+- **No binaries in source control** - Removed ~6MB of committed native libraries
+- **Zig cached** in `~/.gradle/caches/zig/<version>/` (persistent across clean builds)
+- **Native libs cached** in `~/.gradle/caches/tree-sitter-xtc/<hash>/<platform>/` (keyed by grammar hash)
+- **First build**: Downloads Zig (~45MB) + compiles all platforms (~3s total)
+- **Subsequent builds**: Instant (cache hit)
 - Pure Java extraction using Apache Commons Compress (no shell commands)
-- Pre-built binaries committed to source control (~6MB total)
-- Staleness detection via SHA-256 hash of grammar inputs
-- Build **fails** if stale (no auto-rebuild) to avoid Zig download in CI
-- Zig only downloaded when explicitly running rebuild tasks
 - macOS binaries work but aren't signed (fine for development)
+- All 5 platforms bundled in the fatJar for cross-platform distribution
 
 ---
 
@@ -438,179 +440,24 @@ Features requiring compiler should wait for `XtcCompilerAdapterFull`:
 
 ---
 
-## Task: LSP Server Logging
+## Completed Tasks
 
-**Status**: COMPLETE (2026-01-31)
-
-**Goal**: Add comprehensive logging to the LSP server core, common to ALL adapters (Mock, TreeSitter, future Compiler).
-
-### Core Logging (XtcLanguageServer)
-
-These logging points apply regardless of which adapter is used:
-
-1. **Server Lifecycle**
-   - Server initialization: adapter type, configuration
-   - Client capabilities received
-   - Workspace folder changes
-   - Server shutdown
-
-2. **Document Events**
-   - File open: URI, size, detected language version
-   - File change: URI, change type (full/incremental)
-   - File close: URI, session duration
-   - File save: URI
-
-3. **LSP Request/Response**
-   - Request received: method, params summary
-   - Response sent: method, result count, timing
-   - Errors: method, error code, message
-
-### Adapter-Specific Logging
-
-Additional logging in each adapter implementation:
-
-**MockXtcCompilerAdapter**:
-- Regex pattern matches
-- Declaration extraction
-
-**TreeSitterAdapter**:
-- Native library loading: path, platform, load time
-- Parse operations: file path, source size, parse time, error count
-- Query execution: query name, execution time, match count
-
-**Future CompilerAdapter**:
-- Type resolution, semantic analysis timing
-
-### Implementation
-
-Use SLF4J (already a dependency) with appropriate log levels:
-- `DEBUG`: Detailed operation info (parse times, query results)
-- `INFO`: High-level operations (server started, file opened)
-- `WARN`: Recoverable issues (parse errors, missing symbols)
-- `ERROR`: Failures (initialization failed, unhandled exceptions)
-
-### Example Output
-
-```
-INFO  [XtcLanguageServer] Started with adapter: TreeSitterAdapter
-INFO  [XtcLanguageServer] Client capabilities: completion, hover, definition
-DEBUG [XtcLanguageServer] textDocument/didOpen: file:///project/MyClass.x (2,450 bytes)
-DEBUG [TreeSitterAdapter] Parsed in 3.2ms, 0 errors
-DEBUG [XtcLanguageServer] textDocument/documentSymbol: 12 symbols in 4.1ms
-```
-
-### Testing
-
-```bash
-# Run with debug logging (works with any adapter)
-./gradlew :lang:intellij-plugin:runIde
-
-# In IntelliJ: Help → Diagnostic Tools → Debug Log Settings
-# Add: org.xvm.lsp
-```
-
----
-
-## Task: Native Library Staleness Verification
-
-**Status**: COMPLETE (2026-01-31)
-
-**Goal**: Verify the native library build system correctly detects when rebuild is needed.
-
-### Behavior
-
-The `ensureNativeLibraryUpToDate` task:
-1. Computes SHA-256 hash of `grammar.js` + `scanner.c`
-2. Compares to stored hash in `.inputs.sha256`
-3. If match: logs version info and succeeds
-4. If mismatch: **FAILS** with instructions to rebuild
-
-This design avoids downloading Zig in CI (where libraries should always be up-to-date).
-
-### Test Cases
-
-1. **Fail on hash mismatch**
-   - Corrupt the `.inputs.sha256` file
-   - Run `ensureNativeLibraryUpToDate`
-   - Verify task FAILS with "STALE" message
-
-2. **Success when up-to-date**
-   - Run `ensureNativeLibraryUpToDate` with correct hash
-   - Verify task succeeds and logs version info
-
-### Manual Testing
-
-```bash
-# Verify current libraries are up-to-date
-./gradlew :lang:tree-sitter:ensureNativeLibraryUpToDate
-
-# Simulate stale library (corrupt hash)
-echo "0000" > lang/tree-sitter/src/main/resources/native/darwin-arm64/libtree-sitter-xtc.inputs.sha256
-./gradlew :lang:tree-sitter:ensureNativeLibraryUpToDate  # Should FAIL
-
-# Rebuild to fix
-./gradlew :lang:tree-sitter:copyAllNativeLibrariesToResources
-```
+| Task | Status | Documentation |
+|------|--------|---------------|
+| LSP Server Logging | COMPLETE (2026-01-31) | [tree-sitter/lsp-logging.md](./tree-sitter/lsp-logging.md) |
+| Native Library Staleness | SUPERSEDED (2026-02-02) | Replaced by on-demand build |
+| Adapter Rebuild Behavior | COMPLETE (2026-02-02) | [tree-sitter/adapter-rebuild.md](./tree-sitter/adapter-rebuild.md) |
+| On-Demand Native Build | COMPLETE (2026-02-02) | [tree-sitter/native-build-strategy.md](./tree-sitter/native-build-strategy.md) |
 
 ---
 
 ## Task: Conditional Tree-sitter Build
 
-**Status**: PENDING
+**Status**: PENDING (MEDIUM PRIORITY)
 
-**Goal**: Skip tree-sitter native library build when using mock adapter, reducing build time.
+**Goal**: Skip native library bundling when `lsp.adapter=mock` to reduce build time.
 
-### Current Behavior
-
-- `lsp-server` always depends on `tree-sitter` native library
-- Native library is always built/copied to resources
-- Build time cost even when not using tree-sitter adapter
-
-### Desired Behavior
-
-When `lsp.adapter=mock` (default):
-- Skip `ensureNativeLibraryUpToDate` task
-- Skip `copyNativeLibToResources` task
-- lsp-server JAR includes tree-sitter code but no native library
-- Runtime gracefully handles missing native library (already does - falls back to mock)
-
-When `lsp.adapter=treesitter`:
-- Current behavior (build/bundle native library)
-
-### Implementation Options
-
-**Option A: Conditional task dependency**
-```kotlin
-// In lsp-server/build.gradle.kts
-val copyNativeLibToResources by tasks.existing {
-    onlyIf { lspAdapter == "treesitter" }
-}
-```
-
-**Option B: Separate source sets**
-- Create `treesitter` source set with native resources
-- Only include when adapter is treesitter
-
-**Option C: Feature flag in fat JAR**
-- Always include code, conditionally include native library
-- Use `fatJar` exclusion patterns based on adapter
-
-### Recommendation
-
-Option A is simplest. The tree-sitter Kotlin code is small (~50KB) and harmless to include.
-Only skip the native library bundling (~1.2MB per platform).
-
-### Testing
-
-```bash
-# Fast build for mock adapter (no native library)
-./gradlew :lang:intellij-plugin:runIde
-# JAR should NOT contain native/ directory
-
-# Full build with tree-sitter
-./gradlew :lang:intellij-plugin:runIde -Plsp.adapter=treesitter
-# JAR should contain native/<platform>/libtree-sitter-xtc.*
-```
+**Details**: [tree-sitter/conditional-build.md](./tree-sitter/conditional-build.md)
 
 ---
 
@@ -674,7 +521,7 @@ IntelliJ Plugin (JBR 21)          XTC LSP Server (Java 23+)
 | lsp4ij | 0.19.1 | IntelliJ LSP client | Java 17+ |
 
 > **Note**: jtreesitter 0.24.x requires Java 22+ despite being the "oldest" version.
-> See [Critical: Java Version Compatibility](#️-critical-java-version-compatibility-issue) above.
+> See [Critical: Java Version Compatibility](#-critical-java-version-compatibility-issue) above.
 
 ### Internal
 
@@ -793,65 +640,5 @@ This refactor is a nice-to-have improvement, not blocking LSP functionality.
 
 ## Manual Test Plan
 
-### Prerequisites
-
-1. Java 23+ installed and available via `JAVA_HOME` or on PATH
-2. XTC project with `.x` files
-
-### Test: Out-of-Process LSP Server Startup
-
-```bash
-./gradlew :lang:intellij-plugin:runIde
-```
-
-**Expected in console:**
-```
-[XTC-LSP] XTC Language Server v0.4.4-SNAPSHOT
-[XTC-LSP] Backend: Tree-sitter
-[XTC-LSP] TreeSitterAdapter ready: native library loaded and verified
-[XTC-LSP] XtcParser health check PASSED: parsed test module successfully
-```
-
-**Expected in IDE:**
-- Notification: "XTC Language Server Started - Out-of-process server (v0.4.4-SNAPSHOT, adapter=treesitter)"
-
-### Test: Health Check Verification
-
-1. Open an `.x` file in the IDE
-2. Look for console output:
-   - `Native library: extracted libtree-sitter-xtc.dylib to ...`
-   - `Native library: successfully loaded XTC tree-sitter grammar (FFM API)`
-   - `XtcParser health check PASSED`
-
-### Test: Document Symbols
-
-1. Open an XTC file with classes/methods
-2. View → Tool Windows → Structure (or Cmd+7)
-3. Verify outline shows class/method hierarchy
-
-### Test: Crash Recovery
-
-1. Find the LSP server process: `ps aux | grep xtc-lsp-server`
-2. Kill it: `kill -9 <pid>`
-3. Verify notification appears: "XTC Language Server Crashed"
-4. Click "Restart Server"
-5. Verify server restarts (new notification)
-
-### Test: Version Display
-
-1. After LSP starts, check notification shows correct version
-2. Version should NOT be "?" - should show actual version like "v0.4.4-SNAPSHOT"
-
-### Test: Native Library Not Found
-
-1. Temporarily rename/remove native libraries from JAR
-2. Start IDE
-3. Verify error notification about native library
-4. Verify fallback to mock adapter (or fail-fast error)
-
-### Test: Java Version Too Low
-
-1. Set `JAVA_HOME` to Java 21 installation
-2. Unset `XTC_JAVA_HOME`
-3. Start IDE
-4. Verify error: "No Java 23+ runtime found"
+See [MANUAL_TEST_PLAN.md](../MANUAL_TEST_PLAN.md) for comprehensive testing instructions,
+including out-of-process server startup, crash recovery, and health check verification.

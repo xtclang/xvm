@@ -66,6 +66,8 @@ lsp4j = "0.24.0"
 slf4j = "2.0.9"
 # tree-sitter-cli must match jtreesitter major.minor for ABI compatibility
 tree-sitter-cli = "0.26.5"
+# Zig compiler for cross-compiling native tree-sitter libraries
+zig = "0.13.0"
 
 [plugins]
 # Included build plugins - no version (resolved from source)

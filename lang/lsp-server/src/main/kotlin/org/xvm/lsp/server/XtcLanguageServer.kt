@@ -44,10 +44,8 @@ import org.xvm.lsp.model.SymbolInfo
 import java.util.Properties
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.system.measureNanoTime
-
-/** Format a Double with 1 decimal place for logging */
-private fun Double.ms() = "%.1f".format(this)
+import kotlin.time.Duration
+import kotlin.time.measureTime
 
 /**
  * XTC Language Server implementation using LSP4J.
@@ -94,12 +92,12 @@ class XtcLanguageServer(
             }
 
         /**
-         * Execute a block and return its result along with elapsed time in milliseconds (with sub-ms precision).
+         * Execute a block and return its result along with elapsed duration.
          */
-        private inline fun <T> timed(block: () -> T): Pair<T, Double> {
+        private inline fun <T> timed(block: () -> T): Pair<T, Duration> {
             var result: T
-            val nanos = measureNanoTime { result = block() }
-            return result to (nanos / 1_000_000.0)
+            val duration = measureTime { result = block() }
+            return result to duration
         }
     }
 
@@ -316,7 +314,7 @@ class XtcLanguageServer(
 
             // Compile and publish diagnostics
             val (result, elapsed) = timed { adapter.compile(uri, content) }
-            logger.info("textDocument/didOpen: compiled in {}ms, {} diagnostics", elapsed.ms(), result.diagnostics.size)
+            logger.info("textDocument/didOpen: compiled in {}, {} diagnostics", elapsed, result.diagnostics.size)
             publishDiagnostics(uri, result.diagnostics)
         }
 
@@ -335,7 +333,7 @@ class XtcLanguageServer(
 
             // Recompile and publish diagnostics
             val (result, elapsed) = timed { adapter.compile(uri, content) }
-            logger.info("textDocument/didChange: compiled in {}ms, {} diagnostics", elapsed.ms(), result.diagnostics.size)
+            logger.info("textDocument/didChange: compiled in {}, {} diagnostics", elapsed, result.diagnostics.size)
             publishDiagnostics(uri, result.diagnostics)
         }
 
@@ -362,11 +360,11 @@ class XtcLanguageServer(
                 val (hoverInfo, elapsed) = timed { adapter.getHoverInfo(uri, line, column) }
 
                 if (hoverInfo == null) {
-                    logger.info("textDocument/hover: no result in {}ms", elapsed.ms())
+                    logger.info("textDocument/hover: no result in {}", elapsed)
                     return@supplyAsync null
                 }
 
-                logger.info("textDocument/hover: found symbol in {}ms", elapsed.ms())
+                logger.info("textDocument/hover: found symbol in {}", elapsed)
                 Hover().apply {
                     contents =
                         Either.forRight(
@@ -397,7 +395,7 @@ class XtcLanguageServer(
                         }
                     }
 
-                logger.info("textDocument/completion: {} items in {}ms", items.size, elapsed.ms())
+                logger.info("textDocument/completion: {} items in {}", items.size, elapsed)
                 Either.forLeft(items)
             }
         }
@@ -423,11 +421,11 @@ class XtcLanguageServer(
                 val (definition, elapsed) = timed { adapter.findDefinition(uri, line, column) }
 
                 if (definition == null) {
-                    logger.info("textDocument/definition: no result in {}ms", elapsed.ms())
+                    logger.info("textDocument/definition: no result in {}", elapsed)
                     return@supplyAsync Either.forLeft(emptyList())
                 }
 
-                logger.info("textDocument/definition: found in {}ms", elapsed.ms())
+                logger.info("textDocument/definition: found in {}", elapsed)
                 Either.forLeft(listOf(toLspLocation(definition)))
             }
         }
@@ -441,7 +439,7 @@ class XtcLanguageServer(
             logger.info("textDocument/references: {} at {}:{}", uri, line, column)
             return CompletableFuture.supplyAsync {
                 val (refs, elapsed) = timed { adapter.findReferences(uri, line, column, includeDeclaration) }
-                logger.info("textDocument/references: {} references in {}ms", refs.size, elapsed.ms())
+                logger.info("textDocument/references: {} references in {}", refs.size, elapsed)
                 refs.map { toLspLocation(it) }
             }
         }
@@ -458,7 +456,7 @@ class XtcLanguageServer(
                 }
 
                 val (result, elapsed) = timed { adapter.compile(uri, content) }
-                logger.info("textDocument/documentSymbol: {} symbols in {}ms", result.symbols.size, elapsed.ms())
+                logger.info("textDocument/documentSymbol: {} symbols in {}", result.symbols.size, elapsed)
                 result.symbols.map { symbol ->
                     Either.forRight(toDocumentSymbol(symbol))
                 }

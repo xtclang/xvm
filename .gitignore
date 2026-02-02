@@ -113,8 +113,6 @@ TODO
 .claude/settings.local.json
 .plan.md
 
-# Allow tree-sitter native libraries (overrides *.so and *.dll above)
-!lang/tree-sitter/src/main/resources/native/**/*.dylib
-!lang/tree-sitter/src/main/resources/native/**/*.so
-!lang/tree-sitter/src/main/resources/native/**/*.dll
+# Tree-sitter native libraries are now built on-demand and cached in ~/.gradle/caches/
+# No longer committed to source control (see lang/tree-sitter/build.gradle.kts)
 

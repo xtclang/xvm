@@ -305,6 +305,72 @@ ls lang/intellij-plugin/build/idea-sandbox/*/plugins/intellij-plugin/lib/textmat
 
 ---
 
+---
+
+## Out-of-Process LSP Server Tests
+
+The LSP server runs as a separate Java process (requires Java 23+). These tests verify
+the process management and health monitoring.
+
+### Prerequisites
+
+- Java 23+ installed and available via `JAVA_HOME` or on PATH
+- XTC project with `.x` files
+
+### Test: Server Startup
+
+```bash
+./gradlew :lang:intellij-plugin:runIde
+```
+
+**Expected in console:**
+```
+[XTC-LSP] XTC Language Server v0.4.4-SNAPSHOT
+[XTC-LSP] Backend: Tree-sitter
+[XTC-LSP] TreeSitterAdapter ready: native library loaded and verified
+[XTC-LSP] XtcParser health check PASSED: parsed test module successfully
+```
+
+**Expected in IDE:**
+- Notification: "XTC Language Server Started - Out-of-process server (v..., adapter=treesitter)"
+
+### Test: Health Check
+
+1. Open an `.x` file in the IDE
+2. Look for console output:
+   - `Native library: extracted libtree-sitter-xtc.dylib to ...`
+   - `Native library: successfully loaded XTC tree-sitter grammar (FFM API)`
+   - `XtcParser health check PASSED`
+
+### Test: Crash Recovery
+
+1. Find the LSP server process: `ps aux | grep xtc-lsp-server`
+2. Kill it: `kill -9 <pid>`
+3. Verify notification appears: "XTC Language Server Crashed"
+4. Click "Restart Server"
+5. Verify server restarts (new notification)
+
+### Test: Version Display
+
+1. After LSP starts, check notification shows correct version
+2. Version should NOT be "?" - should show actual version like "v0.4.4-SNAPSHOT"
+
+### Test: Native Library Not Found
+
+1. Temporarily rename/remove native libraries from JAR
+2. Start IDE
+3. Verify error notification about native library
+4. Verify fallback to mock adapter (or fail-fast error)
+
+### Test: Java Version Too Low
+
+1. Set `JAVA_HOME` to Java 21 installation
+2. Unset `XTC_JAVA_HOME`
+3. Start IDE
+4. Verify error: "No Java 23+ runtime found"
+
+---
+
 ## Future Enhancements
 
 ### Semantic Tokens (TODO)

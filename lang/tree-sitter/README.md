@@ -34,7 +34,6 @@ The grammar is generated from the XTC language model in `lang/dsl/`:
 lang/
 ├── tree-sitter/
 │   ├── README.md                # This file
-│   ├── implementation.md        # Implementation history and details
 │   └── build/
 │       ├── generated/           # Run tree-sitter CLI from HERE
 │       │   ├── grammar.js       # Generated grammar
@@ -313,4 +312,4 @@ The authoritative sources for XTC syntax are:
 | `javatools/src/main/java/org/xvm/compiler/Token.java` | Keyword/operator enums |
 
 See [PLAN_TREE_SITTER.md](../doc/plans/PLAN_TREE_SITTER.md) for implementation status and next steps.
-See [implementation.md](implementation.md) for detailed implementation history.
+See [implementation.md](../doc/plans/tree-sitter/implementation.md) for detailed implementation history.
