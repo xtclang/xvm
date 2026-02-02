@@ -1133,7 +1133,7 @@ public class BuildContext {
                     ensureVarScope(code, regTo);
                     throwTypeMismatch(code, "Unreconcilable types " +
                             typeFrom.getValueString() + " -> " + typeTo.getValueString());
-                    // unfortunately, if generated at reachable code, this will throw
+                    // unfortunately, if generated for any reachable code, this will throw
                     // during the verification phase without any useful information to debug
                     System.err.println("*** Unreconcilable types " +
                             typeFrom.getValueString() + " -> " + typeTo.getValueString());
@@ -1158,13 +1158,13 @@ public class BuildContext {
 
             AddTransformation:
             switch (srcFlavor) {
-            case Specific:
+            case Specific, SpecificWithDefault:
                 switch (dstFlavor) {
                 case Primitive:
                     Builder.unbox(code, typeTo, regTo.cd());
                     break AddTransformation;
 
-                case Widened:
+                case Specific, Widened:
                     // nothing to do
                     break AddTransformation;
 

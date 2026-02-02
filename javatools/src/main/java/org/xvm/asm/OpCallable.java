@@ -800,5 +800,5 @@ public abstract class OpCallable extends Op {
     protected Argument[] m_aArgReturn; // optional
 
     // categories for cached info
-    enum Category {Function, Template, TargetClass, TargetType, Constructor}
+    protected enum Category {Function, Template, TargetClass, TargetType, Constructor}
 }

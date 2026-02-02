@@ -387,5 +387,5 @@ public abstract class OpInvocable extends Op {
     protected Argument[]     m_aArgReturn; // optional
 
     // categories for cached info
-    enum Category {Chain, Composition}
+    protected enum Category {Chain, Composition}
 }
