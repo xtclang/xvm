@@ -169,4 +169,3 @@ object XtcQueries {
         (property_declaration (type_expression) (identifier) @name) @property
         """.trimIndent()
 }
-

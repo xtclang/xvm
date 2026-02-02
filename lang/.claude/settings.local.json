@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "WebFetch(domain:tree-sitter.github.io)",
-      "WebFetch(domain:github.com)",
-      "WebSearch"
-    ]
-  }
-}

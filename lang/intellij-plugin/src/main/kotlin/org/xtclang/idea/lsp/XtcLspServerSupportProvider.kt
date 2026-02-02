@@ -1,20 +1,14 @@
 package org.xtclang.idea.lsp
 
-import com.intellij.notification.NotificationAction
+import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.redhat.devtools.lsp4ij.LanguageServerFactory
-import com.redhat.devtools.lsp4ij.LanguageServerManager
 import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
-import com.redhat.devtools.lsp4ij.server.StreamConnectionProvider
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
+import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
 import org.eclipse.lsp4j.services.LanguageServer
-import java.io.File
-import java.io.InputStream
-import java.io.OutputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Properties
@@ -27,7 +21,7 @@ import java.util.Properties
  * 2. IntelliJ uses JBR 21 which doesn't support FFM
  * 3. Out-of-process allows using a newer Java toolchain
  *
- * See doc/plans/PLAN_OUT_OF_PROCESS_LSP.md for architecture details.
+ * See doc/plans/lsp-processes.md for architecture details.
  */
 class XtcLanguageServerFactory : LanguageServerFactory {
     private val logger = logger<XtcLanguageServerFactory>()
@@ -68,23 +62,24 @@ class XtcLanguageServerFactory : LanguageServerFactory {
 }
 
 /**
- * Out-of-process LSP server connection.
+ * Out-of-process LSP server connection using LSP4IJ's OSProcessStreamConnectionProvider.
  *
- * Spawns the XTC Language Server as a separate Java process with Java 24+,
- * communicating via stdio. This enables jtreesitter/FFM support regardless
- * of IntelliJ's JBR version.
+ * This extends OSProcessStreamConnectionProvider which:
+ * - Uses IntelliJ's OSProcessHandler for proper process management
+ * - Exposes stderr to LSP4IJ's Logs tab automatically
+ * - Handles process lifecycle correctly
  *
  * Java Runtime Resolution:
  * 1. System property `xtc.lsp.java.home` (explicit override)
  * 2. Environment variable `XTC_JAVA_HOME` (XDK toolchain)
  * 3. Environment variable `JAVA_HOME` (system default)
- * 4. Fail with helpful error message
+ * 4. `java` on PATH
  *
  * The Java runtime MUST be version [MIN_JAVA_VERSION]+ for tree-sitter to work.
  */
 class XtcLspConnectionProvider(
     private val project: Project,
-) : StreamConnectionProvider {
+) : OSProcessStreamConnectionProvider() {
     private val logger = logger<XtcLspConnectionProvider>()
 
     companion object {
@@ -97,12 +92,6 @@ class XtcLspConnectionProvider(
          * Update this constant when upgrading jtreesitter to a version with different requirements.
          */
         const val MIN_JAVA_VERSION = 23
-
-        /** JSON-RPC protocol version */
-        private const val JSONRPC_VERSION = "2.0"
-
-        /** Request ID used for the shutdown request during server stop */
-        private const val SHUTDOWN_REQUEST_ID = 99999
     }
 
     private val buildProps: Properties by lazy {
@@ -119,28 +108,16 @@ class XtcLspConnectionProvider(
         }
     }
 
-    private var process: Process? = null
-    private var stderrForwarder: Thread? = null
-    private var processMonitor: Thread? = null
-
-    @Volatile
-    private var alive = false
-
-    @Volatile
-    private var intentionalShutdown = false
-
-    override fun start() {
-        logger.info("Starting XTC LSP Server (out-of-process)")
-
+    init {
+        // Configure the command line for OSProcessStreamConnectionProvider
         val javaPath = findJavaExecutable()
         val serverJar = findServerJar()
 
         logger.info("Using Java: $javaPath")
         logger.info("Using LSP server JAR: $serverJar")
 
-        // Build the command line
-        val command =
-            listOf(
+        val commandLine =
+            GeneralCommandLine(
                 javaPath.toString(),
                 "--enable-native-access=ALL-UNNAMED", // FFM API for tree-sitter native libraries
                 "-Dapple.awt.UIElement=true", // macOS: no dock icon
@@ -149,39 +126,36 @@ class XtcLspConnectionProvider(
                 "-Xmx256m", // Cap memory usage
                 "-jar",
                 serverJar.toString(),
-            )
-
-        logger.info("Launching: ${command.joinToString(" ")}")
-
-        // Start the process
-        val processBuilder =
-            ProcessBuilder(command)
-                .redirectErrorStream(false) // Keep stderr separate for logging
-                .apply {
-                    project.basePath?.let { directory(File(it)) }
-                }
-
-        intentionalShutdown = false
-
-        process =
-            processBuilder.start().also { proc ->
-                // Start stderr forwarder immediately
-                stderrForwarder = startStderrForwarder(proc)
-                // Start process monitor to detect crashes
-                processMonitor = startProcessMonitor(proc)
+            ).apply {
+                project.basePath?.let { withWorkDirectory(it) }
             }
 
-        alive = true
+        setCommandLine(commandLine)
 
         val version = buildProps.getProperty("lsp.version", "?")
         val adapterType = buildProps.getProperty("lsp.adapter", "mock")
-        logger.info("XTC LSP Server process started (v$version, adapter=$adapterType, pid=${process?.pid()})")
+        logger.info("XTC LSP command configured (v$version, adapter=$adapterType): ${commandLine.commandLineString}")
+    }
+
+    override fun start() {
+        logger.info("Starting XTC LSP Server (out-of-process via OSProcessStreamConnectionProvider)")
+        super.start()
+
+        val version = buildProps.getProperty("lsp.version", "?")
+        val adapterType = buildProps.getProperty("lsp.adapter", "mock")
+        logger.info("XTC LSP Server process started (v$version, adapter=$adapterType, pid=${getPid()})")
 
         showNotification(
             title = "XTC Language Server Started",
             content = "Out-of-process server (v$version, adapter=$adapterType)",
             type = NotificationType.INFORMATION,
         )
+    }
+
+    override fun stop() {
+        logger.info("Stopping XTC LSP Server")
+        super.stop()
+        logger.info("XTC LSP Server stopped")
     }
 
     /**
@@ -191,6 +165,7 @@ class XtcLspConnectionProvider(
      * 1. System property `xtc.lsp.java.home`
      * 2. Environment variable `XTC_JAVA_HOME`
      * 3. Environment variable `JAVA_HOME`
+     * 4. `java` on PATH
      *
      * @throws IllegalStateException if no suitable Java is found
      */
@@ -347,103 +322,6 @@ class XtcLspConnectionProvider(
         )
     }
 
-    /**
-     * Start a daemon thread to forward the server's stderr to the console.
-     * This makes LSP server logs visible in Gradle's runIde output.
-     */
-    private fun startStderrForwarder(proc: Process): Thread =
-        Thread({
-            proc.errorStream.bufferedReader().use { reader ->
-                reader.lineSequence().forEach { line ->
-                    // Forward to System.err so it appears in Gradle console during runIde
-                    System.err.println("[XTC-LSP] $line")
-
-                    // Also log via IntelliJ logger for production log files
-                    when {
-                        line.contains("ERROR") || line.contains("Exception") ->
-                            logger.error("LSP: $line")
-                        line.contains("WARN") ->
-                            logger.warn("LSP: $line")
-                        else ->
-                            logger.info("LSP: $line")
-                    }
-                }
-            }
-        }, "XTC-LSP-stderr-forwarder").apply {
-            isDaemon = true
-            start()
-        }
-
-    /**
-     * Start a daemon thread to monitor the server process for unexpected termination.
-     * Shows a notification with restart option if the server crashes.
-     */
-    private fun startProcessMonitor(proc: Process): Thread =
-        Thread({
-            try {
-                val exitCode = proc.waitFor()
-                if (!intentionalShutdown && alive) {
-                    // Server crashed unexpectedly
-                    logger.error("XTC LSP Server crashed with exit code $exitCode")
-                    alive = false
-                    showCrashNotification(exitCode)
-                }
-            } catch (e: InterruptedException) {
-                // Monitor was interrupted during shutdown - normal
-                Thread.currentThread().interrupt()
-            }
-        }, "XTC-LSP-process-monitor").apply {
-            isDaemon = true
-            start()
-        }
-
-    /**
-     * Show a notification when the server crashes with an option to restart.
-     */
-    private fun showCrashNotification(exitCode: Int) {
-        val notification =
-            NotificationGroupManager
-                .getInstance()
-                .getNotificationGroup("XTC Language Server")
-                .createNotification(
-                    "XTC Language Server Crashed",
-                    "The language server terminated unexpectedly (exit code $exitCode). " +
-                        "Some language features may not work until the server is restarted.",
-                    NotificationType.ERROR,
-                ).addAction(
-                    NotificationAction.createSimple("Restart Server") {
-                        restartServer()
-                    },
-                )
-
-        notification.notify(project)
-    }
-
-    /**
-     * Restart the LSP server by stopping and starting it again.
-     */
-    private fun restartServer() {
-        logger.info("Restarting XTC LSP Server...")
-        runCatching {
-            // Use LSP4IJ's LanguageServerManager to restart
-            LanguageServerManager.getInstance(project).stop("xtc")
-        }.onSuccess {
-            // LSP4IJ will automatically restart when needed
-            showNotification(
-                title = "XTC Language Server",
-                content = "Server restart initiated. Open an XTC file to reconnect.",
-                type = NotificationType.INFORMATION,
-            )
-        }.onFailure { e ->
-            logger.error("Failed to restart LSP server", e)
-            showNotification(
-                title = "XTC Language Server Error",
-                content = "Failed to restart server: ${e.message}",
-                type = NotificationType.ERROR,
-            )
-        }
-    }
-
     private fun showNotification(
         title: String,
         content: String,
@@ -454,77 +332,5 @@ class XtcLspConnectionProvider(
             .getNotificationGroup("XTC Language Server")
             .createNotification(title, content, type)
             .notify(project)
-    }
-
-    override fun getInputStream(): InputStream =
-        process?.inputStream
-            ?: throw IllegalStateException("LSP server process not started")
-
-    override fun getOutputStream(): OutputStream =
-        process?.outputStream
-            ?: throw IllegalStateException("LSP server process not started")
-
-    override fun isAlive(): Boolean {
-        val proc = process ?: return false
-        return alive && proc.isAlive
-    }
-
-    override fun stop() {
-        logger.info("Stopping XTC LSP Server")
-        intentionalShutdown = true
-        alive = false
-
-        val proc = process ?: return
-
-        if (proc.isAlive) {
-            runCatching {
-                sendShutdownRequest(proc)
-                sendExitNotification(proc)
-                proc.waitFor(2, java.util.concurrent.TimeUnit.SECONDS)
-            }.onFailure { e ->
-                logger.warn("Error during LSP server shutdown", e)
-            }
-
-            if (proc.isAlive) {
-                logger.warn("LSP server did not exit gracefully, forcing termination")
-                proc.destroyForcibly()
-            }
-        }
-
-        processMonitor?.interrupt()
-        processMonitor = null
-        stderrForwarder?.interrupt()
-        stderrForwarder = null
-        process = null
-
-        logger.info("XTC LSP Server stopped")
-    }
-
-    private fun sendShutdownRequest(proc: Process) {
-        val request =
-            buildJsonObject {
-                put("jsonrpc", JSONRPC_VERSION)
-                put("id", SHUTDOWN_REQUEST_ID)
-                put("method", "shutdown")
-            }.toString()
-        sendJsonRpcMessage(proc, request)
-    }
-
-    private fun sendExitNotification(proc: Process) {
-        val notification =
-            buildJsonObject {
-                put("jsonrpc", JSONRPC_VERSION)
-                put("method", "exit")
-            }.toString()
-        sendJsonRpcMessage(proc, notification)
-    }
-
-    private fun sendJsonRpcMessage(
-        proc: Process,
-        message: String,
-    ) {
-        val header = "Content-Length: ${message.length}\r\n\r\n"
-        proc.outputStream.write((header + message).toByteArray())
-        proc.outputStream.flush()
     }
 }

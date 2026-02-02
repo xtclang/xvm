@@ -29,7 +29,7 @@ import org.xtclang.tooling.model.OperatorCategory
  */
 class TreeSitterGenerator(
     private val model: LanguageModel,
-    private val version: String = "0.0.0",
+    private val version: String,
 ) {
     companion object {
         /** Number of spaces per indentation level in generated grammar.js */

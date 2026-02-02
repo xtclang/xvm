@@ -14,10 +14,10 @@ import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
 import org.xtclang.tooling.generators.EmacsGenerator
 import org.xtclang.tooling.generators.SublimeSyntaxGenerator
+import org.xtclang.tooling.generators.TextMateBundleManifestGenerator
 import org.xtclang.tooling.generators.TextMateGenerator
 import org.xtclang.tooling.generators.TreeSitterGenerator
 import org.xtclang.tooling.generators.VSCodeConfigGenerator
-import org.xtclang.tooling.generators.VSCodePackageGenerator
 import org.xtclang.tooling.generators.VimGenerator
 import org.xtclang.tooling.model.LanguageModel
 import java.io.File
@@ -98,7 +98,9 @@ private fun generateEmacs(outputPath: String?) {
 private fun generateTreeSitter(outputDir: String?) {
     logger.info("Generating Tree-sitter grammar, config, and highlights")
     // Version is passed via system property from Gradle
-    val version = System.getProperty("project.version") ?: "0.0.0"
+    val version =
+        System.getProperty("project.version")
+            ?: error("project.version system property not set. Run via Gradle task, not directly.")
     val generator = TreeSitterGenerator(xtcLanguage, version)
 
     val grammar = generator.generateGrammar()
@@ -135,11 +137,13 @@ private fun generateVSCodeConfig(outputPath: String?) {
 }
 
 private fun generatePackageJson(outputPath: String?) {
-    logger.info("Generating VS Code package.json")
-    val version = System.getProperty("project.version") ?: "1.0.0"
-    val generator = VSCodePackageGenerator(xtcLanguage, version)
+    logger.info("Generating TextMate bundle manifest (package.json)")
+    val version =
+        System.getProperty("project.version")
+            ?: error("project.version system property not set. Run via Gradle task, not directly.")
+    val generator = TextMateBundleManifestGenerator(xtcLanguage, version)
     val packageJson = generator.generate()
-    writeOutput(packageJson, outputPath, "VS Code package.json")
+    writeOutput(packageJson, outputPath, "TextMate bundle manifest (package.json)")
 }
 
 private fun writeOutput(

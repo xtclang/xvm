@@ -54,6 +54,11 @@ fun JavaExec.configureGenerator(
     dependsOn(tasks.compileKotlin, tasks.processResources)
     classpath = configurations.runtimeClasspath.get() + sourceSets.main.get().output
     mainClass.set("org.xtclang.tooling.LanguageModelCliKt")
+    // Pass project version to CLI so generated files have correct version metadata
+    val projectVersion = project.version.toString()
+    systemProperty("project.version", projectVersion)
+    // Declare version as input for proper Gradle caching
+    inputs.property("projectVersion", projectVersion)
 
     val outputPath =
         if (outputFileNames.isNotEmpty()) {
@@ -108,6 +113,11 @@ val generateTreeSitter by tasks.registering(JavaExec::class) {
     dependsOn(tasks.compileKotlin, tasks.processResources)
     classpath = configurations.runtimeClasspath.get() + sourceSets.main.get().output
     mainClass.set("org.xtclang.tooling.LanguageModelCliKt")
+    // Pass project version to CLI so generated files have correct version metadata
+    val projectVersion = project.version.toString()
+    systemProperty("project.version", projectVersion)
+    // Declare version as input for proper Gradle caching
+    inputs.property("projectVersion", projectVersion)
     // Tree-sitter expects a directory, not a file
     args("tree-sitter", generatedDir.get().asFile.absolutePath)
     inputs.files(

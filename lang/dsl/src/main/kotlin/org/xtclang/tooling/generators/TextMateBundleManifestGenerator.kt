@@ -10,23 +10,32 @@ import kotlinx.serialization.json.putJsonObject
 import org.xtclang.tooling.model.LanguageModel
 
 /**
- * Generates VS Code package.json for TextMate bundle distribution.
+ * Generates package.json manifest for TextMate grammar bundles.
  *
- * This file is required for VS Code and IntelliJ's TextMate plugin to recognize
- * the grammar bundle. It defines language metadata and file associations.
+ * The package.json format is the standard manifest for TextMate bundles, used by:
+ * - VS Code
+ * - IntelliJ IDEA (via TextMate plugin)
+ * - Sublime Text
+ * - Other editors with TextMate support
+ *
+ * It defines language metadata, file associations, and grammar file locations.
  */
-class VSCodePackageGenerator(
+class TextMateBundleManifestGenerator(
     private val model: LanguageModel,
-    private val version: String = "1.0.0",
+    private val version: String,
 ) {
     companion object {
         private val json = Json { prettyPrint = true }
     }
 
     fun generate(): String {
+        // Derive language ID from scopeName (e.g., "source.xtc" -> "xtc")
+        // This ensures consistency: language ID, grammar filename, and scope all use the same identifier
+        val languageId = model.scopeName.substringAfterLast(".")
+
         val config =
             buildJsonObject {
-                put("name", "${model.name.lowercase()}-language")
+                put("name", "$languageId-language")
                 put("displayName", "${model.name} Language")
                 put("description", "${model.name} language support")
                 put("version", version)
@@ -36,11 +45,11 @@ class VSCodePackageGenerator(
                 putJsonObject("contributes") {
                     putJsonArray("languages") {
                         addJsonObject {
-                            put("id", model.name.lowercase())
+                            put("id", languageId)
                             putJsonArray("aliases") {
                                 add(JsonPrimitive(model.name))
-                                add(JsonPrimitive(model.name.uppercase()))
-                                add(JsonPrimitive(model.name.lowercase()))
+                                add(JsonPrimitive(languageId.uppercase()))
+                                add(JsonPrimitive(languageId))
                             }
                             putJsonArray("extensions") {
                                 model.fileExtensions.forEach { add(JsonPrimitive(".$it")) }
@@ -50,9 +59,9 @@ class VSCodePackageGenerator(
                     }
                     putJsonArray("grammars") {
                         addJsonObject {
-                            put("language", model.name.lowercase())
+                            put("language", languageId)
                             put("scopeName", model.scopeName)
-                            put("path", "./${model.name.lowercase()}.tmLanguage.json")
+                            put("path", "./$languageId.tmLanguage.json")
                         }
                     }
                 }

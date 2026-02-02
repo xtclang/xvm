@@ -110,7 +110,7 @@ profile-out/
 TODO
 
 # Claude Code; Local config + temporary plan documents.
-.claude/settings.local.json
+.claude/
 .plan.md
 
 # Tree-sitter native libraries are now built on-demand and cached in ~/.gradle/caches/

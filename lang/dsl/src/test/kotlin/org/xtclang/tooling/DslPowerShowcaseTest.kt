@@ -387,8 +387,8 @@ class DslPowerShowcaseTest {
         val textMate = TextMateGenerator(model).generate()
         val vim = VimGenerator(model).generate()
         val emacs = EmacsGenerator(model).generate()
-        val treeSitter = TreeSitterGenerator(model).generateGrammar()
-        val treeSitterHighlights = TreeSitterGenerator(model).generateHighlights()
+        val treeSitter = TreeSitterGenerator(model, "0.0.0-test").generateGrammar()
+        val treeSitterHighlights = TreeSitterGenerator(model, "0.0.0-test").generateHighlights()
 
         // All contain the control keywords
         val controlKeywords = model.keywordsByCategory(KeywordCategory.CONTROL)

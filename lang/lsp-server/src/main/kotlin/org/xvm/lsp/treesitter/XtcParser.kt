@@ -45,7 +45,12 @@ class XtcParser : Closeable {
                     if (valid) {
                         logger.info("XtcParser health check PASSED: parsed test module successfully")
                     } else {
-                        logger.warn("XtcParser health check FAILED: root={}, children={}, hasError={}", root.type, root.childCount, root.hasError)
+                        logger.warn(
+                            "XtcParser health check FAILED: root={}, children={}, hasError={}",
+                            root.type,
+                            root.childCount,
+                            root.hasError,
+                        )
                     }
                 }
             }

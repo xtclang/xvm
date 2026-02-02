@@ -526,3 +526,7 @@ All versions are defined in `/gradle/libs.versions.toml`.
 - [Implementation Plans](./doc/plans/) - Detailed implementation plans for IDE integration and Tree-sitter grammar
 
 Architecture analysis and research documentation: *Internal documentation*
+
+## TODOs
+
+- [ ] **Language naming consistency**: The formal language name is "Ecstasy", but the codebase currently uses "xtc" for technical identifiers (scope names, language IDs, file names). A future PR should audit and unify the naming to use "Ecstasy" where appropriate for user-facing elements while keeping "xtc" for technical identifiers where consistency is important (e.g., `source.xtc` scope name, `xtc.tmLanguage.json` file names).

@@ -432,7 +432,7 @@ Features requiring compiler should wait for `XtcCompilerAdapterFull`:
 7. **Out-of-Process LSP Server with Java 24** (HIGH PRIORITY)
    - Run LSP server as separate process with Java 24 (Foojay Temurin)
    - Enables full tree-sitter support regardless of IntelliJ JBR version
-   - See [PLAN_OUT_OF_PROCESS_LSP.md](./PLAN_OUT_OF_PROCESS_LSP.md) for full implementation plan
+   - See [lsp-processes.md](./lsp-processes.md) for full implementation plan
 
 8. **End-to-End Testing** - Verify LSP features work in IntelliJ/VS Code
 8. **IDE Integration** - See [PLAN_IDE_INTEGRATION.md](./PLAN_IDE_INTEGRATION.md)
@@ -465,7 +465,7 @@ Features requiring compiler should wait for `XtcCompilerAdapterFull`:
 
 **Status**: COMPLETE (2026-02-02)
 
-**Full Plan**: [PLAN_OUT_OF_PROCESS_LSP.md](./PLAN_OUT_OF_PROCESS_LSP.md)
+**Full Plan**: [lsp-processes.md](./lsp-processes.md)
 
 ### Implementation Summary
 

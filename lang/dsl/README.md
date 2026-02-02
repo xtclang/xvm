@@ -141,26 +141,31 @@ VimGenerator(xtcLanguage).generate()  // → "syn keyword xtcControl if else for
 
 ## Files in This Directory
 
-| File                          | Purpose                                                      |
-|-------------------------------|--------------------------------------------------------------|
-| `XtcLanguage.kt`              | **The source of truth** - Complete language model definition |
-| `LspServerGenerator.kt`       | Generates LSP server implementation (Java)                   |
-| `VSCodeExtensionGenerator.kt` | Generates VS Code extension files                            |
-| `EclipseGenerator.kt`         | Generates Eclipse plugin components                          |
-| `IntellijGenerator.kt`        | Generates IntelliJ IDEA plugin components                    |
-| `TextMateGenerator.kt`        | Generates TextMate grammar (used by VS Code, Sublime, etc.)  |
-| `TreeSitterGenerator.kt`      | Generates Tree-sitter grammar (used by Zed, Neovim, GitHub)  |
-| `AdditionalGenerators.kt`     | Vim, Emacs, Monaco editor support                            |
+| File                                | Purpose                                                      |
+|-------------------------------------|--------------------------------------------------------------|
+| `XtcLanguage.kt`                    | **The source of truth** - Complete language model definition |
+| `model/LanguageModel.kt`            | Data classes and DSL builders for language model             |
+| `generators/TextMateGenerator.kt`   | Generates TextMate grammar (VS Code, Sublime, etc.)          |
+| `generators/TreeSitterGenerator.kt` | Generates Tree-sitter grammar (Zed, Neovim, GitHub)          |
+| `generators/VimGenerator.kt`        | Generates Vim syntax file                                    |
+| `generators/EmacsGenerator.kt`      | Generates Emacs major mode                                   |
+| `generators/SublimeSyntaxGenerator.kt` | Generates Sublime Text syntax                             |
+| `generators/VSCodeConfigGenerator.kt` | Generates VS Code language configuration                   |
+| `scanner/ScannerSpec.kt`            | Tree-sitter external scanner token definitions               |
+| `scanner/ScannerCGeneratorDsl.kt`   | DSL-based scanner.c generator                                |
 
 ### Pre-Generated Files
+
+Generated files are output to `lang/generated-examples/`:
 
 | File                          | Format              | Used By                       |
 |-------------------------------|---------------------|-------------------------------|
 | `xtc.tmLanguage.json`         | TextMate Grammar    | VS Code, Cursor, Sublime Text |
 | `highlights.scm`              | Tree-sitter Queries | Zed, Neovim, Helix, GitHub    |
+| `grammar.js`                  | Tree-sitter Grammar | Tree-sitter parsers           |
 | `xtc.vim`                     | Vim Syntax          | Vim, Neovim                   |
 | `xtc-mode.el`                 | Emacs Lisp          | Emacs                         |
-| `xtc.ts`                      | TypeScript/Monarch  | Monaco Editor, VS Code Web    |
+| `xtc.sublime-syntax`          | Sublime Syntax      | Sublime Text                  |
 | `language-configuration.json` | VS Code Config      | VS Code, Cursor               |
 
 ---

@@ -8,7 +8,7 @@ This directory contains implementation plans and status documentation for XTC la
 |----------|-------------|
 | [PLAN_IDE_INTEGRATION](./PLAN_IDE_INTEGRATION.md) | **What's implemented and what's next** - summary of current state |
 | [PLAN_TREE_SITTER](./PLAN_TREE_SITTER.md) | Tree-sitter grammar - main plan and roadmap |
-| [PLAN_OUT_OF_PROCESS_LSP](./PLAN_OUT_OF_PROCESS_LSP.md) | Out-of-process LSP server architecture |
+| [lsp-processes](./lsp-processes.md) | Out-of-process LSP server architecture |
 | [tree-sitter/](./tree-sitter/) | Tree-sitter implementation details and task docs |
 
 ## Quick Start

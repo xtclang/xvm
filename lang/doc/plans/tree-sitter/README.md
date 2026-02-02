@@ -26,7 +26,7 @@ This directory contains all documentation related to tree-sitter integration for
 ## Related Documentation
 
 - [../../tree-sitter/README.md](../../../tree-sitter/README.md) - Grammar usage and build instructions
-- [../PLAN_OUT_OF_PROCESS_LSP.md](../PLAN_OUT_OF_PROCESS_LSP.md) - Out-of-process LSP architecture
+- [../lsp-processes.md](../lsp-processes.md) - Out-of-process LSP architecture
 - [../MANUAL_TEST_PLAN.md](../../MANUAL_TEST_PLAN.md) - Manual testing procedures
 
 ## Getting Started

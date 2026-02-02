@@ -58,8 +58,9 @@ class TreeSitterAdapter :
         logger.info("========================================")
 
         if (!healthCheck()) {
-            val msg = "TreeSitterAdapter: health check FAILED - native library not working. " +
-                "Ensure native libraries are bundled and Java $MIN_JAVA_VERSION+ is used."
+            val msg =
+                "TreeSitterAdapter: health check FAILED - native library not working. " +
+                    "Ensure native libraries are bundled and Java $MIN_JAVA_VERSION+ is used."
             logger.error(msg)
             throw IllegalStateException(msg)
         }

@@ -1,7 +1,7 @@
 {
     "name": "xtc-language",
     "displayName": "XTC Language Support",
-    "description": "XTC (Ecstasy) language support with syntax highlighting and LSP features",
+    "description": "XTC language support with syntax highlighting and LSP features",
     "version": "0.4.4",
     "publisher": "xtclang",
     "license": "Apache-2.0",
@@ -17,7 +17,6 @@
     ],
     "keywords": [
         "xtc",
-        "ecstasy",
         "xvm"
     ],
     "activationEvents": [
@@ -30,7 +29,6 @@
                 "id": "xtc",
                 "aliases": [
                     "XTC",
-                    "Ecstasy",
                     "xtc"
                 ],
                 "extensions": [

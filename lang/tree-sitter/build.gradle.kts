@@ -2,8 +2,6 @@ import de.undercouch.gradle.tasks.download.Download
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.xz.XZCompressorInputStream
 import java.security.MessageDigest
-import java.time.Instant
-import java.util.Properties
 import java.util.zip.GZIPInputStream
 import kotlin.time.measureTime
 
@@ -549,6 +547,10 @@ val testTreeSitterParse by tasks.registering(TreeSitterParseTestTask::class) {
     val compositeRoot = XdkPropertiesService.compositeRootDirectory(projectDir)
 
     cliPath.set(treeSitterCliExe)
+    // NOTE: Setting workDir to the generated directory allows tree-sitter CLI to find the grammar
+    // via tree-sitter.json in the current directory. This produces harmless warnings about
+    // "not configured any parser directories" because there's no global ~/.config/tree-sitter/config.json,
+    // but the CLI still works correctly by discovering the grammar from the working directory.
     workDir.set(generatedDir.map { it.asFile })
     rootDir.set(compositeRoot)
 

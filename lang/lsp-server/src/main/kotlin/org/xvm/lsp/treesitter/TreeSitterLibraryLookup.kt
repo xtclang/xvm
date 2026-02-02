@@ -16,7 +16,6 @@ import java.nio.file.StandardCopyOption
  * The library is bundled at: /native/<platform>/libtree-sitter.<ext>
  */
 class TreeSitterLibraryLookup : NativeLibraryLookup {
-
     override fun get(arena: Arena): SymbolLookup {
         val libraryPath = extractLibraryToTemp()
         logger.info("Loading tree-sitter runtime from: {}", libraryPath)
@@ -27,19 +26,20 @@ class TreeSitterLibraryLookup : NativeLibraryLookup {
         val osName = System.getProperty("os.name").lowercase()
         val osArch = System.getProperty("os.arch").lowercase()
 
-        val (platform, extension) = when {
-            osName.contains("mac") && (osArch.contains("aarch64") || osArch.contains("arm64")) ->
-                "darwin-arm64" to ".dylib"
-            osName.contains("mac") ->
-                "darwin-x64" to ".dylib"
-            osName.contains("linux") && (osArch.contains("aarch64") || osArch.contains("arm64")) ->
-                "linux-arm64" to ".so"
-            osName.contains("linux") ->
-                "linux-x64" to ".so"
-            osName.contains("windows") ->
-                "windows-x64" to ".dll"
-            else -> throw IllegalStateException("Unsupported platform: $osName/$osArch")
-        }
+        val (platform, extension) =
+            when {
+                osName.contains("mac") && (osArch.contains("aarch64") || osArch.contains("arm64")) ->
+                    "darwin-arm64" to ".dylib"
+                osName.contains("mac") ->
+                    "darwin-x64" to ".dylib"
+                osName.contains("linux") && (osArch.contains("aarch64") || osArch.contains("arm64")) ->
+                    "linux-arm64" to ".so"
+                osName.contains("linux") ->
+                    "linux-x64" to ".so"
+                osName.contains("windows") ->
+                    "windows-x64" to ".dll"
+                else -> throw IllegalStateException("Unsupported platform: $osName/$osArch")
+            }
 
         val resourcePath = "/native/$platform/libtree-sitter$extension"
         logger.debug("Loading tree-sitter runtime from resource: {}", resourcePath)
@@ -54,7 +54,7 @@ class TreeSitterLibraryLookup : NativeLibraryLookup {
 
         throw IllegalStateException(
             "tree-sitter runtime library not found at $resourcePath. " +
-                "Build it with: ./gradlew :lang:tree-sitter:copyAllNativeLibrariesToResources"
+                "Build it with: ./gradlew :lang:tree-sitter:copyAllNativeLibrariesToResources",
         )
     }
 

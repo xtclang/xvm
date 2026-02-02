@@ -151,5 +151,5 @@ contexts:
     - match: '\?\.|\.'
       scope: keyword.operator.access.xtc
     # Other
-    - match: '>\.\.<|>\.\.|\.\.<|\.\.|\^\(|\?:|->|<-|_'
+    - match: '>\.\.<|>\.\.|\.\.<|\.\.|\?:|->|<-|_'
       scope: keyword.operator.other.xtc

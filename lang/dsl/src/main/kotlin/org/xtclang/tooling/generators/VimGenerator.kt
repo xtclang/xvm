@@ -91,7 +91,7 @@ class VimGenerator(
                     .filter { !it.contains(":") } // Skip this:* variants
             if (otherKeywords.isNotEmpty()) {
                 appendLine("\" Keywords - Other")
-                appendLine("syn keyword xtcKeyword ${otherKeywords.joinToString(" ")}")
+                appendLine("syn keyword ecstasyKeyword ${otherKeywords.joinToString(" ")}")
                 appendLine()
             }
 
@@ -201,7 +201,7 @@ class VimGenerator(
             appendLine("hi def link xtcDeclaration Keyword")
             appendLine("hi def link xtcModifier StorageClass")
             appendLine("hi def link xtcTypeRelation Keyword")
-            appendLine("hi def link xtcKeyword Keyword")
+            appendLine("hi def link ecstasyKeyword Keyword")
             appendLine("hi def link xtcType Type")
             appendLine("hi def link xtcTypeName Type")
             appendLine("hi def link xtcBoolean Boolean")

@@ -25,7 +25,7 @@ syn keyword xtcModifier public protected private static immutable conditional al
 syn keyword xtcTypeRelation extends implements delegates incorporates into
 
 " Keywords - Other
-syn keyword xtcKeyword is as new void TODO annotation this super outer
+syn keyword ecstasyKeyword is as new void TODO annotation this super outer
 
 " Built-in types
 syn keyword xtcType Bit Boolean Byte Char Int Int8 Int16 Int32 Int64 Int128 IntN UInt UInt8 UInt16 UInt32 UInt64 UInt128 UIntN Dec Dec32 Dec64 Dec128 DecN Float Float8e4 Float8e5 Float16 Float32 Float64 Float128 FloatN BFloat16 String Char Object Enum Exception Const Service Module Package Array List Set Map Range Interval Tuple Function Method Property Type Class Nullable Orderable Hashable Stringable Iterator Iterable Collection Sequence Void Null True False
@@ -95,7 +95,7 @@ hi def link xtcException Exception
 hi def link xtcDeclaration Keyword
 hi def link xtcModifier StorageClass
 hi def link xtcTypeRelation Keyword
-hi def link xtcKeyword Keyword
+hi def link ecstasyKeyword Keyword
 hi def link xtcType Type
 hi def link xtcTypeName Type
 hi def link xtcBoolean Boolean

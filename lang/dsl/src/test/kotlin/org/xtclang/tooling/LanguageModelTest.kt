@@ -481,7 +481,7 @@ class LanguageModelTest {
 
     @Test
     fun `Tree-sitter grammar can be generated`() {
-        val grammar = TreeSitterGenerator(model).generateGrammar()
+        val grammar = TreeSitterGenerator(model, "0.0.0-test").generateGrammar()
 
         assertTrue(grammar.isNotEmpty())
         assertTrue(grammar.contains("module.exports = grammar"), "Should have grammar export")
@@ -491,7 +491,7 @@ class LanguageModelTest {
 
     @Test
     fun `Tree-sitter highlights can be generated`() {
-        val highlights = TreeSitterGenerator(model).generateHighlights()
+        val highlights = TreeSitterGenerator(model, "0.0.0-test").generateHighlights()
 
         assertTrue(highlights.isNotEmpty())
         assertTrue(highlights.contains("@keyword"), "Should have keyword captures")
@@ -501,7 +501,7 @@ class LanguageModelTest {
 
     @Test
     fun `Tree-sitter uses model operators for precedence`() {
-        val grammar = TreeSitterGenerator(model).generateGrammar()
+        val grammar = TreeSitterGenerator(model, "0.0.0-test").generateGrammar()
 
         // Binary expression should contain model operators
         assertTrue(grammar.contains("binary_expression"), "Should have binary_expression rule")
@@ -531,7 +531,7 @@ class LanguageModelTest {
         val controlKeywords = model.keywordsByCategory(KeywordCategory.CONTROL)
         val vim = VimGenerator(model).generate()
         val emacs = EmacsGenerator(model).generate()
-        val highlights = TreeSitterGenerator(model).generateHighlights()
+        val highlights = TreeSitterGenerator(model, "0.0.0-test").generateHighlights()
 
         // Each generator should include the control keywords
         for (kw in listOf("if", "else", "for", "while")) {
