@@ -84,7 +84,7 @@ private fun createAdapter(adapterType: String): Pair<XtcCompilerAdapter, Adapter
                 TreeSitterAdapter() to AdapterBackend.TREE_SITTER
             } catch (e: UnsatisfiedLinkError) {
                 logger.error("Tree-sitter native library not found, falling back to mock adapter", e)
-                logger.warn("To use tree-sitter, build the native library: ./gradlew :lang:dsl:buildTreeSitterLibrary")
+                logger.warn("To use tree-sitter, build the native library: ./gradlew :lang:tree-sitter:buildAllNativeLibrariesOnDemand")
                 MockXtcCompilerAdapter() to AdapterBackend.MOCK
             } catch (e: Exception) {
                 logger.error("Failed to initialize Tree-sitter adapter, falling back to mock", e)

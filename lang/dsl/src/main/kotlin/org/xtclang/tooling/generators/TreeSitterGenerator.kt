@@ -1,5 +1,12 @@
 package org.xtclang.tooling.generators
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
 import org.xtclang.tooling.model.Associativity
 import org.xtclang.tooling.model.KeywordCategory
 import org.xtclang.tooling.model.LanguageModel
@@ -22,6 +29,7 @@ import org.xtclang.tooling.model.OperatorCategory
  */
 class TreeSitterGenerator(
     private val model: LanguageModel,
+    private val version: String = "0.0.0",
 ) {
     companion object {
         /** Number of spaces per indentation level in generated grammar.js */
@@ -29,6 +37,40 @@ class TreeSitterGenerator(
 
         /** Returns indentation string for the given nesting level */
         fun indent(level: Int): String = " ".repeat(INDENT_SIZE * level)
+
+        private val json = Json { prettyPrint = true }
+    }
+
+    /**
+     * Generates the tree-sitter.json configuration file for ABI 15 support.
+     *
+     * This config file is required by tree-sitter CLI 0.25+ for ABI version 15.
+     * It defines the grammar metadata including name, file types, and version.
+     */
+    fun generateConfig(): String {
+        val config =
+            buildJsonObject {
+                putJsonArray("grammars") {
+                    addJsonObject {
+                        put("name", model.name.lowercase())
+                        put("camelcase", model.name)
+                        put("scope", "source.${model.name.lowercase()}")
+                        put("path", ".")
+                        putJsonArray("file-types") {
+                            model.fileExtensions.forEach { add(JsonPrimitive(it)) }
+                        }
+                    }
+                }
+                putJsonObject("metadata") {
+                    put("version", version)
+                    put("license", "Apache-2.0")
+                    put("description", "${model.name} grammar for tree-sitter")
+                    putJsonObject("links") {
+                        put("repository", "https://github.com/xtclang/xvm")
+                    }
+                }
+            }
+        return json.encodeToString(JsonObject.serializer(), config)
     }
 
     private fun loadTemplate(name: String): String =

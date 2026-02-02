@@ -36,8 +36,8 @@ val dslProject: Project = project(":dsl")
 // Platform Detection
 // =============================================================================
 
-val osName: String = System.getProperty("os.name").lowercase()
-val osArch: String = System.getProperty("os.arch")
+val osName: String = System.getProperty("os.name")?.lowercase() ?: ""
+val osArch: String = System.getProperty("os.arch") ?: ""
 
 val treeSitterPlatform: String = when {
     osName.contains("mac") && osArch in listOf("aarch64", "arm64") -> "macos-arm64"
@@ -352,61 +352,44 @@ val copyGrammarFiles by tasks.registering(Copy::class) {
     into(generatedDir)
 }
 
-// =============================================================================
-// Native Build Task (Configuration Cache Compatible)
-// =============================================================================
-
 /**
- * Task to build the native tree-sitter library.
- * Uses injected ExecOperations for configuration cache compatibility.
+ * Generate tree-sitter.json config file for ABI version 15 support.
+ * This eliminates the warning about missing config file.
  */
-abstract class BuildNativeLibraryTask @Inject constructor(
-    private val execOps: ExecOperations
-) : DefaultTask() {
+val generateTreeSitterConfig by tasks.registering {
+    group = "tree-sitter"
+    description = "Generate tree-sitter.json config for ABI 15"
+    dependsOn(copyGrammarFiles)
 
-    @get:Input
-    abstract val treeSitterCli: Property<String>
+    val outputFile = generatedDir.map { it.file("tree-sitter.json") }
+    val xdkVersion = project.version.toString()
 
-    @get:Input
-    abstract val workDir: Property<File>
+    inputs.property("version", xdkVersion)
+    outputs.file(outputFile)
 
-    @get:Input
-    abstract val outputPath: Property<String>
-
-    @get:InputFile
-    abstract val grammarFile: RegularFileProperty
-
-    @get:InputFile
-    abstract val scannerFile: RegularFileProperty
-
-    @get:OutputFile
-    abstract val outputFile: RegularFileProperty
-
-    @TaskAction
-    fun build() {
-        val osName = System.getProperty("os.name").lowercase()
-        val cmd = if (osName.contains("windows")) "where" else "which"
-        val compiler = listOf("cc", "clang", "gcc").firstOrNull { c ->
-            try { ProcessBuilder(cmd, c).start().waitFor() == 0 } catch (_: Exception) { false }
-        } ?: throw GradleException("""
-            No C compiler found. Install one of:
-            - macOS: xcode-select --install
-            - Linux: apt install build-essential
-            - Windows: Install Visual Studio Build Tools or MinGW
-
-            Or use pre-built binaries from CI.
-        """.trimIndent())
-
-        logger.lifecycle("Building native library with: $compiler")
-
-        execOps.exec {
-            workingDir(workDir.get())
-            environment("CC", compiler)
-            executable(treeSitterCli.get())
-            args("build", "--output", outputPath.get())
-        }
-
-        logger.lifecycle("Native library built: ${outputFile.get().asFile.absolutePath}")
+    doLast {
+        val configJson = """
+            {
+              "grammars": [
+                {
+                  "name": "xtc",
+                  "camelcase": "XTC",
+                  "scope": "source.xtc",
+                  "path": ".",
+                  "file-types": ["x", "xtc"]
+                }
+              ],
+              "metadata": {
+                "version": "$xdkVersion",
+                "license": "Apache-2.0",
+                "description": "XTC (Ecstasy) grammar for tree-sitter",
+                "links": {
+                  "repository": "https://github.com/xtclang/xvm"
+                }
+              }
+            }
+        """.trimIndent()
+        outputFile.get().asFile.writeText(configJson + "\n")
     }
 }
 
@@ -421,7 +404,7 @@ abstract class BuildNativeLibraryTask @Inject constructor(
 val validateTreeSitterGrammar by tasks.registering(Exec::class) {
     group = "tree-sitter"
     description = "Validate tree-sitter grammar compiles"
-    dependsOn(copyGrammarFiles, extractTreeSitterCli)
+    dependsOn(copyGrammarFiles, extractTreeSitterCli, generateTreeSitterConfig)
     enabled = treeSitterPlatformSupported
 
     workingDir(generatedDir)
@@ -578,27 +561,6 @@ val testTreeSitterParse by tasks.registering(TreeSitterParseTestTask::class) {
     // Support filtering via -PtestFiles=pattern (comma-separated patterns)
     fileFilter.set(providers.gradleProperty("testFiles"))
     showTiming.set(providers.gradleProperty("showTiming").map { it.toBoolean() })
-}
-
-// =============================================================================
-// Native Library Building
-// =============================================================================
-
-/**
- * Build native tree-sitter library from source.
- */
-val buildTreeSitterLibrary by tasks.registering(BuildNativeLibraryTask::class) {
-    group = "tree-sitter"
-    description = "Build native tree-sitter library"
-    dependsOn(validateTreeSitterGrammar)
-    enabled = treeSitterPlatformSupported
-
-    treeSitterCli.set(treeSitterCliExe)
-    workDir.set(generatedDir.map { it.asFile })
-    grammarFile.set(grammarJsFile)
-    scannerFile.set(scannerCFile)
-    outputPath.set(nativeLibFile.map { it.asFile.absolutePath })
-    outputFile.set(nativeLibFile)
 }
 
 // =============================================================================

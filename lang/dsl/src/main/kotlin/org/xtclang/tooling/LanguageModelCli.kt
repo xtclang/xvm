@@ -17,6 +17,7 @@ import org.xtclang.tooling.generators.SublimeSyntaxGenerator
 import org.xtclang.tooling.generators.TextMateGenerator
 import org.xtclang.tooling.generators.TreeSitterGenerator
 import org.xtclang.tooling.generators.VSCodeConfigGenerator
+import org.xtclang.tooling.generators.VSCodePackageGenerator
 import org.xtclang.tooling.generators.VimGenerator
 import org.xtclang.tooling.model.LanguageModel
 import java.io.File
@@ -42,6 +43,7 @@ fun main(args: Array<String>) {
         "emacs" -> generateEmacs(args.getOrNull(1))
         "tree-sitter" -> generateTreeSitter(args.getOrNull(1))
         "vscode-config" -> generateVSCodeConfig(args.getOrNull(1))
+        "package-json" -> generatePackageJson(args.getOrNull(1))
         "stats" -> showStats()
         "validate" -> validateSources(args.drop(1))
         "help" -> showHelp()
@@ -94,23 +96,31 @@ private fun generateEmacs(outputPath: String?) {
 }
 
 private fun generateTreeSitter(outputDir: String?) {
-    logger.info("Generating Tree-sitter grammar and highlights")
-    val generator = TreeSitterGenerator(xtcLanguage)
+    logger.info("Generating Tree-sitter grammar, config, and highlights")
+    // Version is passed via system property from Gradle
+    val version = System.getProperty("project.version") ?: "0.0.0"
+    val generator = TreeSitterGenerator(xtcLanguage, version)
 
     val grammar = generator.generateGrammar()
+    val config = generator.generateConfig()
     val highlights = generator.generateHighlights()
 
     if (outputDir != null) {
         val dir = File(outputDir)
         dir.mkdirs()
         File(dir, "grammar.js").writeText(grammar)
+        File(dir, "tree-sitter.json").writeText(config + "\n")
         File(dir, "highlights.scm").writeText(highlights)
         logger.info("Tree-sitter files written to: {}", outputDir)
         println("Tree-sitter grammar written to: $outputDir/grammar.js")
+        println("Tree-sitter config written to: $outputDir/tree-sitter.json")
         println("Tree-sitter highlights written to: $outputDir/highlights.scm")
     } else {
         println("// grammar.js")
         println(grammar)
+        println()
+        println("// tree-sitter.json")
+        println(config)
         println()
         println("; highlights.scm")
         println(highlights)
@@ -122,6 +132,14 @@ private fun generateVSCodeConfig(outputPath: String?) {
     val generator = VSCodeConfigGenerator(xtcLanguage)
     val config = generator.generate()
     writeOutput(config, outputPath, "VS Code config")
+}
+
+private fun generatePackageJson(outputPath: String?) {
+    logger.info("Generating VS Code package.json")
+    val version = System.getProperty("project.version") ?: "1.0.0"
+    val generator = VSCodePackageGenerator(xtcLanguage, version)
+    val packageJson = generator.generate()
+    writeOutput(packageJson, outputPath, "VS Code package.json")
 }
 
 private fun writeOutput(
@@ -235,6 +253,7 @@ private fun showHelp() {
         |  emacs [output]         Generate Emacs major mode (.el)
         |  tree-sitter [dir]      Generate Tree-sitter grammar and highlights
         |  vscode-config [output] Generate VS Code language configuration
+        |  package-json [output]  Generate VS Code package.json
         |  validate <paths>       Validate language model against .x source files
         |  help                   Show this help message
         |

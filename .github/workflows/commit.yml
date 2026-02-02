@@ -257,9 +257,9 @@ jobs:
                   echo "✅ Corpus parsing: PASSED"
 
                   echo ""
-                  echo "📋 Verifying native library freshness..."
-                  ./gradlew $GRADLE_OPTIONS :lang:tree-sitter:ensureNativeLibraryUpToDate
-                  echo "✅ Native library: UP-TO-DATE"
+                  echo "📋 Building native libraries for all platforms..."
+                  ./gradlew $GRADLE_OPTIONS :lang:tree-sitter:buildAllNativeLibrariesOnDemand
+                  echo "✅ Native libraries: BUILT (cached by content hash)"
 
                   echo ""
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

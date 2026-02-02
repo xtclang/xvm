@@ -87,44 +87,9 @@ val generateLanguageConfig by tasks.registering(JavaExec::class) {
     configureGenerator("vscode-config", "language-configuration.json")
 }
 
-val generatePackageJson by tasks.registering {
-    group = "generation"
+val generatePackageJson by tasks.registering(JavaExec::class) {
     description = "Generate package.json for TextMate bundle"
-    val outputFile = generatedDir.map { it.file("package.json").asFile }
-    outputs.file(outputFile)
-    inputs.files(
-        sourceSets.main
-            .get()
-            .kotlin.sourceDirectories,
-    )
-    doLast {
-        val file = outputFile.get()
-        file.parentFile.mkdirs()
-        file.writeText(
-            """
-            {
-                "name": "xtc-language",
-                "displayName": "XTC Language",
-                "description": "XTC (Ecstasy) language support",
-                "version": "1.0.0",
-                "engines": { "vscode": "^1.50.0" },
-                "contributes": {
-                    "languages": [{
-                        "id": "xtc",
-                        "aliases": ["XTC", "Ecstasy", "xtc"],
-                        "extensions": [".x"],
-                        "configuration": "./language-configuration.json"
-                    }],
-                    "grammars": [{
-                        "language": "xtc",
-                        "scopeName": "source.xtc",
-                        "path": "./xtc.tmLanguage.json"
-                    }]
-                }
-            }
-            """.trimIndent(),
-        )
-    }
+    configureGenerator("package-json", "package.json")
 }
 
 val generateVim by tasks.registering(JavaExec::class) {
@@ -211,7 +176,7 @@ val generateEditorSupport by tasks.registering {
 // subproject. This keeps the DSL project focused on generation.
 //
 // Run: ./gradlew :lang:tree-sitter:testTreeSitterParse
-// Run: ./gradlew :lang:tree-sitter:buildTreeSitterLibrary
+// Run: ./gradlew :lang:tree-sitter:buildAllNativeLibrariesOnDemand
 // =============================================================================
 
 // =============================================================================

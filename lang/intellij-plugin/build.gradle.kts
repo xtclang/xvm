@@ -4,6 +4,7 @@ import java.io.File
 plugins {
     alias(libs.plugins.xdk.build.properties)
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.intellij.platform)
 }
@@ -24,40 +25,40 @@ val enablePublish = project.findProperty("enablePublish")?.toString()?.toBoolean
 
 fun findLocalIntelliJ(): File? {
     // Allow explicit override via gradle property
-    val explicitPath = project.findProperty("intellijLocalPath")?.toString()
+    val explicitPath: String? = project.findProperty("intellijLocalPath")?.toString()
     if (explicitPath != null) {
         val explicit = File(explicitPath)
         if (explicit.exists()) return explicit
         logger.warn("Explicit intellijLocalPath '$explicitPath' does not exist, searching for installed IDE")
     }
 
-    val osName = System.getProperty("os.name").lowercase()
-    val candidates =
+    val osName: String = System.getProperty("os.name")?.lowercase() ?: ""
+    val userHome: String = System.getProperty("user.home") ?: ""
+    val candidates: List<String> =
         when {
             osName.contains("mac") ->
                 listOf(
                     "/Applications/IntelliJ IDEA CE.app",
                     "/Applications/IntelliJ IDEA.app",
-                    "${System.getProperty("user.home")}/Applications/IntelliJ IDEA CE.app",
-                    "${System.getProperty("user.home")}/Applications/IntelliJ IDEA.app",
+                    "$userHome/Applications/IntelliJ IDEA CE.app",
+                    "$userHome/Applications/IntelliJ IDEA.app",
                 )
             osName.contains("linux") -> {
-                val home = System.getProperty("user.home")
                 listOf(
                     "/opt/idea-IC",
                     "/opt/intellij-idea-community",
                     "/usr/share/intellij-idea-community",
-                    "$home/.local/share/JetBrains/Toolbox/apps/IDEA-C/ch-0",
-                    "$home/idea-IC",
+                    "$userHome/.local/share/JetBrains/Toolbox/apps/IDEA-C/ch-0",
+                    "$userHome/idea-IC",
                 ) + (File("/opt").listFiles()?.filter { it.name.startsWith("idea-IC-") }?.map { it.path } ?: emptyList()) +
-                    (File(home).listFiles()?.filter { it.name.startsWith("idea-IC-") }?.map { it.path } ?: emptyList())
+                    (File(userHome).listFiles()?.filter { it.name.startsWith("idea-IC-") }?.map { it.path } ?: emptyList())
             }
             osName.contains("windows") -> {
-                val programFiles = System.getenv("ProgramFiles") ?: "C:\\Program Files"
+                val programFiles: String = System.getenv("ProgramFiles") ?: "C:\\Program Files"
                 listOf(
                     "$programFiles\\JetBrains\\IntelliJ IDEA Community Edition 2025.1",
                     "$programFiles\\JetBrains\\IntelliJ IDEA Community Edition",
-                    "${System.getProperty("user.home")}\\AppData\\Local\\JetBrains\\Toolbox\\apps\\IDEA-C",
+                    "$userHome\\AppData\\Local\\JetBrains\\Toolbox\\apps\\IDEA-C",
                 )
             }
             else -> emptyList()
@@ -70,9 +71,9 @@ val localIntelliJ: File? = findLocalIntelliJ()
 val useLocalIde = localIntelliJ != null
 
 if (useLocalIde) {
-    logger.lifecycle("Using local IntelliJ IDE: ${localIntelliJ!!.absolutePath}")
+    logger.info("Using local IntelliJ IDE: ${localIntelliJ!!.absolutePath}")
 } else {
-    logger.lifecycle("No local IntelliJ IDE found, will download (may cause cache issues on macOS)")
+    logger.info("No local IntelliJ IDE found, will download (may cause cache issues on macOS)")
 }
 
 repositories {
@@ -88,7 +89,7 @@ repositories {
 // XtcProjectCreator is a standalone class with no javatools dependencies.
 // We sync it here and compile it for Java 21 (IntelliJ's runtime).
 
-val syncedJavaSourceDir = layout.buildDirectory.dir("generated/synced-java")
+val syncedJavaSourceDir: Provider<Directory> = layout.buildDirectory.dir("generated/synced-java")
 
 val syncXtcProjectCreator by tasks.registering(Copy::class) {
     description = "Sync XtcProjectCreator.java from javatools for Java 21 compilation"
@@ -98,8 +99,8 @@ val syncXtcProjectCreator by tasks.registering(Copy::class) {
 
 // Sync gradle-wrapper resources needed by XtcProjectCreator
 // Source of truth is the repo root's gradle wrapper (same as what builds XVM)
-val syncedResourcesDir = layout.buildDirectory.dir("generated/synced-resources")
-val compositeRoot = rootProject.projectDir.parentFile // /lang -> /
+val syncedResourcesDir: Provider<Directory> = layout.buildDirectory.dir("generated/synced-resources")
+val compositeRoot: File = rootProject.projectDir.parentFile!! // /lang -> /
 
 val syncGradleWrapperResources by tasks.registering(Copy::class) {
     description = "Sync gradle-wrapper resources from repo root (single source of truth)"
@@ -152,7 +153,7 @@ tasks.matching { it.name.startsWith("runKtlint") }.configureEach {
 // =============================================================================
 
 // Configuration to consume TextMate grammar from dsl project
-val textMateGrammar by configurations.creating {
+val textMateGrammar: Configuration by configurations.creating {
     isCanBeConsumed = false
     isCanBeResolved = true
     attributes {
@@ -169,7 +170,7 @@ val textMateGrammar by configurations.creating {
 // 2. Out-of-process allows using the XDK's Java 24 toolchain
 // See doc/plans/PLAN_OUT_OF_PROCESS_LSP.md for architecture details.
 
-val lspServerJar by configurations.creating {
+val lspServerJar: Configuration by configurations.creating {
     isCanBeConsumed = false
     isCanBeResolved = true
     attributes {
@@ -180,7 +181,7 @@ val lspServerJar by configurations.creating {
 }
 
 // Configuration to consume LSP version properties for display in IDE
-val lspVersionProperties by configurations.creating {
+val lspVersionProperties: Configuration by configurations.creating {
     isCanBeConsumed = false
     isCanBeResolved = true
     attributes {
@@ -199,6 +200,9 @@ dependencies {
     // CompileOnly dependency for version properties and compile-time type checking
     // (the actual server runs out-of-process via the fat JAR above)
     compileOnly(project(":lsp-server"))
+
+    // JSON serialization for JSON-RPC protocol messages
+    implementation(libs.kotlinx.serialization.json)
 
     intellijPlatform {
         // Use local IDE if available to avoid Gradle transform cache issues on macOS
@@ -220,10 +224,22 @@ dependencies {
 }
 
 // IntelliJ 2025.1 runs on JDK 21, so we must target JDK 21 (not the project's JDK 25)
-val intellijJdkVersion =
+val intellijJdkVersion: Int =
     libs.versions.intellij.jdk
         .get()
         .toInt()
+
+// Derive sinceBuild from IDE version: "2025.1" -> "251" (last 2 digits of year + major version)
+val intellijIdeVersion: String =
+    libs.versions.intellij.ide
+        .get()
+val intellijSinceBuild: String =
+    run {
+        val parts = intellijIdeVersion.split(".")
+        val year = parts[0].takeLast(2)
+        val major = parts.getOrElse(1) { "0" }
+        "$year$major"
+    }
 
 java {
     toolchain {
@@ -244,7 +260,7 @@ intellijPlatform {
         version = project.version.toString()
 
         ideaVersion {
-            sinceBuild = "251" // IntelliJ 2025.1+
+            sinceBuild = intellijSinceBuild
             untilBuild = provider { null } // No upper bound - compatible with future versions
         }
 
@@ -318,7 +334,7 @@ val prepareSandbox by tasks.existing(Sync::class)
 
 // Derive TextMate destination from prepareSandbox's output (works with any IDE version)
 // prepareSandbox.destinationDir is the plugins/ directory, we need plugins/<plugin-name>/lib/textmate
-val sandboxPluginTextMate = prepareSandbox.map { it.destinationDir.resolve("intellij-plugin/lib/textmate") }
+val sandboxPluginTextMate: Provider<File> = prepareSandbox.map { it.destinationDir.resolve("intellij-plugin/lib/textmate") }
 
 val copyTextMateToSandbox by tasks.registering(Sync::class) {
     group = "build"
@@ -340,7 +356,7 @@ val copyTextMateToSandbox by tasks.registering(Sync::class) {
 //
 // Location: plugins/intellij-plugin/bin/xtc-lsp-server.jar (off classpath)
 
-val sandboxPluginBin = prepareSandbox.map { it.destinationDir.resolve("intellij-plugin/bin") }
+val sandboxPluginBin: Provider<File> = prepareSandbox.map { it.destinationDir.resolve("intellij-plugin/bin") }
 
 val copyLspServerToSandbox by tasks.registering(Copy::class) {
     group = "build"
@@ -384,7 +400,7 @@ val prepareJarSearchableOptions by tasks.existing {
 
 // Derive sandbox config dir from prepareSandbox (handles versioned sandbox directories like IU-2025.3.1.1)
 // prepareSandbox.destinationDir is the plugins/ directory, config/ is a sibling
-val sandboxConfigDir = prepareSandbox.map { it.destinationDir.parentFile.resolve("config") }
+val sandboxConfigDir: Provider<File> = prepareSandbox.map { it.destinationDir.parentFile.resolve("config") }
 
 // Plugins to disable in sandbox (Ultimate-only or problematic split-architecture plugins)
 val disabledSandboxPlugins =

@@ -9,6 +9,8 @@ import com.redhat.devtools.lsp4ij.LanguageServerFactory
 import com.redhat.devtools.lsp4ij.LanguageServerManager
 import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
 import com.redhat.devtools.lsp4ij.server.StreamConnectionProvider
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.eclipse.lsp4j.services.LanguageServer
 import java.io.File
 import java.io.InputStream
@@ -95,6 +97,12 @@ class XtcLspConnectionProvider(
          * Update this constant when upgrading jtreesitter to a version with different requirements.
          */
         const val MIN_JAVA_VERSION = 23
+
+        /** JSON-RPC protocol version */
+        private const val JSONRPC_VERSION = "2.0"
+
+        /** Request ID used for the shutdown request during server stop */
+        private const val SHUTDOWN_REQUEST_ID = 99999
     }
 
     private val buildProps: Properties by lazy {
@@ -267,8 +275,8 @@ class XtcLspConnectionProvider(
         return null
     }
 
-    private fun getJavaVersion(javaExecutable: Path): Int? {
-        return try {
+    private fun getJavaVersion(javaExecutable: Path): Int? =
+        try {
             val process =
                 ProcessBuilder(javaExecutable.toString(), "-version")
                     .redirectErrorStream(true)
@@ -281,12 +289,15 @@ class XtcLspConnectionProvider(
             // openjdk version "24" 2025-03-18
             // openjdk version "21.0.1" 2023-10-17
             val versionRegex = """version "(\d+)""".toRegex()
-            versionRegex.find(output)?.groupValues?.get(1)?.toIntOrNull()
+            versionRegex
+                .find(output)
+                ?.groupValues
+                ?.get(1)
+                ?.toIntOrNull()
         } catch (e: Exception) {
             logger.debug("Failed to get Java version from $javaExecutable", e)
             null
         }
-    }
 
     /**
      * Find the LSP server JAR in the plugin's bin directory.
@@ -391,15 +402,15 @@ class XtcLspConnectionProvider(
      */
     private fun showCrashNotification(exitCode: Int) {
         val notification =
-            NotificationGroupManager.getInstance()
+            NotificationGroupManager
+                .getInstance()
                 .getNotificationGroup("XTC Language Server")
                 .createNotification(
                     "XTC Language Server Crashed",
                     "The language server terminated unexpectedly (exit code $exitCode). " +
                         "Some language features may not work until the server is restarted.",
                     NotificationType.ERROR,
-                )
-                .addAction(
+                ).addAction(
                     NotificationAction.createSimple("Restart Server") {
                         restartServer()
                     },
@@ -438,7 +449,8 @@ class XtcLspConnectionProvider(
         content: String,
         type: NotificationType,
     ) {
-        NotificationGroupManager.getInstance()
+        NotificationGroupManager
+            .getInstance()
             .getNotificationGroup("XTC Language Server")
             .createNotification(title, content, type)
             .notify(project)
@@ -489,18 +501,30 @@ class XtcLspConnectionProvider(
     }
 
     private fun sendShutdownRequest(proc: Process) {
-        // JSON-RPC: {"jsonrpc":"2.0","id":99999,"method":"shutdown"}
-        val request = """{"jsonrpc":"2.0","id":99999,"method":"shutdown"}"""
-        val header = "Content-Length: ${request.length}\r\n\r\n"
-        proc.outputStream.write((header + request).toByteArray())
-        proc.outputStream.flush()
+        val request =
+            buildJsonObject {
+                put("jsonrpc", JSONRPC_VERSION)
+                put("id", SHUTDOWN_REQUEST_ID)
+                put("method", "shutdown")
+            }.toString()
+        sendJsonRpcMessage(proc, request)
     }
 
     private fun sendExitNotification(proc: Process) {
-        // JSON-RPC: {"jsonrpc":"2.0","method":"exit"}
-        val notification = """{"jsonrpc":"2.0","method":"exit"}"""
-        val header = "Content-Length: ${notification.length}\r\n\r\n"
-        proc.outputStream.write((header + notification).toByteArray())
+        val notification =
+            buildJsonObject {
+                put("jsonrpc", JSONRPC_VERSION)
+                put("method", "exit")
+            }.toString()
+        sendJsonRpcMessage(proc, notification)
+    }
+
+    private fun sendJsonRpcMessage(
+        proc: Process,
+        message: String,
+    ) {
+        val header = "Content-Length: ${message.length}\r\n\r\n"
+        proc.outputStream.write((header + message).toByteArray())
         proc.outputStream.flush()
     }
 }

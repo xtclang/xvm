@@ -58,7 +58,7 @@ val kotlinJdkVersion = xdkProperties.int("org.xtclang.kotlin.jdk")
 // Default is 'treesitter' which provides syntax-aware features (native library bundled).
 // Use 'mock' for basic regex-based functionality if tree-sitter has issues.
 // =============================================================================
-val lspAdapter = project.findProperty("lsp.adapter")?.toString() ?: "treesitter"
+val lspAdapter: String = project.findProperty("lsp.adapter")?.toString() ?: "treesitter"
 
 // Generate build info for version verification and adapter selection
 val generateBuildInfo by tasks.registering {
@@ -111,7 +111,7 @@ repositories {
 // Consume the tree-sitter native library for the current platform.
 // This library is built on-demand using Zig cross-compilation.
 
-val treeSitterNativeLib by configurations.creating {
+val treeSitterNativeLib: Configuration by configurations.creating {
     isCanBeConsumed = false
     isCanBeResolved = true
     attributes {

@@ -40,7 +40,7 @@ vanniktech-maven-publish = "0.34.0"
 # -----------------------------------------------------------------------------
 # Testing
 # -----------------------------------------------------------------------------
-assertj = "3.24.2"
+assertj = "3.27.7"
 awaitility = "4.2.0"
 junit = "6.0.2"
 junit-platform = "1.11.4"
@@ -60,7 +60,7 @@ jtreesitter = "0.26.0"
 kotlin = "2.2.0"
 kotlinx-serialization = "1.7.3"
 ktlint = "14.0.1"
-logback = "1.5.13"
+logback = "1.5.25"
 lsp4ij = "0.19.1"
 lsp4j = "0.24.0"
 slf4j = "2.0.9"
