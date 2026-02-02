@@ -59,16 +59,29 @@ class TreeSitterAdapter :
         logger.info("Platform: {} / {}", System.getProperty("os.name"), System.getProperty("os.arch"))
         logger.info("========================================")
 
-        val healthy = parser.healthCheck()
-        if (healthy) {
-            logger.info("TreeSitterAdapter ready: native library loaded and verified")
-        } else {
-            logger.error("TreeSitterAdapter: health check FAILED - native library may not work correctly")
+        if (!healthCheck()) {
+            val msg = "TreeSitterAdapter: health check FAILED - native library not working. " +
+                "Ensure native libraries are bundled and Java $MIN_JAVA_VERSION+ is used."
+            logger.error(msg)
+            throw IllegalStateException(msg)
         }
+        logger.info("TreeSitterAdapter ready: native library loaded and verified")
     }
+
+    /**
+     * Perform health check by delegating to the parser's health check.
+     * This verifies the native tree-sitter library is loaded and functional.
+     */
+    override fun healthCheck(): Boolean = parser.healthCheck()
 
     companion object {
         private val logger = LoggerFactory.getLogger(TreeSitterAdapter::class.java)
+
+        /**
+         * Minimum Java version required for tree-sitter FFM API.
+         * Update when jtreesitter dependency changes its requirements.
+         */
+        const val MIN_JAVA_VERSION = 23
 
         /**
          * Execute a block and return its result along with elapsed time in milliseconds (with sub-ms precision).

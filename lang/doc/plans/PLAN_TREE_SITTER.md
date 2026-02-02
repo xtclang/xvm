@@ -10,7 +10,7 @@ intelligence, without requiring compiler modifications.
 
 ## ⚠️ CRITICAL: Java Version Compatibility Issue
 
-> **Last Updated**: 2026-02-01
+> **Last Updated**: 2026-02-02
 
 ### The Problem
 
@@ -103,16 +103,23 @@ IntelliJ 2026.1 is expected to ship with JBR 22+ (late 2026).
 
 Track: https://github.com/JetBrains/JetBrainsRuntime/releases
 
-### Recommendation
+### Current Solution: Out-of-Process LSP Server ✅
 
-**Short-term**: Use mock adapter (current default). The fallback mechanism works correctly.
+**Status**: IMPLEMENTED (2026-02-02)
 
-**Medium-term**: Implement out-of-process LSP server with Java 25. This aligns with:
-- XDK toolchain (Java 25)
-- VS Code extension architecture (already out-of-process)
-- Future-proofing (can use latest jtreesitter)
+The out-of-process LSP server is now the default:
 
-**Long-term**: When IntelliJ ships JBR 22+, consider in-process option for lower latency.
+- **Default adapter**: `treesitter` (changed from `mock`)
+- **Process model**: LSP server runs as separate Java process
+- **Java requirement**: 23+ (for FFM API - see `MIN_JAVA_VERSION` constant)
+- **Communication**: stdio (JSON-RPC)
+- **Health monitoring**: Process monitor with crash notification and restart action
+
+The IntelliJ plugin:
+1. Finds a Java 23+ runtime (JAVA_HOME, XTC_JAVA_HOME, or PATH)
+2. Launches `xtc-lsp-server.jar` as a subprocess
+3. Communicates via LSP protocol over stdin/stdout
+4. Shows notification with "Restart Server" action on crash
 
 > **Documentation**:
 > - [lang/tree-sitter/README.md](../../tree-sitter/README.md) - Usage and architecture
@@ -122,7 +129,7 @@ Track: https://github.com/JetBrains/JetBrainsRuntime/releases
 
 ## Implementation Status
 
-> **Last Updated**: 2026-02-01
+> **Last Updated**: 2026-02-02
 
 ### Grammar (Phase 1) - COMPLETE
 
@@ -219,11 +226,11 @@ The LSP server uses a pluggable adapter pattern:
 ### Switching Adapters
 
 ```bash
-# Build with Mock adapter (default)
+# Build with Tree-sitter adapter (default)
 ./gradlew :lang:lsp-server:build
 
-# Build with Tree-sitter adapter
-./gradlew :lang:lsp-server:build -Plsp.adapter=treesitter
+# Build with Mock adapter (for testing without native libraries)
+./gradlew :lang:lsp-server:build -Plsp.adapter=mock
 ```
 
 ---
@@ -237,17 +244,23 @@ See [tree-sitter/README.md → Native Library Build](../../tree-sitter/README.md
 
 ### Pre-built Libraries
 
-All platforms built and committed to source control:
+Two native libraries are built for each platform and committed to source control:
 
-| Platform | Zig Target | Output |
-|----------|------------|--------|
-| darwin-arm64 | `aarch64-macos` | `libtree-sitter-xtc.dylib` |
-| darwin-x64 | `x86_64-macos` | `libtree-sitter-xtc.dylib` |
-| linux-x64 | `x86_64-linux-gnu` | `libtree-sitter-xtc.so` |
-| linux-arm64 | `aarch64-linux-gnu` | `libtree-sitter-xtc.so` |
-| windows-x64 | `x86_64-windows-gnu` | `libtree-sitter-xtc.dll` |
+1. **XTC Grammar Library** (`libtree-sitter-xtc.*`) - The compiled XTC grammar
+2. **Tree-sitter Runtime** (`libtree-sitter.*`) - The tree-sitter core library (required by jtreesitter)
+
+| Platform | Grammar Library | Runtime Library |
+|----------|-----------------|-----------------|
+| darwin-arm64 | `libtree-sitter-xtc.dylib` | `libtree-sitter.dylib` |
+| darwin-x64 | `libtree-sitter-xtc.dylib` | `libtree-sitter.dylib` |
+| linux-x64 | `libtree-sitter-xtc.so` | `libtree-sitter.so` |
+| linux-arm64 | `libtree-sitter-xtc.so` | `libtree-sitter.so` |
+| windows-x64 | `libtree-sitter-xtc.dll` | `libtree-sitter.dll` |
 
 Location: `tree-sitter/src/main/resources/native/<platform>/`
+
+The runtime library is loaded via `TreeSitterLibraryLookup` which provides a custom
+`NativeLibraryLookup` implementation for jtreesitter's FFM API.
 
 ---
 
@@ -603,43 +616,49 @@ Only skip the native library bundling (~1.2MB per platform).
 
 ## Task: Out-of-Process LSP Server
 
-**Status**: PENDING (HIGH PRIORITY)
+**Status**: COMPLETE (2026-02-02)
 
 **Full Plan**: [PLAN_OUT_OF_PROCESS_LSP.md](./PLAN_OUT_OF_PROCESS_LSP.md)
 
-**Goal**: Run the XTC LSP server as a separate process with Java 24, enabling full tree-sitter
-support regardless of IntelliJ's JBR version.
+### Implementation Summary
 
-### Summary
+The LSP server now runs out-of-process with full tree-sitter support:
 
-The [Java Version Compatibility Issue](#️-critical-java-version-compatibility-issue) prevents
-tree-sitter from working in-process with IntelliJ. The solution is to run the LSP server as
-a separate process with its own JVM, downloaded on first use via the Foojay Disco API.
-
-### Key Design Decisions
-
-- **JRE Source**: Foojay Disco API (Eclipse Temurin distribution)
-- **Java Version**: 24 (latest GA, not 25 EA)
-- **Cache Location**: `~/.xtc/jre/temurin-24-jre/`
-- **Download**: On first `.x` file open, with progress notification
-- **Fallback**: Mock adapter if provisioning fails
+- **Java Resolution**: Searches `xtc.lsp.java.home` → `XTC_JAVA_HOME` → `JAVA_HOME` → PATH
+- **Minimum Java**: 23+ (see `MIN_JAVA_VERSION` constant in `TreeSitterAdapter` and `XtcLspConnectionProvider`)
+- **Default Adapter**: `treesitter` (changed from `mock`)
+- **Fallback**: If tree-sitter fails, falls back to mock with error notification
 
 ### Architecture
 
 ```
-IntelliJ Plugin (JBR 21)          XTC LSP Server (Java 24)
+IntelliJ Plugin (JBR 21)          XTC LSP Server (Java 23+)
 ┌──────────────────────┐          ┌──────────────────────┐
-│  XtcLspServerSupport │──stdio──▶│  XtcLanguageServer   │
-│  Provider            │◀──stdio──│                      │
+│  XtcLanguageServer   │──stdio──▶│  XtcLanguageServer   │
+│  Factory             │◀──stdio──│                      │
 │                      │          │  ┌────────────────┐  │
-│  JreProvisioner      │          │  │ TreeSitter     │  │
-│  └─ Foojay API       │          │  │ Adapter        │  │
-└──────────────────────┘          │  │ (jtreesitter)  │  │
-                                  │  └────────────────┘  │
-                                  └──────────────────────┘
+│  XtcLspConnection    │          │  │ TreeSitter     │  │
+│  Provider            │          │  │ Adapter        │  │
+│  └─ Process monitor  │          │  │ (jtreesitter)  │  │
+│  └─ Crash notif.     │          │  └────────────────┘  │
+└──────────────────────┘          └──────────────────────┘
 ```
 
-See [PLAN_OUT_OF_PROCESS_LSP.md](./PLAN_OUT_OF_PROCESS_LSP.md) for full implementation details.
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `XtcLspServerSupportProvider.kt` | Factory and connection provider |
+| `XtcLspConnectionProvider.MIN_JAVA_VERSION` | Java version requirement constant |
+| `TreeSitterAdapter.MIN_JAVA_VERSION` | Java version requirement constant |
+| `TreeSitterLibraryLookup.kt` | Loads libtree-sitter runtime from JAR |
+
+### Features
+
+- **Health Check**: `xtc/healthCheck` custom LSP method
+- **Fail-Fast**: TreeSitterAdapter throws if health check fails
+- **Crash Notification**: Shows dialog with "Restart Server" action
+- **FFM Warnings Suppressed**: `--enable-native-access=ALL-UNNAMED`
 
 ---
 
@@ -769,3 +788,70 @@ And `childByType()` helper in XtcNode instead of `childByFieldName()`.
 
 **Defer until Phase 5 (Cross-File Support)** - The current positional matching works correctly.
 This refactor is a nice-to-have improvement, not blocking LSP functionality.
+
+---
+
+## Manual Test Plan
+
+### Prerequisites
+
+1. Java 23+ installed and available via `JAVA_HOME` or on PATH
+2. XTC project with `.x` files
+
+### Test: Out-of-Process LSP Server Startup
+
+```bash
+./gradlew :lang:intellij-plugin:runIde
+```
+
+**Expected in console:**
+```
+[XTC-LSP] XTC Language Server v0.4.4-SNAPSHOT
+[XTC-LSP] Backend: Tree-sitter
+[XTC-LSP] TreeSitterAdapter ready: native library loaded and verified
+[XTC-LSP] XtcParser health check PASSED: parsed test module successfully
+```
+
+**Expected in IDE:**
+- Notification: "XTC Language Server Started - Out-of-process server (v0.4.4-SNAPSHOT, adapter=treesitter)"
+
+### Test: Health Check Verification
+
+1. Open an `.x` file in the IDE
+2. Look for console output:
+   - `Native library: extracted libtree-sitter-xtc.dylib to ...`
+   - `Native library: successfully loaded XTC tree-sitter grammar (FFM API)`
+   - `XtcParser health check PASSED`
+
+### Test: Document Symbols
+
+1. Open an XTC file with classes/methods
+2. View → Tool Windows → Structure (or Cmd+7)
+3. Verify outline shows class/method hierarchy
+
+### Test: Crash Recovery
+
+1. Find the LSP server process: `ps aux | grep xtc-lsp-server`
+2. Kill it: `kill -9 <pid>`
+3. Verify notification appears: "XTC Language Server Crashed"
+4. Click "Restart Server"
+5. Verify server restarts (new notification)
+
+### Test: Version Display
+
+1. After LSP starts, check notification shows correct version
+2. Version should NOT be "?" - should show actual version like "v0.4.4-SNAPSHOT"
+
+### Test: Native Library Not Found
+
+1. Temporarily rename/remove native libraries from JAR
+2. Start IDE
+3. Verify error notification about native library
+4. Verify fallback to mock adapter (or fail-fast error)
+
+### Test: Java Version Too Low
+
+1. Set `JAVA_HOME` to Java 21 installation
+2. Unset `XTC_JAVA_HOME`
+3. Start IDE
+4. Verify error: "No Java 23+ runtime found"

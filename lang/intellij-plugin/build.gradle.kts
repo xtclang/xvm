@@ -124,8 +124,22 @@ val compileKotlin by tasks.existing {
     dependsOn(syncXtcProjectCreator)
 }
 
+// Copy LSP version properties to plugin resources so the plugin can display version info
+// The properties file comes from lsp-server's generateBuildInfo task
+val copyLspVersionProperties by tasks.registering(Copy::class) {
+    description = "Copy LSP version properties from lsp-server for display in IDE"
+    // Use the configuration directly - Gradle will resolve dependencies automatically
+    from(configurations.named("lspVersionProperties"))
+    into(layout.buildDirectory.dir("generated/resources/lsp"))
+}
+
+sourceSets.main {
+    resources.srcDir(copyLspVersionProperties.map { layout.buildDirectory.dir("generated/resources/lsp") })
+}
+
 val processResources by tasks.existing {
     dependsOn(syncGradleWrapperResources)
+    dependsOn(copyLspVersionProperties)
 }
 
 // ktlint checks synced Java sources, so it must run after sync
@@ -165,9 +179,22 @@ val lspServerJar by configurations.creating {
     }
 }
 
+// Configuration to consume LSP version properties for display in IDE
+val lspVersionProperties by configurations.creating {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+    attributes {
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.DOCUMENTATION))
+        attribute(Usage.USAGE_ATTRIBUTE, objects.named("lsp-version-properties"))
+    }
+}
+
 dependencies {
     // LSP server fat JAR for out-of-process execution
     lspServerJar(project(path = ":lsp-server", configuration = "lspServerElements"))
+
+    // LSP version properties for displaying version in IDE
+    lspVersionProperties(project(path = ":lsp-server", configuration = "lspVersionProperties"))
 
     // CompileOnly dependency for version properties and compile-time type checking
     // (the actual server runs out-of-process via the fat JAR above)

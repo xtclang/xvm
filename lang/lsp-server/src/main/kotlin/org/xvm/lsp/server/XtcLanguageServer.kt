@@ -31,6 +31,7 @@ import org.eclipse.lsp4j.SymbolInformation
 import org.eclipse.lsp4j.SymbolKind
 import org.eclipse.lsp4j.TextDocumentSyncKind
 import org.eclipse.lsp4j.jsonrpc.messages.Either
+import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.lsp4j.services.LanguageClientAware
 import org.eclipse.lsp4j.services.LanguageServer
@@ -206,6 +207,58 @@ class XtcLanguageServer(
     override fun getTextDocumentService(): TextDocumentService = textDocumentService
 
     override fun getWorkspaceService(): WorkspaceService = workspaceService
+
+    // =========================================================================
+    // Custom XTC LSP Methods
+    // =========================================================================
+    //
+    // LSP allows servers to define custom methods beyond the standard protocol.
+    // Custom methods use the @JsonRequest annotation with a method name.
+    //
+    // Convention: Custom methods should be prefixed with the language/server name
+    // to avoid collisions (e.g., "xtc/healthCheck", "xtc/getModuleInfo").
+    //
+    // How it works:
+    // 1. Client sends JSON-RPC request: {"jsonrpc":"2.0","id":1,"method":"xtc/healthCheck"}
+    // 2. LSP4J routes to the annotated method via reflection
+    // 3. Method returns CompletableFuture with the response
+    // 4. Response sent back: {"jsonrpc":"2.0","id":1,"result":{...}}
+    //
+    // IntelliJ/LSP4IJ: Use LanguageServerManager to send custom requests:
+    //   languageServer.sendRequest("xtc/healthCheck", null)
+    //
+    // VS Code: Use sendRequest on the LanguageClient:
+    //   client.sendRequest("xtc/healthCheck")
+    //
+    // =========================================================================
+
+    /**
+     * Custom health check method that clients can call to verify the server is working.
+     *
+     * Returns a map with:
+     * - healthy: boolean - overall health status
+     * - version: string - server version
+     * - adapter: string - active adapter name
+     * - backend: string - backend type (mock, treesitter, compiler)
+     * - message: string - human-readable status message
+     *
+     * Usage from client: Send JSON-RPC request with method "xtc/healthCheck"
+     */
+    @JsonRequest("xtc/healthCheck")
+    fun healthCheck(): CompletableFuture<Map<String, Any>> =
+        CompletableFuture.supplyAsync {
+            val healthy = adapter.healthCheck()
+            val status =
+                mapOf(
+                    "healthy" to healthy,
+                    "version" to version,
+                    "adapter" to adapter.displayName,
+                    "buildTime" to buildTime,
+                    "message" to if (healthy) "XTC Language Server is healthy" else "Health check failed",
+                )
+            logger.info("xtc/healthCheck: {}", status)
+            status
+        }
 
     /**
      * Publish diagnostics to the client.

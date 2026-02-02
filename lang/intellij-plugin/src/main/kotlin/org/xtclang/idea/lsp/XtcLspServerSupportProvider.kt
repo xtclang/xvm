@@ -1,10 +1,12 @@
 package org.xtclang.idea.lsp
 
+import com.intellij.notification.NotificationAction
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.redhat.devtools.lsp4ij.LanguageServerFactory
+import com.redhat.devtools.lsp4ij.LanguageServerManager
 import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
 import com.redhat.devtools.lsp4ij.server.StreamConnectionProvider
 import org.eclipse.lsp4j.services.LanguageServer
@@ -19,9 +21,9 @@ import java.util.Properties
  * Factory for creating XTC Language Server connections.
  *
  * The server runs OUT-OF-PROCESS as a separate Java process because:
- * 1. jtreesitter requires Java 23+ (Foreign Function & Memory API)
+ * 1. jtreesitter requires Java [XtcLspConnectionProvider.MIN_JAVA_VERSION]+ (Foreign Function & Memory API)
  * 2. IntelliJ uses JBR 21 which doesn't support FFM
- * 3. Out-of-process allows using the XDK's Java 24 toolchain
+ * 3. Out-of-process allows using a newer Java toolchain
  *
  * See doc/plans/PLAN_OUT_OF_PROCESS_LSP.md for architecture details.
  */
@@ -29,16 +31,28 @@ class XtcLanguageServerFactory : LanguageServerFactory {
     private val logger = logger<XtcLanguageServerFactory>()
 
     private val buildInfo: String by lazy {
+        val stream = XtcLanguageServerFactory::class.java.getResourceAsStream("/lsp-version.properties")
+        if (stream == null) {
+            logger.error(
+                "lsp-version.properties not found in plugin resources! " +
+                    "This indicates a build issue - the file should be copied from lsp-server during build.",
+            )
+            return@lazy "ERROR: version properties not bundled"
+        }
+
         runCatching {
-            Properties()
-                .apply {
-                    XtcLanguageServerFactory::class.java
-                        .getResourceAsStream("/lsp-version.properties")
-                        ?.use { load(it) }
-                }.let { props ->
-                    "v${props.getProperty("lsp.version", "?")} built ${props.getProperty("lsp.build.time", "?")}"
+            Properties().apply { stream.use { load(it) } }.let { props ->
+                val version = props.getProperty("lsp.version")
+                val buildTime = props.getProperty("lsp.build.time")
+                if (version == null || buildTime == null) {
+                    logger.warn("lsp-version.properties is missing expected keys: version=$version, buildTime=$buildTime")
                 }
-        }.getOrDefault("unknown")
+                "v${version ?: "?"} built ${buildTime ?: "?"}"
+            }
+        }.getOrElse { e ->
+            logger.error("Failed to parse lsp-version.properties", e)
+            "ERROR: ${e.message}"
+        }
     }
 
     override fun createConnectionProvider(project: Project) =
@@ -64,26 +78,48 @@ class XtcLanguageServerFactory : LanguageServerFactory {
  * 3. Environment variable `JAVA_HOME` (system default)
  * 4. Fail with helpful error message
  *
- * The Java runtime MUST be version 23+ for tree-sitter to work.
+ * The Java runtime MUST be version [MIN_JAVA_VERSION]+ for tree-sitter to work.
  */
 class XtcLspConnectionProvider(
     private val project: Project,
 ) : StreamConnectionProvider {
     private val logger = logger<XtcLspConnectionProvider>()
 
+    companion object {
+        /**
+         * Minimum Java version required for the out-of-process LSP server.
+         *
+         * This is determined by jtreesitter's Foreign Function & Memory (FFM) API requirements:
+         * - jtreesitter 0.26+ requires Java 23+
+         *
+         * Update this constant when upgrading jtreesitter to a version with different requirements.
+         */
+        const val MIN_JAVA_VERSION = 23
+    }
+
     private val buildProps: Properties by lazy {
         Properties().apply {
-            XtcLspConnectionProvider::class.java
-                .getResourceAsStream("/lsp-version.properties")
-                ?.use { load(it) }
+            val stream = XtcLspConnectionProvider::class.java.getResourceAsStream("/lsp-version.properties")
+            if (stream == null) {
+                logger.error(
+                    "lsp-version.properties not found in plugin resources! " +
+                        "Cannot determine LSP server version. This indicates a build issue.",
+                )
+            } else {
+                stream.use { load(it) }
+            }
         }
     }
 
     private var process: Process? = null
     private var stderrForwarder: Thread? = null
+    private var processMonitor: Thread? = null
 
     @Volatile
     private var alive = false
+
+    @Volatile
+    private var intentionalShutdown = false
 
     override fun start() {
         logger.info("Starting XTC LSP Server (out-of-process)")
@@ -98,6 +134,7 @@ class XtcLspConnectionProvider(
         val command =
             listOf(
                 javaPath.toString(),
+                "--enable-native-access=ALL-UNNAMED", // FFM API for tree-sitter native libraries
                 "-Dapple.awt.UIElement=true", // macOS: no dock icon
                 "-Djava.awt.headless=true", // No GUI components
                 "-Xms32m", // Modest initial heap
@@ -116,10 +153,14 @@ class XtcLspConnectionProvider(
                     project.basePath?.let { directory(File(it)) }
                 }
 
+        intentionalShutdown = false
+
         process =
             processBuilder.start().also { proc ->
                 // Start stderr forwarder immediately
                 stderrForwarder = startStderrForwarder(proc)
+                // Start process monitor to detect crashes
+                processMonitor = startProcessMonitor(proc)
             }
 
         alive = true
@@ -136,7 +177,7 @@ class XtcLspConnectionProvider(
     }
 
     /**
-     * Find a Java 23+ executable for running the LSP server.
+     * Find a Java [MIN_JAVA_VERSION]+ executable for running the LSP server.
      *
      * Resolution order:
      * 1. System property `xtc.lsp.java.home`
@@ -158,19 +199,19 @@ class XtcLspConnectionProvider(
             if (executable != null && Files.isExecutable(executable)) {
                 val version = getJavaVersion(executable)
                 logger.info("Found Java $version at $executable")
-                if (version != null && version >= 23) {
+                if (version != null && version >= MIN_JAVA_VERSION) {
                     return executable
                 } else {
-                    logger.warn("Java at $executable is version $version (need 23+), trying next")
+                    logger.warn("Java at $executable is version $version (need $MIN_JAVA_VERSION+), trying next")
                 }
             }
         }
 
-        // If no JAVA_HOME is set, check if 'java' is on PATH and is version 23+
+        // If no JAVA_HOME is set, check if 'java' is on PATH and meets version requirement
         val pathJava = findJavaOnPath()
         if (pathJava != null) {
             val version = getJavaVersion(pathJava)
-            if (version != null && version >= 23) {
+            if (version != null && version >= MIN_JAVA_VERSION) {
                 logger.info("Using java from PATH: $pathJava (version $version)")
                 return pathJava
             }
@@ -178,14 +219,14 @@ class XtcLspConnectionProvider(
 
         val errorMsg =
             """
-            No Java 23+ runtime found for XTC Language Server.
+            No Java $MIN_JAVA_VERSION+ runtime found for XTC Language Server.
 
-            The tree-sitter adapter requires Java 23+ (Foreign Function & Memory API).
+            The tree-sitter adapter requires Java $MIN_JAVA_VERSION+ (Foreign Function & Memory API).
 
             Please set one of:
-            - System property: -Dxtc.lsp.java.home=/path/to/java23+
-            - Environment variable: XTC_JAVA_HOME=/path/to/java23+
-            - Environment variable: JAVA_HOME=/path/to/java23+
+            - System property: -Dxtc.lsp.java.home=/path/to/java$MIN_JAVA_VERSION+
+            - Environment variable: XTC_JAVA_HOME=/path/to/java$MIN_JAVA_VERSION+
+            - Environment variable: JAVA_HOME=/path/to/java$MIN_JAVA_VERSION+
 
             You can download a suitable JDK from:
             - https://adoptium.net/ (Eclipse Temurin)
@@ -197,7 +238,7 @@ class XtcLspConnectionProvider(
         logger.error(errorMsg)
         showNotification(
             title = "XTC Language Server Error",
-            content = "No Java 23+ runtime found. Set JAVA_HOME or XTC_JAVA_HOME to a Java 23+ installation.",
+            content = "No Java $MIN_JAVA_VERSION+ runtime found. Set JAVA_HOME or XTC_JAVA_HOME to a Java $MIN_JAVA_VERSION+ installation.",
             type = NotificationType.ERROR,
         )
 
@@ -322,6 +363,76 @@ class XtcLspConnectionProvider(
             start()
         }
 
+    /**
+     * Start a daemon thread to monitor the server process for unexpected termination.
+     * Shows a notification with restart option if the server crashes.
+     */
+    private fun startProcessMonitor(proc: Process): Thread =
+        Thread({
+            try {
+                val exitCode = proc.waitFor()
+                if (!intentionalShutdown && alive) {
+                    // Server crashed unexpectedly
+                    logger.error("XTC LSP Server crashed with exit code $exitCode")
+                    alive = false
+                    showCrashNotification(exitCode)
+                }
+            } catch (e: InterruptedException) {
+                // Monitor was interrupted during shutdown - normal
+                Thread.currentThread().interrupt()
+            }
+        }, "XTC-LSP-process-monitor").apply {
+            isDaemon = true
+            start()
+        }
+
+    /**
+     * Show a notification when the server crashes with an option to restart.
+     */
+    private fun showCrashNotification(exitCode: Int) {
+        val notification =
+            NotificationGroupManager.getInstance()
+                .getNotificationGroup("XTC Language Server")
+                .createNotification(
+                    "XTC Language Server Crashed",
+                    "The language server terminated unexpectedly (exit code $exitCode). " +
+                        "Some language features may not work until the server is restarted.",
+                    NotificationType.ERROR,
+                )
+                .addAction(
+                    NotificationAction.createSimple("Restart Server") {
+                        restartServer()
+                    },
+                )
+
+        notification.notify(project)
+    }
+
+    /**
+     * Restart the LSP server by stopping and starting it again.
+     */
+    private fun restartServer() {
+        logger.info("Restarting XTC LSP Server...")
+        runCatching {
+            // Use LSP4IJ's LanguageServerManager to restart
+            LanguageServerManager.getInstance(project).stop("xtc")
+        }.onSuccess {
+            // LSP4IJ will automatically restart when needed
+            showNotification(
+                title = "XTC Language Server",
+                content = "Server restart initiated. Open an XTC file to reconnect.",
+                type = NotificationType.INFORMATION,
+            )
+        }.onFailure { e ->
+            logger.error("Failed to restart LSP server", e)
+            showNotification(
+                title = "XTC Language Server Error",
+                content = "Failed to restart server: ${e.message}",
+                type = NotificationType.ERROR,
+            )
+        }
+    }
+
     private fun showNotification(
         title: String,
         content: String,
@@ -348,29 +459,28 @@ class XtcLspConnectionProvider(
 
     override fun stop() {
         logger.info("Stopping XTC LSP Server")
+        intentionalShutdown = true
         alive = false
 
         val proc = process ?: return
 
         if (proc.isAlive) {
-            try {
-                // Send LSP shutdown request
+            runCatching {
                 sendShutdownRequest(proc)
-
-                // Send LSP exit notification
                 sendExitNotification(proc)
-
-                // Wait briefly for graceful exit
-                if (!proc.waitFor(2, java.util.concurrent.TimeUnit.SECONDS)) {
-                    logger.warn("LSP server did not exit gracefully, forcing termination")
-                    proc.destroyForcibly()
-                }
-            } catch (e: Exception) {
+                proc.waitFor(2, java.util.concurrent.TimeUnit.SECONDS)
+            }.onFailure { e ->
                 logger.warn("Error during LSP server shutdown", e)
+            }
+
+            if (proc.isAlive) {
+                logger.warn("LSP server did not exit gracefully, forcing termination")
                 proc.destroyForcibly()
             }
         }
 
+        processMonitor?.interrupt()
+        processMonitor = null
         stderrForwarder?.interrupt()
         stderrForwarder = null
         process = null

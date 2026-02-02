@@ -52,6 +52,16 @@ interface XtcCompilerAdapter {
         get() = this::class.simpleName ?: "Unknown"
 
     /**
+     * Perform a health check to verify the adapter is working correctly.
+     *
+     * For adapters using native code (e.g., TreeSitterAdapter), this verifies
+     * that the native library is loaded and functional.
+     *
+     * @return true if the adapter is healthy, false otherwise
+     */
+    fun healthCheck(): Boolean = true
+
+    /**
      * Compile a source file and return the result.
      *
      * @param uri     the document URI

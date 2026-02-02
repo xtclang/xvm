@@ -32,6 +32,11 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
 
     private val compiledDocuments = ConcurrentHashMap<String, CompilationResult>()
 
+    /**
+     * Mock adapter is always healthy - no native code to verify.
+     */
+    override fun healthCheck(): Boolean = true
+
     companion object {
         // Simple patterns to recognize XTC constructs
         private val MODULE_PATTERN = Regex("""^\s*module\s+([\w.]+)\s*\{?""", RegexOption.MULTILINE)

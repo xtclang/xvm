@@ -52,13 +52,13 @@ val kotlinJdkVersion = xdkProperties.int("org.xtclang.kotlin.jdk")
 //   mock        - Regex-based parsing (default, no native dependencies)
 //   treesitter  - Tree-sitter parsing (syntax-level intelligence, needs native lib)
 //
-// Set via Gradle property: -Plsp.adapter=treesitter
-// Or in gradle.properties:  lsp.adapter=treesitter
+// Set via Gradle property: -Plsp.adapter=mock (to override default)
+// Or in gradle.properties:  lsp.adapter=mock
 //
-// Default is 'mock' which provides basic functionality without tree-sitter setup.
-// Use 'treesitter' for full syntax-aware features (requires native library compiled).
+// Default is 'treesitter' which provides syntax-aware features (native library bundled).
+// Use 'mock' for basic regex-based functionality if tree-sitter has issues.
 // =============================================================================
-val lspAdapter = project.findProperty("lsp.adapter")?.toString() ?: "mock"
+val lspAdapter = project.findProperty("lsp.adapter")?.toString() ?: "treesitter"
 
 // Generate build info for version verification and adapter selection
 val generateBuildInfo by tasks.registering {
@@ -253,6 +253,22 @@ val lspServerElements by configurations.registering {
     }
     outgoing {
         artifact(fatJar)
+    }
+}
+
+// Configuration to expose version properties to IDE plugins
+// This allows the IntelliJ plugin to display version info without accessing the LSP JAR
+val lspVersionProperties by configurations.registering {
+    isCanBeConsumed = true
+    isCanBeResolved = false
+    attributes {
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.DOCUMENTATION))
+        attribute(Usage.USAGE_ATTRIBUTE, objects.named("lsp-version-properties"))
+    }
+    outgoing {
+        artifact(generateBuildInfo.map { layout.buildDirectory.file("generated/resources/buildinfo/lsp-version.properties") }) {
+            builtBy(generateBuildInfo)
+        }
     }
 }
 
