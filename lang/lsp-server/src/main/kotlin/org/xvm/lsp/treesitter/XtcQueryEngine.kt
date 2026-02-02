@@ -177,7 +177,11 @@ class XtcQueryEngine(
         while (current != null) {
             val kind = nodeTypeToSymbolKind(current.type)
             if (kind != null) {
-                val nameNode = current.childByFieldName("name") ?: return null
+                // Find the name by looking for identifier or type_name child
+                // (XTC grammar doesn't use field names)
+                val nameNode = current.childByType("identifier")
+                    ?: current.childByType("type_name")
+                    ?: return null
                 return current.toSymbolInfo(nameNode.text, kind, uri)
             }
             current = current.parent

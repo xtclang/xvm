@@ -147,9 +147,31 @@ val textMateGrammar by configurations.creating {
     }
 }
 
+// =============================================================================
+// Consumer configuration for LSP server fat JAR (out-of-process execution)
+// =============================================================================
+// The LSP server runs as a separate Java process because:
+// 1. jtreesitter requires Java 23+ (FFM API), but IntelliJ uses JBR 21
+// 2. Out-of-process allows using the XDK's Java 24 toolchain
+// See doc/plans/PLAN_OUT_OF_PROCESS_LSP.md for architecture details.
+
+val lspServerJar by configurations.creating {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+    attributes {
+        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+        attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
+        attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling.SHADOWED))
+    }
+}
+
 dependencies {
-    // LSP server for in-process execution (no subprocess needed)
-    implementation(project(":lsp-server"))
+    // LSP server fat JAR for out-of-process execution
+    lspServerJar(project(path = ":lsp-server", configuration = "lspServerElements"))
+
+    // CompileOnly dependency for version properties and compile-time type checking
+    // (the actual server runs out-of-process via the fat JAR above)
+    compileOnly(project(":lsp-server"))
 
     intellijPlatform {
         // Use local IDE if available to avoid Gradle transform cache issues on macOS
@@ -282,12 +304,44 @@ val copyTextMateToSandbox by tasks.registering(Sync::class) {
     mustRunAfter(project(":dsl").tasks.named("compileTestJava"))
 }
 
+// =============================================================================
+// Copy LSP Server Fat JAR into plugin bin directory (NOT lib!)
+// =============================================================================
+// The LSP server runs as a SEPARATE Java process and MUST NOT be on the plugin
+// classpath. If placed in lib/, IntelliJ loads its bundled lsp4j classes which
+// conflict with LSP4IJ's own lsp4j, causing classloader errors.
+//
+// Location: plugins/intellij-plugin/bin/xtc-lsp-server.jar (off classpath)
+
+val sandboxPluginBin = prepareSandbox.map { it.destinationDir.resolve("intellij-plugin/bin") }
+
+val copyLspServerToSandbox by tasks.registering(Copy::class) {
+    group = "build"
+    description = "Copy LSP server fat JAR into plugin sandbox bin directory (off classpath)"
+
+    from(lspServerJar) {
+        rename { "xtc-lsp-server.jar" }
+    }
+    into(sandboxPluginBin)
+
+    // Ensure bin/ directory exists (prepareSandbox only creates lib/)
+    // Capture the directory path at configuration time for cache compatibility
+    val binDir = sandboxPluginBin
+    doFirst {
+        binDir.get().mkdirs()
+    }
+}
+
 prepareSandbox.configure {
     finalizedBy(copyTextMateToSandbox)
+    finalizedBy(copyLspServerToSandbox)
 }
 
 val prepareJarSearchableOptions by tasks.existing {
-    mustRunAfter(copyTextMateToSandbox)
+    // Explicit dependencies ensure copy tasks complete before scanning the sandbox lib directory.
+    // These tasks share the sandbox lib output directory, so ordering must be explicit.
+    dependsOn(copyTextMateToSandbox)
+    dependsOn(copyLspServerToSandbox)
 }
 
 // =============================================================================
@@ -333,10 +387,11 @@ val configureDisabledPlugins by tasks.registering {
     }
 }
 
-// Ensure TextMate files are copied before IDE starts
+// Ensure TextMate files and LSP server JAR are copied before IDE starts
 // NOTE: finalizedBy doesn't guarantee completion, so we need explicit dependsOn
 val runIde by tasks.existing {
     dependsOn(copyTextMateToSandbox)
+    dependsOn(copyLspServerToSandbox)
     dependsOn(configureDisabledPlugins)
 }
 

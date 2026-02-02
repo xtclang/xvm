@@ -16,6 +16,9 @@ import java.io.Closeable
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.system.measureNanoTime
 
+/** Format a Double with 1 decimal place for logging */
+private fun Double.ms() = "%.1f".format(this)
+
 /**
  * XTC Compiler Adapter implementation using Tree-sitter for fast, syntax-level intelligence.
  *
@@ -47,6 +50,22 @@ class TreeSitterAdapter :
     private val queryEngine: XtcQueryEngine = XtcQueryEngine(parser.getLanguage())
     private val parsedTrees = ConcurrentHashMap<String, XtcTree>()
     private val compilationResults = ConcurrentHashMap<String, CompilationResult>()
+
+    init {
+        // Perform health check to verify native library is working
+        logger.info("========================================")
+        logger.info("TreeSitterAdapter initializing...")
+        logger.info("Java version: {} ({})", System.getProperty("java.version"), System.getProperty("java.vendor"))
+        logger.info("Platform: {} / {}", System.getProperty("os.name"), System.getProperty("os.arch"))
+        logger.info("========================================")
+
+        val healthy = parser.healthCheck()
+        if (healthy) {
+            logger.info("TreeSitterAdapter ready: native library loaded and verified")
+        } else {
+            logger.error("TreeSitterAdapter: health check FAILED - native library may not work correctly")
+        }
+    }
 
     companion object {
         private val logger = LoggerFactory.getLogger(TreeSitterAdapter::class.java)
@@ -220,12 +239,12 @@ class TreeSitterAdapter :
         compilationResults[uri] = result
 
         logger.info(
-            "TreeSitterAdapter: parsed in {:.1f}ms ({}), {} errors, {} symbols (query: {:.1f}ms)",
-            parseElapsed,
+            "TreeSitterAdapter: parsed in {}ms ({}), {} errors, {} symbols (query: {}ms)",
+            parseElapsed.ms(),
             if (isIncremental) "incremental" else "full",
             diagnostics.size,
             symbols.size,
-            queryElapsed,
+            queryElapsed.ms(),
         )
 
         return result

@@ -30,8 +30,27 @@ class XtcParser : Closeable {
     init {
         parser = Parser()
         parser.setLanguage(language)
-        logger.debug("XtcParser initialized with tree-sitter")
+        logger.info("XtcParser initialized with tree-sitter native library")
     }
+
+    /**
+     * Perform a health check to verify the parser and native library work correctly.
+     * Parses a minimal XTC snippet and verifies the tree structure is correct.
+     */
+    fun healthCheck(): Boolean =
+        runCatching {
+            parse("module test { }").use { tree ->
+                val root = tree.root
+                (root.type == "source_file" && root.childCount > 0 && !root.hasError).also { valid ->
+                    if (valid) {
+                        logger.info("XtcParser health check PASSED: parsed test module successfully")
+                    } else {
+                        logger.warn("XtcParser health check FAILED: root={}, children={}, hasError={}", root.type, root.childCount, root.hasError)
+                    }
+                }
+            }
+        }.onFailure { logger.error("XtcParser health check FAILED: {}", it.message) }
+            .getOrDefault(false)
 
     /**
      * Parse source code into a syntax tree.
@@ -129,8 +148,10 @@ class XtcParser : Closeable {
                 tempFile.toFile().deleteOnExit()
                 Files.copy(inputStream, tempFile, StandardCopyOption.REPLACE_EXISTING)
 
-                logger.info("Extracted XTC grammar to: {}", tempFile)
-                return loadLanguageFromPath(tempFile)
+                logger.info("Native library: extracted {} to {}", libraryFileName, tempFile)
+                val language = loadLanguageFromPath(tempFile)
+                logger.info("Native library: successfully loaded XTC tree-sitter grammar (FFM API)")
+                return language
             }
 
             // Fallback: try to load from system library path

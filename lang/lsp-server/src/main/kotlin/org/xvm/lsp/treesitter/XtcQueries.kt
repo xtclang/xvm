@@ -5,29 +5,49 @@ package org.xvm.lsp.treesitter
  *
  * These S-expression queries match specific patterns in the syntax tree,
  * enabling extraction of declarations, references, and other language elements.
+ *
+ * NOTE: The XTC grammar does NOT define field names (via field() in grammar.js).
+ * All queries must use positional/structural matching, not field: syntax.
+ * For example, use `(class_declaration (type_name) @name)` not `(class_declaration name: (type_name))`.
+ *
+ * TODO: Consider migrating the grammar (grammar.js) to use field() definitions.
+ *       This would enable field-based query syntax like:
+ *         `(class_declaration name: (type_name) @name)`
+ *       instead of positional matching. Benefits:
+ *       - More robust queries (not dependent on child ordering)
+ *       - Cleaner query patterns (field: syntax is self-documenting)
+ *       - Better XtcNode API (childByFieldName would work)
+ *       - Alignment with tree-sitter best practices
+ *       Example grammar change:
+ *         BEFORE: class_declaration: $ => seq('class', $.type_name, ...)
+ *         AFTER:  class_declaration: $ => seq('class', field('name', $.type_name), ...)
+ *       See: lang/doc/plans/PLAN_TREE_SITTER.md for tracking.
  */
 object XtcQueries {
     /**
      * Find all type declarations (classes, interfaces, mixins, services, consts, enums).
+     * Matches type_name child of each declaration type.
      */
     val TYPE_DECLARATIONS =
         """
-        (class_declaration name: (type_name) @name) @declaration
-        (interface_declaration name: (type_name) @name) @declaration
-        (mixin_declaration name: (type_name) @name) @declaration
-        (service_declaration name: (type_name) @name) @declaration
-        (const_declaration name: (type_name) @name) @declaration
-        (enum_declaration name: (type_name) @name) @declaration
+        (class_declaration (type_name) @name) @declaration
+        (interface_declaration (type_name) @name) @declaration
+        (mixin_declaration (type_name) @name) @declaration
+        (service_declaration (type_name) @name) @declaration
+        (const_declaration (type_name) @name) @declaration
+        (enum_declaration (type_name) @name) @declaration
         """.trimIndent()
 
     /**
      * Find all method declarations.
+     * Matches the identifier (method name) and parameters within method_declaration.
      */
     val METHOD_DECLARATIONS =
         """
         (method_declaration
-            name: (identifier) @name
-            parameters: (parameters) @params
+            (type_expression)
+            (identifier) @name
+            (parameters) @params
         ) @declaration
         """.trimIndent()
 
@@ -37,28 +57,30 @@ object XtcQueries {
     val CONSTRUCTOR_DECLARATIONS =
         """
         (constructor_declaration
-            parameters: (parameters) @params
+            (parameters) @params
         ) @declaration
         """.trimIndent()
 
     /**
      * Find all property declarations.
+     * Matches type_expression followed by identifier in property_declaration.
      */
     val PROPERTY_DECLARATIONS =
         """
         (property_declaration
-            type: (type_expression) @type
-            name: (identifier) @name
+            (type_expression) @type
+            (identifier) @name
         ) @declaration
         """.trimIndent()
 
     /**
      * Find all variable declarations.
+     * Note: variable_declaration has multiple forms - this matches the identifier.
      */
     val VARIABLE_DECLARATIONS =
         """
         (variable_declaration
-            name: (identifier) @name
+            (identifier) @name
         ) @declaration
         """.trimIndent()
 
@@ -68,8 +90,8 @@ object XtcQueries {
     val PARAMETER_DECLARATIONS =
         """
         (parameter
-            type: (type_expression) @type
-            name: (identifier) @name
+            (type_expression) @type
+            (identifier) @name
         ) @declaration
         """.trimIndent()
 
@@ -94,7 +116,7 @@ object XtcQueries {
      */
     val MODULE_DECLARATIONS =
         """
-        (module_declaration name: (qualified_name) @name) @declaration
+        (module_declaration (qualified_name) @name) @declaration
         """.trimIndent()
 
     /**
@@ -102,7 +124,7 @@ object XtcQueries {
      */
     val PACKAGE_DECLARATIONS =
         """
-        (package_declaration name: (identifier) @name) @declaration
+        (package_declaration (identifier) @name) @declaration
         """.trimIndent()
 
     /**
@@ -117,31 +139,34 @@ object XtcQueries {
 
     /**
      * Find all call expressions (for call hierarchy).
+     * Note: call_expression structure is (call_expression function args).
      */
     val CALL_EXPRESSIONS =
         """
         (call_expression
-            function: (identifier) @function) @call
+            (identifier) @function) @call
         (call_expression
-            function: (member_expression
-                property: (identifier) @function)) @call
+            (member_expression
+                (identifier) @function)) @call
         """.trimIndent()
 
     /**
      * Combined query for all declarations (for document symbols).
+     * Uses positional matching since grammar has no field definitions.
      */
     val ALL_DECLARATIONS =
         """
-        (module_declaration name: (qualified_name) @name) @module
-        (package_declaration name: (identifier) @name) @package
-        (class_declaration name: (type_name) @name) @class
-        (interface_declaration name: (type_name) @name) @interface
-        (mixin_declaration name: (type_name) @name) @mixin
-        (service_declaration name: (type_name) @name) @service
-        (const_declaration name: (type_name) @name) @const
-        (enum_declaration name: (type_name) @name) @enum
-        (method_declaration name: (identifier) @name) @method
+        (module_declaration (qualified_name) @name) @module
+        (package_declaration (identifier) @name) @package
+        (class_declaration (type_name) @name) @class
+        (interface_declaration (type_name) @name) @interface
+        (mixin_declaration (type_name) @name) @mixin
+        (service_declaration (type_name) @name) @service
+        (const_declaration (type_name) @name) @const
+        (enum_declaration (type_name) @name) @enum
+        (method_declaration (type_expression) (identifier) @name) @method
         (constructor_declaration) @constructor
-        (property_declaration name: (identifier) @name) @property
+        (property_declaration (type_expression) (identifier) @name) @property
         """.trimIndent()
 }
+

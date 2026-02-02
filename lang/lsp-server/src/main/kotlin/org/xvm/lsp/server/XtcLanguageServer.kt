@@ -45,6 +45,9 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.system.measureNanoTime
 
+/** Format a Double with 1 decimal place for logging */
+private fun Double.ms() = "%.1f".format(this)
+
 /**
  * XTC Language Server implementation using LSP4J.
  *
@@ -260,7 +263,7 @@ class XtcLanguageServer(
 
             // Compile and publish diagnostics
             val (result, elapsed) = timed { adapter.compile(uri, content) }
-            logger.info("textDocument/didOpen: compiled in {:.1f}ms, {} diagnostics", elapsed, result.diagnostics.size)
+            logger.info("textDocument/didOpen: compiled in {}ms, {} diagnostics", elapsed.ms(), result.diagnostics.size)
             publishDiagnostics(uri, result.diagnostics)
         }
 
@@ -279,7 +282,7 @@ class XtcLanguageServer(
 
             // Recompile and publish diagnostics
             val (result, elapsed) = timed { adapter.compile(uri, content) }
-            logger.info("textDocument/didChange: compiled in {:.1f}ms, {} diagnostics", elapsed, result.diagnostics.size)
+            logger.info("textDocument/didChange: compiled in {}ms, {} diagnostics", elapsed.ms(), result.diagnostics.size)
             publishDiagnostics(uri, result.diagnostics)
         }
 
@@ -306,11 +309,11 @@ class XtcLanguageServer(
                 val (hoverInfo, elapsed) = timed { adapter.getHoverInfo(uri, line, column) }
 
                 if (hoverInfo == null) {
-                    logger.info("textDocument/hover: no result in {:.1f}ms", elapsed)
+                    logger.info("textDocument/hover: no result in {}ms", elapsed.ms())
                     return@supplyAsync null
                 }
 
-                logger.info("textDocument/hover: found symbol in {:.1f}ms", elapsed)
+                logger.info("textDocument/hover: found symbol in {}ms", elapsed.ms())
                 Hover().apply {
                     contents =
                         Either.forRight(
@@ -341,7 +344,7 @@ class XtcLanguageServer(
                         }
                     }
 
-                logger.info("textDocument/completion: {} items in {:.1f}ms", items.size, elapsed)
+                logger.info("textDocument/completion: {} items in {}ms", items.size, elapsed.ms())
                 Either.forLeft(items)
             }
         }
@@ -367,11 +370,11 @@ class XtcLanguageServer(
                 val (definition, elapsed) = timed { adapter.findDefinition(uri, line, column) }
 
                 if (definition == null) {
-                    logger.info("textDocument/definition: no result in {:.1f}ms", elapsed)
+                    logger.info("textDocument/definition: no result in {}ms", elapsed.ms())
                     return@supplyAsync Either.forLeft(emptyList())
                 }
 
-                logger.info("textDocument/definition: found in {:.1f}ms", elapsed)
+                logger.info("textDocument/definition: found in {}ms", elapsed.ms())
                 Either.forLeft(listOf(toLspLocation(definition)))
             }
         }
@@ -385,7 +388,7 @@ class XtcLanguageServer(
             logger.info("textDocument/references: {} at {}:{}", uri, line, column)
             return CompletableFuture.supplyAsync {
                 val (refs, elapsed) = timed { adapter.findReferences(uri, line, column, includeDeclaration) }
-                logger.info("textDocument/references: {} references in {:.1f}ms", refs.size, elapsed)
+                logger.info("textDocument/references: {} references in {}ms", refs.size, elapsed.ms())
                 refs.map { toLspLocation(it) }
             }
         }
@@ -402,7 +405,7 @@ class XtcLanguageServer(
                 }
 
                 val (result, elapsed) = timed { adapter.compile(uri, content) }
-                logger.info("textDocument/documentSymbol: {} symbols in {:.1f}ms", result.symbols.size, elapsed)
+                logger.info("textDocument/documentSymbol: {} symbols in {}ms", result.symbols.size, elapsed.ms())
                 result.symbols.map { symbol ->
                     Either.forRight(toDocumentSymbol(symbol))
                 }

@@ -139,6 +139,71 @@ val extractTreeSitterCli by tasks.registering {
 }
 
 // =============================================================================
+// Tree-sitter Runtime Library Download
+// =============================================================================
+// Download tree-sitter source to build the runtime library (libtree-sitter).
+// This is needed by jtreesitter at runtime in addition to our grammar library.
+
+val treeSitterRuntimeVersion: String = libs.versions.tree.sitter.cli.get()
+val treeSitterSourceDir: Provider<Directory> = layout.buildDirectory.dir("tree-sitter-source")
+
+/**
+ * Download tree-sitter source code for building the runtime library.
+ */
+val downloadTreeSitterSource by tasks.registering(Download::class) {
+    group = "tree-sitter"
+    description = "Download tree-sitter source for runtime library build"
+
+    src("https://github.com/tree-sitter/tree-sitter/archive/refs/tags/v$treeSitterRuntimeVersion.tar.gz")
+    dest(treeSitterSourceDir.map { it.file("tree-sitter-$treeSitterRuntimeVersion.tar.gz") })
+    overwrite(false)
+    onlyIfModified(true)
+    quiet(false)
+}
+
+/**
+ * Extract tree-sitter source code.
+ */
+val extractTreeSitterSource by tasks.registering {
+    group = "tree-sitter"
+    description = "Extract tree-sitter source"
+    dependsOn(downloadTreeSitterSource)
+
+    val tarGzFile = treeSitterSourceDir.map { it.file("tree-sitter-$treeSitterRuntimeVersion.tar.gz").asFile }
+    val outputDir = treeSitterSourceDir.map { it.asFile }
+
+    inputs.file(tarGzFile)
+    outputs.dir(outputDir)
+
+    doLast {
+        val input = tarGzFile.get()
+        val outDir = outputDir.get()
+
+        GZIPInputStream(input.inputStream().buffered()).use { gzIn ->
+            TarArchiveInputStream(gzIn).use { tarIn ->
+                var entry = tarIn.nextEntry
+                while (entry != null) {
+                    val outFile = File(outDir, entry.name)
+                    if (entry.isDirectory) {
+                        outFile.mkdirs()
+                    } else {
+                        outFile.parentFile.mkdirs()
+                        outFile.outputStream().buffered().use { out -> tarIn.copyTo(out) }
+                    }
+                    entry = tarIn.nextEntry
+                }
+            }
+        }
+        logger.lifecycle("Extracted tree-sitter source to: ${outDir.absolutePath}")
+    }
+}
+
+// Path to extracted tree-sitter source lib directory
+val treeSitterLibSrc: Provider<Directory> = treeSitterSourceDir.map {
+    it.dir("tree-sitter-$treeSitterRuntimeVersion/lib")
+}
+
+// =============================================================================
 // Zig Compiler Download (for Cross-Compilation)
 // =============================================================================
 // Zig enables building native libraries for ALL platforms from ANY host machine.
@@ -606,14 +671,14 @@ fun libExtForPlatform(platform: String): String = when {
     else -> "so"
 }
 
-// Register cross-compile tasks for all platforms
+// Register cross-compile tasks for XTC grammar library
 crossCompileTargets.forEach { (platform, zigTarget) ->
     val ext = libExtForPlatform(platform)
     val taskName = "buildNativeLibrary_${platform.replace("-", "_")}"
 
     tasks.register<ZigCrossCompileTask>(taskName) {
         group = "tree-sitter"
-        description = "Cross-compile native library for $platform using Zig"
+        description = "Cross-compile XTC grammar library for $platform using Zig"
         dependsOn(extractZig, validateTreeSitterGrammar)
         enabled = zigPlatformSupported
 
@@ -627,75 +692,173 @@ crossCompileTargets.forEach { (platform, zigTarget) ->
     }
 }
 
-/**
- * Build native libraries for all platforms using Zig.
- */
-val buildAllNativeLibraries by tasks.registering {
-    group = "tree-sitter"
-    description = "Build native libraries for all platforms using Zig"
-    enabled = zigPlatformSupported
+// =============================================================================
+// Tree-sitter Runtime Library Cross-Compilation
+// =============================================================================
+// Build libtree-sitter (the core runtime) for all platforms.
+// jtreesitter requires this at runtime alongside our grammar library.
 
-    crossCompileTargets.keys.forEach { platform ->
-        dependsOn("buildNativeLibrary_${platform.replace("-", "_")}")
+/**
+ * Task to cross-compile the tree-sitter runtime library using Zig.
+ */
+abstract class ZigBuildRuntimeTask @Inject constructor(
+    private val execOps: ExecOperations
+) : DefaultTask() {
+
+    @get:Input
+    abstract val zigPath: Property<String>
+
+    @get:Input
+    abstract val targetTriple: Property<String>
+
+    @get:Input
+    abstract val targetPlatform: Property<String>
+
+    @get:InputDirectory
+    abstract val libSrcDir: DirectoryProperty
+
+    @get:OutputFile
+    abstract val outputLib: RegularFileProperty
+
+    @TaskAction
+    fun compile() {
+        val outputFile = outputLib.get().asFile
+        outputFile.parentFile.mkdirs()
+
+        val platform = targetPlatform.get()
+        val triple = targetTriple.get()
+        val libSrc = libSrcDir.get().asFile
+
+        logger.lifecycle("[zig] Building tree-sitter runtime for $platform ($triple)...")
+
+        val libC = File(libSrc, "src/lib.c")
+        if (!libC.exists()) {
+            throw GradleException("tree-sitter lib.c not found at: ${libC.absolutePath}")
+        }
+
+        val nanos = measureNanoTime {
+            execOps.exec {
+                executable(zigPath.get())
+                args(
+                    "cc",
+                    "-shared",
+                    "-fPIC",
+                    "-target", triple,
+                    "-I", File(libSrc, "include").absolutePath,
+                    "-I", File(libSrc, "src").absolutePath,
+                    libC.absolutePath,
+                    "-o", outputFile.absolutePath
+                )
+            }
+        }
+        val elapsedMs = nanos / 1_000_000.0
+
+        logger.lifecycle("[zig] Finished tree-sitter runtime $platform in %.1fms -> ${outputFile.name}".format(elapsedMs))
+    }
+}
+
+// Register cross-compile tasks for tree-sitter runtime library
+crossCompileTargets.forEach { (platform, zigTarget) ->
+    val ext = libExtForPlatform(platform)
+    val taskName = "buildTreeSitterRuntime_${platform.replace("-", "_")}"
+
+    tasks.register<ZigBuildRuntimeTask>(taskName) {
+        group = "tree-sitter"
+        description = "Cross-compile tree-sitter runtime for $platform using Zig"
+        dependsOn(extractZig, extractTreeSitterSource)
+        enabled = zigPlatformSupported
+
+        zigPath.set(zigExe)
+        targetTriple.set(zigTarget)
+        targetPlatform.set(platform)
+        libSrcDir.set(treeSitterLibSrc)
+        outputLib.set(layout.buildDirectory.file("native-cross/$platform/libtree-sitter.$ext"))
     }
 }
 
 /**
- * Copy all cross-compiled libraries to resources directories for committing to source control.
+ * Build all native libraries (grammar + runtime) for all platforms using Zig.
+ */
+val buildAllNativeLibraries by tasks.registering {
+    group = "tree-sitter"
+    description = "Build grammar and runtime libraries for all platforms using Zig"
+    enabled = zigPlatformSupported
+
+    crossCompileTargets.keys.forEach { platform ->
+        val safePlatform = platform.replace("-", "_")
+        dependsOn("buildNativeLibrary_$safePlatform")
+        dependsOn("buildTreeSitterRuntime_$safePlatform")
+    }
+}
+
+/**
+ * Copy all cross-compiled libraries (grammar + runtime) to resources directories for committing to source control.
  */
 val copyAllNativeLibrariesToResources by tasks.registering {
     group = "tree-sitter"
     description = "Copy all cross-compiled native libraries to resources"
     dependsOn(buildAllNativeLibraries)
 
-    // Capture providers at configuration time (not their values)
+    // Capture providers and values at configuration time (not script references)
     val crossBuildDir = layout.buildDirectory.dir("native-cross")
     val resourcesNativeDir = layout.projectDirectory.dir("src/main/resources/native")
     val grammarFileValue = grammarJsFile.map { it.asFile }
     val scannerFileValue = scannerCFile.map { it.asFile }
     val cliVersionValue = treeSitterCliVersion
     val gitCommitProvider = gitCommitShort
+    // Capture the map with pre-computed extensions to avoid script function reference
+    val platformsWithExtensions = crossCompileTargets.keys.associateWith { libExtForPlatform(it) }
 
     inputs.dir(crossBuildDir)
     outputs.dir(resourcesNativeDir)
 
-    doLast {
+    doLastTask {
         val gitCommitValue = gitCommitProvider.get()
-        crossCompileTargets.keys.forEach { platform ->
-            val ext = libExtForPlatform(platform)
-            val srcLib = crossBuildDir.get().dir(platform).file("libtree-sitter-xtc.$ext").asFile
+        platformsWithExtensions.forEach { (platform, ext) ->
             val destDir = resourcesNativeDir.dir(platform).asFile
-            val destLib = File(destDir, "libtree-sitter-xtc.$ext")
+            destDir.mkdirs()
+
+            // Copy XTC grammar library
+            val srcGrammarLib = crossBuildDir.get().dir(platform).file("libtree-sitter-xtc.$ext").asFile
+            val destGrammarLib = File(destDir, "libtree-sitter-xtc.$ext")
+            if (srcGrammarLib.exists()) {
+                srcGrammarLib.copyTo(destGrammarLib, overwrite = true)
+                logger.lifecycle("Copied grammar lib: $platform -> ${destGrammarLib.name}")
+            } else {
+                logger.warn("Grammar lib not found: ${srcGrammarLib.absolutePath}")
+            }
+
+            // Copy tree-sitter runtime library
+            val srcRuntimeLib = crossBuildDir.get().dir(platform).file("libtree-sitter.$ext").asFile
+            val destRuntimeLib = File(destDir, "libtree-sitter.$ext")
+            if (srcRuntimeLib.exists()) {
+                srcRuntimeLib.copyTo(destRuntimeLib, overwrite = true)
+                logger.lifecycle("Copied runtime lib: $platform -> ${destRuntimeLib.name}")
+            } else {
+                logger.warn("Runtime lib not found: ${srcRuntimeLib.absolutePath}")
+            }
+
+            // Compute and write hash for grammar lib (for staleness detection)
             val hashFile = File(destDir, "libtree-sitter-xtc.inputs.sha256")
             val versionFile = File(destDir, "libtree-sitter-xtc.version")
 
-            if (srcLib.exists()) {
-                destDir.mkdirs()
-                srcLib.copyTo(destLib, overwrite = true)
+            val digest = MessageDigest.getInstance("SHA-256")
+            digest.update(cliVersionValue.toByteArray())
+            listOf(grammarFileValue.get(), scannerFileValue.get()).forEach { file ->
+                if (file.exists()) digest.update(file.readBytes())
+            }
+            val hash = digest.digest().joinToString("") { "%02x".format(it) }
+            hashFile.writeText(hash)
 
-                // Compute and write hash (include CLI version - different versions produce different output)
-                val digest = MessageDigest.getInstance("SHA-256")
-                digest.update(cliVersionValue.toByteArray())
-                listOf(grammarFileValue.get(), scannerFileValue.get()).forEach { file ->
-                    if (file.exists()) digest.update(file.readBytes())
-                }
-                val hash = digest.digest().joinToString("") { "%02x".format(it) }
-                hashFile.writeText(hash)
-
-                // Write version info
-                Properties().apply {
-                    setProperty("input.hash", hash)
-                    setProperty("git.commit", gitCommitValue)
-                    setProperty("built.at", Instant.now().toString())
-                    setProperty("platform", platform)
-                    setProperty("cross.compiled", "true")
-                    setProperty("tree.sitter.cli.version", cliVersionValue)
-                    versionFile.outputStream().use { store(it, "Tree-sitter native library build info") }
-                }
-
-                logger.lifecycle("Copied: $platform -> ${destLib.absolutePath}")
-            } else {
-                logger.warn("Not found: ${srcLib.absolutePath}")
+            // Write version info
+            Properties().apply {
+                setProperty("input.hash", hash)
+                setProperty("git.commit", gitCommitValue)
+                setProperty("built.at", Instant.now().toString())
+                setProperty("platform", platform)
+                setProperty("cross.compiled", "true")
+                setProperty("tree.sitter.cli.version", cliVersionValue)
+                versionFile.outputStream().use { store(it, "Tree-sitter native library build info") }
             }
         }
 
@@ -928,8 +1091,12 @@ val ensureNativeLibraryUpToDate by tasks.registering(EnsureNativeLibraryTask::cl
 // Consumable Configuration for LSP Server
 // =============================================================================
 
+// Pre-built runtime library location
+val prebuiltRuntimeLibrary: RegularFile = prebuiltNativeDir.file("libtree-sitter.$nativeLibExt")
+
 /**
- * Expose pre-built native library for consumption by other projects.
+ * Expose pre-built native libraries for consumption by other projects.
+ * Includes both the XTC grammar library and the tree-sitter runtime.
  * Depends on ensureNativeLibraryUpToDate to guarantee freshness.
  */
 val nativeLibraryElements by configurations.registering {
@@ -940,7 +1107,12 @@ val nativeLibraryElements by configurations.registering {
         attribute(Usage.USAGE_ATTRIBUTE, objects.named("native-library"))
     }
     outgoing {
+        // XTC grammar library
         artifact(prebuiltLibrary) {
+            builtBy(ensureNativeLibraryUpToDate)
+        }
+        // Tree-sitter runtime library
+        artifact(prebuiltRuntimeLibrary) {
             builtBy(ensureNativeLibraryUpToDate)
         }
     }

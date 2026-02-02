@@ -138,8 +138,17 @@ class XtcNode internal constructor(
 
     /**
      * Get a child node by field name.
+     * Note: Only works if the grammar defines field names via field().
+     * The XTC grammar does NOT define fields, so this will always return null.
+     * Prefer [childByType] or positional access via [child] instead.
      */
     fun childByFieldName(fieldName: String): XtcNode? = tsNode.getChildByFieldName(fieldName).map { XtcNode(it, source) }.orElse(null)
+
+    /**
+     * Get the first child node with the given type.
+     * Useful when the grammar doesn't define field names.
+     */
+    fun childByType(nodeType: String): XtcNode? = children.find { it.type == nodeType }
 
     /**
      * Get all children of this node.

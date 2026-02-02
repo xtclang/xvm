@@ -677,3 +677,95 @@ The authoritative sources for XTC syntax:
 | `javatools/.../Lexer.java` | Token definitions |
 | `javatools/.../Parser.java` | Grammar rules |
 | `javatools/.../Token.java` | Keyword/operator enums |
+
+---
+
+## Task: Grammar Field Definitions
+
+**Status**: PENDING (LOW PRIORITY)
+
+**Goal**: Add field() definitions to grammar.js to enable field-based query syntax and simplify LSP adapter code.
+
+### Current State
+
+The XTC grammar does NOT define field names. Rules use positional syntax:
+
+```javascript
+// Current: positional (no fields)
+class_declaration: $ => seq(
+    optional($.doc_comment),
+    repeat($.annotation),
+    optional($.visibility_modifier),
+    optional('static'),
+    optional('abstract'),
+    'class',
+    $.type_name,           // <-- No field name
+    optional($.type_parameters),
+    ...
+),
+```
+
+### Proposed Change
+
+Add `field()` wrappers to key children:
+
+```javascript
+// Proposed: with field names
+class_declaration: $ => seq(
+    optional($.doc_comment),
+    repeat($.annotation),
+    optional($.visibility_modifier),
+    optional('static'),
+    optional('abstract'),
+    'class',
+    field('name', $.type_name),     // <-- Named field
+    optional(field('type_parameters', $.type_parameters)),
+    ...
+),
+```
+
+### Benefits
+
+| Benefit | Description |
+|---------|-------------|
+| **Robust queries** | Queries match by field name, not child position |
+| **Self-documenting** | `name: (type_name) @name` is clearer than positional |
+| **API improvements** | `childByFieldName("name")` would work |
+| **Best practices** | Aligns with tree-sitter community standards |
+| **Tool compatibility** | Better support from tree-sitter tooling |
+
+### Current Workaround
+
+The LSP adapter uses positional matching in queries:
+```scheme
+; Positional (current)
+(class_declaration (type_name) @name) @declaration
+
+; Field-based (after migration)
+(class_declaration name: (type_name) @name) @declaration
+```
+
+And `childByType()` helper in XtcNode instead of `childByFieldName()`.
+
+### Implementation Notes
+
+1. **Grammar changes** required in `lang/dsl/.../generators/TreeSitterGenerator.kt`
+2. **Regenerate** grammar via `./gradlew :lang:tree-sitter:generateTreeSitterGrammar`
+3. **Rebuild** native libraries for all 5 platforms
+4. **Update** XtcQueries.kt to use field syntax
+5. **Simplify** XtcNode (childByType no longer needed)
+
+### Files Affected
+
+| File | Change |
+|------|--------|
+| `dsl/.../TreeSitterGenerator.kt` | Add field() wrappers |
+| `tree-sitter/build/generated/grammar.js` | Regenerated |
+| `lsp-server/.../XtcQueries.kt` | Use field: syntax |
+| `lsp-server/.../XtcNode.kt` | Remove childByType workaround |
+| Native libraries (5 platforms) | Rebuild all |
+
+### Decision
+
+**Defer until Phase 5 (Cross-File Support)** - The current positional matching works correctly.
+This refactor is a nice-to-have improvement, not blocking LSP functionality.
