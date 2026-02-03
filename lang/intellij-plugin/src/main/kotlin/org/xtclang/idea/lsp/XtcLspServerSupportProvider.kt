@@ -162,12 +162,16 @@ class XtcLspConnectionProvider(
         logger.info("Using Java: $javaPath")
         logger.info("Using LSP server JAR: $serverJar")
 
+        // Log level: check -Dlsp.logLevel (case-insensitive), default to INFO
+        val logLevel = System.getProperty("lsp.logLevel")?.uppercase() ?: "INFO"
+
         val commandLine =
             GeneralCommandLine(
                 javaPath.toString(),
                 "--enable-native-access=ALL-UNNAMED", // FFM API for tree-sitter native libraries
                 "-Dapple.awt.UIElement=true", // macOS: no dock icon
                 "-Djava.awt.headless=true", // No GUI components
+                "-Dlsp.logLevel=$logLevel", // Pass log level to LSP server
                 "-Xms32m", // Modest initial heap
                 "-Xmx256m", // Cap memory usage
                 "-jar",

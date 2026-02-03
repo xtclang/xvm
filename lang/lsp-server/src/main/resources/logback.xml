@@ -22,8 +22,8 @@
     </appender>
 
     <!-- XTC LSP server logs - INFO level for development visibility -->
-    <!-- Set to WARN in production or override with -Dxtc.lsp.log.level=WARN -->
-    <logger name="org.xvm.lsp" level="${xtc.lsp.log.level:-INFO}"/>
+    <!-- Override with -Dlsp.logLevel=DEBUG (or WARN, ERROR, etc.) -->
+    <logger name="org.xvm.lsp" level="${lsp.logLevel:-INFO}"/>
 
     <!-- Eclipse LSP4J - only errors -->
     <logger name="org.eclipse.lsp4j" level="ERROR"/>

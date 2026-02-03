@@ -24,8 +24,13 @@ import kotlin.io.path.isExecutable
  */
 class JreProvisioner(
     private val cacheDir: Path = Path.of(System.getProperty("user.home"), ".xtc", "jre"),
-    private val version: Int = 25,
+    private val version: Int = TARGET_VERSION,
 ) {
+    companion object {
+        /** Target Java version for the LSP server (must match TreeSitterAdapter.MIN_JAVA_VERSION). */
+        const val TARGET_VERSION = 25
+    }
+
     private val logger = logger<JreProvisioner>()
     private val json = Json { ignoreUnknownKeys = true }
     private val http: HttpClient by lazy {
