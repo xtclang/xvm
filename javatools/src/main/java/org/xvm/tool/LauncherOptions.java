@@ -463,6 +463,12 @@ public abstract class LauncherOptions {
     protected abstract static class AbstractBuilder<T extends AbstractBuilder<T>> {
         protected final List<@NotNull String> args = new ArrayList<>();
 
+        /**
+         * Returns this builder instance with the correct type.
+         * Subclasses implement this to return {@code this}.
+         */
+        protected abstract T self();
+
         protected boolean removeeArgsAndValues(final String arg) {
             boolean removed = false;
             int i;
@@ -488,12 +494,11 @@ public abstract class LauncherOptions {
          *
          * @param verbose true to enable verbose mode, false otherwise
          */
-        @SuppressWarnings("unchecked")
         public T enableVerbose(final boolean verbose) {
             if (verbose) {
                 args.add("-v");
             }
-            return (T) this;
+            return self();
         }
 
         /**
@@ -509,13 +514,12 @@ public abstract class LauncherOptions {
          *
          * @param deduce true to enable deduction, false otherwise
          */
-        @SuppressWarnings("unchecked")
         public T enableDeduction(final boolean deduce) {
             args.remove("-d");
             if (deduce) {
                 args.add("-d");
             }
-            return (T) this;
+            return self();
         }
 
         /**
@@ -533,13 +537,12 @@ public abstract class LauncherOptions {
          *
          * @param showVersion true to enable version display, false otherwise
          */
-        @SuppressWarnings("unchecked")
         public T enableShowVersion(final boolean showVersion) {
             args.remove("--version");
             if (showVersion) {
                 args.add("--version");
             }
-            return (T) this;
+            return self();
         }
 
         public T setModulePath(final File path) {
@@ -572,12 +575,11 @@ public abstract class LauncherOptions {
             return addModulePath(List.of(path));
         }
 
-        @SuppressWarnings("unchecked")
         public T addModulePath(final List<File> paths) {
             for (final var path : paths) {
                 args.addAll(List.of("-L", path.getPath()));
             }
-            return (T) this;
+            return self();
         }
 
         public T addModulePath(final File... paths) {
@@ -704,6 +706,11 @@ public abstract class LauncherOptions {
          * Builds a synthetic command-line array and parses it.
          */
         public static class Builder extends AbstractBuilder<Builder> {
+            @Override
+            protected Builder self() {
+                return this;
+            }
+
             /**
              * Force a complete rebuild of all sources.
              */
@@ -1034,6 +1041,11 @@ public abstract class LauncherOptions {
          * Builds a synthetic command-line array and parses it.
          */
         public static class Builder extends AbstractBuilder<Builder> {
+            @Override
+            protected Builder self() {
+                return this;
+            }
+
             /**
              * Enable the JIT-to-Java back-end.
              */
@@ -1551,6 +1563,10 @@ public abstract class LauncherOptions {
          * Builds a synthetic command-line array and parses it.
          */
         public static class Builder extends AbstractBuilder<Builder> {
+            @Override
+            protected Builder self() {
+                return this;
+            }
 
             /**
              * List all files embedded in the module.

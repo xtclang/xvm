@@ -287,15 +287,13 @@ public abstract class BinaryAST {
      *
      * @return the node deserialized from the stream
      *
-     * @param <N> the class representing the expected BinaryAST sub-class
-     *
      * @throws IOException  indicates a corrupt stream
      */
-    public static <N extends BinaryAST> N readAST(DataInput in, ConstantResolver res)
+    public static BinaryAST readAST(DataInput in, ConstantResolver res)
             throws IOException {
-        N node = (N) (NodeType.valueOf(in.readUnsignedByte())).instantiate();
+        BinaryAST node = NodeType.valueOf(in.readUnsignedByte()).instantiate();
         if (node == null) {
-            node = (N) new StmtBlockAST(NO_ASTS, false);
+            node = new StmtBlockAST(NO_ASTS, false);
         } else {
             node.readBody(in, res);
         }
@@ -376,7 +374,7 @@ public abstract class BinaryAST {
         }
 
         if (nodeType == NodeType.Escape) {
-            return readAST(in, res); // "escape" for expressions
+            return (ExprAST) readAST(in, res); // "escape" for expressions
         }
 
         ExprAST node = (ExprAST) nodeType.instantiate();

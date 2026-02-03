@@ -1990,6 +1990,21 @@ public abstract class Component
     }
 
     /**
+     * Clone this component's body with proper type inference for generic contexts.
+     * <p>
+     * This method provides type-safe cloning when the caller knows the specific component type
+     * but is working through a generic type parameter.
+     *
+     * @param <T>  the expected component type
+     *
+     * @return a clone of this component, sans siblings and sans children
+     */
+    @SuppressWarnings("unchecked")
+    protected final <T extends Component> T cloneBodyAs() {
+        return (T) cloneBody();
+    }
+
+    /**
      * Clone the passed collection child components onto this component.
      *
      * @param collThat  a collection of child components to clone

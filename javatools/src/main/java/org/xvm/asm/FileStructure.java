@@ -33,7 +33,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.util.LinkedIterator;
+import java.util.stream.Stream;
 
 import static org.xvm.util.Handy.intToHexString;
 import static org.xvm.util.Handy.readIndex;
@@ -849,9 +849,7 @@ public class FileStructure
 
     @Override
     public Iterator<? extends XvmStructure> getContained() {
-        return new LinkedIterator(
-                Collections.singleton(m_pool).iterator(),
-                children().iterator());
+        return Stream.concat(Stream.of(m_pool), children().stream()).iterator();
     }
 
     @Override

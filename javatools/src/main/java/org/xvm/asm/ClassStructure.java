@@ -42,7 +42,6 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
 import org.xvm.util.Handy;
-import org.xvm.util.LinkedIterator;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
@@ -3366,11 +3365,13 @@ public class ClassStructure
             }
         }
 
-        return listAnno == null
-                ? super.getContained()
-                : new LinkedIterator(
-                        super.getContained(),
-                        listAnno.iterator());
+        if (listAnno == null) {
+            return super.getContained();
+        }
+        var result = new ArrayList<XvmStructure>();
+        super.getContained().forEachRemaining(result::add);
+        result.addAll(listAnno);
+        return result.iterator();
     }
 
     @Override
