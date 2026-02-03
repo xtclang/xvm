@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.api.io.TempDir;
 
 import org.xvm.asm.BuildInfo;
@@ -27,15 +27,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>These tests create actual projects and run {@code ./gradlew tasks} to verify
  * the build files are syntactically correct and the project structure is valid.
  *
+ * <p><b>DISABLED BY DEFAULT</b>: These tests spawn separate Gradle processes for each
+ * generated project, which downloads dependencies, the Gradle wrapper, and configures
+ * the project from scratch. With an empty cache, this adds several minutes to the build.
+ *
  * <p>Requirements:
  * <ul>
  *   <li>The XTC plugin must be available in mavenLocal() - run {@code ./gradlew publishLocal} first</li>
  *   <li>Network access for Gradle wrapper download (first run only)</li>
  * </ul>
  *
- * <p>Skip these tests by setting environment variable: {@code SKIP_INTEGRATION_TESTS=true}
+ * <p>Enable these tests by setting environment variable: {@code RUN_INTEGRATION_TESTS=true}
+ *
+ * // TODO: Consider running these tests in CI on a scheduled basis (nightly) rather than on every build
+ * // TODO: Consider using TestKit with a shared Gradle home to speed up repeated runs
+ * // TODO: Consider caching the Gradle wrapper and dependencies in CI
  */
-@DisabledIfEnvironmentVariable(named = "SKIP_INTEGRATION_TESTS", matches = "true")
+@EnabledIfEnvironmentVariable(named = "RUN_INTEGRATION_TESTS", matches = "true",
+    disabledReason = "Spawns multiple Gradle builds which are slow with empty cache")
 public class XtcProjectCreatorIntegrationTest {
 
     private static final int GRADLE_TIMEOUT_SECONDS = 120;
