@@ -58,7 +58,7 @@ on:
                 description: 'Include lang projects in build and run tree-sitter validation'
                 type: boolean
                 required: false
-                default: true
+                default: false
 
 env:
     # Add manual tests as included builds in the composite build configuration
