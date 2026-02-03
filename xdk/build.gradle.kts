@@ -1,5 +1,8 @@
 import XdkDistribution.Companion.JAVATOOLS_PREFIX_PATTERN
 import XdkDistribution.Companion.XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE
+import com.vanniktech.maven.publish.JavaLibrary
+import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.SourcesJar
 import org.gradle.api.DefaultTask
 import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
 import org.gradle.api.attributes.Category.LIBRARY
@@ -211,9 +214,9 @@ xdkPublishing {
 // Configure publication type as JavaLibrary to handle custom ZIP artifact
 mavenPublishing {
     configure(
-        com.vanniktech.maven.publish.JavaLibrary(
-            javadocJar = com.vanniktech.maven.publish.JavadocJar.None(),
-            sourcesJar = false
+        JavaLibrary(
+            javadocJar = JavadocJar.None(),
+            sourcesJar = SourcesJar.None()
         )
     )
 
