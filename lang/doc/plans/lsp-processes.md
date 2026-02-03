@@ -1,7 +1,9 @@
 # PLAN: Out-of-Process LSP Server with JRE Provisioning
 
-**Goal**: Run the XTC LSP server as a separate process with Java 24+, enabling full tree-sitter
+**Goal**: Run the XTC LSP server as a separate process with Java 25, enabling full tree-sitter
 support regardless of IntelliJ's JBR version.
+
+**Status**: ✅ COMPLETE (2026-02-03)
 
 **Risk**: Medium (significant plugin architecture change, external dependencies)
 **Prerequisites**: Working LSP server (see [PLAN_TREE_SITTER.md](./PLAN_TREE_SITTER.md))
@@ -91,44 +93,41 @@ JDK/JRE discovery, used by Gradle Toolchains and many IDE plugins.
 - Shared across IDE versions
 - User-discoverable location
 
-### Java Version: 24 (not 25)
+### Java Version: 25
 
-**Target**: Java 24 (latest GA with stable FFM API)
+**Target**: Java 25 (GA since September 2025)
 
 **Rationale**:
-- Java 25 is early access (less stable binaries)
-- Java 24 has production-ready FFM API
-- Gradle 8.x supports Java 24 toolchain (not 25 yet)
-- Temurin provides stable 24 binaries
-
-**Future**: Upgrade to 25 when GA (expected Sept 2025)
+- Java 25 has stable FFM API
+- Eclipse Temurin provides production-ready 25 binaries
+- Gradle 9.x supports Java 25 toolchain
 
 ---
 
 ## Implementation Status
 
-> **Last Updated**: 2026-02-01
+> **Last Updated**: 2026-02-03
 
-### Phase 1: LSP Server Standalone Mode - PENDING
+### Phase 1: LSP Server Standalone Mode - COMPLETE ✅
 
-- [ ] Update `lsp-server/build.gradle.kts` to Java 24 toolchain
-- [ ] Verify fat JAR runs standalone: `java -jar xtc-lsp-server.jar`
-- [ ] Add proper exit handling for stdio mode
+- [x] Update `lsp-server/build.gradle.kts` to Java 25 toolchain
+- [x] Verify fat JAR runs standalone: `java -jar xtc-lsp-server.jar`
+- [x] Add proper exit handling for stdio mode
 
-### Phase 2: JRE Provisioner - PENDING
+### Phase 2: JRE Provisioner - COMPLETE ✅
 
-- [ ] Create `JreProvisioner.kt` in intellij-plugin
-- [ ] Implement Foojay Disco API client
-- [ ] Download with progress notification
-- [ ] Extract archive (tar.gz/zip)
-- [ ] Verify checksum
+- [x] Create `JreProvisioner.kt` in intellij-plugin (~200 lines)
+- [x] Implement Foojay Disco API client (inline, no separate file)
+- [x] Download with progress notification
+- [x] Extract archive using IntelliJ's `Decompressor.Tar`/`Decompressor.Zip`
+- [ ] ~~Verify checksum~~ (deferred - Foojay API checksums optional)
 
-### Phase 3: Plugin Integration - PENDING
+### Phase 3: Plugin Integration - COMPLETE ✅
 
-- [ ] Modify `XtcLspServerSupportProvider` for out-of-process
-- [ ] Extract lsp-server.jar from plugin resources
-- [ ] Launch server process with provisioned JRE
-- [ ] Handle startup failures gracefully
+- [x] Modify `XtcLspServerSupportProvider` for out-of-process
+- [x] Find lsp-server.jar in plugin bin/ directory
+- [x] Launch server process with provisioned JRE
+- [x] Handle startup failures gracefully with notification
 
 ### Phase 4: Polish - PENDING
 
@@ -476,19 +475,22 @@ intellij-plugin/src/main/kotlin/org/xtclang/idea/
 ├── lsp/
 │   ├── XtcLspServerSupportProvider.kt    # Modified for out-of-process
 │   └── jre/
-│       ├── JreProvisioner.kt             # JRE download/cache manager
-│       ├── FoojayClient.kt               # Disco API client
-│       ├── PlatformDetector.kt           # OS/arch detection
-│       └── ArchiveExtractor.kt           # tar.gz/zip extraction
+│       └── JreProvisioner.kt             # All-in-one: Foojay API, download, extraction (~200 lines)
 └── settings/
-    └── XtcSettingsConfigurable.kt        # Settings UI (optional JRE path)
+    └── XtcSettingsConfigurable.kt        # Settings UI (optional JRE path) - PENDING
 ```
+
+**Note**: The implementation was simplified to a single `JreProvisioner.kt` file that:
+- Queries Foojay Disco API for JRE packages
+- Downloads with progress callback
+- Extracts using IntelliJ's built-in `Decompressor.Tar`/`Decompressor.Zip`
+- Caches in `~/.xtc/jre/temurin-25-jre/`
 
 ### Modified Files
 
 ```
-lsp-server/build.gradle.kts               # Java 24 toolchain
-intellij-plugin/build.gradle.kts          # HTTP client deps, bundle server JAR
+lsp-server/build.gradle.kts               # Java 25 toolchain
+intellij-plugin/build.gradle.kts          # Bundle server JAR in bin/
 ```
 
 ---

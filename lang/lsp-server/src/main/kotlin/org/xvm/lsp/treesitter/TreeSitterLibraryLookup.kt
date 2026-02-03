@@ -23,29 +23,11 @@ class TreeSitterLibraryLookup : NativeLibraryLookup {
     }
 
     private fun extractLibraryToTemp(): java.nio.file.Path {
-        val osName = System.getProperty("os.name").lowercase()
-        val osArch = System.getProperty("os.arch").lowercase()
-
-        val (platform, extension) =
-            when {
-                osName.contains("mac") && (osArch.contains("aarch64") || osArch.contains("arm64")) ->
-                    "darwin-arm64" to ".dylib"
-                osName.contains("mac") ->
-                    "darwin-x64" to ".dylib"
-                osName.contains("linux") && (osArch.contains("aarch64") || osArch.contains("arm64")) ->
-                    "linux-arm64" to ".so"
-                osName.contains("linux") ->
-                    "linux-x64" to ".so"
-                osName.contains("windows") ->
-                    "windows-x64" to ".dll"
-                else -> throw IllegalStateException("Unsupported platform: $osName/$osArch")
-            }
-
-        val resourcePath = "/native/$platform/libtree-sitter$extension"
+        val resourcePath = Platform.resourcePath("tree-sitter")
         logger.debug("Loading tree-sitter runtime from resource: {}", resourcePath)
 
         javaClass.getResourceAsStream(resourcePath)?.use { inputStream ->
-            val tempFile = Files.createTempFile("libtree-sitter", extension)
+            val tempFile = Files.createTempFile("libtree-sitter", Platform.libExtension)
             tempFile.toFile().deleteOnExit()
             Files.copy(inputStream, tempFile, StandardCopyOption.REPLACE_EXISTING)
             logger.info("Extracted tree-sitter runtime to: {}", tempFile)

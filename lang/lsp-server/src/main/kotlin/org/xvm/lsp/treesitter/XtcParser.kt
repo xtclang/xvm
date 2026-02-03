@@ -116,40 +116,17 @@ class XtcParser : Closeable {
 
         /**
          * Load the XTC tree-sitter language from native library.
-         *
-         * The library is expected to be in the native resources directory:
-         * - darwin-arm64/libtree-sitter-xtc.dylib
-         * - darwin-x64/libtree-sitter-xtc.dylib
-         * - linux-x64/libtree-sitter-xtc.so
-         * - linux-arm64/libtree-sitter-xtc.so
-         * - windows-x64/tree-sitter-xtc.dll
+         * The library is bundled at /native/<platform>/<libraryFileName>.
          */
         private fun loadXtcLanguage(): Language {
-            val osName = System.getProperty("os.name").lowercase()
-            val osArch = System.getProperty("os.arch").lowercase()
-
-            val (platform, extension, libPrefix) =
-                when {
-                    osName.contains("mac") || osName.contains("darwin") -> {
-                        val arch = if (osArch.contains("aarch64") || osArch.contains("arm64")) "darwin-arm64" else "darwin-x64"
-                        Triple(arch, ".dylib", "lib")
-                    }
-                    osName.contains("linux") -> {
-                        val arch = if (osArch.contains("aarch64") || osArch.contains("arm64")) "linux-arm64" else "linux-x64"
-                        Triple(arch, ".so", "lib")
-                    }
-                    osName.contains("windows") -> Triple("windows-x64", ".dll", "")
-                    else -> throw IllegalStateException("Unsupported platform: $osName/$osArch")
-                }
-
-            val libraryFileName = "$libPrefix$GRAMMAR_LIBRARY_NAME$extension"
-            val resourcePath = "/native/$platform/$libraryFileName"
+            val resourcePath = Platform.resourcePath(GRAMMAR_LIBRARY_NAME)
+            val libraryFileName = Platform.libraryFileName(GRAMMAR_LIBRARY_NAME)
 
             logger.debug("Loading XTC grammar from: {}", resourcePath)
 
             // Try to load from resources (bundled in JAR)
             XtcParser::class.java.getResourceAsStream(resourcePath)?.use { inputStream ->
-                val tempFile = Files.createTempFile(GRAMMAR_LIBRARY_NAME, extension)
+                val tempFile = Files.createTempFile(GRAMMAR_LIBRARY_NAME, Platform.libExtension)
                 tempFile.toFile().deleteOnExit()
                 Files.copy(inputStream, tempFile, StandardCopyOption.REPLACE_EXISTING)
 

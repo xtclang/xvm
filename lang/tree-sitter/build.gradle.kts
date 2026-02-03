@@ -11,11 +11,6 @@ plugins {
     base
 }
 
-// Git commit hash (configuration-cache safe using providers.exec)
-val gitCommitShort: Provider<String> = providers.exec {
-    commandLine("git", "rev-parse", "--short", "HEAD")
-}.standardOutput.asText.map { it.trim() }
-
 // =============================================================================
 // Tree-sitter Native Library Management
 // =============================================================================

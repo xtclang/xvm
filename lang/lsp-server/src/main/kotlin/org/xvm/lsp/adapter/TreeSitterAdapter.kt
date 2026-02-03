@@ -79,8 +79,9 @@ class TreeSitterAdapter :
         /**
          * Minimum Java version required for tree-sitter FFM API.
          * Update when jtreesitter dependency changes its requirements.
+         * Note: Must match JreProvisioner.TARGET_VERSION in intellij-plugin.
          */
-        const val MIN_JAVA_VERSION = 23
+        const val MIN_JAVA_VERSION = 25
 
         /**
          * Execute a block and return its result along with elapsed duration.
@@ -362,15 +363,18 @@ class TreeSitterAdapter :
         line: Int,
         column: Int,
     ): Location? {
-        val tree = parsedTrees[uri] ?: return null
-        val node = tree.nodeAt(line, column) ?: return null
-        val identifierNode = findIdentifierNode(node) ?: return null
+        val (tree, name) = getIdentifierAt(uri, line, column, "definition") ?: return null
 
-        // Search for declaration with this name
         val symbols = queryEngine.findAllDeclarations(tree, uri)
-        val declaration = symbols.find { it.name == identifierNode.text }
+        val decl = symbols.find { it.name == name }
 
-        return declaration?.location
+        return decl?.location.also { loc ->
+            if (loc != null) {
+                logger.info("definition '{}' -> {}:{}", name, loc.startLine, loc.startColumn)
+            } else {
+                logger.info("definition '{}' not found ({} symbols: {})", name, symbols.size, symbols.take(5).joinToString { it.name })
+            }
+        }
     }
 
     override fun findReferences(
@@ -379,12 +383,29 @@ class TreeSitterAdapter :
         column: Int,
         includeDeclaration: Boolean,
     ): List<Location> {
-        val tree = parsedTrees[uri] ?: return emptyList()
-        val node = tree.nodeAt(line, column) ?: return emptyList()
-        val identifierNode = findIdentifierNode(node) ?: return emptyList()
+        val (tree, name) = getIdentifierAt(uri, line, column, "references") ?: return emptyList()
+        return queryEngine.findAllIdentifiers(tree, name, uri).also {
+            logger.info("references '{}' -> {} found", name, it.size)
+        }
+    }
 
-        // Find all occurrences of this identifier
-        return queryEngine.findAllIdentifiers(tree, identifierNode.text, uri)
+    /** Resolves identifier at position, logging failures. Returns (tree, identifierText) or null. */
+    private fun getIdentifierAt(
+        uri: String,
+        line: Int,
+        column: Int,
+        op: String,
+    ): Pair<XtcTree, String>? {
+        val tree = parsedTrees[uri] ?: return null
+        val node =
+            tree.nodeAt(line, column) ?: return null.also {
+                logger.debug("{}: no node at {}:{}:{}", op, uri.substringAfterLast('/'), line, column)
+            }
+        val id =
+            findIdentifierNode(node) ?: return null.also {
+                logger.debug("{}: not an identifier at {}:{}:{} ({})", op, uri.substringAfterLast('/'), line, column, node.type)
+            }
+        return tree to id.text
     }
 
     // TODO LSP: Wire this up in XtcLanguageServer.didClose()

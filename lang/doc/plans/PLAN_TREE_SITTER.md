@@ -105,21 +105,24 @@ Track: https://github.com/JetBrains/JetBrainsRuntime/releases
 
 ### Current Solution: Out-of-Process LSP Server ✅
 
-**Status**: IMPLEMENTED (2026-02-02)
+**Status**: IMPLEMENTED (2026-02-03)
 
 The out-of-process LSP server is now the default:
 
 - **Default adapter**: `treesitter` (changed from `mock`)
 - **Process model**: LSP server runs as separate Java process
-- **Java requirement**: 23+ (for FFM API - see `MIN_JAVA_VERSION` constant)
+- **Java requirement**: 25 (for FFM API)
+- **JRE provisioning**: Automatic download via Foojay Disco API
 - **Communication**: stdio (JSON-RPC)
 - **Health monitoring**: Process monitor with crash notification and restart action
 
 The IntelliJ plugin:
-1. Finds a Java 23+ runtime (JAVA_HOME, XTC_JAVA_HOME, or PATH)
-2. Launches `xtc-lsp-server.jar` as a subprocess
-3. Communicates via LSP protocol over stdin/stdout
-4. Shows notification with "Restart Server" action on crash
+1. Checks for cached JRE at `~/.xtc/jre/temurin-25-jre/`
+2. If not cached, downloads Eclipse Temurin JRE 25 via Foojay Disco API
+3. Uses IntelliJ's built-in `Decompressor` for archive extraction
+4. Launches `xtc-lsp-server.jar` as a subprocess
+5. Communicates via LSP protocol over stdin/stdout
+6. Shows notification with "Restart Server" action on crash
 
 > **Documentation**:
 > - [lang/tree-sitter/README.md](../../tree-sitter/README.md) - Usage and architecture
@@ -429,14 +432,14 @@ Features requiring compiler should wait for `XtcCompilerAdapterFull`:
    - Reduces build time for non-tree-sitter development
    - See "Task: Conditional Tree-sitter Build" below
 
-7. **Out-of-Process LSP Server with Java 24** (HIGH PRIORITY)
-   - Run LSP server as separate process with Java 24 (Foojay Temurin)
-   - Enables full tree-sitter support regardless of IntelliJ JBR version
-   - See [lsp-processes.md](./lsp-processes.md) for full implementation plan
+7. ~~**Out-of-Process LSP Server with Java 23+**~~ ✅ COMPLETE
+   - LSP server runs as separate process with Java 23+ (FFM API requirement)
+   - Full tree-sitter support regardless of IntelliJ JBR version
+   - See "Task: Out-of-Process LSP Server" below
 
 8. **End-to-End Testing** - Verify LSP features work in IntelliJ/VS Code
-8. **IDE Integration** - See [PLAN_IDE_INTEGRATION.md](./PLAN_IDE_INTEGRATION.md)
-9. **Compiler Adapter** - Add semantic features (future)
+9. **IDE Integration** - See [PLAN_IDE_INTEGRATION.md](./PLAN_IDE_INTEGRATION.md)
+10. **Compiler Adapter** - Add semantic features (future)
 
 ---
 
@@ -448,6 +451,7 @@ Features requiring compiler should wait for `XtcCompilerAdapterFull`:
 | Native Library Staleness | SUPERSEDED (2026-02-02) | Replaced by on-demand build |
 | Adapter Rebuild Behavior | COMPLETE (2026-02-02) | [tree-sitter/adapter-rebuild.md](./tree-sitter/adapter-rebuild.md) |
 | On-Demand Native Build | COMPLETE (2026-02-02) | [tree-sitter/native-build-strategy.md](./tree-sitter/native-build-strategy.md) |
+| Out-of-Process LSP Server | COMPLETE (2026-02-02) | [lsp-processes.md](./lsp-processes.md) |
 
 ---
 
@@ -471,8 +475,9 @@ Features requiring compiler should wait for `XtcCompilerAdapterFull`:
 
 The LSP server now runs out-of-process with full tree-sitter support:
 
-- **Java Resolution**: Searches `xtc.lsp.java.home` → `XTC_JAVA_HOME` → `JAVA_HOME` → PATH
-- **Minimum Java**: 23+ (see `MIN_JAVA_VERSION` constant in `TreeSitterAdapter` and `XtcLspConnectionProvider`)
+- **JRE Provisioning**: Automatic download of Eclipse Temurin JRE 25 via Foojay Disco API
+- **Cache Location**: `~/.xtc/jre/temurin-25-jre/`
+- **Extraction**: Uses IntelliJ's built-in `Decompressor.Tar`/`Decompressor.Zip`
 - **Default Adapter**: `treesitter` (changed from `mock`)
 - **Fallback**: If tree-sitter fails, falls back to mock with error notification
 
@@ -496,8 +501,7 @@ IntelliJ Plugin (JBR 21)          XTC LSP Server (Java 23+)
 | File | Purpose |
 |------|---------|
 | `XtcLspServerSupportProvider.kt` | Factory and connection provider |
-| `XtcLspConnectionProvider.MIN_JAVA_VERSION` | Java version requirement constant |
-| `TreeSitterAdapter.MIN_JAVA_VERSION` | Java version requirement constant |
+| `jre/JreProvisioner.kt` | Foojay API client, download, extraction (~200 lines) |
 | `TreeSitterLibraryLookup.kt` | Loads libtree-sitter runtime from JAR |
 
 ### Features
