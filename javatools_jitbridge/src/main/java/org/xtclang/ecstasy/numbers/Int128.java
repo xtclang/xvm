@@ -1,19 +1,19 @@
 package org.xtclang.ecstasy.numbers;
 
 import org.xtclang.ecstasy.OutOfBounds;
-import org.xtclang.ecstasy.nConst;
+
 import org.xvm.javajit.Ctx;
+
 import org.xvm.runtime.template.numbers.LongLong;
 
 /**
  * Native Int128 wrapper.
  */
-public class Int128 extends nConst {
+public class Int128 extends IntNumber {
     /**
      * Construct an Ecstasy Int128 object.
      */
     Int128(long lowValue, long highValue) {
-        super(null);
         $lowValue  = lowValue;
         $highValue = highValue;
     }

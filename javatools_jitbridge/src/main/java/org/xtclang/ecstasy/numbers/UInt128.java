@@ -1,20 +1,19 @@
 package org.xtclang.ecstasy.numbers;
 
 import org.xtclang.ecstasy.OutOfBounds;
-import org.xtclang.ecstasy.nConst;
 
 import org.xvm.javajit.Ctx;
+
 import org.xvm.runtime.template.numbers.LongLong;
 
 /**
  * Native UInt128 wrapper.
  */
-public class UInt128 extends nConst {
+public class UInt128 extends IntNumber {
     /**
      * Construct an Ecstasy UInt128 object.
      */
     UInt128(long lowValue, long highValue) {
-        super(null);
         $lowValue  = lowValue;
         $highValue = highValue;
     }
@@ -35,7 +34,7 @@ public class UInt128 extends nConst {
      * @return this Int8 value as a Java {@code int}
      */
     public int toInt8$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $highValue != 0 
+        if (!dfltCheckBounds && checkBounds && $highValue != 0
                 && ($lowValue < Byte.MIN_VALUE || $lowValue > Byte.MAX_VALUE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
             throw oob.$init(ctx, "UInt128 value " + new LongLong($lowValue, $highValue)
@@ -173,7 +172,7 @@ public class UInt128 extends nConst {
      * @return this Int8 value as a Java {@code int}
      */
     public int toUInt32$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds && $highValue != 0 
+        if (!dfltCheckBounds && checkBounds && $highValue != 0
                 && ($lowValue < 0 || $lowValue > 4294967295L)) {
             OutOfBounds oob = new OutOfBounds(ctx);
             throw oob.$init(ctx, "UInt128 value " + new LongLong($lowValue, $highValue)

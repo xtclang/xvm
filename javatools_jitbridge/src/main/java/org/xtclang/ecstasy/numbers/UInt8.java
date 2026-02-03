@@ -1,7 +1,7 @@
 package org.xtclang.ecstasy.numbers;
 
 import org.xtclang.ecstasy.OutOfBounds;
-import org.xtclang.ecstasy.nConst;
+
 import org.xtclang.ecstasy.text.String;
 
 import org.xvm.javajit.Ctx;
@@ -9,14 +9,13 @@ import org.xvm.javajit.Ctx;
 /**
  * Native UInt8 (a.k.a. Byte) wrapper.
  */
-public class UInt8 extends nConst {
+public class UInt8 extends IntNumber {
     /**
      * Construct an Ecstasy UInt8 object.
      *
      * @param value  the 8-bit integer value
      */
     private UInt8(int value) {
-        super(null);
         $value = value;
     }
 

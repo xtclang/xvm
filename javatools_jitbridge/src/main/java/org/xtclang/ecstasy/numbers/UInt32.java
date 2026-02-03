@@ -1,22 +1,21 @@
 package org.xtclang.ecstasy.numbers;
 
 import org.xtclang.ecstasy.OutOfBounds;
+
 import org.xtclang.ecstasy.text.String;
-import org.xtclang.ecstasy.nConst;
 
 import org.xvm.javajit.Ctx;
 
 /**
  * Native UInt32 wrapper.
  */
-public class UInt32 extends nConst {
+public class UInt32 extends IntNumber {
     /**
      * Construct an Ecstasy UInt32 object.
      *
      * @param value  the 32-bit unsigned integer value
      */
     private UInt32(int value) {
-        super(null);
         $value = value;
     }
 

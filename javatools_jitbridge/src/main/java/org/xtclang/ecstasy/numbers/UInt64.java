@@ -1,22 +1,21 @@
 package org.xtclang.ecstasy.numbers;
 
 import org.xtclang.ecstasy.OutOfBounds;
+
 import org.xtclang.ecstasy.text.String;
-import org.xtclang.ecstasy.nConst;
 
 import org.xvm.javajit.Ctx;
 
 /**
  * Native UInt64 wrapper.
  */
-public class UInt64 extends nConst {
+public class UInt64 extends IntNumber {
     /**
      * Construct an Ecstasy UInt64 object.
      *
      * @param value  the 64-bit unsigned long value
      */
     private UInt64(long value) {
-        super(null);
         $value = value;
     }
 
