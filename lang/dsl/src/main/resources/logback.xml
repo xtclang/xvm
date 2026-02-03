@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Logback configuration for XTC DSL generator tools.
+  Keep output minimal - only errors and explicit print statements.
+-->
+<configuration>
+    <!-- Suppress logback's own status messages -->
+    <statusListener class="ch.qos.logback.core.status.NopStatusListener"/>
+
+    <appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
+        <target>System.err</target>
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Only show warnings and errors from our code -->
+    <logger name="org.xtclang" level="WARN"/>
+
+    <!-- Quiet root logger -->
+    <root level="ERROR">
+        <appender-ref ref="STDERR"/>
+    </root>
+</configuration>

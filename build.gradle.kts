@@ -1,8 +1,5 @@
 import XdkDistribution.Companion.DISTRIBUTION_TASK_GROUP
 import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
-import org.gradle.plugins.ide.idea.model.IdeaLanguageLevel
-import org.gradle.plugins.ide.idea.GenerateIdeaModule
-import org.gradle.plugins.ide.idea.GenerateIdeaProject
 
 /*
  * Main build file for the XVM project, producing the XDK.
@@ -11,7 +8,6 @@ import org.gradle.plugins.ide.idea.GenerateIdeaProject
 plugins {
     alias(libs.plugins.xdk.build.aggregator)
     alias(libs.plugins.xdk.build.properties)
-    idea
 }
 
 // Root aggregator: version set automatically by properties plugin
@@ -175,23 +171,3 @@ dockerTaskNames.forEach { taskName ->
     }
 }
 
-/**
- * IntelliJ IDEA project configuration.
- * Sets the language level from version.properties so IntelliJ doesn't default to JDK 1.6.
- * The JDK itself is auto-detected by IntelliJ; we only need to fix the language level.
- *
- * Note: The idea tasks are disabled because they're not configuration cache compatible.
- * IntelliJ reads this configuration directly during Gradle sync - no tasks needed.
- */
-idea {
-    project {
-        val jdkVersion = xdkProperties.stringValue("org.xtclang.java.jdk")
-        logger.lifecycle("[xvm] IntelliJ IDEA language level set to: JDK_$jdkVersion")
-        languageLevel = IdeaLanguageLevel(jdkVersion)
-    }
-}
-
-// Disable idea tasks - they're not configuration cache compatible and not needed.
-// IntelliJ reads the idea { } configuration directly during Gradle sync.
-tasks.withType<GenerateIdeaProject>().configureEach { enabled = false }
-tasks.withType<GenerateIdeaModule>().configureEach { enabled = false }

@@ -153,14 +153,13 @@ tasks.processResources {
     dependsOn(copyEcstasyResources)
 }
 
-// Make sure generateBuildInfo runs for any compilation task that might need it
+// Ensure resource generation tasks run before compilation and are tracked as inputs
 tasks.compileJava {
-    dependsOn(generateBuildInfo)
+    dependsOn(generateBuildInfo, copyEcstasyResources, copyGradleWrapper)
 }
 
-// Also make it run for tests and other lifecycle tasks
 tasks.compileTestJava {
-    dependsOn(generateBuildInfo)
+    dependsOn(generateBuildInfo, copyEcstasyResources, copyGradleWrapper)
 }
 
 // Use the copied ecstasy resources as before
@@ -227,3 +226,4 @@ val versionOutputTest by tasks.registering(Test::class) {
         logger.info("[javatools] Verifying version output contains expected git and API information")
     }
 }
+    .
