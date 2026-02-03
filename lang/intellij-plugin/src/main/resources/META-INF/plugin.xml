@@ -22,6 +22,7 @@
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.java</depends>
     <depends>com.intellij.gradle</depends>
     <!-- TextMate plugin for syntax highlighting -->
     <depends>org.jetbrains.plugins.textmate</depends>

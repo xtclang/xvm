@@ -18,20 +18,11 @@ class XtcIconProvider : IconProvider() {
     override fun getIcon(
         element: PsiElement,
         flags: Int,
-    ): Icon? {
-        if (element is PsiFile && element.name.endsWith(".x")) {
-            return XTC_ICON
-        }
-        return null
-    }
+    ): Icon? = XTC_ICON.takeIf { element is PsiFile && element.name.endsWith(".x") }
 
     companion object {
         val XTC_ICON: Icon? by lazy {
-            try {
-                IconLoader.getIcon("/icons/xtc.svg", XtcIconProvider::class.java)
-            } catch (e: Exception) {
-                null
-            }
+            runCatching { IconLoader.getIcon("/icons/xtc.svg", XtcIconProvider::class.java) }.getOrNull()
         }
     }
 }

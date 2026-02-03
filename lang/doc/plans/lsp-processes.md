@@ -31,14 +31,13 @@ Run the LSP server as a separate process with its own JRE:
 │  ┌────────────────────────────────────────────────────────┐  │
 │  │  XtcLspServerSupportProvider                           │  │
 │  │    │                                                   │  │
-│  │    ├─ Check ~/.xtc/jre/temurin-24/ exists?             │  │
-│  │    │   └─ No → JreProvisioner.provision() [async]      │  │
-│  │    │          ├─ Query Foojay Disco API                │  │
-│  │    │          ├─ Download JRE archive (~40MB)          │  │
-│  │    │          └─ Extract to ~/.xtc/jre/                │  │
-│  │    │                                                   │  │
+│  │    └─ JreProvisioner.javaPath (resolution order):      │  │
+│  │        1. ProjectJdkTable: registered Java 25+ SDK     │  │
+│  │        2. IDE cache: PathManager.systemPath/xtc-jre/   │  │
+│  │        3. Download: Foojay API → Temurin JRE 25        │  │
+│  │                                                        │  │
 │  │    └─ ProcessBuilder                                   │  │
-│  │        command: ~/.xtc/jre/temurin-24/bin/java         │  │
+│  │        command: <resolved java path>                   │  │
 │  │        args: -jar lsp-server.jar                       │  │
 │  │        stdio: piped (LSP4IJ handles protocol)          │  │
 │  └────────────────────────────────────────────────────────┘  │
@@ -46,7 +45,7 @@ Run the LSP server as a separate process with its own JRE:
                             │ stdin/stdout (JSON-RPC)
                             ▼
 ┌──────────────────────────────────────────────────────────────┐
-│              LSP Server Process (Java 24)                    │
+│              LSP Server Process (Java 25)                    │
 │  ┌────────────────────────────────────────────────────────┐  │
 │  │  XtcLanguageServerLauncher                             │  │
 │  │    └─ XtcLanguageServer                                │  │
@@ -75,23 +74,36 @@ JDK/JRE discovery, used by Gradle Toolchains and many IDE plugins.
 - Predictable release schedule
 - Long-term support
 
+### JRE Resolution Strategy
+
+The provisioner finds a suitable JRE using this priority order:
+
+1. **Registered JDKs**: Checks IntelliJ's `ProjectJdkTable` for any Java 25+ SDK
+2. **IDE System Cache**: `PathManager.getSystemPath()/xtc-jre/temurin-25-jre/`
+3. **Foojay Download**: Eclipse Temurin JRE 25 (only if no JRE found)
+
 ### JRE Cache Location
 
 ```
-~/.xtc/
-└── jre/
-    └── temurin-24-jre/
+{PathManager.getSystemPath()}/
+└── xtc-jre/
+    └── temurin-25-jre/
         ├── bin/
         │   └── java
         ├── lib/
         └── ...
 ```
 
-**Why `~/.xtc/`?**
-- Consistent with XDK conventions
+Platform-specific paths:
+- macOS: `~/Library/Caches/JetBrains/IntelliJIdea2025.1/xtc-jre/`
+- Linux: `~/.cache/JetBrains/IntelliJIdea2025.1/xtc-jre/`
+- Windows: `%LOCALAPPDATA%\JetBrains\IntelliJIdea2025.1\xtc-jre\`
+
+**Why IDE system path?**
+- Managed by IntelliJ (cleaned during "Invalidate Caches")
+- Follows IntelliJ plugin conventions
 - Survives plugin updates
-- Shared across IDE versions
-- User-discoverable location
+- Consistent with how other plugins cache downloads
 
 ### Java Version: 25
 

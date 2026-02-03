@@ -1,6 +1,10 @@
 package org.xtclang.idea.lsp.jre
 
+import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.diagnostic.logger
+import com.intellij.openapi.projectRoots.JavaSdk
+import com.intellij.openapi.projectRoots.ProjectJdkTable
+import com.intellij.openapi.util.io.FileUtil
 import com.intellij.util.io.Decompressor
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -16,14 +20,58 @@ import java.time.Duration
 import kotlin.io.path.createDirectories
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
+import kotlin.io.path.isDirectory
 import kotlin.io.path.isExecutable
+import kotlin.io.path.listDirectoryEntries
+import kotlin.io.path.moveTo
 
 /**
- * Provisions a JRE for the XTC LSP server using the Foojay Disco API.
- * Downloads Eclipse Temurin JRE 25 if not already cached in ~/.xtc/jre/.
+ * Provisions a Java Runtime Environment (JRE) for the XTC LSP server.
+ *
+ * ## Why This Is Needed
+ *
+ * The XTC LSP server uses tree-sitter for parsing, which requires the Foreign Function & Memory
+ * (FFM) API introduced in Java 22 and finalized in Java 25. However, IntelliJ IDEA runs on
+ * JetBrains Runtime (JBR) 21, which doesn't support FFM. Therefore, the LSP server must run
+ * as an out-of-process Java application using a separate Java 25+ runtime.
+ *
+ * ## Resolution Strategy
+ *
+ * The provisioner finds a suitable JRE using this priority order:
+ *
+ * 1. **Registered JDKs**: Checks IntelliJ's Project SDK table (`ProjectJdkTable`) for any
+ *    Java 25+ SDK already registered by the user. This is the preferred path as it uses
+ *    an existing installation without any downloads.
+ *
+ * 2. **Cached JRE**: Checks the IDE's system cache directory for a previously downloaded
+ *    Temurin JRE at `{PathManager.getSystemPath()}/xtc-jre/temurin-25-jre/`.
+ *
+ * 3. **Download from Foojay**: If no suitable JRE is found, downloads Eclipse Temurin JRE 25
+ *    from the [Foojay Disco API](https://api.foojay.io/). This is the same API used by
+ *    Gradle's toolchain auto-provisioning. The download happens once and is cached for
+ *    future use.
+ *
+ * ## Cache Location
+ *
+ * Downloaded JREs are stored in IntelliJ's system directory (`PathManager.getSystemPath()`),
+ * typically at:
+ * - macOS: `~/Library/Caches/JetBrains/IntelliJIdea2025.1/xtc-jre/`
+ * - Linux: `~/.cache/JetBrains/IntelliJIdea2025.1/xtc-jre/`
+ * - Windows: `%LOCALAPPDATA%\JetBrains\IntelliJIdea2025.1\xtc-jre\`
+ *
+ * This location is managed by the IDE and will be cleaned during "Invalidate Caches".
+ *
+ * ## Failure Handling
+ *
+ * To prevent infinite retry loops (e.g., if LSP4IJ keeps restarting a failing server),
+ * a failure marker file is created on provisioning failure. Subsequent attempts will
+ * fail fast until the marker is cleared via [clearFailure] or by deleting the marker file.
+ *
+ * @param cacheDir Directory for caching downloaded JREs (defaults to IDE system path)
+ * @param version Target Java major version (defaults to [TARGET_VERSION])
  */
 class JreProvisioner(
-    private val cacheDir: Path = Path.of(System.getProperty("user.home"), ".xtc", "jre"),
+    private val cacheDir: Path = Path.of(PathManager.getSystemPath(), "xtc-jre"),
     private val version: Int = TARGET_VERSION,
 ) {
     companion object {
@@ -42,21 +90,61 @@ class JreProvisioner(
     }
 
     private val jreDir: Path get() = cacheDir.resolve("temurin-$version-jre")
+    private val failureMarker: Path get() = cacheDir.resolve(".provision-failed-$version")
     private val isWindows get() = "windows" in System.getProperty("os.name").lowercase()
 
     val javaPath: Path?
-        get() {
-            val exe = jreDir.resolve(if (isWindows) "bin/java.exe" else "bin/java")
-            logger.info("Checking for cached JRE at: $exe")
-            return exe.takeIf { it.exists() && it.isExecutable() }
+        get() = findSystemJava() ?: findCachedJava()
+
+    private fun findCachedJava(): Path? {
+        val exe = jreDir.resolve(if (isWindows) "bin/java.exe" else "bin/java")
+        return exe.takeIf { it.exists() && it.isExecutable() }?.also {
+            logger.info("Found cached JRE: $it")
         }
+    }
+
+    private fun findSystemJava(): Path? {
+        val javaSdk = JavaSdk.getInstance()
+        return ProjectJdkTable
+            .getInstance()
+            .getSdksOfType(javaSdk)
+            .firstNotNullOfOrNull { sdk ->
+                val majorVersion =
+                    javaSdk
+                        .getVersion(sdk)
+                        ?.maxLanguageLevel
+                        ?.feature() ?: 0
+                if (majorVersion >= version) {
+                    javaSdk
+                        .getVMExecutablePath(sdk)
+                        ?.let { Path.of(it) }
+                        ?.takeIf { it.exists() }
+                        ?.also { logger.info("Found registered JDK $majorVersion: $it") }
+                } else {
+                    null
+                }
+            }
+    }
 
     fun isProvisioned(): Boolean = javaPath != null
+
+    /** Returns true if provisioning previously failed (prevents infinite retry loops). */
+    fun hasFailedBefore(): Boolean = failureMarker.exists()
+
+    /** Clear failure marker to allow retry (e.g., after user intervention). */
+    fun clearFailure() {
+        failureMarker.deleteIfExists()
+        if (jreDir.exists()) FileUtil.delete(jreDir)
+    }
 
     fun provision(onProgress: ((Float, String) -> Unit)? = null): Path {
         javaPath?.let {
             logger.info("Using cached JRE: $it")
             return it
+        }
+
+        if (hasFailedBefore()) {
+            error("JRE provisioning previously failed. Delete $failureMarker to retry.")
         }
 
         logger.info("No cached JRE found, will download from Foojay")
@@ -72,11 +160,21 @@ class JreProvisioner(
         val archive = download(pkg.links.downloadRedirect)
 
         onProgress?.invoke(0.8f, "Extracting...")
-        extract(archive, archiveType)
+        runCatching {
+            extract(archive, archiveType)
+        }.onFailure { e ->
+            Files.createFile(failureMarker)
+            if (jreDir.exists()) FileUtil.delete(jreDir)
+            throw e
+        }
         archive.deleteIfExists()
 
         onProgress?.invoke(1.0f, "Done")
-        val java = javaPath ?: error("Java executable not found after extraction at $jreDir")
+        val java = javaPath
+        if (java == null) {
+            Files.createFile(failureMarker)
+            error("Java executable not found after extraction at $jreDir")
+        }
         logger.info("JRE provisioned successfully: $java")
         return java
     }
@@ -185,10 +283,40 @@ class JreProvisioner(
                 "zip" -> Decompressor.Zip(archive)
                 else -> error("Unsupported archive: $archiveType")
             }
-        decompressor
-            .removePrefixPath("")
-            .extract(jreDir)
+        decompressor.extract(jreDir)
+
+        // JRE archives have a nested root dir like "jdk-25.0.1+9-jre/" - flatten it
+        flattenSingleSubdirectory()
         logger.info("Extraction complete")
+    }
+
+    /**
+     * If jreDir contains exactly one subdirectory and no bin/, move the subdirectory's contents up.
+     * This handles JRE archives that have a versioned root directory like "jdk-25.0.1+9-jre/".
+     */
+    private fun flattenSingleSubdirectory() {
+        val entries = jreDir.listDirectoryEntries()
+        val binDir = jreDir.resolve("bin")
+
+        // Already flat - bin/ exists at top level
+        if (binDir.exists()) {
+            logger.info("Archive already flat (bin/ exists at top level)")
+            return
+        }
+
+        // Find single subdirectory containing bin/
+        val nestedDir = entries.singleOrNull { it.isDirectory() && it.resolve("bin").exists() }
+        if (nestedDir == null) {
+            logger.warn("Could not find nested JRE directory to flatten. Contents: ${entries.map { it.fileName }}")
+            return
+        }
+
+        logger.info("Flattening nested directory: ${nestedDir.fileName}")
+        nestedDir.listDirectoryEntries().forEach { child ->
+            val target = jreDir.resolve(child.fileName)
+            child.moveTo(target)
+        }
+        nestedDir.deleteIfExists()
     }
 
     @Serializable

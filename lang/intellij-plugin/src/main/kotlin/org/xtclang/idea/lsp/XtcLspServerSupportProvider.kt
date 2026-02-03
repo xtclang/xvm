@@ -113,7 +113,7 @@ class XtcLspConnectionProvider(
 
         val version = buildProps.getProperty("lsp.version", "?")
         val adapterType = buildProps.getProperty("lsp.adapter", "mock")
-        logger.info("XTC LSP Server process started (v$version, adapter=$adapterType, pid=${getPid()})")
+        logger.info("XTC LSP Server process started (v$version, adapter=$adapterType, pid=$pid)")
 
         showNotification(
             title = "XTC Language Server Started",

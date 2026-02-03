@@ -117,12 +117,13 @@ The out-of-process LSP server is now the default:
 - **Health monitoring**: Process monitor with crash notification and restart action
 
 The IntelliJ plugin:
-1. Checks for cached JRE at `~/.xtc/jre/temurin-25-jre/`
-2. If not cached, downloads Eclipse Temurin JRE 25 via Foojay Disco API
-3. Uses IntelliJ's built-in `Decompressor` for archive extraction
-4. Launches `xtc-lsp-server.jar` as a subprocess
-5. Communicates via LSP protocol over stdin/stdout
-6. Shows notification with "Restart Server" action on crash
+1. Checks IntelliJ's registered JDKs (`ProjectJdkTable`) for any Java 25+
+2. Falls back to cached JRE at `{PathManager.getSystemPath()}/xtc-jre/temurin-25-jre/`
+3. If no JRE found, downloads Eclipse Temurin JRE 25 via Foojay Disco API
+4. Uses IntelliJ's built-in `Decompressor` for archive extraction
+5. Launches `xtc-lsp-server.jar` as a subprocess
+6. Communicates via LSP protocol over stdin/stdout
+7. Shows notification with "Restart Server" action on crash
 
 > **Documentation**:
 > - [lang/tree-sitter/README.md](../../tree-sitter/README.md) - Usage and architecture
@@ -475,8 +476,9 @@ Features requiring compiler should wait for `XtcCompilerAdapterFull`:
 
 The LSP server now runs out-of-process with full tree-sitter support:
 
-- **JRE Provisioning**: Automatic download of Eclipse Temurin JRE 25 via Foojay Disco API
-- **Cache Location**: `~/.xtc/jre/temurin-25-jre/`
+- **JRE Resolution**: First checks IntelliJ's registered JDKs, then cached JRE, then downloads
+- **Cache Location**: `{PathManager.getSystemPath()}/xtc-jre/temurin-25-jre/` (IDE-managed)
+- **Download**: Eclipse Temurin JRE 25 via Foojay Disco API (same as Gradle toolchains)
 - **Extraction**: Uses IntelliJ's built-in `Decompressor.Tar`/`Decompressor.Zip`
 - **Default Adapter**: `treesitter` (changed from `mock`)
 - **Fallback**: If tree-sitter fails, falls back to mock with error notification
@@ -501,8 +503,14 @@ IntelliJ Plugin (JBR 21)          XTC LSP Server (Java 23+)
 | File | Purpose |
 |------|---------|
 | `XtcLspServerSupportProvider.kt` | Factory and connection provider |
-| `jre/JreProvisioner.kt` | Foojay API client, download, extraction (~200 lines) |
+| `jre/JreProvisioner.kt` | JRE resolution (SDK table → cache → Foojay download) |
 | `TreeSitterLibraryLookup.kt` | Loads libtree-sitter runtime from JAR |
+
+### JRE Resolution Order
+
+1. **Registered JDKs**: `ProjectJdkTable.getInstance().getSdksOfType(JavaSdk)` for Java 25+
+2. **Cached JRE**: `PathManager.getSystemPath()/xtc-jre/temurin-25-jre/`
+3. **Download**: Foojay Disco API → Eclipse Temurin JRE 25
 
 ### Features
 
