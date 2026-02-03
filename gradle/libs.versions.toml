@@ -29,22 +29,22 @@ jline = "3.30.6"
 # -----------------------------------------------------------------------------
 # Build tooling & publishing
 # -----------------------------------------------------------------------------
-apache-commons-compress = "1.26.0"
+apache-commons-compress = "1.28.0"
 download = "5.6.0"
-tukaani-xz = "1.9"
+tukaani-xz = "1.11"
 gradle-doctor = "0.12.1"
 gradle-portal-publish = "2.0.0"
-palantir-git-version = "4.0.0"
-vanniktech-maven-publish = "0.34.0"
+palantir-git-version = "4.2.0"
+vanniktech-maven-publish = "0.36.0"
 
 # -----------------------------------------------------------------------------
 # Testing
 # -----------------------------------------------------------------------------
 assertj = "3.27.7"
-awaitility = "4.2.0"
+awaitility = "4.3.0"
 junit = "6.0.2"
 junit-platform = "1.11.4"
-mockito = "5.8.0"
+mockito = "5.21.0"
 
 # -----------------------------------------------------------------------------
 # Lang tooling (LSP server, IntelliJ plugin, VS Code extension)
@@ -57,13 +57,13 @@ intellij-platform-gradle-plugin = "2.10.5"
 # The LSP server runs OUT-OF-PROCESS with its own JRE (Java 24), not IntelliJ's JBR 21.
 # See lang/doc/plans/PLAN_OUT_OF_PROCESS_LSP.md for architecture details.
 jtreesitter = "0.26.0"
-kotlin = "2.2.0"
-kotlinx-serialization = "1.7.3"
+kotlin = "2.3.0"
+kotlinx-serialization = "1.10.0"
 ktlint = "14.0.1"
-logback = "1.5.25"
+logback = "1.5.27"
 lsp4ij = "0.19.1"
 lsp4j = "0.24.0"
-slf4j = "2.0.9"
+slf4j = "2.0.17"
 # tree-sitter-cli must match jtreesitter major.minor for ABI compatibility
 tree-sitter-cli = "0.26.5"
 # Zig compiler for cross-compiling native tree-sitter libraries

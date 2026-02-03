@@ -400,6 +400,17 @@ val validateTreeSitterGrammar by tasks.registering(Exec::class) {
     dependsOn(copyGrammarFiles, extractTreeSitterCli, generateTreeSitterConfig)
     enabled = treeSitterPlatformSupported
 
+    // Declare inputs for proper up-to-date checking
+    inputs.file(grammarJsFile)
+    inputs.file(generatedDir.map { it.file("tree-sitter.json") })
+    // scanner.c is copied to src/ by copyGrammarFiles and read by tree-sitter generate
+    inputs.file(scannerCFile)
+
+    // Declare outputs - tree-sitter generate produces these files
+    outputs.file(generatedDir.map { it.file("src/parser.c") })
+    outputs.file(generatedDir.map { it.file("src/tree_sitter/parser.h") })
+    outputs.file(generatedDir.map { it.file("src/node-types.json") })
+
     workingDir(generatedDir)
     executable(treeSitterCliExe.get())
     args("generate")

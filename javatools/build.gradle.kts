@@ -44,7 +44,7 @@ val ecstasyResourcesDir = layout.projectDirectory.dir(
 )
 
 /**
- * Copy ecstasy resources (implicit.x and unicode data) at build time.
+ * Copy ecstasy resources (implicit.x and Unicode data) at build time.
  * Uses direct file path references instead of configuration dependencies to avoid
  * circular dependency issues when the plugin tries to use javatools as compileOnly.
  */
@@ -128,7 +128,7 @@ val generateBuildInfo by tasks.registering(GenerateBuildInfo::class) {
         (project.extensions.extraProperties["versionDetails"] as groovy.lang.Closure<com.palantir.gradle.gitversion.VersionDetails>).call()
     }
 
-    gitCommit.set(versionDetailsProvider.map { it.gitHashFull })
+    gitCommit.set(versionDetailsProvider.map { it.gitHashFull ?: "unknown" })
 
     gitStatus.set(versionDetailsProvider.map { it.branchName ?: "detached-head" })
 
@@ -226,4 +226,3 @@ val versionOutputTest by tasks.registering(Test::class) {
         logger.info("[javatools] Verifying version output contains expected git and API information")
     }
 }
-    .
