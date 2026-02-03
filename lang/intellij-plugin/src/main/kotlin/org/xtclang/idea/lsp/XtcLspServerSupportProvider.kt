@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicReference
  * Factory for creating XTC Language Server connections.
  *
  * The server runs OUT-OF-PROCESS as a separate Java process because:
- * 1. jtreesitter requires Java [JreProvisioner.TARGET_VERSION]+ (Foreign Function & Memory API)
+ * 1. jtreesitter requires Java 25+ (Foreign Function & Memory API)
  * 2. IntelliJ uses JBR 21 which doesn't support FFM
  * 3. Out-of-process allows using a provisioned Java toolchain via Foojay
  *
@@ -63,8 +63,8 @@ class XtcLanguageServerFactory : LanguageServerFactory {
  * Out-of-process LSP server connection using LSP4IJ's OSProcessStreamConnectionProvider.
  *
  * JRE Provisioning:
- * - Uses Foojay Disco API to download Eclipse Temurin JRE [JreProvisioner.TARGET_VERSION]
- * - Caches in ~/.xtc/jre/temurin-[TARGET_VERSION]-jre/
+ * - Uses Foojay Disco API to download Eclipse Temurin JRE 25
+ * - Caches in ~/.xtc/jre/temurin-25-jre/
  * - Shows progress notification during first-time download
  *
  * See doc/plans/lsp-processes.md for architecture details.
@@ -205,12 +205,11 @@ class XtcLspConnectionProvider(
         }
 
         // Fallback: search in typical plugin locations
-        listOf(
+        listOfNotNull(
             System.getProperty("idea.plugins.path"),
             "${System.getProperty("user.home")}/.local/share/JetBrains/IntelliJIdea2025.1/plugins",
             "${System.getProperty("user.home")}/Library/Application Support/JetBrains/IntelliJIdea2025.1/plugins",
-        ).filterNotNull()
-            .map { Path.of(it, "intellij-plugin", "bin", "xtc-lsp-server.jar") }
+        ).map { Path.of(it, "intellij-plugin", "bin", "xtc-lsp-server.jar") }
             .firstOrNull { Files.exists(it) }
             ?.let { return it }
 

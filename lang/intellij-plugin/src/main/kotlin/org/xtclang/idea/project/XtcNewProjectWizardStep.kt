@@ -20,9 +20,8 @@ import org.xvm.tool.XtcProjectCreator
 import kotlin.io.path.Path
 
 /**
- * XTC-specific wizard step. Uses base data (name/path) from NewProjectWizardBaseStep
- * in the chain, and adds XTC-specific options. Uses XtcProjectCreator directly
- * (synced from javatools and compiled for Java 21).
+ * XTC-specific wizard step for the New Project wizard.
+ * Uses XtcProjectCreator (synced from javatools, compiled for Java 21).
  */
 class XtcNewProjectWizardStep(
     parent: NewProjectWizardStep,
@@ -31,28 +30,24 @@ class XtcNewProjectWizardStep(
 
     private val projectTypeProperty = propertyGraph.property(XtcProjectCreator.ProjectType.APPLICATION)
     private val multiModuleProperty = propertyGraph.property(false)
+
     var projectType: XtcProjectCreator.ProjectType by projectTypeProperty
     var multiModule: Boolean by multiModuleProperty
 
     override fun setupUI(builder: Panel) {
-        with(builder) {
+        builder.apply {
             row("Project type:") {
                 comboBox(XtcProjectCreator.ProjectType.entries.toList()).bindItem(projectTypeProperty)
             }
-            row { checkBox("Multi-module project").bindSelected(multiModuleProperty) }
+            row {
+                checkBox("Multi-module project").bindSelected(multiModuleProperty)
+            }
         }
     }
 
     override fun setupProject(project: Project) {
-        val base =
-            baseData ?: run {
-                logger.error("No base data available")
-                return
-            }
-
+        val base = baseData ?: return logger.error("No base data available")
         val projectPath = Path(base.path).resolve(base.name)
-
-        // Get XTC version from the plugin's own version (matches published artifacts)
         val xtcVersion =
             PluginManagerCore.getPlugin(PluginId.getId("org.xtclang.idea"))?.version
                 ?: XtcProjectCreator.DEFAULT_XTC_VERSION
@@ -62,53 +57,45 @@ class XtcNewProjectWizardStep(
         val creator = XtcProjectCreator(projectPath, projectType, multiModule, xtcVersion, null)
         val result = creator.create()
 
-        if (result.success()) {
-            logger.info(result.message())
-
-            // Refresh VFS to pick up the newly created files
-            // This prevents assertion failures in Project View when it tries to display the new files
-            val projectDir = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(projectPath)
-            if (projectDir != null) {
-                VfsUtil.markDirtyAndRefresh(false, true, true, projectDir)
-                logger.info("Refreshed VFS for project directory: $projectPath")
-            } else {
-                logger.warn("Could not find project directory in VFS: $projectPath")
+        when {
+            result.success -> {
+                logger.info(result.message)
+                refreshVfs(projectPath)
+                createDefaultRunConfiguration(project, base.name)
             }
-
-            createDefaultRunConfiguration(project, base.name)
-        } else {
-            logger.error("Failed to create XTC project: ${result.message()}")
-            Messages.showErrorDialog(
-                "Failed to create XTC project: ${result.message()}",
-                "XTC Project Creation Failed",
-            )
+            else -> {
+                logger.error("Failed to create XTC project: ${result.message}")
+                Messages.showErrorDialog("Failed to create XTC project: ${result.message}", "XTC Project Creation Failed")
+            }
         }
     }
 
-    /**
-     * Create a default run configuration for the main module.
-     * The module name is derived from the project name (same as XtcProjectCreator).
-     */
+    private fun refreshVfs(projectPath: java.nio.file.Path) {
+        LocalFileSystem.getInstance().refreshAndFindFileByNioFile(projectPath)?.let { projectDir ->
+            VfsUtil.markDirtyAndRefresh(false, true, true, projectDir)
+            logger.info("Refreshed VFS for project directory: $projectPath")
+        } ?: logger.warn("Could not find project directory in VFS: $projectPath")
+    }
+
     private fun createDefaultRunConfiguration(
         project: Project,
         projectName: String,
     ) {
-        try {
-            val runManager = RunManager.getInstance(project)
-            val configurationType = XtcRunConfigurationType()
-            val factory = configurationType.configurationFactories.first()
-
-            // Module name is the project name (matches what XtcProjectCreator generates)
+        runCatching {
             val moduleName = projectName.trim().trimEnd('.')
+            val runManager = RunManager.getInstance(project)
+            val factory = XtcRunConfigurationType().configurationFactories.first()
             val settings = runManager.createConfiguration("Run $moduleName", factory)
-            val config = settings.configuration as XtcRunConfiguration
-            config.moduleName = moduleName
-            config.useGradle = true
+
+            (settings.configuration as XtcRunConfiguration).apply {
+                this.moduleName = moduleName
+                useGradle = true
+            }
 
             runManager.addConfiguration(settings)
             runManager.selectedConfiguration = settings
             logger.info("Created default run configuration for module: $moduleName")
-        } catch (e: Exception) {
+        }.onFailure { e ->
             logger.warn("Failed to create default run configuration: ${e.message}")
         }
     }
