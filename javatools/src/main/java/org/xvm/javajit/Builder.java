@@ -36,6 +36,8 @@ import org.xvm.javajit.TypeSystem.ClassfileShape;
 import static java.lang.constant.ConstantDescs.CD_MethodHandle;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_char;
+import static java.lang.constant.ConstantDescs.CD_double;
+import static java.lang.constant.ConstantDescs.CD_float;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
@@ -601,6 +603,7 @@ public abstract class Builder {
             switch (type.getSingleUnderlyingClass(false).getName()) {
                 case "Int64"  -> code.invokestatic(CD_Int64,  "$box", MD_Int64_box);
                 case "UInt64" -> code.invokestatic(CD_UInt64, "$box", MD_UInt64_box);
+                case "Dec64"  -> code.invokestatic(CD_Dec64,  "$box", MD_Dec64_box);
                 default       -> throw new IllegalStateException();
             }
             break;
@@ -614,7 +617,24 @@ public abstract class Builder {
                 case "UInt8"  -> code.invokestatic(CD_UInt8,  "$box", MD_UInt8_box);
                 case "UInt16" -> code.invokestatic(CD_UInt16, "$box", MD_UInt16_box);
                 case "UInt32" -> code.invokestatic(CD_UInt32, "$box", MD_UInt32_box);
+                case "Dec16"  -> code.invokestatic(CD_Dec16,  "$box", MD_Dec16_box);
+                case "Dec32"  -> code.invokestatic(CD_Dec32,  "$box", MD_Dec32_box);
                 default       -> throw new IllegalStateException();
+            }
+            break;
+
+        case "F": // float
+            switch (type.getSingleUnderlyingClass(false).getName()) {
+                case "Float16" -> code.invokestatic(CD_Float16, "$box", MD_Float16_box);
+                case "Float32" -> code.invokestatic(CD_Float32, "$box", MD_Float32_box);
+                default       -> throw new IllegalStateException();
+            }
+            break;
+
+        case "D": // double
+            switch (type.getSingleUnderlyingClass(false).getName()) {
+                case "Float64" -> code.invokestatic(CD_Float64, "$box", MD_Float64_box);
+                default        -> throw new IllegalStateException();
             }
             break;
 
@@ -832,8 +852,14 @@ public abstract class Builder {
     public static final String N_Boolean      = "org.xtclang.ecstasy.Boolean";
     public static final String N_Char         = "org.xtclang.ecstasy.text.Char";
     public static final String N_Class        = "org.xtclang.ecstasy.reflect.Class";
+    public static final String N_Dec16        = "org.xtclang.ecstasy.numbers.Dec16";
+    public static final String N_Dec32        = "org.xtclang.ecstasy.numbers.Dec32";
+    public static final String N_Dec64        = "org.xtclang.ecstasy.numbers.Dec64";
     public static final String N_Enumeration  = "org.xtclang.ecstasy.reflect.Enumeration";
     public static final String N_Exception    = "org.xtclang.ecstasy.Exception";
+    public static final String N_Float16      = "org.xtclang.ecstasy.numbers.Float16";
+    public static final String N_Float32      = "org.xtclang.ecstasy.numbers.Float32";
+    public static final String N_Float64      = "org.xtclang.ecstasy.numbers.Float64";
     public static final String N_Int8         = "org.xtclang.ecstasy.numbers.Int8";
     public static final String N_Int16        = "org.xtclang.ecstasy.numbers.Int16";
     public static final String N_Int32        = "org.xtclang.ecstasy.numbers.Int32";
@@ -892,6 +918,12 @@ public abstract class Builder {
 
     public static final ClassDesc CD_Boolean       = ClassDesc.of(N_Boolean);
     public static final ClassDesc CD_Char          = ClassDesc.of(N_Char);
+    public static final ClassDesc CD_Dec16         = ClassDesc.of(N_Dec16);
+    public static final ClassDesc CD_Dec32         = ClassDesc.of(N_Dec32);
+    public static final ClassDesc CD_Dec64         = ClassDesc.of(N_Dec64);
+    public static final ClassDesc CD_Float16       = ClassDesc.of(N_Float16);
+    public static final ClassDesc CD_Float32       = ClassDesc.of(N_Float32);
+    public static final ClassDesc CD_Float64       = ClassDesc.of(N_Float64);
     public static final ClassDesc CD_Int8          = ClassDesc.of(N_Int8);
     public static final ClassDesc CD_Int16         = ClassDesc.of(N_Int16);
     public static final ClassDesc CD_Int32         = ClassDesc.of(N_Int32);
@@ -923,19 +955,25 @@ public abstract class Builder {
 
     public static final String         Instance       = "$INSTANCE";
     public static final MethodTypeDesc MD_Boolean_box = MethodTypeDesc.of(CD_Boolean, CD_boolean);
-    public static final MethodTypeDesc MD_Char_box    = MethodTypeDesc.of(CD_Char,   CD_int);
-    public static final MethodTypeDesc MD_Char_addInt = MethodTypeDesc.of(CD_int,    CD_Ctx, CD_int, CD_long);
-    public static final MethodTypeDesc MD_Char_subInt = MethodTypeDesc.of(CD_int,    CD_Ctx, CD_int, CD_long);
-    public static final MethodTypeDesc MD_Int8_box    = MethodTypeDesc.of(CD_Int8,   CD_int);
-    public static final MethodTypeDesc MD_Int16_box   = MethodTypeDesc.of(CD_Int16,  CD_int);
-    public static final MethodTypeDesc MD_Int32_box   = MethodTypeDesc.of(CD_Int32,  CD_int);
-    public static final MethodTypeDesc MD_Int64_box   = MethodTypeDesc.of(CD_Int64,  CD_long);
-    public static final MethodTypeDesc MD_UInt8_box   = MethodTypeDesc.of(CD_UInt8,  CD_int);
-    public static final MethodTypeDesc MD_UInt16_box  = MethodTypeDesc.of(CD_UInt16, CD_int);
-    public static final MethodTypeDesc MD_UInt32_box  = MethodTypeDesc.of(CD_UInt32, CD_int);
-    public static final MethodTypeDesc MD_UInt64_box  = MethodTypeDesc.of(CD_UInt64, CD_long);
-    public static final MethodTypeDesc MD_Initializer = MethodTypeDesc.of(CD_void,   CD_Ctx);
-    public static final MethodTypeDesc MD_StringOf    = MethodTypeDesc.of(CD_String, CD_Ctx, CD_JavaString);
+    public static final MethodTypeDesc MD_Char_box    = MethodTypeDesc.of(CD_Char,    CD_int);
+    public static final MethodTypeDesc MD_Char_addInt = MethodTypeDesc.of(CD_int,     CD_Ctx, CD_int, CD_long);
+    public static final MethodTypeDesc MD_Char_subInt = MethodTypeDesc.of(CD_int,     CD_Ctx, CD_int, CD_long);
+    public static final MethodTypeDesc MD_Dec16_box   = MethodTypeDesc.of(CD_Dec16,   CD_int);
+    public static final MethodTypeDesc MD_Dec32_box   = MethodTypeDesc.of(CD_Dec32,   CD_int);
+    public static final MethodTypeDesc MD_Dec64_box   = MethodTypeDesc.of(CD_Dec64,   CD_long);
+    public static final MethodTypeDesc MD_Float16_box = MethodTypeDesc.of(CD_Float16, CD_float);
+    public static final MethodTypeDesc MD_Float32_box = MethodTypeDesc.of(CD_Float32, CD_float);
+    public static final MethodTypeDesc MD_Float64_box = MethodTypeDesc.of(CD_Float64, CD_double);
+    public static final MethodTypeDesc MD_Int8_box    = MethodTypeDesc.of(CD_Int8,    CD_int);
+    public static final MethodTypeDesc MD_Int16_box   = MethodTypeDesc.of(CD_Int16,   CD_int);
+    public static final MethodTypeDesc MD_Int32_box   = MethodTypeDesc.of(CD_Int32,   CD_int);
+    public static final MethodTypeDesc MD_Int64_box   = MethodTypeDesc.of(CD_Int64,   CD_long);
+    public static final MethodTypeDesc MD_UInt8_box   = MethodTypeDesc.of(CD_UInt8,   CD_int);
+    public static final MethodTypeDesc MD_UInt16_box  = MethodTypeDesc.of(CD_UInt16,  CD_int);
+    public static final MethodTypeDesc MD_UInt32_box  = MethodTypeDesc.of(CD_UInt32,  CD_int);
+    public static final MethodTypeDesc MD_UInt64_box  = MethodTypeDesc.of(CD_UInt64,  CD_long);
+    public static final MethodTypeDesc MD_Initializer = MethodTypeDesc.of(CD_void,    CD_Ctx);
+    public static final MethodTypeDesc MD_StringOf    = MethodTypeDesc.of(CD_String,  CD_Ctx, CD_JavaString);
     public static final MethodTypeDesc MD_xvmType     = MethodTypeDesc.of(CD_TypeConstant, CD_Ctx);
     public static final MethodTypeDesc MD_TypeIsA     = MethodTypeDesc.of(CD_boolean, CD_TypeConstant);
     public static final MethodTypeDesc MD_FloorModI   = MethodTypeDesc.of(CD_int, CD_int, CD_int);

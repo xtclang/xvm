@@ -844,7 +844,7 @@ public class CommonBuilder
      * Assemble methods for the "Impl" shape.
      */
     protected void assembleImplMethods(String className, ClassBuilder classBuilder) {
-        boolean assembleDeclared = classStruct.getFormat() != Format.INTERFACE;
+        boolean assembleDeclared = !typeInfo.isAbstract();
 
         for (MethodInfo method : typeInfo.getMethods().values()) {
             if (method.isNative()) {

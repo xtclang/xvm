@@ -52,10 +52,10 @@ public class AugmentingBuilder extends CommonBuilder {
         // AugmentingBuilder uses the native class attributes except of the "ABSTRACT" flag
         // that is driven by the type
         int flags = model.flags().flagsMask();
-
         if ((flags & ClassFile.ACC_ABSTRACT) != 0 && !typeInfo.isAbstract()) {
-            classBuilder.withFlags(flags & ~ClassFile.ACC_ABSTRACT);
+            flags &= ~ClassFile.ACC_ABSTRACT;
         }
+        classBuilder.withFlags(flags);
 
         // implemented interfaces may not be native; add them if necessary
         assembleImplInterfaces(classBuilder);
