@@ -19,6 +19,26 @@ import java.util.Properties
 import java.util.concurrent.atomic.AtomicReference
 
 /**
+ * Shared build properties loaded once at class initialization time.
+ * This avoids concurrent getResourceAsStream() calls which can cause
+ * "Inflater wants input" errors in IntelliJ's PluginClassLoader.
+ */
+private object LspBuildProperties {
+    private val logger = logger<LspBuildProperties>()
+
+    val properties: Properties =
+        Properties().apply {
+            LspBuildProperties::class.java.getResourceAsStream("/lsp-version.properties")?.use { load(it) }
+                ?: logger.error("lsp-version.properties not found in plugin resources!")
+        }
+
+    val version: String get() = properties.getProperty("lsp.version", "?")
+    val adapter: String get() = properties.getProperty("lsp.adapter", "mock")
+    val buildTime: String get() = properties.getProperty("lsp.build.time", "?")
+    val buildInfo: String get() = "v$version built $buildTime"
+}
+
+/**
  * Factory for creating XTC Language Server connections.
  *
  * The server runs OUT-OF-PROCESS as a separate Java process because:
@@ -31,27 +51,9 @@ import java.util.concurrent.atomic.AtomicReference
 class XtcLanguageServerFactory : LanguageServerFactory {
     private val logger = logger<XtcLanguageServerFactory>()
 
-    private val buildInfo: String by lazy {
-        javaClass.getResourceAsStream("/lsp-version.properties")?.use { stream ->
-            runCatching {
-                Properties().apply { load(stream) }.let { props ->
-                    val version = props.getProperty("lsp.version")
-                    val buildTime = props.getProperty("lsp.build.time")
-                    "v${version ?: "?"} built ${buildTime ?: "?"}"
-                }
-            }.getOrElse { e ->
-                logger.error("Failed to parse lsp-version.properties", e)
-                "ERROR: ${e.message}"
-            }
-        } ?: run {
-            logger.error("lsp-version.properties not found in plugin resources!")
-            "ERROR: version properties not bundled"
-        }
-    }
-
     override fun createConnectionProvider(project: Project) =
         XtcLspConnectionProvider(project).also {
-            logger.info("Creating XTC LSP connection provider (out-of-process) - $buildInfo")
+            logger.info("Creating XTC LSP connection provider (out-of-process) - ${LspBuildProperties.buildInfo}")
         }
 
     override fun createLanguageClient(project: Project) = LanguageClientImpl(project)
@@ -77,13 +79,6 @@ class XtcLspConnectionProvider(
 
     /** Holds the provisioned java path once available. */
     private val provisionedJavaPath = AtomicReference<Path?>()
-
-    private val buildProps: Properties by lazy {
-        Properties().apply {
-            javaClass.getResourceAsStream("/lsp-version.properties")?.use { load(it) }
-                ?: logger.error("lsp-version.properties not found in plugin resources!")
-        }
-    }
 
     init {
         // Check if JRE is already provisioned (instant check, no download)
@@ -111,13 +106,11 @@ class XtcLspConnectionProvider(
         logger.info("Starting XTC LSP Server (out-of-process via OSProcessStreamConnectionProvider)")
         super.start()
 
-        val version = buildProps.getProperty("lsp.version", "?")
-        val adapterType = buildProps.getProperty("lsp.adapter", "mock")
-        logger.info("XTC LSP Server process started (v$version, adapter=$adapterType, pid=$pid)")
+        logger.info("XTC LSP Server process started (v${LspBuildProperties.version}, adapter=${LspBuildProperties.adapter}, pid=$pid)")
 
         showNotification(
             title = "XTC Language Server Started",
-            content = "Out-of-process server (v$version, adapter=$adapterType)",
+            content = "Out-of-process server (v${LspBuildProperties.version}, adapter=${LspBuildProperties.adapter}, pid=$pid)",
             type = NotificationType.INFORMATION,
         )
     }
@@ -162,8 +155,8 @@ class XtcLspConnectionProvider(
         logger.info("Using Java: $javaPath")
         logger.info("Using LSP server JAR: $serverJar")
 
-        // Log level: check -Dlsp.logLevel (case-insensitive), default to INFO
-        val logLevel = System.getProperty("lsp.logLevel")?.uppercase() ?: "INFO"
+        // Log level: check -Dxtc.logLevel (case-insensitive), default to INFO
+        val logLevel = System.getProperty("xtc.logLevel")?.uppercase() ?: "INFO"
 
         val commandLine =
             GeneralCommandLine(
@@ -171,9 +164,7 @@ class XtcLspConnectionProvider(
                 "--enable-native-access=ALL-UNNAMED", // FFM API for tree-sitter native libraries
                 "-Dapple.awt.UIElement=true", // macOS: no dock icon
                 "-Djava.awt.headless=true", // No GUI components
-                "-Dlsp.logLevel=$logLevel", // Pass log level to LSP server
-                "-Xms32m", // Modest initial heap
-                "-Xmx256m", // Cap memory usage
+                "-Dxtc.logLevel=$logLevel", // Pass log level to LSP server
                 "-jar",
                 serverJar.toString(),
             ).apply {
@@ -183,9 +174,10 @@ class XtcLspConnectionProvider(
         setCommandLine(commandLine)
         provisionedJavaPath.set(javaPath)
 
-        val version = buildProps.getProperty("lsp.version", "?")
-        val adapterType = buildProps.getProperty("lsp.adapter", "mock")
-        logger.info("XTC LSP command configured (v$version, adapter=$adapterType): ${commandLine.commandLineString}")
+        logger.info(
+            "XTC LSP command configured (v${LspBuildProperties.version}, " +
+                "adapter=${LspBuildProperties.adapter}): ${commandLine.commandLineString}",
+        )
     }
 
     /**
@@ -201,7 +193,7 @@ class XtcLspConnectionProvider(
             val pluginDir = pluginLibDir.parent // Go from lib/ to plugin root
             val serverJar = pluginDir.resolve("bin/xtc-lsp-server.jar")
             if (Files.exists(serverJar)) return serverJar
-            logger.debug("LSP server JAR not at expected location: $serverJar")
+            logger.info("LSP server JAR not at expected location: $serverJar")
         }
 
         // Fallback: search in typical plugin locations

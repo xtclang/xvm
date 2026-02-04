@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.MockXtcCompilerAdapter
 import org.xvm.lsp.adapter.TreeSitterAdapter
 import org.xvm.lsp.adapter.XtcCompilerAdapter
+import org.xvm.lsp.adapter.XtcCompilerAdapterStub
 import java.io.InputStream
 import java.io.OutputStream
 import java.lang.invoke.MethodHandles
@@ -72,12 +73,11 @@ private enum class AdapterBackend(
 private fun createAdapter(adapterType: String): Pair<XtcCompilerAdapter, AdapterBackend> =
     when (adapterType.lowercase()) {
         "compiler", "xtc", "full" -> {
-            // TODO: Replace with XtcCompilerAdapter when parallel compiler integration is ready
+            // Stub adapter - all methods log warnings, no actual compiler integration yet
+            // TODO: Replace with real compiler adapter when parallel compiler integration is ready
             // See PLAN_LSP_PARALLEL_LEXER.md for the integration roadmap
-            throw UnsupportedOperationException(
-                "XTC Compiler adapter not yet implemented. " +
-                    "Use 'treesitter' for syntax-aware features or 'mock' for basic testing.",
-            )
+            logger.info("Using compiler stub adapter - all LSP calls will be logged but return empty results")
+            XtcCompilerAdapterStub() to AdapterBackend.COMPILER
         }
         "treesitter", "tree-sitter" -> {
             try {
@@ -110,9 +110,11 @@ fun main(
     val (adapter, backend) = createAdapter(adapterType)
 
     // Log startup banner prominently
+    val logFile = "${System.getProperty("user.home")}/.xtc/logs/lsp-server.log"
     logger.info("========================================")
     logger.info("XTC Language Server v$version")
     logger.info("Backend: ${backend.displayName}")
+    logger.info("Log file: $logFile")
     logger.info("========================================")
 
     when (backend) {
@@ -120,7 +122,8 @@ fun main(
             logger.info("Tree-sitter provides: syntax highlighting, document symbols, completions, go-to-definition")
         }
         AdapterBackend.COMPILER -> {
-            logger.info("XTC Compiler provides: full semantic analysis, type inference, cross-file navigation")
+            logger.warn("XTC Compiler adapter is a STUB - all methods log but return empty results")
+            logger.info("When implemented, will provide: full semantic analysis, type inference, cross-file navigation")
         }
         AdapterBackend.MOCK -> {
             logger.info("Mock backend provides: basic symbol detection (regex-based)")

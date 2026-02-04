@@ -1033,12 +1033,11 @@ Allow verbose logging via system property without rebuilding:
 
 ```kotlin
 // Plugin passes log level when starting server
-val logLevel = System.getProperty("xtc.lsp.log.level", "INFO")
+val logLevel = System.getProperty("xtc.logLevel", "INFO")
 
 val process = ProcessBuilder(
     javaPath.toString(),
-    "-Dlogback.configurationFile=/dev/null",  // Disable bundled config
-    "-Dorg.xvm.lsp.level=$logLevel",          // Custom level
+    "-Dxtc.logLevel=$logLevel",               // Log level for LSP server
     "-Dapple.awt.UIElement=true",
     "-Djava.awt.headless=true",
     "-jar",
@@ -1049,10 +1048,10 @@ val process = ProcessBuilder(
 Or use logback's built-in property substitution in `logback.xml`:
 
 ```xml
-<logger name="org.xvm.lsp" level="${xtc.lsp.log.level:-INFO}"/>
+<logger name="org.xvm.lsp" level="${xtc.logLevel:-INFO}"/>
 ```
 
-Then pass: `-Dxtc.lsp.log.level=DEBUG` for verbose logging.
+Then pass: `-Dxtc.logLevel=DEBUG` for verbose logging.
 
 ### Viewing Logs Summary
 
@@ -1060,7 +1059,7 @@ Then pass: `-Dxtc.lsp.log.level=DEBUG` for verbose logging.
 |----------|------------------|
 | Development (`runIde`) | Gradle console - logs prefixed with `[XTC-LSP]` |
 | Production (installed) | `Help > Diagnostic Tools > Show Log in Finder` |
-| Verbose mode | Add `-Dxtc.lsp.log.level=DEBUG` to server launch |
+| Verbose mode | Add `-Dxtc.logLevel=DEBUG` to Gradle or server launch |
 | Standalone test | `java -jar xtc-lsp-server.jar` → logs go to stderr |
 
 ### LSP4IJ Built-in Log View

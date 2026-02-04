@@ -49,8 +49,8 @@ val kotlinJdkVersion = xdkProperties.int("org.xtclang.kotlin.jdk")
 // =============================================================================
 // The LSP server can use different parsing backends:
 //
-//   mock        - Regex-based parsing (default, no native dependencies)
-//   treesitter  - Tree-sitter parsing (syntax-level intelligence, needs native lib)
+//   treesitter  - Tree-sitter parsing (DEFAULT, syntax-level intelligence, needs native lib)
+//   mock        - Regex-based parsing (no native dependencies, for testing/fallback)
 //
 // Set via Gradle property: -Plsp.adapter=mock (to override default)
 // Or in gradle.properties:  lsp.adapter=mock
@@ -59,6 +59,7 @@ val kotlinJdkVersion = xdkProperties.int("org.xtclang.kotlin.jdk")
 // Use 'mock' for basic regex-based functionality if tree-sitter has issues.
 // =============================================================================
 val lspAdapter: String = project.findProperty("lsp.adapter")?.toString() ?: "treesitter"
+logger.lifecycle("LSP Server adapter: $lspAdapter")
 
 // Generate build info for version verification and adapter selection
 val generateBuildInfo by tasks.registering {
@@ -189,6 +190,7 @@ val ktlintCheck by tasks.existing
 val compileKotlin by tasks.existing {
     dependsOn(ktlintCheck)
 }
+val classes by tasks.existing
 
 tasks.test {
     useJUnitPlatform()
@@ -214,6 +216,9 @@ tasks.jar {
 val fatJar by tasks.registering(Jar::class) {
     archiveClassifier.set("all")
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    // Explicit dependency ensures resources (logback.xml, etc.) are processed before JAR creation
+    dependsOn(classes)
 
     from(sourceSets.main.get().output)
 

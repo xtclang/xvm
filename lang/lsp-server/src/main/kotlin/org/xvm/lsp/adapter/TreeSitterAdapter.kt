@@ -3,6 +3,9 @@ package org.xvm.lsp.adapter
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.XtcCompilerAdapter.CompletionItem
 import org.xvm.lsp.adapter.XtcCompilerAdapter.CompletionItem.CompletionKind
+import org.xvm.lsp.adapter.XtcLanguageConstants.BUILT_IN_TYPES
+import org.xvm.lsp.adapter.XtcLanguageConstants.KEYWORDS
+import org.xvm.lsp.adapter.XtcLanguageConstants.SYMBOL_TO_COMPLETION_KIND
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
@@ -42,12 +45,13 @@ import kotlin.time.measureTime
 class TreeSitterAdapter :
     XtcCompilerAdapter,
     Closeable {
-    override val displayName: String = "Tree-sitter (syntax-aware)"
+    override val displayName: String = "TreeSitter"
 
     private val parser: XtcParser = XtcParser()
     private val queryEngine: XtcQueryEngine = XtcQueryEngine(parser.getLanguage())
     private val parsedTrees = ConcurrentHashMap<String, XtcTree>()
     private val compilationResults = ConcurrentHashMap<String, CompilationResult>()
+    private val logPrefix = "[$displayName]"
 
     init {
         // Perform health check to verify native library is working
@@ -59,7 +63,7 @@ class TreeSitterAdapter :
 
         if (!healthCheck()) {
             val msg =
-                "TreeSitterAdapter: health check FAILED - native library not working. " +
+                "$logPrefix health check FAILED - native library not working. " +
                     "Ensure native libraries are bundled and Java $MIN_JAVA_VERSION+ is used."
             logger.error(msg)
             throw IllegalStateException(msg)
@@ -91,135 +95,13 @@ class TreeSitterAdapter :
             val duration = measureTime { result = block() }
             return result to duration
         }
-
-        // XTC keywords for completion
-        private val KEYWORDS =
-            listOf(
-                "module",
-                "package",
-                "import",
-                "as",
-                "class",
-                "interface",
-                "mixin",
-                "service",
-                "const",
-                "enum",
-                "public",
-                "private",
-                "protected",
-                "static",
-                "abstract",
-                "extends",
-                "implements",
-                "incorporates",
-                "delegates",
-                "into",
-                "if",
-                "else",
-                "switch",
-                "case",
-                "default",
-                "for",
-                "while",
-                "do",
-                "break",
-                "continue",
-                "return",
-                "try",
-                "catch",
-                "finally",
-                "throw",
-                "using",
-                "assert",
-                "new",
-                "this",
-                "super",
-                "outer",
-                "is",
-                "as",
-                "val",
-                "var",
-                "construct",
-                "function",
-                "typedef",
-                "true",
-                "false",
-                "null",
-            )
-
-        // Built-in types for completion
-        private val BUILT_IN_TYPES =
-            listOf(
-                "Int",
-                "Int8",
-                "Int16",
-                "Int32",
-                "Int64",
-                "Int128",
-                "IntN",
-                "UInt",
-                "UInt8",
-                "UInt16",
-                "UInt32",
-                "UInt64",
-                "UInt128",
-                "UIntN",
-                "Dec",
-                "Dec32",
-                "Dec64",
-                "Dec128",
-                "DecN",
-                "Float",
-                "Float16",
-                "Float32",
-                "Float64",
-                "Float128",
-                "FloatN",
-                "String",
-                "Char",
-                "Boolean",
-                "Bit",
-                "Byte",
-                "Object",
-                "Enum",
-                "Exception",
-                "Const",
-                "Service",
-                "Module",
-                "Package",
-                "Array",
-                "List",
-                "Set",
-                "Map",
-                "Range",
-                "Interval",
-                "Tuple",
-                "Function",
-                "Method",
-                "Property",
-                "Type",
-                "Class",
-                "Nullable",
-                "Orderable",
-                "Hashable",
-                "Stringable",
-                "Iterator",
-                "Iterable",
-                "Collection",
-                "Sequence",
-                "void",
-                "Null",
-                "True",
-                "False",
-            )
     }
 
     override fun compile(
         uri: String,
         content: String,
     ): CompilationResult {
-        logger.info("TreeSitterAdapter: parsing {} ({} bytes)", uri, content.length)
+        logger.info("$logPrefix parsing {} ({} bytes)", uri, content.length)
 
         // Parse the content (with incremental parsing if we have an old tree)
         val oldTree = parsedTrees[uri]
@@ -229,7 +111,7 @@ class TreeSitterAdapter :
             try {
                 timed { parser.parse(content, oldTree) }
             } catch (e: Exception) {
-                logger.error("TreeSitterAdapter: parse failed for {}: {}", uri, e.message)
+                logger.error("$logPrefix parse failed for {}: {}", uri, e.message)
                 return CompilationResult.failure(
                     uri,
                     listOf(
@@ -252,7 +134,7 @@ class TreeSitterAdapter :
         compilationResults[uri] = result
 
         logger.info(
-            "TreeSitterAdapter: parsed in {} ({}), {} errors, {} symbols (query: {})",
+            "$logPrefix parsed in {} ({}), {} errors, {} symbols (query: {})",
             parseElapsed,
             if (isIncremental) "incremental" else "full",
             diagnostics.size,
@@ -281,18 +163,9 @@ class TreeSitterAdapter :
 
         return buildString {
             append("```xtc\n")
-            if (symbol.typeSignature != null) {
-                append(symbol.typeSignature)
-            } else {
-                append(symbol.kind.name.lowercase())
-                append(" ")
-                append(symbol.name)
-            }
+            append(symbol.typeSignature ?: "${symbol.kind.name.lowercase()} ${symbol.name}")
             append("\n```")
-            if (symbol.documentation != null) {
-                append("\n\n")
-                append(symbol.documentation)
-            }
+            symbol.documentation?.let { append("\n\n$it") }
         }
     }
 
@@ -327,10 +200,8 @@ class TreeSitterAdapter :
             }
 
             // Add symbols from current document
-            val tree = parsedTrees[uri]
-            if (tree != null) {
-                val symbols = queryEngine.findAllDeclarations(tree, uri)
-                symbols.forEach { symbol ->
+            parsedTrees[uri]?.let { tree ->
+                queryEngine.findAllDeclarations(tree, uri).forEach { symbol ->
                     add(
                         CompletionItem(
                             label = symbol.name,
@@ -340,11 +211,9 @@ class TreeSitterAdapter :
                         ),
                     )
                 }
-            }
 
-            // Add imports from current document
-            tree?.let {
-                queryEngine.findImports(it).forEach { importPath ->
+                // Add imports from current document
+                queryEngine.findImports(tree).forEach { importPath ->
                     val simpleName = importPath.substringAfterLast(".")
                     add(
                         CompletionItem(
@@ -368,12 +237,16 @@ class TreeSitterAdapter :
         val symbols = queryEngine.findAllDeclarations(tree, uri)
         val decl = symbols.find { it.name == name }
 
-        return decl?.location.also { loc ->
-            if (loc != null) {
-                logger.info("definition '{}' -> {}:{}", name, loc.startLine, loc.startColumn)
-            } else {
-                logger.info("definition '{}' not found ({} symbols: {})", name, symbols.size, symbols.take(5).joinToString { it.name })
-            }
+        return decl?.location?.also { loc ->
+            logger.info("$logPrefix definition '{}' -> {}:{}", name, loc.startLine, loc.startColumn)
+        } ?: run {
+            logger.info(
+                "$logPrefix definition '{}' not found ({} symbols: {})",
+                name,
+                symbols.size,
+                symbols.take(5).joinToString { it.name },
+            )
+            null
         }
     }
 
@@ -385,7 +258,7 @@ class TreeSitterAdapter :
     ): List<Location> {
         val (tree, name) = getIdentifierAt(uri, line, column, "references") ?: return emptyList()
         return queryEngine.findAllIdentifiers(tree, name, uri).also {
-            logger.info("references '{}' -> {} found", name, it.size)
+            logger.info("$logPrefix references '{}' -> {} found", name, it.size)
         }
     }
 
@@ -399,11 +272,11 @@ class TreeSitterAdapter :
         val tree = parsedTrees[uri] ?: return null
         val node =
             tree.nodeAt(line, column) ?: return null.also {
-                logger.debug("{}: no node at {}:{}:{}", op, uri.substringAfterLast('/'), line, column)
+                logger.info("{}: no node at {}:{}:{}", op, uri.substringAfterLast('/'), line, column)
             }
         val id =
             findIdentifierNode(node) ?: return null.also {
-                logger.debug("{}: not an identifier at {}:{}:{} ({})", op, uri.substringAfterLast('/'), line, column, node.type)
+                logger.info("{}: not an identifier at {}:{}:{} ({})", op, uri.substringAfterLast('/'), line, column, node.type)
             }
         return tree to id.text
     }
@@ -462,15 +335,5 @@ class TreeSitterAdapter :
             node.parent?.takeIf { it.type == "identifier" || it.type == "type_name" }
         }
 
-    private fun toCompletionKind(kind: SymbolKind): CompletionKind =
-        when (kind) {
-            SymbolKind.MODULE, SymbolKind.PACKAGE -> CompletionKind.MODULE
-            SymbolKind.CLASS, SymbolKind.ENUM, SymbolKind.CONST,
-            SymbolKind.MIXIN, SymbolKind.SERVICE,
-            -> CompletionKind.CLASS
-            SymbolKind.INTERFACE -> CompletionKind.INTERFACE
-            SymbolKind.METHOD, SymbolKind.CONSTRUCTOR -> CompletionKind.METHOD
-            SymbolKind.PROPERTY -> CompletionKind.PROPERTY
-            SymbolKind.PARAMETER, SymbolKind.TYPE_PARAMETER -> CompletionKind.VARIABLE
-        }
+    private fun toCompletionKind(kind: SymbolKind): CompletionKind = SYMBOL_TO_COMPLETION_KIND[kind] ?: CompletionKind.VARIABLE
 }

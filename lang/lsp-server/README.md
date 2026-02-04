@@ -11,6 +11,7 @@ This project provides the LSP server that powers IDE features like:
 - Go to definition
 - Find references
 - Document outline
+- And many more (see feature matrix below)
 
 The server is used by both the [IntelliJ plugin](../intellij-plugin/) and [VS Code extension](../vscode-extension/).
 
@@ -29,18 +30,19 @@ The LSP server uses a pluggable adapter pattern to support different parsing bac
 └───────────────────────────┬───────────────────────────────────┘
                             │
               ┌─────────────┴─────────────┐
-              │    XtcCompilerAdapter     │  ← Interface
+              │    XtcCompilerAdapter     │  ← Interface with defaults
               └─────────────┬─────────────┘
                             │
         ┌───────────────────┼───────────────────┐
         │                   │                   │
 ┌───────┴───────┐   ┌───────┴───────┐   ┌───────┴───────┐
-│ MockXtc-      │   │ TreeSitter-   │   │ (Future)      │
-│ Compiler-     │   │ Adapter       │   │ Compiler-     │
-│ Adapter       │   │               │   │ Adapter       │
+│ MockXtc-      │   │ TreeSitter-   │   │ XtcCompiler-  │
+│ Compiler-     │   │ Adapter       │   │ AdapterStub   │
+│ Adapter       │   │               │   │               │
 │               │   │               │   │               │
-│ - Regex-based │   │ - Tree-sitter │   │ - Full XTC    │
-│ - Default     │   │ - Syntax AST  │   │   compiler    │
+│ - Regex-based │   │ - Tree-sitter │   │ - Stub for    │
+│ - For testing │   │ - Syntax AST  │   │   future      │
+│               │   │ - Default     │   │   compiler    │
 └───────────────┘   └───────────────┘   └───────────────┘
 ```
 
@@ -53,32 +55,31 @@ The selection is embedded in `lsp-version.properties` inside the JAR.
 
 | Adapter | Value | Description |
 |---------|-------|-------------|
-| **Mock** (default) | `mock` | Regex-based parsing. No native dependencies. Good for testing and basic features. |
-| **Tree-sitter** | `treesitter` | AST-based parsing using tree-sitter. Requires native library. Accurate syntax analysis. |
+| **Mock** | `mock` | Regex-based parsing. No native dependencies. Good for testing. |
+| **Tree-sitter** (default) | `treesitter` | AST-based parsing using tree-sitter. Requires native library. |
+| **Compiler** | `compiler` | Stub adapter. All methods logged but return empty. For testing infrastructure. |
 
 ### Build Commands
 
 ```bash
-# Build with Mock adapter (default)
-./gradlew :lang:lsp-server:build
+# Build with Tree-sitter adapter (default)
+./gradlew :lang:lsp-server:fatJar -PincludeBuildLang=true
 
-# Build with Tree-sitter adapter
-./gradlew :lang:lsp-server:build -Plsp.adapter=treesitter
+# Build with Mock adapter (no native dependencies)
+./gradlew :lang:lsp-server:fatJar -Plsp.adapter=mock -PincludeBuildLang=true
+
+# Build with Compiler stub (all calls logged)
+./gradlew :lang:lsp-server:fatJar -Plsp.adapter=compiler -PincludeBuildLang=true
 
 # Run IntelliJ with specific adapter
-./gradlew :lang:intellij-plugin:runIde -Plsp.adapter=treesitter
-
-# Run VS Code with specific adapter
-./gradlew :lang:vscode-extension:runIde -Plsp.adapter=treesitter
+./gradlew :lang:intellij-plugin:runIde -Plsp.adapter=treesitter -PincludeBuildLang=true
 ```
 
 ### Setting a Default Adapter
 
-Create or edit `gradle.properties` in the project root or `lang/` directory:
+Create or edit `gradle.properties`:
 
 ```properties
-lsp.adapter=mock
-# or
 lsp.adapter=treesitter
 ```
 
@@ -89,8 +90,8 @@ The server logs the active backend at startup:
 ```
 ========================================
 XTC Language Server v1.0.0
-Backend: MockXtcCompilerAdapter
-Built: 2026-01-31T15:30:00Z
+Backend: TreeSitter
+Built: 2026-02-04T15:30:00Z
 ========================================
 ```
 
@@ -98,70 +99,107 @@ In IntelliJ: **View → Tool Windows → Language Servers** (LSP4IJ) to see serv
 
 ### Backend Comparison
 
-| Feature | Mock | Tree-sitter |
-|---------|------|-------------|
-| Symbol detection | Regex (basic) | AST-based (accurate) |
-| Nested symbols | ❌ Limited | ✅ Full hierarchy |
-| Syntax errors | ❌ Basic patterns | ✅ Precise location |
-| Error recovery | ❌ None | ✅ Continues parsing |
-| Native library | Not needed | Required |
-| Performance | Fast | Fast (incremental) |
+| Feature | Mock | Tree-sitter | Compiler Stub |
+|---------|:----:|:-----------:|:-------------:|
+| Symbol detection | Regex (basic) | AST-based (accurate) | None (logged) |
+| Nested symbols | ❌ Limited | ✅ Full hierarchy | ❌ None |
+| Syntax errors | ❌ Basic patterns | ✅ Precise location | ❌ None |
+| Error recovery | ❌ None | ✅ Continues parsing | ❌ None |
+| Native library | Not needed | Required | Not needed |
+| All LSP calls logged | ✅ | ✅ | ✅ |
 
-### Tree-sitter Native Library
+## Supported LSP Features
 
-The tree-sitter adapter requires a native library (`libtree-sitter-xtc`). Pre-built libraries
-for all platforms are committed to source control. See [tree-sitter/README.md](../tree-sitter/README.md)
-for details on building and managing native libraries.
+All LSP methods are wired up in `XtcLanguageServer` and delegate to the adapter.
+Unimplemented methods use default interface implementations that log warnings.
 
-> **Note**: The `lsp.adapter` property only affects which adapter is used at runtime.
-> The tree-sitter native library build is **always** verified regardless of adapter selection,
-> to ensure pre-built libraries stay up-to-date with grammar changes.
+| Feature | Mock | TreeSitter | Compiler | LSP Method |
+|---------|:----:|:----------:|:--------:|------------|
+| **Core (Implemented)** |
+| Diagnostics | ⚠️ | ✅ | ❌ | `textDocument/publishDiagnostics` |
+| Hover | ⚠️ | ✅ | ❌ | `textDocument/hover` |
+| Completion | ⚠️ | ✅ | ❌ | `textDocument/completion` |
+| Go to Definition | ⚠️ | ⚠️ | ❌ | `textDocument/definition` |
+| Find References | ❌ | ⚠️ | ❌ | `textDocument/references` |
+| Document Symbols | ⚠️ | ✅ | ❌ | `textDocument/documentSymbol` |
+| **Tree-sitter Capable (Stubs)** |
+| Document Highlights | ❌ | 🔧 | ❌ | `textDocument/documentHighlight` |
+| Selection Ranges | ❌ | 🔧 | ❌ | `textDocument/selectionRange` |
+| Folding Ranges | ❌ | 🔧 | ❌ | `textDocument/foldingRange` |
+| Document Links | ❌ | 🔧 | ❌ | `textDocument/documentLink` |
+| **Requires Compiler (Stubs)** |
+| Signature Help | ❌ | ❌ | 🔮 | `textDocument/signatureHelp` |
+| Rename | ❌ | ❌ | 🔮 | `textDocument/rename` |
+| Prepare Rename | ❌ | ❌ | 🔮 | `textDocument/prepareRename` |
+| Code Actions | ❌ | ❌ | 🔮 | `textDocument/codeAction` |
+| Semantic Tokens | ❌ | ❌ | 🔮 | `textDocument/semanticTokens/full` |
+| Inlay Hints | ❌ | ❌ | 🔮 | `textDocument/inlayHint` |
+| Formatting | ❌ | ❌ | 🔮 | `textDocument/formatting` |
+| Range Formatting | ❌ | ❌ | 🔮 | `textDocument/rangeFormatting` |
+| Workspace Symbols | ❌ | ❌ | 🔮 | `workspace/symbol` |
+
+Legend: ✅ = Implemented, ⚠️ = Partial, ❌ = Not implemented, 🔧 = Tree-sitter TODO, 🔮 = Future compiler
 
 ## Key Components
 
 | Component | Description |
 |-----------|-------------|
-| `XtcLanguageServer` | LSP protocol handler |
-| `XtcCompilerAdapter` | Interface for extracting data from the XTC compiler |
-| `MockXtcCompilerAdapter` | Regex-based implementation for testing and fallback |
-| `TreeSitterAdapter` | Tree-sitter based implementation for syntax intelligence |
-| `CompilationResult` | Immutable snapshot of compilation output |
+| `XtcLanguageServer` | LSP protocol handler, wires all LSP methods to adapter |
+| `XtcCompilerAdapter` | Interface with default stubs for unimplemented methods |
+| `XtcLanguageConstants` | Shared keywords, built-in types, symbol mappings |
+| `MockXtcCompilerAdapter` | Regex-based implementation for testing |
+| `TreeSitterAdapter` | Tree-sitter based syntax intelligence |
+| `XtcCompilerAdapterStub` | Placeholder for future compiler integration |
 
 ## Building
 
 ```bash
-# Build the project
-./gradlew :lsp-server:build
+# Build the project (with lang enabled)
+./gradlew :lang:lsp-server:build -PincludeBuildLang=true
 
 # Run tests
-./gradlew :lsp-server:test
+./gradlew :lang:lsp-server:test -PincludeBuildLang=true
 
-# Create JAR
-./gradlew :lsp-server:jar
+# Create fat JAR with all dependencies
+./gradlew :lang:lsp-server:fatJar -PincludeBuildLang=true
 ```
 
-## Usage
+## Tree-sitter Native Library
 
-The LSP server is used by:
-- **intellij-plugin**: Runs in-process for IntelliJ IDEA
-- **vscode-extension**: Runs as subprocess for VS Code
+The tree-sitter adapter requires native libraries (`libtree-sitter-xtc`). These are built
+on-demand using Zig cross-compilation for all 5 platforms and cached in
+`~/.gradle/caches/tree-sitter-xtc/`.
 
-## Supported LSP Features
+See [tree-sitter/README.md](../tree-sitter/README.md) for details.
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Diagnostics | ✅ | Errors and warnings |
-| Hover | ✅ | Type information |
-| Completion | ✅ | Keywords and symbols |
-| Go to Definition | ✅ | Jump to declaration |
-| Find References | ✅ | Find all usages |
-| Document Symbols | ✅ | Outline view |
-| Formatting | ❌ | Not yet |
-| Rename | ❌ | Not yet |
-| Code Actions | ❌ | Not yet |
+## Logging
+
+The LSP server logs to both stderr (for IntelliJ's Language Servers panel) and a file.
+
+### Log File Location
+
+```bash
+~/.xtc/logs/lsp-server.log
+```
+
+### Changing Log Level
+
+Set the log level via `-Dxtc.logLevel`:
+
+```bash
+# Run IntelliJ with DEBUG logging
+./gradlew :lang:intellij-plugin:runIde -PincludeBuildLang=true -Dxtc.logLevel=DEBUG
+
+# Valid levels: TRACE, DEBUG, INFO (default), WARN, ERROR
+```
+
+### Tailing Logs
+
+```bash
+tail -f ~/.xtc/logs/lsp-server.log
+```
 
 ## Documentation
 
-- [Tree-sitter Integration Plan](../doc/plans/PLAN_TREE_SITTER.md) - Full details on tree-sitter backend
-
-The LSP server uses an adapter pattern to abstract the compiler backend, enabling future migration to a restartable/incremental compiler without changing the LSP protocol layer.
+- [Tree-sitter Feature Matrix](../tree-sitter/doc/functionality.md) - What Tree-sitter can/cannot do
+- [Tree-sitter Integration Plan](../doc/plans/PLAN_TREE_SITTER.md) - Full implementation details

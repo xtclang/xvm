@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   Logback configuration for XTC DSL generator tools.
-  Keep output minimal - only errors and explicit print statements.
+  Keep output minimal by default - only warnings and errors.
+
+  Override via: -Dxtc.logLevel=DEBUG (or INFO, WARN, ERROR)
 -->
 <configuration>
     <!-- Suppress logback's own status messages -->
@@ -10,12 +12,12 @@
     <appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
         <target>System.err</target>
         <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <pattern>%d{HH:mm:ss} %-5level %logger{0} - %msg%n</pattern>
         </encoder>
     </appender>
 
-    <!-- Only show warnings and errors from our code -->
-    <logger name="org.xtclang" level="WARN"/>
+    <!-- XTC tooling logs - WARN by default, override with -Dxtc.logLevel=DEBUG -->
+    <logger name="org.xtclang" level="${xtc.logLevel:-WARN}"/>
 
     <!-- Quiet root logger -->
     <root level="ERROR">
