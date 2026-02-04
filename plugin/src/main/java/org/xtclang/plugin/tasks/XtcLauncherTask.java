@@ -1,25 +1,12 @@
 package org.xtclang.plugin.tasks;
 
-import static org.xtclang.plugin.XtcJavaToolsRuntime.ensureJavaToolsInClasspath;
-import static org.xtclang.plugin.XtcPluginConstants.PROPERTY_VERBOSE_LOGGING_OVERRIDE;
-import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
-import static org.xtclang.plugin.XtcPluginUtils.argumentArrayToList;
-import static org.xtclang.plugin.internal.GradlePhaseAssertions.validateConfigurationTimeCapture;
-
-import java.io.File;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
-
 import org.gradle.api.Project;
-import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.FileTree;
+import org.gradle.api.model.ObjectFactory;
+import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
@@ -31,17 +18,29 @@ import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SourceSet;
-
+import org.gradle.api.tasks.options.Option;
+import org.gradle.api.tasks.options.OptionValues;
+import org.gradle.jvm.toolchain.JavaToolchainService;
 import org.jetbrains.annotations.NotNull;
-
 import org.xtclang.plugin.XtcJavaToolsRuntime;
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.internal.GradlePhaseAssertions;
 import org.xtclang.plugin.launchers.ExecutionMode;
 import org.xtclang.plugin.launchers.ModulePathResolver;
-import org.gradle.api.plugins.JavaPluginExtension;
-import org.gradle.jvm.toolchain.JavaToolchainService;
+
+import java.io.File;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import static java.util.Objects.requireNonNull;
+import static org.xtclang.plugin.XtcJavaToolsRuntime.ensureJavaToolsInClasspath;
+import static org.xtclang.plugin.XtcPluginConstants.PROPERTY_VERBOSE_LOGGING_OVERRIDE;
+import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
+import static org.xtclang.plugin.XtcPluginUtils.argumentArrayToList;
+import static org.xtclang.plugin.internal.GradlePhaseAssertions.validateConfigurationTimeCapture;
 
 /**
  * Abstract class that represents and XTC Launcher execution (i.e. Compiler, Runner, Disassembler etc.),
@@ -130,7 +129,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
             sourceSetNames.stream()
                 .map(sourceSetName -> {
                     final String configName = XtcProjectDelegate.incomingXtcModuleDependencies(sourceSetName);
-                    Objects.requireNonNull(configName, "Incoming configuration not found: " + configName + " (source set: " + sourceSetName + ")");
+                    requireNonNull(configName, "Incoming configuration not found: " + configName + " (source set: " + sourceSetName + ")");
                     return configurations.getByName(configName);
                 })
                 .forEach(result::from);
@@ -155,9 +154,6 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         validateConfigurationTimeCapture(this.sourceSetNames, "source set names");
         validateConfigurationTimeCapture(this.sourceSetOutputDirs, "source set output directories");
     }
-
-    //@Inject
-    //public abstract ExecOperations getExecOperations();
 
     /**
      * Hook called at start of launcher task execution.
@@ -270,16 +266,52 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         return verbose;
     }
 
+    /**
+     * Enable verbose output from command line.
+     * Example: ./gradlew runXtc --verbose
+     */
+    @SuppressWarnings("unused")
+    @Option(option = "verbose", description = "Enable verbose output")
+    public void setVerboseOption(final boolean verbose) {
+        this.verbose.set(verbose);
+    }
 
     @Input
     public Property<@NotNull Boolean> getShowVersion() {
         return showVersion;
     }
 
+    /**
+     * Show XTC version before execution from command line.
+     * Example: ./gradlew runXtc --show-version
+     */
+    @Option(option = "show-version", description = "Show XTC version before execution")
+    public void setShowVersionOption(final boolean showVersion) {
+        this.showVersion.set(showVersion);
+    }
+
     @Input
     @Override
     public Property<@NotNull ExecutionMode> getExecutionMode() {
         return executionMode;
+    }
+
+    /**
+     * Set execution mode from command line.
+     * Example: ./gradlew runXtc --mode=DETACHED
+     */
+    @Option(option = "mode", description = "Execution mode: DIRECT, ATTACHED, or DETACHED")
+    public void setExecutionModeOption(final ExecutionMode mode) {
+        this.executionMode.set(mode);
+    }
+
+    /**
+     * Lists available execution modes for command line help.
+     */
+    @SuppressWarnings("unused")
+    @OptionValues("mode")
+    public List<ExecutionMode> getAvailableExecutionModes() {
+        return List.of(ExecutionMode.values());
     }
 
     @Optional
@@ -347,17 +379,6 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         return xtcModuleDependencies.get();
     }
 
-    /*
-    @Internal
-    public Provider<@NotNull FileCollection> getXtcModuleDependenciesProvider() {
-        return xtcModuleDependencies;
-    }
-
-    @Internal
-    public Map<String, Provider<@NotNull Directory>> getSourceSetOutputDirs() {
-        return sourceSetOutputDirs;
-    }*/
-
     @Internal
     protected Provider<@NotNull String> getProjectVersion() {
         return projectVersion;
@@ -387,12 +408,4 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         // TODO: Eventually replace this with a method that returns source set names only
         throw new UnsupportedOperationException("getDependentSourceSets() should not be called at execution time for configuration cache compatibility. Use sourceSetNames instead.");
     }
-
-    /*
-    protected final List<String> resolveJvmArgs() {
-        final var list = new ArrayList<>(getJvmArgs().get());
-        // Debug arguments are now specified via jvmArgs() - use standard JDWP format:
-        // jvmArgs("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005")
-        return Collections.unmodifiableList(list);
-    }*/
 }

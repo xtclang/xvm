@@ -34,12 +34,14 @@ import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.tasks.options.Option;
 
 import org.jetbrains.annotations.NotNull;
 
 import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.XtcRunModule;
 import org.xtclang.plugin.XtcRuntimeExtension;
+import org.xtclang.plugin.internal.DefaultXtcRunModule;
 import org.xtclang.plugin.internal.DefaultXtcRuntimeExtension;
 import org.xtclang.plugin.launchers.AttachedStrategy;
 import org.xtclang.plugin.launchers.DetachedStrategy;
@@ -74,6 +76,11 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     protected final Map<XtcRunModule, Integer> executedModules; // Module -> exit code
     private final Property<@NotNull DefaultXtcRuntimeExtension> taskLocalModules;
 
+    // Command-line override properties (set via --module, --method, --args options)
+    private final Property<String> cliModuleName;
+    private final Property<String> cliMethodName;
+    private final ListProperty<String> cliModuleArgs;
+
     /**
      * Create an XTC run task, currently delegating instead of inheriting the plugin project
      * delegate. We are slowly getting rid of this delegate pattern, now that the intra-plugin
@@ -87,9 +94,65 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         super(objects, project, XtcProjectDelegate.resolveXtcRuntimeExtension(project));
         this.executedModules = new LinkedHashMap<>();
         this.taskLocalModules = objects.property(DefaultXtcRuntimeExtension.class).convention(objects.newInstance(DefaultXtcRuntimeExtension.class));
+        this.cliModuleName = objects.property(String.class);
+        this.cliMethodName = objects.property(String.class);
+        this.cliModuleArgs = objects.listProperty(String.class);
+    }
+
+    // =========================================================================
+    // Command-line options (override build.gradle.kts configuration)
+    // Usage: ./gradlew runXtc --module=MyModule --method=main --args=arg1,arg2
+    // =========================================================================
+
+    /**
+     * Override the module to run from command line.
+     * Example: ./gradlew runXtc --module=MyModule
+     */
+    @Option(option = "module", description = "Module name to run (overrides xtcRun configuration)")
+    public void setCliModuleName(final String moduleName) {
+        this.cliModuleName.set(moduleName);
+    }
+
+    @SuppressWarnings("unused") // NOTE: Optional, so IntelliJ doesn't see it in use
+    @Internal
+    public Property<String> getCliModuleName() {
+        return cliModuleName;
+    }
+
+    /**
+     * Override the method to invoke from command line.
+     * Example: ./gradlew runXtc --method=main
+     */
+    @Option(option = "method", description = "Method name to invoke (default: run)")
+    public void setCliMethodName(final String methodName) {
+        this.cliMethodName.set(methodName);
+    }
+
+    @SuppressWarnings("unused") // NOTE: Optional, so IntelliJ doesn't see it in use
+    @Internal
+    public Property<String> getCliMethodName() {
+        return cliMethodName;
+    }
+
+    /**
+     * Override module arguments from command line (comma-separated).
+     * Example: ./gradlew runXtc --args=hello,world
+     */
+    @Option(option = "args", description = "Module arguments (comma-separated)")
+    public void setCliModuleArgs(final String args) {
+        if (args != null && !args.isBlank()) {
+            this.cliModuleArgs.set(List.of(args.split(",")));
+        }
+    }
+
+    @SuppressWarnings("unused") // NOTE: Optional, so IntelliJ doesn't see it in use
+    @Internal
+    public ListProperty<String> getCliModuleArgs() {
+        return cliModuleArgs;
     }
 
 
+    @SuppressWarnings("unused") // NOTE: Optional, so IntelliJ doesn't see it in use
     @Internal
     @Override
     public String getJavaLauncherClassName() {
@@ -240,6 +303,15 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
 
     protected List<XtcRunModule> resolveModulesToRunFromModulePath(final List<File> resolvedModulePath) {
         logger.info("[plugin] Resolving modules to run from module path: '{}'", resolvedModulePath);
+
+        // Check for command-line override: --module=MyModule takes precedence over all configuration
+        if (cliModuleName.isPresent()) {
+            final String moduleName = cliModuleName.get();
+            logger.info("[plugin] Command-line override: running module '{}' (ignoring xtcRun configuration)", moduleName);
+            final XtcRunModule cliModule = createCliOverrideModule(moduleName);
+            return List.of(validatedModule(cliModule));
+        }
+
         if (isEmpty()) {
             logger.info("[plugin] Task extension '{}' and/or local task configuration do not declare any modules to run for '{}'. Skipping task.", ext.getName(), getName());
             return List.of();
@@ -260,6 +332,21 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         logger.info("[plugin] Found {} modules(s) in task and extension specification.", size());
         selectedModules.forEach(module -> logger.info("[plugin]    ***** Module to run: {}", module));
         return selectedModules.stream().map(XtcRunTask::validatedModule).sorted().toList();
+    }
+
+    /**
+     * Create an XtcRunModule from command-line options.
+     */
+    private XtcRunModule createCliOverrideModule(final String moduleName) {
+        final var module = objects.newInstance(DefaultXtcRunModule.class);
+        module.getModuleName().set(moduleName);
+        if (cliMethodName.isPresent()) {
+            module.getMethodName().set(cliMethodName.get());
+        }
+        if (cliModuleArgs.isPresent() && !cliModuleArgs.get().isEmpty()) {
+            module.getModuleArgs().set(cliModuleArgs.get());
+        }
+        return module;
     }
 
     /**

@@ -21,8 +21,6 @@ class XdkDistribution(
         const val XDK_ARTIFACT_NAME_JAVATOOLS_JAR = "javatools-jar"
         const val XDK_ARTIFACT_NAME_MACK_DIR = "mack-dir"
 
-        private const val CI = "CI"
-
         // These need to be computed at execution time to be configuration cache compatible
         val currentOs: OperatingSystem = OperatingSystem.current()
         fun getCurrentArch(project: Project): String = normalizeArchitecture(project.providers.systemProperty("os.arch").get())
@@ -86,32 +84,8 @@ class XdkDistribution(
         }
 
         /**
-         * Generate launcher command for a specific tool.
-         * - xcc → Launcher build -L ... "$@"
-         * - xec → Launcher run -L ... "$@"
-         * - xtc → Launcher "$@" -L ... (user provides command as first arg)
-         */
-        fun generateLauncherCommand(isWindows: Boolean, toolName: String): String {
-            val modulePaths = generateModulePaths(isWindows)
-            return when (toolName) {
-                "xcc" -> "org.xvm.tool.Launcher build $modulePaths"
-                "xec" -> "org.xvm.tool.Launcher run $modulePaths"
-                // xtc: user args (containing the command) go BEFORE -L options
-                else -> "org.xvm.tool.Launcher"
-            }
-        }
-
-        /**
-         * Get the module paths suffix for xtc script (appended after user args).
-         */
-        fun getModulePathsSuffix(isWindows: Boolean): String {
-            return generateModulePaths(isWindows)
-        }
-
-        /**
          * Script template strings for platform-specific launcher modifications.
-         * Note: Dollar signs are intentionally escaped for shell script generation.
-         * IntelliJ warnings about string templates are intentional - do not simplify!
+         * Uses ${'$'} escaping to produce literal $ characters in shell scripts.
          */
         val SCRIPT_TEMPLATES = mapOf(
             "windows" to mapOf(

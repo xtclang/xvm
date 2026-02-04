@@ -2,6 +2,7 @@
 *.com
 *.class
 *.dll
+*.dylib
 *.o
 *.so
 *.dSYM
@@ -17,8 +18,10 @@
 *.tar
 *.zip
 
-# User specific tool settings
+# User specific tool settings (vim swap files)
 *.swp
+*.swo
+*.swn
 
 # Eclipse
 .project
@@ -43,6 +46,9 @@ TAGS
 
 # OS generated files
 
+# Microsoft Office temporary files
+~$*
+
 # Mac
 .DS_Store
 .DS_Store?
@@ -58,6 +64,10 @@ build/
 
 # Build directories (IntelliJ)
 out/
+.intellijPlatform/
+
+# Node.js
+node_modules/
 
 # Tooling and project files
 prj/
@@ -100,6 +110,13 @@ profile-out/
 TODO
 
 # Claude Code; Local config + temporary plan documents.
-.claude/settings.local.json
+# Ignore all .claude/ except commands that should be shared
+.claude/*
+!.claude/commands/
+.claude/commands/*
+!.claude/commands/*.md
 .plan.md
+
+# Tree-sitter native libraries are now built on-demand and cached in ~/.gradle/caches/
+# No longer committed to source control (see lang/tree-sitter/build.gradle.kts)
 

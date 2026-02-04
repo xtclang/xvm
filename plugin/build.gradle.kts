@@ -1,3 +1,6 @@
+import com.vanniktech.maven.publish.GradlePlugin
+import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.SourcesJar
 import org.gradle.api.attributes.plugin.GradlePluginApiVersion
 import org.gradle.api.tasks.compile.JavaCompile
 
@@ -75,9 +78,9 @@ xdkPublishing {
 // Configure publication type as Gradle Plugin (vanniktech will handle plugin marker automatically)
 mavenPublishing {
     configure(
-        com.vanniktech.maven.publish.GradlePlugin(
-            javadocJar = com.vanniktech.maven.publish.JavadocJar.None(),
-            sourcesJar = true
+        GradlePlugin(
+            javadocJar = JavadocJar.None(),
+            sourcesJar = SourcesJar.Sources()
         )
     )
 }

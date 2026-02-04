@@ -57,7 +57,8 @@ This repository contains comprehensive documentation organized hierarchically:
 - **[Contributing Guide](CONTRIBUTING.md)** - How to contribute to the Ecstasy project
 - **[Code of Conduct](CODE_OF_CONDUCT.md)** - Community guidelines and expectations
 
-### Development Documentation  
+### Development Documentation
+- **[XTC CLI Reference](doc/xtc-cli.md)** - Command-line tools: `xtc init`, `xtc build`, `xtc run`, `xtc test`
 - **[Docker Guide](docker/README.md)** - Container development, build instructions, and CI integration
 - **[GitHub Actions](/.github/GITHUB_WORKFLOWS.md)** - CI/CD pipeline, workflows, and automation documentation
 
@@ -939,66 +940,15 @@ To submit a contributor agreement, sign up for very hard work, fork over a giant
 pile of cash, or in case of emergency: "info _at_ xtclang _dot_ org", but please
 understand if we cannot respond to every e-mail. Thank you.
 
-## Appendix: Gradle fundamentals
+## Appendix: Gradle Fundamentals
 
-We have tried very hard to create an easy-to-use build system based on industry standards
-and expected behavior. These days, most software is based on the Maven/Gradle model, which
-provides repositories of semantically versioned artifacts, cached incremental builds and
-mature support for containerization.
+This project follows industry-standard Gradle/Maven conventions. The build is designed to "just work" - clone and run `./gradlew build`.
 
-The principle of least astonishment permeates the philosophy behind the entire build system.
-This means that a modern developer, should be immediately familiar with how to build and run
-the XDK project, i.e. clone it from GitHub and execute "./gradlew build". It should also
-import complaint free, and with dependency chains understood by any IDE that has support
-for Gradle projects. "It should just work", out of the box, and should look familiar to any
-developer with basic experience as a Gradle user. Nothing should require more than a single
-command like to build or execute the system or anything built on top of it.
+**For developers new to Gradle**, we've documented the essential concepts you'll need:
 
-Implementing language support for an alien language on top of Gradle, however, is a fairly
-complex undertaking, and requires deeper knowledge of the Gradle architecture. It is
-our firm belief, though, that the user should not have to drill down to these levels, unless he/she
-specifically wants to. As it is, any open source developer today still needs to grasp some fundamentals 
-about artifacts and the Gradle build system. This is not just our assumption; it is actually 
-industry-wide.
+**[📖 doc/assumed-gradle-knowledge.md](doc/assumed-gradle-knowledge.md)** - Covers the build lifecycle, source sets, artifacts, repositories, and the Gradle wrapper.
 
-We believe the following concepts are necessary to understand, in order to work with XDK
-projects or the XDK. None of them are at all specific to XTC:
-
-* The concept of "gradlew" and "mvnw" (or "gradlew.bat" and "mvnw.bat" on Windows) wrappers,
-  and why it should ALWAYS be used instead of a "gradle" binary on the local system, for any
-  repository that ships it with its build.
-* The concept of a versioned Maven artifact, and that its descriptor "group:artifactId:version"
-  is its "global address", no matter how it is resolved on the lower abstraction layer.
-* The concept of release vs snapshot artifact versions in the Maven model.
-* The concept of local (mostly mavenLocal()) and remote artifact repositories, and how they are used
-  by a maven build.
-* The concept of the Maven/Gradle build lifecycle, its fundamental tasks, and how they depend
-  on each other ("clean", "assemble", "build" and "check").
-* The concept of the Gradle/Maven cache, build daemons, and why "clean" is not what you think  
-  of as "clean" in a C++ Makefile and why is it often better not to use it, in a cached, incrementally
-  built Gradle project.
-* The concept of Maven/Gradle source sets, like `main`, `resources` and `test`.
-* The concept of a Gradle build scan, and understanding how to inspect it and how to use it to
-  spot build issues.
-* The standard flags that can be used to control Gradle debug log levels, `--info`, `-q`, `--stacktrace`
-  and so on.
-* The concept of goal of self-contained software, which specifies its complete dependencies
-  as part of its source controlled configuration.
-    1) On the Maven model level, this means semantically versioned Maven artifacts.
-    2) On the software build and execution level, this also means specific versions of external
-       pieces of software, for example Java, Node.js or Yarn. This also means that we CAN and SHOULD
-       always be able to containerize for development purposes.
-
-Today, it is pretty safe to assume that most open source developers who has worked on any Gradle
-or Maven based project has at least the most important parts of the above knowledge.
-We have spent significant architectural effort to ensure that an adopter who wants to become an
-XTC or XDK user or developer does not need to acquire *any* knowledge that is
-more domain specific than concepts listed above. None of these concepts are specific to the
-XTC platform, but should be familiar to most software developers who have worked on projects
-with Maven style build systems.
-
-We will also work on IDE Language support as soon as we have enough cycles to do so, which
-should make getting up to speed with XTC and even less complicated process.
-# Test change for git properties rebuild verification
-# Test change for git detection
-# Test git change detection in full build chain
+Key points:
+- Always use `./gradlew` (the wrapper), never a system-installed `gradle`
+- The build uses standard Maven artifact conventions (`group:name:version`)
+- Gradle's `clean` is different from `make clean` - you rarely need it

@@ -14,20 +14,60 @@
 #
 
 [versions]
+
+# -----------------------------------------------------------------------------
+# Core XDK dependencies
+# -----------------------------------------------------------------------------
 apache-commons-cli = "1.11.0"
-download = "5.6.0"
 gson = "2.13.2"
-gradle-doctor = "0.12.1"
-gradle-portal-publish = "2.0.0"
 jakarta-activation = "2.1.4"
 jakarta-xml-bind-api = "4.0.4"
 jaxb-runtime = "4.0.6"
 jetbrains-annotations = "26.0.2-1"
 jline = "3.30.6"
+
+# -----------------------------------------------------------------------------
+# Build tooling & publishing
+# -----------------------------------------------------------------------------
+apache-commons-compress = "1.28.0"
+download = "5.6.0"
+tukaani-xz = "1.11"
+gradle-doctor = "0.12.1"
+gradle-portal-publish = "2.0.0"
+palantir-git-version = "4.2.0"
+vanniktech-maven-publish = "0.36.0"
+
+# -----------------------------------------------------------------------------
+# Testing
+# -----------------------------------------------------------------------------
+assertj = "3.27.7"
+awaitility = "4.3.0"
 junit = "6.0.2"
-ktlint = "13.1.0"
-palantir-git-version = "4.0.0"
-vanniktech-maven-publish = "0.34.0"
+junit-platform = "1.11.4"
+mockito = "5.21.0"
+
+# -----------------------------------------------------------------------------
+# Lang tooling (LSP server, IntelliJ plugin, VS Code extension)
+# These are only used when includeBuildLang=true
+# -----------------------------------------------------------------------------
+intellij-ide = "2025.1"
+intellij-jdk = "21"
+intellij-platform-gradle-plugin = "2.10.5"
+# jtreesitter 0.26.x requires Java 23+ (FFM API)
+# The LSP server runs OUT-OF-PROCESS with its own JRE (Java 24), not IntelliJ's JBR 21.
+# See lang/doc/plans/PLAN_OUT_OF_PROCESS_LSP.md for architecture details.
+jtreesitter = "0.26.0"
+kotlin = "2.3.0"
+kotlinx-serialization = "1.10.0"
+ktlint = "14.0.1"
+logback = "1.5.27"
+lsp4ij = "0.19.1"
+lsp4j = "0.24.0"
+slf4j = "2.0.17"
+# tree-sitter-cli must match jtreesitter major.minor for ABI compatibility
+tree-sitter-cli = "0.26.5"
+# Zig compiler for cross-compiling native tree-sitter libraries
+zig = "0.13.0"
 
 [plugins]
 # Included build plugins - no version (resolved from source)
@@ -39,9 +79,12 @@ xdk-build-properties = { id = "org.xtclang.build.xdk.properties" }
 xdk-build-publishing = { id = "org.xtclang.build.publishing" }
 
 # Third-party published plugins - with versions
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 download = { id = "de.undercouch.download", version.ref = "download" }
 gradle-doctor = { id = "com.osacky.doctor", version.ref = "gradle-doctor" }
 gradle-portal-publish = { id = "com.gradle.plugin-publish", version.ref = "gradle-portal-publish" }
+intellij-platform = { id = "org.jetbrains.intellij.platform", version.ref = "intellij-platform-gradle-plugin" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint" }
 palantir-git-version = { id = "com.palantir.git-version", version.ref = "palantir-git-version" }
 vanniktech-maven-publish = { id = "com.vanniktech.maven.publish", version.ref = "vanniktech-maven-publish" }
@@ -86,7 +129,30 @@ jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "j
 jline = { module = "org.jline:jline", version.ref = "jline" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
-junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version = "1.11.4" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
+# Used for downloading zipped Zig and TreeSitter native artifacts.
+apache-commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "apache-commons-compress" }
+tukaani-xz = { module = "org.tukaani:xz", version.ref = "tukaani-xz" }
+
+# Testing utilities
+assertj = { module = "org.assertj:assertj-core", version.ref = "assertj" }
+awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility" }
+mockito = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+
+# Logging
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
+logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+
+# LSP
+lsp4j = { module = "org.eclipse.lsp4j:org.eclipse.lsp4j", version.ref = "lsp4j" }
+lsp4j-jsonrpc = { module = "org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc", version.ref = "lsp4j" }
+
+# Tree-sitter - JVM bindings for incremental parsing
+jtreesitter = { module = "io.github.tree-sitter:jtreesitter", version.ref = "jtreesitter" }
+
+# Kotlin
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 
 [bundles]
 unicode = ["jakarta-activation-api", "jakarta-xml-bind-api", "jaxb-runtime"]
