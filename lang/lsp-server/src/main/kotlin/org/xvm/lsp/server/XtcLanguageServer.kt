@@ -17,7 +17,6 @@ import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
 import org.eclipse.lsp4j.DocumentFormattingParams
 import org.eclipse.lsp4j.DocumentHighlight
-import org.eclipse.lsp4j.DocumentHighlightKind
 import org.eclipse.lsp4j.DocumentHighlightParams
 import org.eclipse.lsp4j.DocumentLink
 import org.eclipse.lsp4j.DocumentLinkParams
@@ -25,14 +24,12 @@ import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.FoldingRange
-import org.eclipse.lsp4j.FoldingRangeKind
 import org.eclipse.lsp4j.FoldingRangeRequestParams
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.HoverParams
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializeResult
 import org.eclipse.lsp4j.InlayHint
-import org.eclipse.lsp4j.InlayHintKind
 import org.eclipse.lsp4j.InlayHintParams
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.LocationLink
@@ -56,7 +53,6 @@ import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.SignatureHelpParams
 import org.eclipse.lsp4j.SignatureInformation
 import org.eclipse.lsp4j.SymbolInformation
-import org.eclipse.lsp4j.SymbolKind
 import org.eclipse.lsp4j.TextDocumentSyncKind
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.WorkspaceEdit
@@ -74,18 +70,16 @@ import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.XtcCompilerAdapter
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.SymbolInfo
+import org.xvm.lsp.model.fromLsp
+import org.xvm.lsp.model.toLsp
+import org.xvm.lsp.model.toRange
 import java.util.Properties
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration
 import kotlin.time.measureTime
-import org.eclipse.lsp4j.CodeActionKind as LspCodeActionKind
-import org.xvm.lsp.adapter.XtcCompilerAdapter.CodeAction.CodeActionKind as AdapterCodeActionKind
 import org.xvm.lsp.adapter.XtcCompilerAdapter.CompletionItem.CompletionKind as AdapterCompletionKind
-import org.xvm.lsp.adapter.XtcCompilerAdapter.DocumentHighlight.HighlightKind as AdapterHighlightKind
-import org.xvm.lsp.adapter.XtcCompilerAdapter.FoldingRange.FoldingKind as AdapterFoldingKind
 import org.xvm.lsp.adapter.XtcCompilerAdapter.FormattingOptions as AdapterFormattingOptions
-import org.xvm.lsp.adapter.XtcCompilerAdapter.InlayHint.InlayHintKind as AdapterInlayKind
 import org.xvm.lsp.adapter.XtcCompilerAdapter.Position as AdapterPosition
 import org.xvm.lsp.adapter.XtcCompilerAdapter.Range as AdapterRange
 import org.xvm.lsp.adapter.XtcCompilerAdapter.SelectionRange as AdapterSelectionRange
@@ -312,57 +306,13 @@ class XtcLanguageServer(
         diagnostics: List<Diagnostic>,
     ) {
         val currentClient = client ?: return
-        val lspDiagnostics = diagnostics.map { toLspDiagnostic(it) }
+        val lspDiagnostics = diagnostics.map { it.toLsp() }
         currentClient.publishDiagnostics(PublishDiagnosticsParams(uri, lspDiagnostics))
     }
-
-    private fun toLspDiagnostic(diag: Diagnostic): org.eclipse.lsp4j.Diagnostic =
-        org.eclipse.lsp4j.Diagnostic().apply {
-            range = toRange(diag.location)
-            severity = toLspSeverity(diag.severity)
-            message = diag.message
-            source = diag.source
-            if (diag.code != null) {
-                code = Either.forLeft(diag.code)
-            }
-        }
-
-    private fun toLspSeverity(severity: Diagnostic.Severity): org.eclipse.lsp4j.DiagnosticSeverity =
-        when (severity) {
-            Diagnostic.Severity.ERROR -> org.eclipse.lsp4j.DiagnosticSeverity.Error
-            Diagnostic.Severity.WARNING -> org.eclipse.lsp4j.DiagnosticSeverity.Warning
-            Diagnostic.Severity.INFORMATION -> org.eclipse.lsp4j.DiagnosticSeverity.Information
-            Diagnostic.Severity.HINT -> org.eclipse.lsp4j.DiagnosticSeverity.Hint
-        }
-
-    private fun toRange(loc: org.xvm.lsp.model.Location): Range =
-        Range(
-            Position(loc.startLine, loc.startColumn),
-            Position(loc.endLine, loc.endColumn),
-        )
-
-    private fun toLspLocation(loc: org.xvm.lsp.model.Location): Location = Location(loc.uri, toRange(loc))
 
     private fun toAdapterPosition(pos: Position) = AdapterPosition(pos.line, pos.character)
 
     private fun toAdapterRange(range: Range) = AdapterRange(toAdapterPosition(range.start), toAdapterPosition(range.end))
-
-    private fun toLspRange(range: AdapterRange): Range =
-        Range(
-            Position(range.start.line, range.start.column),
-            Position(range.end.line, range.end.column),
-        )
-
-    private fun toCodeActionKind(kind: AdapterCodeActionKind): String =
-        when (kind) {
-            AdapterCodeActionKind.QUICKFIX -> LspCodeActionKind.QuickFix
-            AdapterCodeActionKind.REFACTOR -> LspCodeActionKind.Refactor
-            AdapterCodeActionKind.REFACTOR_EXTRACT -> LspCodeActionKind.RefactorExtract
-            AdapterCodeActionKind.REFACTOR_INLINE -> LspCodeActionKind.RefactorInline
-            AdapterCodeActionKind.REFACTOR_REWRITE -> LspCodeActionKind.RefactorRewrite
-            AdapterCodeActionKind.SOURCE -> LspCodeActionKind.Source
-            AdapterCodeActionKind.SOURCE_ORGANIZE_IMPORTS -> LspCodeActionKind.SourceOrganizeImports
-        }
 
     // ========================================================================
     // Text Document Service
@@ -515,7 +465,7 @@ class XtcLanguageServer(
                 }
 
                 logger.info("textDocument/definition: found in {}", elapsed)
-                Either.forLeft(listOf(toLspLocation(definition)))
+                Either.forLeft(listOf(definition.toLsp()))
             }
         }
 
@@ -533,7 +483,7 @@ class XtcLanguageServer(
             return CompletableFuture.supplyAsync {
                 val (refs, elapsed) = timed { adapter.findReferences(uri, line, column, includeDeclaration) }
                 logger.info("textDocument/references: {} references in {}", refs.size, elapsed)
-                refs.map { toLspLocation(it) }
+                refs.map { it.toLsp() }
             }
         }
 
@@ -563,30 +513,15 @@ class XtcLanguageServer(
         private fun toDocumentSymbol(symbol: SymbolInfo): DocumentSymbol =
             DocumentSymbol().apply {
                 name = symbol.name
-                kind = toSymbolKind(symbol.kind)
-                range = toRange(symbol.location)
-                selectionRange = toRange(symbol.location)
+                kind = symbol.kind.toLsp()
+                range = symbol.location.toRange()
+                selectionRange = symbol.location.toRange()
                 if (symbol.typeSignature != null) {
                     detail = symbol.typeSignature
                 }
                 if (symbol.children.isNotEmpty()) {
                     children = symbol.children.map { toDocumentSymbol(it) }
                 }
-            }
-
-        private fun toSymbolKind(kind: SymbolInfo.SymbolKind): SymbolKind =
-            when (kind) {
-                SymbolInfo.SymbolKind.MODULE -> SymbolKind.Module
-                SymbolInfo.SymbolKind.PACKAGE -> SymbolKind.Package
-                SymbolInfo.SymbolKind.CLASS, SymbolInfo.SymbolKind.MIXIN, SymbolInfo.SymbolKind.SERVICE -> SymbolKind.Class
-                SymbolInfo.SymbolKind.INTERFACE -> SymbolKind.Interface
-                SymbolInfo.SymbolKind.ENUM -> SymbolKind.Enum
-                SymbolInfo.SymbolKind.CONST -> SymbolKind.Constant
-                SymbolInfo.SymbolKind.METHOD -> SymbolKind.Method
-                SymbolInfo.SymbolKind.PROPERTY -> SymbolKind.Property
-                SymbolInfo.SymbolKind.PARAMETER -> SymbolKind.Variable
-                SymbolInfo.SymbolKind.TYPE_PARAMETER -> SymbolKind.TypeParameter
-                SymbolInfo.SymbolKind.CONSTRUCTOR -> SymbolKind.Constructor
             }
 
         // ====================================================================
@@ -607,13 +542,8 @@ class XtcLanguageServer(
                 logger.info("textDocument/documentHighlight: {} highlights in {}", highlights.size, elapsed)
                 highlights.map { h ->
                     DocumentHighlight().apply {
-                        range = toLspRange(h.range)
-                        kind =
-                            when (h.kind) {
-                                AdapterHighlightKind.TEXT -> DocumentHighlightKind.Text
-                                AdapterHighlightKind.READ -> DocumentHighlightKind.Read
-                                AdapterHighlightKind.WRITE -> DocumentHighlightKind.Write
-                            }
+                        range = h.range.toLsp()
+                        kind = h.kind.toLsp()
                     }
                 }
             }
@@ -638,7 +568,7 @@ class XtcLanguageServer(
 
         private fun toLspSelectionRange(range: AdapterSelectionRange): SelectionRange =
             SelectionRange().apply {
-                this.range = toLspRange(range.range)
+                this.range = range.range.toLsp()
                 this.parent = range.parent?.let { toLspSelectionRange(it) }
             }
 
@@ -655,13 +585,7 @@ class XtcLanguageServer(
                 logger.info("textDocument/foldingRange: {} ranges in {}", ranges.size, elapsed)
                 ranges.map { r ->
                     FoldingRange(r.startLine, r.endLine).apply {
-                        kind =
-                            when (r.kind) {
-                                AdapterFoldingKind.COMMENT -> FoldingRangeKind.Comment
-                                AdapterFoldingKind.IMPORTS -> FoldingRangeKind.Imports
-                                AdapterFoldingKind.REGION -> FoldingRangeKind.Region
-                                null -> null
-                            }
+                        kind = r.kind?.toLsp()
                     }
                 }
             }
@@ -686,7 +610,7 @@ class XtcLanguageServer(
                 logger.info("textDocument/documentLink: {} links in {}", links.size, elapsed)
                 links.map { l ->
                     DocumentLink().apply {
-                        range = toLspRange(l.range)
+                        range = l.range.toLsp()
                         target = l.target
                         tooltip = l.tooltip
                     }
@@ -761,7 +685,7 @@ class XtcLanguageServer(
                 logger.info("textDocument/prepareRename: '{}' in {}", result.placeholder, elapsed)
                 Either3.forSecond(
                     PrepareRenameResult().apply {
-                        range = toLspRange(result.range)
+                        range = result.range.toLsp()
                         placeholder = result.placeholder
                     },
                 )
@@ -793,7 +717,7 @@ class XtcLanguageServer(
                         edit.changes.mapValues { (_, edits) ->
                             edits.map { e ->
                                 TextEdit().apply {
-                                    range = toLspRange(e.range)
+                                    range = e.range.toLsp()
                                     newText = e.newText
                                 }
                             }
@@ -821,37 +745,19 @@ class XtcLanguageServer(
                 context.triggerKind,
             )
             return CompletableFuture.supplyAsync {
-                val adapterDiagnostics =
-                    params.context.diagnostics.map { d ->
-                        Diagnostic(
-                            location =
-                                org.xvm.lsp.model.Location(
-                                    uri,
-                                    d.range.start.line,
-                                    d.range.start.character,
-                                    d.range.end.line,
-                                    d.range.end.character,
-                                ),
-                            message = d.message,
-                            severity =
-                                when (d.severity) {
-                                    org.eclipse.lsp4j.DiagnosticSeverity.Error -> Diagnostic.Severity.ERROR
-                                    org.eclipse.lsp4j.DiagnosticSeverity.Warning -> Diagnostic.Severity.WARNING
-                                    org.eclipse.lsp4j.DiagnosticSeverity.Information -> Diagnostic.Severity.INFORMATION
-                                    org.eclipse.lsp4j.DiagnosticSeverity.Hint -> Diagnostic.Severity.HINT
-                                    null -> Diagnostic.Severity.INFORMATION
-                                },
-                        )
-                    }
+                val adapterDiagnostics = params.context.diagnostics.map { Diagnostic.fromLsp(uri, it) }
 
-                val (actions, elapsed) = timed { adapter.getCodeActions(uri, toAdapterRange(range), adapterDiagnostics) }
+                val (actions, elapsed) =
+                    timed {
+                        adapter.getCodeActions(uri, toAdapterRange(range), adapterDiagnostics)
+                    }
                 logger.info("textDocument/codeAction: {} actions in {}", actions.size, elapsed)
 
                 actions.map { a ->
                     Either.forRight<Command, CodeAction>(
                         CodeAction().apply {
                             title = a.title
-                            kind = toCodeActionKind(a.kind)
+                            kind = a.kind.toLsp()
                             isPreferred = a.isPreferred
                             a.edit?.let { e ->
                                 edit =
@@ -860,7 +766,7 @@ class XtcLanguageServer(
                                             e.changes.mapValues { (_, edits) ->
                                                 edits.map { te ->
                                                     TextEdit().apply {
-                                                        this.range = toLspRange(te.range)
+                                                        this.range = te.range.toLsp()
                                                         newText = te.newText
                                                     }
                                                 }
@@ -912,11 +818,7 @@ class XtcLanguageServer(
                     InlayHint().apply {
                         position = Position(h.position.line, h.position.column)
                         label = Either.forLeft(h.label)
-                        kind =
-                            when (h.kind) {
-                                AdapterInlayKind.TYPE -> InlayHintKind.Type
-                                AdapterInlayKind.PARAMETER -> InlayHintKind.Parameter
-                            }
+                        kind = h.kind.toLsp()
                         paddingLeft = h.paddingLeft
                         paddingRight = h.paddingRight
                     }
@@ -948,7 +850,7 @@ class XtcLanguageServer(
                 logger.info("textDocument/formatting: {} edits in {}", edits.size, elapsed)
                 edits.map { e ->
                     TextEdit().apply {
-                        range = toLspRange(e.range)
+                        range = e.range.toLsp()
                         newText = e.newText
                     }
                 }
@@ -980,7 +882,7 @@ class XtcLanguageServer(
                 logger.info("textDocument/rangeFormatting: {} edits in {}", edits.size, elapsed)
                 edits.map { e ->
                     TextEdit().apply {
-                        this.range = toLspRange(e.range)
+                        this.range = e.range.toLsp()
                         newText = e.newText
                     }
                 }
@@ -1027,23 +929,8 @@ class XtcLanguageServer(
                     symbols.map { s ->
                         WorkspaceSymbol().apply {
                             name = s.name
-                            kind =
-                                when (s.kind) {
-                                    SymbolInfo.SymbolKind.CLASS,
-                                    SymbolInfo.SymbolKind.MIXIN,
-                                    SymbolInfo.SymbolKind.SERVICE, -> SymbolKind.Class
-                                    SymbolInfo.SymbolKind.MODULE -> SymbolKind.Module
-                                    SymbolInfo.SymbolKind.PACKAGE -> SymbolKind.Package
-                                    SymbolInfo.SymbolKind.INTERFACE -> SymbolKind.Interface
-                                    SymbolInfo.SymbolKind.ENUM -> SymbolKind.Enum
-                                    SymbolInfo.SymbolKind.CONST -> SymbolKind.Constant
-                                    SymbolInfo.SymbolKind.METHOD -> SymbolKind.Method
-                                    SymbolInfo.SymbolKind.PROPERTY -> SymbolKind.Property
-                                    SymbolInfo.SymbolKind.PARAMETER -> SymbolKind.Variable
-                                    SymbolInfo.SymbolKind.TYPE_PARAMETER -> SymbolKind.TypeParameter
-                                    SymbolInfo.SymbolKind.CONSTRUCTOR -> SymbolKind.Constructor
-                                }
-                            location = Either.forLeft(toLspLocation(s.location))
+                            kind = s.kind.toLsp()
+                            location = Either.forLeft(s.location.toLsp())
                         }
                     },
                 )

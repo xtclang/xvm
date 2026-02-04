@@ -102,7 +102,7 @@ class XtcParser : Closeable {
         if (!closed) {
             closed = true
             parser.close()
-            logger.debug("XtcParser closed")
+            logger.info("XtcParser closed")
         }
     }
 
@@ -122,7 +122,7 @@ class XtcParser : Closeable {
             val resourcePath = Platform.resourcePath(GRAMMAR_LIBRARY_NAME)
             val libraryFileName = Platform.libraryFileName(GRAMMAR_LIBRARY_NAME)
 
-            logger.debug("Loading XTC grammar from: {}", resourcePath)
+            logger.info("Loading XTC grammar from: {}", resourcePath)
 
             // Try to load from resources (bundled in JAR)
             XtcParser::class.java.getResourceAsStream(resourcePath)?.use { inputStream ->
@@ -137,7 +137,7 @@ class XtcParser : Closeable {
             }
 
             // Fallback: try to load from system library path
-            logger.debug("Resource not found, trying system library path")
+            logger.info("Resource not found, trying system library path")
             try {
                 return loadLanguageFromSystemPath()
             } catch (e: Exception) {
@@ -161,7 +161,7 @@ class XtcParser : Closeable {
          * look up the tree_sitter_xtc language function symbol.
          */
         private fun loadLanguageFromPath(path: Path): Language {
-            logger.debug("Loading language from path: {}", path)
+            logger.info("Loading language from path: {}", path)
 
             // Create a symbol lookup for the library
             val symbols = SymbolLookup.libraryLookup(path, arena)
@@ -177,7 +177,7 @@ class XtcParser : Closeable {
          * or in java.library.path.
          */
         private fun loadLanguageFromSystemPath(): Language {
-            logger.debug("Loading language from system path")
+            logger.info("Loading language from system path")
 
             // Map to platform-specific library name
             val libraryName = System.mapLibraryName(GRAMMAR_LIBRARY_NAME)

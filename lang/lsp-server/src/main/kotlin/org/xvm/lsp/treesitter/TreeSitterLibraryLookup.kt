@@ -24,7 +24,7 @@ class TreeSitterLibraryLookup : NativeLibraryLookup {
 
     private fun extractLibraryToTemp(): java.nio.file.Path {
         val resourcePath = Platform.resourcePath("tree-sitter")
-        logger.debug("Loading tree-sitter runtime from resource: {}", resourcePath)
+        logger.info("Loading tree-sitter runtime from resource: {}", resourcePath)
 
         javaClass.getResourceAsStream(resourcePath)?.use { inputStream ->
             val tempFile = Files.createTempFile("libtree-sitter", Platform.libExtension)

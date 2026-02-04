@@ -204,7 +204,7 @@ Uses jtreesitter's Foreign Function API:
 
 ## Adapter Architecture
 
-The LSP server uses a pluggable adapter pattern:
+The LSP server uses a pluggable adapter pattern with three available backends:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -213,30 +213,46 @@ The LSP server uses a pluggable adapter pattern:
 └────────────────────────────┬────────────────────────────────┘
                              │
                ┌─────────────┴─────────────┐
-               │    XtcCompilerAdapter     │  ← Interface
+               │    XtcCompilerAdapter     │  ← Interface with defaults
                └─────────────┬─────────────┘
                              │
         ┌────────────────────┼────────────────────┐
         │                    │                    │
         ▼                    ▼                    ▼
 ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│ MockXtcCompiler │  │ TreeSitter      │  │ (Future)        │
-│ Adapter         │  │ Adapter         │  │ CompilerAdapter │
+│ MockXtcCompiler │  │ TreeSitter      │  │ XtcCompiler     │
+│ Adapter         │  │ Adapter         │  │ AdapterStub     │
 │                 │  │                 │  │                 │
-│ - Regex-based   │  │ - Tree-sitter   │  │ - Full XTC      │
-│ - For testing   │  │ - Syntax only   │  │   compiler      │
+│ - Regex-based   │  │ - Tree-sitter   │  │ - All methods   │
+│ - For testing   │  │ - Syntax only   │  │   logged        │
+│ lsp.adapter=mock│  │ lsp.adapter=    │  │ lsp.adapter=    │
+│                 │  │   treesitter    │  │   compiler      │
 └─────────────────┘  └─────────────────┘  └─────────────────┘
 ```
+
+The interface provides default implementations for all methods that log
+"not yet implemented" warnings. Adapters only override what they implement.
 
 ### Switching Adapters
 
 ```bash
 # Build with Tree-sitter adapter (default)
-./gradlew :lang:lsp-server:build
+./gradlew :lang:lsp-server:fatJar -PincludeBuildLang=true
 
 # Build with Mock adapter (for testing without native libraries)
-./gradlew :lang:lsp-server:build -Plsp.adapter=mock
+./gradlew :lang:lsp-server:fatJar -Plsp.adapter=mock -PincludeBuildLang=true
+
+# Build with Compiler stub (all LSP calls logged)
+./gradlew :lang:lsp-server:fatJar -Plsp.adapter=compiler -PincludeBuildLang=true
 ```
+
+### Shared Constants
+
+Common XTC language data is centralized in `XtcLanguageConstants.kt`:
+
+- `KEYWORDS` - 79 XTC keywords for completion
+- `BUILT_IN_TYPES` - 70+ built-in types
+- `SYMBOL_TO_COMPLETION_KIND` - Symbol kind mapping
 
 ---
 

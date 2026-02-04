@@ -26,6 +26,9 @@ data class SymbolInfo(
         PARAMETER,
         TYPE_PARAMETER,
         CONSTRUCTOR,
+        ;
+
+        companion object
     }
 
     companion object {

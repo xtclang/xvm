@@ -13,7 +13,10 @@ import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.TreeMap;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import jakarta.xml.bind.JAXBContext;
@@ -57,7 +60,7 @@ public class BuildUnicodeTables {
      *
      * @param asArgs command line arguments
      */
-    public static void main(final String[] asArgs) throws IOException, JAXBException {
+    static void main(final String[] asArgs) throws IOException, JAXBException {
         new BuildUnicodeTables(asArgs).run();
     }
 
@@ -199,14 +202,12 @@ public class BuildUnicodeTables {
 
     void writeResult(final String name, final String[] array) throws IOException {
         // collect and sort the values
-        final var map = new TreeMap<String, Integer>();
-        final int c = array.length;
-        for (final var s : array) {
-            if (null != s) {
-                assert !s.isEmpty();
-                map.compute(s, (k, v) -> (null == v ? 0 : v) + 1);
-            }
-        }
+        final var map = Arrays.stream(array)
+            .filter(Objects::nonNull)
+            .collect(Collectors.groupingBy(
+                Function.identity(),
+                TreeMap::new,
+                Collectors.summingInt(_ -> 1)));
 
         final var sb = new StringBuilder();
         sb.append(name).append(": [index] \"str\" (freq) \n--------------------");
@@ -222,8 +223,8 @@ public class BuildUnicodeTables {
         writeDetails(name, sb.toString());
 
         // assign indexes to each
-        final int[] an = new int[c];
-        for (int i = 0; i < c; ++i) {
+        final int[] an = new int[array.length];
+        for (int i = 0; i < array.length; ++i) {
             final String s = array[i];
             an[i] = null == s ? indexNull : map.get(s);
         }
@@ -232,14 +233,13 @@ public class BuildUnicodeTables {
     }
 
     void writeResult(final String name, final int[] array) throws IOException {
-        //        if (name.equals("Cats"))
-        //            {
+        // TODO:
+        //        if (name.equals("Cats")) {
         //            out("cats:");
-        //            for (int i = 0; i < 128; ++i)
-        //                {
+        //            for (int i = 0; i < 128; ++i) {
         //                out("[" + i + "]=" + array[i]);
-        //                }
         //            }
+        //        }
 
         writeResult(name, ConstOrdinalList.compress(array, BUF_SIZE));
 

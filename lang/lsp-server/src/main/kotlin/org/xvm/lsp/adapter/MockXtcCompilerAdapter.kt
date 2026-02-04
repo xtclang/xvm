@@ -1,5 +1,9 @@
 package org.xvm.lsp.adapter
 
+import org.slf4j.LoggerFactory
+import org.xvm.lsp.adapter.XtcLanguageConstants.BUILT_IN_TYPES
+import org.xvm.lsp.adapter.XtcLanguageConstants.KEYWORDS
+import org.xvm.lsp.adapter.XtcLanguageConstants.SYMBOL_TO_COMPLETION_KIND
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
@@ -28,16 +32,22 @@ import java.util.concurrent.ConcurrentHashMap
  * // - findReferences(): Only returns the declaration, not actual usages
  */
 class MockXtcCompilerAdapter : XtcCompilerAdapter {
-    override val displayName: String = "Mock (regex-based)"
+    override val displayName: String = "Mock"
 
     private val compiledDocuments = ConcurrentHashMap<String, CompilationResult>()
+    private val logPrefix = "[$displayName]"
 
     /**
      * Mock adapter is always healthy - no native code to verify.
      */
-    override fun healthCheck(): Boolean = true
+    override fun healthCheck(): Boolean {
+        logger.info("$logPrefix healthCheck() -> true")
+        return true
+    }
 
     companion object {
+        private val logger = LoggerFactory.getLogger(MockXtcCompilerAdapter::class.java)
+
         // Simple patterns to recognize XTC constructs
         private val MODULE_PATTERN = Regex("""^\s*module\s+([\w.]+)\s*\{?""", RegexOption.MULTILINE)
         private val CLASS_PATTERN = Regex("""^\s*(?:public\s+|private\s+|protected\s+)?class\s+(\w+)""", RegexOption.MULTILINE)
@@ -51,73 +61,15 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
         private val PROPERTY_PATTERN =
             Regex("""^\s*(?:public\s+|private\s+|protected\s+)?(\w+(?:<[^>]+>)?)\s+(\w+)\s*[;=]""", RegexOption.MULTILINE)
         private val ERROR_PATTERN = Regex("""ERROR:\s*(.+)""", RegexOption.MULTILINE)
-
-        private val KEYWORDS =
-            listOf(
-                "module",
-                "class",
-                "interface",
-                "service",
-                "mixin",
-                "enum",
-                "const",
-                "public",
-                "private",
-                "protected",
-                "static",
-                "if",
-                "else",
-                "while",
-                "for",
-                "switch",
-                "case",
-                "return",
-                "extends",
-                "implements",
-                "incorporates",
-                "delegates",
-                "into",
-                "true",
-                "false",
-                "null",
-                "this",
-                "super",
-            )
-
-        private val BUILT_IN_TYPES =
-            listOf(
-                "Int",
-                "Int8",
-                "Int16",
-                "Int32",
-                "Int64",
-                "UInt",
-                "UInt8",
-                "UInt16",
-                "UInt32",
-                "UInt64",
-                "String",
-                "Boolean",
-                "Char",
-                "Bit",
-                "Byte",
-                "Float",
-                "Double",
-                "Dec",
-                "Dec64",
-                "Dec128",
-                "Array",
-                "List",
-                "Map",
-                "Set",
-                "Iterator",
-            )
     }
 
     override fun compile(
         uri: String,
         content: String,
     ): CompilationResult {
+        val fileName = uri.substringAfterLast('/')
+        logger.info("$logPrefix compile(uri={}, content={} bytes)", fileName, content.length)
+
         val diagnostics = mutableListOf<Diagnostic>()
         val symbols = mutableListOf<SymbolInfo>()
 
@@ -199,6 +151,7 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
 
         val result = CompilationResult.withDiagnostics(uri, diagnostics, symbols)
         compiledDocuments[uri] = result
+        logger.info("$logPrefix compile -> {} symbols, {} diagnostics", symbols.size, diagnostics.size)
         return result
     }
 
@@ -207,38 +160,47 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
         line: Int,
         column: Int,
     ): SymbolInfo? {
-        val result = compiledDocuments[uri] ?: return null
-        return result.symbols.find { containsPosition(it.location, line, column) }
+        val fileName = uri.substringAfterLast('/')
+        logger.info("$logPrefix findSymbolAt(uri={}, line={}, column={})", fileName, line, column)
+        val result =
+            compiledDocuments[uri] ?: run {
+                logger.info("$logPrefix findSymbolAt -> null (no compiled document)")
+                return null
+            }
+        val symbol = result.symbols.find { containsPosition(it.location, line, column) }
+        logger.info("$logPrefix findSymbolAt -> {}", symbol?.name ?: "null")
+        return symbol
     }
 
     override fun getHoverInfo(
         uri: String,
         line: Int,
         column: Int,
-    ): String? =
-        findSymbolAt(uri, line, column)?.let { symbol ->
+    ): String? {
+        val fileName = uri.substringAfterLast('/')
+        logger.info("$logPrefix getHoverInfo(uri={}, line={}, column={})", fileName, line, column)
+        return findSymbolAt(uri, line, column)?.let { symbol ->
             buildString {
                 append("```xtc\n")
-                if (symbol.typeSignature != null) {
-                    append(symbol.typeSignature)
-                } else {
-                    append(symbol.kind.name.lowercase())
-                    append(" ")
-                    append(symbol.name)
-                }
+                append(symbol.typeSignature ?: "${symbol.kind.name.lowercase()} ${symbol.name}")
                 append("\n```")
-                if (symbol.documentation != null) {
-                    append("\n\n")
-                    append(symbol.documentation)
-                }
+                symbol.documentation?.let { append("\n\n$it") }
+            }.also { hoverText ->
+                logger.info("$logPrefix getHoverInfo -> {} chars", hoverText.length)
             }
+        } ?: run {
+            logger.info("$logPrefix getHoverInfo -> null (no symbol at position)")
+            null
         }
+    }
 
     override fun getCompletions(
         uri: String,
         line: Int,
         column: Int,
     ): List<XtcCompilerAdapter.CompletionItem> {
+        val fileName = uri.substringAfterLast('/')
+        logger.info("$logPrefix getCompletions(uri={}, line={}, column={})", fileName, line, column)
         // TODO LSP: This is completely context-unaware. A real implementation should:
         // 1. Determine context (after '.', inside type position, statement start, etc.)
         // 2. Filter completions by type compatibility
@@ -284,6 +246,7 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
             )
         }
 
+        logger.info("$logPrefix getCompletions -> {} items", completions.size)
         return completions
     }
 
@@ -292,6 +255,8 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
         line: Int,
         column: Int,
     ): Location? {
+        val fileName = uri.substringAfterLast('/')
+        logger.info("$logPrefix findDefinition(uri={}, line={}, column={})", fileName, line, column)
         // TODO LSP: This mock can only find definitions in the same file.
         // A real implementation needs:
         // 1. Cross-file resolution (imports, inherited members)
@@ -299,7 +264,9 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
         // 3. Jump to decompiled source for .xtc files without source
 
         // In the mock, just return the symbol's own location
-        return findSymbolAt(uri, line, column)?.location
+        val location = findSymbolAt(uri, line, column)?.location
+        logger.info("$logPrefix findDefinition -> {}", location?.let { "${it.startLine}:${it.startColumn}" } ?: "null")
+        return location
     }
 
     override fun findReferences(
@@ -308,6 +275,8 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
         column: Int,
         includeDeclaration: Boolean,
     ): List<Location> {
+        val fileName = uri.substringAfterLast('/')
+        logger.info("$logPrefix findReferences(uri={}, line={}, column={}, includeDecl={})", fileName, line, column, includeDeclaration)
         // TODO LSP: This mock returns NO actual references - only the declaration!
         // A real implementation needs:
         // 1. SemanticModel.findReferences() from Phase 4 (Symbol Resolution)
@@ -319,6 +288,7 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
         if (includeDeclaration) {
             findSymbolAt(uri, line, column)?.let { refs.add(it.location) }
         }
+        logger.info("$logPrefix findReferences -> {} locations", refs.size)
         return refs
     }
 
@@ -339,16 +309,7 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
     }
 
     private fun toCompletionKind(kind: SymbolKind): XtcCompilerAdapter.CompletionItem.CompletionKind =
-        when (kind) {
-            SymbolKind.MODULE, SymbolKind.PACKAGE -> XtcCompilerAdapter.CompletionItem.CompletionKind.MODULE
-            SymbolKind.CLASS, SymbolKind.ENUM, SymbolKind.CONST,
-            SymbolKind.MIXIN, SymbolKind.SERVICE,
-            -> XtcCompilerAdapter.CompletionItem.CompletionKind.CLASS
-            SymbolKind.INTERFACE -> XtcCompilerAdapter.CompletionItem.CompletionKind.INTERFACE
-            SymbolKind.METHOD, SymbolKind.CONSTRUCTOR -> XtcCompilerAdapter.CompletionItem.CompletionKind.METHOD
-            SymbolKind.PROPERTY -> XtcCompilerAdapter.CompletionItem.CompletionKind.PROPERTY
-            SymbolKind.PARAMETER, SymbolKind.TYPE_PARAMETER -> XtcCompilerAdapter.CompletionItem.CompletionKind.VARIABLE
-        }
+        SYMBOL_TO_COMPLETION_KIND[kind] ?: XtcCompilerAdapter.CompletionItem.CompletionKind.VARIABLE
 
     private fun parseTypeDeclarations(
         pattern: Regex,

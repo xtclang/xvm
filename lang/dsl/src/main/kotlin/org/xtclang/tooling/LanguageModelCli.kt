@@ -33,7 +33,7 @@ private val json =
 
 fun main(args: Array<String>) {
     val command = args.firstOrNull() ?: "stats"
-    logger.debug("Executing command: {}", command)
+    logger.info("Executing command: {}", command)
 
     when (command) {
         "dump" -> dumpModel()
@@ -234,7 +234,7 @@ private fun validateSources(paths: List<String>) {
 
     val unusedKeywords = model.allKeywords.filter { it !in keywordCounts }
     if (unusedKeywords.isNotEmpty()) {
-        logger.debug("Found {} unused keywords", unusedKeywords.size)
+        logger.info("Found {} unused keywords", unusedKeywords.size)
         println()
         println("Keywords defined but not found in sources (${unusedKeywords.size}):")
         unusedKeywords.forEach { println("  - $it") }

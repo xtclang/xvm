@@ -301,6 +301,13 @@ The LSP server supports multiple adapters, selected via Gradle property:
 The adapter is configured at build time in `lsp-server/build.gradle.kts` and written to
 `lsp-version.properties` in the JAR.
 
+## Feature Matrix & Limitations
+
+For a comprehensive guide to what Tree-sitter can and cannot provide for LSP features,
+including exact code locations for each feature, see:
+
+**[doc/functionality.md](./doc/functionality.md)**
+
 ## Reference
 
 The authoritative sources for XTC syntax are:

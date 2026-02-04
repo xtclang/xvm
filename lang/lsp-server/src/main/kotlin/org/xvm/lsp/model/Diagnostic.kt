@@ -15,6 +15,9 @@ data class Diagnostic(
         WARNING,
         INFORMATION,
         HINT,
+        ;
+
+        companion object
     }
 
     companion object {
