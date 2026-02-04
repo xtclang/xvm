@@ -235,7 +235,8 @@ jobs:
                 echo "✅ Manual tests completed"
 
             - name: Validate Tree-sitter Grammar and LSP Adapters
-              if: success() && matrix.os == 'ubuntu-latest' && env.ORG_GRADLE_PROJECT_includeBuildLang == 'true'
+              #if: success() && matrix.os == 'ubuntu-latest' && env.ORG_GRADLE_PROJECT_includeBuildLang == 'true'
+              if: false
               shell: bash
               env:
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}

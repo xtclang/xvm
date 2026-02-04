@@ -9,16 +9,17 @@ import java.io.File
  * The scanner is STATELESS - it uses valid_symbols to determine context.
  */
 object ScannerCGeneratorDsl {
-    fun generate(): String =
+    fun generate(debug: Boolean = false): String =
         cFile {
-            header(FILE_HEADER)
+            header(fileHeader(debug))
             raw(generateEnums())
             raw(generateLifecycleFunctions())
             raw(generateHelperFunctions())
             raw(generateScanFunction())
         }
 
-    private const val FILE_HEADER = """
+    private fun fileHeader(debug: Boolean): String =
+        """
 /**
  * Tree-sitter external scanner for XTC template string literals.
  *
@@ -36,10 +37,7 @@ object ScannerCGeneratorDsl {
 
 #include "tree_sitter/parser.h"
 #include <stdbool.h>
-
-// Debug flag - uncomment to enable debug output
-#define SCANNER_DEBUG 1
-
+${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
 #ifdef SCANNER_DEBUG
 #include <stdio.h>
 #endif"""
@@ -712,12 +710,13 @@ object ScannerCGeneratorDsl {
 
 /** Main entry point for CLI - uses DSL-based generator. */
 fun main(args: Array<String>) {
-    val outputPath = args.getOrNull(0)
-    val generated = ScannerCGeneratorDsl.generate()
+    val debug = args.contains("--debug")
+    val outputPath = args.firstOrNull { !it.startsWith("--") }
+    val generated = ScannerCGeneratorDsl.generate(debug = debug)
     if (outputPath == null) {
         println(generated)
         return
     }
     File(outputPath).writeText(generated)
-    println("Generated scanner.c at: $outputPath")
+    println("Generated scanner.c at: $outputPath" + if (debug) " (with debug enabled)" else "")
 }
