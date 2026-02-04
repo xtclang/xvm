@@ -49,32 +49,32 @@ Build with any of the three adapters:
 
 ## LSP Feature Implementation Matrix
 
-| LSP Feature | Tree-sitter | Mock | Compiler Stub | Implementation Location |
-|-------------|:-----------:|:----:|:-------------:|------------------------|
-| **Core Features** |
-| Syntax Highlighting | ✅ | ❌ | ❌ | TextMate grammar (dsl-generated) |
-| Document Symbols | ✅ | ⚠️ | ❌ | `XtcQueryEngine.findAllDeclarations()` |
-| Hover | ✅ | ⚠️ | ❌ | `TreeSitterAdapter.getHoverInfo()` |
-| Completion | ⚠️ | ⚠️ | ❌ | `TreeSitterAdapter.getCompletions()` |
-| Go to Definition | ⚠️ | ⚠️ | ❌ | `TreeSitterAdapter.findDefinition()` |
-| Find References | ⚠️ | ❌ | ❌ | `TreeSitterAdapter.findReferences()` |
-| Diagnostics (Syntax) | ✅ | ⚠️ | ❌ | `TreeSitterAdapter.collectSyntaxErrors()` |
-| **Tree-sitter Capable** |
-| Document Highlights | ⚠️ | ❌ | ❌ | `adapter.getDocumentHighlights()` (stub) |
-| Selection Ranges | ⚠️ | ❌ | ❌ | `adapter.getSelectionRanges()` (stub) |
-| Folding Ranges | ⚠️ | ❌ | ❌ | `adapter.getFoldingRanges()` (stub) |
-| Document Links | ⚠️ | ❌ | ❌ | `adapter.getDocumentLinks()` (stub) |
-| **Requires Compiler** |
-| Diagnostics (Semantic) | ❌ | ❌ | 🔮 | Requires compiler |
-| Signature Help | ❌ | ❌ | 🔮 | `adapter.getSignatureHelp()` (stub) |
-| Rename | ❌ | ❌ | 🔮 | `adapter.rename()` (stub) |
-| Code Actions | ❌ | ❌ | 🔮 | `adapter.getCodeActions()` (stub) |
-| Semantic Tokens | ❌ | ❌ | 🔮 | `adapter.getSemanticTokens()` (stub) |
-| Inlay Hints | ❌ | ❌ | 🔮 | `adapter.getInlayHints()` (stub) |
-| Formatting | ❌ | ❌ | 🔮 | `adapter.formatDocument()` (stub) |
-| Workspace Symbols | ❌ | ❌ | 🔮 | `adapter.findWorkspaceSymbols()` (stub) |
-| Call Hierarchy | ❌ | ❌ | 🔮 | Requires semantic analysis |
-| Type Hierarchy | ❌ | ❌ | 🔮 | Requires semantic analysis |
+| LSP Feature              | Tree-sitter | Mock | Compiler Stub | Implementation Location                    |
+|--------------------------|:-----------:|:----:|:-------------:|--------------------------------------------|
+| **Core Features**        |             |      |               |                                            |
+| Syntax Highlighting      | ✅          | ❌   | ❌            | TextMate grammar (dsl-generated)           |
+| Document Symbols         | ✅          | ⚠️   | ❌            | `XtcQueryEngine.findAllDeclarations()`     |
+| Hover                    | ✅          | ⚠️   | ❌            | `TreeSitterAdapter.getHoverInfo()`         |
+| Completion               | ⚠️          | ⚠️   | ❌            | `TreeSitterAdapter.getCompletions()`       |
+| Go to Definition         | ⚠️          | ⚠️   | ❌            | `TreeSitterAdapter.findDefinition()`       |
+| Find References          | ⚠️          | ❌   | ❌            | `TreeSitterAdapter.findReferences()`       |
+| Diagnostics (Syntax)     | ✅          | ⚠️   | ❌            | `TreeSitterAdapter.collectSyntaxErrors()`  |
+| **Tree-sitter Capable**  |             |      |               |                                            |
+| Document Highlights      | ⚠️          | ❌   | ❌            | `adapter.getDocumentHighlights()` (stub)   |
+| Selection Ranges         | ⚠️          | ❌   | ❌            | `adapter.getSelectionRanges()` (stub)      |
+| Folding Ranges           | ⚠️          | ❌   | ❌            | `adapter.getFoldingRanges()` (stub)        |
+| Document Links           | ⚠️          | ❌   | ❌            | `adapter.getDocumentLinks()` (stub)        |
+| **Requires Compiler**    |             |      |               |                                            |
+| Diagnostics (Semantic)   | ❌          | ❌   | 🔮            | Requires compiler                          |
+| Signature Help           | ❌          | ❌   | 🔮            | `adapter.getSignatureHelp()` (stub)        |
+| Rename                   | ❌          | ❌   | 🔮            | `adapter.rename()` (stub)                  |
+| Code Actions             | ❌          | ❌   | 🔮            | `adapter.getCodeActions()` (stub)          |
+| Semantic Tokens          | ❌          | ❌   | 🔮            | `adapter.getSemanticTokens()` (stub)       |
+| Inlay Hints              | ❌          | ❌   | 🔮            | `adapter.getInlayHints()` (stub)           |
+| Formatting               | ❌          | ❌   | 🔮            | `adapter.formatDocument()` (stub)          |
+| Workspace Symbols        | ❌          | ❌   | 🔮            | `adapter.findWorkspaceSymbols()` (stub)    |
+| Call Hierarchy           | ❌          | ❌   | 🔮            | Requires semantic analysis                 |
+| Type Hierarchy           | ❌          | ❌   | 🔮            | Requires semantic analysis                 |
 
 Legend: ✅ = Full support, ⚠️ = Partial/limited, ❌ = Cannot implement, 🔮 = Future (stub logs warning)
 
@@ -120,12 +120,12 @@ Useful for verifying all LSP methods are properly wired up.
 
 Common XTC language data is centralized in `XtcLanguageConstants.kt`:
 
-| Constant | Purpose |
-|----------|---------|
-| `KEYWORDS` | XTC keywords for completion (79 keywords) |
-| `BUILT_IN_TYPES` | Built-in types for completion (70+ types) |
-| `SYMBOL_TO_COMPLETION_KIND` | Maps SymbolKind → CompletionKind |
-| `toCompletionKind()` | Conversion helper |
+| Constant                   | Purpose                                   |
+|----------------------------|-------------------------------------------|
+| `KEYWORDS`                 | XTC keywords for completion (79 keywords) |
+| `BUILT_IN_TYPES`           | Built-in types for completion (70+ types) |
+| `SYMBOL_TO_COMPLETION_KIND`| Maps SymbolKind → CompletionKind          |
+| `toCompletionKind()`       | Conversion helper                         |
 
 Both Mock and TreeSitter adapters use these shared constants.
 
@@ -222,7 +222,7 @@ Tree-sitter cannot answer:
 - Which overload is selected?
 - Is this method overridden?
 
-Therefore you cannot implement:
+Therefore, you cannot implement:
 
 - Go to definition (cross-file)
 - Find usages (project-wide)
@@ -256,20 +256,20 @@ Without the compiler frontend, you cannot detect:
 
 All paths relative to `lang/`:
 
-| File | Purpose |
-|------|---------|
-| `lsp-server/.../adapter/XtcCompilerAdapter.kt` | Interface defining core LSP operations |
-| `lsp-server/.../adapter/AbstractXtcCompilerAdapter.kt` | Base class with shared logging, utilities |
-| `lsp-server/.../adapter/XtcLanguageConstants.kt` | Shared keywords, types, mappings, hover formatting |
-| `lsp-server/.../adapter/TreeSitterAdapter.kt` | Tree-sitter implementation |
-| `lsp-server/.../adapter/MockXtcCompilerAdapter.kt` | Regex-based mock |
-| `lsp-server/.../adapter/XtcCompilerAdapterStub.kt` | Minimal placeholder for future compiler |
-| `lsp-server/.../server/XtcLanguageServer.kt` | LSP protocol handler |
-| `lsp-server/.../server/XtcLanguageServerLauncher.kt` | Adapter selection and startup |
-| `lsp-server/.../treesitter/XtcParser.kt` | Tree-sitter parser wrapper |
-| `lsp-server/.../treesitter/XtcQueryEngine.kt` | Query execution for symbol extraction |
-| `lsp-server/.../treesitter/XtcQueries.kt` | Tree-sitter query definitions |
-| `dsl/.../generators/TreeSitterGenerator.kt` | Generates grammar.js |
+| File                                                   | Purpose                                              |
+|--------------------------------------------------------|------------------------------------------------------|
+| `lsp-server/.../adapter/XtcCompilerAdapter.kt`         | Interface defining core LSP operations               |
+| `lsp-server/.../adapter/AbstractXtcCompilerAdapter.kt` | Base class with shared logging, utilities            |
+| `lsp-server/.../adapter/XtcLanguageConstants.kt`       | Shared keywords, types, mappings, hover formatting   |
+| `lsp-server/.../adapter/TreeSitterAdapter.kt`          | Tree-sitter implementation                           |
+| `lsp-server/.../adapter/MockXtcCompilerAdapter.kt`     | Regex-based mock                                     |
+| `lsp-server/.../adapter/XtcCompilerAdapterStub.kt`     | Minimal placeholder for future compiler              |
+| `lsp-server/.../server/XtcLanguageServer.kt`           | LSP protocol handler                                 |
+| `lsp-server/.../server/XtcLanguageServerLauncher.kt`   | Adapter selection and startup                        |
+| `lsp-server/.../treesitter/XtcParser.kt`               | Tree-sitter parser wrapper                           |
+| `lsp-server/.../treesitter/XtcQueryEngine.kt`          | Query execution for symbol extraction                |
+| `lsp-server/.../treesitter/XtcQueries.kt`              | Tree-sitter query definitions                        |
+| `dsl/.../generators/TreeSitterGenerator.kt`            | Generates grammar.js                                 |
 
 ---
 
