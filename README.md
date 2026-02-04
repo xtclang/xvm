@@ -58,7 +58,7 @@ This repository contains comprehensive documentation organized hierarchically:
 - **[Code of Conduct](CODE_OF_CONDUCT.md)** - Community guidelines and expectations
 
 ### Development Documentation
-- **[XTC CLI Reference](doc/XTC_CLI.md)** - Command-line tools: `xtc init`, `xtc build`, `xtc run`, `xtc test`
+- **[XTC CLI Reference](doc/xtc-cli.md)** - Command-line tools: `xtc init`, `xtc build`, `xtc run`, `xtc test`
 - **[Docker Guide](docker/README.md)** - Container development, build instructions, and CI integration
 - **[GitHub Actions](/.github/GITHUB_WORKFLOWS.md)** - CI/CD pipeline, workflows, and automation documentation
 
@@ -946,7 +946,7 @@ This project follows industry-standard Gradle/Maven conventions. The build is de
 
 **For developers new to Gradle**, we've documented the essential concepts you'll need:
 
-**[📖 doc/ASSUMED_GRADLE_KNOWLEDGE.md](doc/ASSUMED_GRADLE_KNOWLEDGE.md)** - Covers the build lifecycle, source sets, artifacts, repositories, and the Gradle wrapper.
+**[📖 doc/assumed-gradle-knowledge.md](doc/assumed-gradle-knowledge.md)** - Covers the build lifecycle, source sets, artifacts, repositories, and the Gradle wrapper.
 
 Key points:
 - Always use `./gradlew` (the wrapper), never a system-installed `gradle`
