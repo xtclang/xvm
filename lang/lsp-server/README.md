@@ -13,7 +13,8 @@ This project provides the LSP server that powers IDE features like:
 - Document outline
 - And many more (see feature matrix below)
 
-The server is used by both the [IntelliJ plugin](../intellij-plugin/) and [VS Code extension](../vscode-extension/).
+The server is used by both the [IntelliJ plugin](../intellij-plugin/) and
+[VS Code extension](../vscode-extension/).
 
 ## Adapter Architecture
 

@@ -49,34 +49,34 @@ Build with any of the three adapters:
 
 ## LSP Feature Implementation Matrix
 
-| LSP Feature              | Tree-sitter | Mock | Compiler Stub | Implementation Location                    |
-|--------------------------|:-----------:|:----:|:-------------:|--------------------------------------------|
-| **Core Features**        |             |      |               |                                            |
-| Syntax Highlighting      | ✅          | ❌   | ❌            | TextMate grammar (dsl-generated)           |
-| Document Symbols         | ✅          | ⚠️   | ❌            | `XtcQueryEngine.findAllDeclarations()`     |
-| Hover                    | ✅          | ⚠️   | ❌            | `TreeSitterAdapter.getHoverInfo()`         |
-| Completion               | ⚠️          | ⚠️   | ❌            | `TreeSitterAdapter.getCompletions()`       |
-| Go to Definition         | ⚠️          | ⚠️   | ❌            | `TreeSitterAdapter.findDefinition()`       |
-| Find References          | ⚠️          | ❌   | ❌            | `TreeSitterAdapter.findReferences()`       |
-| Diagnostics (Syntax)     | ✅          | ⚠️   | ❌            | `TreeSitterAdapter.collectSyntaxErrors()`  |
-| **Tree-sitter Capable**  |             |      |               |                                            |
-| Document Highlights      | ⚠️          | ❌   | ❌            | `adapter.getDocumentHighlights()` (stub)   |
-| Selection Ranges         | ⚠️          | ❌   | ❌            | `adapter.getSelectionRanges()` (stub)      |
-| Folding Ranges           | ⚠️          | ❌   | ❌            | `adapter.getFoldingRanges()` (stub)        |
-| Document Links           | ⚠️          | ❌   | ❌            | `adapter.getDocumentLinks()` (stub)        |
-| **Requires Compiler**    |             |      |               |                                            |
-| Diagnostics (Semantic)   | ❌          | ❌   | 🔮            | Requires compiler                          |
-| Signature Help           | ❌          | ❌   | 🔮            | `adapter.getSignatureHelp()` (stub)        |
-| Rename                   | ❌          | ❌   | 🔮            | `adapter.rename()` (stub)                  |
-| Code Actions             | ❌          | ❌   | 🔮            | `adapter.getCodeActions()` (stub)          |
-| Semantic Tokens          | ❌          | ❌   | 🔮            | `adapter.getSemanticTokens()` (stub)       |
-| Inlay Hints              | ❌          | ❌   | 🔮            | `adapter.getInlayHints()` (stub)           |
-| Formatting               | ❌          | ❌   | 🔮            | `adapter.formatDocument()` (stub)          |
-| Workspace Symbols        | ❌          | ❌   | 🔮            | `adapter.findWorkspaceSymbols()` (stub)    |
-| Call Hierarchy           | ❌          | ❌   | 🔮            | Requires semantic analysis                 |
-| Type Hierarchy           | ❌          | ❌   | 🔮            | Requires semantic analysis                 |
+| LSP Feature             | Tree-sitter | Mock | Compiler Stub | Implementation Location                   |
+|-------------------------|-------------|------|---------------|-------------------------------------------|
+| **Core Features**       |             |      |               |                                           |
+| Syntax Highlighting     | Yes         | No   | No            | TextMate grammar (dsl-generated)          |
+| Document Symbols        | Yes         | Part | No            | `XtcQueryEngine.findAllDeclarations()`    |
+| Hover                   | Yes         | Part | No            | `TreeSitterAdapter.getHoverInfo()`        |
+| Completion              | Part        | Part | No            | `TreeSitterAdapter.getCompletions()`      |
+| Go to Definition        | Part        | Part | No            | `TreeSitterAdapter.findDefinition()`      |
+| Find References         | Part        | No   | No            | `TreeSitterAdapter.findReferences()`      |
+| Diagnostics (Syntax)    | Yes         | Part | No            | `TreeSitterAdapter.collectSyntaxErrors()` |
+| **Tree-sitter Capable** |             |      |               |                                           |
+| Document Highlights     | Part        | No   | No            | `adapter.getDocumentHighlights()` (stub)  |
+| Selection Ranges        | Part        | No   | No            | `adapter.getSelectionRanges()` (stub)     |
+| Folding Ranges          | Part        | No   | No            | `adapter.getFoldingRanges()` (stub)       |
+| Document Links          | Part        | No   | No            | `adapter.getDocumentLinks()` (stub)       |
+| **Requires Compiler**   |             |      |               |                                           |
+| Diagnostics (Semantic)  | No          | No   | Future        | Requires compiler                         |
+| Signature Help          | No          | No   | Future        | `adapter.getSignatureHelp()` (stub)       |
+| Rename                  | No          | No   | Future        | `adapter.rename()` (stub)                 |
+| Code Actions            | No          | No   | Future        | `adapter.getCodeActions()` (stub)         |
+| Semantic Tokens         | No          | No   | Future        | `adapter.getSemanticTokens()` (stub)      |
+| Inlay Hints             | No          | No   | Future        | `adapter.getInlayHints()` (stub)          |
+| Formatting              | No          | No   | Future        | `adapter.formatDocument()` (stub)         |
+| Workspace Symbols       | No          | No   | Future        | `adapter.findWorkspaceSymbols()` (stub)   |
+| Call Hierarchy          | No          | No   | Future        | Requires semantic analysis                |
+| Type Hierarchy          | No          | No   | Future        | Requires semantic analysis                |
 
-Legend: ✅ = Full support, ⚠️ = Partial/limited, ❌ = Cannot implement, 🔮 = Future (stub logs warning)
+Legend: Yes = Full support, Part = Partial/limited, No = Cannot implement, Future = Stub (logs warning)
 
 ### Adapter Details
 
@@ -120,12 +120,12 @@ Useful for verifying all LSP methods are properly wired up.
 
 Common XTC language data is centralized in `XtcLanguageConstants.kt`:
 
-| Constant                   | Purpose                                   |
-|----------------------------|-------------------------------------------|
-| `KEYWORDS`                 | XTC keywords for completion (79 keywords) |
-| `BUILT_IN_TYPES`           | Built-in types for completion (70+ types) |
-| `SYMBOL_TO_COMPLETION_KIND`| Maps SymbolKind → CompletionKind          |
-| `toCompletionKind()`       | Conversion helper                         |
+| Constant                    | Purpose                                   |
+|-----------------------------|-------------------------------------------|
+| `KEYWORDS`                  | XTC keywords for completion (79 keywords) |
+| `BUILT_IN_TYPES`            | Built-in types for completion (70+ types) |
+| `SYMBOL_TO_COMPLETION_KIND` | Maps SymbolKind → CompletionKind          |
+| `toCompletionKind()`        | Conversion helper                         |
 
 Both Mock and TreeSitter adapters use these shared constants.
 

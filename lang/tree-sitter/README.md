@@ -21,12 +21,12 @@ cd lang/tree-sitter/build/generated
 
 The grammar is generated from the XTC language model in `lang/dsl/`:
 
-| Task | Description |
-|------|-------------|
-| `./gradlew :lang:dsl:generateTreeSitter` | Generate `grammar.js` from `XtcLanguage.kt` |
-| `./gradlew :lang:dsl:generateScannerC` | Generate `scanner.c` from `ScannerSpec.kt` |
-| `./gradlew :lang:tree-sitter:validateTreeSitterGrammar` | Compile and validate grammar |
-| `./gradlew :lang:tree-sitter:testTreeSitterParse` | Test against 692 XTC files from `lib_*` |
+| Task                                                    | Description                                 |
+|---------------------------------------------------------|---------------------------------------------|
+| `./gradlew :lang:dsl:generateTreeSitter`                | Generate `grammar.js` from `XtcLanguage.kt` |
+| `./gradlew :lang:dsl:generateScannerC`                  | Generate `scanner.c` from `ScannerSpec.kt`  |
+| `./gradlew :lang:tree-sitter:validateTreeSitterGrammar` | Compile and validate grammar                |
+| `./gradlew :lang:tree-sitter:testTreeSitterParse`       | Test against 692 XTC files from `lib_*`     |
 
 ## Directory Structure
 
@@ -90,19 +90,19 @@ Benefits of the DSL approach:
 
 Tree-sitter's external scanner handles tokens that cannot be expressed with regular expressions:
 
-| Token Type | Context | Purpose |
-|------------|---------|---------|
-| `_singleline_content` | `$"..."` | String content in single-line template |
-| `_singleline_expr_start` | `$"..."` | `{` opening expression in template |
-| `_singleline_end` | `$"..."` | `"` closing delimiter |
-| `_multiline_content` | `$\|...\|` | String content in multiline template |
-| `_multiline_expr_start` | `$\|...\|` | `{` opening expression in template |
-| `_multiline_end` | `$\|...\|` | End when no `\|` continuation |
-| `_template_expr_end` | Both | `}` closing expression |
-| `_multiline_stmt_block` | `$\|...\|` | `{{...}}` statement blocks |
-| `_singleline_stmt_block` | `$"..."` | `{{...}}` statement blocks |
-| `_todo_freeform_text` | Statement | `TODO message` to end of line |
-| `_todo_freeform_until_semi` | Expression | `TODO message` stops at `;` |
+| Token Type                  | Context    | Purpose                                |
+|-----------------------------|------------|----------------------------------------|
+| `_singleline_content`       | `$"..."`   | String content in single-line template |
+| `_singleline_expr_start`    | `$"..."`   | `{` opening expression in template     |
+| `_singleline_end`           | `$"..."`   | `"` closing delimiter                  |
+| `_multiline_content`        | `$\|...\|` | String content in multiline template   |
+| `_multiline_expr_start`     | `$\|...\|` | `{` opening expression in template     |
+| `_multiline_end`            | `$\|...\|` | End when no `\|` continuation          |
+| `_template_expr_end`        | Both       | `}` closing expression                 |
+| `_multiline_stmt_block`     | `$\|...\|` | `{{...}}` statement blocks             |
+| `_singleline_stmt_block`    | `$"..."`   | `{{...}}` statement blocks             |
+| `_todo_freeform_text`       | Statement  | `TODO message` to end of line          |
+| `_todo_freeform_until_semi` | Expression | `TODO message` stops at `;`            |
 
 ### Stateless Scanner Design
 
@@ -170,13 +170,13 @@ This means a developer on macOS can build Windows and Linux binaries locally, wi
 
 ### Native Library Outputs
 
-| Platform | Zig Target | Output File | Architecture |
-|----------|------------|-------------|--------------|
-| darwin-arm64 | `aarch64-macos` | `libtree-sitter-xtc.dylib` | Mach-O arm64 |
-| darwin-x64 | `x86_64-macos` | `libtree-sitter-xtc.dylib` | Mach-O x86_64 |
-| linux-x64 | `x86_64-linux-gnu` | `libtree-sitter-xtc.so` | ELF x86-64 |
-| linux-arm64 | `aarch64-linux-gnu` | `libtree-sitter-xtc.so` | ELF aarch64 |
-| windows-x64 | `x86_64-windows-gnu` | `libtree-sitter-xtc.dll` | PE32+ x86-64 |
+| Platform     | Zig Target           | Output File                | Architecture  |
+|--------------|----------------------|----------------------------|---------------|
+| darwin-arm64 | `aarch64-macos`      | `libtree-sitter-xtc.dylib` | Mach-O arm64  |
+| darwin-x64   | `x86_64-macos`       | `libtree-sitter-xtc.dylib` | Mach-O x86_64 |
+| linux-x64    | `x86_64-linux-gnu`   | `libtree-sitter-xtc.so`    | ELF x86-64    |
+| linux-arm64  | `aarch64-linux-gnu`  | `libtree-sitter-xtc.so`    | ELF aarch64   |
+| windows-x64  | `x86_64-windows-gnu` | `libtree-sitter-xtc.dll`   | PE32+ x86-64  |
 
 Each library exports the `tree_sitter_xtc` function symbol, which the JVM loads via Java's Foreign Function & Memory API.
 
@@ -201,15 +201,15 @@ to rebuild, then commit the updated libraries.
 
 ### Gradle Tasks
 
-| Task | Description |
-|------|-------------|
-| `ensureNativeLibraryUpToDate` | **Verify** pre-built library matches grammar inputs (fails if stale) |
-| `copyAllNativeLibrariesToResources` | Rebuild all platforms and copy to resources (downloads Zig) |
-| `buildAllNativeLibraries` | Build for all 5 platforms (downloads Zig) |
-| `buildNativeLibrary_<platform>` | Cross-compile for specific platform |
-| `checkNativeLibraryStaleness` | Report if pre-built libraries need updating |
-| `downloadZig` | Download Zig compiler (called automatically by build tasks) |
-| `extractZig` | Extract Zig from archive (pure Java) |
+| Task                                | Description                                                          |
+|-------------------------------------|----------------------------------------------------------------------|
+| `ensureNativeLibraryUpToDate`       | **Verify** pre-built library matches grammar inputs (fails if stale) |
+| `copyAllNativeLibrariesToResources` | Rebuild all platforms and copy to resources (downloads Zig)          |
+| `buildAllNativeLibraries`           | Build for all 5 platforms (downloads Zig)                            |
+| `buildNativeLibrary_<platform>`     | Cross-compile for specific platform                                  |
+| `checkNativeLibraryStaleness`       | Report if pre-built libraries need updating                          |
+| `downloadZig`                       | Download Zig compiler (called automatically by build tasks)          |
+| `extractZig`                        | Extract Zig from archive (pure Java)                                 |
 
 ### How It Works
 
@@ -243,13 +243,13 @@ Each platform directory includes:
 
 The tree-sitter grammar powers the LSP server's syntax features:
 
-| Feature | Implementation |
-|---------|----------------|
+| Feature          | Implementation                         |
+|------------------|----------------------------------------|
 | Document symbols | `XtcQueryEngine.findAllDeclarations()` |
-| Go-to-definition | `XtcQueryEngine.findDeclarationAt()` |
-| Find references | `XtcQueryEngine.findAllIdentifiers()` |
-| Syntax errors | Parse tree ERROR nodes |
-| Completions | Keywords + visible declarations |
+| Go-to-definition | `XtcQueryEngine.findDeclarationAt()`   |
+| Find references  | `XtcQueryEngine.findAllIdentifiers()`  |
+| Syntax errors    | Parse tree ERROR nodes                 |
+| Completions      | Keywords + visible declarations        |
 
 See `lang/lsp-server/src/main/kotlin/org/xvm/lsp/treesitter/` for implementation.
 
@@ -259,12 +259,12 @@ The `TreeSitterAdapter` uses `XtcParser` to load the native library and parse XT
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    TreeSitterAdapter                             │
+│                    TreeSitterAdapter                            │
 │  (implements XtcCompilerAdapter for LSP)                        │
 └────────────────────────────┬────────────────────────────────────┘
                              │ uses
 ┌────────────────────────────▼────────────────────────────────────┐
-│                      XtcParser                                   │
+│                      XtcParser                                  │
 │  - Extracts native library from JAR resources                   │
 │  - Loads via Java Foreign Function & Memory API                 │
 │  - Wraps jtreesitter Parser with XTC Language                   │
@@ -312,11 +312,11 @@ including exact code locations for each feature, see:
 
 The authoritative sources for XTC syntax are:
 
-| File | Purpose |
-|------|---------|
-| `javatools/src/main/java/org/xvm/compiler/Lexer.java` | Token definitions |
-| `javatools/src/main/java/org/xvm/compiler/Parser.java` | Grammar rules |
-| `javatools/src/main/java/org/xvm/compiler/Token.java` | Keyword/operator enums |
+| File                                                   | Purpose                |
+|--------------------------------------------------------|------------------------|
+| `javatools/src/main/java/org/xvm/compiler/Lexer.java`  | Token definitions      |
+| `javatools/src/main/java/org/xvm/compiler/Parser.java` | Grammar rules          |
+| `javatools/src/main/java/org/xvm/compiler/Token.java`  | Keyword/operator enums |
 
 See [PLAN_TREE_SITTER.md](../doc/plans/PLAN_TREE_SITTER.md) for implementation status and next steps.
 See [implementation.md](../doc/plans/tree-sitter/implementation.md) for detailed implementation history.

@@ -89,8 +89,7 @@ fun SymbolInfo.SymbolKind.toLsp(): SymbolKind =
         SymbolInfo.SymbolKind.PACKAGE -> SymbolKind.Package
         SymbolInfo.SymbolKind.CLASS,
         SymbolInfo.SymbolKind.MIXIN,
-        SymbolInfo.SymbolKind.SERVICE,
-        -> SymbolKind.Class
+        SymbolInfo.SymbolKind.SERVICE, -> SymbolKind.Class
         SymbolInfo.SymbolKind.INTERFACE -> SymbolKind.Interface
         SymbolInfo.SymbolKind.ENUM -> SymbolKind.Enum
         SymbolInfo.SymbolKind.CONST -> SymbolKind.Constant
