@@ -146,6 +146,8 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         return queryEngine.findDeclarationAt(tree, line, column, uri)
     }
 
+    // TODO: Context-unaware. Cannot provide member completion after '.' or
+    //       type-aware suggestions. Needs compiler TypeResolver (Phase 5).
     override fun getCompletions(
         uri: String,
         line: Int,
@@ -184,6 +186,8 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
             }
         }
 
+    // TODO: Same-file only. Cross-file requires compiler's NameResolver (Phase 4).
+    //       Cannot resolve: imports, inherited members, overloaded methods
     override fun findDefinition(
         uri: String,
         line: Int,
@@ -207,6 +211,8 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         }
     }
 
+    // TODO: Same-file text matching only. Cannot distinguish shadowed locals.
+    //       Cross-file references require compiler's semantic model (Phase 4+).
     override fun findReferences(
         uri: String,
         line: Int,
