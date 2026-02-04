@@ -45,16 +45,18 @@ The LSP server uses a pluggable adapter pattern to support different backends:
          ┌──────────────────┼──────────────────┐
          │                  │                  │
          ▼                  ▼                  ▼
-  MockXtcCompiler-    TreeSitter-      XtcCompilerAdapter-
-  Adapter             Adapter          Full
+  MockXtcCompiler-    TreeSitter-      XtcCompiler-
+  Adapter             Adapter          AdapterStub
   (regex-based)       (syntax-aware)   (future: semantic)
 ```
+
+All adapters extend `AbstractXtcCompilerAdapter` which provides shared logging and utilities.
 
 | Adapter | Backend | LSP Feature Coverage | Status |
 |---------|---------|----------------------|--------|
 | `MockXtcCompilerAdapter` | Regex patterns | ~30% (basic testing) | Implemented |
 | `TreeSitterAdapter` | Tree-sitter grammar | ~70% (syntax-level) | Implemented |
-| `XtcCompilerAdapterFull` | XTC Compiler | 100% (semantic) | Interface only |
+| `XtcCompilerAdapterStub` | XTC Compiler | 100% (semantic) | Placeholder |
 
 **What Each Adapter Provides:**
 
@@ -133,7 +135,8 @@ Full tree-sitter support for fast, incremental parsing:
 
 ### Medium-term (Compiler Integration)
 
-5. **Implement `XtcCompilerAdapterFull`**
+5. **Implement full compiler adapter**
+   - Replace `XtcCompilerAdapterStub` with real compiler integration
    - Extract type information from XTC compiler
    - Provide cross-file go-to-definition
    - Provide semantic error reporting

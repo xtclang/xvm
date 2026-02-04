@@ -395,7 +395,7 @@ Features that can be fully implemented with tree-sitter should be prioritized:
 5. **Signature help** (basic) - Show parameter names from syntax
 6. **Workspace symbols** (same-file) - Index declarations per file
 
-Features requiring compiler should wait for `XtcCompilerAdapterFull`:
+Features requiring compiler should wait for full compiler integration:
 
 1. Rename/prepareRename
 2. Call hierarchy

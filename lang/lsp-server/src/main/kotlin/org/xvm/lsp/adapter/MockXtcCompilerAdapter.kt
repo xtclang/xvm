@@ -1,15 +1,43 @@
 package org.xvm.lsp.adapter
 
-import org.slf4j.LoggerFactory
-import org.xvm.lsp.adapter.XtcLanguageConstants.BUILT_IN_TYPES
-import org.xvm.lsp.adapter.XtcLanguageConstants.KEYWORDS
-import org.xvm.lsp.adapter.XtcLanguageConstants.SYMBOL_TO_COMPLETION_KIND
+import org.xvm.lsp.adapter.XtcLanguageConstants.builtInTypeCompletions
+import org.xvm.lsp.adapter.XtcLanguageConstants.keywordCompletions
+import org.xvm.lsp.adapter.XtcLanguageConstants.toCompletionKind
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.model.SymbolInfo.SymbolKind
 import java.util.concurrent.ConcurrentHashMap
+
+/** Pattern to recognize module declarations. */
+private val modulePattern = Regex("""^\s*module\s+([\w.]+)\s*\{?""", RegexOption.MULTILINE)
+
+/** Pattern to recognize class declarations. */
+private val classPattern = Regex("""^\s*(?:public\s+|private\s+|protected\s+)?class\s+(\w+)""", RegexOption.MULTILINE)
+
+/** Pattern to recognize interface declarations. */
+private val interfacePattern = Regex("""^\s*(?:public\s+|private\s+|protected\s+)?interface\s+(\w+)""", RegexOption.MULTILINE)
+
+/** Pattern to recognize service declarations. */
+private val servicePattern = Regex("""^\s*(?:public\s+|private\s+|protected\s+)?service\s+(\w+)""", RegexOption.MULTILINE)
+
+/** Pattern to recognize method declarations. */
+private val methodPattern =
+    Regex(
+        """^\s*(?:public\s+|private\s+|protected\s+)?(?:static\s+)?(\w+(?:<[^>]+>)?(?:\s*\|\s*\w+)?)\s+(\w+)\s*\(""",
+        RegexOption.MULTILINE,
+    )
+
+/** Pattern to recognize property declarations. */
+private val propertyPattern =
+    Regex(
+        """^\s*(?:public\s+|private\s+|protected\s+)?(\w+(?:<[^>]+>)?)\s+(\w+)\s*[;=]""",
+        RegexOption.MULTILINE,
+    )
+
+/** Pattern to recognize ERROR markers (for testing). */
+private val errorPattern = Regex("""ERROR:\s*(.+)""", RegexOption.MULTILINE)
 
 /**
  * Mock implementation of the XTC compiler adapter for testing.
@@ -31,11 +59,10 @@ import java.util.concurrent.ConcurrentHashMap
  * // - findDefinition(): Returns symbol's own location, can't follow references
  * // - findReferences(): Only returns the declaration, not actual usages
  */
-class MockXtcCompilerAdapter : XtcCompilerAdapter {
+class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
     override val displayName: String = "Mock"
 
     private val compiledDocuments = ConcurrentHashMap<String, CompilationResult>()
-    private val logPrefix = "[$displayName]"
 
     /**
      * Mock adapter is always healthy - no native code to verify.
@@ -43,24 +70,6 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
     override fun healthCheck(): Boolean {
         logger.info("$logPrefix healthCheck() -> true")
         return true
-    }
-
-    companion object {
-        private val logger = LoggerFactory.getLogger(MockXtcCompilerAdapter::class.java)
-
-        // Simple patterns to recognize XTC constructs
-        private val MODULE_PATTERN = Regex("""^\s*module\s+([\w.]+)\s*\{?""", RegexOption.MULTILINE)
-        private val CLASS_PATTERN = Regex("""^\s*(?:public\s+|private\s+|protected\s+)?class\s+(\w+)""", RegexOption.MULTILINE)
-        private val INTERFACE_PATTERN = Regex("""^\s*(?:public\s+|private\s+|protected\s+)?interface\s+(\w+)""", RegexOption.MULTILINE)
-        private val SERVICE_PATTERN = Regex("""^\s*(?:public\s+|private\s+|protected\s+)?service\s+(\w+)""", RegexOption.MULTILINE)
-        private val METHOD_PATTERN =
-            Regex(
-                """^\s*(?:public\s+|private\s+|protected\s+)?(?:static\s+)?(\w+(?:<[^>]+>)?(?:\s*\|\s*\w+)?)\s+(\w+)\s*\(""",
-                RegexOption.MULTILINE,
-            )
-        private val PROPERTY_PATTERN =
-            Regex("""^\s*(?:public\s+|private\s+|protected\s+)?(\w+(?:<[^>]+>)?)\s+(\w+)\s*[;=]""", RegexOption.MULTILINE)
-        private val ERROR_PATTERN = Regex("""ERROR:\s*(.+)""", RegexOption.MULTILINE)
     }
 
     override fun compile(
@@ -76,13 +85,13 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
         val lines = content.split("\n")
 
         // Check for deliberate ERROR markers (for testing)
-        ERROR_PATTERN.findAll(content).forEach { match ->
+        errorPattern.findAll(content).forEach { match ->
             val line = countLines(content, match.range.first)
             diagnostics.add(Diagnostic.error(Location.ofLine(uri, line), match.groupValues[1]))
         }
 
         // Parse module
-        MODULE_PATTERN.find(content)?.let { match ->
+        modulePattern.find(content)?.let { match ->
             val line = countLines(content, match.range.first)
             val moduleName = match.groupValues[1]
             symbols.add(
@@ -97,15 +106,14 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
         }
 
         // Parse type declarations (classes, interfaces, services)
-        parseTypeDeclarations(CLASS_PATTERN, content, uri, SymbolKind.CLASS, "class", "Class", symbols)
-        parseTypeDeclarations(INTERFACE_PATTERN, content, uri, SymbolKind.INTERFACE, "interface", "Interface", symbols)
-        parseTypeDeclarations(SERVICE_PATTERN, content, uri, SymbolKind.SERVICE, "service", "Service", symbols)
+        parseTypeDeclarations(classPattern, content, uri, SymbolKind.CLASS, "class", "Class", symbols)
+        parseTypeDeclarations(interfacePattern, content, uri, SymbolKind.INTERFACE, "interface", "Interface", symbols)
+        parseTypeDeclarations(servicePattern, content, uri, SymbolKind.SERVICE, "service", "Service", symbols)
 
         // Parse methods
-        METHOD_PATTERN.findAll(content).forEach { match ->
+        methodPattern.findAll(content).forEach { match ->
             val line = countLines(content, match.range.first)
-            val returnType = match.groupValues[1]
-            val methodName = match.groupValues[2]
+            val (returnType, methodName) = match.destructured
             // Skip if this looks like a class/interface/service declaration
             if (returnType !in listOf("class", "interface", "service")) {
                 symbols.add(
@@ -121,10 +129,9 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
         }
 
         // Parse properties
-        PROPERTY_PATTERN.findAll(content).forEach { match ->
+        propertyPattern.findAll(content).forEach { match ->
             val line = countLines(content, match.range.first)
-            val propType = match.groupValues[1]
-            val propName = match.groupValues[2]
+            val (propType, propName) = match.destructured
             // Skip if this looks like something else
             if (propType !in listOf("class", "interface", "module", "return")) {
                 symbols.add(
@@ -167,31 +174,9 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
                 logger.info("$logPrefix findSymbolAt -> null (no compiled document)")
                 return null
             }
-        val symbol = result.symbols.find { containsPosition(it.location, line, column) }
+        val symbol = result.symbols.find { it.location.contains(line, column) }
         logger.info("$logPrefix findSymbolAt -> {}", symbol?.name ?: "null")
         return symbol
-    }
-
-    override fun getHoverInfo(
-        uri: String,
-        line: Int,
-        column: Int,
-    ): String? {
-        val fileName = uri.substringAfterLast('/')
-        logger.info("$logPrefix getHoverInfo(uri={}, line={}, column={})", fileName, line, column)
-        return findSymbolAt(uri, line, column)?.let { symbol ->
-            buildString {
-                append("```xtc\n")
-                append(symbol.typeSignature ?: "${symbol.kind.name.lowercase()} ${symbol.name}")
-                append("\n```")
-                symbol.documentation?.let { append("\n\n$it") }
-            }.also { hoverText ->
-                logger.info("$logPrefix getHoverInfo -> {} chars", hoverText.length)
-            }
-        } ?: run {
-            logger.info("$logPrefix getHoverInfo -> null (no symbol at position)")
-            null
-        }
     }
 
     override fun getCompletions(
@@ -210,29 +195,9 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
 
         val completions = mutableListOf<XtcCompilerAdapter.CompletionItem>()
 
-        // Add keywords
-        KEYWORDS.forEach { keyword ->
-            completions.add(
-                XtcCompilerAdapter.CompletionItem(
-                    label = keyword,
-                    kind = XtcCompilerAdapter.CompletionItem.CompletionKind.KEYWORD,
-                    detail = "keyword",
-                    insertText = keyword,
-                ),
-            )
-        }
-
-        // Add built-in types
-        BUILT_IN_TYPES.forEach { type ->
-            completions.add(
-                XtcCompilerAdapter.CompletionItem(
-                    label = type,
-                    kind = XtcCompilerAdapter.CompletionItem.CompletionKind.CLASS,
-                    detail = "built-in type",
-                    insertText = type,
-                ),
-            )
-        }
+        // Add keywords and built-in types
+        completions.addAll(keywordCompletions())
+        completions.addAll(builtInTypeCompletions())
 
         // Add symbols from current document
         compiledDocuments[uri]?.symbols?.forEach { symbol ->
@@ -296,20 +261,6 @@ class MockXtcCompilerAdapter : XtcCompilerAdapter {
         content: String,
         position: Int,
     ): Int = content.take(position).count { it == '\n' }
-
-    private fun containsPosition(
-        loc: Location,
-        line: Int,
-        column: Int,
-    ): Boolean {
-        if (line < loc.startLine || line > loc.endLine) return false
-        if (line == loc.startLine && column < loc.startColumn) return false
-        if (line == loc.endLine && column > loc.endColumn) return false
-        return true
-    }
-
-    private fun toCompletionKind(kind: SymbolKind): XtcCompilerAdapter.CompletionItem.CompletionKind =
-        SYMBOL_TO_COMPLETION_KIND[kind] ?: XtcCompilerAdapter.CompletionItem.CompletionKind.VARIABLE
 
     private fun parseTypeDeclarations(
         pattern: Regex,

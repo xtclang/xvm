@@ -1,21 +1,18 @@
 package org.xvm.lsp.adapter
 
-import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.XtcCompilerAdapter.CompletionItem
 import org.xvm.lsp.adapter.XtcCompilerAdapter.CompletionItem.CompletionKind
-import org.xvm.lsp.adapter.XtcLanguageConstants.BUILT_IN_TYPES
-import org.xvm.lsp.adapter.XtcLanguageConstants.KEYWORDS
-import org.xvm.lsp.adapter.XtcLanguageConstants.SYMBOL_TO_COMPLETION_KIND
+import org.xvm.lsp.adapter.XtcLanguageConstants.builtInTypeCompletions
+import org.xvm.lsp.adapter.XtcLanguageConstants.keywordCompletions
+import org.xvm.lsp.adapter.XtcLanguageConstants.toCompletionKind
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
-import org.xvm.lsp.model.SymbolInfo.SymbolKind
 import org.xvm.lsp.treesitter.XtcNode
 import org.xvm.lsp.treesitter.XtcParser
 import org.xvm.lsp.treesitter.XtcQueryEngine
 import org.xvm.lsp.treesitter.XtcTree
-import java.io.Closeable
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration
 import kotlin.time.measureTime
@@ -42,24 +39,21 @@ import kotlin.time.measureTime
  * // TODO LSP: This adapter provides ~70% of LSP functionality without the compiler.
  * // For full semantic features, combine with a CompilerAdapter via CompositeAdapter.
  */
-class TreeSitterAdapter :
-    XtcCompilerAdapter,
-    Closeable {
+class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
     override val displayName: String = "TreeSitter"
 
     private val parser: XtcParser = XtcParser()
     private val queryEngine: XtcQueryEngine = XtcQueryEngine(parser.getLanguage())
     private val parsedTrees = ConcurrentHashMap<String, XtcTree>()
     private val compilationResults = ConcurrentHashMap<String, CompilationResult>()
-    private val logPrefix = "[$displayName]"
 
     init {
         // Perform health check to verify native library is working
-        logger.info("========================================")
-        logger.info("TreeSitterAdapter initializing...")
-        logger.info("Java version: {} ({})", System.getProperty("java.version"), System.getProperty("java.vendor"))
-        logger.info("Platform: {} / {}", System.getProperty("os.name"), System.getProperty("os.arch"))
-        logger.info("========================================")
+        logger.info("$logPrefix ========================================")
+        logger.info("$logPrefix initializing...")
+        logger.info("$logPrefix Java version: {} ({})", System.getProperty("java.version"), System.getProperty("java.vendor"))
+        logger.info("$logPrefix Platform: {} / {}", System.getProperty("os.name"), System.getProperty("os.arch"))
+        logger.info("$logPrefix ========================================")
 
         if (!healthCheck()) {
             val msg =
@@ -68,7 +62,7 @@ class TreeSitterAdapter :
             logger.error(msg)
             throw IllegalStateException(msg)
         }
-        logger.info("TreeSitterAdapter ready: native library loaded and verified")
+        logger.info("$logPrefix ready: native library loaded and verified")
     }
 
     /**
@@ -78,8 +72,6 @@ class TreeSitterAdapter :
     override fun healthCheck(): Boolean = parser.healthCheck()
 
     companion object {
-        private val logger = LoggerFactory.getLogger(TreeSitterAdapter::class.java)
-
         /**
          * Minimum Java version required for tree-sitter FFM API.
          * Update when jtreesitter dependency changes its requirements.
@@ -154,50 +146,15 @@ class TreeSitterAdapter :
         return queryEngine.findDeclarationAt(tree, line, column, uri)
     }
 
-    override fun getHoverInfo(
-        uri: String,
-        line: Int,
-        column: Int,
-    ): String? {
-        val symbol = findSymbolAt(uri, line, column) ?: return null
-
-        return buildString {
-            append("```xtc\n")
-            append(symbol.typeSignature ?: "${symbol.kind.name.lowercase()} ${symbol.name}")
-            append("\n```")
-            symbol.documentation?.let { append("\n\n$it") }
-        }
-    }
-
     override fun getCompletions(
         uri: String,
         line: Int,
         column: Int,
     ): List<CompletionItem> =
         buildList {
-            // Add keywords
-            KEYWORDS.forEach { keyword ->
-                add(
-                    CompletionItem(
-                        label = keyword,
-                        kind = CompletionKind.KEYWORD,
-                        detail = "keyword",
-                        insertText = keyword,
-                    ),
-                )
-            }
-
-            // Add built-in types
-            BUILT_IN_TYPES.forEach { type ->
-                add(
-                    CompletionItem(
-                        label = type,
-                        kind = CompletionKind.CLASS,
-                        detail = "built-in type",
-                        insertText = type,
-                    ),
-                )
-            }
+            // Add keywords and built-in types
+            addAll(keywordCompletions())
+            addAll(builtInTypeCompletions())
 
             // Add symbols from current document
             parsedTrees[uri]?.let { tree ->
@@ -272,11 +229,11 @@ class TreeSitterAdapter :
         val tree = parsedTrees[uri] ?: return null
         val node =
             tree.nodeAt(line, column) ?: return null.also {
-                logger.info("{}: no node at {}:{}:{}", op, uri.substringAfterLast('/'), line, column)
+                logger.info("$logPrefix {}: no node at {}:{}:{}", op, uri.substringAfterLast('/'), line, column)
             }
         val id =
             findIdentifierNode(node) ?: return null.also {
-                logger.info("{}: not an identifier at {}:{}:{} ({})", op, uri.substringAfterLast('/'), line, column, node.type)
+                logger.info("$logPrefix {}: not an identifier at {}:{}:{} ({})", op, uri.substringAfterLast('/'), line, column, node.type)
             }
         return tree to id.text
     }
@@ -334,6 +291,4 @@ class TreeSitterAdapter :
         } else {
             node.parent?.takeIf { it.type == "identifier" || it.type == "type_name" }
         }
-
-    private fun toCompletionKind(kind: SymbolKind): CompletionKind = SYMBOL_TO_COMPLETION_KIND[kind] ?: CompletionKind.VARIABLE
 }

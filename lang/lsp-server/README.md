@@ -145,11 +145,12 @@ Legend: ✅ = Implemented, ⚠️ = Partial, ❌ = Not implemented, 🔧 = Tree-
 | Component | Description |
 |-----------|-------------|
 | `XtcLanguageServer` | LSP protocol handler, wires all LSP methods to adapter |
-| `XtcCompilerAdapter` | Interface with default stubs for unimplemented methods |
+| `XtcCompilerAdapter` | Interface defining core LSP operations |
+| `AbstractXtcCompilerAdapter` | Base class with shared logging, hover formatting, utilities |
 | `XtcLanguageConstants` | Shared keywords, built-in types, symbol mappings |
 | `MockXtcCompilerAdapter` | Regex-based implementation for testing |
 | `TreeSitterAdapter` | Tree-sitter based syntax intelligence |
-| `XtcCompilerAdapterStub` | Placeholder for future compiler integration |
+| `XtcCompilerAdapterStub` | Minimal placeholder for future compiler integration |
 
 ## Building
 

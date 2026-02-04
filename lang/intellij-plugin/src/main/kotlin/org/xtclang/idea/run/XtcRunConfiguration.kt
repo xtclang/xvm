@@ -9,6 +9,7 @@ import com.intellij.execution.configurations.RunConfigurationBase
 import com.intellij.execution.configurations.RunProfileState
 import com.intellij.execution.process.OSProcessHandler
 import com.intellij.execution.runners.ExecutionEnvironment
+import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.options.SettingsEditor
 import com.intellij.openapi.project.Project
 import com.intellij.ui.dsl.builder.bindSelected
@@ -26,10 +27,13 @@ class XtcRunConfiguration(
     factory: ConfigurationFactory,
     name: String,
 ) : RunConfigurationBase<Any>(project, factory, name) {
+    private val logger = logger<XtcRunConfiguration>()
+
     var moduleName = ""
     var methodName = "" // Empty means use default "run"
     var moduleArguments = "" // Comma-separated arguments passed to the module
     var useGradle = true
+    var quietMode = true // Use -q flag for less verbose Gradle output
 
     override fun getConfigurationEditor(): SettingsEditor<out RunConfiguration> = XtcRunSettingsEditor()
 
@@ -54,12 +58,14 @@ class XtcRunConfiguration(
                     "win" in System.getProperty("os.name").lowercase() -> "gradlew.bat"
                     else -> "./gradlew"
                 }
+            if (quietMode) addParameter("-q")
             addParameter("runXtc")
             // Pass configuration as Gradle task options (--module, --method, --args)
             moduleName.takeIf { it.isNotBlank() }?.let { addParameter("--module=$it") }
             methodName.takeIf { it.isNotBlank() }?.let { addParameter("--method=$it") }
             moduleArguments.takeIf { it.isNotBlank() }?.let { addParameter("--args=$it") }
             workDirectory = project.basePath?.let { Path(it).toFile() }
+            logger.info("Running Gradle: $commandLineString")
         }
 
     private fun createXtcCommandLine() =
@@ -69,6 +75,7 @@ class XtcRunConfiguration(
             moduleName.takeIf { it.isNotBlank() }?.let { addParameter(it) }
             moduleArguments.split(",").filter { it.isNotBlank() }.forEach(::addParameter)
             workDirectory = project.basePath?.let { Path(it).toFile() }
+            logger.info("Running XTC: $commandLineString")
         }
 
     override fun readExternal(element: Element) {
@@ -77,6 +84,7 @@ class XtcRunConfiguration(
         methodName = element.getAttributeValue("methodName").orEmpty()
         moduleArguments = element.getAttributeValue("moduleArguments").orEmpty()
         useGradle = element.getAttributeValue("useGradle")?.toBoolean() ?: true
+        quietMode = element.getAttributeValue("quietMode")?.toBoolean() ?: true
     }
 
     override fun writeExternal(element: Element) {
@@ -85,6 +93,7 @@ class XtcRunConfiguration(
         element.setAttribute("methodName", methodName)
         element.setAttribute("moduleArguments", moduleArguments)
         element.setAttribute("useGradle", useGradle.toString())
+        element.setAttribute("quietMode", quietMode.toString())
     }
 }
 
@@ -96,6 +105,7 @@ class XtcRunSettingsEditor : SettingsEditor<XtcRunConfiguration>() {
     private var methodName = ""
     private var moduleArguments = ""
     private var useGradle = true
+    private var quietMode = true
 
     private val editorPanel by lazy {
         panel {
@@ -115,6 +125,7 @@ class XtcRunSettingsEditor : SettingsEditor<XtcRunConfiguration>() {
                     .comment("Comma-separated arguments passed to the module")
             }
             row { checkBox("Use Gradle (recommended)").bindSelected(::useGradle) }
+            row { checkBox("Quiet mode (-q)").bindSelected(::quietMode) }
         }
     }
 
@@ -126,6 +137,7 @@ class XtcRunSettingsEditor : SettingsEditor<XtcRunConfiguration>() {
         config.methodName = methodName
         config.moduleArguments = moduleArguments
         config.useGradle = useGradle
+        config.quietMode = quietMode
     }
 
     override fun resetEditorFrom(config: XtcRunConfiguration) {
@@ -133,6 +145,7 @@ class XtcRunSettingsEditor : SettingsEditor<XtcRunConfiguration>() {
         methodName = config.methodName
         moduleArguments = config.moduleArguments
         useGradle = config.useGradle
+        quietMode = config.quietMode
         editorPanel.reset() // Reset UI from backing properties
     }
 }

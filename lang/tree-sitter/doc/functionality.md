@@ -16,12 +16,14 @@ The XTC LSP server uses a pluggable adapter architecture with three available ba
 └────────────────────────────┬────────────────────────────────────┘
                              │ uses XtcCompilerAdapter interface
 ┌────────────────────────────▼────────────────────────────────────┐
-│                    XtcCompilerAdapter                           │
+│                    XtcCompilerAdapter (interface)               │
 │           (lsp-server/.../adapter/XtcCompilerAdapter.kt)        │
-│                                                                 │
-│  Interface with default stub implementations that log warnings  │
-│  for unimplemented methods. Adapters only override what they    │
-│  specifically implement.                                        │
+│  Defines core LSP operations with default stubs for optional    │
+│  methods that log warnings.                                     │
+├─────────────────────────────────────────────────────────────────┤
+│                 AbstractXtcCompilerAdapter (abstract class)     │
+│  Provides: shared logger, logPrefix, getHoverInfo(),            │
+│  Location.contains(), Closeable with no-op close()              │
 └─────────────────────────────────────────────────────────────────┘
          │                    │                     │
          ▼                    ▼                     ▼
@@ -29,7 +31,7 @@ The XTC LSP server uses a pluggable adapter architecture with three available ba
 │ MockAdapter     │  │ TreeSitterAdapter│  │ XtcCompilerAdapter  │
 │ (regex-based)   │  │ (syntax-aware)   │  │ Stub                │
 │                 │  │                  │  │                     │
-│ For testing     │  │ ~70% features    │  │ All methods logged  │
+│ For testing     │  │ ~70% features    │  │ Minimal placeholder │
 │ lsp.adapter=mock│  │ lsp.adapter=     │  │ lsp.adapter=compiler│
 │                 │  │   treesitter     │  │                     │
 └─────────────────┘  └──────────────────┘  └─────────────────────┘
@@ -256,11 +258,12 @@ All paths relative to `lang/`:
 
 | File | Purpose |
 |------|---------|
-| `lsp-server/.../adapter/XtcCompilerAdapter.kt` | Interface with default stubs |
-| `lsp-server/.../adapter/XtcLanguageConstants.kt` | Shared keywords, types, mappings |
+| `lsp-server/.../adapter/XtcCompilerAdapter.kt` | Interface defining core LSP operations |
+| `lsp-server/.../adapter/AbstractXtcCompilerAdapter.kt` | Base class with shared logging, utilities |
+| `lsp-server/.../adapter/XtcLanguageConstants.kt` | Shared keywords, types, mappings, hover formatting |
 | `lsp-server/.../adapter/TreeSitterAdapter.kt` | Tree-sitter implementation |
 | `lsp-server/.../adapter/MockXtcCompilerAdapter.kt` | Regex-based mock |
-| `lsp-server/.../adapter/XtcCompilerAdapterStub.kt` | Compiler stub (all methods logged) |
+| `lsp-server/.../adapter/XtcCompilerAdapterStub.kt` | Minimal placeholder for future compiler |
 | `lsp-server/.../server/XtcLanguageServer.kt` | LSP protocol handler |
 | `lsp-server/.../server/XtcLanguageServerLauncher.kt` | Adapter selection and startup |
 | `lsp-server/.../treesitter/XtcParser.kt` | Tree-sitter parser wrapper |
