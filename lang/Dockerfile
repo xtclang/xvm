@@ -65,31 +65,23 @@ RUN mkdir -p /opt && \
     ln -s /opt/idea-IC /opt/intellij-idea-community
 
 # =============================================================================
-# JDK Configuration (from version.properties)
+# JDK Configuration
 # =============================================================================
-# The XDK uses multiple JDK versions:
+# The XDK uses multiple JDK versions (defined in version.properties):
 #   - JDK 25: Main build (org.xtclang.java.jdk)
-#   - JDK 24: Kotlin/LSP server (org.xtclang.kotlin.jdk - Gradle workaround)
+#   - JDK 24: Kotlin/LSP server (org.xtclang.kotlin.jdk)
 #   - JDK 21: IntelliJ plugin only (libs.versions.toml intellij-jdk)
 #
-# For runIde we need:
-#   - JDK 21: Base image provides this for IntelliJ and Gradle
-#   - JDK 24: For LSP server (jtreesitter requires Java 23+ FFM API)
-#
-# Gradle's toolchain auto-provisioning will download JDK 25 as needed.
+# Base image provides JDK 21 for running Gradle.
+# Gradle's toolchain auto-provisioning downloads JDK 24 and 25 as needed.
 # =============================================================================
 
-# Install JDK 24 for LSP server (Kotlin JDK from version.properties)
-# The LSP server runs out-of-process and requires Java 23+ for FFM API.
-RUN mkdir -p /opt/java && \
-    curl -fsSL "https://download.java.net/java/GA/jdk24/1f9ff9062db4449d8ca828c504ffae90/36/GPL/openjdk-24_linux-x64_bin.tar.gz" \
-    | tar -xz -C /opt/java && \
-    ln -s /opt/java/jdk-24 /opt/java/jdk-lsp
-
-# Set JAVA_HOME to JDK 21 (base image JDK - used by Gradle and IntelliJ)
-# Gradle toolchain will auto-provision JDK 25 for main compilation.
 ENV JAVA_HOME=/opt/java/openjdk
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
+
+# Verify base JDK version matches what IntelliJ expects
+RUN java -version 2>&1 | head -1 | grep -q "21" || \
+    (echo "ASSERTION FAILED: Base JDK must be version 21 for IntelliJ" && exit 1)
 
 # =============================================================================
 # Configure virtual display for headless operation
@@ -128,12 +120,20 @@ COPY --chown=builder:builder . /home/builder/xvm
 WORKDIR /home/builder/xvm
 
 # =============================================================================
-# Pre-populate Gradle caches (optional, makes subsequent builds faster)
+# Pre-populate Gradle caches and verify JDK provisioning
 # =============================================================================
-# This downloads dependencies but doesn't run the full build.
-# Comment out if you want a completely clean first-run experience.
+# This compiles the DSL project which triggers Gradle toolchain provisioning
+# for JDK 24 (Kotlin) and JDK 25 (Java). The JDKs are cached in ~/.gradle/jdks/
 
-RUN ./gradlew --no-daemon -PlangBuild=true :lang:dsl:dependencies || true
+RUN ./gradlew --no-daemon -PlangBuild=true :lang:dsl:compileKotlin :lang:dsl:compileJava || true
+
+# Verify Gradle auto-provisioned the expected JDKs (from version.properties)
+# These assertions ensure the Dockerfile stays in sync with version.properties
+RUN echo "Verifying Gradle-provisioned JDKs..." && \
+    ls -la ~/.gradle/jdks/ && \
+    (ls ~/.gradle/jdks/ | grep -q "24" || (echo "ASSERTION FAILED: JDK 24 not provisioned (expected for org.xtclang.kotlin.jdk)" && exit 1)) && \
+    (ls ~/.gradle/jdks/ | grep -q "25" || (echo "ASSERTION FAILED: JDK 25 not provisioned (expected for org.xtclang.java.jdk)" && exit 1)) && \
+    echo "JDK provisioning verified: JDK 24 and 25 present"
 
 # =============================================================================
 # Default entrypoint with virtual display
