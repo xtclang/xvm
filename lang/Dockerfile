@@ -23,6 +23,19 @@
 #   # Capture all output to a log file for analysis
 #   docker run --rm xtc-lang-dev 2>&1 | tee runIde.log
 #
+# BUILD CACHING:
+#   By default, this Dockerfile builds from scratch each time to verify the build
+#   works with no pre-existing state. For faster iterative development, use
+#   BuildKit cache mounts to persist Gradle caches between builds:
+#
+#   # Fast build with Gradle cache (for development)
+#   DOCKER_BUILDKIT=1 docker build \
+#     --build-arg BUILDKIT_INLINE_CACHE=1 \
+#     -f lang/Dockerfile -t xtc-lang-dev .
+#
+#   # Clean build with no cache (for CI/verification)
+#   docker build --no-cache -f lang/Dockerfile -t xtc-lang-dev .
+#
 # To see IntelliJ window on your host (optional):
 #
 #   macOS (requires XQuartz installed and running):
@@ -82,8 +95,13 @@ ARG INTELLIJ_VERSION=2025.1
 ARG INTELLIJ_BUILD=251.23774.200
 
 # Download, extract, and create symlink for the build to find
-RUN mkdir -p /opt && \
-    curl -fsSL "https://download.jetbrains.com/idea/ideaIC-${INTELLIJ_VERSION}.tar.gz" \
+# Architecture suffix: empty for x86_64, "-aarch64" for arm64
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "aarch64" ]; then ARCH_SUFFIX="-aarch64"; \
+    elif [ "$ARCH" = "x86_64" ]; then ARCH_SUFFIX=""; \
+    else echo "Unsupported architecture: $ARCH" && exit 1; fi && \
+    mkdir -p /opt && \
+    curl -fsSL "https://download.jetbrains.com/idea/ideaIC-${INTELLIJ_VERSION}${ARCH_SUFFIX}.tar.gz" \
     | tar -xz -C /opt && \
     mv /opt/idea-IC-* /opt/idea-IC && \
     ln -s /opt/idea-IC /opt/intellij-idea-community
@@ -96,7 +114,7 @@ RUN mkdir -p /opt && \
 #   - JDK 24: Kotlin/LSP server (org.xtclang.kotlin.jdk)
 #
 # Base image provides JDK 25 for running Gradle.
-# Gradle's toolchain auto-provisioning downloads JDK 24 as needed.
+# JDK 24 is installed directly to avoid Foojay API dependency.
 # =============================================================================
 
 ENV JAVA_HOME=/opt/java/openjdk
@@ -105,6 +123,17 @@ ENV PATH="${JAVA_HOME}/bin:${PATH}"
 # Verify base JDK version matches org.xtclang.java.jdk
 RUN java -version 2>&1 | head -1 | grep -q "25" || \
     (echo "ASSERTION FAILED: Base JDK must be version 25 (org.xtclang.java.jdk)" && exit 1)
+
+# Install JDK 24 for Kotlin toolchain (avoids Foojay API dependency)
+ARG JDK24_VERSION=24.0.1+9
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "aarch64" ]; then JDK_ARCH="aarch64"; \
+    elif [ "$ARCH" = "x86_64" ]; then JDK_ARCH="x64"; \
+    else echo "Unsupported architecture: $ARCH" && exit 1; fi && \
+    mkdir -p /opt/jdk-24 && \
+    curl -fsSL "https://github.com/adoptium/temurin24-binaries/releases/download/jdk-${JDK24_VERSION}/OpenJDK24U-jdk_${JDK_ARCH}_linux_hotspot_$(echo ${JDK24_VERSION} | tr '+' '_').tar.gz" \
+    | tar -xz -C /opt/jdk-24 --strip-components=1 && \
+    /opt/jdk-24/bin/java -version
 
 # =============================================================================
 # Configure virtual display for headless operation
@@ -126,7 +155,8 @@ exec "$@"' > /usr/local/bin/with-display && \
 # =============================================================================
 
 RUN useradd -m -s /bin/bash builder && \
-    mkdir -p /home/builder/.gradle && \
+    mkdir -p /home/builder/.gradle/jdks && \
+    ln -s /opt/jdk-24 /home/builder/.gradle/jdks/temurin-24 && \
     chown -R builder:builder /home/builder
 
 USER builder
@@ -143,18 +173,23 @@ COPY --chown=builder:builder . /home/builder/xvm
 WORKDIR /home/builder/xvm
 
 # =============================================================================
-# Pre-populate Gradle caches and verify JDK provisioning
+# Pre-populate Gradle caches
 # =============================================================================
-# Run assemble to trigger Foojay toolchain provisioning for JDK 24 and 25.
-# The JDKs are cached in ~/.gradle/jdks/
+# Run build to populate caches. JDK 24 is pre-installed, JDK 25 from base image.
+# The --mount=type=cache enables BuildKit caching for faster rebuilds when using
+# DOCKER_BUILDKIT=1. Without BuildKit, this is ignored and builds from scratch.
 
-RUN ./gradlew --no-daemon build || true
+RUN --mount=type=cache,target=/home/builder/.gradle,uid=1000,gid=1000 \
+    ./gradlew --no-daemon \
+    -Dorg.gradle.jvmargs="-Xmx2g" \
+    -Dorg.gradle.java.installations.paths=/opt/jdk-24 \
+    build || true
 
-# Verify Gradle auto-provisioned JDK 24 (JDK 25 comes from base image)
-RUN echo "Verifying Gradle-provisioned JDKs..." && \
-    ls -la ~/.gradle/jdks/ && \
-    (ls ~/.gradle/jdks/ | grep -q "24" || (echo "ASSERTION FAILED: JDK 24 not provisioned (expected for org.xtclang.kotlin.jdk)" && exit 1)) && \
-    echo "JDK provisioning verified: JDK 24 present, JDK 25 from base image"
+# Verify JDKs are available
+RUN echo "Verifying JDKs..." && \
+    /opt/jdk-24/bin/java -version && \
+    java -version && \
+    echo "JDK verification complete: JDK 24 at /opt/jdk-24, JDK 25 from base image"
 
 # =============================================================================
 # Default entrypoint with virtual display
@@ -162,4 +197,4 @@ RUN echo "Verifying Gradle-provisioned JDKs..." && \
 # The with-display script starts Xvfb before running the provided command.
 
 ENTRYPOINT ["/usr/local/bin/with-display"]
-CMD ["./gradlew", "--no-daemon", "-PlangBuild=true", "-PuseLocalIde=true", ":lang:intellij-plugin:runIde"]
+CMD ["./gradlew", "--no-daemon", "-Dorg.gradle.jvmargs=-Xmx2g", "-Dorg.gradle.java.installations.paths=/opt/jdk-24", "-PlangBuild=true", "-PuseLocalIde=true", ":lang:intellij-plugin:runIde"]
