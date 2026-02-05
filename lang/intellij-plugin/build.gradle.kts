@@ -68,10 +68,14 @@ fun findLocalIntelliJ(): File? {
 }
 
 val localIntelliJ: File? = findLocalIntelliJ()
-val useLocalIde = localIntelliJ != null
+// Force download with -PforceDownloadIde=true (useful when local IDE has incompatible bundled plugins)
+val forceDownloadIde = project.findProperty("forceDownloadIde")?.toString()?.toBoolean() ?: false
+val useLocalIde = localIntelliJ != null && !forceDownloadIde
 
 if (useLocalIde) {
     logger.info("Using local IntelliJ IDE: ${localIntelliJ!!.absolutePath}")
+} else if (forceDownloadIde && localIntelliJ != null) {
+    logger.info("Skipping local IDE (forceDownloadIde=true), will download IntelliJ Community")
 } else {
     logger.info("No local IntelliJ IDE found, will download (may cause cache issues on macOS)")
 }
