@@ -285,7 +285,7 @@ public abstract class OpTest
             }
             if (type2.isNullable()) {
                 type2 = type2.removeNullable();
-                reg1  = bctx.narrowRegister(code, reg2, type2);
+                reg2  = bctx.narrowRegister(code, reg2, type2);
             }
             typeCmp = typeCmp.removeNullable();
         }

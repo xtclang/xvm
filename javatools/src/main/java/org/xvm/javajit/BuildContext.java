@@ -1132,8 +1132,8 @@ public class BuildContext {
                     return;
                 }
 
-                // TODO: generateCheckCast() to transform a potential CCE into TypeMismatch
-                code.checkcast(typeTo.ensureClassDesc(typeSystem));
+                // trust the compiler
+                generateCheckCast(code, typeTo);
             }
         }
 
@@ -1364,7 +1364,7 @@ public class BuildContext {
             case Primitive:
                 switch (dstFlavor) {
                 case Specific, SpecificWithDefault, Widened, WidenedWithDefault:
-                    assert srcReg.type().isA(pd.type);
+                    assert srcReg.type().isA(pd.type) || pd.type.containsTypeParameter(true);
                     Builder.box(code, srcReg.type(), srcReg.cd());
                     continue;
 
@@ -1677,6 +1677,27 @@ public class BuildContext {
 
                 default:
                     // process the natural return
+                    if (reg.cd().isPrimitive() && !isOptimized) {
+                        if (typeRet.isTypeParameter()) {
+                            // we need to trust the compiler here
+                            switch (reg.flavor()) {
+                            case Primitive:
+                                generateCheckCast(code, typeRet = reg.type());
+                                Builder.unbox(code, typeRet, reg.cd());
+                                break;
+
+                            case NullablePrimitive:
+                                // TODO: resolve the type parameter and check for Null if necessary
+                                generateCheckCast(code, typeRet = reg.type().removeNullable());
+                                Builder.unbox(code, typeRet, reg.cd());
+                                code.iconst_0();
+                                break;
+
+                            default:
+                                throw new IllegalStateException();
+                            }
+                        }
+                    }
                     storeValue(code, reg, typeRet);
                     break;
                 }
@@ -1746,6 +1767,26 @@ public class BuildContext {
             .invokevirtual(exCD, "$init", MethodTypeDesc.of(
                 CD_nException, CD_Ctx, CD_JavaString, CD_Throwable))
             .athrow();
+    }
+
+    /**
+     * Generate a "checkcast" that transforms a potential CCE into a TypeMismatch.
+     */
+    public void generateCheckCast(CodeBuilder code, TypeConstant typeTo) {
+        Label startLabel   = code.newLabel();
+        Label endLabel     = code.newLabel();
+        Label successLabel = code.newLabel();
+
+        ClassDesc cd = typeTo.ensureClassDesc(typeSystem);
+        code.labelBinding(startLabel)
+            .checkcast(cd)
+            .goto_(successLabel)
+            .labelBinding(endLabel);
+        throwTypeMismatch(code, cd.descriptorString());
+
+        code.labelBinding(successLabel)
+            .exceptionCatch(startLabel, endLabel, endLabel,
+                ClassDesc.of("java.lang.ClassCastException"));
     }
 
     /**

@@ -560,7 +560,7 @@ public class MethodBody {
 
             m_jmd = jmd = JitMethodDesc.of(sigActual.getRawParams(), sigActual.getRawReturns(),
                                 isCtorOrValidator(), typeContainer.ensureClassDesc(ts),
-                                method.getRequiredParamCount(), ts);
+                                method.getTypeParamCount() + method.getRequiredParamCount(), ts);
             m_typeJmdContainer = typeContainer;
         }
         return jmd;

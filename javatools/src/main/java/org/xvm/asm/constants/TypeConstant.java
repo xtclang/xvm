@@ -6699,7 +6699,8 @@ public abstract class TypeConstant
             reg2.load(code);
 
             switch (nOp) {
-            case Op.OP_IS_EQ, Op.OP_JMP_EQ, Op.OP_IS_NEQ, Op.OP_JMP_NEQ:
+            case Op.OP_IS_EQ,  Op.OP_JMP_EQ,
+                 Op.OP_IS_NEQ, Op.OP_JMP_NEQ:
                 assert jmd.isOptimized;
                 // Boolean equals(Ctx,xType,xObj,xObj)
                 code.invokestatic(cd, sJitName+OPT, jmd.optimizedMD);
@@ -6718,7 +6719,11 @@ public abstract class TypeConstant
                 }
                 return;
 
-            case Op.OP_CMP, Op.OP_IS_GT, Op.OP_IS_GTE, Op.OP_IS_LT, Op.OP_IS_LTE:
+            case Op.OP_CMP,
+                 Op.OP_IS_GT,  Op.OP_JMP_GT,
+                 Op.OP_IS_GTE, Op.OP_JMP_GTE,
+                 Op.OP_IS_LT,  Op.OP_JMP_LT,
+                 Op.OP_IS_LTE, Op.OP_JMP_LTE :
                 // Ordered compare(Ctx,Type,xObj,xObj)
                 code.invokestatic(cd, sJitName, jmd.standardMD);
 
@@ -6728,22 +6733,22 @@ public abstract class TypeConstant
                     // the result is on Java stack
                     return;
 
-                case Op.OP_IS_GT:
+                case Op.OP_IS_GT, Op.OP_JMP_GT:
                     bctx.loadConstant(code, pool.valGreater());
                     fInverse = false;
                     break;
 
-                case Op.OP_IS_GTE:
+                case Op.OP_IS_GTE, Op.OP_JMP_GTE:
                     bctx.loadConstant(code, pool.valLesser());
                     fInverse = true;
                     break;
 
-                case Op.OP_IS_LT:
+                case Op.OP_IS_LT, Op.OP_JMP_LT:
                     bctx.loadConstant(code, pool.valLesser());
                     fInverse = false;
                     break;
 
-                case Op.OP_IS_LTE:
+                case Op.OP_IS_LTE, Op.OP_JMP_LTE:
                     bctx.loadConstant(code, pool.valGreater());
                     fInverse = true;
                     break;
@@ -6757,6 +6762,10 @@ public abstract class TypeConstant
                 } else {
                     code.if_acmpeq(lblTrue);
                 }
+                break;
+
+            default:
+                throw new IllegalStateException();
             }
         }
 

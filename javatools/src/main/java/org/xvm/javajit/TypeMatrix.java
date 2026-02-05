@@ -146,7 +146,7 @@ public class TypeMatrix {
             }
 
             // use CastTypeConstant to remember the original type
-            assert type.isA(nextType);
+            assert type.isA(nextType) || type.containsFormalType(true);
 
             if (!type.equals(nextType)) {
                 if (type instanceof CastTypeConstant inferredType) {

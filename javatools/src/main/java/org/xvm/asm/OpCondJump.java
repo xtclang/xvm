@@ -419,8 +419,10 @@ public abstract class OpCondJump
         if (typeCmp.isFormalType()) {
             typeCmp = typeCmp.resolveConstraints();
         }
-        assert typeCmp.equals(
-            selectCommonType(type1, type2, ErrorListener.BLACKHOLE).removeNullable());
+
+        TypeConstant typeCommon =
+            selectCommonType(type1, type2, ErrorListener.BLACKHOLE).removeNullable();
+        assert typeCmp.equals(typeCommon.resolveConstraints());
 
         typeCmp.buildCompare(bctx, code, nOp, reg1, reg2, lblTrue);
 

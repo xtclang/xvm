@@ -620,6 +620,7 @@ public abstract class OpCallable extends Op {
         String        sJitName;
         JitMethodDesc jmdCall;
         boolean       fSpecial;
+        boolean       fInterface;
 
         if (m_nFunctionId == A_SUPER) {
             int        nDepth    = bctx.callDepth + 1;
@@ -640,8 +641,9 @@ public abstract class OpCallable extends Op {
             } else {
                 cdTarget = idCallee.ensureClassDesc(ts);
             }
-            jmdCall  = bodySuper.getJitDesc(ts, bctx.typeInfo.getType());
-            fSpecial = true;
+            jmdCall    = bodySuper.getJitDesc(ts, bctx.typeInfo.getType());
+            fSpecial   = true;
+            fInterface = false;
             code.aload(0); // super() can only be on "this"
         } else if (m_nFunctionId <= CONSTANT_OFFSET) {
             MethodConstant   idMethod   = bctx.getConstant(m_nFunctionId, MethodConstant.class);
@@ -649,10 +651,11 @@ public abstract class OpCallable extends Op {
             TypeConstant     typeTarget = idTarget.getType();
             MethodInfo       infoMethod = typeTarget.ensureTypeInfo().getMethodById(idMethod);
 
-            cdTarget = idTarget.ensureClassDesc(ts); // function; no formal types applicable
-            sJitName = infoMethod.ensureJitMethodName(ts);
-            jmdCall  = infoMethod.getJitDesc(ts, typeTarget);
-            fSpecial = false;
+            cdTarget   = idTarget.ensureClassDesc(ts); // function; no formal types applicable
+            sJitName   = infoMethod.ensureJitMethodName(ts);
+            jmdCall    = infoMethod.getJitDesc(ts, typeTarget);
+            fSpecial   = false;
+            fInterface = !typeTarget.isSingleUnderlyingClass(false);
         } else {
             RegisterInfo regFn = bctx.loadArgument(code, m_nFunctionId);
             // call "$invoke(Ctx ctx, Object... args)" via the corresponding MethodHandle
@@ -700,7 +703,7 @@ public abstract class OpCallable extends Op {
         if (fSpecial) {
             code.invokespecial(cdTarget, sJitName, mdCall);
         } else {
-            code.invokestatic(cdTarget, sJitName, mdCall);
+            code.invokestatic(cdTarget, sJitName, mdCall, fInterface);
         }
 
         if (m_nRetValue != Op.A_IGNORE) {

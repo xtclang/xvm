@@ -44,6 +44,9 @@ package callTests {
 
         i5 = 1;
         assert call5(i5) == 6;
+
+//        assert i5.notLessThan(3) != i5;
+//        assert i5.notGreaterThan(3) == i5;
     }
 
     Int call1(Int i, Int j = 2) = i + j;

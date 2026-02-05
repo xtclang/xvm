@@ -1415,7 +1415,7 @@ public class CommonBuilder
             flags |= ClassFile.ACC_ABSTRACT;
         }
         if (method.isFunction() || method.isCtorOrValidator()) {
-            if (classStruct.getFormat() == Format.INTERFACE) {
+            if (method.isAbstract() && classStruct.getFormat() == Format.INTERFACE) {
                 // this must be a funky interface method; just ignore
                 return;
             }
@@ -1498,7 +1498,8 @@ public class CommonBuilder
         "Test", "test",
         "IOException", "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState",
         "Boolean", "Ordered",
-//        "Array",
+        "Orderable",
+        // "Array",
         "TerminalConsole",
     };
     private final static HashSet<String> SKIP_SET = new HashSet<>();
