@@ -413,7 +413,8 @@ val validateTreeSitterGrammar by tasks.registering(Exec::class) {
 
     workingDir(generatedDir)
     executable(treeSitterCliExe.get())
-    args("generate")
+    // Use native QuickJS runtime instead of requiring system Node.js
+    args("generate", "--js-runtime", "native")
 
     // Capture paths at configuration time for logging in doFirst
     val cliExePath = treeSitterCliExe.get()
