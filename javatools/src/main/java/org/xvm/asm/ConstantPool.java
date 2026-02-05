@@ -2216,6 +2216,7 @@ public class ConstantPool
     public TypeConstant      typeBinary()        {TypeConstant      c = m_typeBinary;        if (c == null) {m_typeBinary        = c = ensureImmutableTypeConstant(typeByteArray()                     );} return c;}
     public TypeConstant      typeException१()    {TypeConstant      c = m_typeException१;    if (c == null) {m_typeException१    = c = ensureNullableTypeConstant(typeException()                       );} return c;}
     public TypeConstant      typeString१()       {TypeConstant      c = m_typeString१;       if (c == null) {m_typeString१       = c = ensureNullableTypeConstant(typeString()                          );} return c;}
+    public TypeConstant      typeInjector()      {TypeConstant      c = m_typeInjector;      if (c == null) {m_typeInjector      = c = ensureTerminalTypeConstant(clzInjector()                        );} return c;}
 
     public IntConstant       val0()              {IntConstant       c = m_val0;              if (c == null) {m_val0              = c = ensureIntConstant(0)                                             ;} return c;}
     public SingletonConstant valFalse()          {SingletonConstant c = m_valFalse;          if (c == null) {m_valFalse          = c = ensureSingletonConstConstant(clzFalse()                         );} return c;}
@@ -2288,6 +2289,7 @@ public class ConstantPool
     protected ClassConstant  clzFile()          {return (ClassConstant) getImplicitlyImportedIdentity("File"                     );}
     protected ClassConstant  clzFileNode()      {return                 ensureEcstasyClassConstant   ("fs.FileNode"              );}
     protected ClassConstant  clzFileStore()     {return (ClassConstant) getImplicitlyImportedIdentity("FileStore"                );}
+    protected ClassConstant  clzInjector()      {return                 ensureEcstasyClassConstant   ("reflect.Injector"         );}
 
     /**
      * A special TypeInfo that acts as a place-holder for "this TypeInfo is currently being built".
@@ -4020,6 +4022,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeDirectory;
     private transient TypeConstant      m_typeFile;
     private transient TypeConstant      m_typeFileNode;
+    private transient TypeConstant      m_typeInjector;
     private transient IntConstant       m_val0;
     private transient SingletonConstant m_valFalse;
     private transient SingletonConstant m_valTrue;

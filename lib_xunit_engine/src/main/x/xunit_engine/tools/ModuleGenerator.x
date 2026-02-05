@@ -66,8 +66,9 @@ class ModuleGenerator(String moduleName, Version? version = Null) {
             } catch (Exception ignore) {}
         }
 
-        File sourceFile = buildDir.fileFor($"{appName}_{implName}.x");
-        createModule(sourceFile, appName, qualifier, testModule);
+        String moduleImports = collectModuleImports(testModule);
+        File   sourceFile    = buildDir.fileFor($"{appName}_{implName}.x");
+        createModule(sourceFile, appName, qualifier, moduleImports, testModule);
 
         if (compileModule(repository, sourceFile, buildDir, errors)) {
             errors.add($"Info: Created a host module '{hostName}' for '{moduleName}'");
@@ -81,16 +82,27 @@ class ModuleGenerator(String moduleName, Version? version = Null) {
     /**
      * Create module source file.
      *
+     * @param sourceFile     the file to write the generated module source code to
+     * @param appName        the name of the module to be tested
+     * @param qualifier      the qualifier for the name of the module to be tested
+     * @param moduleImports  a String containing the module imports to be injected into the
+     *                       generated test module
+     * @param moduleTemplate the module template for the module to be tested
+     *
      * @return True iff the source file has been successfully created
      */
-    void createModule(File sourceFile, String appName, String qualifier,
+    void createModule(File           sourceFile,
+                      String         appName,
+                      String         qualifier,
+                      String         moduleImports,
                       ModuleTemplate moduleTemplate) {
 
         String versionString = version == Null ? "" : $" v:{version}";
         String moduleSource  = moduleSourceTemplate
-                                .replace("%appName%"   , appName)
-                                .replace("%qualifier%" , qualifier)
-                                .replace("%version%"   , versionString)
+                                .replace("%appName%"      , appName)
+                                .replace("%qualifier%"    , qualifier)
+                                .replace("%version%"      , versionString)
+                                .replace("%moduleImports%", moduleImports)
                                 ;
         sourceFile.create();
         sourceFile.contents = moduleSource.utf8();
@@ -98,6 +110,13 @@ class ModuleGenerator(String moduleName, Version? version = Null) {
 
     /**
      * Compile the specified source file.
+     *
+     * @param repository  the module repository to load necessary modules from
+     * @param sourceFile  the source file to compile
+     * @param buildDir    the directory to write the compiled module into
+     * @param errors      the error log
+     *
+     * @return True iff the source file has been successfully compiled
      */
     Boolean compileModule(ModuleRepository repository, File sourceFile, Directory buildDir, Log errors) {
         @Inject ecstasy.lang.src.Compiler compiler;
@@ -113,5 +132,35 @@ class ModuleGenerator(String moduleName, Version? version = Null) {
             errors.addAll(compilationErrors);
         }
         return success;
+    }
+
+    /**
+     * Collect the module imports using the direct and transitive dependencies of the specified
+     * module.
+     *
+     * @param testModule  the module to collect the imports from
+     *
+     * @return a String specifying all the module imports that should be injected into the generated
+     *         test module
+     */
+    String collectModuleImports(ModuleTemplate testModule) {
+        StringBuffer                buf   = new StringBuffer();
+        Map<String, ModuleTemplate> deps  = testModule.modulesByPath;
+        Set<String>                 names = new HashSet();
+
+        for (ModuleTemplate mt : deps.values) {
+            if (mt.qualifiedName == TypeSystem.MackKernel) {
+                continue;
+            }
+            names.add(mt.qualifiedName);
+        }
+
+        Int id = 0;
+        for (String qualifiedName : names) {
+            buf.append("    package ").append("xunit_").append(id++)
+               .append(" import ").append(qualifiedName)
+               .append("  inject (ecstasy.reflect.Injector _) using SimpleInjector;\n");
+        }
+        return buf.toString();
     }
 }

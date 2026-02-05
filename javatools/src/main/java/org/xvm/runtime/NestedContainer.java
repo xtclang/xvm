@@ -127,7 +127,7 @@ public class NestedContainer
     public ObjectHandle getInjectable(Frame frame, String sName, TypeConstant type, ObjectHandle hOpts) {
         InjectionSupplier supplier = f_mapResources.get(new InjectionKey(sName, type));
         return supplier == null
-                ? null
+                ? type.isNullable() ? xNullable.NULL : null
                 : supplier.supply(frame, hOpts);
     }
 

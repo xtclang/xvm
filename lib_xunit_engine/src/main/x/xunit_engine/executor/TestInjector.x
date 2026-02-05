@@ -70,14 +70,17 @@ service TestInjector
             }
         }
 
+        Supplier supplier = super(type, name);
         return (Options opts) -> {
             if (Object o := contextLookup(type, name, opts)) {
                 // the context has on override for this injectable
                 return o;
             }
-            // no override found, use the parent injector
-            @Inject Injector injector;
-            return injector.inject(type, name, opts);
+            // no override found, use the super class implementation
+            if (supplier.is(ResourceSupplier)) {
+                return supplier(opts);
+            }
+            return supplier;
         };
     }
 

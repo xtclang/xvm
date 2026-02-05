@@ -98,6 +98,8 @@ public abstract class Utils {
                                             getIdentityConstant().getSignature();
         SIG_GET_RESOURCE              = container.getClassStructure("mgmt.ResourceProvider").findMethod("getResource", 2).
                                             getIdentityConstant().getSignature();
+        SIG_INJECT                    = container.getClassStructure("reflect.Injector").findMethod("inject", 3).
+                                            getIdentityConstant().getSignature();
     }
 
     /**
@@ -283,6 +285,53 @@ public abstract class Utils {
             ObjectHandle[] ahArg = new ObjectHandle[chain.getMaxVars()];
             ahArg[0] = type.ensureTypeHandle(frame.f_context.f_container);
             ahArg[1] = xString.makeHandle(sName);
+
+            iResult = chain.invoke(frame, hInjector, ahArg, Op.A_STACK);
+        }
+
+        return frame.popResult(iResult);
+    }
+
+    /**
+     * Call the "inject" method on the specified injector instance.
+     *
+     * @param frame     the frame that expects a conditional return value
+     * @param hInjector the handle of the injector instance
+     * @param type      the type of the resource to inject
+     * @param sName     the name of the resource to inject
+     * @param hOpts     the options to use for the injection
+     *
+     * @return the handle representing the resource (can be deferred)
+     */
+    public static ObjectHandle callInject(Frame        frame,
+                                          ObjectHandle hInjector,
+                                          TypeConstant type,
+                                          String       sName,
+                                          ObjectHandle hOpts) {
+        int iResult;
+        if (Op.isDeferred(hInjector)) {
+            iResult = hInjector.proceed(frame, frameCaller -> {
+                ObjectHandle hResource = callGetResource(frameCaller,
+                        frameCaller.popStack(), type, sName);
+                return hResource instanceof DeferredCallHandle hDeferred
+                        ? hDeferred.proceed(frameCaller, null)
+                        : frameCaller.pushStack(hResource);
+            });
+        } else {
+            TypeComposition clazz = hInjector.getComposition();
+            CallChain       chain = clazz.getMethodCallChain(SIG_INJECT);
+
+            if (chain.isEmpty()) {
+                return new DeferredCallHandle(xException.makeHandle(frame,
+                        "Missing method \"" + SIG_INJECT.getValueString() +
+                                "\" on " + hInjector.getType().getValueString()));
+            }
+
+            ObjectHandle[] ahArg = new ObjectHandle[chain.getMaxVars()];
+            ahArg[0] = type.ensureTypeHandle(frame.f_context.f_container);
+            ahArg[1] = ahArg[0];
+            ahArg[2] = xString.makeHandle(sName);
+            ahArg[3] = hOpts;
 
             iResult = chain.invoke(frame, hInjector, ahArg, Op.A_STACK);
         }
@@ -1704,6 +1753,7 @@ public abstract class Utils {
     private static TypeConstant      ARGUMENT_ARRAY_TYPE;
     private static SignatureConstant SIG_FREEZE;
     private static SignatureConstant SIG_GET_RESOURCE;
+    private static SignatureConstant SIG_INJECT;
 
      /**
      * Wait until the main context is no longer overwhelmed.

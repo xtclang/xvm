@@ -37,8 +37,6 @@ service BasicResourceProvider
 //            @Inject HashCollector hash;
 //            return hash;
 //
-        case (Injector, "injector"):
-            return &this.maskAs(Injector);
 
         case (Timer, "timer"):
             return (Inject.Options opts) -> {
@@ -130,18 +128,16 @@ service BasicResourceProvider
         if (baseType.is(Type<Destringable>)) {
             // the requested type is Destringable so it may be possible to construct it from a
             // string injection
-            @Inject Injector injector;
-            return True, (Inject.Options opts) -> {
-                var value = injector.inject(String?, name, opts);
-                if (value.is(String)) {
-                    return new baseType.DataType(value);
-                }
-                if (isNullable) {
-                    return Null;
-                }
+            @Inject(name) String? value;
+            if (value.is(String)) {
+                return True, new baseType.DataType(value);
+            }
+            if (isNullable) {
+                return True, Null;
+            }
+            return True, (Inject.Options opts) ->
                 throw new Exception($|Unsupported resource: type="{type}", name="{name}"
-                                   );
-            };
+                                    );
         }
         return False;
     }

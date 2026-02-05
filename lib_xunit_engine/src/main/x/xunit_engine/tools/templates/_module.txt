@@ -1,10 +1,22 @@
 /**
- * Auto generated module to execute XUnit tests.
+ * An auto generated module to execute XUnit tests.
  */
 module %appName%_xunit%qualifier% {
-    package xunit     import xunit.xtclang.org        inject() using SimpleInjector;
-    package engine    import xunit_engine.xtclang.org inject() using SimpleInjector;
-    package %appName% import %appName%%qualifier%     inject() using SimpleInjector;
+    package xunit import xunit.xtclang.org inject (
+        ecstasy.mgmt.ResourceProvider _,
+        engine.executor.ResourceLookupProvider _,
+        xunit.extensions.ExecutionContext _
+    ) using SimpleInjector;
+
+    package engine import xunit_engine.xtclang.org inject (
+        ecstasy.mgmt.ResourceProvider _,
+        engine.executor.ResourceLookupProvider _,
+        xunit.extensions.ExecutionContext _
+    ) using SimpleInjector;
+
+    package %appName% import %appName%%qualifier% inject (ecstasy.reflect.Injector _) using SimpleInjector;
+
+%moduleImports%
 
     import ecstasy.mgmt.*;
 
@@ -13,21 +25,7 @@ module %appName%_xunit%qualifier% {
     import engine.console.ConsoleRunner;
 
     Boolean run(String[] args) {
-        @Inject ModuleRepository repository;
-        @Inject Directory        curDir;
-        @Inject Directory        xunitOutDir;
-
-        ModuleTemplate template  = repository.getResolvedModule(this.qualifiedName);
-        Container      container = new Container(template, Lightweight, repository, SimpleInjector);
-
-        Tuple t = container.invoke("executeTests", ());
-        return t[0].as(Boolean);
-    }
-
-    Boolean executeTests() {
-        Module m = %appName%.as(Module);
-        ConsoleRunner runner = new ConsoleRunner();
-        return runner.run(m);
+        return engine.executor.runTests(%appName%.as(Module));
     }
 
     /**
