@@ -68,16 +68,17 @@ fun findLocalIntelliJ(): File? {
 }
 
 val localIntelliJ: File? = findLocalIntelliJ()
-// Force download with -PforceDownloadIde=true (useful when local IDE has incompatible bundled plugins)
-val forceDownloadIde = project.findProperty("forceDownloadIde")?.toString()?.toBoolean() ?: false
-val useLocalIde = localIntelliJ != null && !forceDownloadIde
+// Download IDE by default (Gradle caches it in ~/.gradle/caches/modules-2/).
+// Local IDE can have incompatible bundled plugins (e.g., Ultimate's Full Line Code Completion).
+// Use -PuseLocalIde=true to use a local installation instead.
+val useLocalIde = project.findProperty("useLocalIde")?.toString()?.toBoolean() ?: false
 
-if (useLocalIde) {
-    logger.info("Using local IntelliJ IDE: ${localIntelliJ!!.absolutePath}")
-} else if (forceDownloadIde && localIntelliJ != null) {
-    logger.info("Skipping local IDE (forceDownloadIde=true), will download IntelliJ Community")
+if (useLocalIde && localIntelliJ != null) {
+    logger.info("Using local IntelliJ IDE: ${localIntelliJ.absolutePath}")
+} else if (useLocalIde && localIntelliJ == null) {
+    logger.warn("useLocalIde=true but no local IDE found, will download IntelliJ Community")
 } else {
-    logger.info("No local IntelliJ IDE found, will download (may cause cache issues on macOS)")
+    logger.info("Downloading IntelliJ Community (cached in GRADLE_USER_HOME/caches/)")
 }
 
 repositories {
@@ -213,9 +214,10 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
 
     intellijPlatform {
-        // Use local IDE if available to avoid Gradle transform cache issues on macOS
-        if (useLocalIde) {
-            local(localIntelliJ!!.absolutePath)
+        // Default: download IntelliJ Community (Gradle caches in ~/.gradle/caches/modules-2/)
+        // Use -PuseLocalIde=true to use a local installation instead
+        if (useLocalIde && localIntelliJ != null) {
+            local(localIntelliJ.absolutePath)
         } else {
             intellijIdeaCommunity(
                 libs.versions.intellij.ide
