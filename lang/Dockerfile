@@ -33,6 +33,12 @@
 #     xhost +local:docker
 #     docker run --rm -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix xtc-lang-dev
 #
+#   Windows WSL2 (requires X server like VcXsrv or X410):
+#     1. Install and start VcXsrv with "Disable access control" checked
+#     2. From WSL2 terminal:
+#        export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0
+#        docker run --rm -it -e DISPLAY=$DISPLAY xtc-lang-dev
+#
 # =============================================================================
 
 FROM eclipse-temurin:21-jdk-jammy
