@@ -5,15 +5,27 @@
 # installed except a JDK and IntelliJ IDEA. All build dependencies (tree-sitter
 # CLI, Zig compiler, etc.) are downloaded and cached by Gradle automatically.
 #
+# HEADLESS OPERATION:
+#   The container runs completely headlessly using Xvfb (X Virtual Framebuffer).
+#   IntelliJ renders to a virtual display inside the container - nothing will
+#   appear on your host desktop. This is intentional for CI/testing purposes.
+#
 # Usage:
 #   # Build the image
 #   docker build -t xtc-lang-dev .
 #
-#   # Run runIde (headless with virtual display)
-#   docker run --rm -it xtc-lang-dev ./gradlew :lang:intellij-plugin:runIde
+#   # Run runIde (headless - no window on host)
+#   docker run --rm -it xtc-lang-dev
 #
 #   # Interactive shell for debugging
 #   docker run --rm -it xtc-lang-dev bash
+#
+#   # Capture all output to a log file for analysis
+#   docker run --rm xtc-lang-dev 2>&1 | tee runIde.log
+#
+# To see IntelliJ on your Mac (requires XQuartz installed and running):
+#   xhost +localhost
+#   docker run --rm -it -e DISPLAY=host.docker.internal:0 xtc-lang-dev
 #
 # =============================================================================
 
@@ -57,11 +69,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ARG INTELLIJ_VERSION=2025.1
 ARG INTELLIJ_BUILD=251.23774.200
 
+# Download, extract, and create symlink for the build to find
 RUN mkdir -p /opt && \
     curl -fsSL "https://download.jetbrains.com/idea/ideaIC-${INTELLIJ_VERSION}.tar.gz" \
     | tar -xz -C /opt && \
     mv /opt/idea-IC-* /opt/idea-IC && \
-    # Create a simpler symlink for the build to find
     ln -s /opt/idea-IC /opt/intellij-idea-community
 
 # =============================================================================
