@@ -124,6 +124,8 @@ ENV PATH="${JAVA_HOME}/bin:${PATH}"
 RUN java -version 2>&1 | head -1 | grep -q "25" || \
     (echo "ASSERTION FAILED: Base JDK must be version 25 (org.xtclang.java.jdk)" && exit 1)
 
+# JDK 21 is provided by IntelliJ's bundled JBR at /opt/idea-IC/jbr
+
 # Install JDK 24 for Kotlin toolchain (avoids Foojay API dependency)
 ARG JDK24_VERSION=24.0.1+9
 RUN ARCH=$(uname -m) && \
@@ -179,9 +181,8 @@ WORKDIR /home/builder/xvm
 # The --mount=type=cache enables BuildKit caching for faster rebuilds when using
 # DOCKER_BUILDKIT=1. Without BuildKit, this is ignored and builds from scratch.
 
-RUN --mount=type=cache,target=/home/builder/.gradle,uid=1000,gid=1000 \
-    ./gradlew --no-daemon \
-    -Dorg.gradle.java.installations.paths=/opt/jdk-24 \
+RUN ./gradlew --no-daemon \
+    -Dorg.gradle.java.installations.paths=/opt/jdk-24,/opt/idea-IC/jbr \
     build || true
 
 # Verify JDKs are available
@@ -196,4 +197,4 @@ RUN echo "Verifying JDKs..." && \
 # The with-display script starts Xvfb before running the provided command.
 
 ENTRYPOINT ["/usr/local/bin/with-display"]
-CMD ["./gradlew", "--no-daemon", "-Dorg.gradle.java.installations.paths=/opt/jdk-24", "-PlangBuild=true", "-PuseLocalIde=true", ":lang:intellij-plugin:runIde"]
+CMD ["./gradlew", "--no-daemon", "-Dorg.gradle.java.installations.paths=/opt/jdk-24,/opt/idea-IC/jbr", "-PlangBuild=true", "-PuseLocalIde=true", ":lang:intellij-plugin:runIde"]

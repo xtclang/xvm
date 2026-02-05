@@ -59,7 +59,7 @@ val updateGeneratedExamples by tasks.registering(Copy::class) {
 // =============================================================================
 
 // Projects to aggregate standard lifecycle tasks from
-val coreProjects = listOf(":dsl", ":lsp-server", ":intellij-plugin")
+val coreProjects = listOf(":dsl", ":tree-sitter", ":lsp-server", ":intellij-plugin")
 val allProjects = coreProjects + ":vscode-extension"
 
 // Map of aggregate task -> subproject task (null means same name)
