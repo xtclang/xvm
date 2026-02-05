@@ -116,8 +116,17 @@ jobs:
             - name: Fetch Sources
               uses: actions/checkout@v6
               with:
-                  fetch-depth: 1
+                  fetch-depth: 0  # Need full history for path filtering
                   show-progress: true
+
+            - name: Check for lang-related changes
+              id: changes
+              uses: dorny/paths-filter@v3
+              with:
+                  filters: |
+                      lang:
+                        - 'lang/**'
+                        - 'lib_ecstasy/**/*.x'
 
             - name: 🚀 Publishing Configuration
               shell: bash
@@ -234,9 +243,22 @@ jobs:
                 inspect_gradle_cache "after manual tests"
                 echo "✅ Manual tests completed"
 
+            - name: Skip Tree-sitter (no lang changes)
+              if: |
+                  success() &&
+                  matrix.os == 'ubuntu-latest' &&
+                  env.ORG_GRADLE_PROJECT_includeBuildLang == 'true' &&
+                  steps.changes.outputs.lang != 'true'
+              run: |
+                  echo "⏭️ Skipping Tree-sitter validation - no changes in lang/ or lib_ecstasy/*.x"
+                  echo "Changed paths filter result: lang=${{ steps.changes.outputs.lang }}"
+
             - name: Validate Tree-sitter Grammar and LSP Adapters
-              #if: success() && matrix.os == 'ubuntu-latest' && env.ORG_GRADLE_PROJECT_includeBuildLang == 'true'
-              if: false
+              if: |
+                  success() &&
+                  matrix.os == 'ubuntu-latest' &&
+                  env.ORG_GRADLE_PROJECT_includeBuildLang == 'true' &&
+                  steps.changes.outputs.lang == 'true'
               shell: bash
               env:
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
