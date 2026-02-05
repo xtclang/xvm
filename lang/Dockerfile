@@ -10,9 +10,9 @@
 #   IntelliJ renders to a virtual display inside the container - nothing will
 #   appear on your host desktop. This is intentional for CI/testing purposes.
 #
-# Usage:
-#   # Build the image
-#   docker build -t xtc-lang-dev .
+# Usage (from project root directory):
+#   # Build the image (must run from project root, not lang/)
+#   docker build -f lang/Dockerfile -t xtc-lang-dev .
 #
 #   # Run runIde (headless - no window on host)
 #   docker run --rm -it xtc-lang-dev
@@ -57,19 +57,19 @@ LABEL description="Build environment for XTC Language tooling (IntelliJ plugin, 
 # - libfreetype6: Font rendering
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    xvfb \
-    libxi6 \
-    libxtst6 \
-    libxrender1 \
-    libxrandr2 \
-    libx11-6 \
+    ca-certificates \
+    curl \
     fontconfig \
     fonts-dejavu-core \
-    libfreetype6 \
     git \
-    curl \
+    libfreetype6 \
+    libx11-6 \
+    libxi6 \
+    libxrandr2 \
+    libxrender1 \
+    libxtst6 \
     wget \
-    ca-certificates \
+    xvfb \
     && rm -rf /var/lib/apt/lists/*
 
 # =============================================================================
