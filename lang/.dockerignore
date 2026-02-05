@@ -1,0 +1,22 @@
+# Build outputs
+**/build/
+**/.gradle/
+
+# IDE files
+**/.idea/
+**/*.iml
+**/.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git (we need .git for version detection)
+# .git/
+
+# Node modules (for vscode-extension)
+**/node_modules/
+
+# Test outputs
+**/test-results/
+**/reports/
