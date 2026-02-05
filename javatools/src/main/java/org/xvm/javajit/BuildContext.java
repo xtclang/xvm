@@ -837,16 +837,8 @@ public class BuildContext {
                         return reg;
                     }
                 } else if (reg.cd().isPrimitive()) {
-                    assert reg.flavor() == NullablePrimitive && mtxType.isPrimitive();
-
-                    // we need to narrow from X? to X, where X is primitive - that simply means
-                    // popping the nullable flag
-                    if (loaded) {
-                        code.pop();
-                    } else {
-                        // TODO: load should pop the nullable flag
-                        throw new UnsupportedOperationException();
-                    }
+                    assert reg.flavor() == NullablePrimitive &&
+                        (mtxType.isPrimitive() || mtxType.isTypeParameter());
                     return reg;
                 }
 
