@@ -23,9 +23,15 @@
 #   # Capture all output to a log file for analysis
 #   docker run --rm xtc-lang-dev 2>&1 | tee runIde.log
 #
-# To see IntelliJ on your Mac (requires XQuartz installed and running):
-#   xhost +localhost
-#   docker run --rm -it -e DISPLAY=host.docker.internal:0 xtc-lang-dev
+# To see IntelliJ window on your host (optional):
+#
+#   macOS (requires XQuartz installed and running):
+#     xhost +localhost
+#     docker run --rm -it -e DISPLAY=host.docker.internal:0 xtc-lang-dev
+#
+#   Linux:
+#     xhost +local:docker
+#     docker run --rm -it -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix xtc-lang-dev
 #
 # =============================================================================
 
