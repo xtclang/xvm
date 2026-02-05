@@ -181,7 +181,6 @@ WORKDIR /home/builder/xvm
 
 RUN --mount=type=cache,target=/home/builder/.gradle,uid=1000,gid=1000 \
     ./gradlew --no-daemon \
-    -Dorg.gradle.jvmargs="-Xmx2g" \
     -Dorg.gradle.java.installations.paths=/opt/jdk-24 \
     build || true
 
@@ -197,4 +196,4 @@ RUN echo "Verifying JDKs..." && \
 # The with-display script starts Xvfb before running the provided command.
 
 ENTRYPOINT ["/usr/local/bin/with-display"]
-CMD ["./gradlew", "--no-daemon", "-Dorg.gradle.jvmargs=-Xmx2g", "-Dorg.gradle.java.installations.paths=/opt/jdk-24", "-PlangBuild=true", "-PuseLocalIde=true", ":lang:intellij-plugin:runIde"]
+CMD ["./gradlew", "--no-daemon", "-Dorg.gradle.java.installations.paths=/opt/jdk-24", "-PlangBuild=true", "-PuseLocalIde=true", ":lang:intellij-plugin:runIde"]
