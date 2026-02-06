@@ -72,7 +72,8 @@ class XtcNewProjectWizardStep(
 
     private fun refreshVfs(projectPath: java.nio.file.Path) {
         LocalFileSystem.getInstance().refreshAndFindFileByNioFile(projectPath)?.let { projectDir ->
-            VfsUtil.markDirtyAndRefresh(false, true, true, projectDir)
+            // async=true to avoid blocking the EDT (SlowOperations assertion)
+            VfsUtil.markDirtyAndRefresh(true, true, true, projectDir)
             logger.info("Refreshed VFS for project directory: $projectPath")
         } ?: logger.warn("Could not find project directory in VFS: $projectPath")
     }

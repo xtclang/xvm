@@ -330,8 +330,50 @@ val publishPlugin by tasks.existing {
     dependsOn(publishCheck)
 }
 
+// Searchable options allow IntelliJ's Settings search (Cmd+Shift+A / Ctrl+Shift+A) to index
+// this plugin's settings pages and configuration UI text. When disabled, users cannot find
+// plugin settings via the search bar — they must navigate to them manually. Enabling it adds
+// ~30-60s to the build because it launches a headless IDE to index all settings pages.
+// Enable with: -Plsp.buildSearchableOptions=true
+val buildSearchableOptionsEnabled =
+    providers
+        .gradleProperty("lsp.buildSearchableOptions")
+        .map { it.toBoolean() }
+        .getOrElse(false)
+
+val searchableOptionsStatus =
+    if (buildSearchableOptionsEnabled) "enabled" else "disabled (use -Plsp.buildSearchableOptions=true to enable)"
+logger.lifecycle("[ide] Searchable options: $searchableOptionsStatus")
+
 val buildSearchableOptions by tasks.existing {
-    enabled = false // Speeds up build; enable for production
+    enabled = buildSearchableOptionsEnabled
+    inputs.property("buildSearchableOptionsEnabled", buildSearchableOptionsEnabled)
+}
+
+// =============================================================================
+// Plugin Distribution ZIP
+// =============================================================================
+// The buildPlugin task creates a distributable ZIP archive that can be installed
+// in any IntelliJ IDE. Log the output path and installation instructions.
+
+val buildPlugin by tasks.existing {
+    val distDir = layout.buildDirectory.dir("distributions")
+    val rootDir = project.rootDir
+    doLastTask {
+        val dir = distDir.get().asFile
+        val zipFiles = dir.listFiles { f -> f.extension == "zip" }.orEmpty()
+        if (zipFiles.isNotEmpty()) {
+            val zip = zipFiles.first()
+            val relPath = zip.relativeTo(rootDir)
+            logger.lifecycle("[plugin] Distribution ZIP: $relPath (${zip.length().humanSize()})")
+            logger.lifecycle("[plugin] Absolute path:    ${zip.absolutePath}")
+            logger.lifecycle("[plugin]")
+            logger.lifecycle("[plugin] To install in IntelliJ IDEA:")
+            logger.lifecycle("[plugin]   1. Open Settings -> Plugins -> gear icon -> Install Plugin from Disk...")
+            logger.lifecycle("[plugin]   2. Select: ${zip.absolutePath}")
+            logger.lifecycle("[plugin]   3. Restart the IDE")
+        }
+    }
 }
 
 // =============================================================================

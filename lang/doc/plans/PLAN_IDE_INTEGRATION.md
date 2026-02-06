@@ -67,7 +67,7 @@ out-of-process with an auto-provisioned JRE to meet this requirement (IntelliJ r
 
 | Feature | Mock | Tree-sitter | Compiler |
 |---------|------|-------------|----------|
-| Syntax highlighting | - | TextMate | TextMate |
+| Syntax highlighting | - | TextMate + semantic tokens (lexer) | Full semantic tokens |
 | Document symbols | Limited | Full | Full |
 | Go-to-definition (same file) | By name | By name | Semantic |
 | Go-to-definition (cross-file) | - | - | Full |
@@ -143,10 +143,33 @@ Full tree-sitter support for fast, incremental parsing:
    - Out-of-process LSP server runs with Java 25+ (FFM API for tree-sitter)
    - JRE auto-provisioning via Foojay Disco API
 
-2. **Implement semantic tokens**
-   - Add `textDocument/semanticTokens/full` to LSP server
-   - Use tree-sitter or compiler for accurate token types
-   - Better than TextMate for semantic highlighting
+2. **Implement semantic tokens (two phases)**
+
+   The LSP server already has `semanticTokensFull` wired up and the adapter interface
+   defines `getSemanticTokens()`, but no adapter implements it and the server doesn't
+   advertise the capability yet.
+
+   **Phase 1 — Lexer-based (no compiler needed):**
+   - Implement `getSemanticTokens()` in `TreeSitterAdapter` using tree-sitter node types
+   - Token types achievable with a lexer/tree-sitter alone:
+     - `keyword` — control flow, declarations, modifiers
+     - `decorator` — annotations (`@Test`, `@Inject`, etc.)
+     - `comment` — line and block comments
+     - `string` — regular and interpolated strings
+     - `number` — integer, float, hex, binary literals
+     - `operator` — all operator types
+     - `type` — identifiers matching `[A-Z]...` (heuristic, not semantic)
+     - `function` — identifiers followed by `(` (heuristic)
+   - Register `SemanticTokensWithRegistrationOptions` in server capabilities
+   - Move `getSemanticTokens` from "Semantic features" to "Tree-sitter capable" in adapter
+   - This fixes the immediate problem: `@Test` will get `decorator` token type and
+     render with distinct annotation coloring in all themes
+
+   **Phase 2 — Compiler-based (requires pluggable compiler):**
+   - Distinguish classes vs interfaces vs enums vs type parameters
+   - Distinguish variables vs parameters vs properties
+   - Add modifiers: `declaration`, `definition`, `readonly`, `static`, `deprecated`
+   - Cross-file type resolution for accurate identifier classification
 
 3. **Complete VS Code extension**
    - Finish LSP client integration
