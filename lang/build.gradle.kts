@@ -106,4 +106,3 @@ val runVsCodeExtension by tasks.registering {
     description = "Launch VS Code with the XTC extension loaded for testing"
     dependsOn(project(":vscode-extension").tasks.named("runCode"))
 }
-

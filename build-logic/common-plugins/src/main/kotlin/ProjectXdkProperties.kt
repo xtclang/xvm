@@ -1,9 +1,10 @@
+import java.io.File
+import javax.inject.Inject
+import org.gradle.api.Action
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
-import org.gradle.api.Task
-import org.gradle.api.Action
-import javax.inject.Inject
 
 abstract class ProjectXdkProperties @Inject constructor(
     private val providers: ProviderFactory,
@@ -96,4 +97,31 @@ fun Task.doFirstTask(block: Task.() -> Unit) {
 
 fun Task.doLastTask(block: Task.() -> Unit) {
     doLast(Action { block(this) })
+}
+
+/** Human-readable file size (e.g., "12 KB", "6 MB"). */
+fun Long.humanSize(): String =
+    when {
+        this >= 1L shl 20 -> "${this shr 20} MB"
+        this >= 1L shl 10 -> "${this shr 10} KB"
+        else -> "$this B"
+    }
+
+/**
+ * Log files in a directory with sizes at lifecycle level.
+ * [rootDir] must be captured at configuration time for CC safety.
+ */
+fun Task.logCopiedFiles(
+    tag: String,
+    dir: File,
+    rootDir: File,
+    vararg notes: String,
+) {
+    val files = dir.listFiles().orEmpty()
+    val relPath = dir.relativeTo(rootDir)
+    logger.lifecycle("[$tag] ${files.size} file(s) -> $relPath/ (${files.sumOf { it.length() }.humanSize()})")
+    files.forEach { f ->
+        logger.lifecycle("[$tag]   ${f.name} (${f.length().humanSize()})")
+    }
+    notes.forEach { logger.lifecycle("[$tag]   $it") }
 }
