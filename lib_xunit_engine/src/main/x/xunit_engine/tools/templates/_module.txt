@@ -2,21 +2,14 @@
  * An auto generated module to execute XUnit tests.
  */
 module %appName%_xunit%qualifier% {
-    package xunit import xunit.xtclang.org inject (
-        ecstasy.mgmt.ResourceProvider _,
+    package engine import xunit_engine.xtclang.org inject (
         engine.executor.ResourceLookupProvider _,
         xunit.extensions.ExecutionContext _
     ) using SimpleInjector;
 
-    package engine import xunit_engine.xtclang.org inject (
-        ecstasy.mgmt.ResourceProvider _,
-        engine.executor.ResourceLookupProvider _,
-        xunit.extensions.ExecutionContext _
-    ) using SimpleInjector;
+    package xunit import xunit.xtclang.org inject (ecstasy.reflect.Injector _) using SimpleInjector;
 
     package %appName% import %appName%%qualifier% inject (ecstasy.reflect.Injector _) using SimpleInjector;
-
-%moduleImports%
 
     import ecstasy.mgmt.*;
 

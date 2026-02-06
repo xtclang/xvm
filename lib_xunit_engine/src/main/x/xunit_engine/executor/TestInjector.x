@@ -1,9 +1,7 @@
 import ecstasy.annotations.Inject.Options;
 
-import ecstasy.mgmt.BasicResourceProvider;
 import ecstasy.mgmt.ModuleRepository;
 import ecstasy.mgmt.ResourceProvider;
-import ecstasy.mgmt.Container.Linker;
 
 import ecstasy.reflect.Injector;
 
@@ -23,10 +21,14 @@ service TestInjector
         implements ResourceLookupProvider {
 
     construct () {
-        @Inject Directory curDir;
+        @Inject Directory        curDir;
         @Inject ModuleRepository repository;
+        @Inject Directory        testOutputRoot;
+        this.testOutputRoot = testOutputRoot;
         construct BaseResourceProvider(curDir, repository);
     }
+
+    Directory testOutputRoot;
 
     /**
      * The current execution context.
@@ -47,8 +49,8 @@ service TestInjector
         case (ResourceLookupProvider, _):
             return &this.maskAs(ResourceLookupProvider);
 
-        case (ResourceProvider, _):
-            return &this.maskAs(ResourceProvider);
+        case (Injector, _):
+            return &this.maskAs(Injector);
 
         case (ExecutionContext, _):
             return getExecutionContext;
@@ -59,8 +61,7 @@ service TestInjector
                 return tempDir;
 
             case "testOutputRoot":
-                @Inject Directory testOutputRoot;
-                return testOutputRoot;
+                return testOutputRoot.ensure();
 
             case "testOutput":
                 return getTestDirectory;
@@ -126,11 +127,7 @@ service TestInjector
     /**
      * Returns the directory to for any files specific for the current test.
      */
-    Directory getTestDirectory(Options opts) {
-        @Inject Directory testOutputRoot;
-        testOutputRoot.ensure();
-        return testDirectoryUnder(testOutputRoot);
-    }
+    Directory getTestDirectory(Options opts) = testDirectoryUnder(testOutputRoot.ensure());
 
     /**
      * Returns the directory to for any files specific for the current test.

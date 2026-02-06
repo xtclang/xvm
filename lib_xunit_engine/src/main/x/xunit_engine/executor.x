@@ -7,8 +7,5 @@ package executor {
      *
      * @return True iif all the tests succeeded or False if there was a test failure or other error
      */
-    Boolean runTests(Module m) {
-        console.ConsoleRunner runner = new console.ConsoleRunner();
-        return runner.run(m);
-    }
+    Boolean runTests(Module m) = new console.ConsoleRunner().run(m);
 }

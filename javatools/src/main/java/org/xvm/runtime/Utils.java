@@ -311,8 +311,8 @@ public abstract class Utils {
         int iResult;
         if (Op.isDeferred(hInjector)) {
             iResult = hInjector.proceed(frame, frameCaller -> {
-                ObjectHandle hResource = callGetResource(frameCaller,
-                        frameCaller.popStack(), type, sName);
+                ObjectHandle hResource = callInject(frameCaller,
+                        frameCaller.popStack(), type, sName, hOpts);
                 return hResource instanceof DeferredCallHandle hDeferred
                         ? hDeferred.proceed(frameCaller, null)
                         : frameCaller.pushStack(hResource);

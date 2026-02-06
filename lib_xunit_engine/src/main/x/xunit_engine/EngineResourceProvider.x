@@ -19,9 +19,7 @@ service EngineResourceProvider(Directory curDir, Directory outDir, ModuleReposit
 
     @Override
     Supplier getResource(Type type, String name) {
-        switch (type, name) {
-
-        case (Directory, "testOutputRoot"):
+        if (type.is(Type<Directory>) && name.equals("testOutputRoot")) {
             return testOutputRootDir;
         }
 

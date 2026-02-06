@@ -94,7 +94,7 @@ service BasicResourceProvider
             // if the type is Nullable, no need to complain; just return Null, otherwise
             // return a deferred exception (thrown only if the container actually asks for the
             // resource at run time)
-            return Nullable.as(Type).isA(type)
+            return type.isNullable()
                 ? Null.as(Supplier)
                 : (Inject.Options opts) ->
                     throw new Exception($|Unsupported resource: type="{type}", name="{name}"
@@ -121,14 +121,15 @@ service BasicResourceProvider
      */
     conditional Supplier getDestringableResource(Type type, String name) {
         Type    baseType   = type;
-        Boolean isNullable = Nullable.as(Type).isA(type);
-        if (isNullable) {
-            baseType = type.underlyingTypes[1];
+        Boolean isNullable = False;
+        if (Type nonNullable := type.isNullable()) {
+            baseType   = nonNullable;
+            isNullable = True;
         }
         if (baseType.is(Type<Destringable>)) {
             // the requested type is Destringable so it may be possible to construct it from a
             // string injection
-            @Inject(name) String? value;
+            @Inject(resourceName=name) String? value;
             if (value.is(String)) {
                 return True, new baseType.DataType(value);
             }

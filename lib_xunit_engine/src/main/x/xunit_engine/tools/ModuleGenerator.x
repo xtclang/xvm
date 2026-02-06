@@ -1,16 +1,7 @@
 import ecstasy.mgmt.ModuleRepository;
 
-import ecstasy.reflect.AnnotationTemplate;
 import ecstasy.reflect.ClassTemplate;
-import ecstasy.reflect.ClassTemplate.Composition;
-import ecstasy.reflect.ClassTemplate.Contribution;
-import ecstasy.reflect.MethodTemplate;
 import ecstasy.reflect.ModuleTemplate;
-import ecstasy.reflect.MultiMethodTemplate;
-import ecstasy.reflect.ParameterTemplate;
-import ecstasy.reflect.PropertyTemplate;
-import ecstasy.reflect.TypeParameter;
-import ecstasy.reflect.TypeTemplate;
 
 import ecstasy.text.Log;
 
@@ -102,7 +93,6 @@ class ModuleGenerator(String moduleName, Version? version = Null) {
                                 .replace("%appName%"      , appName)
                                 .replace("%qualifier%"    , qualifier)
                                 .replace("%version%"      , versionString)
-                                .replace("%moduleImports%", moduleImports)
                                 ;
         sourceFile.create();
         sourceFile.contents = moduleSource.utf8();
