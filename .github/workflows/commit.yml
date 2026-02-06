@@ -67,10 +67,11 @@ env:
     ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
     RUN_INTEGRATION_TESTS: true
 
-    # Lang build inclusion - defaults to true for push/PR, configurable for workflow_dispatch
-    # These env vars override gradle.properties settings (which may have lang disabled)
-    ORG_GRADLE_PROJECT_includeBuildLang: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.include-lang == true || github.event.inputs.include-lang == 'true' }}
-    ORG_GRADLE_PROJECT_includeBuildAttachLang: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.include-lang == true || github.event.inputs.include-lang == 'true' }}
+    # Lang build inclusion - defaults to false (matching gradle.properties).
+    # Only enabled via workflow_dispatch with include-lang=true.
+    # Tree-sitter validation steps have their own path-based gating.
+    ORG_GRADLE_PROJECT_includeBuildLang: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.include-lang == true || github.event.inputs.include-lang == 'true') }}
+    ORG_GRADLE_PROJECT_includeBuildAttachLang: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.include-lang == true || github.event.inputs.include-lang == 'true') }}
 
     skip_manual_tests: ${{ github.event.inputs.skip-tests == true || github.event.inputs.skip-tests == 'true' }}
     # Default to parallel mode (true) for push/PR events; for workflow_dispatch, use the input value
