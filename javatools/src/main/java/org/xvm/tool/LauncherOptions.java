@@ -219,7 +219,7 @@ public abstract class LauncherOptions {
      * Common helper to parse path options that support both multiple invocations and path separator splitting.
      * For example: -L path1 -L path2 and -L path1:path2 both work.
      * <p>
-     * Note: Tilde expansion and glob/wildcard expansion are handled by the shell before arguments reach Java.
+     * NOTE: Tilde expansion and glob/wildcard expansion are handled by the shell before arguments reach Java.
      * For programmatic use via the Builder API, callers should provide resolved paths.
      *
      * @param optionName the short option name (e.g., "L", "r")
