@@ -61,9 +61,9 @@ on:
                 default: false
 
 env:
-    # Add manual tests as included builds in the composite build configuration
-    ORG_GRADLE_PROJECT_includeBuildManualTests: true
-    ORG_GRADLE_PROJECT_includeBuildAttachManualTests: true
+    # Add manual tests as included builds - defaults to true for push/PR, controlled by include-lang for workflow_dispatch
+    ORG_GRADLE_PROJECT_includeBuildManualTests: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.include-lang == true || github.event.inputs.include-lang == 'true' }}
+    ORG_GRADLE_PROJECT_includeBuildAttachManualTests: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.include-lang == true || github.event.inputs.include-lang == 'true' }}
     ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
 
     # Lang build inclusion - defaults to true for push/PR, configurable for workflow_dispatch
