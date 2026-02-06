@@ -113,16 +113,16 @@ const DiscoveryConfiguration {
          * @param testModule  the `module containing the tests to discover
          */
         Builder autoConfigure(Module testModule) {
-            @Inject(discovery.ConfigDiscoveryTestPackage) String[]? testPackages;
-            @Inject(discovery.ConfigDiscoveryTestClass)   String[]? testClasses;
-            @Inject(discovery.ConfigDiscoveryTest)        String[]? tests;
-            @Inject(discovery.ConfigDiscoveryGroup)       String[]? testGroups;
-            @Inject(discovery.ConfigDiscoveryVerbose)     String?   verboseConfig;
+            @Inject(discovery.ConfigDiscoveryTestPackage) List<String>? testPackages;
+            @Inject(discovery.ConfigDiscoveryTestClass)   List<String>? testClasses;
+            @Inject(discovery.ConfigDiscoveryTest)        List<String>? tests;
+            @Inject(discovery.ConfigDiscoveryGroup)       List<String>? testGroups;
+            @Inject(discovery.ConfigDiscoveryVerbose)     String?       verboseConfig;
 
             Boolean verbose = verboseConfig.is(String) && verboseConfig.toLowercase() == "true";
 
             Selector[] selectors = new Array();
-            if (testPackages.is(String[])) {
+            if (testPackages.is(List<String>)) {
                 for (String testPackage : testPackages) {
                     if (Class clz := findClass(testModule, testPackage)) {
                         assert:arg Selector selector := discovery.selectors.forPackage(clz)
@@ -134,7 +134,7 @@ const DiscoveryConfiguration {
                 }
             }
 
-            if (testClasses.is(String[])) {
+            if (testClasses.is(List<String>)) {
                 for (String testClass : testClasses) {
                     if (Class clz := findClass(testModule, testClass)) {
                         assert:arg Selector selector := discovery.selectors.forClass(clz)
@@ -146,7 +146,7 @@ const DiscoveryConfiguration {
                 }
             }
 
-            if (tests.is(String[])) {
+            if (tests.is(List<String>)) {
                 for (String test : tests) {
 // ToDo JK: Fix why specifying a method seems to hang somewhere
 //                    assert:arg Selector[] testSelectors := discovery.selectors.forMethod(clz, test)

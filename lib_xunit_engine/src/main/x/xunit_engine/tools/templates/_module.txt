@@ -1,16 +1,30 @@
 /**
- * Auto generated module to execute XUnit tests.
+ * An auto generated module to execute XUnit tests.
  */
 module %appName%_xunit%qualifier% {
-    package xunit     import xunit.xtclang.org;
-    package engine    import xunit_engine.xtclang.org;
-    package %appName% import %appName%%qualifier%;
+    package engine import xunit_engine.xtclang.org inject (
+        engine.executor.ResourceLookupProvider _,
+        xunit.extensions.ExecutionContext _
+    ) using SimpleInjector;
+
+    package xunit import xunit.xtclang.org inject (ecstasy.reflect.Injector _) using SimpleInjector;
+
+    package %appName% import %appName%%qualifier% inject (ecstasy.reflect.Injector _) using SimpleInjector;
+
+    import ecstasy.mgmt.*;
+
+    import ecstasy.reflect.ModuleTemplate;
 
     import engine.console.ConsoleRunner;
 
     Boolean run(String[] args) {
-        Module m = %appName%.as(Module);
-        ConsoleRunner runner = new ConsoleRunner();
-        return runner.run(m);
+        return engine.executor.runTests(%appName%.as(Module));
+    }
+
+    /**
+     * A singleton service to inject resources into XUnit tests.
+     */
+    static service SimpleInjector
+            extends engine.executor.TestInjector {
     }
 }

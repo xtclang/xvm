@@ -1,94 +1,67 @@
 import ecstasy.annotations.Inject.Options;
 
-import ecstasy.fs.DirectoryFileStore;
-import ecstasy.fs.FileNode;
+import ecstasy.mgmt.ModuleRepository;
+import ecstasy.mgmt.ResourceProvider;
 
-import ecstasy.lang.src.Compiler;
+import ecstasy.reflect.Injector;
 
-import ecstasy.mgmt.*;
-
-import ecstasy.reflect.ModuleTemplate;
-
-import extensions.ExtensionRegistry;
-
-import xunit.MethodOrFunction;
+import executor.ResourceLookupProvider;
 
 import xunit.extensions.ExecutionContext;
 import xunit.extensions.ResourceLookupCallback;
 
 /**
- * A `ResourceProvider` implementation that can provide resources to inject into tests.
+ * A resource provider use in the generated test module.
  *
- * @param curDir  the current working directory
- * @param outDir  the XUnit root test output directory
+ * This provider tracks the current ExecutionContext so that it can inject resources based on the
+ * currently executing test.
  */
-service TestResourceProvider(Directory curDir, Directory outDir)
-        extends BasicResourceProvider {
+service TestInjector
+        extends BaseResourceProvider
+        implements ResourceLookupProvider {
 
-    /**
-     * The `FileStore` to use to access files.
-     */
-    @Lazy FileStore store.calc() {
-        @Inject FileStore storage;
-        return storage;
+    construct () {
+        @Inject Directory        curDir;
+        @Inject ModuleRepository repository;
+        @Inject Directory        testOutputRoot;
+        this.testOutputRoot = testOutputRoot;
+        construct BaseResourceProvider(curDir, repository);
     }
 
-    /**
-     * The build output directory.
-     */
-    @Lazy Directory buildDir.calc() = curDir.dirFor(DefaultXUnitDir);
-
-    /**
-     * The test output root directory directory.
-     */
-    @Lazy Directory testOutputRootDir.calc() = outDir.dirFor(TestOutputRootDir);
+    Directory testOutputRoot;
 
     /**
      * The current execution context.
      */
-    private ExecutionContext? context = Null;
+    @Override
+    public/private ExecutionContext? context = Null;
 
     /**
      * The current lookup callbacks.
      */
-    private ResourceLookupCallback[] lookupCallbacks = [];
+    @Override
+    public/private ResourceLookupCallback[] lookupCallbacks = [];
 
     @Override
-    Supplier getResource(Type type, String name) {
-        import Container.Linker;
+    ResourceProvider.Supplier getResource(Type type, String name) {
 
         switch (type, name) {
-        case (TestResourceProvider, _):
-            return this;
+        case (ResourceLookupProvider, _):
+            return &this.maskAs(ResourceLookupProvider);
 
-        case (ResourceProvider, _):
-            return &this.maskAs(ResourceProvider);
+        case (Injector, _):
+            return &this.maskAs(Injector);
 
         case (ExecutionContext, _):
             return getExecutionContext;
 
-        case (FileStore, "storage"):
-            return &store.maskAs(FileStore);
-
         case (Directory, _):
             switch (name) {
-            case "rootDir":
-                return curDir;
-
-            case "homeDir":
-                return curDir;
-
-            case "curDir":
-                return curDir;
-
             case "tmpDir":
                 return tempDir;
 
-            case "buildDir":
-                return buildDir;
-
             case "testOutputRoot":
-                return testOutputRootDir;
+                return testOutputRoot.ensure();
 
             case "testOutput":
                 return getTestDirectory;
@@ -96,29 +69,15 @@ service TestResourceProvider(Directory curDir, Directory outDir)
             default:
                 return super(type, name);
             }
-
-        case (Console, _):
-            @Inject Console console;
-            return console;
-
-        case (Compiler, "compiler"):
-            @Inject Compiler compiler;
-            return compiler;
-
-        case (Linker, "linker"):
-            @Inject Linker linker;
-            return linker;
-
-        case (ModuleRepository, "repository"):
-            @Inject ModuleRepository repository;
-            return repository;
         }
 
         Supplier supplier = super(type, name);
         return (Options opts) -> {
             if (Object o := contextLookup(type, name, opts)) {
+                // the context has on override for this injectable
                 return o;
             }
+            // no override found, use the super class implementation
             if (supplier.is(ResourceSupplier)) {
                 return supplier(opts);
             }
@@ -147,8 +106,10 @@ service TestResourceProvider(Directory curDir, Directory outDir)
     /**
      * Set the current ExecutionContext.
      *
-     * @param context  the current ExecutionContext
+     * @param context    the current ExecutionContext, or Null if there is no current context
+     * @param callbacks  the current resource lookup callbacks
      */
+     @Override
     void setExecutionContext(ExecutionContext? context, ResourceLookupCallback[] callbacks) {
         this.context         = context;
         this.lookupCallbacks = callbacks;
@@ -166,10 +127,7 @@ service TestResourceProvider(Directory curDir, Directory outDir)
     /**
      * Returns the directory to for any files specific for the current test.
      */
-    Directory getTestDirectory(Options opts) {
-        Directory testDir = testOutputRootDir.ensure();
-        return testDirectoryUnder(testDir);
-    }
+    Directory getTestDirectory(Options opts) = testDirectoryUnder(testOutputRoot.ensure());
 
     /**
      * Returns the directory to for any files specific for the current test.

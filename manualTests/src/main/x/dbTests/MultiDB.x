@@ -4,7 +4,7 @@ module MultiDB {
 
     import oodb.*;
 
-    typedef (oodb.Connection<MainSchema>  + MainSchema) as Connection;
+    typedef (oodb.Connection<MainSchema> + MainSchema) as Connection;
 
     interface MainSchema
             extends RootSchema {

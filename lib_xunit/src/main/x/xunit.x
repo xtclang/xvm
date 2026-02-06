@@ -39,4 +39,27 @@ module xunit.xtclang.org {
 	     */
 	    static SkipResult NotSkipped = new SkipResult(False);
     }
+
+    /**
+     * A simple Injector service to pass injectable resources to test modules.
+     *
+     * This service is typically used as the injector for module imports inside test modules.
+     */
+    static service PassThruInjector
+            implements ecstasy.reflect.Injector
+            implements ecstasy.mgmt.ResourceProvider {
+
+        @Override
+        Supplier getResource(Type type, String name) {
+            assert as "Should not be called, PassThruInjector should only be used as an Injector";
+        }
+
+        @Override
+        <InjectionType> InjectionType inject(Type<InjectionType> type,
+                                             String              name,
+                                             Inject.Options      opts = Null) {
+            @Inject ecstasy.reflect.Injector injector;
+            return injector.inject(type, name, opts);
+        }
+    }
 }

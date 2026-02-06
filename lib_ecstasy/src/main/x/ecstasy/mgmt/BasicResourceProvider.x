@@ -37,8 +37,6 @@ service BasicResourceProvider
 //            @Inject HashCollector hash;
 //            return hash;
 //
-        case (Injector, "injector"):
-            return &this.maskAs(Injector);
 
         case (Timer, "timer"):
             return (Inject.Options opts) -> {
@@ -53,6 +51,15 @@ service BasicResourceProvider
                 return random;
             };
 
+        case (String, _):
+            // ToDo This will return ANY string injectable from the parent, we might want to think
+            // about this and maybe filter them in some way as we would not necessarily want to pass
+            // down some injected information that the child container should not be able to see
+            return (Inject.Options opts) -> {
+                @Inject(resourceName=name, opts=opts) String value;
+                return value;
+            };
+
         case (String?, _):
             // ToDo This will return ANY string injectable from the parent, we might want to think
             // about this and maybe filter them in some way as we would not necessarily want to pass
@@ -62,20 +69,32 @@ service BasicResourceProvider
                 return value;
             };
 
-        case (String[]?, _):
+        case (List<String>, _):
             // ToDo This will return ANY string injectable from the parent, we might want to think
             // about this and maybe filter them in some way as we would not necessarily want to pass
             // down some injected information that the child container should not be able to see
             return (Inject.Options opts) -> {
-                @Inject(resourceName=name, opts=opts) String[]? value;
+                @Inject(resourceName=name, opts=opts) List<String> value;
+                return value;
+            };
+
+        case (List<String>?, _):
+            // ToDo This will return ANY string injectable from the parent, we might want to think
+            // about this and maybe filter them in some way as we would not necessarily want to pass
+            // down some injected information that the child container should not be able to see
+            return (Inject.Options opts) -> {
+                @Inject(resourceName=name, opts=opts) List<String>? value;
                 return value;
             };
 
         default:
+            if (Supplier supp := getDestringableResource(type, name)) {
+                return supp;
+            }
             // if the type is Nullable, no need to complain; just return Null, otherwise
             // return a deferred exception (thrown only if the container actually asks for the
             // resource at run time)
-            return Nullable.as(Type).isA(type)
+            return type.isNullable()
                 ? Null.as(Supplier)
                 : (Inject.Options opts) ->
                     throw new Exception($|Unsupported resource: type="{type}", name="{name}"
@@ -92,5 +111,35 @@ service BasicResourceProvider
         }
 
         return supplier.as(InjectionType);
+    }
+
+    /**
+     * Returns a supplier that constructs a Destringable resource for a string injection.
+     *
+     * @return `True` iff the injection type is a Destringable or nullable Destringable
+     * @return a supplier that constructs a Destringable resource for a string injection
+     */
+    conditional Supplier getDestringableResource(Type type, String name) {
+        Type    baseType   = type;
+        Boolean isNullable = False;
+        if (Type nonNullable := type.isNullable()) {
+            baseType   = nonNullable;
+            isNullable = True;
+        }
+        if (baseType.is(Type<Destringable>)) {
+            // the requested type is Destringable so it may be possible to construct it from a
+            // string injection
+            @Inject(resourceName=name) String? value;
+            if (value.is(String)) {
+                return True, new baseType.DataType(value);
+            }
+            if (isNullable) {
+                return True, Null;
+            }
+            return True, (Inject.Options opts) ->
+                throw new Exception($|Unsupported resource: type="{type}", name="{name}"
+                                    );
+        }
+        return False;
     }
 }

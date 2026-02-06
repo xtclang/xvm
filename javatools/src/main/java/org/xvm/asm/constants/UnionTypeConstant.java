@@ -221,6 +221,11 @@ public class UnionTypeConstant
     }
 
     @Override
+    public boolean isInjectable() {
+        return m_constType1.isInjectable() && m_constType2.isInjectable();
+    }
+
+    @Override
     public boolean isIncompatibleCombo(TypeConstant that) {
         TypeConstant type1 = m_constType1.resolveTypedefs();
         TypeConstant type2 = m_constType2.resolveTypedefs();

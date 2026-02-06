@@ -96,7 +96,6 @@ service JsonDbProvider<Schema extends RootSchema>(Type<Schema> type, Module dbMo
      * @param parentDir  the parent directory to put the database directory into
      */
     private Catalog createCatalog(DbConfig config, Directory parentDir) {
-        @Inject ResourceProvider provider;
         @Inject Directory        testOutputRoot;
         @Inject Directory        testOutput;
 
@@ -114,7 +113,7 @@ service JsonDbProvider<Schema extends RootSchema>(Type<Schema> type, Module dbMo
         }
 
         dataDir.ensure();
-        return jsondb.createCatalog(dbName, dataDir, buildDir, resources=provider);
+        return jsondb.createCatalog(dbName, dataDir, buildDir);
     }
 
     /**

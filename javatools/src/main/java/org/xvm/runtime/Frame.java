@@ -1382,19 +1382,30 @@ public class Frame
             if (pkgImport != null) {
                 SingletonConstant constInjector = pkgImport.getModuleInjector();
                 if (constInjector != null) {
-                    List<Injection> listInject = pkgImport.getModuleInjections();
-                    boolean         fUse       = false;
+                    List<Injection> listInject   = pkgImport.getModuleInjections();
+                    TypeConstant    typeInjector = poolContext().typeInjector();
+                    boolean         fResource    = false;
+                    boolean         fInjector    = false;
                     for (Injection inject : listInject) {
+                        TypeConstant injectType = inject.getType();
+                        if (injectType.equals(typeInjector)) {
+                            fInjector = true;
+                            break;
+                        }
                         String sInjectName = inject.getName();
-                        if (inject.getType().isA(type) &&
-                                "_".equals(sInjectName) || sInjectName.equals(sName)) {
-                            fUse = true;
+                        if (injectType.isA(type) &&
+                                ("_".equals(sInjectName) || sInjectName.equals(sName))) {
+                            fResource = true;
                             break;
                         }
                     }
 
-                    if (fUse) {
-                        return Utils.callGetResource(this, getConstHandle(constInjector), type, sName);
+                    if (fInjector) {
+                        ObjectHandle hInjector = getConstHandle(constInjector);
+                        return Utils.callInject(this, hInjector, type, sName, hOpts);
+                    } else if (fResource) {
+                        ObjectHandle hInjector = getConstHandle(constInjector);
+                        return Utils.callGetResource(this, hInjector, type, sName);
                     }
                 }
             }
