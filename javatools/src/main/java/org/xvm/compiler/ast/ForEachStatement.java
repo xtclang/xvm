@@ -382,7 +382,7 @@ public class ForEachStatement
                 };
 
                 if (exprRVal.testFit(ctx, typeRVal, false, null).isFit()) {
-                    atypeLVals = exprLVal.getTypes();
+                    atypeLVals = fValid ? exprLVal.getTypes() : null;
                     break;
                 }
             }
