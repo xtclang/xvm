@@ -1,6 +1,5 @@
 import ecstasy.mgmt.ModuleRepository;
 
-import ecstasy.reflect.ClassTemplate;
 import ecstasy.reflect.ModuleTemplate;
 
 import ecstasy.text.Log;
@@ -57,9 +56,8 @@ class ModuleGenerator(String moduleName, Version? version = Null) {
             } catch (Exception ignore) {}
         }
 
-        String moduleImports = collectModuleImports(testModule);
-        File   sourceFile    = buildDir.fileFor($"{appName}_{implName}.x");
-        createModule(sourceFile, appName, qualifier, moduleImports, testModule);
+        File sourceFile = buildDir.fileFor($"{appName}_{implName}.x");
+        createModule(sourceFile, appName, qualifier, testModule);
 
         if (compileModule(repository, sourceFile, buildDir, errors)) {
             errors.add($"Info: Created a host module '{hostName}' for '{moduleName}'");
@@ -76,8 +74,6 @@ class ModuleGenerator(String moduleName, Version? version = Null) {
      * @param sourceFile     the file to write the generated module source code to
      * @param appName        the name of the module to be tested
      * @param qualifier      the qualifier for the name of the module to be tested
-     * @param moduleImports  a String containing the module imports to be injected into the
-     *                       generated test module
      * @param moduleTemplate the module template for the module to be tested
      *
      * @return True iff the source file has been successfully created
@@ -85,7 +81,6 @@ class ModuleGenerator(String moduleName, Version? version = Null) {
     void createModule(File           sourceFile,
                       String         appName,
                       String         qualifier,
-                      String         moduleImports,
                       ModuleTemplate moduleTemplate) {
 
         String versionString = version == Null ? "" : $" v:{version}";
@@ -122,35 +117,5 @@ class ModuleGenerator(String moduleName, Version? version = Null) {
             errors.addAll(compilationErrors);
         }
         return success;
-    }
-
-    /**
-     * Collect the module imports using the direct and transitive dependencies of the specified
-     * module.
-     *
-     * @param testModule  the module to collect the imports from
-     *
-     * @return a String specifying all the module imports that should be injected into the generated
-     *         test module
-     */
-    String collectModuleImports(ModuleTemplate testModule) {
-        StringBuffer                buf   = new StringBuffer();
-        Map<String, ModuleTemplate> deps  = testModule.modulesByPath;
-        Set<String>                 names = new HashSet();
-
-        for (ModuleTemplate mt : deps.values) {
-            if (mt.qualifiedName == TypeSystem.MackKernel) {
-                continue;
-            }
-            names.add(mt.qualifiedName);
-        }
-
-        Int id = 0;
-        for (String qualifiedName : names) {
-            buf.append("    package ").append("xunit_").append(id++)
-               .append(" import ").append(qualifiedName)
-               .append("  inject (ecstasy.reflect.Injector _) using SimpleInjector;\n");
-        }
-        return buf.toString();
     }
 }

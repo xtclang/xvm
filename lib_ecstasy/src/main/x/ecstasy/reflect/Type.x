@@ -312,7 +312,7 @@ interface Type<DataType, OuterType>
      */
     conditional Type!<> isNullable() {
         if (this == Nullable) {
-            return True, this;
+            return False;
         }
         for (Type t : underlyingTypes) {
             if (t == Nullable) {
