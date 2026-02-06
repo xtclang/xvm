@@ -17,14 +17,17 @@ val releaseChannel: String = xdkProperties.stringValue("xdk.intellij.release.cha
 val enablePublish = providers.gradleProperty("enablePublish").map { it.toBoolean() }.getOrElse(false)
 
 // =============================================================================
-// Local IntelliJ IDE Detection
+// IntelliJ IDE Resolution
 // =============================================================================
-// Using a local IDE avoids Gradle transform cache issues on macOS where
-// Gatekeeper/code signing can modify extracted files, corrupting the cache.
-// Override with: -PintellijLocalPath=/path/to/IntelliJ
+// By default, IntelliJ Community is downloaded and cached in ~/.gradle (Gradle's
+// dependency cache). The cached IDE is keyed by version, so changing the version
+// in libs.versions.toml automatically downloads the new version on the next build.
+//
+// To use a locally installed IDE instead (faster startup, no download):
+//   -PuseLocalIde=true          Auto-detect a local IntelliJ installation
+//   -PintellijLocalPath=/path   Use a specific local IDE path
 
 fun findLocalIntelliJ(): File? {
-    // Allow explicit override via gradle property
     val explicitPath = providers.gradleProperty("intellijLocalPath").orNull
     if (explicitPath != null) {
         val explicit = File(explicitPath)
@@ -67,15 +70,15 @@ fun findLocalIntelliJ(): File? {
     return candidates.map(::File).firstOrNull(File::exists)
 }
 
-// Use local IntelliJ IDE by default to avoid Gradle transform cache issues on macOS.
-// Pass -PdownloadIde=true to force downloading IntelliJ Community instead.
-val downloadIde = providers.gradleProperty("downloadIde").map { it.toBoolean() }.getOrElse(false)
-val localIntelliJ: File? = if (downloadIde) null else findLocalIntelliJ()
+// Default: download IntelliJ Community (cached in ~/.gradle by version).
+// Opt-in to local IDE: -PuseLocalIde=true or -PintellijLocalPath=/path
+val useLocalIde = providers.gradleProperty("useLocalIde").map { it.toBoolean() }.getOrElse(false)
+val hasExplicitLocalPath = providers.gradleProperty("intellijLocalPath").isPresent
+val localIntelliJ: File? = if (useLocalIde || hasExplicitLocalPath) findLocalIntelliJ() else null
 
 when {
-    localIntelliJ != null -> logger.lifecycle("Using local IntelliJ IDE: ${localIntelliJ.absolutePath}")
-    downloadIde -> logger.lifecycle("Downloading IntelliJ Community (-PdownloadIde=true)")
-    else -> logger.lifecycle("No local IntelliJ found, downloading IntelliJ Community")
+    localIntelliJ != null -> logger.lifecycle("[ide] Using local IntelliJ IDE: ${localIntelliJ.absolutePath}")
+    else -> logger.lifecycle("[ide] Using IntelliJ Community ${libs.versions.intellij.ide.get()} (cached in ~/.gradle)")
 }
 
 repositories {
@@ -211,8 +214,8 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
 
     intellijPlatform {
-        // Use local IDE if available, otherwise download IntelliJ Community
-        // Pass -PdownloadIde=true to force download
+        // Default: download IntelliJ Community (cached in ~/.gradle by version)
+        // Use -PuseLocalIde=true or -PintellijLocalPath=/path for local IDE
         if (localIntelliJ != null) {
             local(localIntelliJ.absolutePath)
         } else {
@@ -453,6 +456,29 @@ val runIde by tasks.existing {
         copyLspServerToSandbox,
         configureDisabledPlugins,
     )
+
+    // Log sandbox location and idea.log path so the user can click to open them in the IDE
+    val sandboxDir = sandboxConfigDir.map { it.parentFile }
+    doFirstTask {
+        val sandbox = sandboxDir.get()
+        val ideaLog = sandbox.resolve("log/idea.log")
+        logger.lifecycle("[runIde] Sandbox: ${sandbox.absolutePath}")
+        logger.lifecycle("[runIde] IDE log:  ${ideaLog.absolutePath}")
+    }
+}
+
+// =============================================================================
+// Clean sandbox when running 'clean'
+// =============================================================================
+// The IntelliJ Platform Gradle Plugin stores the sandbox under build/idea-sandbox/.
+// By default, Gradle's clean task only deletes build/classes, build/libs, etc.
+// We extend clean to also delete the sandbox so that version or dependency changes
+// are picked up on the next run. The downloaded IDE distribution itself is cached
+// in ~/.gradle and is NOT affected by clean (only re-downloaded when the version
+// in libs.versions.toml changes, managed by Gradle's dependency resolution).
+
+val clean by tasks.existing(Delete::class) {
+    delete(layout.buildDirectory.dir("idea-sandbox"))
 }
 
 // No tests in this module - disable test task to avoid IntelliJ plugin test infrastructure overhead
