@@ -9,30 +9,30 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.javajit.Ctx;
 
 /**
- * Native Enumeration<Boolean>.
+ * Native Enumeration<Ordered>.
  */
-public class eBoolean extends Enumeration {
-    private eBoolean() {
+public class eOrdered extends Enumeration {
+    private eOrdered() {
         super(null);
     }
 
-    public static final eBoolean $INSTANCE = new eBoolean();
+    public static final eOrdered $INSTANCE = new eOrdered();
 
-    public static final String[] $names   = new String[] {Boolean.False.$name, Boolean.True.$name};
-    public static final Boolean[] $values = new Boolean[] {Boolean.False, Boolean.True};
+    public static final String[]  $names  = new String[] {Ordered.Lesser.$name, Ordered.Equal.$name, Ordered.Greater.$name};
+    public static final Ordered[] $values = new Ordered[] {Ordered.Lesser, Ordered.Equal, Ordered.Greater};
 
     @Override public TypeConstant $xvmType(Ctx ctx) {
         ConstantPool pool = ctx.container.typeSystem.pool();
-        return pool.ensureClassTypeConstant(pool.clzClass(), null, pool.typeBoolean());
+        return pool.ensureClassTypeConstant(pool.clzClass(), null, pool.typeOrdered());
     }
 
     @Override
     public long count$get$p() {
-        return 2;
+        return 3;
     }
 
     @Override
-    public Boolean[] values$get() {
+    public Ordered[] values$get() {
         return $values;
     }
 

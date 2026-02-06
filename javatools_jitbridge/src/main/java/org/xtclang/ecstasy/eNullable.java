@@ -14,8 +14,8 @@ import org.xvm.javajit.Ctx;
  * Native Enumeration<Nullable>.
  */
 public class eNullable extends Enumeration {
-    private eNullable(Ctx ctx) {
-        super(ctx);
+    private eNullable() {
+        super(null);
     }
 
     @Override public TypeConstant $xvmType(Ctx ctx) {
@@ -23,7 +23,7 @@ public class eNullable extends Enumeration {
         return pool.ensureClassTypeConstant(pool.clzClass(), null, pool.typeNullable());
     }
 
-    public static final eNullable $INSTANCE = new eNullable(Ctx.get());
+    public static final eNullable $INSTANCE = new eNullable();
 
     public static final String[] $names = new String[] {Nullable.$name};
     public static final Nullable[] $values = new Nullable[] {Nullable.Null};

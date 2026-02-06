@@ -852,6 +852,7 @@ public abstract class Builder {
     public static final String N_Boolean      = "org.xtclang.ecstasy.Boolean";
     public static final String N_Char         = "org.xtclang.ecstasy.text.Char";
     public static final String N_Class        = "org.xtclang.ecstasy.reflect.Class";
+    public static final String N_Comparable   = "org.xtclang.ecstasy.Comparable";
     public static final String N_Dec16        = "org.xtclang.ecstasy.numbers.Dec16";
     public static final String N_Dec32        = "org.xtclang.ecstasy.numbers.Dec32";
     public static final String N_Dec64        = "org.xtclang.ecstasy.numbers.Dec64";
@@ -866,6 +867,7 @@ public abstract class Builder {
     public static final String N_Int64        = "org.xtclang.ecstasy.numbers.Int64";
     public static final String N_Nullable     = "org.xtclang.ecstasy.Nullable";
     public static final String N_Object       = "org.xtclang.ecstasy.Object";
+    public static final String N_Orderable    = "org.xtclang.ecstasy.Orderable";
     public static final String N_Ordered      = "org.xtclang.ecstasy.Ordered";
     public static final String N_String       = "org.xtclang.ecstasy.text.String";
     public static final String N_TypeMismatch = "org.xtclang.ecstasy.TypeMismatch";
@@ -901,6 +903,7 @@ public abstract class Builder {
 
     public static final ClassDesc CD_Array         = ClassDesc.of(N_Array);
     public static final ClassDesc CD_Class         = ClassDesc.of(N_Class);
+    public static final ClassDesc CD_Comparable    = ClassDesc.of(N_Comparable);
     public static final ClassDesc CD_Enumeration   = ClassDesc.of(N_Enumeration);
     public static final ClassDesc CD_Exception     = ClassDesc.of(N_Exception);
     public static final ClassDesc CD_nFunction     = ClassDesc.of(N_nFunction);
@@ -911,6 +914,7 @@ public abstract class Builder {
 
     public static final ClassDesc CD_nArrayChar    = ClassDesc.of(N_nArrayChar);
     public static final ClassDesc CD_nArrayObj     = ClassDesc.of(N_nArrayObj);
+    public static final ClassDesc CD_nConst        = ClassDesc.of(N_nConst);
     public static final ClassDesc CD_nEnum         = ClassDesc.of(N_nEnum);
     public static final ClassDesc CD_nException    = ClassDesc.of(N_nException);
     public static final ClassDesc CD_nObj          = ClassDesc.of(N_nObj);
@@ -930,6 +934,7 @@ public abstract class Builder {
     public static final ClassDesc CD_Int64         = ClassDesc.of(N_Int64);
     public static final ClassDesc CD_Nullable      = ClassDesc.of(N_Nullable);
     public static final ClassDesc CD_Object        = ClassDesc.of(N_Object);
+    public static final ClassDesc CD_Orderable     = ClassDesc.of(N_Orderable);
     public static final ClassDesc CD_Ordered       = ClassDesc.of(N_Ordered);
     public static final ClassDesc CD_String        = ClassDesc.of(N_String);
     public static final ClassDesc CD_UInt8         = ClassDesc.of(N_UInt8);
@@ -937,7 +942,6 @@ public abstract class Builder {
     public static final ClassDesc CD_UInt32        = ClassDesc.of(N_UInt32);
     public static final ClassDesc CD_UInt64        = ClassDesc.of(N_UInt64);
 
-    public static final ClassDesc CD_nConst        = ClassDesc.of(N_nConst);
     public static final ClassDesc CD_Container     = ClassDesc.of(Container.class.getName());
     public static final ClassDesc CD_Ctx           = ClassDesc.of(Ctx.class.getName());
     public static final ClassDesc CD_CtorCtx       = ClassDesc.of(Ctx.CtorCtx.class.getName());
