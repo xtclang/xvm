@@ -727,7 +727,7 @@ public abstract class TypeConstant
      * @return true iff this type is a nullable type
      */
     public boolean isNullable() {
-        // a type is only considered nullable if it is a "(nullable | type)"
+        // a type is only considered nullable if it is a "(Nullable | type)"
         return false;
     }
 
@@ -757,14 +757,6 @@ public abstract class TypeConstant
      */
     public TypeConstant removeNullable() {
         return this;
-    }
-
-    /**
-     * @return true iff objects fo this type can be injected by the runtime
-     */
-    public boolean isInjectable() {
-        // a type is injectable only if it's a "const" an interface or a union of those
-        return isConst() || isInterfaceType();
     }
 
     /**

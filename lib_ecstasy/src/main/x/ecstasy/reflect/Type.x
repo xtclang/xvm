@@ -305,10 +305,11 @@ interface Type<DataType, OuterType>
     }
 
     /**
-     * Determine if this type is a Nullable type.
+     * Determine if this type is a nullable type. A type is considered nullable if it is a union of
+     * `Nullable` and some other type.
      *
-     * @return True iff this is a Nullable type
-     * @return (conditional) the underlying non-Nullable type
+     * @return True iff this is a nullable type
+     * @return (conditional) the underlying non-`Nullable` type
      */
     conditional Type!<> isNullable() {
         for (Type t : underlyingTypes) {
