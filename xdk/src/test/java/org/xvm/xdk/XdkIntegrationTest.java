@@ -2,6 +2,7 @@ package org.xvm.xdk;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.api.io.TempDir;
 import org.xvm.asm.ErrorList;
 import org.xvm.tool.Compiler;
@@ -80,6 +81,8 @@ class XdkIntegrationTest {
     }
 
     @Test
+    @EnabledIfEnvironmentVariable(named = "RUN_INTEGRATION_TESTS", matches = "true",
+        disabledReason = "Compiles XTC modules; enable with RUN_INTEGRATION_TESTS=true")
     void testCompilerWithBuilderAPI(@TempDir final Path tempDir) throws IOException {
         // Create a simple XTC source file
         String sourceCode = """
@@ -130,6 +133,8 @@ class XdkIntegrationTest {
     }
 
     @Test
+    @EnabledIfEnvironmentVariable(named = "RUN_INTEGRATION_TESTS", matches = "true",
+        disabledReason = "Compiles XTC modules; enable with RUN_INTEGRATION_TESTS=true")
     void testCompilerWithParseAPI(@TempDir final Path tempDir) throws IOException {
         // Create a simple XTC source file
         String sourceCode = """
@@ -189,6 +194,8 @@ class XdkIntegrationTest {
     }
 
     @Test
+    @EnabledIfEnvironmentVariable(named = "RUN_INTEGRATION_TESTS", matches = "true",
+        disabledReason = "Compiles XTC modules; enable with RUN_INTEGRATION_TESTS=true")
     void testCompilerMissingModulePath(@TempDir final Path tempDir) throws IOException {
         // Create source without providing module path (should fail to resolve ecstasy.xtc)
         String sourceCode = """
@@ -218,6 +225,8 @@ class XdkIntegrationTest {
     }
 
     @Test
+    @EnabledIfEnvironmentVariable(named = "RUN_INTEGRATION_TESTS", matches = "true",
+        disabledReason = "Compiles and runs XTC modules; enable with RUN_INTEGRATION_TESTS=true")
     void testRunnerOptionsBuilderAPI(@TempDir final Path tempDir) throws IOException {
         // First compile a simple module
         String sourceCode = """
@@ -276,6 +285,8 @@ class XdkIntegrationTest {
     }
 
     @Test
+    @EnabledIfEnvironmentVariable(named = "RUN_INTEGRATION_TESTS", matches = "true",
+        disabledReason = "Compiles and runs XTC modules; enable with RUN_INTEGRATION_TESTS=true")
     void testRunnerOptionsParseAPI(@TempDir final Path tempDir) throws IOException {
         // First compile a module
         String sourceCode = """
@@ -401,6 +412,8 @@ class XdkIntegrationTest {
     }
 
     @Test
+    @EnabledIfEnvironmentVariable(named = "RUN_INTEGRATION_TESTS", matches = "true",
+        disabledReason = "Compiles XTC modules; enable with RUN_INTEGRATION_TESTS=true")
     void testCompilerStrictMode(@TempDir final Path tempDir) throws IOException {
         // Test that strict mode flag is properly set and used
         String sourceCode = """
@@ -444,6 +457,8 @@ class XdkIntegrationTest {
      * to the Compiler during automatic recompilation. See Runner.java:159-167.
      */
     @Test
+    @EnabledIfEnvironmentVariable(named = "RUN_INTEGRATION_TESTS", matches = "true",
+        disabledReason = "Compiles and runs XTC modules; enable with RUN_INTEGRATION_TESTS=true")
     void testRunnerForwardsDeduceAndVerboseFlagsToCompiler(@TempDir final Path tempDir) throws IOException {
         // Create a source file that uses deduce to find its location
         // The key is that we run xec with -d on a .x file (not .xtc),
@@ -500,6 +515,8 @@ class XdkIntegrationTest {
      * needs recompilation.
      */
     @Test
+    @EnabledIfEnvironmentVariable(named = "RUN_INTEGRATION_TESTS", matches = "true",
+        disabledReason = "Compiles and runs XTC modules with recompilation; enable with RUN_INTEGRATION_TESTS=true")
     void testRunnerRecompilesOutOfDateModule(@TempDir final Path tempDir) throws IOException, InterruptedException {
         // Step 1: Create and compile a module
         String sourceCodeV1 = """

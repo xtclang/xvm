@@ -65,6 +65,7 @@ env:
     ORG_GRADLE_PROJECT_includeBuildManualTests: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.include-lang == true || github.event.inputs.include-lang == 'true' }}
     ORG_GRADLE_PROJECT_includeBuildAttachManualTests: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.include-lang == true || github.event.inputs.include-lang == 'true' }}
     ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
+    RUN_INTEGRATION_TESTS: true
 
     # Lang build inclusion - defaults to true for push/PR, configurable for workflow_dispatch
     # These env vars override gradle.properties settings (which may have lang disabled)

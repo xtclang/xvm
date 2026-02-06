@@ -161,7 +161,7 @@ class JreProvisioner(
     fun clearFailure() {
         failureMarker.deleteIfExists()
         metadataFile.deleteIfExists()
-        if (jreDir.exists()) FileUtil.delete(jreDir)
+        if (jreDir.exists()) FileUtil.delete(jreDir.toFile())
     }
 
     fun provision(onProgress: ((Float, String) -> Unit)? = null): Path {
@@ -207,7 +207,7 @@ class JreProvisioner(
         // Clear old cache if exists
         if (jreDir.exists()) {
             logger.info("Removing old cached JRE")
-            FileUtil.delete(jreDir)
+            FileUtil.delete(jreDir.toFile())
         }
 
         val archive = download(pkg.links.downloadRedirect)
@@ -217,7 +217,7 @@ class JreProvisioner(
             extract(archive, archiveType)
         }.onFailure { e ->
             Files.createFile(failureMarker)
-            if (jreDir.exists()) FileUtil.delete(jreDir)
+            if (jreDir.exists()) FileUtil.delete(jreDir.toFile())
             throw e
         }
         archive.deleteIfExists()
