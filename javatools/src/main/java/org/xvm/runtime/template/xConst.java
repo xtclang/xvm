@@ -530,10 +530,9 @@ public class xConst
                     return frameCaller.raiseException("Unassigned property \"" + field.getName() +'"');
                 }
 
-                TypeConstant typeProp = (TypeConstant) pool.register(clzBase.getFieldType(enid));
-
-                typeProp = typeProp.resolveGenerics(pool,
-                            frameCaller.getGenericsResolver(typeProp.containsDynamicType()));
+                TypeConstant typeField = clzBase.getFieldType(enid);
+                TypeConstant typeProp  = pool.register(typeField).resolveGenerics(pool,
+                            frameCaller.getGenericsResolver(typeField.containsDynamicType()));
 
                 switch (typeProp.callEquals(frameCaller, h1, h2, Op.A_STACK)) {
                 case Op.R_NEXT:
@@ -618,7 +617,7 @@ public class xConst
                     return frameCaller.raiseException("Unassigned property \"" + field.getName() +'"');
                 }
 
-                TypeConstant typeProp = (TypeConstant) pool.register(clzBase.getFieldType(enid));
+                TypeConstant typeProp = pool.register(clzBase.getFieldType(enid));
 
                 // this check is only to provide a better exception description
                 if (typeProp.findCallable(pool.sigCompare()) == null) {
@@ -706,10 +705,9 @@ public class xConst
                     return frameCaller.raiseException("Unassigned property: \"" + field.getName() + '"');
                 }
 
-                TypeConstant typeProp = (TypeConstant) pool.register(clzBase.getFieldType(enid));
-
-                typeProp = typeProp.resolveGenerics(pool,
-                            frameCaller.getGenericsResolver(typeProp.containsDynamicType()));
+                TypeConstant typeField = clzBase.getFieldType(enid);
+                TypeConstant typeProp  = pool.register(typeField).resolveGenerics(pool,
+                            frameCaller.getGenericsResolver(typeField.containsDynamicType()));
 
                 MethodStructure methodHash = typeProp.findCallable(HASH_SIG);
                 if (methodHash == null) {
