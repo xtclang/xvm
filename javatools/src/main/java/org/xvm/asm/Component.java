@@ -1347,7 +1347,7 @@ public abstract class Component
         }
 
         if (matches.size() == 1) {
-            return matches.get(0);
+            return matches.getFirst();
         }
 
         return new CompositeComponent(this, matches);
@@ -1519,7 +1519,7 @@ public abstract class Component
         }
 
         if (matches.size() == 1) {
-            return matches.get(0);
+            return matches.getFirst();
         }
 
         return new CompositeComponent(this, matches);
@@ -1961,9 +1961,12 @@ public abstract class Component
     /**
      * Clone this component's body, but not its siblings nor its children.
      *
+     * @param <T>  the expected component type
+     *
      * @return a clone of this component, sans siblings and sans children
      */
-    protected Component cloneBody() {
+    @SuppressWarnings("unchecked")
+    protected <T extends Component> T cloneBody() {
         Component that;
         try {
             that = (Component) super.clone();
@@ -1986,22 +1989,7 @@ public abstract class Component
         that.m_childByName = null;
         that.m_abChildren  = null;
 
-        return that;
-    }
-
-    /**
-     * Clone this component's body with proper type inference for generic contexts.
-     * <p>
-     * This method provides type-safe cloning when the caller knows the specific component type
-     * but is working through a generic type parameter.
-     *
-     * @param <T>  the expected component type
-     *
-     * @return a clone of this component, sans siblings and sans children
-     */
-    @SuppressWarnings("unchecked")
-    protected final <T extends Component> T cloneBodyAs() {
-        return (T) cloneBody();
+        return (T) that;
     }
 
     /**

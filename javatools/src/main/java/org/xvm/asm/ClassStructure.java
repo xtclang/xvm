@@ -548,7 +548,7 @@ public class ClassStructure
     public ListMap<StringConstant, TypeConstant> getTypeParams() {
         ListMap<StringConstant, TypeConstant> mapThis = m_mapParams;
         return mapThis == null
-                ? ListMap.EMPTY
+                ? ListMap.empty()
                 : mapThis;
     }
 
@@ -3735,7 +3735,7 @@ public class ClassStructure
                     List<Map.Entry<StringConstant, TypeConstant>> entries = getTypeParamsAsList();
 
                     if (id.equals(pool.clzClass()) && cActual > 0) {
-                        TypeConstant typePublic = listActual.get(0);
+                        TypeConstant typePublic = listActual.getFirst();
                         if (typePublic.isSingleUnderlyingClass(false) && !typePublic.isFormalType()) {
                             // we know a bit more about the relationship between Class formal types;
                             // prime them accordingly

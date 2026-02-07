@@ -40,7 +40,7 @@ public class ComponentBifurcator<T extends Component> {
         if (list.isEmpty()) {
             throw new IllegalStateException();
         } else if (list.size() == 1) {
-            return list.get(0);
+            return list.getFirst();
         } else {
             return new CompositeComponent(unsplit.getParent(), List.copyOf(list));
         }
@@ -81,7 +81,7 @@ public class ComponentBifurcator<T extends Component> {
      */
     private T split(ConditionalConstant cond) {
         T componentTrue  = unsplit;
-        T componentFalse = unsplit.cloneBodyAs();
+        T componentFalse = unsplit.cloneBody();
 
         componentTrue.addAndCondition(cond);
         componentFalse.addAndCondition(cond.negate());

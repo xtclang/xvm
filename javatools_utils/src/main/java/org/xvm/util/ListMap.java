@@ -15,8 +15,22 @@ import java.util.Set;
  * insertion. This map should work well for small numbers of entries, but will
  * degrade in performance as it grows in size.
  */
-public class ListMap<K,V>
-        extends AbstractMap<K,V> {
+public class ListMap<K, V>
+        extends AbstractMap<K, V> {
+
+    /**
+     * Return an empty, immutable ListMap.
+     *
+     * @param <K>  the key type
+     * @param <V>  the value type
+     *
+     * @return an empty ListMap
+     */
+    @SuppressWarnings("unchecked")
+    public static <K, V> ListMap<K, V> empty() {
+        return (ListMap<K, V>) EMPTY;
+    }
+
     /**
      * Construct a new ListMap.
      */
@@ -29,10 +43,11 @@ public class ListMap<K,V>
      *
      * @param cInitSize  the initial capacity; negative value indicates an immutable empty map
      */
+    @SuppressWarnings("unchecked")
     public ListMap(int cInitSize) {
         m_list = cInitSize >= 0
             ? new ArrayList<>(cInitSize)
-            : (ArrayList<SimpleEntry<K,V>>) EMPTY_ARRAY_LIST;
+            : (List<Entry<K, V>>) EMPTY_LIST;
     }
 
     /**
@@ -46,12 +61,12 @@ public class ListMap<K,V>
 
     @Override
     public V put(K key, V value) {
-        Entry<K,V> entry = getEntry(key);
+        var entry = getEntry(key);
         if (entry != null) {
             return entry.setValue(value);
         }
 
-        if (m_list == EMPTY_ARRAY_LIST) {
+        if (m_list == EMPTY_LIST) {
             throw new UnsupportedOperationException();
         }
 
@@ -69,8 +84,8 @@ public class ListMap<K,V>
      *
      * @return the entries of the map in a List
      */
-    public List<Entry<K,V>> asList() {
-        List<Entry<K,V>> list = (List) m_list;
+    public List<Entry<K, V>> asList() {
+        var list = m_list;
         assert (list = Collections.unmodifiableList(list)) != null;
         return list;
     }
@@ -82,7 +97,7 @@ public class ListMap<K,V>
      *
      * @return an entry
      */
-    public Entry<K,V> entryAt(int index) {
+    public Entry<K, V> entryAt(int index) {
         return m_list.get(index);
     }
 
@@ -93,10 +108,10 @@ public class ListMap<K,V>
      *
      * @return the entry if it exists; otherwise null
      */
-    protected SimpleEntry<K,V> getEntry(Object key) {
-        ArrayList<SimpleEntry<K,V>> list = m_list;
+    protected Entry<K, V> getEntry(Object key) {
+        var list = m_list;
         for (int i = 0, c = list.size(); i < c; ++i) { // avoid Iterator creation
-            SimpleEntry<K, V> entry = list.get(i);
+            var entry = list.get(i);
             if (entry.getKey().equals(key)) {
                 return entry;
             }
@@ -107,15 +122,14 @@ public class ListMap<K,V>
 
     @Override
     public V get(Object key) {
-        SimpleEntry<K, V> entry = getEntry(key);
+        var entry = getEntry(key);
         return entry == null ? null : entry.getValue();
     }
 
     /**
-     * The contents of the map are stored in an ArrayList of SimpleEntry
-     * objects.
+     * The contents of the map are stored in a List of Entry objects.
      */
-    private final ArrayList<SimpleEntry<K, V>> m_list;
+    private final List<Entry<K, V>> m_list;
 
     /**
      * The AbstractMap implementation needs an underlying "entry set" to be
@@ -124,7 +138,7 @@ public class ListMap<K,V>
     private final Set<Entry<K, V>> m_setEntries = new AbstractSet<>() {
         @Override
         public Iterator<Entry<K, V>> iterator() {
-            return (Iterator) m_list.iterator();
+            return m_list.iterator();
         }
 
         @Override
@@ -134,12 +148,15 @@ public class ListMap<K,V>
     };
 
     /**
-     * An empty ArrayList.
+     * An empty List used for immutable empty maps.
      */
-    private static final ArrayList<?> EMPTY_ARRAY_LIST = new ArrayList<>(0);
+    private static final List<?> EMPTY_LIST = List.of();
 
     /**
      * An empty ListMap.
+     *
+     * @deprecated use {@link #empty()} for type-safe access
      */
-    public static final ListMap EMPTY = new ListMap<>(-1);
+    @Deprecated
+    public static final ListMap<?, ?> EMPTY = new ListMap<>(-1);
 }

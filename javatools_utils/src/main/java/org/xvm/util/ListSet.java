@@ -265,6 +265,7 @@ public class ListSet<E>
      *
      * @return an element of type E (including null)
      */
+    @SuppressWarnings("unchecked")
     private static <E> E toExternal(Object o) {
         assert o != null && !(o instanceof Stop);
         return o == NULL ? null : (E) o;

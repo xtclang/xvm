@@ -745,7 +745,7 @@ public class UnionTypeConstant
     @Override
     protected ListMap<String, ChildInfo> mergeChildren(TypeInfo info1, TypeInfo info2, ErrorListener errs) {
         if (info1 == null || info2 == null) {
-            return ListMap.EMPTY;
+            return ListMap.empty();
         }
 
         ListMap<String, ChildInfo> map1     = info1.getChildInfosByName();
