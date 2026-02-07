@@ -306,7 +306,7 @@ public class xOSStorage
                 return;
             }
 
-            for (WatchEvent event : key.pollEvents()) {
+            for (var event : key.pollEvents()) {
                 int iKind = getKindId(event.kind());
                 if (iKind < 0) {
                     continue;
@@ -336,7 +336,7 @@ public class xOSStorage
          * @return 0 - for CREATE, 1 - for MODIFY, 2 - for DELETE, -1 for OVERFLOW;
          *        -2 for anything else
          */
-        private int getKindId(WatchEvent.Kind kind) {
+        private int getKindId(WatchEvent.Kind<?> kind) {
             if (kind == StandardWatchEventKinds.ENTRY_CREATE) {
                 return 0;
             }

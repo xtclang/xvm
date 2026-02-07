@@ -430,7 +430,7 @@ public class SwitchStatement
      */
     protected static class SwitchContext
             extends Context {
-        protected SwitchContext(Context ctxOuter, CaseManager mgr) {
+        protected SwitchContext(Context ctxOuter, CaseManager<?> mgr) {
             super(ctxOuter, true);
 
             f_mgr = mgr;
@@ -591,7 +591,7 @@ public class SwitchStatement
             }
         }
 
-        private final CaseManager            f_mgr;
+        private final CaseManager<?>          f_mgr;
         private final List<CaseBlockContext> f_listBlocks = new ArrayList<>();
     }
 

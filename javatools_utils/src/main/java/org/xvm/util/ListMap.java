@@ -142,4 +142,12 @@ public class ListMap<K,V>
      * An empty ListMap.
      */
     public static final ListMap EMPTY = new ListMap<>(-1);
+
+    /**
+     * @return a typed empty ListMap
+     */
+    @SuppressWarnings("unchecked")
+    public static <K, V> ListMap<K, V> empty() {
+        return EMPTY;
+    }
 }

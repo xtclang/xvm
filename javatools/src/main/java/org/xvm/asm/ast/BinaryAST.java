@@ -268,7 +268,7 @@ public abstract class BinaryAST {
 
     // ----- internal ------------------------------------------------------------------------------
 
-    private static final Set<String> ALREADY_DISPLAYED = new HashSet();
+    private static final Set<String> ALREADY_DISPLAYED = new HashSet<>();
 
     static void reportUnimplemented(String msg) {
         if (ALREADY_DISPLAYED.add(msg)) {

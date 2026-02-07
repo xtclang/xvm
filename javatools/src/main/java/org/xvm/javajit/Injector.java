@@ -36,7 +36,7 @@ public class Injector {
      *
      * @return a supplier Function, or null if that Resource cannot be supplied
      */
-    public Function supplierOf(Resource res) {
+    public Function<Object, Object> supplierOf(Resource res) {
         return null;
     }
 
@@ -47,7 +47,7 @@ public class Injector {
      *
      * @return a supplier Function, or null if that Resource cannot be supplied
      */
-    public Function supplierOf(TypeConstant resoureType, String resourceName) {
+    public Function<Object, Object> supplierOf(TypeConstant resoureType, String resourceName) {
         return supplierOf(new Resource(resoureType, resourceName));
     }
 
@@ -61,7 +61,8 @@ public class Injector {
      * @return the value of the specified Resource, or null
      */
     public Object valueOf(Resource res, Object opts) {
-        return supplierOf(res) instanceof Function supply ? supply.apply(opts) : null;
+        var supply = supplierOf(res);
+        return supply != null ? supply.apply(opts) : null;
     }
 
     /**

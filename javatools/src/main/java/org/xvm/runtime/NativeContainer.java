@@ -137,7 +137,7 @@ public class NativeContainer
         String sRoot = xObject.class.getProtectionDomain().getCodeSource().getLocation().getFile();
         sRoot = URLDecoder.decode(sRoot, StandardCharsets.UTF_8);
 
-        Map<String, Class> mapTemplateClasses = new HashMap<>();
+        var mapTemplateClasses = new HashMap<String, Class<?>>();
         if (sRoot.endsWith(".jar")) {
             scanNativeJarDirectory(sRoot, "org/xvm/runtime/template", mapTemplateClasses);
         } else {
@@ -152,7 +152,7 @@ public class NativeContainer
         storeNativeTemplate(new xConst  (this, getClassStructure("Const"),   true));
         storeNativeTemplate(new xService(this, getClassStructure("Service"), true));
 
-        for (Map.Entry<String, Class> entry : mapTemplateClasses.entrySet()) {
+        for (var entry : mapTemplateClasses.entrySet()) {
             ClassStructure structClass = getClassStructure(entry.getKey());
             if (structClass == null) {
                 // this is a native class for a composite type;
@@ -167,7 +167,7 @@ public class NativeContainer
                 continue;
             }
 
-            Class<ClassTemplate> clz = entry.getValue();
+            var clz = (Class<ClassTemplate>) entry.getValue();
             if (!Modifier.isAbstract(clz.getModifiers())) {
                 try {
                     storeNativeTemplate(clz.getConstructor(
@@ -202,7 +202,7 @@ public class NativeContainer
         return pool;
     }
 
-    private void scanNativeJarDirectory(String sJarFile, String sPackage, Map<String, Class> mapTemplateClasses) {
+    private void scanNativeJarDirectory(String sJarFile, String sPackage, Map<String, Class<?>> mapTemplateClasses) {
         try (JarFile jf = new JarFile(sJarFile)) {
             jf.stream().filter(entry  -> isNativeClass(sPackage, entry.getName()))
                        .forEach(entry -> mapTemplateClasses.put(componentName(entry.getName()),
@@ -235,7 +235,7 @@ public class NativeContainer
         return sb.toString();
     }
 
-    private static Class classForName(String sFile) {
+    private static Class<?> classForName(String sFile) {
         assert sFile.endsWith(".class");
         String sClz = sFile.substring(0, sFile.length() - ".class".length()).replace('/', '.');
         try {
@@ -246,7 +246,7 @@ public class NativeContainer
     }
 
     // sPackage is either empty or ends with a dot
-    private void scanNativeDirectory(File dirNative, String sPackage, Map<String, Class> mapTemplateClasses) {
+    private void scanNativeDirectory(File dirNative, String sPackage, Map<String, Class<?>> mapTemplateClasses) {
         for (String sName : dirNative.list()) {
             if (sName.endsWith(".class")) {
                 if (sName.startsWith("x") && !sName.contains("$")) {

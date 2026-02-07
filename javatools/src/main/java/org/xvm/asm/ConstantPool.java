@@ -2302,7 +2302,7 @@ public class ConstantPool
                 Collections.emptyList(), new ListMap<>(), new ListMap<>(),
                 Collections.emptyMap(), Collections.emptyMap(),
                 Collections.emptyMap(), Collections.emptyMap(),
-                ListMap.EMPTY, null, Progress.Building) {
+                ListMap.empty(), null, Progress.Building) {
                     public String toString() {
                         return "Placeholder";
                     }
@@ -3515,13 +3515,13 @@ public class ConstantPool
                 null,                   // typeRebase
                 null,                   // typeInto
                 Collections.emptyList(), // listProcess,
-                ListMap.EMPTY,          // listmapClassChain
-                ListMap.EMPTY,          // listmapDefaultChain
+                ListMap.empty(),          // listmapClassChain
+                ListMap.empty(),          // listmapDefaultChain
                 Collections.emptyMap(),  // mapProps
                 mapMethods,
                 Collections.emptyMap(),  // mapVirtProps
                 mapVirtMethods,
-                ListMap.EMPTY,          // mapChildren
+                ListMap.empty(),          // mapChildren
                 null, Progress.Complete
                 );
     }

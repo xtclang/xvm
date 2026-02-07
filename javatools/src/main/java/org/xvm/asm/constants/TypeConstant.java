@@ -2302,7 +2302,7 @@ public abstract class TypeConstant
                 false, infoPri.getTypeParams(), infoPri.getClassAnnotations(), infoPri.getMixinAnnotations(),
                 infoPri.getExtends(), infoPri.getRebases(), infoPri.getInto(),
                 infoPri.getContributionList(), infoPri.getClassChain(), infoPri.getDefaultChain(),
-                mapProps, mapMethods, mapVirtProps, Collections.emptyMap(), ListMap.EMPTY,
+                mapProps, mapMethods, mapVirtProps, Map.of(), ListMap.empty(),
                 null, fIncomplete ? Progress.Incomplete : Progress.Complete);
     }
 

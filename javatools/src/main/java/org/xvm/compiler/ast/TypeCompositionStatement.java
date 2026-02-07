@@ -1698,11 +1698,9 @@ public class TypeCompositionStatement
                         // copy this constructor's arguments
                         List<Parameter> listParams = constructorParams;
                         if (listParams != null) {
-                            List<Expression> listArgs = new ArrayList(listParams.size());
-                            for (Parameter listParam : listParams) {
-                                listArgs.add(new NameExpression(this, listParam.name, null));
-                            }
-                            m_mapContribArgs.put(contrib, listArgs);
+                            m_mapContribArgs.put(contrib, listParams.stream()
+                                    .<Expression>map(p -> new NameExpression(this, p.name, null))
+                                    .toList());
                         }
                     } else if (!fAlreadyLogged) {
                         name.log(errs, getSource(), Severity.ERROR,

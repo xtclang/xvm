@@ -42,7 +42,6 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
 import org.xvm.util.Handy;
-import org.xvm.util.LinkedIterator;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
@@ -549,7 +548,7 @@ public class ClassStructure
     public ListMap<StringConstant, TypeConstant> getTypeParams() {
         ListMap<StringConstant, TypeConstant> mapThis = m_mapParams;
         return mapThis == null
-                ? ListMap.EMPTY
+                ? ListMap.empty()
                 : mapThis;
     }
 
@@ -3366,11 +3365,13 @@ public class ClassStructure
             }
         }
 
-        return listAnno == null
-                ? super.getContained()
-                : new LinkedIterator(
-                        super.getContained(),
-                        listAnno.iterator());
+        if (listAnno == null) {
+            return super.getContained();
+        }
+        var result = new ArrayList<XvmStructure>();
+        super.getContained().forEachRemaining(result::add);
+        result.addAll(listAnno);
+        return result.iterator();
     }
 
     @Override
@@ -3603,8 +3604,8 @@ public class ClassStructure
         }
 
         // type parameters
-        Map mapThisParams = this.m_mapParams;
-        Map mapThatParams = that.m_mapParams;
+        var mapThisParams = this.m_mapParams;
+        var mapThatParams = that.m_mapParams;
         int cThisParams   = mapThisParams == null ? 0 : mapThisParams.size();
         int cThatParams   = mapThatParams == null ? 0 : mapThatParams.size();
 

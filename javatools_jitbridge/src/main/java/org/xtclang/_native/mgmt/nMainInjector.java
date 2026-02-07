@@ -25,10 +25,10 @@ public class nMainInjector
 
     private final Xvm xvm;
 
-    private final Map<Resource, Function> suppliers = new HashMap<>();
+    private final Map<Resource, Function<Object, Object>> suppliers = new HashMap<>();
 
     @Override
-    public Function supplierOf(Resource res) {
+    public Function<Object, Object> supplierOf(Resource res) {
         return suppliers.get(res);
     }
 

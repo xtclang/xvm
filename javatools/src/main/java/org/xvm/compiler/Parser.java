@@ -310,11 +310,10 @@ public class Parser {
         List<Token>                modifiers   = null;
         List<AnnotationExpression> annotations = null;
 
-        List[] twoLists = parseModifiers();
-        if (twoLists != null) {
-            // note to self: this language needs multiple return values
-            modifiers   = twoLists[0];
-            annotations = twoLists[1];
+        var parsed = parseModifiers();
+        if (parsed != null) {
+            modifiers   = parsed.modifiers();
+            annotations = parsed.annotations();
         }
 
         return parseTypeDeclarationStatementAfterModifiers(lStartPos, null, doc, modifiers, annotations);
@@ -698,11 +697,10 @@ public class Parser {
         List<Token>                modifiers   = null;
         List<AnnotationExpression> annotations = null;
 
-        List[] twoLists = parseModifiers(true);
-        if (twoLists != null) {
-            // note to self: this language needs multiple return values
-            modifiers   = twoLists[0];
-            annotations = twoLists[1];
+        var parsed = parseModifiers(true);
+        if (parsed != null) {
+            modifiers   = parsed.modifiers();
+            annotations = parsed.annotations();
         }
 
         // both constant and property have a TypeExpression next
@@ -4537,7 +4535,7 @@ public class Parser {
      *
      * @return a List&lt;Token | Annotation&gt;
      */
-    List[] parseModifiers() {
+    ParsedModifiers parseModifiers() {
         return parseModifiers(false);
     }
 
@@ -4557,7 +4555,7 @@ public class Parser {
      * @return a List&lt;Token | Annotation | '/'&gt; (in the case of a property, there could be
      *         something like "static, public, '/', private")
      */
-    List[] parseModifiers(boolean couldBeProperty) {
+    ParsedModifiers parseModifiers(boolean couldBeProperty) {
         List<Token>                modifiers   = null;
         List<AnnotationExpression> annotations = null;
         boolean                    err         = false;
@@ -4615,7 +4613,7 @@ public class Parser {
 
             default:
                 return (modifiers != null || annotations != null)
-                        ? new List[] {modifiers, annotations}
+                        ? new ParsedModifiers(modifiers, annotations)
                         : null;
             }
         }
@@ -5780,4 +5778,6 @@ public class Parser {
      * Object supporting unpredictable amount of look-ahead.
      */
     private SafeLookAhead m_lookAhead;
+
+    record ParsedModifiers(List<Token> modifiers, List<AnnotationExpression> annotations) {}
 }

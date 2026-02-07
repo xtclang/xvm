@@ -153,9 +153,8 @@ public final class Ctx {
      * Injection helper.
      */
     public Object inject(TypeConstant resourceType, String resourceName, Object opts) {
-        Function supplier = container.injector.supplierOf(resourceType, resourceName);
-
-        return supplier == null ? null : supplier.apply(opts);
+        var supplier = container.injector.supplierOf(resourceType, resourceName);
+        return supplier != null ? supplier.apply(opts) : null;
     }
 
     // ----- debugging support ---------------------------------------------------------------------

@@ -1234,11 +1234,9 @@ public class NewExpression
             return (List<T>) list;
         }
 
-        List listCopy = new ArrayList<>(list.size());
-        for (AstNode node : list) {
-            listCopy.add(node.clone());
-        }
-        return listCopy;
+        return list.stream()
+                .map(node -> (T) node.clone())
+                .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
     }
 
     /**

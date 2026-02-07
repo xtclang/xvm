@@ -948,6 +948,8 @@ public abstract class Component
      * @param child    the child component
      * @param sibling  the sibling component to unlink
      */
+    // TODO: eliminate raw Map and Object id; properly type this method for each call site
+    @SuppressWarnings({"rawtypes", "unchecked"})
     protected void unlinkSibling(Map kids, Object id, Component child, Component sibling) {
         if (sibling == child && child.getNextSibling() == null) {
             // most common case: the specified child is the only sibling with that id
