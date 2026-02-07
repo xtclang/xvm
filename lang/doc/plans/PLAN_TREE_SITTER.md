@@ -190,15 +190,16 @@ Uses jtreesitter's Foreign Function API:
 
 - [x] Query patterns defined (`XtcQueries.kt`)
 - [x] Query engine implemented (`XtcQueryEngine.kt`)
-- [ ] Tests for query accuracy (blocked on native library)
+- [x] Tests for query accuracy (`LspIntegrationTest` runs tree-sitter against real `.x` files)
 
-### LSP Features (Phase 4) - IMPLEMENTED, PENDING TESTING
+### LSP Features (Phase 4) - COMPLETE
 
 - [x] `TreeSitterAdapter` implements all basic LSP methods
-- [ ] Document symbols shows class/method outline
-- [ ] Go-to-definition works for local variables
-- [ ] Find references works within same file
-- [ ] Completion shows keywords and locals
+- [x] Document symbols shows class/method outline
+- [x] Go-to-definition works for local variables
+- [x] Find references works within same file
+- [x] Completion shows keywords and locals
+- [x] Integration tests verify all features against real `.x` files (`LspIntegrationTest`)
 
 ### Cross-File Support (Phase 5) - PENDING
 
@@ -461,7 +462,7 @@ Features requiring compiler should wait for full compiler integration:
    - Full tree-sitter support regardless of IntelliJ JBR version
    - See "Task: Out-of-Process LSP Server" below
 
-8. **End-to-End Testing** - Verify LSP features work in IntelliJ/VS Code
+8. ~~**End-to-End Testing**~~ ✅ PARTIAL - `LspIntegrationTest` verifies all LSP features against real `.x` files with tree-sitter native parsing. Manual IDE testing still needed for IntelliJ/VS Code.
 9. **IDE Integration** - See [PLAN_IDE_INTEGRATION.md](./PLAN_IDE_INTEGRATION.md)
 10. **Compiler Adapter** - Add semantic features (future)
 

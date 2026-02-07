@@ -197,6 +197,17 @@ tasks.test {
     testLogging {
         events("passed", "skipped", "failed")
     }
+
+    // Enable FFM native access for tree-sitter integration tests (suppresses JDK warning)
+    jvmArgs("--enable-native-access=ALL-UNNAMED")
+
+    // Pass the composite root directory to integration tests so they can find real .x source files.
+    // Uses the same marker-file approach as XdkPropertiesService.compositeRootDirectory().
+    var dir = projectDir
+    while (dir.parentFile != null && !File(dir, "version.properties").exists()) {
+        dir = dir.parentFile
+    }
+    systemProperty("xtc.composite.root", dir.absolutePath)
 }
 
 tasks.jar {
