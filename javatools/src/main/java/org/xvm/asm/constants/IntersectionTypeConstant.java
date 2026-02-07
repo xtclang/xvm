@@ -527,8 +527,8 @@ public class IntersectionTypeConstant
 
     @Override
     protected ListMap<String, ChildInfo> mergeChildren(TypeInfo info1, TypeInfo info2, ErrorListener errs) {
-        ListMap<String, ChildInfo> map1 = info1 == null ? ListMap.empty() : info1.getChildInfosByName();
-        ListMap<String, ChildInfo> map2 = info1 == null ? ListMap.empty() : info2.getChildInfosByName();
+        ListMap<String, ChildInfo> map1 = info1 == null ? ListMap.EMPTY : info1.getChildInfosByName();
+        ListMap<String, ChildInfo> map2 = info1 == null ? ListMap.EMPTY : info2.getChildInfosByName();
 
         if (map1.isEmpty()) {
             return map2;

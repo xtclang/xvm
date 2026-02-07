@@ -243,7 +243,7 @@ public abstract class Container
         if (template == null) {
             if (type.isSingleUnderlyingClass(true)) {
                 // make sure we don't hold on other pool's constants
-                type = getConstantPool().register(type);
+                type = (TypeConstant) getConstantPool().register(type);
 
                 IdentityConstant idClass = type.getSingleUnderlyingClass(true);
                 template = getTemplate(idClass);
@@ -352,7 +352,7 @@ public abstract class Container
         }
 
         // make sure we don't hold on other pool's constants
-        type = getConstantPool().register(type);
+        type = (TypeConstant) getConstantPool().register(type);
 
         return getTemplate(type).ensureClass(this, type.normalizeParameters());
     }
@@ -371,7 +371,7 @@ public abstract class Container
             assert !typeInception.isAccessSpecified();
             assert typeInception.normalizeParameters().equals(typeInception);
 
-            typeInception = pool.register(typeInception);
+            typeInception = (TypeConstant) pool.register(typeInception);
 
             clz = f_mapCompositions.computeIfAbsent(typeInception, (type) -> {
                 ClassTemplate templateReal = type.isAnnotated() && type.isIntoVariableType()

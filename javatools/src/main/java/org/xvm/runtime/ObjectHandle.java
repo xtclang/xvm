@@ -565,7 +565,7 @@ public abstract class ObjectHandle
                 TypeConstant     typeInception = clz.getInceptionType().removeAccess();
                 assert typeInception.isShared(owner.getConstantPool());
 
-                typeInception = owner.getConstantPool().register(typeInception);
+                typeInception = (TypeConstant) owner.getConstantPool().register(typeInception);
                 clzAs = owner.ensureClassComposition(typeInception, clz.getTemplate()).maskAs(typeAs);
             }
 

@@ -362,7 +362,7 @@ public class DifferenceTypeConstant
     @Override
     protected ListMap<String, ChildInfo> mergeChildren(TypeInfo info1, TypeInfo info2, ErrorListener errs) {
         if (info1 == null) {
-            return ListMap.empty();
+            return ListMap.EMPTY;
         }
 
         if (info2 == null) {
