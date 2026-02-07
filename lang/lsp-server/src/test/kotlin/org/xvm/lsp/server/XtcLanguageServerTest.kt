@@ -7,6 +7,7 @@ import org.eclipse.lsp4j.HoverParams
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.PublishDiagnosticsParams
+import org.eclipse.lsp4j.ServerCapabilities
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.services.LanguageClient
@@ -153,6 +154,107 @@ class XtcLanguageServerTest {
                 .isNotEmpty()
                 .anyMatch { it.label == "class" }
                 .anyMatch { it.label == "String" }
+        }
+    }
+
+    @Nested
+    @DisplayName("capabilities audit")
+    inner class CapabilitiesAuditTests {
+        private lateinit var caps: ServerCapabilities
+
+        @BeforeEach
+        fun initServer() {
+            val result = server.initialize(InitializeParams()).get()
+            caps = result.capabilities
+        }
+
+        @Test
+        @DisplayName("should advertise all implemented capabilities")
+        fun shouldAdvertiseImplementedCapabilities() {
+            // Core navigation
+            assertThat(caps.hoverProvider?.left).describedAs("hover").isTrue()
+            assertThat(caps.completionProvider).describedAs("completion").isNotNull()
+            assertThat(caps.definitionProvider?.left).describedAs("definition").isTrue()
+            assertThat(caps.referencesProvider?.left).describedAs("references").isTrue()
+            assertThat(caps.documentSymbolProvider?.left).describedAs("documentSymbol").isTrue()
+
+            // Tree-sitter features
+            assertThat(caps.documentHighlightProvider?.left).describedAs("documentHighlight").isTrue()
+            assertThat(caps.selectionRangeProvider?.left).describedAs("selectionRange").isTrue()
+            assertThat(caps.foldingRangeProvider?.left).describedAs("foldingRange").isTrue()
+
+            // Editing features
+            assertThat(caps.renameProvider?.left).describedAs("rename").isTrue()
+            assertThat(caps.codeActionProvider?.left).describedAs("codeAction").isTrue()
+            assertThat(caps.documentFormattingProvider?.left).describedAs("formatting").isTrue()
+            assertThat(caps.documentRangeFormattingProvider?.left).describedAs("rangeFormatting").isTrue()
+            assertThat(caps.inlayHintProvider?.left).describedAs("inlayHint").isTrue()
+
+            // Sync
+            assertThat(caps.textDocumentSync?.left).describedAs("textDocumentSync").isNotNull()
+        }
+
+        @Test
+        @DisplayName("should report all unimplemented LSP capabilities")
+        fun shouldReportUnimplementedCapabilities() {
+            // Full LSP spec capabilities and their current status in this server.
+            // When a capability is implemented, move it from "not yet" to "implemented" above.
+            val notYetImplemented = mutableListOf<String>()
+
+            if (caps.declarationProvider == null) notYetImplemented.add("declaration")
+            if (caps.typeDefinitionProvider == null) notYetImplemented.add("typeDefinition")
+            if (caps.implementationProvider == null) notYetImplemented.add("implementation")
+            if (caps.codeLensProvider == null) notYetImplemented.add("codeLens")
+            if (caps.documentLinkProvider == null) notYetImplemented.add("documentLink")
+            if (caps.colorProvider == null) notYetImplemented.add("colorProvider")
+            if (caps.signatureHelpProvider == null) notYetImplemented.add("signatureHelp")
+            if (caps.documentOnTypeFormattingProvider == null) notYetImplemented.add("onTypeFormatting")
+            if (caps.typeHierarchyProvider == null) notYetImplemented.add("typeHierarchy")
+            if (caps.callHierarchyProvider == null) notYetImplemented.add("callHierarchy")
+            if (caps.semanticTokensProvider == null) notYetImplemented.add("semanticTokens")
+            if (caps.monikerProvider == null) notYetImplemented.add("moniker")
+            if (caps.linkedEditingRangeProvider == null) notYetImplemented.add("linkedEditingRange")
+            if (caps.inlineValueProvider == null) notYetImplemented.add("inlineValue")
+            if (caps.diagnosticProvider == null) notYetImplemented.add("diagnosticProvider")
+            if (caps.workspaceSymbolProvider == null) notYetImplemented.add("workspaceSymbol")
+
+            // Print the audit report
+            println("========================================")
+            println("LSP Capabilities Audit")
+            println("========================================")
+            println("Implemented (${14 - 0} capabilities):")
+            println("  hover, completion, definition, references, documentSymbol,")
+            println("  documentHighlight, selectionRange, foldingRange,")
+            println("  rename, codeAction, formatting, rangeFormatting, inlayHint,")
+            println("  textDocumentSync")
+            println()
+            println("Not yet implemented (${notYetImplemented.size} capabilities):")
+            for (cap in notYetImplemented) {
+                println("  - $cap")
+            }
+            println("========================================")
+
+            // This assertion documents the gap - update as capabilities are added
+            assertThat(notYetImplemented)
+                .describedAs("Unimplemented LSP capabilities")
+                .containsExactlyInAnyOrder(
+                    "declaration",
+                    "typeDefinition",
+                    "implementation",
+                    "codeLens",
+                    "documentLink",
+                    "colorProvider",
+                    "signatureHelp",
+                    "onTypeFormatting",
+                    "typeHierarchy",
+                    "callHierarchy",
+                    "semanticTokens",
+                    "moniker",
+                    "linkedEditingRange",
+                    "inlineValue",
+                    "diagnosticProvider",
+                    "workspaceSymbol",
+                )
         }
     }
 
