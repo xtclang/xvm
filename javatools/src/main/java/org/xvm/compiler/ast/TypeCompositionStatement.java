@@ -915,9 +915,9 @@ public class TypeCompositionStatement
         int                  cImports      = 0;
         boolean              fHasDefault   = false;
         Format               format        = component.getFormat();
-        var                  bifurcator    = new ComponentBifurcator<>(component);
+        ComponentBifurcator  bifurcator    = new ComponentBifurcator(component);
         ConditionalConstant  condPrev      = null;
-        var                  componentList = new ArrayList<ClassStructure>();
+        List<ClassStructure> componentList = new ArrayList<>();
 
         componentList.add(component);
 
@@ -935,7 +935,7 @@ public class TypeCompositionStatement
             ConditionalConstant condCur  = exprCond == null ? null : exprCond.toConditionalConstant();
             if (!Handy.equals(condCur, condPrev)) {
                 componentList.clear();
-                bifurcator.collectMatchingComponents(condCur, componentList);
+                bifurcator.collectMatchingComponents(condCur, (List<Component>) (List) componentList);
                 condPrev = condCur;
             }
 
@@ -1292,7 +1292,7 @@ public class TypeCompositionStatement
 
         // need to go through all components for the next bit
         componentList.clear();
-        bifurcator.collectMatchingComponents(null, componentList);
+        bifurcator.collectMatchingComponents(null, (List<Component>) (List) componentList);
 
         // add default "implement" and/or "extend"
         if (!fAlreadyExtends && (typeDefaultImpl != null || typeDefaultSuper != null)) {

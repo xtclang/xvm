@@ -10,11 +10,9 @@ import org.xvm.asm.constants.ConditionalConstant;
 /**
  * A ComponentBifurcator is a condition-aware and sibling-aware helper that splits a component as
  * necessary to respond to the request for various conditional views of the component.
- *
- * @param <T> the type of component being bifurcated
  */
-public class ComponentBifurcator<T extends Component> {
-    public ComponentBifurcator(T component) {
+public class ComponentBifurcator {
+    public ComponentBifurcator(Component component) {
         // this could support CompositeComponent, but it doesn't
         assert !(component instanceof CompositeComponent);
 
@@ -35,14 +33,14 @@ public class ComponentBifurcator<T extends Component> {
             return cond == null ? unsplit : split(cond);
         }
 
-        var list = new ArrayList<T>();
+        List<Component> list = new ArrayList<>();
         collectMatchingComponents(cond, list);
         if (list.isEmpty()) {
             throw new IllegalStateException();
         } else if (list.size() == 1) {
             return list.get(0);
         } else {
-            return new CompositeComponent(unsplit.getParent(), List.copyOf(list));
+            return new CompositeComponent(unsplit.getParent(), list);
         }
     }
 
@@ -53,7 +51,7 @@ public class ComponentBifurcator<T extends Component> {
      * @param cond  the condition to satisfy
      * @param list  the list to place matching components into
      */
-    public void collectMatchingComponents(ConditionalConstant cond, List<T> list) {
+    public void collectMatchingComponents(ConditionalConstant cond, List<Component> list) {
         if (splitter == null) {
             list.add(cond == null ? unsplit : split(cond));
         } else if (cond == null) {
@@ -79,22 +77,23 @@ public class ComponentBifurcator<T extends Component> {
      *
      * @return the component corresponding to the <b>true</b> branch of the condition
      */
-    private T split(ConditionalConstant cond) {
-        T componentTrue  = unsplit;
-        T componentFalse = unsplit.cloneBodyAs();
+    private Component split(ConditionalConstant cond) {
+        Component componentTrue  = unsplit;
+        Component componentFalse = unsplit.cloneBody(); // REVIEW w.r.t. changes to clone() etc.
+        // TODO link componentFalse as a sibling from componentTrue?
 
         componentTrue.addAndCondition(cond);
         componentFalse.addAndCondition(cond.negate());
 
         splitter = cond;
-        iftrue   = new ComponentBifurcator<>(componentTrue);
-        iffalse  = new ComponentBifurcator<>(componentFalse);
+        iftrue   = new ComponentBifurcator(componentTrue);
+        iffalse  = new ComponentBifurcator(componentFalse);
 
         return componentTrue;
     }
 
-    private final T                      unsplit;
-    private ConditionalConstant          splitter;
-    private ComponentBifurcator<T>       iftrue;
-    private ComponentBifurcator<T>       iffalse;
+    private final Component     unsplit;
+    private ConditionalConstant splitter;
+    private ComponentBifurcator iftrue;
+    private ComponentBifurcator iffalse;
 }

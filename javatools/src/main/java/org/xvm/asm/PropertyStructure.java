@@ -23,6 +23,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.MethodStructure.ConcurrencySafety;
 
+import org.xvm.util.LinkedIterator;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.writePackedLong;
@@ -733,13 +734,11 @@ public class PropertyStructure
             }
         }
 
-        if (listAnno == null) {
-            return super.getContained();
-        }
-        var result = new ArrayList<XvmStructure>();
-        super.getContained().forEachRemaining(result::add);
-        result.addAll(listAnno);
-        return result.iterator();
+        return listAnno == null
+                ? super.getContained()
+                : new LinkedIterator(
+                        super.getContained(),
+                        listAnno.iterator());
     }
 
     @Override

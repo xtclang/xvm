@@ -48,7 +48,7 @@ public class ReturnStatement
     // ----- constructors --------------------------------------------------------------------------
 
     public ReturnStatement(Token keyword) {
-        this(keyword, (List<Expression>) null);
+        this(keyword, (List) null);
     }
 
     public ReturnStatement(Token keyword, Expression expr) {

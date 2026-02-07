@@ -58,7 +58,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Utils;
 
-import java.util.Collections;
+import org.xvm.util.LinkedIterator;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
@@ -2004,13 +2004,11 @@ public class MethodStructure
 
     @Override
     public Iterator<? extends XvmStructure> getContained() {
-        if (getAnnotationCount() == 0) {
-            return super.getContained();
-        }
-        var result = new ArrayList<XvmStructure>();
-        super.getContained().forEachRemaining(result::add);
-        Collections.addAll(result, m_aAnnotations);
-        return result.iterator();
+        return getAnnotationCount() == 0
+                ? super.getContained()
+                : new LinkedIterator(
+                    super.getContained(),
+                    Arrays.stream(m_aAnnotations).iterator());
     }
 
     @Override

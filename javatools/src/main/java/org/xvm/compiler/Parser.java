@@ -1476,7 +1476,7 @@ public class Parser {
         // figure out which form of the "for" statement this is:
         // 1) VariableInitializationList-opt ";" Expression-opt ";" VariableModificationList-opt
         // 2) OptionalDeclarationList ":" Expression
-        var init = new ArrayList<Statement>();
+        List<AstNode> init = new ArrayList<>();
         if (!peek(Id.SEMICOLON)) {
             boolean fFirst = true;
             do {
@@ -1569,7 +1569,7 @@ public class Parser {
         }
 
         expect(Id.R_PAREN);
-        return new ForStatement(keyword, init, conds, update, parseStatementBlock());
+        return new ForStatement(keyword, (List<Statement>) (List) init, conds, update, parseStatementBlock());
     }
 
     /**
