@@ -413,7 +413,40 @@ val validateTreeSitterGrammar by tasks.registering(Exec::class) {
 
     workingDir(generatedDir)
     executable(treeSitterCliExe.get())
-    args("generate")
+    // Use native QuickJS runtime instead of requiring system Node.js
+    args("generate", "--js-runtime", "native")
+
+    // Capture paths at configuration time for logging in doFirst
+    val cliExePath = treeSitterCliExe.get()
+    val grammarJsPath = grammarJsFile.get().asFile.absolutePath
+    val workDirPath = generatedDir.get().asFile.absolutePath
+    val buildDirPath = layout.buildDirectory.get().asFile.absolutePath
+
+    doFirst {
+        logger.lifecycle("========== TREE-SITTER GRAMMAR VALIDATION ==========")
+        logger.lifecycle("tree-sitter CLI:  $cliExePath")
+        logger.lifecycle("grammar.js:       $grammarJsPath")
+        logger.lifecycle("working dir:      $workDirPath")
+        logger.lifecycle("====================================================")
+
+        // Assert we're using the build tree's tree-sitter CLI, not a system installation
+        require(cliExePath.startsWith(buildDirPath)) {
+            "ASSERTION FAILED: tree-sitter CLI must be from build directory!\n" +
+                "  Expected prefix: $buildDirPath\n" +
+                "  Actual path:     $cliExePath\n" +
+                "  This suggests a system-installed tree-sitter is being used."
+        }
+
+        // Assert grammar.js is from the build tree
+        require(grammarJsPath.startsWith(buildDirPath)) {
+            "ASSERTION FAILED: grammar.js must be from build directory!\n" +
+                "  Expected prefix: $buildDirPath\n" +
+                "  Actual path:     $grammarJsPath\n" +
+                "  This suggests grammar.js from an unexpected location is being used."
+        }
+
+        logger.lifecycle("Assertions passed: Using build-local tree-sitter and grammar.js")
+    }
 }
 
 // =============================================================================
@@ -453,8 +486,40 @@ abstract class TreeSitterParseTestTask @Inject constructor(
 
     data class ParseResult(val relativePath: String, val success: Boolean, val timeMs: Long)
 
+    @get:Input
+    abstract val buildDirPath: Property<String>
+
     @TaskAction
     fun run() {
+        val cliAbsPath = cliPath.get()
+        val workDirAbsPath = workDir.get().absolutePath
+        val buildDir = buildDirPath.get()
+
+        // Log paths for debugging build issues
+        logger.lifecycle("========== TREE-SITTER PARSE TEST ==========")
+        logger.lifecycle("tree-sitter CLI:  $cliAbsPath")
+        logger.lifecycle("working dir:      $workDirAbsPath")
+        logger.lifecycle("build dir:        $buildDir")
+        logger.lifecycle("=============================================")
+
+        // Assert we're using the build tree's tree-sitter CLI
+        require(cliAbsPath.startsWith(buildDir)) {
+            "ASSERTION FAILED: tree-sitter CLI must be from build directory!\n" +
+                "  Expected prefix: $buildDir\n" +
+                "  Actual path:     $cliAbsPath\n" +
+                "  This suggests a system-installed tree-sitter is being used."
+        }
+
+        // Assert working directory is in the build tree (contains grammar.js)
+        require(workDirAbsPath.startsWith(buildDir)) {
+            "ASSERTION FAILED: working directory must be in build directory!\n" +
+                "  Expected prefix: $buildDir\n" +
+                "  Actual path:     $workDirAbsPath\n" +
+                "  This suggests grammar.js from an unexpected location is being used."
+        }
+
+        logger.lifecycle("Assertions passed: Using build-local tree-sitter and grammar")
+
         val filter = fileFilter.orNull
         val showTimingInfo = showTiming.getOrElse(true)
 
@@ -558,6 +623,7 @@ val testTreeSitterParse by tasks.registering(TreeSitterParseTestTask::class) {
     // "not configured any parser directories" because there's no global ~/.config/tree-sitter/config.json,
     // but the CLI still works correctly by discovering the grammar from the working directory.
     workDir.set(generatedDir.map { it.asFile })
+    buildDirPath.set(layout.buildDirectory.map { it.asFile.absolutePath })
     rootDir.set(compositeRoot)
 
     // Find all lib_* directories (the XDK standard library)

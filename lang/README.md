@@ -58,7 +58,7 @@ This ensures the grammar can parse real-world Ecstasy code.
 
 ```bash
 # Run the full corpus test (requires lang build enabled)
-./gradlew :lang:tree-sitter:testTreeSitterParse -PincludeBuildLang=true
+./gradlew :lang:tree-sitter:testTreeSitterParse 
 
 # Filter to specific files (comma-separated patterns)
 ./gradlew :lang:tree-sitter:testTreeSitterParse -PtestFiles=ecstasy/numbers

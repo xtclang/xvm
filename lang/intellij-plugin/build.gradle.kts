@@ -14,47 +14,50 @@ val xdkVersion: String = project.version.toString()
 val releaseChannel: String = xdkProperties.stringValue("xdk.intellij.release.channel", "alpha")
 
 // Publishing is disabled by default. Enable with: ./gradlew publishPlugin -PenablePublish=true
-val enablePublish = project.findProperty("enablePublish")?.toString()?.toBoolean() ?: false
+val enablePublish = providers.gradleProperty("enablePublish").map { it.toBoolean() }.getOrElse(false)
 
 // =============================================================================
-// Local IntelliJ IDE Detection
+// IntelliJ IDE Resolution
 // =============================================================================
-// Using a local IDE avoids Gradle transform cache issues on macOS where
-// Gatekeeper/codesigning can modify extracted files, corrupting the cache.
-// Override with: -PintellijLocalPath=/path/to/IntelliJ
+// By default, IntelliJ Community is downloaded and cached in ~/.gradle (Gradle's
+// dependency cache). The cached IDE is keyed by version, so changing the version
+// in libs.versions.toml automatically downloads the new version on the next build.
+//
+// To use a locally installed IDE instead (faster startup, no download):
+//   -PuseLocalIde=true          Auto-detect a local IntelliJ installation
+//   -PintellijLocalPath=/path   Use a specific local IDE path
 
 fun findLocalIntelliJ(): File? {
-    // Allow explicit override via gradle property
-    val explicitPath: String? = project.findProperty("intellijLocalPath")?.toString()
+    val explicitPath = providers.gradleProperty("intellijLocalPath").orNull
     if (explicitPath != null) {
         val explicit = File(explicitPath)
         if (explicit.exists()) return explicit
         logger.warn("Explicit intellijLocalPath '$explicitPath' does not exist, searching for installed IDE")
     }
 
-    val osName: String = System.getProperty("os.name")?.lowercase() ?: ""
-    val userHome: String = System.getProperty("user.home") ?: ""
-    val candidates: List<String> =
+    val osName = System.getProperty("os.name", "").lowercase()
+    val userHome = System.getProperty("user.home", "")
+    val candidates =
         when {
-            osName.contains("mac") ->
+            "mac" in osName ->
                 listOf(
                     "/Applications/IntelliJ IDEA CE.app",
                     "/Applications/IntelliJ IDEA.app",
                     "$userHome/Applications/IntelliJ IDEA CE.app",
                     "$userHome/Applications/IntelliJ IDEA.app",
                 )
-            osName.contains("linux") -> {
-                listOf(
-                    "/opt/idea-IC",
-                    "/opt/intellij-idea-community",
-                    "/usr/share/intellij-idea-community",
-                    "$userHome/.local/share/JetBrains/Toolbox/apps/IDEA-C/ch-0",
-                    "$userHome/idea-IC",
-                ) + (File("/opt").listFiles()?.filter { it.name.startsWith("idea-IC-") }?.map { it.path } ?: emptyList()) +
-                    (File(userHome).listFiles()?.filter { it.name.startsWith("idea-IC-") }?.map { it.path } ?: emptyList())
-            }
-            osName.contains("windows") -> {
-                val programFiles: String = System.getenv("ProgramFiles") ?: "C:\\Program Files"
+            "linux" in osName ->
+                buildList {
+                    add("/opt/idea-IC")
+                    add("/opt/intellij-idea-community")
+                    add("/usr/share/intellij-idea-community")
+                    add("$userHome/.local/share/JetBrains/Toolbox/apps/IDEA-C/ch-0")
+                    add("$userHome/idea-IC")
+                    File("/opt").listFiles()?.forEach { if (it.name.startsWith("idea-IC-")) add(it.path) }
+                    File(userHome).listFiles()?.forEach { if (it.name.startsWith("idea-IC-")) add(it.path) }
+                }
+            "windows" in osName -> {
+                val programFiles = System.getenv("ProgramFiles") ?: "C:\\Program Files"
                 listOf(
                     "$programFiles\\JetBrains\\IntelliJ IDEA Community Edition 2025.1",
                     "$programFiles\\JetBrains\\IntelliJ IDEA Community Edition",
@@ -64,16 +67,18 @@ fun findLocalIntelliJ(): File? {
             else -> emptyList()
         }
 
-    return candidates.map { File(it) }.firstOrNull { it.exists() }
+    return candidates.map(::File).firstOrNull(File::exists)
 }
 
-val localIntelliJ: File? = findLocalIntelliJ()
-val useLocalIde = localIntelliJ != null
+// Default: download IntelliJ Community (cached in ~/.gradle by version).
+// Opt-in to local IDE: -PuseLocalIde=true or -PintellijLocalPath=/path
+val useLocalIde = providers.gradleProperty("useLocalIde").map { it.toBoolean() }.getOrElse(false)
+val hasExplicitLocalPath = providers.gradleProperty("intellijLocalPath").isPresent
+val localIntelliJ: File? = if (useLocalIde || hasExplicitLocalPath) findLocalIntelliJ() else null
 
-if (useLocalIde) {
-    logger.info("Using local IntelliJ IDE: ${localIntelliJ!!.absolutePath}")
-} else {
-    logger.info("No local IntelliJ IDE found, will download (may cause cache issues on macOS)")
+when {
+    localIntelliJ != null -> logger.lifecycle("[ide] Using local IntelliJ IDE: ${localIntelliJ.absolutePath}")
+    else -> logger.lifecycle("[ide] Using IntelliJ Community ${libs.versions.intellij.ide.get()} (cached in ~/.gradle)")
 }
 
 repositories {
@@ -209,9 +214,10 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
 
     intellijPlatform {
-        // Use local IDE if available to avoid Gradle transform cache issues on macOS
-        if (useLocalIde) {
-            local(localIntelliJ!!.absolutePath)
+        // Default: download IntelliJ Community (cached in ~/.gradle by version)
+        // Use -PuseLocalIde=true or -PintellijLocalPath=/path for local IDE
+        if (localIntelliJ != null) {
+            local(localIntelliJ.absolutePath)
         } else {
             intellijIdeaCommunity(
                 libs.versions.intellij.ide
@@ -324,8 +330,50 @@ val publishPlugin by tasks.existing {
     dependsOn(publishCheck)
 }
 
+// Searchable options allow IntelliJ's Settings search (Cmd+Shift+A / Ctrl+Shift+A) to index
+// this plugin's settings pages and configuration UI text. When disabled, users cannot find
+// plugin settings via the search bar — they must navigate to them manually. Enabling it adds
+// ~30-60s to the build because it launches a headless IDE to index all settings pages.
+// Enable with: -Plsp.buildSearchableOptions=true
+val buildSearchableOptionsEnabled =
+    providers
+        .gradleProperty("lsp.buildSearchableOptions")
+        .map { it.toBoolean() }
+        .getOrElse(false)
+
+val searchableOptionsStatus =
+    if (buildSearchableOptionsEnabled) "enabled" else "disabled (use -Plsp.buildSearchableOptions=true to enable)"
+logger.lifecycle("[ide] Searchable options: $searchableOptionsStatus")
+
 val buildSearchableOptions by tasks.existing {
-    enabled = false // Speeds up build; enable for production
+    enabled = buildSearchableOptionsEnabled
+    inputs.property("buildSearchableOptionsEnabled", buildSearchableOptionsEnabled)
+}
+
+// =============================================================================
+// Plugin Distribution ZIP
+// =============================================================================
+// The buildPlugin task creates a distributable ZIP archive that can be installed
+// in any IntelliJ IDE. Log the output path and installation instructions.
+
+val buildPlugin by tasks.existing {
+    val distDir = layout.buildDirectory.dir("distributions")
+    val rootDir = project.rootDir
+    doLastTask {
+        val dir = distDir.get().asFile
+        val zipFiles = dir.listFiles { f -> f.extension == "zip" }.orEmpty()
+        if (zipFiles.isNotEmpty()) {
+            val zip = zipFiles.first()
+            val relPath = zip.relativeTo(rootDir)
+            logger.lifecycle("[plugin] Distribution ZIP: $relPath (${zip.length().humanSize()})")
+            logger.lifecycle("[plugin] Absolute path:    ${zip.absolutePath}")
+            logger.lifecycle("[plugin]")
+            logger.lifecycle("[plugin] To install in IntelliJ IDEA:")
+            logger.lifecycle("[plugin]   1. Open Settings -> Plugins -> gear icon -> Install Plugin from Disk...")
+            logger.lifecycle("[plugin]   2. Select: ${zip.absolutePath}")
+            logger.lifecycle("[plugin]   3. Restart the IDE")
+        }
+    }
 }
 
 // =============================================================================
@@ -350,6 +398,9 @@ val copyTextMateToSandbox by tasks.registering(Sync::class) {
 
     // Ensure DSL test compilation completes before copying (Gradle detected potential conflict with build/generated)
     mustRunAfter(project(":dsl").tasks.named("compileTestJava"))
+
+    val rootDir = project.rootDir // local capture for CC safety
+    doLastTask { logCopiedFiles("textmate", destinationDir, rootDir) }
 }
 
 // =============================================================================
@@ -372,11 +423,14 @@ val copyLspServerToSandbox by tasks.registering(Copy::class) {
     }
     into(sandboxPluginBin)
 
-    // Ensure bin/ directory exists (prepareSandbox only creates lib/)
-    // Capture the directory path at configuration time for cache compatibility
+    // Capture at configuration time for CC safety
     val binDir = sandboxPluginBin
-    doFirst {
+    val rootDir = project.rootDir
+    doFirstTask {
         binDir.get().mkdirs()
+    }
+    doLastTask {
+        logCopiedFiles("lsp", binDir.get(), rootDir, "Adapter: tree-sitter (out-of-process, off classpath)")
     }
 }
 
@@ -432,15 +486,41 @@ val configureDisabledPlugins by tasks.registering {
         val disabledPluginsFile = configDir.get().resolve("disabled_plugins.txt")
         disabledPluginsFile.parentFile.mkdirs()
         disabledPluginsFile.writeText(pluginsList.joinToString("\n") + "\n")
+        logger.lifecycle("[sandbox] Disabled ${pluginsList.size} Ultimate-only plugins in sandbox config")
     }
 }
 
 // Ensure TextMate files and LSP server JAR are copied before IDE starts
 // NOTE: finalizedBy doesn't guarantee completion, so we need explicit dependsOn
 val runIde by tasks.existing {
-    dependsOn(copyTextMateToSandbox)
-    dependsOn(copyLspServerToSandbox)
-    dependsOn(configureDisabledPlugins)
+    dependsOn(
+        copyTextMateToSandbox,
+        copyLspServerToSandbox,
+        configureDisabledPlugins,
+    )
+
+    // Log sandbox location and idea.log path so the user can click to open them in the IDE
+    val sandboxDir = sandboxConfigDir.map { it.parentFile }
+    doFirstTask {
+        val sandbox = sandboxDir.get()
+        val ideaLog = sandbox.resolve("log/idea.log")
+        logger.lifecycle("[runIde] Sandbox: ${sandbox.absolutePath}")
+        logger.lifecycle("[runIde] IDE log:  ${ideaLog.absolutePath}")
+    }
+}
+
+// =============================================================================
+// Clean sandbox when running 'clean'
+// =============================================================================
+// The IntelliJ Platform Gradle Plugin stores the sandbox under build/idea-sandbox/.
+// By default, Gradle's clean task only deletes build/classes, build/libs, etc.
+// We extend clean to also delete the sandbox so that version or dependency changes
+// are picked up on the next run. The downloaded IDE distribution itself is cached
+// in ~/.gradle and is NOT affected by clean (only re-downloaded when the version
+// in libs.versions.toml changes, managed by Gradle's dependency resolution).
+
+val clean by tasks.existing(Delete::class) {
+    delete(layout.buildDirectory.dir("idea-sandbox"))
 }
 
 // No tests in this module - disable test task to avoid IntelliJ plugin test infrastructure overhead

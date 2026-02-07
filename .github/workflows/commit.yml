@@ -61,15 +61,17 @@ on:
                 default: false
 
 env:
-    # Add manual tests as included builds in the composite build configuration
-    ORG_GRADLE_PROJECT_includeBuildManualTests: true
-    ORG_GRADLE_PROJECT_includeBuildAttachManualTests: true
+    # Add manual tests as included builds - defaults to true for push/PR, controlled by include-lang for workflow_dispatch
+    ORG_GRADLE_PROJECT_includeBuildManualTests: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.include-lang == true || github.event.inputs.include-lang == 'true' }}
+    ORG_GRADLE_PROJECT_includeBuildAttachManualTests: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.include-lang == true || github.event.inputs.include-lang == 'true' }}
     ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
+    RUN_INTEGRATION_TESTS: true
 
-    # Lang build inclusion - defaults to true for push/PR, configurable for workflow_dispatch
-    # These env vars override gradle.properties settings (which may have lang disabled)
-    ORG_GRADLE_PROJECT_includeBuildLang: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.include-lang == true || github.event.inputs.include-lang == 'true' }}
-    ORG_GRADLE_PROJECT_includeBuildAttachLang: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.include-lang == true || github.event.inputs.include-lang == 'true' }}
+    # Lang build inclusion - defaults to false (matching gradle.properties).
+    # Only enabled via workflow_dispatch with include-lang=true.
+    # Tree-sitter validation steps have their own path-based gating.
+    ORG_GRADLE_PROJECT_includeBuildLang: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.include-lang == true || github.event.inputs.include-lang == 'true') }}
+    ORG_GRADLE_PROJECT_includeBuildAttachLang: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.include-lang == true || github.event.inputs.include-lang == 'true') }}
 
     skip_manual_tests: ${{ github.event.inputs.skip-tests == true || github.event.inputs.skip-tests == 'true' }}
     # Default to parallel mode (true) for push/PR events; for workflow_dispatch, use the input value
@@ -116,8 +118,17 @@ jobs:
             - name: Fetch Sources
               uses: actions/checkout@v6
               with:
-                  fetch-depth: 1
+                  fetch-depth: 0  # Need full history for path filtering
                   show-progress: true
+
+            - name: Check for lang-related changes
+              id: changes
+              uses: dorny/paths-filter@v3
+              with:
+                  filters: |
+                      lang:
+                        - 'lang/**'
+                        - 'lib_ecstasy/**/*.x'
 
             - name: 🚀 Publishing Configuration
               shell: bash
@@ -234,9 +245,22 @@ jobs:
                 inspect_gradle_cache "after manual tests"
                 echo "✅ Manual tests completed"
 
+            - name: Skip Tree-sitter (no lang changes)
+              if: |
+                  success() &&
+                  matrix.os == 'ubuntu-latest' &&
+                  env.ORG_GRADLE_PROJECT_includeBuildLang == 'true' &&
+                  steps.changes.outputs.lang != 'true'
+              run: |
+                  echo "⏭️ Skipping Tree-sitter validation - no changes in lang/ or lib_ecstasy/*.x"
+                  echo "Changed paths filter result: lang=${{ steps.changes.outputs.lang }}"
+
             - name: Validate Tree-sitter Grammar and LSP Adapters
-              #if: success() && matrix.os == 'ubuntu-latest' && env.ORG_GRADLE_PROJECT_includeBuildLang == 'true'
-              if: false
+              if: |
+                  success() &&
+                  matrix.os == 'ubuntu-latest' &&
+                  env.ORG_GRADLE_PROJECT_includeBuildLang == 'true' &&
+                  steps.changes.outputs.lang == 'true'
               shell: bash
               env:
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}

@@ -1,6 +1,5 @@
 package org.xtclang.idea.lsp.jre
 
-import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.projectRoots.JavaSdk
 import com.intellij.openapi.projectRoots.ProjectJdkTable
@@ -17,6 +16,7 @@ import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
+import java.time.Instant
 import kotlin.io.path.createDirectories
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
@@ -24,6 +24,9 @@ import kotlin.io.path.isDirectory
 import kotlin.io.path.isExecutable
 import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.moveTo
+import kotlin.io.path.readText
+import kotlin.io.path.writeText
+import kotlin.jvm.optionals.getOrNull
 
 /**
  * Provisions a Java Runtime Environment (JRE) for the XTC LSP server.
@@ -43,8 +46,8 @@ import kotlin.io.path.moveTo
  *    Java 25+ SDK already registered by the user. This is the preferred path as it uses
  *    an existing installation without any downloads.
  *
- * 2. **Cached JRE**: Checks the IDE's system cache directory for a previously downloaded
- *    Temurin JRE at `{PathManager.getSystemPath()}/xtc-jre/temurin-25-jre/`.
+ * 2. **Cached JRE**: Checks the Gradle cache directory for a previously downloaded
+ *    Temurin JRE at `{GRADLE_USER_HOME}/caches/xtc-jre/temurin-25-jre/`.
  *
  * 3. **Download from Foojay**: If no suitable JRE is found, downloads Eclipse Temurin JRE 25
  *    from the [Foojay Disco API](https://api.foojay.io/). This is the same API used by
@@ -53,13 +56,16 @@ import kotlin.io.path.moveTo
  *
  * ## Cache Location
  *
- * Downloaded JREs are stored in IntelliJ's system directory (`PathManager.getSystemPath()`),
- * typically at:
- * - macOS: `~/Library/Caches/JetBrains/IntelliJIdea2025.1/xtc-jre/`
- * - Linux: `~/.cache/JetBrains/IntelliJIdea2025.1/xtc-jre/`
- * - Windows: `%LOCALAPPDATA%\JetBrains\IntelliJIdea2025.1\xtc-jre\`
+ * Downloaded JREs are stored in Gradle's user home (same location as Gradle toolchains):
+ * - Default: `~/.gradle/caches/xtc-jre/`
+ * - Override: Set `GRADLE_USER_HOME` environment variable
  *
- * This location is managed by the IDE and will be cleaned during "Invalidate Caches".
+ * This location persists across IDE sessions and won't be cleared by IntelliJ's "Invalidate Caches".
+ *
+ * ## Cache Validation
+ *
+ * A metadata file tracks the downloaded package ID. Periodically (every 7 days), the provisioner
+ * checks Foojay for newer point releases and re-downloads if available.
  *
  * ## Failure Handling
  *
@@ -67,16 +73,30 @@ import kotlin.io.path.moveTo
  * a failure marker file is created on provisioning failure. Subsequent attempts will
  * fail fast until the marker is cleared via [clearFailure] or by deleting the marker file.
  *
- * @param cacheDir Directory for caching downloaded JREs (defaults to IDE system path)
+ * @param cacheDir Directory for caching downloaded JREs (defaults to GRADLE_USER_HOME/caches/xtc-jre)
  * @param version Target Java major version (defaults to [TARGET_VERSION])
  */
 class JreProvisioner(
-    private val cacheDir: Path = Path.of(PathManager.getSystemPath(), "xtc-jre"),
+    private val cacheDir: Path = defaultCacheDir(),
     private val version: Int = TARGET_VERSION,
 ) {
     companion object {
         /** Target Java version for the LSP server (must match TreeSitterAdapter.MIN_JAVA_VERSION). */
         const val TARGET_VERSION = 25
+
+        /** How often to check for newer JRE versions (in days). */
+        private const val CACHE_CHECK_INTERVAL_DAYS = 7L
+
+        /**
+         * Returns the default cache directory for downloaded JREs.
+         * Uses GRADLE_USER_HOME if set, otherwise ~/.gradle.
+         */
+        fun defaultCacheDir(): Path {
+            val gradleHome =
+                System.getenv("GRADLE_USER_HOME")
+                    ?: Path.of(System.getProperty("user.home"), ".gradle").toString()
+            return Path.of(gradleHome, "caches", "xtc-jre")
+        }
     }
 
     private val logger = logger<JreProvisioner>()
@@ -90,6 +110,7 @@ class JreProvisioner(
     }
 
     private val jreDir: Path get() = cacheDir.resolve("temurin-$version-jre")
+    private val metadataFile: Path get() = cacheDir.resolve("temurin-$version-jre.json")
     private val failureMarker: Path get() = cacheDir.resolve(".provision-failed-$version")
     private val isWindows get() = "windows" in System.getProperty("os.name").lowercase()
 
@@ -97,10 +118,15 @@ class JreProvisioner(
         get() = findSystemJava() ?: findCachedJava()
 
     private fun findCachedJava(): Path? {
-        val exe = jreDir.resolve(if (isWindows) "bin/java.exe" else "bin/java")
-        return exe.takeIf { it.exists() && it.isExecutable() }?.also {
-            logger.info("Found cached JRE: $it")
-        }
+        if (!jreDir.exists()) return null
+        val javaName = if (isWindows) "java.exe" else "java"
+        return Files
+            .walk(jreDir, 5) // max depth 5 handles any nested structure
+            .filter { it.fileName.toString() == javaName && it.parent?.fileName.toString() == "bin" }
+            .filter { it.isExecutable() }
+            .findFirst()
+            .getOrNull()
+            ?.also { logger.info("Found cached JRE: $it") }
     }
 
     private fun findSystemJava(): Path? {
@@ -134,12 +160,14 @@ class JreProvisioner(
     /** Clear failure marker to allow retry (e.g., after user intervention). */
     fun clearFailure() {
         failureMarker.deleteIfExists()
-        if (jreDir.exists()) FileUtil.delete(jreDir)
+        metadataFile.deleteIfExists()
+        if (jreDir.exists()) FileUtil.delete(jreDir.toFile())
     }
 
     fun provision(onProgress: ((Float, String) -> Unit)? = null): Path {
-        javaPath?.let {
-            logger.info("Using cached JRE: $it")
+        // Check for system JDK first
+        findSystemJava()?.let {
+            logger.info("Using registered JDK: $it")
             return it
         }
 
@@ -147,16 +175,41 @@ class JreProvisioner(
             error("JRE provisioning previously failed. Delete $failureMarker to retry.")
         }
 
-        logger.info("No cached JRE found, will download from Foojay")
-        onProgress?.invoke(0.1f, "Finding JRE package...")
-
         val (os, arch, archiveType) = platform()
         logger.info("Detected platform: os=$os, arch=$arch, archiveType=$archiveType")
 
-        val pkg = findPackage(os, arch, archiveType) ?: error("No JRE found for Java $version on $os-$arch")
-        logger.info("Found package: ${pkg.filename} from ${pkg.links.downloadRedirect}")
+        // Check if cached JRE is still valid
+        val cachedJava = findCachedJava()
+        val metadata = loadMetadata()
+        if (cachedJava != null && metadata != null && !shouldRefreshCache(metadata, os, arch)) {
+            logger.info("Using cached JRE (package: ${metadata.packageId}): $cachedJava")
+            return cachedJava
+        }
 
+        // Check for newer version or download fresh
+        logger.info("Checking Foojay for latest JRE package...")
+        onProgress?.invoke(0.1f, "Finding JRE package...")
+
+        val pkg = findPackage(os, arch, archiveType) ?: error("No JRE found for Java $version on $os-$arch")
+        logger.info("Found package: ${pkg.filename} (id: ${pkg.id})")
+
+        // If cached version matches latest, just update the check timestamp
+        if (cachedJava != null && metadata?.packageId == pkg.id) {
+            logger.info("Cached JRE is up-to-date")
+            saveMetadata(CacheMetadata(pkg.id, os, arch, Instant.now().epochSecond))
+            return cachedJava
+        }
+
+        // Download new version
+        logger.info("Downloading: ${pkg.filename} from ${pkg.links.downloadRedirect}")
         onProgress?.invoke(0.2f, "Downloading ${pkg.filename}...")
+
+        // Clear old cache if exists
+        if (jreDir.exists()) {
+            logger.info("Removing old cached JRE")
+            FileUtil.delete(jreDir.toFile())
+        }
+
         val archive = download(pkg.links.downloadRedirect)
 
         onProgress?.invoke(0.8f, "Extracting...")
@@ -164,19 +217,59 @@ class JreProvisioner(
             extract(archive, archiveType)
         }.onFailure { e ->
             Files.createFile(failureMarker)
-            if (jreDir.exists()) FileUtil.delete(jreDir)
+            if (jreDir.exists()) FileUtil.delete(jreDir.toFile())
             throw e
         }
         archive.deleteIfExists()
 
+        // Save metadata for future cache validation
+        saveMetadata(CacheMetadata(pkg.id, os, arch, Instant.now().epochSecond))
+
         onProgress?.invoke(1.0f, "Done")
-        val java = javaPath
+        val java = findCachedJava()
         if (java == null) {
             Files.createFile(failureMarker)
             error("Java executable not found after extraction at $jreDir")
         }
         logger.info("JRE provisioned successfully: $java")
         return java
+    }
+
+    private fun shouldRefreshCache(
+        metadata: CacheMetadata,
+        os: String,
+        arch: String,
+    ): Boolean {
+        // Platform mismatch - shouldn't happen but check anyway
+        if (metadata.os != os || metadata.arch != arch) {
+            logger.info("Platform mismatch in cache (cached: ${metadata.os}-${metadata.arch}, current: $os-$arch)")
+            return true
+        }
+
+        // Check if cache is old enough to warrant a refresh check
+        val lastCheck = Instant.ofEpochSecond(metadata.lastCheckedEpoch)
+        val daysSinceCheck = Duration.between(lastCheck, Instant.now()).toDays()
+        if (daysSinceCheck >= CACHE_CHECK_INTERVAL_DAYS) {
+            logger.info("Cache is $daysSinceCheck days old, will check for updates")
+            return true
+        }
+
+        logger.info("Cache is fresh ($daysSinceCheck days old, threshold: $CACHE_CHECK_INTERVAL_DAYS days)")
+        return false
+    }
+
+    private fun loadMetadata(): CacheMetadata? {
+        if (!metadataFile.exists()) return null
+        return runCatching {
+            json.decodeFromString<CacheMetadata>(metadataFile.readText())
+        }.onFailure {
+            logger.warn("Failed to read cache metadata: ${it.message}")
+        }.getOrNull()
+    }
+
+    private fun saveMetadata(metadata: CacheMetadata) {
+        cacheDir.createDirectories()
+        metadataFile.writeText(json.encodeToString(CacheMetadata.serializer(), metadata))
     }
 
     private fun platform(): Triple<String, String, String> {
@@ -291,23 +384,17 @@ class JreProvisioner(
     }
 
     /**
-     * If jreDir contains exactly one subdirectory and no bin/, move the subdirectory's contents up.
-     * This handles JRE archives that have a versioned root directory like "jdk-25.0.1+9-jre/".
+     * Flatten the top-level archive directory if there's exactly one.
+     * JRE archives typically have a versioned root like "jdk-25.0.1+9-jre/" - we move its contents up.
+     * The internal structure (bin/java vs Contents/Home/bin/java) doesn't matter since findCachedJava() searches.
      */
     private fun flattenSingleSubdirectory() {
         val entries = jreDir.listDirectoryEntries()
-        val binDir = jreDir.resolve("bin")
 
-        // Already flat - bin/ exists at top level
-        if (binDir.exists()) {
-            logger.info("Archive already flat (bin/ exists at top level)")
-            return
-        }
-
-        // Find single subdirectory containing bin/
-        val nestedDir = entries.singleOrNull { it.isDirectory() && it.resolve("bin").exists() }
+        // If there's exactly one directory entry, flatten it
+        val nestedDir = entries.singleOrNull()?.takeIf { it.isDirectory() }
         if (nestedDir == null) {
-            logger.warn("Could not find nested JRE directory to flatten. Contents: ${entries.map { it.fileName }}")
+            logger.info("No single nested directory to flatten (${entries.size} entries)")
             return
         }
 
@@ -336,4 +423,12 @@ class JreProvisioner(
             @SerialName("pkg_download_redirect") val downloadRedirect: String,
         )
     }
+
+    @Serializable
+    private data class CacheMetadata(
+        val packageId: String,
+        val os: String,
+        val arch: String,
+        val lastCheckedEpoch: Long,
+    )
 }

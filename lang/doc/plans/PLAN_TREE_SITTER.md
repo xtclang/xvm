@@ -105,25 +105,32 @@ Track: https://github.com/JetBrains/JetBrainsRuntime/releases
 
 ### Current Solution: Out-of-Process LSP Server ✅
 
-**Status**: IMPLEMENTED (2026-02-03)
+**Status**: IMPLEMENTED (2026-02-05)
 
 The out-of-process LSP server is now the default:
 
 - **Default adapter**: `treesitter` (changed from `mock`)
 - **Process model**: LSP server runs as separate Java process
 - **Java requirement**: 25 (for FFM API)
-- **JRE provisioning**: Automatic download via Foojay Disco API
+- **JRE provisioning**: Automatic download via Foojay Disco API with persistent caching
 - **Communication**: stdio (JSON-RPC)
 - **Health monitoring**: Process monitor with crash notification and restart action
 
 The IntelliJ plugin:
 1. Checks IntelliJ's registered JDKs (`ProjectJdkTable`) for any Java 25+
-2. Falls back to cached JRE at `{PathManager.getSystemPath()}/xtc-jre/temurin-25-jre/`
+2. Falls back to cached JRE at `{GRADLE_USER_HOME}/caches/xtc-jre/temurin-25-jre/`
 3. If no JRE found, downloads Eclipse Temurin JRE 25 via Foojay Disco API
-4. Uses IntelliJ's built-in `Decompressor` for archive extraction
-5. Launches `xtc-lsp-server.jar` as a subprocess
-6. Communicates via LSP protocol over stdin/stdout
-7. Shows notification with "Restart Server" action on crash
+4. Stores metadata (package ID, platform, timestamp) for cache validation
+5. Periodically checks for newer point releases (every 7 days)
+6. Uses IntelliJ's built-in `Decompressor` for archive extraction
+7. Launches `xtc-lsp-server.jar` as a subprocess
+8. Communicates via LSP protocol over stdin/stdout
+9. Shows notification with "Restart Server" action on crash
+
+**JRE Cache Location** (persistent across IDE sessions):
+- Default: `~/.gradle/caches/xtc-jre/`
+- Override: Set `GRADLE_USER_HOME` environment variable
+- Not affected by IntelliJ's "Invalidate Caches"
 
 > **Documentation**:
 > - [lang/tree-sitter/README.md](../../tree-sitter/README.md) - Usage and architecture
@@ -183,15 +190,16 @@ Uses jtreesitter's Foreign Function API:
 
 - [x] Query patterns defined (`XtcQueries.kt`)
 - [x] Query engine implemented (`XtcQueryEngine.kt`)
-- [ ] Tests for query accuracy (blocked on native library)
+- [x] Tests for query accuracy (`LspIntegrationTest` runs tree-sitter against real `.x` files)
 
-### LSP Features (Phase 4) - IMPLEMENTED, PENDING TESTING
+### LSP Features (Phase 4) - COMPLETE
 
 - [x] `TreeSitterAdapter` implements all basic LSP methods
-- [ ] Document symbols shows class/method outline
-- [ ] Go-to-definition works for local variables
-- [ ] Find references works within same file
-- [ ] Completion shows keywords and locals
+- [x] Document symbols shows class/method outline
+- [x] Go-to-definition works for local variables
+- [x] Find references works within same file
+- [x] Completion shows keywords and locals
+- [x] Integration tests verify all features against real `.x` files (`LspIntegrationTest`)
 
 ### Cross-File Support (Phase 5) - PENDING
 
@@ -454,7 +462,7 @@ Features requiring compiler should wait for full compiler integration:
    - Full tree-sitter support regardless of IntelliJ JBR version
    - See "Task: Out-of-Process LSP Server" below
 
-8. **End-to-End Testing** - Verify LSP features work in IntelliJ/VS Code
+8. ~~**End-to-End Testing**~~ ✅ PARTIAL - `LspIntegrationTest` verifies all LSP features against real `.x` files with tree-sitter native parsing. Manual IDE testing still needed for IntelliJ/VS Code.
 9. **IDE Integration** - See [PLAN_IDE_INTEGRATION.md](./PLAN_IDE_INTEGRATION.md)
 10. **Compiler Adapter** - Add semantic features (future)
 
@@ -493,7 +501,8 @@ Features requiring compiler should wait for full compiler integration:
 The LSP server now runs out-of-process with full tree-sitter support:
 
 - **JRE Resolution**: First checks IntelliJ's registered JDKs, then cached JRE, then downloads
-- **Cache Location**: `{PathManager.getSystemPath()}/xtc-jre/temurin-25-jre/` (IDE-managed)
+- **Cache Location**: `{GRADLE_USER_HOME}/caches/xtc-jre/temurin-25-jre/` (persistent, not IDE-managed)
+- **Cache Validation**: Stores package ID and checks Foojay for updates every 7 days
 - **Download**: Eclipse Temurin JRE 25 via Foojay Disco API (same as Gradle toolchains)
 - **Extraction**: Uses IntelliJ's built-in `Decompressor.Tar`/`Decompressor.Zip`
 - **Default Adapter**: `treesitter` (changed from `mock`)
@@ -525,8 +534,8 @@ IntelliJ Plugin (JBR 21)          XTC LSP Server (Java 23+)
 ### JRE Resolution Order
 
 1. **Registered JDKs**: `ProjectJdkTable.getInstance().getSdksOfType(JavaSdk)` for Java 25+
-2. **Cached JRE**: `PathManager.getSystemPath()/xtc-jre/temurin-25-jre/`
-3. **Download**: Foojay Disco API → Eclipse Temurin JRE 25
+2. **Cached JRE**: `{GRADLE_USER_HOME}/caches/xtc-jre/temurin-25-jre/` with metadata validation
+3. **Download**: Foojay Disco API → Eclipse Temurin JRE 25 (cached with package ID for future validation)
 
 ### Features
 

@@ -18,7 +18,8 @@ profile-out/
 .DS_Store
 
 # Git and version control
-.git/
+# Note: .git is needed for palantir-git-version plugin (version detection)
+# .git/
 .gitignore
 .gitattributes
 
