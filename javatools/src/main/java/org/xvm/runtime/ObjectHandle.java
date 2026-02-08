@@ -660,6 +660,7 @@ public abstract class ObjectHandle
                     : "");
         }
 
+        @SuppressWarnings("serial")
         public class WrapperException
                 extends Exception {
             public WrapperException() {

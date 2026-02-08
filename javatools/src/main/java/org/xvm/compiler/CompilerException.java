@@ -7,6 +7,7 @@ import org.xvm.tool.Launcher.LauncherException;
  * process to indicate that forward progress is not possible due to a flaw in
  * source material being compiled.
  */
+@SuppressWarnings("serial")
 public class CompilerException extends LauncherException {
     public CompilerException(String message) {
         super(true, message);

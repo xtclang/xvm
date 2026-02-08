@@ -2,103 +2,67 @@
 
 Compiled with `-Xlint:all` via `-Porg.xtclang.java.lint=true -Porg.xtclang.java.warningsAsErrors=false -Porg.xtclang.java.maxWarnings=1000`.
 
-**Total: 357 warnings** (21 in `javatools_utils`, 336 in `javatools`)
+**Current: 313 warnings** (17 in `javatools_utils`, 296 in `javatools`)
+**Original: 357 warnings** — 44 fixed so far
 
-| Category | Count | Tier | Difficulty |
-|----------|-------|------|------------|
-| `[fallthrough]` | 102 | 4 | Involved |
-| `[unchecked]` | 75 | 3 | Moderate |
-| `[this-escape]` | 68 | 5 | Hard |
-| `[rawtypes]` | 68 | 3 | Moderate |
-| `[try]` | 18 | 1 | Trivial |
-| `[cast]` | 13 | 1 | Trivial |
-| `[serial]` | 8 | 2 | Easy |
-| `[overrides]` | 3 | 3 | Moderate |
-| `[static]` | 2 | 1 | Trivial |
-
----
-
-## Tier 1: TRIVIAL (mechanical, zero semantic risk) -- 33 warnings
-
-### 1a. `[static]` Static method qualified by expression (2 warnings)
-
-Change `instance.staticMethod()` to `ClassName.staticMethod()`.
-
-| File | Line | Detail |
-|------|------|--------|
-| `xLocalClock.java` | 179 | static method should be qualified by `xInt64` |
-| `xLocalClock.java` | 183 | static method should be qualified by `xInt64` |
-
-### 1b. `[cast]` Redundant casts (13 warnings)
-
-Remove the cast -- the compiler already knows the type.
-
-| File | Line | Cast to |
-|------|------|---------|
-| `ClassComposition.java` | 312 | `IdentityConstant` |
-| `ClassComposition.java` | 354 | `PropertyConstant` |
-| `ClassComposition.java` | 396 | `PropertyConstant` |
-| `ClassComposition.java` | 541 | `T` |
-| `PropertyComposition.java` | 206 | `IdentityConstant` |
-| `PropertyComposition.java` | 231 | `PropertyConstant` |
-| `PropertyComposition.java` | 253 | `PropertyConstant` |
-| `ArrayConstant.java` | 212 | `ArrayConstant` |
-| `Container.java` | 278 | `IdentityConstant` |
-| `EnumValueConstant.java` | 93 | `EnumValueConstant` |
-| `MapConstant.java` | 252 | `MapConstant` |
-| `MethodStructure.java` | 1436 | `SingletonConstant` |
-| `SingletonConstant.java` | 164 | `SingletonConstant` |
-
-### 1c. `[try]` Unused auto-closeable resource (18 warnings)
-
-These are intentional try-with-resources used for scoping (e.g., `var ignore = lock()`).
-Fix by adding `@SuppressWarnings("try")` to the enclosing method.
-
-| File | Line |
-|------|------|
-| `MethodStructure.java` | 641 |
-| `TypeConstant.java` | 1942 |
-| `ServiceContext.java` | 309 |
-| `FileStructure.java` | 182 |
-| `Container.java` | 101 |
-| `NativeContainer.java` | 100 |
-| `NativeTypeSystem.java` | 99 |
-| `xContainerControl.java` | 107 |
-| `xRTServer.java` | 654 |
-| `xOSStorage.java` | 295 |
-| `MainContainer.java` | 176 |
-| `JitConnector.java` | 52 |
-| `TypeParameterConstant.java` | 212 |
-| `Compiler.java` (tool) | 315 |
-| `Compiler.java` (compiler) | 155 |
-| `Compiler.java` (compiler) | 192 |
-| `Compiler.java` (compiler) | 236 |
-| `Compiler.java` (compiler) | 280 |
+| Category | Original | Current | Tier | Difficulty |
+|----------|----------|---------|------|------------|
+| `[fallthrough]` | 102 | 102 | 4 | Involved |
+| `[unchecked]` | 75 | 75 | 3 | Moderate |
+| `[this-escape]` | 68 | 68 | 5 | Hard |
+| `[rawtypes]` | 68 | 65 | 3 | Moderate |
+| `[try]` | 18 | **0** | 1 | Trivial |
+| `[cast]` | 13 | **0** | 1 | Trivial |
+| `[serial]` | 8 | **0** | 2 | Easy |
+| `[overrides]` | 3 | 3 | 3 | Moderate |
+| `[static]` | 2 | **0** | 1 | Trivial |
 
 ---
 
-## Tier 2: EASY (straightforward, low risk) -- 8 warnings
+## Tier 1: TRIVIAL -- DONE (33 warnings fixed)
 
-### 2. `[serial]` Missing serialVersionUID / non-serializable field
-
-Add `@Serial private static final long serialVersionUID = 1L;` or `@SuppressWarnings("serial")`.
-
-| File | Line | Class | Detail |
-|------|------|-------|--------|
-| `IdentityArrayList.java` | 12 | `IdentityArrayList` | missing serialVersionUID |
-| `ObjectHandle.java` | 663 | `ExceptionHandle.WrapperException` | missing serialVersionUID |
-| `MapConstant.java` | 354 | `ROEntry` | missing serialVersionUID |
-| `Launcher.java` | 963 | `LauncherException` | missing serialVersionUID |
-| `Decimal.java` | 868 | `RangeException` | missing serialVersionUID |
-| `Decimal.java` | 873 | `RangeException` | non-transient non-serializable field |
-| `CompilerException.java` | 10 | `CompilerException` | missing serialVersionUID |
-| `SegFault.java` | 6 | `SegFault` | missing serialVersionUID |
+Fixed in commit `b8d36c5ca`:
+- `[static]` (2): Changed instance-qualified static calls to class-qualified in `xLocalClock.java`
+- `[cast]` (13): Removed redundant casts across 8 files
+- `[try]` (18): Added `@SuppressWarnings("try")` for intentional scoped try-with-resources
 
 ---
 
-## Tier 3: MODERATE (need understanding, some refactoring) -- 146 warnings
+## Tier 2: EASY -- DONE (11 warnings fixed)
 
-### 3a. `[rawtypes]` Raw generic type usage (68 warnings)
+### `[serial]` Missing serialVersionUID / non-serializable field (8 warnings → 0)
+
+All `[serial]` warnings came from classes that inherit `Serializable` through their superclass
+hierarchy but are never actually serialized. The root cause is that `java.lang.Throwable`
+implements `Serializable` (a JDK 1.1 design decision for RMI), so every `Exception`,
+`RuntimeException`, and `Error` subclass is automatically `Serializable` whether intended or not.
+
+**Exception classes** — suppressed with `@SuppressWarnings("serial")`:
+- `SegFault` — extends `Error`
+- `CompilerException` — extends `LauncherException` → `RuntimeException`
+- `LauncherException` — extends `RuntimeException`
+- `WrapperException` — extends `Exception` (inner class of `ExceptionHandle`)
+- `RangeException` — extends `ArithmeticException` (inner class of `Decimal`; also carried a
+  non-serializable `Decimal` field that would have thrown `NotSerializableException` at runtime)
+
+**Collection classes** — suppressed with `@SuppressWarnings("serial")`:
+- `ROEntry` — extends `AbstractMap.SimpleEntry` (inner class of `MapConstant`)
+
+**IdentityArrayList** — rewritten with composition (3 `[rawtypes]` warnings also eliminated):
+- Changed from `extends ArrayList<E>` to `extends AbstractList<E>` with internal `ArrayList<E>`
+  delegate. `AbstractList` is not `Serializable`, so no suppression needed. Previously, the class
+  inherited `Serializable`, `Cloneable`, and `RandomAccess` from `ArrayList`, none of which were
+  used at any call site. Only used in `CompositeComponent.java`, stored as `List<Component>`.
+
+**Existing `serialVersionUID` declarations investigated (2 found, both must stay):**
+- `NonBlockingHashMapLong` and `NonBlockingHashMap` in `javatools_backend` both have active
+  `writeObject()`/`readObject()` implementations — genuine serialization.
+
+---
+
+## Tier 3: MODERATE (need understanding, some refactoring) -- 143 warnings remaining
+
+### 3a. `[rawtypes]` Raw generic type usage (65 warnings)
 
 Add proper type parameters. Hotspots:
 
@@ -110,7 +74,6 @@ Add proper type parameters. Hotspots:
 | `CaseManager.java` | 4 | `Comparable` |
 | `Frame.java` | 4 | `CompletableFuture` |
 | `xOSFile.java` | 4 | `CompletableFuture` |
-| `IdentityArrayList.java` | 3 | `List`, `ListIterator` |
 | `ObjectHandle.java` | 2 | `CompletableFuture` |
 | `NativeTypeSystem.java` | 2 | `Class` |
 | `TypeInfo.java` | 2 | `Entry` |
@@ -151,7 +114,7 @@ Many overlap with `rawtypes`. Fix together per-file.
 
 ---
 
-## Tier 4: INVOLVED (needs careful control-flow review) -- 102 warnings
+## Tier 4: INVOLVED (needs careful control-flow review) -- 102 warnings remaining
 
 ### 4. `[fallthrough]` Switch case fall-through
 
@@ -180,7 +143,7 @@ Each must be audited: intentional fall-through gets `// fall through` comment; a
 
 ---
 
-## Tier 5: HARD (architectural, risk of subtle breakage) -- 68 warnings
+## Tier 5: HARD (architectural, risk of subtle breakage) -- 68 warnings remaining
 
 ### 5. `[this-escape]` Constructor this-escape
 
@@ -217,8 +180,8 @@ Constructor calls an overridable method before `this` is fully initialized.
 
 ## Recommended Execution Order
 
-1. **Tier 1** -- 33 quick wins, zero risk, builds momentum
-2. **Tier 2** -- 8 more easy ones
+1. **Tier 1** -- DONE (33 warnings)
+2. **Tier 2** -- DONE (11 warnings: 8 serial + 3 rawtypes from IdentityArrayList)
 3. **Tier 4** (`fallthrough`) -- Single-file, self-contained audits; largest category
 4. **Tier 3** (`rawtypes` + `unchecked` + `overrides`) -- Fix together per-file
 5. **Tier 5** (`this-escape`) -- Highest risk, most architectural judgment needed

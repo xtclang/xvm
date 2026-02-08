@@ -1,16 +1,55 @@
 package org.xvm.util;
 
 
+import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.ListIterator;
 
 
 /**
- * An ArrayList using identity for equality comparison.
+ * A List that uses identity ({@code ==}) instead of {@link Object#equals} for element comparison.
+ * <p>
+ * Previously, this class extended {@link ArrayList} directly. That inheritance pulled in the
+ * {@link java.io.Serializable} and {@link Cloneable} contracts from {@code ArrayList}, neither of
+ * which is needed or used here, and caused {@code [serial]} lint warnings about a missing
+ * {@code serialVersionUID}. By switching to composition over an internal {@code ArrayList} delegate,
+ * with {@link AbstractList} as the base class, this class provides the same mutable random-access
+ * {@link List} semantics without inheriting any unneeded contracts.
  */
 public class IdentityArrayList<E>
-        extends ArrayList<E> {
+        extends AbstractList<E> {
+
+    private final ArrayList<E> delegate = new ArrayList<>();
+
+    // ----- AbstractList required overrides --------------------------------------------------------
+
+    @Override
+    public E get(int index) {
+        return delegate.get(index);
+    }
+
+    @Override
+    public int size() {
+        return delegate.size();
+    }
+
+    @Override
+    public void add(int index, E element) {
+        delegate.add(index, element);
+    }
+
+    @Override
+    public E set(int index, E element) {
+        return delegate.set(index, element);
+    }
+
+    @Override
+    public E remove(int index) {
+        return delegate.remove(index);
+    }
+
+    // ----- identity-based overrides --------------------------------------------------------------
+
     /**
      * Add the specified element if it is not already present in the list.
      *
@@ -64,7 +103,7 @@ public class IdentityArrayList<E>
             return true;
         }
 
-        if (!(o instanceof List that)) {
+        if (!(o instanceof List<?> that)) {
             return false;
         }
 
@@ -72,8 +111,9 @@ public class IdentityArrayList<E>
             return false;
         }
 
-        for (ListIterator iterThis = this.listIterator(), iterThat = that.listIterator();
-                iterThis.hasNext() && iterThat.hasNext(); ) {
+        var iterThis = this.listIterator();
+        var iterThat = that.listIterator();
+        while (iterThis.hasNext() && iterThat.hasNext()) {
             if (iterThis.next() != iterThat.next()) {
                 return false;
             }

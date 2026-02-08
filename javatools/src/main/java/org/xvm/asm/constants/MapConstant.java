@@ -351,6 +351,7 @@ public class MapConstant
     /**
      * A simple, read-only Map Entry.
      */
+    @SuppressWarnings("serial")
     public static class ROEntry<K,V>
             extends AbstractMap.SimpleEntry<K,V> {
         public ROEntry(K key, V value) {

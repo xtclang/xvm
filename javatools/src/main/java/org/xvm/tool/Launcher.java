@@ -960,6 +960,7 @@ public abstract class Launcher<T extends LauncherOptions>
      * TODO: Ideally this should not be a runtime exception. We can have throws declaration and do more processing
      *   and recovery attempts if we explicitly declare how to handle LauncherException in subclasses in code.
      */
+    @SuppressWarnings("serial")
     static public class LauncherException extends RuntimeException {
         private final boolean error;
         private final int exitCode;

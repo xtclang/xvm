@@ -865,6 +865,7 @@ public abstract class Decimal {
     /**
      * An extension of the ArithmeticException that carries a suggested infinite or NaN Decimal.
      */
+    @SuppressWarnings("serial")
     public static class RangeException
             extends ArithmeticException {
         public RangeException(String s, Decimal decNaN) {
