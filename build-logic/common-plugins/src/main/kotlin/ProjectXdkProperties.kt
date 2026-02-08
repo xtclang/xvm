@@ -1,5 +1,6 @@
 import java.io.File
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.nanoseconds
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -97,6 +98,40 @@ fun Task.doFirstTask(block: Task.() -> Unit) {
 
 fun Task.doLastTask(block: Task.() -> Unit) {
     doLast(Action { block(this) })
+}
+
+/**
+ * Add lifecycle logging with timing around a task's execution. Logs [startMsg] before the task
+ * action runs, then calls [endMsg] with the elapsed duration after the task action completes.
+ *
+ * Uses system properties for timer state between doFirst/doLast (configuration-cache safe).
+ * All parameters must be captured as local vals at configuration time (no script-level references).
+ *
+ * Example:
+ * ```
+ * val downloadFoo by tasks.registering(Download::class) {
+ *     val url = "https://example.com/foo.tar.gz"
+ *     val dest = destDir.get().asFile.absolutePath
+ *     // ...
+ *     logTimed("[foo] Downloading $url...") { elapsed ->
+ *         val size = File(dest).length().humanSize()
+ *         "[foo] Download complete ($size in $elapsed) -> $dest"
+ *     }
+ * }
+ * ```
+ */
+fun Task.logTimed(startMsg: String, endMsg: (kotlin.time.Duration) -> String) {
+    val key = "gradle.task.timer.${path.replace(":", ".")}"
+    doFirstTask {
+        System.setProperty(key, System.nanoTime().toString())
+        logger.lifecycle(startMsg)
+    }
+    doLastTask {
+        val start = System.getProperty(key)?.toLongOrNull() ?: System.nanoTime()
+        val elapsed = (System.nanoTime() - start).nanoseconds
+        System.clearProperty(key)
+        logger.lifecycle(endMsg(elapsed))
+    }
 }
 
 /** Human-readable file size (e.g., "12 KB", "6 MB"). */

@@ -67,8 +67,8 @@ env:
     ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
     RUN_INTEGRATION_TESTS: true
 
-    # Lang build inclusion - defaults to false (matching gradle.properties).
-    # Only enabled via workflow_dispatch with include-lang=true.
+    # Lang build inclusion - overrides gradle.properties default (true) to exclude lang
+    # from push/PR CI builds. Only included via workflow_dispatch with include-lang=true.
     # Tree-sitter validation steps have their own path-based gating.
     ORG_GRADLE_PROJECT_includeBuildLang: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.include-lang == true || github.event.inputs.include-lang == 'true') }}
     ORG_GRADLE_PROJECT_includeBuildAttachLang: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.include-lang == true || github.event.inputs.include-lang == 'true') }}

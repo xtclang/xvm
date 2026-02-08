@@ -171,7 +171,7 @@ val modifyScripts by tasks.registering(ModifyScriptsTask::class) {
 val prepareDistributionScripts by tasks.registering(Copy::class) {
     dependsOn(modifyScripts)
     from(tasks.startScripts.map { it.outputDir!! }) {
-        include("xec*", "xcc*", "xtc*")
+        include("xtc*", "xcc*", "xec*")
     }
     into(layout.buildDirectory.dir("distribution-scripts"))
 }
@@ -321,62 +321,6 @@ distributions {
             capturedDistributionExcludes.forEach { exclude(it) }
         }
     }
-    val withNativeLaunchers by registering {
-        distributionBaseName = xdkDist.distributionName
-        version = xdkDist.distributionVersion
-        distributionClassifier = "native-${xdkDist.osClassifier()}"
-
-        contents {
-            // Handle potential script duplicates
-            duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-
-            // Core XDK content (same as main distribution)
-            val xdkTemplate = tasks.processResources.map {
-                File(it.outputs.files.singleFile, "xdk")
-            }
-            from(xdkTemplate) {
-                exclude("**/bin/**")  // Exclude bin directory to avoid conflicts with generated scripts
-                includeEmptyDirs = false
-            }
-
-            // XTC modules
-            from(configurations.xtcModule) {
-                into("lib")
-                exclude(JAVATOOLS_PREFIX_PATTERN) // *.xtc, but not javatools_*.xtc
-            }
-            from(configurations.xtcModule) {
-                into("javatools")
-                include(JAVATOOLS_PREFIX_PATTERN) // only javatools_*.xtc
-            }
-
-            // Java tools (strip version from jar names)
-            from(configurations.xdkJavaTools) {
-                // Configuration cache: Use static transformer to avoid script object references
-                rename(XdkDistribution.createRenameTransformer(artifactVersion))
-                into("javatools")
-            }
-
-            // Include javatools-jitbridge binary blob (separate from normal javatools classpath)
-            from(xdkJavaToolsJitBridge) {
-                // Configuration cache: Use static transformer to avoid script object references
-                rename(XdkDistribution.createRenameTransformer(artifactVersion))
-                into("javatools")
-            }
-
-            // Install platform-specific binary launchers that work on the host system
-            XdkDistribution.binaryLauncherNames.forEach {
-                val launcher = xdkDist.launcherFileName()
-                from(xtcLauncherBinaries) {
-                    include(launcher)
-                    rename(launcher, it)
-                    into("bin")
-                }
-            }
-
-            // Exclude unwanted files and prevent auto-inclusion of script task outputs
-            capturedDistributionExcludes.forEach { exclude(it) }
-        }
-    }
 }
 
 // Ensure distribution tasks depend on script preparation AND javatools artifacts
@@ -446,12 +390,4 @@ tasks.test {
 
     // Set working directory for tests
     workingDir = projectDir
-}
-
-val withNativeLaunchersDistZip by tasks.existing {
-    dependsOn(tasks.startScripts)
-}
-
-val withNativeLaunchersDistTar by tasks.existing {
-    dependsOn(tasks.startScripts)
 }
