@@ -9,6 +9,7 @@ import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
 
 import java.lang.constant.ClassDesc;
+import java.lang.constant.MethodTypeDesc;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -23,7 +24,6 @@ import java.util.Objects;
 import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
-
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -86,10 +86,17 @@ import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
 import org.xvm.util.TransientThreadLocal;
 
+import static java.lang.constant.ConstantDescs.CD_boolean;
 
+import static org.xvm.javajit.Builder.CD_Comparable;
+import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.CD_Orderable;
+import static org.xvm.javajit.Builder.CD_Ordered;
 import static org.xvm.javajit.Builder.CD_nObj;
+import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.N_nRangeInt64;
 import static org.xvm.javajit.Builder.OPT;
+
 import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
 import static org.xvm.javajit.JitFlavor.Specific;
@@ -6688,22 +6695,61 @@ public abstract class TypeConstant
                      Op.OP_IS_LTE, Op.OP_JMP_LTE  -> pool.sigCompare();
                 default -> throw new IllegalStateException();
             };
-            MethodInfo    method   = ensureTypeInfo().getMethodBySignature(sig);
-            ClassDesc     cd       = method.getJitIdentity().getNamespace().ensureClassDesc(ts);
-            JitMethodDesc jmd      = method.getJitDesc(ts, this);
-            String        sJitName = method.ensureJitMethodName(ts);
 
-            bctx.loadCtx(code);
-            bctx.loadType(code, this);
+            boolean        isFormal = isFormalType();
+            ClassDesc      cd;
+            MethodTypeDesc md;
+            String         sJitName;
+
+            if (isFormal) {
+                cd = CD_nType;
+                switch (nOp) {
+                    case Op.OP_IS_EQ,  Op.OP_JMP_EQ, Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> {
+                        md       = MethodTypeDesc.of(CD_boolean, CD_Ctx, CD_Comparable, CD_Comparable);
+                        sJitName = "equals$p";
+                    }
+                    default -> {
+                        md       = MethodTypeDesc.of(CD_Ordered, CD_Ctx, CD_Orderable, CD_Orderable);
+                        sJitName ="compare";
+                    }
+                }
+            } else {
+                MethodInfo    method = ensureTypeInfo().getMethodBySignature(sig);
+                JitMethodDesc jmd    = method.getJitDesc(ts, this);
+                cd       = method.getJitIdentity().getNamespace().ensureClassDesc(ts);
+                sJitName = method.ensureJitMethodName(ts);
+
+                switch (nOp) {
+                    case Op.OP_IS_EQ,  Op.OP_JMP_EQ, Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> {
+                        assert jmd.isOptimized;
+                        sJitName += OPT;
+                        md        = jmd.optimizedMD;
+                    }
+                    default ->
+                        md = jmd.standardMD;
+                }
+            }
+
+            if (isFormal) {
+                bctx.loadType(code, this);
+                bctx.loadCtx(code);
+            } else {
+                bctx.loadCtx(code);
+                bctx.loadType(code, getType()); // type of this type
+            }
             reg1.load(code);
             reg2.load(code);
 
             switch (nOp) {
             case Op.OP_IS_EQ,  Op.OP_JMP_EQ,
                  Op.OP_IS_NEQ, Op.OP_JMP_NEQ:
-                assert jmd.isOptimized;
-                // Boolean equals(Ctx,xType,xObj,xObj)
-                code.invokestatic(cd, sJitName+OPT, jmd.optimizedMD);
+                if (isFormal) {
+                    // boolean equals$p(Ctx,xObj,xObj)
+                    code.invokevirtual(cd, sJitName, md);
+                } else {
+                    // static boolean equals$p(Ctx,nType,nObj,nObj)
+                    code.invokestatic(cd, sJitName, md);
+                }
 
                 if (fLocalTrue) {
                     if (nOp == Op.OP_IS_NEQ) {
@@ -6724,8 +6770,14 @@ public abstract class TypeConstant
                  Op.OP_IS_GTE, Op.OP_JMP_GTE,
                  Op.OP_IS_LT,  Op.OP_JMP_LT,
                  Op.OP_IS_LTE, Op.OP_JMP_LTE :
-                // Ordered compare(Ctx,Type,xObj,xObj)
-                code.invokestatic(cd, sJitName, jmd.standardMD);
+
+                if (isFormal) {
+                    // Ordered compare(Ctx,nObj,nObj)
+                    code.invokevirtual(cd, sJitName, md);
+                } else {
+                    // static Ordered compare(Ctx,nType,nObj,nObj)
+                    code.invokestatic(cd, sJitName, md);
+                }
 
                 boolean fInverse;
                 switch (nOp) {

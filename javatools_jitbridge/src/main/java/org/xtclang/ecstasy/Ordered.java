@@ -15,30 +15,14 @@ public class Ordered
         extends nEnum {
     private Ordered(long ordinal, String name, String symbol) {
         super(null);
-        $ordinal  = ordinal;
-        $name     = name;
-        $symbol   = symbol;
+        $ordinal = ordinal;
+        $name    = name;
+        $symbol  = symbol;
     }
 
-    public final long    $ordinal;
-    public final String  $name;
-    public final String  $symbol;
-    public       Ordered $reversed;
-
-    public static Ordered Lesser;
-    public static Ordered Equal;
-    public static Ordered Greater;
-
-
-    static {
-        Lesser  = new Ordered(0, String.of(null, "Lesser"),  String.of(null, "<"));
-        Equal   = new Ordered(1, String.of(null, "Equal"),   String.of(null, "="));
-        Greater = new Ordered(2, String.of(null, "Greater"), String.of(null, ">"));
-
-        Lesser .$reversed = Greater;
-        Equal  .$reversed = Equal;
-        Greater.$reversed = Equal;
-    }
+    public final long   $ordinal;
+    public final String $name;
+    public final String $symbol;
 
     @Override public TypeConstant $xvmType(Ctx ctx) {
         ConstantPool pool = $xvm().ecstasyPool;
@@ -54,6 +38,15 @@ public class Ordered
         return eBoolean.$INSTANCE;
     }
 
+    public Ordered reversed$get(Ctx ctx) {
+        return switch ((int) $ordinal) {
+            case 0 -> Greater.$INSTANCE;
+            case 1 -> Equal.$INSTANCE;
+            case 2 -> Lesser.$INSTANCE;
+            default -> throw new IllegalStateException();
+        };
+    }
+
     @Override
     public String name$get(Ctx ctx) {
         return $name;
@@ -64,6 +57,26 @@ public class Ordered
         return $ordinal;
     }
 
+    public static class Lesser extends Ordered {
+        private Lesser() {
+            super(0, String.of(null, "Lesser"),  String.of(null, "<"));
+        }
+        public static Lesser $INSTANCE = new Lesser();
+    }
+
+    public static class Equal extends Ordered {
+        private Equal() {
+            super(1, String.of(null, "Equal"),   String.of(null, "="));
+        }
+        public static Equal $INSTANCE = new Equal();
+    }
+
+    public static class Greater extends Ordered {
+        private Greater() {
+            super(2, String.of(null, "Greater"), String.of(null, ">"));
+        }
+        public static Greater $INSTANCE = new Greater();
+    }
 
     // ----- debugging support ---------------------------------------------------------------------
 

@@ -28,6 +28,7 @@ import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.TypeParameterConstant;
 
 import org.xvm.javajit.BuildContext.DoubleSlot;
 import org.xvm.javajit.BuildContext.SingleSlot;
@@ -181,8 +182,8 @@ public abstract class Builder {
             return new SingleSlot(constant.getConstantPool().typeChar(), Primitive, CD_char, "");
 
         case TypeConstant type:
-            bctx.loadType(code, type);
-            return new SingleSlot(type.getType(), Specific, CD_nType, "");
+            assert type.isTypeOfType();
+            return bctx.loadType(code, type);
 
         case PropertyConstant propId: {
             // support for the "local property" mode
@@ -419,7 +420,7 @@ public abstract class Builder {
             assert reg.cd().isPrimitive();
 
             code.iload(doubleSlot.extSlot())
-                .if_icmpne(lblNull);
+                .ifne(lblNull);
         } else {
             assert !reg.cd().isPrimitive();
 
@@ -439,7 +440,7 @@ public abstract class Builder {
             assert reg.cd().isPrimitive();
 
             code.iload(doubleSlot.extSlot())
-                .if_icmpeq(lblNotNull);
+                .ifeq(lblNotNull);
         } else {
             assert !reg.cd().isPrimitive();
 
@@ -550,6 +551,7 @@ public abstract class Builder {
             switch (type.getSingleUnderlyingClass(false).getName()) {
                 case "Int64"  -> code.getfield(CD_Int64,  "$value", cd);
                 case "UInt64" -> code.getfield(CD_UInt64, "$value", cd);
+                case "Dec64"  -> code.getfield(CD_Dec64,  "$value", cd);
                 default       -> throw new IllegalStateException();
             }
             break;
@@ -563,7 +565,24 @@ public abstract class Builder {
                 case "UInt8"  -> code.getfield(CD_UInt8,  "$value", cd);
                 case "UInt16" -> code.getfield(CD_UInt16, "$value", cd);
                 case "UInt32" -> code.getfield(CD_UInt32, "$value", cd);
+                case "Dec16"  -> code.getfield(CD_Dec16,  "$value", cd);
+                case "Dec32"  -> code.getfield(CD_Dec32,  "$value", cd);
                 default       -> throw new IllegalStateException();
+            }
+            break;
+
+        case "F": // float
+            switch (type.getSingleUnderlyingClass(false).getName()) {
+                case "Float16" -> code.getfield(CD_Float16, "$value", cd);
+                case "Float32" -> code.getfield(CD_Float32, "$value", cd);
+                default        -> throw new IllegalStateException();
+            }
+            break;
+
+        case "D": // double
+            switch (type.getSingleUnderlyingClass(false).getName()) {
+                case "Float64" -> code.getfield(CD_Float64, "$value", cd);
+                default        -> throw new IllegalStateException();
             }
             break;
 

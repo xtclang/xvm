@@ -128,13 +128,14 @@ public class CommonBuilder
         types.put(typeInfo.getType(), 0);
         typeConstants.put(className, types);
 
-        assembleImplClass(className, classBuilder);
-        assembleImplProperties(className, classBuilder);
-        assembleImplMethods(className, classBuilder);
+        if (assembleImplClass(className, classBuilder)) {
+            assembleImplProperties(className, classBuilder);
+            assembleImplMethods(className, classBuilder);
 
-        // static initializer must be assembled at the very end, after all potentially used
-        // TypeConstants have been collected
-        assembleStaticInitializer(className, classBuilder);
+            // static initializer must be assembled at the very end, after all potentially used
+            // TypeConstants have been collected
+            assembleStaticInitializer(className, classBuilder);
+        }
     }
 
     @Override
@@ -228,8 +229,10 @@ public class CommonBuilder
 
     /**
      * Assemble the class specific info for the "Impl" shape.
+     *
+     * @return false iff no more assembly required for this class
      */
-    protected void assembleImplClass(String className, ClassBuilder classBuilder) {
+    protected boolean assembleImplClass(String className, ClassBuilder classBuilder) {
         int flags = ClassFile.ACC_PUBLIC;
 
         switch (classStruct.getFormat()) {
@@ -245,7 +248,7 @@ public class CommonBuilder
             case ANNOTATION, MIXIN:
                 // annotations and mixins are incorporated (copied) into every class that
                 // annotates the annotation or incorporates the mixin
-                return;
+                return false;
 
             default:
                 // TODO: support for mixin, annotations, etc
@@ -254,6 +257,7 @@ public class CommonBuilder
         classBuilder.withFlags(flags);
 
         assembleImplInterfaces(classBuilder);
+        return true;
     }
 
     /**
@@ -604,7 +608,7 @@ public class CommonBuilder
         }
     }
 
-    private void generateTrivialGetter(String className, ClassBuilder classBuilder, PropertyInfo prop) {
+    protected void generateTrivialGetter(String className, ClassBuilder classBuilder, PropertyInfo prop) {
         String jitGetterName = prop.ensureGetterJitMethodName(typeSystem);
         String jitFieldName  = prop.getIdentity().ensureJitPropertyName(typeSystem);
 
@@ -668,7 +672,7 @@ public class CommonBuilder
         }
     }
 
-    private void generateTrivialSetter(String className, ClassBuilder classBuilder, PropertyInfo prop) {
+    protected void generateTrivialSetter(String className, ClassBuilder classBuilder, PropertyInfo prop) {
         String jitSetterName = prop.ensureSetterJitMethodName(typeSystem);
         String jitFieldName  = prop.getIdentity().ensureJitPropertyName(typeSystem);
 
@@ -921,7 +925,7 @@ public class CommonBuilder
             JitMethodDesc jmDesc = method.getJitDesc(typeSystem, typeInfo.getType());
             assembleMethod(className, classBuilder, method, jitName, jmDesc);
 
-            if (method.isCtorOrValidator()) {
+            if (method.isCtorOrValidator() && !typeInfo.isAbstract()) {
                 String        newName = jitName.replace("construct", typeInfo.isSingleton() ? INIT : NEW);
                 JitMethodDesc newDesc = Builder.convertConstructToNew(typeInfo, className, (JitCtorDesc) jmDesc);
                 assembleNew(className, classBuilder, method, newName, newDesc);

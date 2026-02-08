@@ -30,11 +30,11 @@ public class PackageBuilder
     }
 
     @Override
-    public void assembleImplClass(String className, ClassBuilder classBuilder) {
+    public boolean assembleImplClass(String className, ClassBuilder classBuilder) {
         classBuilder
             .withFlags(ClassFile.ACC_PUBLIC)
-            .withSuperclass(CD_nPackage)
-            ;
+            .withSuperclass(CD_nPackage);
+        return true;
     }
 
     @Override

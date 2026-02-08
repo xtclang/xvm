@@ -13,6 +13,7 @@ import java.lang.constant.MethodTypeDesc;
 
 import java.util.List;
 
+import org.xvm.asm.Component;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
@@ -48,7 +49,7 @@ public class AugmentingBuilder extends CommonBuilder {
     }
 
     @Override
-    public void assembleImplClass(String className, ClassBuilder classBuilder) {
+    public boolean assembleImplClass(String className, ClassBuilder classBuilder) {
         // AugmentingBuilder uses the native class attributes except of the "ABSTRACT" flag
         // that is driven by the type
         int flags = model.flags().flagsMask();
@@ -66,6 +67,9 @@ public class AugmentingBuilder extends CommonBuilder {
         if (type.isA(T_EXCEPTION) && !type.removeAccess().equals(T_EXCEPTION)) {
             new ExceptionBuilder(typeSystem, type).assembleCreateException(className, classBuilder);
         }
+
+        // for now, native enum values need to be fully functional (no code gen)
+        return typeInfo.getFormat() != Component.Format.ENUMVALUE;
     }
 
     @Override
@@ -107,6 +111,20 @@ public class AugmentingBuilder extends CommonBuilder {
         }
 
         super.assemblePropertyAccessor(className, classBuilder, prop, jitName, md, isOptimized, isGetter);
+    }
+
+    @Override
+    protected void generateTrivialGetter(String className, ClassBuilder classBuilder, PropertyInfo prop) {
+        if (findMethod(prop.ensureGetterJitMethodName(typeSystem), null) == null) {
+            super.generateTrivialGetter(className, classBuilder, prop);
+        }
+    }
+
+    @Override
+    protected void generateTrivialSetter(String className, ClassBuilder classBuilder, PropertyInfo prop) {
+        if (findMethod(prop.ensureSetterJitMethodName(typeSystem), null) == null) {
+            super.generateTrivialSetter(className, classBuilder, prop);
+        }
     }
 
     @Override
@@ -187,7 +205,8 @@ public class AugmentingBuilder extends CommonBuilder {
     protected MethodModel findMethod(String jitName, MethodTypeDesc md) {
         for (MethodModel mm : model.methods()) {
             if (mm.methodName().equalsString(jitName) &&
-                    mm.methodTypeSymbol().descriptorString().equals(md.descriptorString())) {
+                (md == null ||
+                    mm.methodTypeSymbol().descriptorString().equals(md.descriptorString()))) {
                 return mm;
             }
         }

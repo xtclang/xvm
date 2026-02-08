@@ -25,7 +25,7 @@ public class eNullable extends Enumeration {
 
     public static final eNullable $INSTANCE = new eNullable();
 
-    public static final String[] $names = new String[] {Nullable.$name};
+    public static final String[]   $names  = new String[] {Nullable.$name};
     public static final Nullable[] $values = new Nullable[] {Nullable.Null};
 
     @Override

@@ -1,7 +1,11 @@
 package org.xtclang.ecstasy.numbers;
 
+import org.xtclang.ecstasy.Comparable;
 import org.xtclang.ecstasy.Exception;
+import org.xtclang.ecstasy.Orderable;
+import org.xtclang.ecstasy.Ordered;
 import org.xtclang.ecstasy.OutOfBounds;
+import org.xtclang.ecstasy.nType;
 
 import org.xtclang.ecstasy.text.String;
 
@@ -262,6 +266,32 @@ public class Int64 extends IntNumber {
             throw oob.$init(ctx, "Int64 value " + $value + " is not a valid UInt128 value");
         }
         return new UInt128($value, $value >= 0L ? 0L : -1L);
+    }
+
+    // ----- Orderable interface -------------------------------------------------------------------
+
+    /**
+     * The primitive implementation of:
+     *
+     * static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
+     */
+    public static Ordered compare(Ctx ctx, nType type, Orderable value1, Orderable value2) {
+        long l1 = ((Int64) value1).$value;
+        long l2 = ((Int64) value2).$value;
+        return l1 < l2    ? Ordered.Lesser.$INSTANCE
+               : l1 == l2 ? Ordered.Equal.$INSTANCE
+                          : Ordered.Greater.$INSTANCE;
+    }
+
+    /**
+     * The primitive implementation of:
+     *
+     *  static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
+     */
+    public static Boolean equals(Ctx ctx, nType type, Comparable value1, Comparable value2) {
+        long l1 = ((Int64) value1).$value;
+        long l2 = ((Int64) value2).$value;
+        return l1 == l2 ? Boolean.TRUE : Boolean.FALSE;
     }
 
     // ----- debugging support ---------------------------------------------------------------------

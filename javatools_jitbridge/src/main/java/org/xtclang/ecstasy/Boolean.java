@@ -13,7 +13,7 @@ import org.xvm.javajit.Ctx;
  * Native representation for "ecstasy.Boolean".
  */
 public class Boolean
-    extends nEnum {
+        extends nEnum {
     private Boolean(boolean value, long ordinal, String name) {
         super(null);
         $value   = value;
@@ -25,8 +25,8 @@ public class Boolean
     public final long $ordinal;
     public final String $name;
 
-    public static Boolean False = new Boolean(false, 0, String.of(null, "False"));
-    public static Boolean True  = new Boolean(true, 1, String.of(null, "True"));
+    public static Boolean False = new False();
+    public static Boolean True  = new True();
 
     @Override public TypeConstant $xvmType(Ctx ctx) {
         ConstantPool pool = $xvm().ecstasyPool;
@@ -75,6 +75,17 @@ public class Boolean
         return this.$value ? (byte) 1 : (byte) 0;
     }
 
+    public static class False extends Boolean {
+        public False() {
+            super(false, 0, String.of(null, "False"));
+        }
+    }
+
+    public static class True extends Boolean {
+        public True() {
+            super(true, 1, String.of(null, "True"));
+        }
+    }
     // ----- debugging support ---------------------------------------------------------------------
 
     @Override

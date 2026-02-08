@@ -35,9 +35,10 @@ public class EnumBuilder extends CommonBuilder {
     }
 
     @Override
-    protected void assembleImplClass(String className, ClassBuilder classBuilder) {
+    protected boolean assembleImplClass(String className, ClassBuilder classBuilder) {
         classBuilder.withSuperclass(getSuperCD())
                     .withFlags(ClassFile.ACC_PUBLIC | ClassFile.ACC_ABSTRACT);
+        return true;
     }
 
     @Override

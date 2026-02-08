@@ -184,7 +184,9 @@ public class NativeTypeSystem
                 return;
             }
 
-            if (element instanceof MethodModel methodModel &&
+            // ignore native enum values; we are not generating any code for them
+            if (!type.isEnumValue() &&
+                    element instanceof MethodModel methodModel &&
                     methodModel.methodName().stringValue().equals(ConstantDescs.CLASS_INIT_NAME)) {
                 // skip the static initializer for now; we will re-incorporate it later;
                 // see AugmentingBuilder.augmentStaticInitializer()

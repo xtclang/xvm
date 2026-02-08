@@ -415,14 +415,10 @@ public abstract class OpCondJump
             typeCmp = typeCmp.removeNullable();
         }
 
-        // TODO: can we get rid of typeCompare?
-        if (typeCmp.isFormalType()) {
-            typeCmp = typeCmp.resolveConstraints();
-        }
-
+        // TODO: can we get rid of typeCmp?
         TypeConstant typeCommon =
             selectCommonType(type1, type2, ErrorListener.BLACKHOLE).removeNullable();
-        assert typeCmp.equals(typeCommon.resolveConstraints());
+        assert typeCmp.isA(typeCommon) && typeCommon.isA(typeCmp);
 
         typeCmp.buildCompare(bctx, code, nOp, reg1, reg2, lblTrue);
 

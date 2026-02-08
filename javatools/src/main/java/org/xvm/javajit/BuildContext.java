@@ -40,6 +40,7 @@ import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.TypeParameterConstant;
 
 import org.xvm.asm.op.CatchStart;
 import org.xvm.asm.op.Enter;
@@ -565,25 +566,6 @@ public class BuildContext {
     }
 
     /**
-     * TODO: Resolve the specified type.
-     */
-    public TypeConstant resolveType(CodeBuilder code, TypeConstant type) {
-        if (type.containsFormalType(true)) {
-            // TODO: how to resolve?
-            if (type.containsFormalType(true)) {
-                // soft assertion
-                System.err.println("ERROR: Unresolved type " + type);
-            }
-        }
-
-        if (!isFunction && type.containsAutoNarrowing(true)) {
-            // TODO: how to resolve?
-        }
-
-        return type;
-        }
-
-    /**
      * Prepare the compilation.
      */
     public void enterMethod(CodeBuilder code) {
@@ -909,13 +891,30 @@ public class BuildContext {
 
     /**
      * Generate a "load" for an nType object for the specified TypeConstant.
-     * Out: xType instance
+     *
+     * Note: the specified type must be {@link TypeConstant#isTypeOfType() type-of-type}.
+     *
+     * Out: nType object instance
      */
-    public void loadType(CodeBuilder code, TypeConstant type) {
+    public RegisterInfo loadType(CodeBuilder code, TypeConstant type) {
+        if (type.isTypeParameter()) {
+            int iReg = ((TypeParameterConstant) type.getDefiningConstant()).getRegister();
+            return loadArgument(code, iReg);
+        }
+
+        assert type.isTypeOfType();
+        TypeConstant typeData = type.getParamType(0);
+
+        if (typeData.isTypeParameter()) {
+            int iReg = ((TypeParameterConstant) typeData.getDefiningConstant()).getRegister();
+            return loadArgument(code, iReg);
+        }
+
         loadCtx(code);
-        loadTypeConstant(code, type);
+        loadTypeConstant(code, typeData);
         code.invokestatic(CD_nType, "$ensureType",
                           MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
+        return new SingleSlot(type, Specific, CD_nType, "");
     }
 
     /**
@@ -1713,8 +1712,7 @@ public class BuildContext {
                     if (reg.isSingle()) {
                         Label ifTrue = code.newLabel();
                         Label endIf  = code.newLabel();
-                        code.iconst_0()
-                            .if_icmpeq(ifTrue);
+                        code.ifeq(ifTrue);
                         Builder.box(code, typeRet, cdRet);
                         code.goto_(endIf);
                         code.labelBinding(ifTrue)

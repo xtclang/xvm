@@ -35,7 +35,6 @@ import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.PropertyBody.Effect;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.Builder;
 import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;

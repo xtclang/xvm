@@ -268,7 +268,7 @@ public abstract class OpTest
 
     protected void buildBinary(BuildContext bctx, CodeBuilder code) {
         // this is very similar to OpCondJump logic
-        TypeConstant typeCmp = bctx.getTypeConstant(m_nType).getCanonicalJitType();
+        TypeConstant typeCmp = bctx.getTypeConstant(m_nType);
         RegisterInfo reg1    = bctx.ensureRegister(code, m_nValue1);
         RegisterInfo reg2    = bctx.ensureRegister(code, m_nValue2);
         TypeConstant type1   = reg1.type();
@@ -279,21 +279,19 @@ public abstract class OpTest
         if (type1.isNullable() || type2.isNullable()) {
             assembleNullCheck(code, reg1, reg2, lblEnd);
 
+            // only narrow the registers for the duration of this op
             if (type1.isNullable()) {
                 type1 = type1.removeNullable();
-                reg1  = bctx.narrowRegister(code, reg1, type1);
+                reg1  = bctx.narrowRegister(code, reg1, getAddress(), type1);
             }
             if (type2.isNullable()) {
                 type2 = type2.removeNullable();
-                reg2  = bctx.narrowRegister(code, reg2, type2);
+                reg2  = bctx.narrowRegister(code, reg2, getAddress(), type2);
             }
             typeCmp = typeCmp.removeNullable();
         }
 
-        // TODO: can we get rid of typeCompare?
-        if (typeCmp.isFormalType()) {
-            typeCmp = typeCmp.resolveConstraints();
-        }
+        // TODO: can we get rid of typeCmp?
         TypeConstant typeCommon = selectCommonType(type1, type2, ErrorListener.BLACKHOLE).removeNullable();
         assert typeCmp.isA(typeCommon) && typeCommon.isA(typeCmp);
 
@@ -317,8 +315,8 @@ public abstract class OpTest
      */
     private void assembleNullCheck(CodeBuilder code, RegisterInfo reg1, RegisterInfo reg2,
                                    Label lblEnd) {
-        Label lblEqual   = code.newLabel();
-        Label lblNotEq   = code.newLabel();
+        Label lblEqual   = null;
+        Label lblNotEq   = null;
         Label lblProceed = code.newLabel();
 
         if (reg1.type().isNullable()) {
@@ -330,22 +328,22 @@ public abstract class OpTest
                 Builder.checkNotNull(code, reg2, lblProceed);  // (reg2 != Null) - proceed
 
                 // (reg1 != Null && reg2 == Null) - negative result
-                code.goto_(lblNotEq);
+                code.goto_(lblNotEq = code.newLabel());
 
                 // (reg1 == Null)
                 code.labelBinding(lblNull1);
                 Builder.checkNotNull(code, reg2, lblNotEq); // (reg2 != Null) - negative result
 
                 // (reg1 == Null && reg2 == Null) - positive result
-                code.goto_(lblEqual);
+                code.goto_(lblEqual = code.newLabel());
             } else {
                 Builder.checkNotNull(code, reg1, lblProceed);
-                code.goto_(lblNotEq); // (reg2 != Null && reg1 == Null) - negative result
+                // (reg2 != Null && reg1 == Null) - negative result; fall through
             }
         } else { // (reg1 != Null)
             assert reg2.type().isNullable();
             Builder.checkNotNull(code, reg2, lblProceed);
-            code.goto_(lblNotEq); // (reg1 != Null && reg2 == Null) - negative result
+            // (reg1 != Null && reg2 == Null) - negative result; fall through
         }
 
         // we are comparing two Nullable arguments where at least one is known to be "Null";
@@ -354,19 +352,25 @@ public abstract class OpTest
         // the only ops, for which comparison of two Null values would produce a positive result are:
         // EQ, GE, LE
 
-        code.labelBinding(lblNotEq);
+        if (lblNotEq != null) {
+            code.labelBinding(lblNotEq);
+        }
+
         switch (getOpCode()) {
             case OP_IS_NEQ -> code.iconst_1();
             default        -> code.iconst_0();
         }
         code.goto_(lblEnd);
 
-        code.labelBinding(lblEqual);
-        switch (getOpCode()) {
-            case OP_IS_EQ, OP_IS_GTE, OP_IS_LTE -> code.iconst_1();
-            default                             -> code.iconst_0();
+        if (lblEqual != null) {
+            code.labelBinding(lblEqual);
+
+            switch (getOpCode()) {
+                case OP_IS_EQ, OP_IS_GTE, OP_IS_LTE -> code.iconst_1();
+                default                             -> code.iconst_0();
+            }
+            code.goto_(lblEnd);
         }
-        code.goto_w(lblEnd);
 
         code.labelBinding(lblProceed);
     }

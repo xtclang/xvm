@@ -18,7 +18,7 @@ public class eBoolean extends Enumeration {
 
     public static final eBoolean $INSTANCE = new eBoolean();
 
-    public static final String[] $names   = new String[] {Boolean.False.$name, Boolean.True.$name};
+    public static final String[]  $names  = new String[] {Boolean.False.$name, Boolean.True.$name};
     public static final Boolean[] $values = new Boolean[] {Boolean.False, Boolean.True};
 
     @Override public TypeConstant $xvmType(Ctx ctx) {

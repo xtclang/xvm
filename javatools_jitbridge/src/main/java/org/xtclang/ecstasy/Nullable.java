@@ -12,7 +12,7 @@ import org.xvm.javajit.Ctx;
  * Ecstasy Nullable.
  */
 public class Nullable
-    extends nEnum {
+        extends nEnum {
 
     private Nullable() {
         super(null);
@@ -20,7 +20,7 @@ public class Nullable
 
     public static final String $name = String.of(null, "Null");
 
-    public static final Nullable Null = new Nullable();
+    public static final Nullable Null = new Null();
 
     @Override public TypeConstant $xvmType(Ctx ctx) {
         return $xvm().ecstasyPool.typeNull();
@@ -36,4 +36,6 @@ public class Nullable
     public long ordinal$get$p(Ctx ctx) {
         return 0;
     }
+
+    public static class Null extends Nullable {}
 }

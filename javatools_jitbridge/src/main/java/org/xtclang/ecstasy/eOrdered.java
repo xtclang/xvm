@@ -18,8 +18,17 @@ public class eOrdered extends Enumeration {
 
     public static final eOrdered $INSTANCE = new eOrdered();
 
-    public static final String[]  $names  = new String[] {Ordered.Lesser.$name, Ordered.Equal.$name, Ordered.Greater.$name};
-    public static final Ordered[] $values = new Ordered[] {Ordered.Lesser, Ordered.Equal, Ordered.Greater};
+    public static final String[] $names = new String[] {
+        Ordered.Lesser.$INSTANCE.$name,
+        Ordered.Equal.$INSTANCE.$name,
+        Ordered.Greater.$INSTANCE.$name
+    };
+
+    public static final Ordered[] $values = new Ordered[] {
+        Ordered.Lesser.$INSTANCE,
+        Ordered.Equal.$INSTANCE,
+        Ordered.Greater.$INSTANCE
+    };
 
     @Override public TypeConstant $xvmType(Ctx ctx) {
         ConstantPool pool = ctx.container.typeSystem.pool();
