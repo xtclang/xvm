@@ -948,9 +948,8 @@ public abstract class Component
      * @param child    the child component
      * @param sibling  the sibling component to unlink
      */
-    // TODO: eliminate raw Map and Object id; properly type this method for each call site
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    protected void unlinkSibling(Map kids, Object id, Component child, Component sibling) {
+    @SuppressWarnings("unchecked")
+    protected <K, V extends Component> void unlinkSibling(Map<K, V> kids, K id, V child, V sibling) {
         if (sibling == child && child.getNextSibling() == null) {
             // most common case: the specified child is the only sibling with that id
             markModified();
@@ -964,17 +963,17 @@ public abstract class Component
 
         if (sibling == child) {
             // the child to remove is in the head of the linked list
-            kids.put(id, child.getNextSibling());
+            kids.put(id, (V) child.getNextSibling());
         } else {
             // the child to remove is in the middle of the linked list;
             // put the linked list back first, then find and remove the child
             kids.put(id, sibling);
             do {
                 if (sibling.getNextSibling() == child) {
-                    sibling.setNextSibling(child.getNextSibling());
+                    ((Component) sibling).setNextSibling(child.getNextSibling());
                     break;
                 }
-                sibling = sibling.getNextSibling();
+                sibling = (V) sibling.getNextSibling();
             } while (sibling != null);
         }
 

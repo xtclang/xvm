@@ -161,7 +161,7 @@ public class MultiMethodStructure
 
         MethodStructure sibling = kids.remove(id);
 
-        unlinkSibling(kids, id, child, sibling);
+        unlinkSibling(kids, id, method, sibling);
     }
 
     @Override

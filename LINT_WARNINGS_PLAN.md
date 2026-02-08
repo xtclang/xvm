@@ -64,6 +64,11 @@ implements `Serializable` (a JDK 1.1 design decision for RMI), so every `Excepti
 
 ### 3a. `[rawtypes]` Raw generic type usage (65 warnings)
 
+**Already eliminated (suppressed, not counted in warning totals):**
+- `Component.unlinkSibling()` — generified to `<K, V extends Component>`, removed raw `Map`/`Object`
+  and `@SuppressWarnings("rawtypes")`. Also fixed bug in `MultiMethodStructure.removeChild()` that
+  passed `child` (Component) instead of `method` (MethodStructure).
+
 Add proper type parameters. Hotspots:
 
 | File | Count | Key raw types |
