@@ -15,24 +15,24 @@ import java.util.Set;
  * insertion. This map should work well for small numbers of entries, but will
  * degrade in performance as it grows in size.
  */
-public class ListMap<K,V>
-        extends AbstractMap<K,V> {
+public class ListMap<K, V>
+        extends AbstractMap<K, V> {
     /**
      * Construct a new ListMap.
      */
     public ListMap() {
-        m_list = new ArrayList<>();
+        m_list      = new ArrayList<>();
+        m_immutable = false;
     }
 
     /**
      * Construct a new ListMap of the specified initial capacity.
      *
-     * @param cInitSize  the initial capacity; negative value indicates an immutable empty map
+     * @param cInitSize  the initial capacity
      */
     public ListMap(int cInitSize) {
-        m_list = cInitSize >= 0
-            ? new ArrayList<>(cInitSize)
-            : (ArrayList<SimpleEntry<K,V>>) EMPTY_ARRAY_LIST;
+        m_list      = new ArrayList<>(cInitSize);
+        m_immutable = false;
     }
 
     /**
@@ -41,21 +41,57 @@ public class ListMap<K,V>
      * @param map  the map to clone
      */
     public ListMap(ListMap<K, V> map) {
-        m_list = new ArrayList<>(map.m_list);
+        m_list      = new ArrayList<>(map.m_list);
+        m_immutable = false;
+    }
+
+    /**
+     * Private constructor for the immutable empty singleton.
+     */
+    private ListMap(boolean immutable) {
+        m_list      = new ArrayList<>(0);
+        m_immutable = immutable;
+    }
+
+    @Override
+    public int size() {
+        return m_list.size();
+    }
+
+    @Override
+    public boolean containsKey(Object key) {
+        return getEntry(key) != null;
+    }
+
+    @Override
+    public V get(Object key) {
+        Entry<K, V> entry = getEntry(key);
+        return entry == null ? null : entry.getValue();
     }
 
     @Override
     public V put(K key, V value) {
-        Entry<K,V> entry = getEntry(key);
+        Entry<K, V> entry = getEntry(key);
         if (entry != null) {
             return entry.setValue(value);
         }
 
-        if (m_list == EMPTY_ARRAY_LIST) {
+        if (m_immutable) {
             throw new UnsupportedOperationException();
         }
 
         m_list.add(new SimpleEntry<>(key, value));
+        return null;
+    }
+
+    @Override
+    public V remove(Object key) {
+        ArrayList<Entry<K, V>> list = m_list;
+        for (int i = 0, c = list.size(); i < c; ++i) {
+            if (list.get(i).getKey().equals(key)) {
+                return list.remove(i).getValue();
+            }
+        }
         return null;
     }
 
@@ -69,34 +105,21 @@ public class ListMap<K,V>
      *
      * @return the entries of the map in a List
      */
-    public List<Entry<K,V>> asList() {
-        List<Entry<K,V>> list = (List) m_list;
-        assert (list = Collections.unmodifiableList(list)) != null;
-        return list;
+    public List<Entry<K, V>> asList() {
+        return Collections.unmodifiableList(m_list);
     }
 
     /**
-     * Obtain an entry at the specified index.
-     *
-     * @param index  the entry index
-     *
-     * @return an entry
-     */
-    public Entry<K,V> entryAt(int index) {
-        return m_list.get(index);
-    }
-
-    /**
-     * Internal: Obtain the entry that corresponds to the specified key.
+     * Obtain the entry that corresponds to the specified key.
      *
      * @param key  the key
      *
      * @return the entry if it exists; otherwise null
      */
-    protected SimpleEntry<K,V> getEntry(Object key) {
-        ArrayList<SimpleEntry<K,V>> list = m_list;
-        for (int i = 0, c = list.size(); i < c; ++i) { // avoid Iterator creation
-            SimpleEntry<K, V> entry = list.get(i);
+    private Entry<K, V> getEntry(Object key) {
+        ArrayList<Entry<K, V>> list = m_list;
+        for (int i = 0, c = list.size(); i < c; ++i) {
+            Entry<K, V> entry = list.get(i);
             if (entry.getKey().equals(key)) {
                 return entry;
             }
@@ -105,17 +128,15 @@ public class ListMap<K,V>
         return null;
     }
 
-    @Override
-    public V get(Object key) {
-        SimpleEntry<K, V> entry = getEntry(key);
-        return entry == null ? null : entry.getValue();
-    }
+    /**
+     * The contents of the map are stored in an ArrayList of Entry objects.
+     */
+    private final ArrayList<Entry<K, V>> m_list;
 
     /**
-     * The contents of the map are stored in an ArrayList of SimpleEntry
-     * objects.
+     * True if this map is immutable.
      */
-    private final ArrayList<SimpleEntry<K, V>> m_list;
+    private final boolean m_immutable;
 
     /**
      * The AbstractMap implementation needs an underlying "entry set" to be
@@ -124,7 +145,7 @@ public class ListMap<K,V>
     private final Set<Entry<K, V>> m_setEntries = new AbstractSet<>() {
         @Override
         public Iterator<Entry<K, V>> iterator() {
-            return (Iterator) m_list.iterator();
+            return m_list.iterator();
         }
 
         @Override
@@ -134,14 +155,10 @@ public class ListMap<K,V>
     };
 
     /**
-     * An empty ArrayList.
+     * An immutable empty ListMap singleton.
      */
-    private static final ArrayList<?> EMPTY_ARRAY_LIST = new ArrayList<>(0);
-
-    /**
-     * An empty ListMap.
-     */
-    public static final ListMap EMPTY = new ListMap<>(-1);
+    @SuppressWarnings("rawtypes")
+    private static final ListMap EMPTY = new ListMap<>(true);
 
     /**
      * @return a typed empty ListMap

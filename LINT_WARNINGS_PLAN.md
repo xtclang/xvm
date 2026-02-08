@@ -2,15 +2,15 @@
 
 Compiled with `-Xlint:all` via `-Porg.xtclang.java.lint=true -Porg.xtclang.java.warningsAsErrors=false -Porg.xtclang.java.maxWarnings=1000`.
 
-**Current: 313 warnings** (17 in `javatools_utils`, 296 in `javatools`)
-**Original: 357 warnings** — 44 fixed so far
+**Current: 307 warnings** (11 in `javatools_utils`, 296 in `javatools`)
+**Original: 357 warnings** — 50 fixed so far
 
 | Category | Original | Current | Tier | Difficulty |
 |----------|----------|---------|------|------------|
 | `[fallthrough]` | 102 | 102 | 4 | Involved |
 | `[unchecked]` | 75 | 75 | 3 | Moderate |
 | `[this-escape]` | 68 | 68 | 5 | Hard |
-| `[rawtypes]` | 68 | 65 | 3 | Moderate |
+| `[rawtypes]` | 68 | 62 | 3 | Moderate |
 | `[try]` | 18 | **0** | 1 | Trivial |
 | `[cast]` | 13 | **0** | 1 | Trivial |
 | `[serial]` | 8 | **0** | 2 | Easy |
@@ -98,7 +98,7 @@ Many overlap with `rawtypes`. Fix together per-file.
 | `LambdaExpression.java` | 4 | raw `Stream.allMatch()` |
 | `TypeInfo.java` | 4 | `entrySet().toArray(Entry[])` with raw Entry |
 | `AstNode.java` | 3 | generic child replacement utility |
-| `ListMap.java` | 3 | internal casts for `EMPTY_ARRAY_LIST` |
+| `ListMap.java` | **0** | **Rewritten:** stored `ArrayList<Entry>` instead of `ArrayList<SimpleEntry>`, eliminated `EMPTY_ARRAY_LIST` sentinel, raw casts, and assert-only unmodifiable bug |
 | `TypeCompositionStatement.java` | 3 | unchecked casts to generic types |
 | 14 more files | 1-2 each | Various |
 
