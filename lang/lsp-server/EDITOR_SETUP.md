@@ -242,8 +242,16 @@ nvim --headless \
        print('definition=' .. tostring(c.definitionProvider)); \
        print('documentSymbol=' .. tostring(c.documentSymbolProvider)); \
        print('references=' .. tostring(c.referencesProvider)); \
-       print('rename=' .. tostring(c.renameProvider)); \
-       print('foldingRange=' .. tostring(c.foldingRangeProvider))" \
+       print('rename=' .. tostring(c.renameProvider ~= nil)); \
+       print('foldingRange=' .. tostring(c.foldingRangeProvider)); \
+       print('documentHighlight=' .. tostring(c.documentHighlightProvider)); \
+       print('selectionRange=' .. tostring(c.selectionRangeProvider)); \
+       print('documentLink=' .. tostring(c.documentLinkProvider ~= nil)); \
+       print('signatureHelp=' .. tostring(c.signatureHelpProvider ~= nil)); \
+       print('codeAction=' .. tostring(c.codeActionProvider)); \
+       print('formatting=' .. tostring(c.documentFormattingProvider)); \
+       print('rangeFormatting=' .. tostring(c.documentRangeFormattingProvider)); \
+       print('inlayHint=' .. tostring(c.inlayHintProvider))" \
   -c "qa" 2>&1
 ```
 
@@ -257,6 +265,14 @@ documentSymbol=true
 references=true
 rename=true
 foldingRange=true
+documentHighlight=true
+selectionRange=true
+documentLink=true
+signatureHelp=true
+codeAction=true
+formatting=true
+rangeFormatting=true
+inlayHint=true
 ```
 
 ### Request document symbols
@@ -324,6 +340,113 @@ Expected output:
 Hover: ```xtc
 enum Boolean
 ```​
+```
+
+### Request folding ranges
+
+Sends `textDocument/foldingRange` and prints the ranges found:
+
+```bash
+nvim --headless \
+  -c "edit lib_ecstasy/src/main/x/ecstasy/Boolean.x" \
+  -c "sleep 5" \
+  -c "lua local params = { textDocument = vim.lsp.util.make_text_document_params() }; \
+       local results = vim.lsp.buf_request_sync(0, 'textDocument/foldingRange', params, 5000); \
+       for _, res in pairs(results or {}) do \
+         if res.result then \
+           print('Folding ranges: ' .. #res.result); \
+           for i, r in ipairs(res.result) do \
+             if i <= 5 then \
+               print('  lines ' .. r.startLine .. '-' .. r.endLine .. \
+                     (r.kind and (' [' .. r.kind .. ']') or '')) \
+             end \
+           end \
+         end \
+       end" \
+  -c "qa" 2>&1
+```
+
+### Request document highlights
+
+Sends `textDocument/documentHighlight` at a symbol position:
+
+```bash
+nvim --headless \
+  -c "edit lib_ecstasy/src/main/x/ecstasy/Boolean.x" \
+  -c "sleep 5" \
+  -c "lua vim.api.nvim_win_set_cursor(0, {1, 5}); \
+       local params = vim.lsp.util.make_position_params(); \
+       local results = vim.lsp.buf_request_sync(0, 'textDocument/documentHighlight', params, 5000); \
+       for _, res in pairs(results or {}) do \
+         if res.result then \
+           print('Highlights: ' .. #res.result) \
+         end \
+       end" \
+  -c "qa" 2>&1
+```
+
+### Request prepare rename
+
+Sends `textDocument/prepareRename` to verify identifier detection:
+
+```bash
+nvim --headless \
+  -c "edit lib_ecstasy/src/main/x/ecstasy/Boolean.x" \
+  -c "sleep 5" \
+  -c "lua vim.api.nvim_win_set_cursor(0, {1, 5}); \
+       local params = vim.lsp.util.make_position_params(); \
+       local results = vim.lsp.buf_request_sync(0, 'textDocument/prepareRename', params, 5000); \
+       for _, res in pairs(results or {}) do \
+         if res.result then \
+           local r = res.result; \
+           print('PrepareRename: ' .. (r.placeholder or vim.inspect(r))) \
+         end \
+       end" \
+  -c "qa" 2>&1
+```
+
+### Request document links
+
+Sends `textDocument/documentLink` on a file with imports:
+
+```bash
+nvim --headless \
+  -c "edit manualTests/src/main/x/TestSimple.x" \
+  -c "sleep 5" \
+  -c "lua local params = { textDocument = vim.lsp.util.make_text_document_params() }; \
+       local results = vim.lsp.buf_request_sync(0, 'textDocument/documentLink', params, 5000); \
+       for _, res in pairs(results or {}) do \
+         if res.result then \
+           print('Document links: ' .. #res.result); \
+           for i, l in ipairs(res.result) do \
+             if i <= 5 then \
+               print('  ' .. (l.tooltip or '(no tooltip)')) \
+             end \
+           end \
+         end \
+       end" \
+  -c "qa" 2>&1
+```
+
+### Request formatting
+
+Sends `textDocument/formatting` and checks for edits:
+
+```bash
+nvim --headless \
+  -c "edit lib_ecstasy/src/main/x/ecstasy/Boolean.x" \
+  -c "sleep 5" \
+  -c "lua local params = { \
+         textDocument = vim.lsp.util.make_text_document_params(), \
+         options = { tabSize = 4, insertSpaces = true } \
+       }; \
+       local results = vim.lsp.buf_request_sync(0, 'textDocument/formatting', params, 5000); \
+       for _, res in pairs(results or {}) do \
+         if res.result then \
+           print('Formatting edits: ' .. #res.result) \
+         end \
+       end" \
+  -c "qa" 2>&1
 ```
 
 ### Check the log file after tests

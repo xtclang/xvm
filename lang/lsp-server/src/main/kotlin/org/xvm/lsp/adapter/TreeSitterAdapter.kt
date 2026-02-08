@@ -1,7 +1,21 @@
 package org.xvm.lsp.adapter
 
+import org.xvm.lsp.adapter.XtcCompilerAdapter.CodeAction
+import org.xvm.lsp.adapter.XtcCompilerAdapter.CodeAction.CodeActionKind
 import org.xvm.lsp.adapter.XtcCompilerAdapter.CompletionItem
 import org.xvm.lsp.adapter.XtcCompilerAdapter.CompletionItem.CompletionKind
+import org.xvm.lsp.adapter.XtcCompilerAdapter.DocumentHighlight
+import org.xvm.lsp.adapter.XtcCompilerAdapter.DocumentHighlight.HighlightKind
+import org.xvm.lsp.adapter.XtcCompilerAdapter.FoldingRange
+import org.xvm.lsp.adapter.XtcCompilerAdapter.ParameterInfo
+import org.xvm.lsp.adapter.XtcCompilerAdapter.Position
+import org.xvm.lsp.adapter.XtcCompilerAdapter.PrepareRenameResult
+import org.xvm.lsp.adapter.XtcCompilerAdapter.Range
+import org.xvm.lsp.adapter.XtcCompilerAdapter.SelectionRange
+import org.xvm.lsp.adapter.XtcCompilerAdapter.SignatureHelp
+import org.xvm.lsp.adapter.XtcCompilerAdapter.SignatureInfo
+import org.xvm.lsp.adapter.XtcCompilerAdapter.TextEdit
+import org.xvm.lsp.adapter.XtcCompilerAdapter.WorkspaceEdit
 import org.xvm.lsp.adapter.XtcLanguageConstants.builtInTypeCompletions
 import org.xvm.lsp.adapter.XtcLanguageConstants.keywordCompletions
 import org.xvm.lsp.adapter.XtcLanguageConstants.toCompletionKind
@@ -26,17 +40,26 @@ import kotlin.time.measureTime
  * - Document symbols and outline
  * - Basic go-to-definition (same file, by name)
  * - Find references (same file, by name)
+ * - Document highlight (all occurrences of symbol under cursor)
+ * - Selection ranges (smart expand/shrink selection via AST)
+ * - Folding ranges (collapsible declarations and blocks)
+ * - Same-file rename (text-based identifier replacement)
  * - Completion (keywords, locals, visible names)
+ * - Signature help (same-file method parameter info)
+ * - Code actions (organize imports)
+ * - Document formatting (trailing whitespace, final newline)
+ * - Document links (import statement highlighting)
  * - Syntax error reporting
  *
  * Limitations (requires compiler adapter for these):
  * - Type inference and semantic types
- * - Cross-file go-to-definition
+ * - Cross-file go-to-definition and rename
  * - Semantic error reporting
  * - Smart completion based on types
- * - Rename refactoring
+ * - Semantic tokens (type-aware highlighting)
+ * - Inlay hints (type annotations)
  *
- * // TODO LSP: This adapter provides ~70% of LSP functionality without the compiler.
+ * // TODO LSP: This adapter provides ~80% of LSP functionality without the compiler.
  * // For full semantic features, combine with a CompilerAdapter via CompositeAdapter.
  */
 class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
@@ -146,8 +169,13 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         return queryEngine.findDeclarationAt(tree, line, column, uri)
     }
 
-    // TODO: Context-unaware. Cannot provide member completion after '.' or
-    //       type-aware suggestions. Needs compiler TypeResolver (Phase 5).
+    /**
+     * TODO: Context-unaware. Cannot provide member completion after '.' or
+     * type-aware suggestions. Needs compiler TypeResolver (Phase 5).
+     *
+     * Currently returns keywords, built-in types, document symbols, and imported names.
+     * A compiler adapter would add after-dot member completion and type-filtered suggestions.
+     */
     override fun getCompletions(
         uri: String,
         line: Int,
@@ -186,8 +214,13 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
             }
         }
 
-    // TODO: Same-file only. Cross-file requires compiler's NameResolver (Phase 4).
-    //       Cannot resolve: imports, inherited members, overloaded methods
+    /**
+     * TODO: Same-file only. Cross-file requires compiler's NameResolver (Phase 4).
+     * Cannot resolve: imports, inherited members, overloaded methods.
+     *
+     * Searches AST declarations for a matching identifier name in the current file.
+     * A compiler adapter would resolve across files via import paths and qualified names.
+     */
     override fun findDefinition(
         uri: String,
         line: Int,
@@ -211,8 +244,13 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         }
     }
 
-    // TODO: Same-file text matching only. Cannot distinguish shadowed locals.
-    //       Cross-file references require compiler's semantic model (Phase 4+).
+    /**
+     * TODO: Same-file text matching only. Cannot distinguish shadowed locals.
+     * Cross-file references require compiler's semantic model (Phase 4+).
+     *
+     * Finds all identifier nodes with the same text in the current file's AST.
+     * A compiler adapter would provide scope-aware, cross-file reference search.
+     */
     override fun findReferences(
         uri: String,
         line: Int,
@@ -244,11 +282,404 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         return tree to id.text
     }
 
-    // TODO LSP: Wire this up in XtcLanguageServer.didClose()
+    // ========================================================================
+    // Tree-sitter capable features
+    // ========================================================================
+
+    override fun getDocumentHighlights(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): List<DocumentHighlight> {
+        val (tree, name) = getIdentifierAt(uri, line, column, "highlight") ?: return emptyList()
+        val locations = queryEngine.findAllIdentifiers(tree, name, uri)
+        logger.info("$logPrefix highlight '{}' -> {} occurrences", name, locations.size)
+        return locations.map { loc ->
+            DocumentHighlight(
+                range =
+                    Range(
+                        start = Position(loc.startLine, loc.startColumn),
+                        end = Position(loc.endLine, loc.endColumn),
+                    ),
+                kind = HighlightKind.TEXT,
+            )
+        }
+    }
+
+    override fun getSelectionRanges(
+        uri: String,
+        positions: List<Position>,
+    ): List<SelectionRange> {
+        val tree = parsedTrees[uri] ?: return emptyList()
+        return positions.map { pos ->
+            buildSelectionRange(tree, pos.line, pos.column)
+        }
+    }
+
+    private fun buildSelectionRange(
+        tree: XtcTree,
+        line: Int,
+        column: Int,
+    ): SelectionRange {
+        val node =
+            tree.nodeAt(line, column)
+                ?: return SelectionRange(range = Range(Position(line, column), Position(line, column)))
+
+        // Walk up from the leaf node to the root, building a chain of nested ranges
+        val nodes = mutableListOf(node)
+        var current = node.parent
+        while (current != null) {
+            // Skip nodes that cover the exact same range as their child
+            val prev = nodes.last()
+            if (current.startLine != prev.startLine ||
+                current.startColumn != prev.startColumn ||
+                current.endLine != prev.endLine ||
+                current.endColumn != prev.endColumn
+            ) {
+                nodes.add(current)
+            }
+            current = current.parent
+        }
+
+        // Build the SelectionRange chain from outermost to innermost
+        var result: SelectionRange? = null
+        for (n in nodes.reversed()) {
+            result =
+                SelectionRange(
+                    range =
+                        Range(
+                            start = Position(n.startLine, n.startColumn),
+                            end = Position(n.endLine, n.endColumn),
+                        ),
+                    parent = result,
+                )
+        }
+        return result ?: SelectionRange(range = Range(Position(line, column), Position(line, column)))
+    }
+
+    override fun getFoldingRanges(uri: String): List<FoldingRange> {
+        val tree = parsedTrees[uri] ?: return emptyList()
+        return buildList {
+            collectFoldingRanges(tree.root, this)
+        }.also {
+            logger.info("$logPrefix folding ranges -> {} found", it.size)
+        }
+    }
+
+    private fun collectFoldingRanges(
+        node: XtcNode,
+        result: MutableList<FoldingRange>,
+    ) {
+        // Foldable node types: declarations and block constructs that span multiple lines
+        val foldKind =
+            when (node.type) {
+                "class_declaration", "interface_declaration", "mixin_declaration",
+                "service_declaration", "const_declaration", "enum_declaration",
+                "method_declaration", "constructor_declaration",
+                "module_declaration", "package_declaration",
+                -> null // no special kind = code region
+                "comment", "block_comment" -> FoldingRange.FoldingKind.COMMENT
+                "import_list" -> FoldingRange.FoldingKind.IMPORTS
+                else -> {
+                    // Not a foldable node type, but recurse into children
+                    node.children.forEach { collectFoldingRanges(it, result) }
+                    return
+                }
+            }
+
+        if (node.endLine > node.startLine) {
+            result.add(FoldingRange(node.startLine, node.endLine, foldKind))
+        }
+
+        // Recurse into children for nested declarations
+        node.children.forEach { collectFoldingRanges(it, result) }
+    }
+
+    /**
+     * TODO: Same-file rename only. Finds the identifier AST node at the cursor position.
+     * A compiler adapter would validate that the rename is semantically safe and preview
+     * cross-file impacts.
+     */
+    override fun prepareRename(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): PrepareRenameResult? {
+        val tree = parsedTrees[uri] ?: return null
+        val node = tree.nodeAt(line, column) ?: return null
+        val id = findIdentifierNode(node) ?: return null
+
+        logger.info("$logPrefix prepareRename '{}' at {}:{}", id.text, line, column)
+        return PrepareRenameResult(
+            range =
+                Range(
+                    start = Position(id.startLine, id.startColumn),
+                    end = Position(id.endLine, id.endColumn),
+                ),
+            placeholder = id.text,
+        )
+    }
+
+    /**
+     * TODO: Same-file rename via text matching. Finds all identifier nodes with the same name
+     * and produces edit operations. Cannot handle cross-file renames or validate naming conflicts.
+     * A compiler adapter would rename across the workspace and update import paths.
+     */
+    override fun rename(
+        uri: String,
+        line: Int,
+        column: Int,
+        newName: String,
+    ): WorkspaceEdit? {
+        val (tree, name) = getIdentifierAt(uri, line, column, "rename") ?: return null
+        val locations = queryEngine.findAllIdentifiers(tree, name, uri)
+
+        if (locations.isEmpty()) return null
+
+        logger.info("$logPrefix rename '{}' -> '{}' ({} occurrences)", name, newName, locations.size)
+        val edits =
+            locations.map { loc ->
+                TextEdit(
+                    range =
+                        Range(
+                            start = Position(loc.startLine, loc.startColumn),
+                            end = Position(loc.endLine, loc.endColumn),
+                        ),
+                    newText = newName,
+                )
+            }
+        return WorkspaceEdit(changes = mapOf(uri to edits))
+    }
+
+    override fun getSignatureHelp(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): SignatureHelp? {
+        val tree = parsedTrees[uri] ?: return null
+        val node = tree.nodeAt(line, column) ?: return null
+
+        // Walk up to find enclosing call_expression
+        var current: XtcNode? = node
+        var argsNode: XtcNode? = null
+        while (current != null) {
+            if (current.type == "call_expression") {
+                argsNode = current.childByType("argument_list")
+                    ?: current.childByType("parameters")
+                break
+            }
+            current = current.parent
+        }
+        if (current == null) return null
+
+        // Extract function name from the call expression
+        val funcName =
+            current.childByType("identifier")?.text
+                ?: current
+                    .childByType("member_expression")
+                    ?.children
+                    ?.lastOrNull { it.type == "identifier" }
+                    ?.text
+                ?: return null
+
+        // Count commas before the cursor to determine active parameter
+        val activeParam =
+            if (argsNode != null) {
+                argsNode.children.count { child ->
+                    child.type == "," && (child.endLine < line || (child.endLine == line && child.endColumn <= column))
+                }
+            } else {
+                0
+            }
+
+        // Find method declarations with matching name in same file
+        val methods = queryEngine.findMethodDeclarations(tree, uri).filter { it.name == funcName }
+        if (methods.isEmpty()) {
+            logger.info("$logPrefix signatureHelp: no method '{}' found", funcName)
+            return null
+        }
+
+        val signatures =
+            methods.map { method ->
+                // Find the method_declaration node to extract parameters
+                val methodNode =
+                    tree
+                        .nodeAt(method.location.startLine, method.location.startColumn)
+                        ?.let { findDeclarationNode(it, "method_declaration") }
+                val params =
+                    methodNode
+                        ?.childByType("parameters")
+                        ?.let { extractParameters(it) }
+                        ?: emptyList()
+                val paramLabel = params.joinToString(", ") { p -> p.label }
+                SignatureInfo(
+                    label = "$funcName($paramLabel)",
+                    parameters = params,
+                )
+            }
+
+        logger.info("$logPrefix signatureHelp '{}' -> {} signatures, active param {}", funcName, signatures.size, activeParam)
+        return SignatureHelp(
+            signatures = signatures,
+            activeParameter = activeParam,
+        )
+    }
+
+    private fun findDeclarationNode(
+        node: XtcNode,
+        type: String,
+    ): XtcNode? {
+        var current: XtcNode? = node
+        while (current != null) {
+            if (current.type == type) return current
+            current = current.parent
+        }
+        return null
+    }
+
+    private fun extractParameters(paramsNode: XtcNode): List<ParameterInfo> =
+        paramsNode.children
+            .filter { it.type == "parameter" }
+            .map { param ->
+                val typeName = param.childByType("type_expression")?.text ?: ""
+                val paramName = param.childByType("identifier")?.text ?: ""
+                val label = if (typeName.isNotEmpty()) "$typeName $paramName" else paramName
+                ParameterInfo(label = label)
+            }
+
+    override fun getCodeActions(
+        uri: String,
+        range: Range,
+        diagnostics: List<Diagnostic>,
+    ): List<CodeAction> =
+        buildList {
+            // Organize imports: offer when the cursor is in an import region or always as a source action
+            val organizeImports = buildOrganizeImportsAction(uri)
+            if (organizeImports != null) {
+                add(organizeImports)
+            }
+        }.also {
+            logger.info("$logPrefix codeActions -> {} actions", it.size)
+        }
+
+    private fun buildOrganizeImportsAction(uri: String): CodeAction? {
+        val tree = parsedTrees[uri] ?: return null
+        val importNodes = tree.root.children.filter { it.type == "import_statement" }
+        if (importNodes.size < 2) return null
+
+        val sortedTexts = importNodes.map { it.text }.sorted()
+        val currentTexts = importNodes.map { it.text }
+        if (sortedTexts == currentTexts) return null
+
+        // Build a single edit that replaces the import block
+        val firstImport = importNodes.first()
+        val lastImport = importNodes.last()
+        val edit =
+            TextEdit(
+                range =
+                    Range(
+                        start = Position(firstImport.startLine, firstImport.startColumn),
+                        end = Position(lastImport.endLine, lastImport.endColumn),
+                    ),
+                newText = sortedTexts.joinToString("\n"),
+            )
+        return CodeAction(
+            title = "Organize Imports",
+            kind = CodeActionKind.SOURCE_ORGANIZE_IMPORTS,
+            edit = WorkspaceEdit(changes = mapOf(uri to listOf(edit))),
+        )
+    }
+
+    override fun formatDocument(
+        uri: String,
+        content: String,
+        options: XtcCompilerAdapter.FormattingOptions,
+    ): List<TextEdit> = formatContent(content, options, null)
+
+    override fun formatRange(
+        uri: String,
+        content: String,
+        range: Range,
+        options: XtcCompilerAdapter.FormattingOptions,
+    ): List<TextEdit> = formatContent(content, options, range)
+
+    /**
+     * Basic formatting: trailing whitespace removal and final newline insertion.
+     * If [range] is non-null, only lines within that range are formatted.
+     */
+    private fun formatContent(
+        content: String,
+        options: XtcCompilerAdapter.FormattingOptions,
+        range: Range?,
+    ): List<TextEdit> =
+        buildList {
+            val lines = content.split("\n")
+            val startLine = range?.start?.line ?: 0
+            val endLine = range?.end?.line ?: (lines.size - 1)
+
+            // Trailing whitespace removal
+            for (i in startLine..minOf(endLine, lines.size - 1)) {
+                val line = lines[i]
+                val trimmed = line.trimEnd()
+                if (trimmed.length < line.length && (options.trimTrailingWhitespace || range == null)) {
+                    add(
+                        TextEdit(
+                            range =
+                                Range(
+                                    start = Position(i, trimmed.length),
+                                    end = Position(i, line.length),
+                                ),
+                            newText = "",
+                        ),
+                    )
+                }
+            }
+
+            // Insert final newline if requested and missing (only for full-document format)
+            if (range == null && options.insertFinalNewline && content.isNotEmpty() && !content.endsWith("\n")) {
+                val lastLine = lines.size - 1
+                val lastCol = lines[lastLine].length
+                add(
+                    TextEdit(
+                        range =
+                            Range(
+                                start = Position(lastLine, lastCol),
+                                end = Position(lastLine, lastCol),
+                            ),
+                        newText = "\n",
+                    ),
+                )
+            }
+        }.also {
+            logger.info("$logPrefix format -> {} edits", it.size)
+        }
+
+    override fun getDocumentLinks(
+        uri: String,
+        content: String,
+    ): List<XtcCompilerAdapter.DocumentLink> {
+        val tree = parsedTrees[uri] ?: return emptyList()
+        val imports = queryEngine.findImportLocations(tree, uri)
+        logger.info("$logPrefix documentLinks -> {} imports", imports.size)
+        return imports.map { (importPath, loc) ->
+            XtcCompilerAdapter.DocumentLink(
+                range =
+                    Range(
+                        start = Position(loc.startLine, loc.startColumn),
+                        end = Position(loc.endLine, loc.endColumn),
+                    ),
+                target = null, // Cannot resolve cross-file paths without compiler
+                tooltip = "import $importPath",
+            )
+        }
+    }
 
     /**
      * Close and release resources for a document.
      * Called by the language server when a document is closed.
+     *
+     * TODO: Wire this up in XtcLanguageServer.didClose() to free native tree-sitter memory
+     * when documents are closed by the editor.
      */
     @Suppress("unused")
     fun closeDocument(uri: String) {

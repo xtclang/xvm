@@ -217,13 +217,27 @@ class XtcQueryEngine(
     )
 
     /**
-     * Find imports in the tree.
+     * Find imports in the tree (text only).
      */
     fun findImports(tree: XtcTree): List<String> =
         buildList {
             executeQuery(importsQuery, tree) { captures ->
                 val importNode = captures["import"] ?: return@executeQuery
                 add(importNode.text)
+            }
+        }
+
+    /**
+     * Find imports in the tree with their source locations.
+     */
+    fun findImportLocations(
+        tree: XtcTree,
+        uri: String,
+    ): List<Pair<String, Location>> =
+        buildList {
+            executeQuery(importsQuery, tree) { captures ->
+                val importNode = captures["import"] ?: return@executeQuery
+                add(importNode.text to importNode.toLocation(uri))
             }
         }
 

@@ -19,6 +19,7 @@ import org.eclipse.lsp4j.DocumentFormattingParams
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.DocumentHighlightParams
 import org.eclipse.lsp4j.DocumentLink
+import org.eclipse.lsp4j.DocumentLinkOptions
 import org.eclipse.lsp4j.DocumentLinkParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.DocumentSymbol
@@ -43,6 +44,7 @@ import org.eclipse.lsp4j.PrepareRenameResult
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.ReferenceParams
+import org.eclipse.lsp4j.RenameOptions
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SelectionRangeParams
@@ -50,6 +52,7 @@ import org.eclipse.lsp4j.SemanticTokens
 import org.eclipse.lsp4j.SemanticTokensParams
 import org.eclipse.lsp4j.ServerCapabilities
 import org.eclipse.lsp4j.SignatureHelp
+import org.eclipse.lsp4j.SignatureHelpOptions
 import org.eclipse.lsp4j.SignatureHelpParams
 import org.eclipse.lsp4j.SignatureInformation
 import org.eclipse.lsp4j.SymbolInformation
@@ -309,15 +312,17 @@ class XtcLanguageServer(
             foldingRangeProvider = Either.forLeft(true)
 
             // --- Editing features (treesitter) ---
-            renameProvider = Either.forLeft(true)
+            renameProvider = Either.forRight(RenameOptions().apply { prepareProvider = true })
             codeActionProvider = Either.forLeft(true)
             documentFormattingProvider = Either.forLeft(true)
             documentRangeFormattingProvider = Either.forLeft(true)
             inlayHintProvider = Either.forLeft(true)
 
+            documentLinkProvider = DocumentLinkOptions()
+
+            signatureHelpProvider = SignatureHelpOptions(listOf("(", ","))
+
             // Not yet advertised (enable when implemented)
-            // signatureHelpProvider = SignatureHelpOptions(listOf("(", ",")) // treesitter
-            // documentLinkProvider = DocumentLinkOptions() // treesitter
             // semanticTokensProvider = SemanticTokensWithRegistrationOptions(...) // compiler(sym)
             // declarationProvider = Either.forLeft(true) // compiler: go-to-declaration
             // typeDefinitionProvider = Either.forLeft(true) // compiler(types): jump to type
