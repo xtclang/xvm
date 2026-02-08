@@ -1,5 +1,9 @@
 # Claude Configuration
 
+## ABSOLUTE RULE: No Unsupervised Git Operations
+
+**NEVER push commits, create remote branches, delete branches, or perform any destructive git operation without explicit manual confirmation from the user.** This includes `git push`, `git push -u`, `git branch -D`, `git push --delete`, and any `gh` command that modifies remote state (e.g., `gh pr create`). Local branch creation and local commits are allowed when requested, but nothing leaves the local machine without the user saying so.
+
 ## MOST IMPORTANT RULE: Gradle Task Execution
 
 ### NEVER Run Clean with Other Tasks
