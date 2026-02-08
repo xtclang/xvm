@@ -32,7 +32,7 @@ dependencies {
 }
 
 val unicodeUcdUrl = "https://unicode.org/Public/UCD/latest/ucdxml/ucd.all.flat.zip"
-val processedResourcesDir = tasks.processResources.get().outputs.files.singleFile
+val processedResourcesDir = tasks.processResources.get().outputs.files.singleFile!!
 
 /**
  * Type safe "jar" task accessor.

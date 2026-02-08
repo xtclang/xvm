@@ -109,82 +109,80 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
         logger.info("$logPrefix compile(uri={}, content={} bytes)", fileName, content.length)
 
         documentContents[uri] = content
-        val diagnostics = mutableListOf<Diagnostic>()
-        val symbols = mutableListOf<SymbolInfo>()
-
         val lines = content.split("\n")
 
-        // Check for deliberate ERROR markers (for testing)
-        errorPattern.findAll(content).forEach { match ->
-            val line = countLines(content, match.range.first)
-            diagnostics.add(Diagnostic.error(Location.ofLine(uri, line), match.groupValues[1]))
-        }
+        val diagnostics =
+            buildList {
+                // Check for deliberate ERROR markers (for testing)
+                errorPattern.findAll(content).forEach { match ->
+                    val line = countLines(content, match.range.first)
+                    add(Diagnostic.error(Location.ofLine(uri, line), match.groupValues[1]))
+                }
 
-        // Parse module
-        modulePattern.find(content)?.let { match ->
-            val line = countLines(content, match.range.first)
-            val moduleName = match.groupValues[1]
-            symbols.add(
-                SymbolInfo(
-                    name = moduleName,
-                    qualifiedName = moduleName,
-                    kind = SymbolKind.MODULE,
-                    location = Location(uri, line, 0, line, match.value.length),
-                    documentation = "Module $moduleName",
-                ),
-            )
-        }
-
-        // Parse type declarations (classes, interfaces, services)
-        parseTypeDeclarations(classPattern, content, uri, SymbolKind.CLASS, "class", "Class", symbols)
-        parseTypeDeclarations(interfacePattern, content, uri, SymbolKind.INTERFACE, "interface", "Interface", symbols)
-        parseTypeDeclarations(servicePattern, content, uri, SymbolKind.SERVICE, "service", "Service", symbols)
-
-        // Parse methods
-        methodPattern.findAll(content).forEach { match ->
-            val line = countLines(content, match.range.first)
-            val (returnType, methodName) = match.destructured
-            // Skip if this looks like a class/interface/service declaration
-            if (returnType !in listOf("class", "interface", "service")) {
-                symbols.add(
-                    SymbolInfo(
-                        name = methodName,
-                        qualifiedName = methodName,
-                        kind = SymbolKind.METHOD,
-                        location = Location(uri, line, 0, line, match.value.length),
-                        typeSignature = "$returnType $methodName(...)",
-                    ),
-                )
+                // Check for basic syntax errors
+                if (content.contains("{") && !content.contains("}")) {
+                    add(Diagnostic.error(Location.ofLine(uri, lines.size - 1), "Unmatched opening brace"))
+                }
             }
-        }
 
-        // Parse properties
-        propertyPattern.findAll(content).forEach { match ->
-            val line = countLines(content, match.range.first)
-            val (propType, propName) = match.destructured
-            // Skip if this looks like something else
-            if (propType !in listOf("class", "interface", "module", "return")) {
-                symbols.add(
-                    SymbolInfo(
-                        name = propName,
-                        qualifiedName = propName,
-                        kind = SymbolKind.PROPERTY,
-                        location = Location(uri, line, 0, line, match.value.length),
-                        typeSignature = "$propType $propName",
-                    ),
-                )
+        val symbols =
+            buildList {
+                // Parse module
+                modulePattern.find(content)?.let { match ->
+                    val line = countLines(content, match.range.first)
+                    val moduleName = match.groupValues[1]
+                    add(
+                        SymbolInfo(
+                            name = moduleName,
+                            qualifiedName = moduleName,
+                            kind = SymbolKind.MODULE,
+                            location = Location(uri, line, 0, line, match.value.length),
+                            documentation = "Module $moduleName",
+                        ),
+                    )
+                }
+
+                // Parse type declarations (classes, interfaces, services)
+                addAll(parseTypeDeclarations(classPattern, content, uri, SymbolKind.CLASS, "class", "Class"))
+                addAll(parseTypeDeclarations(interfacePattern, content, uri, SymbolKind.INTERFACE, "interface", "Interface"))
+                addAll(parseTypeDeclarations(servicePattern, content, uri, SymbolKind.SERVICE, "service", "Service"))
+
+                // Parse methods
+                methodPattern.findAll(content).forEach { match ->
+                    val line = countLines(content, match.range.first)
+                    val (returnType, methodName) = match.destructured
+                    // Skip if this looks like a class/interface/service declaration
+                    if (returnType !in listOf("class", "interface", "service")) {
+                        add(
+                            SymbolInfo(
+                                name = methodName,
+                                qualifiedName = methodName,
+                                kind = SymbolKind.METHOD,
+                                location = Location(uri, line, 0, line, match.value.length),
+                                typeSignature = "$returnType $methodName(...)",
+                            ),
+                        )
+                    }
+                }
+
+                // Parse properties
+                propertyPattern.findAll(content).forEach { match ->
+                    val line = countLines(content, match.range.first)
+                    val (propType, propName) = match.destructured
+                    // Skip if this looks like something else
+                    if (propType !in listOf("class", "interface", "module", "return")) {
+                        add(
+                            SymbolInfo(
+                                name = propName,
+                                qualifiedName = propName,
+                                kind = SymbolKind.PROPERTY,
+                                location = Location(uri, line, 0, line, match.value.length),
+                                typeSignature = "$propType $propName",
+                            ),
+                        )
+                    }
+                }
             }
-        }
-
-        // Check for basic syntax errors
-        if (content.contains("{") && !content.contains("}")) {
-            diagnostics.add(
-                Diagnostic.error(
-                    Location.ofLine(uri, lines.size - 1),
-                    "Unmatched opening brace",
-                ),
-            )
-        }
 
         val result = CompilationResult.withDiagnostics(uri, diagnostics, symbols)
         compiledDocuments[uri] = result
@@ -217,26 +215,24 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
         val fileName = uri.substringAfterLast('/')
         logger.info("$logPrefix getCompletions(uri={}, line={}, column={})", fileName, line, column)
 
-        val completions = mutableListOf<XtcCompilerAdapter.CompletionItem>()
+        return buildList {
+            addAll(keywordCompletions())
+            addAll(builtInTypeCompletions())
 
-        // Add keywords and built-in types
-        completions.addAll(keywordCompletions())
-        completions.addAll(builtInTypeCompletions())
-
-        // Add symbols from current document
-        compiledDocuments[uri]?.symbols?.forEach { symbol ->
-            completions.add(
-                XtcCompilerAdapter.CompletionItem(
-                    label = symbol.name,
-                    kind = toCompletionKind(symbol.kind),
-                    detail = symbol.typeSignature ?: symbol.kind.name,
-                    insertText = symbol.name,
-                ),
-            )
+            // Add symbols from current document
+            compiledDocuments[uri]?.symbols?.forEach { symbol ->
+                add(
+                    XtcCompilerAdapter.CompletionItem(
+                        label = symbol.name,
+                        kind = toCompletionKind(symbol.kind),
+                        detail = symbol.typeSignature ?: symbol.kind.name,
+                        insertText = symbol.name,
+                    ),
+                )
+            }
+        }.also {
+            logger.info("$logPrefix getCompletions -> {} items", it.size)
         }
-
-        logger.info("$logPrefix getCompletions -> {} items", completions.size)
-        return completions
     }
 
     override fun findDefinition(
@@ -263,12 +259,11 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
         logger.info("$logPrefix findReferences(uri={}, line={}, column={}, includeDecl={})", fileName, line, column, includeDeclaration)
 
         // Mock implementation: just return the declaration
-        val refs = mutableListOf<Location>()
-        if (includeDeclaration) {
-            findSymbolAt(uri, line, column)?.let { refs.add(it.location) }
+        return listOfNotNull(
+            if (includeDeclaration) findSymbolAt(uri, line, column)?.location else null,
+        ).also {
+            logger.info("$logPrefix findReferences -> {} locations", it.size)
         }
-        logger.info("$logPrefix findReferences -> {} locations", refs.size)
-        return refs
     }
 
     // ========================================================================
@@ -284,34 +279,23 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
         val word = getWordAt(content, line, column) ?: return emptyList()
 
         logger.info("$logPrefix highlight '{}' at {}:{}", word, line, column)
-        val lines = content.split("\n")
-        return buildList {
-            lines.forEachIndexed { lineIdx, lineText ->
-                var start = 0
-                while (true) {
-                    val idx = lineText.indexOf(word, start)
-                    if (idx < 0) break
-                    // Ensure it's a whole word match
-                    val before = if (idx > 0) lineText[idx - 1] else ' '
-                    val after = if (idx + word.length < lineText.length) lineText[idx + word.length] else ' '
-                    if (!before.isLetterOrDigit() && before != '_' && !after.isLetterOrDigit() && after != '_') {
-                        add(
-                            DocumentHighlight(
-                                range =
-                                    Range(
-                                        start = Position(lineIdx, idx),
-                                        end = Position(lineIdx, idx + word.length),
-                                    ),
-                                kind = HighlightKind.TEXT,
-                            ),
+        return content
+            .split("\n")
+            .flatMapIndexed { lineIdx, lineText ->
+                findWholeWordOccurrences(lineText, word)
+                    .map { idx ->
+                        DocumentHighlight(
+                            range =
+                                Range(
+                                    start = Position(lineIdx, idx),
+                                    end = Position(lineIdx, idx + word.length),
+                                ),
+                            kind = HighlightKind.TEXT,
                         )
-                    }
-                    start = idx + word.length
-                }
+                    }.toList()
+            }.also {
+                logger.info("$logPrefix highlight '{}' -> {} occurrences", word, it.size)
             }
-        }.also {
-            logger.info("$logPrefix highlight '{}' -> {} occurrences", word, it.size)
-        }
     }
 
     override fun getFoldingRanges(uri: String): List<FoldingRange> {
@@ -375,32 +359,22 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
         val content = documentContents[uri] ?: return null
         val word = getWordAt(content, line, column) ?: return null
 
-        val lines = content.split("\n")
         val edits =
-            buildList {
-                lines.forEachIndexed { lineIdx, lineText ->
-                    var start = 0
-                    while (true) {
-                        val idx = lineText.indexOf(word, start)
-                        if (idx < 0) break
-                        val before = if (idx > 0) lineText[idx - 1] else ' '
-                        val after = if (idx + word.length < lineText.length) lineText[idx + word.length] else ' '
-                        if (!before.isLetterOrDigit() && before != '_' && !after.isLetterOrDigit() && after != '_') {
-                            add(
-                                TextEdit(
-                                    range =
-                                        Range(
-                                            start = Position(lineIdx, idx),
-                                            end = Position(lineIdx, idx + word.length),
-                                        ),
-                                    newText = newName,
-                                ),
+            content
+                .split("\n")
+                .flatMapIndexed { lineIdx, lineText ->
+                    findWholeWordOccurrences(lineText, word)
+                        .map { idx ->
+                            TextEdit(
+                                range =
+                                    Range(
+                                        start = Position(lineIdx, idx),
+                                        end = Position(lineIdx, idx + word.length),
+                                    ),
+                                newText = newName,
                             )
-                        }
-                        start = idx + word.length
-                    }
+                        }.toList()
                 }
-            }
 
         if (edits.isEmpty()) return null
         logger.info("$logPrefix rename '{}' -> '{}' ({} occurrences)", word, newName, edits.size)
@@ -412,12 +386,7 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
         range: Range,
         diagnostics: List<Diagnostic>,
     ): List<CodeAction> =
-        buildList {
-            val organizeImports = buildOrganizeImportsAction(uri)
-            if (organizeImports != null) {
-                add(organizeImports)
-            }
-        }.also {
+        listOfNotNull(buildOrganizeImportsAction(uri)).also {
             logger.info("$logPrefix codeActions -> {} actions", it.size)
         }
 
@@ -567,6 +536,18 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
             ?.range
             ?.first
 
+    private fun findWholeWordOccurrences(
+        lineText: String,
+        word: String,
+    ): Sequence<Int> =
+        generateSequence(lineText.indexOf(word)) { prev ->
+            lineText.indexOf(word, prev + word.length).takeIf { it >= 0 }
+        }.filter { idx ->
+            val before = if (idx > 0) lineText[idx - 1] else ' '
+            val after = if (idx + word.length < lineText.length) lineText[idx + word.length] else ' '
+            !before.isLetterOrDigit() && before != '_' && !after.isLetterOrDigit() && after != '_'
+        }
+
     private fun countLines(
         content: String,
         position: Int,
@@ -579,12 +560,12 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
         kind: SymbolKind,
         typeKeyword: String,
         kindLabel: String,
-        symbols: MutableList<SymbolInfo>,
-    ) {
-        pattern.findAll(content).forEach { match ->
-            val line = countLines(content, match.range.first)
-            val name = match.groupValues[1]
-            symbols.add(
+    ): List<SymbolInfo> =
+        pattern
+            .findAll(content)
+            .map { match ->
+                val line = countLines(content, match.range.first)
+                val name = match.groupValues[1]
                 SymbolInfo(
                     name = name,
                     qualifiedName = name,
@@ -592,8 +573,6 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
                     location = Location(uri, line, 0, line, match.value.length),
                     documentation = "$kindLabel $name",
                     typeSignature = "$typeKeyword $name",
-                ),
-            )
-        }
-    }
+                )
+            }.toList()
 }

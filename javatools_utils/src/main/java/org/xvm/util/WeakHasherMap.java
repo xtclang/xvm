@@ -1,5 +1,7 @@
 package org.xvm.util;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
@@ -118,7 +120,7 @@ public class WeakHasherMap<K, V> extends HasherMap<K, V> {
      */
     protected class KeySet extends HasherMap<K, V>.KeySet {
         @Override
-        public Iterator<K> iterator() {
+        public @NotNull Iterator<K> iterator() {
             return new FilterIterator<>(super.iterator(), Objects::nonNull);
         }
     }
@@ -133,7 +135,7 @@ public class WeakHasherMap<K, V> extends HasherMap<K, V> {
      */
     protected class EntrySet extends HasherMap<K, V>.EntrySet {
         @Override
-        public Iterator<Entry<K, V>> iterator() {
+        public @NotNull Iterator<Entry<K, V>> iterator() {
             return new FilterIterator<>(super.iterator(), e -> e.getKey() != null);
         }
     }

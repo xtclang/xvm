@@ -112,7 +112,6 @@ TODO
 # Claude Code; Local config + temporary plan documents.
 # Ignore all .claude/ except commands that should be shared
 .claude/*
-!.claude/commands/
 .claude/commands/*
 !.claude/commands/*.md
 .plan.md

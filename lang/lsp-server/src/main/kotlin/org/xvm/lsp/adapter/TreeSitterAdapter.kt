@@ -28,8 +28,7 @@ import org.xvm.lsp.treesitter.XtcParser
 import org.xvm.lsp.treesitter.XtcQueryEngine
 import org.xvm.lsp.treesitter.XtcTree
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.time.Duration
-import kotlin.time.measureTime
+import kotlin.time.measureTimedValue
 
 /**
  * XTC Compiler Adapter implementation using Tree-sitter for fast, syntax-level intelligence.
@@ -101,15 +100,6 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
          * Note: Must match JreProvisioner.TARGET_VERSION in intellij-plugin.
          */
         const val MIN_JAVA_VERSION = 25
-
-        /**
-         * Execute a block and return its result along with elapsed duration.
-         */
-        private inline fun <T> timed(block: () -> T): Pair<T, Duration> {
-            var result: T
-            val duration = measureTime { result = block() }
-            return result to duration
-        }
     }
 
     override fun compile(
@@ -124,7 +114,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
 
         val (tree, parseElapsed) =
             try {
-                timed { parser.parse(content, oldTree) }
+                measureTimedValue { parser.parse(content, oldTree) }
             } catch (e: Exception) {
                 logger.error("$logPrefix parse failed for {}: {}", uri, e.message)
                 return CompilationResult.failure(
@@ -143,7 +133,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         val diagnostics = if (tree.hasErrors) collectSyntaxErrors(tree.root, uri) else emptyList()
 
         // Extract symbols for document outline
-        val (symbols, queryElapsed) = timed { queryEngine.findAllDeclarations(tree, uri) }
+        val (symbols, queryElapsed) = measureTimedValue { queryEngine.findAllDeclarations(tree, uri) }
 
         val result = CompilationResult.withDiagnostics(uri, diagnostics, symbols)
         compilationResults[uri] = result
@@ -321,40 +311,36 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         line: Int,
         column: Int,
     ): SelectionRange {
-        val node =
-            tree.nodeAt(line, column)
-                ?: return SelectionRange(range = Range(Position(line, column), Position(line, column)))
+        val fallback = SelectionRange(range = Range(Position(line, column), Position(line, column)))
+        val node = tree.nodeAt(line, column) ?: return fallback
 
-        // Walk up from the leaf node to the root, building a chain of nested ranges
-        val nodes = mutableListOf(node)
-        var current = node.parent
-        while (current != null) {
-            // Skip nodes that cover the exact same range as their child
-            val prev = nodes.last()
-            if (current.startLine != prev.startLine ||
-                current.startColumn != prev.startColumn ||
-                current.endLine != prev.endLine ||
-                current.endColumn != prev.endColumn
-            ) {
-                nodes.add(current)
+        // Walk up from the leaf node to the root, skipping nodes with identical ranges
+        val nodes =
+            buildList {
+                add(node)
+                generateSequence(node.parent) { it.parent }.forEach { ancestor ->
+                    val prev = last()
+                    if (ancestor.startLine != prev.startLine ||
+                        ancestor.startColumn != prev.startColumn ||
+                        ancestor.endLine != prev.endLine ||
+                        ancestor.endColumn != prev.endColumn
+                    ) {
+                        add(ancestor)
+                    }
+                }
             }
-            current = current.parent
-        }
 
-        // Build the SelectionRange chain from outermost to innermost
-        var result: SelectionRange? = null
-        for (n in nodes.reversed()) {
-            result =
-                SelectionRange(
-                    range =
-                        Range(
-                            start = Position(n.startLine, n.startColumn),
-                            end = Position(n.endLine, n.endColumn),
-                        ),
-                    parent = result,
-                )
-        }
-        return result ?: SelectionRange(range = Range(Position(line, column), Position(line, column)))
+        // Build the SelectionRange chain from outermost (parent) to innermost (leaf)
+        return nodes.foldRight<XtcNode, SelectionRange?>(null) { n, parent ->
+            SelectionRange(
+                range =
+                    Range(
+                        start = Position(n.startLine, n.startColumn),
+                        end = Position(n.endLine, n.endColumn),
+                    ),
+                parent = parent,
+            )
+        } ?: fallback
     }
 
     override fun getFoldingRanges(uri: String): List<FoldingRange> {
@@ -460,22 +446,15 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         val node = tree.nodeAt(line, column) ?: return null
 
         // Walk up to find enclosing call_expression
-        var current: XtcNode? = node
-        var argsNode: XtcNode? = null
-        while (current != null) {
-            if (current.type == "call_expression") {
-                argsNode = current.childByType("argument_list")
-                    ?: current.childByType("parameters")
-                break
-            }
-            current = current.parent
-        }
-        if (current == null) return null
+        val callNode =
+            generateSequence(node) { it.parent }
+                .firstOrNull { it.type == "call_expression" }
+                ?: return null
 
         // Extract function name from the call expression
         val funcName =
-            current.childByType("identifier")?.text
-                ?: current
+            callNode.childByType("identifier")?.text
+                ?: callNode
                     .childByType("member_expression")
                     ?.children
                     ?.lastOrNull { it.type == "identifier" }
@@ -483,14 +462,13 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
                 ?: return null
 
         // Count commas before the cursor to determine active parameter
+        val argsNode =
+            callNode.childByType("argument_list")
+                ?: callNode.childByType("parameters")
         val activeParam =
-            if (argsNode != null) {
-                argsNode.children.count { child ->
-                    child.type == "," && (child.endLine < line || (child.endLine == line && child.endColumn <= column))
-                }
-            } else {
-                0
-            }
+            argsNode?.children?.count { child ->
+                child.type == "," && (child.endLine < line || (child.endLine == line && child.endColumn <= column))
+            } ?: 0
 
         // Find method declarations with matching name in same file
         val methods = queryEngine.findMethodDeclarations(tree, uri).filter { it.name == funcName }
@@ -528,14 +506,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
     private fun findDeclarationNode(
         node: XtcNode,
         type: String,
-    ): XtcNode? {
-        var current: XtcNode? = node
-        while (current != null) {
-            if (current.type == type) return current
-            current = current.parent
-        }
-        return null
-    }
+    ): XtcNode? = generateSequence(node) { it.parent }.firstOrNull { it.type == type }
 
     private fun extractParameters(paramsNode: XtcNode): List<ParameterInfo> =
         paramsNode.children
@@ -552,13 +523,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         range: Range,
         diagnostics: List<Diagnostic>,
     ): List<CodeAction> =
-        buildList {
-            // Organize imports: offer when the cursor is in an import region or always as a source action
-            val organizeImports = buildOrganizeImportsAction(uri)
-            if (organizeImports != null) {
-                add(organizeImports)
-            }
-        }.also {
+        listOfNotNull(buildOrganizeImportsAction(uri)).also {
             logger.info("$logPrefix codeActions -> {} actions", it.size)
         }
 
