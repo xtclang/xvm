@@ -361,55 +361,61 @@ These features require compiler integration (future adapter):
 | Type inference | `val x = foo()` - need to resolve `foo()` return type |
 | Semantic errors | Type mismatches, missing methods, etc. |
 | Smart completion | Members of a type require type resolution |
-| Rename refactoring | Need to know which references are semantic matches |
-| Import organization | Need to resolve qualified names |
+| Cross-file rename | Need to know which references are semantic matches across files |
+| Cross-file navigation | Import resolution, module dependency tracking |
+| Semantic tokens | Distinguishing field vs local vs parameter by type |
+| Inlay hints | Type inference annotations (`:Int`, `:String`) |
 
-The tree-sitter approach provides ~70% of LSP functionality. Add the compiler adapter
-later for semantic features.
+> **Note**: Same-file rename, code actions (organize imports), formatting, folding ranges,
+> document highlights, document links, and signature help have all been implemented using
+> tree-sitter and regex approaches. The compiler adapter will enhance these with
+> cross-file and semantic capabilities.
 
 ---
 
-## Not-Yet-Implemented Features: Tree-sitter vs Compiler
+## Feature Implementation Status: Tree-sitter vs Compiler
 
-The following LSP features are not yet implemented. This table shows which can be done with
-tree-sitter alone vs which require the full compiler adapter.
+> **Last Updated**: 2026-02-08
 
-| Feature | Tree-sitter | Compiler | Notes |
-|---------|:-----------:|:--------:|-------|
-| **Rename/prepareRename** | ❌ | ✅ | Requires semantic analysis to identify all references to the same symbol across scopes |
-| **Code actions** | ⚠️ Partial | ✅ | Structural fixes (missing braces, formatting) with tree-sitter; semantic fixes (import, type) require compiler |
-| **Document formatting** | ✅ | ✅ | Syntax-based formatting works with tree-sitter; type-aware formatting needs compiler |
-| **Semantic tokens** | ⚠️ Partial | ✅ | Keyword/syntax highlighting with tree-sitter; type-based coloring (method vs property) needs compiler |
-| **Signature help** | ⚠️ Partial | ✅ | Can show signature syntax with tree-sitter; parameter types and overload resolution need compiler |
-| **Folding ranges** | ✅ | ✅ | Structural folding (blocks, functions, comments) is purely syntactic |
-| **Inlay hints** | ⚠️ Partial | ✅ | Structural hints possible; type inference hints (`val x = ...` → `: Int`) require compiler |
-| **Call hierarchy** | ❌ | ✅ | Requires semantic analysis to resolve function references across files |
-| **Type hierarchy** | ❌ | ✅ | Requires type system to understand inheritance relationships |
-| **Workspace symbols** | ⚠️ Partial | ✅ | Same-file with tree-sitter; cross-file requires indexing or compiler integration |
+This table shows the current implementation status for LSP features, and which require
+the full compiler adapter for advanced capabilities.
+
+| Feature | Tree-sitter | Mock | Compiler | Status |
+|---------|:-----------:|:----:|:--------:|--------|
+| **Rename/prepareRename** | ✅ | ✅ | 🔮 | Same-file text/AST-based; cross-file requires compiler |
+| **Code actions** | ✅ | ✅ | 🔮 | Organize imports implemented; semantic quick fixes need compiler |
+| **Document formatting** | ✅ | ✅ | 🔮 | Trailing whitespace + final newline; full formatter needs compiler |
+| **Range formatting** | ✅ | ✅ | 🔮 | Range-scoped trailing whitespace removal |
+| **Folding ranges** | ✅ | ✅ | 🔮 | TS: AST nodes; Mock: brace matching |
+| **Document highlights** | ✅ | ✅ | 🔮 | TS: AST identifiers; Mock: text matching |
+| **Document links** | ✅ | ✅ | 🔮 | Clickable import paths (regex or AST) |
+| **Signature help** | ✅ | ❌ | 🔮 | Same-file method parameters; overload resolution needs compiler |
+| **Selection ranges** | ✅ | ❌ | 🔮 | AST walk-up chain; requires AST (Mock returns empty) |
+| **Semantic tokens** | ❌ | ❌ | 🔮 | Type-based coloring needs compiler |
+| **Inlay hints** | ❌ | ❌ | 🔮 | Type inference hints require compiler |
+| **Call hierarchy** | ❌ | ❌ | 🔮 | Requires semantic analysis |
+| **Type hierarchy** | ❌ | ❌ | 🔮 | Requires type system |
+| **Workspace symbols** | ❌ | ❌ | 🔮 | Cross-file requires indexing or compiler |
 
 **Legend:**
-- ✅ = Full support possible
-- ⚠️ Partial = Basic functionality possible, advanced features need compiler
-- ❌ = Requires compiler
+- ✅ = Implemented
+- ❌ = Not yet implemented
+- 🔮 = Planned for compiler adapter (full semantic support)
 
-### Recommended Implementation Order (Tree-sitter First)
+### Remaining Tree-sitter Opportunities
 
-Features that can be fully implemented with tree-sitter should be prioritized:
+Features that could be partially implemented with tree-sitter in the future:
 
-1. **Folding ranges** - Pure syntax, easy win
-2. **Document formatting** - Syntax-based, high value
-3. **Semantic tokens** (basic) - Better highlighting than TextMate
-4. **Code actions** (structural) - Missing semicolons, brace fixes
-5. **Signature help** (basic) - Show parameter names from syntax
-6. **Workspace symbols** (same-file) - Index declarations per file
+1. **Semantic tokens** (basic) - Keyword/syntax highlighting better than TextMate
+2. **Workspace symbols** (same-file) - Index declarations per file
+3. **Inlay hints** (structural) - Basic structural hints without type inference
 
-Features requiring compiler should wait for full compiler integration:
+Features requiring compiler for any useful implementation:
 
-1. Rename/prepareRename
-2. Call hierarchy
-3. Type hierarchy
-4. Semantic code actions (imports, type fixes)
-5. Type-aware inlay hints
+1. Call hierarchy
+2. Type hierarchy
+3. Semantic code actions (type fixes, missing imports)
+4. Type-aware inlay hints
 
 ---
 
@@ -423,10 +429,10 @@ Features requiring compiler should wait for full compiler integration:
 ### Phase 3-4 Complete When:
 - [x] Query engine implemented
 - [x] TreeSitterAdapter implements all basic LSP methods
-- [ ] Document symbols shows class/method outline
-- [ ] Go-to-definition works for local variables
-- [ ] Find references works within same file
-- [ ] Completion shows keywords and locals
+- [x] Document symbols shows class/method outline
+- [x] Go-to-definition works for local variables
+- [x] Find references works within same file
+- [x] Completion shows keywords and locals
 
 ### Phase 5 Complete When:
 - [ ] Go-to-definition works across files

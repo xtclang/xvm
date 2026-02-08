@@ -16,32 +16,35 @@ This matrix shows all LSP features across the three adapter implementations:
 |---------|-----------|:----:|:-----------:|:--------:|-------|
 | **Syntax Highlighting** |
 | TextMate highlighting | TextMate | ✅ | ✅ | ✅ | Independent of LSP adapter |
-| Semantic tokens | `semanticTokens/*` | ❌ | ⏳ | 🔮 | Distinguishes field/local/param |
+| Semantic tokens | `semanticTokens/*` | ❌ | ❌ | 🔮 | Distinguishes field/local/param |
 | **Navigation** |
 | Go to Definition (same file) | `textDocument/definition` | ✅ | ✅ | 🔮 | |
 | Go to Definition (cross-file) | `textDocument/definition` | ❌ | ❌ | 🔮 | Requires import resolution |
 | Find References (same file) | `textDocument/references` | ⚠️ | ✅ | 🔮 | Mock: declaration only |
 | Find References (cross-file) | `textDocument/references` | ❌ | ❌ | 🔮 | Requires workspace index |
 | Document Symbols / Outline | `textDocument/documentSymbol` | ✅ | ✅ | 🔮 | Structure view works |
+| Document Highlight | `textDocument/documentHighlight` | ✅ | ✅ | 🔮 | Highlight symbol occurrences |
+| Selection Ranges | `textDocument/selectionRange` | ❌ | ✅ | 🔮 | Mock: returns empty (needs AST) |
 | Workspace Symbols | `workspace/symbol` | ❌ | ❌ | 🔮 | Cross-file search |
 | **Editing** |
 | Hover Information | `textDocument/hover` | ✅ | ✅ | 🔮 | Mock/TS: kind+name; Compiler: +types |
 | Code Completion (keywords) | `textDocument/completion` | ✅ | ✅ | 🔮 | |
 | Code Completion (context-aware) | `textDocument/completion` | ❌ | ✅ | 🔮 | After-dot member completion |
 | Code Completion (type-aware) | `textDocument/completion` | ❌ | ❌ | 🔮 | Requires type inference |
-| Signature Help | `textDocument/signatureHelp` | ❌ | ❌ | 🔮 | Parameter hints |
+| Signature Help | `textDocument/signatureHelp` | ❌ | ✅ | 🔮 | TS: same-file method params |
+| Document Links | `textDocument/documentLink` | ✅ | ✅ | 🔮 | Clickable import paths |
 | **Diagnostics** |
 | Syntax Errors | `textDocument/publishDiagnostics` | ⚠️ | ✅ | 🔮 | Mock: ERROR comments only |
 | Semantic Errors | `textDocument/publishDiagnostics` | ❌ | ❌ | 🔮 | Type errors, undefined refs |
 | **Refactoring** |
-| Rename Symbol (same file) | `textDocument/rename` | ❌ | ⏳ | 🔮 | Tree-sitter can find refs |
+| Rename Symbol (same file) | `textDocument/rename` | ✅ | ✅ | 🔮 | Text-based replacement |
 | Rename Symbol (cross-file) | `textDocument/rename` | ❌ | ❌ | 🔮 | Requires workspace index |
-| Code Actions / Quick Fixes | `textDocument/codeAction` | ❌ | ❌ | 🔮 | |
+| Code Actions (organize imports) | `textDocument/codeAction` | ✅ | ✅ | 🔮 | Sort unsorted imports |
 | **Formatting** |
-| Format Document | `textDocument/formatting` | ❌ | ⏳ | 🔮 | Tree-sitter has AST |
-| Format Selection | `textDocument/rangeFormatting` | ❌ | ⏳ | 🔮 | Tree-sitter has AST |
+| Format Document | `textDocument/formatting` | ✅ | ✅ | 🔮 | Trailing whitespace + final newline |
+| Format Selection | `textDocument/rangeFormatting` | ✅ | ✅ | 🔮 | Range-scoped formatting |
 | **Code Intelligence** |
-| Folding Ranges | `textDocument/foldingRange` | ❌ | ⏳ | 🔮 | Tree-sitter has block info |
+| Folding Ranges | `textDocument/foldingRange` | ✅ | ✅ | 🔮 | Mock: braces; TS: AST nodes |
 | Inlay Hints | `textDocument/inlayHint` | ❌ | ❌ | 🔮 | Requires type inference |
 | Call Hierarchy | `callHierarchy/*` | ❌ | ❌ | 🔮 | Requires semantic analysis |
 | Type Hierarchy | `typeHierarchy/*` | ❌ | ❌ | 🔮 | Requires type resolution |
@@ -65,6 +68,14 @@ This matrix shows all LSP features across the three adapter implementations:
 | **Type Information** | No | No | Yes |
 | **Cross-file Analysis** | No | No | Yes |
 | **Semantic Validation** | No | No | Yes |
+| **Rename** | Same-file (text) | Same-file (AST) | Cross-file |
+| **Code Actions** | Organize imports | Organize imports | Quick fixes |
+| **Formatting** | Trailing WS + newline | Trailing WS + newline | Full formatter |
+| **Folding** | Brace matching | AST node boundaries | AST nodes |
+| **Signature Help** | No | Same-file methods | Cross-file |
+| **Document Highlight** | Text matching | AST identifiers | Semantic |
+| **Selection Ranges** | No | AST walk-up chain | AST walk-up |
+| **Document Links** | Import regex | Import AST nodes | Resolved URIs |
 | **Production Ready** | Testing only | Yes | Future |
 
 ---
@@ -259,8 +270,16 @@ module TestModule {
 | **Performance** | Fast (regex) | Very fast (native) | Moderate |
 | **Error tolerance** | None (literal match) | Excellent | Good |
 | **Symbol detection** | Top-level only | Nested scopes | Full AST |
-| **Completion** | Keywords only | Context-aware | Type-aware |
+| **Completion** | Keywords + symbols | Keywords + imports | Type-aware |
 | **Find references** | Declaration only | All in file | All in workspace |
+| **Rename** | Same-file (text) | Same-file (AST) | Cross-file |
+| **Code actions** | Organize imports | Organize imports | Quick fixes + refactorings |
+| **Formatting** | Trailing WS removal | Trailing WS removal | Full formatter |
+| **Folding ranges** | Brace matching | AST nodes | AST nodes |
+| **Signature help** | None | Same-file methods | Cross-file overloads |
+| **Document highlight** | Text matching | AST identifiers | Semantic (R/W) |
+| **Selection ranges** | None (empty) | AST walk-up chain | AST walk-up chain |
+| **Document links** | Import regex | Import AST nodes | Resolved file URIs |
 | **Diagnostics** | Comment markers only | Syntax errors | Semantic errors |
 | **Type information** | None | None | Full |
 | **Incremental updates** | No | Yes | Partial |
@@ -391,7 +410,7 @@ Requires:
 
 Planned features once compiler adapter is implemented:
 - Semantic error detection
-- Type inference in hover
-- Accurate completion filtering
-- Rename refactoring
-- Code actions / quick fixes
+- Type inference in hover and inlay hints
+- Accurate completion filtering (type-aware)
+- Cross-file rename refactoring
+- Diagnostic-driven quick fixes and refactorings

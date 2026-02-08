@@ -56,8 +56,8 @@ All adapters extend `AbstractXtcCompilerAdapter` which provides shared logging a
 
 | Adapter | Backend | LSP Feature Coverage | Status |
 |---------|---------|----------------------|--------|
-| `MockXtcCompilerAdapter` | Regex patterns | ~30% (basic testing) | Implemented |
-| `TreeSitterAdapter` | Tree-sitter grammar | ~70% (syntax-level) | **DEFAULT** - Implemented |
+| `MockXtcCompilerAdapter` | Regex patterns | ~60% (syntax-level, no AST) | Implemented |
+| `TreeSitterAdapter` | Tree-sitter grammar | ~80% (syntax + structure) | **DEFAULT** - Implemented |
 | `XtcCompilerAdapterStub` | XTC Compiler | 100% (semantic) | Placeholder |
 
 **Note:** TreeSitterAdapter requires Java 25+ (FFM API). The IntelliJ plugin runs the LSP server
@@ -68,14 +68,22 @@ out-of-process with an auto-provisioned JRE to meet this requirement (IntelliJ r
 | Feature | Mock | Tree-sitter | Compiler |
 |---------|------|-------------|----------|
 | Syntax highlighting | - | TextMate + semantic tokens (lexer) | Full semantic tokens |
-| Document symbols | Limited | Full | Full |
+| Document symbols | Full | Full | Full |
 | Go-to-definition (same file) | By name | By name | Semantic |
 | Go-to-definition (cross-file) | - | - | Full |
-| Find references (same file) | By name | By name | Full |
-| Completions | Keywords | Keywords + locals | Types + members |
-| Syntax errors | - | Full | Full |
+| Find references (same file) | Decl only | By name | Full |
+| Completions | Keywords | Keywords + locals + members | Types + members |
+| Syntax errors | Markers | Full | Full |
 | Semantic errors | - | - | Full |
-| Hover (signature) | - | Basic | Full types |
+| Hover (signature) | Basic | Basic | Full types |
+| Document highlights | Text match | AST identifiers | Semantic |
+| Selection ranges | - | AST walk-up | AST walk-up |
+| Folding ranges | Braces | AST nodes | AST nodes |
+| Document links | Regex | AST nodes | Resolved URIs |
+| Signature help | - | Same-file | Cross-file |
+| Rename (same file) | Text | AST | Semantic |
+| Code actions | Organize imports | Organize imports | Quick fixes |
+| Formatting | Trailing WS | Trailing WS | Full formatter |
 
 **Data Model:** `lang/lsp-server/src/main/kotlin/org/xvm/lsp/model/`
 - `CompilationResult` - Compilation output with diagnostics and symbols
@@ -204,14 +212,15 @@ Full tree-sitter support for fast, incremental parsing:
 
 ### Long-term (Advanced Features)
 
-7. **Refactoring support**
-   - Rename symbol
+7. **Refactoring support (cross-file)**
+   - ~~Rename symbol (same file)~~ ✅ COMPLETE (both adapters)
+   - Cross-file rename (requires compiler)
    - Extract method/variable
    - Safe delete
 
-8. **Code actions**
-   - Quick fixes for common errors
-   - Import organization
+8. **Code actions (semantic)**
+   - ~~Organize imports~~ ✅ COMPLETE (both adapters)
+   - Quick fixes for common errors (requires compiler)
    - Generate code (getters, toString, etc.)
 
 9. **Debugging (DAP)**

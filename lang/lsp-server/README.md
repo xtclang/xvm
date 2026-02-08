@@ -106,40 +106,50 @@ In IntelliJ: **View → Tool Windows → Language Servers** (LSP4IJ) to see serv
 | Nested symbols | ❌ Limited | ✅ Full hierarchy | ❌ None |
 | Syntax errors | ❌ Basic patterns | ✅ Precise location | ❌ None |
 | Error recovery | ❌ None | ✅ Continues parsing | ❌ None |
+| Rename | ✅ Same-file (text) | ✅ Same-file (AST) | ❌ None |
+| Code actions | ✅ Organize imports | ✅ Organize imports | ❌ None |
+| Formatting | ✅ Trailing WS | ✅ Trailing WS | ❌ None |
+| Folding ranges | ✅ Brace matching | ✅ AST node boundaries | ❌ None |
+| Signature help | ❌ None | ✅ Same-file methods | ❌ None |
+| Document links | ✅ Import regex | ✅ Import AST nodes | ❌ None |
 | Native library | Not needed | Required | Not needed |
 | All LSP calls logged | ✅ | ✅ | ✅ |
 
 ## Supported LSP Features
 
-All LSP methods are wired up in `XtcLanguageServer` and delegate to the adapter.
-Unimplemented methods use default interface implementations that log warnings.
+All 17 LSP capabilities are advertised by the server and wired up in
+`XtcLanguageServer`. Each method delegates to the active `XtcCompilerAdapter`.
+Capabilities not yet implemented in an adapter use default interface methods
+(returning empty results or null).
 
 | Feature | Mock | TreeSitter | Compiler | LSP Method |
 |---------|:----:|:----------:|:--------:|------------|
-| **Core (Implemented)** |
-| Diagnostics | ⚠️ | ✅ | ❌ | `textDocument/publishDiagnostics` |
-| Hover | ⚠️ | ✅ | ❌ | `textDocument/hover` |
-| Completion | ⚠️ | ✅ | ❌ | `textDocument/completion` |
-| Go to Definition | ⚠️ | ⚠️ | ❌ | `textDocument/definition` |
-| Find References | ❌ | ⚠️ | ❌ | `textDocument/references` |
-| Document Symbols | ⚠️ | ✅ | ❌ | `textDocument/documentSymbol` |
-| **Tree-sitter Capable (Stubs)** |
-| Document Highlights | ❌ | 🔧 | ❌ | `textDocument/documentHighlight` |
-| Selection Ranges | ❌ | 🔧 | ❌ | `textDocument/selectionRange` |
-| Folding Ranges | ❌ | 🔧 | ❌ | `textDocument/foldingRange` |
-| Document Links | ❌ | 🔧 | ❌ | `textDocument/documentLink` |
-| **Requires Compiler (Stubs)** |
-| Signature Help | ❌ | ❌ | 🔮 | `textDocument/signatureHelp` |
-| Rename | ❌ | ❌ | 🔮 | `textDocument/rename` |
-| Prepare Rename | ❌ | ❌ | 🔮 | `textDocument/prepareRename` |
-| Code Actions | ❌ | ❌ | 🔮 | `textDocument/codeAction` |
+| **Navigation** |
+| Go to Definition | ✅ | ✅ | 🔮 | `textDocument/definition` |
+| Find References | ⚠️ | ✅ | 🔮 | `textDocument/references` |
+| Document Symbols | ✅ | ✅ | 🔮 | `textDocument/documentSymbol` |
+| Document Highlight | ✅ | ✅ | 🔮 | `textDocument/documentHighlight` |
+| Selection Ranges | ❌ | ✅ | 🔮 | `textDocument/selectionRange` |
+| Document Links | ✅ | ✅ | 🔮 | `textDocument/documentLink` |
+| **Editing** |
+| Hover | ✅ | ✅ | 🔮 | `textDocument/hover` |
+| Completion | ⚠️ | ✅ | 🔮 | `textDocument/completion` |
+| Signature Help | ❌ | ✅ | 🔮 | `textDocument/signatureHelp` |
+| **Refactoring** |
+| Rename / Prepare Rename | ✅ | ✅ | 🔮 | `textDocument/rename` |
+| Code Actions | ✅ | ✅ | 🔮 | `textDocument/codeAction` |
+| **Formatting** |
+| Format Document | ✅ | ✅ | 🔮 | `textDocument/formatting` |
+| Format Selection | ✅ | ✅ | 🔮 | `textDocument/rangeFormatting` |
+| **Code Intelligence** |
+| Diagnostics | ⚠️ | ✅ | 🔮 | `textDocument/publishDiagnostics` |
+| Folding Ranges | ✅ | ✅ | 🔮 | `textDocument/foldingRange` |
+| **Future (Requires Compiler)** |
 | Semantic Tokens | ❌ | ❌ | 🔮 | `textDocument/semanticTokens/full` |
 | Inlay Hints | ❌ | ❌ | 🔮 | `textDocument/inlayHint` |
-| Formatting | ❌ | ❌ | 🔮 | `textDocument/formatting` |
-| Range Formatting | ❌ | ❌ | 🔮 | `textDocument/rangeFormatting` |
 | Workspace Symbols | ❌ | ❌ | 🔮 | `workspace/symbol` |
 
-Legend: ✅ = Implemented, ⚠️ = Partial, ❌ = Not implemented, 🔧 = Tree-sitter TODO, 🔮 = Future compiler
+Legend: ✅ = Implemented, ⚠️ = Partial/limited, ❌ = Not implemented, 🔮 = Future (compiler adapter)
 
 ## Key Components
 
