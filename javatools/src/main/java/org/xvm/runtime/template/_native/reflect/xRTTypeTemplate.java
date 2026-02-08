@@ -733,6 +733,7 @@ public class xRTTypeTemplate
             return doNext(frameCaller);
         }
 
+        @SuppressWarnings("fallthrough")
         public int doNext(Frame frameCaller) {
             switch (stageNext) {
             case ArgValue: {

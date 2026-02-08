@@ -105,6 +105,7 @@ public class MethodStructure
      * @param fHasCode     true indicates that the method has code
      * @param fUsesSuper   true indicates that the method is known to reference "super"
      */
+    @SuppressWarnings("this-escape")
     protected MethodStructure(XvmStructure xsParent, int nFlags, MethodConstant constId,
             ConditionalConstant condition, Annotation[] annotations,
             Parameter[] aReturns, Parameter[] aParams, boolean fHasCode, boolean fUsesSuper) {
@@ -2279,6 +2280,7 @@ public class MethodStructure
         /**
          * @return true iff the code can be optimized out
          */
+        @SuppressWarnings("fallthrough")
         public boolean isNoOp() {
             if (m_listOps == null && m_aop == null) {
                 // too early to ask

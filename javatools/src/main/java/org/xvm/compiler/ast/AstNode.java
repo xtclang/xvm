@@ -85,7 +85,7 @@ public abstract class AstNode
      *
      * @param parent  the parent node
      */
-    protected void setParent(AstNode parent) {
+    protected final void setParent(AstNode parent) {
         assert parent == null || !this.isDiscarded() && !parent.isDiscarded();
         this.m_parent = parent;
     }
@@ -94,7 +94,7 @@ public abstract class AstNode
      * This method recurses through the tree of AstNode objects, allowing each node to introduce
      * itself as the parent of each node under it.
      */
-    protected void introduceParentage() {
+    protected final void introduceParentage() {
         for (AstNode node : children()) {
             node.setParent(this);
             node.introduceParentage();
@@ -107,7 +107,7 @@ public abstract class AstNode
      *
      * @param children  an Iterable of AstNode, or null
      */
-    protected void adopt(Iterable<? extends AstNode> children) {
+    protected final void adopt(Iterable<? extends AstNode> children) {
         if (children != null) {
             for (AstNode child : children) {
                 child.setParent(this);
@@ -122,7 +122,7 @@ public abstract class AstNode
      *
      * @return the same child as passed, which may be null
      */
-    protected <T extends AstNode> T adopt(T child) {
+    protected final <T extends AstNode> T adopt(T child) {
         if (child != null) {
             child.setParent(this);
         }
@@ -197,7 +197,7 @@ public abstract class AstNode
     /**
      * @return true iff the node has been discarded
      */
-    protected boolean isDiscarded() {
+    protected final boolean isDiscarded() {
         return m_stage == Stage.Discarded;
     }
 

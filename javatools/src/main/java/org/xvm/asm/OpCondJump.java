@@ -52,8 +52,8 @@ public abstract class OpCondJump
      * @param arg  a value Argument
      * @param op   the op to jump to
      */
+    @SuppressWarnings("this-escape")
     protected OpCondJump(Argument arg, Op op) {
-        assert !hasSecondArgument() && !isBinaryOp();
         m_argVal = arg;
         m_opDest = op;
     }
@@ -65,8 +65,8 @@ public abstract class OpCondJump
      * @param arg2  a second value Argument
      * @param op    the op to jump to
      */
+    @SuppressWarnings("this-escape")
     protected OpCondJump(Argument arg, Argument arg2, Op op) {
-        assert hasSecondArgument() && !isBinaryOp();
         m_argVal  = arg;
         m_argVal2 = arg2;
         m_opDest  = op;
@@ -80,8 +80,8 @@ public abstract class OpCondJump
      * @param arg2  a second value Argument
      * @param op    the op to jump to
      */
+    @SuppressWarnings("this-escape")
     protected OpCondJump(TypeConstant type, Argument arg, Argument arg2, Op op) {
-        assert isBinaryOp();
         m_typeCommon = type;
         m_argVal     = arg;
         m_argVal2    = arg2;
@@ -94,6 +94,7 @@ public abstract class OpCondJump
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
+    @SuppressWarnings("this-escape")
     protected OpCondJump(DataInput in, Constant[] aconst)
             throws IOException {
         if (isBinaryOp()) {

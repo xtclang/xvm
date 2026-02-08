@@ -535,6 +535,7 @@ public class xRTDelegate
     /**
      * Check if an element write is allowed.
      */
+    @SuppressWarnings("fallthrough")
     protected int checkWrite(Frame frame, DelegateHandle hDelegate, long lIndex, long cSize) {
         switch (hDelegate.getMutability()) {
         case Fixed:

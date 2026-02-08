@@ -2618,27 +2618,15 @@ public abstract class Component
             assert composition != null;
 
             switch (composition) {
-            case Annotation:
-            case Extends:
-            case Implements:
-            case Into:
-            case Incorporates:
-            case RebasesOnto:
+            case Annotation, Extends, Implements, Into, Incorporates, RebasesOnto -> {
                 if (constType == null) {
                     throw new IllegalArgumentException("type is required");
                 }
-
-            case Equal:
-                break;
-
-            case Delegates:
-                throw new IllegalArgumentException("delegates uses the constructor with a PropertyConstant");
-
-            case Import:
-                throw new IllegalArgumentException("imports uses the constructor with a ModuleConstant");
-
-            default:
-                throw new UnsupportedOperationException("composition=" + composition);
+            }
+            case Equal    -> {}
+            case Delegates -> throw new IllegalArgumentException("delegates uses the constructor with a PropertyConstant");
+            case Import    -> throw new IllegalArgumentException("imports uses the constructor with a ModuleConstant");
+            default        -> throw new UnsupportedOperationException("composition=" + composition);
             }
 
             m_composition = composition;

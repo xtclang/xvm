@@ -1104,6 +1104,7 @@ public class InvocationExpression
                  nodeChild instanceof Expression exprChild && args.contains(exprChild));
     }
 
+    @SuppressWarnings("fallthrough")
     @Override
     protected SideEffect mightAffect(Expression exprLeft, Argument arg) {
         switch (super.mightAffect(exprLeft, arg)) {
@@ -1188,6 +1189,7 @@ public class InvocationExpression
         return super.generateArguments(ctx, code, fLocalPropOk, errs);
     }
 
+    @SuppressWarnings("fallthrough")
     @Override
     public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs) {
         ConstantPool pool   = pool();

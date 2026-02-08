@@ -1783,12 +1783,10 @@ public class ConstantPool
             constId = (ThisClassConstant) constClass;
             break;
 
-        case NativeClass:
-            constClass = ((NativeRebaseConstant) constClass).getClassConstant();
-            // fall through;
-        case Module:
-        case Package:
-        case Class:
+        case NativeClass, Module, Package, Class:
+            if (constClass instanceof NativeRebaseConstant nrc) {
+                constClass = nrc.getClassConstant();
+            }
             constId = ensureThisClassConstant((IdentityConstant) constClass);
             break;
 

@@ -203,6 +203,7 @@ public abstract class Decimal {
      *
      * @return true iff the two values are equal in terms of their sign, significand, and exponent
      */
+    @SuppressWarnings("fallthrough")
     public boolean isSameValue(Decimal that) {
         if (this == that) {
             return true;

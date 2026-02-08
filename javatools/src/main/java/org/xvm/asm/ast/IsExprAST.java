@@ -34,6 +34,7 @@ public class IsExprAST
         return 2;
     }
 
+    @SuppressWarnings("fallthrough")
     @Override
     public TypeConstant getType(int i) {
         switch (i) {

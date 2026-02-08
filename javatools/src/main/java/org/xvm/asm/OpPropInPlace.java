@@ -28,10 +28,9 @@ public abstract class OpPropInPlace
      * @param idProp     the property id
      * @param argTarget  the target Argument
      */
+    @SuppressWarnings("this-escape")
     protected OpPropInPlace(PropertyConstant idProp, Argument argTarget) {
         super(idProp);
-
-        assert(!isAssignOp());
 
         m_argTarget = argTarget;
     }
@@ -43,10 +42,9 @@ public abstract class OpPropInPlace
      * @param argTarget   the target Argument
      * @param argReturn   the Argument to store the result into
      */
+    @SuppressWarnings("this-escape")
     protected OpPropInPlace(PropertyConstant idProp, Argument argTarget, Argument argReturn) {
         super(idProp);
-
-        assert(isAssignOp());
 
         m_argTarget = argTarget;
         m_argReturn = argReturn;
@@ -58,6 +56,7 @@ public abstract class OpPropInPlace
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
+    @SuppressWarnings("this-escape")
     protected OpPropInPlace(DataInput in, Constant[] aconst)
             throws IOException {
         super(in, aconst);

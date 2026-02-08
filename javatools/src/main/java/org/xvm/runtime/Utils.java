@@ -1291,6 +1291,7 @@ public abstract class Utils {
             return doNext(frameCaller);
         }
 
+        @SuppressWarnings("fallthrough")
         public int doNext(Frame frameCaller) {
             NextStep:
             while (true) {

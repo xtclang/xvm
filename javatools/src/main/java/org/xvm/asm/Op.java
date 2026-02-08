@@ -663,6 +663,7 @@ public abstract class Op {
          * @param method  the MethodStructure
          * @param pool    the underlying ConstantPool
          */
+        @SuppressWarnings("this-escape")
         public ConstantRegistry(MethodStructure method, ConstantPool pool) {
             f_method = method;
             f_pool   = pool;

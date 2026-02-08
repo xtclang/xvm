@@ -240,6 +240,7 @@ public class LiteralConstant
      *
      * @return the PackedInteger value of an IntLiteral
      */
+    @SuppressWarnings("fallthrough")
     public PackedInteger getPackedInteger() {
         assert getFormat() == Format.IntLiteral;
 

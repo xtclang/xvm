@@ -2,6 +2,7 @@ package org.xvm.javajit;
 
 import java.lang.constant.ClassDesc;
 
+import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_CtorCtx;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 
@@ -23,7 +24,26 @@ public class JitCtorDesc
         this.addCtorCtx = addCtorCtx;
         this.addType    = addType;
 
-        super(standardReturns, standardParams, optimizedReturns, optimizedParams);
+        super(standardReturns, standardParams, optimizedReturns, optimizedParams,
+              buildExtraCDs(addCtorCtx, addType, targetCD));
+    }
+
+    private static ClassDesc[] buildExtraCDs(boolean addCtorCtx, boolean addType,
+                                             ClassDesc targetCD) {
+        int count = 1 + (addCtorCtx ? 1 : 0) + (addType ? 1 : 0) + (targetCD == null ? 0 : 1);
+        ClassDesc[] extraCDs = new ClassDesc[count];
+        int ix = 0;
+        extraCDs[ix++] = CD_Ctx;
+        if (addCtorCtx) {
+            extraCDs[ix++] = CD_CtorCtx;
+        }
+        if (addType) {
+            extraCDs[ix++] = CD_TypeConstant;
+        }
+        if (targetCD != null) {
+            extraCDs[ix] = targetCD;
+        }
+        return extraCDs;
     }
 
     @Override

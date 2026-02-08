@@ -130,7 +130,12 @@ public class TypeInfo {
         //  - exploded Ref types keyed by the corresponding NestedIdentity
         f_fHasGenerics = mapTypeParams.keySet().stream().anyMatch(k -> k instanceof String);
 
-        m_fExplicitAbstract = fSynthetic || !isClass() || struct.isExplicitlyAbstract() ||
+        Format format = struct == null ? Format.INTERFACE : struct.getFormat();
+        boolean fIsClass = switch (format) {
+            case MODULE, PACKAGE, CLASS, CONST, ENUM, ENUMVALUE, SERVICE -> true;
+            default -> false;
+        };
+        m_fExplicitAbstract = fSynthetic || !fIsClass || struct.isExplicitlyAbstract() ||
                 containsAnnotation(aannoClass, "Abstract");
 
         assert cInvalidations == 0 // necessary for TYPEINFO_PLACEHOLDER construction

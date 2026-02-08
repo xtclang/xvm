@@ -1375,6 +1375,7 @@ public class LambdaExpression
             return false;
         }
 
+        @SuppressWarnings("fallthrough")
         @Override
         protected void markVarRead(boolean fNested, String sName, Token tokName, boolean fDeref,
                                    ErrorListener errs) {

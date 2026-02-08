@@ -1802,6 +1802,7 @@ public class NameExpression
      *
      * @return the raw argument, or null if it was not determinable
      */
+    @SuppressWarnings("fallthrough")
     protected Argument resolveRawArgument(Context ctx, boolean fForce, ErrorListener errs) {
         if (!fForce && m_arg != null) {
             return m_arg;
@@ -2905,6 +2906,7 @@ public class NameExpression
      * @return the meaning of the name (after resolveRawArgument has finished), or null if it cannot be
      *         determined
      */
+    @SuppressWarnings("fallthrough")
     protected Meaning getMeaning() {
         Argument arg = m_arg;
         switch (arg) {

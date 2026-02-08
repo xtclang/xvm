@@ -23,6 +23,7 @@ class PhantomGcTest {
 
     static List<C> list = null;
 
+    @SuppressWarnings("fallthrough")
     public static void main(String[] args) {
         // we'll need multiple threads
         // with each thread cycling through different container contexts

@@ -55,9 +55,8 @@ public abstract class OpIndex
      * @param argTarget  the target Argument
      * @param argIndex   the index Argument
      */
+    @SuppressWarnings("this-escape")
     protected OpIndex(Argument argTarget, Argument argIndex) {
-        assert(!isAssignOp());
-
         m_argTarget = argTarget;
         m_argIndex  = argIndex;
     }
@@ -69,9 +68,8 @@ public abstract class OpIndex
      * @param argIndex   the index Argument
      * @param argReturn  the Argument to store the result into
      */
+    @SuppressWarnings("this-escape")
     protected OpIndex(Argument argTarget, Argument argIndex, Argument argReturn) {
-        assert(isAssignOp());
-
         m_argTarget = argTarget;
         m_argIndex  = argIndex;
         m_argReturn = argReturn;
@@ -83,6 +81,7 @@ public abstract class OpIndex
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
+    @SuppressWarnings("this-escape")
     protected OpIndex(DataInput in, Constant[] aconst)
             throws IOException {
         m_nTarget = readPackedInt(in);

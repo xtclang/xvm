@@ -836,6 +836,7 @@ public class MethodInfo
      *
      * @return a chain of bodies, each representing functionality to invoke, in their "super" order
      */
+    @SuppressWarnings("fallthrough")
     public MethodBody[] ensureOptimizedMethodChain(TypeInfo infoType) {
         MethodBody[] chain = m_aBodyResolved;
         if (chain == null) {

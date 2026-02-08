@@ -641,6 +641,7 @@ public final class DebugConsole
      *         Op.R_EXCEPTION if the command was invalid and a generic error should be reported
      *         any other value is used to exit the debugger
      */
+    @SuppressWarnings("fallthrough")
     private int processCommand(Frame frame, int iPC, PrintWriter writer, String sCommand) {
         String[] asParts = parseDelimitedString(sCommand, ' ');
         int      cArgs   = asParts.length - 1;

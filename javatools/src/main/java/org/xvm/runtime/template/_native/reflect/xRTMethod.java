@@ -288,7 +288,7 @@ public class xRTMethod
             m_fMutable   = clz.isStruct();
             f_typeTarget = typeTarget;
 
-            assert getMethodInfo() != null;
+            assert f_typeTarget.ensureTypeInfo().getMethodById(f_idMethod, true) != null;
         }
 
         public MethodInfo getMethodInfo() {

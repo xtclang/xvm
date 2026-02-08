@@ -197,6 +197,7 @@ public class JumpVal
      *
      * @return one of Op.R_NEXT, Op.R_CALL, Op.R_EXCEPTION or the next iPC value
      */
+    @SuppressWarnings("fallthrough")
     protected int findNatural(Frame frame, int iPC, ObjectHandle hValue, int iCase) {
         ObjectHandle[] ahCase = m_ahCase;
         int            cCases = ahCase.length;

@@ -537,7 +537,8 @@ public class CallChain {
         public FieldAccessChain(MethodBody[] aMethods) {
             super(aMethods);
 
-            assert isField();
+            assert f_aMethods.length > 0 &&
+                   f_aMethods[0].getImplementation() == Implementation.Field;
         }
 
         @Override

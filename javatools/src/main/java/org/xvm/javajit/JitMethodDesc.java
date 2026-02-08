@@ -28,15 +28,22 @@ import static org.xvm.javajit.JitFlavor.WidenedWithDefault;
 public class JitMethodDesc {
     public JitMethodDesc(JitParamDesc[] standardReturns,  JitParamDesc[] standardParams,
                          JitParamDesc[] optimizedReturns, JitParamDesc[] optimizedParams) {
+        this(standardReturns, standardParams, optimizedReturns, optimizedParams,
+             new ClassDesc[] {CD_Ctx});
+    }
+
+    protected JitMethodDesc(JitParamDesc[] standardReturns,  JitParamDesc[] standardParams,
+                            JitParamDesc[] optimizedReturns, JitParamDesc[] optimizedParams,
+                            ClassDesc[] extraCDs) {
         this.standardReturns  = standardReturns;
         this.standardParams   = standardParams;
         this.optimizedReturns = optimizedReturns;
         this.optimizedParams  = optimizedParams;
 
         isOptimized = optimizedParams != null && optimizedReturns != null;
-        standardMD  = computeMethodDesc(standardReturns, standardParams);
+        standardMD  = computeMethodDesc(standardReturns, standardParams, extraCDs);
         optimizedMD = isOptimized
-            ? computeMethodDesc(optimizedReturns, optimizedParams)
+            ? computeMethodDesc(optimizedReturns, optimizedParams, extraCDs)
             : null;
     }
 
@@ -78,12 +85,13 @@ public class JitMethodDesc {
         throw new IllegalArgumentException("Invalid return index");
     }
 
-    protected MethodTypeDesc computeMethodDesc(JitParamDesc[] returns, JitParamDesc[] params) {
-        int         extraCount = getImplicitParamCount();
+    protected static MethodTypeDesc computeMethodDesc(JitParamDesc[] returns, JitParamDesc[] params,
+                                                         ClassDesc[] extraCDs) {
+        int         extraCount = extraCDs.length;
         int         paramCount = params.length;
         ClassDesc[] paramCDs   = new ClassDesc[extraCount + paramCount];
 
-        fillExtraClassDesc(paramCDs);
+        System.arraycopy(extraCDs, 0, paramCDs, 0, extraCount);
 
         for (int i = 0; i < paramCount; i++)
             {

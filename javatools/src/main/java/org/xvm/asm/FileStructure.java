@@ -56,6 +56,7 @@ public class FileStructure
      *
      * @param sModule   the fully qualified module name
      */
+    @SuppressWarnings("this-escape")
     public FileStructure(String sModule) {
         super(null, Access.PUBLIC, true, true, true, Format.FILE, null, null);
 
@@ -129,6 +130,7 @@ public class FileStructure
      *
      * @throws IOException  if an IOException occurs while reading the FileStructure
      */
+    @SuppressWarnings("this-escape")
     public FileStructure(InputStream in, boolean fAutoClose, boolean fLazy)
             throws IOException {
         super(null, Access.PUBLIC, true, true, true, Format.FILE, null, null);
@@ -151,6 +153,7 @@ public class FileStructure
      * @param module       the module to copy
      * @param fSynthesize  if true, synthesize all necessary structures
      */
+    @SuppressWarnings("this-escape")
     public FileStructure(ModuleStructure module, boolean fSynthesize) {
         super(null, Access.PUBLIC, true, true, true, Format.FILE, null, null);
 

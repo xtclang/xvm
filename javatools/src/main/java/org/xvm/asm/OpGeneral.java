@@ -39,8 +39,8 @@ public abstract class OpGeneral
      * @param argTarget  the target Argument
      * @param argReturn  the Argument to move the result into
      */
+    @SuppressWarnings("this-escape")
     protected OpGeneral(Argument argTarget, Argument argReturn) {
-        assert(!isBinaryOp());
         assert argTarget != null && argReturn != null;
 
         m_argTarget = argTarget;
@@ -54,8 +54,8 @@ public abstract class OpGeneral
      * @param argValue   the second value Argument
      * @param argReturn  the Argument to store the result into
      */
+    @SuppressWarnings("this-escape")
     protected OpGeneral(Argument argTarget, Argument argValue, Argument argReturn) {
-        assert(isBinaryOp());
         assert argTarget != null && argValue != null && argReturn != null;
 
         m_argTarget = argTarget;
@@ -69,6 +69,7 @@ public abstract class OpGeneral
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
+    @SuppressWarnings("this-escape")
     protected OpGeneral(DataInput in, Constant[] aconst)
             throws IOException {
         m_nTarget = readPackedInt(in);

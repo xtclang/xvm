@@ -2211,6 +2211,7 @@ public abstract class ClassTemplate
             fAnonymous = constructor != null && constructor.isAnonymousClassWrapperConstructor();
         }
 
+        @SuppressWarnings("fallthrough")
         @Override
         public int proceed(Frame frameCaller) {
             // assume that we have class D with an auto-generated initializer (AI), a constructor (CD),

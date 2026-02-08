@@ -857,6 +857,7 @@ public class Frame
      * @param hValueFrom  the source value
      * @param infoTo      the destination register
      */
+    @SuppressWarnings("fallthrough")
     private void checkType(ObjectHandle hValueFrom, VarInfo infoTo) {
         TypeConstant typeFrom = hValueFrom.getUnsafeType();
         if (typeFrom.getPosition() != infoTo.m_nTypeId) { // quick check

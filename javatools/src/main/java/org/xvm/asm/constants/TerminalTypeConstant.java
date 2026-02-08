@@ -187,10 +187,10 @@ public class TerminalTypeConstant
         case TypeParameter:
             return ((FormalConstant) constant).getConstraintType().isImmutable();
 
-        case NativeClass:
-            constant = ((NativeRebaseConstant) constant).getClassConstant();
-            // fall through
-        case Class:
+        case NativeClass, Class:
+            if (constant instanceof NativeRebaseConstant nrc) {
+                constant = nrc.getClassConstant();
+            }
             idClass = (IdentityConstant) constant;
             break;
 
@@ -235,10 +235,10 @@ public class TerminalTypeConstant
         case DynamicFormal:
             return (((FormalConstant) constant)).getConstraintType().isService();
 
-        case NativeClass:
-            constant = ((NativeRebaseConstant) constant).getClassConstant();
-            // fall through
-        case Class:
+        case NativeClass, Class:
+            if (constant instanceof NativeRebaseConstant nrc) {
+                constant = nrc.getClassConstant();
+            }
             idClass = (IdentityConstant) constant;
             break;
 
@@ -471,12 +471,10 @@ public class TerminalTypeConstant
         case IsClass:
             return ResolutionResult.UNKNOWN;
 
-        case NativeClass:
-            constant = ((NativeRebaseConstant) constant).getClassConstant();
-            // fall through
-        case Module:
-        case Package:
-        case Class: {
+        case NativeClass, Module, Package, Class: {
+            if (constant instanceof NativeRebaseConstant nrc) {
+                constant = nrc.getClassConstant();
+            }
             IdentityConstant idClz = (IdentityConstant) constant;
             if (idMethod != null) {
                 if (idClz.isNestMateOf(idMethod.getClassIdentity())) {
@@ -1664,10 +1662,10 @@ public class TerminalTypeConstant
 
         Constant constIdLeft = getDefiningConstant();
         switch (constIdLeft.getFormat()) {
-        case NativeClass:
-            constIdLeft = ((NativeRebaseConstant) constIdLeft).getClassConstant();
-            // fall through
-        case Class: {
+        case NativeClass, Class: {
+            if (constIdLeft instanceof NativeRebaseConstant nrc) {
+                constIdLeft = nrc.getClassConstant();
+            }
             IdentityConstant idLeft  = (IdentityConstant) constIdLeft;
             ClassStructure   clzLeft = (ClassStructure) idLeft.getComponent();
 
@@ -1704,12 +1702,10 @@ public class TerminalTypeConstant
 
         Constant constIdThis = getDefiningConstant();
         switch (constIdThis.getFormat()) {
-        case NativeClass:
-            constIdThis = ((NativeRebaseConstant) constIdThis).getClassConstant();
-            // fall through
-        case Module:
-        case Package:
-        case Class: {
+        case NativeClass, Module, Package, Class: {
+            if (constIdThis instanceof NativeRebaseConstant nrc) {
+                constIdThis = nrc.getClassConstant();
+            }
             IdentityConstant idThis  = (IdentityConstant) constIdThis;
             ClassStructure   clzThis = (ClassStructure) idThis.getComponent();
 
@@ -1766,10 +1762,10 @@ public class TerminalTypeConstant
         case IsClass:
             return Usage.NO;
 
-        case NativeClass:
-            constId = ((NativeRebaseConstant) constId).getClassConstant();
-            // fall through
-        case Class:
+        case NativeClass, Class:
+            if (constId instanceof NativeRebaseConstant nrc) {
+                constId = nrc.getClassConstant();
+            }
             if (isTuple()) {
                 // Tuple consumes and produces every element type
                 for (TypeConstant constParam : listParams) {
@@ -1846,10 +1842,10 @@ public class TerminalTypeConstant
                     constFormal.getName().equals(sTypeName));
         }
 
-        case NativeClass:
-            constId = ((NativeRebaseConstant) constId).getClassConstant();
-            // fall through
-        case Class:
+        case NativeClass, Class:
+            if (constId instanceof NativeRebaseConstant nrc) {
+                constId = nrc.getClassConstant();
+            }
             if (isTuple()) {
                 // Tuple consumes and produces every element type
                 for (TypeConstant constParam : listParams) {

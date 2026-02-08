@@ -191,6 +191,7 @@ public class JumpVal_N
                 : findLarge(frame, iPC, ahValue);
     }
 
+    @SuppressWarnings("fallthrough")
     protected int findSmall(Frame frame, int iPC, ObjectHandle[] ahValue) {
         Algorithm[]               aAlg   = m_aAlgorithm;
         Map<ObjectHandle, Long>[] aMap   = m_amapJumpSmall;
@@ -270,6 +271,7 @@ public class JumpVal_N
         return findSmallNatural(frame, iPC, ahValue, ixBits, 0, 0);
     }
 
+    @SuppressWarnings("fallthrough")
     protected int findSmallNatural(Frame frame, int iPC, ObjectHandle[] ahValue, long ixBits,
                                    int iRow, int iCol) {
         ObjectHandle[][] aahCases = m_aahCases;

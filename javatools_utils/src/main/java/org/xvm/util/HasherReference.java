@@ -32,7 +32,7 @@ public class HasherReference<T> implements Supplier<T> {
      * @param referent the new referent
      * @param hasher   the hasher
      */
-    protected void reset(T referent, Hasher<? super T> hasher) {
+    protected final void reset(T referent, Hasher<? super T> hasher) {
         this.referent = referent;
         this.hasher = hasher;
     }

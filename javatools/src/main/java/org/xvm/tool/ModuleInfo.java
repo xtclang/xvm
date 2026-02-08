@@ -475,7 +475,7 @@ public class ModuleInfo {
     /**
      * @return the ResourceDir object representing the root resource directory
      */
-    public ResourceDir getResourceDir() {
+    public final ResourceDir getResourceDir() {
         if (resourceDir == null) {
             File sourceFile = getSourceFile();
             resourceDir = sourceFile.exists()

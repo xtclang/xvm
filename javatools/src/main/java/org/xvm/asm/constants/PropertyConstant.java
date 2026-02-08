@@ -39,7 +39,33 @@ public class PropertyConstant
     public PropertyConstant(ConstantPool pool, IdentityConstant constParent, String sName) {
         super(pool, constParent, sName);
 
-        checkParent(constParent);
+        switch (constParent.getFormat()) {
+        case Module:
+        case Package:
+        case Class:
+        case NativeClass:
+        case Property:
+        case Method:
+            break;
+
+        default:
+            throw new IllegalArgumentException("invalid parent: " + constParent.getFormat());
+        }
+    }
+
+    /**
+     * Construct a constant whose value is a property identifier, without performing parent
+     * validation.  This constructor is intended for use by subclasses that need to perform their
+     * own parent validation.
+     *
+     * @param pool         the ConstantPool that will contain this Constant
+     * @param constParent  the parent constant
+     * @param sName        the property name
+     * @param fSubclass    ignored; exists only to disambiguate from the public constructor
+     */
+    protected PropertyConstant(ConstantPool pool, IdentityConstant constParent, String sName,
+                               boolean fSubclass) {
+        super(pool, constParent, sName);
     }
 
     /**
@@ -54,26 +80,6 @@ public class PropertyConstant
     public PropertyConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException {
         super(pool, format, in);
-    }
-
-    /**
-     * Validate the parent's format.
-     *
-     * @param idParent  the parent's id
-     */
-    protected void checkParent(IdentityConstant idParent) {
-        switch (idParent.getFormat()) {
-        case Module:
-        case Package:
-        case Class:
-        case NativeClass:
-        case Property:
-        case Method:
-            break;
-
-        default:
-            throw new IllegalArgumentException("invalid parent: " + idParent.getFormat());
-        }
     }
 
 

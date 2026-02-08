@@ -40,8 +40,8 @@ public abstract class OpTest
      * @param arg        the value Argument
      * @param argReturn  the location to store the test result
      */
+    @SuppressWarnings("this-escape")
     protected OpTest(Argument arg, Argument argReturn) {
-        assert !isBinaryOp() && !hasSecondArgument();
         m_argVal1   = arg;
         m_argReturn = argReturn;
     }
@@ -54,7 +54,6 @@ public abstract class OpTest
      * @param argReturn  the location to store the test result
      */
     protected OpTest(Argument arg1, Argument arg2, Argument argReturn) {
-        assert hasSecondArgument() && !isBinaryOp();
         m_argVal1   = arg1;
         m_argVal2   = arg2;
         m_argReturn = argReturn;
@@ -69,7 +68,6 @@ public abstract class OpTest
      * @param argReturn  the location to store the test result
      */
     protected OpTest(TypeConstant type, Argument arg1, Argument arg2, Argument argReturn) {
-        assert isBinaryOp();
         m_typeCommon = type;
         m_argVal1    = arg1;
         m_argVal2    = arg2;

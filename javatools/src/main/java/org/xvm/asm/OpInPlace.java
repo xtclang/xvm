@@ -46,9 +46,8 @@ public abstract class OpInPlace
      *
      * @param argTarget  the target Argument
      */
+    @SuppressWarnings("this-escape")
     protected OpInPlace(Argument argTarget) {
-        assert(!isAssignOp());
-
         m_argTarget = argTarget;
     }
 
@@ -58,9 +57,8 @@ public abstract class OpInPlace
      * @param argTarget  the target Argument
      * @param argReturn  the Argument to store the result into
      */
+    @SuppressWarnings("this-escape")
     protected OpInPlace(Argument argTarget, Argument argReturn) {
-        assert(isAssignOp());
-
         m_argTarget = argTarget;
         m_argReturn = argReturn;
     }
@@ -71,6 +69,7 @@ public abstract class OpInPlace
      * @param in      the DataInput to read from
      * @param aconst  an array of constants used within the method
      */
+    @SuppressWarnings("this-escape")
     protected OpInPlace(DataInput in, Constant[] aconst)
             throws IOException {
         m_nTarget = readPackedInt(in);

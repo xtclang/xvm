@@ -493,6 +493,7 @@ public abstract class IdentityConstant
      *
      * @return the resulting IdentityConstant
      */
+    @SuppressWarnings("fallthrough")
     public IdentityConstant appendTrailingPathTo(IdentityConstant that, int cSegments) {
         switch (cSegments) {
         default:

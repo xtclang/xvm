@@ -265,6 +265,7 @@ public abstract class Expression
      * @return a TypeFit value describing the expression's capability (or lack thereof) to produce
      *         the required type(s)
      */
+    @SuppressWarnings("fallthrough")
     public TypeFit testFitMulti(Context ctx, TypeConstant[] atypeRequired, boolean fExhaustive,
                                 ErrorListener errs) {
         switch (atypeRequired.length) {
@@ -1468,6 +1469,7 @@ public abstract class Expression
      * @param aLVal  an array of Assignable objects representing the L-Values
      * @param errs   the error list to log any errors to
      */
+    @SuppressWarnings("fallthrough")
     public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs) {
         int     cLVals = aLVal.length;
         int     cRVals = getValueCount();
@@ -2274,6 +2276,7 @@ public abstract class Expression
          *
          * @return an argument, if an Assignable was not provided
          */
+        @SuppressWarnings("fallthrough")
         public Argument getValue(Assignable LValResult, boolean fLocalPropOk, Code code,
                                  ErrorListener errs) {
             switch (m_form) {

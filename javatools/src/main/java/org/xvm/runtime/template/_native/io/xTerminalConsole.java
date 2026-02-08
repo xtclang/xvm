@@ -83,6 +83,7 @@ public class xTerminalConsole
         return hConsole;
     }
 
+    @SuppressWarnings("fallthrough")
     @Override
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn) {

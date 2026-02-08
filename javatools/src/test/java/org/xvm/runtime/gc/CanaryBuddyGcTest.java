@@ -27,6 +27,7 @@ class CanaryBuddyGcTest {
     static final long OBJ_SIZE = ShallowSizeOf.instanceOf(C.class);
     static final long LIST_SIZE = ShallowSizeOf.instanceOf(CollectibleList.class) + ShallowSizeOf.instanceOf(ArrayList.class) + ShallowSizeOf.arrayOf(C.class, 16);
 
+    @SuppressWarnings("fallthrough")
     public static void main(String[] args) {
         // we'll need multiple threads
         // with each thread cycling through different container contexts

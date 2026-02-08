@@ -88,6 +88,7 @@ public class CondOpExpression
         return pool().typeBoolean();
     }
 
+    @SuppressWarnings("fallthrough")
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         TypeFit fit = TypeFit.Fit;
@@ -163,6 +164,7 @@ public class CondOpExpression
         return expr1.isCompletable();
     }
 
+    @SuppressWarnings("fallthrough")
     @Override
     public Argument generateArgument(
         Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {

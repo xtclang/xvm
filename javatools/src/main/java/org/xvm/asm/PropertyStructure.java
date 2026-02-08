@@ -61,10 +61,12 @@ public class PropertyStructure
                                 ConditionalConstant condition, Access access2, TypeConstant type) {
         this(xsParent, nFlags, constId, condition);
         if (access2 != null) {
-            setVarAccess(access2);
+            assert access2.ordinal() >= getAccess().ordinal();
+            m_accessVar = access2;
         }
         if (type != null) {
-            setType(type);
+            m_type = type;
+            constId.invalidateCache();
         }
     }
 
