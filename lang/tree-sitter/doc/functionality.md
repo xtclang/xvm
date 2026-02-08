@@ -31,7 +31,7 @@ The XTC LSP server uses a pluggable adapter architecture with three available ba
 │ MockAdapter     │  │ TreeSitterAdapter│  │ XtcCompilerAdapter  │
 │ (regex-based)   │  │ (syntax-aware)   │  │ Stub                │
 │                 │  │                  │  │                     │
-│ For testing     │  │ ~70% features    │  │ Minimal placeholder │
+│ For testing     │  │ ~80% features    │  │ Minimal placeholder │
 │ lsp.adapter=mock│  │ lsp.adapter=     │  │ lsp.adapter=compiler│
 │                 │  │   treesitter     │  │                     │
 └─────────────────┘  └──────────────────┘  └─────────────────────┘
@@ -49,34 +49,38 @@ Build with any of the three adapters:
 
 ## LSP Feature Implementation Matrix
 
-| LSP Feature             | Tree-sitter | Mock | Compiler Stub | Implementation Location                   |
-|-------------------------|-------------|------|---------------|-------------------------------------------|
-| **Core Features**       |             |      |               |                                           |
-| Syntax Highlighting     | Yes         | No   | No            | TextMate grammar (dsl-generated)          |
-| Document Symbols        | Yes         | Part | No            | `XtcQueryEngine.findAllDeclarations()`    |
-| Hover                   | Yes         | Part | No            | `TreeSitterAdapter.getHoverInfo()`        |
-| Completion              | Part        | Part | No            | `TreeSitterAdapter.getCompletions()`      |
-| Go to Definition        | Part        | Part | No            | `TreeSitterAdapter.findDefinition()`      |
-| Find References         | Part        | No   | No            | `TreeSitterAdapter.findReferences()`      |
-| Diagnostics (Syntax)    | Yes         | Part | No            | `TreeSitterAdapter.collectSyntaxErrors()` |
-| **Tree-sitter Capable** |             |      |               |                                           |
-| Document Highlights     | Part        | No   | No            | `adapter.getDocumentHighlights()` (stub)  |
-| Selection Ranges        | Part        | No   | No            | `adapter.getSelectionRanges()` (stub)     |
-| Folding Ranges          | Part        | No   | No            | `adapter.getFoldingRanges()` (stub)       |
-| Document Links          | Part        | No   | No            | `adapter.getDocumentLinks()` (stub)       |
-| **Requires Compiler**   |             |      |               |                                           |
-| Diagnostics (Semantic)  | No          | No   | Future        | Requires compiler                         |
-| Signature Help          | No          | No   | Future        | `adapter.getSignatureHelp()` (stub)       |
-| Rename                  | No          | No   | Future        | `adapter.rename()` (stub)                 |
-| Code Actions            | No          | No   | Future        | `adapter.getCodeActions()` (stub)         |
-| Semantic Tokens         | No          | No   | Future        | `adapter.getSemanticTokens()` (stub)      |
-| Inlay Hints             | No          | No   | Future        | `adapter.getInlayHints()` (stub)          |
-| Formatting              | No          | No   | Future        | `adapter.formatDocument()` (stub)         |
-| Workspace Symbols       | No          | No   | Future        | `adapter.findWorkspaceSymbols()` (stub)   |
-| Call Hierarchy          | No          | No   | Future        | Requires semantic analysis                |
-| Type Hierarchy          | No          | No   | Future        | Requires semantic analysis                |
+> **Last Updated**: 2026-02-08
 
-Legend: Yes = Full support, Part = Partial/limited, No = Cannot implement, Future = Stub (logs warning)
+| LSP Feature             | Tree-sitter | Mock | Compiler Stub | Implementation Location                        |
+|-------------------------|:-----------:|:----:|:-------------:|------------------------------------------------|
+| **Core Features**       |             |      |               |                                                |
+| Syntax Highlighting     | Yes         | No   | No            | TextMate grammar (dsl-generated)               |
+| Document Symbols        | Yes         | Yes  | No            | `XtcQueryEngine.findAllDeclarations()`         |
+| Hover                   | Yes         | Part | No            | `AbstractXtcCompilerAdapter.getHoverInfo()`    |
+| Completion              | Part        | Part | No            | `TreeSitterAdapter.getCompletions()`           |
+| Go to Definition        | Part        | Part | No            | `TreeSitterAdapter.findDefinition()`           |
+| Find References         | Part        | Part | No            | `TreeSitterAdapter.findReferences()`           |
+| Diagnostics (Syntax)    | Yes         | Part | No            | `TreeSitterAdapter.collectSyntaxErrors()`      |
+| **Navigation & Structure** |          |      |               |                                                |
+| Document Highlights     | Yes         | Yes  | No            | `adapter.getDocumentHighlights()`              |
+| Selection Ranges        | Yes         | No   | No            | `TreeSitterAdapter.getSelectionRanges()`       |
+| Folding Ranges          | Yes         | Yes  | No            | `adapter.getFoldingRanges()`                   |
+| Document Links          | Yes         | Yes  | No            | `adapter.getDocumentLinks()`                   |
+| Signature Help          | Yes         | No   | No            | `TreeSitterAdapter.getSignatureHelp()`         |
+| **Refactoring & Editing** |           |      |               |                                                |
+| Rename / Prepare Rename | Yes         | Yes  | No            | `adapter.rename()`, `adapter.prepareRename()`  |
+| Code Actions            | Yes         | Yes  | No            | `adapter.getCodeActions()`                     |
+| Formatting              | Yes         | Yes  | No            | `adapter.formatDocument()`                     |
+| Range Formatting        | Yes         | Yes  | No            | `adapter.formatRange()`                        |
+| **Requires Compiler**   |             |      |               |                                                |
+| Diagnostics (Semantic)  | No          | No   | Future        | Requires compiler                              |
+| Semantic Tokens         | No          | No   | Future        | `adapter.getSemanticTokens()` (default)        |
+| Inlay Hints             | No          | No   | Future        | `adapter.getInlayHints()` (default)            |
+| Workspace Symbols       | No          | No   | Future        | `adapter.findWorkspaceSymbols()` (default)     |
+| Call Hierarchy          | No          | No   | Future        | Requires semantic analysis                     |
+| Type Hierarchy          | No          | No   | Future        | Requires semantic analysis                     |
+
+Legend: Yes = Full support, Part = Partial/limited, No = Not implemented, Future = Requires compiler adapter
 
 ### Adapter Details
 
@@ -89,6 +93,13 @@ A regex-based implementation for testing. Uses simple patterns to extract:
 - **Methods**: `METHOD_PATTERN` matches `ReturnType methodName(`
 - **Properties**: `PROPERTY_PATTERN` matches `Type propName;` or `Type propName =`
 
+**Implemented capabilities:**
+- Document symbols, hover, completion (keywords), go-to-definition (same file)
+- Find references (declaration only), document highlights (text matching)
+- Folding ranges (brace matching), document links (import regex)
+- Rename (same-file text replacement), code actions (organize imports)
+- Formatting and range formatting (trailing whitespace removal, final newline)
+
 **Limitations:**
 - Uses regex patterns, misses many constructs
 - `findSymbolAt()` only finds top-level symbols, no nested scope
@@ -96,18 +107,29 @@ A regex-based implementation for testing. Uses simple patterns to extract:
 - `getCompletions()` returns all keywords + document symbols, no context filtering
 - `findDefinition()` returns symbol's own location, can't follow references
 - `findReferences()` only returns the declaration, not actual usages
+- Selection ranges: returns empty (requires AST)
+- Signature help: returns null (requires AST)
+- Inlay hints: returns empty (requires type inference)
 
 #### TreeSitterAdapter (`lsp.adapter=treesitter`)
 
-Syntax-aware parsing providing ~70% of LSP features without compiler integration:
+Syntax-aware parsing providing ~80% of LSP features without compiler integration:
 
 - Fast incremental parsing (sub-millisecond for small changes)
 - Error-tolerant (works with incomplete/invalid code)
 - Document symbols and outline
-- Basic go-to-definition (same file, by name)
+- Go-to-definition (same file, by name)
 - Find references (same file, by name)
-- Completion (keywords, locals, visible names)
+- Completion (keywords, locals, visible names, after-dot member completion)
 - Syntax error reporting
+- Document highlights (AST identifier matching)
+- Selection ranges (AST walk-up chain)
+- Folding ranges (AST node boundaries)
+- Document links (import AST nodes)
+- Signature help (same-file method parameters)
+- Rename and prepare rename (AST-based same-file)
+- Code actions (organize imports)
+- Formatting and range formatting (trailing whitespace removal)
 
 #### XtcCompilerAdapterStub (`lsp.adapter=compiler`)
 
