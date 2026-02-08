@@ -651,7 +651,7 @@ public class xRTServer
 
         @Override
         public void handle(HttpExchange exchange) {
-            try (var ignore = ConstantPool.withPool(f_context.f_pool)) {
+            try (var _ = ConstantPool.withPool(f_context.f_pool)) {
                 // call the Handler handle method
                 ObjectHandle[] hArgs = createArguments(exchange);
                 f_context.postRequest(null, f_hFunction, hArgs, 0).handle((response, err) -> {

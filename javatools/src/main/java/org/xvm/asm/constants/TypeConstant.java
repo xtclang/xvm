@@ -1939,7 +1939,7 @@ public abstract class TypeConstant
     protected TypeInfo buildTypeInfo(ErrorListener errs) {
         // any newly created derivative types and various constants should be placed into the same
         // pool where this type comes from
-        try (var ignore = ConstantPool.withPool(getConstantPool())) {
+        try (var _ = ConstantPool.withPool(getConstantPool())) {
             return buildTypeInfoImpl(errs);
         }
     }

@@ -98,7 +98,7 @@ public abstract class Container
     public ServiceContext ensureServiceContext() {
         ServiceContext ctx = m_contextMain;
         if (ctx == null) {
-            try (var ignore = ConstantPool.withPool(getConstantPool())) {
+            try (var _ = ConstantPool.withPool(getConstantPool())) {
                 m_contextMain = ctx = createServiceContext(getModule().getName());
                 xService.INSTANCE.createServiceHandle(ctx,
                     xService.INSTANCE.getCanonicalClass(),
@@ -275,7 +275,7 @@ public abstract class Container
         }
 
         // make sure we don't hold on other pool's constants or structures
-        idClass = (IdentityConstant) getConstantPool().register(idClass);
+        idClass = getConstantPool().register(idClass);
 
         ClassStructure structClass = (ClassStructure) idClass.getComponent();
         if (structClass == null) {

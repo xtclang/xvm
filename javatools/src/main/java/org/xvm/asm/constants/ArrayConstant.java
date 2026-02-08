@@ -209,7 +209,7 @@ public class ArrayConstant
 
         return typeNew == typeOld && aconstNew == null
                 ? this
-                : (ArrayConstant) getConstantPool().register(
+                : getConstantPool().register(
                         new ArrayConstant(getConstantPool(), f_fmt, typeNew, aconstNew));
     }
 

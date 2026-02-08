@@ -203,7 +203,7 @@ public class PropertyComposition
             NestedIdentity   idNested = (NestedIdentity) nidMethod;
             IdentityConstant idParent = idNested.getIdentityConstant();
             if (idParent.getConstantPool() != pool) {
-                idParent  = (IdentityConstant) pool.register(idParent);
+                idParent  = pool.register(idParent);
                 nidMethod = idParent.appendNestedIdentity(pool, idNested);
             }
         }
@@ -228,7 +228,7 @@ public class PropertyComposition
     public CallChain getPropertyGetterChain(PropertyConstant idProp) {
         ConstantPool pool = getConstantPool();
         if (idProp.getConstantPool() != pool) {
-            idProp = (PropertyConstant) pool.register(idProp);
+            idProp = pool.register(idProp);
         }
         return f_mapGetters.computeIfAbsent(idProp,
             id -> {
@@ -250,7 +250,7 @@ public class PropertyComposition
     public CallChain getPropertySetterChain(PropertyConstant idProp) {
         ConstantPool pool = getConstantPool();
         if (idProp.getConstantPool() != pool) {
-            idProp = (PropertyConstant) pool.register(idProp);
+            idProp = pool.register(idProp);
         }
         return f_mapSetters.computeIfAbsent(idProp,
             id -> {

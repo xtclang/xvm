@@ -209,7 +209,7 @@ public class TypeParameterConstant
             return nDif;
         }
 
-        try (var ignore = f_tloReEntry.push(true)) {
+        try (var _ = f_tloReEntry.push(true)) {
             return getParentConstant().compareTo(that.getParentConstant());
         }
     }

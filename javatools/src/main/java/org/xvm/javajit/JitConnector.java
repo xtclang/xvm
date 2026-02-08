@@ -49,7 +49,7 @@ public class JitConnector
             var clz      = loader.loadClass("org.xtclang._native.mgmt.nMainInjector")
                                  .asSubclass(Injector.class);
             var injector = clz.getDeclaredConstructor(Xvm.class).newInstance(xvm);
-            try (var ignore = ConstantPool.withPool(xvm.nativeTypeSystem.pool())) {
+            try (var _ = ConstantPool.withPool(xvm.nativeTypeSystem.pool())) {
                 clz.getMethod("addNativeResources").invoke(injector);
             }
             container = xvm.createContainer(ts, injector);

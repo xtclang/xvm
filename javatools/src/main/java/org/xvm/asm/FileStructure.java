@@ -179,7 +179,7 @@ public class FileStructure
 
         ConstantPool pool = m_pool;
 
-        try (var ignore = ConstantPool.withPool(pool)) {
+        try (var _ = ConstantPool.withPool(pool)) {
             // add fingerprints
             for (ModuleStructure moduleChild : module.getFileStructure().children()) {
                 if (moduleChild.isFingerprint() && getModule(moduleChild.getIdentityConstant()) == null) {

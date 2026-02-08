@@ -161,7 +161,7 @@ public class SingletonConstant
         IdentityConstant constNew = (IdentityConstant) constOld.resolveTypedefs();
         return constNew == constOld
                 ? this
-                : (SingletonConstant) getConstantPool().register(
+                : getConstantPool().register(
                         new SingletonConstant(getConstantPool(), f_fmt, constNew));
     }
 

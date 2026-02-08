@@ -249,7 +249,7 @@ public class MapConstant
 
         return typeNew == typeOld && aconstNewKey == null && aconstNewVal == null
                 ? this
-                : (MapConstant) getConstantPool().register(new MapConstant(
+                : getConstantPool().register(new MapConstant(
                         getConstantPool(), m_fmt, typeNew, aconstNewKey, aconstNewVal));
     }
 

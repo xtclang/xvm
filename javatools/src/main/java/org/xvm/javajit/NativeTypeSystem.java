@@ -96,7 +96,7 @@ public class NativeTypeSystem
         }
 
         ConstantPool pool = fs.getConstantPool();
-        try (var ignore = ConstantPool.withPool(pool)) {
+        try (var _ = ConstantPool.withPool(pool)) {
             if (pool.getNakedRefType() == null) {
                 turtle = fs.getChild(TURTLE_MODULE);
                 ClassStructure clzNakedRef = (ClassStructure) turtle.getChild("NakedRef");

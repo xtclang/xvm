@@ -104,7 +104,7 @@ public class xContainerControl
         Container    container = hCtrl.f_container;
         ConstantPool pool      = container.getConstantPool();
 
-        try (var ignore = ConstantPool.withPool(pool)) {
+        try (var _ = ConstantPool.withPool(pool)) {
             ServiceContext ctxContainer = container.ensureServiceContext();
 
             ObjectHandle[] ahArg    = hTupleArg.m_ahValue;

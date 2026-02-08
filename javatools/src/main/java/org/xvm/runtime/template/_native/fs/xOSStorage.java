@@ -292,7 +292,7 @@ public class xOSStorage
 
         @Override
         public void run() {
-            try (var ignore = ConstantPool.withPool(f_pool)) {
+            try (var _ = ConstantPool.withPool(f_pool)) {
                 while (true) {
                     processKey(f_service.take());
                 }

@@ -97,7 +97,7 @@ public class NativeContainer
         f_repository = repository;
 
         ConstantPool pool = loadNativeTemplates();
-        try (var ignore = ConstantPool.withPool(pool)) {
+        try (var _ = ConstantPool.withPool(pool)) {
             initResources(pool);
         }
     }

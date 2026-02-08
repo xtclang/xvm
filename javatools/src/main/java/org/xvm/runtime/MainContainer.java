@@ -173,7 +173,7 @@ public class MainContainer
      * Invoke the specified entry point.
      */
     public void invoke0(String sMethodName, ObjectHandle... ahArg) {
-        try (var ignore = ConstantPool.withPool(f_idModule.getConstantPool())) {
+        try (var _ = ConstantPool.withPool(f_idModule.getConstantPool())) {
             MethodConstant idMethod = findModuleMethod(sMethodName, ahArg);
             if (idMethod == null) {
                 System.err.println("Missing: " +  sMethodName + " method for " + f_idModule.getValueString());

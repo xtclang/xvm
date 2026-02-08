@@ -638,7 +638,7 @@ public class MethodStructure
 
             ConstantResolver res = new ConstantRegistry(this, pool);
             DataInput        in  = new DataInputStream(new ByteArrayInputStream(abAst));
-            try (var ignore = ConstantPool.withPool(pool)) {
+            try (var _ = ConstantPool.withPool(pool)) {
                 return m_ast = BinaryAST.readAST(in, res);
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -1433,7 +1433,7 @@ public class MethodStructure
             if (constant.getConstantPool() != pooThis) {
                 Container containerThis = frame.f_context.f_container;
                 Container containerOrig = containerThis.getOriginContainer(constSingle);
-                constSingle = (SingletonConstant) containerOrig.getConstantPool().register(constSingle);
+                constSingle = containerOrig.getConstantPool().register(constSingle);
             }
             list.add(constSingle);
         } else if (constant instanceof ArrayConstant constArray) {
