@@ -149,96 +149,193 @@ class XtcLanguageServer(
 
     override fun connect(client: LanguageClient) {
         this.client = client
-        logger.info("Connected to language client")
+        logger.info("connect: Connected to language client")
     }
 
     override fun initialize(params: InitializeParams): CompletableFuture<InitializeResult> {
-        val pid = ProcessHandle.current().pid()
-        logger.info("========================================")
-        logger.info("XTC Language Server v{} (pid={})", version, pid)
-        logger.info("Backend: {}", adapter.displayName)
-        logger.info("Built: {}", buildTime)
-        logger.info("========================================")
+        logServerBanner()
+        logWorkspaceFolders(params)
+        logClientCapabilities(params)
 
-        val folders = params.workspaceFolders
-        if (!folders.isNullOrEmpty()) {
-            logger.info("Initializing for workspace folders: {}", folders.map { it.uri })
-        } else {
-            logger.info("Initializing (no workspace folders provided)")
-        }
-
-        // Log client capabilities
-        // NOTE: The chained ?. calls look verbose but are necessary - LSP4J is a Java library
-        // where all these capability fields are nullable. This is idiomatic for Java interop.
-        val td = params.capabilities?.textDocument
-        val supportedFeatures =
-            listOfNotNull(
-                td?.hover?.let { "hover" },
-                td?.completion?.let { "completion" },
-                td?.definition?.let { "definition" },
-                td?.references?.let { "references" },
-                td?.documentSymbol?.let { "documentSymbol" },
-                td?.formatting?.let { "formatting" },
-                td?.rename?.let { "rename" },
-                td?.codeAction?.let { "codeAction" },
-                td?.semanticTokens?.let { "semanticTokens" },
-                td?.documentHighlight?.let { "documentHighlight" },
-                td?.selectionRange?.let { "selectionRange" },
-                td?.foldingRange?.let { "foldingRange" },
-                td?.signatureHelp?.let { "signatureHelp" },
-                td?.inlayHint?.let { "inlayHint" },
-                td?.documentLink?.let { "documentLink" },
-            )
-        if (supportedFeatures.isNotEmpty()) {
-            logger.info("Client capabilities: {}", supportedFeatures.joinToString(", "))
-        }
-
-        val capabilities =
-            ServerCapabilities().apply {
-                // Text document sync - using Full sync for simplicity
-                textDocumentSync = Either.forLeft(TextDocumentSyncKind.Full)
-
-                // Core features (implemented)
-                hoverProvider = Either.forLeft(true)
-                completionProvider =
-                    CompletionOptions().apply {
-                        triggerCharacters = listOf(".", ":", "<")
-                        resolveProvider = false
-                    }
-                definitionProvider = Either.forLeft(true)
-                referencesProvider = Either.forLeft(true)
-                documentSymbolProvider = Either.forLeft(true)
-
-                // Tree-sitter capable features
-                documentHighlightProvider = Either.forLeft(true)
-                selectionRangeProvider = Either.forLeft(true)
-                foldingRangeProvider = Either.forLeft(true)
-                documentLinkProvider = null // Enable when implemented
-
-                // Semantic features (stubs, log "not implemented")
-                signatureHelpProvider = null // Enable when implemented
-                renameProvider = Either.forLeft(true)
-                codeActionProvider = Either.forLeft(true)
-                documentFormattingProvider = Either.forLeft(true)
-                documentRangeFormattingProvider = Either.forLeft(true)
-                inlayHintProvider = Either.forLeft(true)
-                // semanticTokensProvider requires SemanticTokensWithRegistrationOptions
-            }
+        val capabilities = buildServerCapabilities()
 
         initialized = true
-        logger.info("XTC Language Server initialized")
+        logger.info("initialize: XTC Language Server initialized")
 
         return CompletableFuture.completedFuture(InitializeResult(capabilities))
     }
 
+    private fun logServerBanner() {
+        val pid = ProcessHandle.current().pid()
+        logger.info("initialize: ========================================")
+        logger.info("initialize: XTC Language Server v{} (pid={})", version, pid)
+        logger.info("initialize: Backend: {}", adapter.displayName)
+        logger.info("initialize: Built: {}", buildTime)
+        logger.info("initialize: ========================================")
+    }
+
+    private fun logWorkspaceFolders(params: InitializeParams) {
+        val folders = params.workspaceFolders
+        if (!folders.isNullOrEmpty()) {
+            logger.info("initialize: workspace folders: {}", folders.map { it.uri })
+        } else {
+            logger.info("initialize: no workspace folders provided")
+        }
+    }
+
+    /**
+     * Log which LSP capabilities the client advertises.
+     *
+     * NOTE: The chained ?. calls look verbose but are necessary — LSP4J is a Java library
+     * where all these capability fields are nullable. This is idiomatic for Java interop.
+     *
+     * ## LSP Capabilities Reference
+     *
+     * Each capability is annotated with:
+     * - What it does for the end user
+     * - What adapter level is needed to implement it properly:
+     *   - **mock**: regex-based, no parse tree needed
+     *   - **treesitter**: requires syntax tree (structural parsing)
+     *   - **compiler**: requires XTC compiler integration (type resolution, semantic analysis)
+     *
+     * ### Currently implemented (server advertises these):
+     *
+     * | Capability         | Description                                            | Adapter    |
+     * |--------------------|--------------------------------------------------------|------------|
+     * | hover              | Tooltip with type/doc info on mouse-over               | treesitter |
+     * | completion         | Code completion suggestions (., :, < triggers)         | treesitter |
+     * | definition         | Go-to-definition (jump to where a symbol is declared)  | treesitter |
+     * | references         | Find all references to a symbol in the current file    | treesitter |
+     * | documentSymbol     | Outline view / breadcrumbs (classes, methods, fields)  | treesitter |
+     * | formatting         | Whole-document code formatting                         | treesitter |
+     * | rangeFormatting    | Format a selected range of code                        | treesitter |
+     * | rename             | Rename a symbol across the file                        | treesitter |
+     * | codeAction         | Quick fixes and refactorings (lightbulb menu)          | treesitter |
+     * | documentHighlight  | Highlight other occurrences of symbol under cursor      | treesitter |
+     * | selectionRange     | Smart expand/shrink selection based on syntax           | treesitter |
+     * | foldingRange       | Code folding regions (classes, methods, blocks)        | treesitter |
+     * | inlayHint          | Inline hints (parameter names, inferred types)         | treesitter |
+     *
+     * ### Not yet implemented:
+     *
+     * | Capability         | Description                                            | Adapter needed  |
+     * |--------------------|--------------------------------------------------------|-----------------|
+     * | signatureHelp      | Parameter hints while typing a method call             | treesitter      |
+     * | documentLink       | Clickable links in code (import paths, URLs)           | treesitter      |
+     * | declaration        | Go-to-declaration (vs definition, for interfaces)      | compiler        |
+     * | typeDefinition     | Jump to the type definition of a variable              | compiler (types)|
+     * | implementation     | Find implementations of an interface/abstract method   | compiler (types)|
+     * | codeLens           | Inline actionable info above functions (run, #refs)    | compiler        |
+     * | colorProvider      | Color swatches in editor for color literals             | mock            |
+     * | onTypeFormatting   | Auto-format as you type (e.g., indent after {)         | treesitter      |
+     * | typeHierarchy      | Show super/subtypes of a class (hierarchy tree)        | compiler (full) |
+     * | callHierarchy      | Show callers/callees of a function (call tree)         | compiler (full) |
+     * | semanticTokens     | Token-level semantic highlighting (types vs vars)      | compiler (sym)  |
+     * | moniker            | Cross-project symbol identity for indexing              | compiler (full) |
+     * | linkedEditingRange | Edit matching tags/names simultaneously                 | treesitter      |
+     * | inlineValue        | Show variable values inline during debugging            | compiler (full) |
+     * | diagnostic         | Pull-based diagnostics (vs push via publishDiagnostics)| compiler        |
+     * | workspaceSymbol    | Search symbols across all files in workspace            | compiler (sym)  |
+     */
+    private fun logClientCapabilities(params: InitializeParams) {
+        val td = params.capabilities?.textDocument
+        val supportedFeatures =
+            listOfNotNull(
+                // Implemented (server advertises these)
+                td?.hover?.let { "hover" }, // treesitter: tooltip info
+                td?.completion?.let { "completion" }, // treesitter: code completions
+                td?.definition?.let { "definition" }, // treesitter: go-to-definition
+                td?.references?.let { "references" }, // treesitter: find references
+                td?.documentSymbol?.let { "documentSymbol" }, // treesitter: outline/breadcrumbs
+                td?.formatting?.let { "formatting" }, // treesitter: format document
+                td?.rename?.let { "rename" }, // treesitter: rename symbol
+                td?.codeAction?.let { "codeAction" }, // treesitter: quick fixes
+                td?.semanticTokens?.let { "semanticTokens" }, // compiler(sym): semantic highlighting
+                td?.documentHighlight?.let { "documentHighlight" }, // treesitter: highlight occurrences
+                td?.selectionRange?.let { "selectionRange" }, // treesitter: smart selection
+                td?.foldingRange?.let { "foldingRange" }, // treesitter: code folding
+                td?.signatureHelp?.let { "signatureHelp" }, // treesitter: parameter hints
+                td?.inlayHint?.let { "inlayHint" }, // treesitter: inline hints
+                td?.documentLink?.let { "documentLink" }, // treesitter: clickable links
+                // Not yet implemented (uncomment as we add support)
+                // td?.synchronization?.let { "synchronization" }, // built-in: doc sync events
+                // td?.rangeFormatting?.let { "rangeFormatting" }, // treesitter: format selection
+                // td?.onTypeFormatting?.let { "onTypeFormatting" }, // treesitter: auto-indent
+                // td?.declaration?.let { "declaration" }, // compiler: go-to-declaration
+                // td?.typeDefinition?.let { "typeDefinition" }, // compiler(types): jump to type
+                // td?.implementation?.let { "implementation" }, // compiler(types): find impls
+                // td?.codeLens?.let { "codeLens" }, // compiler: inline actions
+                // td?.colorProvider?.let { "colorProvider" }, // mock: color swatches
+                // td?.publishDiagnostics?.let { "publishDiagnostics" }, // compiler: error reporting
+                // td?.typeHierarchy?.let { "typeHierarchy" }, // compiler(full): type tree
+                // td?.callHierarchy?.let { "callHierarchy" }, // compiler(full): call tree
+                // td?.moniker?.let { "moniker" }, // compiler(full): cross-project IDs
+                // td?.linkedEditingRange?.let { "linkedEditingRange" }, // treesitter: linked edits
+                // td?.inlineValue?.let { "inlineValue" }, // compiler(full): debug values
+                // td?.diagnostic?.let { "diagnostic" }, // compiler: pull diagnostics
+            )
+        if (supportedFeatures.isNotEmpty()) {
+            logger.info("initialize: client capabilities: {}", supportedFeatures.joinToString(", "))
+        }
+    }
+
+    /**
+     * Build the server capabilities that we advertise to the client.
+     *
+     * Each capability here corresponds to an LSP method that the server handles.
+     * See [logClientCapabilities] for a full reference table of all LSP capabilities,
+     * what they do, and what adapter level is required.
+     */
+    private fun buildServerCapabilities(): ServerCapabilities =
+        ServerCapabilities().apply {
+            // Text document sync - Full means the client sends the entire document on each change.
+            // Incremental sync (sending only deltas) is more efficient but requires diffing logic.
+            textDocumentSync = Either.forLeft(TextDocumentSyncKind.Full)
+
+            // --- Core navigation (treesitter) ---
+            hoverProvider = Either.forLeft(true)
+            completionProvider =
+                CompletionOptions().apply {
+                    triggerCharacters = listOf(".", ":", "<")
+                    resolveProvider = false
+                }
+            definitionProvider = Either.forLeft(true)
+            referencesProvider = Either.forLeft(true)
+            documentSymbolProvider = Either.forLeft(true)
+
+            // --- Structural features (treesitter) ---
+            documentHighlightProvider = Either.forLeft(true)
+            selectionRangeProvider = Either.forLeft(true)
+            foldingRangeProvider = Either.forLeft(true)
+
+            // --- Editing features (treesitter) ---
+            renameProvider = Either.forLeft(true)
+            codeActionProvider = Either.forLeft(true)
+            documentFormattingProvider = Either.forLeft(true)
+            documentRangeFormattingProvider = Either.forLeft(true)
+            inlayHintProvider = Either.forLeft(true)
+
+            // Not yet advertised (enable when implemented)
+            // signatureHelpProvider = SignatureHelpOptions(listOf("(", ",")) // treesitter
+            // documentLinkProvider = DocumentLinkOptions() // treesitter
+            // semanticTokensProvider = SemanticTokensWithRegistrationOptions(...) // compiler(sym)
+            // declarationProvider = Either.forLeft(true) // compiler: go-to-declaration
+            // typeDefinitionProvider = Either.forLeft(true) // compiler(types): jump to type
+            // implementationProvider = Either.forLeft(true) // compiler(types): find implementations
+            // codeLensProvider = CodeLensOptions() // compiler: inline actions
+            // typeHierarchyProvider = Either.forLeft(true) // compiler(full): type tree
+            // callHierarchyProvider = Either.forLeft(true) // compiler(full): call tree
+            // workspaceSymbolProvider = Either.forLeft(true) // compiler(sym): cross-file search
+        }
+
     override fun shutdown(): CompletableFuture<Any> {
-        logger.info("Shutting down XTC Language Server")
+        logger.info("shutdown: Shutting down XTC Language Server")
         initialized = false
         return CompletableFuture.completedFuture(null)
     }
 
     override fun exit() {
-        logger.info("Exiting XTC Language Server")
+        logger.info("exit: Exiting XTC Language Server")
     }
 
     override fun getTextDocumentService(): TextDocumentService = textDocumentService
