@@ -113,9 +113,4 @@ TODO
 # Ignore all .claude/ except commands that should be shared
 .claude/*
 .claude/commands/*
-!.claude/commands/*.md
 .plan.md
-
-# Tree-sitter native libraries are now built on-demand and cached in ~/.gradle/caches/
-# No longer committed to source control (see lang/tree-sitter/build.gradle.kts)
-

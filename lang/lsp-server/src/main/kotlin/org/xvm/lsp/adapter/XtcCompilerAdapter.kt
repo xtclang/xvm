@@ -62,6 +62,8 @@ interface XtcCompilerAdapter {
      * **LSP capability:** Triggered by `textDocument/didOpen` and `textDocument/didChange`.
      * The client sends the full document text; the server parses it and publishes diagnostics.
      *
+     * **Editor activation:** Automatic — triggered when a `.x` file is opened or edited.
+     *
      * **Adapter implementations:**
      * - *Mock:* Regex-scans for module/class/interface/method/property patterns and ERROR markers.
      * - *TreeSitter:* Incremental native parse with error-tolerant grammar; extracts symbols via queries.
@@ -111,6 +113,10 @@ interface XtcCompilerAdapter {
      * **LSP capability:** `textDocument/hover` — shown when the user hovers the mouse over a
      * symbol. Displays a tooltip with type signature, documentation, and other info.
      *
+     * **Editor activation:**
+     * - *IntelliJ:* Hover mouse over a symbol, or Ctrl+Q (Quick Documentation)
+     * - *VS Code:* Hover mouse over a symbol
+     *
      * **Adapter implementations:**
      * - *Mock/TreeSitter:* Default in [AbstractXtcCompilerAdapter] — calls [findSymbolAt] and
      *   formats the symbol's kind, name, and type signature as Markdown.
@@ -134,7 +140,11 @@ interface XtcCompilerAdapter {
      * Get completion suggestions at a position.
      *
      * **LSP capability:** `textDocument/completion` — provides code completion suggestions as the
-     * user types. Triggered by `.`, `:`, `<`, or explicit Ctrl+Space.
+     * user types. Triggered by `.`, `:`, `<`, or explicit request.
+     *
+     * **Editor activation:**
+     * - *IntelliJ:* Ctrl+Space (Basic), or type and wait for auto-popup
+     * - *VS Code:* Ctrl+Space, or type and wait for auto-popup
      *
      * **Adapter implementations:**
      * - *Mock:* Returns XTC keywords, built-in types, and symbols from the current document.
@@ -159,8 +169,11 @@ interface XtcCompilerAdapter {
     /**
      * Find the definition of the symbol at a position.
      *
-     * **LSP capability:** `textDocument/definition` — navigates to where a symbol is declared
-     * when the user Ctrl+clicks or presses F12.
+     * **LSP capability:** `textDocument/definition` — navigates to where a symbol is declared.
+     *
+     * **Editor activation:**
+     * - *IntelliJ:* Ctrl+Click on a symbol, Ctrl+B, or F12
+     * - *VS Code:* Ctrl+Click on a symbol, or F12
      *
      * **Adapter implementations:**
      * - *Mock:* Returns the symbol's own location (same-file, name-based match only).
@@ -184,8 +197,11 @@ interface XtcCompilerAdapter {
     /**
      * Find all references to the symbol at a position.
      *
-     * **LSP capability:** `textDocument/references` — shows all usages of a symbol in the
-     * "Find References" panel (Shift+F12 or right-click → Find Usages).
+     * **LSP capability:** `textDocument/references` — shows all usages of a symbol.
+     *
+     * **Editor activation:**
+     * - *IntelliJ:* Alt+F7 (Find Usages), or Shift+F12
+     * - *VS Code:* Shift+F12, or right-click → Find All References
      *
      * **Adapter implementations:**
      * - *Mock:* Returns only the declaration itself (when `includeDeclaration` is true), no
@@ -220,6 +236,8 @@ interface XtcCompilerAdapter {
      * **LSP capability:** `textDocument/documentHighlight` — highlights all occurrences of the
      * symbol under the cursor in the same document. Shown as background color emphasis.
      *
+     * **Editor activation:** Automatic — click on any identifier to highlight all occurrences.
+     *
      * **Adapter implementations:**
      * - *Mock:* Whole-word text search across all lines of the cached document content.
      * - *TreeSitter:* Finds the identifier AST node at the position, then queries all identifier
@@ -246,9 +264,12 @@ interface XtcCompilerAdapter {
     /**
      * Get selection ranges for positions (smart selection expansion).
      *
-     * **LSP capability:** `textDocument/selectionRange` — powers the "Expand Selection" /
-     * "Shrink Selection" commands (Ctrl+Shift+→/←). Returns a chain of nested ranges from the
-     * innermost token to the outermost declaration.
+     * **LSP capability:** `textDocument/selectionRange` — powers smart expand/shrink selection.
+     * Returns a chain of nested ranges from the innermost token to the outermost declaration.
+     *
+     * **Editor activation:**
+     * - *IntelliJ:* Ctrl+W (Expand Selection) / Ctrl+Shift+W (Shrink)
+     * - *VS Code:* Shift+Alt+Right (Expand) / Shift+Alt+Left (Shrink)
      *
      * **Adapter implementations:**
      * - *Mock:* Returns empty (requires AST structure for meaningful results).
@@ -277,6 +298,10 @@ interface XtcCompilerAdapter {
      * **LSP capability:** `textDocument/foldingRange` — provides collapsible regions in the
      * editor gutter (classes, methods, imports, comments).
      *
+     * **Editor activation:**
+     * - *IntelliJ:* Click fold arrows in gutter; Ctrl+Shift+Minus (fold all) / Ctrl+Shift+Plus (unfold all)
+     * - *VS Code:* Click fold arrows in gutter; Ctrl+Shift+[ (fold) / Ctrl+Shift+] (unfold)
+     *
      * **Adapter implementations:**
      * - *Mock:* Brace-matching (`{`/`}` pairs) plus import-line grouping.
      * - *TreeSitter:* AST node boundaries for declarations, blocks, comments, and import lists.
@@ -299,6 +324,8 @@ interface XtcCompilerAdapter {
      *
      * **LSP capability:** `textDocument/documentLink` — makes import paths and other references
      * clickable in the editor, allowing quick navigation.
+     *
+     * **Editor activation:** Automatic — import paths appear as clickable links (Ctrl+Click).
      *
      * **Adapter implementations:**
      * - *Mock:* Regex-matches `import` statements and returns the path portion as a link.
@@ -331,6 +358,10 @@ interface XtcCompilerAdapter {
      * **LSP capability:** `textDocument/signatureHelp` — shows parameter hints when the user
      * types `(` or `,` inside a function call. Highlights the active parameter.
      *
+     * **Editor activation:**
+     * - *IntelliJ:* Type `(` after a method name, or Ctrl+P inside argument list
+     * - *VS Code:* Type `(` after a method name, or Ctrl+Shift+Space inside argument list
+     *
      * **Adapter implementations:**
      * - *Mock:* Returns null (cannot extract method parameters from regex patterns).
      * - *TreeSitter:* Walks up to enclosing `call_expression`, finds the called method's
@@ -361,6 +392,8 @@ interface XtcCompilerAdapter {
      * **LSP capability:** `textDocument/prepareRename` — called before a rename to verify the
      * position is on a renamable identifier and to highlight the range to be changed.
      *
+     * **Editor activation:** Called automatically as part of the rename flow (see [rename]).
+     *
      * **Adapter implementations:**
      * - *Mock:* Finds the word at the position via regex and returns its range and text.
      * - *TreeSitter:* Finds the identifier AST node at the position and returns its exact range.
@@ -388,6 +421,10 @@ interface XtcCompilerAdapter {
      *
      * **LSP capability:** `textDocument/rename` — renames a symbol and returns a workspace edit
      * with all text changes. The editor applies all edits atomically.
+     *
+     * **Editor activation:**
+     * - *IntelliJ:* Shift+F6 on an identifier, or right-click → Refactor → Rename
+     * - *VS Code:* F2 on an identifier, or right-click → Rename Symbol
      *
      * **Adapter implementations:**
      * - *Mock:* Whole-word text replacement across all lines in the same file.
@@ -420,6 +457,10 @@ interface XtcCompilerAdapter {
      * **LSP capability:** `textDocument/codeAction` — provides the lightbulb menu with quick
      * fixes and refactoring suggestions. Actions can include workspace edits or commands.
      *
+     * **Editor activation:**
+     * - *IntelliJ:* Alt+Enter (Intentions), or click lightbulb icon in gutter
+     * - *VS Code:* Ctrl+. (Quick Fix), or click lightbulb icon
+     *
      * **Adapter implementations:**
      * - *Mock:* Offers "Organize Imports" when import statements are detected and unsorted.
      * - *TreeSitter:* Same as Mock — detects unsorted import nodes from the AST and offers
@@ -451,6 +492,8 @@ interface XtcCompilerAdapter {
      * highlighting that supplements TextMate grammars. Distinguishes fields vs locals vs
      * parameters, type names vs variable names, etc.
      *
+     * **Editor activation:** Automatic — applied as an overlay on top of TextMate highlighting.
+     *
      * **Adapter implementations:**
      * - *Mock:* Returns null (no type information available).
      * - *TreeSitter:* Returns null (could partially classify tokens from AST, but without type
@@ -473,6 +516,10 @@ interface XtcCompilerAdapter {
      *
      * **LSP capability:** `textDocument/inlayHint` — shows inline annotations in the editor
      * for inferred types and parameter names (e.g., `val x` shows `: Int` after the variable).
+     *
+     * **Editor activation:** Automatic — hints appear inline when enabled.
+     * - *IntelliJ:* Settings → Editor → Inlay Hints (toggle per category)
+     * - *VS Code:* `editor.inlayHints.enabled` setting
      *
      * **Adapter implementations:**
      * - *Mock:* Returns empty (requires type inference).
@@ -497,8 +544,11 @@ interface XtcCompilerAdapter {
     /**
      * Format an entire document.
      *
-     * **LSP capability:** `textDocument/formatting` — formats the entire document when the user
-     * invokes "Format Document" (Shift+Alt+F or equivalent).
+     * **LSP capability:** `textDocument/formatting` — formats the entire document.
+     *
+     * **Editor activation:**
+     * - *IntelliJ:* Ctrl+Alt+L (Reformat Code)
+     * - *VS Code:* Shift+Alt+F (Format Document)
      *
      * **Adapter implementations:**
      * - *Mock:* Removes trailing whitespace from all lines and inserts final newline if missing.
@@ -526,8 +576,11 @@ interface XtcCompilerAdapter {
     /**
      * Format a range within a document.
      *
-     * **LSP capability:** `textDocument/rangeFormatting` — formats only the selected range when
-     * the user invokes "Format Selection".
+     * **LSP capability:** `textDocument/rangeFormatting` — formats only the selected range.
+     *
+     * **Editor activation:**
+     * - *IntelliJ:* Select text, then Ctrl+Alt+L
+     * - *VS Code:* Select text, then Ctrl+K Ctrl+F (Format Selection)
      *
      * **Adapter implementations:**
      * - *Mock:* Removes trailing whitespace only on lines within the specified range.
@@ -557,8 +610,11 @@ interface XtcCompilerAdapter {
     /**
      * Find symbols across the workspace.
      *
-     * **LSP capability:** `workspace/symbol` — provides workspace-wide symbol search, typically
-     * invoked via "Go to Symbol in Workspace" (Ctrl+T).
+     * **LSP capability:** `workspace/symbol` — provides workspace-wide symbol search.
+     *
+     * **Editor activation:**
+     * - *IntelliJ:* Ctrl+T (Go to Symbol), or Navigate → Symbol
+     * - *VS Code:* Ctrl+T (Go to Symbol in Workspace)
      *
      * **Adapter implementations:**
      * - *Mock:* Returns empty (no workspace index).
