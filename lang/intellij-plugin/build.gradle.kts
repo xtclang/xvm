@@ -527,6 +527,33 @@ val configureDisabledPlugins by tasks.registering {
     }
 }
 
+// Enable INFO-level logging for the XTC plugin in the sandbox IDE.
+// IntelliJ defaults to WARN, which hides useful JRE resolution and LSP lifecycle messages.
+val configureSandboxLogging by tasks.registering {
+    group = "intellij platform"
+    description = "Configure INFO-level logging for XTC plugin in the sandbox IDE"
+
+    dependsOn(prepareSandbox)
+    mustRunAfter(prepareSandbox)
+
+    val configDir = sandboxConfigDir
+    outputs.dir(configDir)
+
+    doLast {
+        val optionsDir = configDir.get().resolve("options")
+        optionsDir.mkdirs()
+        val logCategoriesFile = optionsDir.resolve("log-categories.xml")
+        logCategoriesFile.writeText(
+            """
+            |<application>
+            |  <component name="Logs.Categories"><![CDATA[{"org.xtclang":"INFO"}]]></component>
+            |</application>
+            """.trimMargin() + "\n",
+        )
+        logger.lifecycle("[sandbox] Configured INFO-level logging for org.xtclang")
+    }
+}
+
 // Ensure the XTC Gradle plugin and XDK are published to mavenLocal before the sandbox IDE starts.
 // The sandbox IDE resolves the plugin from mavenLocal (not from the composite includeBuild),
 // so publishToMavenLocal must complete first. gradle.parent reaches the root build that has
@@ -547,6 +574,7 @@ val runIde by tasks.existing {
         copyTextMateToSandbox,
         copyLspServerToSandbox,
         configureDisabledPlugins,
+        configureSandboxLogging,
     )
 
     // Log sandbox location, mavenLocal status, and idea.log path
