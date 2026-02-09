@@ -18,6 +18,7 @@ import org.xtclang.idea.lsp.jre.JreProvisioner
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Properties
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -79,6 +80,11 @@ class XtcLspConnectionProvider(
     private val logger = logger<XtcLspConnectionProvider>()
     private val provisioner = JreProvisioner()
 
+    companion object {
+        /** Ensures we only show the "started" notification once per IDE session. */
+        private val startNotificationShown = AtomicBoolean(false)
+    }
+
     /** Holds the provisioned java path once available. */
     private val provisionedJavaPath = AtomicReference<Path?>()
 
@@ -90,6 +96,17 @@ class XtcLspConnectionProvider(
         }
         // If not provisioned, commandLine will be configured during start() with progress
     }
+
+    // NOTE: LSP4IJ (as of 0.19.1) may call createConnectionProvider() + start() multiple times
+    //  concurrently when several .x files are opened/indexed simultaneously. This is a known
+    //  race condition in the LanguageServerWrapper where getInitializedServer() can be called
+    //  from multiple threads before the first instance reports readiness, causing duplicate
+    //  wrapper creation. Each call spawns a separate server process. LSP4IJ eventually kills
+    //  the extras and settles on a single instance, so this is harmless — the extra processes
+    //  receive shutdown/exit within milliseconds and the surviving instance works correctly.
+    //  We use a static AtomicBoolean to show the "Started" notification only once per IDE session.
+    //  See: https://github.com/eclipse-lsp4e/lsp4e/issues/512 (same bug in lsp4e, fixed in PR #520)
+    //  See: https://github.com/redhat-developer/lsp4ij/issues/888 (related LSP4IJ performance issue)
 
     override fun start() {
         // If command line not yet configured, provision JRE with progress
@@ -110,11 +127,13 @@ class XtcLspConnectionProvider(
 
         logger.info("XTC LSP Server process started (v${LspBuildProperties.version}, adapter=${LspBuildProperties.adapter}, pid=$pid)")
 
-        showNotification(
-            title = "XTC Language Server Started",
-            content = "Out-of-process server (v${LspBuildProperties.version}, adapter=${LspBuildProperties.adapter}, pid=$pid)",
-            type = NotificationType.INFORMATION,
-        )
+        if (startNotificationShown.compareAndSet(false, true)) {
+            showNotification(
+                title = "XTC Language Server Started",
+                content = "Out-of-process server (v${LspBuildProperties.version}, adapter=${LspBuildProperties.adapter}, pid=$pid)",
+                type = NotificationType.INFORMATION,
+            )
+        }
     }
 
     override fun stop() {
@@ -160,10 +179,12 @@ class XtcLspConnectionProvider(
         // Log level: check -Dxtc.logLevel (case-insensitive), default to INFO
         val logLevel = System.getProperty("xtc.logLevel")?.uppercase() ?: "INFO"
 
+        // FFM API is finalized since Java 22. The --enable-native-access flag is unnecessary
+        // on Java 22+ and may trigger experimental feature consent dialogs on older JVMs.
+        // We target Java 25, so no flag is needed.
         val commandLine =
             GeneralCommandLine(
                 javaPath.toString(),
-                "--enable-native-access=ALL-UNNAMED", // FFM API for tree-sitter native libraries
                 "-Dapple.awt.UIElement=true", // macOS: no dock icon
                 "-Djava.awt.headless=true", // No GUI components
                 "-Dxtc.logLevel=$logLevel", // Pass log level to LSP server
