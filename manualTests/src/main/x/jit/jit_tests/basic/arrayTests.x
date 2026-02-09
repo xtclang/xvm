@@ -4,8 +4,15 @@ package arrayTests {
     void run() {
         console.print(">>>> Running ArrayTests >>>>");
 
+        test0();
         test1();
         test2();
+    }
+
+    void test0() {
+        String s  = "hello";
+        Char   ch = s[0];
+        assert ch == 'h';
     }
 
     void test1() {

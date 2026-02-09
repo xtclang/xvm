@@ -235,13 +235,11 @@ public class String
     }
 
     /**
-     * Get the codepoint located at the specified index within the string.
+     * Native implementation of:
      *
-     * @param index  the zero-based index
-     *
-     * @return the codepoint of the character at the specified index in the string
+     *   @Op("[]") Char getElement(Int index)
      */
-    public int get(Ctx ctx, long index) {
+    public int getElement$p(Ctx ctx, long index) {
         if (index < 0) {
             oob(ctx, index);
         }
@@ -277,6 +275,11 @@ public class String
     }
 
 
+    /**
+     * Native implementation of:
+     *
+     *  static <CompileType extends String> Boolean equals(CompileType value1, CompileType value2)
+     */
     public static boolean equals$p(Ctx ctx, nType type, String s1, String s2) {
         // TODO CP: optimize
         return s1.size$get$p(ctx) == s2.size$get$p(ctx) &&

@@ -204,7 +204,11 @@ public abstract class OpIndex
     public void computeTypes(BuildContext bctx) {
         if (isAssignOp()) {
             TypeConstant typeFrom = bctx.getArgumentType(m_nTarget);
-            bctx.typeMatrix.assign(getAddress(), m_nRetValue, typeFrom.getParamType(0));
+            TypeConstant typeEl   = typeFrom.resolveGenericType("Element");
+            if (typeEl == null) {
+                throw new RuntimeException("Cannot find the element type for " + typeFrom);
+            }
+            bctx.typeMatrix.assign(getAddress(), m_nRetValue, typeEl);
         } else {
             super.computeTypes(bctx);
         }
@@ -215,7 +219,7 @@ public abstract class OpIndex
         TypeSystem   ts     = bctx.typeSystem;
         RegisterInfo reg    = bctx.loadArgument(code, m_nTarget);
         TypeConstant type   = reg.type();
-        TypeConstant typeEl = type.getParamType(0);
+        TypeConstant typeEl = type.resolveGenericType("Element");
 
         if (type.isArray()) {
             if (typeEl.isPrimitive()) {
@@ -383,10 +387,24 @@ public abstract class OpIndex
                 case OP_IIP_XOR  -> {sName = "xor";           sOp = "^";  }
                 default          -> throw new UnsupportedOperationException(toName(getOpCode()));
             }
-            TypeConstant  typeArg  = bctx.getArgumentType(m_nRetValue);
+
+            TypeConstant  typeArg  = bctx.getArgumentType(m_nIndex);
             MethodInfo    method   = type.ensureTypeInfo().findOpMethod(sName, sOp, typeArg);
+            JitMethodDesc jmd      = method.getJitDesc(ts, type);
             String        sJitName = method.ensureJitMethodName(ts);
-            throw new UnsupportedOperationException("TODO");
+
+            MethodTypeDesc mdCall;
+            if (jmd.isOptimized) {
+                mdCall  = jmd.optimizedMD;
+                sJitName += Builder.OPT;
+            }
+            else {
+                mdCall = jmd.standardMD;
+            }
+            bctx.loadCtx(code);
+            bctx.loadCallArguments(code, jmd, new int[] {m_nIndex});
+
+            code.invokevirtual(reg.cd(), sJitName, mdCall);
         }
 
         if (isAssignOp()) {
