@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -193,11 +194,11 @@ public class JumpVal_N
 
     @SuppressWarnings("fallthrough")
     protected int findSmall(Frame frame, int iPC, ObjectHandle[] ahValue) {
-        Algorithm[]               aAlg   = m_aAlgorithm;
-        Map<ObjectHandle, Long>[] aMap   = m_amapJumpSmall;
-        long[]                    alWild = m_alWildcardSmall;
-        long                      afIs   = m_afIsSwitch;
-        long                      ixBits = -1;
+        Algorithm[] aAlg   = m_aAlgorithm;
+        var         aMap   = m_amapJumpSmall;
+        long[]      alWild = m_alWildcardSmall;
+        long        afIs   = m_afIsSwitch;
+        long        ixBits = -1;
 
         // first go over the native columns
         for (int iCol = 0, cCols = ahValue.length; iCol < cCols; iCol++) {
@@ -205,7 +206,7 @@ public class JumpVal_N
             long         ixColumn = 0; // matching cases in this column
             switch (aAlg[iCol]) {
             case NativeRange: {
-                List<Object[]> listRange = m_alistRangeSmall[iCol];
+                List<Object[]> listRange = m_alistRangeSmall.get(iCol);
                 for (int iRange = 0, cR = listRange.size(); iRange < cR; iRange++) {
                     Object[] ao = listRange.get(iRange);
 
@@ -227,7 +228,7 @@ public class JumpVal_N
 
             case NativeSimple: {
                 if ((afIs & (1L << iCol)) == 0) {
-                    Long LBits = aMap[iCol].get(hValue);
+                    Long LBits = aMap.get(iCol).get(hValue);
                     if (LBits != null) {
                         ixColumn |= LBits.longValue();
                     }
@@ -393,7 +394,7 @@ public class JumpVal_N
         int              cRows       = anConstCase.length;
         int              cColumns    = anArg.length;
 
-        Map<ObjectHandle, Long>[] amapJump    = new Map[cColumns];
+        var amapJump = new ArrayList<Map<ObjectHandle, Long>>(Collections.nCopies(cColumns, null));
         long[]                    alWild      = new long[cColumns];
         Algorithm[]               aAlgorithm  = new Algorithm[cColumns];
         Algorithm                 algorithm   = Algorithm.NativeSimple;
@@ -402,7 +403,7 @@ public class JumpVal_N
         Arrays.fill(aAlgorithm, Algorithm.NativeSimple); // assume native
         for (int iC = 0; iC < cColumns; iC++) {
             if ((afIs & (1L << iC)) == 0) {
-                amapJump[iC] = new HashMap<>(cRows);
+                amapJump.set(iC, new HashMap<>(cRows));
             }
             atypeColumn[iC] = frame.getLocalType(anArg[iC], null);
         }
@@ -430,7 +431,7 @@ public class JumpVal_N
 
                 if (aAlgorithm[iC].isNative()) {
                     if (hCase.isNativeEqual()) {
-                        Map<ObjectHandle, Long> mapJump = amapJump[iC];
+                        Map<ObjectHandle, Long> mapJump = amapJump.get(iC);
                         if (mapJump != null) {
                             mapJump.compute(hCase, (h, LOld) ->
                                 Long.valueOf(lCaseBit | (LOld == null ?  0 : LOld.longValue())));
@@ -451,7 +452,7 @@ public class JumpVal_N
 
                         addRange((GenericHandle) hCase, lCaseBit, cColumns, iC);
                     } else {
-                        amapJump[iC].compute(hCase, (h, LOld) ->
+                        amapJump.get(iC).compute(hCase, (h, LOld) ->
                             Long.valueOf(lCaseBit | (LOld == null ?  0 : LOld.longValue())));
                     }
                 }
@@ -487,13 +488,14 @@ public class JumpVal_N
     }
 
     private List<Object[]> ensureRangeList(int cColumns, int iCol) {
-        List<Object[]>[] alist = m_alistRangeSmall;
+        List<List<Object[]>> alist = m_alistRangeSmall;
         if (alist == null) {
-            alist = m_alistRangeSmall = new List[cColumns];
+            alist = m_alistRangeSmall = new ArrayList<>(Collections.nCopies(cColumns, null));
         }
-        List<Object[]> list = alist[iCol];
+        List<Object[]> list = alist.get(iCol);
         if (list == null) {
-            list = alist[iCol] = new ArrayList<>();
+            list = new ArrayList<>();
+            alist.set(iCol, list);
         }
         return list;
     }
@@ -545,7 +547,7 @@ public class JumpVal_N
      * Cached array of jump maps for # cases < 64. The Long represents a bitset of matching cases.
      * The bits are 0-based (bit 0 representing case #0), therefore the value of 0 is invalid.
      */
-    private transient Map<ObjectHandle, Long>[] m_amapJumpSmall;
+    private transient List<Map<ObjectHandle, Long>> m_amapJumpSmall;
 
     /**
      * The bitmask of wildcard cases per column.
@@ -560,7 +562,7 @@ public class JumpVal_N
      *  a[1] - upper bound (ObjectHandle);
      *  a[2] - the case mask (Long)
      */
-    private transient List<Object[]>[] m_alistRangeSmall;
+    private transient List<List<Object[]>> m_alistRangeSmall;
 
     // cached array of jump maps; for # cases >= 64
     // private transient Map<ObjectHandle, BitSet>[] m_amapJumpLarge; // maps per column keyed by constant handle

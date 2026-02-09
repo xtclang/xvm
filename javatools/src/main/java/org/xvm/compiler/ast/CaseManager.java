@@ -952,8 +952,8 @@ public class CaseManager<CookieType> {
             oThisLo = oThisHi = ((ValueConstant) constThis).getValue();
         }
 
-        if (!(oThisLo instanceof Comparable cmpThisLo &&
-              oThisHi instanceof Comparable cmpThisHi)) {
+        if (!(oThisLo instanceof Comparable<?> cmpThisLo &&
+              oThisHi instanceof Comparable<?> cmpThisHi)) {
             return false;
         }
 
@@ -975,8 +975,8 @@ public class CaseManager<CookieType> {
         } else {
             oThatLo = oThatHi = ((ValueConstant) constThat).getValue();
         }
-        if (!(oThatLo instanceof Comparable cmpThatLo &&
-              oThatHi instanceof Comparable cmpThatHi)) {
+        if (!(oThatLo instanceof Comparable<?> cmpThatLo &&
+              oThatHi instanceof Comparable<?> cmpThatHi)) {
             return false;
         }
 
@@ -985,10 +985,19 @@ public class CaseManager<CookieType> {
 
             // this automatically works for ValueConstant types that have a corresponding Java type,
             // like Int, String, etc., while enums use their ordinal values (see EnumValueConstant).
-            return cmpThisLo.compareTo(cmpThatLo) <= 0 && cmpThisHi.compareTo(cmpThatHi) >= 0;
+            return compareRaw(cmpThisLo, cmpThatLo) <= 0 && compareRaw(cmpThisHi, cmpThatHi) >= 0;
         } catch (Exception e) {
             return false;
         }
+    }
+
+    /**
+     * Compare two Comparable values whose types are not statically known to match.
+     * The caller is responsible for handling ClassCastException if the types are incompatible.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static int compareRaw(Comparable a, Comparable b) {
+        return a.compareTo(b);
     }
 
     /**

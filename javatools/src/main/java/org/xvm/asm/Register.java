@@ -1,6 +1,8 @@
 package org.xvm.asm;
 
 
+import java.util.Objects;
+
 import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.NarrowedExprAST;
 import org.xvm.asm.ast.RegAllocAST;
@@ -449,6 +451,11 @@ public class Register
     }
 
     @Override
+    public int hashCode() {
+        return Objects.hash(m_iArg, m_fRO, m_fEffectivelyFinal, isInPlace(), m_type);
+    }
+
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
 
@@ -778,6 +785,11 @@ public class Register
             return obj instanceof ShadowRegister that
                     && this.getOriginalRegister().equals(that.getOriginalRegister())
                     && this.getType()            .equals(that.getType());
+        }
+
+        @Override
+        public int hashCode() {
+            return 31 * getOriginalRegister().hashCode() + getType().hashCode();
         }
 
         /**

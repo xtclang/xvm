@@ -155,6 +155,11 @@ public class ChildInfo {
     }
 
     @Override
+    public int hashCode() {
+        return Objects.hash(f_child, f_access, f_setIds);
+    }
+
+    @Override
     public String toString() {
         return "ChildInfo: " + getAccess() + ' ' + getName();
     }

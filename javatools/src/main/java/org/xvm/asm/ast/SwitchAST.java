@@ -154,8 +154,8 @@ public class SwitchAST
      *         source code, where a {@Code Constant} indicates a "case" value, and a {@Code BinaryAST}
      *         indicates a body
      */
-    public Iterator contents() {
-        return new Iterator() {
+    public Iterator<Object> contents() {
+        return new Iterator<>() {
             int     cur       = 0;
             boolean checkBody = false;
             Object  loaded    = null;

@@ -2,7 +2,7 @@
 
 Compiled with `-Xlint:all` via `--no-build-cache --no-configuration-cache --rerun-tasks -Porg.xtclang.java.lint=true -Porg.xtclang.java.warningsAsErrors=false -Porg.xtclang.java.maxWarnings=1000`.
 
-**Current: 231 warnings** (6 in `javatools_utils`, 221 in `javatools`, 4 in `javatools_jitbridge`)
+**Current: 220 warnings** (6 in `javatools_utils`, 210 in `javatools`, 4 in `javatools_jitbridge`)
 
 Note: counts use `--rerun-tasks` for full accuracy; earlier sessions used cached builds which
 undercounted `rawtypes`/`unchecked`. The delta from our work is what matters.
@@ -11,12 +11,12 @@ undercounted `rawtypes`/`unchecked`. The delta from our work is what matters.
 |----------|---------|-------|------|--------|
 | `[fallthrough]` | **0** | 102 | 4 | DONE |
 | `[this-escape]` | **40** | 28 | 5 | 28 fixed by code rewrites; 40 remain (intentionally unsuppressed) |
-| `[rawtypes]` | 98 | 6 | 3 | Pending |
+| `[rawtypes]` | 90 | 14 | 3 | 8 fixed by generics rewrites; 82 remaining |
 | `[unchecked]` | 86 | 0 | 3 | Pending |
 | `[try]` | **0** | 18 | 1 | DONE |
 | `[cast]` | **2** | 13 | 1 | DONE (2 in `javatools_jitbridge`) |
 | `[serial]` | **2** | 8 | 2 | DONE (2 in `javatools_jitbridge`) |
-| `[overrides]` | 3 | 0 | 3 | Pending |
+| `[overrides]` | **0** | 3 | 3 | DONE |
 | `[static]` | **0** | 2 | 1 | DONE |
 
 ---
@@ -62,30 +62,35 @@ implements `Serializable` (a JDK 1.1 design decision for RMI), so every `Excepti
 
 ---
 
-## Tier 3: MODERATE (need understanding, some refactoring) -- 187 warnings remaining
+## Tier 3: MODERATE (need understanding, some refactoring) -- 176 warnings remaining
 
-### 3a. `[rawtypes]` Raw generic type usage (98 warnings)
+### 3a. `[rawtypes]` Raw generic type usage (90 warnings, 8 fixed)
 
 **Already eliminated (suppressed, not counted in warning totals):**
 - `Component.unlinkSibling()` — generified to `<K, V extends Component>`, removed raw `Map`/`Object`
   and `@SuppressWarnings("rawtypes")`. Also fixed bug in `MultiMethodStructure.removeChild()` that
   passed `child` (Component) instead of `method` (MethodStructure).
 
-Add proper type parameters. Hotspots:
+**Eliminated by generics rewrites (8 warnings):**
+- `SwitchAST.java` (2) — parameterized `Iterator` → `Iterator<Object>` for `contents()` method
+- `JumpVal_N.java` (2) — replaced generic array fields `Map<ObjectHandle, Long>[]` →
+  `List<Map<ObjectHandle, Long>>` and `List<Object[]>[]` → `List<List<Object[]>>`, eliminating
+  raw `new Map[n]` and `new List[n]` array creations
+- `CaseManager.java` (4) — parameterized `instanceof Comparable` → `instanceof Comparable<?>`;
+  extracted `compareRaw()` helper to isolate the unavoidable raw comparison
+
+Add proper type parameters. Remaining hotspots:
 
 | File | Count | Key raw types |
 |------|-------|---------------|
 | `AstNode.java` | 14 | `List`, `Map`, `Collection`, `Iterator`, `ListIterator`, `ArrayList`, `Class` |
 | `ServiceContext.java` | 13 | `CompletableFuture`, `Response`, `Enum`, `EnumMap`, `WeakReference` |
 | `Fiber.java` | 8 | `CompletableFuture` |
-| `CaseManager.java` | 4 | `Comparable` |
 | `Frame.java` | 4 | `CompletableFuture` |
 | `xOSFile.java` | 4 | `CompletableFuture` |
 | `ObjectHandle.java` | 2 | `CompletableFuture` |
 | `NativeTypeSystem.java` | 2 | `Class` |
 | `TypeInfo.java` | 2 | `Entry` |
-| `SwitchAST.java` | 2 | `Iterator` |
-| `JumpVal_N.java` | 2 | `Map`, `List` |
 | `xFuture.java` | 2 | `CompletableFuture` |
 | Many more files | 1 each | Various |
 
@@ -109,15 +114,12 @@ Many overlap with `rawtypes`. Fix together per-file.
 | `TypeCompositionStatement.java` | 3 | unchecked casts to generic types |
 | 14 more files | 1-2 each | Various |
 
-### 3c. `[overrides]` equals without hashCode (3 warnings)
+### 3c. `[overrides]` equals without hashCode -- DONE (3 warnings fixed)
 
-| File | Line | Class |
-|------|------|-------|
-| `Register.java` | 16 | `Register` |
-| `Register.java` | 591 | `ShadowRegister` |
-| `ChildInfo.java` | 18 | `ChildInfo` |
-
-**Strategy:** Implement `hashCode()` consistent with the `equals()` contract.
+Implemented `hashCode()` consistent with `equals()` in all three classes:
+- `Register` — `Objects.hash(m_iArg, m_fRO, m_fEffectivelyFinal, isInPlace(), m_type)`
+- `ShadowRegister` — `31 * getOriginalRegister().hashCode() + getType().hashCode()`
+- `ChildInfo` — `Objects.hash(f_child, f_access, f_setIds)`
 
 ---
 
