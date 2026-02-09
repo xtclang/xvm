@@ -1,9 +1,11 @@
 package org.xtclang.idea.lsp
 
 import com.intellij.execution.configurations.GeneralCommandLine
+import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.diagnostic.logger
+import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
@@ -187,23 +189,21 @@ class XtcLspConnectionProvider(
      * loads its bundled lsp4j classes which conflict with LSP4IJ's lsp4j.
      */
     private fun findServerJar(): Path {
-        // Try to find via class loader resource - our class is in lib/, JAR is in bin/
-        javaClass.protectionDomain?.codeSource?.location?.let { classUrl ->
-            val pluginLibDir = Path.of(classUrl.toURI()).parent
-            val pluginDir = pluginLibDir.parent // Go from lib/ to plugin root
-            val serverJar = pluginDir.resolve("bin/xtc-lsp-server.jar")
+        // Primary: use PluginManagerCore to find the plugin directory (works for all IDE versions)
+        PluginManagerCore.getPlugin(PluginId.getId("org.xtclang.idea"))?.let { plugin ->
+            val serverJar = plugin.pluginPath.resolve("bin/xtc-lsp-server.jar")
             if (Files.exists(serverJar)) return serverJar
-            logger.info("LSP server JAR not at expected location: $serverJar")
+            logger.warn("LSP server JAR not at expected location: $serverJar")
+            logger.warn("Plugin directory contents: ${plugin.pluginPath.toFile().listFiles()?.map { it.name }}")
         }
 
-        // Fallback: search in typical plugin locations
-        listOfNotNull(
-            System.getProperty("idea.plugins.path"),
-            "${System.getProperty("user.home")}/.local/share/JetBrains/IntelliJIdea2025.1/plugins",
-            "${System.getProperty("user.home")}/Library/Application Support/JetBrains/IntelliJIdea2025.1/plugins",
-        ).map { Path.of(it, "intellij-plugin", "bin", "xtc-lsp-server.jar") }
-            .firstOrNull { Files.exists(it) }
-            ?.let { return it }
+        // Fallback: find via classloader (our class is in lib/, JAR is in bin/)
+        javaClass.protectionDomain?.codeSource?.location?.let { classUrl ->
+            val pluginDir = Path.of(classUrl.toURI()).parent.parent
+            val serverJar = pluginDir.resolve("bin/xtc-lsp-server.jar")
+            if (Files.exists(serverJar)) return serverJar
+            logger.warn("LSP server JAR not found via classloader either: $serverJar")
+        }
 
         throw IllegalStateException(
             """
