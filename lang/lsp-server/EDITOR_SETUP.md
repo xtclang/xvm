@@ -46,14 +46,11 @@ Run a quick smoke test by sending a raw LSP `initialize` request via stdin:
 
 ```bash
 echo -ne 'Content-Length: 73\r\n\r\n{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"capabilities":{}}}' \
-  | java --enable-native-access=ALL-UNNAMED \
-         -jar lang/lsp-server/build/libs/lsp-server-0.4.4-SNAPSHOT-all.jar
+  | java -jar lang/lsp-server/build/libs/lsp-server-0.4.4-SNAPSHOT-all.jar
 ```
 
 You should see a JSON-RPC response containing the server's capabilities. The
 server also writes logs to `~/.xtc/logs/lsp-server.log`.
-
-If you built with the mock adapter, you can omit `--enable-native-access=ALL-UNNAMED`.
 
 ## Step 3: Connect to Your Editor
 
@@ -61,7 +58,7 @@ The LSP server communicates over **stdio** using the standard JSON-RPC protocol.
 Any editor with LSP support can use it by launching:
 
 ```bash
-java --enable-native-access=ALL-UNNAMED -jar /absolute/path/to/lsp-server-0.4.4-SNAPSHOT-all.jar
+java -jar /absolute/path/to/lsp-server-0.4.4-SNAPSHOT-all.jar
 ```
 
 Replace the jar path with the actual absolute path on your system.
@@ -89,7 +86,6 @@ vim.api.nvim_create_autocmd('FileType', {
       name = 'xtc-lsp',
       cmd = {
         'java',
-        '--enable-native-access=ALL-UNNAMED',
         '-jar',
         -- UPDATE THIS PATH to match your build output:
         '/absolute/path/to/lang/lsp-server/build/libs/lsp-server-0.4.4-SNAPSHOT-all.jar',
@@ -122,7 +118,6 @@ Add the following to your Emacs configuration (`~/.emacs.d/init.el` or
 (with-eval-after-load 'eglot
   (add-to-list 'eglot-server-programs
                '(prog-mode . ("java"
-                               "--enable-native-access=ALL-UNNAMED"
                                "-jar"
                                ;; UPDATE THIS PATH to match your build output:
                                "/absolute/path/to/lang/lsp-server/build/libs/lsp-server-0.4.4-SNAPSHOT-all.jar"))))
@@ -141,7 +136,6 @@ Then open a `.x` file and run `M-x eglot` to start the language server.
  (make-lsp-client
   :new-connection (lsp-stdio-connection
                    '("java"
-                     "--enable-native-access=ALL-UNNAMED"
                      "-jar"
                      ;; UPDATE THIS PATH:
                      "/absolute/path/to/lang/lsp-server/build/libs/lsp-server-0.4.4-SNAPSHOT-all.jar"))
@@ -185,7 +179,6 @@ Then install the `.vsix` from `lang/vscode-extension/build/distributions/`.
       "enabled": true,
       "command": [
         "java",
-        "--enable-native-access=ALL-UNNAMED",
         "-jar",
         "/absolute/path/to/lang/lsp-server/build/libs/lsp-server-0.4.4-SNAPSHOT-all.jar"
       ],
@@ -505,7 +498,7 @@ This means the tree-sitter native library could not be loaded. Either:
 If your default `java` is older than 25, point to the correct binary explicitly:
 
 ```bash
-/path/to/java-25/bin/java --enable-native-access=ALL-UNNAMED -jar lsp-server-0.4.4-SNAPSHOT-all.jar
+/path/to/java-25/bin/java -jar lsp-server-0.4.4-SNAPSHOT-all.jar
 ```
 
 Update the editor configuration to use the full path to the Java 25+ binary
