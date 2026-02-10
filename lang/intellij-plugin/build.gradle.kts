@@ -1,5 +1,7 @@
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import java.io.File
+import java.io.RandomAccessFile
+import kotlin.concurrent.thread
 
 plugins {
     alias(libs.plugins.xdk.build.properties)
@@ -577,26 +579,108 @@ val runIde by tasks.existing {
         configureSandboxLogging,
     )
 
-    // Log sandbox location, mavenLocal status, and idea.log path
+    // Log sandbox location, mavenLocal status, version info, and idea.log path
     val sandboxDir = sandboxConfigDir.map { it.parentFile }
     val mavenLocalRoot =
         providers
             .systemProperty("maven.repo.local")
             .orElse(providers.systemProperty("user.home").map { "$it/.m2/repository" })
     val m2Repo = mavenLocalRoot.map { File(it, "org/xtclang") }
+    val lspLogFile = providers.systemProperty("user.home").map { File(it, ".xtc/logs/lsp-server.log") }
+    val capturedIdeVersion = ideVersion
+    val capturedLsp4ijVersion = libs.versions.lsp4ij.get()
+    val capturedSinceBuild = intellijSinceBuild
+    val capturedIdeCacheDir = ideCacheDir
+    val capturedGradleUserHome = gradleUserHome
+    val capturedPluginVersion = project.version.toString()
     doFirstTask {
         val sandbox = sandboxDir.get()
         val ideaLog = sandbox.resolve("log/idea.log")
+        val pluginsDir = sandbox.resolve("plugins")
+        val systemDir = sandbox.resolve("system")
+
+        // Version matrix - all pinned in gradle/libs.versions.toml
+        logger.lifecycle("[runIde] ─── Version Matrix (gradle/libs.versions.toml) ───")
+        logger.lifecycle("[runIde]   IntelliJ CE:  $capturedIdeVersion (sinceBuild=$capturedSinceBuild)")
+        logger.lifecycle("[runIde]   LSP4IJ:       $capturedLsp4ijVersion")
+        logger.lifecycle("[runIde]   XTC plugin:   $capturedPluginVersion")
+
+        // IDE cache layers
+        logger.lifecycle("[runIde] ─── IDE Cache Layers ───")
+        logger.lifecycle("[runIde]   Download:  ${capturedIdeCacheDir.absolutePath}")
+        if (capturedIdeCacheDir.exists()) {
+            val sizeMb = capturedIdeCacheDir.walkTopDown().filter { it.isFile }.sumOf { it.length() } / (1024 * 1024)
+            logger.lifecycle("[runIde]              (cached, ~$sizeMb MB - survives clean)")
+        } else {
+            logger.lifecycle("[runIde]              (not cached - will download on demand)")
+        }
+        logger.lifecycle("[runIde]   Extracted: ${capturedGradleUserHome}/caches/<ver>/transforms/...")
+        logger.lifecycle("[runIde]              (Gradle artifact transform - survives clean)")
+
+        // Sandbox status
+        logger.lifecycle("[runIde] ─── Sandbox ───")
+        logger.lifecycle("[runIde]   Path:      ${sandbox.absolutePath}")
+        val sandboxIsReused = systemDir.exists() && systemDir.listFiles().orEmpty().isNotEmpty()
+        if (sandboxIsReused) {
+            logger.lifecycle("[runIde]   Status:    reused (existing sandbox with IDE caches/indices)")
+        } else {
+            logger.lifecycle("[runIde]   Status:    fresh (new sandbox - first-run indexing will be slower)")
+        }
+        logger.lifecycle("[runIde]   Plugins:   ${pluginsDir.listFiles()?.map { it.name } ?: emptyList()}")
+        logger.lifecycle("[runIde]   IDE log:   ${ideaLog.absolutePath}")
+        logger.lifecycle("[runIde]              tail -f ${ideaLog.absolutePath}")
+
+        // mavenLocal artifacts
         val xtcArtifacts = m2Repo.get()
-        logger.lifecycle("[runIde] mavenLocal XTC artifacts: ${xtcArtifacts.absolutePath}")
+        logger.lifecycle("[runIde] ─── mavenLocal XTC Artifacts ───")
+        logger.lifecycle("[runIde]   ${xtcArtifacts.absolutePath}")
         if (xtcArtifacts.exists()) {
             xtcArtifacts.listFiles()?.sorted()?.forEach { artifact ->
                 val versions = artifact.listFiles()?.filter { it.isDirectory }?.map { it.name } ?: emptyList()
                 logger.lifecycle("[runIde]   ${artifact.name}: ${versions.joinToString(", ")}")
             }
         }
-        logger.lifecycle("[runIde] Sandbox:  ${sandbox.absolutePath}")
-        logger.lifecycle("[runIde] IDE log:  ${ideaLog.absolutePath}")
+
+        // Recovery instructions
+        logger.lifecycle("[runIde] ─── Reset Commands ───")
+        logger.lifecycle("[runIde]   Nuke sandbox (keeps IDE download):  ./gradlew :lang:intellij-plugin:clean")
+        logger.lifecycle("[runIde]   Nuke everything (re-downloads IDE): rm -rf ${capturedIdeCacheDir.absolutePath}")
+        logger.lifecycle("[runIde]              then: rm -rf lang/.intellijPlatform/localPlatformArtifacts")
+
+        // Tail LSP server log file to Gradle console in real time.
+        // The LSP server writes to this file via logback's FILE appender.
+        // We skip any pre-existing content and only show this session's output.
+        // Safe with multiple LSP server processes: logback opens in append mode, and
+        // POSIX guarantees atomic appends for small writes (log lines are well under
+        // the ~4KB threshold). LSP4IJ may briefly spawn duplicate servers on startup
+        // but kills extras within milliseconds, so interleaving is negligible.
+        val logFile = lspLogFile.get()
+        val startSize = if (logFile.exists()) logFile.length() else 0L
+        val taskLogger = logger
+        thread(isDaemon = true, name = "lsp-log-tailer") {
+            runCatching {
+                while (!logFile.exists() && !Thread.currentThread().isInterrupted) Thread.sleep(500)
+                val raf = RandomAccessFile(logFile, "r")
+                raf.seek(startSize)
+                while (!Thread.currentThread().isInterrupted) {
+                    val line = raf.readLine()
+                    if (line != null) {
+                        taskLogger.lifecycle("[lsp-server] $line")
+                    } else {
+                        Thread.sleep(200)
+                    }
+                }
+                raf.close()
+            }
+        }
+        logger.lifecycle("[runIde] LSP log:  ${logFile.absolutePath} (tailing to console)")
+    }
+
+    // Stop the tailer thread when the IDE exits (prevents it lingering in the Gradle daemon)
+    doLastTask {
+        Thread.getAllStackTraces().keys
+            .firstOrNull { it.name == "lsp-log-tailer" }
+            ?.interrupt()
     }
 }
 

@@ -185,26 +185,99 @@ The LSP server supports multiple adapters. See [LSP Server README](../lsp-server
    - Check **Help → Show Log in Finder** for LSP messages
    - Look for "XTC LSP Server started" in the log
 
+#### Sandbox Console Output
+
+When you run `./gradlew :lang:intellij-plugin:runIde`, the task logs detailed environment
+information before launching the IDE. This is useful for debugging version mismatches,
+stale sandbox state, or missing artifacts:
+
+```
+[runIde] ─── Version Matrix (gradle/libs.versions.toml) ───
+[runIde]   IntelliJ CE:  2025.1 (sinceBuild=251)
+[runIde]   LSP4IJ:       0.19.1
+[runIde]   XTC plugin:   0.4.4-SNAPSHOT
+[runIde] ─── IDE Cache Layers ───
+[runIde]   Download:  ~/.gradle/caches/modules-2/files-2.1/idea/ideaIC/2025.1
+[runIde]              (cached, ~1024 MB - survives clean)
+[runIde]   Extracted: ~/.gradle/caches/<ver>/transforms/...
+[runIde]              (Gradle artifact transform - survives clean)
+[runIde] ─── Sandbox ───
+[runIde]   Path:      .../build/idea-sandbox/IC-2025.1
+[runIde]   Status:    reused (existing sandbox with IDE caches/indices)
+[runIde]   Plugins:   [intellij-plugin, lsp4ij]
+[runIde]   IDE log:   .../build/idea-sandbox/IC-2025.1/log/idea.log
+[runIde]              tail -f .../build/idea-sandbox/IC-2025.1/log/idea.log
+[runIde] ─── mavenLocal XTC Artifacts ───
+[runIde]   ~/.m2/repository/org/xtclang
+[runIde]   xdk: 0.4.4-SNAPSHOT
+[runIde]   xtc-plugin: 0.4.4-SNAPSHOT
+[runIde] ─── Reset Commands ───
+[runIde]   Nuke sandbox (keeps IDE download):  ./gradlew :lang:intellij-plugin:clean
+[runIde]   Nuke everything (re-downloads IDE): rm -rf ~/.gradle/caches/.../ideaIC/2025.1
+[runIde]              then: rm -rf lang/.intellijPlatform/localPlatformArtifacts
+[runIde] LSP log:  ~/.xtc/logs/lsp-server.log (tailing to console)
+```
+
+Once the IDE is running and you open a `.x` file, LSP server logs are streamed
+to the Gradle console in real time:
+
+```
+[lsp-server] 10:23:45 INFO  XtcLanguageServer - ========================================
+[lsp-server] 10:23:45 INFO  XtcLanguageServer - XTC Language Server v0.4.4
+[lsp-server] 10:23:45 INFO  XtcLanguageServer - Backend: Tree-sitter
+[lsp-server] 10:23:45 INFO  XtcLanguageServer - ========================================
+[lsp-server] 10:23:46 INFO  XtcLanguageServer - textDocument/didOpen: file:///path/to/Hello.x
+[lsp-server] 10:23:46 INFO  TreeSitterAdapter - compiled in 13.2ms, 0 diagnostics
+```
+
+All versions are pinned in `gradle/libs.versions.toml`. Changing a version there
+automatically triggers a re-download or rebuild on the next `runIde`.
+
+#### IDE Cache Layers
+
+The IntelliJ Platform Gradle Plugin manages three separate cache layers:
+
+| Layer | Location | Size | Survives `clean`? |
+|-------|----------|------|-------------------|
+| **Download** | `~/.gradle/caches/modules-2/files-2.1/idea/ideaIC/<version>/` | ~1 GB | Yes |
+| **Extracted** | `~/.gradle/caches/<gradle-ver>/transforms/...` | ~3 GB | Yes |
+| **Sandbox** | `lang/intellij-plugin/build/idea-sandbox/IC-<version>/` | ~200 MB | No |
+
+The sandbox contains IDE config, plugin JARs, indices, and logs. It is rebuilt
+from the cached download by `prepareSandbox` whenever it is missing.
+
 #### Viewing Plugin Logs
 
-The sandbox IDE writes logs to:
-```
-lang/intellij-plugin/build/idea-sandbox/IC-2025.1/log/idea.log
+**LSP server logs** are automatically tailed to the Gradle console (see above).
+These appear with a `[lsp-server]` prefix whenever the LSP server is active.
+
+**IDE logs** (`idea.log`) are NOT tailed automatically because they are very
+noisy (indexing, VFS, GC, etc.). To view them in a separate terminal:
+
+```bash
+tail -f lang/intellij-plugin/build/idea-sandbox/IC-2025.1/log/idea.log
+# Or filter to XTC-related entries:
+tail -f lang/intellij-plugin/build/idea-sandbox/IC-2025.1/log/idea.log | grep -i "xtc\|lsp"
 ```
 
-To view logs in real-time:
+**LSP server file log** (always available, even outside `runIde`):
+
 ```bash
-tail -f lang/intellij-plugin/build/idea-sandbox/IC-2025.1/log/idea.log | grep -i "xtc\|lsp"
+tail -f ~/.xtc/logs/lsp-server.log
 ```
 
 #### Clearing Sandbox State
 
-If you need a fresh start, clean the sandbox:
 ```bash
+# Nuke sandbox only (keeps IDE download - fast recovery)
 ./gradlew :lang:intellij-plugin:clean
-# Or manually:
-rm -rf lang/intellij-plugin/build/idea-sandbox/
+
+# Nuke everything including the downloaded IDE (re-downloads ~1.5 GB)
+rm -rf ~/.gradle/caches/modules-2/files-2.1/idea/ideaIC/2025.1
+rm -rf lang/.intellijPlatform/localPlatformArtifacts
 ```
+
+After nuking, running `runIde` again downloads (if needed) and rebuilds a fresh sandbox.
 
 ---
 
@@ -401,37 +474,42 @@ intellij-plugin/
 ## Architecture: How LSP Communication Works
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        IntelliJ IDEA                                 │
-│  ┌──────────────────┐    ┌────────────────────┐                     │
-│  │ XTC Plugin       │    │ LSP4IJ Plugin      │                     │
-│  │ (this plugin)    │───▶│ (dependency)       │                     │
-│  │                  │    │                    │                     │
-│  │ - Project wizard │    │ - LSP client       │                     │
-│  │ - Run configs    │    │ - Protocol handler │                     │
-│  │ - File type      │    │ - JSON-RPC         │                     │
-│  └──────────────────┘    └─────────┬──────────┘                     │
-│                                    │ stdio                          │
-└────────────────────────────────────┼────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                    IntelliJ IDEA (JBR 21)                        │
+│  ┌──────────────────┐    ┌────────────────────┐                  │
+│  │ XTC Plugin       │    │ LSP4IJ Plugin      │                  │
+│  │ (this plugin)    │───▶│ (Red Hat)          │                  │
+│  │                  │    │                    │                  │
+│  │ - Project wizard │    │ - LSP client       │                  │
+│  │ - Run configs    │    │ - Protocol handler │                  │
+│  │ - TextMate       │    │ - JSON-RPC         │                  │
+│  │ - JRE provision  │    │ - stderr capture   │                  │
+│  └──────────────────┘    └─────────┬──────────┘                  │
+│                                    │ stdio (JSON-RPC)            │
+└────────────────────────────────────┼─────────────────────────────┘
                                      │
                           ┌──────────▼──────────┐
                           │ XTC LSP Server      │
                           │ (separate process)  │
+                          │ Java 25 (Temurin)   │
                           │                     │
                           │ java -jar           │
-                          │   xtc-lsp-all.jar   │
+                          │  xtc-lsp-server.jar │
                           │                     │
-                          │ Located at:         │
-                          │ $XDK_HOME/lib/      │
+                          │ plugins/            │
+                          │  intellij-plugin/   │
+                          │   bin/ (off classpath)│
                           └─────────────────────┘
 ```
 
 **Key points:**
-- The IntelliJ plugin does NOT contain the LSP server
-- The LSP server runs as a separate Java process
-- Communication is via stdio (stdin/stdout) using JSON-RPC
-- LSP4IJ handles the protocol details
-- The plugin just tells LSP4IJ how to start the server
+- The LSP server runs as a **separate out-of-process** Java process
+- It requires Java 25+ (for tree-sitter's FFM API), while IntelliJ uses JBR 21
+- The plugin provisions a JRE automatically via Foojay Disco API (cached in `~/.xtc/jre/`)
+- The server JAR lives in `bin/` (not `lib/`) to avoid classloader conflicts with LSP4IJ
+- Communication is via stdio (stdin/stdout) using JSON-RPC; logging goes to stderr
+- LSP4IJ captures stderr and shows it in the Language Servers panel
+- The `runIde` task also tails `~/.xtc/logs/lsp-server.log` to the Gradle console
 
 ## Troubleshooting
 
