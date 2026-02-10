@@ -599,6 +599,7 @@ val runIde by tasks.existing {
     val capturedSinceBuild = intellijSinceBuild
     val capturedIdeCacheDir = ideCacheDir
     val capturedGradleUserHome = gradleUserHome
+    val capturedGradleVersion = gradle.gradleVersion
     val capturedPluginVersion = project.version.toString()
     doFirstTask {
         val sandbox = sandboxDir.get()
@@ -621,7 +622,7 @@ val runIde by tasks.existing {
         } else {
             logger.lifecycle("[runIde]              (not cached - will download on demand)")
         }
-        logger.lifecycle("[runIde]   Extracted: ${capturedGradleUserHome}/caches/<ver>/transforms/...")
+        logger.lifecycle("[runIde]   Extracted: $capturedGradleUserHome/caches/$capturedGradleVersion/transforms/...")
         logger.lifecycle("[runIde]              (Gradle artifact transform - survives clean)")
 
         // Sandbox status
@@ -685,7 +686,9 @@ val runIde by tasks.existing {
 
     // Stop the tailer thread when the IDE exits (prevents it lingering in the Gradle daemon)
     doLastTask {
-        Thread.getAllStackTraces().keys
+        Thread
+            .getAllStackTraces()
+            .keys
             .firstOrNull { it.name == "lsp-log-tailer" }
             ?.interrupt()
     }
