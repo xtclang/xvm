@@ -32,6 +32,8 @@ import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.CastTypeConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.DecoratedClassConstant;
+import org.xvm.asm.constants.FormalConstant;
+import org.xvm.asm.constants.FormalTypeChildConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
@@ -907,9 +909,8 @@ public class BuildContext {
      * Out: nType object instance
      */
     public RegisterInfo loadType(CodeBuilder code, TypeConstant type) {
-        if (type.isTypeParameter()) {
-            int iReg = ((TypeParameterConstant) type.getDefiningConstant()).getRegister();
-            return loadArgument(code, iReg);
+        if (type.isFormalType()) {
+            return loadFormalType(code, (FormalConstant) type.getDefiningConstant());
         }
 
         assert type.isTypeOfType();
@@ -925,6 +926,22 @@ public class BuildContext {
         code.invokestatic(CD_nType, "$ensureType",
                           MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
         return new SingleSlot(type, Specific, CD_nType, "");
+    }
+
+
+    private RegisterInfo loadFormalType(CodeBuilder code, FormalConstant formalConst) {
+        if (formalConst instanceof TypeParameterConstant typeParam) {
+            return loadArgument(code, typeParam.getRegister());
+        }
+
+        if (formalConst instanceof FormalTypeChildConstant child) {
+            loadFormalType(code, child.getParentConstant());
+            loadCtx(code);
+            code.ldc(child.getName())
+                .invokevirtual(CD_nObj, "$type", MethodTypeDesc.of(CD_nType, CD_Ctx, CD_JavaString));
+            return new SingleSlot(child.getType(), Specific, CD_nType, "");
+        }
+        throw new UnsupportedOperationException("FormalConstant=" + formalConst);
     }
 
     /**
