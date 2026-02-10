@@ -30,6 +30,8 @@ import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.CastTypeConstant;
+import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.DecoratedClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
@@ -759,14 +761,22 @@ public class BuildContext {
         }
 
         if (argId <= Op.CONSTANT_OFFSET) {
-            TypeConstant type = getConstant(argId).getType();
-            if (type.containsFormalType(true)) {
-                type = type.resolveGenerics(pool(), typeInfo.getType());
-            }
+            Constant     constant = getConstant(argId);
+            TypeConstant type;
+            if (constant instanceof ClassConstant ||
+                    constant instanceof DecoratedClassConstant) {
+                IdentityConstant constId = (IdentityConstant) constant;
+                type = constId.getValueType(pool(), null);
+            } else {
+                type = constant.getType();
+                if (type.containsFormalType(true)) {
+                    type = type.resolveGenerics(pool(), typeInfo.getType());
+                }
 
-            // if the type is an enum value, widen it to its parent Enumeration
-            if (type.isEnumValue()) {
-                type = type.getSingleUnderlyingClass(false).getNamespace().getType();
+                // if the type is an enum value, widen it to its parent Enumeration
+                if (type.isEnumValue()) {
+                    type = type.getSingleUnderlyingClass(false).getNamespace().getType();
+                }
             }
             return type;
         }

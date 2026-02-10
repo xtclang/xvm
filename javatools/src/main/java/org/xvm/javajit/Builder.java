@@ -16,7 +16,10 @@ import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.constants.ByteConstant;
 import org.xvm.asm.constants.CharConstant;
+import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.DecoratedClassConstant;
 import org.xvm.asm.constants.EnumValueConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.MethodBody;
@@ -28,7 +31,6 @@ import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
-import org.xvm.asm.constants.TypeParameterConstant;
 
 import org.xvm.javajit.BuildContext.DoubleSlot;
 import org.xvm.javajit.BuildContext.SingleSlot;
@@ -184,6 +186,11 @@ public abstract class Builder {
         case TypeConstant type:
             assert type.isTypeOfType();
             return bctx.loadType(code, type);
+
+        case ClassConstant _:
+        case DecoratedClassConstant _:
+            IdentityConstant constId = (IdentityConstant) constant;
+            throw new UnsupportedOperationException("Load class " + constId.getValueType(bctx.pool(), null));
 
         case PropertyConstant propId: {
             // support for the "local property" mode
