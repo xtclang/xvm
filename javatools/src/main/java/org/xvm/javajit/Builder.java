@@ -983,7 +983,17 @@ public abstract class Builder {
 
     // ----- well-known methods --------------------------------------------------------------------
 
-    public static final String         Instance       = "$INSTANCE";
+    /**
+     * The name of the static field holding an instance reference for singleton types.
+     */
+    public static final String Instance = "$INSTANCE";
+
+    /**
+     * The name of the field on nType object holding the underlying TypeConstant.
+     */
+    public static final String DataType = "$dataType";
+
+    // various commonly used MethodDesc constants
     public static final MethodTypeDesc MD_Boolean_box = MethodTypeDesc.of(CD_Boolean, CD_boolean);
     public static final MethodTypeDesc MD_Char_box    = MethodTypeDesc.of(CD_Char,    CD_int);
     public static final MethodTypeDesc MD_Char_addInt = MethodTypeDesc.of(CD_int,     CD_Ctx, CD_int, CD_long);

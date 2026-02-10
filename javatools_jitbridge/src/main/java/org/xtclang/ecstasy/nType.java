@@ -20,43 +20,43 @@ public class nType
     private nType(Ctx ctx, TypeConstant type) {
         super(ctx);
 
-        $ctx  = ctx;
-        $type = type;
+        $ctx      = ctx;
+        $dataType = type;
     }
 
     public final Ctx          $ctx;
-    public final TypeConstant $type;
+    public final TypeConstant $dataType;
 
     private Method equalsMethod;
     private Method compareMethod;
 
     public nObj alloc(Ctx ctx) {
-        throw Exception.$unsupported(ctx, "Type " + $type);
+        throw Exception.$unsupported(ctx, "Type " + $dataType);
     }
 
     @Override public TypeConstant $xvmType(Ctx ctx) {
-        return $type.getType();
+        return $dataType.getType();
     }
 
     @Override public boolean $isA(Ctx ctx, nType t) {
-        return $type.isA(t.$type);
+        return $dataType.isA(t.$dataType);
     }
 
     @Override
     public Boolean structConstructor(Ctx ctx, Type OuterType, nObj outer) {
-        throw Exception.$unsupported(ctx, "Type " + $type);
+        throw Exception.$unsupported(ctx, "Type " + $dataType);
     }
 
     @Override
     public String toString(Ctx ctx) {
-        return String.of(ctx, $type.getValueString());
+        return String.of(ctx, $dataType.getValueString());
     }
 
     /**
-     * @return xType instance for the specified type
+     * @return nType instance for the specified type
      */
     public static nType $ensureType(Ctx ctx, TypeConstant type) {
-        return (nType) type.ensureXType(() -> new nType(ctx, type));
+        return new nType(ctx, type);
     }
 
     /**
@@ -76,7 +76,7 @@ public class nType
             return result.$value;
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw Exception.$unsupported($ctx,
-                "Failed to invoke 'equals()` on class " + $type.getValueString());
+                "Failed to invoke 'equals()` on class " + $dataType.getValueString());
         }
     }
 
@@ -97,12 +97,12 @@ public class nType
             return (Ordered) compareMethod.invoke(null, ctx, this, value1, value2);
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw Exception.$unsupported($ctx,
-                "Failed to invoke 'compare()` on class " + $type.getValueString());
+                "Failed to invoke 'compare()` on class " + $dataType.getValueString());
         }
     }
 
     private Method ensureMethod(java.lang.String methodName, Class paramClass) {
-        java.lang.String clzName = $type.ensureJitClassName($ctx.container.typeSystem);
+        java.lang.String clzName = $dataType.ensureJitClassName($ctx.container.typeSystem);
         java.lang.Class  clz;
         try {
             clz = java.lang.Class.forName(clzName);
@@ -118,7 +118,7 @@ public class nType
                 clz = clz.getSuperclass();
                 if (clz == null) {
                     throw Exception.$unsupported($ctx,
-                        "No method " + methodName + " on class " + $type.getValueString());
+                        "No method " + methodName + " on class " + $dataType.getValueString());
                 }
             }
         }

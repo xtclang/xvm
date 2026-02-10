@@ -94,7 +94,7 @@ public class EnumBuilder extends CommonBuilder {
 
     /**
      * The signature of the function we generate is:
-     *    "public boolean equals$p(Ctx ctx, xType CompileType, [EnumType] o1, {EnumType} o2)"
+     *    "public boolean equals$p(Ctx ctx, nType CompileType, [EnumType] o1, {EnumType} o2)"
      */
     private void assembleEquals(CodeBuilder code) {
         // all we need is to call the equivalent function on xEnum
@@ -110,17 +110,17 @@ public class EnumBuilder extends CommonBuilder {
 
     /**
      * The signature of the function we generate is:
-     *    "public Ordered compare(Ctx ctx, xType CompileType, [EnumType] o1, {EnumType} o2)"
+     *    "public Ordered compare(Ctx ctx, nType CompileType, [EnumType] o1, {EnumType} o2)"
      */
     private void assembleCompare(CodeBuilder code) {
-        // there is a custom primitivized function on xEnum:
-        //      long compare$p(Ctx ctx, xType CompileType, xEnum o1, xEnum o2)
+        // there is a custom primitivized function on nEnum:
+        //      long compare$p(Ctx ctx, nType CompileType, nEnum o1, nEnum o2)
         // which returns a negative, zero or positive value that needs to be translated into
         // the corresponding Ordered value
 
         ConstantPool pool = typeSystem.pool();
 
-        // long c = xEnum.compare$p(ctx, CompileType, o1, o2);
+        // long c = nEnum.compare$p(ctx, CompileType, o1, o2);
         code.aload(0)
             .aload(1)
             .aload(2)

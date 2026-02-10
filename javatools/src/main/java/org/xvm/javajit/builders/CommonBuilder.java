@@ -751,6 +751,7 @@ public class CommonBuilder
     private void assembleGenericProperty(ClassBuilder classBuilder, String name) {
         classBuilder.withMethodBody(name + "$get", MethodTypeDesc.of(CD_nType, CD_Ctx),
             ClassFile.ACC_PUBLIC, code ->
+                // return nObj.$type(ctx, name);
                 code.aload(0)                     // this
                     .aload(code.parameterSlot(0)) // ctx
                     .ldc(name)
@@ -1503,7 +1504,8 @@ public class CommonBuilder
         "IOException", "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState",
         "Boolean", "Ordered",
         "Orderable",
-        // "Array",
+//        "Int64",
+//        "Array",
         "TerminalConsole",
     };
     private final static HashSet<String> SKIP_SET = new HashSet<>();

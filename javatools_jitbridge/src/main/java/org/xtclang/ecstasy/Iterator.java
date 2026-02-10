@@ -7,7 +7,5 @@ import org.xvm.javajit.Ctx;
  */
 public interface Iterator extends Object {
 
-    // xType Element$get(Ctx ctx);
-
     boolean next(Ctx ctx);
 }

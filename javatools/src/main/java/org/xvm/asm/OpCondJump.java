@@ -30,6 +30,7 @@ import org.xvm.runtime.Utils;
 
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nType;
+import static org.xvm.javajit.Builder.DataType;
 import static org.xvm.javajit.Builder.MD_TypeIsA;
 import static org.xvm.javajit.Builder.MD_xvmType;
 
@@ -642,9 +643,9 @@ public abstract class OpCondJump
             }
         } else {
             // dynamic types
-            RegisterInfo regType = bctx.loadArgument(code, m_nArg2); // xType
+            RegisterInfo regType = bctx.loadArgument(code, m_nArg2); // nType
             assert regType.type().isTypeOfType();
-            code.getfield(CD_nType, "$type", CD_TypeConstant)
+            code.getfield(CD_nType, DataType, CD_TypeConstant)
                 .invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
 
             if (getOpCode() == OP_JMP_TYPE) {

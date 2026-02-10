@@ -29,7 +29,6 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
@@ -6228,7 +6227,7 @@ public abstract class TypeConstant
 
     /**
      * @return true iff this type can be used in an "into" clause for an annotation for a class to
-     *         signify that the annotation applies to the meta-data of the class and is not actually
+     *         signify that the annotation applies to the metadata of the class and is not actually
      *         mixed into the class functionality itself
      */
     public boolean isIntoClassType() {
@@ -6237,7 +6236,7 @@ public abstract class TypeConstant
 
     /**
      * @return true iff this type can be used in an "into" clause for an annotation for a method,
-     *         which means that the mix-in applies to the meta-data of the method
+     *         which means that the mix-in applies to the metadata of the method
      */
     public boolean isIntoMethodType() {
         return isIntoMetaData(getConstantPool().typeMethod(), false);
@@ -6245,7 +6244,7 @@ public abstract class TypeConstant
 
     /**
      * @return true iff this type can be used in an "into" clause for an annotation for a method
-     *         parameter, which means that the mix-in applies to the meta-data of the parameter
+     *         parameter, which means that the mix-in applies to the metadata of the parameter
      */
     public boolean isIntoMethodParameterType() {
         return isIntoMetaData(getConstantPool().typeParameter(), false);
@@ -6254,7 +6253,7 @@ public abstract class TypeConstant
     /**
      * Check if this type can be used in an "into" clause for an annotation for the specified target
      * (e.g. class, method or method parameter), which means that the mix-in applies to the
-     * meta-data of the target rather than the target itself.
+     * metadata of the target rather than the target itself.
      *
      * @param typeTarget  the target type
      * @param fStrict     if true, the terminal type of this type must be exactly the target type;
@@ -6268,7 +6267,7 @@ public abstract class TypeConstant
 
     /**
      * @return true iff this type can be used in an "into" clause for an annotation for a property,
-     *         which means that the mix-in applies to the meta-data of the property or to the
+     *         which means that the mix-in applies to the metadata of the property or to the
      *         Ref/Var instance used for the property
      */
     public boolean isIntoPropertyType() {
@@ -7226,21 +7225,6 @@ public abstract class TypeConstant
         return atype;
     }
 
-    /**
-     * Obtain a run-time object representing this type.
-     *
-     * @param supplier  (TODO GG: fix the doc)  the Container to make the xType for
-     *
-     * @return an xType object represented by this TypeConstant
-     */
-    public Object ensureXType(Supplier<Object> supplier) {
-        Object type = m_xType;
-        if (type == null) {
-            type = m_xType = supplier.get();
-        }
-        return type;
-    }
-
 
     // ----- inner class: Origin -------------------------------------------------------------------
 
@@ -7373,11 +7357,6 @@ public abstract class TypeConstant
      * Cached TypeHandle.
      */
     private transient xRTType.TypeHandle m_handle;
-
-    /**
-     * Cached xType object.
-     */
-    private transient Object m_xType;
 
     /**
      * Cached JIT class name.
