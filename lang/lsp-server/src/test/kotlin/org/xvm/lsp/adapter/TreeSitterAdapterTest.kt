@@ -10,6 +10,8 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.SymbolInfo
 import java.util.concurrent.atomic.AtomicInteger
@@ -28,6 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger
 @DisplayName("TreeSitterAdapter")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TreeSitterAdapterTest {
+    private val logger: Logger = LoggerFactory.getLogger(TreeSitterAdapterTest::class.java)
     private var adapter: TreeSitterAdapter? = null
     private val uriCounter = AtomicInteger(0)
 
@@ -40,7 +43,16 @@ class TreeSitterAdapterTest {
      * a stale tree whose byte offsets don't match the new source, causing
      * [StringIndexOutOfBoundsException] inside the native parser.
      */
-    private fun freshUri(): String = "file:///test${uriCounter.incrementAndGet()}.x"
+    private fun freshUri(): String = "file:///t1st${uriCounter.incrementAndGet()}.x"
+
+    /** Log and return a value — use to trace adapter responses during test runs. */
+    private fun <T> logged(
+        test: String,
+        value: T,
+    ): T {
+        logger.info("[TEST] {} -> {}", test, value)
+        return value
+    }
 
     @BeforeAll
     fun setUpAdapter() {
@@ -384,6 +396,41 @@ class TreeSitterAdapterTest {
 
             assertThat(completions).anyMatch { it.label == "Person" }
         }
+
+        /**
+         * After compiling a class with multiple methods, completions should include
+         * those method names alongside keywords and built-in types.
+         */
+        @Test
+        @DisplayName("should include method names from compiled source")
+        fun shouldIncludeMethodNames() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Calculator {
+                        Int add(Int a, Int b) {
+                            return a + b;
+                        }
+                        Int multiply(Int a, Int b) {
+                            return a * b;
+                        }
+                        void test() {
+                            add(1, 2);
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            val completions = logged("shouldIncludeMethodNames", ts.getCompletions(uri, 9, 0))
+            logger.info("  completion labels: {}", completions.map { it.label })
+
+            assertThat(completions).anyMatch { it.label == "add" }
+            assertThat(completions).anyMatch { it.label == "multiply" }
+            assertThat(completions).anyMatch { it.label == "test" }
+            assertThat(completions).anyMatch { it.label == "Calculator" }
+        }
     }
 
     // ========================================================================
@@ -424,6 +471,66 @@ class TreeSitterAdapterTest {
             ts.compile(uri, "module myapp {}")
 
             assertThat(ts.findDefinition(uri, 100, 0)).isNull()
+        }
+
+        /**
+         * When the cursor is on a method name at a call site (`add` in `add(1, 2)`),
+         * go-to-definition should navigate to the method's declaration line.
+         */
+        @Test
+        @DisplayName("should find method definition from call site")
+        fun shouldFindMethodDefinitionFromCallSite() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Calculator {
+                        Int add(Int a, Int b) {
+                            return a + b;
+                        }
+                        void test() {
+                            add(1, 2);
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor on 'add' in call at line 6, col 12
+            val definition = logged("shouldFindMethodDefinitionFromCallSite", ts.findDefinition(uri, 6, 12))
+
+            assertThat(definition).isNotNull
+            assertThat(definition!!.startLine).isEqualTo(2)
+        }
+
+        /**
+         * When the cursor is on a class name used as a return type in a different
+         * class, go-to-definition should navigate to the class declaration.
+         */
+        @Test
+        @DisplayName("should find class definition from type usage")
+        fun shouldFindClassDefinitionFromTypeUsage() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Person {
+                        String name;
+                    }
+                    class Factory {
+                        Person create() {
+                            return new Person();
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor on 'Person' in return type at line 5, col 8
+            val definition = logged("shouldFindClassDefinitionFromTypeUsage", ts.findDefinition(uri, 5, 8))
+
+            assertThat(definition).isNotNull
+            assertThat(definition!!.startLine).isEqualTo(1)
         }
     }
 
@@ -468,6 +575,38 @@ class TreeSitterAdapterTest {
             ts.compile(uri, "module myapp {}")
 
             assertThat(ts.getDocumentHighlights(uri, 100, 0)).isEmpty()
+        }
+
+        /**
+         * A method name used in both declaration and multiple call sites should
+         * produce highlights at all locations.
+         */
+        @Test
+        @DisplayName("should highlight method name at declaration and call sites")
+        fun shouldHighlightMethodAtDeclarationAndCalls() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Calculator {
+                        Int add(Int a, Int b) {
+                            return a + b;
+                        }
+                        void test() {
+                            Int x = add(1, 2);
+                            Int y = add(3, 4);
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor on 'add' at declaration, line 2, col 12
+            val highlights = logged("shouldHighlightMethodAtDeclarationAndCalls", ts.getDocumentHighlights(uri, 2, 12))
+            logger.info("  highlights ({}): {}", highlights.size, highlights.map { "L${it.range.start.line}:${it.range.start.column}" })
+
+            // declaration + 2 call sites = at least 3
+            assertThat(highlights).hasSizeGreaterThanOrEqualTo(3)
         }
     }
 
@@ -532,6 +671,36 @@ class TreeSitterAdapterTest {
             // module + class + comment = at least 3, but we only require 2 to be
             // resilient against grammar differences in comment node types.
             assertThat(ranges).hasSizeGreaterThanOrEqualTo(2)
+        }
+
+        /**
+         * Deeply nested declarations (module > class > inner class > method) should
+         * each produce a foldable range, giving at least 4 ranges.
+         */
+        @Test
+        @DisplayName("should fold deeply nested declarations")
+        fun shouldFoldDeeplyNestedDeclarations() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Outer {
+                        class Inner {
+                            void method() {
+                                return;
+                            }
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            val ranges = logged("shouldFoldDeeplyNestedDeclarations", ts.getFoldingRanges(uri))
+            logger.info("  folding ranges ({}): {}", ranges.size, ranges.map { "L${it.startLine}-L${it.endLine}" })
+
+            // module + Outer + Inner + method = at least 4
+            assertThat(ranges).hasSizeGreaterThanOrEqualTo(4)
+            assertThat(ranges).allMatch { it.endLine > it.startLine }
         }
     }
 
@@ -812,6 +981,42 @@ class TreeSitterAdapterTest {
 
             assertThat(ts.findReferences(uri, 100, 0, includeDeclaration = true)).isEmpty()
         }
+
+        /**
+         * A method referenced in multiple call sites should produce locations
+         * for the declaration and each call.
+         */
+        @Test
+        @DisplayName("should find method references across declaration and calls")
+        fun shouldFindMethodReferencesAcrossDeclarationAndCalls() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Calculator {
+                        Int add(Int a, Int b) {
+                            return a + b;
+                        }
+                        void test() {
+                            Int x = add(1, 2);
+                            Int y = add(3, 4);
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor on 'add' at declaration, line 2, col 12
+            val refs =
+                logged(
+                    "shouldFindMethodReferencesAcrossDeclarationAndCalls",
+                    ts.findReferences(uri, 2, 12, includeDeclaration = true),
+                )
+            logger.info("  references ({}): {}", refs.size, refs.map { "L${it.startLine}:${it.startColumn}" })
+
+            // declaration + 2 call sites = at least 3
+            assertThat(refs).hasSizeGreaterThanOrEqualTo(3)
+        }
     }
 
     // ========================================================================
@@ -998,7 +1203,7 @@ class TreeSitterAdapterTest {
         fun shouldReturnSignatureHelpForMethodCall() {
             val uri = freshUri()
             ts.compile(uri, calculatorSource())
-            val help = ts.getSignatureHelp(uri, 6, 16)
+            val help = logged("shouldReturnSignatureHelpForMethodCall", ts.getSignatureHelp(uri, 6, 16))
 
             assertThat(help).isNotNull
             assertThat(help!!.signatures).hasSize(1)
@@ -1017,7 +1222,7 @@ class TreeSitterAdapterTest {
         fun shouldReportFirstParameterActive() {
             val uri = freshUri()
             ts.compile(uri, calculatorSource())
-            val help = ts.getSignatureHelp(uri, 6, 16)
+            val help = logged("shouldReportFirstParameterActive", ts.getSignatureHelp(uri, 6, 16))
 
             assertThat(help).isNotNull
             assertThat(help!!.activeParameter).isEqualTo(0)
@@ -1033,7 +1238,7 @@ class TreeSitterAdapterTest {
         fun shouldTrackActiveParameter() {
             val uri = freshUri()
             ts.compile(uri, calculatorSource())
-            val help = ts.getSignatureHelp(uri, 6, 19)
+            val help = logged("shouldTrackActiveParameter", ts.getSignatureHelp(uri, 6, 19))
 
             assertThat(help).isNotNull
             assertThat(help!!.activeParameter).isEqualTo(1)
@@ -1056,8 +1261,193 @@ class TreeSitterAdapterTest {
                 """.trimIndent()
 
             ts.compile(uri, source)
+            val help = logged("shouldReturnNullOutsideCallExpression", ts.getSignatureHelp(uri, 1, 10))
 
-            assertThat(ts.getSignatureHelp(uri, 1, 10)).isNull()
+            assertThat(help).isNull()
+        }
+
+        /**
+         * A call to a zero-parameter method `greet()` should produce a signature
+         * with an empty parameter list and label "greet()".
+         */
+        @Test
+        @DisplayName("should return signature help for no-arg call")
+        fun shouldReturnSignatureHelpForNoArgCall() {
+            val uri = freshUri()
+            ts.compile(uri, greeterSource())
+            // line 6: `            greet();` — col 18 = ')' inside call
+            val help = logged("shouldReturnSignatureHelpForNoArgCall", ts.getSignatureHelp(uri, 6, 18))
+
+            assertThat(help).isNotNull
+            assertThat(help!!.signatures).hasSize(1)
+            assertThat(help.signatures[0].label).isEqualTo("greet()")
+            assertThat(help.signatures[0].parameters).isEmpty()
+        }
+
+        /**
+         * Cursor on the first argument of a three-parameter call `clamp(5, 0, 100)`
+         * should report activeParameter = 0 and show the full three-param label.
+         */
+        @Test
+        @DisplayName("should report first param active for three-arg call")
+        fun shouldReportFirstParamActiveForThreeArgCall() {
+            val uri = freshUri()
+            ts.compile(uri, clampSource())
+            // line 6: `            clamp(5, 0, 100);` — col 18 = '5'
+            val help = logged("shouldReportFirstParamActiveForThreeArgCall", ts.getSignatureHelp(uri, 6, 18))
+
+            assertThat(help).isNotNull
+            assertThat(help!!.activeParameter).isEqualTo(0)
+            assertThat(help.signatures[0].label).isEqualTo("clamp(Int value, Int low, Int high)")
+        }
+
+        /**
+         * Cursor on the second argument of `clamp(5, 0, 100)` should report
+         * activeParameter = 1.
+         */
+        @Test
+        @DisplayName("should report second param active for three-arg call")
+        fun shouldReportSecondParamActiveForThreeArgCall() {
+            val uri = freshUri()
+            ts.compile(uri, clampSource())
+            // line 6: `            clamp(5, 0, 100);` — col 21 = '0'
+            val help = logged("shouldReportSecondParamActiveForThreeArgCall", ts.getSignatureHelp(uri, 6, 21))
+
+            assertThat(help).isNotNull
+            assertThat(help!!.activeParameter).isEqualTo(1)
+        }
+
+        /**
+         * Cursor on the third argument of `clamp(5, 0, 100)` should report
+         * activeParameter = 2.
+         */
+        @Test
+        @DisplayName("should report third param active for three-arg call")
+        fun shouldReportThirdParamActiveForThreeArgCall() {
+            val uri = freshUri()
+            ts.compile(uri, clampSource())
+            // line 6: `            clamp(5, 0, 100);` — col 24 = '1' (first digit of 100)
+            val help = logged("shouldReportThirdParamActiveForThreeArgCall", ts.getSignatureHelp(uri, 6, 24))
+
+            assertThat(help).isNotNull
+            assertThat(help!!.activeParameter).isEqualTo(2)
+        }
+
+        /**
+         * Two methods with the same name but different parameter counts should
+         * produce two signatures in the result.
+         */
+        @Test
+        @DisplayName("should return multiple signatures for overloads")
+        fun shouldReturnMultipleSignaturesForOverloads() {
+            val uri = freshUri()
+            ts.compile(uri, overloadedFormatSource())
+            // line 9: `            format("hello", 10);` — col 19 = '"' inside call
+            val help = logged("shouldReturnMultipleSignaturesForOverloads", ts.getSignatureHelp(uri, 9, 19))
+
+            assertThat(help).isNotNull
+            assertThat(help!!.signatures).hasSize(2)
+        }
+
+        /**
+         * In `add(negate(1), 2)`, cursor on `1` inside `negate(1)` should
+         * return the signature for `negate`, not `add`.
+         */
+        @Test
+        @DisplayName("should return signature help for inner nested call")
+        fun shouldReturnSignatureHelpForInnerNestedCall() {
+            val uri = freshUri()
+            ts.compile(uri, nestedCallSource())
+            // line 9: `            add(negate(1), 2);` — col 23 = '1'
+            val help = logged("shouldReturnSignatureHelpForInnerNestedCall", ts.getSignatureHelp(uri, 9, 23))
+
+            assertThat(help).isNotNull
+            assertThat(help!!.signatures).hasSize(1)
+            assertThat(help.signatures[0].label).isEqualTo("negate(Int x)")
+        }
+
+        /**
+         * In `add(negate(1), 2)`, cursor on `2` should return the signature
+         * for `add` with activeParameter = 1.
+         */
+        @Test
+        @DisplayName("should return signature help for outer nested call")
+        fun shouldReturnSignatureHelpForOuterNestedCall() {
+            val uri = freshUri()
+            ts.compile(uri, nestedCallSource())
+            // line 9: `            add(negate(1), 2);` — col 27 = '2'
+            val help = logged("shouldReturnSignatureHelpForOuterNestedCall", ts.getSignatureHelp(uri, 9, 27))
+
+            assertThat(help).isNotNull
+            assertThat(help!!.signatures).hasSize(1)
+            assertThat(help.signatures[0].label).isEqualTo("add(Int a, Int b)")
+            assertThat(help.activeParameter).isEqualTo(1)
+        }
+
+        /**
+         * A call to a sibling method from a different method in the same class
+         * should resolve correctly via same-file lookup.
+         */
+        @Test
+        @DisplayName("should resolve cross-method call in same class")
+        fun shouldResolveCrossMethodCallInSameClass() {
+            val uri = freshUri()
+            ts.compile(uri, crossMethodSource())
+            // line 6: `            return repeat(s, width);` — col 26 = 's'
+            val help = logged("shouldResolveCrossMethodCallInSameClass", ts.getSignatureHelp(uri, 6, 26))
+
+            assertThat(help).isNotNull
+            assertThat(help!!.signatures).hasSize(1)
+            assertThat(help.signatures[0].label).isEqualTo("repeat(String s, Int count)")
+            assertThat(help.activeParameter).isEqualTo(0)
+        }
+
+        /**
+         * Cursor on the fifth argument of a five-parameter method should
+         * report activeParameter = 4 and the signature should have 5 params.
+         */
+        @Test
+        @DisplayName("should track active param in five-param method")
+        fun shouldTrackActiveParamInFiveParamMethod() {
+            val uri = freshUri()
+            ts.compile(uri, fiveParamSource())
+            // line 6: `            execute("run", 30, True, 5, "out.log");` — col 40 = '"' of "out.log"
+            val help = logged("shouldTrackActiveParamInFiveParamMethod", ts.getSignatureHelp(uri, 6, 40))
+
+            assertThat(help).isNotNull
+            assertThat(help!!.activeParameter).isEqualTo(4)
+            assertThat(help.signatures[0].parameters).hasSize(5)
+        }
+
+        /**
+         * When the cursor is right at the opening paren of a call, the adapter
+         * should still find the enclosing call expression and return a result.
+         */
+        @Test
+        @DisplayName("should return signature help at open paren")
+        fun shouldReturnSignatureHelpAtOpenParen() {
+            val uri = freshUri()
+            ts.compile(uri, calculatorSource())
+            // line 6: `            add(1, 2);` — col 15 = '('
+            val help = logged("shouldReturnSignatureHelpAtOpenParen", ts.getSignatureHelp(uri, 6, 15))
+
+            assertThat(help).isNotNull
+            assertThat(help!!.signatures[0].label).isEqualTo("add(Int a, Int b)")
+        }
+
+        /**
+         * Calling a method that has no declaration in the file should return null
+         * without crashing.
+         */
+        @Test
+        @DisplayName("should return null when called method not in file")
+        fun shouldReturnNullWhenCalledMethodNotInFile() {
+            val uri = freshUri()
+            ts.compile(uri, unknownMethodSource())
+            // line 3: `            unknown(42);` — col 20 = '4'
+            val help = logged("shouldReturnNullWhenCalledMethodNotInFile", ts.getSignatureHelp(uri, 3, 20))
+
+            assertThat(help).isNull()
         }
 
         private fun calculatorSource() =
@@ -1073,6 +1463,418 @@ class TreeSitterAdapterTest {
                 }
             }
             """.trimIndent()
+
+        private fun greeterSource() =
+            """
+            module myapp {
+                class Greeter {
+                    void greet() {
+                        return;
+                    }
+                    void test() {
+                        greet();
+                    }
+                }
+            }
+            """.trimIndent()
+
+        private fun clampSource() =
+            """
+            module myapp {
+                class MathUtil {
+                    Int clamp(Int value, Int low, Int high) {
+                        return value;
+                    }
+                    void test() {
+                        clamp(5, 0, 100);
+                    }
+                }
+            }
+            """.trimIndent()
+
+        private fun overloadedFormatSource() =
+            """
+            module myapp {
+                class Formatter {
+                    String format(String pattern) {
+                        return pattern;
+                    }
+                    String format(String pattern, Int width) {
+                        return pattern;
+                    }
+                    void test() {
+                        format("hello", 10);
+                    }
+                }
+            }
+            """.trimIndent()
+
+        private fun nestedCallSource() =
+            """
+            module myapp {
+                class Math {
+                    Int add(Int a, Int b) {
+                        return a + b;
+                    }
+                    Int negate(Int x) {
+                        return -x;
+                    }
+                    void test() {
+                        add(negate(1), 2);
+                    }
+                }
+            }
+            """.trimIndent()
+
+        private fun crossMethodSource() =
+            """
+            module myapp {
+                class StringUtil {
+                    String repeat(String s, Int count) {
+                        return s;
+                    }
+                    String padRight(String s, Int width) {
+                        return repeat(s, width);
+                    }
+                }
+            }
+            """.trimIndent()
+
+        private fun fiveParamSource() =
+            """
+            module myapp {
+                class Runner {
+                    void execute(String cmd, Int timeout, Boolean retry, Int max, String log) {
+                        return;
+                    }
+                    void test() {
+                        execute("run", 30, True, 5, "out.log");
+                    }
+                }
+            }
+            """.trimIndent()
+
+        private fun unknownMethodSource() =
+            """
+            module myapp {
+                class Caller {
+                    void test() {
+                        unknown(42);
+                    }
+                }
+            }
+            """.trimIndent()
+    }
+
+    // ========================================================================
+    // Call pattern edge cases — tree-sitter-specific
+    // ========================================================================
+
+    @Nested
+    @DisplayName("call pattern edge cases — tree-sitter-specific")
+    inner class CallPatternParsingTests {
+        /**
+         * `new Box(42)` is a constructor invocation, not a method call. Signature
+         * help should return null (no matching method declaration) without crashing.
+         */
+        @Test
+        @DisplayName("should return null for new expression")
+        fun shouldReturnNullForNewExpression() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Box {
+                        Int value;
+                    }
+                    class Test {
+                        void test() {
+                            new Box(42);
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor inside the `(42)` part of `new Box(42)` at line 6, col 20
+            val help = logged("shouldReturnNullForNewExpression", ts.getSignatureHelp(uri, 6, 20))
+
+            // No method named "Box" exists, so either null or no crash
+            // (grammar may route through generic_type but method lookup fails)
+            assertThat(help).isNull()
+        }
+
+        /**
+         * Cursor on the method name in a declaration (not a call) should return null
+         * because the declaration's parameters node is not named "arguments".
+         */
+        @Test
+        @DisplayName("should return null at method declaration site")
+        fun shouldReturnNullAtMethodDeclarationSite() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Calculator {
+                        Int add(Int a, Int b) {
+                            return a + b;
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor on 'add' in declaration at line 2, col 12
+            val help = logged("shouldReturnNullAtMethodDeclarationSite", ts.getSignatureHelp(uri, 2, 12))
+
+            assertThat(help).isNull()
+        }
+
+        /**
+         * Cursor on a bare identifier that is not a call expression (e.g., a
+         * variable reference) should return null.
+         */
+        @Test
+        @DisplayName("should return null for bare identifier reference")
+        fun shouldReturnNullForBareIdentifierReference() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Test {
+                        void test() {
+                            Int x = 42;
+                            Int y = x;
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor on 'x' in `Int y = x;` at line 4, col 20
+            val help = logged("shouldReturnNullForBareIdentifierReference", ts.getSignatureHelp(uri, 4, 20))
+
+            assertThat(help).isNull()
+        }
+    }
+
+    // ========================================================================
+    // Completions at call sites — tree-sitter-specific
+    // ========================================================================
+
+    @Nested
+    @DisplayName("completions at call sites — tree-sitter-specific")
+    inner class CompletionsAtCallSiteTests {
+        /**
+         * Completions inside a class body should include all sibling method names
+         * and the class name itself, since the adapter adds all document symbols.
+         */
+        @Test
+        @DisplayName("should include sibling methods in completions")
+        fun shouldIncludeSiblingMethodsInCompletions() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Calculator {
+                        Int add(Int a, Int b) {
+                            return a + b;
+                        }
+                        Int multiply(Int a, Int b) {
+                            return a * b;
+                        }
+                        void test() {
+                            add(1, 2);
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            val completions = logged("shouldIncludeSiblingMethodsInCompletions", ts.getCompletions(uri, 9, 12))
+            logger.info("  completion labels: {}", completions.map { it.label })
+
+            assertThat(completions).anyMatch { it.label == "add" }
+            assertThat(completions).anyMatch { it.label == "multiply" }
+            assertThat(completions).anyMatch { it.label == "test" }
+            assertThat(completions).anyMatch { it.label == "Calculator" }
+        }
+
+        /**
+         * After compiling source with multiple classes, completions should include
+         * all class names and method names from the entire file.
+         */
+        @Test
+        @DisplayName("should include symbols from multiple classes")
+        fun shouldIncludeSymbolsFromMultipleClasses() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Parser {
+                        void parse() {
+                            return;
+                        }
+                    }
+                    class Lexer {
+                        void tokenize() {
+                            return;
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            val completions = logged("shouldIncludeSymbolsFromMultipleClasses", ts.getCompletions(uri, 0, 0))
+            logger.info("  completion labels: {}", completions.map { it.label })
+
+            assertThat(completions).anyMatch { it.label == "Parser" }
+            assertThat(completions).anyMatch { it.label == "Lexer" }
+            assertThat(completions).anyMatch { it.label == "parse" }
+            assertThat(completions).anyMatch { it.label == "tokenize" }
+        }
+    }
+
+    // ========================================================================
+    // Selection ranges at call sites — tree-sitter-specific
+    // ========================================================================
+
+    @Nested
+    @DisplayName("selection ranges at call sites — tree-sitter-specific")
+    inner class SelectionRangesAtCallSiteTests {
+        /**
+         * Starting from an argument literal (`1` in `add(1, 2)`), the selection
+         * range chain should walk outward through argument list, call expression,
+         * statement, block, method, class, module — at least 4 levels deep.
+         */
+        @Test
+        @DisplayName("should walk outward from call argument")
+        fun shouldWalkOutwardFromCallArgument() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Calculator {
+                        Int add(Int a, Int b) {
+                            return a + b;
+                        }
+                        void test() {
+                            add(1, 2);
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor on '1' in `add(1, 2)` at line 6, col 16
+            val selections = ts.getSelectionRanges(uri, listOf(XtcCompilerAdapter.Position(6, 16)))
+            val depth = selectionDepth(selections.single())
+            logger.info("[TEST] shouldWalkOutwardFromCallArgument -> depth={}", depth)
+            logSelectionChain("shouldWalkOutwardFromCallArgument", selections.single())
+
+            assertThat(depth).isGreaterThanOrEqualTo(4)
+            assertWideningChain(selections.single())
+        }
+
+        /**
+         * Starting from a nested call argument (`1` in `negate(1)` inside
+         * `add(negate(1), 2)`), the chain should be even deeper — at least 5 levels.
+         */
+        @Test
+        @DisplayName("should walk outward from nested call argument")
+        fun shouldWalkOutwardFromNestedCallArgument() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Math {
+                        Int add(Int a, Int b) {
+                            return a + b;
+                        }
+                        Int negate(Int x) {
+                            return -x;
+                        }
+                        void test() {
+                            add(negate(1), 2);
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor on '1' in `negate(1)` at line 9, col 23
+            val selections = ts.getSelectionRanges(uri, listOf(XtcCompilerAdapter.Position(9, 23)))
+            val depth = selectionDepth(selections.single())
+            logger.info("[TEST] shouldWalkOutwardFromNestedCallArgument -> depth={}", depth)
+            logSelectionChain("shouldWalkOutwardFromNestedCallArgument", selections.single())
+
+            assertThat(depth).isGreaterThanOrEqualTo(5)
+            assertWideningChain(selections.single())
+        }
+
+        /**
+         * Multiple cursor positions in a single request should each produce an
+         * independent selection range chain.
+         */
+        @Test
+        @DisplayName("should handle multiple positions independently")
+        fun shouldHandleMultiplePositionsIndependently() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Calculator {
+                        Int add(Int a, Int b) {
+                            return a + b;
+                        }
+                        void test() {
+                            add(1, 2);
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            val positions =
+                listOf(
+                    XtcCompilerAdapter.Position(6, 16), // '1' in add(1, 2)
+                    XtcCompilerAdapter.Position(2, 12), // 'add' in declaration
+                )
+            val selections = ts.getSelectionRanges(uri, positions)
+            logger.info("[TEST] shouldHandleMultiplePositionsIndependently -> {} selections", selections.size)
+            selections.forEachIndexed { i, sel ->
+                logSelectionChain("shouldHandleMultiplePositionsIndependently[$i]", sel)
+            }
+
+            assertThat(selections).hasSize(2)
+            selections.forEach { assertWideningChain(it) }
+        }
+
+        private fun selectionDepth(sel: XtcCompilerAdapter.SelectionRange): Int = generateSequence(sel) { it.parent }.count()
+
+        private fun linearize(pos: XtcCompilerAdapter.Position): Int = pos.line * 10_000 + pos.column
+
+        private fun assertWideningChain(selection: XtcCompilerAdapter.SelectionRange) {
+            generateSequence(selection) { it.parent }
+                .zipWithNext()
+                .forEach { (child, parent) ->
+                    assertThat(linearize(parent.range.start))
+                        .isLessThanOrEqualTo(linearize(child.range.start))
+                    assertThat(linearize(parent.range.end))
+                        .isGreaterThanOrEqualTo(linearize(child.range.end))
+                }
+        }
+
+        private fun logSelectionChain(
+            test: String,
+            sel: XtcCompilerAdapter.SelectionRange,
+        ) {
+            val chain = generateSequence(sel) { it.parent }.toList()
+            chain.forEachIndexed { i, s ->
+                val r = s.range
+                logger.info("  [{}] level {} -> L{}:{}-L{}:{}", test, i, r.start.line, r.start.column, r.end.line, r.end.column)
+            }
+        }
     }
 
     // ========================================================================
