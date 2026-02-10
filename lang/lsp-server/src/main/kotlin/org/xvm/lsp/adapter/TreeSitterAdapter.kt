@@ -445,15 +445,23 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         val tree = parsedTrees[uri] ?: return null
         val node = tree.nodeAt(line, column) ?: return null
 
-        // Walk up to find enclosing call_expression
+        // Walk up to find enclosing call_expression or generic_type (which the grammar
+        // produces for `name(args)` calls since it can't distinguish calls from type
+        // expressions without semantic analysis).
+        val callTypes = setOf("call_expression", "generic_type")
         val callNode =
             generateSequence(node) { it.parent }
-                .firstOrNull { it.type == "call_expression" }
+                .firstOrNull { it.type in callTypes && it.childByType("arguments") != null }
                 ?: return null
 
-        // Extract function name from the call expression
+        // Extract function name — call_expression uses identifier directly,
+        // generic_type wraps it in type_name.
         val funcName =
             callNode.childByType("identifier")?.text
+                ?: callNode
+                    .childByType("type_name")
+                    ?.childByType("identifier")
+                    ?.text
                 ?: callNode
                     .childByType("member_expression")
                     ?.children
@@ -462,9 +470,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
                 ?: return null
 
         // Count commas before the cursor to determine active parameter
-        val argsNode =
-            callNode.childByType("argument_list")
-                ?: callNode.childByType("parameters")
+        val argsNode = callNode.childByType("arguments")
         val activeParam =
             argsNode?.children?.count { child ->
                 child.type == "," && (child.endLine < line || (child.endLine == line && child.endColumn <= column))

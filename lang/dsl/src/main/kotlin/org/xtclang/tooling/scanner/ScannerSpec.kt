@@ -12,10 +12,10 @@ package org.xtclang.tooling.scanner
  * to know what type of template content to scan.
  *
  * Grammar structure:
- *   template_string_literal: $" + singleline_content* + singleline_end
+ *   template_string_literal: `$"` + singleline_content* + singleline_end
  *   multiline_template_literal: $| + multiline_content* + multiline_end
  *
- * The $" and $| are regular grammar tokens (not external).
+ * The `$"` and `$|` are regular grammar tokens (not external).
  * This allows tree-sitter's lexer to match them correctly.
  */
 
@@ -61,7 +61,7 @@ object TemplateScannerSpec {
      * Scanner logic - determined by which tokens are valid:
      *
      * 1. If SINGLELINE_CONTENT or SINGLELINE_EXPR_START or SINGLELINE_END valid:
-     *    → In single-line template: scan until '{' or ", handle escapes
+     *    → In single-line template: scan until '{' or `"`, handle escapes
      *
      * 2. If MULTILINE_CONTENT or MULTILINE_EXPR_START or MULTILINE_END valid:
      *    → In multiline template: scan until '{' or newline-without-continuation

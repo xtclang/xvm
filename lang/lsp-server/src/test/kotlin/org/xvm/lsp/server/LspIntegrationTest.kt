@@ -137,14 +137,7 @@ class LspIntegrationTest {
     // Helpers
     // ========================================================================
 
-    private fun createTreeSitterAdapterOrNull(): TreeSitterAdapter? =
-        try {
-            TreeSitterAdapter()
-        } catch (_: Exception) {
-            null
-        } catch (_: UnsatisfiedLinkError) {
-            null
-        }
+    private fun createTreeSitterAdapterOrNull(): TreeSitterAdapter? = runCatching { TreeSitterAdapter() }.getOrNull()
 
     private fun resolveProjectRoot(): Path {
         val root =
