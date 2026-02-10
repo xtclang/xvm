@@ -222,9 +222,9 @@ public abstract class OpIndex
         TypeConstant typeEl = type.resolveGenericType("Element");
 
         if (type.isArray()) {
+            ClassDesc cdArray = type.ensureClassDesc(ts);
             if (typeEl.isPrimitive()) {
-                ClassDesc cdArray = type.ensureClassDesc(ts);
-                ClassDesc cdEl    = JitTypeDesc.getPrimitiveClass(typeEl);
+                ClassDesc cdEl = JitTypeDesc.getPrimitiveClass(typeEl);
 
                 bctx.loadCtx(code);
                 bctx.loadArgument(code, m_nIndex);
@@ -345,7 +345,6 @@ public abstract class OpIndex
                     default -> throw new UnsupportedOperationException(toName(getOpCode()));
                 }
             } else {
-                ClassDesc cdArray = Builder.CD_nArrayObj;
                 bctx.loadCtx(code);
                 bctx.loadArgument(code, m_nIndex);
                 switch (getOpCode()) {
