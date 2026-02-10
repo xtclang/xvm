@@ -134,7 +134,7 @@ class JreProvisioner(
             return null
         }
 
-    private fun findCachedJava(): Path? {
+    internal fun findCachedJava(): Path? {
         if (!jreDir.exists()) return null
         val javaName = if (isWindows) "java.exe" else "java"
         return Files
@@ -409,7 +409,7 @@ class JreProvisioner(
      * JRE archives typically have a versioned root like "jdk-25.0.1+9-jre/" - we move its contents up.
      * The internal structure (bin/java vs Contents/Home/bin/java) doesn't matter since findCachedJava() searches.
      */
-    private fun flattenSingleSubdirectory() {
+    internal fun flattenSingleSubdirectory() {
         val entries = jreDir.listDirectoryEntries()
 
         // If there's exactly one directory entry, flatten it

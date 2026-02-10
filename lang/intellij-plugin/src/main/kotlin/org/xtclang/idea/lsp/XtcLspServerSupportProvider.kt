@@ -83,6 +83,15 @@ class XtcLspConnectionProvider(
     companion object {
         /** Ensures we only show the "started" notification once per IDE session. */
         private val startNotificationShown = AtomicBoolean(false)
+
+        /**
+         * Resolve the LSP server JAR from a plugin directory.
+         * Returns the path to `bin/xtc-lsp-server.jar` if it exists, or null otherwise.
+         */
+        internal fun resolveServerJar(pluginDir: Path): Path? {
+            val serverJar = pluginDir.resolve("bin/xtc-lsp-server.jar")
+            return if (Files.exists(serverJar)) serverJar else null
+        }
     }
 
     /** Holds the provisioned java path once available. */
@@ -212,18 +221,16 @@ class XtcLspConnectionProvider(
     private fun findServerJar(): Path {
         // Primary: use PluginManagerCore to find the plugin directory (works for all IDE versions)
         PluginManagerCore.getPlugin(PluginId.getId("org.xtclang.idea"))?.let { plugin ->
-            val serverJar = plugin.pluginPath.resolve("bin/xtc-lsp-server.jar")
-            if (Files.exists(serverJar)) return serverJar
-            logger.warn("LSP server JAR not at expected location: $serverJar")
+            resolveServerJar(plugin.pluginPath)?.let { return it }
+            logger.warn("LSP server JAR not at expected location: ${plugin.pluginPath}/bin/xtc-lsp-server.jar")
             logger.warn("Plugin directory contents: ${plugin.pluginPath.toFile().listFiles()?.map { it.name }}")
         }
 
         // Fallback: find via classloader (our class is in lib/, JAR is in bin/)
         javaClass.protectionDomain?.codeSource?.location?.let { classUrl ->
             val pluginDir = Path.of(classUrl.toURI()).parent.parent
-            val serverJar = pluginDir.resolve("bin/xtc-lsp-server.jar")
-            if (Files.exists(serverJar)) return serverJar
-            logger.warn("LSP server JAR not found via classloader either: $serverJar")
+            resolveServerJar(pluginDir)?.let { return it }
+            logger.warn("LSP server JAR not found via classloader either: $pluginDir/bin/xtc-lsp-server.jar")
         }
 
         throw IllegalStateException(

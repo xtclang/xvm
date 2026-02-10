@@ -239,6 +239,13 @@ val lspVersionProperties: Configuration by configurations.creating {
 }
 
 dependencies {
+    // Test dependencies
+    testImplementation(platform(libs.junit.bom))
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
+    testRuntimeOnly("junit:junit:4.13.2") // Required by IntelliJ Platform test harness
+    testImplementation(libs.assertj)
+
     // LSP server fat JAR for out-of-process execution
     lspServerJar(project(path = ":lsp-server", configuration = "lspServerElements"))
 
@@ -698,7 +705,16 @@ val clean by tasks.existing(Delete::class) {
     delete(layout.buildDirectory.dir("idea-sandbox"))
 }
 
-// No tests in this module - disable test task to avoid IntelliJ plugin test infrastructure overhead
-val test by tasks.existing {
-    enabled = false
+// The IntelliJ Platform Gradle Plugin sets -Djava.system.class.loader=com.intellij.util.lang.PathClassLoader
+// on the test JVM so that IntelliJ's plugin classloading works during tests. This causes a harmless JVM warning:
+//   [warning][cds] Archived non-system classes are disabled because the java.system.class.loader property is specified
+// CDS (Class Data Sharing) is a JVM startup optimization; IntelliJ's custom classloader is incompatible with it
+// for non-system classes, so the JVM falls back to normal class loading. This is standard for all IntelliJ plugin
+// test suites and is unrelated to the LSP server JAR (which runs in a separate JVM process at runtime).
+val test by tasks.existing(Test::class) {
+    useJUnitPlatform()
+    jvmArgs("-Xlog:cds=off")
+    testLogging {
+        events("passed", "skipped", "failed")
+    }
 }
