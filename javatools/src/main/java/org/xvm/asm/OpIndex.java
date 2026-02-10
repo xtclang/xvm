@@ -17,6 +17,7 @@ import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
+import org.xvm.javajit.JitParamDesc.JitParams;
 import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
@@ -28,17 +29,11 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.Utils;
 
-import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_nObj;
-
-import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
-import static org.xvm.javajit.JitFlavor.Primitive;
-import static org.xvm.javajit.JitFlavor.Specific;
-import static org.xvm.javajit.JitFlavor.Widened;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -209,7 +204,11 @@ public abstract class OpIndex
     public void computeTypes(BuildContext bctx) {
         if (isAssignOp()) {
             TypeConstant typeFrom = bctx.getArgumentType(m_nTarget);
-            bctx.typeMatrix.assign(getAddress(), m_nRetValue, typeFrom.getParamType(0));
+            TypeConstant typeEl   = typeFrom.resolveGenericType("Element");
+            if (typeEl == null) {
+                throw new RuntimeException("Cannot find the element type for " + typeFrom);
+            }
+            bctx.typeMatrix.assign(getAddress(), m_nRetValue, typeEl);
         } else {
             super.computeTypes(bctx);
         }
@@ -220,7 +219,7 @@ public abstract class OpIndex
         TypeSystem   ts     = bctx.typeSystem;
         RegisterInfo reg    = bctx.loadArgument(code, m_nTarget);
         TypeConstant type   = reg.type();
-        TypeConstant typeEl = type.getParamType(0);
+        TypeConstant typeEl = type.resolveGenericType("Element");
 
         if (type.isArray()) {
             if (typeEl.isPrimitive()) {
@@ -388,57 +387,36 @@ public abstract class OpIndex
                 case OP_IIP_XOR  -> {sName = "xor";           sOp = "^";  }
                 default          -> throw new UnsupportedOperationException(toName(getOpCode()));
             }
-            TypeConstant  typeArg  = bctx.getArgumentType(m_nRetValue);
+
+            TypeConstant  typeArg  = bctx.getArgumentType(m_nIndex);
             MethodInfo    method   = type.ensureTypeInfo().findOpMethod(sName, sOp, typeArg);
+            JitMethodDesc jmd      = method.getJitDesc(ts, type);
             String        sJitName = method.ensureJitMethodName(ts);
-            throw new UnsupportedOperationException("TODO");
+
+            MethodTypeDesc mdCall;
+            if (jmd.isOptimized) {
+                mdCall  = jmd.optimizedMD;
+                sJitName += Builder.OPT;
+            }
+            else {
+                mdCall = jmd.standardMD;
+            }
+            bctx.loadCtx(code);
+            bctx.loadCallArguments(code, jmd, new int[] {m_nIndex});
+
+            code.invokevirtual(reg.cd(), sJitName, mdCall);
         }
 
         if (isAssignOp()) {
-            JitParams      result      = computeJitParams(ts, typeEl);
-            JitParamDesc[] apdOptParam = result.apdOptParam();
-
-            JitMethodDesc jmd = new JitMethodDesc(
-                result.apdStdParam(), JitParamDesc.NONE,
-                apdOptParam, apdOptParam == null ? null : JitParamDesc.NONE);
+            JitParams     params = JitParamDesc.computeJitParams(ts, typeEl);
+            JitMethodDesc jmd    = new JitMethodDesc(
+                params.apdStdParam(), JitParamDesc.NONE,
+                params.apdOptParam(), params.isOptimized() ? JitParamDesc.NONE : null);
 
             bctx.assignReturns(code, jmd, 1, new int[] {m_nRetValue});
         }
     }
 
-    private JitParams computeJitParams(TypeSystem ts, TypeConstant type) {
-        JitParamDesc[] apdOptParam = null;
-        JitParamDesc[] apdStdParam;
-        ClassDesc cd;
-
-        if ((cd = JitTypeDesc.getPrimitiveClass(type)) != null) {
-            ClassDesc cdStd = type.ensureClassDesc(ts);
-
-            apdStdParam = new JitParamDesc[] {
-                new JitParamDesc(type, Specific, cdStd, 0, 0, false)};
-            apdOptParam = new JitParamDesc[] {
-                new JitParamDesc(type, Primitive, cd, 0, 0, false)};
-        } else if ((cd = JitTypeDesc.getMultiSlotPrimitiveClass(type)) != null) {
-            apdStdParam = new JitParamDesc[] {
-                new JitParamDesc(type, Widened, cd, 0, 0, false)};
-            apdOptParam = new JitParamDesc[] {
-                new JitParamDesc(type, MultiSlotPrimitive, cd, 0, 0, false),
-                new JitParamDesc(type, MultiSlotPrimitive, CD_boolean, 0, 1, true)
-            };
-        } else if ((cd = JitTypeDesc.getWidenedClass(type)) != null) {
-            apdStdParam = new JitParamDesc[] {
-                new JitParamDesc(type, Widened, cd, 0, 0, false)};
-        } else {
-            assert type.isSingleUnderlyingClass(true);
-
-            cd = type.ensureClassDesc(ts);
-            apdStdParam = new JitParamDesc[] {
-                new JitParamDesc(type, Specific, cd, 0, 0, false)};
-        }
-        return new JitParams(apdStdParam, apdOptParam);
-    }
-
-    private record JitParams(JitParamDesc[] apdStdParam, JitParamDesc[] apdOptParam) {}
 
     /**
      * @return the index of the argument value for corresponding ops

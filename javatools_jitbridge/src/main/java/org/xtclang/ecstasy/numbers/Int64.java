@@ -1,8 +1,11 @@
 package org.xtclang.ecstasy.numbers;
 
+import org.xtclang.ecstasy.Comparable;
 import org.xtclang.ecstasy.Exception;
-import org.xtclang.ecstasy.nConst;
+import org.xtclang.ecstasy.Orderable;
+import org.xtclang.ecstasy.Ordered;
 import org.xtclang.ecstasy.OutOfBounds;
+import org.xtclang.ecstasy.nType;
 
 import org.xtclang.ecstasy.text.String;
 
@@ -11,14 +14,13 @@ import org.xvm.javajit.Ctx;
 /**
  * Native Int64 wrapper.
  */
-public class Int64 extends nConst {
+public class Int64 extends IntNumber {
     /**
      * Construct an Ecstasy Int64 object.
      *
      * @param value  the 64-bit signed integer value
      */
     private Int64(long value) {
-        super(null);
         $value = value;
     }
 
@@ -57,6 +59,13 @@ public class Int64 extends nConst {
         }
         // TODO consider using a cache on the context (to avoid CPU cache line collisions)
         return new Int64(value);
+    }
+
+    /**
+     * Int64 add(Int64! n)
+     */
+    public long addꖛ0$p(Ctx ctx, long n) {
+        return $value + n;
     }
 
     /**
@@ -257,6 +266,32 @@ public class Int64 extends nConst {
             throw oob.$init(ctx, "Int64 value " + $value + " is not a valid UInt128 value");
         }
         return new UInt128($value, $value >= 0L ? 0L : -1L);
+    }
+
+    // ----- Orderable interface -------------------------------------------------------------------
+
+    /**
+     * The primitive implementation of:
+     *
+     * static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
+     */
+    public static Ordered compare(Ctx ctx, nType type, Orderable value1, Orderable value2) {
+        long l1 = ((Int64) value1).$value;
+        long l2 = ((Int64) value2).$value;
+        return l1 < l2    ? Ordered.Lesser.$INSTANCE
+               : l1 == l2 ? Ordered.Equal.$INSTANCE
+                          : Ordered.Greater.$INSTANCE;
+    }
+
+    /**
+     * The primitive implementation of:
+     *
+     *  static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
+     */
+    public static Boolean equals(Ctx ctx, nType type, Comparable value1, Comparable value2) {
+        long l1 = ((Int64) value1).$value;
+        long l2 = ((Int64) value2).$value;
+        return l1 == l2 ? Boolean.TRUE : Boolean.FALSE;
     }
 
     // ----- debugging support ---------------------------------------------------------------------

@@ -97,12 +97,12 @@ public abstract class OpReturn
             for (int i = 0; i < cRets; i++) {
                 int          iOpt   = fOptimized ? jmd.getOptimizedReturnIndex(i) : -1;
                 JitParamDesc pdRet  = fOptimized ? jmd.optimizedReturns[iOpt] : jmd.standardReturns[i];
-                RegisterInfo regRet = bctx.loadArgument(code, anRet[i], pdRet);
+                RegisterInfo regRet = bctx.loadArgument(code, anRet[i]);
                 ClassDesc    cd     = regRet.cd();
                 int          slotR  = bctx.scope.getSynthetic(sRetVal + i, true);
 
                 switch (pdRet.flavor) {
-                case MultiSlotPrimitive:
+                case NullablePrimitive:
                     assert fOptimized;
                     int slotValEx = bctx.scope.getSynthetic(sRetVal + (i + 1), true);
                     if (cd.isPrimitive()) {
@@ -133,57 +133,87 @@ public abstract class OpReturn
             for (int i = cRets - 1; i >= 0; i--) {
                 int          iOpt   = fOptimized ? jmd.getOptimizedReturnIndex(i) : -1;
                 JitParamDesc pdRet  = fOptimized ? jmd.optimizedReturns[iOpt] : jmd.standardReturns[i];
-                RegisterInfo regRet = bctx.loadArgument(code, anRet[i], pdRet);
+                RegisterInfo regRet = bctx.loadArgument(code, anRet[i]);
                 ClassDesc    cd     = regRet.cd();
-                if (i == 0) {
-                    switch (pdRet.flavor) {
-                    case MultiSlotPrimitive:
-                        assert fOptimized;
-                        if (cd.isPrimitive()) {
-                            // `false` at Ctx.i0 and return the actual primitive value
-                            code.iconst_0();
-                            Builder.storeToContext(code, CD_boolean, 0);
-                            Builder.addReturn(code, cd);
-                        } else {
-                            assert regRet.type().isOnlyNullable();
+                boolean      fValid = true;
 
-                            // throw away Null; `true` at Ctx.i0 and return the default value
-                            code.pop().iconst_1();
-                            Builder.storeToContext(code, CD_boolean, 0);
-                            Builder.defaultLoad(code, pdRet.cd);
-                            Builder.addReturn(code, pdRet.cd);
-                        }
+                switch (regRet.flavor()) {
+                case NullablePrimitive:
+                    switch (pdRet.flavor) {
+                    case NullablePrimitive:
+                        assert fOptimized;
+                        // e.g.: Int? f(Int? i) = i;
+                        JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
+                        Builder.storeToContext(code, CD_boolean, pdExt.altIndex);
+                        break;
+
+                    case Primitive:
+                        // e.g.: Int f(Int? i) = i ?: -1;
+                        code.pop();
                         break;
 
                     default:
-                        Builder.addReturn(code, cd);
+                        fValid = false;
                         break;
+                    }
+                    break;
+
+                case Primitive: {
+                    assert fOptimized;
+                    switch (pdRet.flavor) {
+                    case NullablePrimitive:
+                        // e.g.: Int? f() = 42;
+
+                        // pass `false` at Ctx
+                        JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
+                        code.iconst_0();
+                        Builder.storeToContext(code, CD_boolean, pdExt.altIndex);
+                        break;
+
+                    case Primitive:
+                        break;
+
+                    default:
+                        fValid = false;
+                        break;
+                    }
+                    break;
+                }
+
+                case Specific:
+                    switch (pdRet.flavor) {
+                    case NullablePrimitive:
+                        // e.g.: Int? f() = Null;
+                        assert fOptimized && regRet.type().isOnlyNullable();
+                        JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
+
+                        // throw away Null; `true` at Ctx and return the default value
+                        code.pop().iconst_1();
+                        Builder.storeToContext(code, CD_boolean, pdExt.altIndex);
+                        cd = pdRet.cd;
+                        Builder.defaultLoad(code, cd);
+                        break;
+
+                    case Specific:
+                        break;
+
+                    default:
+                        fValid = false;
+                        break;
+                    }
+                }
+
+                if (fValid) {
+                    if (i == 0) {
+                        // return the actual primitive value
+                        Builder.addReturn(code, cd);
+                    } else {
+                        // pass the actual primitive value at Ctx
+                        Builder.storeToContext(code, cd, pdRet.altIndex);
                     }
                 } else {
-                    switch (pdRet.flavor) {
-                    case MultiSlotPrimitive:
-                        assert fOptimized;
-                        JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
-                        if (cd.isPrimitive()) {
-                            // the actual primitive value and `false` at Ctx
-                            Builder.storeToContext(code, cd, pdRet.altIndex);
-                            code.iconst_0();
-                            Builder.storeToContext(code, CD_boolean, pdExt.altIndex);
-                        } else {
-                            assert regRet.type().isOnlyNullable();
-
-                            // the default primitive value and `true` at Ctx
-                            Builder.defaultLoad(code, pdRet.cd);
-                            Builder.storeToContext(code, cd, pdRet.altIndex);
-                            code.iconst_1();
-                            Builder.storeToContext(code, CD_boolean, pdExt.altIndex);
-                        }
-                        break;
-
-                    default:
-                        Builder.storeToContext(code, cd, pdRet.altIndex);
-                        break;
-                    }
+                    throw new UnsupportedOperationException(
+                        "Not implemented: src=" + regRet.flavor() + "; dst=" + pdRet.flavor);
                 }
             }
         }

@@ -36,9 +36,7 @@ public interface NumberSupport {
                 code.iadd();
                 bctx.adjustIntValue(code, regTarget.type());
             }
-            case "J" -> {
-                code.ladd();
-            }
+            case "J" -> code.ladd();
             case "F" -> code.fadd();
             case "D" -> code.dadd();
             default  -> throw new IllegalStateException();

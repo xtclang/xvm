@@ -4,9 +4,13 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import java.lang.classfile.ClassFile;
+import java.lang.classfile.ClassHierarchyResolver;
 import java.lang.classfile.ClassModel;
 import java.lang.classfile.Interfaces;
+import java.lang.classfile.MethodModel;
 import java.lang.classfile.Superclass;
+
+import java.lang.constant.ConstantDescs;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -165,9 +169,12 @@ public class NativeTypeSystem
      * Augment the existing native class with the Ecstasy methods.
      */
     private byte[] augmentNativeClass(ClassModel model, String className, TypeConstant type) {
-        Builder builder = ensureBuilder(type, model);
-
-        return ClassFile.of().transformClass(model, (classBuilder, element) -> {
+        ClassFile classFile = ClassFile.of(
+                ClassFile.ClassHierarchyResolverOption.of(
+                    ClassHierarchyResolver.ofClassLoading(loader)),
+                ClassFile.ShortJumpsOption.FIX_SHORT_JUMPS,
+                ClassFile.StackMapsOption.GENERATE_STACK_MAPS);
+        return classFile.transformClass(model, (classBuilder, element) -> {
             if (element instanceof Interfaces) {
                 // don't copy an interface list; it would prevent the builder to add any;
                 // NOTE: any "implements" declared by the native classes will be removed
@@ -177,11 +184,20 @@ public class NativeTypeSystem
                 return;
             }
 
+            // ignore native enum values; we are not generating any code for them
+            if (!type.isEnumValue() &&
+                    element instanceof MethodModel methodModel &&
+                    methodModel.methodName().stringValue().equals(ConstantDescs.CLASS_INIT_NAME)) {
+                // skip the static initializer for now; we will re-incorporate it later;
+                // see AugmentingBuilder.augmentStaticInitializer()
+                return;
+            }
+
             classBuilder.with(element); // copy everything else "as is"
 
             if (element instanceof Superclass) {
                 // augment the new classfile using the Ecstasy class structure (just once!)
-                builder.assembleImpl(className, classBuilder);
+                ensureBuilder(type, model).assembleImpl(className, classBuilder);
             }
         });
     }
@@ -191,7 +207,7 @@ public class NativeTypeSystem
 
         if (nativeBuilders.get(type) instanceof Class builderClass) {
             try {
-                return (Builder) builderClass.getDeclaredConstructor(
+                return (AugmentingBuilder) builderClass.getDeclaredConstructor(
                     TypeSystem.class, TypeConstant.class, ClassModel.class).
                         newInstance(this, type, model);
             } catch (Exception e) {

@@ -40,6 +40,7 @@ import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.TypeParameterConstant;
 
 import org.xvm.asm.op.CatchStart;
 import org.xvm.asm.op.Enter;
@@ -70,10 +71,13 @@ import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nException;
 import static org.xvm.javajit.Builder.CD_nFunction;
 import static org.xvm.javajit.Builder.CD_nObj;
+import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.N_TypeMismatch;
 import static org.xvm.javajit.Builder.OPT;
-import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
+import static org.xvm.javajit.JitFlavor.NullablePrimitive;
+import static org.xvm.javajit.JitFlavor.Primitive;
+import static org.xvm.javajit.JitFlavor.Specific;
 import static org.xvm.javajit.TypeSystem.ID_NUM;
 
 /**
@@ -562,25 +566,6 @@ public class BuildContext {
     }
 
     /**
-     * TODO: Resolve the specified type.
-     */
-    public TypeConstant resolveType(CodeBuilder code, TypeConstant type) {
-        if (type.containsFormalType(true)) {
-            // TODO: how to resolve?
-            if (type.containsFormalType(true)) {
-                // soft assertion
-                System.err.println("ERROR: Unresolved type " + type);
-            }
-        }
-
-        if (!isFunction && type.containsAutoNarrowing(true)) {
-            // TODO: how to resolve?
-        }
-
-        return type;
-        }
-
-    /**
      * Prepare the compilation.
      */
     public void enterMethod(CodeBuilder code) {
@@ -597,9 +582,11 @@ public class BuildContext {
         ClassDesc    CD_this   = thisType.ensureClassDesc(typeSystem);
         if (isConstructor) {
             thisType = thisType.ensureAccess(Access.STRUCT);
-            registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, extraArgs-1, thisType, CD_this, "thi$"));
+            registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, extraArgs-1, thisType, Specific,
+                CD_this, "thi$"));
         } else if (!isFunction) {
-            registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, 0, thisType, CD_this, "this$"));
+            registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, 0, thisType, Specific,
+                CD_this, "this$"));
         }
         typeMatrix.declare(-1, Op.A_THIS, thisType);
 
@@ -612,19 +599,25 @@ public class BuildContext {
             TypeConstant type      = param.getType();
             int          slot      = code.parameterSlot(extraArgs + i); // compensate for implicits
 
+            if (type.containsFormalType(true)) {
+                type = type.resolveGenerics(pool(), thisType);
+            }
+
             code.localVariable(slot, name, paramDesc.cd, scope.startLabel, scope.endLabel);
             scope.topReg = Math.max(scope.topReg, varIndex + 1);
 
-            switch (paramDesc.flavor) {
+            JitFlavor flavor = paramDesc.flavor;
+            switch (flavor) {
             case Specific, Widened, Primitive, SpecificWithDefault, WidenedWithDefault:
-                registerInfos.put(varIndex, new SingleSlot(varIndex, slot, type, paramDesc.cd, name));
+                registerInfos.put(varIndex,
+                    new SingleSlot(varIndex, slot, type, flavor, paramDesc.cd, name));
                 break;
 
-            case MultiSlotPrimitive, PrimitiveWithDefault:
+            case NullablePrimitive, PrimitiveWithDefault:
                 int extSlot = code.parameterSlot(extraArgs + i + 1);
 
                 registerInfos.put(varIndex,
-                    new DoubleSlot(varIndex, slot, extSlot, paramDesc.flavor, type, paramDesc.cd, name));
+                    new DoubleSlot(this, varIndex, slot, extSlot, flavor, type, paramDesc.cd, name));
                 i++; // already processed
                 break;
             }
@@ -672,33 +665,19 @@ public class BuildContext {
                 }
                 if (entry.getValue() instanceof Narrowed narrowedReg &&
                         narrowedReg.scopeDepth >= scope.depth) {
-                    // reset the register type
-                    entry.setValue(narrowedReg.origReg());
+                    // copy the data and reset the register type
+                    // TODO: track the data change to prevent unnecessary copy
+                    RegisterInfo origReg = narrowedReg.origReg();
+                    if (narrowedReg.slot() != origReg.slot()) {
+                        narrowedReg.load(code);
+                        moveVar(code, narrowedReg, origReg, false);
+                    }
+                    entry.setValue(origReg);
                 }
-            }
-
-
-            // there are scenarios when Exit is unreachable (e.g. following LoopEnd)
-            if (isReached) {
-                mergeTypes(code, currOpAddr + 1);
             }
         }
 
         return prevScope;
-    }
-
-    /**
-     * Merge the types for the specified address.
-     */
-    public void mergeTypes(CodeBuilder code, int jumpAddr) {
-        // collect the registered that need to be "widened"
-        for (int widenedId : typeMatrix.follow(currOpAddr, jumpAddr, -1)) {
-            if (registerInfos.get(widenedId) instanceof Narrowed narrowedReg) {
-                // TODO: if reg.changed
-                RegisterInfo reg = narrowedReg.widen(this, code, typeMatrix.getType(widenedId, jumpAddr));
-                registerInfos.put(widenedId, reg);
-            }
-        }
     }
 
     /**
@@ -768,8 +747,7 @@ public class BuildContext {
         assert isConstructor || !isFunction;
 
         RegisterInfo reg = getRegisterInfo(code, Op.A_THIS);
-        reg.load(code);
-        return reg;
+        return reg.load(code);
     }
 
     /**
@@ -805,46 +783,15 @@ public class BuildContext {
     }
 
     /**
-     * Build the code to load an argument value on the Java stack.
-     */
+     * Build the code to load an argument value on the Java stack. If the argument represents a
+     * constant, the corresponding value gets loaded on the Java stack directly, without allocating
+     * a Java slot, in which case the RegisterInfo.slot() returns the value of {@link Op#A_STACK}
+     * (-1).
+     * */
     public RegisterInfo loadArgument(CodeBuilder code, int argId) {
-        if (argId >= 0) {
-            RegisterInfo reg = getRegisterInfo(code, argId);
-            assert reg != null;
-            ClassDesc cd = reg.cd();
-            if (reg instanceof DoubleSlot doubleSlot) {
-                switch (doubleSlot.flavor) {
-                case PrimitiveWithDefault:
-                    Parameter parameter = methodStruct.getParam(argId);
-                    assert parameter.hasDefaultValue();
-
-                    Label ifTrue = code.newLabel();
-                    Label endIf  = code.newLabel();
-
-                    // if the extension slot is `true`, take the default value
-                    code.iload(doubleSlot.extSlot)
-                        .ifne(ifTrue)
-                        .loadLocal(Builder.toTypeKind(cd), doubleSlot.slot)
-                        .goto_(endIf)
-                        .labelBinding(ifTrue);
-                    builder.loadConstant(this, code, parameter.getDefaultValue());
-                    code.labelBinding(endIf);
-                    return new SingleSlot(reg.type(), cd, reg.name());
-
-                case MultiSlotPrimitive:
-                    code.loadLocal(Builder.toTypeKind(cd), doubleSlot.slot);
-                    code.loadLocal(TypeKind.BOOLEAN, doubleSlot.extSlot);
-                    return reg;
-
-                default:
-                    throw new IllegalStateException();
-                }
-            }
-            code.loadLocal(Builder.toTypeKind(cd), reg.slot());
-
-            return adjustRegister(code, reg, true);
-        }
-        return argId <= Op.CONSTANT_OFFSET
+        return argId >= 0
+            ? adjustRegister(code, getRegisterInfo(code, argId).load(code), true)
+            : argId <= Op.CONSTANT_OFFSET
                 ? loadConstant(code, argId)
                 : loadPredefineArgument(code, argId);
     }
@@ -856,12 +803,13 @@ public class BuildContext {
      * @param loaded  if true, the register value has been loaded on the Java stack
      */
     protected RegisterInfo adjustRegister(CodeBuilder code, RegisterInfo reg, boolean loaded) {
-        if (!reg.cd().isPrimitive()) {
+        if (!reg.type().isPrimitive()) {
             int          regId   = reg.regId();
             TypeConstant regType = reg.type().getCanonicalJitType();
             TypeConstant mtxType = typeMatrix.getType(regId, currOpAddr);
 
-            if (!mtxType.equals(regType)) {
+            // the types could be equivalent, but not equal
+            if (!mtxType.isA(regType) || !regType.isA(mtxType)) {
                 int depth = scope.depth;
                 if (reg instanceof Narrowed narrowedReg) {
                     reg     = narrowedReg.origReg();
@@ -870,51 +818,24 @@ public class BuildContext {
                     if (mtxType.equals(regType)) {
                         return reg;
                     }
+                } else if (reg.cd().isPrimitive()) {
+                    assert reg.flavor() == NullablePrimitive &&
+                        (mtxType.isPrimitive() || mtxType.isTypeParameter());
+                    return reg;
                 }
 
                 assert mtxType.isA(regType);
+
                 // narrow, but stay boxed for primitive types
                 ClassDesc narrowedCD = mtxType.ensureClassDesc(typeSystem);
+
                 // if already loaded - cast here and don't cast on load
-                reg = new Narrowed(regId, reg.slot(), mtxType, narrowedCD, reg.name(), depth, !loaded, reg);
+                reg = new Narrowed(regId, reg.slot(), mtxType, Specific, narrowedCD, reg.name(),
+                        depth, !loaded, reg);
                 registerInfos.put(regId, reg);
                 if (loaded) {
                     code.checkcast(narrowedCD);
                 }
-            }
-        }
-        return reg;
-    }
-
-    /**
-     * Build the code to load an argument value on the Java stack. If the argument represents a
-     * constant, the corresponding value gets loaded on the Java stack directly, without allocating
-     * a Java slot, in which case the RegisterInfo.slot() returns the value of {@link Op#A_STACK}
-     * (-1).
-     *
-     * @param targetDesc  the desired type description
-     */
-    public RegisterInfo loadArgument(CodeBuilder code, int argId, JitTypeDesc targetDesc) {
-        RegisterInfo reg = loadArgument(code, argId);
-        if (reg.cd().isPrimitive() && !targetDesc.cd.isPrimitive()) {
-            if (reg instanceof DoubleSlot doubleSlot) {
-                assert doubleSlot.flavor == MultiSlotPrimitive;
-                // loadArgument() has already loaded the value and the boolean
-
-                Label ifTrue = code.newLabel();
-                Label endIf  = code.newLabel();
-
-                code.ifne(ifTrue);
-                Builder.box(code, reg.type().removeNullable(), reg.cd());
-                code.goto_(endIf)
-                    .labelBinding(ifTrue);
-                Builder.pop(code, doubleSlot.cd);
-                Builder.loadNull(code);
-                code.labelBinding(endIf);
-                reg = new SingleSlot(targetDesc.type, targetDesc.cd, reg.name() + "?");
-            } else {
-                Builder.box(code, reg.type(), reg.cd());
-                reg = new SingleSlot(targetDesc.type, targetDesc.cd, reg.name());
             }
         }
         return reg;
@@ -939,7 +860,7 @@ public class BuildContext {
         assert reg.isSingle() && reg.slot() == -1; // constant
 
         int slot = storeTempValue(code, reg.cd());
-        return new SingleSlot(argId, slot, reg.type(), reg.cd(), reg.name());
+        return new SingleSlot(argId, slot, reg.type(), reg.flavor(), reg.cd(), reg.name());
     }
 
     /**
@@ -961,6 +882,42 @@ public class BuildContext {
     }
 
     /**
+     * Generate a "load" for the specified TypeConstant.
+     * Out: TypeConstant on Java stack
+     */
+    public void loadTypeConstant(CodeBuilder code, TypeConstant type) {
+        builder.loadTypeConstant(code, className, type);
+    }
+
+    /**
+     * Generate a "load" for an nType object for the specified TypeConstant.
+     *
+     * Note: the specified type must be {@link TypeConstant#isTypeOfType() type-of-type}.
+     *
+     * Out: nType object instance
+     */
+    public RegisterInfo loadType(CodeBuilder code, TypeConstant type) {
+        if (type.isTypeParameter()) {
+            int iReg = ((TypeParameterConstant) type.getDefiningConstant()).getRegister();
+            return loadArgument(code, iReg);
+        }
+
+        assert type.isTypeOfType();
+        TypeConstant typeData = type.getParamType(0);
+
+        if (typeData.isTypeParameter()) {
+            int iReg = ((TypeParameterConstant) typeData.getDefiningConstant()).getRegister();
+            return loadArgument(code, iReg);
+        }
+
+        loadCtx(code);
+        loadTypeConstant(code, typeData);
+        code.invokestatic(CD_nType, "$ensureType",
+                          MethodTypeDesc.of(CD_nType, CD_Ctx, CD_TypeConstant));
+        return new SingleSlot(type, Specific, CD_nType, "");
+    }
+
+    /**
      * Build the code to load a value for a predefine constant on the Java stack.
      */
     public RegisterInfo loadPredefineArgument(CodeBuilder code, int argId) {
@@ -968,8 +925,7 @@ public class BuildContext {
         case Op.A_STACK:
             // this refers to a synthetic RegInfo created by the pushTempRegister() method
             RegisterInfo reg = tempRegStack.pop();
-            reg.load(code);
-            return reg;
+            return reg.load(code);
 
         case Op.A_THIS:
             return loadThis(code);
@@ -1026,7 +982,7 @@ public class BuildContext {
         code.new_(cd)
             .dup()
             .aload(code.parameterSlot(0)); // ctx
-        Builder.loadTypeConstant(code, typeSystem, fnType);
+        loadTypeConstant(code, fnType);
         code.ldc(stdMD)
             .aload(0)
             .invokevirtual(CD_MethodHandle, "bindTo", bindDesc);
@@ -1040,7 +996,7 @@ public class BuildContext {
         code.iconst_1() // immutable = true
             .invokespecial(cd, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant,
                 CD_MethodHandle, CD_MethodHandle, CD_boolean));
-        return new SingleSlot(fnType, cd, "");
+        return new SingleSlot(fnType, Specific, cd, "");
     }
 
     /**
@@ -1073,10 +1029,6 @@ public class BuildContext {
         TypeConstant type = (TypeConstant) getConstant(typeId);
         String       name = nameId == 0 ? "" : ((StringConstant) getConstant(nameId)).getValue();
 
-        if (type.containsFormalType(true)) {
-            type = type.resolveGenerics(pool(), typeInfo.getType());
-        }
-
         return introduceVar(code, regId, type, name);
     }
 
@@ -1091,36 +1043,195 @@ public class BuildContext {
         if (regId < 0) {
             throw new IllegalArgumentException("Invalid var index: " + regId);
         }
+
+        if (type.containsFormalType(true)) {
+            type = type.resolveGenerics(pool(), typeInfo.getType());
+        }
+
         if (name.isEmpty()) {
             name = "v$" + regId;
         } else {
             name = name.replace('#', '$').replace('.', '$');
         }
 
-        Label varStart = code.newLabel();
+        Label        varStart = code.newLabel();
+        JitTypeDesc  jtd      = type.getJitDesc(typeSystem);
+        RegisterInfo reg      = switch (jtd.flavor) {
+            case Specific, Widened, Primitive -> {
+                int slotPrime = scope.allocateLocal(regId, jtd.cd);
+                code.localVariable(slotPrime, name, jtd.cd, varStart, scope.endLabel);
 
-        ClassDesc    cd;
-        RegisterInfo reg;
-        if ((cd = JitTypeDesc.getMultiSlotPrimitiveClass(type)) != null) {
-            int slotPrime = scope.allocateLocal(regId, cd);
-            int slotExt   = scope.allocateLocal(regId, TypeKind.BOOLEAN);
+                yield new SingleSlot(regId, slotPrime, type, jtd.flavor, jtd.cd, name);
+            }
+            case NullablePrimitive -> {
+                int slotPrime = scope.allocateLocal(regId, jtd.cd);
+                int slotExt   = scope.allocateLocal(regId, TypeKind.BOOLEAN);
 
-            code.localVariable(slotPrime, name, cd, varStart, scope.endLabel);
-            code.localVariable(slotExt,   name+EXT, CD_boolean, varStart, scope.endLabel);
+                code.localVariable(slotPrime, name, jtd.cd, varStart, scope.endLabel);
+                code.localVariable(slotExt,   name+EXT, CD_boolean, varStart, scope.endLabel);
 
-            reg = new DoubleSlot(regId, slotPrime, slotExt, MultiSlotPrimitive, type, cd, name);
-        } else {
-            cd = JitParamDesc.getJitClass(typeSystem, type);
-
-            int slotPrime = scope.allocateLocal(regId, cd);
-            code.localVariable(slotPrime, name, cd, varStart, scope.endLabel);
-
-            reg = new SingleSlot(regId, slotPrime, type, cd, name);
-        }
+                yield new DoubleSlot(this, regId, slotPrime, slotExt, NullablePrimitive,
+                    type, jtd.cd, name);
+            }
+            default -> throw new UnsupportedOperationException("Not implemented: " + jtd.flavor);
+        };
 
         registerInfos.put(regId, reg);
         unassignedRegisters.put(reg, varStart);
         return reg;
+    }
+
+    /**
+     * Build the code that moves the value between the vars.
+     *
+     * @param allowUpcast  if true, the destination type is allowed to be narrower and the
+     *                     corresponding "checkcast" needs to be added, which can happen in some
+     *                     scenarios (e.g.: assignment of narrowed properties)
+     */
+    public void moveVar(CodeBuilder code, int fromVarId, int toVarId, boolean allowUpcast) {
+        RegisterInfo regFrom  = loadArgument(code, fromVarId);
+        RegisterInfo regTo    = ensureRegInfo(toVarId, regFrom.type());
+
+        moveVar(code, regFrom, regTo, allowUpcast);
+    }
+
+    /**
+     * Build the code that moves the value between the vars represented by the corresponding
+     * registers.
+     *
+     * Note: the value of the "regFrom" has already been loaded on Java stack.
+     *
+     * @param allowUpcast  if true, the destination type is allowed to be narrower and the
+     *                     corresponding "checkcast" needs to be added, which can happen in some
+     *                     scenarios (e.g.: assignment of narrowed properties)
+     */
+    public void moveVar(CodeBuilder code, RegisterInfo regFrom, RegisterInfo regTo,
+                        boolean allowUpcast) {
+        TypeConstant typeFrom = regFrom.type();
+        TypeConstant typeTo   = regTo.type();
+        ClassDesc    cdFrom   = regFrom.cd();
+
+        if (!typeFrom.isA(typeTo)) {
+            if (regTo instanceof Narrowed narrowedReg) {
+                regTo  = resetRegister(narrowedReg);
+                typeTo = regTo.type();
+            }
+
+            if (!typeFrom.isA(typeTo) && regFrom.flavor() != NullablePrimitive) {
+                assert allowUpcast;
+                if (cdFrom.isPrimitive()) {
+                    // this can only be caused by a dead/unreachable code
+                    ensureVarScope(code, regTo);
+                    throwTypeMismatch(code, "Unreconcilable types " +
+                            typeFrom.getValueString() + " -> " + typeTo.getValueString());
+                    // unfortunately, if generated for any reachable code, this will throw
+                    // during the verification phase without any useful information to debug
+                    System.err.println("*** Unreconcilable types " +
+                            typeFrom.getValueString() + " -> " + typeTo.getValueString());
+                    return;
+                }
+
+                // trust the compiler
+                generateCheckCast(code, typeTo);
+            }
+        }
+
+        if (regFrom.flavor() != regTo.flavor()) {
+            // additional transformations are required for these scenarios:
+            //  - Primitive -> Widened            (n = 5; where Int? n;)
+            //  - Specific  -> NullablePrimitive  (Int? n = 5; or Int? n = Null;)
+            //  - Specific  -> Primitive          (Int n := o.is(Int);)
+            //  - NullablePrimitive -> Specific   (Int? n = Null; assert call(n);)
+
+            JitFlavor srcFlavor = regFrom.flavor();
+            JitFlavor dstFlavor = regTo.flavor();
+            boolean   invalid   = false;
+
+            AddTransformation:
+            switch (srcFlavor) {
+            case Specific, SpecificWithDefault:
+                switch (dstFlavor) {
+                case Primitive:
+                    Builder.unbox(code, typeTo, regTo.cd());
+                    break AddTransformation;
+
+                case Specific, Widened:
+                    // nothing to do
+                    break AddTransformation;
+
+                case NullablePrimitive:
+                    assert typeFrom.isOnlyNullable();
+                    code.pop(); // throw away Null; load the default value and "true"
+                    Builder.defaultLoad(code, regTo.cd());
+                    code.iconst_1();
+                    break AddTransformation;
+
+                default:
+                    invalid = true;
+                    break AddTransformation;
+                }
+
+            case Primitive:
+                switch (dstFlavor) {
+                case Specific, Widened:
+                    Builder.box(code, typeFrom, cdFrom);
+                    break AddTransformation;
+
+                case NullablePrimitive:
+                    // the value is already on Java stack; just load "false"
+                    code.iconst_0();
+                    break AddTransformation;
+
+                default:
+                    invalid = true;
+                    break AddTransformation;
+                }
+
+            case Widened, WidenedWithDefault:
+                switch (dstFlavor) {
+                case Specific:
+                    // we must have added "checkcast" above already
+                    assert allowUpcast;
+                    break AddTransformation;
+
+                case Widened:
+                    // nothing to do
+                    break AddTransformation;
+
+                default:
+                    invalid = true;
+                    break AddTransformation;
+                }
+
+            case NullablePrimitive:
+                switch (dstFlavor) {
+                case Specific:
+                    assert typeTo.isOnlyNullable();
+                    code.pop();
+                    Builder.loadNull(code);
+                    break AddTransformation;
+
+                case Primitive:
+                    // the boolean and the value are on the Java stack; just pop the boolean
+                    code.pop();
+                    break AddTransformation;
+
+                default:
+                    invalid = true;
+                    break AddTransformation;
+                }
+
+            default:
+                invalid = true;
+                break;
+            }
+
+            if (invalid) {
+                throw new UnsupportedOperationException("Not implemented: src=" + srcFlavor +
+                                                        "; dst=" + dstFlavor);
+            }
+        }
+        storeValue(code, regTo, typeTo);
     }
 
     /**
@@ -1160,13 +1271,14 @@ public class BuildContext {
                 Label        varStart   = code.newLabel();
                 ClassDesc    resourceCD = resourceType.ensureClassDesc(typeSystem);
                 int          slot       = scope.allocateLocal(regId, TypeKind.REFERENCE);
-                RegisterInfo reg        = new SingleSlot(regId, slot, resourceType, resourceCD, name);
+                RegisterInfo reg        = new SingleSlot(regId, slot, resourceType, Specific,
+                                            resourceCD, name);
                 code.localVariable(slot, name, resourceCD, varStart, scope.endLabel);
 
                 registerInfos.put(regId, reg);
 
                 loadCtx(code);
-                Builder.loadTypeConstant(code, typeSystem, resourceType);
+                loadTypeConstant(code, resourceType);
                 code.ldc(resourceName)
                     .aconst_null() // opts
                     .invokevirtual(CD_Ctx, "inject", Ctx.MD_inject);
@@ -1181,39 +1293,107 @@ public class BuildContext {
     /**
      * Load arguments for a method invocation.
      */
-    public void loadArguments(CodeBuilder code, JitMethodDesc jmd, int[] anArgValue) {
+    public void loadCallArguments(CodeBuilder code, JitMethodDesc jmd, int[] anArgValue) {
         boolean isOptimized = jmd.isOptimized;
         int     argCount    = anArgValue.length;
 
         for (int i = 0, c = jmd.standardParams.length; i < c; i++ ) {
             int          iArg = i < argCount ? anArgValue[i] : Op.A_DEFAULT;
             JitParamDesc pd   = isOptimized ? jmd.getOptimizedParam(i) : jmd.standardParams[i];
-            switch (pd.flavor) {
-            case SpecificWithDefault, WidenedWithDefault:
-                if (iArg == Op.A_DEFAULT) {
-                    code.aconst_null();
-                    continue;
-                }
-                break;
 
-            case PrimitiveWithDefault:
-                if (iArg == Op.A_DEFAULT) {
+            JitFlavor dstFlavor = pd.flavor;
+            if (iArg == Op.A_DEFAULT) {
+                switch (dstFlavor) {
+                case SpecificWithDefault, WidenedWithDefault:
+                    code.aconst_null();
+                    break;
+
+                case PrimitiveWithDefault:
                     assert isOptimized;
                     // default primitive with an additional `true`
                     Builder.defaultLoad(code, pd.cd);
                     code.iconst_1();
-                } else {
-                    // actual primitive with an additional `false`
-                    loadArgument(code, iArg);
-                    code.iconst_0();
+                    break;
+
+                default:
+                    throw new UnsupportedOperationException(
+                        "Unsupported default argument for: " + dstFlavor);
                 }
                 continue;
+            }
 
-            default:
-                assert iArg != Op.A_DEFAULT;
+            RegisterInfo srcReg    = loadArgument(code, iArg);
+            JitFlavor    srcFlavor = srcReg.flavor();
+            if (srcReg.flavor() == dstFlavor) {
+                continue;
+            }
+
+            // possible transformations are:
+            //  - Specific  -> Specific           (String s; f(s) with f(Stringable))
+            //  - Specific  -> Widened            (String s; f(s) with f(Int|String))
+            //  - Specific  -> NullablePrimitive  (f(Null) with f(Int?))
+            //  - Primitive -> Widened            (Int n; f(n) with f(Int|String))
+            //  - Primitive -> NullablePrimitive  (Int n; f(n) with f(Int?))
+            //  - NullablePrimitive -> Specific   (Int? n; f(n) with f(Object)
+            switch (srcFlavor) {
+            case Specific, SpecificWithDefault:
+                switch (dstFlavor) {
+                case Specific, SpecificWithDefault, Widened, WidenedWithDefault:
+                    // nothing to do
+                    continue;
+
+                case NullablePrimitive:
+                    assert srcReg.type().isOnlyNullable();
+                    code.pop(); // throw away Null; load the default value and "true"
+                    Builder.defaultLoad(code, pd.cd);
+                    code.iconst_1();
+                    continue;
+                }
+                break;
+
+            case Widened:
+                switch (dstFlavor) {
+                case Specific, SpecificWithDefault:
+                    // nothing to do
+                    assert pd.type.equals(pool().typeObject());
+                    continue;
+                }
+                break;
+
+            case Primitive:
+                switch (dstFlavor) {
+                case Specific, SpecificWithDefault, Widened, WidenedWithDefault:
+                    assert srcReg.type().isA(pd.type) || pd.type.containsTypeParameter(true);
+                    Builder.box(code, srcReg.type(), srcReg.cd());
+                    continue;
+
+                case NullablePrimitive, PrimitiveWithDefault:
+                    // loadArgument() has already loaded the value; just load "false"
+                    code.iconst_0();
+                    continue;
+                }
+                break;
+
+            case NullablePrimitive:
+                switch (dstFlavor) {
+                case Specific, SpecificWithDefault, Widened, WidenedWithDefault:
+                    // loadArgument() has already loaded the value and the boolean
+                    Label ifTrue = code.newLabel();
+                    Label endIf  = code.newLabel();
+
+                    code.ifne(ifTrue);
+                    Builder.box(code, srcReg.type().removeNullable(), srcReg.cd());
+                    code.goto_(endIf)
+                        .labelBinding(ifTrue);
+                    Builder.pop(code, srcReg.cd());
+                    Builder.loadNull(code);
+                    code.labelBinding(endIf);
+                    continue;
+                }
                 break;
             }
-            loadArgument(code, iArg, pd);
+            throw new UnsupportedOperationException("Not implemented: src=" + srcFlavor +
+                                                    "; dst=" + dstFlavor);
         }
     }
 
@@ -1237,9 +1417,16 @@ public class BuildContext {
      */
     public RegisterInfo ensureRegInfo(int regId, TypeConstant type, ClassDesc cd, String name) {
         return regId == Op.A_IGNORE
-            ? new SingleSlot(regId, -2, type, cd, name)
-            : registerInfos.computeIfAbsent(regId, ix -> new SingleSlot(regId,
-                    scope.allocateLocal(ix, cd), type, cd, name));
+            ? new SingleSlot(regId, -2, type, Specific, cd, name)
+            : registerInfos.computeIfAbsent(regId, ix -> {
+                TypeConstant resolvedType = type.containsFormalType(true)
+                    ? type.resolveGenerics(pool(), typeInfo.getType())
+                    : type;
+
+                return new SingleSlot(regId, scope.allocateLocal(ix, cd), resolvedType,
+                    resolvedType.getJitDesc(typeSystem).flavor, cd, name);
+            }
+        );
     }
 
     /**
@@ -1291,8 +1478,9 @@ public class BuildContext {
             narrowedSlot = origReg.slot();
         }
 
-        Narrowed narrowedReg = new Narrowed(origReg.regId(), narrowedSlot, narrowedType, narrowedCD,
-                origReg.name(), scope.depth, false, origReg);
+        Narrowed narrowedReg = new Narrowed(origReg.regId(), narrowedSlot, narrowedType,
+            narrowedType.getJitDesc(typeSystem).flavor, narrowedCD, origReg.name(),
+            scope.depth, false, origReg);
         OpAction action = () -> {
             if (fromAddr > currOpAddr) {
                 registerInfos.put(narrowedReg.regId, narrowedReg);
@@ -1301,12 +1489,29 @@ public class BuildContext {
             if (origReg.slot() != narrowedSlot || !narrowedCD.equals(CD_nObj)) {
                 // even if the narrowed register uses the same slot, we need to let the Java verifier
                 // know that
-                origReg.load(code);
-                if (narrowedCD.isPrimitive() && !origReg.cd().isPrimitive()) {
-                    code.checkcast(narrowedType.ensureClassDesc(typeSystem)); // boxed
-                    Builder.unbox(code, narrowedReg);
+                if (narrowedCD.isPrimitive()) {
+                    if (origReg.cd().isPrimitive()) {
+                        // this can only mean that the original was a NullablePrimitive
+                        assert origReg instanceof DoubleSlot doubleSlot &&
+                                doubleSlot.flavor == NullablePrimitive &&
+                                !narrowedType.isNullable();
+                        Builder.load(code, origReg.cd(), origReg.slot());
+                    } else {
+                        origReg.load(code);
+                        code.checkcast(narrowedType.ensureClassDesc(typeSystem)); // boxed
+                        Builder.unbox(code, narrowedReg);
+                    }
                 } else {
-                    code.checkcast(narrowedCD);
+                    if (origReg.cd().isPrimitive()) {
+                        // this can only mean that the original was a NullablePrimitive
+                        assert origReg instanceof DoubleSlot doubleSlot &&
+                                doubleSlot.flavor == NullablePrimitive &&
+                                narrowedType.isOnlyNullable();
+                        Builder.loadNull(code);
+                    } else {
+                        origReg.load(code);
+                        code.checkcast(narrowedCD);
+                    }
                 }
                 Builder.store(code, narrowedCD, narrowedSlot);
             }
@@ -1424,9 +1629,9 @@ public class BuildContext {
 
         loadCtx(code);
         if (infoTarget.hasGenericTypes()) {
-            Builder.loadTypeConstant(code, typeSystem, infoTarget.getType());
+            loadTypeConstant(code, infoTarget.getType());
         }
-        loadArguments(code, jmdNew, anArgValue);
+        loadCallArguments(code, jmdNew, anArgValue);
 
         code.invokestatic(cdTarget, sJitNew, md);
         return cdTarget;
@@ -1448,7 +1653,7 @@ public class BuildContext {
 
             if (i == 0) {
                 switch (pdRet.flavor) {
-                case MultiSlotPrimitive:
+                case NullablePrimitive:
                     assert isOptimized;
                     JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
 
@@ -1471,12 +1676,33 @@ public class BuildContext {
 
                 default:
                     // process the natural return
+                    if (reg.cd().isPrimitive() && !isOptimized) {
+                        if (typeRet.isTypeParameter()) {
+                            // we need to trust the compiler here
+                            switch (reg.flavor()) {
+                            case Primitive:
+                                generateCheckCast(code, typeRet = reg.type());
+                                Builder.unbox(code, typeRet, reg.cd());
+                                break;
+
+                            case NullablePrimitive:
+                                // TODO: resolve the type parameter and check for Null if necessary
+                                generateCheckCast(code, typeRet = reg.type().removeNullable());
+                                Builder.unbox(code, typeRet, reg.cd());
+                                code.iconst_0();
+                                break;
+
+                            default:
+                                throw new IllegalStateException();
+                            }
+                        }
+                    }
                     storeValue(code, reg, typeRet);
                     break;
                 }
             } else {
                 switch (pdRet.flavor) {
-                case MultiSlotPrimitive:
+                case NullablePrimitive:
                     assert isOptimized;
                     JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
 
@@ -1486,8 +1712,7 @@ public class BuildContext {
                     if (reg.isSingle()) {
                         Label ifTrue = code.newLabel();
                         Label endIf  = code.newLabel();
-                        code.iconst_0()
-                            .if_icmpeq(ifTrue);
+                        code.ifeq(ifTrue);
                         Builder.box(code, typeRet, cdRet);
                         code.goto_(endIf);
                         code.labelBinding(ifTrue)
@@ -1540,6 +1765,26 @@ public class BuildContext {
             .invokevirtual(exCD, "$init", MethodTypeDesc.of(
                 CD_nException, CD_Ctx, CD_JavaString, CD_Throwable))
             .athrow();
+    }
+
+    /**
+     * Generate a "checkcast" that transforms a potential CCE into a TypeMismatch.
+     */
+    public void generateCheckCast(CodeBuilder code, TypeConstant typeTo) {
+        Label startLabel   = code.newLabel();
+        Label endLabel     = code.newLabel();
+        Label successLabel = code.newLabel();
+
+        ClassDesc cd = typeTo.ensureClassDesc(typeSystem);
+        code.labelBinding(startLabel)
+            .checkcast(cd)
+            .goto_(successLabel)
+            .labelBinding(endLabel);
+        throwTypeMismatch(code, cd.descriptorString());
+
+        code.labelBinding(successLabel)
+            .exceptionCatch(startLabel, endLabel, endLabel,
+                ClassDesc.of("java.lang.ClassCastException"));
     }
 
     /**
@@ -1610,7 +1855,8 @@ public class BuildContext {
      */
     public RegisterInfo pushTempRegister(TypeConstant type, ClassDesc cd) {
         int          tempSlot = scope.allocateJavaSlot(cd);
-        RegisterInfo tempReg  = new SingleSlot(Op.A_THIS, tempSlot, type, cd, "");
+        RegisterInfo tempReg  = new SingleSlot(Op.A_THIS, tempSlot, type,
+                                    type.getJitDesc(typeSystem).flavor, cd, "");
         tempRegStack.push(tempReg);
         return tempReg;
     }
@@ -1701,25 +1947,15 @@ public class BuildContext {
 
     // ----- RegisterInfo implementations ----------------------------------------------------------
 
-    public record SingleSlot(int regId, int slot, TypeConstant type, ClassDesc cd, String name)
+    public record SingleSlot(int regId, int slot, TypeConstant type, JitFlavor flavor, ClassDesc cd,
+                             String name)
             implements RegisterInfo {
 
         /**
          * Construct the SingleSlot representing a value placed on the Java stack.
          */
-        public SingleSlot(TypeConstant type, ClassDesc cd, String name) {
-            this(Op.A_STACK, JAVA_STACK, type, cd, name);
-        }
-
-        /**
-         * Construct the SingleSlot.
-         */
-        public SingleSlot(int regId, int slot, TypeConstant type, ClassDesc cd, String name) {
-            this.regId = regId;
-            this.slot  = slot;
-            this.type  = type.getCanonicalJitType();
-            this.cd    = cd;
-            this.name  = name;
+        public SingleSlot(TypeConstant type, JitFlavor flavor, ClassDesc cd, String name) {
+            this(Op.A_STACK, JAVA_STACK, type, flavor, cd, name);
         }
 
         @Override
@@ -1728,20 +1964,9 @@ public class BuildContext {
         }
     }
 
-    public record DoubleSlot(int regId, int slot, int extSlot, JitFlavor flavor,
-                             TypeConstant type, ClassDesc cd, String name)
+    public record DoubleSlot(BuildContext bctx, int regId, int slot, int extSlot,
+                             JitFlavor flavor, TypeConstant type, ClassDesc cd, String name)
             implements RegisterInfo {
-
-        public DoubleSlot(int regId, int slot, int extSlot, JitFlavor flavor,
-                             TypeConstant type, ClassDesc cd, String name) {
-            this.regId   = regId;
-            this.slot    = slot;
-            this.extSlot = extSlot;
-            this.flavor  = flavor;
-            this.type    = type.getCanonicalJitType();
-            this.cd      = cd;
-            this.name    = name;
-        }
 
         @Override
         public boolean isSingle() {
@@ -1750,10 +1975,33 @@ public class BuildContext {
 
         @Override
         public RegisterInfo load(CodeBuilder code) {
-            // load the "extension" boolean flag first.
-            code.iload(extSlot());
+            switch (flavor) {
+            case PrimitiveWithDefault:
+                Parameter parameter = bctx.methodStruct.getParam(regId);
+                assert parameter.hasDefaultValue();
 
-            return RegisterInfo.super.load(code);
+                Label ifTrue = code.newLabel();
+                Label endIf  = code.newLabel();
+
+                // if the extension slot is `true`, take the default value
+                code.iload(extSlot)
+                    .ifne(ifTrue)
+                    .loadLocal(Builder.toTypeKind(cd), slot)
+                    .goto_(endIf)
+                    .labelBinding(ifTrue);
+                bctx.builder.loadConstant(bctx, code, parameter.getDefaultValue());
+                code.labelBinding(endIf);
+                return new SingleSlot(type(), Primitive, cd, name());
+
+            case NullablePrimitive:
+                // load the "extension" boolean flag last
+                Builder.load(code, cd, slot);
+                Builder.load(code, CD_boolean, extSlot);
+                return this;
+
+            default:
+                throw new IllegalStateException();
+            }
         }
 
         @Override
@@ -1765,8 +2013,8 @@ public class BuildContext {
         }
     }
 
-    public record Narrowed(int regId, int slot, TypeConstant type, ClassDesc cd, String name,
-                           int scopeDepth, boolean castOnLoad, RegisterInfo origReg)
+    public record Narrowed(int regId, int slot, TypeConstant type, JitFlavor flavor, ClassDesc cd,
+                           String name, int scopeDepth, boolean castOnLoad, RegisterInfo origReg)
             implements RegisterInfo {
 
         @Override

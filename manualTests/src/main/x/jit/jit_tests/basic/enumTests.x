@@ -27,6 +27,9 @@ package enumTests {
         assert testRed1(cint);
         assert testRed2(cint);
         assert testRed3(cint);
+
+        Ordered lesser = Lesser;
+        assert lesser.reversed.ordinal == Greater.ordinal;
     }
 
     Boolean testRedOrNull(Color? c) {
@@ -39,7 +42,7 @@ package enumTests {
 
     Boolean testRed1(Color|Int cint) {
         if (Blue == cint) {
-            assert:debug;
+            assert;
         }
         return Red == cint;
     }

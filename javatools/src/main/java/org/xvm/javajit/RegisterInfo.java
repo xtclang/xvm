@@ -29,6 +29,11 @@ public interface RegisterInfo {
     TypeConstant type();
 
     /**
+     * @return the JitFlavor for the register
+     */
+    JitFlavor flavor();
+
+    /**
      * @return the jit type for XTC register
      */
     default TypeConstant jitType() {
@@ -36,7 +41,7 @@ public interface RegisterInfo {
     }
 
     /**
-     * @return the Java slot ClassDesc
+     * @return the ClassDesc for the {@link #slot()}
      */
     ClassDesc cd();
 

@@ -1,6 +1,5 @@
 package org.xtclang.ecstasy.numbers;
 
-import org.xtclang.ecstasy.nConst;
 import org.xtclang.ecstasy.OutOfBounds;
 
 import org.xtclang.ecstasy.text.String;
@@ -10,14 +9,13 @@ import org.xvm.javajit.Ctx;
 /**
  * Native Int32 wrapper.
  */
-public class Int32 extends nConst {
+public class Int32 extends IntNumber {
     /**
      * Construct an Ecstasy Int32 object.
      *
      * @param value  the 32-bit signed integer value
      */
     private Int32(int value) {
-        super(null);
         $value = value;
     }
 
@@ -52,7 +50,7 @@ public class Int32 extends nConst {
      * @return this Int8 value as a Java {@code int}
      */
     public int toInt8$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds 
+        if (!dfltCheckBounds && checkBounds
                 && ($value < Byte.MIN_VALUE || $value > Byte.MAX_VALUE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
             throw oob.$init(ctx, "Int32 value " + $value + " is not a valid Int8 value");
@@ -71,7 +69,7 @@ public class Int32 extends nConst {
      * @return this Int8 value as a Java {@code int}
      */
     public int toInt16$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        if (!dfltCheckBounds && checkBounds 
+        if (!dfltCheckBounds && checkBounds
                 && ($value < Short.MIN_VALUE || $value > Short.MAX_VALUE)) {
             OutOfBounds oob = new OutOfBounds(ctx);
             throw oob.$init(ctx, "Int32 value " + $value + " is not a valid Int16 value");
@@ -210,7 +208,7 @@ public class Int32 extends nConst {
         }
         return new UInt128($value, $value >= 0 ? 0L : -1L);
     }
-    
+
     // ----- debugging support ---------------------------------------------------------------------
 
     @Override public java.lang.String toString() {

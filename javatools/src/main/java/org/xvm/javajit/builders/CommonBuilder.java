@@ -12,6 +12,8 @@ import java.lang.constant.MethodTypeDesc;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +49,8 @@ import org.xvm.javajit.JitCtorDesc;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.JitTypeDesc;
+import org.xvm.javajit.ModuleLoader;
+import org.xvm.javajit.NativeTypeSystem;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
 
@@ -57,7 +61,8 @@ import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 
-import static org.xvm.javajit.JitFlavor.MultiSlotPrimitive;
+import static java.lang.constant.ConstantDescs.MTD_void;
+import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 
 /**
  * Generic Java class builder.
@@ -88,10 +93,26 @@ public class CommonBuilder
     protected long implSize;
 
     /**
+     * List of constant properties for every class name this builder assembles.
+     *
+     * Note: a vast majority of builders assemble one and only one class.
+     */
+    protected Map<String, List<PropertyInfo>> constProperties = new HashMap<>(1);
+
+    /**
+     * Registry of TypeConstant objects used by the code generator; for each class name this
+     * builder assembles, the (TypeConstant, Integer) entry represents the suffix ("$typeN") of a
+     * synthetic static property holding the corresponding TypeConstant object.
+     *
+     * Note: a vast majority of builders assemble one and only one class.
+     */
+    protected Map<String, Map<TypeConstant, Integer>> typeConstants = new HashMap<>(1);
+
+    /**
      * Methods that were added during the compilation. They are either nested in properties/methods
      * or methods declared on the mixins or annotations that were added to the "impl" class.
      */
-    protected Set<IdentityConstant> extraMethods = new HashSet<>();
+    protected final Set<IdentityConstant> extraMethods = new HashSet<>();
 
     /**
      * TEMPORARY: compensation for TypeInfo dupes.
@@ -101,9 +122,20 @@ public class CommonBuilder
     @Override
     public void assembleImpl(String className, ClassBuilder classBuilder) {
         implSize = ShallowSizeOf.align(computeInstanceSize());
-        assembleImplClass(className, classBuilder);
-        assembleImplProperties(className, classBuilder);
-        assembleImplMethods(className, classBuilder);
+
+        // prime the type registry with "this" type
+        Map<TypeConstant, Integer> types = new HashMap<>();
+        types.put(typeInfo.getType(), 0);
+        typeConstants.put(className, types);
+
+        if (assembleImplClass(className, classBuilder)) {
+            assembleImplProperties(className, classBuilder);
+            assembleImplMethods(className, classBuilder);
+
+            // static initializer must be assembled at the very end, after all potentially used
+            // TypeConstants have been collected
+            assembleStaticInitializer(className, classBuilder);
+        }
     }
 
     @Override
@@ -116,6 +148,18 @@ public class CommonBuilder
     @Override
     protected TypeConstant getThisType() {
         return typeInfo.getType();
+    }
+
+    @Override
+    protected void loadTypeConstant(CodeBuilder code, String className, TypeConstant type) {
+        Map<TypeConstant, Integer> types =
+            typeConstants.computeIfAbsent(className, _ -> new HashMap<>());
+
+        Integer index = types.computeIfAbsent(type, _ -> types.size());
+
+        // see assembleStaticInitializer()
+        ClassDesc CD_this = ClassDesc.of(className);
+        code.getstatic(CD_this, "$type" + index, CD_TypeConstant);
     }
 
     /**
@@ -185,8 +229,10 @@ public class CommonBuilder
 
     /**
      * Assemble the class specific info for the "Impl" shape.
+     *
+     * @return false iff no more assembly required for this class
      */
-    protected void assembleImplClass(String className, ClassBuilder classBuilder) {
+    protected boolean assembleImplClass(String className, ClassBuilder classBuilder) {
         int flags = ClassFile.ACC_PUBLIC;
 
         switch (classStruct.getFormat()) {
@@ -202,7 +248,7 @@ public class CommonBuilder
             case ANNOTATION, MIXIN:
                 // annotations and mixins are incorporated (copied) into every class that
                 // annotates the annotation or incorporates the mixin
-                return;
+                return false;
 
             default:
                 // TODO: support for mixin, annotations, etc
@@ -211,6 +257,7 @@ public class CommonBuilder
         classBuilder.withFlags(flags);
 
         assembleImplInterfaces(classBuilder);
+        return true;
     }
 
     /**
@@ -261,15 +308,10 @@ public class CommonBuilder
             }
         }
 
-        boolean isSingleton = typeInfo.isSingleton();
-        if (isSingleton) {
+        if (typeInfo.isSingleton()) {
             // public static final $INSTANCE;
             classBuilder.withField(Instance, ClassDesc.of(className),
                 ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC | ClassFile.ACC_FINAL);
-        }
-
-        if (!constProps.isEmpty() || isSingleton || hasStaticInitializer()) {
-            assembleStaticInitializer(className, classBuilder, constProps);
         }
 
         Format format = classStruct.getFormat();
@@ -303,6 +345,9 @@ public class CommonBuilder
                 }
             }
         }
+
+        // save off the constant properties list to be added to the static initializer
+        constProperties.put(className, constProps);
     }
 
     /**
@@ -321,7 +366,7 @@ public class CommonBuilder
             classBuilder.withField(jitName, jtd.cd, flags);
             break;
 
-        case MultiSlotPrimitive:
+        case NullablePrimitive:
             classBuilder.withField(jitName, jtd.cd, flags);
             classBuilder.withField(jitName+EXT, CD_boolean, flags);
             break;
@@ -332,14 +377,22 @@ public class CommonBuilder
     }
 
     /**
-     * Add constant fields initialization to the static initializer.
+     * Add constant fields (including synthetic TypeConstant fields) initialization to the static
+     * initializer.
      */
-    protected void assembleStaticInitializer(String className, ClassBuilder classBuilder,
-                                             List<PropertyInfo> props) {
+    protected void assembleStaticInitializer(String className, ClassBuilder classBuilder) {
+        List<PropertyInfo>         props = constProperties.getOrDefault(className, Collections.emptyList());
+        Map<TypeConstant, Integer> types = typeConstants.getOrDefault(className, Collections.emptyMap());
+
+        // add synthetic TypeConstant fields
+        for (int i = 0, c = types.size(); i < c; i++) {
+            classBuilder.withField("$type" + i, CD_TypeConstant,
+                ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC | ClassFile.ACC_FINAL);
+        }
+
         ClassDesc CD_this = ClassDesc.of(className);
 
-        classBuilder.withMethod(ConstantDescs.CLASS_INIT_NAME,
-            MethodTypeDesc.of(CD_void),
+        classBuilder.withMethod(ConstantDescs.CLASS_INIT_NAME, MTD_void,
             ClassFile.ACC_STATIC | ClassFile.ACC_PUBLIC,
             methodBuilder -> methodBuilder.withCode(code -> {
                 Label startScope = code.newLabel();
@@ -358,12 +411,12 @@ public class CommonBuilder
                         RegisterInfo reg     = loadConstant(code, prop.getInitialValue());
                         String       jitName = prop.getIdentity().ensureJitPropertyName(ts);
                         if (reg instanceof DoubleSlot doubleSlot) {
-                            assert doubleSlot.flavor() == MultiSlotPrimitive;
+                            assert doubleSlot.flavor() == NullablePrimitive;
                             // loadConstant() has already loaded the value and the boolean
                             Label ifTrue = code.newLabel();
                             Label endIf  = code.newLabel();
                             code.ifne(ifTrue)
-                                .putstatic(CD_this, jitName +EXT, CD_boolean)
+                                .putstatic(CD_this, jitName+EXT, CD_boolean)
                                 .goto_(endIf)
                                 .labelBinding(ifTrue);
                                 pop(code, doubleSlot.cd());
@@ -374,9 +427,36 @@ public class CommonBuilder
                             code.putstatic(CD_this, jitName, reg.cd());
                         }
                     } else {
-                        throw new UnsupportedOperationException("Static field initializer");
+                        throw new UnsupportedOperationException("Static field initializer for " +
+                            prop.getIdentity().getValueString());
                     }
                 }
+
+                // initialize synthetic TypeConstant fields; to make the jasm look neater
+                // generate the assignments in the lexicographical order
+                ModuleLoader loader   = typeSystem.findOwnerLoader(className);
+                boolean      nativeTS = typeSystem instanceof NativeTypeSystem;
+                ConstantPool pool     = loader.module.getConstantPool();
+                types.entrySet().stream()
+                     .sorted(Map.Entry.comparingByValue())
+                     .forEach(entry -> {
+                        TypeConstant type = entry.getKey();
+                        String       name = "$type" + entry.getValue();
+
+                        assert type.isShared(pool);
+                        type = pool.register(type);
+
+                        int index = type.getPosition();
+                        if (nativeTS) {
+                            index = -index;
+                        }
+                        code.aload(ctxSlot)
+                            .loadConstant(className)
+                            .loadConstant(index)
+                            .invokevirtual(CD_Ctx, "getConstant", Ctx.MD_getConstant) // <- const
+                            .checkcast(CD_TypeConstant)                               // <- type
+                            .putstatic(CD_this, name, CD_TypeConstant);
+                     });
 
                 if (typeInfo.isSingleton()) {
                     // $INSTANCE = new Singleton($ctx);
@@ -406,13 +486,6 @@ public class CommonBuilder
     /**
      * Allow subclasses to augment the <clinit> assembly.
      */
-    protected boolean hasStaticInitializer() {
-        return false;
-    }
-
-    /**
-     * Allow subclasses to augment the <clinit> assembly.
-     */
     protected void augmentStaticInitializer(String className, CodeBuilder code) {
     }
 
@@ -433,7 +506,7 @@ public class CommonBuilder
 
                 code.localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, startScope, endScope);
 
-                callSuperInitializer(code);
+                callSuperInitializer(code, className);
 
                 // add field initialization
                 for (PropertyInfo prop : props) {
@@ -443,7 +516,7 @@ public class CommonBuilder
                         RegisterInfo reg     = loadConstant(code, prop.getInitialValue());
                         String       jitName = prop.getIdentity().ensureJitPropertyName(typeSystem);
                         if (reg instanceof DoubleSlot doubleSlot) {
-                            assert doubleSlot.flavor() == MultiSlotPrimitive;
+                            assert doubleSlot.flavor() == NullablePrimitive;
                             // loadConstant() has already loaded the value and the boolean
                             Label ifTrue = code.newLabel();
                             Label endIf  = code.newLabel();
@@ -472,7 +545,7 @@ public class CommonBuilder
     /**
      * Assemble the super class constructor call.
      */
-    protected void callSuperInitializer(CodeBuilder code) {
+    protected void callSuperInitializer(CodeBuilder code, String className) {
         // super($ctx);
         code.aload(0)
             .aload(code.parameterSlot(0))
@@ -535,7 +608,7 @@ public class CommonBuilder
         }
     }
 
-    private void generateTrivialGetter(String className, ClassBuilder classBuilder, PropertyInfo prop) {
+    protected void generateTrivialGetter(String className, ClassBuilder classBuilder, PropertyInfo prop) {
         String jitGetterName = prop.ensureGetterJitMethodName(typeSystem);
         String jitFieldName  = prop.getIdentity().ensureJitPropertyName(typeSystem);
 
@@ -564,7 +637,7 @@ public class CommonBuilder
                     addReturn(code, cdOpt);
                     break;
 
-                case MultiSlotPrimitive:
+                case NullablePrimitive:
                     if (prop.isConstant()) {
                         code.getstatic(CD_this, jitFieldName, cdOpt)
                             .getstatic(CD_this, jitFieldName+EXT, CD_boolean);
@@ -599,7 +672,7 @@ public class CommonBuilder
         }
     }
 
-    private void generateTrivialSetter(String className, ClassBuilder classBuilder, PropertyInfo prop) {
+    protected void generateTrivialSetter(String className, ClassBuilder classBuilder, PropertyInfo prop) {
         String jitSetterName = prop.ensureSetterJitMethodName(typeSystem);
         String jitFieldName  = prop.getIdentity().ensureJitPropertyName(typeSystem);
 
@@ -631,7 +704,7 @@ public class CommonBuilder
                     }
                     break;
 
-                case MultiSlotPrimitive:
+                case NullablePrimitive:
                     int extSlot = argSlot + toTypeKind(cdOpt).slotSize();
                     if (prop.isConstant()) {
                         load(code, cdOpt, argSlot);
@@ -730,7 +803,7 @@ public class CommonBuilder
                         .getfield(CD_this, jitFieldName, cdOpt);
                     throw new UnsupportedOperationException("Primitive injection");
 
-                case MultiSlotPrimitive:
+                case NullablePrimitive:
                     code.aload(0)
                         .getfield(CD_this, jitFieldName, cdOpt)
                         .getfield(CD_this, jitFieldName+EXT, CD_boolean);
@@ -749,7 +822,7 @@ public class CommonBuilder
                     .astore(valueSlot)
                     .ifnonnull(endLbl)
                     .aload(1); // $ctx
-                Builder.loadTypeConstant(code, typeSystem, resourceType);
+                loadTypeConstant(code, className, resourceType);
                 code.ldc(resourceName)
                     .aconst_null() // opts
                     .invokevirtual(CD_Ctx, "inject", Ctx.MD_inject)
@@ -775,7 +848,7 @@ public class CommonBuilder
      * Assemble methods for the "Impl" shape.
      */
     protected void assembleImplMethods(String className, ClassBuilder classBuilder) {
-        boolean assembleDeclared = classStruct.getFormat() != Format.INTERFACE;
+        boolean assembleDeclared = !typeInfo.isAbstract();
 
         for (MethodInfo method : typeInfo.getMethods().values()) {
             if (method.isNative()) {
@@ -807,13 +880,16 @@ public class CommonBuilder
             classBuilder.withField("$type", CD_TypeConstant, ClassFile.ACC_PUBLIC);
         }
 
+        ClassDesc CD_this = ClassDesc.of(className);
         classBuilder.withMethodBody("$xvmType", MD_xvmType,
                 ClassFile.ACC_PUBLIC, code -> {
             if (hasType) {
+                // the field is initialized in assembleNew()
                 code.aload(0)
-                    .getfield(ClassDesc.of(className), "$type", CD_TypeConstant);
+                    .getfield(CD_this, "$type", CD_TypeConstant);
             } else {
-                loadTypeConstant(code, typeSystem, typeInfo.getType());
+                // the static field is initialized in assembleStaticInitializer()
+                code.getstatic(CD_this, "$type0", CD_TypeConstant);
             }
             code.areturn();
         });
@@ -849,7 +925,7 @@ public class CommonBuilder
             JitMethodDesc jmDesc = method.getJitDesc(typeSystem, typeInfo.getType());
             assembleMethod(className, classBuilder, method, jitName, jmDesc);
 
-            if (method.isCtorOrValidator()) {
+            if (method.isCtorOrValidator() && !typeInfo.isAbstract()) {
                 String        newName = jitName.replace("construct", typeInfo.isSingleton() ? INIT : NEW);
                 JitMethodDesc newDesc = Builder.convertConstructToNew(typeInfo, className, (JitCtorDesc) jmDesc);
                 assembleNew(className, classBuilder, method, newName, newDesc);
@@ -910,9 +986,8 @@ public class CommonBuilder
                         Label ifNotNull = code.newLabel();
                         Label endIf     = code.newLabel();
 
-                        code
-                           .aload(stdParamSlot)
-                           .ifnonnull(ifNotNull);
+                        code.aload(stdParamSlot)
+                            .ifnonnull(ifNotNull);
                         // the value is `null`
                         Builder.defaultLoad(code, optParamDesc.cd); // default primitive
                         code.iconst_1();                            // true
@@ -929,9 +1004,9 @@ public class CommonBuilder
                         break;
                     }
 
-                    case MultiSlotPrimitive: {
+                    case NullablePrimitive: {
                         assert stdParamType.isNullable();
-                        TypeConstant primitiveType = stdParamType.getUnderlyingType();
+                        TypeConstant primitiveType = stdParamType.removeNullable();
                         // if the argument is Ecstasy `Null`, pass the default value for the type
                         // and `true`; otherwise the unboxed primitive value and `false`
                         Label ifNotNull = code.newLabel();
@@ -944,10 +1019,10 @@ public class CommonBuilder
                         Builder.defaultLoad(code, optParamDesc.cd);  // default primitive
                         code.iconst_1();                             // true
 
-                        code
-                            .goto_(endIf)
+                        code.goto_(endIf)
                             .labelBinding(ifNotNull)
-                            .aload(stdParamSlot);
+                            .aload(stdParamSlot)
+                            .checkcast(optParamDesc.type.removeNullable().ensureClassDesc(typeSystem));
                         unbox(code, primitiveType, optParamDesc.cd); // unboxed primitive
                         code.iconst_0();                             // false
 
@@ -1017,7 +1092,7 @@ public class CommonBuilder
                     }
                     break;
 
-                case MultiSlotPrimitive:
+                case NullablePrimitive:
                     assert stdType.isNullable();
 
                     // if the extension is 'true', the return value is "Null", otherwise the
@@ -1195,8 +1270,8 @@ public class CommonBuilder
         boolean   hasType     = typeInfo.hasGenericTypes();
         ClassDesc CD_this     = ClassDesc.of(className);
 
-        // Note: the "$init" is a virtual method for singletons and "$new" is static otherwise
-        //       (see assembleStaticInitializer)
+        // Note: the "$init" is a virtual method for singletons and "$new" is static otherwise;
+        //       see assembleStaticInitializer()
         int flags = ClassFile.ACC_PUBLIC;
         if (!isSingleton) {
             flags |= ClassFile.ACC_STATIC;
@@ -1228,7 +1303,7 @@ public class CommonBuilder
             }
 
             // for singleton classes the steps 0-2 are performed by the static initializer;
-            // see "assembleStaticInitializer()"
+            // see assembleStaticInitializer()
             int thisSlot;
             if (isSingleton) {
                 thisSlot = 0;
@@ -1344,7 +1419,7 @@ public class CommonBuilder
             flags |= ClassFile.ACC_ABSTRACT;
         }
         if (method.isFunction() || method.isCtorOrValidator()) {
-            if (classStruct.getFormat() == Format.INTERFACE) {
+            if (method.isAbstract() && classStruct.getFormat() == Format.INTERFACE) {
                 // this must be a funky interface method; just ignore
                 return;
             }
@@ -1427,7 +1502,8 @@ public class CommonBuilder
         "Test", "test",
         "IOException", "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState",
         "Boolean", "Ordered",
-//        "Array",
+        "Orderable",
+        // "Array",
         "TerminalConsole",
     };
     private final static HashSet<String> SKIP_SET = new HashSet<>();

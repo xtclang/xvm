@@ -15,6 +15,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
+import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeMatrix;
@@ -219,7 +220,7 @@ public abstract class OpGeneral
     public void build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo regTarget = bctx.ensureRegister(code, m_nTarget);
 
-        if (!regTarget.isSingle()) {
+        if (!regTarget.isSingle() && regTarget.flavor() != JitFlavor.PrimitiveWithDefault) {
             throw new UnsupportedOperationException(toName(getOpCode()) + " operation on multi-slot");
         }
 
@@ -253,8 +254,7 @@ public abstract class OpGeneral
             bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeResult), typeResult);
         } else { // unary op
             if (cdTarget.isPrimitive()) {
-                regTarget.load(code);
-                buildOptimizedUnary(bctx, code, regTarget);
+                buildOptimizedUnary(bctx, code, regTarget.load(code));
             } else {
                 String sName;
                 String sOp;

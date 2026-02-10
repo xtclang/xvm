@@ -41,6 +41,11 @@ public class CastTypeConstant
     }
 
     @Override
+    public boolean isTypeParameter() {
+        return m_constType2.isTypeParameter() || super.isTypeParameter();
+    }
+
+    @Override
     public boolean isSingleUnderlyingClass(boolean fAllowInterface) {
         return getUnderlyingType().isSingleUnderlyingClass(fAllowInterface);
     }

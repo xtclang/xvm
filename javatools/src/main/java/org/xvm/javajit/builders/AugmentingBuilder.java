@@ -3,14 +3,17 @@ package org.xvm.javajit.builders;
 import java.lang.classfile.ClassBuilder;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
+import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.FieldModel;
 import java.lang.classfile.MethodModel;
 
 import java.lang.constant.ClassDesc;
+import java.lang.constant.ConstantDescs;
 import java.lang.constant.MethodTypeDesc;
 
 import java.util.List;
 
+import org.xvm.asm.Component;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
@@ -21,6 +24,7 @@ import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.TypeSystem;
 
 import static java.lang.constant.ConstantDescs.INIT_NAME;
+import static java.lang.constant.ConstantDescs.MTD_void;
 
 /**
  * The builder for native types that uses an existing Java class to augment with the Ecstasy natural
@@ -45,14 +49,14 @@ public class AugmentingBuilder extends CommonBuilder {
     }
 
     @Override
-    public void assembleImplClass(String className, ClassBuilder classBuilder) {
+    public boolean assembleImplClass(String className, ClassBuilder classBuilder) {
         // AugmentingBuilder uses the native class attributes except of the "ABSTRACT" flag
         // that is driven by the type
         int flags = model.flags().flagsMask();
-
         if ((flags & ClassFile.ACC_ABSTRACT) != 0 && !typeInfo.isAbstract()) {
-            classBuilder.withFlags(flags & ~ClassFile.ACC_ABSTRACT);
+            flags &= ~ClassFile.ACC_ABSTRACT;
         }
+        classBuilder.withFlags(flags);
 
         // implemented interfaces may not be native; add them if necessary
         assembleImplInterfaces(classBuilder);
@@ -62,6 +66,20 @@ public class AugmentingBuilder extends CommonBuilder {
         TypeConstant T_EXCEPTION = type.getConstantPool().typeException();
         if (type.isA(T_EXCEPTION) && !type.removeAccess().equals(T_EXCEPTION)) {
             new ExceptionBuilder(typeSystem, type).assembleCreateException(className, classBuilder);
+        }
+
+        // for now, native enum values need to be fully functional (no code gen)
+        return typeInfo.getFormat() != Component.Format.ENUMVALUE;
+    }
+
+    @Override
+    protected void augmentStaticInitializer(String className, CodeBuilder code) {
+        MethodModel model = findMethod(ConstantDescs.CLASS_INIT_NAME, MTD_void);
+
+        if (model != null) {
+            // the native class had the static initializer, which was skipped during the "copy"
+            // phase and now needs to be incorporated
+            model.code().ifPresent(oldCode -> oldCode.forEach(code::with));
         }
     }
 
@@ -93,6 +111,20 @@ public class AugmentingBuilder extends CommonBuilder {
         }
 
         super.assemblePropertyAccessor(className, classBuilder, prop, jitName, md, isOptimized, isGetter);
+    }
+
+    @Override
+    protected void generateTrivialGetter(String className, ClassBuilder classBuilder, PropertyInfo prop) {
+        if (findMethod(prop.ensureGetterJitMethodName(typeSystem), null) == null) {
+            super.generateTrivialGetter(className, classBuilder, prop);
+        }
+    }
+
+    @Override
+    protected void generateTrivialSetter(String className, ClassBuilder classBuilder, PropertyInfo prop) {
+        if (findMethod(prop.ensureSetterJitMethodName(typeSystem), null) == null) {
+            super.generateTrivialSetter(className, classBuilder, prop);
+        }
     }
 
     @Override
@@ -173,7 +205,8 @@ public class AugmentingBuilder extends CommonBuilder {
     protected MethodModel findMethod(String jitName, MethodTypeDesc md) {
         for (MethodModel mm : model.methods()) {
             if (mm.methodName().equalsString(jitName) &&
-                    mm.methodTypeSymbol().descriptorString().equals(md.descriptorString())) {
+                (md == null ||
+                    mm.methodTypeSymbol().descriptorString().equals(md.descriptorString()))) {
                 return mm;
             }
         }

@@ -2,9 +2,11 @@ package org.xvm.javajit;
 
 import java.lang.constant.ClassDesc;
 
+import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
+import static java.lang.constant.ConstantDescs.CD_double;
 import static java.lang.constant.ConstantDescs.CD_float;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
@@ -45,12 +47,14 @@ public class JitTypeDesc {
     public static ClassDesc getPrimitiveClass(TypeConstant type) {
         if (type.isPrimitive()) {
             return switch (type.getSingleUnderlyingClass(false).getName()) {
-                case "Char", "Int8", "Int16", "Int32", "UInt8", "UInt16", "UInt32", "Dec32"
+                case "Char", "Int8", "Int16", "Int32", "UInt8", "UInt16", "UInt32", "Dec16", "Dec32"
                     -> CD_int;
                 case "Int64", "UInt64", "Dec64"
                     -> CD_long;
-                case "Float16", "Float32", "Float64"
+                case "Float16", "Float32"
                      -> CD_float;
+                case "Float64"
+                     -> CD_double;
                 case "Boolean"
                     -> CD_boolean;
                 default
@@ -64,10 +68,25 @@ public class JitTypeDesc {
      * @return the primitive ClassDesc if the specified type is optimizable to a multi-slot
      *         primitive Java class; null otherwise
      */
-    public static ClassDesc getMultiSlotPrimitiveClass(TypeConstant type) {
+    public static ClassDesc getNullablePrimitiveClass(TypeConstant type) {
         return type.isNullable()
             ? getPrimitiveClass(type.removeNullable())
             : null;
+    }
+
+    /**
+     * @return true iff the objects of the specified type could be represented by two longs
+     */
+    public static boolean isDoubleLong(TypeConstant type) {
+        if (type.isSingleDefiningConstant()
+                && type.getDefiningConstant() instanceof ClassConstant id
+                && id.getModuleConstant().isEcstasyModule()) {
+            return switch (id.getName()) {
+                case "Int128",  "UInt128" -> true;
+                default -> false;
+            };
+        }
+        return false;
     }
 
     /**

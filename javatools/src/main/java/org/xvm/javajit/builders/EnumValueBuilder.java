@@ -19,7 +19,7 @@ import org.xvm.javajit.TypeSystem;
  * The builder for Enum value types.
  *
  * It overrides the CommonBuilder to do the following:
- *   - create a synthetic "$name" field to hold the name
+ *   - create a synthetic "$name" field to hold the enum value name
  *   - supply the "ordinal" and "name" properties
  */
 public class EnumValueBuilder extends CommonBuilder {
@@ -29,18 +29,9 @@ public class EnumValueBuilder extends CommonBuilder {
     }
 
     @Override
-    protected boolean hasStaticInitializer() {
-        return true;
-    }
-
-    @Override
     protected void augmentStaticInitializer(String className, CodeBuilder code) {
-        super.augmentStaticInitializer(className, code);
-
-        String name = classStruct.getName();
-
         code.aconst_null()
-            .loadConstant(name)
+            .loadConstant(classStruct.getName())
             .invokestatic(CD_String, "of", MD_StringOf)
             .putstatic(ClassDesc.of(className), NAME, CD_String);
     }

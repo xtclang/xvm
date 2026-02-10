@@ -362,7 +362,7 @@ public class FBind
         code.new_(cdFn)
             .dup()
             .aload(code.parameterSlot(0)); // ctx
-        Builder.loadTypeConstant(code, ts, typeFn);
+        bctx.loadTypeConstant(code, typeFn);
         code.aload(slotStd)
             .aload(slotOpt)
             .iload(slotImm)
@@ -403,7 +403,6 @@ public class FBind
             .ifeq(labelEnd);
         regArg.load(code);
         code.invokevirtual(CD_nObj, "$isImmut", MethodTypeDesc.of(CD_boolean))
-            .iand()
             .istore(slotImm)
             .labelBinding(labelEnd);
     }
