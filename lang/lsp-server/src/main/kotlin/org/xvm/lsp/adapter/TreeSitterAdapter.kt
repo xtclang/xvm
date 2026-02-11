@@ -66,6 +66,10 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
 
     private val parser: XtcParser = XtcParser()
     private val queryEngine: XtcQueryEngine = XtcQueryEngine(parser.getLanguage())
+
+    // ConcurrentHashMap is required because compile() is called from the LSP message thread
+    // (via didOpen/didChange), while read methods like findSymbolAt(), getCompletions(), and
+    // findDefinition() are called from CompletableFuture.supplyAsync on the ForkJoinPool.
     private val parsedTrees = ConcurrentHashMap<String, XtcTree>()
     private val compilationResults = ConcurrentHashMap<String, CompilationResult>()
 

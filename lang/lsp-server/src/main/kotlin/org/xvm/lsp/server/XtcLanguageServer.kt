@@ -411,6 +411,9 @@ class XtcLanguageServer(
     // ========================================================================
 
     private inner class XtcTextDocumentService : TextDocumentService {
+        // ConcurrentHashMap is required because didOpen/didChange/didClose write on the LSP
+        // message thread, while documentSymbol, formatting, documentLink, etc. read from
+        // CompletableFuture.supplyAsync handlers on the ForkJoinPool.
         private val openDocuments = ConcurrentHashMap<String, String>()
 
         /**

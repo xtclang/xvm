@@ -90,6 +90,9 @@ private val identifierPattern = Regex("""\b(\w+)\b""")
 class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
     override val displayName: String = "Mock"
 
+    // ConcurrentHashMap is required because compile() is called from the LSP message thread
+    // (via didOpen/didChange), while read methods like findSymbolAt() and getCompletions()
+    // are called from CompletableFuture.supplyAsync on the ForkJoinPool.
     private val compiledDocuments = ConcurrentHashMap<String, CompilationResult>()
     private val documentContents = ConcurrentHashMap<String, String>()
 

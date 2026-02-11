@@ -61,7 +61,7 @@ val nativePlatformDir: String = when {
 // Directory Layout
 // =============================================================================
 
-val treeSitterCliVersion: String = libs.versions.tree.sitter.cli.get()
+val treeSitterCliVersion: String = libs.versions.lang.tree.sitter.cli.get()
 val treeSitterCliDir: Provider<Directory> = layout.buildDirectory.dir("tree-sitter-cli")
 val generatedDir: Provider<Directory> = layout.buildDirectory.dir("generated")
 val nativeOutputDir: Provider<Directory> = layout.buildDirectory.dir("native")
@@ -159,7 +159,7 @@ val extractTreeSitterCli by tasks.registering {
 // Download tree-sitter source to build the runtime library (libtree-sitter).
 // This is needed by jtreesitter at runtime in addition to our grammar library.
 
-val treeSitterRuntimeVersion: String = libs.versions.tree.sitter.cli.get()
+val treeSitterRuntimeVersion: String = libs.versions.lang.tree.sitter.cli.get()
 val treeSitterSourceDir: Provider<Directory> = layout.buildDirectory.dir("tree-sitter-source")
 
 /**
@@ -235,7 +235,7 @@ val treeSitterLibSrc: Provider<Directory> = treeSitterSourceDir.map {
 // Zig enables building native libraries for ALL platforms from ANY host machine.
 // Download once, build everywhere - no platform-specific toolchains needed.
 
-val zigVersion: String = libs.versions.zig.get()
+val zigVersion: String = libs.versions.lang.zig.get()
 // Use persistent cache directory instead of build directory
 val zigDir: File = File(zigCacheDir, zigVersion)
 
@@ -890,7 +890,7 @@ val populateNativeLibraryCache by tasks.registering {
     val grammarFileValue = grammarJsFile.map { it.asFile }
     val scannerFileValue = scannerCFile.map { it.asFile }
     val cliVersionValue = treeSitterCliVersion
-    val zigVersionValue = libs.versions.zig.get()
+    val zigVersionValue = zigVersion
     val cacheDirValue = nativeLibCacheDir
     // Capture the map with pre-computed extensions to avoid script function reference
     val platformsWithExtensions = crossCompileTargets.keys.associateWith { libExtForPlatform(it) }
@@ -1249,7 +1249,7 @@ val buildAllNativeLibrariesOnDemand by tasks.registering(BuildAllNativeLibraries
     scannerFile.set(scannerCFile)
     parserSrcDir.set(generatedDir.map { it.dir("src") })
     cliVersion.set(treeSitterCliVersion)
-    this.zigVersion.set(libs.versions.zig)
+    this.zigVersion.set(libs.versions.lang.zig)
     zigExePath.set(zigExe)
     treeSitterLibSrcPath.set(treeSitterLibSrc.map { it.asFile.absolutePath })
     cacheDir.set(nativeLibCacheDir.absolutePath)

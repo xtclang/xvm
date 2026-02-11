@@ -1,3 +1,5 @@
+import org.jlleitschuh.gradle.ktlint.KtlintExtension
+
 /**
  * Root project for XTC language tooling.
  *
@@ -10,9 +12,52 @@
 
 plugins {
     base
-    alias(libs.plugins.kotlin.jvm) apply false
-    alias(libs.plugins.kotlin.serialization) apply false
-    alias(libs.plugins.ktlint) apply false
+    alias(libs.plugins.lang.kotlin.jvm) apply false
+    alias(libs.plugins.lang.kotlin.serialization) apply false
+    alias(libs.plugins.lang.ktlint) apply false
+}
+
+// =============================================================================
+// ktlint configuration for all Kotlin subprojects
+// =============================================================================
+// Centralized ktlint setup: pins the engine version and ensures auto-formatting
+// runs before checks, so developers never see formatting-only failures.
+// Rule configuration lives in lang/.editorconfig (picked up automatically).
+
+subprojects {
+    pluginManager.withPlugin("org.jlleitschuh.gradle.ktlint") {
+        configure<KtlintExtension> {
+            // Pin the ktlint engine version (from libs.versions.toml) to ensure
+            // consistent formatting across environments, independent of which
+            // Gradle plugin version is used.
+            version.set(libs.versions.lang.ktlint.engine)
+
+            // --- Uncomment to override defaults ---
+            // verbose.set(false)
+            // debug.set(false)
+            // android.set(false)
+            // outputToConsole.set(true)
+            // coloredOutput.set(true)
+            // outputColorName.set("")
+            // ignoreFailures.set(false)
+            // enableExperimentalRules.set(false)
+            // relative.set(false)
+            // baseline.set(file("config/ktlint/baseline.xml"))
+        }
+
+        // Auto-format before check: both lifecycle tasks (ktlint*Check) and their
+        // underlying worker tasks (runKtlintCheckOver*) must wait for formatting to
+        // complete. Without wiring the worker tasks, Gradle can schedule them before
+        // the format workers finish writing corrected files.
+        tasks.matching { it.name.startsWith("ktlint") && it.name.endsWith("Check") }.configureEach {
+            val formatTaskName = name.replace("Check", "Format")
+            dependsOn(tasks.named(formatTaskName))
+        }
+        tasks.matching { it.name.startsWith("runKtlintCheck") }.configureEach {
+            val formatTaskName = name.replace("runKtlintCheck", "runKtlintFormat")
+            dependsOn(tasks.named(formatTaskName))
+        }
+    }
 }
 
 
@@ -59,7 +104,7 @@ val updateGeneratedExamples by tasks.registering(Copy::class) {
 // =============================================================================
 
 // Projects to aggregate standard lifecycle tasks from
-val coreProjects = listOf(":dsl", ":tree-sitter", ":lsp-server", ":intellij-plugin")
+val coreProjects = listOf(":dsl", ":tree-sitter", ":lsp-server", ":debug-adapter", ":intellij-plugin")
 val allProjects = coreProjects + ":vscode-extension"
 
 // Map of aggregate task -> subproject task (null means same name)

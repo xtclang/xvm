@@ -5,10 +5,10 @@ import kotlin.concurrent.thread
 
 plugins {
     alias(libs.plugins.xdk.build.properties)
-    alias(libs.plugins.kotlin.jvm)
-    alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.ktlint)
-    alias(libs.plugins.intellij.platform)
+    alias(libs.plugins.lang.kotlin.jvm)
+    alias(libs.plugins.lang.kotlin.serialization)
+    alias(libs.plugins.lang.ktlint)
+    alias(libs.plugins.lang.intellij.platform)
 }
 
 // Access version from xdkProperties (set by xdk.build.properties plugin)
@@ -81,7 +81,7 @@ val localIntelliJ: File? = if (useLocalIde || hasExplicitLocalPath) findLocalInt
 
 val gradleUserHome = gradle.gradleUserHomeDir
 val ideVersion =
-    libs.versions.intellij.ide
+    libs.versions.lang.intellij.ide
         .get()
 
 // The IntelliJ Platform Gradle Plugin downloads the IDE distribution into the Gradle module cache:
@@ -243,7 +243,7 @@ dependencies {
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
-    testRuntimeOnly("junit:junit:4.13.2") // Required by IntelliJ Platform test harness
+    testRuntimeOnly(libs.lang.intellij.junit4.compat)
     testImplementation(libs.assertj)
 
     // LSP server fat JAR for out-of-process execution
@@ -257,7 +257,7 @@ dependencies {
     compileOnly(project(":lsp-server"))
 
     // JSON serialization for JSON-RPC protocol messages
-    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.lang.kotlinx.serialization.json)
 
     intellijPlatform {
         // Default: download IntelliJ Community (cached in $GRADLE_USER_HOME by version)
@@ -266,14 +266,18 @@ dependencies {
             local(localIntelliJ.absolutePath)
         } else {
             intellijIdeaCommunity(
-                libs.versions.intellij.ide
+                libs.versions.lang.intellij.ide
                     .get(),
             )
         }
         bundledPlugin("com.intellij.java")
         bundledPlugin("com.intellij.gradle")
         bundledPlugin("org.jetbrains.plugins.textmate")
-        plugin("com.redhat.devtools.lsp4ij", libs.versions.lsp4ij.get())
+        plugin(
+            "com.redhat.devtools.lsp4ij",
+            libs.versions.lang.intellij.lsp4ij
+                .get(),
+        )
         // pluginVerifier() - only enable when publishing to verify compatibility
     }
 
@@ -282,13 +286,13 @@ dependencies {
 
 // IntelliJ 2025.1 runs on JDK 21, so we must target JDK 21 (not the project's JDK 25)
 val intellijJdkVersion: Int =
-    libs.versions.intellij.jdk
+    libs.versions.lang.intellij.jdk
         .get()
         .toInt()
 
 // Derive sinceBuild from IDE version: "2025.1" -> "251" (last 2 digits of year + major version)
 val intellijIdeVersion: String =
-    libs.versions.intellij.ide
+    libs.versions.lang.intellij.ide
         .get()
 val intellijSinceBuild: String =
     run {
@@ -595,7 +599,9 @@ val runIde by tasks.existing {
     val m2Repo = mavenLocalRoot.map { File(it, "org/xtclang") }
     val lspLogFile = providers.systemProperty("user.home").map { File(it, ".xtc/logs/lsp-server.log") }
     val capturedIdeVersion = ideVersion
-    val capturedLsp4ijVersion = libs.versions.lsp4ij.get()
+    val capturedLsp4ijVersion =
+        libs.versions.lang.intellij.lsp4ij
+            .get()
     val capturedSinceBuild = intellijSinceBuild
     val capturedIdeCacheDir = ideCacheDir
     val capturedGradleUserHome = gradleUserHome

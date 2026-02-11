@@ -1,8 +1,8 @@
 plugins {
     alias(libs.plugins.xdk.build.properties)
-    alias(libs.plugins.kotlin.jvm)
-    alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.ktlint)
+    alias(libs.plugins.lang.kotlin.jvm)
+    alias(libs.plugins.lang.kotlin.serialization)
+    alias(libs.plugins.lang.ktlint)
 }
 
 val kotlinJdkVersion = xdkProperties.int("org.xtclang.kotlin.jdk")
@@ -24,9 +24,9 @@ repositories {
 }
 
 dependencies {
-    implementation(libs.kotlinx.serialization.json)
-    implementation(libs.slf4j.api)
-    runtimeOnly(libs.logback)
+    implementation(libs.lang.kotlinx.serialization.json)
+    implementation(libs.lang.slf4j.api)
+    runtimeOnly(libs.lang.logback)
     testImplementation(libs.junit.jupiter)
     testImplementation(kotlin("test"))
     testRuntimeOnly(libs.junit.platform.launcher)
