@@ -2,7 +2,6 @@ package org.xvm.javajit;
 
 import java.lang.constant.ClassDesc;
 
-import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
@@ -36,11 +35,11 @@ public class JitTypeDesc {
      * @return the primitive ClassDesc if the specified type is optimizable to a primitive Java
      *         class; and a corresponding non-primitive ClassDesc otherwise.
      */
-    public static ClassDesc getJitClass(TypeSystem ts, TypeConstant type) {
+    public static ClassDesc getJitClass(Builder builder, TypeConstant type) {
         return type.isJavaPrimitive()
             ? JitParamDesc.getPrimitiveClass(type)
             : type.isSingleUnderlyingClass(true)
-                ? type.ensureClassDesc(ts)
+                ? builder.ensureClassDesc(type)
                 : CD_nObj;
     }
 
@@ -76,21 +75,6 @@ public class JitTypeDesc {
         return type.isNullable()
             ? getPrimitiveClass(type.removeNullable())
             : null;
-    }
-
-    /**
-     * @return true iff the objects of the specified type could be represented by two longs
-     */
-    public static boolean isDoubleLong(TypeConstant type) {
-        if (type.isSingleDefiningConstant()
-                && type.getDefiningConstant() instanceof ClassConstant id
-                && id.getModuleConstant().isEcstasyModule()) {
-            return switch (id.getName()) {
-                case "Int128",  "UInt128" -> true;
-                default -> false;
-            };
-        }
-        return false;
     }
 
     /**

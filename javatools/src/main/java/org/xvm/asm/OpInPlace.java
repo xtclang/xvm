@@ -460,7 +460,7 @@ public abstract class OpInPlace
         TypeConstant  type     = reg.type();
         MethodInfo    method   = type.ensureTypeInfo().findOpMethod(sName, sOp, null);
         String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
-        JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem, type);
+        JitMethodDesc jmd      = method.getJitDesc(bctx.builder, type);
 
         assert !jmd.isOptimized;
 
@@ -478,10 +478,9 @@ public abstract class OpInPlace
      */
     protected void buildPrimitiveProperty(BuildContext bctx, CodeBuilder code,
                                           PropertyConstant idProp) {
-        TypeSystem    ts       = bctx.typeSystem;
         PropertyInfo  infoProp = idProp.getPropertyInfo();
-        JitMethodDesc jmdGet   = infoProp.getGetterJitDesc(ts);
-        JitMethodDesc jmdSet   = infoProp.getSetterJitDesc(ts);
+        JitMethodDesc jmdGet   = infoProp.getGetterJitDesc(bctx.builder);
+        JitMethodDesc jmdSet   = infoProp.getSetterJitDesc(bctx.builder);
         JitParamDesc  pd       = jmdGet.optimizedReturns[0];
         ClassDesc     cd       = pd.cd;
 
@@ -489,8 +488,8 @@ public abstract class OpInPlace
 
         MethodTypeDesc mdGet    = jmdGet.optimizedMD;
         MethodTypeDesc mdSet    = jmdSet.optimizedMD;
-        String         sGetName = infoProp.ensureGetterJitMethodName(ts) + Builder.OPT;
-        String         sSetName = infoProp.ensureSetterJitMethodName(ts) + Builder.OPT;
+        String         sGetName = infoProp.ensureGetterJitMethodName(bctx.typeSystem) + Builder.OPT;
+        String         sSetName = infoProp.ensureSetterJitMethodName(bctx.typeSystem) + Builder.OPT;
 
         RegisterInfo regTarget = bctx.loadThis(code);
         bctx.loadCtx(code);

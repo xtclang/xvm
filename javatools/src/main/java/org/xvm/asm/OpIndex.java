@@ -20,7 +20,6 @@ import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.JitParamDesc.JitParams;
 import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.RegisterInfo;
-import org.xvm.javajit.TypeSystem;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -216,13 +215,12 @@ public abstract class OpIndex
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        TypeSystem   ts     = bctx.typeSystem;
         RegisterInfo reg    = bctx.loadArgument(code, m_nTarget);
         TypeConstant type   = reg.type();
         TypeConstant typeEl = type.resolveGenericType("Element");
 
         if (type.isArray()) {
-            ClassDesc cdArray = type.ensureClassDesc(ts);
+            ClassDesc cdArray = bctx.builder.ensureClassDesc(type);
             if (typeEl.isJavaPrimitive()) {
                 ClassDesc cdEl = JitTypeDesc.getPrimitiveClass(typeEl);
 
@@ -272,7 +270,7 @@ public abstract class OpIndex
 
                     case OP_IIP_ADD -> {
                         // @Op(+) Char add(Int n)
-                        ClassDesc cdArg = typeEl.equals(ts.pool().typeChar())
+                        ClassDesc cdArg = typeEl.equals(bctx.pool().typeChar())
                             ? CD_long
                             : cdEl;
                         bctx.loadArgument(code, getValueIndex());
@@ -282,7 +280,7 @@ public abstract class OpIndex
 
                     case OP_IIP_SUB -> {
                         // @Op(+) Char add(Int n)
-                        ClassDesc cdArg = typeEl.equals(ts.pool().typeChar())
+                        ClassDesc cdArg = typeEl.equals(bctx.pool().typeChar())
                             ? CD_long
                             : cdEl;
                         bctx.loadArgument(code, getValueIndex());
@@ -389,8 +387,8 @@ public abstract class OpIndex
 
             TypeConstant  typeArg  = bctx.getArgumentType(m_nIndex);
             MethodInfo    method   = type.ensureTypeInfo().findOpMethod(sName, sOp, typeArg);
-            JitMethodDesc jmd      = method.getJitDesc(ts, type);
-            String        sJitName = method.ensureJitMethodName(ts);
+            JitMethodDesc jmd      = method.getJitDesc(bctx.builder, type);
+            String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
 
             MethodTypeDesc mdCall;
             if (jmd.isOptimized) {
@@ -407,7 +405,7 @@ public abstract class OpIndex
         }
 
         if (isAssignOp()) {
-            JitParams     params = JitParamDesc.computeJitParams(ts, typeEl);
+            JitParams     params = JitParamDesc.computeJitParams(bctx.builder, typeEl);
             JitMethodDesc jmd    = new JitMethodDesc(
                 params.apdStdParam(), JitParamDesc.NONE,
                 params.apdOptParam(), params.isOptimized() ? JitParamDesc.NONE : null);

@@ -171,7 +171,7 @@ public class CommonBuilder
         TypeConstant superType = typeInfo.getExtends();
         return superType == null
             ? CD_nObj
-            : superType.ensureClassDesc(typeSystem);
+            : ensureClassDesc(superType);
     }
 
     /**
@@ -277,7 +277,7 @@ public class CommonBuilder
                         // ignore "implements Object" for classes
                         continue;
                     }
-                    interfaces.add(contribType.ensureClassDesc(typeSystem));
+                    interfaces.add(ensureClassDesc(contribType));
                     break;
             }
         }
@@ -357,7 +357,7 @@ public class CommonBuilder
      */
     protected void assembleField(String className, ClassBuilder classBuilder, PropertyInfo prop) {
         String      jitName = prop.getIdentity().ensureJitPropertyName(typeSystem);
-        JitTypeDesc jtd     = prop.getType().getJitDesc(typeSystem);
+        JitTypeDesc jtd     = prop.getType().getJitDesc(this);
 
         int flags = ClassFile.ACC_PUBLIC;
         if (prop.isConstant()) {
@@ -647,7 +647,7 @@ public class CommonBuilder
                 break;
             case Explicit:
                 String         jitName = prop.ensureGetterJitMethodName(typeSystem);
-                JitMethodDesc  jmDesc  = prop.getGetterJitDesc(typeSystem);
+                JitMethodDesc  jmDesc  = prop.getGetterJitDesc(this);
                 boolean        isOpt   = jmDesc.isOptimized;
                 MethodTypeDesc md      = isOpt ? jmDesc.optimizedMD : jmDesc.standardMD;
                 if (isOpt) {
@@ -671,7 +671,7 @@ public class CommonBuilder
 
             case Explicit:
                 String         jitName = prop.ensureSetterJitMethodName(typeSystem);
-                JitMethodDesc  jmDesc  = prop.getSetterJitDesc(typeSystem);
+                JitMethodDesc  jmDesc  = prop.getSetterJitDesc(this);
                 boolean        isOpt   = jmDesc.isOptimized;
                 MethodTypeDesc md      = isOpt ? jmDesc.optimizedMD : jmDesc.standardMD;
                 if (isOpt) {
@@ -692,7 +692,7 @@ public class CommonBuilder
         if (prop.isConstant()) {
             flags |= ClassFile.ACC_STATIC;
         }
-        JitMethodDesc  jmd     = prop.getGetterJitDesc(typeSystem);
+        JitMethodDesc  jmd     = prop.getGetterJitDesc(this);
         boolean        isOpt   = jmd.isOptimized;
         MethodTypeDesc md      = isOpt ? jmd.optimizedMD : jmd.standardMD;
         String         jitName = isOpt ? jitGetterName+OPT : jitGetterName;
@@ -786,7 +786,7 @@ public class CommonBuilder
         if (prop.isConstant()) {
             flags |= ClassFile.ACC_STATIC;
         }
-        JitMethodDesc  jmd     = prop.getSetterJitDesc(typeSystem);
+        JitMethodDesc  jmd     = prop.getSetterJitDesc(this);
         boolean        isOpt   = jmd.isOptimized;
         MethodTypeDesc md      = isOpt ? jmd.optimizedMD : jmd.standardMD;
         String         jitName = isOpt ? jitSetterName+OPT : jitSetterName;
@@ -917,7 +917,7 @@ public class CommonBuilder
         ClassDesc CD_this = ClassDesc.of(className);
         int       flags   = ClassFile.ACC_PUBLIC;
 
-        JitMethodDesc  jmd     = prop.getGetterJitDesc(typeSystem);
+        JitMethodDesc  jmd     = prop.getGetterJitDesc(this);
         boolean        isOpt   = jmd.isOptimized;
         MethodTypeDesc md      = isOpt ? jmd.optimizedMD : jmd.standardMD;
         String         jitName = isOpt ? jitGetterName+OPT : jitGetterName;
@@ -1075,7 +1075,7 @@ public class CommonBuilder
             assert targetMethod != null;
             assembleRoutingMethod(className, classBuilder, method, targetMethod);
         } else {
-            JitMethodDesc jmDesc = method.getJitDesc(typeSystem, typeInfo.getType());
+            JitMethodDesc jmDesc = method.getJitDesc(this, typeInfo.getType());
             assembleMethod(className, classBuilder, method, jitName, jmDesc);
 
             if (method.isCtorOrValidator() && !typeInfo.isAbstract()) {
@@ -1117,7 +1117,6 @@ public class CommonBuilder
                 int          stdParamIx   = optParamDesc.index;
                 int          stdParamSlot = code.parameterSlot(extraCount + stdParamIx);
                 TypeConstant stdParamType = optParamDesc.type;
-                ClassDesc    cd;
 
                 switch (optParamDesc.flavor) {
                     case Specific, Widened:
@@ -1146,8 +1145,7 @@ public class CommonBuilder
                         Builder.defaultLoad(code, optParamDesc.cd); // default primitive
                         code.iconst_1();                            // true
 
-                        code
-                            .goto_(endIf)
+                        code.goto_(endIf)
                             .labelBinding(ifNotNull)
                             .aload(stdParamSlot);
                         unbox(code, stdParamType, optParamDesc.cd); // unwrapped primitive
@@ -1176,7 +1174,7 @@ public class CommonBuilder
                         code.goto_(endIf)
                             .labelBinding(ifNotNull)
                             .aload(stdParamSlot)
-                            .checkcast(stdParamType.removeNullable().ensureClassDesc(typeSystem));
+                            .checkcast(ensureClassDesc(primitiveType));
                         unbox(code, primitiveType, optParamDesc.cd); // unboxed primitive
                         code.iconst_0();                             // false
 
@@ -1185,16 +1183,17 @@ public class CommonBuilder
                         break;
                     }
 
-                    case XvmPrimitive:
+                    case XvmPrimitive: {
                         code.aload(stdParamSlot);
-                        cd = JitTypeDesc.getXvmPrimitiveClass(stdParamType);
+                        ClassDesc cd = JitTypeDesc.getXvmPrimitiveClass(stdParamType);
                         assert cd != null;
                         unbox(code, stdParamType, cd);
                         // skip over the additional parameters that we have just loaded by unboxing
                         i = i - 1 + JitTypeDesc.getXvmPrimitiveSlotCount(stdParamType);
                         break;
+                    }
 
-                    case NullableXvmPrimitive:
+                    case NullableXvmPrimitive: {
                         assert stdParamType.isNullable();
                         int slotCount = JitTypeDesc.getXvmPrimitiveSlotCount(stdParamType);
                         // if the argument is Ecstasy `Null`, pass the default value for the type
@@ -1211,21 +1210,22 @@ public class CommonBuilder
                         }
                         code.iconst_1();                                 // true
 
-                        TypeConstant underlying = stdParamType.removeNullable();
+                        TypeConstant underlyingType = stdParamType.removeNullable();
                         code.goto_(endIf)
                             .labelBinding(ifNotNull)
                             .aload(stdParamSlot)
-                            .checkcast(underlying.ensureClassDesc(typeSystem));
+                            .checkcast(ensureClassDesc(underlyingType));
 
-                        cd = JitTypeDesc.getXvmPrimitiveClass(underlying);
+                        ClassDesc cd = JitTypeDesc.getXvmPrimitiveClass(underlyingType);
                         assert cd != null;
-                        unbox(code, underlying, cd); // unboxed primitives
-                        code.iconst_0();             // false
+                        unbox(code, underlyingType, cd); // unboxed primitives
+                        code.iconst_0();                 // false
 
                         code.labelBinding(endIf);
                         // skip over the additional parameters that we have just loaded
                         i = i + slotCount;
                         break;
+                    }
 
                     case AlwaysNull:
                         throw new UnsupportedOperationException();
@@ -1264,10 +1264,7 @@ public class CommonBuilder
                 TypeConstant stdType  = stdDesc.type;
                 int          stdRetIx = stdDesc.altIndex;
 
-                int[]        optIndexes;
                 JitParamDesc optExt;
-                Label        ifNull;
-                Label        endIf;
                 int          idx;
 
                 switch (optDesc.flavor) {
@@ -1295,13 +1292,13 @@ public class CommonBuilder
                     }
                     break;
 
-                case NullablePrimitive:
+                case NullablePrimitive: {
                     assert stdType.isNullable();
 
                     // if the extension is 'true', the return value is "Null", otherwise the
                     // boxed primitive value
-                    ifNull = code.newLabel();
-                    endIf  = code.newLabel();
+                    Label ifNull = code.newLabel();
+                    Label endIf  = code.newLabel();
 
                     optExt = optReturns[optIx + 1];
                     loadFromContext(code, CD_boolean, optExt.altIndex);
@@ -1330,9 +1327,10 @@ public class CommonBuilder
                         code.labelBinding(endIf);
                     }
                     break;
+                }
 
-                case XvmPrimitive:
-                    optIndexes = jmDesc.getAllOptimizedReturnIndexes(optDesc.index);
+                case XvmPrimitive: {
+                    int[] optIndexes = jmDesc.getAllOptimizedReturnIndexes(optDesc.index);
                     optIx -= optIndexes.length - 1; // skip the Opt returns we will process
                     idx =  optDesc.index == 0 ? 1 : 0;
                     for (; idx < optIndexes.length; idx++) {
@@ -1346,21 +1344,21 @@ public class CommonBuilder
                         storeToContext(code, stdCD, stdRetIx);
                     }
                     break;
+                }
 
-                case NullableXvmPrimitive:
+                case NullableXvmPrimitive: {
                     assert stdType.isNullable();
                     // if the extension is 'true', the return value is "Null", otherwise the
                     // boxed primitive value
-                    ifNull = code.newLabel();
-                    endIf  = code.newLabel();
+                    Label ifNull = code.newLabel();
+                    Label endIf  = code.newLabel();
 
-                    optIndexes = jmDesc.getAllOptimizedReturnIndexes(optDesc.index);
+                    int[] optIndexes = jmDesc.getAllOptimizedReturnIndexes(optDesc.index);
                     optIx -= optIndexes.length - 2; // skip the Opt returns we will process
                     optExt = optReturns[optIndexes[optIndexes.length - 1]];
                     loadFromContext(code, CD_boolean, optExt.altIndex);
                     code.iconst_1()
-                            .if_icmpeq(ifNull)  // if true, go to Null
-                    ;
+                        .if_icmpeq(ifNull);  // if true, go to Null
 
                     idx = optDesc.index == 0 ? 1 : 0;
                     for (; idx < optIndexes.length - 1; idx++) {
@@ -1385,6 +1383,7 @@ public class CommonBuilder
                         code.labelBinding(endIf);
                     }
                     break;
+                }
 
                 case SpecificWithDefault:
                 case WidenedWithDefault:
@@ -1603,7 +1602,7 @@ public class CommonBuilder
             // step 6: call the constructor
             // construct$17(ctx, cctx, [type], thi$, x, y, z);
             String        ctorName = constructor.ensureJitMethodName(typeSystem);
-            JitMethodDesc ctorDesc = constructor.getJitDesc(typeSystem, typeInfo.getType());
+            JitMethodDesc ctorDesc = constructor.getJitDesc(this, typeInfo.getType());
 
             code.aload(ctxSlot)
                 .aload(cctxSlot)

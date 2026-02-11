@@ -8,8 +8,8 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
-import org.xvm.javajit.TypeSystem;
 
 import org.xvm.util.Handy;
 
@@ -549,18 +549,18 @@ public class MethodBody {
     /**
      * @return the JitMethodDesc for the method associated with this body
      */
-    public synchronized JitMethodDesc getJitDesc(TypeSystem ts, TypeConstant typeContainer) {
+    public synchronized JitMethodDesc getJitDesc(Builder builder, TypeConstant typeContainer) {
         JitMethodDesc jmd = m_jmd;
         if (jmd == null ||
                 isCtorOrValidator() && !typeContainer.removeAccess().equals(m_typeJmdContainer)) {
             MethodStructure   method        = getMethodStructure();
             TypeConstant      typeCanonical = typeContainer.getCanonicalJitType().normalizeParameters();
             SignatureConstant sigActual     = getIdentity().getSignature().
-                                                    resolveGenericTypes(ts.pool(), typeCanonical);
+                                                    resolveGenericTypes(builder.typeSystem.pool(), typeCanonical);
 
-            m_jmd = jmd = JitMethodDesc.of(sigActual.getRawParams(), sigActual.getRawReturns(),
-                                isCtorOrValidator(), typeContainer.ensureClassDesc(ts),
-                                method.getTypeParamCount() + method.getRequiredParamCount(), ts);
+            m_jmd = jmd = JitMethodDesc.of(builder, sigActual.getRawParams(), sigActual.getRawReturns(),
+                                isCtorOrValidator(), builder.ensureClassDesc(typeContainer),
+                                method.getTypeParamCount() + method.getRequiredParamCount());
             m_typeJmdContainer = typeContainer;
         }
         return jmd;

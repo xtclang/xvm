@@ -230,7 +230,7 @@ public abstract class OpGeneral
             } else {
                 MethodInfo    method   = findOpMethod(bctx, typeTarget);
                 String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
-                JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem, typeTarget);
+                JitMethodDesc jmd      = method.getJitDesc(bctx.builder, typeTarget);
 
                 MethodTypeDesc md;
                 if (jmd.isOptimized) {
@@ -276,7 +276,7 @@ public abstract class OpGeneral
                 }
                 MethodInfo    method   = typeTarget.ensureTypeInfo().findOpMethod(sName, sOp, null);
                 String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
-                JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem, typeTarget);
+                JitMethodDesc jmd      = method.getJitDesc(bctx.builder, typeTarget);
 
                 MethodTypeDesc md;
                 if (jmd.isOptimized) {

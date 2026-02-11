@@ -9,6 +9,7 @@ import java.lang.constant.ClassDesc;
 import java.lang.constant.DirectMethodHandleDesc;
 import java.lang.constant.MethodHandleDesc;
 import java.lang.constant.MethodTypeDesc;
+
 import java.math.BigInteger;
 
 import org.xvm.asm.Constant;
@@ -99,6 +100,27 @@ public abstract class Builder {
     }
 
     // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * @return the ConstantPool used by this {@link Builder}.
+     */
+    public ConstantPool pool() {
+        return typeSystem.pool();
+    }
+
+    /**
+     * Ensure a unique ClassDesc for the specified type.
+     */
+    public ClassDesc ensureClassDesc(TypeConstant type) {
+        return type.ensureClassDesc(typeSystem);
+    }
+
+    /**
+     * Ensure a unique Java class name for the specified type.
+     */
+    public String ensureJitClassName(TypeConstant type) {
+        return type.ensureJitClassName(typeSystem);
+    }
 
     /**
      * Build the code to load a value for a constant on the Java stack.
@@ -194,7 +216,7 @@ public abstract class Builder {
             }
 
             TypeConstant type = singleton.getType();
-            JitTypeDesc  jtd  = type.getJitDesc(typeSystem);
+            JitTypeDesc  jtd  = type.getJitDesc(this);
             assert jtd.flavor == Specific;
 
             // retrieve from Singleton.$INSTANCE (see CommonBuilder.assembleStaticInitializer)
@@ -224,7 +246,7 @@ public abstract class Builder {
             TypeConstant type = jmd.isOptimized
                     ? jmd.optimizedReturns[0].type
                     : jmd.standardReturns[0].type;
-            JitTypeDesc jtd = type.getJitDesc(typeSystem);
+            JitTypeDesc jtd = type.getJitDesc(this);
             if (jtd.flavor == NullablePrimitive) {
                 throw new UnsupportedOperationException("TODO multislot property");
             }
@@ -261,7 +283,7 @@ public abstract class Builder {
             // 2) create the MethodHandle(s)
             TypeConstant  containerType = bctx.typeInfo.getType();
             ClassDesc     containerCD   = ClassDesc.of(bctx.className);
-            JitMethodDesc jmd           = body.getJitDesc(typeSystem, containerType);
+            JitMethodDesc jmd           = body.getJitDesc(this, containerType);
             boolean       isFunction    = body.getMethodStructure().isFunction();
 
             DirectMethodHandleDesc.Kind kind = isFunction
@@ -346,8 +368,8 @@ public abstract class Builder {
                                       PropertyConstant propId) {
         PropertyInfo  xvmInfo    = propId.getPropertyInfo(typeContainer);
         PropertyInfo  jitInfo    = propId.getPropertyInfo(typeContainer.getCanonicalJitType());
-        ClassDesc     cdOwner    = jitInfo.getOwnerClassDesc(typeSystem, typeContainer);
-        JitMethodDesc jmdGet     = jitInfo.getGetterJitDesc(typeSystem);
+        ClassDesc     cdOwner    = jitInfo.getOwnerClassDesc(this, typeContainer);
+        JitMethodDesc jmdGet     = jitInfo.getGetterJitDesc(this);
         String        getterName = jitInfo.ensureGetterJitMethodName(typeSystem);
 
         MethodTypeDesc md;
@@ -361,7 +383,7 @@ public abstract class Builder {
         code.aload(code.parameterSlot(0)); // $ctx
         code.invokevirtual(cdOwner, getterName, md);
         if (!xvmInfo.getType().equals(jitInfo.getType())) {
-            code.checkcast(xvmInfo.getType().ensureClassDesc(typeSystem));
+            code.checkcast(ensureClassDesc(xvmInfo.getType()));
         }
         return jmdGet;
     }
@@ -461,7 +483,7 @@ public abstract class Builder {
             assert reg.type().isXvmPrimitive();
 
             code.iload(multiSlot.extSlot())
-                    .ifne(lblNull);
+                .ifne(lblNull);
         } else {
             assert !reg.cd().isPrimitive();
 
@@ -486,7 +508,7 @@ public abstract class Builder {
             assert reg.flavor() == NullableXvmPrimitive;
 
             code.iload(multiSlot.extSlot())
-                    .ifeq(lblNotNull);
+                .ifeq(lblNotNull);
         } else {
             assert !reg.cd().isPrimitive();
 
@@ -566,7 +588,7 @@ public abstract class Builder {
     /**
      * Generate unboxing opcodes for a wrapper reference on the Java stack.
      *
-     * In: a boxed XVM reference
+     * In: a boxed Java reference
      * Out: the unboxed primitive value
      *
      * @param reg  the RegisterInfo for the unboxed value
@@ -578,7 +600,7 @@ public abstract class Builder {
     /**
      * Generate unboxing opcodes for a wrapper reference on the Java stack.
      *
-     * In: a boxed XVM reference
+     * In: a boxed Java reference
      * Out: the unboxed primitive value
      *
      * @param type  the primitive type for the boxed value
@@ -638,7 +660,7 @@ public abstract class Builder {
                 default:
                     throw new UnsupportedOperationException();
             }
-        } else { // must be an Ecstasy primitive
+        } else { // must be an XVM primitive
             switch (type.getSingleUnderlyingClass(false).getName()) {
                 case "Int128"  -> {
                     // stack is Int128
@@ -671,7 +693,7 @@ public abstract class Builder {
      * Generate boxing opcodes for a primitive value of the specified primitive class on the stack.
      *
      * In: an unboxed primitive value
-     * Out: the boxed XVM reference
+     * Out: the boxed Java reference
      *
      * @param reg  the RegisterInfo for the unboxed value
      */
@@ -683,7 +705,7 @@ public abstract class Builder {
      * Generate boxing opcodes for a primitive value of the specified primitive class on the stack.
      *
      * In: an unboxed primitive value
-     * Out: the boxed XVM reference
+     * Out: the boxed Java reference
      */
     public static void box(CodeBuilder code, TypeConstant type, ClassDesc cd) {
         TypeConstant baseType      = type.removeNullable();

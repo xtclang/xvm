@@ -103,7 +103,7 @@ public class BuildContext {
         this.callChain     = methodInfo.getChain();
         this.methodStruct  = callChain[0].getMethodStructure();
         this.callDepth     = 0;
-        this.methodDesc    = methodInfo.getJitDesc(typeSystem, typeInfo.getType());
+        this.methodDesc    = methodInfo.getJitDesc(builder, typeInfo.getType());
         this.methodJitName = methodInfo.ensureJitMethodName(typeSystem);
         this.isFunction    = methodInfo.isFunction();
         this.isConstructor = methodInfo.isCtorOrValidator();
@@ -126,8 +126,8 @@ public class BuildContext {
                 : propInfo.ensureOptimizedSetChain(typeInfo, null);
         this.methodStruct  = callChain[0].getMethodStructure();
         this.methodDesc = isGetter
-                ? propInfo.getGetterJitDesc(typeSystem)
-                : propInfo.getSetterJitDesc(typeSystem);
+                ? propInfo.getGetterJitDesc(builder)
+                : propInfo.getSetterJitDesc(builder);
         this.methodJitName = isGetter
                 ? propInfo.ensureGetterJitMethodName(typeSystem)
                 : propInfo.ensureSetterJitMethodName(typeSystem);
@@ -150,7 +150,7 @@ public class BuildContext {
         this.callChain     = bctx.callChain;
         this.methodStruct  = body.getMethodStructure();
         this.callDepth     = callDepth;
-        this.methodDesc    = body.getJitDesc(typeSystem, typeInfo.getType());
+        this.methodDesc    = body.getJitDesc(builder, typeInfo.getType());
         this.methodJitName = jitName;
         this.isFunction    = bctx.isFunction;
         this.isConstructor = bctx.isConstructor;
@@ -169,7 +169,7 @@ public class BuildContext {
         this.callChain     = bctx.callChain;
         this.methodStruct  = body.getMethodStructure();
         this.callDepth     = 0;
-        this.methodDesc    = body.getJitDesc(typeSystem, typeInfo.getType());
+        this.methodDesc    = body.getJitDesc(builder, typeInfo.getType());
         this.methodJitName = jitName;
         this.isFunction    = bctx.isFunction;
         this.isConstructor = bctx.isConstructor;
@@ -587,7 +587,7 @@ public class BuildContext {
 
         int          extraArgs = methodDesc.getImplicitParamCount(); // account for $ctx, $cctx, thi$
         TypeConstant thisType  = typeInfo.getType();
-        ClassDesc    CD_this   = thisType.ensureClassDesc(typeSystem);
+        ClassDesc    CD_this   = builder.ensureClassDesc(thisType);
         if (isConstructor) {
             thisType = thisType.ensureAccess(Access.STRUCT);
             registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, extraArgs-1, thisType, Specific,
@@ -606,7 +606,6 @@ public class BuildContext {
             String       name      = param.getName();
             TypeConstant type      = param.getType();
             int          slot      = code.parameterSlot(extraArgs + i); // compensate for implicits
-            int          extSlot;
 
             if (type.containsFormalType(true)) {
                 type = type.resolveGenerics(pool(), thisType);
@@ -622,15 +621,16 @@ public class BuildContext {
                     new SingleSlot(varIndex, slot, type, flavor, paramDesc.cd, name));
                 break;
 
-            case NullablePrimitive, PrimitiveWithDefault:
-                extSlot = code.parameterSlot(extraArgs + i + 1);
+            case NullablePrimitive, PrimitiveWithDefault: {
+                int extSlot = code.parameterSlot(extraArgs + i + 1);
 
                 registerInfos.put(varIndex,
                     new DoubleSlot(this, varIndex, slot, extSlot, flavor, type, paramDesc.cd, name));
                 i++; // already processed
                 break;
+            }
 
-            case XvmPrimitive, NullableXvmPrimitive, XvmPrimitiveWithDefault:
+            case XvmPrimitive, NullableXvmPrimitive, XvmPrimitiveWithDefault: {
                 ClassDesc[] cds   = JitTypeDesc.getXvmPrimitiveClasses(type);
                 int[]       slots = new int[cds.length];
 
@@ -640,21 +640,22 @@ public class BuildContext {
                     slots[j] = code.parameterSlot(extraArgs + i);
                 }
 
-                if (paramDesc.flavor == XvmPrimitive) {
+                int extSlot;
+                if (flavor == XvmPrimitive) {
                     extSlot = MultipleSlot.NO_SLOT;
                 } else {
                     extSlot = code.parameterSlot(extraArgs + i + 1);
                     i++; // we consume the next param
                 }
 
-                ClassDesc cd = paramDesc.flavor == NullableXvmPrimitive
+                ClassDesc cd = flavor == NullableXvmPrimitive
                         ? JitTypeDesc.getNullableXvmPrimitiveClass(paramDesc.type)
                         : JitTypeDesc.getXvmPrimitiveClass(paramDesc.type);
 
                 registerInfos.put(varIndex, new MultipleSlot(this, varIndex, slots, extSlot,
-                        paramDesc.flavor, type, cd, cds, name));
+                        flavor, type, cd, cds, name));
                 break;
-
+            }
             }
         typeMatrix.declare(-1, varIndex, type);
         }
@@ -871,7 +872,7 @@ public class BuildContext {
                 assert mtxType.isA(regType);
 
                 // narrow, but stay boxed for primitive types
-                ClassDesc narrowedCD = mtxType.ensureClassDesc(typeSystem);
+                ClassDesc narrowedCD = builder.ensureClassDesc(mtxType);
 
                 // if already loaded - cast here and don't cast on load
                 reg = new Narrowed(regId, reg.slots(), mtxType, Specific, narrowedCD, reg.slotCds(),
@@ -1016,10 +1017,10 @@ public class BuildContext {
 
             buildSuper(jitName, nDepth);
         } else {
-            containerCD = containerId.ensureClassDesc(typeSystem);
+            containerCD = builder.ensureClassDesc(containerId.getType());
         }
 
-        JitMethodDesc               jmd  = bodySuper.getJitDesc(typeSystem, typeInfo.getType());
+        JitMethodDesc               jmd  = bodySuper.getJitDesc(builder, typeInfo.getType());
         DirectMethodHandleDesc.Kind kind = DirectMethodHandleDesc.Kind.SPECIAL;
 
         DirectMethodHandleDesc stdMD = MethodHandleDesc.ofMethod(kind,
@@ -1111,7 +1112,7 @@ public class BuildContext {
         }
 
         Label        varStart = code.newLabel();
-        JitTypeDesc  jtd      = type.getJitDesc(typeSystem);
+        JitTypeDesc  jtd      = type.getJitDesc(builder);
         RegisterInfo reg      = switch (jtd.flavor) {
             case Specific, Widened, Primitive -> {
                 int slotPrime = scope.allocateLocal(regId, jtd.cd);
@@ -1393,7 +1394,7 @@ public class BuildContext {
                 }
 
                 Label        varStart   = code.newLabel();
-                ClassDesc    resourceCD = resourceType.ensureClassDesc(typeSystem);
+                ClassDesc    resourceCD = builder.ensureClassDesc(resourceType);
                 int          slot       = scope.allocateLocal(regId, TypeKind.REFERENCE);
                 RegisterInfo reg        = new SingleSlot(regId, slot, resourceType, Specific,
                                             resourceCD, name);
@@ -1579,7 +1580,7 @@ public class BuildContext {
      * ClassDesc for the specified type.
      */
     public RegisterInfo ensureRegInfo(int regId, TypeConstant type) {
-        return ensureRegInfo(regId, type, JitTypeDesc.getJitClass(typeSystem, type), "");
+        return ensureRegInfo(regId, type, JitTypeDesc.getJitClass(builder, type), "");
     }
 
     /**
@@ -1593,7 +1594,7 @@ public class BuildContext {
                     ? type.resolveGenerics(pool(), typeInfo.getType())
                     : type;
 
-                JitTypeDesc jitDesc = resolvedType.getJitDesc(typeSystem);
+                JitTypeDesc jitDesc = resolvedType.getJitDesc(builder);
                 if (resolvedType.isXvmPrimitive()) {
                     ClassDesc[] cds   = JitTypeDesc.getXvmPrimitiveClasses(resolvedType);
                     int[]       slots = new int[cds.length];
@@ -1651,7 +1652,7 @@ public class BuildContext {
             return origReg;
         }
 
-        ClassDesc   narrowedCD = JitTypeDesc.getJitClass(typeSystem, narrowedType);
+        ClassDesc   narrowedCD = JitTypeDesc.getJitClass(builder, narrowedType);
 
         ClassDesc[] narrowedSlotCds;
         int[]       narrowedSlots;
@@ -1670,7 +1671,7 @@ public class BuildContext {
         }
 
         Narrowed narrowedReg = new Narrowed(origReg.regId(), narrowedSlots, narrowedType,
-            narrowedType.getJitDesc(typeSystem).flavor, narrowedCD, narrowedSlotCds, origReg.name(),
+            narrowedType.getJitDesc(builder).flavor, narrowedCD, narrowedSlotCds, origReg.name(),
             scope.depth, false, origReg);
         OpAction action = () -> {
             if (fromAddr > currOpAddr) {
@@ -1689,7 +1690,7 @@ public class BuildContext {
                         Builder.load(code, origReg.cd(), origReg.slot());
                     } else {
                         origReg.load(code);
-                        code.checkcast(narrowedType.ensureClassDesc(typeSystem)); // boxed
+                        code.checkcast(builder.ensureClassDesc(narrowedType)); // boxed
                         Builder.unbox(code, narrowedReg);
                     }
                 } else if (narrowedType.isXvmPrimitive()) {
@@ -1706,7 +1707,7 @@ public class BuildContext {
                         }
                     } else {
                         origReg.load(code);
-                        code.checkcast(narrowedType.ensureClassDesc(typeSystem)); // boxed
+                        code.checkcast(builder.ensureClassDesc(narrowedType)); // boxed
                         Builder.unbox(code, narrowedReg);
                     }
                 } else {
@@ -1717,7 +1718,7 @@ public class BuildContext {
                                 narrowedType.isOnlyNullable();
                         Builder.loadNull(code);
                     } else if (origType.removeNullable().isXvmPrimitive()) {
-                        // this can only mean that the original was a NullableXvmrimitive
+                        // this can only mean that the original was a NullableXvmPrimitive
                         assert origReg.flavor() == NullableXvmPrimitive &&
                                 narrowedType.isNullable();
                         Builder.loadNull(code);
@@ -1795,7 +1796,7 @@ public class BuildContext {
         }
         PropertyConstant propId     = getConstant(propIdIndex, PropertyConstant.class);
         PropertyInfo     propInfo   = propId.getPropertyInfo(targetSlot.type());
-        JitMethodDesc    jmd        = propInfo.getSetterJitDesc(typeSystem);
+        JitMethodDesc    jmd        = propInfo.getSetterJitDesc(builder);
         String           setterName = propInfo.ensureSetterJitMethodName(typeSystem);
 
         MethodTypeDesc md;
@@ -1824,10 +1825,10 @@ public class BuildContext {
                 idCtor.getValueString() + "\" for " + typeTarget.getValueString());
         }
 
-        String        sJitTarget = typeTarget.ensureJitClassName(typeSystem);
+        String        sJitTarget = builder.ensureJitClassName(typeTarget);
         ClassDesc     cdTarget   = ClassDesc.of(sJitTarget);
         JitMethodDesc jmdNew     = Builder.convertConstructToNew(infoTarget, sJitTarget,
-                                    (JitCtorDesc) infoCtor.getJitDesc(typeSystem, typeTarget));
+                                    (JitCtorDesc) infoCtor.getJitDesc(builder, typeTarget));
 
         boolean fOptimized = jmdNew.isOptimized;
         String  sJitNew    = infoCtor.ensureJitMethodName(typeSystem).replace("construct", Builder.NEW);
@@ -1863,7 +1864,6 @@ public class BuildContext {
             ClassDesc    cdRet   = pdRet.cd;
             int          regId   = anVar[i];
             RegisterInfo reg     = ensureRegInfo(regId, typeRet, cdRet, "");
-            int[]        optIndexes;
 
             if (i == 0) {
                 switch (pdRet.flavor) {
@@ -1888,20 +1888,21 @@ public class BuildContext {
                     storeValue(code, reg, typeRet);
                     break;
 
-                case XvmPrimitive:
+                case XvmPrimitive: {
                     assert isOptimized;
                     // process the remaining primitives by loading from the context
-                    optIndexes = jmd.getAllOptimizedReturnIndexes(i);
+                    int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
                     for (int j = 1, retIndex = 0; j < optIndexes.length; j++, retIndex++) {
                         JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
                         Builder.loadFromContext(code, retDesc.cd, retIndex);
                     }
                     storeValue(code, reg, typeRet);
                     break;
+                }
 
-                case NullableXvmPrimitive:
+                case NullableXvmPrimitive: {
                     assert isOptimized;
-                    optIndexes = jmd.getAllOptimizedReturnIndexes(i);
+                    int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
 
                     if (reg.isSingle()) {
                         Builder.loadFromContext(code, CD_boolean, optIndexes[optIndexes.length - 1]);
@@ -1925,6 +1926,7 @@ public class BuildContext {
                     }
                     storeValue(code, reg, typeRet);
                     break;
+                }
 
                 default:
                     // process the natural return
@@ -1954,7 +1956,7 @@ public class BuildContext {
                 }
             } else {
                 switch (pdRet.flavor) {
-                case NullablePrimitive:
+                case NullablePrimitive: {
                     assert isOptimized;
                     JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
 
@@ -1975,21 +1977,23 @@ public class BuildContext {
                     }
                     storeValue(code, reg, typeRet);
                     break;
+                }
 
-                case XvmPrimitive:
+                case XvmPrimitive: {
                     assert isOptimized;
                     // process the remaining primitives by loading from the context
-                    optIndexes = jmd.getAllOptimizedReturnIndexes(i);
+                    int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
                     for (int optIndex : optIndexes) {
                         JitParamDesc retDesc = jmd.optimizedReturns[optIndex];
                         Builder.loadFromContext(code, retDesc.cd, retDesc.altIndex);
                     }
                     storeValue(code, reg, typeRet);
                     break;
+                }
 
-                case NullableXvmPrimitive:
+                case NullableXvmPrimitive: {
                     assert isOptimized;
-                    optIndexes = jmd.getAllOptimizedReturnIndexes(i);
+                    int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
                     if (reg.isSingle()) {
                         Builder.loadFromContext(code, CD_boolean, optIndexes[optIndexes.length - 1]);
                         Label ifTrue = code.newLabel();
@@ -2013,6 +2017,7 @@ public class BuildContext {
                     }
                     storeValue(code, reg, typeRet);
                     break;
+                }
 
                 default:
                     Builder.loadFromContext(code, cdRet, pdRet.altIndex);
@@ -2066,7 +2071,7 @@ public class BuildContext {
         Label endLabel     = code.newLabel();
         Label successLabel = code.newLabel();
 
-        ClassDesc cd = typeTo.ensureClassDesc(typeSystem);
+        ClassDesc cd = builder.ensureClassDesc(typeTo);
         code.labelBinding(startLabel)
             .checkcast(cd)
             .goto_(successLabel)
@@ -2147,7 +2152,7 @@ public class BuildContext {
     public RegisterInfo pushTempRegister(TypeConstant type, ClassDesc cd) {
         int          tempSlot = scope.allocateJavaSlot(cd);
         RegisterInfo tempReg  = new SingleSlot(Op.A_THIS, tempSlot, type,
-                                    type.getJitDesc(typeSystem).flavor, cd, "");
+                                    type.getJitDesc(builder).flavor, cd, "");
         tempRegStack.push(tempReg);
         return tempReg;
     }

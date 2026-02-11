@@ -127,7 +127,7 @@ public class MoveCast
     public void build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo regType = bctx.loadConstant(code, m_nToType);
         bctx.loadArgument(code, m_nFromValue);
-        code.checkcast(regType.type().ensureClassDesc(bctx.typeSystem));
+        code.checkcast(bctx.builder.ensureClassDesc(regType.type()));
     }
 
     // ----- fields --------------------------------------------------------------------------------

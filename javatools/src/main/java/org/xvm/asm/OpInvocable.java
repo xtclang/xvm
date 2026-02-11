@@ -340,14 +340,14 @@ public abstract class OpInvocable extends Op {
         TypeConstant   typeTarget = regTarget.type();
         MethodConstant idMethod   = bctx.getConstant(m_nMethodId, MethodConstant.class);
         MethodInfo     infoMethod = typeTarget.ensureTypeInfo().getMethodById(idMethod);
-        JitMethodDesc  jmd        = infoMethod.getJitDesc(bctx.typeSystem, typeTarget);
+        JitMethodDesc  jmd        = infoMethod.getJitDesc(bctx.builder, typeTarget);
         String         methodName = infoMethod.ensureJitMethodName(bctx.typeSystem);
         boolean        fOptimized = jmd.isOptimized;
         MethodTypeDesc md;
 
         if (cdTarget.isPrimitive()) {
             Builder.box(code, regTarget);
-            cdTarget = regTarget.type().ensureClassDesc(bctx.typeSystem);
+            cdTarget = bctx.builder.ensureClassDesc(regTarget.type());
         }
 
         if (fOptimized) {

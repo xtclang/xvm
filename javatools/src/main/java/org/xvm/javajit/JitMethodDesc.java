@@ -1,6 +1,5 @@
 package org.xvm.javajit;
 
-import java.lang.classfile.CodeBuilder;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
@@ -147,19 +146,18 @@ public class JitMethodDesc {
     }
 
     /**
-     * @param cdContainer  the container class; used only for constructors
-     *
+     * @param cdContainer the container class; used only for constructors
      * @return the JitMethodDesc for the method associated with this signature for the specified
-     *         container
+     * container
      */
-    public static JitMethodDesc of(TypeConstant[] paramTypes,
+    public static JitMethodDesc of(Builder builder,
+                                   TypeConstant[] paramTypes,
                                    TypeConstant[] returnTypes,
                                    boolean        isConstructor,
                                    ClassDesc      cdContainer,
-                                   int            reqParamCount,
-                                   TypeSystem     ts) {
+                                   int            reqParamCount) {
 
-        ConstantPool       pool         = ts.pool();
+        ConstantPool       pool         = builder.typeSystem.pool();
         List<JitParamDesc> stdParamList = new ArrayList<>();
         List<JitParamDesc> optParamList = new ArrayList<>();
         boolean            isOptimized  = false;
@@ -171,7 +169,7 @@ public class JitMethodDesc {
 
             if ((cd = JitTypeDesc.getPrimitiveClass(type)) != null) {
                 JitFlavor flavor = fDflt ? SpecificWithDefault : Specific;
-                ClassDesc cdStd  = type.ensureClassDesc(ts);
+                ClassDesc cdStd  = builder.ensureClassDesc(type);
 
                 stdParamList.add(new JitParamDesc(type, flavor, cdStd, iOrig, iStd++, false));
 
@@ -244,7 +242,7 @@ public class JitMethodDesc {
             } else {
                 assert type.isSingleUnderlyingClass(true);
 
-                cd = type.ensureClassDesc(ts);
+                cd = builder.ensureClassDesc(type);
 
                 JitFlavor flavor = fDflt ? SpecificWithDefault : Specific;
 
@@ -270,7 +268,7 @@ public class JitMethodDesc {
             ClassDesc    cd;
 
             if ((cd = JitTypeDesc.getPrimitiveClass(type)) != null) {
-                ClassDesc cdStd = type.ensureClassDesc(ts);
+                ClassDesc cdStd = builder.ensureClassDesc(type);
 
                 stdParamList.add(new JitParamDesc(type, Specific, cdStd, iOrig, ixStdObj++, false));
                 optParamList.add(new JitParamDesc(type, Primitive, cd,   iOrig, ixLong++, false));
@@ -306,7 +304,7 @@ public class JitMethodDesc {
             } else {
                 assert type.isSingleUnderlyingClass(true);
 
-                cd = type.ensureClassDesc(ts);
+                cd = builder.ensureClassDesc(type);
 
                 stdParamList.add(new JitParamDesc(type, Specific, cd, iOrig, ixStdObj++, false));
                 optParamList.add(new JitParamDesc(type, Specific, cd, iOrig, ixOptObj++, false));

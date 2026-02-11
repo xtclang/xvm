@@ -4,8 +4,6 @@ package org.xvm.asm.constants;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.lang.constant.ClassDesc;
-
 import java.util.List;
 
 import org.xvm.asm.Annotation;
@@ -651,16 +649,6 @@ public abstract class IdentityConstant
 
 
     // ----- JIT support ---------------------------------------------------------------------------
-
-    /**
-     * Ensure a unique ClassDesc for a type represented by this IdentityConstant.
-     * <br>
-     * Note: in some scenarios, the corresponding jit name <b>is not</b> the same as the result
-     *       of the {@link #getJitName} method.
-     */
-    public ClassDesc ensureClassDesc(TypeSystem ts) {
-        return getType().ensureClassDesc(ts);
-    }
 
     /**
      * @return a dot or '$'-delimited string that represents the corresponding Jit class name

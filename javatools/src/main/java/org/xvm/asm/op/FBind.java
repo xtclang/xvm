@@ -250,10 +250,10 @@ public class FBind
 
         assert typeFn.isFunction() && regFn.cd().equals(CD_nFunction);
 
-        JitMethodDesc jmdBefore = JitMethodDesc.of(
+        JitMethodDesc jmdBefore = JitMethodDesc.of(bctx.builder,
                 pool.extractFunctionParams(typeFn),
                 pool.extractFunctionReturns(typeFn),
-                false, null, Integer.MAX_VALUE, ts);
+                false, null, Integer.MAX_VALUE);
 
         boolean fOptBefore = jmdBefore.isOptimized;
 
@@ -281,10 +281,10 @@ public class FBind
 
             typeFn = pool.bindFunctionParam(typeFn, nArgPos);
 
-            JitMethodDesc jmdAfter = JitMethodDesc.of(
+            JitMethodDesc jmdAfter = JitMethodDesc.of(bctx.builder,
                     pool.extractFunctionParams(typeFn),
                     pool.extractFunctionReturns(typeFn),
-                    false, null, Integer.MAX_VALUE, ts);
+                    false, null, Integer.MAX_VALUE);
 
             boolean fOptAfter = jmdAfter.isOptimized;
 
@@ -358,7 +358,7 @@ public class FBind
             fOptBefore = fOptAfter;
         }
 
-        ClassDesc cdFn = typeFn.ensureClassDesc(ts);
+        ClassDesc cdFn = bctx.builder.ensureClassDesc(typeFn);
         code.new_(cdFn)
             .dup()
             .aload(code.parameterSlot(0)); // ctx

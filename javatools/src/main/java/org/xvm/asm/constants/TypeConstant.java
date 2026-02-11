@@ -4382,7 +4382,7 @@ public abstract class TypeConstant
      * Helper to select the "best" signature from an array of signatures; in other words, choose
      * the one that any other signature could "super" to.
      *
-     * @param setSigs  an array of signatures
+     * @param setSigs  a set of signatures
      * @param sigSub   (optional) if specified, it's a common "sub" method for all signatures
      *
      * @return the "best" signature to use
@@ -6584,7 +6584,7 @@ public abstract class TypeConstant
     /**
      * @return the JitTypeDesc for this type
      */
-    public JitTypeDesc getJitDesc(TypeSystem ts) {
+    public JitTypeDesc getJitDesc(Builder builder) {
         ClassDesc cd;
         if ((cd = JitTypeDesc.getPrimitiveClass(this)) != null) {
             return new JitTypeDesc(getCanonicalJitType(), Primitive, cd);
@@ -6603,7 +6603,7 @@ public abstract class TypeConstant
         }
         assert isSingleUnderlyingClass(true);
 
-        return new JitTypeDesc(getCanonicalJitType(), Specific, ensureClassDesc(ts));
+        return new JitTypeDesc(getCanonicalJitType(), Specific, builder.ensureClassDesc(this));
     }
 
     /**
@@ -6732,7 +6732,7 @@ public abstract class TypeConstant
             switch (nOp) {
                 case Op.OP_IS_EQ, Op.OP_JMP_EQ, Op.OP_IS_NEQ, Op.OP_JMP_NEQ:
                     // boolean equals(Ctx, primitives1..., primitives2...)
-                    code.invokestatic(ensureClassDesc(ts), methodName, methodDesc);
+                    code.invokestatic(bctx.builder.ensureClassDesc(this), methodName, methodDesc);
 
                     if (fLocalTrue) {
                         if (nOp == Op.OP_IS_NEQ) {
@@ -6750,7 +6750,7 @@ public abstract class TypeConstant
 
                 case Op.OP_IS_GT, Op.OP_IS_GTE, Op.OP_IS_LT, Op.OP_IS_LTE:
                     // int compare(Ctx, primitives1..., primitives2...)
-                    code.invokestatic(ensureClassDesc(ts), methodName, methodDesc);
+                    code.invokestatic(bctx.builder.ensureClassDesc(this), methodName, methodDesc);
                     code.iconst_0();
 
                     switch (nOp) {
@@ -6811,8 +6811,8 @@ public abstract class TypeConstant
                 }
             } else {
                 MethodInfo    method = ensureTypeInfo().getMethodBySignature(sig);
-                JitMethodDesc jmd    = method.getJitDesc(ts, this);
-                cd       = method.getJitIdentity().getNamespace().ensureClassDesc(ts);
+                JitMethodDesc jmd    = method.getJitDesc(bctx.builder, this);
+                cd       = bctx.builder.ensureClassDesc(method.getJitIdentity().getNamespace().getType());
                 sJitName = method.ensureJitMethodName(ts);
 
                 switch (nOp) {

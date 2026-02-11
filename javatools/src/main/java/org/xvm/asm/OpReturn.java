@@ -8,6 +8,7 @@ import java.lang.classfile.CodeBuilder;
 import java.lang.constant.ClassDesc;
 
 import org.xvm.asm.op.GuardAll;
+
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
@@ -15,7 +16,6 @@ import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.RegisterInfo;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
-import static org.xvm.javajit.Builder.EXT;
 
 /**
  * Base class for the RETURN_* op-codes.
@@ -86,8 +86,6 @@ public abstract class OpReturn
         boolean       fOptimized = bctx.isOptimized;
 
         if (m_fCallFinally) {
-            String sRetVal = "$ret";
-
             // $retN = true;
             int slotRet = bctx.scope.getSynthetic(GuardAll.DO_RETURN_SLOT_NAME, true);
             assert slotRet != -1;

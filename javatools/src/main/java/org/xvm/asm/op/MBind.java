@@ -157,7 +157,7 @@ public class MBind
         int slotImm = bctx.storeTempValue(code, CD_boolean);
 
         TypeConstant typeFn = bctx.pool().bindMethodTarget(regMethod.type());
-        ClassDesc    cdFn   = typeFn.ensureClassDesc(bctx.typeSystem);
+        ClassDesc    cdFn   = bctx.builder.ensureClassDesc(typeFn);
         code.new_(cdFn)
             .dup()
             .aload(code.parameterSlot(0)); // ctx

@@ -47,28 +47,28 @@ public class JitParamDesc extends JitTypeDesc {
     /**
      * @return the JitParams record for the specified parameter type.
      */
-    public static JitParams computeJitParams(TypeSystem ts, TypeConstant type) {
+    public static JitParams computeJitParams(Builder builder, TypeConstant type) {
         JitParamDesc[] apdOptParam = null;
         JitParamDesc[] apdStdParam;
-        ClassDesc cd;
+        ClassDesc      cd;
 
         if ((cd = JitTypeDesc.getPrimitiveClass(type)) != null) {
-            ClassDesc cdStd = type.ensureClassDesc(ts);
+            ClassDesc cdStd = builder.ensureClassDesc(type);
 
             apdStdParam = new JitParamDesc[] {
                 new JitParamDesc(type, Specific, cdStd, 0, 0, false)};
             apdOptParam = new JitParamDesc[] {
                 new JitParamDesc(type, Primitive, cd, 0, 0, false)};
         } else if ((cd = JitTypeDesc.getNullablePrimitiveClass(type)) != null) {
-            ClassDesc cdStd = type.ensureClassDesc(ts);
+            ClassDesc cdStd = builder.ensureClassDesc(type);
             apdStdParam = new JitParamDesc[] {
                 new JitParamDesc(type, Widened, cdStd, 0, 0, false)};
             apdOptParam = new JitParamDesc[] {
                 new JitParamDesc(type, NullablePrimitive, cd, 0, 0, false),
                 new JitParamDesc(type, NullablePrimitive, CD_boolean, 0, 1, true)
             };
-        } else if ((cd = JitTypeDesc.getXvmPrimitiveClass(type)) != null) {
-            ClassDesc cdStd = type.ensureClassDesc(ts);
+        } else if ((JitTypeDesc.getXvmPrimitiveClass(type)) != null) {
+            ClassDesc cdStd = builder.ensureClassDesc(type);
             apdStdParam = new JitParamDesc[] {
                     new JitParamDesc(type, Specific, cdStd, 0, 0, false)};
             ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(type);
@@ -76,8 +76,8 @@ public class JitParamDesc extends JitTypeDesc {
             for (int i = 0; i < cds.length; i++) {
                 apdOptParam[i] = new JitParamDesc(type, XvmPrimitive, cds[i], 0, i, false);
             }
-        } else if ((cd = JitTypeDesc.getNullableXvmPrimitiveClass(type)) != null) {
-            ClassDesc cdStd = type.ensureClassDesc(ts);
+        } else if ((JitTypeDesc.getNullableXvmPrimitiveClass(type)) != null) {
+            ClassDesc cdStd = builder.ensureClassDesc(type);
             apdStdParam = new JitParamDesc[] {
                     new JitParamDesc(type, Widened, cdStd, 0, 0, false)};
             ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(type);
@@ -93,7 +93,7 @@ public class JitParamDesc extends JitTypeDesc {
         } else {
             assert type.isSingleUnderlyingClass(true);
 
-            cd = type.ensureClassDesc(ts);
+            cd = builder.ensureClassDesc(type);
             apdStdParam = new JitParamDesc[] {
                 new JitParamDesc(type, Specific, cd, 0, 0, false)};
         }

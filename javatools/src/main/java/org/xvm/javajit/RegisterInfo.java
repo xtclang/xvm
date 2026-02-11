@@ -99,8 +99,6 @@ public interface RegisterInfo {
 
     /**
      * Load the value for this register on the Java stack.
-     *
-     * @param code  the code builder
      */
     default RegisterInfo load(CodeBuilder code) {
         Builder.load(code, cd(), slot());
@@ -132,8 +130,6 @@ public interface RegisterInfo {
     /**
      * Store the value represented by this register currently on the stack into a temporary slot.
      *
-     * @param bctx   the build context
-     * @param code   the code builder
      * @param regId  the value to use for the new register identifier
      *
      * @return the new register info

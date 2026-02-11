@@ -639,9 +639,9 @@ public abstract class OpCallable extends Op {
 
                 bctx.buildSuper(sJitName, nDepth);
             } else {
-                cdTarget = idCallee.ensureClassDesc(ts);
+                cdTarget = bctx.builder.ensureClassDesc(idCallee.getType());
             }
-            jmdCall    = bodySuper.getJitDesc(ts, bctx.typeInfo.getType());
+            jmdCall    = bodySuper.getJitDesc(bctx.builder, bctx.typeInfo.getType());
             fSpecial   = true;
             fInterface = false;
             code.aload(0); // super() can only be on "this"
@@ -651,9 +651,9 @@ public abstract class OpCallable extends Op {
             TypeConstant     typeTarget = idTarget.getType();
             MethodInfo       infoMethod = typeTarget.ensureTypeInfo().getMethodById(idMethod);
 
-            cdTarget   = idTarget.ensureClassDesc(ts); // function; no formal types applicable
+            cdTarget   = bctx.builder.ensureClassDesc(idTarget.getType()); // function; no formal types applicable
             sJitName   = infoMethod.ensureJitMethodName(ts);
-            jmdCall    = infoMethod.getJitDesc(ts, typeTarget);
+            jmdCall    = infoMethod.getJitDesc(bctx.builder, typeTarget);
             fSpecial   = false;
             fInterface = !typeTarget.isSingleUnderlyingClass(false);
         } else {
@@ -667,7 +667,8 @@ public abstract class OpCallable extends Op {
             TypeConstant[] atypeParams  = pool.extractFunctionParams(typeFn);
             TypeConstant[] atypeReturns = pool.extractFunctionReturns(typeFn);
 
-            jmdCall = JitMethodDesc.of(atypeParams, atypeReturns, false, null, atypeParams.length, ts);
+            jmdCall = JitMethodDesc.of(bctx.builder,
+                        atypeParams, atypeReturns, false, null, atypeParams.length);
 
             if (jmdCall.isOptimized) {
                 code.getfield(CD_nFunction, "optMethod", CD_MethodHandle);
@@ -748,7 +749,6 @@ public abstract class OpCallable extends Op {
      * Support for CONSTR_ ops.
      */
     protected void buildConstruct(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
-        TypeSystem       ts         = bctx.typeSystem;
         MethodConstant   idCtor     = (MethodConstant) bctx.getConstant(m_nFunctionId);
         IdentityConstant idTarget   = idCtor.getNamespace();
         TypeConstant     typeTarget = idTarget.getType();
@@ -765,15 +765,15 @@ public abstract class OpCallable extends Op {
         if (infoTarget.getFormat() == Format.MIXIN) {
             cdTarget   = ClassDesc.of(bctx.className);
             typeTarget = bctx.typeInfo.getType();
-            sJitCtor   = idTarget.getName() + "$" + infoCtor.ensureJitMethodName(ts);
+            sJitCtor   = idTarget.getName() + "$" + infoCtor.ensureJitMethodName(bctx.typeSystem);
 
             bctx.buildMethod(sJitCtor, infoCtor.getHead());
         } else {
-            cdTarget = typeTarget.ensureClassDesc(ts);
-            sJitCtor = infoCtor.ensureJitMethodName(ts);
+            cdTarget = bctx.builder.ensureClassDesc(typeTarget);
+            sJitCtor = infoCtor.ensureJitMethodName(bctx.typeSystem);
         }
 
-        JitMethodDesc jmdCtor = infoCtor.getJitDesc(ts, typeTarget);
+        JitMethodDesc jmdCtor = infoCtor.getJitDesc(bctx.builder, typeTarget);
 
         boolean fOptimized = jmdCtor.isOptimized;
         MethodTypeDesc md;
