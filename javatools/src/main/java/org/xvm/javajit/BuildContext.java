@@ -1825,9 +1825,8 @@ public class BuildContext {
                 idCtor.getValueString() + "\" for " + typeTarget.getValueString());
         }
 
-        String        sJitTarget = builder.ensureJitClassName(typeTarget);
-        ClassDesc     cdTarget   = ClassDesc.of(sJitTarget);
-        JitMethodDesc jmdNew     = Builder.convertConstructToNew(infoTarget, sJitTarget,
+        ClassDesc     cdTarget = builder.ensureClassDesc(typeTarget);
+        JitMethodDesc jmdNew   = Builder.convertConstructToNew(infoTarget, cdTarget,
                                     (JitCtorDesc) infoCtor.getJitDesc(builder, typeTarget));
 
         boolean fOptimized = jmdNew.isOptimized;

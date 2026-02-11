@@ -935,10 +935,9 @@ public abstract class Builder {
     /**
      * Convert the "void construct$17(...)" to "This new$17(...)"
      */
-    public static JitMethodDesc convertConstructToNew(TypeInfo typeInfo, String className,
+    public static JitMethodDesc convertConstructToNew(TypeInfo typeInfo, ClassDesc cd,
                                                       JitCtorDesc jmdCtor) {
-        JitParamDesc retDesc = new JitParamDesc(typeInfo.getType(), Specific,
-                ClassDesc.of(className), 0, -1, false);
+        JitParamDesc retDesc = new JitParamDesc(typeInfo.getType(), Specific, cd, 0, -1, false);
 
         JitParamDesc[] standardReturns  = new JitParamDesc[] {retDesc};
         JitParamDesc[] optimizedReturns = jmdCtor.isOptimized ? standardReturns : null;

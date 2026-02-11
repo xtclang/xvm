@@ -132,7 +132,7 @@ public class AugmentingBuilder extends CommonBuilder {
                                   String jitName, JitMethodDesc jmd) {
         if (method.isCtorOrValidator()) {
             String        newName = jitName.replace("construct", typeInfo.isSingleton() ? INIT : NEW);
-            JitMethodDesc newJmd  = Builder.convertConstructToNew(typeInfo, className, (JitCtorDesc) jmd);
+            JitMethodDesc newJmd  = Builder.convertConstructToNew(typeInfo, ClassDesc.of(className), (JitCtorDesc) jmd);
             MethodModel   newMM   = newJmd.isOptimized
                     ? findMethod(newName+OPT, newJmd.optimizedMD)
                     : findMethod(newName, newJmd.standardMD);

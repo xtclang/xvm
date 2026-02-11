@@ -1080,7 +1080,8 @@ public class CommonBuilder
 
             if (method.isCtorOrValidator() && !typeInfo.isAbstract()) {
                 String        newName = jitName.replace("construct", typeInfo.isSingleton() ? INIT : NEW);
-                JitMethodDesc newDesc = Builder.convertConstructToNew(typeInfo, className, (JitCtorDesc) jmDesc);
+                JitMethodDesc newDesc = Builder.convertConstructToNew(typeInfo,
+                                            ClassDesc.of(className), (JitCtorDesc) jmDesc);
                 assembleNew(className, classBuilder, method, newName, newDesc);
             }
         }
