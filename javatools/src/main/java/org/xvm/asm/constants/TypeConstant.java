@@ -6496,7 +6496,7 @@ public abstract class TypeConstant
         if (id.equals(pool.clzArray())) {
             TypeConstant typeEl = getParamType(0);
             if (typeEl.isFormalType() || typeEl.equals(pool.typeObject())) {
-                return Builder.N_Array;
+                return Builder.N_nArrayObj;
             } else if (typeEl.isJavaPrimitive()){
                 ClassDesc        cdEl = JitTypeDesc.getPrimitiveClass(typeEl);
                 IdentityConstant idEl = typeEl.getSingleUnderlyingClass(false);
