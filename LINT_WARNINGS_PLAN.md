@@ -11,8 +11,8 @@ undercounted `rawtypes`/`unchecked`. The delta from our work is what matters.
 |----------|---------|-------|------|--------|
 | `[fallthrough]` | **0** | 102 | 4 | DONE |
 | `[this-escape]` | **40** | 28 | 5 | 28 fixed by code rewrites; 40 remain (intentionally unsuppressed) |
-| `[rawtypes]` | 90 | 14 | 3 | 8 fixed by generics rewrites; 82 remaining |
-| `[unchecked]` | 86 | 0 | 3 | Pending |
+| `[rawtypes]` | 76 | 28 | 3 | 8 by generics rewrites, 14 AstNode wildcards; 68 remaining |
+| `[unchecked]` | 83 | 3 | 3 | 3 eliminated in AstNode; 83 remaining |
 | `[try]` | **0** | 18 | 1 | DONE |
 | `[cast]` | **2** | 13 | 1 | DONE (2 in `javatools_jitbridge`) |
 | `[serial]` | **2** | 8 | 2 | DONE (2 in `javatools_jitbridge`) |
@@ -62,9 +62,9 @@ implements `Serializable` (a JDK 1.1 design decision for RMI), so every `Excepti
 
 ---
 
-## Tier 3: MODERATE (need understanding, some refactoring) -- 176 warnings remaining
+## Tier 3: MODERATE (need understanding, some refactoring) -- 159 warnings remaining
 
-### 3a. `[rawtypes]` Raw generic type usage (90 warnings, 8 fixed)
+### 3a. `[rawtypes]` Raw generic type usage (90 warnings, 22 fixed)
 
 **Already eliminated (suppressed, not counted in warning totals):**
 - `Component.unlinkSibling()` — generified to `<K, V extends Component>`, removed raw `Map`/`Object`
@@ -79,11 +79,18 @@ implements `Serializable` (a JDK 1.1 design decision for RMI), so every `Excepti
 - `CaseManager.java` (4) — parameterized `instanceof Comparable` → `instanceof Comparable<?>`;
   extracted `compareRaw()` helper to isolate the unavoidable raw comparison
 
+**Eliminated by wildcard parameterization (14 warnings):**
+- `AstNode.java` (14) — added `<?>` wildcards to all raw type patterns in `clone()`, `dump()`,
+  `ChildIteratorImpl`, `ensureArrayList()`, and `fieldsForNames()`. `clone()` eliminated unchecked
+  `(List<AstNode>)` cast by iterating `List<?>` with checked `(AstNode)` element casts.
+  `ensureArrayList()` uses `@SuppressWarnings("unchecked")` for safe `ArrayList<T>` downcast.
+  `ChildIteratorImpl.replaceWith()` uses `@SuppressWarnings("unchecked")` for `ListIterator<AstNode>`
+  cast needed for `set()`.
+
 Add proper type parameters. Remaining hotspots:
 
 | File | Count | Key raw types |
 |------|-------|---------------|
-| `AstNode.java` | 14 | `List`, `Map`, `Collection`, `Iterator`, `ListIterator`, `ArrayList`, `Class` |
 | `ServiceContext.java` | 13 | `CompletableFuture`, `Response`, `Enum`, `EnumMap`, `WeakReference` |
 | `Fiber.java` | 8 | `CompletableFuture` |
 | `Frame.java` | 4 | `CompletableFuture` |
@@ -109,7 +116,7 @@ Many overlap with `rawtypes`. Fix together per-file.
 | `Context.java` | 4 | `Map.putAll` with raw maps |
 | `LambdaExpression.java` | 4 | raw `Stream.allMatch()` |
 | `TypeInfo.java` | 4 | `entrySet().toArray(Entry[])` with raw Entry |
-| `AstNode.java` | 3 | generic child replacement utility |
+| `AstNode.java` | **0** | **Fixed:** wildcard parameterization + 2 targeted `@SuppressWarnings("unchecked")` |
 | `ListMap.java` | **0** | **Rewritten:** stored `ArrayList<Entry>` instead of `ArrayList<SimpleEntry>`, eliminated `EMPTY_ARRAY_LIST` sentinel, raw casts, and assert-only unmodifiable bug |
 | `TypeCompositionStatement.java` | 3 | unchecked casts to generic types |
 | 14 more files | 1-2 each | Various |

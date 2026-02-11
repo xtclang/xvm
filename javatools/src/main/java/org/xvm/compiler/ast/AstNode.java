@@ -233,10 +233,10 @@ public abstract class AstNode
 
                     that.adopt(nodeNew);
                     oVal = nodeNew;
-                } else if (oVal instanceof List list) {
-                    ArrayList<AstNode> listNew = new ArrayList<>();
-                    for (AstNode node : (List<AstNode>) list) {
-                        listNew.add(node.clone());
+                } else if (oVal instanceof List<?> list) {
+                    var listNew = new ArrayList<AstNode>();
+                    for (Object item : list) {
+                        listNew.add(((AstNode) item).clone());
                     }
 
                     that.adopt(listNew);
@@ -1679,12 +1679,12 @@ public abstract class AstNode
             Object value = entry.getValue();
             switch (value) {
             case null -> iter.remove();
-            case Map map -> {
+            case Map<?, ?> map -> {
                 if (map.isEmpty()) {
                     iter.remove();
                 }
             }
-            case Collection coll -> {
+            case Collection<?> coll -> {
                 if (coll.isEmpty()) {
                     iter.remove();
                 }
@@ -1732,13 +1732,13 @@ public abstract class AstNode
 
             // find the kids
             int      cKids;
-            Iterator iterK;
+            Iterator<?> iterK;
             switch (value) {
-            case Map kids -> {
+            case Map<?, ?> kids -> {
                 cKids = kids.size();
                 iterK = kids.entrySet().iterator();
             }
-            case Collection kids -> {
+            case Collection<?> kids -> {
                 cKids = kids.size();
                 iterK = kids.iterator();
             }
@@ -1764,7 +1764,7 @@ public abstract class AstNode
                         out.println();
                     }
                     node.dump(out, sIndent1, sIndent2);
-                } else if (kid instanceof Map.Entry) {
+                } else if (kid instanceof Map.Entry<?, ?>) {
                     if (fFirstK) {
                         out.println();
                     }
@@ -1848,9 +1848,10 @@ public abstract class AstNode
      *
      * @return an ArrayList
      */
+    @SuppressWarnings("unchecked") // safe: list is List<T>, confirmed as ArrayList
     protected static <T> ArrayList<T> ensureArrayList(List<T> list) {
-        return list instanceof ArrayList alist
-                ? alist
+        return list instanceof ArrayList<?>
+                ? (ArrayList<T>) list
                 : new ArrayList<>(list);
     }
 
@@ -1862,14 +1863,14 @@ public abstract class AstNode
      *
      * @return an array of fields corresponding to the specified names on the specified class
      */
-    protected static Field[] fieldsForNames(Class clz, String... names) {
+    protected static Field[] fieldsForNames(Class<?> clz, String... names) {
         if (names == null || names.length == 0) {
             return NO_FIELDS;
         }
 
         Field[] fields = new Field[names.length];
         NextField: for (int i = 0, c = fields.length; i < c; ++i) {
-            Class                clzTry = clz;
+            Class<?>             clzTry = clz;
             NoSuchFieldException eOrig  = null;
             while (clzTry != null) {
                 try {
@@ -1958,7 +1959,7 @@ public abstract class AstNode
                 if (value instanceof AstNode node) {
                     return node;
                 } else {
-                    return (AstNode) ((Iterator) value).next();
+                    return (AstNode) ((Iterator<?>) value).next();
                 }
             }
 
@@ -1966,7 +1967,7 @@ public abstract class AstNode
         }
 
         private boolean prepareNextElement() {
-            if (value instanceof Iterator iter && iter.hasNext()) {
+            if (value instanceof Iterator<?> iter && iter.hasNext()) {
                 state = HAS_NEXT;
                 return true;
             }
@@ -1990,12 +1991,12 @@ public abstract class AstNode
                 }
 
                 if (next != null) {
-                    if (next instanceof List list) {
+                    if (next instanceof List<?> list) {
                         if (!list.isEmpty()) {
                             value = list.listIterator();
                             return true;
                         }
-                    } else if (next instanceof Collection coll) {
+                    } else if (next instanceof Collection<?> coll) {
                         if (!coll.isEmpty()) {
                             value = coll.iterator();
                             return true;
@@ -2025,7 +2026,7 @@ public abstract class AstNode
                     return;
                 }
 
-                if (value instanceof Iterator iter) {
+                if (value instanceof Iterator<?> iter) {
                     // tell the underlying iterator to remove the value
                     iter.remove();
                     state = NOT_PREP;
@@ -2048,7 +2049,9 @@ public abstract class AstNode
                     return;
                 }
 
-                if (value instanceof ListIterator iter) {
+                if (value instanceof ListIterator<?>) {
+                    @SuppressWarnings("unchecked") // safe: list contains AstNode elements
+                    ListIterator<AstNode> iter = (ListIterator<AstNode>) value;
                     iter.set(newChild);
                     return;
                 }
