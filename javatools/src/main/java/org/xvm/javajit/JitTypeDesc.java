@@ -11,7 +11,11 @@ import static java.lang.constant.ConstantDescs.CD_float;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
 
+import static org.xvm.javajit.Builder.CD_Int128;
+import static org.xvm.javajit.Builder.CD_UInt128;
 import static org.xvm.javajit.Builder.CD_nObj;
+import static org.xvm.javajit.Builder.CDs_Int128;
+import static org.xvm.javajit.Builder.CDs_UInt128;
 
 /**
  * Representation of an Ecstasy type in Java.
@@ -33,7 +37,7 @@ public class JitTypeDesc {
      *         class; and a corresponding non-primitive ClassDesc otherwise.
      */
     public static ClassDesc getJitClass(TypeSystem ts, TypeConstant type) {
-        return type.isPrimitive()
+        return type.isJavaPrimitive()
             ? JitParamDesc.getPrimitiveClass(type)
             : type.isSingleUnderlyingClass(true)
                 ? type.ensureClassDesc(ts)
@@ -45,7 +49,7 @@ public class JitTypeDesc {
      *         class; null otherwise
      */
     public static ClassDesc getPrimitiveClass(TypeConstant type) {
-        if (type.isPrimitive()) {
+        if (type.isJavaPrimitive()) {
             return switch (type.getSingleUnderlyingClass(false).getName()) {
                 case "Char", "Int8", "Int16", "Int32", "UInt8", "UInt16", "UInt32", "Dec16", "Dec32"
                     -> CD_int;
@@ -98,5 +102,44 @@ public class JitTypeDesc {
             return CD_nObj;
         }
         return null;
+    }
+
+    public static ClassDesc getNullableXvmPrimitiveClass(TypeConstant type) {
+        return type.isNullable()
+                ? getXvmPrimitiveClass(type.removeNullable())
+                : null;
+    }
+
+    public static ClassDesc getXvmPrimitiveClass(TypeConstant type) {
+        if (type.isSingleUnderlyingClass(false)) {
+            return switch (type.getSingleUnderlyingClass(false).getName()) {
+                case "Int128"  -> CD_Int128;
+                case "UInt128" -> CD_UInt128;
+                default        -> null;
+            };
+        }
+        return null;
+    }
+
+    public static int getXvmPrimitiveSlotCount(TypeConstant type) {
+        return getXvmPrimitiveClasses(type).length;
+    }
+
+    public static ClassDesc[] getXvmPrimitiveClasses(TypeConstant type) {
+        TypeConstant baseType = type.removeNullable();
+        if (baseType.isSingleUnderlyingClass(false)) {
+            return switch (baseType.getSingleUnderlyingClass(false).getName()) {
+                case "Int128"  -> CDs_Int128;
+                case "UInt128" -> CDs_UInt128;
+                default        -> {
+                    ClassDesc cd = getPrimitiveClass(baseType);
+                    if (cd == null) {
+                        throw new IllegalArgumentException("Unsupported primitive: " + baseType);
+                    }
+                    yield new ClassDesc[]{cd};
+                }
+            };
+        }
+        throw new IllegalArgumentException("Unsupported primitive: " + baseType);
     }
 }

@@ -86,6 +86,7 @@ import org.xvm.util.Severity;
 import org.xvm.util.TransientThreadLocal;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
+import static java.lang.constant.ConstantDescs.CD_int;
 
 import static org.xvm.javajit.Builder.CD_Comparable;
 import static org.xvm.javajit.Builder.CD_Ctx;
@@ -97,9 +98,11 @@ import static org.xvm.javajit.Builder.N_nRangeInt64;
 import static org.xvm.javajit.Builder.OPT;
 
 import static org.xvm.javajit.JitFlavor.NullablePrimitive;
+import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
 import static org.xvm.javajit.JitFlavor.Specific;
 import static org.xvm.javajit.JitFlavor.Widened;
+import static org.xvm.javajit.JitFlavor.XvmPrimitive;
 import static org.xvm.javajit.TypeSystem.ID_NUM;
 
 
@@ -4379,8 +4382,8 @@ public abstract class TypeConstant
      * Helper to select the "best" signature from an array of signatures; in other words, choose
      * the one that any other signature could "super" to.
      *
-     * @param aSig    an array of signatures
-     * @param sigSub  (optional) if specified, it's a common "sub" method for all signatures
+     * @param setSigs  an array of signatures
+     * @param sigSub   (optional) if specified, it's a common "sub" method for all signatures
      *
      * @return the "best" signature to use
      */
@@ -6494,7 +6497,7 @@ public abstract class TypeConstant
             TypeConstant typeEl = getParamType(0);
             if (typeEl.isFormalType() || typeEl.equals(pool.typeObject())) {
                 return Builder.N_Array;
-            } else if (typeEl.isPrimitive()){
+            } else if (typeEl.isJavaPrimitive()){
                 ClassDesc        cdEl = JitTypeDesc.getPrimitiveClass(typeEl);
                 IdentityConstant idEl = typeEl.getSingleUnderlyingClass(false);
 
@@ -6566,7 +6569,15 @@ public abstract class TypeConstant
     /**
      * @return true iff objects of this type can be represented by a single primitive Java value
      */
-    public boolean isPrimitive() {
+    public boolean isJavaPrimitive() {
+        return false;
+    }
+
+    /**
+     * @return true iff objects of this type are Ecstasy types that are represented by one or
+     *         more Java primitive values
+     */
+    public boolean isXvmPrimitive() {
         return false;
     }
 
@@ -6581,13 +6592,15 @@ public abstract class TypeConstant
         if ((cd = JitTypeDesc.getNullablePrimitiveClass(this)) != null) {
             return new JitTypeDesc(this.removeNullable().getCanonicalJitType(), NullablePrimitive, cd);
         }
+        if ((cd = JitTypeDesc.getXvmPrimitiveClass(this)) != null) {
+            return new JitTypeDesc(getCanonicalJitType(), XvmPrimitive, cd);
+        }
+        if ((cd = JitTypeDesc.getNullableXvmPrimitiveClass(this)) != null) {
+            return new JitTypeDesc(getCanonicalJitType(), NullableXvmPrimitive, cd);
+        }
         if ((cd = JitTypeDesc.getWidenedClass(this)) != null) {
             return new JitTypeDesc(getCanonicalJitType(), Widened, cd);
         }
-// TODO JK: uncomment
-//        if (JitTypeDesc.isDoubleLong(this)) {
-//            return new JitTypeDesc(getCanonicalJitType(), DoubleLong, CD_long);
-//        }
         assert isSingleUnderlyingClass(true);
 
         return new JitTypeDesc(getCanonicalJitType(), Specific, ensureClassDesc(ts));
@@ -6620,14 +6633,16 @@ public abstract class TypeConstant
     public void buildCompare(BuildContext bctx, CodeBuilder code, int nOp,
                              RegisterInfo reg1, RegisterInfo reg2, Label lblTrue) {
         assert isSingleUnderlyingClass(true);
-        assert reg1.type().isA(this) && reg2.type().isA(this);
+        TypeConstant type1 = reg1.type();
+        TypeConstant type2 = reg2.type();
+        assert type1.isA(this) && type2.isA(this);
 
         boolean fLocalTrue = lblTrue == null;
         if (fLocalTrue) {
             lblTrue = code.newLabel();
         }
 
-        if (isPrimitive()) {
+        if (isJavaPrimitive()) {
             ClassDesc cdCommon = JitTypeDesc.getPrimitiveClass(this);
             String    desc     = cdCommon.descriptorString();
 
@@ -6682,7 +6697,89 @@ public abstract class TypeConstant
             default:
                 throw new IllegalStateException();
             }
+        } else if (isXvmPrimitive()) {
+            // type is a custom XVM primitive
+            TypeSystem   ts       = bctx.typeSystem;
+            ClassDesc[]  cds      = JitTypeDesc.getXvmPrimitiveClasses(this);
+            ClassDesc[]  cdParams = new ClassDesc[cds.length * 2 + 1];
+
+            cdParams[0] = CD_Ctx;
+            System.arraycopy(cds, 0, cdParams, 1, cds.length);
+            System.arraycopy(cds, 0, cdParams, cds.length + 1, cds.length);
+
+            String         methodName;
+            MethodTypeDesc methodDesc;
+            switch (nOp) {
+                case Op.OP_IS_EQ,  Op.OP_JMP_EQ,
+                     Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> {
+                    methodName = "equals" + OPT;
+                    methodDesc = MethodTypeDesc.of(CD_boolean, cdParams);
+                }
+                case Op.OP_IS_GT,  Op.OP_JMP_GT,
+                     Op.OP_IS_GTE, Op.OP_JMP_GTE,
+                     Op.OP_IS_LT,  Op.OP_JMP_LT,
+                     Op.OP_IS_LTE, Op.OP_JMP_LTE -> {
+                    methodName = "compare" + OPT;
+                    methodDesc = MethodTypeDesc.of(CD_int, cdParams);
+                }
+                default -> throw new IllegalStateException();
+            }
+
+            bctx.loadCtx(code);
+            reg1.load(code);
+            reg2.load(code);
+
+            switch (nOp) {
+                case Op.OP_IS_EQ, Op.OP_JMP_EQ, Op.OP_IS_NEQ, Op.OP_JMP_NEQ:
+                    // boolean equals(Ctx, primitives1..., primitives2...)
+                    code.invokestatic(ensureClassDesc(ts), methodName, methodDesc);
+
+                    if (fLocalTrue) {
+                        if (nOp == Op.OP_IS_NEQ) {
+                            code.iconst_1()
+                                    .ixor();
+                        }
+                    } else {
+                        if (nOp == Op.OP_IS_EQ) {
+                            code.ifne(lblTrue);
+                        } else {
+                            code.ifeq(lblTrue);
+                        }
+                    }
+                    return;
+
+                case Op.OP_IS_GT, Op.OP_IS_GTE, Op.OP_IS_LT, Op.OP_IS_LTE:
+                    // int compare(Ctx, primitives1..., primitives2...)
+                    code.invokestatic(ensureClassDesc(ts), methodName, methodDesc);
+                    code.iconst_0();
+
+                    switch (nOp) {
+                        case Op.OP_IS_GT:
+                            // > 0
+                            code.if_icmpge(lblTrue);
+                            break;
+
+                        case Op.OP_IS_GTE:
+                            // >= 0
+                            code.if_icmpge(lblTrue);
+                            break;
+
+                        case Op.OP_IS_LT:
+                            // < 0
+                            code.if_icmplt(lblTrue);
+                            break;
+
+                        case Op.OP_IS_LTE:
+                            // <= 0
+                            code.if_icmple(lblTrue);
+                            break;
+
+                        default:
+                            throw new IllegalStateException();
+                    }
+            }
         } else {
+            // type is an Object
             TypeSystem   ts   = bctx.typeSystem;
             ConstantPool pool = ts.pool();
             SignatureConstant sig = switch (nOp) {

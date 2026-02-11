@@ -223,7 +223,7 @@ public abstract class OpIndex
 
         if (type.isArray()) {
             ClassDesc cdArray = type.ensureClassDesc(ts);
-            if (typeEl.isPrimitive()) {
+            if (typeEl.isJavaPrimitive()) {
                 ClassDesc cdEl = JitTypeDesc.getPrimitiveClass(typeEl);
 
                 bctx.loadCtx(code);

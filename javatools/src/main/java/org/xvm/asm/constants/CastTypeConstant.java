@@ -66,8 +66,13 @@ public class CastTypeConstant
     }
 
     @Override
-    public boolean isPrimitive() {
-        return getUnderlyingType().isPrimitive();
+    public boolean isJavaPrimitive() {
+        return getUnderlyingType().isJavaPrimitive();
+    }
+
+    @Override
+    public boolean isXvmPrimitive() {
+        return getUnderlyingType().isXvmPrimitive();
     }
 
     @Override

@@ -15,8 +15,8 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
-import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.JitMethodDesc;
+import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeMatrix;
 
@@ -218,18 +218,14 @@ public abstract class OpGeneral
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        RegisterInfo regTarget = bctx.ensureRegister(code, m_nTarget);
-
-        if (!regTarget.isSingle() && regTarget.flavor() != JitFlavor.PrimitiveWithDefault) {
-            throw new UnsupportedOperationException(toName(getOpCode()) + " operation on multi-slot");
-        }
-
-        ClassDesc    cdTarget    = regTarget.cd();
-        TypeConstant typeTarget  = regTarget.type();
+        RegisterInfo regTarget  = bctx.ensureRegister(code, m_nTarget);
+        ClassDesc    cdTarget   = regTarget.cd();
+        TypeConstant typeTarget = regTarget.type();
 
         if (isBinaryOp()) {
             TypeConstant typeResult;
             if (cdTarget.isPrimitive()) {
+                assertNotMultislot(regTarget);
                 typeResult = buildOptimizedBinary(bctx, code, regTarget, m_nArgValue);
             } else {
                 MethodInfo    method   = findOpMethod(bctx, typeTarget);
@@ -244,10 +240,25 @@ public abstract class OpGeneral
                     md = jmd.standardMD;
                 }
 
-                regTarget.load(code);
-                bctx.loadCtx(code);
-                bctx.loadArgument(code, m_nArgValue);
-                code.invokevirtual(regTarget.cd(), sJitName, md);
+                if (regTarget.type().isXvmPrimitive()) {
+                    assert jmd.isOptimized;
+
+                    bctx.loadCtx(code);
+                    regTarget.load(code);
+                    bctx.loadArgument(code, m_nArgValue);
+                    code.invokestatic(regTarget.cd(), sJitName, md);
+                    // load the remaining returns from the context
+                    JitParamDesc[] optRets = jmd.optimizedReturns;
+                    for (int i = 1; i < optRets.length; ++i) {
+                        JitParamDesc pd = optRets[i];
+                        Builder.loadFromContext(code, pd.cd, pd.altIndex);
+                    }
+                } else {
+                    regTarget.load(code);
+                    bctx.loadCtx(code);
+                    bctx.loadArgument(code, m_nArgValue);
+                    code.invokevirtual(regTarget.cd(), sJitName, md);
+                }
 
                 typeResult = method.getSignature().getRawReturns()[0]; // could differ from target
             }
@@ -312,6 +323,13 @@ public abstract class OpGeneral
 
         return typeTarget.ensureTypeInfo().findOpMethod(sName, sOp,
                 bctx.getArgumentType(m_nArgValue));
+    }
+
+    void assertNotMultislot(RegisterInfo reg) {
+        if (!reg.isSingle()) {
+            throw new UnsupportedOperationException(toName(getOpCode())
+                    + " operation on multi-slot");
+        }
     }
 
     // ----- fields --------------------------------------------------------------------------------

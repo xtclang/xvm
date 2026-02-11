@@ -1899,9 +1899,9 @@ public class TerminalTypeConstant
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public boolean isPrimitive() {
+    public boolean isJavaPrimitive() {
         if (isAutoNarrowing()) {
-            return removeAutoNarrowing().isPrimitive();
+            return removeAutoNarrowing().isJavaPrimitive();
         }
         if (isSingleDefiningConstant() && getDefiningConstant() instanceof ClassConstant id
                 && id.getModuleConstant().isEcstasyModule()) {
@@ -1918,6 +1918,20 @@ public class TerminalTypeConstant
         return false;
     }
 
+    @Override
+    public boolean isXvmPrimitive() {
+        if (isAutoNarrowing()) {
+            return removeAutoNarrowing().isXvmPrimitive();
+        }
+        if (isSingleDefiningConstant() && getDefiningConstant() instanceof ClassConstant id
+                && id.getModuleConstant().isEcstasyModule()) {
+            return switch (id.getName()) {
+                case "Int128", "UInt128" -> true;
+                default -> false;
+            };
+        }
+        return false;
+    }
 
     // ----- run-time support ----------------------------------------------------------------------
 

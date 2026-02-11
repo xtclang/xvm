@@ -24,6 +24,8 @@ import org.xvm.javajit.JitParamDesc;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.Frame.AllGuard;
 
+import static org.xvm.javajit.Builder.EXT;
+
 
 /**
  * GUARDALL addr ; (implicit ENTER)
@@ -124,30 +126,33 @@ public class GuardAll
             JitMethodDesc jmd        = bctx.methodDesc;
             boolean       fOptimized = bctx.isOptimized;
             int           cRets      = jmd.standardReturns.length;
-            String        sRetVal    = "$ret";
 
             // $retN = false;
-            int slotRet = scopeOuter.allocateSynthetic("$doReturn", TypeKind.BOOLEAN);
+            int slotRet = scopeOuter.allocateSynthetic(DO_RETURN_SLOT_NAME, TypeKind.BOOLEAN);
             assert slotRet != -1;
             code.iconst_0()
                 .istore(slotRet);
 
             for (int i = 0; i < cRets; i++) {
-                int          iOpt  = fOptimized ? jmd.getOptimizedReturnIndex(i) : -1;
-                JitParamDesc pdRet = fOptimized ? jmd.optimizedReturns[iOpt] : jmd.standardReturns[i];
-                ClassDesc    cd    = pdRet.cd;
-
-                // $retN = 0 or null
-                int slotR = scopeOuter.allocateSynthetic(sRetVal + i, Builder.toTypeKind(cd));
-                Builder.defaultLoad(code, cd);
-                Builder.store(code, cd, slotR);
-
-                switch (pdRet.flavor) {
-                case NullablePrimitive:
-                    int slotEx = scopeOuter.allocateSynthetic(sRetVal + (i + 1), TypeKind.BOOLEAN);
-                    code.iconst_0()
-                        .istore(slotEx);
-                    break;
+                if (fOptimized) {
+                    int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
+                    for (int iOpt : optIndexes) {
+                        JitParamDesc pdRet    = jmd.optimizedReturns[iOpt];
+                        ClassDesc    cd       = pdRet.cd;
+                        TypeKind     typeKind = Builder.toTypeKind(cd);
+                        String       name     = returnSlotName(pdRet);
+                        int          slotR    = scopeOuter.allocateSynthetic(name, typeKind);
+                        Builder.defaultLoad(code, cd);
+                        Builder.store(code, cd, slotR);
+                    }
+                } else {
+                    JitParamDesc pdRet    = jmd.standardReturns[i];
+                    ClassDesc    cd       = pdRet.cd;
+                    TypeKind     typeKind = Builder.toTypeKind(cd);
+                    String       name     = returnSlotName(pdRet);
+                    int          slotR    = scopeOuter.allocateSynthetic(name, typeKind);
+                    Builder.defaultLoad(code, cd);
+                    Builder.store(code, cd, slotR);
                 }
             }
         }
@@ -155,7 +160,24 @@ public class GuardAll
         bctx.enterScope(code); // guarded by FinallyStart
     }
 
+    /**
+     * Obtain the slot name for a given return parameter.
+     *
+     * @param pd  the return parameter descriptor
+     *
+     * @return the slot name
+     */
+    public static String returnSlotName(JitParamDesc pd) {
+        return pd.extension
+                ? RETURN_SLOT_PREFIX + pd.index + EXT
+                : RETURN_SLOT_PREFIX + pd.index + "$" + pd.altIndex;
+    }
+
     // ----- fields --------------------------------------------------------------------------------
+
+    public static final String DO_RETURN_SLOT_NAME = "$doReturn";
+
+    public static final String RETURN_SLOT_PREFIX = "$ret";
 
     private int m_nNextVar;
 

@@ -1,6 +1,9 @@
 package org.xtclang.ecstasy.numbers;
 
+import org.xtclang.ecstasy.Orderable;
+import org.xtclang.ecstasy.Ordered;
 import org.xtclang.ecstasy.OutOfBounds;
+import org.xtclang.ecstasy.nType;
 
 import org.xvm.javajit.Ctx;
 
@@ -20,6 +23,28 @@ public class UInt128 extends IntNumber {
 
     public final long $lowValue;
     public final long $highValue;
+
+    private org.xtclang.ecstasy.text.String $toString = null;
+
+    @Override
+    public org.xtclang.ecstasy.text.String toString(Ctx ctx) {
+        org.xtclang.ecstasy.text.String toString = $toString;
+        if (toString == null) {
+            toString = $toString
+                    = org.xtclang.ecstasy.text.String.of(ctx, new LongLong($lowValue, $highValue)
+                    .toString());
+        }
+        return toString;
+    }
+
+    /**
+     * Obtain an Int128 for two 64-bit "primitive" long values.
+     *
+     * @return an Int128 reference
+     */
+    public static Int128 $box(long lowValue, long highValue) {
+        return new Int128(lowValue, highValue);
+    }
 
     // ----- conversion ----------------------------------------------------------------------------
 
@@ -212,6 +237,78 @@ public class UInt128 extends IntNumber {
      */
     public UInt128 toUInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         return this;
+    }
+
+    // ----- Orderable interface -------------------------------------------------------------------
+
+    /**
+     * The primitive implementation of:
+     * <p>
+     * {@code static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);}
+     */
+    public static Ordered compare(Ctx ctx, nType type, Orderable value1, Orderable value2) {
+        UInt128 i1        = (UInt128) value1;
+        UInt128 i2        = (UInt128) value2;
+        long    unsigned1 = i1.$highValue + Long.MIN_VALUE;
+        long    unsigned2 = i2.$highValue + Long.MIN_VALUE;
+        if (unsigned1 != unsigned2) {
+            return (unsigned1 < unsigned2)
+                    ? Ordered.Lesser.$INSTANCE
+                    : Ordered.Greater.$INSTANCE;
+        }
+        unsigned1 = i1.$lowValue + Long.MIN_VALUE;
+        unsigned2 = i2.$lowValue + Long.MIN_VALUE;
+        return (unsigned1 < unsigned2)
+                ? Ordered.Lesser.$INSTANCE
+                : unsigned1 == unsigned2 ? Ordered.Equal.$INSTANCE : Ordered.Greater.$INSTANCE;
+    }
+
+    /**
+     * Compare two Int128 primitives.
+     *
+     * @param ctx    the context
+     * @param low1   the low 64 bits of the first Int128
+     * @param high1  the high 64 bits of the first Int128
+     * @param low2   the low 64 bits of the second Int128
+     * @param high2  the high 64 bits of the second Int128
+     *
+     * @return a negative integer if the first Int28 is lower than the second, zero if both
+     * Int128 values are equal, or a positive integer if the first Int128 is greater than the
+     * second.
+     */
+    public static int compare$p(Ctx ctx, long low1, long high1, long low2, long high2) {
+        if (high1 != high2) {
+            return Long.compareUnsigned(high1, high2);
+        }
+        return Long.compareUnsigned(low1, low2);
+    }
+
+    /**
+     * The primitive implementation of:
+     * <p>
+     * {@code static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);}
+     */
+    public static Boolean equals(Ctx ctx, nType type, org.xtclang.ecstasy.Comparable value1, org.xtclang.ecstasy.Comparable value2) {
+        Int128 i1 = (Int128) value1;
+        Int128 i2 = (Int128) value2;
+        return i1.$lowValue == i2.$lowValue && i1.$highValue == i2.$highValue
+                ? Boolean.TRUE
+                : Boolean.FALSE;
+    }
+
+    /**
+     * Determine whether two Int128 primitives are equal.
+     *
+     * @param ctx    the context
+     * @param low1   the low 64 bits of the first Int128
+     * @param high1  the high 64 bits of the first Int128
+     * @param low2   the low 64 bits of the second Int128
+     * @param high2  the high 64 bits of the second Int128
+     *
+     * @return {@code true} iff the two Int128 primitives are equal
+     */
+    public static boolean equals$p(Ctx ctx, long low1, long high1, long low2, long high2) {
+        return low1 == low2 && high1 == high2;
     }
 
     // ----- debugging support ---------------------------------------------------------------------

@@ -23,6 +23,7 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.template.xNullable;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
+import static org.xvm.javajit.Builder.EXT;
 
 
 /**
@@ -145,7 +146,7 @@ public class FinallyEnd
                 .labelBinding(labelSkip);
         }
 
-        int slotRet = scopeGuard.getSynthetic("$doReturn", false);
+        int slotRet = scopeGuard.getSynthetic(GuardAll.DO_RETURN_SLOT_NAME, false);
         if (slotRet >= 0) {
             // this is the topmost FinallyEnd; generate the return code
             JitMethodDesc jmd        = bctx.methodDesc;
@@ -163,21 +164,40 @@ public class FinallyEnd
             }
 
             for (int i = cRets - 1; i >= 0; i--) {
-                int          iOpt    = fOptimized ? jmd.getOptimizedReturnIndex(i) : -1;
-                JitParamDesc pdRet   = fOptimized ? jmd.optimizedReturns[iOpt] : jmd.standardReturns[i];
-                ClassDesc    cd      = pdRet.cd;
-                int          slotVal = scopeGuard.getSynthetic(sRetVal + i, false);
+                int[]        optIndexes = jmd.getAllOptimizedReturnIndexes(i);
+                int          iOpt       = fOptimized ? optIndexes[0] : -1;
+                JitParamDesc pdRet      = fOptimized ? jmd.optimizedReturns[iOpt]
+                                                     : jmd.standardReturns[i];
+                ClassDesc    cd         = pdRet.cd;
+                int          iExt       = fOptimized ? optIndexes[optIndexes.length - 1] : -1;
+                JitParamDesc pdExt      = fOptimized ? jmd.optimizedReturns[iExt] : null;
 
-                Builder.load(code, cd, slotVal);
+                // load the return values (including any extension slots) to the stack
+                for (int j = 0; j < optIndexes.length; j++) {
+                    JitParamDesc pd = jmd.optimizedReturns[optIndexes[i]];
+                    String name  = GuardAll.returnSlotName(pd);
+                    int    slot  = scopeGuard.getSynthetic(name, false);
+                    Builder.load(code, pd.cd, slot);
+                }
 
                 // the code below is complementary to the code in OpReturn
                 if (i == 0) {
                     switch (pdRet.flavor) {
                     case NullablePrimitive:
                         assert fOptimized;
-                        int slotEx = scopeGuard.getSynthetic(sRetVal + (i + 1), false);
-                        code.iload(slotEx);
+                        // the extSlot boolean will be on the top of the stack
                         Builder.storeToContext(code, CD_boolean, 0);
+                        Builder.addReturn(code, cd);
+                        break;
+
+                    case XvmPrimitive, NullableXvmPrimitive:
+                        // store the return primitives (including any extensions) to the context,
+                        // leaving the last one on the stack
+                        for (int j = optIndexes.length - 1; j >= 1 ; j--) {
+                            JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
+                            Builder.storeToContext(code, retDesc.cd, retDesc.altIndex);
+                        }
+                        // set the last primitive on the stack as the return value
                         Builder.addReturn(code, cd);
                         break;
 
@@ -189,12 +209,20 @@ public class FinallyEnd
                     switch (pdRet.flavor) {
                     case NullablePrimitive:
                         assert fOptimized;
-                        int slotEx = scopeGuard.getSynthetic(sRetVal + (i + 1), false);
-                        code.iload(slotEx);
-
-                        JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
+                        // the extSlot boolean will be on the top of the stack
                         Builder.storeToContext(code, cd, pdRet.altIndex);
                         Builder.storeToContext(code, CD_boolean, pdExt.altIndex);
+                        break;
+
+                    case XvmPrimitive, NullableXvmPrimitive:
+                        // store the return primitives (including any extensions) to the context,
+                        // leaving the last one on the stack
+                        for (int j = optIndexes.length - 1; j >= 1 ; j--) {
+                            JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
+                            Builder.storeToContext(code, retDesc.cd, retDesc.altIndex);
+                        }
+                        // set the last primitive on the stack as the return value
+                        Builder.addReturn(code, cd);
                         break;
 
                     default:
@@ -208,7 +236,7 @@ public class FinallyEnd
             }
         } else if (m_nFinallyAddr != -1) {
             // check if the "return" has beed encountered and if so, jump to the next "finally"
-            slotRet = scopeGuard.getSynthetic("$doReturn", true);
+            slotRet = scopeGuard.getSynthetic(GuardAll.DO_RETURN_SLOT_NAME, true);
             assert slotRet >= 0;
 
             code.iload(slotRet);  // boolean: if true, a return has been encountered (see OpReturn)

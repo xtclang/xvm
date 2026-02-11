@@ -343,7 +343,7 @@ public class FBind
             } else if (regArg.cd().isPrimitive()) {
                 bindArgument(code, slotStd, nJitPos, regArg, true);
                 bindArgument(code, slotOpt, nJitPos, regArg, false);
-            } else if (!regArg.type().isPrimitive()) {
+            } else if (!regArg.type().isJavaPrimitive()) {
                 bindArgument(code, slotStd, nJitPos, regArg, false);
                 bindArgument(code, slotOpt, nJitPos, regArg, false);
 

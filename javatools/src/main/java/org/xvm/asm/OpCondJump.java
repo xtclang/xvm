@@ -17,6 +17,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.BuildContext.DoubleSlot;
+import org.xvm.javajit.BuildContext.MultipleSlot;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.Ctx;
 import org.xvm.javajit.JitFlavor;
@@ -339,7 +340,7 @@ public abstract class OpCondJump
                 TypeConstant typeTarget = bctx.getArgumentType(m_nArg);
                 TypeConstant typeTest   = bctx.getTypeConstant(m_nArg2);
 
-                if (typeTarget.isPrimitive()) {
+                if (typeTarget.isJavaPrimitive()) {
                     // we can statically compute the result, which most probably means that a formal
                     // type was narrowed for a particular class flavor and the corresponding code
                     // is either always true or can be safely eliminated
@@ -575,7 +576,7 @@ public abstract class OpCondJump
             assert typeTest.isTypeOfType();
             typeTest = typeTest.getParamType(0);
 
-            if (typeTarget.isPrimitive()) {
+            if (typeTarget.isJavaPrimitive() || typeTarget.isXvmPrimitive()) {
                 // we can statically compute the result, which most probably means that a formal
                 // type was narrowed for a particular class flavor and the corresponding code
                 // can be safely eliminated
@@ -607,6 +608,16 @@ public abstract class OpCondJump
             if (regTarget instanceof DoubleSlot doubleSlot) {
                 assert doubleSlot.flavor() == JitFlavor.NullablePrimitive;
                 code.iload(doubleSlot.extSlot());
+                if (!typeTest.isOnlyNullable()) {
+                    assert typeTarget.removeNullable().isA(typeTest);
+
+                    // testing X? for ".is(X)" is equivalent to testing it for "!= Null";
+                    // the inverted answer is on the Java stack
+                    fInvert = true;
+                }
+            } else if (regTarget instanceof MultipleSlot multiSlot) {
+                assert multiSlot.flavor() == JitFlavor.NullableXvmPrimitive;
+                code.iload(multiSlot.extSlot());
                 if (!typeTest.isOnlyNullable()) {
                     assert typeTarget.removeNullable().isA(typeTest);
 

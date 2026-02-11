@@ -400,6 +400,15 @@ public abstract class OpTest
             } else {
                 code.ifne(labelTrue);
             }
+        } else if (regArg instanceof BuildContext.MultipleSlot slotMulti
+                && slotMulti.flavor() == JitFlavor.NullableXvmPrimitive) {
+
+            code.iload(slotMulti.extSlot()); // True indicates Null
+            if (fNot) {
+                code.ifeq(labelTrue);
+            } else {
+                code.ifne(labelTrue);
+            }
         } else {
             assert regArg.type().isNullable();
 
@@ -425,7 +434,7 @@ public abstract class OpTest
             assert typeTest.isTypeOfType();
             typeTest = typeTest.getParamType(0);
 
-            if (typeTarget.isPrimitive()) {
+            if (typeTarget.isJavaPrimitive()) {
                 // we can statically compute the result
                 if (getOpCode() == OP_IS_TYPE) {
                     if (typeTarget.isA(typeTest)) {code.iconst_1();} else {code.iconst_0();}

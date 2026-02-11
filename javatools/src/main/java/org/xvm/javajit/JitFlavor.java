@@ -41,10 +41,32 @@ public enum JitFlavor {
     NullablePrimitive(true, 2),
 
     /**
-     * Double-slot Java primitives that represent Int128, UInt128 or any other type that could be
-     * decomposed into two longs.
+     * Multi-slot Java primitives that represent a custom XVM primitive. For example, Int128,
+     * UInt128, or any other type that could be decomposed into multiple Java primitives.
+     * <p>
+     * The implication is that it uses multiple slots and transformations (boxing/unboxing) may be
+     * required.
      */
-    DoubleLong(true, 2),
+    XvmPrimitive(true, 2),
+
+    /**
+     * Multi-slot Java primitives that represent a `Nullable` custom XVM primitive. For example,
+     * Int128, UInt128, or any other type that could be decomposed into multiple Java primitives.
+     * <p>
+     * The implication is that it uses multiple slots and transformations (boxing/unboxing) may be
+     * required.
+     */
+    NullableXvmPrimitive(true, 3),
+
+    /**
+     * Multi-slot Java primitives that represent a custom XVM primitive with a default value. For
+     * example, Int128, UInt128, or any other type that could be decomposed into multiple Java
+     * primitives.
+     * <p>
+     * The implication is that it uses multiple slots and transformations (boxing/unboxing) may be
+     * required.
+     */
+    XvmPrimitiveWithDefault(true, 3),
 
     /**
      * A parameter of the {@link #Specific} flavor with a default value.

@@ -246,7 +246,7 @@ public abstract class OpInPlace
             // operation on a local property
             PropertyConstant idProp   = bctx.getConstant(nTarget, PropertyConstant.class);
             TypeConstant     typeProp = idProp.getType();
-            if (typeProp.isPrimitive()) {
+            if (typeProp.isJavaPrimitive()) {
                 buildPrimitiveProperty(bctx, code, idProp);
                 if (isAssignOp()) {
                     bctx.ensureRegInfo(m_nRetValue, idProp.getType());

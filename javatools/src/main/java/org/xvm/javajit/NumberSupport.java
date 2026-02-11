@@ -12,11 +12,15 @@ import static java.lang.constant.ConstantDescs.CD_Long;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
 
+import static org.xvm.javajit.Builder.CD_Int128;
 import static org.xvm.javajit.Builder.CD_JavaMath;
+import static org.xvm.javajit.Builder.CD_UInt128;
 import static org.xvm.javajit.Builder.MD_FloorModI;
 import static org.xvm.javajit.Builder.MD_FloorModJ;
+import static org.xvm.javajit.Builder.MD_Int128_add;
 import static org.xvm.javajit.Builder.MD_UDivInt;
 import static org.xvm.javajit.Builder.MD_UDivLong;
+import static org.xvm.javajit.Builder.MD_UInt128_add;
 
 /**
  * A "mixin" interface to generate bytecodes for operations on Ecstasy numeric types.
@@ -31,15 +35,30 @@ public interface NumberSupport {
      * @param regTarget  the register containing the target of the operation
      */
     default void buildPrimitiveAdd(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
-        switch (regTarget.cd().descriptorString()) {
-            case "I" -> {
-                code.iadd();
-                bctx.adjustIntValue(code, regTarget.type());
+        ClassDesc    cd            = regTarget.cd();
+        TypeConstant baseType      = regTarget.type().removeNullable();
+        boolean      javaPrimitive = cd.isPrimitive();
+        boolean      xvmPrimitive  = baseType.isXvmPrimitive();
+        assert (javaPrimitive && baseType.isJavaPrimitive()) || xvmPrimitive;
+
+        if (javaPrimitive && !xvmPrimitive) { // Java primitive
+            switch (cd.descriptorString()) {
+                case "I" -> {
+                    code.iadd();
+                    bctx.adjustIntValue(code, regTarget.type());
+                }
+                case "J" -> code.ladd();
+                case "F" -> code.fadd();
+                case "D" -> code.dadd();
+                default -> throw new IllegalStateException();
             }
-            case "J" -> code.ladd();
-            case "F" -> code.fadd();
-            case "D" -> code.dadd();
-            default  -> throw new IllegalStateException();
+        } else { // XVM primitive
+            switch (baseType.getSingleUnderlyingClass(false).getName()) {
+                case "Int128"  -> code.invokestatic(CD_Int128,  "add$p", MD_Int128_add);
+                case "UInt128" -> code.invokestatic(CD_UInt128, "add$p", MD_UInt128_add);
+                default        ->  throw new IllegalStateException();
+            // return is on the stack,
+            }
         }
     }
 

@@ -1,5 +1,6 @@
 package org.xvm.javajit;
 
+import java.lang.classfile.CodeBuilder;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
@@ -14,6 +15,8 @@ import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_nObj;
+import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
+import static org.xvm.javajit.JitFlavor.XvmPrimitive;
 import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
 import static org.xvm.javajit.JitFlavor.PrimitiveWithDefault;
@@ -21,6 +24,7 @@ import static org.xvm.javajit.JitFlavor.Specific;
 import static org.xvm.javajit.JitFlavor.SpecificWithDefault;
 import static org.xvm.javajit.JitFlavor.Widened;
 import static org.xvm.javajit.JitFlavor.WidenedWithDefault;
+import static org.xvm.javajit.JitFlavor.XvmPrimitiveWithDefault;
 
 /**
  * JIT specific information for a method.
@@ -45,6 +49,23 @@ public class JitMethodDesc {
      */
     public JitParamDesc getOptimizedParam(int argIndex) {
         return optimizedParams[getOptimizedParamIndex(argIndex)];
+    }
+
+    /**
+     * @return all the indexes of the optimized JitParamDesc for the specified standard argument
+     * index.
+     */
+    public int[] getAllOptimizedParams(int retIndex) {
+        List<Integer> list = new ArrayList<>(optimizedParams.length);
+        for (int i = 0, c = optimizedParams.length; i < c; i++) {
+            if (optimizedParams[i].index == retIndex) {
+                list.add(i);
+            }
+        }
+        if (list.isEmpty()) {
+            throw new IllegalArgumentException("Invalid param index");
+        }
+        return list.stream().mapToInt(i -> i).toArray();
     }
 
     /**
@@ -76,6 +97,23 @@ public class JitMethodDesc {
             }
         }
         throw new IllegalArgumentException("Invalid return index");
+    }
+
+    /**
+     * @return all the indexes of the optimized JitParamDesc for the specified standard return
+     * index.
+     */
+    public int[] getAllOptimizedReturnIndexes(int retIndex) {
+        List<Integer> list = new ArrayList<>(optimizedReturns.length);
+        for (int i = 0, c = optimizedReturns.length; i < c; i++) {
+            if (optimizedReturns[i].index == retIndex) {
+                list.add(i);
+            }
+        }
+        if (list.isEmpty()) {
+            throw new IllegalArgumentException("Invalid return index");
+        }
+        return list.stream().mapToInt(i -> i).toArray();
     }
 
     protected MethodTypeDesc computeMethodDesc(JitParamDesc[] returns, JitParamDesc[] params) {
@@ -162,6 +200,43 @@ public class JitMethodDesc {
                     optParamList.add(
                         new JitParamDesc(type, NullablePrimitive, CD_boolean, iOrig, iOpt++, true));
                 }
+            } else if ((cd = JitTypeDesc.getXvmPrimitiveClass(type)) != null) {
+                isOptimized = true;
+                stdParamList.add(
+                        new JitParamDesc(type, Specific, cd, iOrig, iStd++, false));
+
+                JitFlavor optFlavor = fDflt ? XvmPrimitiveWithDefault : XvmPrimitive;
+                for (ClassDesc cdArg : JitTypeDesc.getXvmPrimitiveClasses(type)) {
+                    optParamList.add(new JitParamDesc(type, optFlavor, cdArg, iOrig, iOpt++, false));
+                }
+
+                if (fDflt) {
+                    optParamList.add(
+                            new JitParamDesc(type, optFlavor, CD_boolean, iOrig, iOpt++, true));
+                }
+            } else if ((cd = JitTypeDesc.getNullableXvmPrimitiveClass(type)) != null) {
+                boolean   nullable  = type.isNullable();
+                JitFlavor stdFlavor = fDflt ? WidenedWithDefault : Widened;
+                JitFlavor optFlavor = nullable ? NullableXvmPrimitive : XvmPrimitive;
+
+                stdParamList.add(
+                        new JitParamDesc(type, stdFlavor, cd, iOrig, iStd++, false));
+
+                if (fDflt) {
+                    // TODO: ??? we can further optimize to extra slots for the default
+                    optParamList.add(
+                            new JitParamDesc(type, stdFlavor, cd, iOrig, iOpt++, false));
+                } else {
+                    isOptimized = true;
+                    for (ClassDesc cdArg : JitTypeDesc.getXvmPrimitiveClasses(type)) {
+                        optParamList.add(
+                                new JitParamDesc(type, optFlavor, cdArg, iOrig, iOpt++, false));
+                    }
+                    if (nullable) {
+                        optParamList.add(
+                                new JitParamDesc(type, optFlavor, CD_boolean, iOrig, iOpt++, true));
+                    }
+                }
             } else if ((cd = JitTypeDesc.getWidenedClass(type)) != null) {
                 JitFlavor flavor = fDflt ? WidenedWithDefault : Widened;
                 stdParamList.add(new JitParamDesc(type, flavor, cd, iOrig, iStd++, false));
@@ -202,14 +277,29 @@ public class JitMethodDesc {
                 isOptimized = true;
             } else if ((cd = JitTypeDesc.getNullablePrimitiveClass(type)) != null) {
                 TypeConstant typePrimitive = type.removeNullable();
-                TypeConstant typeBoolean   = pool.typeBoolean();
 
                 stdParamList.add(new JitParamDesc(type, Widened, CD_nObj, iOrig, ixStdObj++, false));
                 optParamList.add(new JitParamDesc(typePrimitive,
                     NullablePrimitive, cd,         iOrig, ixLong++, false));
-                optParamList.add(new JitParamDesc(typeBoolean,
+                optParamList.add(new JitParamDesc(pool.typeBoolean(),
                     NullablePrimitive, CD_boolean, iOrig, ixLong++, true));
                 isOptimized = true;
+            } else if ((cd = JitTypeDesc.getXvmPrimitiveClass(type)) != null) {
+                isOptimized = true;
+                stdParamList.add(new JitParamDesc(type, Specific, cd, iOrig, ixStdObj++, false));
+
+                for (ClassDesc cdArg : JitTypeDesc.getXvmPrimitiveClasses(type)) {
+                    optParamList.add(new JitParamDesc(type, XvmPrimitive, cdArg, iOrig, ixLong++, false));
+                }
+            } else if ((cd = JitTypeDesc.getNullableXvmPrimitiveClass(type)) != null) {
+                isOptimized = true;
+                stdParamList.add(new JitParamDesc(type, Widened, CD_nObj, iOrig, ixStdObj++, false));
+
+                for (ClassDesc cdArg : JitTypeDesc.getXvmPrimitiveClasses(type)) {
+                    optParamList.add(new JitParamDesc(type, NullableXvmPrimitive, cdArg, iOrig, ixLong++, false));
+                }
+                optParamList.add(new JitParamDesc(pool.typeBoolean(),
+                        NullableXvmPrimitive, CD_boolean, iOrig, ixLong++, true));
             } else if ((cd = JitTypeDesc.getWidenedClass(type)) != null) {
                 stdParamList.add(new JitParamDesc(type, Widened, cd, iOrig, ixStdObj++, false));
                 optParamList.add(new JitParamDesc(type, Widened, cd, iOrig, ixOptObj++, false));
