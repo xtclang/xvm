@@ -605,7 +605,7 @@ public abstract class OpCallable extends Op {
                     tmx.assign(getAddress(), nRetVal, atypeResult[i]);
                 }
             }
-        } else {
+        } else if (m_nRetValue != A_IGNORE) {
             tmx.assign(getAddress(), m_nRetValue, atypeResult[0]);
         }
     }
@@ -707,10 +707,8 @@ public abstract class OpCallable extends Op {
             code.invokestatic(cdTarget, sJitName, mdCall, fInterface);
         }
 
-        if (m_nRetValue != Op.A_IGNORE) {
-            int[] anVar = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
-            bctx.assignReturns(code, jmdCall, anVar.length, anVar);
-        }
+        int[] anVar = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
+        bctx.assignReturns(code, jmdCall, anVar.length, anVar);
     }
 
     /**

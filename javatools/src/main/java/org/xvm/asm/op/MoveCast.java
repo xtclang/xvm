@@ -9,6 +9,7 @@ import java.lang.classfile.CodeBuilder;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Op;
 import org.xvm.asm.OpMove;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -118,16 +119,18 @@ public class MoveCast
 
     @Override
     public void computeTypes(BuildContext bctx) {
+        assert m_nToType <= Op.CONSTANT_OFFSET;
         TypeConstant typeFrom = bctx.getArgumentType(m_nFromValue);
-        TypeConstant typeTo   = bctx.getArgumentType(m_nToValue);
-        bctx.typeMatrix.assign(getAddress(), m_nFromValue, typeFrom.combine(bctx.pool(), typeTo));
+        TypeConstant typeTo   = bctx.getTypeConstant(m_nToType);
+        bctx.typeMatrix.assign(getAddress(), m_nToValue, typeFrom.combine(bctx.pool(), typeTo));
     }
 
     @Override
     public void build(BuildContext bctx, CodeBuilder code) {
-        RegisterInfo regType = bctx.loadConstant(code, m_nToType);
-        bctx.loadArgument(code, m_nFromValue);
-        code.checkcast(bctx.builder.ensureClassDesc(regType.type()));
+        RegisterInfo regFrom = bctx.loadArgument(code, m_nFromValue);
+        TypeConstant typeTo  = regFrom.type().combine(bctx.pool(), bctx.getTypeConstant(m_nToType));
+        bctx.generateCheckCast(code, typeTo);
+        bctx.storeValue(code, bctx.ensureRegInfo(m_nToValue, typeTo));
     }
 
     // ----- fields --------------------------------------------------------------------------------
