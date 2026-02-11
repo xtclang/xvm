@@ -105,24 +105,24 @@ class TemplateScannerTest {
             val tokens = scanner.tokenize(source)
 
             assertThat(tokens).hasSize(10)
-            // $"
+            // `$"` start
             assertThat(tokens[0].type).isEqualTo(TemplateTokenType.TEMPLATE_START)
             // {a}
             assertThat(tokens[1].type).isEqualTo(TemplateTokenType.TEMPLATE_EXPR_START)
             assertThat(tokens[2].type).isEqualTo(TemplateTokenType.TEMPLATE_EXPR_END)
-            // " + "
+            // content: " + "
             assertThat(tokens[3].type).isEqualTo(TemplateTokenType.TEMPLATE_CONTENT)
             assertThat(tokens[3].value).isEqualTo(" + ")
             // {b}
             assertThat(tokens[4].type).isEqualTo(TemplateTokenType.TEMPLATE_EXPR_START)
             assertThat(tokens[5].type).isEqualTo(TemplateTokenType.TEMPLATE_EXPR_END)
-            // " = "
+            // content: " = "
             assertThat(tokens[6].type).isEqualTo(TemplateTokenType.TEMPLATE_CONTENT)
             assertThat(tokens[6].value).isEqualTo(" = ")
             // {c}
             assertThat(tokens[7].type).isEqualTo(TemplateTokenType.TEMPLATE_EXPR_START)
             assertThat(tokens[8].type).isEqualTo(TemplateTokenType.TEMPLATE_EXPR_END)
-            // "
+            // `"` end
             assertThat(tokens[9].type).isEqualTo(TemplateTokenType.TEMPLATE_END)
         }
     }

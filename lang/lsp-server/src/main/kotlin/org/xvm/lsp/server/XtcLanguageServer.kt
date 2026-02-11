@@ -19,6 +19,7 @@ import org.eclipse.lsp4j.DocumentFormattingParams
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.DocumentHighlightParams
 import org.eclipse.lsp4j.DocumentLink
+import org.eclipse.lsp4j.DocumentLinkOptions
 import org.eclipse.lsp4j.DocumentLinkParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.DocumentSymbol
@@ -43,6 +44,7 @@ import org.eclipse.lsp4j.PrepareRenameResult
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.ReferenceParams
+import org.eclipse.lsp4j.RenameOptions
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SelectionRangeParams
@@ -50,6 +52,7 @@ import org.eclipse.lsp4j.SemanticTokens
 import org.eclipse.lsp4j.SemanticTokensParams
 import org.eclipse.lsp4j.ServerCapabilities
 import org.eclipse.lsp4j.SignatureHelp
+import org.eclipse.lsp4j.SignatureHelpOptions
 import org.eclipse.lsp4j.SignatureHelpParams
 import org.eclipse.lsp4j.SignatureInformation
 import org.eclipse.lsp4j.SymbolInformation
@@ -76,8 +79,7 @@ import org.xvm.lsp.model.toRange
 import java.util.Properties
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.time.Duration
-import kotlin.time.measureTime
+import kotlin.time.measureTimedValue
 import org.xvm.lsp.adapter.XtcCompilerAdapter.CompletionItem.CompletionKind as AdapterCompletionKind
 import org.xvm.lsp.adapter.XtcCompilerAdapter.FormattingOptions as AdapterFormattingOptions
 import org.xvm.lsp.adapter.XtcCompilerAdapter.Position as AdapterPosition
@@ -132,15 +134,6 @@ class XtcLanguageServer(
             Properties().apply {
                 XtcLanguageServer::class.java.getResourceAsStream("/lsp-version.properties")?.use { load(it) }
             }
-
-        /**
-         * Execute a block and return its result along with elapsed duration.
-         */
-        private inline fun <T> timed(block: () -> T): Pair<T, Duration> {
-            var result: T
-            val duration = measureTime { result = block() }
-            return result to duration
-        }
     }
 
     private val buildInfo = loadBuildInfo()
@@ -309,15 +302,17 @@ class XtcLanguageServer(
             foldingRangeProvider = Either.forLeft(true)
 
             // --- Editing features (treesitter) ---
-            renameProvider = Either.forLeft(true)
+            renameProvider = Either.forRight(RenameOptions().apply { prepareProvider = true })
             codeActionProvider = Either.forLeft(true)
             documentFormattingProvider = Either.forLeft(true)
             documentRangeFormattingProvider = Either.forLeft(true)
             inlayHintProvider = Either.forLeft(true)
 
+            documentLinkProvider = DocumentLinkOptions()
+
+            signatureHelpProvider = SignatureHelpOptions(listOf("(", ","))
+
             // Not yet advertised (enable when implemented)
-            // signatureHelpProvider = SignatureHelpOptions(listOf("(", ",")) // treesitter
-            // documentLinkProvider = DocumentLinkOptions() // treesitter
             // semanticTokensProvider = SemanticTokensWithRegistrationOptions(...) // compiler(sym)
             // declarationProvider = Either.forLeft(true) // compiler: go-to-declaration
             // typeDefinitionProvider = Either.forLeft(true) // compiler(types): jump to type
@@ -416,6 +411,9 @@ class XtcLanguageServer(
     // ========================================================================
 
     private inner class XtcTextDocumentService : TextDocumentService {
+        // ConcurrentHashMap is required because didOpen/didChange/didClose write on the LSP
+        // message thread, while documentSymbol, formatting, documentLink, etc. read from
+        // CompletableFuture.supplyAsync handlers on the ForkJoinPool.
         private val openDocuments = ConcurrentHashMap<String, String>()
 
         /**
@@ -429,7 +427,7 @@ class XtcLanguageServer(
             logger.info("{}: {} ({} bytes)", "textDocument/didOpen", uri, content.length)
             openDocuments[uri] = content
 
-            val (result, elapsed) = timed { adapter.compile(uri, content) }
+            val (result, elapsed) = measureTimedValue { adapter.compile(uri, content) }
             logger.info("textDocument/didOpen: compiled in {}, {} diagnostics", elapsed, result.diagnostics.size)
             publishDiagnostics(uri, result.diagnostics)
         }
@@ -450,7 +448,7 @@ class XtcLanguageServer(
             logger.info("{}: {} ({} bytes)", "textDocument/didChange", uri, content.length)
             openDocuments[uri] = content
 
-            val (result, elapsed) = timed { adapter.compile(uri, content) }
+            val (result, elapsed) = measureTimedValue { adapter.compile(uri, content) }
             logger.info("textDocument/didChange: compiled in {}, {} diagnostics", elapsed, result.diagnostics.size)
             publishDiagnostics(uri, result.diagnostics)
         }
@@ -485,7 +483,7 @@ class XtcLanguageServer(
 
             logger.info("{}: {} at {}:{}", "textDocument/hover", uri, line, column)
             return CompletableFuture.supplyAsync {
-                val (hoverInfo, elapsed) = timed { adapter.getHoverInfo(uri, line, column) }
+                val (hoverInfo, elapsed) = measureTimedValue { adapter.getHoverInfo(uri, line, column) }
 
                 if (hoverInfo == null) {
                     logger.info("textDocument/hover: no result in {}", elapsed)
@@ -516,7 +514,7 @@ class XtcLanguageServer(
 
             logger.info("{}: {} at {}:{}", "textDocument/completion", uri, line, column)
             return CompletableFuture.supplyAsync {
-                val (completions, elapsed) = timed { adapter.getCompletions(uri, line, column) }
+                val (completions, elapsed) = measureTimedValue { adapter.getCompletions(uri, line, column) }
 
                 val items =
                     completions.map { c ->
@@ -554,7 +552,7 @@ class XtcLanguageServer(
 
             logger.info("textDocument/definition: {} at {}:{}", uri, line, column)
             return CompletableFuture.supplyAsync {
-                val (definition, elapsed) = timed { adapter.findDefinition(uri, line, column) }
+                val (definition, elapsed) = measureTimedValue { adapter.findDefinition(uri, line, column) }
 
                 if (definition == null) {
                     logger.info("textDocument/definition: no result in {}", elapsed)
@@ -578,7 +576,7 @@ class XtcLanguageServer(
 
             logger.info("textDocument/references: {} at {}:{}", uri, line, column)
             return CompletableFuture.supplyAsync {
-                val (refs, elapsed) = timed { adapter.findReferences(uri, line, column, includeDeclaration) }
+                val (refs, elapsed) = measureTimedValue { adapter.findReferences(uri, line, column, includeDeclaration) }
                 logger.info("textDocument/references: {} references in {}", refs.size, elapsed)
                 refs.map { it.toLsp() }
             }
@@ -599,7 +597,7 @@ class XtcLanguageServer(
                     return@supplyAsync emptyList()
                 }
 
-                val (result, elapsed) = timed { adapter.compile(uri, content) }
+                val (result, elapsed) = measureTimedValue { adapter.compile(uri, content) }
                 logger.info("textDocument/documentSymbol: {} symbols in {}", result.symbols.size, elapsed)
                 result.symbols.map { symbol ->
                     Either.forRight(toDocumentSymbol(symbol))
@@ -635,7 +633,7 @@ class XtcLanguageServer(
 
             logger.info("{}: {} pos={}", "textDocument/documentHighlight", uri, pos.fmt())
             return CompletableFuture.supplyAsync {
-                val (highlights, elapsed) = timed { adapter.getDocumentHighlights(uri, pos.line, pos.character) }
+                val (highlights, elapsed) = measureTimedValue { adapter.getDocumentHighlights(uri, pos.line, pos.character) }
                 logger.info("textDocument/documentHighlight: {} highlights in {}", highlights.size, elapsed)
                 highlights.map { h ->
                     DocumentHighlight().apply {
@@ -657,7 +655,7 @@ class XtcLanguageServer(
             logger.info("textDocument/selectionRange: {} positions={}", uri, positions.map { it.fmt() })
             return CompletableFuture.supplyAsync {
                 val adapterPositions = positions.map { toAdapterPosition(it) }
-                val (ranges, elapsed) = timed { adapter.getSelectionRanges(uri, adapterPositions) }
+                val (ranges, elapsed) = measureTimedValue { adapter.getSelectionRanges(uri, adapterPositions) }
                 logger.info("textDocument/selectionRange: {} ranges in {}", ranges.size, elapsed)
                 ranges.map { toLspSelectionRange(it) }
             }
@@ -678,7 +676,7 @@ class XtcLanguageServer(
 
             logger.info("textDocument/foldingRange: {}", uri)
             return CompletableFuture.supplyAsync {
-                val (ranges, elapsed) = timed { adapter.getFoldingRanges(uri) }
+                val (ranges, elapsed) = measureTimedValue { adapter.getFoldingRanges(uri) }
                 logger.info("textDocument/foldingRange: {} ranges in {}", ranges.size, elapsed)
                 ranges.map { r ->
                     FoldingRange(r.startLine, r.endLine).apply {
@@ -703,7 +701,7 @@ class XtcLanguageServer(
                     return@supplyAsync emptyList()
                 }
 
-                val (links, elapsed) = timed { adapter.getDocumentLinks(uri, content) }
+                val (links, elapsed) = measureTimedValue { adapter.getDocumentLinks(uri, content) }
                 logger.info("textDocument/documentLink: {} links in {}", links.size, elapsed)
                 links.map { l ->
                     DocumentLink().apply {
@@ -730,7 +728,7 @@ class XtcLanguageServer(
 
             logger.info("textDocument/signatureHelp: {} at {}:{}", uri, line, column)
             return CompletableFuture.supplyAsync {
-                val (help, elapsed) = timed { adapter.getSignatureHelp(uri, line, column) }
+                val (help, elapsed) = measureTimedValue { adapter.getSignatureHelp(uri, line, column) }
 
                 if (help == null) {
                     logger.info("textDocument/signatureHelp: no result in {}", elapsed)
@@ -772,7 +770,7 @@ class XtcLanguageServer(
 
             logger.info("textDocument/prepareRename: {} at {}:{}", uri, line, column)
             return CompletableFuture.supplyAsync {
-                val (result, elapsed) = timed { adapter.prepareRename(uri, line, column) }
+                val (result, elapsed) = measureTimedValue { adapter.prepareRename(uri, line, column) }
 
                 if (result == null) {
                     logger.info("textDocument/prepareRename: rename not allowed in {}", elapsed)
@@ -801,7 +799,7 @@ class XtcLanguageServer(
 
             logger.info("textDocument/rename: {} at {}:{} -> '{}'", uri, line, column, newName)
             return CompletableFuture.supplyAsync {
-                val (edit, elapsed) = timed { adapter.rename(uri, line, column, newName) }
+                val (edit, elapsed) = measureTimedValue { adapter.rename(uri, line, column, newName) }
 
                 if (edit == null) {
                     logger.info("textDocument/rename: no edit in {}", elapsed)
@@ -845,7 +843,7 @@ class XtcLanguageServer(
                 val adapterDiagnostics = params.context.diagnostics.map { Diagnostic.fromLsp(uri, it) }
 
                 val (actions, elapsed) =
-                    timed {
+                    measureTimedValue {
                         adapter.getCodeActions(uri, toAdapterRange(range), adapterDiagnostics)
                     }
                 logger.info("textDocument/codeAction: {} actions in {}", actions.size, elapsed)
@@ -885,7 +883,7 @@ class XtcLanguageServer(
 
             logger.info("textDocument/semanticTokens/full: {}", uri)
             return CompletableFuture.supplyAsync {
-                val (tokens, elapsed) = timed { adapter.getSemanticTokens(uri) }
+                val (tokens, elapsed) = measureTimedValue { adapter.getSemanticTokens(uri) }
 
                 if (tokens == null) {
                     logger.info("textDocument/semanticTokens/full: no tokens in {}", elapsed)
@@ -909,7 +907,7 @@ class XtcLanguageServer(
 
             logger.info("{}: {} range={}", "textDocument/inlayHint", uri, range.fmt())
             return CompletableFuture.supplyAsync {
-                val (hints, elapsed) = timed { adapter.getInlayHints(uri, toAdapterRange(range)) }
+                val (hints, elapsed) = measureTimedValue { adapter.getInlayHints(uri, toAdapterRange(range)) }
                 logger.info("textDocument/inlayHint: {} hints in {}", hints.size, elapsed)
                 hints.map { h ->
                     InlayHint().apply {
@@ -943,7 +941,7 @@ class XtcLanguageServer(
                         tabSize = params.options.tabSize,
                         insertSpaces = params.options.isInsertSpaces,
                     )
-                val (edits, elapsed) = timed { adapter.formatDocument(uri, content, options) }
+                val (edits, elapsed) = measureTimedValue { adapter.formatDocument(uri, content, options) }
                 logger.info("textDocument/formatting: {} edits in {}", edits.size, elapsed)
                 edits.map { e ->
                     TextEdit().apply {
@@ -975,7 +973,7 @@ class XtcLanguageServer(
                         tabSize = params.options.tabSize,
                         insertSpaces = params.options.isInsertSpaces,
                     )
-                val (edits, elapsed) = timed { adapter.formatRange(uri, content, toAdapterRange(range), options) }
+                val (edits, elapsed) = measureTimedValue { adapter.formatRange(uri, content, toAdapterRange(range), options) }
                 logger.info("textDocument/rangeFormatting: {} edits in {}", edits.size, elapsed)
                 edits.map { e ->
                     TextEdit().apply {
@@ -1020,7 +1018,7 @@ class XtcLanguageServer(
 
             logger.info("workspace/symbol: query='{}'", query)
             return CompletableFuture.supplyAsync {
-                val (symbols, elapsed) = timed { adapter.findWorkspaceSymbols(query) }
+                val (symbols, elapsed) = measureTimedValue { adapter.findWorkspaceSymbols(query) }
                 logger.info("workspace/symbol: {} symbols in {}", symbols.size, elapsed)
                 Either.forRight(
                     symbols.map { s ->

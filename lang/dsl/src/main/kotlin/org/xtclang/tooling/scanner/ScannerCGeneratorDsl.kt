@@ -28,10 +28,10 @@ object ScannerCGeneratorDsl {
  * Regenerate with: ./gradlew :lang:dsl:generateScannerC
  *
  * DESIGN: The scanner is STATELESS. It uses valid_symbols to determine context:
- * - SINGLELINE_* tokens valid → in single-line template ($"...")
+ * - SINGLELINE_* tokens valid → in single-line template (`$"`...)
  * - MULTILINE_* tokens valid → in multiline template ($|...|)
  *
- * Tree-sitter's grammar handles $" and $| as regular tokens.
+ * Tree-sitter's grammar handles `$"` and `$|` as regular tokens.
  * The scanner only handles content and delimiters AFTER the start is matched.
  */
 

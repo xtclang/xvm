@@ -61,7 +61,7 @@ val nativePlatformDir: String = when {
 // Directory Layout
 // =============================================================================
 
-val treeSitterCliVersion: String = libs.versions.tree.sitter.cli.get()
+val treeSitterCliVersion: String = libs.versions.lang.tree.sitter.cli.get()
 val treeSitterCliDir: Provider<Directory> = layout.buildDirectory.dir("tree-sitter-cli")
 val generatedDir: Provider<Directory> = layout.buildDirectory.dir("generated")
 val nativeOutputDir: Provider<Directory> = layout.buildDirectory.dir("native")
@@ -102,11 +102,20 @@ val downloadTreeSitterCliGz by tasks.registering(Download::class) {
     description = "Download tree-sitter CLI gzipped binary"
     enabled = treeSitterPlatformSupported
 
-    src("https://github.com/tree-sitter/tree-sitter/releases/download/v$treeSitterCliVersion/tree-sitter-$treeSitterPlatform.gz")
+    val version = treeSitterCliVersion
+    val platform = treeSitterPlatform
+    val url = "https://github.com/tree-sitter/tree-sitter/releases/download/v$version/tree-sitter-$platform.gz"
+    val destPath = treeSitterCliDir.get().asFile.absolutePath
+    src(url)
     dest(treeSitterCliDir)
     overwrite(false)
     onlyIfModified(true)
     quiet(false)
+
+    logTimed("[tree-sitter] Downloading CLI v$version ($platform)...\n[tree-sitter]   URL:  $url\n[tree-sitter]   Dest: $destPath") { elapsed ->
+        val size = File(destPath).walkTopDown().filter { it.isFile }.sumOf { it.length() }.humanSize()
+        "[tree-sitter] CLI download complete ($size in $elapsed) -> $destPath"
+    }
 }
 
 /**
@@ -121,6 +130,8 @@ val extractTreeSitterCli by tasks.registering {
 
     val gzFile = treeSitterCliDir.map { it.file("tree-sitter-$treeSitterPlatform.gz").asFile }
     val outputFile = treeSitterCliDir.map { it.file("tree-sitter").asFile }
+    val version = treeSitterCliVersion
+    val platform = treeSitterPlatform
 
     inputs.file(gzFile)
     outputs.file(outputFile)
@@ -129,6 +140,8 @@ val extractTreeSitterCli by tasks.registering {
         val input = gzFile.get()
         val output = outputFile.get()
 
+        logger.lifecycle("[tree-sitter] Extracting CLI v$version ($platform) from ${input.name}...")
+
         GZIPInputStream(input.inputStream().buffered()).use { gzIn ->
             output.outputStream().buffered().use { out ->
                 gzIn.copyTo(out)
@@ -136,7 +149,7 @@ val extractTreeSitterCli by tasks.registering {
         }
 
         output.setExecutable(true)
-        logger.lifecycle("Extracted tree-sitter CLI to: ${output.absolutePath}")
+        logger.lifecycle("[tree-sitter] CLI extracted to: ${output.absolutePath}")
     }
 }
 
@@ -146,7 +159,7 @@ val extractTreeSitterCli by tasks.registering {
 // Download tree-sitter source to build the runtime library (libtree-sitter).
 // This is needed by jtreesitter at runtime in addition to our grammar library.
 
-val treeSitterRuntimeVersion: String = libs.versions.tree.sitter.cli.get()
+val treeSitterRuntimeVersion: String = libs.versions.lang.tree.sitter.cli.get()
 val treeSitterSourceDir: Provider<Directory> = layout.buildDirectory.dir("tree-sitter-source")
 
 /**
@@ -156,11 +169,19 @@ val downloadTreeSitterSource by tasks.registering(Download::class) {
     group = "tree-sitter"
     description = "Download tree-sitter source for runtime library build"
 
-    src("https://github.com/tree-sitter/tree-sitter/archive/refs/tags/v$treeSitterRuntimeVersion.tar.gz")
-    dest(treeSitterSourceDir.map { it.file("tree-sitter-$treeSitterRuntimeVersion.tar.gz") })
+    val version = treeSitterRuntimeVersion
+    val url = "https://github.com/tree-sitter/tree-sitter/archive/refs/tags/v$version.tar.gz"
+    val destPath = treeSitterSourceDir.get().file("tree-sitter-$version.tar.gz").asFile.absolutePath
+    src(url)
+    dest(treeSitterSourceDir.map { it.file("tree-sitter-$version.tar.gz") })
     overwrite(false)
     onlyIfModified(true)
     quiet(false)
+
+    logTimed("[tree-sitter] Downloading source v$version...\n[tree-sitter]   URL:  $url\n[tree-sitter]   Dest: $destPath") { elapsed ->
+        val size = File(destPath).length().humanSize()
+        "[tree-sitter] Source download complete ($size in $elapsed) -> $destPath"
+    }
 }
 
 /**
@@ -173,6 +194,7 @@ val extractTreeSitterSource by tasks.registering {
 
     val tarGzFile = treeSitterSourceDir.map { it.file("tree-sitter-$treeSitterRuntimeVersion.tar.gz").asFile }
     val outputDir = treeSitterSourceDir.map { it.asFile }
+    val version = treeSitterRuntimeVersion
 
     inputs.file(tarGzFile)
     outputs.dir(outputDir)
@@ -180,6 +202,8 @@ val extractTreeSitterSource by tasks.registering {
     doLast {
         val input = tarGzFile.get()
         val outDir = outputDir.get()
+
+        logger.lifecycle("[tree-sitter] Extracting source v$version from ${input.name}...")
 
         GZIPInputStream(input.inputStream().buffered()).use { gzIn ->
             TarArchiveInputStream(gzIn).use { tarIn ->
@@ -196,7 +220,7 @@ val extractTreeSitterSource by tasks.registering {
                 }
             }
         }
-        logger.lifecycle("Extracted tree-sitter source to: ${outDir.absolutePath}")
+        logger.lifecycle("[tree-sitter] Source extracted to: ${outDir.absolutePath}")
     }
 }
 
@@ -211,7 +235,7 @@ val treeSitterLibSrc: Provider<Directory> = treeSitterSourceDir.map {
 // Zig enables building native libraries for ALL platforms from ANY host machine.
 // Download once, build everywhere - no platform-specific toolchains needed.
 
-val zigVersion: String = libs.versions.zig.get()
+val zigVersion: String = libs.versions.lang.zig.get()
 // Use persistent cache directory instead of build directory
 val zigDir: File = File(zigCacheDir, zigVersion)
 
@@ -238,11 +262,22 @@ val downloadZig by tasks.registering(Download::class) {
     description = "Download Zig compiler for cross-compilation"
     enabled = zigPlatformSupported
 
-    src("https://ziglang.org/download/$zigVersion/zig-$zigPlatform-$zigVersion.$zigArchiveExt")
-    dest(File(zigDir, "zig-$zigPlatform-$zigVersion.$zigArchiveExt"))
+    val version = zigVersion
+    val platform = zigPlatform
+    val ext = zigArchiveExt
+    val url = "https://ziglang.org/download/$version/zig-$platform-$version.$ext"
+    val destFile = File(zigDir, "zig-$platform-$version.$ext")
+    val destPath = destFile.absolutePath
+    src(url)
+    dest(destFile)
     overwrite(false)
     onlyIfModified(true)
     quiet(false)
+
+    logTimed("[zig] Downloading Zig compiler v$version ($platform)...\n[zig]   URL:  $url\n[zig]   Dest: $destPath") { elapsed ->
+        val size = File(destPath).length().humanSize()
+        "[zig] Zig download complete ($size in $elapsed) -> $destPath"
+    }
 }
 
 /**
@@ -269,17 +304,23 @@ abstract class ExtractZigTask @Inject constructor(
         val archive = archiveFile.get().asFile
         val outDir = outputDir.get().asFile
 
-        if (archiveExt.get() == "zip") {
-            fsOps.copy {
-                from(archiveOps.zipTree(archive))
-                into(outDir)
+        logger.lifecycle("[zig] Extracting Zig compiler from ${archive.name}...")
+        logger.lifecycle("[zig]   Archive: ${archive.absolutePath}")
+        logger.lifecycle("[zig]   Target:  ${outDir.absolutePath}")
+
+        val duration = measureTime {
+            if (archiveExt.get() == "zip") {
+                fsOps.copy {
+                    from(archiveOps.zipTree(archive))
+                    into(outDir)
+                }
+            } else {
+                // Use Apache Commons Compress for .tar.xz extraction (pure Java)
+                extractTarXz(archive, outDir)
             }
-        } else {
-            // Use Apache Commons Compress for .tar.xz extraction (pure Java)
-            extractTarXz(archive, outDir)
         }
 
-        logger.lifecycle("Extracted Zig compiler to: ${outDir.absolutePath}")
+        logger.lifecycle("[zig] Zig compiler extracted in $duration to: ${outDir.absolutePath}")
     }
 
     private fun extractTarXz(archive: File, outDir: File) {
@@ -849,7 +890,7 @@ val populateNativeLibraryCache by tasks.registering {
     val grammarFileValue = grammarJsFile.map { it.asFile }
     val scannerFileValue = scannerCFile.map { it.asFile }
     val cliVersionValue = treeSitterCliVersion
-    val zigVersionValue = libs.versions.zig.get()
+    val zigVersionValue = zigVersion
     val cacheDirValue = nativeLibCacheDir
     // Capture the map with pre-computed extensions to avoid script function reference
     val platformsWithExtensions = crossCompileTargets.keys.associateWith { libExtForPlatform(it) }
@@ -1115,67 +1156,79 @@ abstract class BuildAllNativeLibrariesOnDemandTask @Inject constructor(
         val scannerC = scannerFile.get().asFile
         val includeDir = parserSrcDir.get().asFile
 
-        logger.lifecycle("Building native libraries for ${platformMap.size} platforms...")
+        logger.lifecycle("[zig] ========== NATIVE LIBRARY CROSS-COMPILATION ==========")
+        logger.lifecycle("[zig] Platforms: ${platformMap.keys.joinToString(", ")}")
+        logger.lifecycle("[zig] Zig compiler: $zigPath")
+        logger.lifecycle("[zig] Cache dir: ${cacheRoot.absolutePath}")
 
-        platformMap.forEach { (platform, zigTarget) ->
-            val ext = extMap[platform] ?: error("No extension for platform: $platform")
-            val hash = computeHash(platform)
-            val cachedDir = File(cacheRoot, "$hash/$platform")
-            val cachedGrammarLib = File(cachedDir, "libtree-sitter-xtc.$ext")
-            val cachedRuntimeLib = File(cachedDir, "libtree-sitter.$ext")
+        var cachedCount = 0
+        var builtCount = 0
 
-            val platformOutDir = File(outDir, platform)
-            platformOutDir.mkdirs()
-            val grammarOutput = File(platformOutDir, "libtree-sitter-xtc.$ext")
-            val runtimeOutput = File(platformOutDir, "libtree-sitter.$ext")
+        val totalDuration = measureTime {
+            platformMap.forEach { (platform, zigTarget) ->
+                val ext = extMap[platform] ?: error("No extension for platform: $platform")
+                val hash = computeHash(platform)
+                val cachedDir = File(cacheRoot, "$hash/$platform")
+                val cachedGrammarLib = File(cachedDir, "libtree-sitter-xtc.$ext")
+                val cachedRuntimeLib = File(cachedDir, "libtree-sitter.$ext")
 
-            // Check cache
-            if (cachedGrammarLib.exists() && cachedRuntimeLib.exists()) {
-                logger.lifecycle("  $platform: Using cached (hash: ${hash.take(8)}...)")
+                val platformOutDir = File(outDir, platform)
+                platformOutDir.mkdirs()
+                val grammarOutput = File(platformOutDir, "libtree-sitter-xtc.$ext")
+                val runtimeOutput = File(platformOutDir, "libtree-sitter.$ext")
+
+                // Check cache
+                if (cachedGrammarLib.exists() && cachedRuntimeLib.exists()) {
+                    logger.lifecycle("[zig]   $platform: cache hit (hash: ${hash.take(8)}...)")
+                    cachedGrammarLib.copyTo(grammarOutput, overwrite = true)
+                    cachedRuntimeLib.copyTo(runtimeOutput, overwrite = true)
+                    cachedCount++
+                    return@forEach
+                }
+
+                logger.lifecycle("[zig]   $platform: BUILDING with Zig ($zigTarget)...")
+                cachedDir.mkdirs()
+
+                val duration = measureTime {
+                    // Build grammar library
+                    execOps.exec {
+                        executable(zigPath)
+                        args(
+                            "cc", "-shared", "-fPIC",
+                            "-target", zigTarget,
+                            "-I", includeDir.absolutePath,
+                            parserC.absolutePath,
+                            scannerC.absolutePath,
+                            "-o", cachedGrammarLib.absolutePath
+                        )
+                    }
+
+                    // Build runtime library
+                    val libC = File(treeSitterLibSrc, "src/lib.c")
+                    execOps.exec {
+                        executable(zigPath)
+                        args(
+                            "cc", "-shared", "-fPIC",
+                            "-target", zigTarget,
+                            "-I", File(treeSitterLibSrc, "include").absolutePath,
+                            "-I", File(treeSitterLibSrc, "src").absolutePath,
+                            libC.absolutePath,
+                            "-o", cachedRuntimeLib.absolutePath
+                        )
+                    }
+                }
+                logger.lifecycle("[zig]   $platform: compiled in $duration")
+                builtCount++
+
+                // Copy to output
                 cachedGrammarLib.copyTo(grammarOutput, overwrite = true)
                 cachedRuntimeLib.copyTo(runtimeOutput, overwrite = true)
-                return@forEach
             }
-
-            logger.lifecycle("  $platform: Building with Zig ($zigTarget)...")
-            cachedDir.mkdirs()
-
-            val duration = measureTime {
-                // Build grammar library
-                execOps.exec {
-                    executable(zigPath)
-                    args(
-                        "cc", "-shared", "-fPIC",
-                        "-target", zigTarget,
-                        "-I", includeDir.absolutePath,
-                        parserC.absolutePath,
-                        scannerC.absolutePath,
-                        "-o", cachedGrammarLib.absolutePath
-                    )
-                }
-
-                // Build runtime library
-                val libC = File(treeSitterLibSrc, "src/lib.c")
-                execOps.exec {
-                    executable(zigPath)
-                    args(
-                        "cc", "-shared", "-fPIC",
-                        "-target", zigTarget,
-                        "-I", File(treeSitterLibSrc, "include").absolutePath,
-                        "-I", File(treeSitterLibSrc, "src").absolutePath,
-                        libC.absolutePath,
-                        "-o", cachedRuntimeLib.absolutePath
-                    )
-                }
-            }
-            logger.lifecycle("  $platform: Built in $duration")
-
-            // Copy to output
-            cachedGrammarLib.copyTo(grammarOutput, overwrite = true)
-            cachedRuntimeLib.copyTo(runtimeOutput, overwrite = true)
         }
 
-        logger.lifecycle("All native libraries ready.")
+        logger.lifecycle("[zig] ==========================================================")
+        logger.lifecycle("[zig] Result: $builtCount built, $cachedCount from cache, total: $totalDuration")
+        logger.lifecycle("[zig] ==========================================================")
     }
 }
 
@@ -1196,7 +1249,7 @@ val buildAllNativeLibrariesOnDemand by tasks.registering(BuildAllNativeLibraries
     scannerFile.set(scannerCFile)
     parserSrcDir.set(generatedDir.map { it.dir("src") })
     cliVersion.set(treeSitterCliVersion)
-    this.zigVersion.set(libs.versions.zig)
+    this.zigVersion.set(libs.versions.lang.zig)
     zigExePath.set(zigExe)
     treeSitterLibSrcPath.set(treeSitterLibSrc.map { it.asFile.absolutePath })
     cacheDir.set(nativeLibCacheDir.absolutePath)

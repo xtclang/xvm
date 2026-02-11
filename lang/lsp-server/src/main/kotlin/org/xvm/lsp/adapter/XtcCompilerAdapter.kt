@@ -59,7 +59,18 @@ interface XtcCompilerAdapter {
     /**
      * Compile a source file and return the result.
      *
-     * LSP: Triggered by textDocument/didOpen and textDocument/didChange.
+     * **LSP capability:** Triggered by `textDocument/didOpen` and `textDocument/didChange`.
+     * The client sends the full document text; the server parses it and publishes diagnostics.
+     *
+     * **Editor activation:** Automatic — triggered when a `.x` file is opened or edited.
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Regex-scans for module/class/interface/method/property patterns and ERROR markers.
+     * - *TreeSitter:* Incremental native parse with error-tolerant grammar; extracts symbols via queries.
+     * - *Compiler:* Full semantic compilation with type resolution and cross-file analysis.
+     *
+     * **Compiler upgrade path:** A compiler adapter would produce semantic diagnostics (type errors,
+     * unresolved references) and a richer symbol table with resolved types and cross-file links.
      *
      * @param uri     the document URI
      * @param content the source code content
@@ -73,7 +84,17 @@ interface XtcCompilerAdapter {
     /**
      * Find the symbol at a specific position.
      *
-     * Used internally by hover, definition, and references.
+     * **LSP capability:** Used internally by hover, definition, and references — not directly
+     * exposed as an LSP method, but underpins several user-visible features.
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Checks if position falls within any compiled symbol's line range.
+     * - *TreeSitter:* Walks the parse tree to find the AST node at the position, then queries
+     *   declarations to match it.
+     * - *Compiler:* Resolves the fully-qualified symbol with type information.
+     *
+     * **Compiler upgrade path:** Would return symbols with resolved types, cross-file qualified
+     * names, and documentation extracted from doc comments.
      *
      * @param uri    the document URI
      * @param line   0-based line number
@@ -89,7 +110,20 @@ interface XtcCompilerAdapter {
     /**
      * Get hover information for a position.
      *
-     * LSP: textDocument/hover
+     * **LSP capability:** `textDocument/hover` — shown when the user hovers the mouse over a
+     * symbol. Displays a tooltip with type signature, documentation, and other info.
+     *
+     * **Editor activation:**
+     * - *IntelliJ:* Hover mouse over a symbol, or Ctrl+Q (Quick Documentation)
+     * - *VS Code:* Hover mouse over a symbol
+     *
+     * **Adapter implementations:**
+     * - *Mock/TreeSitter:* Default in [AbstractXtcCompilerAdapter] — calls [findSymbolAt] and
+     *   formats the symbol's kind, name, and type signature as Markdown.
+     * - *Compiler:* Would add resolved types, inferred generics, and extracted doc comments.
+     *
+     * **Compiler upgrade path:** Full type signatures (e.g., `Person implements Hashable, Const`)
+     * and rendered XDoc documentation.
      *
      * @param uri    the document URI
      * @param line   0-based line number
@@ -105,7 +139,21 @@ interface XtcCompilerAdapter {
     /**
      * Get completion suggestions at a position.
      *
-     * LSP: textDocument/completion
+     * **LSP capability:** `textDocument/completion` — provides code completion suggestions as the
+     * user types. Triggered by `.`, `:`, `<`, or explicit request.
+     *
+     * **Editor activation:**
+     * - *IntelliJ:* Ctrl+Space (Basic), or type and wait for auto-popup
+     * - *VS Code:* Ctrl+Space, or type and wait for auto-popup
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Returns XTC keywords, built-in types, and symbols from the current document.
+     * - *TreeSitter:* Same as Mock, plus import-derived names and symbols from AST queries.
+     *   Context-unaware (cannot provide member completion after `.`).
+     * - *Compiler:* Type-aware completion with member access, method overloads, and import suggestions.
+     *
+     * **Compiler upgrade path:** Context-sensitive completions: after `.` show members, after `:`
+     * show types, inside `import` show available modules/packages.
      *
      * @param uri    the document URI
      * @param line   0-based line number
@@ -121,7 +169,19 @@ interface XtcCompilerAdapter {
     /**
      * Find the definition of the symbol at a position.
      *
-     * LSP: textDocument/definition
+     * **LSP capability:** `textDocument/definition` — navigates to where a symbol is declared.
+     *
+     * **Editor activation:**
+     * - *IntelliJ:* Ctrl+Click on a symbol, Ctrl+B, or F12
+     * - *VS Code:* Ctrl+Click on a symbol, or F12
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Returns the symbol's own location (same-file, name-based match only).
+     * - *TreeSitter:* Searches AST declarations for a matching name in the same file.
+     * - *Compiler:* Cross-file resolution via import paths and fully-qualified names.
+     *
+     * **Compiler upgrade path:** Cross-file go-to-definition, resolving imports, inherited
+     * members, and overloaded method signatures.
      *
      * @param uri    the document URI
      * @param line   0-based line number
@@ -137,7 +197,21 @@ interface XtcCompilerAdapter {
     /**
      * Find all references to the symbol at a position.
      *
-     * LSP: textDocument/references
+     * **LSP capability:** `textDocument/references` — shows all usages of a symbol.
+     *
+     * **Editor activation:**
+     * - *IntelliJ:* Alt+F7 (Find Usages), or Shift+F12
+     * - *VS Code:* Shift+F12, or right-click → Find All References
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Returns only the declaration itself (when `includeDeclaration` is true), no
+     *   actual usage search.
+     * - *TreeSitter:* Text-matches the identifier name across all AST nodes in the same file.
+     *   Cannot distinguish shadowed locals or cross-file references.
+     * - *Compiler:* Semantic reference search across the entire workspace.
+     *
+     * **Compiler upgrade path:** Cross-file references, distinguishing reads vs writes, and
+     * filtering by scope (e.g., only references within the same module).
      *
      * @param uri                the document URI
      * @param line               0-based line number
@@ -159,10 +233,19 @@ interface XtcCompilerAdapter {
     /**
      * Get document highlights for a symbol at a position.
      *
-     * Highlights all occurrences of the symbol in the same document.
-     * Tree-sitter can implement this via text matching on identifier names.
+     * **LSP capability:** `textDocument/documentHighlight` — highlights all occurrences of the
+     * symbol under the cursor in the same document. Shown as background color emphasis.
      *
-     * LSP: textDocument/documentHighlight
+     * **Editor activation:** Automatic — click on any identifier to highlight all occurrences.
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Whole-word text search across all lines of the cached document content.
+     * - *TreeSitter:* Finds the identifier AST node at the position, then queries all identifier
+     *   nodes with the same text. Returns all as `TEXT` kind.
+     * - *Compiler:* Semantic highlights distinguishing `READ` vs `WRITE` access.
+     *
+     * **Compiler upgrade path:** Distinguish read/write highlights, skip string literals and
+     * comments, handle shadowed variables correctly.
      *
      * @param uri    the document URI
      * @param line   0-based line number
@@ -181,10 +264,21 @@ interface XtcCompilerAdapter {
     /**
      * Get selection ranges for positions (smart selection expansion).
      *
-     * Returns nested ranges based on AST structure for expand/shrink selection.
-     * Tree-sitter can implement this directly from parse tree structure.
+     * **LSP capability:** `textDocument/selectionRange` — powers smart expand/shrink selection.
+     * Returns a chain of nested ranges from the innermost token to the outermost declaration.
      *
-     * LSP: textDocument/selectionRange
+     * **Editor activation:**
+     * - *IntelliJ:* Ctrl+W (Expand Selection) / Ctrl+Shift+W (Shrink)
+     * - *VS Code:* Shift+Alt+Right (Expand) / Shift+Alt+Left (Shrink)
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Returns empty (requires AST structure for meaningful results).
+     * - *TreeSitter:* Walks up from the leaf node at the position to the root, building a chain
+     *   of progressively larger ranges (identifier → expression → statement → block → class).
+     * - *Compiler:* Same as TreeSitter (AST-based; no semantic info needed).
+     *
+     * **Compiler upgrade path:** Minimal — tree-sitter already provides excellent selection ranges.
+     * A compiler adapter would use the same approach from its own AST.
      *
      * @param uri       the document URI
      * @param positions list of positions to get selection ranges for
@@ -201,10 +295,21 @@ interface XtcCompilerAdapter {
     /**
      * Get folding ranges for a document.
      *
-     * Returns regions that can be collapsed (classes, methods, blocks, imports).
-     * Tree-sitter can implement this from AST node boundaries.
+     * **LSP capability:** `textDocument/foldingRange` — provides collapsible regions in the
+     * editor gutter (classes, methods, imports, comments).
      *
-     * LSP: textDocument/foldingRange
+     * **Editor activation:**
+     * - *IntelliJ:* Click fold arrows in gutter; Ctrl+Shift+Minus (fold all) / Ctrl+Shift+Plus (unfold all)
+     * - *VS Code:* Click fold arrows in gutter; Ctrl+Shift+[ (fold) / Ctrl+Shift+] (unfold)
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Brace-matching (`{`/`}` pairs) plus import-line grouping.
+     * - *TreeSitter:* AST node boundaries for declarations, blocks, comments, and import lists.
+     *   More accurate than brace matching (handles string literals, comments correctly).
+     * - *Compiler:* Same as TreeSitter (structural feature, no semantic info needed).
+     *
+     * **Compiler upgrade path:** Minimal — tree-sitter provides excellent folding ranges.
+     * A compiler adapter could add region markers from structured comments.
      *
      * @param uri the document URI
      * @return list of folding ranges
@@ -217,9 +322,19 @@ interface XtcCompilerAdapter {
     /**
      * Get document links (clickable paths in imports, etc.).
      *
-     * Tree-sitter can extract import statements and return them as links.
+     * **LSP capability:** `textDocument/documentLink` — makes import paths and other references
+     * clickable in the editor, allowing quick navigation.
      *
-     * LSP: textDocument/documentLink
+     * **Editor activation:** Automatic — import paths appear as clickable links (Ctrl+Click).
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Regex-matches `import` statements and returns the path portion as a link.
+     * - *TreeSitter:* Extracts import nodes from the AST and returns their locations.
+     *   Target is null (cannot resolve cross-file paths without compiler).
+     * - *Compiler:* Resolves import paths to actual file URIs for clickable navigation.
+     *
+     * **Compiler upgrade path:** Resolve `target` URIs so clicking an import opens the
+     * referenced module/package file.
      *
      * @param uri     the document URI
      * @param content the source code content
@@ -240,10 +355,22 @@ interface XtcCompilerAdapter {
     /**
      * Get signature help for a function call at a position.
      *
-     * Shows parameter info when typing function arguments.
-     * Requires resolved method signatures from compiler.
+     * **LSP capability:** `textDocument/signatureHelp` — shows parameter hints when the user
+     * types `(` or `,` inside a function call. Highlights the active parameter.
      *
-     * LSP: textDocument/signatureHelp
+     * **Editor activation:**
+     * - *IntelliJ:* Type `(` after a method name, or Ctrl+P inside argument list
+     * - *VS Code:* Type `(` after a method name, or Ctrl+Shift+Space inside argument list
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Returns null (cannot extract method parameters from regex patterns).
+     * - *TreeSitter:* Walks up to enclosing `call_expression`, finds the called method's
+     *   declaration in the same file, extracts parameter nodes, and counts commas to determine
+     *   the active parameter index.
+     * - *Compiler:* Resolves overloaded methods, cross-file signatures, and default values.
+     *
+     * **Compiler upgrade path:** Cross-file method resolution, overload disambiguation,
+     * default parameter values, and documentation for each parameter.
      *
      * @param uri    the document URI
      * @param line   0-based line number
@@ -260,9 +387,20 @@ interface XtcCompilerAdapter {
     }
 
     /**
-     * Prepare rename operation - check if rename is valid at position.
+     * Prepare rename operation — check if rename is valid at position.
      *
-     * LSP: textDocument/prepareRename
+     * **LSP capability:** `textDocument/prepareRename` — called before a rename to verify the
+     * position is on a renamable identifier and to highlight the range to be changed.
+     *
+     * **Editor activation:** Called automatically as part of the rename flow (see [rename]).
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Finds the word at the position via regex and returns its range and text.
+     * - *TreeSitter:* Finds the identifier AST node at the position and returns its exact range.
+     * - *Compiler:* Validates the rename is semantically valid (not a keyword, not cross-module).
+     *
+     * **Compiler upgrade path:** Reject renames of built-in types, warn about cross-file impact,
+     * and validate the new name doesn't conflict with existing declarations.
      *
      * @param uri    the document URI
      * @param line   0-based line number
@@ -281,10 +419,21 @@ interface XtcCompilerAdapter {
     /**
      * Perform rename operation.
      *
-     * Renames a symbol across all files in the workspace.
-     * Requires full semantic analysis from compiler.
+     * **LSP capability:** `textDocument/rename` — renames a symbol and returns a workspace edit
+     * with all text changes. The editor applies all edits atomically.
      *
-     * LSP: textDocument/rename
+     * **Editor activation:**
+     * - *IntelliJ:* Shift+F6 on an identifier, or right-click → Refactor → Rename
+     * - *VS Code:* F2 on an identifier, or right-click → Rename Symbol
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Whole-word text replacement across all lines in the same file.
+     * - *TreeSitter:* Finds all identifier AST nodes with the same text in the same file and
+     *   produces edits for each occurrence.
+     * - *Compiler:* Cross-file rename with semantic analysis, updating imports and references.
+     *
+     * **Compiler upgrade path:** Cross-file rename across the workspace, updating import paths,
+     * and handling constructor references and type aliases.
      *
      * @param uri     the document URI
      * @param line    0-based line number
@@ -305,10 +454,22 @@ interface XtcCompilerAdapter {
     /**
      * Get code actions for a range (quick fixes, refactorings).
      *
-     * Returns available actions based on diagnostics and context.
-     * Requires semantic analysis for meaningful suggestions.
+     * **LSP capability:** `textDocument/codeAction` — provides the lightbulb menu with quick
+     * fixes and refactoring suggestions. Actions can include workspace edits or commands.
      *
-     * LSP: textDocument/codeAction
+     * **Editor activation:**
+     * - *IntelliJ:* Alt+Enter (Intentions), or click lightbulb icon in gutter
+     * - *VS Code:* Ctrl+. (Quick Fix), or click lightbulb icon
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Offers "Organize Imports" when import statements are detected and unsorted.
+     * - *TreeSitter:* Same as Mock — detects unsorted import nodes from the AST and offers
+     *   a single edit to sort them.
+     * - *Compiler:* Quick fixes for diagnostics (add import, fix typo), refactorings (extract
+     *   method, inline variable).
+     *
+     * **Compiler upgrade path:** Diagnostic-driven quick fixes, extract/inline refactorings,
+     * and "add missing override" suggestions.
      *
      * @param uri         the document URI
      * @param range       the range to get actions for
@@ -327,10 +488,20 @@ interface XtcCompilerAdapter {
     /**
      * Get semantic tokens for enhanced syntax highlighting.
      *
-     * Returns token classifications based on semantic analysis.
-     * Requires type resolution from compiler.
+     * **LSP capability:** `textDocument/semanticTokens/full` — provides token-level semantic
+     * highlighting that supplements TextMate grammars. Distinguishes fields vs locals vs
+     * parameters, type names vs variable names, etc.
      *
-     * LSP: textDocument/semanticTokens/full
+     * **Editor activation:** Automatic — applied as an overlay on top of TextMate highlighting.
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Returns null (no type information available).
+     * - *TreeSitter:* Returns null (could partially classify tokens from AST, but without type
+     *   resolution the benefit over TextMate is limited).
+     * - *Compiler:* Full semantic token classification with type-aware highlighting.
+     *
+     * **Compiler upgrade path:** Classify every token with its semantic role (variable, parameter,
+     * property, type, function, enum member, etc.) for rich editor highlighting.
      *
      * @param uri the document URI
      * @return semantic tokens data
@@ -343,10 +514,20 @@ interface XtcCompilerAdapter {
     /**
      * Get inlay hints (inline type annotations, parameter names).
      *
-     * Shows inferred types and parameter names inline.
-     * Requires type inference from compiler.
+     * **LSP capability:** `textDocument/inlayHint` — shows inline annotations in the editor
+     * for inferred types and parameter names (e.g., `val x` shows `: Int` after the variable).
      *
-     * LSP: textDocument/inlayHint
+     * **Editor activation:** Automatic — hints appear inline when enabled.
+     * - *IntelliJ:* Settings → Editor → Inlay Hints (toggle per category)
+     * - *VS Code:* `editor.inlayHints.enabled` setting
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Returns empty (requires type inference).
+     * - *TreeSitter:* Returns empty (requires type inference).
+     * - *Compiler:* Provides inferred type annotations and parameter name hints.
+     *
+     * **Compiler upgrade path:** Show inferred types for `val` declarations, parameter names
+     * at call sites, and return type hints for methods without explicit return types.
      *
      * @param uri   the document URI
      * @param range the range to get hints for
@@ -363,7 +544,20 @@ interface XtcCompilerAdapter {
     /**
      * Format an entire document.
      *
-     * LSP: textDocument/formatting
+     * **LSP capability:** `textDocument/formatting` — formats the entire document.
+     *
+     * **Editor activation:**
+     * - *IntelliJ:* Ctrl+Alt+L (Reformat Code)
+     * - *VS Code:* Shift+Alt+F (Format Document)
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Removes trailing whitespace from all lines and inserts final newline if missing.
+     * - *TreeSitter:* Same as Mock (basic formatting; AST-aware indentation is possible but not
+     *   yet implemented).
+     * - *Compiler:* Full code formatting with XTC style rules, indentation, and alignment.
+     *
+     * **Compiler upgrade path:** AST-aware formatting with configurable style rules (brace
+     * placement, indentation, blank lines between declarations).
      *
      * @param uri     the document URI
      * @param content the source code content
@@ -382,7 +576,20 @@ interface XtcCompilerAdapter {
     /**
      * Format a range within a document.
      *
-     * LSP: textDocument/rangeFormatting
+     * **LSP capability:** `textDocument/rangeFormatting` — formats only the selected range.
+     *
+     * **Editor activation:**
+     * - *IntelliJ:* Select text, then Ctrl+Alt+L
+     * - *VS Code:* Select text, then Ctrl+K Ctrl+F (Format Selection)
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Removes trailing whitespace only on lines within the specified range.
+     *   Does not insert final newline (that's a whole-document concern).
+     * - *TreeSitter:* Same as Mock (range-scoped trailing whitespace removal).
+     * - *Compiler:* Full formatting within the range, re-indenting and aligning.
+     *
+     * **Compiler upgrade path:** AST-aware range formatting that adjusts indentation relative
+     * to the surrounding context.
      *
      * @param uri     the document URI
      * @param content the source code content
@@ -403,7 +610,19 @@ interface XtcCompilerAdapter {
     /**
      * Find symbols across the workspace.
      *
-     * LSP: workspace/symbol
+     * **LSP capability:** `workspace/symbol` — provides workspace-wide symbol search.
+     *
+     * **Editor activation:**
+     * - *IntelliJ:* Ctrl+T (Go to Symbol), or Navigate → Symbol
+     * - *VS Code:* Ctrl+T (Go to Symbol in Workspace)
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Returns empty (no workspace index).
+     * - *TreeSitter:* Returns empty (single-file parsing only).
+     * - *Compiler:* Searches a workspace-wide symbol index.
+     *
+     * **Compiler upgrade path:** Build and maintain a cross-file symbol index that supports
+     * fuzzy matching, filtering by kind, and ranking by relevance.
      *
      * @param query search query string
      * @return list of matching symbols

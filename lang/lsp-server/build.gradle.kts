@@ -3,8 +3,8 @@ import java.time.Instant
 
 plugins {
     alias(libs.plugins.xdk.build.properties)
-    alias(libs.plugins.kotlin.jvm)
-    alias(libs.plugins.ktlint)
+    alias(libs.plugins.lang.kotlin.jvm)
+    alias(libs.plugins.lang.ktlint)
     `java-library`
 }
 
@@ -127,19 +127,19 @@ dependencies {
 
     // LSP4J - Eclipse LSP implementation for Java
     // Bundled in fat JAR for out-of-process execution (not provided by IntelliJ)
-    implementation(libs.lsp4j)
-    implementation(libs.lsp4j.jsonrpc)
+    implementation(libs.lang.lsp4j)
+    implementation(libs.lang.lsp4j.jsonrpc)
 
     // JetBrains annotations for nullability (Kotlin uses these automatically)
     compileOnly(libs.jetbrains.annotations)
 
     // Logging - bundled in fat JAR for out-of-process execution
-    implementation(libs.slf4j.api)
-    implementation(libs.logback)
+    implementation(libs.lang.slf4j.api)
+    implementation(libs.lang.logback)
 
     // Tree-sitter JVM bindings for fast, incremental, error-tolerant parsing
     // Requires Java 23+ (uses FFM API) - runs out-of-process with its own JRE
-    implementation(libs.jtreesitter)
+    implementation(libs.lang.jtreesitter)
 
     // Testing
     testImplementation(platform(libs.junit.bom))

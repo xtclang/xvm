@@ -115,9 +115,26 @@ class JreProvisioner(
     private val isWindows get() = "windows" in System.getProperty("os.name").lowercase()
 
     val javaPath: Path?
-        get() = findSystemJava() ?: findCachedJava()
+        get() {
+            logger.info("[jre-resolve] Resolving Java $version+ for LSP server...")
 
-    private fun findCachedJava(): Path? {
+            findSystemJava()?.let { java ->
+                logger.info("[jre-resolve] SELECTED: registered JDK -> $java")
+                return java
+            }
+            logger.info("[jre-resolve] No suitable JDK (>= $version) found in IntelliJ's Project SDK table")
+
+            findCachedJava()?.let { java ->
+                logger.info("[jre-resolve] SELECTED: cached Temurin JRE -> $java")
+                return java
+            }
+            logger.info("[jre-resolve] No cached JRE at $jreDir")
+
+            logger.info("[jre-resolve] No Java $version+ found — will need to download from Foojay")
+            return null
+        }
+
+    internal fun findCachedJava(): Path? {
         if (!jreDir.exists()) return null
         val javaName = if (isWindows) "java.exe" else "java"
         return Files
@@ -126,30 +143,34 @@ class JreProvisioner(
             .filter { it.isExecutable() }
             .findFirst()
             .getOrNull()
-            ?.also { logger.info("Found cached JRE: $it") }
     }
 
     private fun findSystemJava(): Path? {
         val javaSdk = JavaSdk.getInstance()
-        return ProjectJdkTable
-            .getInstance()
-            .getSdksOfType(javaSdk)
-            .firstNotNullOfOrNull { sdk ->
-                val majorVersion =
-                    javaSdk
-                        .getVersion(sdk)
-                        ?.maxLanguageLevel
-                        ?.feature() ?: 0
-                if (majorVersion >= version) {
-                    javaSdk
-                        .getVMExecutablePath(sdk)
-                        ?.let { Path.of(it) }
-                        ?.takeIf { it.exists() }
-                        ?.also { logger.info("Found registered JDK $majorVersion: $it") }
-                } else {
-                    null
-                }
+        val allSdks = ProjectJdkTable.getInstance().getSdksOfType(javaSdk)
+        logger.info("[jre-resolve] IntelliJ SDK table has ${allSdks.size} registered JDK(s):")
+        allSdks.forEach { sdk ->
+            val sdkVersion = javaSdk.getVersion(sdk)
+            val major = sdkVersion?.maxLanguageLevel?.feature() ?: 0
+            val vmPath = javaSdk.getVMExecutablePath(sdk)
+            val suitable = if (major >= version) "OK" else "too old"
+            logger.info("[jre-resolve]   ${sdk.name}: Java $major ($suitable) -> $vmPath")
+        }
+        return allSdks.firstNotNullOfOrNull { sdk ->
+            val majorVersion =
+                javaSdk
+                    .getVersion(sdk)
+                    ?.maxLanguageLevel
+                    ?.feature() ?: 0
+            if (majorVersion >= version) {
+                javaSdk
+                    .getVMExecutablePath(sdk)
+                    ?.let { Path.of(it) }
+                    ?.takeIf { it.exists() }
+            } else {
+                null
             }
+        }
     }
 
     fun isProvisioned(): Boolean = javaPath != null
@@ -165,9 +186,9 @@ class JreProvisioner(
     }
 
     fun provision(onProgress: ((Float, String) -> Unit)? = null): Path {
-        // Check for system JDK first
+        // Check for system JDK first (javaPath getter already logged details)
         findSystemJava()?.let {
-            logger.info("Using registered JDK: $it")
+            logger.info("[jre-resolve] provision: using registered JDK -> $it")
             return it
         }
 
@@ -388,7 +409,7 @@ class JreProvisioner(
      * JRE archives typically have a versioned root like "jdk-25.0.1+9-jre/" - we move its contents up.
      * The internal structure (bin/java vs Contents/Home/bin/java) doesn't matter since findCachedJava() searches.
      */
-    private fun flattenSingleSubdirectory() {
+    internal fun flattenSingleSubdirectory() {
         val entries = jreDir.listDirectoryEntries()
 
         // If there's exactly one directory entry, flatten it

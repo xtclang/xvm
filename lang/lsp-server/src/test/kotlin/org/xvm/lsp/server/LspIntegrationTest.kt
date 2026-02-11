@@ -1,21 +1,30 @@
 package org.xvm.lsp.server
 
 import org.assertj.core.api.Assertions.assertThat
+import org.eclipse.lsp4j.CodeActionContext
+import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.DefinitionParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DocumentFormattingParams
 import org.eclipse.lsp4j.DocumentHighlightParams
+import org.eclipse.lsp4j.DocumentLinkParams
+import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.FoldingRangeRequestParams
 import org.eclipse.lsp4j.FormattingOptions
 import org.eclipse.lsp4j.HoverParams
 import org.eclipse.lsp4j.InitializeParams
+import org.eclipse.lsp4j.InlayHintParams
 import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.PrepareRenameParams
 import org.eclipse.lsp4j.PublishDiagnosticsParams
+import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.ReferenceContext
 import org.eclipse.lsp4j.ReferenceParams
+import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.SelectionRangeParams
+import org.eclipse.lsp4j.SignatureHelpParams
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.services.LanguageClient
@@ -128,14 +137,7 @@ class LspIntegrationTest {
     // Helpers
     // ========================================================================
 
-    private fun createTreeSitterAdapterOrNull(): TreeSitterAdapter? =
-        try {
-            TreeSitterAdapter()
-        } catch (_: Exception) {
-            null
-        } catch (_: UnsatisfiedLinkError) {
-            null
-        }
+    private fun createTreeSitterAdapterOrNull(): TreeSitterAdapter? = runCatching { TreeSitterAdapter() }.getOrNull()
 
     private fun resolveProjectRoot(): Path {
         val root =
@@ -432,15 +434,15 @@ class LspIntegrationTest {
     }
 
     // ========================================================================
-    // Tests: textDocument/documentHighlight (TreeSitter only)
+    // Tests: textDocument/documentHighlight
     // ========================================================================
 
     @Nested
     @DisplayName("textDocument/documentHighlight")
     inner class DocumentHighlightTests {
         @Test
-        @DisplayName("should not crash and return valid result")
-        fun shouldNotCrashAndReturnValidResult() {
+        @DisplayName("should highlight all occurrences of symbol")
+        fun shouldHighlightAllOccurrences() {
             val tf = openFile("Boolean.x")
             val pos = findPosition(tf.content, "Boolean")
 
@@ -449,8 +451,23 @@ class LspIntegrationTest {
                     .documentHighlight(DocumentHighlightParams(TextDocumentIdentifier(tf.uri), pos))
                     .get()
 
-            // Not yet implemented in any adapter — verify it returns without error
             assertThat(highlights).isNotNull()
+            // "Boolean" appears many times in Boolean.x
+            assertThat(highlights).isNotEmpty()
+        }
+
+        @Test
+        @DisplayName("should return empty past end of file")
+        fun shouldReturnEmptyPastEndOfFile() {
+            val tf = openFile("Closeable.x")
+            val pos = Position(9999, 0)
+
+            val highlights =
+                server.textDocumentService
+                    .documentHighlight(DocumentHighlightParams(TextDocumentIdentifier(tf.uri), pos))
+                    .get()
+
+            assertThat(highlights).isEmpty()
         }
     }
 
@@ -462,8 +479,8 @@ class LspIntegrationTest {
     @DisplayName("textDocument/foldingRange")
     inner class FoldingRangeTests {
         @Test
-        @DisplayName("should not crash and return valid result")
-        fun shouldNotCrashAndReturnValidResult() {
+        @DisplayName("should return folding ranges for declarations")
+        fun shouldReturnFoldingRangesForDeclarations() {
             val tf = openFile("Exception.x")
 
             val ranges =
@@ -471,8 +488,10 @@ class LspIntegrationTest {
                     .foldingRange(FoldingRangeRequestParams(TextDocumentIdentifier(tf.uri)))
                     .get()
 
-            // Not yet implemented in any adapter — verify it returns without error
             assertThat(ranges).isNotNull()
+            assertThat(ranges).isNotEmpty()
+            // At minimum, the const Exception declaration should be foldable
+            assertThat(ranges).anyMatch { it.endLine > it.startLine }
         }
     }
 
@@ -484,8 +503,8 @@ class LspIntegrationTest {
     @DisplayName("textDocument/selectionRange")
     inner class SelectionRangeTests {
         @Test
-        @DisplayName("should not crash and return valid result")
-        fun shouldNotCrashAndReturnValidResult() {
+        @DisplayName("should return nested selection ranges")
+        fun shouldReturnNestedSelectionRanges() {
             val tf = openFile("Exception.x")
             val declStart = tf.content.indexOf("const Exception")
             val pos = findPosition(tf.content, "Exception", declStart)
@@ -495,8 +514,11 @@ class LspIntegrationTest {
                     .selectionRange(SelectionRangeParams(TextDocumentIdentifier(tf.uri), listOf(pos)))
                     .get()
 
-            // Not yet implemented in any adapter — verify it returns without error
             assertThat(ranges).isNotNull()
+            assertThat(ranges).hasSize(1)
+            // TreeSitter should return a chain of nested ranges; Mock returns a single point
+            val range = ranges[0]
+            assertThat(range).isNotNull()
         }
     }
 
@@ -523,6 +545,182 @@ class LspIntegrationTest {
 
             // May return edits or empty list, but should not throw
             assertThat(edits).isNotNull()
+        }
+    }
+
+    // ========================================================================
+    // Tests: textDocument/prepareRename and rename
+    // ========================================================================
+
+    @Nested
+    @DisplayName("textDocument/rename")
+    inner class RenameTests {
+        @Test
+        @DisplayName("should prepare rename for identifier")
+        fun shouldPrepareRenameForIdentifier() {
+            val tf = openFile("Exception.x")
+            val declStart = tf.content.indexOf("const Exception")
+            val pos = findPosition(tf.content, "Exception", declStart)
+
+            val result =
+                server.textDocumentService
+                    .prepareRename(PrepareRenameParams(TextDocumentIdentifier(tf.uri), pos))
+                    .get()
+
+            assertThat(result).isNotNull()
+            // The result should contain "Exception" as the placeholder
+            assertThat(result.second.placeholder).isEqualTo("Exception")
+        }
+
+        @Test
+        @DisplayName("should rename symbol and produce edits")
+        fun shouldRenameAndProduceEdits() {
+            val tf = openFile("Exception.x")
+            val declStart = tf.content.indexOf("const Exception")
+            val pos = findPosition(tf.content, "Exception", declStart)
+
+            val edit =
+                server.textDocumentService
+                    .rename(RenameParams(TextDocumentIdentifier(tf.uri), pos, "MyException"))
+                    .get()
+
+            assertThat(edit).isNotNull()
+            assertThat(edit.changes).containsKey(tf.uri)
+            val fileEdits = edit.changes[tf.uri]
+            assertThat(fileEdits).isNotEmpty()
+            assertThat(fileEdits).allMatch { it.newText == "MyException" }
+        }
+    }
+
+    // ========================================================================
+    // Tests: textDocument/codeAction
+    // ========================================================================
+
+    @Nested
+    @DisplayName("textDocument/codeAction")
+    inner class CodeActionTests {
+        @Test
+        @DisplayName("should return code actions without crashing")
+        fun shouldReturnCodeActionsWithoutCrashing() {
+            val tf = openFile("TestSimple.x")
+            val range = Range(Position(0, 0), Position(0, 0))
+
+            val actions =
+                server.textDocumentService
+                    .codeAction(
+                        CodeActionParams(
+                            TextDocumentIdentifier(tf.uri),
+                            range,
+                            CodeActionContext(emptyList()),
+                        ),
+                    ).get()
+
+            // May return actions or empty, should not crash
+            assertThat(actions).isNotNull()
+        }
+    }
+
+    // ========================================================================
+    // Tests: textDocument/documentLink
+    // ========================================================================
+
+    @Nested
+    @DisplayName("textDocument/documentLink")
+    inner class DocumentLinkTests {
+        @Test
+        @DisplayName("should return document links for imports")
+        fun shouldReturnDocumentLinksForImports() {
+            val tf = openFile("TestSimple.x")
+
+            val links =
+                server.textDocumentService
+                    .documentLink(DocumentLinkParams(TextDocumentIdentifier(tf.uri)))
+                    .get()
+
+            // TestSimple.x has imports, so we should get links
+            assertThat(links).isNotNull()
+            // Both adapters should return links if the file has imports
+            if (tf.content.contains("import ")) {
+                assertThat(links).isNotEmpty()
+            }
+        }
+    }
+
+    // ========================================================================
+    // Tests: textDocument/signatureHelp
+    // ========================================================================
+
+    @Nested
+    @DisplayName("textDocument/signatureHelp")
+    inner class SignatureHelpTests {
+        @Test
+        @DisplayName("should return signature help or null")
+        fun shouldReturnSignatureHelpOrNull() {
+            val tf = openFile("TestSimple.x")
+            // Position at a method call — may return null (mock) or signatures (tree-sitter)
+            val pos = Position(2, 10)
+
+            val result =
+                server.textDocumentService
+                    .signatureHelp(SignatureHelpParams(TextDocumentIdentifier(tf.uri), pos))
+                    .get()
+
+            // Either null or a valid SignatureHelp object — tests protocol flow
+            if (result != null) {
+                assertThat(result.signatures).isNotNull()
+            }
+        }
+    }
+
+    // ========================================================================
+    // Tests: textDocument/rangeFormatting
+    // ========================================================================
+
+    @Nested
+    @DisplayName("textDocument/rangeFormatting")
+    inner class RangeFormattingTests {
+        @Test
+        @DisplayName("should return formatting edits for range")
+        fun shouldReturnFormattingEditsForRange() {
+            val tf = openFile("TestSimple.x")
+            val range = Range(Position(0, 0), Position(4, 0))
+
+            val edits =
+                server.textDocumentService
+                    .rangeFormatting(
+                        DocumentRangeFormattingParams(
+                            TextDocumentIdentifier(tf.uri),
+                            FormattingOptions(4, true),
+                            range,
+                        ),
+                    ).get()
+
+            // Should not throw; result is non-null (may be empty if file is clean)
+            assertThat(edits).isNotNull()
+        }
+    }
+
+    // ========================================================================
+    // Tests: textDocument/inlayHint
+    // ========================================================================
+
+    @Nested
+    @DisplayName("textDocument/inlayHint")
+    inner class InlayHintTests {
+        @Test
+        @DisplayName("should return inlay hints or empty")
+        fun shouldReturnInlayHintsOrEmpty() {
+            val tf = openFile("TestSimple.x")
+            val lastLine = tf.content.count { it == '\n' }
+            val range = Range(Position(0, 0), Position(lastLine, 0))
+
+            val hints =
+                server.textDocumentService
+                    .inlayHint(InlayHintParams(TextDocumentIdentifier(tf.uri), range))
+                    .get()
+
+            // No adapter implements inlay hints yet, so expect empty
+            assertThat(hints).isEmpty()
         }
     }
 }

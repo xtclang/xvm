@@ -40,13 +40,13 @@ This document surveys how major programming languages have implemented IDE-indep
 
 ### IDE Support
 
-| IDE                | LSP Support | DAP Support | Implementation                             |
-|--------------------|-------------|-------------|--------------------------------------------|
-| **VSCode**         | ✅ Yes      | ✅ Yes      | `rust-analyzer` extension + `codelldb`     |
-| **IntelliJ IDEA**  | ✅ Yes      | ✅ Yes      | Built-in Rust plugin + rust-analyzer mode  |
-| **Vim/Neovim**     | ✅ Yes      | ✅ Yes      | Via `nvim-lspconfig` + `nvim-dap`          |
-| **Emacs**          | ✅ Yes      | ✅ Yes      | Via `lsp-mode` + `dap-mode`                |
-| **Sublime Text**   | ✅ Yes      | ❌ Limited  | Via LSP package                            |
+| IDE               | LSP Support | DAP Support | Implementation                            |
+|-------------------|-------------|-------------|-------------------------------------------|
+| **VSCode**        | ✅ Yes       | ✅ Yes       | `rust-analyzer` extension + `codelldb`    |
+| **IntelliJ IDEA** | ✅ Yes       | ✅ Yes       | Built-in Rust plugin + rust-analyzer mode |
+| **Vim/Neovim**    | ✅ Yes       | ✅ Yes       | Via `nvim-lspconfig` + `nvim-dap`         |
+| **Emacs**         | ✅ Yes       | ✅ Yes       | Via `lsp-mode` + `dap-mode`               |
+| **Sublime Text**  | ✅ Yes       | ❌ Limited   | Via LSP package                           |
 
 ### Key Features Implemented
 
@@ -104,13 +104,13 @@ This document surveys how major programming languages have implemented IDE-indep
 
 ### IDE Support
 
-| IDE                | LSP Support | DAP Support | Implementation                    |
-|--------------------|-------------|-------------|-----------------------------------|
-| **VSCode**         | ✅ Yes      | ✅ Yes      | Native (built-in)                 |
-| **IntelliJ IDEA**  | ✅ Yes      | ✅ Yes      | Built-in TypeScript support       |
-| **Vim/Neovim**     | ✅ Yes      | ✅ Yes      | Via `nvim-lspconfig` + `nvim-dap` |
-| **Emacs**          | ✅ Yes      | ✅ Yes      | Via `lsp-mode` + `dap-mode`       |
-| **Sublime Text**   | ✅ Yes      | ❌ Limited  | Via LSP package                   |
+| IDE               | LSP Support | DAP Support | Implementation                    |
+|-------------------|-------------|-------------|-----------------------------------|
+| **VSCode**        | ✅ Yes       | ✅ Yes       | Native (built-in)                 |
+| **IntelliJ IDEA** | ✅ Yes       | ✅ Yes       | Built-in TypeScript support       |
+| **Vim/Neovim**    | ✅ Yes       | ✅ Yes       | Via `nvim-lspconfig` + `nvim-dap` |
+| **Emacs**         | ✅ Yes       | ✅ Yes       | Via `lsp-mode` + `dap-mode`       |
+| **Sublime Text**  | ✅ Yes       | ❌ Limited   | Via LSP package                   |
 
 ### Key Features Implemented
 
@@ -184,11 +184,11 @@ This document surveys how major programming languages have implemented IDE-indep
 
 | IDE                  | LSP Support | DAP Support | Implementation                       |
 |----------------------|-------------|-------------|--------------------------------------|
-| **VSCode**           | ✅ Yes      | ✅ Yes      | Pylance + Python extension + debugpy |
-| **IntelliJ/PyCharm** | ✅ Yes      | ✅ Yes      | Built-in (proprietary, not LSP)      |
-| **Vim/Neovim**       | ✅ Yes      | ✅ Yes      | Jedi/python-lsp-server + nvim-dap    |
-| **Emacs**            | ✅ Yes      | ✅ Yes      | python-lsp-server + dap-mode         |
-| **Sublime Text**     | ✅ Yes      | ❌ Limited  | Via LSP package                      |
+| **VSCode**           | ✅ Yes       | ✅ Yes       | Pylance + Python extension + debugpy |
+| **IntelliJ/PyCharm** | ✅ Yes       | ✅ Yes       | Built-in (proprietary, not LSP)      |
+| **Vim/Neovim**       | ✅ Yes       | ✅ Yes       | Jedi/python-lsp-server + nvim-dap    |
+| **Emacs**            | ✅ Yes       | ✅ Yes       | python-lsp-server + dap-mode         |
+| **Sublime Text**     | ✅ Yes       | ❌ Limited   | Via LSP package                      |
 
 ### Key Features Implemented
 
@@ -249,11 +249,11 @@ This document surveys how major programming languages have implemented IDE-indep
 
 | IDE                 | LSP Support | DAP Support | Implementation                          |
 |---------------------|-------------|-------------|-----------------------------------------|
-| **VSCode**          | ✅ Yes      | ✅ Yes      | Go extension + gopls + delve            |
-| **IntelliJ/GoLand** | ✅ Yes      | ✅ Yes      | Built-in (proprietary + gopls fallback) |
-| **Vim/Neovim**      | ✅ Yes      | ✅ Yes      | gopls + nvim-dap-go                     |
-| **Emacs**           | ✅ Yes      | ✅ Yes      | gopls + dap-mode                        |
-| **Sublime Text**    | ✅ Yes      | ❌ Limited  | Via LSP package                         |
+| **VSCode**          | ✅ Yes       | ✅ Yes       | Go extension + gopls + delve            |
+| **IntelliJ/GoLand** | ✅ Yes       | ✅ Yes       | Built-in (proprietary + gopls fallback) |
+| **Vim/Neovim**      | ✅ Yes       | ✅ Yes       | gopls + nvim-dap-go                     |
+| **Emacs**           | ✅ Yes       | ✅ Yes       | gopls + dap-mode                        |
+| **Sublime Text**    | ✅ Yes       | ❌ Limited   | Via LSP package                         |
 
 ### Key Features Implemented
 
@@ -313,13 +313,13 @@ This document surveys how major programming languages have implemented IDE-indep
 
 ### IDE Support
 
-| IDE                | LSP Support | DAP Support | Implementation                    |
-|--------------------|-------------|-------------|-----------------------------------|
-| **VSCode**         | ✅ Yes      | ✅ Yes      | clangd extension + cppdbg         |
-| **IntelliJ/CLion** | ✅ Yes      | ✅ Yes      | Built-in (proprietary + clangd)   |
-| **Vim/Neovim**     | ✅ Yes      | ✅ Yes      | clangd + nvim-dap                 |
-| **Emacs**          | ✅ Yes      | ✅ Yes      | clangd + dap-mode                 |
-| **Qt Creator**     | ✅ Yes      | ✅ Yes      | Built-in clangd support           |
+| IDE                | LSP Support | DAP Support | Implementation                  |
+|--------------------|-------------|-------------|---------------------------------|
+| **VSCode**         | ✅ Yes       | ✅ Yes       | clangd extension + cppdbg       |
+| **IntelliJ/CLion** | ✅ Yes       | ✅ Yes       | Built-in (proprietary + clangd) |
+| **Vim/Neovim**     | ✅ Yes       | ✅ Yes       | clangd + nvim-dap               |
+| **Emacs**          | ✅ Yes       | ✅ Yes       | clangd + dap-mode               |
+| **Qt Creator**     | ✅ Yes       | ✅ Yes       | Built-in clangd support         |
 
 ### Key Features Implemented
 
@@ -383,12 +383,12 @@ This document surveys how major programming languages have implemented IDE-indep
 
 ### IDE Support
 
-| IDE               | LSP Support | DAP Support  | Implementation                             |
-|-------------------|-------------|--------------|--------------------------------------------|
-| **VSCode**        | ✅ Yes      | ✅ Yes       | Kotlin extension + kotlin-language-server  |
-| **IntelliJ IDEA** | ✅ Yes      | ✅ Yes       | Built-in (JetBrains, not LSP)              |
-| **Vim/Neovim**    | ✅ Yes      | ⚠️ Via Java | kotlin-language-server + nvim-jdtls        |
-| **Emacs**         | ✅ Yes      | ⚠️ Via Java | kotlin-language-server + dap-mode          |
+| IDE               | LSP Support | DAP Support | Implementation                            |
+|-------------------|-------------|-------------|-------------------------------------------|
+| **VSCode**        | ✅ Yes       | ✅ Yes       | Kotlin extension + kotlin-language-server |
+| **IntelliJ IDEA** | ✅ Yes       | ✅ Yes       | Built-in (JetBrains, not LSP)             |
+| **Vim/Neovim**    | ✅ Yes       | ⚠️ Via Java | kotlin-language-server + nvim-jdtls       |
+| **Emacs**         | ✅ Yes       | ⚠️ Via Java | kotlin-language-server + dap-mode         |
 
 ### Key Features Implemented
 
@@ -447,12 +447,12 @@ This document surveys how major programming languages have implemented IDE-indep
 
 ### IDE Support
 
-| IDE               | LSP Support | DAP Support | Implementation                             |
-|-------------------|-------------|-------------|--------------------------------------------|
-| **VSCode**        | ✅ Yes      | ✅ Yes      | Java extension pack + jdt.ls + java-debug  |
-| **IntelliJ IDEA** | ✅ Yes      | ✅ Yes      | Built-in (JetBrains, not LSP)              |
-| **Vim/Neovim**    | ✅ Yes      | ✅ Yes      | nvim-jdtls + nvim-dap                      |
-| **Emacs**         | ✅ Yes      | ✅ Yes      | lsp-java + dap-mode                        |
+| IDE               | LSP Support | DAP Support | Implementation                            |
+|-------------------|-------------|-------------|-------------------------------------------|
+| **VSCode**        | ✅ Yes       | ✅ Yes       | Java extension pack + jdt.ls + java-debug |
+| **IntelliJ IDEA** | ✅ Yes       | ✅ Yes       | Built-in (JetBrains, not LSP)             |
+| **Vim/Neovim**    | ✅ Yes       | ✅ Yes       | nvim-jdtls + nvim-dap                     |
+| **Emacs**         | ✅ Yes       | ✅ Yes       | lsp-java + dap-mode                       |
 
 ### Key Features Implemented
 
@@ -493,11 +493,11 @@ This document surveys how major programming languages have implemented IDE-indep
 
 ## Comparison Matrix
 
-| Language       | LSP Server                       | Written In | Reuses Compiler?     | DAP Adapter           | Debugger Backend | IDE Coverage | Maturity |
-|----------------|----------------------------------|------------|----------------------|-----------------------|------------------|--------------|----------|
+| Language       | LSP Server                       | Written In | Reuses Compiler?    | DAP Adapter           | Debugger Backend | IDE Coverage | Maturity |
+|----------------|----------------------------------|------------|---------------------|-----------------------|------------------|--------------|----------|
 | **Rust**       | rust-analyzer                    | Rust       | ✅ Yes (rustc API)   | lldb-vscode, codelldb | LLDB (native)    | Excellent    | Mature   |
 | **TypeScript** | typescript-language-server       | TypeScript | ✅ Yes (TSC API)     | vscode-js-debug       | V8 Inspector     | Excellent    | Mature   |
-| **Python**     | Pylance, Jedi, python-lsp-server | Python/TS  | ⚠️ Partial           | debugpy               | pdb + hooks      | Excellent    | Mature   |
+| **Python**     | Pylance, Jedi, python-lsp-server | Python/TS  | ⚠️ Partial          | debugpy               | pdb + hooks      | Excellent    | Mature   |
 | **Go**         | gopls                            | Go         | ✅ Yes (go/ast)      | delve                 | Delve (native)   | Excellent    | Mature   |
 | **C/C++**      | clangd                           | C++        | ✅ Yes (Clang)       | lldb-vscode, cppdbg   | LLDB/GDB         | Excellent    | Mature   |
 | **Kotlin**     | kotlin-language-server           | Kotlin     | ✅ Yes (kotlinc)     | java-debug            | JDWP             | Good         | Growing  |
