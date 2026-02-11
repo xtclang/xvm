@@ -2,6 +2,8 @@ package org.xtclang.ecstasy.collections;
 
 import java.util.Arrays;
 
+import org.xtclang.ecstasy.Iterable;
+import org.xtclang.ecstasy.Range;
 import org.xtclang.ecstasy.nObj;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
@@ -51,7 +53,7 @@ public class nArrayᐸObjectᐳ
         throw new UnsupportedOperationException();
     }
 
-    public static nArrayᐸObjectᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, org.xtclang.ecstasy.Iterable elements) {
+    public static nArrayᐸObjectᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
         // TODO
         throw new UnsupportedOperationException();
     }
@@ -144,9 +146,15 @@ public class nArrayᐸObjectᐳ
         }
     }
 
-    // TODO CP
-//
-//    @Override public Array$Object clear(Ctx ctx) {
+    @Override public nArrayᐸObjectᐳ delete$p(Ctx ctx, long index) {
+        throw new UnsupportedOperationException("TODO CP");
+    }
+
+    @Override public nArrayᐸObjectᐳ deleteAll(Ctx ctx, Range indexes) {
+        throw new UnsupportedOperationException("TODO CP");
+    }
+
+    @Override public nArrayᐸObjectᐳ clear(Ctx ctx) {
 //        if (empty$get$p(ctx)) {
 //            return this;
 //        }
@@ -159,7 +167,8 @@ public class nArrayᐸObjectᐳ
 //        switch ($mut()) {
 //        case $CONSTANT -> return
 //        }
-//    }
+        throw new UnsupportedOperationException("TODO CP");
+    }
 
     @Override public nArrayᐸObjectᐳ slice$p(Ctx ctx, long n1, long n2) {
         // slice must be in-range

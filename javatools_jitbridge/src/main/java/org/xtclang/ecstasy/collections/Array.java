@@ -433,7 +433,7 @@ public abstract class Array
      *
      *   Array deleteAll(Interval<Int> indexes)
      */
-    public Array deleteAll(Range indexes) {
+    public Array deleteAll(Ctx ctx, Range indexes) {
         throw new UnsupportedOperationException("TODO");
     }
 
