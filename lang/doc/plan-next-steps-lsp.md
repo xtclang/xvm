@@ -3,7 +3,7 @@
 This document covers all LSP features — implemented and planned — along with IDE client
 integration strategies for IntelliJ (via LSP4IJ), VS Code, and other editors.
 
-> **Last Updated**: 2026-02-12 (§1 updated: adapter architecture refactored — interface is now pure signatures, all defaults in AbstractXtcCompilerAdapter)
+> **Last Updated**: 2026-02-13 (Full audit: §1 status table verified against implementation, §2 Semantic Tokens Tier 1 marked done, §10 sprint plan updated with progress and recommended next work)
 
 ---
 
@@ -65,12 +65,12 @@ actions are traceable even when not yet supported.
 | `textDocument/documentLink` | Import statement locations (target unresolved) |
 | `textDocument/signatureHelp` | Same-file method parameters. Trigger chars: `(` `,` |
 | `textDocument/publishDiagnostics` | Syntax errors from tree-sitter parse |
+| `textDocument/semanticTokens/full` | Tier 1: declarations, type refs, annotations, calls, members. Opt-in via `-Plsp.semanticTokens=true` |
 
 ### Stub / Not Implemented (advertised but returning empty/null)
 
 | LSP Method | Status | Blocker |
 |------------|--------|---------|
-| `textDocument/semanticTokens/full` | Returns `null` | Needs tree-sitter query mapping |
 | `textDocument/inlayHint` | Returns `emptyList()` | Needs workspace index for param names |
 | `workspace/symbol` | Returns `emptyList()`, capability not advertised | Needs workspace index |
 
@@ -98,7 +98,7 @@ actions are traceable even when not yet supported.
 
 **Impact:** Highest. Semantic tokens overlay TextMate highlighting with type-aware coloring — distinguishing class names from variable names, parameters from properties, annotations from keywords. This is the single most visible upgrade to editor experience.
 
-**Current state:** `AbstractXtcCompilerAdapter.getSemanticTokens()` returns `null` (inherited default). The `SemanticTokens` data class already exists in `XtcCompilerAdapter`. The `semanticTokensFull()` handler in `XtcLanguageServer.kt` already delegates to the adapter — only the computation and capability registration are missing.
+**Current state:** Tier 1 is **implemented** in `TreeSitterAdapter.getSemanticTokens()` via `SemanticTokenEncoder`, which walks the tree-sitter AST and classifies tokens by syntactic position. The capability is registered when built with `-Plsp.semanticTokens=true`. The encoder covers all declaration types (class, interface, enum, mixin, service, const, method, constructor, property, variable, parameter, module, package), type references in syntactic positions, annotations, call expressions (direct and member calls), and member expressions. Modifiers (`declaration`, `static`, `abstract`, `readonly`) are emitted as bitmasks. Delta encoding produces the standard 5-integer-per-token format. Tier 2 (heuristic usage-site tokens) and Tier 3 (compiler-resolved) remain future work.
 
 ### 2.1 What Tree-Sitter Can Classify (No Compiler Needed)
 
@@ -138,7 +138,7 @@ actions are traceable even when not yet supported.
 
 ```kotlin
 object XtcSemanticTokenLegend {
-    val TOKEN_TYPES: List<String> = listOf(
+    val tokenTypes: List<String> = listOf(
         "namespace",      // 0  — modules, packages
         "type",           // 1  — generic type references
         "class",          // 2  — class names
@@ -164,7 +164,7 @@ object XtcSemanticTokenLegend {
         "decorator",      // 22 — annotations (@Inject, @Override)
     )
 
-    val TOKEN_MODIFIERS: List<String> = listOf(
+    val tokenModifiers: List<String> = listOf(
         "declaration",    // bit 0 — at declaration site
         "definition",     // bit 1 — body/implementation exists
         "readonly",       // bit 2 — immutable (val, const)
@@ -195,21 +195,19 @@ Token: class   → [0, 0, 5, 15, 0]    (keyword, no modifiers)
 Token: Person  → [0, 6, 6, 2, 1]     (class, declaration modifier)
 ```
 
-### 2.4 Implementation Plan
+### 2.4 Implementation Status
 
-**Files to modify:**
+**Files modified (Tier 1 — complete):**
 
 | File | Change |
 |------|--------|
-| `XtcLanguageConstants.kt` or new `XtcSemanticTokenLegend.kt` | Token legend definition |
-| `TreeSitterAdapter.kt` | Implement `getSemanticTokens()` |
-| `XtcQueryEngine.kt` | Add semantic token query execution |
-| `XtcQueries.kt` | Add query patterns for annotations, type expressions |
-| `XtcLanguageServer.kt` | Uncomment and configure `semanticTokensProvider` in capabilities |
+| `SemanticTokenEncoder.kt` (new) | Token legend (`SemanticTokenLegend`) + AST walker + delta encoder |
+| `TreeSitterAdapter.kt` | `getSemanticTokens()` creates fresh encoder per request, walks cached tree |
+| `XtcLanguageServer.kt` | `semanticTokensProvider` registered (opt-in via build flag) |
 
-**Phase 1:** Declaration-site tokens + type references in syntactic positions + annotations. Register `full` only. Gives ~60-70% of the benefit.
+**Phase 1 (DONE):** Declaration-site tokens + type references in syntactic positions + annotations + call/member expressions. Register `full` only. This gives ~60-70% of the benefit — all identifiers in declaration contexts are correctly classified with modifiers, and type references in return types, parameter types, and extends clauses are distinguished from plain identifiers.
 
-**Phase 2:** Heuristic usage-site tokens (method calls, property access, UpperCamelCase). Add `range` support.
+**Phase 2 (next):** Heuristic usage-site tokens (UpperCamelCase type detection, broader property/variable classification). Add `range` support for viewport-only computation.
 
 **Phase 3 (compiler):** Override tree-sitter tokens with compiler-resolved classifications. Add `delta` encoding. Use `workspace/semanticTokens/refresh` on compiler analysis completion.
 
@@ -917,47 +915,88 @@ Built from tree-sitter-extracted `extends`/`implements`/`incorporates` clauses. 
 ```
 
 Note: Semantic Tokens Tier 1 is **independent** of the workspace index — it uses only the local
-tree-sitter AST. This means it can be built in parallel with the index, giving users the most
-visible improvement as early as possible.
+tree-sitter AST. This independence was validated: Tier 1 shipped in parallel with index planning,
+giving users the most visible improvement as early as possible. Tier 2+ will benefit from the
+workspace index (e.g., cross-file type classification, `defaultLibrary` modifier).
 
 ### Recommended Build Order
 
-**Sprint 1 — Foundation + Immediate Visual Impact (parallel tracks):**
+#### ✅ Completed
 
-*Track A — Workspace Symbol Index:*
-1. Build `WorkspaceSymbolIndex` with tree-sitter extraction
+**Sprint 1B — Semantic Tokens (no index dependency):**
+- ✅ **Semantic Tokens Tier 1** — declaration-site + type positions + annotations +
+  call/member expressions + modifiers. Implemented in `SemanticTokenEncoder` using AST walker.
+  Opt-in via `-Plsp.semanticTokens=true`. Comprehensive test coverage in
+  `TreeSitterAdapterTest` and `SemanticTokensVsTextMateTest` (10 tests demonstrating benefit
+  over TextMate highlighting).
+
+**Already implemented (pre-sprint, TreeSitterAdapter baseline):**
+- ✅ Hover, completion (keywords + built-in types + document symbols), same-file definition,
+  same-file references, document symbols, document highlight, selection ranges, folding ranges,
+  formatting, rename (same-file), code actions (organize imports), document links (target
+  unresolved), signature help (same-file), push diagnostics (syntax errors).
+
+---
+
+#### 🔜 What To Work On Next (recommended order)
+
+**Sprint 1A — Workspace Symbol Index (highest-leverage infrastructure):**
+
+This is the single most important piece of remaining work. It unblocks cross-file definition,
+workspace symbols, completion after `.`, import resolution, inlay hints, and type hierarchy —
+essentially every remaining sprint depends on it.
+
+1. Build `WorkspaceSymbolIndex` data structure with tree-sitter extraction
+   - `IndexedSymbol` with name, qualified name, kind, URI, range, members, supertypes
+   - Trie-based name index for O(k) prefix search
+   - Secondary indexes: `uri → symbols`, `qualifiedName → symbol`
 2. Implement startup workspace scanning with `WorkDoneProgress` reporting
-   (critical UX — first-time indexing of a large project can take seconds, users must see progress)
+   - Parallel scan of all `*.x` files, parse with tree-sitter, extract declarations
+   - Critical UX: first-time indexing can take seconds, users must see progress
 3. Wire up incremental re-indexing on `didChange` (debounced 300ms) and `didSave`
-
-*Track B — Semantic Tokens (no index dependency):*
-4. **Semantic Tokens Tier 1** — declaration-site + type positions + annotations + modifiers.
-   Purely tree-sitter AST classification. Most visible improvement to users. Register `full` only.
+   - Register `**/*.x` file watcher via `workspace/didChangeWatchedFiles`
 
 **Sprint 2 — Cross-File Features (index now available):**
-5. **Workspace Symbol Search** (wire index to `workspace/symbol` with fuzzy matching)
-6. **Cross-file Go-to-Definition** (import resolution → index lookup)
-7. **Document Link Resolution** (wire import `target` URIs — trivial once index exists)
 
-**Sprint 3 — Completion & References:**
-8. **Cross-file Find References** (workspace-wide name search)
-9. **Context-aware Completion** (member completion after `.` with heuristic type resolution)
-10. **Import path completion**
+These are the features developers miss most after basic syntax support. Each one is a
+straightforward wire-up once the index exists.
+
+4. **Workspace Symbol Search** — wire index to `workspace/symbol` with fuzzy matching
+   (CamelCase + subsequence). Advertise the capability. Enables Ctrl+T navigation.
+5. **Cross-file Go-to-Definition** — resolve imported type names through the index.
+   The existing `findDefinition()` already handles same-file; add index fallback.
+6. **Document Link Resolution** — set `target` on import links using index lookup.
+   Currently returns `target = null`; trivial fix once index maps qualified names to URIs.
+
+**Sprint 3 — Completion & References (index + member info):**
+
+7. **Cross-file Find References** — workspace-wide name search through the index.
+   Same-file references already work; extend to other indexed files.
+8. **Context-aware Completion after `.`** — heuristic type resolution for the receiver
+   expression, then look up members from the index. The biggest "feels like a real IDE" upgrade.
+9. **Import path completion** — after `import `, suggest from qualified names in the index.
 
 **Sprint 4 — Hierarchy & Hints:**
-11. **Type Hierarchy** (from tree-sitter extends/implements extraction)
-12. **Inlay Hints — Parameter Names** (from method signature index)
-13. **Inlay Hints — Tier 1 Types** (literals, constructors)
+
+10. **Type Hierarchy** — extract `extends`/`implements`/`incorporates` clauses from the AST.
+    Build forward (supertypes) and reverse (subtypes) maps. Advertise `typeHierarchyProvider`.
+11. **Inlay Hints — Parameter Names** — look up method signatures from the index, show
+    parameter names at call sites for literal arguments. The most impactful inlay hint.
+12. **Inlay Hints — Tier 1 Types** — show inferred types for literals (`Int`, `String`)
+    and constructor calls (`new Foo()` → `: Foo`). Purely syntactic, no compiler needed.
 
 **Sprint 5 — Polish & Enrichment:**
-14. Semantic Tokens Tier 2 (heuristic usage-site tokens)
-15. Call Hierarchy (syntactic approximation)
-16. Persistent index cache for fast startup
-17. `completionItem/resolve` for auto-import and documentation
+
+13. Semantic Tokens Tier 2 (heuristic usage-site tokens: UpperCamelCase → type, broader
+    property/variable classification)
+14. Call Hierarchy (syntactic approximation — find all `call_expression` nodes)
+15. Persistent index cache for fast startup (save to disk with checksums)
+16. `completionItem/resolve` for auto-import and documentation
 
 **Sprint 6 — Additional LSP Features:**
-18. **Code Lens** — reference counts (once index exists), run/debug buttons (once DAP is wired)
-19. **On-Type Formatting** — auto-indent via tree-sitter AST context
+
+17. **Code Lens** — reference counts (once index exists), run/debug buttons (once DAP is wired)
+18. **On-Type Formatting** — auto-indent via tree-sitter AST context
 
 ### The Compiler Adapter Milestone
 

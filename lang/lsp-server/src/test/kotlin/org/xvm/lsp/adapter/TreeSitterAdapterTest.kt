@@ -1885,8 +1885,8 @@ class TreeSitterAdapterTest {
     // Semantic token test helpers
     // ========================================================================
 
-    private val semanticTypeIndex = org.xvm.lsp.treesitter.SemanticTokenLegend.TYPE_INDEX
-    private val semanticModIndex = org.xvm.lsp.treesitter.SemanticTokenLegend.MOD_INDEX
+    private val semanticTypeIndex = org.xvm.lsp.treesitter.SemanticTokenLegend.typeIndex
+    private val semanticModIndex = org.xvm.lsp.treesitter.SemanticTokenLegend.modIndex
 
     private fun decodeSemanticTokens(data: List<Int>): List<IntArray> {
         val result = mutableListOf<IntArray>()

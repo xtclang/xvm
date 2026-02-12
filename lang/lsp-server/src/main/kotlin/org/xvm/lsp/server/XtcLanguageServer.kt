@@ -340,8 +340,8 @@ class XtcLanguageServer(
                     SemanticTokensWithRegistrationOptions().apply {
                         legend =
                             SemanticTokensLegend(
-                                SemanticTokenLegend.TOKEN_TYPES,
-                                SemanticTokenLegend.TOKEN_MODIFIERS,
+                                SemanticTokenLegend.tokenTypes,
+                                SemanticTokenLegend.tokenModifiers,
                             )
                         full = Either.forLeft(true)
                     }
@@ -409,7 +409,7 @@ class XtcLanguageServer(
      * Usage from client: Send JSON-RPC request with method "xtc/health check"
      *
      * NOTE: Called at runtime via JSON-RPC by LSP clients (e.g., IntelliJ plugin, VS Code extension)
-     * sending a request with method "xtc/healthCheck". LSP4J dispatches via reflection.
+     * sending a request with method "xtc/health check". LSP4J dispatches via reflection.
      */
     @Suppress("unused")
     @JsonRequest("xtc/healthCheck")

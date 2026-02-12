@@ -7,7 +7,7 @@ package org.xvm.lsp.treesitter
  * the integer indices in the token data array.
  */
 object SemanticTokenLegend {
-    val TOKEN_TYPES: List<String> =
+    val tokenTypes: List<String> =
         listOf(
             "namespace", // 0
             "type", // 1
@@ -34,7 +34,7 @@ object SemanticTokenLegend {
             "decorator", // 22
         )
 
-    val TOKEN_MODIFIERS: List<String> =
+    val tokenModifiers: List<String> =
         listOf(
             "declaration", // 0
             "definition", // 1
@@ -48,17 +48,10 @@ object SemanticTokenLegend {
             "defaultLibrary", // 9
         )
 
-    val TYPE_INDEX: Map<String, Int> = TOKEN_TYPES.withIndex().associate { (i, v) -> v to i }
-    val MOD_INDEX: Map<String, Int> = TOKEN_MODIFIERS.withIndex().associate { (i, v) -> v to i }
+    val typeIndex: Map<String, Int> = tokenTypes.withIndex().associate { (i, v) -> v to i }
+    val modIndex: Map<String, Int> = tokenModifiers.withIndex().associate { (i, v) -> v to i }
 
-    fun modifierBitmask(vararg mods: String): Int {
-        var mask = 0
-        for (mod in mods) {
-            val bit = MOD_INDEX[mod] ?: continue
-            mask = mask or (1 shl bit)
-        }
-        return mask
-    }
+    fun modifierBitmask(vararg mods: String): Int = mods.fold(0) { mask, mod -> modIndex[mod]?.let { mask or (1 shl it) } ?: mask }
 }
 
 /**
@@ -119,7 +112,7 @@ class SemanticTokenEncoder {
         tokenType: String,
         vararg extraMods: String,
     ) {
-        val typeName = node.childByType("type_name") ?: node.childByType("identifier")
+        val typeName = node.childByFieldName("name")
         if (typeName != null) {
             val mods = buildModifiers(node, "declaration", *extraMods)
             emitToken(typeName, tokenType, mods)
@@ -128,29 +121,20 @@ class SemanticTokenEncoder {
 
     private fun classifyMethodDeclaration(node: XtcNode) {
         // Emit return type
-        val returnType = node.childByType("type_expression")
+        val returnType = node.childByFieldName("return_type")
         if (returnType != null) {
             classifyTypeExpression(returnType)
             markClassified(returnType)
         }
 
         // Emit method name
-        val id = node.childByType("identifier")
+        val id = node.childByFieldName("name")
         if (id != null) {
             val mods = buildModifiers(node, "declaration")
             emitToken(id, "method", mods)
         }
 
-        // Classify parameters
-        val params = node.childByType("parameters")
-        if (params != null) {
-            for (child in params.children) {
-                if (child.type == "parameter") {
-                    classifyParameter(child)
-                    markClassified(child)
-                }
-            }
-        }
+        classifyParameterChildren(node)
     }
 
     private fun classifyConstructorDeclaration(node: XtcNode) {
@@ -162,9 +146,11 @@ class SemanticTokenEncoder {
             }
         }
 
-        // Classify parameters
-        val params = node.childByType("parameters")
-        if (params != null) {
+        classifyParameterChildren(node)
+    }
+
+    private fun classifyParameterChildren(node: XtcNode) {
+        node.childByFieldName("parameters")?.let { params ->
             for (child in params.children) {
                 if (child.type == "parameter") {
                     classifyParameter(child)
@@ -175,13 +161,13 @@ class SemanticTokenEncoder {
     }
 
     private fun classifyPropertyDeclaration(node: XtcNode) {
-        val typeExpr = node.childByType("type_expression")
+        val typeExpr = node.childByFieldName("type")
         if (typeExpr != null) {
             classifyTypeExpression(typeExpr)
             markClassified(typeExpr)
         }
 
-        val id = node.childByType("identifier")
+        val id = node.childByFieldName("name")
         if (id != null) {
             val mods = buildModifiers(node, "declaration")
             emitToken(id, "property", mods)
@@ -189,33 +175,33 @@ class SemanticTokenEncoder {
     }
 
     private fun classifyVariableDeclaration(node: XtcNode) {
-        val typeExpr = node.childByType("type_expression")
+        val typeExpr = node.childByFieldName("type")
         if (typeExpr != null) {
             classifyTypeExpression(typeExpr)
             markClassified(typeExpr)
         }
 
-        val id = node.childByType("identifier")
+        val id = node.childByFieldName("name")
         if (id != null) {
             emitToken(id, "variable", SemanticTokenLegend.modifierBitmask("declaration"))
         }
     }
 
     private fun classifyParameter(node: XtcNode) {
-        val typeExpr = node.childByType("type_expression")
+        val typeExpr = node.childByFieldName("type")
         if (typeExpr != null) {
             classifyTypeExpression(typeExpr)
             markClassified(typeExpr)
         }
 
-        val id = node.childByType("identifier")
+        val id = node.childByFieldName("name")
         if (id != null) {
             emitToken(id, "parameter", SemanticTokenLegend.modifierBitmask("declaration"))
         }
     }
 
     private fun classifyModuleDeclaration(node: XtcNode) {
-        val qname = node.childByType("qualified_name") ?: node.childByType("identifier")
+        val qname = node.childByFieldName("name")
         if (qname != null) {
             emitToken(qname, "namespace", SemanticTokenLegend.modifierBitmask("declaration"))
             markClassified(qname)
@@ -223,14 +209,14 @@ class SemanticTokenEncoder {
     }
 
     private fun classifyPackageDeclaration(node: XtcNode) {
-        val id = node.childByType("identifier")
+        val id = node.childByFieldName("name")
         if (id != null) {
             emitToken(id, "namespace", SemanticTokenLegend.modifierBitmask("declaration"))
         }
     }
 
     private fun classifyAnnotation(node: XtcNode) {
-        val id = node.childByType("identifier") ?: node.childByType("type_name")
+        val id = node.childByFieldName("name")
         if (id != null) {
             emitToken(id, "decorator", 0)
             markClassified(id)
@@ -261,23 +247,21 @@ class SemanticTokenEncoder {
     }
 
     private fun classifyCallExpression(node: XtcNode) {
-        // Direct call: the function identifier
-        val id = node.childByType("identifier")
-        if (id != null) {
-            emitToken(id, "method", 0)
-            return
-        }
+        // The 'function' field holds the callee expression — could be an identifier
+        // (direct call) or a member_expression (method call) or other expression.
+        val funcNode = node.childByFieldName("function") ?: return
 
-        // Member call: obj.method(args) — classify the last identifier as method
-        val memberExpr = node.childByType("member_expression")
-        if (memberExpr != null) {
-            val ids = memberExpr.children.filter { it.type == "identifier" }
-            val lastId = ids.lastOrNull()
-            if (lastId != null) {
-                emitToken(lastId, "method", 0)
-                markClassified(lastId)
+        if (funcNode.type == "identifier") {
+            // Direct call: foo(args)
+            emitToken(funcNode, "method", 0)
+        } else if (funcNode.type == "member_expression") {
+            // Member call: obj.method(args) — the 'member' field is the method name
+            val memberId = funcNode.childByFieldName("member")
+            if (memberId != null) {
+                emitToken(memberId, "method", 0)
+                markClassified(memberId)
             }
-            markClassified(memberExpr)
+            markClassified(funcNode)
         }
     }
 
@@ -286,10 +270,10 @@ class SemanticTokenEncoder {
         val parentType = node.parent?.type
         if (parentType == "call_expression") return
 
-        val ids = node.children.filter { it.type == "identifier" }
-        val lastId = ids.lastOrNull()
-        if (lastId != null) {
-            emitToken(lastId, "property", 0)
+        // The 'member' field holds the property/method name identifier
+        val memberId = node.childByFieldName("member")
+        if (memberId != null) {
+            emitToken(memberId, "property", 0)
         }
     }
 
@@ -324,7 +308,7 @@ class SemanticTokenEncoder {
         // Skip multi-line tokens — LSP semantic tokens are single-line
         if (node.startLine != node.endLine) return
 
-        val typeIndex = SemanticTokenLegend.TYPE_INDEX[tokenType] ?: return
+        val typeIndex = SemanticTokenLegend.typeIndex[tokenType] ?: return
         val length = node.endColumn - node.startColumn
         if (length <= 0) return
 
