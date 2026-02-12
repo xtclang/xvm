@@ -1,0 +1,9 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="xtc build" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="org.xvm.tool.Launcher" />
+    <module name="javatools.main" />
+    <option name="PROGRAM_PARAMETERS" value="build manualTests/src/main/x/FizzBuzz.x -L xdk/build/install/xdk/lib -L xdk/build/install/xdk/javatools/javatools_turtle.xtc -L xdk/build/install/xdk/javatools/javatools_bridge.xtc" />
+    <option name="VM_PARAMETERS" value="-ea --enable-native-access=ALL-UNNAMED" />
+    <method v="2" />
+  </configuration>
+</component>
