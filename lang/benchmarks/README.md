@@ -95,7 +95,7 @@ Total XTC compilation time (sum of all `compileXtc`): ~109s across 20 modules.
 | Project | Duration |
 |---|---|
 | `:intellij-plugin` | 0.886s |
-| `:debug-adapter` | 0.426s |
+| `:dap-server` | 0.426s |
 | `:javatools-bridge` | 0.253s |
 | `:` (root) | 0.146s |
 | All others | <0.04s each |

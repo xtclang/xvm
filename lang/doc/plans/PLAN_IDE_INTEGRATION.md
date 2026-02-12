@@ -268,7 +268,7 @@ The IntelliJ plugin uses Red Hat's [LSP4IJ](https://github.com/redhat-developer/
 
 ### Why LSP4IJ
 
-**DAP support.** IntelliJ has no built-in DAP (Debug Adapter Protocol) client. LSP4IJ provides a DAP client via the `debugAdapterServer` extension point, which is required for `lang/debug-adapter/` integration. Without it, we would need to write thousands of lines of IntelliJ-specific debug infrastructure (`XDebugProcess`, `XBreakpointHandler`, `ProcessHandler`, variable tree rendering, stack frame mapping, expression evaluation) — the exact opposite of IDE independence.
+**DAP support.** IntelliJ has no built-in DAP (Debug Adapter Protocol) client. LSP4IJ provides a DAP client via the `debugAdapterServer` extension point, which is required for `lang/dap-server/` integration. Without it, we would need to write thousands of lines of IntelliJ-specific debug infrastructure (`XDebugProcess`, `XBreakpointHandler`, `ProcessHandler`, variable tree rendering, stack frame mapping, expression evaluation) — the exact opposite of IDE independence.
 
 **LSP feature coverage.** LSP4IJ supports LSP features that IntelliJ's built-in LSP (as of 2025.3) does not:
 
@@ -293,7 +293,7 @@ IDE independence is preserved either way. The shared, IDE-independent code is:
 
 ```
 lang/lsp-server/     — LSP server (Eclipse LSP4J, stdio)
-lang/debug-adapter/  — DAP server (Eclipse LSP4J debug, stdio)
+lang/dap-server/  — DAP server (Eclipse LSP4J debug, stdio)
 lang/dsl/            — Language model, generates TextMate/tree-sitter/vim/emacs
 lang/tree-sitter/    — Grammar + native libs
 ```

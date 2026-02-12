@@ -1,6 +1,6 @@
 # XTC Debug Adapter Protocol (DAP): Implementation Plan
 
-This document details how DAP-based debugging works end-to-end for XTC/Ecstasy, how the existing runtime debugger infrastructure maps to DAP, and the concrete implementation plan for connecting the scaffolded `debug-adapter` module to the XTC runtime. It covers the full lifecycle from "user clicks a line number in VS Code" through to "breakpoint fires and variables are displayed."
+This document details how DAP-based debugging works end-to-end for XTC/Ecstasy, how the existing runtime debugger infrastructure maps to DAP, and the concrete implementation plan for connecting the scaffolded `dap-server` module to the XTC runtime. It covers the full lifecycle from "user clicks a line number in VS Code" through to "breakpoint fires and variables are displayed."
 
 ---
 
@@ -37,7 +37,7 @@ This document details how DAP-based debugging works end-to-end for XTC/Ecstasy, 
           │         │          │
     ┌─────▼──────┐  │  ┌───────▼────────┐
     │ LSP Server │  │  │ DAP Server     │
-    │ (lsp-server│  │  │ (debug-adapter)│
+    │ (lsp-server│  │  │ (dap-server)   │
     │  module)   │  │  │                │
     └────────────┘  │  └───────┬────────┘
                     │          │  Debugger interface
@@ -971,5 +971,5 @@ This is significantly reduced from a from-scratch implementation because:
 | `javatools/src/main/java/org/xvm/asm/op/Assert.java` | `assert:debug` hook |
 | `javatools/src/main/java/org/xvm/asm/MethodStructure.java` | Source text, line calculation |
 | `javatools/src/main/java/org/xvm/compiler/EvalCompiler.java` | Runtime expression evaluation |
-| `lang/debug-adapter/src/main/kotlin/org/xvm/debug/XtcDebugServer.kt` | DAP server stub |
-| `lang/debug-adapter/src/main/kotlin/org/xvm/debug/XtcDebugServerLauncher.kt` | DAP stdio launcher |
+| `lang/dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServer.kt` | DAP server stub |
+| `lang/dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServerLauncher.kt` | DAP stdio launcher |
