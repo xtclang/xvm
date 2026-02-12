@@ -131,7 +131,7 @@ public class NativeTypeSystem
     /**
      * A cache of builders for native classes keyed by type.
      */
-    public final Map<TypeConstant, Class> nativeBuilders = new ConcurrentHashMap<>();
+    public final Map<TypeConstant, Class<? extends Builder>> nativeBuilders = new ConcurrentHashMap<>();
 
     @Override
     public byte[] genClass(ModuleLoader moduleLoader, String name) {
@@ -189,7 +189,7 @@ public class NativeTypeSystem
     protected Builder ensureBuilder(TypeConstant type, ClassModel model) {
         assert model != null;
 
-        if (nativeBuilders.get(type) instanceof Class builderClass) {
+        if (nativeBuilders.get(type) instanceof Class<?> builderClass) {
             try {
                 return (Builder) builderClass.getDeclaredConstructor(
                     TypeSystem.class, TypeConstant.class, ClassModel.class).

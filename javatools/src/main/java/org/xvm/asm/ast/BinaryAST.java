@@ -291,6 +291,7 @@ public abstract class BinaryAST {
      *
      * @throws IOException  indicates a corrupt stream
      */
+    @SuppressWarnings("unchecked")
     public static <N extends BinaryAST> N readAST(DataInput in, ConstantResolver res)
             throws IOException {
         N node = (N) (NodeType.valueOf(in.readUnsignedByte())).instantiate();

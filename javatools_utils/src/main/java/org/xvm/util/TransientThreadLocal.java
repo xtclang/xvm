@@ -37,6 +37,7 @@ public class TransientThreadLocal<T>
         };
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public T get() {
         var map   = TRANSIENT_MAP.get();
@@ -67,6 +68,7 @@ public class TransientThreadLocal<T>
      *
      * @return the new value
      */
+    @SuppressWarnings("unchecked")
     public T compute(Function<? super T, ? extends T> fn) {
         var map      = TRANSIENT_MAP.get();
         T   valueOld = (T) map.get(this);
@@ -89,6 +91,7 @@ public class TransientThreadLocal<T>
      *
      * @return the new value
      */
+    @SuppressWarnings("unchecked")
     public T computeIfAbsent(Supplier<? extends T> fn) {
         var map      = TRANSIENT_MAP.get();
         T   valueOld = (T) map.get(this);
@@ -112,6 +115,7 @@ public class TransientThreadLocal<T>
      *
      * @return a {@link AutoCloseable} which when closed will restore the prior value
      */
+    @SuppressWarnings("unchecked")
     public Sentry<T> push(T value) {
         var map          = TRANSIENT_MAP.get();
         T   valuePrev    = (T) map.put(this, value);

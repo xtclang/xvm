@@ -135,7 +135,7 @@ class CanaryBuddyGcTest {
 
         // TODO this is ONLY for a single-threaded test; in the XVM runtime, each carrier thread has its
         //      own ReferenceQueue
-        ReferenceQueue<?> refQueue = new ReferenceQueue<>();
+        ReferenceQueue<Object> refQueue = new ReferenceQueue<>();
         Reclaim<?> keepalive;
 
         int containerCount = 0;
@@ -210,7 +210,7 @@ class CanaryBuddyGcTest {
         }
 
         public void drainQueue() {
-            ReferenceQueue queue = refQueue; // TODO
+            ReferenceQueue<Object> queue = refQueue; // TODO
 
             long startMillis = currentTimeMillis();
             int count = 0;
@@ -222,13 +222,13 @@ class CanaryBuddyGcTest {
 
             boolean restoreInterrupt = Thread.interrupted();
             try {
-                while (queue.poll() instanceof CleanablePhantom ref) {
+                while (queue.poll() instanceof CleanablePhantom<?> ref) {
                     if (first) {
                         ++drains;
                     }
 
                     ref.clean(this);
-                    if (ref instanceof Reclaim reclaim) {
+                    if (ref instanceof Reclaim<?> reclaim) {
                         int cid = reclaim.cid();
                         if (cid != prevCid) {
                             if (release > 0) {
@@ -310,7 +310,7 @@ class CanaryBuddyGcTest {
         public Ctx(Container container) {
             this.container = container;
             this.canary = new Canary();
-            this.canaryReclaim = new Reclaim(canary, container.xvm.refQueue, container.id, 0);
+            this.canaryReclaim = new Reclaim<>(canary, container.xvm.refQueue, container.id, 0);
         }
 
         public final Container container;
@@ -372,7 +372,7 @@ class CanaryBuddyGcTest {
                 if (canaryReclaim.size() >= CANARY_SIZE) {
                     container.xvm.keepalive = canaryReclaim.link(container.xvm.keepalive);
                     canary = new Canary();
-                    canaryReclaim = new Reclaim(canary, container.xvm.refQueue, container.id, 0);
+                    canaryReclaim = new Reclaim<>(canary, container.xvm.refQueue, container.id, 0);
                 }
 
                 // record next as the new orphan
@@ -427,7 +427,7 @@ class CanaryBuddyGcTest {
          * @param size this instances size in bytes
          */
         public Collectable(Ctx ctx, long size) {
-            super(ctx.orphan, ctx.orphan == null ? null : (ReferenceQueue) ctx.container.xvm.refQueue);
+            super(ctx.orphan, ctx.orphan == null ? null : ctx.container.xvm.refQueue);
             ctx.watch(this, size);
         }
 
@@ -461,7 +461,7 @@ class CanaryBuddyGcTest {
          * @param cid
          * @param size
          */
-        public Reclaim(V v, ReferenceQueue<V> q, int cid, long size) {
+        public Reclaim(V v, ReferenceQueue<? super V> q, int cid, long size) {
             super(v, q);
             assert (cid >= 0) & (cid <= 0xFFFFFF) & (size >= 0) & (size <= 0xFFFFFFFFFFL);
             info = (((long) cid) << 40) | size;
@@ -480,7 +480,7 @@ class CanaryBuddyGcTest {
          * Each Reclaim is part of a doubly linked list to hold a strong reference to each Reclaim
          * until after it has been processed.
          */
-        private Reclaim next;
+        private Reclaim<?> next;
 
         /**
          * A reference to the previous Reclaim that was created by the current carrier (Java/OS)
@@ -489,7 +489,7 @@ class CanaryBuddyGcTest {
          * Each Reclaim is part of a doubly linked list to hold a strong reference to each Reclaim
          * until after it has been processed.
          */
-        private Reclaim prev;
+        private Reclaim<?> prev;
 
         // ----- methods
 
@@ -538,7 +538,7 @@ class CanaryBuddyGcTest {
             prev = null;
         }
 
-        public Reclaim link(Reclaim that) {
+        public Reclaim<?> link(Reclaim<?> that) {
             if (that != null) {
                 this.next = that.next;
                 that.next = this;

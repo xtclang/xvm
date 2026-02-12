@@ -84,13 +84,14 @@ public class LambdaExpression
      * @param body       the StatementBlock of the lambda
      * @param lStartPos  the expression's start position in the source code
      */
-    public LambdaExpression(List params, Token operator, StatementBlock body, long lStartPos) {
+    @SuppressWarnings("unchecked")
+    public LambdaExpression(List<? extends AstNode> params, Token operator, StatementBlock body, long lStartPos) {
         if (!params.isEmpty() && params.get(0) instanceof Expression) {
             assert params.stream().allMatch(Expression.class::isInstance);
-            this.paramNames = params;
+            this.paramNames = (List<Expression>) (List<?>) params;
         } else {
             assert params.stream().allMatch(Parameter.class::isInstance);
-            this.params = params;
+            this.params = (List<Parameter>) (List<?>) params;
         }
 
         this.operator  = operator;

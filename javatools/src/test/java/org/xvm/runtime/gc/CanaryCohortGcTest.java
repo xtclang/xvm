@@ -136,7 +136,7 @@ class CanaryCohortGcTest {
 
         // TODO this is ONLY for a single-threaded test; in the XVM runtime, each carrier thread has its
         //      own ReferenceQueue
-        ReferenceQueue<?> refQueue = new ReferenceQueue<>();
+        ReferenceQueue<Object> refQueue = new ReferenceQueue<>();
         CleanablePhantom<?> keepalive;
 
         int containerCount = 0;
@@ -211,7 +211,7 @@ class CanaryCohortGcTest {
         }
 
         public void drainQueue() {
-            ReferenceQueue queue = refQueue; // TODO
+            ReferenceQueue<Object> queue = refQueue; // TODO
 
             long startMillis = currentTimeMillis();
             int count = 0;
@@ -223,13 +223,13 @@ class CanaryCohortGcTest {
 
             boolean restoreInterrupt = Thread.interrupted();
             try {
-                while (queue.poll() instanceof CleanablePhantom ref) {
+                while (queue.poll() instanceof CleanablePhantom<?> ref) {
                     if (first) {
                         ++drains;
                     }
 
                     ref.clean(this);
-                    if (ref instanceof Reclaim reclaim) {
+                    if (ref instanceof Reclaim<?> reclaim) {
                         int cid = reclaim.cid();
                         if (cid != prevCid) {
                             if (release > 0) {
@@ -314,7 +314,7 @@ class CanaryCohortGcTest {
         public Ctx(Container container) {
             this.container = container;
             this.canary = new Canary();
-            this.canary.reclaim = new Reclaim(canary, container.xvm.refQueue, container.id, 0);
+            this.canary.reclaim = new Reclaim<>(canary, container.xvm.refQueue, container.id, 0);
             this.canary.ctx = this;
         }
 
@@ -361,7 +361,7 @@ class CanaryCohortGcTest {
          */
         void watch(Collectable toWatch, long size) {
             if (RECLAIM) {
-                CohortRef watch = toWatch.watch = new CohortRef(toWatch, size, canary, (ReferenceQueue) container.xvm.refQueue);
+                CohortRef watch = toWatch.watch = new CohortRef(toWatch, size, canary, container.xvm.refQueue);
 
                 lastWatch = watch.link(lastWatch);
 
@@ -379,7 +379,7 @@ class CanaryCohortGcTest {
                     container.xvm.keepalive = canary.reclaim.link(container.xvm.keepalive);
                     canary = new Canary();
                     canary.ctx = this;
-                    canary.reclaim = new Reclaim(canary, container.xvm.refQueue, container.id, 0);
+                    canary.reclaim = new Reclaim<>(canary, container.xvm.refQueue, container.id, 0);
                     firstWatch = lastWatch = null;
                 }
             }
@@ -532,7 +532,7 @@ class CanaryCohortGcTest {
          * @param cid
          * @param size
          */
-        public Reclaim(V v, ReferenceQueue<V> q, int cid, long size) {
+        public Reclaim(V v, ReferenceQueue<? super V> q, int cid, long size) {
             super(v, q);
             assert (cid >= 0) & (cid <= 0xFFFFFF) & (size >= 0) & (size <= 0xFFFFFFFFFFL);
             info = (((long) cid) << 40) | size;

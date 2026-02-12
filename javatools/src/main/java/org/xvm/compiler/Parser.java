@@ -1570,7 +1570,9 @@ public class Parser {
         }
 
         expect(Id.R_PAREN);
-        return new ForStatement(keyword, (List<Statement>) (List) init, conds, update, parseStatementBlock());
+        @SuppressWarnings("unchecked")
+        List<Statement> stmts = (List<Statement>) (List<?>) init;
+        return new ForStatement(keyword, stmts, conds, update, parseStatementBlock());
     }
 
     /**

@@ -167,6 +167,7 @@ public class NativeContainer
                 continue;
             }
 
+            @SuppressWarnings("unchecked")
             var clz = (Class<ClassTemplate>) entry.getValue();
             if (!Modifier.isAbstract(clz.getModifiers())) {
                 try {
@@ -491,7 +492,7 @@ public class NativeContainer
         if (hProps == null) {
             List<StringHandle> listKeys = new ArrayList<>();
             List<StringHandle> listVals = new ArrayList<>();
-            for (String sKey : (Set<String>) (Set) System.getProperties().keySet()) {
+            for (String sKey : System.getProperties().stringPropertyNames()) {
                 if (sKey.startsWith("xvm.")) {
                     String sVal = System.getProperty(sKey);
                     if (sVal != null) {

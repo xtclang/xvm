@@ -1229,6 +1229,7 @@ public class NewExpression
      *
      * @return a deeply cloned list
      */
+    @SuppressWarnings("unchecked")
     private <T extends AstNode> List<T> clone(List<? extends AstNode> list) {
         if (list == null || list.isEmpty()) {
             return (List<T>) list;

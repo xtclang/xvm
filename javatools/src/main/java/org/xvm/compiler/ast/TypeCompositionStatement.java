@@ -936,7 +936,9 @@ public class TypeCompositionStatement
             ConditionalConstant condCur  = exprCond == null ? null : exprCond.toConditionalConstant();
             if (!Handy.equals(condCur, condPrev)) {
                 componentList.clear();
-                bifurcator.collectMatchingComponents(condCur, (List<Component>) (List) componentList);
+                @SuppressWarnings("unchecked")
+                List<Component> components = (List<Component>) (List<?>) componentList;
+                bifurcator.collectMatchingComponents(condCur, components);
                 condPrev = condCur;
             }
 
@@ -1293,7 +1295,9 @@ public class TypeCompositionStatement
 
         // need to go through all components for the next bit
         componentList.clear();
-        bifurcator.collectMatchingComponents(null, (List<Component>) (List) componentList);
+        @SuppressWarnings("unchecked")
+        List<Component> allComponents = (List<Component>) (List<?>) componentList;
+        bifurcator.collectMatchingComponents(null, allComponents);
 
         // add default "implement" and/or "extend"
         if (!fAlreadyExtends && (typeDefaultImpl != null || typeDefaultSuper != null)) {
@@ -2675,7 +2679,7 @@ public class TypeCompositionStatement
             // compute default values at run-time (see TypeConstant#mergeMixinTypeInfo)
             constructor.setShorthandInitialization(idSuper, aconstSuper);
         }
-        return listSuperArgs == null ? Collections.EMPTY_LIST : listSuperArgs;
+        return listSuperArgs == null ? Collections.emptyList() : listSuperArgs;
     }
 
     private void disallowTypeParams(ErrorListener errs) {

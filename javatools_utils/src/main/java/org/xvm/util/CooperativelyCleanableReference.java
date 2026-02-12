@@ -48,7 +48,7 @@ public class CooperativelyCleanableReference<V> extends WeakReference<V> {
     /**
      * Queues of unreachable references with unreachable referents.
      */
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private static final ReferenceQueue<Object>[] QUEUE = new ReferenceQueue[
             Integer.highestOneBit(Runtime.getRuntime().availableProcessors() << 1)];
 

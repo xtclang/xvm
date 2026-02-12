@@ -129,13 +129,13 @@ public class SetTest {
         ArrayList<Op> listOps = new ArrayList<>(cSteps);
         Data data = new StringData(1+rnd.nextInt(1+rnd.nextInt(100000)));
         Set<Object>   setControl = createControlSet();
-        Set<Object>[] aTestSets  = createTestSets();
+        List<Set<Object>> listTestSets = createTestSets();
         for (int iStep = 0; iStep < cSteps; ++iStep) {
             Op op = randomOp(setControl, data);
             listOps.add(op);
             op.init(setControl);
-            for (int iSet = 0, cSets = aTestSets.length; iSet < cSets; ++iSet) {
-                Set<Object> set = aTestSets[iSet];
+            for (int iSet = 0, cSets = listTestSets.size(); iSet < cSets; ++iSet) {
+                Set<Object> set = listTestSets.get(iSet);
                 try {
                     op.test(set);
                 } catch (final Exception | AssertionError e) {
@@ -166,11 +166,11 @@ public class SetTest {
             }
         }
 
-        Set<Object>[] aSet = createTestSets();
+        List<Set<Object>> listSets = createTestSets();
         for (int i = 0, cOps = listOps.size(); i < cOps; ++i) {
             Op op = listOps.get(i);
-            for (int iSet = 0, cSets = aSet.length; iSet < cSets; ++iSet) {
-                Set<Object> set = aSet[iSet];
+            for (int iSet = 0, cSets = listSets.size(); iSet < cSets; ++iSet) {
+                Set<Object> set = listSets.get(iSet);
                 try {
                     op.test(set);
                 } catch (final Exception | AssertionError e) {
@@ -255,19 +255,16 @@ public class SetTest {
         return new HashSet<>();
     }
 
-    @SuppressWarnings("unchecked")
-    static Set<Object>[] createTestSets() {
+    static List<Set<Object>> createTestSets() {
         return fReplay
-                ? new Set[] {
+                ? List.of(
                         new ListSet<>(),
-                        new ListSet<>().disableHashIndex(),
-                    }
-                : new Set[] {
+                        new ListSet<>().disableHashIndex())
+                : List.of(
                         new ListSet<>(),
                         new ListSet<>().disableHashIndex(),
                         new ListSet<>().useIdentityEquality(),
-                        new ListSet<>().disableHashIndex().useIdentityEquality(),
-                    };
+                        new ListSet<>().disableHashIndex().useIdentityEquality());
     }
 
     @FunctionalInterface

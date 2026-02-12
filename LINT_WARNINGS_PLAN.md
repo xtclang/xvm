@@ -2,7 +2,7 @@
 
 Compiled with `-Xlint:all` via `--no-build-cache --no-configuration-cache --rerun-tasks -Porg.xtclang.java.lint=true -Porg.xtclang.java.warningsAsErrors=false -Porg.xtclang.java.maxWarnings=1000`.
 
-**Current: 135 warnings** (14 in `javatools_utils`, 117 in `javatools`, 4 in `javatools_jitbridge`)
+**Current: 44 warnings** (0 in `javatools_utils`, 40 in `javatools`, 4 in `javatools_jitbridge`)
 
 Note: counts use `--rerun-tasks` for full accuracy; earlier sessions used cached builds which
 undercounted `rawtypes`/`unchecked`. The delta from our work is what matters.
@@ -11,8 +11,8 @@ undercounted `rawtypes`/`unchecked`. The delta from our work is what matters.
 |----------|---------|-------|------|--------|
 | `[fallthrough]` | **0** | 102 | 4 | DONE |
 | `[this-escape]` | **40** | 28 | 5 | 28 fixed by code rewrites; 40 remain (intentionally unsuppressed) |
-| `[rawtypes]` | **43** | 61 | 3 | 8 generics rewrites, 14 AstNode wildcards, 33 CompletableFuture cluster; 43 remaining |
-| `[unchecked]` | **48** | 38 | 3 | 3 AstNode, 35 CompletableFuture cluster; 48 remaining |
+| `[rawtypes]` | **0** | 104 | 3 | DONE |
+| `[unchecked]` | **0** | 86 | 3 | DONE |
 | `[try]` | **0** | 18 | 1 | DONE |
 | `[cast]` | **2** | 13 | 1 | DONE (2 in `javatools_jitbridge`) |
 | `[serial]` | **2** | 8 | 2 | DONE (2 in `javatools_jitbridge`) |
@@ -62,9 +62,9 @@ implements `Serializable` (a JDK 1.1 design decision for RMI), so every `Excepti
 
 ---
 
-## Tier 3: MODERATE (need understanding, some refactoring) -- 91 warnings remaining
+## Tier 3: MODERATE (need understanding, some refactoring) -- DONE (all 91 remaining warnings fixed)
 
-### 3a. `[rawtypes]` Raw generic type usage (90 warnings, 55 fixed)
+### 3a. `[rawtypes]` Raw generic type usage (104 total fixed)
 
 **Already eliminated (suppressed, not counted in warning totals):**
 - `Component.unlinkSibling()` — generified to `<K, V extends Component>`, removed raw `Map`/`Object`
@@ -110,33 +110,46 @@ Only 2 `@SuppressWarnings("unchecked")` remain at genuine type system boundaries
 Files changed: `ServiceContext.java`, `Fiber.java`, `Frame.java`, `ObjectHandle.java`,
 `xFuture.java`, `xOSFile.java`
 
-Remaining hotspots:
+**Eliminated remaining 43 rawtypes + 48 unchecked (91 warnings) across scattered files:**
 
-| File | Count | Key raw types |
-|------|-------|---------------|
-| `NativeTypeSystem.java` | 2 | `Class` |
-| `TypeInfo.java` | 2 | `Entry` |
-| `TypeConstant.java` | 1 | `TransientThreadLocal` |
-| `Utils.java` | 1 | `Predicate` |
-| `Context.java` | 1 | `Map` |
-| Many more files | 1 each | Various |
+GC test files (4 files, ~44 warnings):
+- Changed `ReferenceQueue<?>` to `ReferenceQueue<Object>` in all `Xvm` classes, enabling
+  `Reclaim<>` diamond inference with `ReferenceQueue<? super V>` constructor parameter
+- Added `<?>` wildcards to all raw `Reclaim`, `CleanablePhantom`, `ReferenceQueue` patterns
+  in `instanceof`, field declarations, and `link()` method signatures
+- Files: `SimpleCanaryGcTest.java`, `PhantomGcTest.java`, `CanaryBuddyGcTest.java`,
+  `CanaryCohortGcTest.java`
 
-### 3b. `[unchecked]` Unchecked casts and conversions (86 warnings, 38 fixed)
+Production code rewrites (no suppressions needed):
+- `Context.java` — replaced single raw `Map mapBranch` with properly typed
+  `Map<String, Argument>` and `Map<FormalConstant, TypeConstant>` variables
+- `LambdaExpression.java` — changed `List` parameter to `List<? extends AstNode>`,
+  eliminating raw `Stream.allMatch()` warnings; 2 unavoidable variance casts remain
+  with targeted `@SuppressWarnings("unchecked")`
+- `Utils.ANY` — typed from raw `Predicate` to `Predicate<MethodStructure>` (sole caller)
+- `NativeTypeSystem.nativeBuilders` — typed from `Class` to `Class<? extends Builder>`;
+  `instanceof Class` → `instanceof Class<?>` in `ensureBuilder()`
+- `TypeConstant.java` — `(ListMap) null` → `(ListMap<StringConstant, TypeConstant>) null`
+- `NativeContainer.java` — `(Set<String>) (Set) System.getProperties().keySet()` →
+  `System.getProperties().stringPropertyNames()` (proper JDK API)
+- `ReturnStatement.java` — `(List) null` → `(List<Expression>) null`
+- `TypeCompositionStatement.java` — `Collections.EMPTY_LIST` → `Collections.emptyList()`;
+  raw `(List)` intermediate casts → `(List<?>)` with targeted `@SuppressWarnings`
+- `SetTest.java` — rewrote `Set<Object>[]` generic array to `List<Set<Object>>` using
+  `List.of()`, eliminating all rawtypes/unchecked from generic array creation
 
-Many overlap with `rawtypes`. Fix together per-file.
+Targeted suppressions at type system boundaries:
+- `TransientThreadLocal.java` (4) — `(T) map.get(this)` in `get()`, `compute()`,
+  `computeIfAbsent()`, `push()` — unavoidable, map stores `Object` values
+- `TypeInfo.java` (2) — `entrySet().toArray(new Entry[0])` — Java can't create
+  parameterized arrays
+- `BinaryAST.readAST()` — `(N)` casts on erased generic type
+- `NewExpression.clone()` — `(T)` cast on cloned AstNode list elements
+- `CooperativelyCleanableReference.java` — `new ReferenceQueue[]` array creation
+- `ListSet.toExternal()` — `(E)` cast from Object sentinel pattern
+- `TypeConstant.s_tloInProgress` — class literal can't be parameterized
 
-| File | Count | Key patterns |
-|------|-------|-------------|
-| `ServiceContext.java` | **0** | **Fixed:** `Message<T>` generics + 1 `@SuppressWarnings` on `sendResponse` |
-| `Fiber.java` | **0** | **Fixed:** wildcards + 1 `@SuppressWarnings` on `pendingRequestMap` helper |
-| `TransientThreadLocal.java` | 4 | `(T) map.get(this)` -- unavoidable, suppress |
-| `Context.java` | 4 | `Map.putAll` with raw maps |
-| `LambdaExpression.java` | 4 | raw `Stream.allMatch()` |
-| `TypeInfo.java` | 4 | `entrySet().toArray(Entry[])` with raw Entry |
-| `AstNode.java` | **0** | **Fixed:** wildcard parameterization + 2 targeted `@SuppressWarnings("unchecked")` |
-| `ListMap.java` | **0** | **Rewritten:** stored `ArrayList<Entry>` instead of `ArrayList<SimpleEntry>`, eliminated `EMPTY_ARRAY_LIST` sentinel, raw casts, and assert-only unmodifiable bug |
-| `TypeCompositionStatement.java` | 3 | unchecked casts to generic types |
-| ~14 more files | 1-2 each | Various |
+### 3b. `[unchecked]` — DONE (all fixed together with rawtypes, see 3a above)
 
 ### 3c. `[overrides]` equals without hashCode -- DONE (3 warnings fixed)
 
@@ -298,7 +311,9 @@ require non-trivial refactoring or `@SuppressWarnings` to silence.
 2. **Tier 2** -- DONE (11 warnings: 8 serial + 3 rawtypes from IdentityArrayList)
 3. **Tier 4** -- DONE (96 warnings: 11 refactored + 85 suppressed)
 4. **Tier 5** -- PARTIAL (28 this-escape fixed by code rewrites; 40 remain unsuppressed)
-5. **Tier 3** (`rawtypes` + `unchecked` + `overrides`) -- Next up, fix together per-file
+5. **Tier 3** -- DONE (91 warnings: rawtypes + unchecked + overrides, fixed per-file)
+
+**Remaining: 44 warnings total** — 40 intentional `[this-escape]` + 4 in `javatools_jitbridge` (2 cast + 2 serial)
 
 ## How to Reproduce
 

@@ -1912,27 +1912,25 @@ public class Context {
         }
 
         private void discardBranch(boolean fWhenTrue) {
-            Map mapBranch;
-
             // clear this branch
-            mapBranch = getNarrowingMap(fWhenTrue);
-            if (!mapBranch.isEmpty()) {
-                mapBranch.clear();
+            Map<String, Argument> mapNarrowing = getNarrowingMap(fWhenTrue);
+            if (!mapNarrowing.isEmpty()) {
+                mapNarrowing.clear();
             }
-            mapBranch = getFormalTypeMap(Branch.of(fWhenTrue));
-            if (!mapBranch.isEmpty()) {
-                mapBranch.clear();
+            Map<FormalConstant, TypeConstant> mapFormal = getFormalTypeMap(Branch.of(fWhenTrue));
+            if (!mapFormal.isEmpty()) {
+                mapFormal.clear();
             }
 
             // copy the opposite branch; the context may merge it (see IfContext)
-            mapBranch = getNarrowingMap(!fWhenTrue);
-            if (!mapBranch.isEmpty()) {
-                ensureNarrowingMap(fWhenTrue).putAll(mapBranch);
+            mapNarrowing = getNarrowingMap(!fWhenTrue);
+            if (!mapNarrowing.isEmpty()) {
+                ensureNarrowingMap(fWhenTrue).putAll(mapNarrowing);
             }
 
-            mapBranch = getFormalTypeMap(Branch.of(!fWhenTrue));
-            if (!mapBranch.isEmpty()) {
-                ensureFormalTypeMap(Branch.of(fWhenTrue)).putAll(mapBranch);
+            mapFormal = getFormalTypeMap(Branch.of(!fWhenTrue));
+            if (!mapFormal.isEmpty()) {
+                ensureFormalTypeMap(Branch.of(fWhenTrue)).putAll(mapFormal);
             }
 
             // promote the other branch's assignments

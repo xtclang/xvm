@@ -117,8 +117,8 @@ class PhantomGcTest {
 
         // TODO this is ONLY for a single-threaded test; in the XVM runtime, each carrier thread has its
         //      own ReferenceQueue
-        ReferenceQueue refQueue = new ReferenceQueue();
-        Reclaim keepalive;
+        ReferenceQueue<Object> refQueue = new ReferenceQueue<>();
+        Reclaim<?> keepalive;
 
         int containerCount = 0;
         Container[] containers = new Container[8];
@@ -190,7 +190,7 @@ class PhantomGcTest {
         }
 
         public void drainQueue() {
-            ReferenceQueue queue = refQueue; // TODO
+            ReferenceQueue<Object> queue = refQueue; // TODO
 
             long startMillis = currentTimeMillis();
             int count = 0;
@@ -202,7 +202,7 @@ class PhantomGcTest {
 
             boolean restoreInterrupt = Thread.interrupted();
             try {
-                while (queue.poll() instanceof Reclaim reclaim) {
+                while (queue.poll() instanceof Reclaim<?> reclaim) {
                     if (first) {
                         ++drains;
                     }
@@ -316,7 +316,7 @@ class PhantomGcTest {
 
         void watch(Object o, long size) {
             if (RECLAIM) {
-                container.xvm.keepalive = new Reclaim(list, container.xvm.refQueue, container.id, size).link(container.xvm.keepalive);
+                container.xvm.keepalive = new Reclaim<>(list, container.xvm.refQueue, container.id, size).link(container.xvm.keepalive);
             }
         }
     }
@@ -338,7 +338,7 @@ class PhantomGcTest {
          * @param cid
          * @param size
          */
-        public Reclaim(V v, ReferenceQueue<V> q, int cid, long size) {
+        public Reclaim(V v, ReferenceQueue<? super V> q, int cid, long size) {
             super(v, q);
             assert (cid >= 0) & (cid <= 0xFFFFFF) & (size >= 0) & (size <= 0xFFFFFFFFFFL);
             info = (((long) cid) << 40) | size;
@@ -357,7 +357,7 @@ class PhantomGcTest {
          * Each Reclaim is part of a doubly linked list to hold a strong reference to each Reclaim
          * until after it has been processed.
          */
-        private Reclaim next;
+        private Reclaim<?> next;
 
         /**
          * A reference to the previous Reclaim that was created by the current carrier (Java/OS)
@@ -366,7 +366,7 @@ class PhantomGcTest {
          * Each Reclaim is part of a doubly linked list to hold a strong reference to each Reclaim
          * until after it has been processed.
          */
-        private Reclaim prev;
+        private Reclaim<?> prev;
 
         // ----- methods
 
@@ -401,7 +401,7 @@ class PhantomGcTest {
             prev = null;
         }
 
-        public Reclaim link(Reclaim that) {
+        public Reclaim<?> link(Reclaim<?> that) {
             if (that != null) {
                 this.next = that.next;
                 that.next = this;
