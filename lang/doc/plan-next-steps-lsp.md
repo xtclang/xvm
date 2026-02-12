@@ -905,47 +905,72 @@ Built from tree-sitter-extracted `extends`/`implements`/`incorporates` clauses. 
   Def    Refs  Sym  Comp Hints Hier  Hier  Hier
 ```
 
+Note: Semantic Tokens Tier 1 is **independent** of the workspace index — it uses only the local
+tree-sitter AST. This means it can be built in parallel with the index, giving users the most
+visible improvement as early as possible.
+
 ### Recommended Build Order
 
-**Sprint 1 — Foundation (enables everything else):**
-1. Build `WorkspaceSymbolIndex` with tree-sitter extraction
-2. Implement startup workspace scanning with progress reporting
-3. Wire up incremental re-indexing on file changes
+**Sprint 1 — Foundation + Immediate Visual Impact (parallel tracks):**
 
-**Sprint 2 — Highest Impact Features:**
-4. **Semantic Tokens** (Tier 1 — declaration-site + type positions)
+*Track A — Workspace Symbol Index:*
+1. Build `WorkspaceSymbolIndex` with tree-sitter extraction
+2. Implement startup workspace scanning with `WorkDoneProgress` reporting
+   (critical UX — first-time indexing of a large project can take seconds, users must see progress)
+3. Wire up incremental re-indexing on `didChange` (debounced 300ms) and `didSave`
+
+*Track B — Semantic Tokens (no index dependency):*
+4. **Semantic Tokens Tier 1** — declaration-site + type positions + annotations + modifiers.
+   Purely tree-sitter AST classification. Most visible improvement to users. Register `full` only.
+
+**Sprint 2 — Cross-File Features (index now available):**
 5. **Workspace Symbol Search** (wire index to `workspace/symbol` with fuzzy matching)
 6. **Cross-file Go-to-Definition** (import resolution → index lookup)
+7. **Document Link Resolution** (wire import `target` URIs — trivial once index exists)
 
 **Sprint 3 — Completion & References:**
-7. **Cross-file Find References** (workspace-wide name search)
-8. **Context-aware Completion** (member completion after `.` with heuristic type resolution)
-9. **Import path completion**
+8. **Cross-file Find References** (workspace-wide name search)
+9. **Context-aware Completion** (member completion after `.` with heuristic type resolution)
+10. **Import path completion**
 
 **Sprint 4 — Hierarchy & Hints:**
-10. **Type Hierarchy** (from tree-sitter extends/implements extraction)
-11. **Inlay Hints — Parameter Names** (from method signature index)
-12. **Inlay Hints — Tier 1 Types** (literals, constructors)
+11. **Type Hierarchy** (from tree-sitter extends/implements extraction)
+12. **Inlay Hints — Parameter Names** (from method signature index)
+13. **Inlay Hints — Tier 1 Types** (literals, constructors)
 
 **Sprint 5 — Polish & Enrichment:**
-13. Semantic Tokens Tier 2 (heuristic usage-site tokens)
-14. Call Hierarchy (syntactic approximation)
-15. Persistent index cache for fast startup
-16. `completionItem/resolve` for auto-import and documentation
+14. Semantic Tokens Tier 2 (heuristic usage-site tokens)
+15. Call Hierarchy (syntactic approximation)
+16. Persistent index cache for fast startup
+17. `completionItem/resolve` for auto-import and documentation
 
 **Sprint 6 — Additional LSP Features:**
-17. **Document Link Resolution** (wire import targets to workspace index)
 18. **Code Lens** — reference counts (once index exists), run/debug buttons (once DAP is wired)
 19. **On-Type Formatting** — auto-indent via tree-sitter AST context
 
-**Future (compiler integration):**
-- Full type inference for completion and type hints
-- Semantic name resolution for references and navigation
-- Delta encoding for semantic tokens
-- Overload resolution
-- Chained method return type hints
-- Type definition, implementation, declaration
-- Pull diagnostics (semantic errors beyond syntax)
+### The Compiler Adapter Milestone
+
+The tree-sitter adapter reaches its ceiling around Sprint 5 — cross-file features work but are
+name-based (no type resolution), completion can't resolve overloads, and diagnostics are
+syntax-only. The next major capability leap requires a **compiler adapter** that connects the
+LSP server to the XTC compiler (`javatools`).
+
+What the compiler adapter unlocks:
+- **Full type inference** for completion, inlay hints, and hover (chain resolution, generics)
+- **Semantic name resolution** for definition/references (overload disambiguation, inherited members)
+- **Semantic diagnostics** beyond syntax errors (type mismatches, unresolved references, unused imports)
+- **Delta encoding** for semantic tokens (compiler knows what changed semantically)
+- **Type definition / implementation / declaration** (all require resolved types)
+
+What it looks like architecturally:
+- A new `CompilerAdapter` implementing `XtcCompilerAdapter` (alongside `TreeSitterAdapter`)
+- Wraps the XTC compiler's `FileStructure` / `TypeCompositionStatement` / `MethodStructure` APIs
+- Runs the compiler in "analysis mode" (parse + resolve, no code gen)
+- Falls back to tree-sitter for features the compiler doesn't cover yet (folding, formatting)
+- Incremental: only re-analyze changed files and their dependents
+
+This is a significant engineering effort (likely its own multi-sprint plan) but is the path to
+parity with mature language servers like rust-analyzer or gopls.
 
 ---
 
@@ -1101,7 +1126,7 @@ vscode.debug.registerDebugAdapterDescriptorFactory('xtc', {
 | DAP debugging | Built-in | Via LSP4IJ DAP client |
 | TextMate grammar | Built-in support | Via TextMate bundle plugin |
 | Tree-sitter highlighting | Via WASM (optional) | N/A (server-side) |
-| JRE provisioning | Must implement in TS | `JreProvisioner.kt` (done) |
+| JRE provisioning | See §12.5 | `JreProvisioner.kt` (done) |
 | Code lens | Built-in support | Via LSP4IJ |
 | Semantic tokens | Built-in support | Via LSP4IJ |
 
@@ -1109,10 +1134,28 @@ vscode.debug.registerDebugAdapterDescriptorFactory('xtc', {
 (which requires LSP4IJ). The LSP server and DAP server JARs are identical — only the thin client
 wrapper differs.
 
-### 12.5 VS Code Extension Roadmap
+### 12.5 JRE Provisioning for VS Code
 
-1. **Phase 1**: Basic LSP — TextMate grammar + `LanguageClient` pointing at `xtc-lsp-server.jar`
-2. **Phase 2**: JRE provisioning — download Java 25 if not available
+The IntelliJ plugin uses `JreProvisioner.kt` (Kotlin, IntelliJ APIs). VS Code needs its own
+approach. Options in order of preference:
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| **Per-platform extension builds** | No runtime download, instant startup | Larger extension (~40MB per platform), must publish 5 variants |
+| **Shell provisioner script** | Simple, reuse Foojay API, language-agnostic | Platform-specific scripts (bash + PowerShell), error handling is fragile |
+| **TypeScript Foojay client** | Full control, progress reporting, VS Code API integration | Significant code (~300 lines), duplicates IntelliJ provisioner logic |
+| **Require user-installed Java 25** | Zero extension code | Bad UX, most users don't have Java 25 |
+
+**Recommended**: Start with **require user-installed Java 25** (simplest, gets the extension
+working) with a `xtc.javaHome` setting. Then add **per-platform builds** that bundle the JRE
+for zero-config experience. The per-platform approach is how `rust-analyzer` and other VS Code
+extensions handle native dependencies.
+
+### 12.6 VS Code Extension Roadmap
+
+1. **Phase 1**: Basic LSP — TextMate grammar + `LanguageClient` pointing at `xtc-lsp-server.jar`.
+   Require `xtc.javaHome` setting or `JAVA_HOME` pointing at Java 25+.
+2. **Phase 2**: JRE bundling — per-platform extension builds with bundled Temurin JRE 25
 3. **Phase 3**: DAP debugging — register debug adapter, `launch.json` configuration
 4. **Phase 4**: Polish — snippets, task definitions, status bar, settings UI
 
