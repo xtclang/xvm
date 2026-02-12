@@ -5,6 +5,7 @@ import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
+import java.io.Closeable
 
 /**
  * Interface for adapting XTC compiler operations into clean, immutable results.
@@ -30,10 +31,12 @@ import org.xvm.lsp.model.SymbolInfo
  * @see TreeSitterAdapter for syntax-level intelligence
  * @see MockXtcCompilerAdapter for testing
  */
-interface XtcCompilerAdapter {
+interface XtcCompilerAdapter : Closeable {
     companion object {
         private val logger = LoggerFactory.getLogger(XtcCompilerAdapter::class.java)
     }
+
+    override fun close() {}
 
     /**
      * Human-readable name of this adapter for display in logs and UI.

@@ -79,22 +79,16 @@ val useLocalIde = providers.gradleProperty("useLocalIde").map { it.toBoolean() }
 val hasExplicitLocalPath = providers.gradleProperty("intellijLocalPath").isPresent
 val localIntelliJ: File? = if (useLocalIde || hasExplicitLocalPath) findLocalIntelliJ() else null
 
-val gradleUserHome = gradle.gradleUserHomeDir
 val ideVersion =
     libs.versions.lang.intellij.ide
         .get()
 
-// The IntelliJ Platform Gradle Plugin downloads the IDE distribution into the Gradle module cache:
-//   $GRADLE_USER_HOME/caches/modules-2/files-2.1/idea/ideaIC/<version>/
+// The IntelliJ Platform Gradle Plugin manages IDE download caching internally.
 // Bundled plugin metadata is stored locally in: lang/.intellijPlatform/localPlatformArtifacts/
 //
-// To purge all cached IntelliJ distributions and force a fresh re-download:
-//   rm -rf "${GRADLE_USER_HOME:-$HOME/.gradle}/caches/modules-2/files-2.1/idea"
+// To force a fresh re-download, delete the localPlatformArtifacts directory:
 //   rm -rf lang/.intellijPlatform/localPlatformArtifacts
 // Then run any task that requires the IDE (e.g. ./gradlew :lang:intellij-plugin:runIde).
-
-val ideCacheDir =
-    File(gradleUserHome, "caches/modules-2/files-2.1/idea/ideaIC/$ideVersion")
 
 when {
     localIntelliJ != null -> {
@@ -105,18 +99,9 @@ when {
         logger.warn("[ide]   Prefer the default sandboxed download for reliable development.")
     }
     else -> {
-        if (ideCacheDir.exists()) {
-            val sizeBytes =
-                ideCacheDir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
-            val sizeMb = sizeBytes / (1024 * 1024)
-            logger.lifecycle("[ide] IntelliJ Community $ideVersion (cached, ~$sizeMb MB)")
-            logger.lifecycle("[ide]   Location: $ideCacheDir")
-        } else {
-            logger.lifecycle("[ide] IntelliJ Community $ideVersion not cached - will download (~1.5 GB)")
-            logger.lifecycle("[ide]   Destination: $ideCacheDir")
-            logger.lifecycle("[ide]   First-time download may take several minutes.")
-            logger.lifecycle("[ide]   To use a local IDE instead: -PuseLocalIde=true")
-        }
+        logger.lifecycle("[ide] IntelliJ IDEA $ideVersion (managed by IntelliJ Platform Gradle Plugin)")
+        logger.lifecycle("[ide]   First-time download may take several minutes if not already cached.")
+        logger.lifecycle("[ide]   To use a local IDE instead: -PuseLocalIde=true")
     }
 }
 
@@ -265,7 +250,7 @@ dependencies {
         if (localIntelliJ != null) {
             local(localIntelliJ.absolutePath)
         } else {
-            intellijIdeaCommunity(
+            intellijIdea(
                 libs.versions.lang.intellij.ide
                     .get(),
             )
@@ -284,13 +269,13 @@ dependencies {
     textMateGrammar(project(path = ":dsl", configuration = "textMateElements"))
 }
 
-// IntelliJ 2025.1 runs on JDK 21, so we must target JDK 21 (not the project's JDK 25)
+// IntelliJ 2025.3 runs on JBR 21, so we must target JDK 21 (not the project's JDK 25)
 val intellijJdkVersion: Int =
     libs.versions.lang.intellij.jdk
         .get()
         .toInt()
 
-// Derive sinceBuild from IDE version: "2025.1" -> "251" (last 2 digits of year + major version)
+// Derive sinceBuild from IDE version: "2025.3.2" -> "253" (last 2 digits of year + major version)
 val intellijIdeVersion: String =
     libs.versions.lang.intellij.ide
         .get()
@@ -603,9 +588,6 @@ val runIde by tasks.existing {
         libs.versions.lang.intellij.lsp4ij
             .get()
     val capturedSinceBuild = intellijSinceBuild
-    val capturedIdeCacheDir = ideCacheDir
-    val capturedGradleUserHome = gradleUserHome
-    val capturedGradleVersion = gradle.gradleVersion
     val capturedPluginVersion = project.version.toString()
     doFirstTask {
         val sandbox = sandboxDir.get()
@@ -615,21 +597,9 @@ val runIde by tasks.existing {
 
         // Version matrix - all pinned in gradle/libs.versions.toml
         logger.lifecycle("[runIde] ─── Version Matrix (gradle/libs.versions.toml) ───")
-        logger.lifecycle("[runIde]   IntelliJ CE:  $capturedIdeVersion (sinceBuild=$capturedSinceBuild)")
-        logger.lifecycle("[runIde]   LSP4IJ:       $capturedLsp4ijVersion")
-        logger.lifecycle("[runIde]   XTC plugin:   $capturedPluginVersion")
-
-        // IDE cache layers
-        logger.lifecycle("[runIde] ─── IDE Cache Layers ───")
-        logger.lifecycle("[runIde]   Download:  ${capturedIdeCacheDir.absolutePath}")
-        if (capturedIdeCacheDir.exists()) {
-            val sizeMb = capturedIdeCacheDir.walkTopDown().filter { it.isFile }.sumOf { it.length() } / (1024 * 1024)
-            logger.lifecycle("[runIde]              (cached, ~$sizeMb MB - survives clean)")
-        } else {
-            logger.lifecycle("[runIde]              (not cached - will download on demand)")
-        }
-        logger.lifecycle("[runIde]   Extracted: $capturedGradleUserHome/caches/$capturedGradleVersion/transforms/...")
-        logger.lifecycle("[runIde]              (Gradle artifact transform - survives clean)")
+        logger.lifecycle("[runIde]   IntelliJ IDEA: $capturedIdeVersion (sinceBuild=$capturedSinceBuild)")
+        logger.lifecycle("[runIde]   LSP4IJ:        $capturedLsp4ijVersion")
+        logger.lifecycle("[runIde]   XTC plugin:    $capturedPluginVersion")
 
         // Sandbox status
         logger.lifecycle("[runIde] ─── Sandbox ───")
@@ -658,8 +628,7 @@ val runIde by tasks.existing {
         // Recovery instructions
         logger.lifecycle("[runIde] ─── Reset Commands ───")
         logger.lifecycle("[runIde]   Nuke sandbox (keeps IDE download):  ./gradlew :lang:intellij-plugin:clean")
-        logger.lifecycle("[runIde]   Nuke everything (re-downloads IDE): rm -rf ${capturedIdeCacheDir.absolutePath}")
-        logger.lifecycle("[runIde]              then: rm -rf lang/.intellijPlatform/localPlatformArtifacts")
+        logger.lifecycle("[runIde]   Nuke cached IDE + metadata:         rm -rf lang/.intellijPlatform/localPlatformArtifacts")
 
         // Tail LSP server log file to Gradle console in real time.
         // The LSP server writes to this file via logback's FILE appender.

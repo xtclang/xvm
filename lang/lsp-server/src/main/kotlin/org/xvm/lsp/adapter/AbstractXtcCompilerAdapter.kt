@@ -4,7 +4,6 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.XtcLanguageConstants.toHoverMarkdown
 import org.xvm.lsp.model.Location
-import java.io.Closeable
 
 /**
  * Abstract base class for XTC compiler adapters.
@@ -19,9 +18,7 @@ import java.io.Closeable
  * @see TreeSitterAdapter for syntax-aware adapter
  * @see XtcCompilerAdapterStub for placeholder adapter
  */
-abstract class AbstractXtcCompilerAdapter :
-    XtcCompilerAdapter,
-    Closeable {
+abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
     /**
      * Logger instance for this adapter, using the concrete class name.
      * Lazily initialized to use the actual subclass type.
@@ -64,15 +61,5 @@ abstract class AbstractXtcCompilerAdapter :
         if (line == startLine && column < startColumn) return false
         if (line == endLine && column > endColumn) return false
         return true
-    }
-
-    /**
-     * Release any resources held by this adapter.
-     *
-     * Default implementation is a no-op. Subclasses that hold resources
-     * (e.g., native handles, caches) should override this method.
-     */
-    override fun close() {
-        // No-op by default
     }
 }

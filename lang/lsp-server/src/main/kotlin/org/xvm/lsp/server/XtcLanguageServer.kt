@@ -326,6 +326,7 @@ class XtcLanguageServer(
     override fun shutdown(): CompletableFuture<Any> {
         logger.info("shutdown: Shutting down XTC Language Server")
         initialized = false
+        adapter.close()
         return CompletableFuture.completedFuture(null)
     }
 

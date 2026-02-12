@@ -129,8 +129,15 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
                 )
             }
 
-        // Close old tree if it exists
-        oldTree?.close()
+        // Store the new tree first, then close the old one. This ordering is critical:
+        // async handlers (codeAction, foldingRange, etc.) read from parsedTrees concurrently.
+        // If we close the old tree first, in-flight handlers holding references to nodes from
+        // the old tree will crash with IllegalStateException ("Already closed") when accessing
+        // native FFM memory. By storing the new tree first, new requests get the fresh tree.
+        // The old tree is NOT closed eagerly - its native memory is backed by Arena.global()
+        // which persists for the JVM lifetime. The Tree object itself will be GC'd, and the
+        // underlying C tree is freed by its finalizer. This avoids the race where in-flight
+        // requests hold XtcNode references that point to already-freed native memory.
         parsedTrees[uri] = tree
 
         // Extract diagnostics from syntax errors
