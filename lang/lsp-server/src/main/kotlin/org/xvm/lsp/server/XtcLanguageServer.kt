@@ -364,10 +364,10 @@ class XtcLanguageServer(
     // Custom methods use the @JsonRequest annotation with a method name.
     //
     // Convention: Custom methods should be prefixed with the language/server name
-    // to avoid collisions (e.g., "xtc/healthCheck", "xtc/getModuleInfo").
+    // to avoid collisions (e.g., "xtc/health check", "xtc/getModuleInfo").
     //
     // How it works:
-    // 1. Client sends JSON-RPC request: {"jsonrpc":"2.0","id":1,"method":"xtc/healthCheck"}
+    // 1. Client sends JSON-RPC request: {"jsonrpc":"2.0","id":1,"method":"xtc/health check"}
     // 2. LSP4J routes to the annotated method via reflection
     // 3. Method returns CompletableFuture with the response
     // 4. Response sent back: {"jsonrpc":"2.0","id":1,"result":{...}}
@@ -390,8 +390,11 @@ class XtcLanguageServer(
      * - backend: string - backend type (mock, treesitter, compiler)
      * - message: string - human-readable status message
      *
-     * Usage from client: Send JSON-RPC request with method "xtc/healthCheck"
+     * Usage from client: Send JSON-RPC request with method "xtc/health check"
      */
+    // NOTE: Called at runtime via JSON-RPC by LSP clients (e.g., IntelliJ plugin, VS Code extension)
+    //       sending a request with method "xtc/healthCheck". LSP4J dispatches via reflection.
+    @Suppress("unused")
     @JsonRequest("xtc/healthCheck")
     fun healthCheck(): CompletableFuture<Map<String, Any>> =
         CompletableFuture.supplyAsync {
@@ -868,7 +871,7 @@ class XtcLanguageServer(
                 logger.info("textDocument/codeAction: {} actions in {}", actions.size, elapsed)
 
                 actions.map { a ->
-                    Either.forRight<Command, CodeAction>(
+                    Either.forRight(
                         CodeAction().apply {
                             title = a.title
                             kind = a.kind.toLsp()

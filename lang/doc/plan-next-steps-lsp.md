@@ -3,7 +3,7 @@
 This document covers all LSP features — implemented and planned — along with IDE client
 integration strategies for IntelliJ (via LSP4IJ), VS Code, and other editors.
 
-> **Last Updated**: 2026-02-12 (§13 expanded with multi-IDE market data and priority ranking)
+> **Last Updated**: 2026-02-12 (§1 updated: adapter architecture refactored — interface is now pure signatures, all defaults in AbstractXtcCompilerAdapter)
 
 ---
 
@@ -32,8 +32,19 @@ integration strategies for IntelliJ (via LSP4IJ), VS Code, and other editors.
 
 ## 1. Current Status
 
-The LSP server uses an adapter pattern (`XtcCompilerAdapter`) with two backends:
-**TreeSitterAdapter** (current default) and **MockXtcCompilerAdapter** (fallback).
+The LSP server uses a layered adapter pattern:
+
+- **`XtcCompilerAdapter`** — pure interface defining all LSP feature method signatures
+- **`AbstractXtcCompilerAdapter`** — abstract base class providing logging infrastructure
+  (`[adapterName]` prefixed log lines) and "not yet implemented" defaults for all optional
+  features. Also provides shared formatting logic (trailing whitespace removal, final newline).
+- **`TreeSitterAdapter`** (current default) — syntax-aware features via tree-sitter
+- **`MockXtcCompilerAdapter`** — regex-based fallback for testing
+- **`XtcCompilerAdapterStub`** — minimal placeholder for future full compiler integration
+
+Concrete adapters extend `AbstractXtcCompilerAdapter` and override only the methods they
+implement. All unoverridden methods log full input parameters and return null/empty, so IDE
+actions are traceable even when not yet supported.
 
 ### Implemented (TreeSitter — returning real data)
 
@@ -87,7 +98,7 @@ The LSP server uses an adapter pattern (`XtcCompilerAdapter`) with two backends:
 
 **Impact:** Highest. Semantic tokens overlay TextMate highlighting with type-aware coloring — distinguishing class names from variable names, parameters from properties, annotations from keywords. This is the single most visible upgrade to editor experience.
 
-**Current state:** `TreeSitterAdapter.getSemanticTokens()` returns `null`. The `SemanticTokens` data class already exists in `XtcCompilerAdapter.kt:794`. The `semanticTokensFull()` handler in `XtcLanguageServer.kt` already delegates to the adapter — only the computation and capability registration are missing.
+**Current state:** `AbstractXtcCompilerAdapter.getSemanticTokens()` returns `null` (inherited default). The `SemanticTokens` data class already exists in `XtcCompilerAdapter`. The `semanticTokensFull()` handler in `XtcLanguageServer.kt` already delegates to the adapter — only the computation and capability registration are missing.
 
 ### 2.1 What Tree-Sitter Can Classify (No Compiler Needed)
 
@@ -458,7 +469,7 @@ fun getCompletions(uri: String, line: Int, column: Int, triggerChar: String?): L
 
 **Impact:** Medium-high. `Ctrl+T` (Go to Symbol in Workspace) is a power-user feature used constantly for navigation. Currently returns empty.
 
-**Current state:** `XtcCompilerAdapter.findWorkspaceSymbols()` returns `emptyList()`. The `symbol()` handler in `XtcLanguageServer.kt` already delegates to this method.
+**Current state:** `AbstractXtcCompilerAdapter.findWorkspaceSymbols()` returns `emptyList()` (inherited default). The `symbol()` handler in `XtcLanguageServer.kt` already delegates to this method.
 
 ### 5.1 Index Strategy
 
@@ -963,7 +974,7 @@ What the compiler adapter unlocks:
 - **Type definition / implementation / declaration** (all require resolved types)
 
 What it looks like architecturally:
-- A new `CompilerAdapter` implementing `XtcCompilerAdapter` (alongside `TreeSitterAdapter`)
+- A new `CompilerAdapter` extending `AbstractXtcCompilerAdapter` (alongside `TreeSitterAdapter`)
 - Wraps the XTC compiler's `FileStructure` / `TypeCompositionStatement` / `MethodStructure` APIs
 - Runs the compiler in "analysis mode" (parse + resolve, no code gen)
 - Falls back to tree-sitter for features the compiler doesn't cover yet (folding, formatting)

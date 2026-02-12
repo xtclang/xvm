@@ -1,6 +1,5 @@
 package org.xvm.lsp.adapter
 
-import org.slf4j.LoggerFactory
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
@@ -32,10 +31,6 @@ import java.io.Closeable
  * @see MockXtcCompilerAdapter for testing
  */
 interface XtcCompilerAdapter : Closeable {
-    companion object {
-        private val logger = LoggerFactory.getLogger(XtcCompilerAdapter::class.java)
-    }
-
     override fun close() {}
 
     /**
@@ -259,10 +254,7 @@ interface XtcCompilerAdapter : Closeable {
         uri: String,
         line: Int,
         column: Int,
-    ): List<DocumentHighlight> {
-        logger.info("[{}] getDocumentHighlights not yet implemented; uri={}, line={}, column={}", displayName, uri, line, column)
-        return emptyList()
-    }
+    ): List<DocumentHighlight>
 
     /**
      * Get selection ranges for positions (smart selection expansion).
@@ -290,10 +282,7 @@ interface XtcCompilerAdapter : Closeable {
     fun getSelectionRanges(
         uri: String,
         positions: List<Position>,
-    ): List<SelectionRange> {
-        logger.info("[{}] getSelectionRanges not yet implemented; uri={}, positions={}", displayName, uri, positions)
-        return emptyList()
-    }
+    ): List<SelectionRange>
 
     /**
      * Get folding ranges for a document.
@@ -317,10 +306,7 @@ interface XtcCompilerAdapter : Closeable {
      * @param uri the document URI
      * @return list of folding ranges
      */
-    fun getFoldingRanges(uri: String): List<FoldingRange> {
-        logger.info("[{}] getFoldingRanges not yet implemented; uri={}", displayName, uri)
-        return emptyList()
-    }
+    fun getFoldingRanges(uri: String): List<FoldingRange>
 
     /**
      * Get document links (clickable paths in imports, etc.).
@@ -346,10 +332,7 @@ interface XtcCompilerAdapter : Closeable {
     fun getDocumentLinks(
         uri: String,
         content: String,
-    ): List<DocumentLink> {
-        logger.info("[{}] getDocumentLinks not yet implemented; uri={}, content={} bytes", displayName, uri, content.length)
-        return emptyList()
-    }
+    ): List<DocumentLink>
 
     // ========================================================================
     // Semantic features (require full compiler)
@@ -384,16 +367,7 @@ interface XtcCompilerAdapter : Closeable {
         uri: String,
         line: Int,
         column: Int,
-    ): SignatureHelp? {
-        logger.info(
-            "[{}] getSignatureHelp not yet implemented (requires compiler); uri={}, line={}, column={}",
-            displayName,
-            uri,
-            line,
-            column,
-        )
-        return null
-    }
+    ): SignatureHelp?
 
     /**
      * Prepare rename operation — check if rename is valid at position.
@@ -420,16 +394,7 @@ interface XtcCompilerAdapter : Closeable {
         uri: String,
         line: Int,
         column: Int,
-    ): PrepareRenameResult? {
-        logger.info(
-            "[{}] prepareRename not yet implemented (requires compiler); uri={}, line={}, column={}",
-            displayName,
-            uri,
-            line,
-            column,
-        )
-        return null
-    }
+    ): PrepareRenameResult?
 
     /**
      * Perform rename operation.
@@ -461,17 +426,7 @@ interface XtcCompilerAdapter : Closeable {
         line: Int,
         column: Int,
         newName: String,
-    ): WorkspaceEdit? {
-        logger.info(
-            "[{}] rename not yet implemented (requires compiler); uri={}, line={}, column={}, newName='{}'",
-            displayName,
-            uri,
-            line,
-            column,
-            newName,
-        )
-        return null
-    }
+    ): WorkspaceEdit?
 
     /**
      * Get code actions for a range (quick fixes, refactorings).
@@ -502,19 +457,7 @@ interface XtcCompilerAdapter : Closeable {
         uri: String,
         range: Range,
         diagnostics: List<Diagnostic>,
-    ): List<CodeAction> {
-        logger.info(
-            "[{}] getCodeActions not yet implemented (requires compiler); uri={}, range={}:{}-{}:{}, diagnostics={}",
-            displayName,
-            uri,
-            range.start.line,
-            range.start.column,
-            range.end.line,
-            range.end.column,
-            diagnostics.size,
-        )
-        return emptyList()
-    }
+    ): List<CodeAction>
 
     /**
      * Get semantic tokens for enhanced syntax highlighting.
@@ -537,10 +480,7 @@ interface XtcCompilerAdapter : Closeable {
      * @param uri the document URI
      * @return semantic tokens data
      */
-    fun getSemanticTokens(uri: String): SemanticTokens? {
-        logger.info("[{}] getSemanticTokens not yet implemented (requires compiler); uri={}", displayName, uri)
-        return null
-    }
+    fun getSemanticTokens(uri: String): SemanticTokens?
 
     /**
      * Get inlay hints (inline type annotations, parameter names).
@@ -567,18 +507,7 @@ interface XtcCompilerAdapter : Closeable {
     fun getInlayHints(
         uri: String,
         range: Range,
-    ): List<InlayHint> {
-        logger.info(
-            "[{}] getInlayHints not yet implemented (requires compiler); uri={}, range={}:{}-{}:{}",
-            displayName,
-            uri,
-            range.start.line,
-            range.start.column,
-            range.end.line,
-            range.end.column,
-        )
-        return emptyList()
-    }
+    ): List<InlayHint>
 
     /**
      * Format an entire document.
@@ -607,17 +536,7 @@ interface XtcCompilerAdapter : Closeable {
         uri: String,
         content: String,
         options: FormattingOptions,
-    ): List<TextEdit> {
-        logger.info(
-            "[{}] formatDocument not yet implemented; uri={}, content={} bytes, tabSize={}, insertSpaces={}",
-            displayName,
-            uri,
-            content.length,
-            options.tabSize,
-            options.insertSpaces,
-        )
-        return emptyList()
-    }
+    ): List<TextEdit>
 
     /**
      * Format a range within a document.
@@ -648,19 +567,7 @@ interface XtcCompilerAdapter : Closeable {
         content: String,
         range: Range,
         options: FormattingOptions,
-    ): List<TextEdit> {
-        logger.info(
-            "[{}] formatRange not yet implemented; uri={}, range={}:{}-{}:{}, content={} bytes",
-            displayName,
-            uri,
-            range.start.line,
-            range.start.column,
-            range.end.line,
-            range.end.column,
-            content.length,
-        )
-        return emptyList()
-    }
+    ): List<TextEdit>
 
     /**
      * Find symbols across the workspace.
@@ -682,19 +589,16 @@ interface XtcCompilerAdapter : Closeable {
      * @param query search query string
      * @return list of matching symbols
      */
-    fun findWorkspaceSymbols(query: String): List<SymbolInfo> {
-        logger.info("[{}] findWorkspaceSymbols not yet implemented (requires workspace index); query='{}'", displayName, query)
-        return emptyList()
-    }
+    fun findWorkspaceSymbols(query: String): List<SymbolInfo>
 
     // ========================================================================
-    // Planned features (not yet implemented — stubs with logging)
+    // Planned features (not yet implemented)
     // ========================================================================
     //
     // These methods correspond to LSP capabilities described in plan-next-steps-lsp.md.
-    // Each returns null/empty by default and logs the call with full input parameters.
-    // When the IDE invokes these, the log trace shows exactly what was requested
-    // and that the feature is not yet available — making it easy to plug in later.
+    // Default implementations in AbstractXtcCompilerAdapter log the call with full
+    // input parameters, so the log trace shows exactly what was requested and that
+    // the feature is not yet available — making it easy to plug in later.
     //
     // ========================================================================
 
@@ -722,16 +626,7 @@ interface XtcCompilerAdapter : Closeable {
         uri: String,
         line: Int,
         column: Int,
-    ): Location? {
-        logger.info(
-            "[{}] findDeclaration not yet implemented (requires compiler); uri={}, line={}, column={}",
-            displayName,
-            uri,
-            line,
-            column,
-        )
-        return null
-    }
+    ): Location?
 
     /**
      * Find the type definition of the symbol at a position.
@@ -757,16 +652,7 @@ interface XtcCompilerAdapter : Closeable {
         uri: String,
         line: Int,
         column: Int,
-    ): Location? {
-        logger.info(
-            "[{}] findTypeDefinition not yet implemented (requires compiler); uri={}, line={}, column={}",
-            displayName,
-            uri,
-            line,
-            column,
-        )
-        return null
-    }
+    ): Location?
 
     /**
      * Find implementations of the interface or abstract method at a position.
@@ -791,16 +677,7 @@ interface XtcCompilerAdapter : Closeable {
         uri: String,
         line: Int,
         column: Int,
-    ): List<Location> {
-        logger.info(
-            "[{}] findImplementation not yet implemented (requires compiler + type hierarchy); uri={}, line={}, column={}",
-            displayName,
-            uri,
-            line,
-            column,
-        )
-        return emptyList()
-    }
+    ): List<Location>
 
     /**
      * Prepare type hierarchy for the symbol at a position.
@@ -828,16 +705,7 @@ interface XtcCompilerAdapter : Closeable {
         uri: String,
         line: Int,
         column: Int,
-    ): List<TypeHierarchyItem> {
-        logger.info(
-            "[{}] prepareTypeHierarchy not yet implemented (requires workspace index); uri={}, line={}, column={}",
-            displayName,
-            uri,
-            line,
-            column,
-        )
-        return emptyList()
-    }
+    ): List<TypeHierarchyItem>
 
     /**
      * Get supertypes for a type hierarchy item.
@@ -848,10 +716,7 @@ interface XtcCompilerAdapter : Closeable {
      * @param item the type hierarchy item to get supertypes for
      * @return list of supertype items
      */
-    fun getSupertypes(item: TypeHierarchyItem): List<TypeHierarchyItem> {
-        logger.info("[{}] getSupertypes not yet implemented (requires workspace index); item={}", displayName, item.name)
-        return emptyList()
-    }
+    fun getSupertypes(item: TypeHierarchyItem): List<TypeHierarchyItem>
 
     /**
      * Get subtypes for a type hierarchy item.
@@ -862,10 +727,7 @@ interface XtcCompilerAdapter : Closeable {
      * @param item the type hierarchy item to get subtypes for
      * @return list of subtype items
      */
-    fun getSubtypes(item: TypeHierarchyItem): List<TypeHierarchyItem> {
-        logger.info("[{}] getSubtypes not yet implemented (requires workspace index); item={}", displayName, item.name)
-        return emptyList()
-    }
+    fun getSubtypes(item: TypeHierarchyItem): List<TypeHierarchyItem>
 
     /**
      * Prepare call hierarchy for the symbol at a position.
@@ -892,16 +754,7 @@ interface XtcCompilerAdapter : Closeable {
         uri: String,
         line: Int,
         column: Int,
-    ): List<CallHierarchyItem> {
-        logger.info(
-            "[{}] prepareCallHierarchy not yet implemented (requires workspace index + call graph); uri={}, line={}, column={}",
-            displayName,
-            uri,
-            line,
-            column,
-        )
-        return emptyList()
-    }
+    ): List<CallHierarchyItem>
 
     /**
      * Get incoming calls for a call hierarchy item (who calls this function).
@@ -912,10 +765,7 @@ interface XtcCompilerAdapter : Closeable {
      * @param item the call hierarchy item to find callers for
      * @return list of incoming calls with caller info and call-site ranges
      */
-    fun getIncomingCalls(item: CallHierarchyItem): List<CallHierarchyIncomingCall> {
-        logger.info("[{}] getIncomingCalls not yet implemented (requires workspace index + call graph); item={}", displayName, item.name)
-        return emptyList()
-    }
+    fun getIncomingCalls(item: CallHierarchyItem): List<CallHierarchyIncomingCall>
 
     /**
      * Get outgoing calls for a call hierarchy item (what does this function call).
@@ -926,10 +776,7 @@ interface XtcCompilerAdapter : Closeable {
      * @param item the call hierarchy item to find callees for
      * @return list of outgoing calls with callee info and call-site ranges
      */
-    fun getOutgoingCalls(item: CallHierarchyItem): List<CallHierarchyOutgoingCall> {
-        logger.info("[{}] getOutgoingCalls not yet implemented (requires workspace index + call graph); item={}", displayName, item.name)
-        return emptyList()
-    }
+    fun getOutgoingCalls(item: CallHierarchyItem): List<CallHierarchyOutgoingCall>
 
     /**
      * Get code lenses for a document.
@@ -947,10 +794,7 @@ interface XtcCompilerAdapter : Closeable {
      * @param uri the document URI
      * @return list of code lenses
      */
-    fun getCodeLenses(uri: String): List<CodeLens> {
-        logger.info("[{}] getCodeLenses not yet implemented (requires workspace index); uri={}", displayName, uri)
-        return emptyList()
-    }
+    fun getCodeLenses(uri: String): List<CodeLens>
 
     /**
      * Resolve a code lens (fill in the command/action lazily).
@@ -961,17 +805,7 @@ interface XtcCompilerAdapter : Closeable {
      * @param lens the code lens to resolve
      * @return the resolved code lens with command filled in
      */
-    fun resolveCodeLens(lens: CodeLens): CodeLens {
-        logger.info(
-            "[{}] resolveCodeLens not yet implemented; lens range={}:{}-{}:{}",
-            displayName,
-            lens.range.start.line,
-            lens.range.start.column,
-            lens.range.end.line,
-            lens.range.end.column,
-        )
-        return lens
-    }
+    fun resolveCodeLens(lens: CodeLens): CodeLens
 
     /**
      * Format on type — auto-format after typing a trigger character.
@@ -999,10 +833,7 @@ interface XtcCompilerAdapter : Closeable {
         column: Int,
         ch: String,
         options: FormattingOptions,
-    ): List<TextEdit> {
-        logger.info("[{}] onTypeFormatting not yet implemented; uri={}, line={}, column={}, ch='{}'", displayName, uri, line, column, ch)
-        return emptyList()
-    }
+    ): List<TextEdit>
 
     /**
      * Get linked editing ranges for the symbol at a position.
@@ -1027,10 +858,7 @@ interface XtcCompilerAdapter : Closeable {
         uri: String,
         line: Int,
         column: Int,
-    ): LinkedEditingRanges? {
-        logger.info("[{}] getLinkedEditingRanges not yet implemented; uri={}, line={}, column={}", displayName, uri, line, column)
-        return null
-    }
+    ): LinkedEditingRanges?
 
     // ========================================================================
     // Data classes for LSP types

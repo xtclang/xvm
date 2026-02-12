@@ -356,7 +356,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
             }
 
         // Build the SelectionRange chain from outermost (parent) to innermost (leaf)
-        return nodes.foldRight<XtcNode, SelectionRange?>(null) { n, parent ->
+        return nodes.foldRight(null) { n, parent ->
             SelectionRange(
                 range =
                     Range(
@@ -536,7 +536,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
 
     private fun findDeclarationNode(
         node: XtcNode,
-        type: String,
+        @Suppress("SameParameterValue") type: String, // TODO: Currently always "method_declaration"
     ): XtcNode? = generateSequence(node) { it.parent }.firstOrNull { it.type == type }
 
     private fun extractParameters(paramsNode: XtcNode): List<ParameterInfo> =
@@ -585,70 +585,6 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
             edit = WorkspaceEdit(changes = mapOf(uri to listOf(edit))),
         )
     }
-
-    override fun formatDocument(
-        uri: String,
-        content: String,
-        options: XtcCompilerAdapter.FormattingOptions,
-    ): List<TextEdit> = formatContent(content, options, null)
-
-    override fun formatRange(
-        uri: String,
-        content: String,
-        range: Range,
-        options: XtcCompilerAdapter.FormattingOptions,
-    ): List<TextEdit> = formatContent(content, options, range)
-
-    /**
-     * Basic formatting: trailing whitespace removal and final newline insertion.
-     * If [range] is non-null, only lines within that range are formatted.
-     */
-    private fun formatContent(
-        content: String,
-        options: XtcCompilerAdapter.FormattingOptions,
-        range: Range?,
-    ): List<TextEdit> =
-        buildList {
-            val lines = content.split("\n")
-            val startLine = range?.start?.line ?: 0
-            val endLine = range?.end?.line ?: (lines.size - 1)
-
-            // Trailing whitespace removal
-            for (i in startLine..minOf(endLine, lines.size - 1)) {
-                val line = lines[i]
-                val trimmed = line.trimEnd()
-                if (trimmed.length < line.length && (options.trimTrailingWhitespace || range == null)) {
-                    add(
-                        TextEdit(
-                            range =
-                                Range(
-                                    start = Position(i, trimmed.length),
-                                    end = Position(i, line.length),
-                                ),
-                            newText = "",
-                        ),
-                    )
-                }
-            }
-
-            // Insert final newline if requested and missing (only for full-document format)
-            if (range == null && options.insertFinalNewline && content.isNotEmpty() && !content.endsWith("\n")) {
-                val lastLine = lines.size - 1
-                val lastCol = lines[lastLine].length
-                add(
-                    TextEdit(
-                        range =
-                            Range(
-                                start = Position(lastLine, lastCol),
-                                end = Position(lastLine, lastCol),
-                            ),
-                        newText = "\n",
-                    ),
-                )
-            }
-        }.also {
-            logger.info("$logPrefix format -> {} edits", it.size)
-        }
 
     override fun getDocumentLinks(
         uri: String,

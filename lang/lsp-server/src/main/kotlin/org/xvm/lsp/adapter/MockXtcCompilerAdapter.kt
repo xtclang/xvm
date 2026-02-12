@@ -424,64 +424,6 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
         )
     }
 
-    override fun formatDocument(
-        uri: String,
-        content: String,
-        options: XtcCompilerAdapter.FormattingOptions,
-    ): List<TextEdit> = formatContent(content, options, null)
-
-    override fun formatRange(
-        uri: String,
-        content: String,
-        range: Range,
-        options: XtcCompilerAdapter.FormattingOptions,
-    ): List<TextEdit> = formatContent(content, options, range)
-
-    private fun formatContent(
-        content: String,
-        options: XtcCompilerAdapter.FormattingOptions,
-        range: Range?,
-    ): List<TextEdit> =
-        buildList {
-            val lines = content.split("\n")
-            val startLine = range?.start?.line ?: 0
-            val endLine = range?.end?.line ?: (lines.size - 1)
-
-            for (i in startLine..minOf(endLine, lines.size - 1)) {
-                val line = lines[i]
-                val trimmed = line.trimEnd()
-                if (trimmed.length < line.length && (options.trimTrailingWhitespace || range == null)) {
-                    add(
-                        TextEdit(
-                            range =
-                                Range(
-                                    start = Position(i, trimmed.length),
-                                    end = Position(i, line.length),
-                                ),
-                            newText = "",
-                        ),
-                    )
-                }
-            }
-
-            if (range == null && options.insertFinalNewline && content.isNotEmpty() && !content.endsWith("\n")) {
-                val lastLine = lines.size - 1
-                val lastCol = lines[lastLine].length
-                add(
-                    TextEdit(
-                        range =
-                            Range(
-                                start = Position(lastLine, lastCol),
-                                end = Position(lastLine, lastCol),
-                            ),
-                        newText = "\n",
-                    ),
-                )
-            }
-        }.also {
-            logger.info("$logPrefix format -> {} edits", it.size)
-        }
-
     override fun getDocumentLinks(
         uri: String,
         content: String,

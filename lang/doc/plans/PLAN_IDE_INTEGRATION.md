@@ -52,7 +52,14 @@ The LSP server uses a pluggable adapter pattern to support different backends:
   (regex-based)       (syntax-aware)   (future: semantic)
 ```
 
-All adapters extend `AbstractXtcCompilerAdapter` which provides shared logging and utilities.
+All adapters extend `AbstractXtcCompilerAdapter` which provides:
+- Per-adapter `[displayName]` prefixed logging via `logPrefix`
+- "Not yet implemented" defaults for all optional LSP features (with full input parameter logging)
+- Shared formatting logic (trailing whitespace removal, final newline insertion)
+- Utility method for position-in-range checking
+
+`XtcCompilerAdapter` is a pure interface (method signatures only). Concrete adapters override
+only the methods they actually implement — all others inherit traceable logging stubs.
 
 | Adapter | Backend | LSP Feature Coverage | Status |
 |---------|---------|----------------------|--------|
