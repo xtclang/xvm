@@ -1,23 +1,87 @@
 # XTC LSP Server: Next Steps Implementation Plan
 
-This document details the six unimplemented LSP features identified in the PR, with research-backed implementation strategies, architectural guidance, and phased delivery plans tailored to the XTC codebase.
+This document covers all LSP features — implemented and planned — along with IDE client
+integration strategies for IntelliJ (via LSP4IJ), VS Code, and other editors.
+
+> **Last Updated**: 2026-02-12
 
 ---
 
 ## Table of Contents
 
-1. [Semantic Tokens](#1-semantic-tokens)
-2. [Cross-File Navigation](#2-cross-file-navigation)
-3. [Context-Aware Completion](#3-context-aware-completion)
-4. [Workspace Symbol Search](#4-workspace-symbol-search)
-5. [Type / Call Hierarchy](#5-type--call-hierarchy)
-6. [Smart Inlay Hints](#6-smart-inlay-hints)
-7. [Shared Infrastructure](#7-shared-infrastructure)
-8. [Dependency Graph & Implementation Order](#8-dependency-graph--implementation-order)
+### LSP Server Features (IDE-independent)
+
+1. [Current Status](#1-current-status)
+2. [Semantic Tokens](#2-semantic-tokens)
+3. [Cross-File Navigation](#3-cross-file-navigation)
+4. [Context-Aware Completion](#4-context-aware-completion)
+5. [Workspace Symbol Search](#5-workspace-symbol-search)
+6. [Type / Call Hierarchy](#6-type--call-hierarchy)
+7. [Smart Inlay Hints](#7-smart-inlay-hints)
+8. [Additional LSP Features](#8-additional-lsp-features)
+9. [Shared Infrastructure](#9-shared-infrastructure)
+10. [Dependency Graph & Implementation Order](#10-dependency-graph--implementation-order)
+
+### IDE Client Integration
+
+11. [IntelliJ (LSP4IJ)](#11-intellij-lsp4ij)
+12. [VS Code](#12-vs-code)
+13. [Other Editors](#13-other-editors)
 
 ---
 
-## 1. Semantic Tokens
+## 1. Current Status
+
+The LSP server uses an adapter pattern (`XtcCompilerAdapter`) with two backends:
+**TreeSitterAdapter** (current default) and **MockXtcCompilerAdapter** (fallback).
+
+### Implemented (TreeSitter — returning real data)
+
+| LSP Method | Notes |
+|------------|-------|
+| `textDocument/hover` | AST-based symbol lookup, markdown formatting |
+| `textDocument/completion` | Keywords, built-in types, document symbols, imports. Trigger chars: `.` `:` `<` |
+| `textDocument/definition` | Same-file only (name matching) |
+| `textDocument/references` | Same-file only (text matching) |
+| `textDocument/documentSymbol` | Full declaration tree via tree-sitter queries |
+| `textDocument/documentHighlight` | All occurrences of identifier under cursor |
+| `textDocument/selectionRange` | Smart expand/shrink via AST traversal |
+| `textDocument/foldingRange` | Declarations, blocks, comments, imports |
+| `textDocument/formatting` | Trailing whitespace removal, final newline |
+| `textDocument/rangeFormatting` | Same as above, range-scoped |
+| `textDocument/rename` | Same-file text replacement, with `prepareRename` validation |
+| `textDocument/codeAction` | "Organize Imports" only |
+| `textDocument/documentLink` | Import statement locations (target unresolved) |
+| `textDocument/signatureHelp` | Same-file method parameters. Trigger chars: `(` `,` |
+| `textDocument/publishDiagnostics` | Syntax errors from tree-sitter parse |
+
+### Stub / Not Implemented (advertised but returning empty/null)
+
+| LSP Method | Status | Blocker |
+|------------|--------|---------|
+| `textDocument/semanticTokens/full` | Returns `null` | Needs tree-sitter query mapping |
+| `textDocument/inlayHint` | Returns `emptyList()` | Needs workspace index for param names |
+| `workspace/symbol` | Returns `emptyList()`, capability not advertised | Needs workspace index |
+
+### Not Registered (capability commented out in server)
+
+| LSP Method | Requires |
+|------------|----------|
+| `textDocument/declaration` | Compiler (distinguish declaration vs definition) |
+| `textDocument/typeDefinition` | Compiler (resolve type of expression) |
+| `textDocument/implementation` | Compiler (find implementations of interface/abstract) |
+| `typeHierarchy/prepare`, `supertypes`, `subtypes` | Workspace index (tree-sitter can extract extends/implements) |
+| `callHierarchy/prepare`, `incomingCalls`, `outgoingCalls` | Workspace index + syntactic call graph |
+| `textDocument/codeLens` | Compiler (reference counts, run buttons) |
+| `textDocument/onTypeFormatting` | Tree-sitter (auto-indent) |
+| `textDocument/linkedEditingRange` | Tree-sitter (rename tag pairs) |
+| `textDocument/colorProvider` | Low priority |
+| `textDocument/inlineValue` | Compiler + debugger |
+| `textDocument/diagnostic` (pull-based) | Compiler |
+
+---
+
+## 2. Semantic Tokens
 
 **LSP Methods:** `textDocument/semanticTokens/full`, `textDocument/semanticTokens/full/delta`, `textDocument/semanticTokens/range`
 
@@ -25,7 +89,7 @@ This document details the six unimplemented LSP features identified in the PR, w
 
 **Current state:** `TreeSitterAdapter.getSemanticTokens()` returns `null`. The `SemanticTokens` data class already exists in `XtcCompilerAdapter.kt:794`. The `semanticTokensFull()` handler in `XtcLanguageServer.kt` already delegates to the adapter — only the computation and capability registration are missing.
 
-### 1.1 What Tree-Sitter Can Classify (No Compiler Needed)
+### 2.1 What Tree-Sitter Can Classify (No Compiler Needed)
 
 **Tier 1 — High confidence (directly from parse tree position):**
 
@@ -59,7 +123,7 @@ This document details the six unimplemented LSP features identified in the PR, w
 
 **NOT achievable without compiler:** Distinguishing class vs. interface at usage sites, `deprecated` modifier, `defaultLibrary` modifier, cross-file type classification, distinguishing variable vs. parameter at usage sites.
 
-### 1.2 Token Legend Design
+### 2.2 Token Legend Design
 
 ```kotlin
 object XtcSemanticTokenLegend {
@@ -104,7 +168,7 @@ object XtcSemanticTokenLegend {
 }
 ```
 
-### 1.3 Encoding Format
+### 2.3 Encoding Format
 
 The `data` field is a flat `int[]` where every 5 consecutive integers represent one token:
 
@@ -120,7 +184,7 @@ Token: class   → [0, 0, 5, 15, 0]    (keyword, no modifiers)
 Token: Person  → [0, 6, 6, 2, 1]     (class, declaration modifier)
 ```
 
-### 1.4 Implementation Plan
+### 2.4 Implementation Plan
 
 **Files to modify:**
 
@@ -138,7 +202,7 @@ Token: Person  → [0, 6, 6, 2, 1]     (class, declaration modifier)
 
 **Phase 3 (compiler):** Override tree-sitter tokens with compiler-resolved classifications. Add `delta` encoding. Use `workspace/semanticTokens/refresh` on compiler analysis completion.
 
-### 1.5 Lessons from Other Implementations
+### 2.5 Lessons from Other Implementations
 
 - **rust-analyzer:** Defines ~30 custom token types. Two-phase rendering: fast syntax pass, then semantic enrichment. Delta encoding essential for large files.
 - **kotlin-language-server:** Only ~15 token types. Proves a modest set is already dramatically better than TextMate alone.
@@ -147,7 +211,7 @@ Token: Person  → [0, 6, 6, 2, 1]     (class, declaration modifier)
 
 ---
 
-## 2. Cross-File Navigation
+## 3. Cross-File Navigation
 
 **LSP Methods:** `textDocument/definition`, `textDocument/references`
 
@@ -155,7 +219,7 @@ Token: Person  → [0, 6, 6, 2, 1]     (class, declaration modifier)
 
 **Current state:** `TreeSitterAdapter` supports same-file go-to-definition (by name matching) and same-file find-references (by text occurrence). Cannot resolve imports or cross-file jumps.
 
-### 2.1 What Requires Compiler vs. What Doesn't
+### 3.1 What Requires Compiler vs. What Doesn't
 
 | Case | Tree-Sitter Alone | With Symbol Index | Requires Compiler |
 |------|-------------------|-------------------|-------------------|
@@ -168,7 +232,7 @@ Token: Person  → [0, 6, 6, 2, 1]     (class, declaration modifier)
 | Find references (same file) | Yes (text match) | — | — |
 | Find references (cross-file) | No | **Yes** (workspace-wide name search) | Semantic filtering |
 
-### 2.2 Architecture: Workspace Symbol Index
+### 3.2 Architecture: Workspace Symbol Index
 
 The enabling infrastructure is a **workspace symbol index** that maps symbol names to their declarations across all files. This index serves cross-file navigation, workspace symbols, and completion.
 
@@ -194,7 +258,7 @@ data class IndexedSymbol(
 - **Secondary:** `uri → symbols` for file-level operations, `qualifiedName → symbol` for import resolution
 - **Update strategy:** On `didChange` (debounced 300ms), remove all symbols for the changed file, re-parse with tree-sitter, re-add. On `didSave`, immediate re-index.
 
-### 2.3 Import Resolution Strategy
+### 3.3 Import Resolution Strategy
 
 XTC imports follow the pattern `import module.package.TypeName;`. Resolution approach:
 
@@ -206,7 +270,7 @@ XTC imports follow the pattern `import module.package.TypeName;`. Resolution app
 
 **File discovery:** On workspace open, recursively scan for `*.x` files. Parse each with tree-sitter. Extract declarations. Build the index. Report progress via `WorkDoneProgress`.
 
-### 2.4 Go-to-Definition Enhancement
+### 3.4 Go-to-Definition Enhancement
 
 ```kotlin
 override fun findDefinition(uri: String, line: Int, column: Int): Location? {
@@ -232,7 +296,7 @@ override fun findDefinition(uri: String, line: Int, column: Int): Location? {
 }
 ```
 
-### 2.5 Find-References Enhancement
+### 3.5 Find-References Enhancement
 
 ```kotlin
 override fun findReferences(uri: String, line: Int, column: Int, includeDeclaration: Boolean): List<Location> {
@@ -250,7 +314,7 @@ override fun findReferences(uri: String, line: Int, column: Int, includeDeclarat
 }
 ```
 
-### 2.6 Implementation Phases
+### 3.6 Implementation Phases
 
 **Phase 1 (tree-sitter + index):** Build workspace symbol index on startup. Resolve imports to files for go-to-definition. Cross-file find-references by name matching.
 
@@ -260,7 +324,7 @@ override fun findReferences(uri: String, line: Int, column: Int, includeDeclarat
 
 ---
 
-## 3. Context-Aware Completion
+## 4. Context-Aware Completion
 
 **LSP Method:** `textDocument/completion`, `completionItem/resolve`
 
@@ -268,7 +332,7 @@ override fun findReferences(uri: String, line: Int, column: Int, includeDeclarat
 
 **Current state:** `TreeSitterAdapter.getCompletions()` returns keywords (43), built-in types (70+), and visible declarations in the current file. Trigger characters `.`, `:`, `<` are registered. No member completion after `.`.
 
-### 3.1 Implementation Tiers
+### 4.1 Implementation Tiers
 
 **Tier 1 — No Type Info (current + enhancements):**
 - Keywords and built-in types (done)
@@ -293,7 +357,7 @@ override fun findReferences(uri: String, line: Int, column: Int, includeDeclarat
 - Expected-type-based ranking
 - Smart completions (postfix, auto-casts)
 
-### 3.2 Heuristic Type Resolution for `.` Completion
+### 4.2 Heuristic Type Resolution for `.` Completion
 
 Without a type checker, we can resolve the receiver type in common cases:
 
@@ -354,7 +418,7 @@ fun getMemberCompletions(typeName: String): List<CompletionItem> {
 }
 ```
 
-### 3.3 Completion Resolve
+### 4.3 Completion Resolve
 
 Use `completionItem/resolve` to lazily load documentation and auto-import edits:
 
@@ -373,7 +437,7 @@ override fun resolveCompletionItem(item: CompletionItem): CompletionItem {
 }
 ```
 
-### 3.4 Trigger Character Handling
+### 4.4 Trigger Character Handling
 
 ```kotlin
 fun getCompletions(uri: String, line: Int, column: Int, triggerChar: String?): List<CompletionItem> {
@@ -388,7 +452,7 @@ fun getCompletions(uri: String, line: Int, column: Int, triggerChar: String?): L
 
 ---
 
-## 4. Workspace Symbol Search
+## 5. Workspace Symbol Search
 
 **LSP Method:** `workspace/symbol`
 
@@ -396,7 +460,7 @@ fun getCompletions(uri: String, line: Int, column: Int, triggerChar: String?): L
 
 **Current state:** `XtcCompilerAdapter.findWorkspaceSymbols()` returns `emptyList()`. The `symbol()` handler in `XtcLanguageServer.kt` already delegates to this method.
 
-### 4.1 Index Strategy
+### 5.1 Index Strategy
 
 The workspace symbol index (shared with cross-file navigation) provides the data. The search layer adds fuzzy matching.
 
@@ -415,7 +479,7 @@ override fun findWorkspaceSymbols(query: String): List<SymbolInfo> {
 }
 ```
 
-### 4.2 Fuzzy Matching
+### 5.2 Fuzzy Matching
 
 **CamelCase matching** is the most important strategy for code symbols:
 
@@ -437,20 +501,20 @@ fun extractHumps(name: String): List<String> {
 - Contiguity of matched characters
 - Length ratio between query and candidate
 
-### 4.3 Index Maintenance
+### 5.3 Index Maintenance
 
 - **Startup:** Parallel scan of all `*.x` files, parse with tree-sitter, extract declarations
 - **File changes:** Debounced re-indexing (300ms) on `didChange`, immediate on `didSave`
 - **File watcher:** Register for `**/*.x` changes via `workspace/didChangeWatchedFiles`
 - **Progress reporting:** Use `WorkDoneProgress` during initial indexing
 
-### 4.4 Persistent Cache (Optimization)
+### 5.4 Persistent Cache (Optimization)
 
 Save the index to disk (JSON or binary) with file checksums. On next startup, load cache, verify checksums, re-index only changed files. Reduces startup time from O(n) full parses to O(changed files).
 
 ---
 
-## 5. Type / Call Hierarchy
+## 6. Type / Call Hierarchy
 
 **LSP Methods:**
 - Type: `typeHierarchy/prepareTypeHierarchy`, `typeHierarchy/supertypes`, `typeHierarchy/subtypes`
@@ -458,7 +522,7 @@ Save the index to disk (JSON or binary) with file checksums. On next startup, lo
 
 **Impact:** Medium. Power-user features for understanding code structure. Particularly valuable for Ecstasy's rich type system (classes, interfaces, mixins, services, const).
 
-### 5.1 Type Hierarchy
+### 6.1 Type Hierarchy
 
 **The three-step protocol:**
 
@@ -499,7 +563,7 @@ For each type declaration, extract the `extends`/`implements`/`incorporates` cla
 - **Services**: Services are types. They participate in the hierarchy like classes.
 - **Const classes**: Immutable classes. Shown in hierarchy like regular classes.
 
-### 5.2 Call Hierarchy
+### 6.2 Call Hierarchy
 
 **The three-step protocol (symmetric with type hierarchy):**
 
@@ -533,7 +597,7 @@ This gives useful results even without the compiler: "show all places that call 
 
 **Virtual dispatch:** When `obj.method()` is called, record the call to the statically known type's method. At query time, combine with the type hierarchy to show all possible dispatch targets.
 
-### 5.3 Incremental Updates
+### 6.3 Incremental Updates
 
 When a file changes:
 1. Remove all type entries and call sites from that file
@@ -541,7 +605,7 @@ When a file changes:
 3. Reverse maps update automatically (remove old entries, add new)
 4. Cross-file references may become stale — validate on query (lazy reconciliation)
 
-### 5.4 Implementation Phases
+### 6.4 Implementation Phases
 
 **Phase 1:** Type hierarchy using tree-sitter-extracted `extends`/`implements`/`incorporates` clauses. No call hierarchy yet.
 
@@ -551,7 +615,7 @@ When a file changes:
 
 ---
 
-## 6. Smart Inlay Hints
+## 7. Smart Inlay Hints
 
 **LSP Method:** `textDocument/inlayHint`, `inlayHint/resolve`
 
@@ -559,7 +623,7 @@ When a file changes:
 
 **Current state:** `TreeSitterAdapter.getInlayHints()` returns `emptyList()`. The capability is already advertised.
 
-### 6.1 Types of Inlay Hints
+### 7.1 Types of Inlay Hints
 
 #### Parameter Name Hints (Tier 1 — needs method signature only)
 
@@ -605,7 +669,7 @@ var result = items.filter { it.isActive }.map { it.name }
 // hint: ": List<String>" — requires generic type propagation through chain
 ```
 
-### 6.2 Implementation
+### 7.2 Implementation
 
 ```kotlin
 override fun getInlayHints(uri: String, range: Range): List<InlayHint> {
@@ -657,7 +721,7 @@ fun inferSimpleType(expr: Node?): String? = when {
 }
 ```
 
-### 6.3 Performance Considerations
+### 7.3 Performance Considerations
 
 Inlay hints are **the most performance-sensitive** LSP feature:
 - Requested on every scroll (visible range changes)
@@ -671,7 +735,7 @@ Inlay hints are **the most performance-sensitive** LSP feature:
 - Use `inlayHint/resolve` for lazy tooltip/location loading
 - Target < 10ms for Tier 1 hints, < 50ms for Tier 2
 
-### 6.4 Clickable Type Hints
+### 7.4 Clickable Type Hints
 
 Use `InlayHintLabelPart` so type names in hints link to their definitions:
 
@@ -691,7 +755,7 @@ InlayHint(
 )
 ```
 
-### 6.5 Implementation Phases
+### 7.5 Implementation Phases
 
 **Phase 1:** Parameter name hints (needs method signature lookup from workspace index). Type hints for literals and constructor calls (purely syntactic).
 
@@ -701,11 +765,79 @@ InlayHint(
 
 ---
 
-## 7. Shared Infrastructure
+## 8. Additional LSP Features
 
-All six features depend on common infrastructure that should be built first.
+Beyond the six high-priority features above, the following LSP capabilities are either partially
+implemented or should be on the roadmap.
 
-### 7.1 Workspace Symbol Index
+### 8.1 Document Link Resolution (Medium Priority)
+
+**Current state**: `TreeSitterAdapter.getDocumentLinks()` extracts import statement locations but
+returns `target = null` — the links appear in the editor but don't navigate anywhere.
+
+**What's needed**: Once the workspace symbol index (§9.1) and import resolution (§9.3) are built,
+document links can resolve `import module.package.TypeName` to the file URI where `TypeName` is
+declared. This is a straightforward wire-up once the index exists.
+
+### 8.2 Code Lens (Medium Priority)
+
+**LSP Method**: `textDocument/codeLens`
+
+Code lens shows actionable inline annotations above declarations — reference counts
+("3 references"), "Run Test", "Debug", "Implement". Useful for XTC services (show callers),
+test methods (run/debug buttons), and interfaces (show implementations).
+
+**Tree-sitter tier**: Reference counts can be approximated once the workspace index exists.
+Run/debug buttons need integration with the DAP server and run configurations.
+
+**Compiler tier**: Precise reference counts, virtual dispatch resolution, test discovery.
+
+### 8.3 On-Type Formatting (Low Priority)
+
+**LSP Method**: `textDocument/onTypeFormatting`
+
+Auto-indent when pressing Enter or `}`. Tree-sitter provides enough AST context to determine
+correct indentation level. Lower priority because most editors have basic auto-indent built in.
+
+### 8.4 Linked Editing Range (Low Priority)
+
+**LSP Method**: `textDocument/linkedEditingRange`
+
+When renaming an identifier, all related occurrences update simultaneously in real-time
+(before committing the rename). Tree-sitter can identify the declaration and its same-file usages.
+
+### 8.5 Pull Diagnostics (Low Priority, Compiler)
+
+**LSP Method**: `textDocument/diagnostic`
+
+Pull-based diagnostic model (client requests diagnostics on demand, vs push-based
+`publishDiagnostics`). Only useful once the compiler adapter is online — tree-sitter already
+pushes syntax errors via `publishDiagnostics`.
+
+### 8.6 Type Definition / Implementation / Declaration (Compiler)
+
+- `textDocument/typeDefinition` — jump to the type of an expression (e.g., from a variable to
+  its class definition). Requires type inference.
+- `textDocument/implementation` — find all implementations of an interface or abstract method.
+  Requires type hierarchy index + compiler resolution.
+- `textDocument/declaration` — distinguish between declaration site and definition site.
+  XTC's single-file-per-type model makes this less important than in C/C++.
+
+### 8.7 Features NOT Planned
+
+| Feature | Why Not |
+|---------|---------|
+| Color Provider | XTC has no color literal syntax |
+| Inline Values | Compiler + debugger integration; DAP handles this directly |
+| Moniker | Cross-repository symbol linking; far future |
+
+---
+
+## 9. Shared Infrastructure
+
+All features in §2-§8 depend on common infrastructure that should be built first.
+
+### 9.1 Workspace Symbol Index
 
 The core data structure that enables cross-file features. Stores declarations extracted by tree-sitter from all `*.x` files in the workspace.
 
@@ -721,7 +853,7 @@ The core data structure that enables cross-file features. Stores declarations ex
 2. `didOpen` / `didChange` → re-index the changed file (debounced)
 3. `didChangeWatchedFiles` → handle external changes (git checkout, etc.)
 
-### 7.2 Member Info in Index
+### 9.2 Member Info in Index
 
 For each type in the index, store its members (methods, properties, constructors) with signatures. This enables:
 - `.` completion
@@ -740,14 +872,14 @@ data class MemberInfo(
 )
 ```
 
-### 7.3 Import Resolution
+### 9.3 Import Resolution
 
 A cross-cutting concern: map import paths to workspace files. Used by:
 - Go-to-definition (resolve imported types)
 - Completion (auto-import edits)
 - Cross-file references (determine which file defines a symbol)
 
-### 7.4 Type Hierarchy Index
+### 9.4 Type Hierarchy Index
 
 Built from tree-sitter-extracted `extends`/`implements`/`incorporates` clauses. Used by:
 - Type hierarchy feature directly
@@ -756,7 +888,7 @@ Built from tree-sitter-extracted `extends`/`implements`/`incorporates` clauses. 
 
 ---
 
-## 8. Dependency Graph & Implementation Order
+## 10. Dependency Graph & Implementation Order
 
 ```
                  Workspace Symbol Index
@@ -801,9 +933,266 @@ Built from tree-sitter-extracted `extends`/`implements`/`incorporates` clauses. 
 15. Persistent index cache for fast startup
 16. `completionItem/resolve` for auto-import and documentation
 
+**Sprint 6 — Additional LSP Features:**
+17. **Document Link Resolution** (wire import targets to workspace index)
+18. **Code Lens** — reference counts (once index exists), run/debug buttons (once DAP is wired)
+19. **On-Type Formatting** — auto-indent via tree-sitter AST context
+
 **Future (compiler integration):**
 - Full type inference for completion and type hints
 - Semantic name resolution for references and navigation
 - Delta encoding for semantic tokens
 - Overload resolution
 - Chained method return type hints
+- Type definition, implementation, declaration
+- Pull diagnostics (semantic errors beyond syntax)
+
+---
+
+## 11. IntelliJ (LSP4IJ)
+
+The IntelliJ plugin uses **LSP4IJ** (Red Hat's LSP/DAP client) rather than IntelliJ's built-in
+LSP support. See `PLAN_IDE_INTEGRATION.md § Design Decision: LSP4IJ over IntelliJ Built-in LSP`
+for the rationale. In short: IntelliJ's built-in LSP has no DAP support, no code lens, no call/type
+hierarchy, and no LSP console.
+
+### 11.1 What LSP4IJ Provides Automatically
+
+LSP4IJ translates standard LSP responses into IntelliJ UI with no plugin-side code:
+
+| LSP Feature | IntelliJ Integration | Notes |
+|-------------|---------------------|-------|
+| Hover | Quick Documentation popup (Ctrl+Q) | Renders markdown |
+| Completion | Code completion popup | Supports `completionItem/resolve` |
+| Definition | Ctrl+Click / Ctrl+B navigation | |
+| References | Find Usages (Alt+F7) | |
+| Document Symbol | Structure view, breadcrumbs | |
+| Document Highlight | Occurrence highlighting | |
+| Folding Range | Code folding gutter | |
+| Formatting | Code > Reformat (Ctrl+Alt+L) | |
+| Rename | Shift+F6 refactor dialog | |
+| Code Action | Alt+Enter intention actions | |
+| Signature Help | Parameter info popup | |
+| Inlay Hints | Inline hints in editor | |
+| Semantic Tokens | Semantic highlighting overlay | |
+| Code Lens | Inline annotations above declarations | **Not available in built-in LSP** |
+| Type Hierarchy | Ctrl+H hierarchy view | **Not available in built-in LSP** |
+| Call Hierarchy | Ctrl+Alt+H hierarchy view | **Not available in built-in LSP** |
+| Selection Range | Ctrl+W / Ctrl+Shift+W expand/shrink | |
+| On-Type Formatting | Auto-indent on Enter | **Not available in built-in LSP** |
+| Document Link | Clickable import paths | |
+| LSP Console | View > Tool Windows > Language Servers | Protocol-level debugging |
+| DAP Client | Debug tool window | **Not available in built-in LSP** |
+
+### 11.2 IntelliJ-Specific Plugin Features (Beyond LSP)
+
+These are features that require IntelliJ-specific code in the plugin, beyond what LSP provides:
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| File type registration (`.x`) | Done | `plugin.xml` + `XtcFileType` |
+| TextMate grammar (syntax highlighting) | Done | Bundled `.tmLanguage.json` |
+| Run configurations | Done | `XtcRunConfigurationType` |
+| New Project wizard | Done | `XtcModuleBuilder` |
+| JRE provisioning (Foojay) | Done | `JreProvisioner` |
+| DAP extension point | Done | `XtcDebugAdapterFactory` |
+| Line marker (gutter icons) | Not done | Run/debug icons for `module` declarations |
+| Color settings page | Not done | Customizable semantic token colors |
+| Intentions beyond code actions | Not done | XTC-specific quick fixes |
+| Inspections | Not done | Would duplicate LSP diagnostics — avoid unless needed |
+| Live templates / snippets | Not done | `for`, `if`, `switch` templates |
+
+### 11.3 LSP4IJ-Specific Considerations
+
+**Duplicate server spawn (LSP4IJ issue #888)**: LSP4IJ may call `start()` concurrently when
+multiple `.x` files are opened, spawning duplicate LSP server processes that are killed within
+milliseconds. Harmless but requires an `AtomicBoolean` guard on notifications.
+See TODO in `XtcLspConnectionProvider`.
+
+**DAP session lifecycle**: Unlike LSP (auto-start on file open), DAP sessions are user-initiated
+(one `startServer()` per debug action). No race condition, no notification guard needed.
+
+**LSP Console**: LSP4IJ provides `View > Tool Windows > Language Servers` for protocol-level
+debugging. This is invaluable during development — shows all JSON-RPC request/response pairs.
+
+---
+
+## 12. VS Code
+
+The VS Code extension lives in `lang/vscode-extension/` (scaffolded, not yet functional).
+
+### 12.1 Architecture
+
+```
+VS Code Extension (TypeScript/Node.js)
+├── package.json           — extension manifest, contributes, activationEvents
+├── src/extension.ts       — activation, LanguageClient setup
+├── syntaxes/xtc.tmLanguage.json — TextMate grammar (shared with IntelliJ)
+└── tree-sitter-xtc.wasm   — tree-sitter grammar (optional, for local parsing)
+
+       │ stdio (JSON-RPC)
+       ▼
+LSP Server Process (Java 25)    — same xtc-lsp-server.jar as IntelliJ
+DAP Server Process (Java 25)    — same xtc-dap-server.jar as IntelliJ
+```
+
+### 12.2 LSP Client: `vscode-languageclient`
+
+VS Code's standard LSP client library (`vscode-languageclient`) handles all protocol translation.
+The extension only needs to:
+
+1. **Find/provision Java 25** — same Foojay strategy as IntelliJ, but implemented in TypeScript
+   (or shell out to a bundled provisioner script)
+2. **Locate the server JAR** — bundled in the extension's `bin/` directory
+3. **Create a `LanguageClient`** — point it at the server process
+
+```typescript
+const serverOptions: ServerOptions = {
+    command: javaPath,
+    args: ['-jar', serverJarPath],
+    options: { cwd: workspaceFolder }
+};
+
+const clientOptions: LanguageClientOptions = {
+    documentSelector: [{ scheme: 'file', language: 'xtc' }],
+};
+
+const client = new LanguageClient('xtc', 'XTC Language Server', serverOptions, clientOptions);
+client.start();
+```
+
+All LSP features (hover, completion, definition, etc.) work automatically — `vscode-languageclient`
+maps them to VS Code's extension API.
+
+### 12.3 DAP Client: `vscode.debug`
+
+VS Code has **first-class DAP support** built in. The extension registers a debug adapter via
+`package.json`:
+
+```json
+{
+    "contributes": {
+        "debuggers": [{
+            "type": "xtc",
+            "label": "XTC Debug",
+            "program": "./bin/xtc-dap-server.jar",
+            "runtime": "java",
+            "languages": ["xtc"]
+        }]
+    }
+}
+```
+
+Or for more control, use a `DebugAdapterDescriptorFactory`:
+
+```typescript
+vscode.debug.registerDebugAdapterDescriptorFactory('xtc', {
+    createDebugAdapterDescriptor(session) {
+        return new vscode.DebugAdapterExecutable(javaPath, ['-jar', dapServerJarPath]);
+    }
+});
+```
+
+### 12.4 Feature Parity with IntelliJ
+
+| Feature | VS Code | IntelliJ (LSP4IJ) |
+|---------|---------|-------------------|
+| LSP features | All (via vscode-languageclient) | All (via LSP4IJ) |
+| DAP debugging | Built-in | Via LSP4IJ DAP client |
+| TextMate grammar | Built-in support | Via TextMate bundle plugin |
+| Tree-sitter highlighting | Via WASM (optional) | N/A (server-side) |
+| JRE provisioning | Must implement in TS | `JreProvisioner.kt` (done) |
+| Code lens | Built-in support | Via LSP4IJ |
+| Semantic tokens | Built-in support | Via LSP4IJ |
+
+**Key difference**: VS Code has native DAP support, making debug integration simpler than IntelliJ
+(which requires LSP4IJ). The LSP server and DAP server JARs are identical — only the thin client
+wrapper differs.
+
+### 12.5 VS Code Extension Roadmap
+
+1. **Phase 1**: Basic LSP — TextMate grammar + `LanguageClient` pointing at `xtc-lsp-server.jar`
+2. **Phase 2**: JRE provisioning — download Java 25 if not available
+3. **Phase 3**: DAP debugging — register debug adapter, `launch.json` configuration
+4. **Phase 4**: Polish — snippets, task definitions, status bar, settings UI
+
+---
+
+## 13. Other Editors
+
+Because the LSP and DAP servers are standalone Java processes communicating over stdio, they work
+with **any editor** that supports LSP/DAP. The servers are entirely IDE-independent.
+
+### 13.1 Eclipse
+
+Eclipse has built-in LSP support via **Eclipse LSP4E** (`org.eclipse.lsp4e`). Configuration:
+
+- Register a content type for `.x` files
+- Point `LanguageServerDefinition` at `java -jar xtc-lsp-server.jar`
+- DAP: Eclipse has built-in DAP support via **Eclipse LSP4E Debug**
+
+Eclipse is lower priority but would work with minimal effort since both LSP4E and our server
+use Eclipse LSP4J types.
+
+### 13.2 Neovim
+
+Neovim has built-in LSP client (`vim.lsp`) since 0.5:
+
+```lua
+vim.lsp.start({
+    name = 'xtc',
+    cmd = { 'java', '-jar', '/path/to/xtc-lsp-server.jar' },
+    root_dir = vim.fs.dirname(vim.fs.find({ '.git', 'build.gradle.kts' }, { upward = true })[1]),
+})
+```
+
+DAP via `nvim-dap`:
+
+```lua
+require('dap').adapters.xtc = {
+    type = 'executable',
+    command = 'java',
+    args = { '-jar', '/path/to/xtc-dap-server.jar' },
+}
+```
+
+### 13.3 Zed, Helix, Sublime Text, Emacs
+
+All support LSP natively or via plugins:
+
+| Editor | LSP Support | DAP Support | Config Effort |
+|--------|-------------|-------------|---------------|
+| Zed | Built-in | Planned | Extension or `languages.toml` |
+| Helix | Built-in | Built-in | `languages.toml` |
+| Sublime Text | Via LSP package | Via DebugAdapter package | `.sublime-settings` |
+| Emacs | Via `lsp-mode` or `eglot` | Via `dap-mode` | Elisp config |
+
+### 13.4 Shared Assets
+
+The `lang/dsl/` module generates shared language assets that all editors can use:
+
+| Asset | Generated By | Used By |
+|-------|-------------|---------|
+| TextMate grammar (`.tmLanguage.json`) | `lang/dsl/` | VS Code, IntelliJ, Sublime, others |
+| Tree-sitter grammar | `lang/tree-sitter/` | Neovim, Helix, Zed, Emacs |
+| Vim syntax file | `lang/dsl/` (planned) | Vim, Neovim (fallback) |
+| Emacs major mode | `lang/dsl/` (planned) | Emacs (fallback) |
+
+### 13.5 What's IDE-Specific vs Shared
+
+```
+SHARED (IDE-independent, reused across ALL editors):
+├── lang/lsp-server/     — LSP server JAR (stdio, Java 25)
+├── lang/dap-server/     — DAP server JAR (stdio, Java 25)
+├── lang/dsl/            — Language model → TextMate, tree-sitter, vim, emacs
+└── lang/tree-sitter/    — Grammar + native libs (WASM for VS Code, .so/.dylib for server)
+
+IDE-SPECIFIC (thin wrappers — always editor-specific):
+├── lang/intellij-plugin/  — IntelliJ (LSP4IJ, JRE provisioning, run configs)
+├── lang/vscode-extension/ — VS Code (vscode-languageclient, launch.json)
+└── (future configs)       — Neovim, Helix, Zed, etc. (just config files, no code)
+```
+
+The architectural principle: **servers are source of truth, IDE plugins are thin wrappers.**
+Adding a new editor means writing a small configuration/wrapper — the LSP and DAP servers
+provide all the intelligence.
