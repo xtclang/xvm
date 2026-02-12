@@ -28,9 +28,9 @@ public abstract class OpOptimized
      * @return the type of the result of the operation
      */
     protected TypeConstant buildOptimizedBinary(BuildContext bctx,
-                                              CodeBuilder  code,
-                                              RegisterInfo regTarget,
-                                              int          nArgValue) {
+                                                CodeBuilder  code,
+                                                RegisterInfo regTarget,
+                                                int          nArgValue) {
         regTarget.load(code);
         RegisterInfo regArg = bctx.loadArgument(code, nArgValue);
         if (!regArg.cd().equals(regTarget.cd())) {
@@ -51,9 +51,9 @@ public abstract class OpOptimized
      * @param regArg     the {@link RegisterInfo} for the argument of the operation
      */
     protected void buildOptimizedBinary(BuildContext bctx,
-                                      CodeBuilder  code,
-                                      RegisterInfo regTarget,
-                                      RegisterInfo regArg) {
+                                        CodeBuilder  code,
+                                        RegisterInfo regTarget,
+                                        RegisterInfo regArg) {
          throw new UnsupportedOperationException();
      }
 

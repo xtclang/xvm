@@ -8,6 +8,8 @@ import java.lang.constant.MethodTypeDesc;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.javajit.BuildContext.MultipleSlot;
+
 import static java.lang.constant.ConstantDescs.CD_Integer;
 import static java.lang.constant.ConstantDescs.CD_Long;
 import static java.lang.constant.ConstantDescs.CD_int;
@@ -64,7 +66,7 @@ public interface NumberSupport {
                                               int          nArgValue) {
         switch (regTarget.type().getValueString()) {
             case "Int128", "UInt128" -> {
-                return buildLongLongAdd(bctx, code, regTarget, nArgValue);
+                return buildLongLongAdd(bctx, code, (MultipleSlot) regTarget, nArgValue);
             }
             default  -> throw new IllegalStateException("Unsupported type: "
                     + regTarget.type().getValueString());
@@ -88,16 +90,15 @@ public interface NumberSupport {
      */
     default TypeConstant buildLongLongAdd(BuildContext bctx,
                                           CodeBuilder  code,
-                                          RegisterInfo regTarget,
+                                          MultipleSlot regTarget,
                                           int          nArgValue) {
 
-        BuildContext.MultipleSlot regArg
-                = (BuildContext.MultipleSlot) bctx.ensureRegister(code, nArgValue);
+        MultipleSlot regArg = (MultipleSlot) bctx.ensureRegister(code, nArgValue);
 
-        int   slotL1   = ((BuildContext.MultipleSlot) regTarget).slot(0);
-        int   slotH1   = ((BuildContext.MultipleSlot) regTarget).slot(1);
-        int   slotL2   = regArg.slot(0);
-        int   slotH2   = regArg.slot(1);
+        int slotL1 = regTarget.slot(0);
+        int slotH1 = regTarget.slot(1);
+        int slotL2 = regArg.slot(0);
+        int slotH2 = regArg.slot(1);
         buildLongLongAdd(bctx, code, slotL1, slotH1, slotL2, slotH2);
         return regTarget.type();
     }
@@ -270,9 +271,9 @@ public interface NumberSupport {
                                               int          nArgValue) {
         switch (regTarget.type().getValueString()) {
             case "Int128", "UInt128" -> {
-                return buildLongLongAnd(bctx, code, regTarget, nArgValue);
+                return buildLongLongAnd(bctx, code, (MultipleSlot) regTarget, nArgValue);
             }
-            default  -> throw new IllegalStateException("Unsupported type: "
+            default -> throw new IllegalStateException("Unsupported type: "
                     + regTarget.type().getValueString());
         }
     }
@@ -291,16 +292,15 @@ public interface NumberSupport {
      */
     default TypeConstant buildLongLongAnd(BuildContext bctx,
                                           CodeBuilder  code,
-                                          RegisterInfo regTarget,
+                                          MultipleSlot regTarget,
                                           int          nArgValue) {
 
-        BuildContext.MultipleSlot regArg
-                = (BuildContext.MultipleSlot) bctx.ensureRegister(code, nArgValue);
+        MultipleSlot regArg = (MultipleSlot) bctx.ensureRegister(code, nArgValue);
 
-        int   slotL1   = ((BuildContext.MultipleSlot) regTarget).slot(0);
-        int   slotH1   = ((BuildContext.MultipleSlot) regTarget).slot(1);
-        int   slotL2   = regArg.slot(0);
-        int   slotH2   = regArg.slot(1);
+        int slotL1 = regTarget.slot(0);
+        int slotH1 = regTarget.slot(1);
+        int slotL2 = regArg.slot(0);
+        int slotH2 = regArg.slot(1);
 
         // and the low long values
         Builder.load(code, CD_long, slotL1);
@@ -554,7 +554,7 @@ public interface NumberSupport {
             case "Int16", "UInt16" -> code.ldc(0xFFFF).iand();
         }
 
-        RegisterInfo regArg     = bctx.loadArgument(code, nArgId);
+        RegisterInfo regArg = bctx.loadArgument(code, nArgId);
         return buildPrimitiveShr(bctx, code, regTarget, regArg, true);
     }
 
@@ -571,10 +571,10 @@ public interface NumberSupport {
      * @return the type of the result of the operation
      */
     default TypeConstant buildPrimitiveShr(BuildContext bctx,
-                                             CodeBuilder  code,
-                                             RegisterInfo regTarget,
-                                             RegisterInfo regArg,
-                                             boolean      fUnsigned) {
+                                           CodeBuilder  code,
+                                           RegisterInfo regTarget,
+                                           RegisterInfo regArg,
+                                           boolean      fUnsigned) {
         TypeConstant typeTarget = regTarget.type();
 
         switch (regArg.cd().descriptorString()) {
@@ -647,7 +647,7 @@ public interface NumberSupport {
                                               int          nArgValue) {
         switch (regTarget.type().getValueString()) {
             case "Int128", "UInt128" -> {
-                return buildLongLongSub(bctx, code, regTarget, nArgValue);
+                return buildLongLongSub(bctx, code, (MultipleSlot) regTarget, nArgValue);
             }
             default  -> throw new IllegalStateException("Unsupported type: "
                     + regTarget.type().getValueString());
@@ -671,16 +671,15 @@ public interface NumberSupport {
      */
     default TypeConstant buildLongLongSub(BuildContext bctx,
                                           CodeBuilder  code,
-                                          RegisterInfo regTarget,
+                                          MultipleSlot regTarget,
                                           int          nArgValue) {
 
-        BuildContext.MultipleSlot regArg
-                = (BuildContext.MultipleSlot) bctx.ensureRegister(code, nArgValue);
+        MultipleSlot regArg = (MultipleSlot) bctx.ensureRegister(code, nArgValue);
 
-        int   slotL1   = ((BuildContext.MultipleSlot) regTarget).slot(0);
-        int   slotH1   = ((BuildContext.MultipleSlot) regTarget).slot(1);
-        int   slotL2   = regArg.slot(0);
-        int   slotH2   = regArg.slot(1);
+        int slotL1 = regTarget.slot(0);
+        int slotH1 = regTarget.slot(1);
+        int slotL2 = regArg.slot(0);
+        int slotH2 = regArg.slot(1);
         buildLongLongSub(bctx, code, slotL1, slotH1, slotL2, slotH2);
         return regTarget.type();
     }
@@ -785,8 +784,7 @@ public interface NumberSupport {
         // store the result
         int slotResultHigh = bctx.storeTempValue(code, CD_long);
 
-        // check for borrow
-        // borrow occurs if l1L <u l2L
+        // check for borrow, which occurs if l1L <u l2L (less as unsigned)
         // which is equivalent to (l1L + MIN_VALUE) < (l2L + MIN_VALUE)
         Builder.load(code, CD_long, slotL1);
         code.ldc(Long.MIN_VALUE).ladd();

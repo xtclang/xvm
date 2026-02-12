@@ -18,7 +18,7 @@ public interface GenericTypeResolver {
      *
      * @param sFormalName  the formal parameter name
      *
-     * @return a resolved type
+     * @return a resolved type, or null if it could not be resolved
      */
     TypeConstant resolveGenericType(String sFormalName);
 
@@ -27,7 +27,7 @@ public interface GenericTypeResolver {
      *
      * @param constFormal  the formal constant
      *
-     * @return a resolved type
+     * @return a resolved type, or null if it could not be resolved
      */
     default TypeConstant resolveFormalType(FormalConstant constFormal) {
         return constFormal instanceof PropertyConstant

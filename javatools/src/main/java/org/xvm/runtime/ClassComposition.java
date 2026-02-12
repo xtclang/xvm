@@ -309,7 +309,7 @@ public class ClassComposition
             IdentityConstant idParent = idNested.getIdentityConstant();
             if (idParent.getConstantPool() != pool) {
                 if (idParent.isShared(pool)) {
-                    idParent  = (IdentityConstant) pool.register(idParent);
+                    idParent  = pool.register(idParent);
                     nidMethod = idParent.appendNestedIdentity(pool, idNested);
                 } else {
                     fCache = false;
@@ -351,7 +351,7 @@ public class ClassComposition
         if (idProp.getConstantPool() != pool) {
             if (idProp.getConstantPool() != pool) {
                 if (idProp.isShared(pool)) {
-                    idProp = (PropertyConstant) pool.register(idProp);
+                    idProp = pool.register(idProp);
                 } else {
                     // most likely this happens due to duck-typed properties; we may consider
                     // caching chains by name (the PropertyInfo is most likely cached already)
@@ -393,7 +393,7 @@ public class ClassComposition
         boolean      fShared = true;
         if (idProp.getConstantPool() != pool) {
             if (idProp.isShared(pool)) {
-                idProp = (PropertyConstant) pool.register(idProp);
+                idProp = pool.register(idProp);
             } else {
                 // see the comment in ensureGetterChain()
                 fShared = false;
@@ -538,7 +538,7 @@ public class ClassComposition
                 return type;
             }
         }
-        return (T) poolThis.register(type);
+        return poolThis.register(type);
     }
 
     /**
