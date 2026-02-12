@@ -492,11 +492,9 @@ public class xRTFunction
             if (method != null) {
                 Parameter parameter = getParam(iArg);
                 if (parameter.isTypeParameter()) {
-                    TypeHandle hType = (TypeHandle) hArg;
-                    resolver = sName ->
-                        sName.equals(parameter.getName())
-                            ? hType.getDataType()
-                            : null;
+                    resolver = GenericTypeResolver.chain(resolver,
+                        parameter.asGenericTypeResolver(
+                            method.getIdentityConstant(), ((TypeHandle) hArg).getDataType()));
                 }
             }
 

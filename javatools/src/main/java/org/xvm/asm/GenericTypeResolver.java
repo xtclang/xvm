@@ -4,6 +4,7 @@ package org.xvm.asm;
 import java.util.Map;
 
 import org.xvm.asm.constants.FormalConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 
@@ -29,7 +30,9 @@ public interface GenericTypeResolver {
      * @return a resolved type
      */
     default TypeConstant resolveFormalType(FormalConstant constFormal) {
-        return resolveGenericType(constFormal.getName());
+        return constFormal instanceof PropertyConstant
+            ? resolveGenericType(constFormal.getName())
+            : null;
     }
 
     /**
@@ -37,6 +40,12 @@ public interface GenericTypeResolver {
      */
     static GenericTypeResolver of(Map<FormalConstant, TypeConstant> mapResolve) {
         return new TypeParameterResolver(mapResolve);
+    }
+    /**
+     * Create a GenericTypeResolver based on two resolvers.
+     */
+    static GenericTypeResolver chain(GenericTypeResolver resolver1, GenericTypeResolver resolver2) {
+        return new ChainResolver(resolver1, resolver2);
     }
 
     /**
@@ -56,6 +65,36 @@ public interface GenericTypeResolver {
             return mapResolve.get(constFormal);
         }
 
-        Map<FormalConstant, TypeConstant> mapResolve;
+        private final Map<FormalConstant, TypeConstant> mapResolve;
+    }
+
+    /**
+     * Chain GenericTypeResolver implementation.
+     */
+    class ChainResolver
+            implements GenericTypeResolver {
+        public ChainResolver(GenericTypeResolver resolver1, GenericTypeResolver resolver2) {
+            this.resolver1 = resolver1;
+            this.resolver2 = resolver2;
+        }
+
+        @Override
+        public TypeConstant resolveGenericType(String sFormalName) {
+            TypeConstant type = resolver1.resolveGenericType(sFormalName);
+            return type == null
+                    ? resolver2.resolveGenericType(sFormalName)
+                    : type;
+        }
+
+        @Override
+        public TypeConstant resolveFormalType(FormalConstant constFormal) {
+            TypeConstant type = resolver1.resolveFormalType(constFormal);
+            return type == null
+                    ? resolver2.resolveFormalType(constFormal)
+                    : type;
+        }
+
+        private final GenericTypeResolver resolver1;
+        private final GenericTypeResolver resolver2;
     }
 }
