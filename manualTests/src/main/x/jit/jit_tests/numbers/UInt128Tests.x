@@ -60,6 +60,14 @@ class UInt128Tests {
         testUInt128AsNullableUInt128Return();
         testNullableUInt128ConditionalReturn();
 
+        // Op tests
+        // Add
+        testUInt128OpAddBig();
+        testUInt128OpAddLowOnly();
+        testUInt128OpAddOverflow();
+        // And
+        testUInt128OpAnd();
+
         console.print("<<<<< Finished UInt128Tests Conversion tests >>>>>");
     }
 
@@ -442,4 +450,37 @@ class UInt128Tests {
         }
         return False;
     }
+
+    // ----- Op tests (Add) ------------------------------------------------------------------------
+
+    void testUInt128OpAddBig() {
+        UInt128 n1 = 18446744073709551616;
+        UInt128 n2 = 18446744073709200000;
+        UInt128 n3 = n1 + n2;
+        assert n3 == 36893488147418751616;
+    }
+
+    void testUInt128OpAddLowOnly() {
+        UInt128 n1 = 1000;
+        UInt128 n2 = 19;
+        UInt128 n3 = n1 + n2;
+        assert n3 == 1019;
+    }
+
+    void testUInt128OpAddOverflow() {
+        UInt128 n1 = UInt128.MaxValue;
+        UInt128 n2 = 1;
+        UInt128 n3 = n1 + n2;
+        assert n3 == UInt128.MinValue;
+    }
+
+    // ----- Op tests (logical And) ----------------------------------------------------------------
+
+    void testUInt128OpAnd() {
+        UInt128 n1 = 0x00F2_F0F2_F0F0_F0F0_F0F0_F0F0_F0F0_F0F0;
+        UInt128 n2 = 0x0AAA_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA;
+        UInt128 n3 = n1 & n2;
+        assert n3 == 0x00A2_A0A2_A0A0_A0A0_A0A0_A0A0_A0A0_A0A0;
+    }
+
 }

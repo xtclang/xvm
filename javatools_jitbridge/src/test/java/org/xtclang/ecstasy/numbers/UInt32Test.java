@@ -3,6 +3,7 @@ package org.xtclang.ecstasy.numbers;
 import org.junit.jupiter.api.Test;
 import org.xtclang.ecstasy.OutOfBounds;
 import org.xtclang.ecstasy.nException;
+import org.xvm.javajit.Ctx;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -197,29 +198,33 @@ public class UInt32Test
     @Test
     public void shouldConvertToInt128() {
         for (int i : ensurePositiveIntTestData()) {
-            UInt32 n  = UInt32.$box(i);
-            Int128 n2 = n.toInt128$p(null, false, true);
-            assertEquals(i, n2.$lowValue);
-            assertEquals(0, n2.$highValue);
+            UInt32 n   = UInt32.$box(i);
+            Ctx    ctx = new Ctx(null, null);
+            long   n2  = n.toInt128$p(ctx, false, true);
+            assertEquals(i, n2);
+            assertEquals(0L, ctx.i0);
         }
     }
 
     @Test
     public void shouldConvertToUInt128() {
         for (int i : ensurePositiveIntTestData()) {
-            UInt32  n  = UInt32.$box(i);
-            UInt128 n2 = n.toUInt128$p(null, false, true);
-            assertEquals(0, n2.$highValue);
+            UInt32 n   = UInt32.$box(i);
+            Ctx    ctx = new Ctx(null, null);
+            long   n2  = n.toUInt128$p(ctx, false, true);
+            assertEquals(i, n2);
+            assertEquals(0L, ctx.i0);
         }
     }
 
     @Test
     public void shouldConvertToUInt128WithBoundsCheck() {
         for (int i : ensurePositiveIntTestData()) {
-            UInt32  n  = UInt32.$box(i);
-            UInt128 n2 = n.toUInt128$p(null, true, false);
-            assertEquals(i, n2.$lowValue);
-            assertEquals(0, n2.$highValue);
+            UInt32 n   = UInt32.$box(i);
+            Ctx    ctx = new Ctx(null, null);
+            long   n2  = n.toUInt128$p(ctx, true, false);
+            assertEquals(i, n2);
+            assertEquals(0L, ctx.i0);
         }
     }
 }

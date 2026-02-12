@@ -59,6 +59,17 @@ class Int128Tests {
         testInt128AsNullableInt128Return();
         testNullableInt128ConditionalReturn();
 
+        // Op tests
+        // Add
+        testInt128OpAddBig();
+        testInt128OpAddLowOnly();
+        testInt128OpAddFirstNegativeBig();
+        testInt128OpAddSecondNegativeBig();
+        testInt128OpAddBothNegativeBig();
+        testInt128OpAddOverflow();
+        // And
+        testInt128OpAnd();
+
         console.print("<<<<< Finished Int128Tests Conversion tests >>>>>");
     }
 
@@ -441,4 +452,58 @@ class Int128Tests {
         }
         return False;
     }
+
+    // ----- Op tests (Add) ------------------------------------------------------------------------
+
+    void testInt128OpAddBig() {
+        Int128 n1 = 18446744073709551616;
+        Int128 n2 = 18446744073709200000;
+        Int128 n3 = n1 + n2;
+        assert n3 == 36893488147418751616;
+    }
+
+    void testInt128OpAddLowOnly() {
+        Int128 n1 = 1000;
+        Int128 n2 = 19;
+        Int128 n3 = n1 + n2;
+        assert n3 == 1019;
+    }
+
+    void testInt128OpAddFirstNegativeBig() {
+        Int128 n1 = -18446744073709551616;
+        Int128 n2 = 18446744073709200000;
+        Int128 n3 = n1 + n2;
+        assert n3 == -351616;
+    }
+
+    void testInt128OpAddSecondNegativeBig() {
+        Int128 n1 = 18446744073709551616;
+        Int128 n2 = -18446744073709200000;
+        Int128 n3 = n1 + n2;
+        assert n3 == 351616;
+    }
+
+    void testInt128OpAddBothNegativeBig() {
+        Int128 n1 = -18446744073709551616;
+        Int128 n2 = -18446744073709200000;
+        Int128 n3 = n1 + n2;
+        assert n3 == -36893488147418751616;
+    }
+
+    void testInt128OpAddOverflow() {
+        Int128 n1 = Int128.MaxValue;
+        Int128 n2 = 1;
+        Int128 n3 = n1 + n2;
+        assert n3 == Int128.MinValue;
+    }
+
+    // ----- Op tests (logical And) ----------------------------------------------------------------
+
+    void testInt128OpAnd() {
+        Int128 n1 = 0x00F2_F0F2_F0F0_F0F0_F0F0_F0F0_F0F0_F0F0;
+        Int128 n2 = 0x0AAA_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA;
+        Int128 n3 = n1 & n2;
+        assert n3 == 0x00A2_A0A2_A0A0_A0A0_A0A0_A0A0_A0A0_A0A0;
+    }
+
 }

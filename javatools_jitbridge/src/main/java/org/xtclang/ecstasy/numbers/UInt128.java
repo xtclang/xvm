@@ -32,18 +32,18 @@ public class UInt128 extends IntNumber {
         if (toString == null) {
             toString = $toString
                     = org.xtclang.ecstasy.text.String.of(ctx, new LongLong($lowValue, $highValue)
-                    .toString());
+                    .toUnsignedBigInteger().toString());
         }
         return toString;
     }
 
     /**
-     * Obtain an Int128 for two 64-bit "primitive" long values.
+     * Obtain a UInt128 for two 64-bit "primitive" long values.
      *
-     * @return an Int128 reference
+     * @return a UInt128 reference
      */
-    public static Int128 $box(long lowValue, long highValue) {
-        return new Int128(lowValue, highValue);
+    public static UInt128 $box(long lowValue, long highValue) {
+        return new UInt128(lowValue, highValue);
     }
 
     // ----- conversion ----------------------------------------------------------------------------
@@ -56,7 +56,7 @@ public class UInt128 extends IntNumber {
      * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
      *                         default value (in this case False)
      *
-     * @return this Int8 value as a Java {@code int}
+     * @return this UInt128 value as a Java {@code int}
      */
     public int toInt8$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         if (!dfltCheckBounds && checkBounds && $highValue != 0
@@ -76,7 +76,7 @@ public class UInt128 extends IntNumber {
      * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
      *                         default value (in this case False)
      *
-     * @return this Int8 value as a Java {@code int}
+     * @return this UInt128 value as a Java {@code int}
      */
     public int toInt16$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         if (!dfltCheckBounds && checkBounds && $highValue != 0
@@ -96,7 +96,7 @@ public class UInt128 extends IntNumber {
      * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
      *                         default value (in this case False)
      *
-     * @return this Int8 value as a Java {@code int}
+     * @return this UInt128 value as a Java {@code int}
      */
     public int toInt32$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         if (!dfltCheckBounds && checkBounds && $highValue != 0
@@ -116,7 +116,7 @@ public class UInt128 extends IntNumber {
      * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
      *                         default value (in this case False)
      *
-     * @return this Int8 value as a Java long
+     * @return this UInt128 value as a Java long
      */
     public long toInt64$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         if (!dfltCheckBounds && checkBounds && $highValue != 0 && $lowValue < 0) {
@@ -135,15 +135,17 @@ public class UInt128 extends IntNumber {
      * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
      *                         default value (in this case False)
      *
-     * @return this Int8 value as an Int128
+     * @return this UInt128 value as an Int128
      */
-    public Int128 toInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public long toInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         if (!dfltCheckBounds && checkBounds && $highValue < 0) {
             OutOfBounds oob = new OutOfBounds(ctx);
             throw oob.$init(ctx, "UInt128 value " + new LongLong($lowValue, $highValue)
                     + " is not a valid Int128 value");
         }
-        return new Int128($lowValue, $highValue);
+        // load the high long value to the context and return the low value
+        ctx.i0 = $highValue;
+        return $lowValue;
     }
 
     /**
@@ -154,7 +156,7 @@ public class UInt128 extends IntNumber {
      * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
      *                         default value (in this case False)
      *
-     * @return this Int8 value as a Java {@code int}
+     * @return this UInt128 value as a Java {@code int}
      */
     public int toUInt8$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         if (!dfltCheckBounds && checkBounds && $highValue != 0
@@ -174,7 +176,7 @@ public class UInt128 extends IntNumber {
      * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
      *                         default value (in this case False)
      *
-     * @return this Int8 value as a Java {@code int}
+     * @return this UInt128 value as a Java {@code int}
      */
     public int toUInt16$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         if (!dfltCheckBounds && checkBounds && $highValue != 0
@@ -194,7 +196,7 @@ public class UInt128 extends IntNumber {
      * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
      *                         default value (in this case False)
      *
-     * @return this Int8 value as a Java {@code int}
+     * @return this UInt128 value as a Java {@code int}
      */
     public int toUInt32$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         if (!dfltCheckBounds && checkBounds && $highValue != 0
@@ -214,7 +216,7 @@ public class UInt128 extends IntNumber {
      * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
      *                         default value (in this case False)
      *
-     * @return this Int8 value as a Java long
+     * @return this UInt128 value as a Java long
      */
     public long toUInt64$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         if (!dfltCheckBounds && checkBounds && $highValue != 0 && $lowValue < 0) {
@@ -233,10 +235,12 @@ public class UInt128 extends IntNumber {
      * @param dfltCheckBounds  if {@code true} ignore the checkBounds parameter and use the
      *                         default value (in this case False)
      *
-     * @return this Int8 value as a UInt128
+     * @return this UInt128 value as a UInt128
      */
-    public UInt128 toUInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return this;
+    public long toUInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        // load the high long value to the context and return the low value
+        ctx.i0 = $highValue;
+        return $lowValue;
     }
 
     // ----- Orderable interface -------------------------------------------------------------------

@@ -39,6 +39,10 @@ class UInt16ConvertTests {
         testUInt16ToInt64(500, 500);
         testUInt16ToInt64(Int16.MaxValue, 32767);
 
+        testUInt16ToInt128(0, 0);
+        testUInt16ToInt128(500, 500);
+        testUInt16ToInt128(Int16.MaxValue, 32767);
+
         testUInt16ToUInt8(0, 0);
         testUInt16ToUInt8(500, 244);
         testUInt16ToUInt8(127, 127);
@@ -63,6 +67,10 @@ class UInt16ConvertTests {
         testUInt16ToUInt64(0, 0);
         testUInt16ToUInt64(500, 500);
         testUInt16ToUInt64(Int16.MaxValue, 32767);
+
+        testUInt16ToUInt128(0, 0);
+        testUInt16ToUInt128(500, 500);
+        testUInt16ToUInt128(Int16.MaxValue, 32767);
 
         console.print("<<<<< Finished UInt16 Conversion tests >>><<");
     }
@@ -147,6 +155,17 @@ class UInt16ConvertTests {
         assert b == expected;
     }
 
+    void testUInt16ToInt128(UInt16 a, Int128 expected) {
+        console.print("Test Int16 ", True);
+        console.print(a, True);
+        console.print(" to Int128 expected=", True);
+        console.print(expected, True);
+        Int128 b = a.toInt128();
+        console.print(" actual=", True);
+        console.print(b);
+        assert b == expected;
+    }
+
     void testUInt16ToUInt8(UInt16 a, UInt8 expected) {
         console.print("Test Int16 ", True);
         console.print(a, True);
@@ -222,6 +241,17 @@ class UInt16ConvertTests {
         console.print(" to UInt64 expected=", True);
         console.print(expected, True);
         UInt64 b = a.toUInt64();
+        console.print(" actual=", True);
+        console.print(b);
+        assert b == expected;
+    }
+
+    void testUInt16ToUInt128(UInt16 a, UInt128 expected) {
+        console.print("Test Int16 ", True);
+        console.print(a, True);
+        console.print(" to UInt128 expected=", True);
+        console.print(expected, True);
+        UInt128 b = a.toUInt128();
         console.print(" actual=", True);
         console.print(b);
         assert b == expected;

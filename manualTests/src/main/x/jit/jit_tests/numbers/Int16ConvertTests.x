@@ -43,6 +43,12 @@ class Int16ConvertTests {
         testInt16ToInt64(100, 100);
         testInt16ToInt64(Int16.MaxValue, 32767);
 
+        testInt16ToInt128(Int16.MinValue, -32768);
+        testInt16ToInt128(-100, -100);
+        testInt16ToInt128(0, 0);
+        testInt16ToInt128(100, 100);
+        testInt16ToInt128(Int16.MaxValue, 32767);
+
         // Int16.MinValue is 0x8000 the lowest byte is zero
         testInt16ToUInt8(Int16.MinValue, 0);
         testInt16ToUInt8(-128, 128);
@@ -106,6 +112,20 @@ class Int16ConvertTests {
         testInt16ToUInt64WithBoundsCheck(100, 100, False);
         testInt16ToUInt64WithBoundsCheck(Int16.MaxValue, 32767, False);
 
+        testInt16ToUInt128(Int16.MinValue, 340282366920938463463374607431768178688);
+        testInt16ToUInt128(-1, 340282366920938463463374607431768211455);
+        testInt16ToUInt128(-100, 340282366920938463463374607431768211356);
+        testInt16ToUInt128(0, 0);
+        testInt16ToUInt128(100, 100);
+        testInt16ToUInt128(Int16.MaxValue, 32767);
+
+        testInt16ToUInt128WithBoundsCheck(Int16.MinValue, 0, True);
+        testInt16ToUInt128WithBoundsCheck(-1, 0, True);
+        testInt16ToUInt128WithBoundsCheck(-100, 0, True);
+        testInt16ToUInt128WithBoundsCheck(0, 0, False);
+        testInt16ToUInt128WithBoundsCheck(100, 100, False);
+        testInt16ToUInt128WithBoundsCheck(Int16.MaxValue, 32767, False);
+
         console.print("<<<<< Finished Int16 Conversion tests >>><<");
     }
 
@@ -166,6 +186,17 @@ class Int16ConvertTests {
         console.print(" to Int64 expected=", True);
         console.print(expected, True);
         Int64 b = a;
+        console.print(" actual=", True);
+        console.print(b);
+        assert b == expected;
+    }
+
+    void testInt16ToInt128(Int16 a, Int128 expected) {
+        console.print("Test Int16 ", True);
+        console.print(a, True);
+        console.print(" to Int128 expected=", True);
+        console.print(expected, True);
+        Int128 b = a;
         console.print(" actual=", True);
         console.print(b);
         assert b == expected;
@@ -283,6 +314,35 @@ class Int16ConvertTests {
         } else {
             console.print(" to UInt64 succeeds");
             UInt64 b = a.toUInt64(True);
+            assert b == expected;
+        }
+    }
+
+    void testInt16ToUInt128(Int16 a, UInt128 expected) {
+        console.print("Test Int16 ", True);
+        console.print(a, True);
+        console.print(" to UInt128 expected=", True);
+        console.print(expected, True);
+        UInt128 b = a.toUInt128();
+        console.print(" actual=", True);
+        console.print(b);
+        assert b == expected;
+    }
+
+    void testInt16ToUInt128WithBoundsCheck(Int16 a, UInt128 expected, Boolean oob) {
+        console.print("Test Int16 ", True);
+        console.print(a, True);
+        if (oob) {
+            console.print(" to UInt128 throws OutOfBounds");
+            try {
+                a.toUInt128(True);
+                assert as "Expected OutOfBounds to be thrown";
+            } catch (OutOfBounds e) {
+                // expected
+            }
+        } else {
+            console.print(" to UInt128 succeeds");
+            UInt128 b = a.toUInt128(True);
             assert b == expected;
         }
     }

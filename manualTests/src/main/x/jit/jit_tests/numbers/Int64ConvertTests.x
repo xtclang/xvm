@@ -76,6 +76,14 @@ class Int64ConvertTests {
         testInt64ToInt64(0x7FFFFFFF, 0x7FFFFFFF);
         testInt64ToInt64(Int64.MaxValue, Int64.MaxValue);
 
+        testInt64ToInt128(Int64.MinValue, Int64.MinValue);
+        testInt64ToInt128(-0x80000000, -0x80000000);
+        testInt64ToInt128(-100, -100);
+        testInt64ToInt128(0, 0);
+        testInt64ToInt128(100, 100);
+        testInt64ToInt128(0x7FFFFFFF, 0x7FFFFFFF);
+        testInt64ToInt128(Int64.MaxValue, Int64.MaxValue);
+
         // Int64.MinValue is -0x8000_0000_0000_0000 the lowest byte is zero
         testInt64ToUInt8(Int64.MinValue, 0);
         testInt64ToInt8(-0x8000, 0);
@@ -139,6 +147,20 @@ class Int64ConvertTests {
         testInt64ToUInt64WithBoundsCheck(0, 0, False);
         testInt64ToUInt64WithBoundsCheck(100, 100, False);
         testInt64ToUInt64WithBoundsCheck(Int64.MaxValue, 0x7FFF_FFFF_FFFF_FFFF, False);
+
+        testInt64ToUInt128(Int64.MinValue, 340282366920938463454151235394913435648);
+        testInt64ToUInt128(-1, 340282366920938463463374607431768211455);
+        testInt64ToUInt128(-100, 340282366920938463463374607431768211356);
+        testInt64ToUInt128(0, 0);
+        testInt64ToUInt128(100, 100);
+        testInt64ToUInt128(Int64.MaxValue, 0x7FFF_FFFF_FFFF_FFFF);
+
+        testInt64ToUInt128WithBoundsCheck(Int64.MinValue, 0, True);
+        testInt64ToUInt128WithBoundsCheck(-1, 0, True);
+        testInt64ToUInt128WithBoundsCheck(-100, 0, True);
+        testInt64ToUInt128WithBoundsCheck(0, 0, False);
+        testInt64ToUInt128WithBoundsCheck(100, 100, False);
+        testInt64ToUInt128WithBoundsCheck(Int64.MaxValue, 0x7FFF_FFFF_FFFF_FFFF, False);
 
         console.print("<<<<< Finished Int64 Conversion tests >>><<");
     }
@@ -236,6 +258,17 @@ class Int64ConvertTests {
         console.print(" to Int64 expected=", True);
         console.print(expected, True);
         Int64 b = a;
+        console.print(" actual=", True);
+        console.print(b);
+        assert b == expected;
+    }
+
+    void testInt64ToInt128(Int64 a, Int128 expected) {
+        console.print("Test Int64 ", True);
+        console.print(a, True);
+        console.print(" to Int128 expected=", True);
+        console.print(expected, True);
+        Int128 b = a;
         console.print(" actual=", True);
         console.print(b);
         assert b == expected;
@@ -353,6 +386,35 @@ class Int64ConvertTests {
         } else {
             console.print(" to UInt64 succeeds");
             UInt64 b = a.toUInt64(True);
+            assert b == expected;
+        }
+    }
+
+    void testInt64ToUInt128(Int64 a, UInt128 expected) {
+        console.print("Test Int64 ", True);
+        console.print(a, True);
+        console.print(" to UInt128 expected=", True);
+        console.print(expected, True);
+        UInt128 b = a.toUInt128();
+        console.print(" actual=", True);
+        console.print(b);
+        assert b == expected;
+    }
+
+    void testInt64ToUInt128WithBoundsCheck(Int64 a, UInt128 expected, Boolean oob) {
+        console.print("Test Int64 ", True);
+        console.print(a, True);
+        if (oob) {
+            console.print(" to UInt128 throws OutOfBounds");
+            try {
+                a.toUInt128(True);
+                assert as "Expected OutOfBounds to be thrown";
+            } catch (OutOfBounds e) {
+                // expected
+            }
+        } else {
+            console.print(" to UInt128 succeeds");
+            UInt128 b = a.toUInt128(True);
             assert b == expected;
         }
     }

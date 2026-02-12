@@ -5,6 +5,7 @@ import java.util.Random;
 import org.junit.jupiter.api.Test;
 import org.xtclang.ecstasy.OutOfBounds;
 import org.xtclang.ecstasy.nException;
+import org.xvm.javajit.Ctx;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -243,9 +244,10 @@ public class Int128Test
             long   low  = rnd.nextLong();
             long   high = rnd.nextLong();
             Int128 n    = new Int128(low, high);
-            Int128 n2 = n.toInt128$p(null, false, true);
-            assertEquals(n.$lowValue, n2.$lowValue);
-            assertEquals(n.$highValue, n2.$highValue);
+            Ctx    ctx  = new Ctx(null, null);
+            long   n2   = n.toInt128$p(ctx, false, true);
+            assertEquals(n.$lowValue, n2);
+            assertEquals(n.$highValue, ctx.i0);
         }
     }
 
@@ -256,16 +258,18 @@ public class Int128Test
             long    low  = rnd.nextLong();
             long    high = rnd.nextLong();
             Int128  n    = new Int128(low, high);
-            UInt128 n2   = n.toUInt128$p(null, false, true);
-            assertEquals(low, n2.$lowValue);
-            assertEquals(high, n2.$highValue);
+            Ctx     ctx  = new Ctx(null, null);
+            long    n2   = n.toUInt128$p(ctx, false, true);
+            assertEquals(n.$lowValue, n2);
+            assertEquals(n.$highValue, ctx.i0);
         }
     }
 
     @Test
     public void shouldConvertToUInt128WithBoundsCheck() {
         for (long i : ensureLongTestData()) {
-            Int128 n  = new Int128(i, i < 0L ? -1L : 0L);
+            Int128 n   = new Int128(i, i < 0L ? -1L : 0L);
+            Ctx    ctx = new Ctx(null, null);
             if (i < 0L) {
                 try {
                     n.toUInt128$p(null, true, false);
@@ -273,9 +277,9 @@ public class Int128Test
                     assertInstanceOf(OutOfBounds.class, e.exception);
                 }
             } else {
-                UInt128 n2 = n.toUInt128$p(null, true, false);
-                assertEquals(n.$lowValue, n2.$lowValue);
-                assertEquals(0, n2.$highValue);
+                long n2 = n.toUInt128$p(ctx, true, false);
+                assertEquals(n.$lowValue, n2);
+                assertEquals(n.$highValue, ctx.i0);
             }
         }
     }

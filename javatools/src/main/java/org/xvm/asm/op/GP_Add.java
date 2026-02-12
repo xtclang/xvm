@@ -78,4 +78,12 @@ public class GP_Add
                                         RegisterInfo regArg) {
         buildPrimitiveAdd(bctx, code, regTarget);
     }
+
+    @Override
+    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx,
+                                                   CodeBuilder  code,
+                                                   RegisterInfo regTarget,
+                                                   int          nArgValue) {
+        return buildXvmPrimitiveAdd(bctx, code, regTarget, nArgValue);
+    }
 }

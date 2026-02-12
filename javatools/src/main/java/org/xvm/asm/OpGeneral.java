@@ -227,6 +227,8 @@ public abstract class OpGeneral
             if (cdTarget.isPrimitive()) {
                 assertNotMultislot(regTarget);
                 typeResult = buildOptimizedBinary(bctx, code, regTarget, m_nArgValue);
+            } else if (typeTarget.isXvmPrimitive()) {
+                typeResult = buildXvmOptimizedBinary(bctx, code, regTarget, m_nArgValue);
             } else {
                 MethodInfo    method   = findOpMethod(bctx, typeTarget);
                 String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
@@ -240,25 +242,10 @@ public abstract class OpGeneral
                     md = jmd.standardMD;
                 }
 
-                if (regTarget.type().isXvmPrimitive()) {
-                    assert jmd.isOptimized;
-
-                    bctx.loadCtx(code);
-                    regTarget.load(code);
-                    bctx.loadArgument(code, m_nArgValue);
-                    code.invokestatic(regTarget.cd(), sJitName, md);
-                    // load the remaining returns from the context
-                    JitParamDesc[] optRets = jmd.optimizedReturns;
-                    for (int i = 1; i < optRets.length; ++i) {
-                        JitParamDesc pd = optRets[i];
-                        Builder.loadFromContext(code, pd.cd, pd.altIndex);
-                    }
-                } else {
-                    regTarget.load(code);
-                    bctx.loadCtx(code);
-                    bctx.loadArgument(code, m_nArgValue);
-                    code.invokevirtual(regTarget.cd(), sJitName, md);
-                }
+                regTarget.load(code);
+                bctx.loadCtx(code);
+                bctx.loadArgument(code, m_nArgValue);
+                code.invokevirtual(regTarget.cd(), sJitName, md);
 
                 typeResult = method.getSignature().getRawReturns()[0]; // could differ from target
             }

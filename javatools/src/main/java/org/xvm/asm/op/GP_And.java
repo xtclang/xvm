@@ -10,6 +10,7 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpGeneral;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.NumberSupport;
 import org.xvm.javajit.RegisterInfo;
@@ -63,5 +64,13 @@ public class GP_And
                                         RegisterInfo regTarget,
                                         RegisterInfo regArg) {
         buildPrimitiveAnd(bctx, code, regTarget);
+    }
+
+    @Override
+    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx,
+                                                   CodeBuilder  code,
+                                                   RegisterInfo regTarget,
+                                                   int          nArgValue) {
+        return buildXvmPrimitiveAnd(bctx, code, regTarget, nArgValue);
     }
 }
