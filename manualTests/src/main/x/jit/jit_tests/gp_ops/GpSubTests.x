@@ -95,21 +95,19 @@ class GpSubTests {
     }
 
     void testGpSubInt128() {
-// TODO: Need Int128 support
-//        Int128 value1 = 0;
-//        Int128 value2 = 76;
-//        Int128 value3 = 66;
-//        value1 = value2 - value3;
-//        assert value1 == 10;
+        Int128 value1 = 0;
+        Int128 value2 = 76;
+        Int128 value3 = 66;
+        value1 = value2 - value3;
+        assert value1 == 10;
     }
 
     void testGpSubUInt128() {
-// TODO: Need UInt128 support
-//        UInt128 value1 = 0;
-//        UInt128 value2 = 0xFFFFFFF1;
-//        UInt128 value3 = 1;
-//        value1 = value2 - value3;
-//        assert value1 == 0xFFFFFFF0;
+        UInt128 value1 = 0;
+        UInt128 value2 = 0xFFFFFFF1;
+        UInt128 value3 = 1;
+        value1 = value2 - value3;
+        assert value1 == 0xFFFFFFF0;
     }
 
     void testGpSubDec() {

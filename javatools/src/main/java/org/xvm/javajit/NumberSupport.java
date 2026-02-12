@@ -18,6 +18,7 @@ import static org.xvm.javajit.Builder.MD_FloorModI;
 import static org.xvm.javajit.Builder.MD_FloorModJ;
 import static org.xvm.javajit.Builder.MD_UDivInt;
 import static org.xvm.javajit.Builder.MD_UDivLong;
+import static org.xvm.javajit.RegisterInfo.JAVA_STACK;
 
 /**
  * A "mixin" interface to generate bytecodes for operations on Ecstasy numeric types.
@@ -76,6 +77,9 @@ public interface NumberSupport {
      * (T + T -> T).
      * <p>
      * Neither the target nor argument should have been loaded to the stack.
+     * <p>
+     * The result will be represented by two Java long primitive values on the stack. The top of
+     * the stack will be the high long value and below that will be the low long value.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -94,28 +98,117 @@ public interface NumberSupport {
         int   slotH1   = ((BuildContext.MultipleSlot) regTarget).slot(1);
         int   slotL2   = regArg.slot(0);
         int   slotH2   = regArg.slot(1);
+        buildLongLongAdd(bctx, code, slotL1, slotH1, slotL2, slotH2);
+        return regTarget.type();
+    }
+
+    /**
+     * Build the optimized binary operation that will add two XVM primitive types that are each
+     * represented by two Java long primitive values.
+     * (T + T -> T).
+     * <p>
+     * Neither the target nor argument should have been loaded to the stack.
+     * <p>
+     * The result will be represented by two Java long primitive values on the stack. The top of
+     * the stack will be the high long value and below that will be the low long value.
+     *
+     * @param code       the code builder to add the op codes to
+     * @param bctx       the current build context
+     * @param slotL1     the slot containing the low long for the first value
+     * @param slotH1     the slot containing the high long for the first value
+     * @param slotL2     the slot containing the low long for the second value
+     * @param slotH2     the slot containing the high long for the second value
+     */
+    default void buildLongLongAdd(BuildContext bctx,
+                                  CodeBuilder code,
+                                  int slotL1,
+                                  int slotH1,
+                                  int slotL2,
+                                  int slotH2) {
+        buildLongLongAdd(bctx, code, slotL1, slotH1, slotL2, slotH2, 0L, 0L);
+    }
+
+    /**
+     * Build the optimized binary operation that will add two XVM primitive types that are each
+     * represented by two Java long primitive values.
+     * (T + T -> T).
+     * <p>
+     * Neither the target nor argument should have been loaded to the stack.
+     * <p>
+     * The first XVM primitive is stored in slots, the XVM primitive to add is represented by the
+     * two long parameters.
+     * <p>
+     * The result will be represented by two Java long primitive values on the stack. The top of
+     * the stack will be the high long value and below that will be the low long value.
+     *
+     * @param code       the code builder to add the op codes to
+     * @param bctx       the current build context
+     * @param slotL1     the slot containing the low long for the value to add to
+     * @param slotH1     the slot containing the high long for the value to add to
+     * @param valueLow   the long value to add to the low value
+     * @param valueHigh  the long value to add to the high value
+     */
+    default void buildLongLongAdd(BuildContext bctx,
+                                  CodeBuilder code,
+                                  int slotL1,
+                                  int slotH1,
+                                  long valueLow,
+                                  long valueHigh) {
+        buildLongLongAdd(bctx, code, slotL1, slotH1, JAVA_STACK, JAVA_STACK, valueLow, valueHigh);
+    }
+
+    /**
+     * Build the optimized binary operation that will add two XVM primitive types that are each
+     * represented by two Java long primitive values.
+     * (T + T -> T).
+     * <p>
+     * Neither the target nor argument should have been loaded to the stack.
+     * <p>
+     * The result will be represented by two Java long primitive values on the stack. The top of
+     * the stack will be the high long value and below that will be the low long value.
+     *
+     * @param code       the code builder to add the op codes to
+     * @param bctx       the current build context
+     * @param slotL1     the slot containing the low long for the first value
+     * @param slotH1     the slot containing the high long for the first value
+     * @param slotL2     the slot containing the low long for the second value
+     * @param slotH2     the slot containing the high long for the second value
+     * @param valueLow   the long value to add to the low value if {@code slotL2} is
+     *                   {@link RegisterInfo#JAVA_STACK}
+     * @param valueHigh  the long value to add to the high value if {@code slotH2} is
+     *                   {@link RegisterInfo#JAVA_STACK}
+     */
+    default void buildLongLongAdd(BuildContext bctx,
+                                  CodeBuilder code,
+                                  int slotL1,
+                                  int slotH1,
+                                  int slotL2,
+                                  int slotH2,
+                                  long valueLow,
+                                  long valueHigh) {
+
         Label labelEnd = code.newLabel();
 
         // add the low long values
         Builder.load(code, CD_long, slotL1);
-        Builder.load(code, CD_long, slotL2);
+        loadSlotOrConstant(code, slotL2, valueLow);
         code.ladd();
         // store the result
         int slotSumLow = bctx.storeTempValue(code, CD_long);
         // add the high long values
         Builder.load(code, CD_long, slotH1);
-        Builder.load(code, CD_long, slotH2);
+        loadSlotOrConstant(code, slotH2, valueHigh);
         code.ladd();
         // store the result
         int slotSumHigh = bctx.storeTempValue(code, CD_long);
-        // check for overflow
 
+        // check for overflow
         // equivalent to  if (((l1L & l2L) | ((l1L | l2L) & ~lrL)) < 0) {
         Builder.load(code, CD_long, slotL1);
-        Builder.load(code, CD_long, slotL2);
+        loadSlotOrConstant(code, slotL2, valueLow);
         code.land();
         Builder.load(code, CD_long, slotL1);
-        Builder.load(code, CD_long, slotL2);
+        loadSlotOrConstant(code, slotL2, valueLow);
         code.lor();
         Builder.load(code, CD_long, slotSumLow);
         code.ldc(-1L).lxor().land().lor()
@@ -129,10 +222,15 @@ public interface NumberSupport {
         // store the low and high result on the stack
         Builder.load(code, CD_long, slotSumLow);
         Builder.load(code, CD_long, slotSumHigh);
-
-        return regTarget.type();
     }
 
+    private void loadSlotOrConstant(CodeBuilder code, int slot, long value) {
+        if (slot == RegisterInfo.JAVA_STACK) {
+            code.loadConstant(value);
+        } else {
+            Builder.load(code, CD_long, slot);
+        }
+    }
     /**
      * Build the optimized binary operation that will logically AND two primitive types from the
      * stack (T & T -> T).
@@ -528,6 +626,183 @@ public interface NumberSupport {
             case "D" -> code.dsub();
             default  -> throw new IllegalStateException();
         }
+    }
+
+    /**
+     * Build the optimized binary operation that will subtract one XVM primitive type from another
+     * (T - T -> T).
+     * <p>
+     * Each type may be represented by one or more Java primitive types.
+     * <p>
+     * Neither the target nor argument should have been loaded to the stack.
+     *
+     * @param bctx       the current build context
+     * @param code       the code builder to add the op codes to
+     * @param regTarget  the register containing the target of the operation
+     * @param nArgValue  the register containing the operation argument
+     */
+    default TypeConstant buildXvmPrimitiveSub(BuildContext bctx,
+                                              CodeBuilder  code,
+                                              RegisterInfo regTarget,
+                                              int          nArgValue) {
+        switch (regTarget.type().getValueString()) {
+            case "Int128", "UInt128" -> {
+                return buildLongLongSub(bctx, code, regTarget, nArgValue);
+            }
+            default  -> throw new IllegalStateException("Unsupported type: "
+                    + regTarget.type().getValueString());
+        }
+    }
+
+    /**
+     * Build the optimized binary operation that will subtract one XVM primitive type from another
+     * where each is represented by two Java long primitive values.
+     * (T - T -> T).
+     * <p>
+     * Neither the target nor argument should have been loaded to the stack.
+     * <p>
+     * The result will be represented by two Java long primitive values on the stack. The top of
+     * the stack will be the high long value and below that will be the low long value.
+     *
+     * @param bctx       the current build context
+     * @param code       the code builder to add the op codes to
+     * @param regTarget  the register containing the target of the operation
+     * @param nArgValue  the register containing the operation argument
+     */
+    default TypeConstant buildLongLongSub(BuildContext bctx,
+                                          CodeBuilder  code,
+                                          RegisterInfo regTarget,
+                                          int          nArgValue) {
+
+        BuildContext.MultipleSlot regArg
+                = (BuildContext.MultipleSlot) bctx.ensureRegister(code, nArgValue);
+
+        int   slotL1   = ((BuildContext.MultipleSlot) regTarget).slot(0);
+        int   slotH1   = ((BuildContext.MultipleSlot) regTarget).slot(1);
+        int   slotL2   = regArg.slot(0);
+        int   slotH2   = regArg.slot(1);
+        buildLongLongSub(bctx, code, slotL1, slotH1, slotL2, slotH2);
+        return regTarget.type();
+    }
+
+    /**
+     * Build the optimized binary operation that will subtract one XVM primitive type from another
+     * where each is represented by two Java long primitive values.
+     * (T - T -> T).
+     * <p>
+     * Neither the target nor argument should have been loaded to the stack.
+     * <p>
+     * The result will be represented by two Java long primitive values on the stack. The top of
+     * the stack will be the high long value and below that will be the low long value.
+     *
+     * @param code       the code builder to add the op codes to
+     * @param bctx       the current build context
+     * @param slotL1     the slot containing the low long for the first value
+     * @param slotH1     the slot containing the high long for the first value
+     * @param slotL2     the slot containing the low long for the second value
+     * @param slotH2     the slot containing the high long for the second value
+     */
+    default void buildLongLongSub(BuildContext bctx,
+                                  CodeBuilder code,
+                                  int slotL1,
+                                  int slotH1,
+                                  int slotL2,
+                                  int slotH2) {
+        buildLongLongSub(bctx, code, slotL1, slotH1, slotL2, slotH2, 0L, 0L);
+    }
+
+    /**
+     * Build the optimized binary operation that will subtract one XVM primitive type from another
+     * where each is represented by two Java long primitive values.
+     * (T - T -> T).
+     * <p>
+     * Neither the target nor argument should have been loaded to the stack.
+     * <p>
+     * The first XVM primitive is stored in slots, the XVM primitive to subtract is represented by
+     * the two long parameters.
+     * <p>
+     * The result will be represented by two Java long primitive values on the stack. The top of
+     * the stack will be the high long value and below that will be the low long value.
+     *
+     * @param code       the code builder to add the op codes to
+     * @param bctx       the current build context
+     * @param slotL1     the slot containing the low long for the value to subtract from
+     * @param slotH1     the slot containing the high long for the value to subtract from
+     * @param valueLow   the long value to subtract from the low value
+     * @param valueHigh  the long value to subtract from the high value
+     */
+    default void buildLongLongSub(BuildContext bctx,
+                                  CodeBuilder code,
+                                  int slotL1,
+                                  int slotH1,
+                                  long valueLow,
+                                  long valueHigh) {
+        buildLongLongSub(bctx, code, slotL1, slotH1, JAVA_STACK, JAVA_STACK, valueLow, valueHigh);
+    }
+
+    /**
+     * Build the optimized binary operation that will subtract one XVM primitive type from another
+     * where each is represented by two Java long primitive values.
+     * (T - T -> T).
+     * <p>
+     * Neither the target nor argument should have been loaded to the stack.
+     * <p>
+     * The result will be represented by two Java long primitive values on the stack. The top of
+     * the stack will be the high long value and below that will be the low long value.
+     *
+     * @param code       the code builder to add the op codes to
+     * @param bctx       the current build context
+     * @param slotL1     the slot containing the low long for the first value
+     * @param slotH1     the slot containing the high long for the first value
+     * @param slotL2     the slot containing the low long for the second value
+     * @param slotH2     the slot containing the high long for the second value
+     * @param valueLow   the long value to subtract from the low value if {@code slotL2} is
+     *                   {@link RegisterInfo#JAVA_STACK}
+     * @param valueHigh  the long value to subtract from the high value if {@code slotH2} is
+     *                   {@link RegisterInfo#JAVA_STACK}
+     */
+    default void buildLongLongSub(BuildContext bctx,
+                                  CodeBuilder code,
+                                  int slotL1,
+                                  int slotH1,
+                                  int slotL2,
+                                  int slotH2,
+                                  long valueLow,
+                                  long valueHigh) {
+
+        Label labelEnd = code.newLabel();
+
+        // subtract the low long values
+        Builder.load(code, CD_long, slotL1);
+        loadSlotOrConstant(code, slotL2, valueLow);
+        code.lsub();
+        // store the result
+        int slotResultLow = bctx.storeTempValue(code, CD_long);
+        // subtract the high long values
+        Builder.load(code, CD_long, slotH1);
+        loadSlotOrConstant(code, slotH2, valueHigh);
+        code.lsub();
+        // store the result
+        int slotResultHigh = bctx.storeTempValue(code, CD_long);
+
+        // check for borrow
+        // borrow occurs if l1L <u l2L
+        // which is equivalent to (l1L + MIN_VALUE) < (l2L + MIN_VALUE)
+        Builder.load(code, CD_long, slotL1);
+        code.ldc(Long.MIN_VALUE).ladd();
+        loadSlotOrConstant(code, slotL2, valueLow);
+        code.ldc(Long.MIN_VALUE).ladd();
+        code.lcmp().ifge(labelEnd);
+
+        // borrowed from the low part so decrement the high part
+        Builder.load(code, CD_long, slotResultHigh);
+        code.lconst_1().lsub();
+        // store the decremented high part
+        Builder.store(code, CD_long, slotResultHigh);
+        code.labelBinding(labelEnd);
+        // store the low and high result on the stack
+        Builder.load(code, CD_long, slotResultLow);
+        Builder.load(code, CD_long, slotResultHigh);
     }
 
     /**

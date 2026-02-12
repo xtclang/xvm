@@ -65,8 +65,28 @@ class UInt128Tests {
         testUInt128OpAddBig();
         testUInt128OpAddLowOnly();
         testUInt128OpAddOverflow();
+        // Sub
+        testUInt128OpSubBig();
+        testUInt128OpSubLowOnly();
+        testUInt128OpSubOverflow();
         // And
         testUInt128OpAnd();
+        // Inc
+        testUInt128OpIncLowOnly();
+        testUInt128OpPreIncLowOnly();
+        testUInt128OpIncBig();
+        testUInt128OpPreIncBig();
+        testUInt128OpPostIncBig();
+        testUInt128OpIncOverflowLow();
+        testUInt128OpIncOverflowBig();
+        // Dec
+        testUInt128OpDecLowOnly();
+        testUInt128OpPreDecLowOnly();
+        testUInt128OpDecBig();
+        testUInt128OpPreDecBig();
+        testUInt128OpPostDecBig();
+        testUInt128OpDecOverflowLow();
+        testUInt128OpDecOverflowBig();
 
         console.print("<<<<< Finished UInt128Tests Conversion tests >>>>>");
     }
@@ -474,6 +494,29 @@ class UInt128Tests {
         assert n3 == UInt128.MinValue;
     }
 
+    // ----- Op tests (Sub) ------------------------------------------------------------------------
+
+    void testUInt128OpSubBig() {
+        UInt128 n1 = 18446744073709551616;
+        UInt128 n2 = 18446744073709200000;
+        UInt128 n3 = n1 - n2;
+        assert n3 == 351616;
+    }
+
+    void testUInt128OpSubLowOnly() {
+        UInt128 n1 = 1000;
+        UInt128 n2 = 19;
+        UInt128 n3 = n1 - n2;
+        assert n3 == 981;
+    }
+
+    void testUInt128OpSubOverflow() {
+        UInt128 n1 = UInt128.MaxValue;
+        UInt128 n2 = 1;
+        UInt128 n3 = n1 - n2;
+        assert n3 == UInt128.MinValue;
+    }
+
     // ----- Op tests (logical And) ----------------------------------------------------------------
 
     void testUInt128OpAnd() {
@@ -483,4 +526,111 @@ class UInt128Tests {
         assert n3 == 0x00A2_A0A2_A0A0_A0A0_A0A0_A0A0_A0A0_A0A0;
     }
 
+    // ----- Op tests (Inc ++) ---------------------------------------------------------------------
+
+    void testUInt128OpIncLowOnly() {
+        UInt128 n = 1234;
+        n++;
+        assert n == 1235;
+    }
+
+    void testUInt128OpPreIncLowOnly() {
+        UInt128 n1 = 1234;
+        UInt128 n2 = ++n1;
+        assert n1 == 1235;
+        assert n2 == 1235;
+    }
+
+    void testUInt128OpPostIncLowOnly() {
+        UInt128 n1 = 1234;
+        UInt128 n2 = n1++;
+        assert n1 == 1235;
+        assert n2 == 1234;
+    }
+
+    void testUInt128OpIncBig() {
+        UInt128 n = 18446744073709551616;
+        n++;
+        assert n == 18446744073709551617;
+    }
+
+    void testUInt128OpPreIncBig() {
+        UInt128 n1 = 18446744073709551000;
+        UInt128 n2 = ++n1;
+        assert n1 == 18446744073709551001;
+        assert n2 == 18446744073709551001;
+    }
+
+    void testUInt128OpPostIncBig() {
+        UInt128 n1 = 18446744073709551010;
+        UInt128 n2 = n1++;
+        assert n1 == 18446744073709551011;
+        assert n2 == 18446744073709551010;
+    }
+
+    void testUInt128OpIncOverflowLow() {
+        UInt128 n = 2147483647;
+        n++;
+        assert n == 2147483648;
+    }
+
+    void testUInt128OpIncOverflowBig() {
+        UInt128 n = UInt128.MaxValue;
+        n++;
+        assert n == UInt128.MinValue;
+    }
+
+    // ----- Op tests (Dec -- ) --------------------------------------------------------------------
+
+    void testUInt128OpDecLowOnly() {
+        UInt128 n = 1234;
+        n--;
+        assert n == 1233;
+    }
+
+    void testUInt128OpPreDecLowOnly() {
+        UInt128 n1 = 1234;
+        UInt128 n2 = --n1;
+        assert n1 == 1233;
+        assert n2 == 1233;
+    }
+
+    void testUInt128OpPostDecLowOnly() {
+        UInt128 n1 = 1234;
+        UInt128 n2 = n1--;
+        assert n1 == 1233;
+        assert n2 == 1234;
+    }
+
+    void testUInt128OpDecBig() {
+        UInt128 n = 18446744073709551616;
+        n--;
+        assert n == 18446744073709551615;
+    }
+
+    void testUInt128OpPreDecBig() {
+        UInt128 n1 = 18446744073709551000;
+        UInt128 n2 = --n1;
+        assert n1 == 18446744073709550999;
+        assert n2 == 18446744073709550999;
+    }
+
+    void testUInt128OpPostDecBig() {
+        UInt128 n1 = 18446744073709551010;
+        UInt128 n2 = n1--;
+        assert n1 == 18446744073709551009;
+        assert n2 == 18446744073709551010;
+    }
+
+    void testUInt128OpDecOverflowLow() {
+        UInt128 n = 2147483648;
+        n--;
+        assert n == 2147483647;
+    }
+
+    void testUInt128OpDecOverflowBig() {
+        UInt128 n = UInt128.MinValue;
+        n--;
+        assert n == UInt128.MaxValue;
+    }
 }

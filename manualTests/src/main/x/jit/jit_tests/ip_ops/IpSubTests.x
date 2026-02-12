@@ -72,15 +72,15 @@ class IpSubTests {
     }
 
     void testIpSubInt128() {
-//        Int128 value1 = 76;
-//        value1 -= 66;
-//        assert value1 == 10;
+        Int128 value1 = 76;
+        value1 -= 66;
+        assert value1 == 10;
     }
 
     void testIpSubUInt128() {
-//        UInt128 value1 = 0xFFFFFFF1;
-//        value1 -= 1;
-//        assert value1 == 0xFFFFFFF0;
+        UInt128 value1 = 0xFFFFFFF1;
+        value1 -= 1;
+        assert value1 == 0xFFFFFFF0;
     }
 
     void testIpSubDec() {

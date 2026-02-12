@@ -121,13 +121,14 @@ public abstract class OpInPlaceAssign
     public void build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo regTarget = bctx.ensureRegister(code, m_nTarget);
 
-        if (!regTarget.isSingle()) {
-            throw new UnsupportedOperationException(toName(getOpCode()) + " operation on multi-slot");
-        }
-
         TypeConstant typeResult;
         if (regTarget.cd().isPrimitive()) {
+            if (!regTarget.isSingle()) {
+                throw new UnsupportedOperationException(toName(getOpCode()) + " operation on multi-slot");
+            }
             typeResult = buildOptimizedBinary(bctx, code, regTarget, m_nArgValue);
+        } else if (regTarget.type().isXvmPrimitive()) {
+            typeResult = buildXvmOptimizedBinary(bctx, code, regTarget, m_nArgValue);
         } else {
             typeResult = buildOpInvoke(bctx, code, regTarget);
         }

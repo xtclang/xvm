@@ -20,6 +20,7 @@ import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
+import org.xvm.javajit.NumberSupport;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
 
@@ -40,7 +41,8 @@ import static org.xvm.util.Handy.writePackedLong;
  *       "property in-place assign" from {@link OpPropInPlaceAssign}.
  */
 public abstract class OpInPlace
-        extends Op {
+        extends Op
+        implements NumberSupport {
     /**
      * Construct an "in-place" op for the passed target.
      *
@@ -230,6 +232,13 @@ public abstract class OpInPlace
                 assert reg.isSingle();
 
                 buildPrimitiveLocal(code, reg);
+                if (isAssignOp()) {
+                    bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, reg.type()));
+                } else {
+                    reg.markChanged();
+                }
+            } else if (reg.type().isXvmPrimitive()) {
+                buildXvmPrimitiveLocal(bctx, code, reg);
                 if (isAssignOp()) {
                     bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, reg.type()));
                 } else {
@@ -436,6 +445,79 @@ public abstract class OpInPlace
         default:
             throw new IllegalStateException();
         }
+    }
+
+    /**
+     * Build the XVM primitive local ops.
+     * <p>
+     * Nothing is on the Java stack before this method executes. The result will be on the Java
+     * stack when the method completes.
+     *
+     * @param bctx  the current BuildContext
+     * @param code  the CodeBuilder to use to generate the operation byte codes
+     * @param reg   the register containing the XVM prmitive value the operation is performed on
+     */
+    protected void buildXvmPrimitiveLocal(BuildContext bctx, CodeBuilder code, RegisterInfo reg) {
+        TypeConstant baseType = reg.type().removeNullable();
+        String       typeName = baseType.getSingleUnderlyingClass(false).getName();
+        int          op       = getOpCode();
+        switch (typeName) {
+            case "Int128", "UInt128":
+                int[] slots = reg.slots();
+                switch (getOpCode()) {
+                case OP_IP_DEC:
+                    buildLongLongSub(bctx, code, slots[0], slots[1], 1L, 0L);
+                    code.lstore(slots[1])
+                        .lstore(slots[0]);
+                    break;
+
+                case OP_IP_INC:
+                    buildLongLongAdd(bctx, code, slots[0], slots[1], 1L, 0L);
+                    code.lstore(slots[1])
+                        .lstore(slots[0]);
+                    break;
+
+                case OP_IP_DECA:
+                    code.lload(slots[0])
+                        .lload(slots[1]);
+                    buildLongLongSub(bctx, code, slots[0], slots[1], 1L, 0L);
+                    code.lstore(slots[1])
+                        .lstore(slots[0]);
+                    break;
+
+                case OP_IP_INCA:
+                    code.lload(slots[0])
+                        .lload(slots[1]);
+                    buildLongLongAdd(bctx, code, slots[0], slots[1], 1L, 0L);
+                    code.lstore(slots[1])
+                        .lstore(slots[0]);
+                    break;
+
+                case OP_IP_DECB:
+                    buildLongLongSub(bctx, code, slots[0], slots[1], 1L, 0L);
+                    code.lstore(slots[1])
+                        .lstore(slots[0])
+                        .lload(slots[0])
+                        .lload(slots[1]);
+                    break;
+
+                case OP_IP_INCB:
+                    buildLongLongAdd(bctx, code, slots[0], slots[1], 1L, 0L);
+                    code.lstore(slots[1])
+                        .lstore(slots[0])
+                        .lload(slots[0])
+                        .lload(slots[1]);
+                    break;
+
+                default:
+                    throw new IllegalStateException("Unsupported XVM primitive op " + op
+                            + " on type: " + typeName);
+                }
+                break;
+
+            default:
+                throw new IllegalStateException("Unsupported XVM primitive type: " + typeName);
+            }
     }
 
     /**

@@ -63,12 +63,39 @@ class Int128Tests {
         // Add
         testInt128OpAddBig();
         testInt128OpAddLowOnly();
+        testInt128OpAddOverflowLow();
         testInt128OpAddFirstNegativeBig();
         testInt128OpAddSecondNegativeBig();
         testInt128OpAddBothNegativeBig();
         testInt128OpAddOverflow();
+        // Sub
+        testInt128OpSubBig();
+        testInt128OpSubLowOnly();
+        testInt128OpSubOverflowLow();
+        testInt128OpSubFirstNegativeBig();
+        testInt128OpSubSecondNegativeBig();
+        testInt128OpSubBothNegativeBig();
+        testInt128OpSubOverflow();
         // And
         testInt128OpAnd();
+        // Inc
+        testInt128OpIncLowOnly();
+        testInt128OpPreIncLowOnly();
+        testInt128OpIncBig();
+        testInt128OpPreIncBig();
+        testInt128OpPostIncBig();
+        testInt128OpIncOverflowLow();
+        testInt128OpIncOverflowBig();
+        testInt128OpIncNegativeBig();
+        // Dec
+        testInt128OpDecLowOnly();
+        testInt128OpPreDecLowOnly();
+        testInt128OpDecBig();
+        testInt128OpPreDecBig();
+        testInt128OpPostDecBig();
+        testInt128OpDecOverflowLow();
+        testInt128OpDecOverflowBig();
+        testInt128OpDecNegativeBig();
 
         console.print("<<<<< Finished Int128Tests Conversion tests >>>>>");
     }
@@ -469,6 +496,13 @@ class Int128Tests {
         assert n3 == 1019;
     }
 
+    void testInt128OpAddOverflowLow() {
+        Int128 n1 = 2147483647;
+        Int128 n2 = 1;
+        Int128 n3 = n1 + n2;
+        assert n3 == 2147483648;
+    }
+
     void testInt128OpAddFirstNegativeBig() {
         Int128 n1 = -18446744073709551616;
         Int128 n2 = 18446744073709200000;
@@ -497,6 +531,57 @@ class Int128Tests {
         assert n3 == Int128.MinValue;
     }
 
+    // ----- Op tests (Sub) ------------------------------------------------------------------------
+
+    void testInt128OpSubBig() {
+        Int128 n1 = 18446744073709551616;
+        Int128 n2 = 18446744073709200000;
+        Int128 n3 = n1 - n2;
+        assert n3 == 351616;
+    }
+
+    void testInt128OpSubLowOnly() {
+        Int128 n1 = 1000;
+        Int128 n2 = 19;
+        Int128 n3 = n1 - n2;
+        assert n3 == 981;
+    }
+
+    void testInt128OpSubOverflowLow() {
+        Int128 n1 = 2147483648;
+        Int128 n2 = 1;
+        Int128 n3 = n1 - n2;
+        assert n3 == 2147483647;
+    }
+
+    void testInt128OpSubFirstNegativeBig() {
+        Int128 n1 = -18446744073709551616;
+        Int128 n2 = 18446744073709200000;
+        Int128 n3 = n1 - n2;
+        assert n3 == -36893488147418751616;
+    }
+
+    void testInt128OpSubSecondNegativeBig() {
+        Int128 n1 = 18446744073709551616;
+        Int128 n2 = -18446744073709200000;
+        Int128 n3 = n1 - n2;
+        assert n3 == 36893488147418751616;
+    }
+
+    void testInt128OpSubBothNegativeBig() {
+        Int128 n1 = -18446744073709551616;
+        Int128 n2 = -18446744073709200000;
+        Int128 n3 = n1 - n2;
+        assert n3 == -351616;
+    }
+
+    void testInt128OpSubOverflow() {
+        Int128 n1 = Int128.MinValue;
+        Int128 n2 = 1;
+        Int128 n3 = n1 - n2;
+        assert n3 == Int128.MaxValue;
+    }
+
     // ----- Op tests (logical And) ----------------------------------------------------------------
 
     void testInt128OpAnd() {
@@ -506,4 +591,123 @@ class Int128Tests {
         assert n3 == 0x00A2_A0A2_A0A0_A0A0_A0A0_A0A0_A0A0_A0A0;
     }
 
+    // ----- Op tests (Inc ++) ---------------------------------------------------------------------
+
+    void testInt128OpIncLowOnly() {
+        Int128 n = 1234;
+        n++;
+        assert n == 1235;
+    }
+
+    void testInt128OpPreIncLowOnly() {
+        Int128 n1 = 1234;
+        Int128 n2 = ++n1;
+        assert n1 == 1235;
+        assert n2 == 1235;
+    }
+
+    void testInt128OpPostIncLowOnly() {
+        Int128 n1 = 1234;
+        Int128 n2 = n1++;
+        assert n1 == 1235;
+        assert n2 == 1234;
+    }
+
+    void testInt128OpIncBig() {
+        Int128 n = 18446744073709551616;
+        n++;
+        assert n == 18446744073709551617;
+    }
+
+    void testInt128OpPreIncBig() {
+        Int128 n1 = 18446744073709551000;
+        Int128 n2 = ++n1;
+        assert n1 == 18446744073709551001;
+        assert n2 == 18446744073709551001;
+    }
+
+    void testInt128OpPostIncBig() {
+        Int128 n1 = 18446744073709551010;
+        Int128 n2 = n1++;
+        assert n1 == 18446744073709551011;
+        assert n2 == 18446744073709551010;
+    }
+
+    void testInt128OpIncOverflowLow() {
+        Int128 n = 2147483647;
+        n++;
+        assert n == 2147483648;
+    }
+
+    void testInt128OpIncOverflowBig() {
+        Int128 n = Int128.MaxValue;
+        n++;
+        assert n == Int128.MinValue;
+    }
+
+    void testInt128OpIncNegativeBig() {
+        Int128 n = -18446744073709551616;
+        n++;
+        assert n == -18446744073709551615;
+    }
+
+    // ----- Op tests (Dec -- ) --------------------------------------------------------------------
+
+    void testInt128OpDecLowOnly() {
+        Int128 n = 1234;
+        n--;
+        assert n == 1233;
+    }
+
+    void testInt128OpPreDecLowOnly() {
+        Int128 n1 = 1234;
+        Int128 n2 = --n1;
+        assert n1 == 1233;
+        assert n2 == 1233;
+    }
+
+    void testInt128OpPostDecLowOnly() {
+        Int128 n1 = 1234;
+        Int128 n2 = n1--;
+        assert n1 == 1233;
+        assert n2 == 1234;
+    }
+
+    void testInt128OpDecBig() {
+        Int128 n = 18446744073709551616;
+        n--;
+        assert n == 18446744073709551615;
+    }
+
+    void testInt128OpPreDecBig() {
+        Int128 n1 = 18446744073709551000;
+        Int128 n2 = --n1;
+        assert n1 == 18446744073709550999;
+        assert n2 == 18446744073709550999;
+    }
+
+    void testInt128OpPostDecBig() {
+        Int128 n1 = 18446744073709551010;
+        Int128 n2 = n1--;
+        assert n1 == 18446744073709551009;
+        assert n2 == 18446744073709551010;
+    }
+
+    void testInt128OpDecOverflowLow() {
+        Int128 n = 2147483648;
+        n--;
+        assert n == 2147483647;
+    }
+
+    void testInt128OpDecOverflowBig() {
+        Int128 n = Int128.MinValue;
+        n--;
+        assert n == Int128.MaxValue;
+    }
+
+    void testInt128OpDecNegativeBig() {
+        Int128 n = -18446744073709551616;
+        n--;
+        assert n == -18446744073709551617;
+    }
 }

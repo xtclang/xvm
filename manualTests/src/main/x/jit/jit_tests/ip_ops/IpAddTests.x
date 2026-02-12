@@ -73,15 +73,15 @@ class IpAddTests {
     }
 
     void testIpAddInt128() {
-//        Int128 value1 = 10;
-//        value1 += 19;
-//        assert value1 == 29;
+        Int128 value1 = 10;
+        value1 += 19;
+        assert value1 == 29;
     }
 
     void testIpAddUInt128() {
-//        UInt128 value1 = 0xFFFFFFF0;
-//        value1 += 1;
-//        assert value1 == 0xFFFFFFF1;
+        UInt128 value1 = 0xFFFFFFF0;
+        value1 += 1;
+        assert value1 == 0xFFFFFFF1;
     }
 
     void testIpAddDec() {
