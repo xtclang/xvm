@@ -6,9 +6,7 @@ import com.intellij.execution.configurations.RunConfigurationOptions
 import com.intellij.execution.process.OSProcessHandler
 import com.intellij.execution.process.ProcessHandler
 import com.intellij.execution.runners.ExecutionEnvironment
-import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.openapi.diagnostic.logger
-import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.project.Project
@@ -17,9 +15,8 @@ import com.redhat.devtools.lsp4ij.dap.DebugMode
 import com.redhat.devtools.lsp4ij.dap.descriptors.DebugAdapterDescriptor
 import com.redhat.devtools.lsp4ij.dap.descriptors.DebugAdapterDescriptorFactory
 import com.redhat.devtools.lsp4ij.dap.descriptors.ServerReadyConfig
+import org.xtclang.idea.PluginPaths
 import org.xtclang.idea.lsp.jre.JreProvisioner
-import java.nio.file.Files
-import java.nio.file.Path
 
 /**
  * Factory for creating XTC Debug Adapter (DAP) descriptors.
@@ -106,19 +103,9 @@ class XtcDebugAdapterDescriptor(
         project: Project,
     ): Boolean = file.extension == "x"
 
-    /**
-     * Find the DAP server JAR in the plugin's bin directory.
-     * Follows the same convention as the LSP server JAR.
-     */
-    private fun findDapServerJar(): Path {
-        PluginManagerCore.getPlugin(PluginId.getId("org.xtclang.idea"))?.let { plugin ->
-            val serverJar = plugin.pluginPath.resolve("bin/xtc-dap-server.jar")
-            if (Files.exists(serverJar)) return serverJar
-            logger.warn("DAP server JAR not found: $serverJar")
-        }
-
-        throw ExecutionException(
-            "DAP server JAR not found. Expected at: <plugin-dir>/bin/xtc-dap-server.jar",
-        )
+    companion object {
+        private const val DAP_SERVER_JAR = "xtc-dap-server.jar"
     }
+
+    private fun findDapServerJar() = PluginPaths.findServerJar(DAP_SERVER_JAR)
 }
