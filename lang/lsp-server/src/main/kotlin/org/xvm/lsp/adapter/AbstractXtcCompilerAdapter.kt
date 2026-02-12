@@ -42,7 +42,13 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         line: Int,
         column: Int,
     ): String? {
-        val symbol = findSymbolAt(uri, line, column) ?: return null
+        logger.info("$logPrefix getHoverInfo: uri={}, line={}, column={}", uri, line, column)
+        val symbol = findSymbolAt(uri, line, column)
+        if (symbol == null) {
+            logger.info("$logPrefix getHoverInfo: no symbol at position")
+            return null
+        }
+        logger.info("$logPrefix getHoverInfo: found symbol '{}' ({})", symbol.name, symbol.kind)
         return symbol.toHoverMarkdown()
     }
 

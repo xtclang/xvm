@@ -260,7 +260,7 @@ interface XtcCompilerAdapter : Closeable {
         line: Int,
         column: Int,
     ): List<DocumentHighlight> {
-        logger.info("[{}] getDocumentHighlights not yet implemented", displayName)
+        logger.info("[{}] getDocumentHighlights not yet implemented; uri={}, line={}, column={}", displayName, uri, line, column)
         return emptyList()
     }
 
@@ -291,7 +291,7 @@ interface XtcCompilerAdapter : Closeable {
         uri: String,
         positions: List<Position>,
     ): List<SelectionRange> {
-        logger.info("[{}] getSelectionRanges not yet implemented", displayName)
+        logger.info("[{}] getSelectionRanges not yet implemented; uri={}, positions={}", displayName, uri, positions)
         return emptyList()
     }
 
@@ -318,7 +318,7 @@ interface XtcCompilerAdapter : Closeable {
      * @return list of folding ranges
      */
     fun getFoldingRanges(uri: String): List<FoldingRange> {
-        logger.info("[{}] getFoldingRanges not yet implemented", displayName)
+        logger.info("[{}] getFoldingRanges not yet implemented; uri={}", displayName, uri)
         return emptyList()
     }
 
@@ -347,7 +347,7 @@ interface XtcCompilerAdapter : Closeable {
         uri: String,
         content: String,
     ): List<DocumentLink> {
-        logger.info("[{}] getDocumentLinks not yet implemented", displayName)
+        logger.info("[{}] getDocumentLinks not yet implemented; uri={}, content={} bytes", displayName, uri, content.length)
         return emptyList()
     }
 
@@ -385,7 +385,13 @@ interface XtcCompilerAdapter : Closeable {
         line: Int,
         column: Int,
     ): SignatureHelp? {
-        logger.info("[{}] getSignatureHelp not yet implemented (requires compiler)", displayName)
+        logger.info(
+            "[{}] getSignatureHelp not yet implemented (requires compiler); uri={}, line={}, column={}",
+            displayName,
+            uri,
+            line,
+            column,
+        )
         return null
     }
 
@@ -415,7 +421,13 @@ interface XtcCompilerAdapter : Closeable {
         line: Int,
         column: Int,
     ): PrepareRenameResult? {
-        logger.info("[{}] prepareRename not yet implemented (requires compiler)", displayName)
+        logger.info(
+            "[{}] prepareRename not yet implemented (requires compiler); uri={}, line={}, column={}",
+            displayName,
+            uri,
+            line,
+            column,
+        )
         return null
     }
 
@@ -450,7 +462,14 @@ interface XtcCompilerAdapter : Closeable {
         column: Int,
         newName: String,
     ): WorkspaceEdit? {
-        logger.info("[{}] rename not yet implemented (requires compiler)", displayName)
+        logger.info(
+            "[{}] rename not yet implemented (requires compiler); uri={}, line={}, column={}, newName='{}'",
+            displayName,
+            uri,
+            line,
+            column,
+            newName,
+        )
         return null
     }
 
@@ -484,7 +503,16 @@ interface XtcCompilerAdapter : Closeable {
         range: Range,
         diagnostics: List<Diagnostic>,
     ): List<CodeAction> {
-        logger.info("[{}] getCodeActions not yet implemented (requires compiler)", displayName)
+        logger.info(
+            "[{}] getCodeActions not yet implemented (requires compiler); uri={}, range={}:{}-{}:{}, diagnostics={}",
+            displayName,
+            uri,
+            range.start.line,
+            range.start.column,
+            range.end.line,
+            range.end.column,
+            diagnostics.size,
+        )
         return emptyList()
     }
 
@@ -510,7 +538,7 @@ interface XtcCompilerAdapter : Closeable {
      * @return semantic tokens data
      */
     fun getSemanticTokens(uri: String): SemanticTokens? {
-        logger.info("[{}] getSemanticTokens not yet implemented (requires compiler)", displayName)
+        logger.info("[{}] getSemanticTokens not yet implemented (requires compiler); uri={}", displayName, uri)
         return null
     }
 
@@ -540,7 +568,15 @@ interface XtcCompilerAdapter : Closeable {
         uri: String,
         range: Range,
     ): List<InlayHint> {
-        logger.info("[{}] getInlayHints not yet implemented (requires compiler)", displayName)
+        logger.info(
+            "[{}] getInlayHints not yet implemented (requires compiler); uri={}, range={}:{}-{}:{}",
+            displayName,
+            uri,
+            range.start.line,
+            range.start.column,
+            range.end.line,
+            range.end.column,
+        )
         return emptyList()
     }
 
@@ -572,7 +608,14 @@ interface XtcCompilerAdapter : Closeable {
         content: String,
         options: FormattingOptions,
     ): List<TextEdit> {
-        logger.info("[{}] formatDocument not yet implemented", displayName)
+        logger.info(
+            "[{}] formatDocument not yet implemented; uri={}, content={} bytes, tabSize={}, insertSpaces={}",
+            displayName,
+            uri,
+            content.length,
+            options.tabSize,
+            options.insertSpaces,
+        )
         return emptyList()
     }
 
@@ -606,7 +649,16 @@ interface XtcCompilerAdapter : Closeable {
         range: Range,
         options: FormattingOptions,
     ): List<TextEdit> {
-        logger.info("[{}] formatRange not yet implemented", displayName)
+        logger.info(
+            "[{}] formatRange not yet implemented; uri={}, range={}:{}-{}:{}, content={} bytes",
+            displayName,
+            uri,
+            range.start.line,
+            range.start.column,
+            range.end.line,
+            range.end.column,
+            content.length,
+        )
         return emptyList()
     }
 
@@ -631,8 +683,353 @@ interface XtcCompilerAdapter : Closeable {
      * @return list of matching symbols
      */
     fun findWorkspaceSymbols(query: String): List<SymbolInfo> {
-        logger.info("[{}] findWorkspaceSymbols not yet implemented (requires compiler)", displayName)
+        logger.info("[{}] findWorkspaceSymbols not yet implemented (requires workspace index); query='{}'", displayName, query)
         return emptyList()
+    }
+
+    // ========================================================================
+    // Planned features (not yet implemented — stubs with logging)
+    // ========================================================================
+    //
+    // These methods correspond to LSP capabilities described in plan-next-steps-lsp.md.
+    // Each returns null/empty by default and logs the call with full input parameters.
+    // When the IDE invokes these, the log trace shows exactly what was requested
+    // and that the feature is not yet available — making it easy to plug in later.
+    //
+    // ========================================================================
+
+    /**
+     * Find the declaration of the symbol at a position.
+     *
+     * **LSP capability:** `textDocument/declaration` — navigates to the declaration site
+     * (as opposed to the definition site). In XTC's single-file-per-type model, this is
+     * less important than in C/C++ where declaration and definition can be in separate files.
+     *
+     * **Editor activation:**
+     * - *IntelliJ:* Ctrl+B on a symbol (if distinct from definition)
+     * - *VS Code:* Right-click → Go to Declaration
+     *
+     * **Adapter implementations:**
+     * - *Mock/TreeSitter:* Not implemented — cannot distinguish declaration from definition.
+     * - *Compiler:* Resolves declaration site from semantic analysis.
+     *
+     * @param uri    the document URI
+     * @param line   0-based line number
+     * @param column 0-based column number
+     * @return location of the declaration, if found
+     */
+    fun findDeclaration(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): Location? {
+        logger.info(
+            "[{}] findDeclaration not yet implemented (requires compiler); uri={}, line={}, column={}",
+            displayName,
+            uri,
+            line,
+            column,
+        )
+        return null
+    }
+
+    /**
+     * Find the type definition of the symbol at a position.
+     *
+     * **LSP capability:** `textDocument/typeDefinition` — navigates to the type of an
+     * expression or variable. E.g., from a variable `name` of type `String`, jumps to the
+     * `String` class definition.
+     *
+     * **Editor activation:**
+     * - *IntelliJ:* Ctrl+Shift+B on a variable or expression
+     * - *VS Code:* Right-click → Go to Type Definition
+     *
+     * **Adapter implementations:**
+     * - *Mock/TreeSitter:* Not implemented — requires type inference.
+     * - *Compiler:* Resolves the type of the expression and navigates to the type declaration.
+     *
+     * @param uri    the document URI
+     * @param line   0-based line number
+     * @param column 0-based column number
+     * @return location of the type definition, if found
+     */
+    fun findTypeDefinition(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): Location? {
+        logger.info(
+            "[{}] findTypeDefinition not yet implemented (requires compiler); uri={}, line={}, column={}",
+            displayName,
+            uri,
+            line,
+            column,
+        )
+        return null
+    }
+
+    /**
+     * Find implementations of the interface or abstract method at a position.
+     *
+     * **LSP capability:** `textDocument/implementation` — finds all concrete implementations
+     * of an interface, abstract class, or abstract method.
+     *
+     * **Editor activation:**
+     * - *IntelliJ:* Ctrl+Alt+B on an interface/abstract method
+     * - *VS Code:* Right-click → Go to Implementations
+     *
+     * **Adapter implementations:**
+     * - *Mock/TreeSitter:* Not implemented — requires type hierarchy and semantic analysis.
+     * - *Compiler:* Walks the type hierarchy index to find all implementors.
+     *
+     * @param uri    the document URI
+     * @param line   0-based line number
+     * @param column 0-based column number
+     * @return list of implementation locations
+     */
+    fun findImplementation(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): List<Location> {
+        logger.info(
+            "[{}] findImplementation not yet implemented (requires compiler + type hierarchy); uri={}, line={}, column={}",
+            displayName,
+            uri,
+            line,
+            column,
+        )
+        return emptyList()
+    }
+
+    /**
+     * Prepare type hierarchy for the symbol at a position.
+     *
+     * **LSP capability:** `typeHierarchy/prepareTypeHierarchy` — resolves the type at the cursor
+     * and returns it as a TypeHierarchyItem. This is the entry point; the client then calls
+     * [getSupertypes] and [getSubtypes] to expand the tree.
+     *
+     * **Editor activation:**
+     * - *IntelliJ:* Ctrl+H (Type Hierarchy)
+     * - *VS Code:* Right-click → Show Type Hierarchy
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Not implemented.
+     * - *TreeSitter:* Could extract the type declaration and its extends/implements clauses
+     *   from the AST (Phase 1 — tree-sitter can parse these syntactically).
+     * - *Compiler:* Full type resolution with generics and conditional mixins.
+     *
+     * @param uri    the document URI
+     * @param line   0-based line number
+     * @param column 0-based column number
+     * @return list of type hierarchy items at the position
+     */
+    fun prepareTypeHierarchy(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): List<TypeHierarchyItem> {
+        logger.info(
+            "[{}] prepareTypeHierarchy not yet implemented (requires workspace index); uri={}, line={}, column={}",
+            displayName,
+            uri,
+            line,
+            column,
+        )
+        return emptyList()
+    }
+
+    /**
+     * Get supertypes for a type hierarchy item.
+     *
+     * **LSP capability:** `typeHierarchy/supertypes` — returns the parents of a type
+     * (extends, implements, incorporates).
+     *
+     * @param item the type hierarchy item to get supertypes for
+     * @return list of supertype items
+     */
+    fun getSupertypes(item: TypeHierarchyItem): List<TypeHierarchyItem> {
+        logger.info("[{}] getSupertypes not yet implemented (requires workspace index); item={}", displayName, item.name)
+        return emptyList()
+    }
+
+    /**
+     * Get subtypes for a type hierarchy item.
+     *
+     * **LSP capability:** `typeHierarchy/subtypes` — returns all types that extend/implement
+     * the given type.
+     *
+     * @param item the type hierarchy item to get subtypes for
+     * @return list of subtype items
+     */
+    fun getSubtypes(item: TypeHierarchyItem): List<TypeHierarchyItem> {
+        logger.info("[{}] getSubtypes not yet implemented (requires workspace index); item={}", displayName, item.name)
+        return emptyList()
+    }
+
+    /**
+     * Prepare call hierarchy for the symbol at a position.
+     *
+     * **LSP capability:** `callHierarchy/prepare` — resolves the function/method at the cursor
+     * and returns it as a CallHierarchyItem. The client then calls [getIncomingCalls] and
+     * [getOutgoingCalls] to navigate the call graph.
+     *
+     * **Editor activation:**
+     * - *IntelliJ:* Ctrl+Alt+H (Call Hierarchy)
+     * - *VS Code:* Right-click → Show Call Hierarchy
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Not implemented.
+     * - *TreeSitter:* Could syntactically identify the method at cursor (Phase 2).
+     * - *Compiler:* Full semantic resolution with overload disambiguation.
+     *
+     * @param uri    the document URI
+     * @param line   0-based line number
+     * @param column 0-based column number
+     * @return list of call hierarchy items at the position
+     */
+    fun prepareCallHierarchy(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): List<CallHierarchyItem> {
+        logger.info(
+            "[{}] prepareCallHierarchy not yet implemented (requires workspace index + call graph); uri={}, line={}, column={}",
+            displayName,
+            uri,
+            line,
+            column,
+        )
+        return emptyList()
+    }
+
+    /**
+     * Get incoming calls for a call hierarchy item (who calls this function).
+     *
+     * **LSP capability:** `callHierarchy/incomingCalls` — returns all call sites that invoke
+     * the given function/method.
+     *
+     * @param item the call hierarchy item to find callers for
+     * @return list of incoming calls with caller info and call-site ranges
+     */
+    fun getIncomingCalls(item: CallHierarchyItem): List<CallHierarchyIncomingCall> {
+        logger.info("[{}] getIncomingCalls not yet implemented (requires workspace index + call graph); item={}", displayName, item.name)
+        return emptyList()
+    }
+
+    /**
+     * Get outgoing calls for a call hierarchy item (what does this function call).
+     *
+     * **LSP capability:** `callHierarchy/outgoingCalls` — returns all functions/methods that
+     * the given function calls.
+     *
+     * @param item the call hierarchy item to find callees for
+     * @return list of outgoing calls with callee info and call-site ranges
+     */
+    fun getOutgoingCalls(item: CallHierarchyItem): List<CallHierarchyOutgoingCall> {
+        logger.info("[{}] getOutgoingCalls not yet implemented (requires workspace index + call graph); item={}", displayName, item.name)
+        return emptyList()
+    }
+
+    /**
+     * Get code lenses for a document.
+     *
+     * **LSP capability:** `textDocument/codeLens` — provides actionable inline annotations
+     * above declarations: reference counts ("3 references"), "Run Test", "Debug", "Implement".
+     *
+     * **Editor activation:** Automatic — annotations appear above methods, classes, etc.
+     *
+     * **Adapter implementations:**
+     * - *Mock/TreeSitter:* Could show reference counts once workspace index exists.
+     * - *Compiler:* Precise reference counts, virtual dispatch resolution, test discovery,
+     *   run/debug buttons.
+     *
+     * @param uri the document URI
+     * @return list of code lenses
+     */
+    fun getCodeLenses(uri: String): List<CodeLens> {
+        logger.info("[{}] getCodeLenses not yet implemented (requires workspace index); uri={}", displayName, uri)
+        return emptyList()
+    }
+
+    /**
+     * Resolve a code lens (fill in the command/action lazily).
+     *
+     * **LSP capability:** `codeLens/resolve` — called by the client when a code lens becomes
+     * visible to fill in its command. Allows lazy computation for performance.
+     *
+     * @param lens the code lens to resolve
+     * @return the resolved code lens with command filled in
+     */
+    fun resolveCodeLens(lens: CodeLens): CodeLens {
+        logger.info(
+            "[{}] resolveCodeLens not yet implemented; lens range={}:{}-{}:{}",
+            displayName,
+            lens.range.start.line,
+            lens.range.start.column,
+            lens.range.end.line,
+            lens.range.end.column,
+        )
+        return lens
+    }
+
+    /**
+     * Format on type — auto-format after typing a trigger character.
+     *
+     * **LSP capability:** `textDocument/onTypeFormatting` — auto-indent when pressing Enter,
+     * `}`, or `;`. Tree-sitter provides enough AST context to determine correct indentation.
+     *
+     * **Editor activation:** Automatic — triggered after typing the trigger character.
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Not implemented.
+     * - *TreeSitter:* Could determine indentation level from AST context.
+     * - *Compiler:* Full context-aware formatting.
+     *
+     * @param uri     the document URI
+     * @param line    0-based line number where the character was typed
+     * @param column  0-based column number
+     * @param ch      the character that was typed (trigger character)
+     * @param options formatting options
+     * @return list of text edits to apply
+     */
+    fun onTypeFormatting(
+        uri: String,
+        line: Int,
+        column: Int,
+        ch: String,
+        options: FormattingOptions,
+    ): List<TextEdit> {
+        logger.info("[{}] onTypeFormatting not yet implemented; uri={}, line={}, column={}, ch='{}'", displayName, uri, line, column, ch)
+        return emptyList()
+    }
+
+    /**
+     * Get linked editing ranges for the symbol at a position.
+     *
+     * **LSP capability:** `textDocument/linkedEditingRange` — when renaming an identifier,
+     * all related occurrences update simultaneously in real-time (before committing the rename).
+     *
+     * **Editor activation:** Automatic — start editing an identifier and linked ranges
+     * update in real-time.
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Not implemented.
+     * - *TreeSitter:* Could identify the declaration and its same-file usages.
+     * - *Compiler:* Semantic linked editing with scope awareness.
+     *
+     * @param uri    the document URI
+     * @param line   0-based line number
+     * @param column 0-based column number
+     * @return linked editing ranges, if available
+     */
+    fun getLinkedEditingRanges(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): LinkedEditingRanges? {
+        logger.info("[{}] getLinkedEditingRanges not yet implemented; uri={}, line={}, column={}", displayName, uri, line, column)
+        return null
     }
 
     // ========================================================================
@@ -822,5 +1219,94 @@ interface XtcCompilerAdapter : Closeable {
         val insertSpaces: Boolean,
         val trimTrailingWhitespace: Boolean = false,
         val insertFinalNewline: Boolean = false,
+    )
+
+    // ========================================================================
+    // Data classes for planned features (type hierarchy, call hierarchy, etc.)
+    // ========================================================================
+
+    /**
+     * An item in a type hierarchy (a type and its position in the source).
+     *
+     * Used by [prepareTypeHierarchy], [getSupertypes], [getSubtypes].
+     */
+    data class TypeHierarchyItem(
+        val name: String,
+        val kind: SymbolInfo.SymbolKind,
+        val uri: String,
+        val range: Range,
+        val selectionRange: Range,
+        val detail: String? = null,
+    )
+
+    /**
+     * An item in a call hierarchy (a function/method and its position).
+     *
+     * Used by [prepareCallHierarchy], [getIncomingCalls], [getOutgoingCalls].
+     */
+    data class CallHierarchyItem(
+        val name: String,
+        val kind: SymbolInfo.SymbolKind,
+        val uri: String,
+        val range: Range,
+        val selectionRange: Range,
+        val detail: String? = null,
+    )
+
+    /**
+     * An incoming call to a call hierarchy item (who calls it).
+     *
+     * @param from       the calling function/method
+     * @param fromRanges the specific call-site ranges within the caller
+     */
+    data class CallHierarchyIncomingCall(
+        val from: CallHierarchyItem,
+        val fromRanges: List<Range>,
+    )
+
+    /**
+     * An outgoing call from a call hierarchy item (what it calls).
+     *
+     * @param to         the called function/method
+     * @param fromRanges the specific call-site ranges within the caller
+     */
+    data class CallHierarchyOutgoingCall(
+        val to: CallHierarchyItem,
+        val fromRanges: List<Range>,
+    )
+
+    /**
+     * A code lens (actionable inline annotation above a declaration).
+     *
+     * @param range   the range this code lens applies to
+     * @param command the command to execute when clicked (null until resolved)
+     */
+    data class CodeLens(
+        val range: Range,
+        val command: CodeLensCommand? = null,
+    )
+
+    /**
+     * A command associated with a code lens.
+     *
+     * @param title     display text (e.g., "3 references", "Run Test")
+     * @param command   the command identifier to execute
+     * @param arguments optional arguments to the command
+     */
+    data class CodeLensCommand(
+        val title: String,
+        val command: String,
+        val arguments: List<Any> = emptyList(),
+    )
+
+    /**
+     * Linked editing ranges — ranges that should be edited simultaneously.
+     *
+     * @param ranges      the ranges that are linked
+     * @param wordPattern optional regex pattern that the new text must match
+     */
+    data class LinkedEditingRanges(
+        val ranges: List<Range>,
+        val wordPattern: String? = null,
     )
 }

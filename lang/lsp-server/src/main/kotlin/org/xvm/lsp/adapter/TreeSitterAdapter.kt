@@ -166,8 +166,15 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         line: Int,
         column: Int,
     ): SymbolInfo? {
-        val tree = parsedTrees[uri] ?: return null
-        return queryEngine.findDeclarationAt(tree, line, column, uri)
+        logger.info("$logPrefix findSymbolAt: uri={}, line={}, column={}", uri, line, column)
+        val tree = parsedTrees[uri]
+        if (tree == null) {
+            logger.info("$logPrefix findSymbolAt: no parsed tree for uri")
+            return null
+        }
+        val result = queryEngine.findDeclarationAt(tree, line, column, uri)
+        logger.info("$logPrefix findSymbolAt -> {}", result?.let { "'${it.name}' (${it.kind})" } ?: "null")
+        return result
     }
 
     /**
@@ -181,8 +188,9 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         uri: String,
         line: Int,
         column: Int,
-    ): List<CompletionItem> =
-        buildList {
+    ): List<CompletionItem> {
+        logger.info("$logPrefix getCompletions: uri={}, line={}, column={}", uri, line, column)
+        return buildList {
             // Add keywords and built-in types
             addAll(keywordCompletions())
             addAll(builtInTypeCompletions())
@@ -213,7 +221,8 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
                     )
                 }
             }
-        }
+        }.also { logger.info("$logPrefix getCompletions -> {} items", it.size) }
+    }
 
     /**
      * TODO: Same-file only. Cross-file requires compiler's NameResolver (Phase 4).
@@ -311,10 +320,15 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         uri: String,
         positions: List<Position>,
     ): List<SelectionRange> {
-        val tree = parsedTrees[uri] ?: return emptyList()
-        return positions.map { pos ->
-            buildSelectionRange(tree, pos.line, pos.column)
+        logger.info("$logPrefix getSelectionRanges: uri={}, positions={}", uri, positions.map { "${it.line}:${it.column}" })
+        val tree = parsedTrees[uri]
+        if (tree == null) {
+            logger.info("$logPrefix getSelectionRanges: no parsed tree for uri")
+            return emptyList()
         }
+        val result = positions.map { pos -> buildSelectionRange(tree, pos.line, pos.column) }
+        logger.info("$logPrefix getSelectionRanges -> {} ranges", result.size)
+        return result
     }
 
     private fun buildSelectionRange(

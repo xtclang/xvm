@@ -1,13 +1,22 @@
 package org.xvm.lsp.server
 
+import org.eclipse.lsp4j.CallHierarchyIncomingCall
+import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
+import org.eclipse.lsp4j.CallHierarchyItem
+import org.eclipse.lsp4j.CallHierarchyOutgoingCall
+import org.eclipse.lsp4j.CallHierarchyOutgoingCallsParams
+import org.eclipse.lsp4j.CallHierarchyPrepareParams
 import org.eclipse.lsp4j.CodeAction
 import org.eclipse.lsp4j.CodeActionParams
+import org.eclipse.lsp4j.CodeLens
+import org.eclipse.lsp4j.CodeLensParams
 import org.eclipse.lsp4j.Command
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionOptions
 import org.eclipse.lsp4j.CompletionParams
+import org.eclipse.lsp4j.DeclarationParams
 import org.eclipse.lsp4j.DefinitionParams
 import org.eclipse.lsp4j.DidChangeConfigurationParams
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
@@ -21,6 +30,7 @@ import org.eclipse.lsp4j.DocumentHighlightParams
 import org.eclipse.lsp4j.DocumentLink
 import org.eclipse.lsp4j.DocumentLinkOptions
 import org.eclipse.lsp4j.DocumentLinkParams
+import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.DocumentSymbolParams
@@ -28,10 +38,13 @@ import org.eclipse.lsp4j.FoldingRange
 import org.eclipse.lsp4j.FoldingRangeRequestParams
 import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.HoverParams
+import org.eclipse.lsp4j.ImplementationParams
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializeResult
 import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.InlayHintParams
+import org.eclipse.lsp4j.LinkedEditingRangeParams
+import org.eclipse.lsp4j.LinkedEditingRanges
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.LocationLink
 import org.eclipse.lsp4j.MarkupContent
@@ -58,6 +71,11 @@ import org.eclipse.lsp4j.SignatureInformation
 import org.eclipse.lsp4j.SymbolInformation
 import org.eclipse.lsp4j.TextDocumentSyncKind
 import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.TypeDefinitionParams
+import org.eclipse.lsp4j.TypeHierarchyItem
+import org.eclipse.lsp4j.TypeHierarchyPrepareParams
+import org.eclipse.lsp4j.TypeHierarchySubtypesParams
+import org.eclipse.lsp4j.TypeHierarchySupertypesParams
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.WorkspaceSymbol
 import org.eclipse.lsp4j.WorkspaceSymbolParams
@@ -984,6 +1002,311 @@ class XtcLanguageServer(
                 }
             }
         }
+
+        // ====================================================================
+        // Planned features (stubs with logging — not yet advertised)
+        // ====================================================================
+        //
+        // These handlers are wired up but the server does NOT advertise the
+        // capabilities yet (see buildServerCapabilities). They exist so that:
+        // 1. The code structure is ready to plug in when adapters implement them
+        // 2. If a client sends the request anyway, we respond gracefully
+        // 3. Log traces show the exact request parameters for debugging
+        //
+        // ====================================================================
+
+        /**
+         * LSP: textDocument/declaration
+         * @see org.eclipse.lsp4j.services.TextDocumentService.declaration
+         */
+        override fun declaration(params: DeclarationParams): CompletableFuture<Either<List<Location>, List<LocationLink>>> {
+            val uri = params.textDocument.uri
+            val line = params.position.line
+            val column = params.position.character
+
+            logger.info("textDocument/declaration: {} at {}:{}", uri, line, column)
+            return CompletableFuture.supplyAsync {
+                val (declaration, elapsed) = measureTimedValue { adapter.findDeclaration(uri, line, column) }
+
+                if (declaration == null) {
+                    logger.info("textDocument/declaration: no result in {}", elapsed)
+                    return@supplyAsync Either.forLeft(emptyList())
+                }
+
+                logger.info("textDocument/declaration: found in {}", elapsed)
+                Either.forLeft(listOf(declaration.toLsp()))
+            }
+        }
+
+        /**
+         * LSP: textDocument/typeDefinition
+         * @see org.eclipse.lsp4j.services.TextDocumentService.typeDefinition
+         */
+        override fun typeDefinition(params: TypeDefinitionParams): CompletableFuture<Either<List<Location>, List<LocationLink>>> {
+            val uri = params.textDocument.uri
+            val line = params.position.line
+            val column = params.position.character
+
+            logger.info("textDocument/typeDefinition: {} at {}:{}", uri, line, column)
+            return CompletableFuture.supplyAsync {
+                val (typeDefLocation, elapsed) = measureTimedValue { adapter.findTypeDefinition(uri, line, column) }
+
+                if (typeDefLocation == null) {
+                    logger.info("textDocument/typeDefinition: no result in {}", elapsed)
+                    return@supplyAsync Either.forLeft(emptyList())
+                }
+
+                logger.info("textDocument/typeDefinition: found in {}", elapsed)
+                Either.forLeft(listOf(typeDefLocation.toLsp()))
+            }
+        }
+
+        /**
+         * LSP: textDocument/implementation
+         * @see org.eclipse.lsp4j.services.TextDocumentService.implementation
+         */
+        override fun implementation(params: ImplementationParams): CompletableFuture<Either<List<Location>, List<LocationLink>>> {
+            val uri = params.textDocument.uri
+            val line = params.position.line
+            val column = params.position.character
+
+            logger.info("textDocument/implementation: {} at {}:{}", uri, line, column)
+            return CompletableFuture.supplyAsync {
+                val (impls, elapsed) = measureTimedValue { adapter.findImplementation(uri, line, column) }
+                logger.info("textDocument/implementation: {} locations in {}", impls.size, elapsed)
+                Either.forLeft(impls.map { it.toLsp() })
+            }
+        }
+
+        /**
+         * LSP: typeHierarchy/prepareTypeHierarchy
+         * @see org.eclipse.lsp4j.services.TextDocumentService.prepareTypeHierarchy
+         */
+        override fun prepareTypeHierarchy(params: TypeHierarchyPrepareParams): CompletableFuture<List<TypeHierarchyItem>> {
+            val uri = params.textDocument.uri
+            val line = params.position.line
+            val column = params.position.character
+
+            logger.info("typeHierarchy/prepare: {} at {}:{}", uri, line, column)
+            return CompletableFuture.supplyAsync {
+                val (items, elapsed) = measureTimedValue { adapter.prepareTypeHierarchy(uri, line, column) }
+                logger.info("typeHierarchy/prepare: {} items in {}", items.size, elapsed)
+                items.map { it.toLsp(uri) }
+            }
+        }
+
+        /**
+         * LSP: typeHierarchy/supertypes
+         * @see org.eclipse.lsp4j.services.TextDocumentService.typeHierarchySupertypes
+         */
+        override fun typeHierarchySupertypes(params: TypeHierarchySupertypesParams): CompletableFuture<List<TypeHierarchyItem>> {
+            val item = params.item
+
+            logger.info("typeHierarchy/supertypes: {}", item.name)
+            return CompletableFuture.supplyAsync {
+                val adapterItem = item.toAdapter()
+                val (supertypes, elapsed) = measureTimedValue { adapter.getSupertypes(adapterItem) }
+                logger.info("typeHierarchy/supertypes: {} items in {}", supertypes.size, elapsed)
+                supertypes.map { it.toLsp(item.uri) }
+            }
+        }
+
+        /**
+         * LSP: typeHierarchy/subtypes
+         * @see org.eclipse.lsp4j.services.TextDocumentService.typeHierarchySubtypes
+         */
+        override fun typeHierarchySubtypes(params: TypeHierarchySubtypesParams): CompletableFuture<List<TypeHierarchyItem>> {
+            val item = params.item
+
+            logger.info("typeHierarchy/subtypes: {}", item.name)
+            return CompletableFuture.supplyAsync {
+                val adapterItem = item.toAdapter()
+                val (subtypes, elapsed) = measureTimedValue { adapter.getSubtypes(adapterItem) }
+                logger.info("typeHierarchy/subtypes: {} items in {}", subtypes.size, elapsed)
+                subtypes.map { it.toLsp(item.uri) }
+            }
+        }
+
+        /**
+         * LSP: callHierarchy/prepare
+         * @see org.eclipse.lsp4j.services.TextDocumentService.prepareCallHierarchy
+         */
+        override fun prepareCallHierarchy(params: CallHierarchyPrepareParams): CompletableFuture<List<CallHierarchyItem>> {
+            val uri = params.textDocument.uri
+            val line = params.position.line
+            val column = params.position.character
+
+            logger.info("callHierarchy/prepare: {} at {}:{}", uri, line, column)
+            return CompletableFuture.supplyAsync {
+                val (items, elapsed) = measureTimedValue { adapter.prepareCallHierarchy(uri, line, column) }
+                logger.info("callHierarchy/prepare: {} items in {}", items.size, elapsed)
+                items.map { it.toLspCallItem() }
+            }
+        }
+
+        /**
+         * LSP: callHierarchy/incomingCalls
+         * @see org.eclipse.lsp4j.services.TextDocumentService.callHierarchyIncomingCalls
+         */
+        override fun callHierarchyIncomingCalls(
+            params: CallHierarchyIncomingCallsParams,
+        ): CompletableFuture<List<CallHierarchyIncomingCall>> {
+            val item = params.item
+
+            logger.info("callHierarchy/incomingCalls: {}", item.name)
+            return CompletableFuture.supplyAsync {
+                val adapterItem = item.toAdapterCallItem()
+                val (calls, elapsed) = measureTimedValue { adapter.getIncomingCalls(adapterItem) }
+                logger.info("callHierarchy/incomingCalls: {} calls in {}", calls.size, elapsed)
+                calls.map { c ->
+                    CallHierarchyIncomingCall().apply {
+                        from = c.from.toLspCallItem()
+                        fromRanges = c.fromRanges.map { it.toLsp() }
+                    }
+                }
+            }
+        }
+
+        /**
+         * LSP: callHierarchy/outgoingCalls
+         * @see org.eclipse.lsp4j.services.TextDocumentService.callHierarchyOutgoingCalls
+         */
+        override fun callHierarchyOutgoingCalls(
+            params: CallHierarchyOutgoingCallsParams,
+        ): CompletableFuture<List<CallHierarchyOutgoingCall>> {
+            val item = params.item
+
+            logger.info("callHierarchy/outgoingCalls: {}", item.name)
+            return CompletableFuture.supplyAsync {
+                val adapterItem = item.toAdapterCallItem()
+                val (calls, elapsed) = measureTimedValue { adapter.getOutgoingCalls(adapterItem) }
+                logger.info("callHierarchy/outgoingCalls: {} calls in {}", calls.size, elapsed)
+                calls.map { c ->
+                    CallHierarchyOutgoingCall().apply {
+                        to = c.to.toLspCallItem()
+                        fromRanges = c.fromRanges.map { it.toLsp() }
+                    }
+                }
+            }
+        }
+
+        /**
+         * LSP: textDocument/codeLens
+         * @see org.eclipse.lsp4j.services.TextDocumentService.codeLens
+         */
+        override fun codeLens(params: CodeLensParams): CompletableFuture<List<CodeLens>> {
+            val uri = params.textDocument.uri
+
+            logger.info("textDocument/codeLens: {}", uri)
+            return CompletableFuture.supplyAsync {
+                val (lenses, elapsed) = measureTimedValue { adapter.getCodeLenses(uri) }
+                logger.info("textDocument/codeLens: {} lenses in {}", lenses.size, elapsed)
+                lenses.map { l ->
+                    CodeLens().apply {
+                        range = l.range.toLsp()
+                        l.command?.let { cmd ->
+                            command = Command(cmd.title, cmd.command)
+                        }
+                    }
+                }
+            }
+        }
+
+        /**
+         * LSP: textDocument/onTypeFormatting
+         * @see org.eclipse.lsp4j.services.TextDocumentService.onTypeFormatting
+         */
+        override fun onTypeFormatting(params: DocumentOnTypeFormattingParams): CompletableFuture<List<TextEdit>> {
+            val uri = params.textDocument.uri
+            val line = params.position.line
+            val column = params.position.character
+            val ch = params.ch
+
+            logger.info("textDocument/onTypeFormatting: {} at {}:{} ch='{}'", uri, line, column, ch)
+            return CompletableFuture.supplyAsync {
+                val options =
+                    AdapterFormattingOptions(
+                        tabSize = params.options.tabSize,
+                        insertSpaces = params.options.isInsertSpaces,
+                    )
+                val (edits, elapsed) = measureTimedValue { adapter.onTypeFormatting(uri, line, column, ch, options) }
+                logger.info("textDocument/onTypeFormatting: {} edits in {}", edits.size, elapsed)
+                edits.map { e ->
+                    TextEdit().apply {
+                        range = e.range.toLsp()
+                        newText = e.newText
+                    }
+                }
+            }
+        }
+
+        /**
+         * LSP: textDocument/linkedEditingRange
+         * @see org.eclipse.lsp4j.services.TextDocumentService.linkedEditingRange
+         */
+        override fun linkedEditingRange(params: LinkedEditingRangeParams): CompletableFuture<LinkedEditingRanges> {
+            val uri = params.textDocument.uri
+            val line = params.position.line
+            val column = params.position.character
+
+            logger.info("textDocument/linkedEditingRange: {} at {}:{}", uri, line, column)
+            return CompletableFuture.supplyAsync {
+                val (result, elapsed) = measureTimedValue { adapter.getLinkedEditingRanges(uri, line, column) }
+
+                if (result == null) {
+                    logger.info("textDocument/linkedEditingRange: no result in {}", elapsed)
+                    return@supplyAsync null
+                }
+
+                logger.info("textDocument/linkedEditingRange: {} ranges in {}", result.ranges.size, elapsed)
+                LinkedEditingRanges().apply {
+                    ranges = result.ranges.map { it.toLsp() }
+                    wordPattern = result.wordPattern
+                }
+            }
+        }
+
+        // ====================================================================
+        // Conversion helpers for hierarchy types
+        // ====================================================================
+
+        private fun XtcCompilerAdapter.TypeHierarchyItem.toLsp(defaultUri: String): TypeHierarchyItem {
+            val resolvedUri = this.uri.ifEmpty { defaultUri }
+            return TypeHierarchyItem(
+                this.name,
+                this.kind.toLsp(),
+                resolvedUri,
+                this.range.toLsp(),
+                this.selectionRange.toLsp(),
+                this.detail,
+            )
+        }
+
+        private fun TypeHierarchyItem.toAdapter(): XtcCompilerAdapter.TypeHierarchyItem =
+            XtcCompilerAdapter.TypeHierarchyItem(
+                name = name,
+                kind = SymbolInfo.SymbolKind.CLASS,
+                uri = uri,
+                range = toAdapterRange(range),
+                selectionRange = toAdapterRange(selectionRange),
+                detail = detail,
+            )
+
+        private fun XtcCompilerAdapter.CallHierarchyItem.toLspCallItem(): CallHierarchyItem {
+            val result = CallHierarchyItem(this.name, this.kind.toLsp(), this.uri, this.range.toLsp(), this.selectionRange.toLsp())
+            result.detail = this.detail
+            return result
+        }
+
+        private fun CallHierarchyItem.toAdapterCallItem(): XtcCompilerAdapter.CallHierarchyItem =
+            XtcCompilerAdapter.CallHierarchyItem(
+                name = name,
+                kind = SymbolInfo.SymbolKind.METHOD,
+                uri = uri,
+                range = toAdapterRange(range),
+                selectionRange = toAdapterRange(selectionRange),
+                detail = detail,
+            )
     }
 
     // ========================================================================
