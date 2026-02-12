@@ -106,16 +106,10 @@ class XtcLspConnectionProvider(
         // If not provisioned, commandLine will be configured during start() with progress
     }
 
-    // NOTE: LSP4IJ (as of 0.19.1) may call createConnectionProvider() + start() multiple times
-    //  concurrently when several .x files are opened/indexed simultaneously. This is a known
-    //  race condition in the LanguageServerWrapper where getInitializedServer() can be called
-    //  from multiple threads before the first instance reports readiness, causing duplicate
-    //  wrapper creation. Each call spawns a separate server process. LSP4IJ eventually kills
-    //  the extras and settles on a single instance, so this is harmless — the extra processes
-    //  receive shutdown/exit within milliseconds and the surviving instance works correctly.
-    //  We use a static AtomicBoolean to show the "Started" notification only once per IDE session.
-    //  See: https://github.com/eclipse-lsp4e/lsp4e/issues/512 (same bug in lsp4e, fixed in PR #520)
-    //  See: https://github.com/redhat-developer/lsp4ij/issues/888 (related LSP4IJ performance issue)
+    // TODO: Remove AtomicBoolean notification guard once LSP4IJ fixes duplicate server spawning.
+    //  LSP4IJ may call start() concurrently for multiple .x files, spawning extra processes
+    //  that are killed within milliseconds. Harmless, but we guard notifications with a static
+    //  AtomicBoolean to avoid duplicates. See: https://github.com/redhat-developer/lsp4ij/issues/888
 
     override fun start() {
         // If command line not yet configured, provision JRE with progress

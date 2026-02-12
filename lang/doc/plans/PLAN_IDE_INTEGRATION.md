@@ -262,6 +262,56 @@ Full tree-sitter support for fast, incremental parsing:
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
+## Design Decision: LSP4IJ over IntelliJ Built-in LSP
+
+The IntelliJ plugin uses Red Hat's [LSP4IJ](https://github.com/redhat-developer/lsp4ij) (`com.redhat.devtools.lsp4ij`) rather than IntelliJ's built-in LSP support (`com.intellij.modules.lsp` / `ProjectWideLspServerDescriptor`).
+
+### Why LSP4IJ
+
+**DAP support.** IntelliJ has no built-in DAP (Debug Adapter Protocol) client. LSP4IJ provides a DAP client via the `debugAdapterServer` extension point, which is required for `lang/debug-adapter/` integration. Without it, we would need to write thousands of lines of IntelliJ-specific debug infrastructure (`XDebugProcess`, `XBreakpointHandler`, `ProcessHandler`, variable tree rendering, stack frame mapping, expression evaluation) — the exact opposite of IDE independence.
+
+**LSP feature coverage.** LSP4IJ supports LSP features that IntelliJ's built-in LSP (as of 2025.3) does not:
+
+| Feature | LSP4IJ | Built-in LSP |
+|---------|--------|-------------|
+| Code Lens | Yes | No |
+| Call Hierarchy | Yes | No |
+| Type Hierarchy | Yes | No |
+| On-Type Formatting | Yes | No |
+| Selection Range | Yes | No |
+| Semantic Tokens | Full | Limited |
+| LSP Console (debug traces) | Yes | No |
+| DAP Client | Yes | No |
+
+Code Lens, Call Hierarchy, and Type Hierarchy are on the roadmap (see `plan-next-steps-lsp.md`).
+
+**Standard protocol types.** LSP4IJ uses Eclipse LSP4J types (`org.eclipse.lsp4j.services.LanguageServer`, `IDebugProtocolServer`) — the same library our LSP and DAP servers use. IntelliJ's built-in LSP uses internal IntelliJ types.
+
+### What LSP4IJ Does Not Affect
+
+IDE independence is preserved either way. The shared, IDE-independent code is:
+
+```
+lang/lsp-server/     — LSP server (Eclipse LSP4J, stdio)
+lang/debug-adapter/  — DAP server (Eclipse LSP4J debug, stdio)
+lang/dsl/            — Language model, generates TextMate/tree-sitter/vim/emacs
+lang/tree-sitter/    — Grammar + native libs
+```
+
+The IntelliJ plugin (`lang/intellij-plugin/`) is inherently IntelliJ-specific. The choice between LSP4IJ and built-in LSP only affects which IntelliJ API the thin wrapper calls. The servers are unchanged.
+
+### Costs
+
+| Concern | Assessment |
+|---------|-----------|
+| User installs extra plugin | Minor — one dependency (`com.redhat.devtools.lsp4ij`) |
+| Duplicate server spawn race condition | Known LSP4IJ issue ([#888](https://github.com/redhat-developer/lsp4ij/issues/888)), harmless — extras killed in milliseconds |
+| Third-party maintenance risk | LSP4IJ is actively maintained by Red Hat, releases every ~2 weeks |
+
+### Reference
+
+The `xtc-intellij-plugin-dev` reference repo demonstrates IntelliJ's built-in LSP in ~29 lines. That is intentional — it serves as a minimal "getting started" example. The production plugin requires DAP support, advanced LSP features, and the LSP Console, which are only available through LSP4IJ.
+
 ## Related Documentation
 
 - **[PLAN_TREE_SITTER.md](./PLAN_TREE_SITTER.md)** - Tree-sitter grammar status and development guide
