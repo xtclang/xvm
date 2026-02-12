@@ -315,4 +315,5 @@ The `xtc-intellij-plugin-dev` reference repo demonstrates IntelliJ's built-in LS
 ## Related Documentation
 
 - **[PLAN_TREE_SITTER.md](./PLAN_TREE_SITTER.md)** - Tree-sitter grammar status and development guide
+- **[plan-next-steps-lsp.md](../plan-next-steps-lsp.md) § 13** - Multi-IDE strategy with market share data, priority rankings, effort estimates, and configuration examples for Neovim, Helix, Eclipse, Sublime Text, Zed, Emacs, Vim, and Kate
 - *Internal documentation* - Comprehensive architecture analysis and compiler modification plans

@@ -3,7 +3,7 @@
 This document covers all LSP features — implemented and planned — along with IDE client
 integration strategies for IntelliJ (via LSP4IJ), VS Code, and other editors.
 
-> **Last Updated**: 2026-02-12
+> **Last Updated**: 2026-02-12 (§13 expanded with multi-IDE market data and priority ranking)
 
 ---
 
@@ -26,7 +26,7 @@ integration strategies for IntelliJ (via LSP4IJ), VS Code, and other editors.
 
 11. [IntelliJ (LSP4IJ)](#11-intellij-lsp4ij)
 12. [VS Code](#12-vs-code)
-13. [Other Editors](#13-other-editors)
+13. [Multi-IDE Strategy](#13-multi-ide-strategy)
 
 ---
 
@@ -1161,27 +1161,107 @@ extensions handle native dependencies.
 
 ---
 
-## 13. Other Editors
+## 13. Multi-IDE Strategy
 
 Because the LSP and DAP servers are standalone Java processes communicating over stdio, they work
-with **any editor** that supports LSP/DAP. The servers are entirely IDE-independent.
+with **any editor** that supports LSP/DAP. The servers are entirely IDE-independent. This means
+adding a new editor is primarily a **configuration problem**, not a coding problem.
 
-### 13.1 Eclipse
+### 13.1 IDE Market Share & Prioritization
 
-Eclipse has built-in LSP support via **Eclipse LSP4E** (`org.eclipse.lsp4e`). Configuration:
+Data from the 2025 Stack Overflow Developer Survey (49,000+ respondents) and the JRebel 2025
+Java Developer Productivity Report. Respondents can select multiple editors, so percentages
+sum to more than 100%.
+
+#### Overall Developer Usage
+
+| Rank | IDE/Editor | Usage % | Trend | LSP | DAP |
+|------|-----------|---------|-------|-----|-----|
+| 1 | **VS Code** | **75.9%** | Growing | Native | Native |
+| 2 | Visual Studio | ~29% | Stable | Native | Native |
+| 3 | **IntelliJ IDEA** | **~27%** | Stable/growing | Via LSP4IJ | Via LSP4IJ |
+| 4 | Notepad++ | ~24% | Declining | No | No |
+| 5 | Vim | 24.3% | Growing | Plugin (`coc.nvim`, `vim-lsp`) | Plugin (`vimspector`) |
+| 6 | Cursor | 18% | New, fast adoption | Native (VS Code fork) | Native (VS Code fork) |
+| 7 | Android Studio | ~16% | Stable | Via LSP4IJ | Via LSP4IJ |
+| 8 | **Neovim** | **14%** | Growing fast | **Native** (built-in since 0.5) | Plugin (`nvim-dap`) |
+| 9 | **Sublime Text** | **~11%** | Declining | Plugin (`LSP` package, mature) | Plugin (`SublimeDebugger`) |
+| 10 | **Eclipse** | **~9.4%** | Declining fast | **Native** (LSP4E) | **Native** (LSP4E Debug) |
+| 11 | **Emacs** | **<5%** (est.) | Declining | **Native** (`eglot`, built-in since 29) | Plugin (`dap-mode`, `dape`) |
+| 12 | **Zed** | **<3%** (est.) | Growing fast | **Native** (first-class) | **Native** (shipped 2025) |
+| 13 | **Helix** | **<1%** (est.) | Growing | **Native** (first-class) | Experimental (built-in) |
+| 14 | **Kate** | **<1%** (est.) | Stable/niche | **Native** (built-in) | **Native** (built-in) |
+
+#### Java/JVM-Specific Usage (JRebel 2025)
+
+Particularly relevant for XTC/Ecstasy as a JVM-adjacent language:
+
+| Rank | IDE | Java Usage % | Trend |
+|------|-----|-------------|-------|
+| 1 | **IntelliJ IDEA** | **84%** | Up from 71% (2024) — dominant |
+| 2 | **VS Code** | **31%** | Stable, secondary editor for many |
+| 3 | **Eclipse** | **28%** | Down from 39% (2024) — significant decline |
+
+42% of Java developers use more than one IDE. 68% of IntelliJ users also use VS Code.
+
+#### Admiration / Satisfaction Ratings
+
+| IDE/Editor | Admiration % |
+|-----------|-------------|
+| **Neovim** | **~83%** (highest of any editor) |
+| VS Code | 62.6% |
+| Vim | 59.3% |
+| IntelliJ IDEA | 58.2% |
+
+Neovim users are disproportionately influential: they write blog posts, create tutorials, and
+evangelize tools. High satisfaction means high amplification.
+
+### 13.2 Priority Ranking (After IntelliJ + VS Code)
+
+| Priority | Editor | Est. Reach | Effort | ROI | Rationale |
+|----------|--------|-----------|--------|-----|-----------|
+| **1** | **Neovim** | 14% | Very low (~20 lines Lua) | **Very High** | Highest satisfaction, tree-sitter synergy, influential community |
+| **2** | **Helix** | <1% | Minimal (~10 lines TOML) | **High** | Trivial effort, tree-sitter native, early adopters amplify |
+| **3** | **Eclipse** | 9.4% (28% Java) | Medium (small plugin) | **High** | Second-largest Java audience, same LSP4J types |
+| **4** | **Sublime Text** | ~11% | Low (settings JSON) | Medium | Existing TextMate grammar works directly |
+| **5** | **Zed** | <3% | Low (extension/TOML) | Medium-High | Fastest-growing new editor, native LSP+DAP, tree-sitter native |
+| **6** | **Emacs** | <5% | Low-medium (elisp) | Medium | Passionate community, `eglot` now built-in |
+| **7** | **Vim** | 24.3% | Medium (plugin config) | Medium | Large base but migrating to Neovim |
+| **8** | **Kate** | <1% | Minimal (settings) | Low | Trivial but tiny audience |
+
+### 13.3 Effort Estimate Per Editor
+
+| Editor | New Code Required | Reuses | Deliverable |
+|--------|------------------|--------|-------------|
+| **Neovim** | ~20 lines Lua | LSP server, DAP server, tree-sitter grammar | `ftplugin/xtc.lua` + PR to `nvim-lspconfig` + `nvim-treesitter` registration |
+| **Helix** | ~10 lines TOML | LSP server, DAP server, tree-sitter grammar | `languages.toml` snippet + upstream PR to `helix-editor/helix` |
+| **Eclipse** | ~200-500 lines Java | LSP server, DAP server, TextMate grammar | Eclipse marketplace plugin via LSP4E |
+| **Sublime Text** | ~20 lines JSON | LSP server, DAP server, TextMate grammar | Sublime Text package or config guide |
+| **Zed** | ~30 lines config | LSP server, DAP server, tree-sitter grammar | Zed extension or `languages.toml` |
+| **Emacs** | ~50-100 lines elisp | LSP server, DAP server, tree-sitter grammar | `xtc-mode.el` with eglot/dap-mode config (MELPA submission) |
+| **Vim** | ~30 lines config | LSP server, DAP server | Config examples for `coc.nvim` and `vim-lsp` |
+| **Kate** | ~10 lines config | LSP server, DAP server | Settings config snippet |
+
+Editors 1, 2, 4, 5, 7, 8 are **configuration-only** — no new compiled code required. Only
+Eclipse (3) and Emacs (6) need actual development work, and even those are modest.
+
+### 13.4 Protocol Support Details
+
+#### Eclipse (Priority 3)
+
+Eclipse has built-in LSP support via **Eclipse LSP4E** (`org.eclipse.lsp4e`):
 
 - Register a content type for `.x` files
 - Point `LanguageServerDefinition` at `java -jar xtc-lsp-server.jar`
 - DAP: Eclipse has built-in DAP support via **Eclipse LSP4E Debug**
+- Compatibility advantage: both LSP4E and our server use Eclipse LSP4J types
 
-Eclipse is lower priority but would work with minimal effort since both LSP4E and our server
-use Eclipse LSP4J types.
-
-### 13.2 Neovim
+#### Neovim (Priority 1)
 
 Neovim has built-in LSP client (`vim.lsp`) since 0.5:
 
 ```lua
+-- LSP configuration (~10 lines)
 vim.lsp.start({
     name = 'xtc',
     cmd = { 'java', '-jar', '/path/to/xtc-lsp-server.jar' },
@@ -1189,9 +1269,10 @@ vim.lsp.start({
 })
 ```
 
-DAP via `nvim-dap`:
+DAP via `nvim-dap` (4,500+ GitHub stars, community standard):
 
 ```lua
+-- DAP configuration (~10 lines)
 require('dap').adapters.xtc = {
     type = 'executable',
     command = 'java',
@@ -1199,29 +1280,62 @@ require('dap').adapters.xtc = {
 }
 ```
 
-### 13.3 Zed, Helix, Sublime Text, Emacs
+Tree-sitter grammar can be registered with `nvim-treesitter` for syntax highlighting,
+providing the same grammar already used by the LSP server.
 
-All support LSP natively or via plugins:
+Ideal deliverable: submit config to `nvim-lspconfig` (community repo) for one-line setup,
+and register grammar with `nvim-treesitter`.
 
-| Editor | LSP Support | DAP Support | Config Effort |
-|--------|-------------|-------------|---------------|
-| Zed | Built-in | Planned | Extension or `languages.toml` |
-| Helix | Built-in | Built-in | `languages.toml` |
-| Sublime Text | Via LSP package | Via DebugAdapter package | `.sublime-settings` |
-| Emacs | Via `lsp-mode` or `eglot` | Via `dap-mode` | Elisp config |
+#### Helix (Priority 2)
 
-### 13.4 Shared Assets
+Helix uses `languages.toml` for all language configuration — no plugins needed:
+
+```toml
+[[language]]
+name = "xtc"
+scope = "source.xtc"
+file-types = ["x"]
+language-servers = ["xtc-lsp"]
+indent = { tab-width = 4, unit = "    " }
+
+[language-server.xtc-lsp]
+command = "java"
+args = ["-jar", "/path/to/xtc-lsp-server.jar"]
+```
+
+DAP support is experimental but built-in. Submit upstream PR to `helix-editor/helix`.
+
+#### Zed (Priority 5)
+
+Zed has first-class LSP and DAP support (DAP shipped 2025). Built by the creators of Atom
+and Tree-sitter — the tree-sitter-native architecture aligns perfectly with the XTC toolchain.
+Languages can be added via extensions that configure LSP/DAP servers.
+
+#### Sublime Text (Priority 4)
+
+The `LSP` package is mature and well-maintained. `SublimeDebugger` provides DAP support.
+Both installable via Package Control. The existing TextMate grammar (`.tmLanguage.json`)
+works directly for syntax highlighting — no additional work needed.
+
+#### Emacs (Priority 6)
+
+`eglot` is now built into Emacs 29+ (making LSP support effectively native). `lsp-mode`
+is the more feature-rich alternative. For DAP, `dap-mode` works with `lsp-mode`, and the
+newer `dape` package works independently. An `xtc-mode.el` package would provide major mode
++ LSP/DAP configuration.
+
+### 13.5 Shared Assets
 
 The `lang/dsl/` module generates shared language assets that all editors can use:
 
 | Asset | Generated By | Used By |
 |-------|-------------|---------|
-| TextMate grammar (`.tmLanguage.json`) | `lang/dsl/` | VS Code, IntelliJ, Sublime, others |
-| Tree-sitter grammar | `lang/tree-sitter/` | Neovim, Helix, Zed, Emacs |
+| TextMate grammar (`.tmLanguage.json`) | `lang/dsl/` | VS Code, IntelliJ, Sublime, Zed, others |
+| Tree-sitter grammar | `lang/tree-sitter/` | Neovim, Helix, Zed, Emacs, LSP server |
 | Vim syntax file | `lang/dsl/` (planned) | Vim, Neovim (fallback) |
 | Emacs major mode | `lang/dsl/` (planned) | Emacs (fallback) |
 
-### 13.5 What's IDE-Specific vs Shared
+### 13.6 What's IDE-Specific vs Shared
 
 ```
 SHARED (IDE-independent, reused across ALL editors):
@@ -1239,3 +1353,25 @@ IDE-SPECIFIC (thin wrappers — always editor-specific):
 The architectural principle: **servers are source of truth, IDE plugins are thin wrappers.**
 Adding a new editor means writing a small configuration/wrapper — the LSP and DAP servers
 provide all the intelligence.
+
+### 13.7 The Shared Bottleneck: DAP Server
+
+The DAP server (Phases 1-6, ~7-10 weeks, see `plan-dap-debugging.md`) is the shared bottleneck
+for debugging support across all editors. Once the DAP server is functional, **every editor gets
+debugging support simultaneously** through the same `xtc-dap-server.jar`. This makes investing
+in the shared DAP implementation the highest-leverage work for multi-IDE support.
+
+### 13.8 Recommended Rollout Plan
+
+**Wave 1 (alongside VS Code extension completion):**
+Ship Neovim + Helix configs. Combined ~30 lines of configuration. Validates the tree-sitter
+grammar in its native habitat and reaches the most enthusiastic editor communities.
+
+**Wave 2 (after VS Code extension is stable):**
+Sublime Text config + Zed extension. Low effort, broadens reach.
+
+**Wave 3 (dedicated sprint):**
+Eclipse plugin. Only editor requiring real development work that serves a large Java audience.
+
+**Wave 4 (community contributions welcome):**
+Emacs package, Vim configs, Kate settings. Publish config snippets and invite community PRs.
