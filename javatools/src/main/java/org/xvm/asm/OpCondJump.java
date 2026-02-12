@@ -555,7 +555,7 @@ public abstract class OpCondJump
                 Builder.loadNull(code);
                 code.if_acmpne(lblJump);
                 bctx.narrowRegister(code, reg, bctx.pool().typeNullable());
-                bctx.narrowRegister(code, reg, reg.type().removeNullable());
+                bctx.narrowRegister(code, reg, nAddrJump, reg.type().removeNullable());
                 break;
 
             default:
