@@ -3,7 +3,7 @@
 **Goal**: Run the XTC LSP server as a separate process with Java 25, enabling full tree-sitter
 support regardless of IntelliJ's JBR version.
 
-**Status**: ✅ COMPLETE (2026-02-03)
+**Status**: ✅ COMPLETE (2026-02-03, updated 2026-02-12 with DAP wiring)
 
 **Risk**: Medium (significant plugin architecture change, external dependencies)
 **Prerequisites**: Working LSP server (see [PLAN_TREE_SITTER.md](./PLAN_TREE_SITTER.md))

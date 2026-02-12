@@ -873,6 +873,35 @@ The DAP server receives these in the `launch` request and uses them to:
 
 ## 11. Implementation Phases
 
+### Phase 0: IDE-Side DAP Wiring - COMPLETE ✅
+
+**Goal**: Wire up the LSP4IJ DAP extension point so IntelliJ can launch and connect to the DAP server.
+
+> **Completed**: 2026-02-12 on branch `lagergren/lsp-extend4`
+
+1. **Created `XtcDebugAdapterFactory`** (`intellij-plugin/src/main/kotlin/org/xtclang/idea/dap/`)
+   - `XtcDebugAdapterFactory` — LSP4IJ `DebugAdapterDescriptorFactory`, registered via
+     `com.redhat.devtools.lsp4ij.debugAdapterServer` extension point in `plugin.xml`
+   - `XtcDebugAdapterDescriptor` — launches DAP server out-of-process with provisioned Java 25
+
+2. **Shared infrastructure extracted**
+   - `PluginPaths.kt` — shared JAR resolution for both LSP (`xtc-lsp-server.jar`) and DAP
+     (`xtc-dap-server.jar`). Searches plugin `bin/` directory (not `lib/` — avoids classloader
+     conflicts with LSP4IJ's bundled lsp4j). Error messages include all searched paths.
+   - Both LSP and DAP use `JreProvisioner` for Java 25 JRE resolution/download.
+
+3. **Module renamed** `debug-adapter` → `dap-server` for consistency with `lsp-server`
+
+4. **Architecture documented**
+   - KDoc on `XtcDebugAdapterDescriptor` explains: out-of-process/JBR 21 compatibility, LSP vs DAP
+     process lifecycle differences, and why the LSP `AtomicBoolean` notification guard is not needed
+     for DAP (user-initiated sessions, no concurrent spawn race condition).
+   - `lsp-processes.md` updated with DAP architecture, correct class names, JAR locations.
+   - `PLAN_IDE_INTEGRATION.md` documents LSP4IJ design choice over IntelliJ built-in LSP.
+
+**What's NOT done yet**: The DAP server itself (`dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServer.kt`)
+is still a stub. It needs to be connected to the XTC runtime's `Debugger` interface (Phase 1 below).
+
 ### Phase 1: Minimal Viable Debugger (2-3 weeks)
 
 **Goal**: Set a breakpoint, hit it, see the call stack.
