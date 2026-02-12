@@ -62,7 +62,9 @@ import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SelectionRangeParams
 import org.eclipse.lsp4j.SemanticTokens
+import org.eclipse.lsp4j.SemanticTokensLegend
 import org.eclipse.lsp4j.SemanticTokensParams
+import org.eclipse.lsp4j.SemanticTokensWithRegistrationOptions
 import org.eclipse.lsp4j.ServerCapabilities
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.SignatureHelpOptions
@@ -94,6 +96,7 @@ import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.model.fromLsp
 import org.xvm.lsp.model.toLsp
 import org.xvm.lsp.model.toRange
+import org.xvm.lsp.treesitter.SemanticTokenLegend
 import java.util.Properties
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
@@ -157,6 +160,7 @@ class XtcLanguageServer(
     private val buildInfo = loadBuildInfo()
     private val version = buildInfo.getProperty("lsp.version", "?")
     private val buildTime = buildInfo.getProperty("lsp.build.time", "?")
+    private val semanticTokensEnabled = buildInfo.getProperty("lsp.semanticTokens", "false").toBoolean()
 
     override fun connect(client: LanguageClient) {
         this.client = client
@@ -241,7 +245,7 @@ class XtcLanguageServer(
      * | onTypeFormatting   | Auto-format as you type (e.g., indent after {)         | treesitter      |
      * | typeHierarchy      | Show super/subtypes of a class (hierarchy tree)        | compiler (full) |
      * | callHierarchy      | Show callers/callees of a function (call tree)         | compiler (full) |
-     * | semanticTokens     | Token-level semantic highlighting (types vs vars)      | compiler (sym)  |
+     * | semanticTokens     | Token-level semantic highlighting (types vs vars)      | treesitter      |
      * | moniker            | Cross-project symbol identity for indexing              | compiler (full) |
      * | linkedEditingRange | Edit matching tags/names simultaneously                 | treesitter      |
      * | inlineValue        | Show variable values inline during debugging            | compiler (full) |
@@ -330,8 +334,20 @@ class XtcLanguageServer(
 
             signatureHelpProvider = SignatureHelpOptions(listOf("(", ","))
 
+            // Semantic tokens: opt-in via -Plsp.semanticTokens=true in gradle.properties (default: disabled)
+            if (semanticTokensEnabled) {
+                semanticTokensProvider =
+                    SemanticTokensWithRegistrationOptions().apply {
+                        legend =
+                            SemanticTokensLegend(
+                                SemanticTokenLegend.TOKEN_TYPES,
+                                SemanticTokenLegend.TOKEN_MODIFIERS,
+                            )
+                        full = Either.forLeft(true)
+                    }
+            }
+
             // Not yet advertised (enable when implemented)
-            // semanticTokensProvider = SemanticTokensWithRegistrationOptions(...) // compiler(sym)
             // declarationProvider = Either.forLeft(true) // compiler: go-to-declaration
             // typeDefinitionProvider = Either.forLeft(true) // compiler(types): jump to type
             // implementationProvider = Either.forLeft(true) // compiler(types): find implementations
@@ -391,9 +407,10 @@ class XtcLanguageServer(
      * - message: string - human-readable status message
      *
      * Usage from client: Send JSON-RPC request with method "xtc/health check"
+     *
+     * NOTE: Called at runtime via JSON-RPC by LSP clients (e.g., IntelliJ plugin, VS Code extension)
+     * sending a request with method "xtc/healthCheck". LSP4J dispatches via reflection.
      */
-    // NOTE: Called at runtime via JSON-RPC by LSP clients (e.g., IntelliJ plugin, VS Code extension)
-    //       sending a request with method "xtc/healthCheck". LSP4J dispatches via reflection.
     @Suppress("unused")
     @JsonRequest("xtc/healthCheck")
     fun healthCheck(): CompletableFuture<Map<String, Any>> =

@@ -23,6 +23,7 @@ import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
+import org.xvm.lsp.treesitter.SemanticTokenEncoder
 import org.xvm.lsp.treesitter.XtcNode
 import org.xvm.lsp.treesitter.XtcParser
 import org.xvm.lsp.treesitter.XtcQueryEngine
@@ -55,7 +56,6 @@ import kotlin.time.measureTimedValue
  * - Cross-file go-to-definition and rename
  * - Semantic error reporting
  * - Smart completion based on types
- * - Semantic tokens (type-aware highlighting)
  * - Inlay hints (type annotations)
  *
  * // TODO LSP: This adapter provides ~80% of LSP functionality without the compiler.
@@ -604,6 +604,13 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
                 tooltip = "import $importPath",
             )
         }
+    }
+
+    override fun getSemanticTokens(uri: String): XtcCompilerAdapter.SemanticTokens? {
+        val tree = parsedTrees[uri] ?: return null
+        val encoder = SemanticTokenEncoder()
+        val data = encoder.encode(tree.root)
+        return if (data.isEmpty()) null else XtcCompilerAdapter.SemanticTokens(data)
     }
 
     /**

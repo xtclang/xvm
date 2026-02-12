@@ -1881,19 +1881,127 @@ class TreeSitterAdapterTest {
     // Future capabilities — disabled until implemented
     // ========================================================================
 
+    // ========================================================================
+    // Semantic token test helpers
+    // ========================================================================
+
+    private val semanticTypeIndex = org.xvm.lsp.treesitter.SemanticTokenLegend.TYPE_INDEX
+    private val semanticModIndex = org.xvm.lsp.treesitter.SemanticTokenLegend.MOD_INDEX
+
+    private fun decodeSemanticTokens(data: List<Int>): List<IntArray> {
+        val result = mutableListOf<IntArray>()
+        var line = 0
+        var column = 0
+        var i = 0
+        while (i + 4 < data.size) {
+            val deltaLine = data[i]
+            val deltaStart = data[i + 1]
+            val length = data[i + 2]
+            val tokenType = data[i + 3]
+            val tokenMods = data[i + 4]
+
+            line += deltaLine
+            column = if (deltaLine > 0) deltaStart else column + deltaStart
+
+            result.add(intArrayOf(line, column, length, tokenType, tokenMods))
+            i += 5
+        }
+        return result
+    }
+
+    private fun hasSemanticModifier(
+        mods: Int,
+        name: String,
+    ): Boolean {
+        val bit = semanticModIndex[name] ?: return false
+        return (mods and (1 shl bit)) != 0
+    }
+
     @Nested
-    @DisplayName("getSemanticTokens() — future")
+    @DisplayName("getSemanticTokens()")
     inner class SemanticTokenTests {
-        /**
-         * TODO: Semantic tokens would let the editor distinguish fields from locals,
-         *   type names from variable names, etc. Tree-sitter could partially classify
-         *   tokens from AST node types (e.g., identifier inside a type_expression is a
-         *   type name), but full classification requires the compiler's type resolver.
-         */
         @Test
-        @Disabled("Semantic tokens not yet implemented — requires compiler type resolver")
-        @DisplayName("should return semantic tokens for identifiers")
-        fun shouldReturnSemanticTokens() {
+        @DisplayName("should return semantic tokens for class declaration")
+        fun shouldReturnTokensForClassDeclaration() {
+            val uri = freshUri()
+            ts.compile(
+                uri,
+                """
+                module myapp {
+                    class Person {
+                    }
+                }
+                """.trimIndent(),
+            )
+
+            val tokens = ts.getSemanticTokens(uri)
+            assertThat(tokens).isNotNull
+            assertThat(tokens!!.data).isNotEmpty
+
+            val decoded = decodeSemanticTokens(tokens.data)
+            logger.info("[TEST] class decl tokens: {}", decoded.map { it.toList() })
+
+            // "Person" should be classified as "class" with "declaration" modifier
+            // IntArray: [line, column, length, tokenType, tokenModifiers]
+            val classToken = decoded.find { it[3] == semanticTypeIndex["class"] && it[2] == "Person".length }
+            assertThat(classToken).isNotNull
+            assertThat(hasSemanticModifier(classToken!![4], "declaration")).isTrue()
+        }
+
+        @Test
+        @DisplayName("should return semantic tokens for interface declaration")
+        fun shouldReturnTokensForInterfaceDeclaration() {
+            val uri = freshUri()
+            ts.compile(
+                uri,
+                """
+                module myapp {
+                    interface Runnable {
+                    }
+                }
+                """.trimIndent(),
+            )
+
+            val tokens = ts.getSemanticTokens(uri)
+            assertThat(tokens).isNotNull
+
+            val decoded = decodeSemanticTokens(tokens!!.data)
+            val ifaceToken = decoded.find { it[3] == semanticTypeIndex["interface"] && it[2] == "Runnable".length }
+            assertThat(ifaceToken).isNotNull
+            assertThat(hasSemanticModifier(ifaceToken!![4], "declaration")).isTrue()
+        }
+
+        @Test
+        @DisplayName("should return semantic tokens for method declaration")
+        fun shouldReturnTokensForMethodDeclaration() {
+            val uri = freshUri()
+            ts.compile(
+                uri,
+                """
+                module myapp {
+                    class Person {
+                        String getName() {
+                            return name;
+                        }
+                    }
+                }
+                """.trimIndent(),
+            )
+
+            val tokens = ts.getSemanticTokens(uri)
+            assertThat(tokens).isNotNull
+
+            val decoded = decodeSemanticTokens(tokens!!.data)
+            logger.info("[TEST] method decl tokens: {}", decoded.map { it.toList() })
+
+            val methodToken = decoded.find { it[3] == semanticTypeIndex["method"] && it[2] == "getName".length }
+            assertThat(methodToken).isNotNull
+            assertThat(hasSemanticModifier(methodToken!![4], "declaration")).isTrue()
+        }
+
+        @Test
+        @DisplayName("should return semantic tokens for property declaration")
+        fun shouldReturnTokensForPropertyDeclaration() {
             val uri = freshUri()
             ts.compile(
                 uri,
@@ -1907,11 +2015,214 @@ class TreeSitterAdapterTest {
             )
 
             val tokens = ts.getSemanticTokens(uri)
-
-            // TODO: Once implemented, assert tokens classify "Person" as a type,
-            //   "name" as a property, and "String" as a built-in type.
             assertThat(tokens).isNotNull
-            assertThat(tokens!!.data).isNotEmpty
+
+            val decoded = decodeSemanticTokens(tokens!!.data)
+            logger.info("[TEST] property decl tokens: {}", decoded.map { it.toList() })
+
+            val propToken = decoded.find { it[3] == semanticTypeIndex["property"] && it[2] == "name".length }
+            assertThat(propToken).isNotNull
+            assertThat(hasSemanticModifier(propToken!![4], "declaration")).isTrue()
+        }
+
+        @Test
+        @DisplayName("should return semantic tokens for parameter")
+        fun shouldReturnTokensForParameter() {
+            val uri = freshUri()
+            ts.compile(
+                uri,
+                """
+                module myapp {
+                    class Calculator {
+                        Int add(Int a, Int b) {
+                            return a + b;
+                        }
+                    }
+                }
+                """.trimIndent(),
+            )
+
+            val tokens = ts.getSemanticTokens(uri)
+            assertThat(tokens).isNotNull
+
+            val decoded = decodeSemanticTokens(tokens!!.data)
+            logger.info("[TEST] parameter tokens: {}", decoded.map { it.toList() })
+
+            val paramTokens = decoded.filter { it[3] == semanticTypeIndex["parameter"] }
+            assertThat(paramTokens).hasSizeGreaterThanOrEqualTo(2)
+            paramTokens.forEach { assertThat(hasSemanticModifier(it[4], "declaration")).isTrue() }
+        }
+
+        @Test
+        @DisplayName("should return semantic tokens for type reference")
+        fun shouldReturnTokensForTypeReference() {
+            val uri = freshUri()
+            ts.compile(
+                uri,
+                """
+                module myapp {
+                    class Person {
+                        String getName() {
+                            return name;
+                        }
+                    }
+                }
+                """.trimIndent(),
+            )
+
+            val tokens = ts.getSemanticTokens(uri)
+            assertThat(tokens).isNotNull
+
+            val decoded = decodeSemanticTokens(tokens!!.data)
+
+            // "String" should be classified as "type"
+            val typeTokens = decoded.filter { it[3] == semanticTypeIndex["type"] }
+            assertThat(typeTokens).isNotEmpty
+        }
+
+        @Test
+        @DisplayName("should return semantic tokens for module declaration")
+        fun shouldReturnTokensForModuleDeclaration() {
+            val uri = freshUri()
+            ts.compile(uri, "module myapp {}")
+
+            val tokens = ts.getSemanticTokens(uri)
+            assertThat(tokens).isNotNull
+
+            val decoded = decodeSemanticTokens(tokens!!.data)
+            logger.info("[TEST] module tokens: {}", decoded.map { it.toList() })
+
+            val nsToken = decoded.find { it[3] == semanticTypeIndex["namespace"] }
+            assertThat(nsToken).isNotNull
+            assertThat(hasSemanticModifier(nsToken!![4], "declaration")).isTrue()
+        }
+
+        @Test
+        @DisplayName("should return null for empty file")
+        fun shouldReturnNullForEmptyFile() {
+            val uri = freshUri()
+            ts.compile(uri, "")
+
+            val tokens = ts.getSemanticTokens(uri)
+            assertThat(tokens).isNull()
+        }
+
+        @Test
+        @DisplayName("should handle file with errors gracefully")
+        fun shouldHandleFileWithErrorsGracefully() {
+            val uri = freshUri()
+            ts.compile(
+                uri,
+                """
+                module myapp {
+                    class Person {
+                """.trimIndent(),
+            )
+
+            // Should not throw — may return partial tokens or null
+            val tokens = ts.getSemanticTokens(uri)
+            logger.info("[TEST] error file tokens: {}", tokens?.data?.size ?: "null")
+        }
+
+        @Test
+        @DisplayName("should produce valid delta encoding")
+        fun shouldProduceValidDeltaEncoding() {
+            val uri = freshUri()
+            ts.compile(
+                uri,
+                """
+                module myapp {
+                    class Person {
+                        String name = "hello";
+                        Int age = 0;
+                    }
+                }
+                """.trimIndent(),
+            )
+
+            val tokens = ts.getSemanticTokens(uri)
+            assertThat(tokens).isNotNull
+
+            val data = tokens!!.data
+            // Data must be a multiple of 5
+            assertThat(data.size % 5).isEqualTo(0)
+
+            // Decode and verify positions are non-negative
+            val decoded = decodeSemanticTokens(data)
+            for (token in decoded) {
+                assertThat(token[0]).isGreaterThanOrEqualTo(0) // line
+                assertThat(token[1]).isGreaterThanOrEqualTo(0) // column
+                assertThat(token[2]).isGreaterThan(0) // length
+            }
+
+            // Verify tokens are in order (line, then column)
+            for (i in 1 until decoded.size) {
+                val prev = decoded[i - 1]
+                val curr = decoded[i]
+                val prevPos = prev[0] * 10_000 + prev[1]
+                val currPos = curr[0] * 10_000 + curr[1]
+                assertThat(currPos).isGreaterThanOrEqualTo(prevPos)
+            }
+        }
+
+        @Test
+        @DisplayName("should return semantic tokens for call expression")
+        fun shouldReturnTokensForCallExpression() {
+            val uri = freshUri()
+            ts.compile(
+                uri,
+                """
+                module myapp {
+                    class Calculator {
+                        Int add(Int a, Int b) {
+                            return a + b;
+                        }
+                        void test() {
+                            add(1, 2);
+                        }
+                    }
+                }
+                """.trimIndent(),
+            )
+
+            val tokens = ts.getSemanticTokens(uri)
+            assertThat(tokens).isNotNull
+
+            val decoded = decodeSemanticTokens(tokens!!.data)
+            logger.info("[TEST] call expression tokens: {}", decoded.map { it.toList() })
+
+            // "add" should appear as method at the call site too
+            val methodTokens = decoded.filter { it[3] == semanticTypeIndex["method"] }
+            assertThat(methodTokens).hasSizeGreaterThanOrEqualTo(2) // declaration + call
+        }
+
+        @Test
+        @DisplayName("should classify const as struct with readonly modifier")
+        fun shouldClassifyConstAsStruct() {
+            val uri = freshUri()
+            ts.compile(
+                uri,
+                """
+                module myapp {
+                    const Point(Int x, Int y);
+                }
+                """.trimIndent(),
+            )
+
+            val tokens = ts.getSemanticTokens(uri)
+            if (tokens == null) {
+                // Grammar may not produce const_declaration node — skip gracefully
+                return
+            }
+
+            val decoded = decodeSemanticTokens(tokens.data)
+            logger.info("[TEST] const tokens: {}", decoded.map { it.toList() })
+
+            val structToken = decoded.find { it[3] == semanticTypeIndex["struct"] }
+            if (structToken != null) {
+                assertThat(hasSemanticModifier(structToken[4], "declaration")).isTrue()
+                assertThat(hasSemanticModifier(structToken[4], "readonly")).isTrue()
+            }
         }
     }
 

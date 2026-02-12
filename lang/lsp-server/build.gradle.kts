@@ -59,7 +59,8 @@ val kotlinJdkVersion = xdkProperties.int("org.xtclang.kotlin.jdk")
 // Use 'mock' for basic regex-based functionality if tree-sitter has issues.
 // =============================================================================
 val lspAdapter: String = project.findProperty("lsp.adapter")?.toString() ?: "treesitter"
-logger.lifecycle("LSP Server adapter: $lspAdapter")
+val lspSemanticTokens: String = project.findProperty("lsp.semanticTokens")?.toString() ?: "false"
+logger.lifecycle("LSP Server adapter: $lspAdapter, semanticTokens: $lspSemanticTokens")
 
 // Generate build info for version verification and adapter selection
 val generateBuildInfo by tasks.registering {
@@ -67,9 +68,11 @@ val generateBuildInfo by tasks.registering {
     val buildTime = Instant.now().toString()
     val projectVersion = project.version.toString() // Capture at configuration time
     val adapter = lspAdapter // Capture at configuration time
+    val semanticTokens = lspSemanticTokens // Capture at configuration time
 
-    // Declare inputs so task re-runs when adapter changes
+    // Declare inputs so task re-runs when adapter or feature flags change
     inputs.property("adapter", adapter)
+    inputs.property("semanticTokens", semanticTokens)
     inputs.property("version", projectVersion)
     outputs.dir(outputDir)
 
@@ -81,6 +84,7 @@ val generateBuildInfo by tasks.registering {
             lsp.build.time=$buildTime
             lsp.version=$projectVersion
             lsp.adapter=$adapter
+            lsp.semanticTokens=$semanticTokens
             """.trimIndent() + "\n",
         )
     }

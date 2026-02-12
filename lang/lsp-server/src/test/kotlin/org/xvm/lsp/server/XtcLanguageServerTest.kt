@@ -228,9 +228,9 @@ class XtcLanguageServerTest {
             if (caps.codeLensProvider == null) notYetImplemented.add("codeLens")
             if (caps.colorProvider == null) notYetImplemented.add("colorProvider")
             if (caps.documentOnTypeFormattingProvider == null) notYetImplemented.add("onTypeFormatting")
+            if (caps.semanticTokensProvider == null) notYetImplemented.add("semanticTokens")
             if (caps.typeHierarchyProvider == null) notYetImplemented.add("typeHierarchy")
             if (caps.callHierarchyProvider == null) notYetImplemented.add("callHierarchy")
-            if (caps.semanticTokensProvider == null) notYetImplemented.add("semanticTokens")
             if (caps.monikerProvider == null) notYetImplemented.add("moniker")
             if (caps.linkedEditingRangeProvider == null) notYetImplemented.add("linkedEditingRange")
             if (caps.inlineValueProvider == null) notYetImplemented.add("inlineValue")
@@ -248,6 +248,7 @@ class XtcLanguageServerTest {
             println("  rename (with prepareRename), codeAction,")
             println("  formatting, rangeFormatting, inlayHint,")
             println("  textDocumentSync")
+            println("  semanticTokens (opt-in: -Plsp.semanticTokens=true)")
             println()
             println("Not yet implemented (${notYetImplemented.size} capabilities):")
             for (cap in notYetImplemented) {
@@ -265,9 +266,9 @@ class XtcLanguageServerTest {
                     "codeLens",
                     "colorProvider",
                     "onTypeFormatting",
+                    "semanticTokens",
                     "typeHierarchy",
                     "callHierarchy",
-                    "semanticTokens",
                     "moniker",
                     "linkedEditingRange",
                     "inlineValue",
