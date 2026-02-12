@@ -5,6 +5,8 @@ import java.lang.ref.WeakReference;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+
+import java.util.stream.Collectors;
 import java.util.List;
 import java.util.Map;
 
@@ -37,7 +39,7 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
  */
 public class Fiber
         implements Comparable<Fiber> {
-    public Fiber(ServiceContext context, Message msgCall) {
+    public Fiber(ServiceContext context, Message<?> msgCall) {
         f_lId        = s_counter.getAndIncrement();
         f_context    = context;
         f_iCallerId  = msgCall.f_iCallerId;
@@ -311,7 +313,7 @@ public class Fiber
      *
      * @param request  the request
      */
-    public void registerRequest(Message request) {
+    public void registerRequest(Message<?> request) {
         addDependee(request);
 
         m_cPending++;
@@ -325,7 +327,7 @@ public class Fiber
         });
     }
 
-    protected void addDependee(Message request) {
+    protected void addDependee(Message<?> request) {
         if (request.m_fiber == this) {
             return;
         }
@@ -333,28 +335,32 @@ public class Fiber
         Object oPending = m_oPendingRequests;
         if (oPending == null) {
             m_oPendingRequests = request;
-        } else if (oPending instanceof Message requestPrev) {
-            Map<CompletableFuture, Message> mapPending = new HashMap<>();
+        } else if (oPending instanceof Message<?> requestPrev) {
+            var mapPending = new HashMap<CompletableFuture<?>, Message<?>>();
             mapPending.put(requestPrev.f_future, requestPrev);
             mapPending.put(request.f_future, request);
             m_oPendingRequests = mapPending;
         } else {
-            Map<CompletableFuture, Message> mapPending = (Map<CompletableFuture, Message>) oPending;
-            mapPending.put(request.f_future, request);
+            pendingRequestMap().put(request.f_future, request);
         }
     }
 
-    protected void removeDependee(Message request) {
+    protected void removeDependee(Message<?> request) {
         if (request.m_fiber == this) {
             return;
         }
 
         Object oPending = m_oPendingRequests;
-        if (oPending instanceof Message) {
+        if (oPending instanceof Message<?>) {
             m_oPendingRequests = null;
         } else {
-            ((Map<CompletableFuture, Message>) oPending).remove(request.f_future);
+            pendingRequestMap().remove(request.f_future);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<CompletableFuture<?>, Message<?>> pendingRequestMap() {
+        return (Map<CompletableFuture<?>, Message<?>>) m_oPendingRequests;
     }
 
     /**
@@ -369,15 +375,15 @@ public class Fiber
      * Uncaptured request is a "fire and forget" call that needs to be tracked and reported
      * to an UnhandledExceptionHandler if such a handle was registered naturally.
      */
-    public void registerUncapturedRequest(Message request) {
-        Map<CompletableFuture, ObjectHandle> mapPending = m_mapPendingUncaptured;
+    public void registerUncapturedRequest(Message<?> request) {
+        Map<CompletableFuture<?>, ObjectHandle> mapPending = m_mapPendingUncaptured;
         if (mapPending == null) {
             m_mapPendingUncaptured = mapPending = new HashMap<>();
         }
 
         m_cPending++;
 
-        CompletableFuture future = request.f_future;
+        CompletableFuture<?> future = request.f_future;
         mapPending.put(future, m_hAsyncSection);
 
         future.whenComplete((_void, ex) -> {
@@ -485,24 +491,14 @@ public class Fiber
         }
 
         // TODO: check for the deadlock
-        if (oPending instanceof Message msg) {
+        if (oPending instanceof Message<?> msg) {
             Fiber fiber = msg.m_fiber;
             return " for " + (fiber == null ? "initial" : fiber);
         }
 
-        StringBuilder sb     = new StringBuilder(" for [");
-        boolean       fFirst = true;
-        for (Message request : ((Map<CompletableFuture, Message>) oPending).values()) {
-            if (fFirst) {
-                fFirst = false;
-            } else {
-                sb.append(", ");
-            }
-            Fiber fiber = request.m_fiber;
-            sb.append(fiber);
-        }
-        sb.append(']');
-        return sb.toString();
+        return pendingRequestMap().values().stream()
+                .map(request -> String.valueOf(request.m_fiber))
+                .collect(Collectors.joining(", ", " for [", "]"));
     }
 
 
@@ -668,7 +664,7 @@ public class Fiber
     private int m_cPending;
 
     /**
-     * Pending requests: Message | Map<CompletableFuture, Message>.
+     * Pending requests: Message<?> | Map<CompletableFuture<?>, Message<?>>.
      */
     private Object m_oPendingRequests;
 
@@ -676,7 +672,7 @@ public class Fiber
      * Pending uncaptured futures; values are AsyncSection? handlers. Can be accessed only on the
      * fiber's service thread.
      */
-    private Map<CompletableFuture, ObjectHandle> m_mapPendingUncaptured;
+    private Map<CompletableFuture<?>, ObjectHandle> m_mapPendingUncaptured;
 
     /**
      * If specified, indicates an action to be performed as the fiber execution resumes.

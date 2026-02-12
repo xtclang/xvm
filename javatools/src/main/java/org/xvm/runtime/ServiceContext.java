@@ -6,7 +6,6 @@ import java.lang.invoke.VarHandle;
 import java.lang.ref.WeakReference;
 
 import java.util.Arrays;
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -223,12 +222,12 @@ public class ServiceContext {
      *
      * @return the op info for the specified category
      */
-    public Object getOpInfo(Op op, Enum category) {
-        EnumMap mapByCategory = f_mapOpInfo.get(op);
+    public Object getOpInfo(Op op, Enum<?> category) {
+        var mapByCategory = f_mapOpInfo.get(op);
         if (mapByCategory == null) {
             return null;
         }
-        WeakReference ref = (WeakReference) mapByCategory.get(category);
+        var ref = mapByCategory.get(category);
         return ref == null ? null : ref.get();
     }
 
@@ -239,9 +238,9 @@ public class ServiceContext {
      * @param category the category of the cached info (op specific)
      * @param info     the info
      */
-    public void setOpInfo(Op op, Enum category, Object info) {
-        f_mapOpInfo.computeIfAbsent(op, (op_) -> new EnumMap(category.getClass()))
-                   .put(category, new WeakReference(info));
+    public void setOpInfo(Op op, Enum<?> category, Object info) {
+        f_mapOpInfo.computeIfAbsent(op, (op_) -> new HashMap<>())
+                   .put(category, new WeakReference<>(info));
     }
 
     /**
@@ -418,7 +417,7 @@ public class ServiceContext {
      *
      * @return true if the service has become "overwhelmed" - too many outstanding messages
      */
-    public boolean addRequest(Message msg) {
+    public boolean addRequest(Message<?> msg) {
         f_queueMsg.add(msg);
         ensureScheduled(msg.isAsync());
         return isOverwhelmed();
@@ -434,7 +433,7 @@ public class ServiceContext {
     /**
      * Add a response to the service response queue.
      */
-    private void respond(Response response) {
+    private void respond(Response<?> response) {
         f_queueResponse.add(response);
         ensureScheduled(true);
     }
@@ -443,7 +442,7 @@ public class ServiceContext {
      * Process all queued responses.
      */
     private void processResponses() {
-        Response response;
+        Response<?> response;
         while ((response = f_queueResponse.poll()) != null) {
             response.run();
         }
@@ -463,7 +462,7 @@ public class ServiceContext {
         // pickup all the messages, but keep them in the "initial" state
         FiberQueue qFiber = f_queueSuspended;
 
-        Message message;
+        Message<?> message;
         while ((message = f_queueMsg.poll()) != null) {
             qFiber.add(message.createFrame(this));
         }
@@ -773,7 +772,7 @@ public class ServiceContext {
      *
      * @return a new Frame
      */
-    protected Frame createServiceEntryFrame(Message msg, int cReturns, Op[] aopNative) {
+    protected Frame createServiceEntryFrame(Message<?> msg, int cReturns, Op[] aopNative) {
         TypeConstant typeReturn;
         switch (cReturns) {
         case -1 -> {typeReturn = f_pool.typeTuple0(); cReturns = 1;}
@@ -800,7 +799,7 @@ public class ServiceContext {
      *
      * @return a new fiber
      */
-    protected Fiber createFiber(Message msg) {
+    protected Fiber createFiber(Message<?> msg) {
         Fiber fiber = new Fiber(this, msg);
         f_setFibers.add(fiber);
         return fiber;
@@ -840,7 +839,7 @@ public class ServiceContext {
             FiberQueue qFiber = f_queueSuspended;
 
             // process all outstanding messages
-            Message message;
+            Message<?> message;
             while ((message = f_queueMsg.poll()) != null) {
                 qFiber.add(message.createFrame(this));
             }
@@ -1082,7 +1081,7 @@ public class ServiceContext {
             return null;
         }
 
-        Message request = new CallLaterRequest(frame, hFunction, ahArg, cReturns);
+        var request = new CallLaterRequest(frame, hFunction, ahArg, cReturns);
 
         // TODO: should we reject (throw) if the service overwhelmed?
         addRequest(request);
@@ -1104,7 +1103,7 @@ public class ServiceContext {
     public int sendOp1Request(Frame frame, Op op, int iReturn, TypeConstant... typeRet) {
         assert iReturn != Op.A_IGNORE_ASYNC;
 
-        OpRequest request = new OpRequest(frame, op, iReturn == Op.A_IGNORE ? 0 : 1,
+        var request = new OpRequest<ObjectHandle>(frame, op, iReturn == Op.A_IGNORE ? 0 : 1,
                                 frame.isDynamicVar(iReturn),
                                 typeRet.length == 0 ? null : i -> typeRet[i]);
 
@@ -1130,8 +1129,8 @@ public class ServiceContext {
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public int sendOpNRequest(Frame frame, Op op, int[] aiReturn, TypeConstant... typeRet) {
-        int       cRets   = aiReturn.length;
-        OpRequest request = new OpRequest(frame, op, cRets, false,
+        int cRets   = aiReturn.length;
+        var request = new OpRequest<ObjectHandle[]>(frame, op, cRets, false,
                                 cRets == 0 ? null : i -> typeRet[i]);
 
         addRequest(request);
@@ -1249,7 +1248,7 @@ public class ServiceContext {
 
 
         TypeSupplier supplier = resolveFormalReturnTypes(hFunction, ahArg);
-        OpRequest    request  = new OpRequest(frame, opCall, cReturns, fAsync, supplier);
+        var          request  = new OpRequest<ObjectHandle>(frame, opCall, cReturns, fAsync, supplier);
 
         boolean fOverwhelmed = addRequest(request);
 
@@ -1314,17 +1313,20 @@ public class ServiceContext {
         }
 
         TypeSupplier supplier = resolveFormalReturnTypes(hFunction, ahArg);
-        OpRequest    request  = new OpRequest(frame, opCall, cReturns, fAsync, supplier);
+
+        if (cReturns == 0) {
+            var request      = new OpRequest<ObjectHandle>(frame, opCall, 0, fAsync, supplier);
+            boolean fOverwhelmed = addRequest(request);
+            frame.f_fiber.registerUncapturedRequest(request);
+            return fOverwhelmed || request.f_future.isDone()
+                    ? frame.assignFutureResult(Op.A_IGNORE, request.f_future)
+                    : Op.R_NEXT;
+        }
+
+        var request = new OpRequest<ObjectHandle[]>(frame, opCall, cReturns, fAsync, supplier);
 
         CompletableFuture<ObjectHandle[]> future       = request.f_future;
         boolean                           fOverwhelmed = addRequest(request);
-
-        if (cReturns == 0) {
-            frame.f_fiber.registerUncapturedRequest(request);
-            return fOverwhelmed || future.isDone()
-                    ? frame.assignFutureResult(Op.A_IGNORE, (CompletableFuture) future)
-                    : Op.R_NEXT;
-        }
 
         frame.f_fiber.registerRequest(request);
         if (cReturns == 1) {
@@ -1512,7 +1514,7 @@ public class ServiceContext {
             }
         };
 
-        OpRequest request = new OpRequest(frame, opInit, 1, false, null);
+        var request = new OpRequest<ObjectHandle>(frame, opInit, 1, false, null);
 
         addRequest(request);
 
@@ -1574,7 +1576,7 @@ public class ServiceContext {
     /**
      * Base class for an asynchronous cross-service messages based on a CompletableFuture.
      */
-    public abstract static class Message {
+    public abstract static class Message<T> {
         protected Message(Frame frameCaller) {
             if (frameCaller == null) {
                 f_fiberCaller = null;
@@ -1590,7 +1592,7 @@ public class ServiceContext {
                 f_mapTokens   = frameCaller.f_fiber.getTokens();
             }
 
-            f_future = new CompletableFuture();
+            f_future = new CompletableFuture<>();
         }
 
         /**
@@ -1622,21 +1624,23 @@ public class ServiceContext {
         /**
          * Send the specified number of return values back to the caller.
          */
-        protected void sendResponse(Fiber fiberCaller, Frame frame, CompletableFuture future, int cReturns) {
+        @SuppressWarnings("unchecked")
+        protected void sendResponse(Fiber fiberCaller, Frame frame, CompletableFuture<T> future, int cReturns) {
             ServiceContext ctxDst = fiberCaller.f_context;
 
             switch (cReturns) {
-            case 0:
-                ctxDst.respond(new Response<ObjectHandle>(
-                        fiberCaller, xTuple.H_VOID, frame.m_hException, future));
+            case 0: {
+                T voidHandle = (T) xTuple.H_VOID;
+                ctxDst.respond(new Response<>(fiberCaller, voidHandle, frame.m_hException, future));
                 break;
+            }
 
             case 1: {
                 ObjectHandle    hReturn    = frame.f_ahVar[0];
                 ExceptionHandle hException = frame.m_hException;
 
-                ctxDst.respond(
-                        new Response<ObjectHandle>(fiberCaller, hReturn, hException, future));
+                T returnValue = (T) hReturn;
+                ctxDst.respond(new Response<>(fiberCaller, returnValue, hException, future));
                 break;
             }
 
@@ -1645,8 +1649,8 @@ public class ServiceContext {
                 ExceptionHandle hException = frame.m_hException;
                 TupleHandle     hTuple     = hException == null ? (TupleHandle) ahReturn[0] : null;
 
-                ctxDst.respond(
-                        new Response<ObjectHandle>(fiberCaller, hTuple, hException, future));
+                T returnValue = (T) hTuple;
+                ctxDst.respond(new Response<>(fiberCaller, returnValue, hException, future));
                 break;
             }
 
@@ -1668,8 +1672,8 @@ public class ServiceContext {
                         }
                     }
                 }
-                ctxDst.respond(
-                        new Response<ObjectHandle[]>(fiberCaller, ahReturn, hException, future));
+                T arrayReturn = (T) ahReturn;
+                ctxDst.respond(new Response<>(fiberCaller, arrayReturn, hException, future));
                 break;
             }
             }
@@ -1680,7 +1684,7 @@ public class ServiceContext {
         /**
          * The CompletableFuture associates with this message.
          */
-        public final CompletableFuture f_future;
+        public final CompletableFuture<T> f_future;
 
         /**
          * The Fiber this message runs on (assigned by {@link #createFrame}).
@@ -1716,8 +1720,8 @@ public class ServiceContext {
     /**
      * A cross-service Op based Message.
      */
-    public static class OpRequest
-            extends Message {
+    public static class OpRequest<T>
+            extends Message<T> {
         /**
          * @param fAsync        if true, avoid the in-line optimization for the request execution
          * @param typeSupplier  (optional) the supplier of return types to be used *only* if the
@@ -1891,7 +1895,7 @@ public class ServiceContext {
      * Represents a natural "fire and forget" or a native call request to a service.
      */
     public static class CallLaterRequest
-            extends Message {
+            extends Message<ObjectHandle> {
         private final FunctionHandle f_hFunction;
         private final ObjectHandle[] f_ahArg;
         private final int            f_cReturns;
@@ -2107,12 +2111,12 @@ public class ServiceContext {
     /**
      * The queue of incoming messages.
      */
-    private final Queue<Message> f_queueMsg = new ConcurrentLinkedQueue<>();
+    private final Queue<Message<?>> f_queueMsg = new ConcurrentLinkedQueue<>();
 
     /**
      * The queue of responses.
      */
-    private final Queue<Response> f_queueResponse = new ConcurrentLinkedQueue<>();
+    private final Queue<Response<?>> f_queueResponse = new ConcurrentLinkedQueue<>();
 
     /**
      * The set of active fibers. It can be [read] accessed by outside threads.
@@ -2178,7 +2182,7 @@ public class ServiceContext {
      * Since only one fiber can access the service context at any time, a simple HashMap is used.
      * To prevent leaks, the values in the EnumMap are WekRef objects.
      */
-    private final Map<Op, EnumMap> f_mapOpInfo = new WeakHashMap<>();
+    private final Map<Op, Map<Enum<?>, WeakReference<Object>>> f_mapOpInfo = new WeakHashMap<>();
 
     /**
      * A "service-local" cache for transient field values.

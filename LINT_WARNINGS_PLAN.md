@@ -2,7 +2,7 @@
 
 Compiled with `-Xlint:all` via `--no-build-cache --no-configuration-cache --rerun-tasks -Porg.xtclang.java.lint=true -Porg.xtclang.java.warningsAsErrors=false -Porg.xtclang.java.maxWarnings=1000`.
 
-**Current: 220 warnings** (6 in `javatools_utils`, 210 in `javatools`, 4 in `javatools_jitbridge`)
+**Current: 135 warnings** (14 in `javatools_utils`, 117 in `javatools`, 4 in `javatools_jitbridge`)
 
 Note: counts use `--rerun-tasks` for full accuracy; earlier sessions used cached builds which
 undercounted `rawtypes`/`unchecked`. The delta from our work is what matters.
@@ -11,8 +11,8 @@ undercounted `rawtypes`/`unchecked`. The delta from our work is what matters.
 |----------|---------|-------|------|--------|
 | `[fallthrough]` | **0** | 102 | 4 | DONE |
 | `[this-escape]` | **40** | 28 | 5 | 28 fixed by code rewrites; 40 remain (intentionally unsuppressed) |
-| `[rawtypes]` | 76 | 28 | 3 | 8 by generics rewrites, 14 AstNode wildcards; 68 remaining |
-| `[unchecked]` | 83 | 3 | 3 | 3 eliminated in AstNode; 83 remaining |
+| `[rawtypes]` | **43** | 61 | 3 | 8 generics rewrites, 14 AstNode wildcards, 33 CompletableFuture cluster; 43 remaining |
+| `[unchecked]` | **48** | 38 | 3 | 3 AstNode, 35 CompletableFuture cluster; 48 remaining |
 | `[try]` | **0** | 18 | 1 | DONE |
 | `[cast]` | **2** | 13 | 1 | DONE (2 in `javatools_jitbridge`) |
 | `[serial]` | **2** | 8 | 2 | DONE (2 in `javatools_jitbridge`) |
@@ -62,9 +62,9 @@ implements `Serializable` (a JDK 1.1 design decision for RMI), so every `Excepti
 
 ---
 
-## Tier 3: MODERATE (need understanding, some refactoring) -- 159 warnings remaining
+## Tier 3: MODERATE (need understanding, some refactoring) -- 91 warnings remaining
 
-### 3a. `[rawtypes]` Raw generic type usage (90 warnings, 22 fixed)
+### 3a. `[rawtypes]` Raw generic type usage (90 warnings, 55 fixed)
 
 **Already eliminated (suppressed, not counted in warning totals):**
 - `Component.unlinkSibling()` — generified to `<K, V extends Component>`, removed raw `Map`/`Object`
@@ -87,31 +87,48 @@ implements `Serializable` (a JDK 1.1 design decision for RMI), so every `Excepti
   `ChildIteratorImpl.replaceWith()` uses `@SuppressWarnings("unchecked")` for `ListIterator<AstNode>`
   cast needed for `set()`.
 
-Add proper type parameters. Remaining hotspots:
+**Eliminated by generic Message\<T\>/OpRequest\<T\> + CompletableFuture parameterization (33 rawtypes + 35 unchecked):**
+
+Commit `d92babcb8`: Made `Message<T>` and `OpRequest<T>` generic, parameterized `CallLaterRequest`
+as `Message<ObjectHandle>`. Replaced `EnumMap` cache with `HashMap<Enum<?>, WeakReference<Object>>`.
+Added wildcards/proper type args across 6 files. Key design decisions:
+
+- `Message<T>` with `CompletableFuture<T> f_future` — consumer sites get properly typed futures
+  with zero casts: `OpRequest<ObjectHandle>` for single-return, `OpRequest<ObjectHandle[]>` for
+  multi-return
+- `xFuture.cfAny` — replaced `CompletableFuture.anyOf()` + cast with type-safe
+  `cfThis.applyToEither(cfThat, Function.identity())`
+- `sendInvokeNRequest` cReturns==0 edge case — hoisted before request creation to use
+  `OpRequest<ObjectHandle>` instead of casting from `ObjectHandle[]`
+- Fiber `reportWaiting()` — replaced `StringBuilder`/`fFirst` loop with `Collectors.joining()`
+
+Only 2 `@SuppressWarnings("unchecked")` remain at genuine type system boundaries:
+1. `sendResponse()` — runtime dispatch on `cReturns` determines T; can't express in Java types
+2. `Fiber.pendingRequestMap()` — Object union pattern (`null | Message<?> | Map<...>`); splitting
+   into two fields would widen race window in `whenComplete` callbacks
+
+Files changed: `ServiceContext.java`, `Fiber.java`, `Frame.java`, `ObjectHandle.java`,
+`xFuture.java`, `xOSFile.java`
+
+Remaining hotspots:
 
 | File | Count | Key raw types |
 |------|-------|---------------|
-| `ServiceContext.java` | 13 | `CompletableFuture`, `Response`, `Enum`, `EnumMap`, `WeakReference` |
-| `Fiber.java` | 8 | `CompletableFuture` |
-| `Frame.java` | 4 | `CompletableFuture` |
-| `xOSFile.java` | 4 | `CompletableFuture` |
-| `ObjectHandle.java` | 2 | `CompletableFuture` |
 | `NativeTypeSystem.java` | 2 | `Class` |
 | `TypeInfo.java` | 2 | `Entry` |
-| `xFuture.java` | 2 | `CompletableFuture` |
+| `TypeConstant.java` | 1 | `TransientThreadLocal` |
+| `Utils.java` | 1 | `Predicate` |
+| `Context.java` | 1 | `Map` |
 | Many more files | 1 each | Various |
 
-**Strategy:** `CompletableFuture` raw usage (28 warnings across 6 files) is the biggest cluster.
-Parameterize as `CompletableFuture<ObjectHandle>` starting from Frame, then Fiber, then ServiceContext.
-
-### 3b. `[unchecked]` Unchecked casts and conversions (86 warnings)
+### 3b. `[unchecked]` Unchecked casts and conversions (86 warnings, 38 fixed)
 
 Many overlap with `rawtypes`. Fix together per-file.
 
 | File | Count | Key patterns |
 |------|-------|-------------|
-| `ServiceContext.java` | 22 | `Response` constructor, `assignFutureResult`, `createWaitFrame`, raw `CompletableFuture.complete()` |
-| `Fiber.java` | 5 | `CompletableFuture` casts |
+| `ServiceContext.java` | **0** | **Fixed:** `Message<T>` generics + 1 `@SuppressWarnings` on `sendResponse` |
+| `Fiber.java` | **0** | **Fixed:** wildcards + 1 `@SuppressWarnings` on `pendingRequestMap` helper |
 | `TransientThreadLocal.java` | 4 | `(T) map.get(this)` -- unavoidable, suppress |
 | `Context.java` | 4 | `Map.putAll` with raw maps |
 | `LambdaExpression.java` | 4 | raw `Stream.allMatch()` |
@@ -119,7 +136,7 @@ Many overlap with `rawtypes`. Fix together per-file.
 | `AstNode.java` | **0** | **Fixed:** wildcard parameterization + 2 targeted `@SuppressWarnings("unchecked")` |
 | `ListMap.java` | **0** | **Rewritten:** stored `ArrayList<Entry>` instead of `ArrayList<SimpleEntry>`, eliminated `EMPTY_ARRAY_LIST` sentinel, raw casts, and assert-only unmodifiable bug |
 | `TypeCompositionStatement.java` | 3 | unchecked casts to generic types |
-| 14 more files | 1-2 each | Various |
+| ~14 more files | 1-2 each | Various |
 
 ### 3c. `[overrides]` equals without hashCode -- DONE (3 warnings fixed)
 

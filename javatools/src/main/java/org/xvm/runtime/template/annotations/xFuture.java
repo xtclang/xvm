@@ -2,6 +2,7 @@ package org.xvm.runtime.template.annotations;
 
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
@@ -525,7 +526,7 @@ public class xFuture
             return frame.assignValue(iReturn, hThat);
         }
 
-        CompletableFuture cfAny = CompletableFuture.anyOf(cfThis, cfThat);
+        CompletableFuture<ObjectHandle> cfAny = cfThis.applyToEither(cfThat, Function.identity());
 
         return frame.assignValue(iReturn, makeHandle(hThis.getComposition(), cfAny));
     }
@@ -768,7 +769,7 @@ public class xFuture
          *         exceptionally; null otherwise
          */
         public ExceptionHandle getException() {
-            CompletableFuture future = getFuture();
+            CompletableFuture<ObjectHandle> future = getFuture();
             if (future.isCompletedExceptionally()) {
                 try {
                     future.get();
