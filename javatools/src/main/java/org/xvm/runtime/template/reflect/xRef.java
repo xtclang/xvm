@@ -2,7 +2,6 @@ package org.xvm.runtime.template.reflect;
 
 
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -63,26 +62,13 @@ public class xRef
     public static ClassConstant INCEPTION_CLASS;
 
     public xRef(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure);
+        super(container, structure, Set.of(RefHandle.REFERENT, GenericHandle.OUTER));
 
         if (fInstance) {
             INSTANCE = this;
             INCEPTION_CLASS = new NativeRebaseConstant(
                     (ClassConstant) structure.getIdentityConstant());
         }
-    }
-
-    @Override
-    protected Set<String> registerImplicitFields(Set<String> setFields) {
-        if (setFields == null) {
-            setFields = new HashSet<>();
-        }
-
-        // Refs that represent inflated fields need two properties below
-        setFields.add(RefHandle.REFERENT);
-        setFields.add(GenericHandle.OUTER);
-
-        return super.registerImplicitFields(setFields);
     }
 
     @Override

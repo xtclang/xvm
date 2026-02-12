@@ -56,7 +56,7 @@ public class Var_M
      */
     public Var_M(DataInput in, Constant[] aconst)
             throws IOException {
-        super(in, aconst);
+        super(in, aconst, true);
 
         int c = readMagnitude(in);
 

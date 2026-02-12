@@ -37,6 +37,7 @@ public class HasherMap<K, V> extends AbstractConverterMap<K, V, Supplier<K>, V> 
     public HasherMap(Hasher<K> hasher, Supplier<? extends Map<Supplier<K>, V>> storage) {
         super(storage.get());
         this.hasher = hasher;
+        this.keys   = new KeySet();
     }
 
     @Override
@@ -95,11 +96,6 @@ public class HasherMap<K, V> extends AbstractConverterMap<K, V, Supplier<K>, V> 
         try (var tmpKeyDown = transientKeyDown(key)) {
             return write().replace(tmpKeyDown, value);
         }
-    }
-
-    @Override
-    protected Set<K> newKeySet() {
-        return new KeySet();
     }
 
     /**

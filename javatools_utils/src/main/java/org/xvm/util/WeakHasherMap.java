@@ -38,6 +38,8 @@ public class WeakHasherMap<K, V> extends HasherMap<K, V> {
      */
     public WeakHasherMap(Hasher<K> hasher) {
         super(hasher);
+        this.keys    = new KeySet();
+        this.entries = new EntrySet();
     }
 
     /**
@@ -48,6 +50,8 @@ public class WeakHasherMap<K, V> extends HasherMap<K, V> {
      */
     public WeakHasherMap(Hasher<K> hasher, Supplier<? extends Map<Supplier<K>, V>> storage) {
         super(hasher, storage);
+        this.keys    = new KeySet();
+        this.entries = new EntrySet();
     }
 
     @Override
@@ -108,11 +112,6 @@ public class WeakHasherMap<K, V> extends HasherMap<K, V> {
         return storage;
     }
 
-    @Override
-    protected Set<K> newKeySet() {
-        return new KeySet();
-    }
-
     /**
      * KeySet which filters out cleared keys during iteration.
      */
@@ -121,11 +120,6 @@ public class WeakHasherMap<K, V> extends HasherMap<K, V> {
         public Iterator<K> iterator() {
             return new FilterIterator<>(super.iterator(), Objects::nonNull);
         }
-    }
-
-    @Override
-    protected Set<Entry<K, V>> newEntrySet() {
-        return new EntrySet();
     }
 
     /**

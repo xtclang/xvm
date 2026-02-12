@@ -75,6 +75,16 @@ public abstract class ClassTemplate
         implements OpSupport {
     // construct the template
     public ClassTemplate(Container container, ClassStructure structClass) {
+        this(container, structClass, null);
+    }
+
+    /**
+     * Construct the template with additional implicit field names.
+     *
+     * @param extraImplicitFields  additional implicit field names to register (may be null)
+     */
+    protected ClassTemplate(Container container, ClassStructure structClass,
+                            Set<String> extraImplicitFields) {
         f_container = container;
         f_struct    = structClass;
         f_sName     = structClass.getIdentityConstant().getPathString();
@@ -92,7 +102,7 @@ public abstract class ClassTemplate
 
         f_structSuper = structSuper;
 
-        Set<String> setFieldsImplicit = registerImplicitFields(null);
+        Set<String> setFieldsImplicit = computeImplicitFields(extraImplicitFields);
 
         f_asFieldsImplicit = setFieldsImplicit == null
                 ? Utils.NO_NAMES
@@ -100,9 +110,12 @@ public abstract class ClassTemplate
     }
 
     /**
-     * Add all implicit fields to the specified set.
+     * Compute all implicit fields, combining any extra fields from subclasses with the base
+     * class's own implicit fields.
      */
-    protected Set<String> registerImplicitFields(Set<String> setFields) {
+    private Set<String> computeImplicitFields(Set<String> extraFields) {
+        Set<String> setFields = extraFields == null ? null : new HashSet<>(extraFields);
+
         if (f_struct.isInstanceChild()) {
             if (setFields == null) {
                 setFields = new HashSet<>();

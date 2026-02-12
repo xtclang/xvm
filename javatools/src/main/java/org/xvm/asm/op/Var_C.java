@@ -57,7 +57,7 @@ public class Var_C
      */
     public Var_C(DataInput in, Constant[] aconst)
             throws IOException {
-        super(in, aconst);
+        super(in, aconst, false);
 
         m_nArgValue = readPackedInt(in);
     }

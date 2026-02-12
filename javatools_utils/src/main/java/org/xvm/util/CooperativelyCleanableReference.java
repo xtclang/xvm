@@ -69,16 +69,21 @@ public class CooperativelyCleanableReference<V> extends WeakReference<V> {
     private final AutoCloseable cleaner;
 
     /**
-     * Construct a {@link CooperativelyCleanableReference} for a given referent.
+     * Create a {@link CooperativelyCleanableReference} for a given referent.
      *
      * @param referent the referent to manage
      * @param cleaner  the function to run once the referent is unreachable, this function must not reference the referent
      */
-    public CooperativelyCleanableReference(V referent, AutoCloseable cleaner) {
+    public static <V> CooperativelyCleanableReference<V> create(V referent, AutoCloseable cleaner) {
+        var ref = new CooperativelyCleanableReference<>(referent, cleaner);
+        KEEP_ALIVE.add(ref);
+        return ref;
+    }
+
+    private CooperativelyCleanableReference(V referent, AutoCloseable cleaner) {
         super(referent, clean(QUEUE[ThreadLocalRandom.current().nextInt(QUEUE.length)]));
         this.cleaner = Objects.requireNonNull(cleaner, "null cleaner");
-        KEEP_ALIVE.add(this);
-}
+    }
 
     /**
      * Perform cleanup for at least some unreachable referents in the specified queue.

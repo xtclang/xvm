@@ -38,7 +38,7 @@ public class IsNull
      */
     public IsNull(DataInput in, Constant[] aconst)
             throws IOException {
-        super(in, aconst);
+        super(in, aconst, false, false);
     }
 
     @Override

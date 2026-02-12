@@ -54,7 +54,7 @@ public class Var_IN
      */
     public Var_IN(DataInput in, Constant[] aconst)
             throws IOException {
-        super(in, aconst);
+        super(in, aconst, true);
 
         m_nNameId  = readPackedInt(in);
         m_nValueId = readPackedInt(in);

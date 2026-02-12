@@ -15,7 +15,7 @@ import java.util.NoSuchElementException;
  * circular array, and deletion from the middle of the sequence of elements is supported without
  * having to copy the remainder of the array. Null is a supported element value.
  */
-public class ListSet<E>
+public final class ListSet<E>
         extends AbstractSet<E> {
     // ----- constructors --------------------------------------------------------------------------
 

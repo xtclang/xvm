@@ -61,7 +61,7 @@ public class Var_CN
      */
     public Var_CN(DataInput in, Constant[] aconst)
             throws IOException {
-        super(in, aconst);
+        super(in, aconst, false);
 
         m_nNameId  = readPackedInt(in);
         m_nArgValue = readPackedInt(in);

@@ -42,7 +42,7 @@ public class IsGt
      */
     public IsGt(DataInput in, Constant[] aconst)
             throws IOException {
-        super(in, aconst);
+        super(in, aconst, true, true);
     }
 
     @Override

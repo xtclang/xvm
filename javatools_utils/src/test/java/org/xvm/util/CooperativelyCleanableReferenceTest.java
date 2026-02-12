@@ -14,7 +14,7 @@ public class CooperativelyCleanableReferenceTest {
     void shouldClean() {
         AtomicLong cleaned = new AtomicLong();
         while (cleaned.get() == 0) {
-            new CooperativelyCleanableReference<>(new Object(), cleaned::incrementAndGet);
+            CooperativelyCleanableReference.create(new Object(), cleaned::incrementAndGet);
             System.gc();
     }
 }
@@ -23,7 +23,7 @@ public class CooperativelyCleanableReferenceTest {
     void shouldIgnoreExceptionsWhileCleaning() {
         AtomicLong cleaned = new AtomicLong();
         while (cleaned.get() == 0) {
-            new CooperativelyCleanableReference<>(new Object(), () -> {
+            CooperativelyCleanableReference.create(new Object(), () -> {
                 cleaned.incrementAndGet();
                 throw new NullPointerException();
         });
@@ -35,7 +35,7 @@ public class CooperativelyCleanableReferenceTest {
     void shouldIgnoreAndRestoreInterruptExceptionsWhileCleaning() {
         AtomicLong cleaned = new AtomicLong();
         while (cleaned.get() == 0) {
-            new CooperativelyCleanableReference<>(new Object(), () -> {
+            CooperativelyCleanableReference.create(new Object(), () -> {
                 cleaned.incrementAndGet();
                 throw new RuntimeException(new InterruptedException());
         });

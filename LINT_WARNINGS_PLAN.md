@@ -2,7 +2,7 @@
 
 Compiled with `-Xlint:all` via `--no-build-cache --no-configuration-cache --rerun-tasks -Porg.xtclang.java.lint=true -Porg.xtclang.java.warningsAsErrors=false -Porg.xtclang.java.maxWarnings=1000`.
 
-**Current: 44 warnings** (0 in `javatools_utils`, 40 in `javatools`, 4 in `javatools_jitbridge`)
+**Current: 35 warnings** (0 in `javatools_utils`, 31 in `javatools`, 4 in `javatools_jitbridge`)
 
 Note: counts use `--rerun-tasks` for full accuracy; earlier sessions used cached builds which
 undercounted `rawtypes`/`unchecked`. The delta from our work is what matters.
@@ -10,7 +10,7 @@ undercounted `rawtypes`/`unchecked`. The delta from our work is what matters.
 | Category | Current | Fixed | Tier | Status |
 |----------|---------|-------|------|--------|
 | `[fallthrough]` | **0** | 102 | 4 | DONE |
-| `[this-escape]` | **40** | 28 | 5 | 28 fixed by code rewrites; 40 remain (intentionally unsuppressed) |
+| `[this-escape]` | **31** | 37 | 5+6 | 28 code rewrites + 9 architectural (Tier 6); 31 remain |
 | `[rawtypes]` | **0** | 104 | 3 | DONE |
 | `[unchecked]` | **0** | 86 | 3 | DONE |
 | `[try]` | **0** | 18 | 1 | DONE |
@@ -267,19 +267,18 @@ increasing the warning count.
 
 ---
 
-### Remaining 40 this-escape warnings (intentionally unsuppressed)
+### Remaining 31 this-escape warnings
 
 | File | Count | Escape pattern |
 |------|-------|----------------|
 | `Parser.java` | 4 | Constructor chaining + `next()` token priming |
-| `PackedInteger.java` | 3 | `setLong()` / `setBigInteger()` / `readObject()` call `verifyUninitialized()` (virtual) |
-| `ModuleInfo.java` | 2 | `getResourceDir()` traces to virtual calls |
-| `xRef.java` (RefHandle) | 2 | `setField()` on partially-constructed handle |
+| `xRef.java` (RefHandle) | 2 | `setField()` calls `getComposition()` (virtual); `setRef(this)` kind B escape |
 | `NativeContainer.java` | 2 | `loadNativeTemplates()` bootstrap |
 | `BuildContext.java` | 2 | `new TypeMatrix(this)` |
 | `Lexer.java` | 2 | `eatWhitespace()` traces to virtual calls |
 | `TypeCompositionStatement.java` | 2 | `setParent()` + `introduceParentage()` — `this` passed as arg |
 | `MethodDeclarationStatement.java` | 2 | `setComponent()` + `adopt()` — `this` passed as arg |
+| `ModuleInfo.java` | 2 | `getResourceDir()` traces to virtual calls |
 | `SyntheticExpression.java` | 1 | `expr.getParent().adopt(this)` — kind B escape |
 | `ConvertExpression.java` | 1 | chains to SyntheticExpression |
 | `PackExpression.java` | 1 | chains to SyntheticExpression |
@@ -288,32 +287,199 @@ increasing the warning count.
 | `UnpackExpression.java` | 1 | chains to SyntheticExpression |
 | `PropertyDeclarationStatement.java` | 1 | `anno.setParent(this)` |
 | `NamedTypeExpression.java` | 1 | `setStage()` + `setParent()` |
-| `xOSFileNode.java` (NodeHandle) | 1 | `setField()` |
+| `xOSFileNode.java` (NodeHandle) | 1 | `setField()` calls `getComposition()` (virtual) |
 | `Container.java` | 1 | `new ConstHeap(this)` |
-| `ClassTemplate.java` | 1 | `registerImplicitFields()` — virtual, overridden by xRef |
 | `Xvm.java` | 1 | `NativeTypeSystem.create(this, repo)` |
 | `PropertyStructure.java` | 1 | `getAccess()` virtual call in inlined code |
-| `OpVar.java` | 1 | `isTypeAware()` in assert |
-| `OpTest.java` | 1 | deserialization constructor calls `isBinaryOp()` |
 | `ClassStructure.java` | 1 | `resolveGenerics(pool, this)` in SimpleTypeResolver |
-| `AbstractConverterMap.java` | 1 | `newKeySet()`, `newValues()`, `newEntrySet()` — virtual |
-| `CooperativelyCleanableReference.java` | 1 | `KEEP_ALIVE.add(this)` |
-| `ListSet.java` | 1 | `addAll(that)` |
 
 All remaining escapes are safe (no uninitialized field observation, no data races) but
-require non-trivial refactoring or `@SuppressWarnings` to silence.
+require static factory methods or deeper refactoring to silence.
 
 ---
 
-## Recommended Execution Order
+## Tier 6: ARCHITECTURAL — Eliminate remaining this-escape warnings
+
+Three architectural patterns, applied in order from smallest blast radius to largest.
+
+### Step 1 — Make leaf classes `final` -- DONE (4 warnings eliminated)
+
+Classes that have no subclasses and no design intent to be subclassed. Making them `final`
+tells the compiler that virtual dispatch in constructors is safe.
+
+| File | Warning count | Change |
+|------|--------------|--------|
+| `PackedInteger.java` | 3 | `public final class PackedInteger` |
+| `ListSet.java` | 1 | `public final class ListSet<E>` |
+
+### Step 2 — Constructor parameters instead of virtual dispatch -- PARTIAL (6 of 9 eliminated)
+
+Replace the template-method pattern ("base calls virtual to ask subclass") with an inverted
+pattern ("subclass tells base via constructor parameter"). Eliminates virtual dispatch entirely.
+
+**2a. Op deserialization hierarchy -- DONE (2 warnings eliminated)**
+
+`OpTest` and `OpVar` call `isBinaryOp()`, `hasSecondArgument()`, `isTypeAware()` — all virtual
+with 15+ active overrides. Passed the format as constructor parameters:
+
+| File | Change |
+|------|--------|
+| `OpTest.java` | Added `boolean fBinaryOp, boolean fSecondArg` params to deserialization constructor |
+| `OpVar.java` | Added `boolean fTypeAware` param to deserialization constructor |
+| 30 subclasses | Pass format booleans via `super(in, aconst, true, false)` etc. |
+
+**2b. ClassTemplate implicit fields -- DONE (1 warning eliminated)**
+
+`registerImplicitFields()` was virtual, overridden by `xConst` and `xRef`. Replaced with
+constructor chaining: added a `protected` constructor taking `Set<String> extraImplicitFields`,
+made `registerImplicitFields` private (`computeImplicitFields`). Subclass overrides removed.
+
+| File | Change |
+|------|--------|
+| `ClassTemplate.java` | Added `protected` constructor with `Set<String> extraImplicitFields` param; original delegates via `this(...)` |
+| `xConst.java` | `super(container, struct, Set.of(PROP_HASH))`; removed `registerImplicitFields` override |
+| `xRef.java` | `super(container, struct, Set.of(REFERENT, OUTER))`; removed `registerImplicitFields` override |
+
+**2c. AbstractConverterMap collection views -- DONE (1 warning eliminated)**
+
+`newKeySet()`, `newValues()`, `newEntrySet()` were virtual template methods called in
+constructor. Inlined view creation directly (no virtual dispatch). Removed the factory methods.
+`HasherMap` and `WeakHasherMap` now replace the `keys`/`entries` fields after `super(...)`.
+
+| File | Change |
+|------|--------|
+| `AbstractConverterMap.java` | Constructor inlines `new KeySet()` etc.; `keys`/`entries` made non-final; factory methods removed |
+| `HasherMap.java` | Sets `this.keys = new KeySet()` after `super(...)`; removed `newKeySet()` override |
+| `WeakHasherMap.java` | Sets `this.keys`/`this.entries` after `super(...)`; removed `newKeySet()`/`newEntrySet()` overrides |
+
+**2d. Handle.setField() final -- NOT EFFECTIVE (0 of 3 warnings eliminated)**
+
+Made `GenericHandle.setField()` `final` (no subclass overrides it). However, the Java 21+
+this-escape analysis traces through final method bodies and finds `getComposition()` (virtual)
+inside `setField()`. The warnings at `xRef.java:777`, `xRef.java:819`, and
+`xOSFileNode.java:169` remain. A deeper fix would require bypassing `setField()` entirely
+with direct `m_aFields[]` assignment using pre-computed field indices.
+
+**2e. CooperativelyCleanableReference -- DONE (1 warning eliminated)**
+
+Moved `KEEP_ALIVE.add(this)` from constructor to a `static create()` factory method.
+Updated test call sites.
+
+| File | Change |
+|------|--------|
+| `CooperativelyCleanableReference.java` | Private constructor + `static <V> create()` that adds to `KEEP_ALIVE` |
+| `CooperativelyCleanableReferenceTest.java` | `new ...()` → `.create()` |
+
+### Step 3 — Static factory methods for tree-wiring and bootstrap (22 warnings, significant)
+
+Replace public constructors with `create()` factory methods. The private constructor only
+assigns fields; the factory method performs tree-wiring, registration, and initialization
+on the fully-constructed object.
+
+**3a. SyntheticExpression + 5 subclasses (6 warnings)**
+
+Extract tree-wiring from the constructor into a post-construction method:
+
+```java
+// SyntheticExpression: constructor becomes field-assignment only
+protected SyntheticExpression(Expression expr) {
+    this.expr = expr;
+}
+
+// New method called by factory, not constructor
+protected void replaceInTree(Expression original) {
+    original.getParent().adopt(this);
+    this.adopt(original);
+}
+```
+
+Each subclass gets a static `create()` that calls the private constructor, then
+`replaceInTree()`, then `finishValidation()`:
+
+| File | Change |
+|------|--------|
+| `SyntheticExpression.java` | Split constructor; add `replaceInTree()` |
+| `ConvertExpression.java` | `static create()` factory; private constructor |
+| `PackExpression.java` | Same |
+| `ToIntExpression.java` | Same |
+| `TraceExpression.java` | Same |
+| `UnpackExpression.java` | Same |
+| Call sites (~6 files) | `new ConvertExpression(...)` → `ConvertExpression.create(...)` |
+
+**3b. AST statement/expression constructors (6 warnings)**
+
+Same factory pattern for constructors that call `adopt()`, `setParent()`,
+`introduceParentage()`, `setStage()`, or `setComponent()`:
+
+| File | Warning count | Change |
+|------|--------------|--------|
+| `TypeCompositionStatement.java` | 2 | Factory methods for the two escaping constructors |
+| `MethodDeclarationStatement.java` | 2 | Factory methods for constructors 2 and 3 |
+| `PropertyDeclarationStatement.java` | 1 | Factory method; move annotation re-parenting out of constructor |
+| `NamedTypeExpression.java` | 1 | Factory method for synthetic validated constructor |
+
+**3c. Parser + Lexer (6 warnings)**
+
+Separate construction from token-stream priming:
+
+| File | Warning count | Change |
+|------|--------------|--------|
+| `Lexer.java` | 2 | Private constructor + `static create()`; call `eatWhitespace()` after |
+| `Parser.java` | 4 | Private constructor + `static create()`; call `next()` after |
+
+**3d. Container / bootstrap hierarchy (4 warnings)**
+
+Separate construction from heap creation and runtime registration:
+
+| File | Warning count | Change |
+|------|--------------|--------|
+| `Container.java` | 1 | Protected constructor stores params only; `initHeap()` called by factory |
+| `NativeContainer.java` | 2 | `static create()` factory |
+| `Xvm.java` | 1 | `static create()` factory; move `NativeTypeSystem.create()` + `register()` post-construction |
+| `BuildContext.java` | 2 | `static create()` factory; `new TypeMatrix(this)` moved post-construction |
+
+**3e. Remaining (5 warnings)**
+
+| File | Warning count | Change |
+|------|--------------|--------|
+| `ModuleInfo.java` | 2 | Make `getResourceDir()` `final`, or static factory |
+| `ClassStructure.java` | 1 | Static factory for `SimpleTypeResolver` |
+| `PropertyStructure.java` | 1 | Static factory; move `getAccess()` call post-construction |
+| `OpVar.java` (assembly) | 1 | Already addressed by Step 2a |
+
+---
+
+### Execution Order
+
+| Step | Planned | Actual | Status | Cumulative |
+|------|---------|--------|--------|------------|
+| **1. `final` classes** | 4 | 4 | DONE | 36 remaining |
+| **2a. Op constructor params** | 3 | 2 | DONE | 34 remaining |
+| **2b. ClassTemplate params** | 1 | 1 | DONE | 33 remaining |
+| **2c. AbstractConverterMap params** | 1 | 1 | DONE | 32 remaining |
+| **2d. Handle.setField() final** | 3 | 0 | NOT EFFECTIVE | 32 remaining |
+| **2e. CooperativelyCleanableReference factory** | 1 | 1 | DONE | 31 remaining |
+| **3a. SyntheticExpression factories** | 6 | — | Pending | — |
+| **3b. AST statement factories** | 6 | — | Pending | — |
+| **3c. Parser/Lexer factories** | 6 | — | Pending | — |
+| **3d. Container/bootstrap factories** | 4 | — | Pending | — |
+| **3e. Remaining** | 5 | — | Pending | — |
+
+Steps 1+2 eliminated 9 of 13 planned warnings (Step 2d was ineffective — see note above).
+Step 3a+3b (12 warnings) form a natural AST-layer commit. Steps 3c–3e clean up the rest.
+
+---
+
+## Previous Execution Order (completed)
 
 1. **Tier 1** -- DONE (33 warnings)
 2. **Tier 2** -- DONE (11 warnings: 8 serial + 3 rawtypes from IdentityArrayList)
 3. **Tier 4** -- DONE (96 warnings: 11 refactored + 85 suppressed)
-4. **Tier 5** -- PARTIAL (28 this-escape fixed by code rewrites; 40 remain unsuppressed)
+4. **Tier 5** -- PARTIAL (28 this-escape fixed by code rewrites; 40 remain → now Tier 6)
 5. **Tier 3** -- DONE (91 warnings: rawtypes + unchecked + overrides, fixed per-file)
+6. **Tier 6 Steps 1+2** -- PARTIAL (9 this-escape eliminated: 4 final classes + 5 constructor params; Step 2d ineffective)
 
-**Remaining: 44 warnings total** — 40 intentional `[this-escape]` + 4 in `javatools_jitbridge` (2 cast + 2 serial)
+**Remaining: 35 warnings total** — 31 `[this-escape]` (Tier 6 Step 3 above) + 4 in `javatools_jitbridge` (2 cast + 2 serial)
 
 ## How to Reproduce
 

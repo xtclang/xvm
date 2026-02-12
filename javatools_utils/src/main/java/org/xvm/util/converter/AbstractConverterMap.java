@@ -18,7 +18,7 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V> {
     /**
      * The converter keySet.
      */
-    protected final Set<K> keys;
+    protected Set<K> keys;
 
     /**
      * The converter values.
@@ -28,7 +28,7 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V> {
     /**
      * The converter entrySet.
      */
-    protected final Set<Entry<K, V>> entries;
+    protected Set<Entry<K, V>> entries;
 
     /**
      * Construct a {@link AbstractConverterMap}.
@@ -37,9 +37,9 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V> {
      */
     protected AbstractConverterMap(Map<SK, SV> storage) {
         this.storage = storage;
-        keys = newKeySet();
-        values = newValues();
-        entries = newEntrySet();
+        keys    = new KeySet();
+        values  = new Values();
+        entries = new EntrySet();
     }
 
     /**
@@ -99,27 +99,6 @@ public abstract class AbstractConverterMap<K, V, SK, SV> implements Map<K, V> {
     @SuppressWarnings("unchecked")
     protected <X, Y extends X> Y unchecked(X x) {
         return (Y) x;
-    }
-
-    /**
-     * @return a new keyset
-     */
-    protected Set<K> newKeySet() {
-        return new KeySet();
-    }
-
-    /**
-     * @return a new values collection
-     */
-    protected Collection<V> newValues() {
-        return new Values();
-    }
-
-    /**
-     * @return a new  ntrySet
-     */
-    protected Set<Entry<K, V>> newEntrySet() {
-        return new EntrySet();
     }
 
     @Override

@@ -44,7 +44,7 @@ public class IsZero
      */
     public IsZero(DataInput in, Constant[] aconst)
             throws IOException {
-        super(in, aconst);
+        super(in, aconst, false, false);
     }
 
     @Override

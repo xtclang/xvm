@@ -2,7 +2,6 @@ package org.xvm.runtime.template;
 
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -59,22 +58,11 @@ public class xConst
     public static xConst INSTANCE;
 
     public xConst(Container container, ClassStructure structure, boolean fInstance) {
-        super(container, structure);
+        super(container, structure, Set.of(PROP_HASH));
 
         if (fInstance) {
             INSTANCE = this;
         }
-    }
-
-    @Override
-    protected Set<String> registerImplicitFields(Set<String> setFields) {
-        if (setFields == null) {
-            setFields = new HashSet<>();
-        }
-
-        setFields.add(PROP_HASH);
-
-        return super.registerImplicitFields(setFields);
     }
 
     @Override

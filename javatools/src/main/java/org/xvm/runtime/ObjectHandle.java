@@ -390,7 +390,7 @@ public abstract class ObjectHandle
                     : m_aFields[field.getIndex()];
         }
 
-        public void setField(Frame frame, PropertyConstant idProp, ObjectHandle hValue) {
+        public final void setField(Frame frame, PropertyConstant idProp, ObjectHandle hValue) {
             FieldInfo field = getComposition().getFieldInfo(idProp);
             if (field.isTransient()) {
                 setTransientField(frame, field.getIndex(), hValue);
@@ -399,7 +399,7 @@ public abstract class ObjectHandle
             }
         }
 
-        public void setField(Frame frame, String sProp, ObjectHandle hValue) {
+        public final void setField(Frame frame, String sProp, ObjectHandle hValue) {
             FieldInfo field = getComposition().getFieldInfo(sProp);
             if (field.isTransient()) {
                 setTransientField(frame, field.getIndex(), hValue);

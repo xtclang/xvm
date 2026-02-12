@@ -38,7 +38,7 @@ public class IsNot
      */
     public IsNot(DataInput in, Constant[] aconst)
             throws IOException {
-        super(in, aconst);
+        super(in, aconst, false, false);
     }
 
     @Override

@@ -43,7 +43,7 @@ public class IsNType
      */
     public IsNType(DataInput in, Constant[] aconst)
             throws IOException {
-        super(in, aconst);
+        super(in, aconst, false, true);
     }
 
     @Override

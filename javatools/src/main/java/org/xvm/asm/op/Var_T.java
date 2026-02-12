@@ -48,7 +48,7 @@ public class Var_T
      */
     public Var_T(DataInput in, Constant[] aconst)
             throws IOException {
-        super(in, aconst);
+        super(in, aconst, true);
 
         m_anArgValue = readIntArray(in);
     }

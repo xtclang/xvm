@@ -77,16 +77,18 @@ public abstract class OpTest
     /**
      * Deserialization constructor.
      *
-     * @param in      the DataInput to read from
-     * @param aconst  an array of constants used within the method
+     * @param in            the DataInput to read from
+     * @param aconst        an array of constants used within the method
+     * @param fBinaryOp     true iff the op is a binary operator
+     * @param fSecondArg    true iff the op has two arguments
      */
-    protected OpTest(DataInput in, Constant[] aconst)
+    protected OpTest(DataInput in, Constant[] aconst, boolean fBinaryOp, boolean fSecondArg)
             throws IOException {
-        if (isBinaryOp()) {
+        if (fBinaryOp) {
             m_nType = readPackedInt(in);
         }
         m_nValue1 = readPackedInt(in);
-        if (hasSecondArgument()) {
+        if (fSecondArg) {
             m_nValue2 = readPackedInt(in);
         }
         m_nRetValue = readPackedInt(in);

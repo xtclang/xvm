@@ -45,7 +45,7 @@ import java.math.BigInteger;
  * To maximize density, the algorithms in this file use the smallest possible encoding for each
  * value.
  */
-public class PackedInteger
+public final class PackedInteger
         implements Comparable<PackedInteger> {
     // ----- constructors --------------------------------------------------------------------------
 

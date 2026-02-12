@@ -39,7 +39,7 @@ public class Var_D
      */
     public Var_D(DataInput in, Constant[] aconst)
             throws IOException {
-        super(in, aconst);
+        super(in, aconst, true);
     }
 
     @Override

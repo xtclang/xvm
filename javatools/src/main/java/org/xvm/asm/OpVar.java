@@ -38,12 +38,13 @@ public abstract class OpVar
     /**
      * Deserialization constructor.
      *
-     * @param in      the DataInput to read from
-     * @param aconst  an array of constants used within the method
+     * @param in          the DataInput to read from
+     * @param aconst      an array of constants used within the method
+     * @param fTypeAware  true iff this op carries type information
      */
-    protected OpVar(DataInput in, Constant[] aconst)
+    protected OpVar(DataInput in, Constant[] aconst, boolean fTypeAware)
             throws IOException {
-        if (isTypeAware()) {
+        if (fTypeAware) {
             m_nType = readPackedInt(in);
         }
     }
