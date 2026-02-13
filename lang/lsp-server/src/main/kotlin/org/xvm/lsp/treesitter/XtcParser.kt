@@ -21,14 +21,13 @@ import java.nio.file.StandardCopyOption
  * as a native library. The grammar is generated from XtcLanguage.kt by TreeSitterGenerator.
  */
 class XtcParser : Closeable {
-    private val parser: Parser
+    private val parser: Parser = Parser()
     private val language: Language = loadXtcLanguage()
 
     @Volatile
     private var closed = false
 
     init {
-        parser = Parser()
         parser.setLanguage(language)
         logger.info("XtcParser initialized with tree-sitter native library")
     }

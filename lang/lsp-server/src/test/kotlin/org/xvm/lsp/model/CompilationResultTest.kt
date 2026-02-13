@@ -11,9 +11,7 @@ class CompilationResultTest {
     fun successShouldCreateSuccessfulResult() {
         val uri = "file:///test.x"
         val symbol = SymbolInfo.of("Test", SymbolInfo.SymbolKind.CLASS, Location.of(uri, 0, 0))
-
         val result = CompilationResult.success(uri, listOf(symbol))
-
         assertThat(result.success).isTrue()
         assertThat(result.diagnostics).isEmpty()
         assertThat(result.symbols).hasSize(1)
@@ -65,11 +63,8 @@ class CompilationResultTest {
         val uri = "file:///test.x"
         val diagnostics = mutableListOf<Diagnostic>()
         diagnostics.add(Diagnostic.warning(Location.of(uri, 0, 0), "Warning"))
-
         val result = CompilationResult.withDiagnostics(uri, diagnostics, emptyList())
-
         diagnostics.clear()
-
         assertThat(result.diagnostics).hasSize(1)
     }
 }

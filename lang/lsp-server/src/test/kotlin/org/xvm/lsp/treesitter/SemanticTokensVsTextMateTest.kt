@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Demonstrates the concrete benefits of LSP semantic tokens over TextMate/tree-sitter
@@ -54,9 +53,6 @@ import java.util.concurrent.atomic.AtomicInteger
 class SemanticTokensVsTextMateTest {
     private val logger: Logger = LoggerFactory.getLogger(SemanticTokensVsTextMateTest::class.java)
     private var parser: XtcParser? = null
-    private val uriCounter = AtomicInteger(0)
-
-    private fun freshUri(): String = "file:///semantic-test${uriCounter.incrementAndGet()}.x"
 
     @BeforeAll
     fun setUpParser() {

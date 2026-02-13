@@ -50,8 +50,8 @@ class XtcTree internal constructor(
         val point = Point(line, column)
         return tsTree.rootNode
             .getDescendant(point, point)
-            .map { XtcNode(it, source) }
             .orElse(null)
+            ?.let { XtcNode(it, source) }
     }
 
     /**
@@ -64,6 +64,7 @@ class XtcTree internal constructor(
      * @param column 0-based column number
      * @return the named node at that position, or null if none
      */
+    @Suppress("unused")
     fun namedNodeAt(
         line: Int,
         column: Int,

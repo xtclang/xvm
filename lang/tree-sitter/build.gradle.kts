@@ -644,7 +644,7 @@ abstract class TreeSitterParseTestTask @Inject constructor(
                 if (sortedTimes.size % 2 == 0) (sortedTimes[mid - 1] + sortedTimes[mid]) / 2 else sortedTimes[mid]
             } else 0
             logger.lifecycle("")
-            logger.lifecycle("Total: ${totalMs}ms, Average: ${avgMs}ms, Median: ${medianMs}ms per file")
+            logger.lifecycle("Total: ${totalMs}ms, Average: ${avgMs}ms, Median: ${medianMs}ms per file (${results.size} files)")
         }
     }
 }
