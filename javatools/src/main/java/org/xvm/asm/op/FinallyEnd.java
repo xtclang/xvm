@@ -152,7 +152,6 @@ public class FinallyEnd
             JitMethodDesc jmd        = bctx.methodDesc;
             boolean       fOptimized = bctx.isOptimized;
             int           cRets      = jmd.standardReturns.length;
-            String        sRetVal    = "$ret";
 
             Label labelSkip = null;
             if (advances()) {
@@ -173,10 +172,10 @@ public class FinallyEnd
                 JitParamDesc pdExt      = fOptimized ? jmd.optimizedReturns[iExt] : null;
 
                 // load the return values (including any extension slots) to the stack
-                for (int j = 0; j < optIndexes.length; j++) {
-                    JitParamDesc pd = jmd.optimizedReturns[optIndexes[i]];
-                    String name  = GuardAll.returnSlotName(pd);
-                    int    slot  = scopeGuard.getSynthetic(name, false);
+                for (int optIndex : optIndexes) {
+                    JitParamDesc pd   = jmd.optimizedReturns[optIndex];
+                    String       name = GuardAll.returnSlotName(pd);
+                    int          slot = scopeGuard.getSynthetic(name, false);
                     Builder.load(code, pd.cd, slot);
                 }
 
@@ -215,14 +214,11 @@ public class FinallyEnd
                         break;
 
                     case XvmPrimitive, NullableXvmPrimitive:
-                        // store the return primitives (including any extensions) to the context,
-                        // leaving the last one on the stack
-                        for (int j = optIndexes.length - 1; j >= 1 ; j--) {
+                        // store the return primitives (including any extensions) to the context
+                        for (int j = optIndexes.length - 1; j >= 0 ; j--) {
                             JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
                             Builder.storeToContext(code, retDesc.cd, retDesc.altIndex);
                         }
-                        // set the last primitive on the stack as the return value
-                        Builder.addReturn(code, cd);
                         break;
 
                     default:
