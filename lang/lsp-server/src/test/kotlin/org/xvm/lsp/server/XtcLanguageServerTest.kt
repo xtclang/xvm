@@ -213,6 +213,9 @@ class XtcLanguageServerTest {
             assertThat(caps.documentRangeFormattingProvider?.left).describedAs("rangeFormatting").isTrue()
             assertThat(caps.inlayHintProvider?.left).describedAs("inlayHint").isTrue()
 
+            // Workspace features
+            assertThat(caps.workspaceSymbolProvider?.left).describedAs("workspaceSymbol").isTrue()
+
             // Sync
             assertThat(caps.textDocumentSync?.left).describedAs("textDocumentSync").isNotNull()
         }
@@ -235,16 +238,15 @@ class XtcLanguageServerTest {
             if (caps.linkedEditingRangeProvider == null) notYetImplemented.add("linkedEditingRange")
             if (caps.inlineValueProvider == null) notYetImplemented.add("inlineValue")
             if (caps.diagnosticProvider == null) notYetImplemented.add("diagnosticProvider")
-            if (caps.workspaceSymbolProvider == null) notYetImplemented.add("workspaceSymbol")
 
             // Print the audit report
             println("========================================")
             println("LSP Capabilities Audit")
             println("========================================")
-            println("Implemented (${17} capabilities):")
+            println("Implemented (${18} capabilities):")
             println("  hover, completion, definition, references, documentSymbol,")
             println("  documentHighlight, selectionRange, foldingRange,")
-            println("  documentLink, signatureHelp,")
+            println("  documentLink, signatureHelp, workspaceSymbol,")
             println("  rename (with prepareRename), codeAction,")
             println("  formatting, rangeFormatting, inlayHint,")
             println("  textDocumentSync")
@@ -273,7 +275,6 @@ class XtcLanguageServerTest {
                     "linkedEditingRange",
                     "inlineValue",
                     "diagnosticProvider",
-                    "workspaceSymbol",
                 )
         }
     }

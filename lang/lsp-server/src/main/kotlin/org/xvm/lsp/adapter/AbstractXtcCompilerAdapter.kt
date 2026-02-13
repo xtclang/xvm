@@ -26,6 +26,7 @@ import org.xvm.lsp.model.SymbolInfo
  * @see [TreeSitterAdapter] for syntax-aware adapter
  * @see [XtcCompilerAdapterStub] for placeholder adapter
  */
+@Suppress("LoggingSimilarMessage")
 abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
     /**
      * Logger instance for this adapter, using the concrete class name.
@@ -62,6 +63,24 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         }
         logger.info("$logPrefix getHoverInfo: found symbol '{}' ({})", symbol.name, symbol.kind)
         return symbol.toHoverMarkdown()
+    }
+
+    // ========================================================================
+    // Default implementations — workspace lifecycle
+    // ========================================================================
+
+    override fun initializeWorkspace(
+        workspaceFolders: List<String>,
+        progressReporter: ((String, Int) -> Unit)?,
+    ) {
+        logger.info("$logPrefix initializeWorkspace: {} folders: {}", workspaceFolders.size, workspaceFolders)
+    }
+
+    override fun didChangeWatchedFile(
+        uri: String,
+        changeType: Int,
+    ) {
+        logger.info("$logPrefix didChangeWatchedFile: uri={}, changeType={}", uri, changeType)
     }
 
     // ========================================================================

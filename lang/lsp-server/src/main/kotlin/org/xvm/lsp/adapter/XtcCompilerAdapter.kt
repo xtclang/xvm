@@ -225,6 +225,38 @@ interface XtcCompilerAdapter : Closeable {
     ): List<Location>
 
     // ========================================================================
+    // Workspace lifecycle
+    // ========================================================================
+
+    /**
+     * Initialize the workspace after the server has started.
+     *
+     * Called once during `initialize` with the workspace folder paths.
+     * Implementations can use this to start background indexing of all `*.x` files.
+     *
+     * @param workspaceFolders list of workspace folder paths (file system paths, not URIs)
+     * @param progressReporter optional callback for progress: (message, percentComplete)
+     */
+    fun initializeWorkspace(
+        workspaceFolders: List<String>,
+        progressReporter: ((String, Int) -> Unit)? = null,
+    ) {}
+
+    /**
+     * Notification that a watched file has changed on disk.
+     *
+     * Called when the client reports file creation, modification, or deletion
+     * via `workspace/didChangeWatchedFiles`.
+     *
+     * @param uri the file URI
+     * @param changeType 1 = Created, 2 = Changed, 3 = Deleted (LSP FileChangeType values)
+     */
+    fun didChangeWatchedFile(
+        uri: String,
+        changeType: Int,
+    ) {}
+
+    // ========================================================================
     // Tree-sitter capable features (syntax-based, no semantic analysis)
     // ========================================================================
 

@@ -125,6 +125,10 @@ class XtcLspConnectionProvider(
         logger.info("Starting XTC LSP Server (out-of-process via OSProcessStreamConnectionProvider)")
         super.start()
 
+        // The server performs a health check during initialize() and logs the result.
+        // Server-side: adapter.healthCheck() validates native lib, then workspace indexing begins.
+        // TODO: Send xtc/healthCheck from client via LanguageServerManager for diagnostic logging
+        //   once LSP4IJ exposes a post-initialization hook for custom requests.
         logger.info("XTC LSP Server process started (v${LspBuildProperties.version}, adapter=${LspBuildProperties.adapter}, pid=$pid)")
 
         if (startNotificationShown.compareAndSet(false, true)) {

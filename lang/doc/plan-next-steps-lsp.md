@@ -3,7 +3,7 @@
 This document covers all LSP features — implemented and planned — along with IDE client
 integration strategies for IntelliJ (via LSP4IJ), VS Code, and other editors.
 
-> **Last Updated**: 2026-02-13 (Full audit: §1 status table verified against implementation, §2 Semantic Tokens Tier 1 marked done, §10 sprint plan updated with progress and recommended next work)
+> **Last Updated**: 2026-02-13 (Sprint 1A workspace symbol index complete, Sprint 2 workspace symbols + cross-file definition done, §1 status table updated)
 
 ---
 
@@ -24,9 +24,9 @@ integration strategies for IntelliJ (via LSP4IJ), VS Code, and other editors.
 
 ### IDE Client Integration
 
-11. [IntelliJ (LSP4IJ)](#11-intellij-lsp4ij)
-12. [VS Code](#12-vs-code)
-13. [Multi-IDE Strategy](#13-multi-ide-strategy)
+1. [IntelliJ (LSP4IJ)](#11-intellij-lsp4ij)
+2. [VS Code](#12-vs-code)
+3. [Multi-IDE Strategy](#13-multi-ide-strategy)
 
 ---
 
@@ -52,7 +52,7 @@ actions are traceable even when not yet supported.
 |------------|-------|
 | `textDocument/hover` | AST-based symbol lookup, markdown formatting |
 | `textDocument/completion` | Keywords, built-in types, document symbols, imports. Trigger chars: `.` `:` `<` |
-| `textDocument/definition` | Same-file only (name matching) |
+| `textDocument/definition` | Same-file + cross-file via workspace index |
 | `textDocument/references` | Same-file only (text matching) |
 | `textDocument/documentSymbol` | Full declaration tree via tree-sitter queries |
 | `textDocument/documentHighlight` | All occurrences of identifier under cursor |
@@ -66,13 +66,13 @@ actions are traceable even when not yet supported.
 | `textDocument/signatureHelp` | Same-file method parameters. Trigger chars: `(` `,` |
 | `textDocument/publishDiagnostics` | Syntax errors from tree-sitter parse |
 | `textDocument/semanticTokens/full` | Tier 1: declarations, type refs, annotations, calls, members. Opt-in via `-Plsp.semanticTokens=true` |
+| `workspace/symbol` | 4-tier fuzzy search (exact, prefix, CamelCase, subsequence) via workspace index |
 
 ### Stub / Not Implemented (advertised but returning empty/null)
 
 | LSP Method | Status | Blocker |
 |------------|--------|---------|
 | `textDocument/inlayHint` | Returns `emptyList()` | Needs workspace index for param names |
-| `workspace/symbol` | Returns `emptyList()`, capability not advertised | Needs workspace index |
 
 ### Not Registered (capability commented out in server)
 
@@ -226,7 +226,7 @@ Token: Person  → [0, 6, 6, 2, 1]     (class, declaration modifier)
 
 **Impact:** Foundational. Every developer expects Ctrl+Click to jump to definitions and Shift+F12 to find all usages. Cross-file navigation is the gateway to "this feels like a real IDE."
 
-**Current state:** `TreeSitterAdapter` supports same-file go-to-definition (by name matching) and same-file find-references (by text occurrence). Cannot resolve imports or cross-file jumps.
+**Current state:** `TreeSitterAdapter` supports same-file go-to-definition (by name matching) and same-file find-references (by text occurrence). **Cross-file go-to-definition** is now implemented: when same-file lookup fails, `findDefinition()` falls back to the workspace index, preferring type declarations (CLASS, INTERFACE, ENUM, etc.) over methods/properties. Import resolution and cross-file find-references remain future work.
 
 ### 3.1 What Requires Compiler vs. What Doesn't
 
@@ -465,9 +465,9 @@ fun getCompletions(uri: String, line: Int, column: Int, triggerChar: String?): L
 
 **LSP Method:** `workspace/symbol`
 
-**Impact:** Medium-high. `Ctrl+T` (Go to Symbol in Workspace) is a power-user feature used constantly for navigation. Currently returns empty.
+**Impact:** Medium-high. `Ctrl+T` (Go to Symbol in Workspace) is a power-user feature used constantly for navigation.
 
-**Current state:** `AbstractXtcCompilerAdapter.findWorkspaceSymbols()` returns `emptyList()` (inherited default). The `symbol()` handler in `XtcLanguageServer.kt` already delegates to this method.
+**Current state:** **Implemented.** `TreeSitterAdapter.findWorkspaceSymbols()` delegates to `WorkspaceIndex.search()` with 4-tier fuzzy matching (exact, prefix, CamelCase, subsequence). The workspace index is populated by `WorkspaceIndexer` on startup (parallel scan of all `*.x` files) and kept current via `didChangeWatchedFiles` and re-indexing on compile. The `workspaceSymbolProvider` capability is advertised.
 
 ### 5.1 Index Strategy
 
@@ -848,18 +848,26 @@ All features in §2-§8 depend on common infrastructure that should be built fir
 
 ### 9.1 Workspace Symbol Index
 
-The core data structure that enables cross-file features. Stores declarations extracted by tree-sitter from all `*.x` files in the workspace.
+**Status: Implemented.**
+
+The core data structure that enables cross-file features. Implemented in `org.xvm.lsp.index`:
+
+- **`IndexedSymbol`** — flat symbol entry optimized for cross-file lookup (name, qualifiedName, kind, uri, location, containerName). Converts to/from `SymbolInfo`.
+- **`WorkspaceIndex`** — three `ConcurrentHashMap`s (byName, byUri, byQualifiedName) protected by `ReentrantReadWriteLock`. 4-tier fuzzy search: exact → prefix → CamelCase → subsequence.
+- **`WorkspaceIndexer`** — background scanner using dedicated thread pool (`min(processors, 4)`). All tree-sitter parse calls serialized via `parseLock` (native parser is not thread-safe). Supports `scanWorkspace()`, `reindexFile()`, `removeFile()`.
+
+**Wiring:**
+- `TreeSitterAdapter` owns the index and indexer. `initializeWorkspace()` kicks off background scan. `compile()` triggers re-indexing. `didChangeWatchedFile()` handles external file events.
+- `XtcLanguageServer.initialize()` extracts workspace folders and calls `adapter.initializeWorkspace()`. Registers `**/*.x` file watcher via dynamic `client/registerCapability`.
 
 **Key operations:**
-- `addSymbol(symbol)` / `removeSymbolsForUri(uri)` — index maintenance
-- `findByName(name)` — exact name lookup
-- `findByQualifiedName(fqn)` — import resolution
-- `prefixSearch(prefix)` — completion and workspace symbols
+- `addSymbols(uri, symbols)` / `removeSymbolsForUri(uri)` — index maintenance
+- `findByName(name)` — exact name lookup (for cross-file definition)
 - `search(query, limit)` — fuzzy matching for workspace symbol search
 
 **Indexing pipeline:**
 1. Workspace open → scan `*.x` files → parse with tree-sitter → extract declarations → build index
-2. `didOpen` / `didChange` → re-index the changed file (debounced)
+2. `compile()` → re-index the changed file when index is ready
 3. `didChangeWatchedFiles` → handle external changes (git checkout, etc.)
 
 ### 9.2 Member Info in Index
@@ -938,65 +946,64 @@ workspace index (e.g., cross-file type classification, `defaultLibrary` modifier
 
 ---
 
+**Sprint 1A — Workspace Symbol Index:**
+- ✅ **WorkspaceIndex** — `ConcurrentHashMap`-based index with 3 maps (byName, byUri,
+  byQualifiedName), `ReentrantReadWriteLock`, 4-tier fuzzy search (exact, prefix, CamelCase,
+  subsequence). `IndexedSymbol` flat entry with name, qualifiedName, kind, URI, location,
+  containerName. Implemented in `org.xvm.lsp.index`.
+- ✅ **WorkspaceIndexer** — background scanner with dedicated thread pool
+  (`min(processors, 4)`). Parallel file I/O with serialized tree-sitter parsing (`parseLock`).
+  `scanWorkspace()`, `reindexFile()`, `removeFile()`. Comprehensive test coverage in
+  `WorkspaceIndexTest` (17 tests) and `WorkspaceIndexerTest` (6 integration tests).
+- ✅ **Wiring** — `TreeSitterAdapter` owns index/indexer, `XtcLanguageServer.initialize()`
+  extracts workspace folders and kicks off scan, `**/*.x` file watcher registered via
+  dynamic `client/registerCapability`, health check before indexing.
+
+**Sprint 2 — Cross-File Features (partially complete):**
+- ✅ **Workspace Symbol Search** — `findWorkspaceSymbols()` delegates to index with
+  fuzzy matching. `workspaceSymbolProvider` capability advertised. Ctrl+T works.
+- ✅ **Cross-file Go-to-Definition** — `findDefinition()` falls back to workspace index
+  when same-file lookup fails, preferring type declarations over methods/properties.
+- 🔜 **Document Link Resolution** — set `target` on import links using index lookup.
+  Currently returns `target = null`; trivial fix once index maps qualified names to URIs.
+
+---
+
 #### 🔜 What To Work On Next (recommended order)
 
-**Sprint 1A — Workspace Symbol Index (highest-leverage infrastructure):**
-
-This is the single most important piece of remaining work. It unblocks cross-file definition,
-workspace symbols, completion after `.`, import resolution, inlay hints, and type hierarchy —
-essentially every remaining sprint depends on it.
-
-1. Build `WorkspaceSymbolIndex` data structure with tree-sitter extraction
-   - `IndexedSymbol` with name, qualified name, kind, URI, range, members, supertypes
-   - Trie-based name index for O(k) prefix search
-   - Secondary indexes: `uri → symbols`, `qualifiedName → symbol`
-2. Implement startup workspace scanning with `WorkDoneProgress` reporting
-   - Parallel scan of all `*.x` files, parse with tree-sitter, extract declarations
-   - Critical UX: first-time indexing can take seconds, users must see progress
-3. Wire up incremental re-indexing on `didChange` (debounced 300ms) and `didSave`
-   - Register `**/*.x` file watcher via `workspace/didChangeWatchedFiles`
-
-**Sprint 2 — Cross-File Features (index now available):**
-
-These are the features developers miss most after basic syntax support. Each one is a
-straightforward wire-up once the index exists.
-
-4. **Workspace Symbol Search** — wire index to `workspace/symbol` with fuzzy matching
-   (CamelCase + subsequence). Advertise the capability. Enables Ctrl+T navigation.
-5. **Cross-file Go-to-Definition** — resolve imported type names through the index.
-   The existing `findDefinition()` already handles same-file; add index fallback.
-6. **Document Link Resolution** — set `target` on import links using index lookup.
-   Currently returns `target = null`; trivial fix once index maps qualified names to URIs.
+**Sprint 2 remainder — Document Link Resolution:**
+1. **Document Link Resolution** — set `target` on import links using index lookup.
+   Currently returns `target = null`; straightforward wire-up to the workspace index.
 
 **Sprint 3 — Completion & References (index + member info):**
 
-7. **Cross-file Find References** — workspace-wide name search through the index.
+1. **Cross-file Find References** — workspace-wide name search through the index.
    Same-file references already work; extend to other indexed files.
-8. **Context-aware Completion after `.`** — heuristic type resolution for the receiver
+2. **Context-aware Completion after `.`** — heuristic type resolution for the receiver
    expression, then look up members from the index. The biggest "feels like a real IDE" upgrade.
-9. **Import path completion** — after `import `, suggest from qualified names in the index.
+3. **Import path completion** — after `import `, suggest from qualified names in the index.
 
 **Sprint 4 — Hierarchy & Hints:**
 
-10. **Type Hierarchy** — extract `extends`/`implements`/`incorporates` clauses from the AST.
-    Build forward (supertypes) and reverse (subtypes) maps. Advertise `typeHierarchyProvider`.
-11. **Inlay Hints — Parameter Names** — look up method signatures from the index, show
-    parameter names at call sites for literal arguments. The most impactful inlay hint.
-12. **Inlay Hints — Tier 1 Types** — show inferred types for literals (`Int`, `String`)
-    and constructor calls (`new Foo()` → `: Foo`). Purely syntactic, no compiler needed.
+1. **Type Hierarchy** — extract `extends`/`implements`/`incorporates` clauses from the AST.
+   Build forward (supertypes) and reverse (subtypes) maps. Advertise `typeHierarchyProvider`.
+2. **Inlay Hints — Parameter Names** — look up method signatures from the index, show
+   parameter names at call sites for literal arguments. The most impactful inlay hint.
+3. **Inlay Hints — Tier 1 Types** — show inferred types for literals (`Int`, `String`)
+   and constructor calls (`new Foo()` → `: Foo`). Purely syntactic, no compiler needed.
 
 **Sprint 5 — Polish & Enrichment:**
 
-13. Semantic Tokens Tier 2 (heuristic usage-site tokens: UpperCamelCase → type, broader
-    property/variable classification)
-14. Call Hierarchy (syntactic approximation — find all `call_expression` nodes)
-15. Persistent index cache for fast startup (save to disk with checksums)
-16. `completionItem/resolve` for auto-import and documentation
+1. Semantic Tokens Tier 2 (heuristic usage-site tokens: UpperCamelCase → type, broader
+   property/variable classification)
+2. Call Hierarchy (syntactic approximation — find all `call_expression` nodes)
+3. Persistent index cache for fast startup (save to disk with checksums)
+4. `completionItem/resolve` for auto-import and documentation
 
 **Sprint 6 — Additional LSP Features:**
 
-17. **Code Lens** — reference counts (once index exists), run/debug buttons (once DAP is wired)
-18. **On-Type Formatting** — auto-indent via tree-sitter AST context
+1. **Code Lens** — reference counts (once index exists), run/debug buttons (once DAP is wired)
+2. **On-Type Formatting** — auto-indent via tree-sitter AST context
 
 ### The Compiler Adapter Milestone
 
@@ -1035,29 +1042,29 @@ hierarchy, and no LSP console.
 
 LSP4IJ translates standard LSP responses into IntelliJ UI with no plugin-side code:
 
-| LSP Feature | IntelliJ Integration | Notes |
-|-------------|---------------------|-------|
-| Hover | Quick Documentation popup (Ctrl+Q) | Renders markdown |
-| Completion | Code completion popup | Supports `completionItem/resolve` |
-| Definition | Ctrl+Click / Ctrl+B navigation | |
-| References | Find Usages (Alt+F7) | |
-| Document Symbol | Structure view, breadcrumbs | |
-| Document Highlight | Occurrence highlighting | |
-| Folding Range | Code folding gutter | |
-| Formatting | Code > Reformat (Ctrl+Alt+L) | |
-| Rename | Shift+F6 refactor dialog | |
-| Code Action | Alt+Enter intention actions | |
-| Signature Help | Parameter info popup | |
-| Inlay Hints | Inline hints in editor | |
-| Semantic Tokens | Semantic highlighting overlay | |
-| Code Lens | Inline annotations above declarations | **Not available in built-in LSP** |
-| Type Hierarchy | Ctrl+H hierarchy view | **Not available in built-in LSP** |
-| Call Hierarchy | Ctrl+Alt+H hierarchy view | **Not available in built-in LSP** |
-| Selection Range | Ctrl+W / Ctrl+Shift+W expand/shrink | |
-| On-Type Formatting | Auto-indent on Enter | **Not available in built-in LSP** |
-| Document Link | Clickable import paths | |
-| LSP Console | View > Tool Windows > Language Servers | Protocol-level debugging |
-| DAP Client | Debug tool window | **Not available in built-in LSP** |
+| LSP Feature        | IntelliJ Integration                   | Notes                             |
+|--------------------|----------------------------------------|-----------------------------------|
+| Hover              | Quick Documentation popup (Ctrl+Q)     | Renders markdown                  |
+| Completion         | Code completion popup                  | Supports `completionItem/resolve` |
+| Definition         | Ctrl+Click / Ctrl+B navigation         |                                   |
+| References         | Find Usages (Alt+F7)                   |                                   |
+| Document Symbol    | Structure view, breadcrumbs            |                                   |
+| Document Highlight | Occurrence highlighting                |                                   |
+| Folding Range      | Code folding gutter                    |                                   |
+| Formatting         | Code > Reformat (Ctrl+Alt+L)           |                                   |
+| Rename             | Shift+F6 refactor dialog               |                                   |
+| Code Action        | Alt+Enter intention actions            |                                   |
+| Signature Help     | Parameter info popup                   |                                   |
+| Inlay Hints        | Inline hints in editor                 |                                   |
+| Semantic Tokens    | Semantic highlighting overlay          |                                   |
+| Code Lens          | Inline annotations above declarations  | **Not available in built-in LSP** |
+| Type Hierarchy     | Ctrl+H hierarchy view                  | **Not available in built-in LSP** |
+| Call Hierarchy     | Ctrl+Alt+H hierarchy view              | **Not available in built-in LSP** |
+| Selection Range    | Ctrl+W / Ctrl+Shift+W expand/shrink    |                                   |
+| On-Type Formatting | Auto-indent on Enter                   | **Not available in built-in LSP** |
+| Document Link      | Clickable import paths                 |                                   |
+| LSP Console        | View > Tool Windows > Language Servers | Protocol-level debugging          |
+| DAP Client         | Debug tool window                      | **Not available in built-in LSP** |
 
 ### 11.2 IntelliJ-Specific Plugin Features (Beyond LSP)
 
@@ -1225,22 +1232,22 @@ sum to more than 100%.
 
 #### Overall Developer Usage
 
-| Rank | IDE/Editor | Usage % | Trend | LSP | DAP |
-|------|-----------|---------|-------|-----|-----|
-| 1 | **VS Code** | **75.9%** | Growing | Native | Native |
-| 2 | Visual Studio | ~29% | Stable | Native | Native |
-| 3 | **IntelliJ IDEA** | **~27%** | Stable/growing | Via LSP4IJ | Via LSP4IJ |
-| 4 | Notepad++ | ~24% | Declining | No | No |
-| 5 | Vim | 24.3% | Growing | Plugin (`coc.nvim`, `vim-lsp`) | Plugin (`vimspector`) |
-| 6 | Cursor | 18% | New, fast adoption | Native (VS Code fork) | Native (VS Code fork) |
-| 7 | Android Studio | ~16% | Stable | Via LSP4IJ | Via LSP4IJ |
-| 8 | **Neovim** | **14%** | Growing fast | **Native** (built-in since 0.5) | Plugin (`nvim-dap`) |
-| 9 | **Sublime Text** | **~11%** | Declining | Plugin (`LSP` package, mature) | Plugin (`SublimeDebugger`) |
-| 10 | **Eclipse** | **~9.4%** | Declining fast | **Native** (LSP4E) | **Native** (LSP4E Debug) |
-| 11 | **Emacs** | **<5%** (est.) | Declining | **Native** (`eglot`, built-in since 29) | Plugin (`dap-mode`, `dape`) |
-| 12 | **Zed** | **<3%** (est.) | Growing fast | **Native** (first-class) | **Native** (shipped 2025) |
-| 13 | **Helix** | **<1%** (est.) | Growing | **Native** (first-class) | Experimental (built-in) |
-| 14 | **Kate** | **<1%** (est.) | Stable/niche | **Native** (built-in) | **Native** (built-in) |
+| Rank | IDE/Editor        | Usage %        | Trend              | LSP                                     | DAP                         |
+|------|-------------------|----------------|--------------------|-----------------------------------------|-----------------------------|
+| 1    | **VS Code**       | **75.9%**      | Growing            | Native                                  | Native                      |
+| 2    | Visual Studio     | ~29%           | Stable             | Native                                  | Native                      |
+| 3    | **IntelliJ IDEA** | **~27%**       | Stable/growing     | Via LSP4IJ                              | Via LSP4IJ                  |
+| 4    | Notepad++         | ~24%           | Declining          | No                                      | No                          |
+| 5    | Vim               | 24.3%          | Growing            | Plugin (`coc.nvim`, `vim-lsp`)          | Plugin (`vimspector`)       |
+| 6    | Cursor            | 18%            | New, fast adoption | Native (VS Code fork)                   | Native (VS Code fork)       |
+| 7    | Android Studio    | ~16%           | Stable             | Via LSP4IJ                              | Via LSP4IJ                  |
+| 8    | **Neovim**        | **14%**        | Growing fast       | **Native** (built-in since 0.5)         | Plugin (`nvim-dap`)         |
+| 9    | **Sublime Text**  | **~11%**       | Declining          | Plugin (`LSP` package, mature)          | Plugin (`SublimeDebugger`)  |
+| 10   | **Eclipse**       | **~9.4%**      | Declining fast     | **Native** (LSP4E)                      | **Native** (LSP4E Debug)    |
+| 11   | **Emacs**         | **<5%** (est.) | Declining          | **Native** (`eglot`, built-in since 29) | Plugin (`dap-mode`, `dape`) |
+| 12   | **Zed**           | **<3%** (est.) | Growing fast       | **Native** (first-class)                | **Native** (shipped 2025)   |
+| 13   | **Helix**         | **<1%** (est.) | Growing            | **Native** (first-class)                | Experimental (built-in)     |
+| 14   | **Kate**          | **<1%** (est.) | Stable/niche       | **Native** (built-in)                   | **Native** (built-in)       |
 
 #### Java/JVM-Specific Usage (JRebel 2025)
 

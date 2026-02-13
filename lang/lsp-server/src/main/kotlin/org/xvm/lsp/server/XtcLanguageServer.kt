@@ -21,6 +21,7 @@ import org.eclipse.lsp4j.DefinitionParams
 import org.eclipse.lsp4j.DidChangeConfigurationParams
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidChangeWatchedFilesParams
+import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
@@ -34,6 +35,7 @@ import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.DocumentSymbolParams
+import org.eclipse.lsp4j.FileSystemWatcher
 import org.eclipse.lsp4j.FoldingRange
 import org.eclipse.lsp4j.FoldingRangeRequestParams
 import org.eclipse.lsp4j.Hover
@@ -57,6 +59,8 @@ import org.eclipse.lsp4j.PrepareRenameResult
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.ReferenceParams
+import org.eclipse.lsp4j.Registration
+import org.eclipse.lsp4j.RegistrationParams
 import org.eclipse.lsp4j.RenameOptions
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.SelectionRange
@@ -78,6 +82,7 @@ import org.eclipse.lsp4j.TypeHierarchyItem
 import org.eclipse.lsp4j.TypeHierarchyPrepareParams
 import org.eclipse.lsp4j.TypeHierarchySubtypesParams
 import org.eclipse.lsp4j.TypeHierarchySupertypesParams
+import org.eclipse.lsp4j.WatchKind
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.WorkspaceSymbol
 import org.eclipse.lsp4j.WorkspaceSymbolParams
@@ -97,6 +102,8 @@ import org.xvm.lsp.model.fromLsp
 import org.xvm.lsp.model.toLsp
 import org.xvm.lsp.model.toRange
 import org.xvm.lsp.treesitter.SemanticTokenLegend
+import java.net.URI
+import java.nio.file.Path
 import java.util.Properties
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
@@ -136,6 +143,7 @@ private fun Range.fmt(): String = "${start.fmt()}-${end.fmt()}"
  * @see org.xvm.lsp.adapter.XtcCompilerAdapter
  * @see org.xvm.lsp.adapter.TreeSitterAdapter
  */
+@Suppress("LoggingSimilarMessage")
 class XtcLanguageServer(
     private val adapter: XtcCompilerAdapter,
 ) : LanguageServer,
@@ -176,6 +184,31 @@ class XtcLanguageServer(
 
         initialized = true
         logger.info("initialize: XTC Language Server initialized")
+
+        // Health check before workspace indexing
+        val healthy = adapter.healthCheck()
+        if (!healthy) {
+            logger.warn("initialize: adapter health check failed, skipping workspace indexing")
+        } else {
+            // Extract workspace folder paths and initialize workspace index
+            val folders =
+                params.workspaceFolders
+                    ?.mapNotNull { folder ->
+                        runCatching { Path.of(URI(folder.uri)).toString() }
+                            .onFailure { logger.warn("initialize: invalid workspace folder URI: {}", folder.uri) }
+                            .getOrNull()
+                    }
+                    ?: emptyList()
+
+            if (folders.isNotEmpty()) {
+                adapter.initializeWorkspace(folders) { message, percent ->
+                    logger.info("initialize: workspace indexing: {} ({}%)", message, percent)
+                }
+            }
+
+            // Register file watcher for *.x files (dynamic registration)
+            registerFileWatcher()
+        }
 
         return CompletableFuture.completedFuture(InitializeResult(capabilities))
     }
@@ -347,6 +380,9 @@ class XtcLanguageServer(
                     }
             }
 
+            // --- Workspace features ---
+            workspaceSymbolProvider = Either.forLeft(true)
+
             // Not yet advertised (enable when implemented)
             // declarationProvider = Either.forLeft(true) // compiler: go-to-declaration
             // typeDefinitionProvider = Either.forLeft(true) // compiler(types): jump to type
@@ -354,7 +390,6 @@ class XtcLanguageServer(
             // codeLensProvider = CodeLensOptions() // compiler: inline actions
             // typeHierarchyProvider = Either.forLeft(true) // compiler(full): type tree
             // callHierarchyProvider = Either.forLeft(true) // compiler(full): call tree
-            // workspaceSymbolProvider = Either.forLeft(true) // compiler(sym): cross-file search
         }
 
     override fun shutdown(): CompletableFuture<Any> {
@@ -427,6 +462,32 @@ class XtcLanguageServer(
             logger.info("xtc/healthCheck: {}", status)
             status
         }
+
+    /**
+     * Register a file watcher for `**&#47;*.x` files via dynamic capability registration.
+     * This enables the client to notify us when XTC files are created, changed, or deleted
+     * on disk (outside of the editor), which we use to keep the workspace index up to date.
+     */
+    private fun registerFileWatcher() {
+        val currentClient = client ?: return
+        val watcherOptions =
+            DidChangeWatchedFilesRegistrationOptions(
+                listOf(
+                    FileSystemWatcher(
+                        Either.forLeft("**/*.x"),
+                        WatchKind.Create + WatchKind.Change + WatchKind.Delete,
+                    ),
+                ),
+            )
+        val registration =
+            Registration(
+                "xtc-file-watcher",
+                "workspace/didChangeWatchedFiles",
+                watcherOptions,
+            )
+        currentClient.registerCapability(RegistrationParams(listOf(registration)))
+        logger.info("initialize: registered file watcher for **/*.x")
+    }
 
     // =========================================================================
     // Helper Methods
@@ -1348,6 +1409,9 @@ class XtcLanguageServer(
          */
         override fun didChangeWatchedFiles(params: DidChangeWatchedFilesParams) {
             logger.info("workspace/didChangeWatchedFiles: {} changes", params.changes.size)
+            for (change in params.changes) {
+                adapter.didChangeWatchedFile(change.uri, change.type.value)
+            }
         }
 
         /**

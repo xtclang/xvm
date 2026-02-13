@@ -19,16 +19,25 @@ import org.xvm.lsp.adapter.XtcCompilerAdapter.WorkspaceEdit
 import org.xvm.lsp.adapter.XtcLanguageConstants.builtInTypeCompletions
 import org.xvm.lsp.adapter.XtcLanguageConstants.keywordCompletions
 import org.xvm.lsp.adapter.XtcLanguageConstants.toCompletionKind
+import org.xvm.lsp.index.WorkspaceIndex
+import org.xvm.lsp.index.WorkspaceIndexer
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
+import org.xvm.lsp.model.SymbolInfo.SymbolKind
 import org.xvm.lsp.treesitter.SemanticTokenEncoder
 import org.xvm.lsp.treesitter.XtcNode
 import org.xvm.lsp.treesitter.XtcParser
 import org.xvm.lsp.treesitter.XtcQueryEngine
 import org.xvm.lsp.treesitter.XtcTree
+import java.net.URI
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.io.path.extension
+import kotlin.io.path.readText
 import kotlin.time.measureTimedValue
 
 /**
@@ -61,6 +70,7 @@ import kotlin.time.measureTimedValue
  * // TODO LSP: This adapter provides ~80% of LSP functionality without the compiler.
  * // For full semantic features, combine with a CompilerAdapter via CompositeAdapter.
  */
+@Suppress("LoggingSimilarMessage")
 class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
     override val displayName: String = "TreeSitter"
 
@@ -72,6 +82,11 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
     // findDefinition() are called from CompletableFuture.supplyAsync on the ForkJoinPool.
     private val parsedTrees = ConcurrentHashMap<String, XtcTree>()
     private val compilationResults = ConcurrentHashMap<String, CompilationResult>()
+
+    // Workspace index for cross-file symbol lookup
+    private val workspaceIndex = WorkspaceIndex()
+    private val indexer = WorkspaceIndexer(workspaceIndex, parser, queryEngine)
+    private val indexReady = AtomicBoolean(false)
 
     init {
         // Perform health check to verify native library is working
@@ -105,6 +120,63 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
          */
         const val MIN_JAVA_VERSION = 25
     }
+
+    // ========================================================================
+    // Workspace lifecycle
+    // ========================================================================
+
+    override fun initializeWorkspace(
+        workspaceFolders: List<String>,
+        progressReporter: ((String, Int) -> Unit)?,
+    ) {
+        logger.info("$logPrefix initializeWorkspace: {} folders: {}", workspaceFolders.size, workspaceFolders)
+        indexer.scanWorkspace(workspaceFolders, progressReporter).thenRun {
+            indexReady.set(true)
+            logger.info(
+                "$logPrefix workspace index ready: {} symbols in {} files",
+                workspaceIndex.symbolCount,
+                workspaceIndex.fileCount,
+            )
+        }
+    }
+
+    override fun didChangeWatchedFile(
+        uri: String,
+        changeType: Int,
+    ) {
+        if (!indexReady.get()) return
+
+        when (changeType) {
+            1, 2 -> {
+                // Created or Changed: re-index the file
+                val path = Path.of(URI(uri))
+                if (path.extension == "x" && Files.exists(path)) {
+                    val content = path.readText()
+                    indexer.reindexFile(uri, content)
+                    logger.info("$logPrefix re-indexed watched file: {}", uri.substringAfterLast('/'))
+                }
+            }
+            3 -> {
+                // Deleted: remove from index
+                indexer.removeFile(uri)
+                logger.info("$logPrefix removed deleted file from index: {}", uri.substringAfterLast('/'))
+            }
+        }
+    }
+
+    override fun findWorkspaceSymbols(query: String): List<SymbolInfo> {
+        if (!indexReady.get()) {
+            logger.info("$logPrefix findWorkspaceSymbols: index not ready yet; query='{}'", query)
+            return emptyList()
+        }
+        val results = workspaceIndex.search(query)
+        logger.info("$logPrefix findWorkspaceSymbols '{}' -> {} results", query, results.size)
+        return results.map { it.toSymbolInfo() }
+    }
+
+    // ========================================================================
+    // Core LSP features
+    // ========================================================================
 
     override fun compile(
         uri: String,
@@ -148,6 +220,11 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
 
         val result = CompilationResult.withDiagnostics(uri, diagnostics, symbols)
         compilationResults[uri] = result
+
+        // Update workspace index with fresh symbols from this file
+        if (indexReady.get()) {
+            indexer.reindexFile(uri, content)
+        }
 
         logger.info(
             "$logPrefix parsed in {} ({}), {} errors, {} symbols (query: {})",
@@ -225,11 +302,11 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
     }
 
     /**
-     * TODO: Same-file only. Cross-file requires compiler's NameResolver (Phase 4).
-     * Cannot resolve: imports, inherited members, overloaded methods.
+     * Find definition: same-file first, then cross-file via workspace index.
      *
-     * Searches AST declarations for a matching identifier name in the current file.
-     * A compiler adapter would resolve across files via import paths and qualified names.
+     * Searches AST declarations in the current file first. If not found and the
+     * workspace index is ready, falls back to cross-file lookup, preferring type
+     * declarations (classes, interfaces, etc.) over methods/properties.
      */
     override fun findDefinition(
         uri: String,
@@ -238,20 +315,49 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
     ): Location? {
         val (tree, name) = getIdentifierAt(uri, line, column, "definition") ?: return null
 
+        // Same-file lookup first
         val symbols = queryEngine.findAllDeclarations(tree, uri)
         val decl = symbols.find { it.name == name }
 
-        return decl?.location?.also { loc ->
-            logger.info("$logPrefix definition '{}' -> {}:{}", name, loc.startLine, loc.startColumn)
-        } ?: run {
-            logger.info(
-                "$logPrefix definition '{}' not found ({} symbols: {})",
-                name,
-                symbols.size,
-                symbols.take(5).joinToString { it.name },
-            )
-            null
+        if (decl != null) {
+            logger.info("$logPrefix definition '{}' -> same-file {}:{}", name, decl.location.startLine, decl.location.startColumn)
+            return decl.location
         }
+
+        // Cross-file fallback via workspace index
+        if (indexReady.get()) {
+            val indexed = workspaceIndex.findByName(name)
+            if (indexed.isNotEmpty()) {
+                // Prefer type declarations over methods/properties
+                val typeKinds =
+                    setOf(
+                        SymbolKind.CLASS,
+                        SymbolKind.INTERFACE,
+                        SymbolKind.MIXIN,
+                        SymbolKind.SERVICE,
+                        SymbolKind.CONST,
+                        SymbolKind.ENUM,
+                        SymbolKind.MODULE,
+                        SymbolKind.PACKAGE,
+                    )
+                val best = indexed.firstOrNull { it.kind in typeKinds } ?: indexed.first()
+                logger.info(
+                    "$logPrefix definition '{}' -> cross-file {} ({})",
+                    name,
+                    best.uri.substringAfterLast('/'),
+                    best.kind,
+                )
+                return best.location
+            }
+        }
+
+        logger.info(
+            "$logPrefix definition '{}' not found ({} symbols: {})",
+            name,
+            symbols.size,
+            symbols.take(5).joinToString { it.name },
+        )
+        return null
     }
 
     /**
@@ -476,26 +582,27 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         val callTypes = setOf("call_expression", "generic_type")
         val callNode =
             generateSequence(node) { it.parent }
-                .firstOrNull { it.type in callTypes && it.childByType("arguments") != null }
+                .firstOrNull { it.type in callTypes && (it.childByFieldName("arguments") ?: it.childByType("arguments")) != null }
                 ?: return null
 
-        // Extract function name — call_expression uses identifier directly,
-        // generic_type wraps it in type_name.
+        // Extract function name using the 'function' field for call_expression,
+        // falling back to type_name for generic_type nodes.
         val funcName =
-            callNode.childByType("identifier")?.text
+            callNode.childByFieldName("function")?.let { funcNode ->
+                when (funcNode.type) {
+                    "identifier" -> funcNode.text
+                    "member_expression" -> funcNode.childByFieldName("member")?.text
+                    else -> null
+                }
+            }
                 ?: callNode
                     .childByType("type_name")
                     ?.childByType("identifier")
                     ?.text
-                ?: callNode
-                    .childByType("member_expression")
-                    ?.children
-                    ?.lastOrNull { it.type == "identifier" }
-                    ?.text
                 ?: return null
 
         // Count commas before the cursor to determine active parameter
-        val argsNode = callNode.childByType("arguments")
+        val argsNode = callNode.childByFieldName("arguments") ?: callNode.childByType("arguments")
         val activeParam =
             argsNode?.children?.count { child ->
                 child.type == "," && (child.endLine < line || (child.endLine == line && child.endColumn <= column))
@@ -517,7 +624,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
                         ?.let { findDeclarationNode(it, "method_declaration") }
                 val params =
                     methodNode
-                        ?.childByType("parameters")
+                        ?.childByFieldName("parameters")
                         ?.let { extractParameters(it) }
                         ?: emptyList()
                 val paramLabel = params.joinToString(", ") { p -> p.label }
@@ -543,8 +650,8 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         paramsNode.children
             .filter { it.type == "parameter" }
             .map { param ->
-                val typeName = param.childByType("type_expression")?.text ?: ""
-                val paramName = param.childByType("identifier")?.text ?: ""
+                val typeName = param.childByFieldName("type")?.text ?: ""
+                val paramName = param.childByFieldName("name")?.text ?: ""
                 val label = if (typeName.isNotEmpty()) "$typeName $paramName" else paramName
                 ParameterInfo(label = label)
             }
@@ -618,7 +725,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
      * Called by the language server when a document is closed.
      *
      * TODO: Wire this up in XtcLanguageServer.didClose() to free native tree-sitter memory
-     * when documents are closed by the editor.
+     *   when documents are closed by the editor.
      */
     @Suppress("unused")
     fun closeDocument(uri: String) {
@@ -627,6 +734,8 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
     }
 
     override fun close() {
+        indexer.close()
+        workspaceIndex.clear()
         parsedTrees.values.forEach { it.close() }
         parsedTrees.clear()
         compilationResults.clear()
