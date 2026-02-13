@@ -42,15 +42,15 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.DoubleSlot;
-import org.xvm.javajit.BuildContext.MultipleSlot;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.Ctx;
+import org.xvm.javajit.ExtendedSlot;
 import org.xvm.javajit.JitCtorDesc;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.ModuleLoader;
+import org.xvm.javajit.MultipleSlot;
 import org.xvm.javajit.NativeTypeSystem;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeSystem;
@@ -424,8 +424,8 @@ public class CommonBuilder
                     if (prop.getInitializer() == null) {
                         RegisterInfo reg     = loadConstant(code, prop.getInitialValue());
                         String       jitName = prop.getIdentity().ensureJitPropertyName(ts);
-                        if (reg instanceof DoubleSlot doubleSlot) {
-                            assert doubleSlot.flavor() == NullablePrimitive;
+                        if (reg instanceof ExtendedSlot extSlot) {
+                            assert extSlot.flavor() == NullablePrimitive;
                             // loadConstant() has already loaded the value and the boolean
                             Label ifTrue = code.newLabel();
                             Label endIf  = code.newLabel();
@@ -433,7 +433,7 @@ public class CommonBuilder
                                 .putstatic(CD_this, jitName + EXT, CD_boolean)
                                 .goto_(endIf)
                                 .labelBinding(ifTrue);
-                            pop(code, doubleSlot.cd());
+                            pop(code, extSlot.cd());
                             code.putstatic(CD_this, jitName, reg.cd());
                             code.labelBinding(endIf);
                         } else if (reg instanceof MultipleSlot multiSlot) {
@@ -547,8 +547,8 @@ public class CommonBuilder
 
                         RegisterInfo reg     = loadConstant(code, prop.getInitialValue());
                         String       jitName = prop.getIdentity().ensureJitPropertyName(typeSystem);
-                        if (reg instanceof DoubleSlot doubleSlot) {
-                            assert doubleSlot.flavor() == NullablePrimitive;
+                        if (reg instanceof ExtendedSlot extSlot) {
+                            assert extSlot.flavor() == NullablePrimitive;
                             // loadConstant() has already loaded the value and the boolean
                             Label ifTrue = code.newLabel();
                             Label endIf  = code.newLabel();
@@ -557,8 +557,8 @@ public class CommonBuilder
                                 .putfield(CD_this, jitName +EXT, CD_boolean);
                             code.goto_(endIf)
                                 .labelBinding(ifTrue);
-                                pop(code, doubleSlot.cd());
-                                code.putfield(CD_this, jitName, doubleSlot.cd());
+                                pop(code, extSlot.cd());
+                                code.putfield(CD_this, jitName, extSlot.cd());
                             code.labelBinding(endIf);
                         } else if (reg instanceof MultipleSlot multiSlot) {
                             if (multiSlot.flavor() == NullableXvmPrimitive) {

@@ -34,10 +34,6 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
-import org.xvm.javajit.BuildContext.DoubleSlot;
-import org.xvm.javajit.BuildContext.MultipleSlot;
-import org.xvm.javajit.BuildContext.SingleSlot;
-
 import org.xvm.javajit.TypeSystem.ClassfileShape;
 
 import org.xvm.util.PackedInteger;
@@ -474,10 +470,10 @@ public abstract class Builder {
      * @param lblNull  the label to jump to if the register is "Null".
      */
     public static void checkNull(CodeBuilder code, RegisterInfo reg, Label lblNull) {
-        if (reg instanceof DoubleSlot doubleSlot) {
+        if (reg instanceof ExtendedSlot extSlot) {
             assert reg.cd().isPrimitive();
 
-            code.iload(doubleSlot.extSlot())
+            code.iload(extSlot.extSlot())
                 .ifne(lblNull);
         } else if (reg instanceof MultipleSlot multiSlot) {
             assert reg.type().isXvmPrimitive();
@@ -499,10 +495,10 @@ public abstract class Builder {
      * @param lblNotNull  the label to jump to if the register is "not Null".
      */
     public static void checkNotNull(CodeBuilder code, RegisterInfo reg, Label lblNotNull) {
-        if (reg instanceof DoubleSlot doubleSlot) {
+        if (reg instanceof ExtendedSlot extSlot) {
             assert reg.cd().isPrimitive();
 
-            code.iload(doubleSlot.extSlot())
+            code.iload(extSlot.extSlot())
                 .ifeq(lblNotNull);
         } else if (reg instanceof MultipleSlot multiSlot) {
             assert reg.flavor() == NullableXvmPrimitive;

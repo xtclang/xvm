@@ -138,7 +138,7 @@ public interface RegisterInfo {
         assert isJavaStack(); // constant
         ClassDesc cd   = cd();
         int       slot = bctx.storeTempValue(code, cd);
-        return new BuildContext.SingleSlot(regId, slot, type(), flavor(), cd, name());
+        return new SingleSlot(regId, slot, flavor(), type(), cd, name());
     }
 
     /**

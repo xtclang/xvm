@@ -18,7 +18,6 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Component;
@@ -85,7 +84,6 @@ import static org.xvm.javajit.Builder.OPT;
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
 import static org.xvm.javajit.JitFlavor.XvmPrimitive;
 import static org.xvm.javajit.JitFlavor.NullablePrimitive;
-import static org.xvm.javajit.JitFlavor.Primitive;
 import static org.xvm.javajit.JitFlavor.Specific;
 import static org.xvm.javajit.TypeSystem.ID_NUM;
 
@@ -591,10 +589,10 @@ public class BuildContext {
         ClassDesc    CD_this   = builder.ensureClassDesc(thisType);
         if (isConstructor) {
             thisType = thisType.ensureAccess(Access.STRUCT);
-            registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, extraArgs-1, thisType, Specific,
+            registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, extraArgs-1, Specific, thisType,
                 CD_this, "thi$"));
         } else if (!isFunction) {
-            registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, 0, thisType, Specific,
+            registerInfos.put(Op.A_THIS, new SingleSlot(Op.A_THIS, 0, Specific, thisType,
                 CD_this, "this$"));
         }
         typeMatrix.declare(-1, Op.A_THIS, thisType);
@@ -619,14 +617,14 @@ public class BuildContext {
             switch (flavor) {
             case Specific, Widened, Primitive, SpecificWithDefault, WidenedWithDefault:
                 registerInfos.put(varIndex,
-                    new SingleSlot(varIndex, slot, type, flavor, paramDesc.cd, name));
+                    new SingleSlot(varIndex, slot, flavor, type, paramDesc.cd, name));
                 break;
 
             case NullablePrimitive, PrimitiveWithDefault: {
                 int extSlot = code.parameterSlot(extraArgs + i + 1);
 
                 registerInfos.put(varIndex,
-                    new DoubleSlot(this, varIndex, slot, extSlot, flavor, type, paramDesc.cd, name));
+                    new ExtendedSlot(this, varIndex, slot, extSlot, flavor, type, paramDesc.cd, name));
                 i++; // already processed
                 break;
             }
@@ -1119,7 +1117,7 @@ public class BuildContext {
                 int slotPrime = scope.allocateLocal(regId, jtd.cd);
                 code.localVariable(slotPrime, name, jtd.cd, varStart, scope.endLabel);
 
-                yield new SingleSlot(regId, slotPrime, type, jtd.flavor, jtd.cd, name);
+                yield new SingleSlot(regId, slotPrime, jtd.flavor, type, jtd.cd, name);
             }
             case NullablePrimitive -> {
                 int slotPrime = scope.allocateLocal(regId, jtd.cd);
@@ -1128,7 +1126,7 @@ public class BuildContext {
                 code.localVariable(slotPrime, name, jtd.cd, varStart, scope.endLabel);
                 code.localVariable(slotExt,   name+EXT, CD_boolean, varStart, scope.endLabel);
 
-                yield new DoubleSlot(this, regId, slotPrime, slotExt, NullablePrimitive,
+                yield new ExtendedSlot(this, regId, slotPrime, slotExt, NullablePrimitive,
                     type, jtd.cd, name);
             }
             case XvmPrimitive -> {
@@ -1397,8 +1395,8 @@ public class BuildContext {
                 Label        varStart   = code.newLabel();
                 ClassDesc    resourceCD = builder.ensureClassDesc(resourceType);
                 int          slot       = scope.allocateLocal(regId, TypeKind.REFERENCE);
-                RegisterInfo reg        = new SingleSlot(regId, slot, resourceType, Specific,
-                                            resourceCD, name);
+                RegisterInfo reg        = new SingleSlot(regId, slot, Specific, resourceType,
+                    resourceCD, name);
                 code.localVariable(slot, name, resourceCD, varStart, scope.endLabel);
 
                 registerInfos.put(regId, reg);
@@ -1589,7 +1587,7 @@ public class BuildContext {
      */
     public RegisterInfo ensureRegInfo(int regId, TypeConstant type, ClassDesc cd, String name) {
         return regId == Op.A_IGNORE
-            ? new SingleSlot(regId, -2, type, Specific, cd, name)
+            ? new SingleSlot(regId, -2, Specific, type, cd, name)
             : registerInfos.computeIfAbsent(regId, ix -> {
                 TypeConstant resolvedType = type.containsFormalType(true)
                     ? type.resolveGenerics(pool(), typeInfo.getType())
@@ -1605,8 +1603,8 @@ public class BuildContext {
                     return new MultipleSlot(this, regId, slots, jitDesc.flavor,
                             resolvedType, cd, cds, name);
                 }
-                return new SingleSlot(regId, scope.allocateLocal(ix, cd), resolvedType,
-                        jitDesc.flavor, cd, name);
+                return new SingleSlot(regId, scope.allocateLocal(ix, cd), jitDesc.flavor,
+                    resolvedType, cd, name);
             }
         );
     }
@@ -1685,8 +1683,8 @@ public class BuildContext {
                 if (narrowedCD.isPrimitive()) {
                     if (origReg.cd().isPrimitive()) {
                         // this can only mean that the original was a NullablePrimitive
-                        assert origReg instanceof DoubleSlot doubleSlot &&
-                                doubleSlot.flavor == NullablePrimitive &&
+                        assert origReg instanceof ExtendedSlot extSlot &&
+                                extSlot.flavor() == NullablePrimitive &&
                                 !narrowedType.isNullable();
                         Builder.load(code, origReg.cd(), origReg.slot());
                     } else {
@@ -1698,13 +1696,13 @@ public class BuildContext {
                     // this can only mean that the original was a NullableXvmPrimitive
                     if (origType.removeNullable().isXvmPrimitive()) {
                         assert origReg instanceof MultipleSlot multiSlot &&
-                                multiSlot.flavor == NullableXvmPrimitive &&
+                                multiSlot.flavor() == NullableXvmPrimitive &&
                                 !narrowedType.isNullable();
 
                         MultipleSlot multiSlot = (MultipleSlot) origReg;
                         int          slotCount = multiSlot.slotCount();
                         for (int i = 0; i < slotCount; i++) {
-                            Builder.load(code, multiSlot.slotCds[i], multiSlot.slots[i]);
+                            Builder.load(code, multiSlot.slotCds()[i], multiSlot.slots()[i]);
                         }
                     } else {
                         origReg.load(code);
@@ -1714,8 +1712,8 @@ public class BuildContext {
                 } else {
                     if (origReg.cd().isPrimitive()) {
                         // this can only mean that the original was a NullablePrimitive
-                        assert origReg instanceof DoubleSlot doubleSlot &&
-                                doubleSlot.flavor == NullablePrimitive &&
+                        assert origReg instanceof ExtendedSlot extSlot &&
+                                extSlot.flavor() == NullablePrimitive &&
                                 narrowedType.isOnlyNullable();
                         Builder.loadNull(code);
                     } else if (origType.removeNullable().isXvmPrimitive()) {
@@ -2151,8 +2149,8 @@ public class BuildContext {
      */
     public RegisterInfo pushTempRegister(TypeConstant type, ClassDesc cd) {
         int          tempSlot = scope.allocateJavaSlot(cd);
-        RegisterInfo tempReg  = new SingleSlot(Op.A_THIS, tempSlot, type,
-                                    type.getJitDesc(builder).flavor, cd, "");
+        RegisterInfo tempReg  = new SingleSlot(Op.A_THIS, tempSlot, type.getJitDesc(builder).flavor,
+                                    type, cd, "");
         tempRegStack.push(tempReg);
         return tempReg;
     }
@@ -2272,337 +2270,6 @@ public class BuildContext {
 
     // ----- RegisterInfo implementations ----------------------------------------------------------
 
-    public record SingleSlot(int regId, int slot, TypeConstant type, JitFlavor flavor,
-                             ClassDesc cd, String name)
-            implements RegisterInfo {
-
-        /**
-         * Construct the SingleSlot representing a value placed on the Java stack.
-         */
-        public SingleSlot(TypeConstant type, JitFlavor flavor, ClassDesc cd, String name) {
-            this(Op.A_STACK, JAVA_STACK, type, flavor, cd, name);
-        }
-
-        @Override
-        public int[] slots() {
-            return new int[]{slot};
-        }
-
-        @Override
-        public ClassDesc[] slotCds() {
-            return new ClassDesc[]{cd};
-        }
-
-        @Override
-        public boolean isSingle() {
-            return true;
-        }
-    }
-
-    public record DoubleSlot(BuildContext bctx, int regId, int slot, int extSlot,
-                             JitFlavor flavor, TypeConstant type, ClassDesc cd, String name)
-            implements RegisterInfo {
-
-        @Override
-        public int[] slots() {
-            return new int[]{slot};
-        }
-
-        @Override
-        public ClassDesc[] slotCds() {
-            return new ClassDesc[]{cd};
-        }
-
-        @Override
-        public boolean isSingle() {
-            return false;
-        }
-
-        @Override
-        public RegisterInfo load(CodeBuilder code) {
-            switch (flavor) {
-            case PrimitiveWithDefault:
-                Parameter parameter = bctx.methodStruct.getParam(regId);
-                assert parameter.hasDefaultValue();
-
-                Label ifTrue = code.newLabel();
-                Label endIf  = code.newLabel();
-
-                // if the extension slot is `true`, take the default value
-                code.iload(extSlot)
-                    .ifne(ifTrue)
-                    .loadLocal(Builder.toTypeKind(cd), slot)
-                    .goto_(endIf)
-                    .labelBinding(ifTrue);
-                bctx.builder.loadConstant(bctx, code, parameter.getDefaultValue());
-                code.labelBinding(endIf);
-                return new SingleSlot(type(), Primitive, cd, name());
-
-            case NullablePrimitive:
-                // load the "extension" boolean flag last
-                Builder.load(code, cd, slot);
-                Builder.load(code, CD_boolean, extSlot);
-                return this;
-
-            default:
-                throw new IllegalStateException();
-            }
-        }
-
-        @Override
-        public RegisterInfo store(BuildContext bctx, CodeBuilder code, TypeConstant type) {
-            // store the "extension" boolean flag first
-            code.istore(extSlot());
-
-            return RegisterInfo.super.store(bctx, code, type);
-        }
-    }
-
-    /**
-     * A register that stores the representation of a type in multiple slots.
-     *
-     * @param bctx     the {@link BuildContext} associated with this register
-     * @param slots    the identifiers of the slots that store the value represented by this
-     *                 register
-     * @param extSlot  the identifier of the slot that stores an additional boolean flag
-     * @param flavor   the {@link JitFlavor} of the value this register represents
-     * @param type     the {@link TypeConstant} of the value this register represents
-     * @param cd       the {@link ClassDesc} of the value this register represents
-     * @param slotCds  the {@link ClassDesc} instances for each slot
-     * @param name     the name of the value represented by this register
-     */
-    public record MultipleSlot(BuildContext bctx, int regId, int[] slots, int extSlot,
-                               JitFlavor flavor, TypeConstant type, ClassDesc cd,
-                               ClassDesc[] slotCds, String name)
-            implements RegisterInfo {
-
-        /**
-         * An {@code int} value to indicate that the extSlot is not used.
-         */
-        public static final int NO_SLOT = Integer.MIN_VALUE;
-
-        /**
-         * Create a {@link MultipleSlot} representing a value stored on the Java stack.
-         *
-         * @param bctx     the {@link BuildContext} associated with this register
-         * @param flavor   the {@link JitFlavor} of the value this register represents
-         * @param type     the {@link TypeConstant} of the value this register represents
-         * @param cd       the {@link ClassDesc} of the value this register represents
-         * @param cdSlots  the {@link ClassDesc} instances for each slot
-         */
-        public MultipleSlot(BuildContext bctx, JitFlavor flavor, TypeConstant type, ClassDesc cd,
-                            ClassDesc[] cdSlots) {
-            this(bctx, Op.A_STACK, null, NO_SLOT, flavor, type, cd, cdSlots, "");
-        }
-
-        /**
-         * Create a {@link MultipleSlot} representing a value stored on the Java stack.
-         *
-         * @param bctx     the {@link BuildContext} associated with this register
-         * @param flavor   the {@link JitFlavor} of the value this register represents
-         * @param type     the {@link TypeConstant} of the value this register represents
-         * @param cd       the {@link ClassDesc} of the value this register represents
-         * @param cdSlots  the {@link ClassDesc} instances for each slot
-         * @param name     the name of the value represented by this register
-         */
-        public MultipleSlot(BuildContext bctx, JitFlavor flavor, TypeConstant type, ClassDesc cd,
-                            ClassDesc[] cdSlots, String name) {
-            this(bctx, Op.A_STACK, null, NO_SLOT, flavor, type, cd, cdSlots, name);
-        }
-
-        /**
-         * Create a {@link MultipleSlot} representing a value stored on the Java stack.
-         *
-         * @param bctx     the {@link BuildContext} associated with this register
-         * @param regId    the identifier of the register
-         * @param slots    the identifiers of the slots that store the value represented by this
-         *                 register
-         * @param flavor   the {@link JitFlavor} of the value this register represents
-         * @param type     the {@link TypeConstant} of the value this register represents
-         * @param cd       the {@link ClassDesc} of the value this register represents
-         * @param cdSlots  the {@link ClassDesc} instances for each slot
-         */
-        public MultipleSlot(BuildContext bctx, int regId, int[] slots, JitFlavor flavor,
-                            TypeConstant type, ClassDesc cd, ClassDesc[] cdSlots) {
-            this(bctx, regId, slots, NO_SLOT, flavor, type, cd, cdSlots, "");
-        }
-
-        /**
-         * Create a {@link MultipleSlot} representing a value stored on the Java stack.
-         *
-         * @param bctx     the {@link BuildContext} associated with this register
-         * @param regId    the identifier of the register
-         * @param slots    the identifiers of the slots that store the value represented by this
-         *                 register
-         * @param flavor   the {@link JitFlavor} of the value this register represents
-         * @param type     the {@link TypeConstant} of the value this register represents
-         * @param cd       the {@link ClassDesc} of the value this register represents
-         * @param cdSlots  the {@link ClassDesc} instances for each slot
-         * @param name     the name of the value represented by this register
-         */
-        public MultipleSlot(BuildContext bctx, int regId, int[] slots, JitFlavor flavor,
-                            TypeConstant type, ClassDesc cd, ClassDesc[] cdSlots, String name) {
-            this(bctx, regId, slots, NO_SLOT, flavor, type, cd, cdSlots, name);
-        }
-
-        /**
-         * Create a {@link MultipleSlot} representing a value stored on the Java stack.
-         *
-         * @param bctx     the {@link BuildContext} associated with this register
-         * @param regId    the identifier of the register
-         * @param slots    the identifiers of the slots that store the value represented by this
-         *                 register
-         * @param extSlot  the identifier of the slot that stores an additional boolean flag
-         * @param flavor   the {@link JitFlavor} of the value this register represents
-         * @param type     the {@link TypeConstant} of the value this register represents
-         * @param cd       the {@link ClassDesc} of the value this register represents
-         * @param slotCds  the {@link ClassDesc} instances for each slot
-         * @param name     the name of the value represented by this register
-         */
-        public MultipleSlot(BuildContext bctx, int regId, int[] slots, int extSlot,
-                            JitFlavor flavor, TypeConstant type, ClassDesc cd,
-                            ClassDesc[] slotCds, String name) {
-            this.bctx    = bctx;
-            this.regId   = regId;
-            this.extSlot = extSlot;
-            this.flavor  = Objects.requireNonNull(flavor);
-            this.type    = Objects.requireNonNull(type.getCanonicalJitType());
-            this.cd      = Objects.requireNonNull(cd);
-            this.slotCds = Objects.requireNonNull(slotCds);
-            this.name    = name;
-            if (slots == null) {
-                this.slots = new int[slotCds.length];
-                Arrays.fill(this.slots, JAVA_STACK);
-            } else {
-                assert slots.length == slotCds.length;
-                this.slots = slots;
-            }
-        }
-
-        @Override
-        public boolean isSingle() {
-            return false;
-        }
-
-        @Override
-        public int slot() {
-            return slots[0];
-        }
-
-        /**
-         * @return the number of slots used by this register
-         */
-        public int slotCount() {
-            return slots.length;
-        }
-
-        /**
-         * Obtain the slot at the specified index.
-         *
-         * @param index  the index of the slot to return
-         *
-         * @return the slot at the specified index
-         */
-        public int slot(int index) {
-            return slots[index];
-        }
-
-        /**
-         * Obtain the class descriptor at the specified index.
-         *
-         * @param index  the index of the class descriptor to return
-         *
-         * @return the class descriptor at the specified index
-         */
-        public ClassDesc cd(int index) {
-            return slotCds[index];
-        }
-
-        @Override
-        public RegisterInfo load(CodeBuilder code) {
-            if (extSlot != NO_SLOT) {
-                switch (flavor) {
-                    case XvmPrimitiveWithDefault:
-                        Parameter parameter = bctx.methodStruct.getParam(regId);
-                        assert parameter.hasDefaultValue();
-
-                        Label ifTrue = code.newLabel();
-                        Label endIf  = code.newLabel();
-
-                        // if the extension slot is `true`, take the default value
-                        code.iload(extSlot).ifne(ifTrue);
-                        for (int i = 0; i < slotCds.length; i++) {
-                            code.loadLocal(Builder.toTypeKind(slotCds[i]), slots[i]);
-                        }
-                        code.goto_(endIf).labelBinding(ifTrue);
-                        bctx.builder.loadConstant(bctx, code, parameter.getDefaultValue());
-                        code.labelBinding(endIf);
-                        return new SingleSlot(type(), Primitive, cd, name());
-
-                    case NullableXvmPrimitive:
-                        // load the primitive slots
-                        for (int i = 0; i < slotCds.length; i++) {
-                            Builder.load(code, slotCds[i], slots[i]);
-                        }
-                        // load the "extension" boolean flag last
-                        Builder.load(code, CD_boolean, extSlot);
-                        return this;
-
-                    default:
-                        throw new IllegalStateException();
-                }
-            } else {
-                for (int i = 0; i < slotCds.length; i++) {
-                    Builder.load(code, slotCds[i], slots[i]);
-                }
-            }
-            return this;
-        }
-
-        @Override
-        public RegisterInfo store(BuildContext bctx, CodeBuilder code, TypeConstant type) {
-            if (extSlot != NO_SLOT) {
-                // store the "extension" boolean flag first
-                code.istore(extSlot);
-            }
-
-            if (isIgnore()) {
-                // pop stack in reverse CD order
-                for (int i = slotCds.length - 1; i >= 0; i--) {
-                    Builder.pop(code, slotCds[i]);
-                }
-            } else {
-                // store slots in reverse order
-                for (int i = slotCds.length - 1; i >= 0; i--) {
-                    Builder.store(code, slotCds[i], slots[i]);
-                }
-            }
-            return this;
-        }
-
-        @Override
-        public RegisterInfo storeTempValue(BuildContext bctx, CodeBuilder code, int regId) {
-            assert isJavaStack(); // constant
-            boolean hasExtSlot = extSlot != NO_SLOT;
-            int     slotCount  = hasExtSlot ? slots.length + 1 : slots.length;
-            int[]   javaSlots  = new int[slotCount];
-            int     i          = slotCount - 1;
-
-            if (hasExtSlot) {
-                javaSlots[i] = bctx.scope.allocateJavaSlot(slotCds[i]);
-                Builder.store(code, slotCds[i], javaSlots[i]);
-                i--;
-            }
-
-            // the stack will contain the value in multiple slots, they need to be stored in reverse
-            for (; i >= 0; i--) {
-                javaSlots[i] = bctx.scope.allocateJavaSlot(slotCds[i]);
-                Builder.store(code, slotCds[i], javaSlots[i]);
-            }
-            return new MultipleSlot(bctx, regId, javaSlots, extSlot, flavor, type, cd, slotCds, name);
-        }
-    }
-
     /**
      * A register holding a narrowed value.
      */
@@ -2650,9 +2317,9 @@ public class BuildContext {
                 if (!this.sharesOriginalSlot()) {
                     if (cd().isPrimitive()) {
                         if (origReg.cd().isPrimitive()) {
-                            assert origReg instanceof DoubleSlot;
+                            assert origReg instanceof ExtendedSlot;
                             code.iconst_0() // false
-                                .istore(((DoubleSlot) origReg).extSlot);
+                                .istore(((ExtendedSlot) origReg).extSlot());
                         } else {
                             Builder.box(code, type(), cd());
                         }
@@ -2660,7 +2327,7 @@ public class BuildContext {
                         if (origReg.type().isXvmPrimitive()) {
                             assert origReg instanceof MultipleSlot;
                             code.iconst_0() // false
-                                    .istore(((MultipleSlot) origReg).extSlot);
+                                .istore(((MultipleSlot) origReg).extSlot());
                         } else {
                             Builder.box(code, type(), cd());
                         }
@@ -2707,9 +2374,9 @@ public class BuildContext {
 
                 if (cd().isPrimitive()) {
                     if (origReg.cd().isPrimitive()) {
-                        assert origReg instanceof DoubleSlot;
+                        assert origReg instanceof ExtendedSlot;
                         code.iconst_0() // false
-                            .istore(((DoubleSlot) origReg).extSlot);
+                            .istore(((ExtendedSlot) origReg).extSlot());
                     } else {
                         Builder.box(code, prevType, cd());
                     }

@@ -8,8 +8,6 @@ import java.lang.constant.MethodTypeDesc;
 
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.javajit.BuildContext.MultipleSlot;
-
 import static java.lang.constant.ConstantDescs.CD_Integer;
 import static java.lang.constant.ConstantDescs.CD_Long;
 import static java.lang.constant.ConstantDescs.CD_int;

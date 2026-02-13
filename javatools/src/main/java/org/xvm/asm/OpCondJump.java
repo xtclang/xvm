@@ -16,11 +16,11 @@ import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.BuildContext.DoubleSlot;
-import org.xvm.javajit.BuildContext.MultipleSlot;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.Ctx;
+import org.xvm.javajit.ExtendedSlot;
 import org.xvm.javajit.JitFlavor;
+import org.xvm.javajit.MultipleSlot;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeMatrix;
 
@@ -492,9 +492,9 @@ public abstract class OpCondJump
         RegisterInfo reg     = bctx.ensureRegister(code, m_nArg);
         ClassDesc    cd      = reg.cd();
         if (cd.isPrimitive()) {
-            if (reg instanceof DoubleSlot doubleSlot) {
-                assert doubleSlot.flavor() == JitFlavor.NullablePrimitive;
-                code.iload(doubleSlot.extSlot());
+            if (reg instanceof ExtendedSlot extSlot) {
+                assert extSlot.flavor() == JitFlavor.NullablePrimitive;
+                code.iload(extSlot.extSlot());
                 switch (op) {
                 case OP_JMP_NULL:
                     code.ifne(lblJump);
@@ -605,9 +605,9 @@ public abstract class OpCondJump
 
             RegisterInfo regTarget = bctx.ensureRegister(code, m_nArg);
             boolean      fInvert   = false;
-            if (regTarget instanceof DoubleSlot doubleSlot) {
-                assert doubleSlot.flavor() == JitFlavor.NullablePrimitive;
-                code.iload(doubleSlot.extSlot());
+            if (regTarget instanceof ExtendedSlot extSlot) {
+                assert extSlot.flavor() == JitFlavor.NullablePrimitive;
+                code.iload(extSlot.extSlot());
                 if (!typeTest.isOnlyNullable()) {
                     assert typeTarget.removeNullable().isA(typeTest);
 

@@ -12,7 +12,9 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
+import org.xvm.javajit.ExtendedSlot;
 import org.xvm.javajit.JitFlavor;
+import org.xvm.javajit.MultipleSlot;
 import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
@@ -391,16 +393,16 @@ public abstract class OpTest
         Label   labelTrue = code.newLabel();
         Label   labelEnd  = code.newLabel();
         boolean fNot      = getOpCode() == OP_IS_NNULL;
-        if (regArg instanceof BuildContext.DoubleSlot slotMulti) {
-            assert slotMulti.flavor() == JitFlavor.NullablePrimitive;
+        if (regArg instanceof ExtendedSlot slotExt) {
+            assert slotExt.flavor() == JitFlavor.NullablePrimitive;
 
-            code.iload(slotMulti.extSlot()); // True indicates Null
+            code.iload(slotExt.extSlot()); // True indicates Null
             if (fNot) {
                 code.ifeq(labelTrue);
             } else {
                 code.ifne(labelTrue);
             }
-        } else if (regArg instanceof BuildContext.MultipleSlot slotMulti
+        } else if (regArg instanceof MultipleSlot slotMulti
                 && slotMulti.flavor() == JitFlavor.NullableXvmPrimitive) {
 
             code.iload(slotMulti.extSlot()); // True indicates Null
