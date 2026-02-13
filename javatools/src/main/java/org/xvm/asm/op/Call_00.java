@@ -96,6 +96,11 @@ public class Call_00
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        computeCallTypes(bctx, NO_ARGS);
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         buildCall(bctx, code, NO_ARGS);
     }

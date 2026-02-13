@@ -163,6 +163,11 @@ public class Call_11
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        computeCallTypes(bctx, new int[] {m_nArgValue});
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         buildCall(bctx, code, new int[] {m_nArgValue});
     }

@@ -19,6 +19,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -566,8 +567,10 @@ public abstract class OpCallable extends Op {
 
     // ----- JIT support ---------------------------------------------------------------------------
 
-    @Override
-    public void computeTypes(BuildContext bctx) {
+    /**
+     * ComputeType support for CALL_ ops.
+     */
+    protected void computeCallTypes(BuildContext bctx, int[] anArgValue) {
         TypeMatrix tmx = bctx.typeMatrix;
 
         if (m_nRetValue == A_IGNORE && m_anRetValue == null) {
@@ -590,7 +593,12 @@ public abstract class OpCallable extends Op {
                 tmx.assign(getAddress(), m_nRetValue, idMethod.getNamespace().getType());
                 return;
             }
-            atypeResult = idMethod.getSignature().getRawReturns();
+            SignatureConstant sig = idMethod.getSignature();
+            if (sig.containsTypeParameters()) {
+                sig = sig.resolveGenericTypes(bctx.pool(),
+                    bctx.createTypeResolver((MethodStructure) idMethod.getComponent(), anArgValue));
+            }
+            atypeResult = sig.getRawReturns();
         } else {
             TypeConstant typeFn = bctx.getArgumentType(m_nFunctionId);
             assert typeFn.isFunction();
@@ -611,7 +619,7 @@ public abstract class OpCallable extends Op {
     }
 
     /**
-     * Support for CALL_ ops.
+     * Build support for CALL_ ops.
      */
     protected void buildCall(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
         TypeSystem ts = bctx.typeSystem;

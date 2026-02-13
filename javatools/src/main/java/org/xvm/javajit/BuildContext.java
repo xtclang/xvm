@@ -25,6 +25,7 @@ import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpReturn;
@@ -2238,6 +2239,35 @@ public class BuildContext {
             }
         }
         return fromAddr;
+    }
+
+    /**
+     * @return a GenericTypeResolver for FormalTypeParameters within the current context
+     */
+    public GenericTypeResolver createTypeResolver(MethodStructure method, int[] argIds) {
+        return new GenericTypeResolver() {
+            @Override
+            public TypeConstant resolveGenericType(String sFormalName) {
+                return null;
+            }
+
+            @Override
+            public TypeConstant resolveFormalType(FormalConstant constFormal) {
+                MethodConstant methodId = method.getIdentityConstant();
+                for (Parameter param : method.getParamArray()) {
+                    if (param.isTypeParameter() &&
+                            constFormal.equals(param.asTypeParameterConstant(methodId))) {
+                        TypeConstant type = getArgumentType(argIds[param.getIndex()]);
+
+                        // the register the type parameter points to must be an nType instance;
+                        // its type is a type-of-type-of-type
+                        assert type.getParamType(0).isTypeOfType();
+                        return type.getParamType(0).getParamType(0);
+                    }
+                }
+                return null;
+            }
+        };
     }
 
     // ----- RegisterInfo implementations ----------------------------------------------------------

@@ -69,6 +69,11 @@ public class Invoke_00
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        computeInvokeTypes(bctx, NO_ARGS);
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         buildInvoke(bctx, code, NO_ARGS);
     }

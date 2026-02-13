@@ -128,6 +128,11 @@ public class New_1
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        computeCallTypes(bctx, new int[] {m_nArgValue});
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         buildNew(bctx, code, new int[] {m_nArgValue});
     }

@@ -139,6 +139,11 @@ public class Invoke_1N
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        computeInvokeTypes(bctx, new int[] {m_nArgValue});
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         buildInvoke(bctx, code, new int[] {m_nArgValue});
     }

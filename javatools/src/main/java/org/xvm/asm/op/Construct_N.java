@@ -123,6 +123,11 @@ public class Construct_N
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
+    public void computeTypes(BuildContext bctx) {
+        computeCallTypes(bctx, m_anArgValue);
+    }
+
+    @Override
     public void build(BuildContext bctx, CodeBuilder code) {
         buildConstruct(bctx, code, m_anArgValue);
     }

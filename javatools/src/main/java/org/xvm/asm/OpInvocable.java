@@ -18,6 +18,7 @@ import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
@@ -304,8 +305,10 @@ public abstract class OpInvocable extends Op {
 
     // ----- JIT support ---------------------------------------------------------------------------
 
-    @Override
-    public void computeTypes(BuildContext bctx) {
+    /**
+     * ComputeType support for NVOK_ ops.
+     */
+    public void computeInvokeTypes(BuildContext bctx, int[] anArgValue) {
         TypeMatrix tmx = bctx.typeMatrix;
 
         if (m_nRetValue == A_IGNORE && m_anRetValue == null) {
@@ -314,10 +317,28 @@ public abstract class OpInvocable extends Op {
             return;
         }
 
-        TypeConstant   typeThis    = tmx.getType(A_THIS, getAddress());
-        MethodConstant idMethod    = bctx.getConstant(m_nMethodId, MethodConstant.class);
-        TypeConstant[] atypeResult = idMethod.getSignature().
-                                        resolveGenericTypes(bctx.pool(), typeThis).getRawReturns();
+        TypeConstant      typeThis = tmx.getType(A_THIS, getAddress());
+        MethodConstant    idMethod = bctx.getConstant(m_nMethodId, MethodConstant.class);
+        SignatureConstant sig      = idMethod.getSignature();
+
+        if (sig.containsGenericTypes()) {
+            sig = sig.resolveGenericTypes(bctx.pool(), typeThis);
+        }
+        if (sig.containsTypeParameters()) {
+            MethodStructure method = (MethodStructure) idMethod.getComponent();
+            if (method == null) {
+                TypeConstant typeTarget = tmx.getType(m_nTarget, getAddress());
+                TypeInfo     infoTarget = typeTarget.ensureTypeInfo();
+
+                // TODO: add support for nested ids (see the interpreter logic above)
+                MethodInfo infoMethod = infoTarget.getMethodBySignature(sig);
+                assert infoMethod != null;
+                method = infoMethod.getHead().getMethodStructure();
+            }
+            sig = sig.resolveGenericTypes(bctx.pool(), bctx.createTypeResolver(method, anArgValue));
+        }
+
+        TypeConstant[] atypeResult = sig.getRawReturns();
         if (isMultiReturn()) {
             for (int i = 0, c = m_anRetValue.length; i < c; i++) {
                 int nRetVal = m_anRetValue[i];
@@ -338,8 +359,27 @@ public abstract class OpInvocable extends Op {
 
         ClassDesc      cdTarget   = regTarget.cd();
         TypeConstant   typeTarget = regTarget.type();
+        TypeInfo       infoTarget = typeTarget.ensureTypeInfo();
         MethodConstant idMethod   = bctx.getConstant(m_nMethodId, MethodConstant.class);
-        MethodInfo     infoMethod = typeTarget.ensureTypeInfo().getMethodById(idMethod);
+        MethodInfo     infoMethod = infoTarget.getMethodById(idMethod);
+
+        if (infoMethod == null) {
+            SignatureConstant sig = idMethod.getSignature();
+
+            if (sig.containsGenericTypes()) {
+                TypeConstant typeThis = bctx.getArgumentType(A_THIS);
+                sig = sig.resolveGenericTypes(bctx.pool(), typeThis);
+            }
+
+            // TODO: add support for nested ids (see the interpreter logic above)
+            infoMethod = infoTarget.getMethodBySignature(sig);
+            assert infoMethod != null;
+        }
+
+        if (infoMethod.getHead().getImplementation() == MethodBody.Implementation.Delegating) {
+            // TODO: delegation
+        }
+
         JitMethodDesc  jmd        = infoMethod.getJitDesc(bctx.builder, typeTarget);
         String         methodName = infoMethod.ensureJitMethodName(bctx.typeSystem);
         boolean        fOptimized = jmd.isOptimized;
