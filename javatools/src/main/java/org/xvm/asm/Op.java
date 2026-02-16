@@ -427,8 +427,11 @@ public abstract class Op {
 
     /**
      * Build the Java code for this op.
+     *
+     * @return -1 to proceed to the next op, or a positive op address to eliminate all code up to
+     *         that address
      */
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         throw new UnsupportedOperationException(toString());
     }
 

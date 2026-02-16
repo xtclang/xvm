@@ -55,7 +55,8 @@ public class Var
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         bctx.introduceVar(code, m_nVar, m_nType, 0);
+        return -1;
     }
 }

@@ -106,9 +106,10 @@ public class Var_I
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         bctx.introduceVar(code, m_nVar, m_nType, 0);
         bctx.moveVar(code, m_nValueId, m_nVar, false);
+        return -1;
     }
 
     // ----- fields --------------------------------------------------------------------------------

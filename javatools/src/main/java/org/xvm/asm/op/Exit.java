@@ -65,7 +65,8 @@ public class Exit
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         bctx.exitScope(code);
+        return -1;
     }
 }

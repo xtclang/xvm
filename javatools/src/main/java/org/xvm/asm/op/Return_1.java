@@ -112,8 +112,8 @@ public class Return_1
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
-        buildReturn(bctx, code, new int[] {m_nArg});
+    public int build(BuildContext bctx, CodeBuilder code) {
+        return buildReturn(bctx, code, new int[] {m_nArg});
     }
 
     // ----- fields --------------------------------------------------------------------------------

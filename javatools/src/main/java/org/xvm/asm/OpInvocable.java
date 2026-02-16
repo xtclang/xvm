@@ -351,7 +351,7 @@ public abstract class OpInvocable extends Op {
         }
     }
 
-    protected void buildInvoke(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
+    protected int buildInvoke(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
         RegisterInfo regTarget = bctx.loadArgument(code, m_nTarget);
         if (!regTarget.isSingle()) {
             throw new UnsupportedOperationException("Multislot invoke");
@@ -412,6 +412,7 @@ public abstract class OpInvocable extends Op {
             int[] anVar = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
             bctx.assignReturns(code, jmd, cReturns, anVar);
         }
+        return -1;
     }
 
     // ----- fields --------------------------------------------------------------------------------

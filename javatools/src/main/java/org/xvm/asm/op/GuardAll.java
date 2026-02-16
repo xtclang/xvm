@@ -111,7 +111,7 @@ public class GuardAll
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         // the GuardAll introduces two scopes:
         //  - outer with synthetic vars: $rethrow, $contLoop, $breakLoop
         //  - inner loop that is guarded by "FinallyStart" op
@@ -158,6 +158,7 @@ public class GuardAll
         }
 
         bctx.enterScope(code); // guarded by FinallyStart
+        return -1;
     }
 
     /**

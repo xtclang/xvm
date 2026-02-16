@@ -144,9 +144,10 @@ public class Nop extends Op {
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         bctx.lineNumber += getLineCount();
         code.lineNumber(bctx.lineNumber);
+        return -1;
     }
 
     // ----- fields --------------------------------------------------------------------------------

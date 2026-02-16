@@ -159,8 +159,8 @@ public class Return_N
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
-        buildReturn(bctx, code, m_anArg);
+    public int build(BuildContext bctx, CodeBuilder code) {
+        return buildReturn(bctx, code, m_anArg);
     }
 
     // ----- fields --------------------------------------------------------------------------------

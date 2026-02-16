@@ -23,9 +23,9 @@ public class Loop
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         code.labelBinding(bctx.ensureLabel(code, getAddress()));
 
-        super.build(bctx, code);
+        return super.build(bctx, code);
     }
 }

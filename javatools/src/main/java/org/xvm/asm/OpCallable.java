@@ -621,7 +621,7 @@ public abstract class OpCallable extends Op {
     /**
      * Build support for CALL_ ops.
      */
-    protected void buildCall(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
+    protected int buildCall(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
         TypeSystem ts = bctx.typeSystem;
 
         ClassDesc     cdTarget;
@@ -694,7 +694,7 @@ public abstract class OpCallable extends Op {
                 int[] anVar = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
                 bctx.assignReturns(code, jmdCall, anVar.length, anVar);
             }
-            return;
+            return -1;
         }
 
         MethodTypeDesc mdCall;
@@ -717,23 +717,25 @@ public abstract class OpCallable extends Op {
 
         int[] anVar = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
         bctx.assignReturns(code, jmdCall, anVar.length, anVar);
+        return -1;
     }
 
     /**
      * Support for NEW_ ops.
      */
-    protected void buildNew(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
+    protected int buildNew(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
         MethodConstant idCtor     = bctx.getConstant(m_nFunctionId, MethodConstant.class);
         TypeConstant   typeTarget = idCtor.getNamespace().getType();
         ClassDesc      cdTarget   = bctx.buildNew(code, typeTarget, idCtor, anArgValue);
 
         bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget, cdTarget, ""), typeTarget);
+        return -1;
     }
 
     /**
      * Support for NEW_G ops.
      */
-    protected void buildNewG(BuildContext bctx, CodeBuilder code, int nTypeArg, int[] anArgValue) {
+    protected int buildNewG(BuildContext bctx, CodeBuilder code, int nTypeArg, int[] anArgValue) {
         TypeConstant typeTarget;
         if (nTypeArg <= CONSTANT_OFFSET) {
             typeTarget = bctx.getTypeConstant(nTypeArg).
@@ -749,12 +751,13 @@ public abstract class OpCallable extends Op {
         ClassDesc      cdTarget = bctx.buildNew(code, typeTarget, idCtor, anArgValue);
 
         bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget, cdTarget, ""), typeTarget);
+        return -1;
     }
 
     /**
      * Support for CONSTR_ ops.
      */
-    protected void buildConstruct(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
+    protected int buildConstruct(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
         MethodConstant   idCtor     = (MethodConstant) bctx.getConstant(m_nFunctionId);
         IdentityConstant idTarget   = idCtor.getNamespace();
         TypeConstant     typeTarget = idTarget.getType();
@@ -796,6 +799,7 @@ public abstract class OpCallable extends Op {
         bctx.loadThis(code);
         bctx.loadCallArguments(code, jmdCtor, anArgValue);
         code.invokestatic(cdTarget, sJitCtor, md);
+        return -1;
     }
 
     // ----- fields --------------------------------------------------------------------------------

@@ -261,12 +261,13 @@ public abstract class OpTest
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         if (isBinaryOp()) {
             buildBinary(bctx, code);
         } else {
             buildUnary(bctx, code);
         }
+        return -1;
     }
 
     protected void buildBinary(BuildContext bctx, CodeBuilder code) {

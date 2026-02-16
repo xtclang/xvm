@@ -104,8 +104,9 @@ public class L_Set
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         bctx.buildSetProperty(code, bctx.loadThis(code), m_nPropId, m_nValue);
+        return -1;
     }
 
     // ----- fields --------------------------------------------------------------------------------

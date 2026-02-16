@@ -16,7 +16,6 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
-import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeMatrix;
 
@@ -217,7 +216,7 @@ public abstract class OpGeneral
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo regTarget  = bctx.ensureRegister(code, m_nTarget);
         ClassDesc    cdTarget   = regTarget.cd();
         TypeConstant typeTarget = regTarget.type();
@@ -282,6 +281,7 @@ public abstract class OpGeneral
             }
             bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget), typeTarget);
         }
+        return -1;
     }
 
     /**

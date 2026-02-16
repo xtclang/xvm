@@ -123,7 +123,7 @@ public class FinallyStart
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         org.xvm.javajit.Scope scopeGuarded = bctx.exitScope(code);
         assert scopeGuarded.parent == bctx.scope;
 
@@ -162,5 +162,6 @@ public class FinallyStart
         Builder.loadNull(code);
         bctx.storeValue(code, regEx);
         code.labelBinding(labelEnd);
+        return -1;
     }
 }

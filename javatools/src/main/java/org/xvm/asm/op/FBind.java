@@ -241,7 +241,7 @@ public class FBind
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
 
         TypeSystem   ts     = bctx.typeSystem;
         ConstantPool pool   = ts.pool();
@@ -371,6 +371,7 @@ public class FBind
 
         RegisterInfo regRet = bctx.ensureRegInfo(m_nRetValue, typeFn, cdFn, "");
         bctx.storeValue(code, regRet, typeFn);
+        return -1;
     }
 
     private static void bindArgument(CodeBuilder code, int slotMethod, int nPos,

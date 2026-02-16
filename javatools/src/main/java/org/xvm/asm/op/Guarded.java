@@ -24,9 +24,10 @@ public class Guarded
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         CatchStart op = (CatchStart) getNextOp();
         op.build(bctx, code, f_scope);
+        return -1;
     }
 
     // ----- fields --------------------------------------------------------------------------------

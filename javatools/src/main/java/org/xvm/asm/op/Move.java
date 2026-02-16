@@ -106,7 +106,8 @@ public class Move
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         bctx.moveVar(code, m_nFromValue, m_nToValue, true);
+        return -1;
     }
 }

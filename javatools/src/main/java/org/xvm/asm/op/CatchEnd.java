@@ -81,7 +81,7 @@ public class CatchEnd
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         bctx.exitScope(code);
 
         if (m_ofJmp > 1) {
@@ -89,5 +89,6 @@ public class CatchEnd
         } else {
             assert m_ofJmp == 1;
         }
+        return -1;
     }
 }

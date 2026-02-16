@@ -101,11 +101,12 @@ public class Throw
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo target = bctx.loadArgument(code, m_nArgValue);
         assert target.type().isA(bctx.pool().typeException());
         code.getfield(CD_Exception, "$exception", CD_nException)
             .athrow();
+        return -1;
     }
 
     // ----- fields --------------------------------------------------------------------------------

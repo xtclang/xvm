@@ -78,7 +78,7 @@ public abstract class OpReturn
      * Customization of the {@link #build} method. See {@link org.xvm.asm.op.GuardAll#build} for
      * the return values allocations.
      */
-    public void buildReturn(BuildContext bctx, CodeBuilder code, int[] anRet) {
+    public int buildReturn(BuildContext bctx, CodeBuilder code, int[] anRet) {
         int cRets = anRet.length;
         assert cRets > 0;
 
@@ -336,6 +336,7 @@ public abstract class OpReturn
                 }
             }
         }
+        return -1;
     }
 
     // ----- fields --------------------------------------------------------------------------------

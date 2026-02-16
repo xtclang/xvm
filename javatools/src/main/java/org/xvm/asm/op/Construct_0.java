@@ -92,8 +92,8 @@ public class Construct_0
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
-        buildConstruct(bctx, code, NO_ARGS);
+    public int build(BuildContext bctx, CodeBuilder code) {
+        return buildConstruct(bctx, code, NO_ARGS);
     }
 
 }

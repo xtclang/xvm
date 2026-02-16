@@ -118,7 +118,7 @@ public abstract class OpInPlaceAssign
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo regTarget = bctx.ensureRegister(code, m_nTarget);
 
         TypeConstant typeResult;
@@ -134,6 +134,7 @@ public abstract class OpInPlaceAssign
             typeResult = buildOpInvoke(bctx, code, regTarget);
         }
         bctx.storeValue(code, regTarget, typeResult);
+        return -1;
     }
 
     /**

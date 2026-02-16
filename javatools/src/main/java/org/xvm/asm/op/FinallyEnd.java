@@ -23,7 +23,6 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.template.xNullable;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
-import static org.xvm.javajit.Builder.EXT;
 
 
 /**
@@ -117,7 +116,7 @@ public class FinallyEnd
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         org.xvm.javajit.Scope scopeFin   = bctx.exitScope(code);
         org.xvm.javajit.Scope scopeGuard = scopeFin.parent;
 
@@ -240,6 +239,7 @@ public class FinallyEnd
 
         }
         bctx.exitScope(code);
+        return -1;
     }
 
     // ----- fields --------------------------------------------------------------------------------

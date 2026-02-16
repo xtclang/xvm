@@ -133,8 +133,8 @@ public class Construct_1
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
-        buildConstruct(bctx, code, new int[] {m_nArgValue});
+    public int build(BuildContext bctx, CodeBuilder code) {
+        return buildConstruct(bctx, code, new int[] {m_nArgValue});
     }
 
     // ----- fields --------------------------------------------------------------------------------

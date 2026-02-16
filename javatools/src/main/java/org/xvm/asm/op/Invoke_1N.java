@@ -144,8 +144,8 @@ public class Invoke_1N
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
-        buildInvoke(bctx, code, new int[] {m_nArgValue});
+    public int build(BuildContext bctx, CodeBuilder code) {
+        return buildInvoke(bctx, code, new int[] {m_nArgValue});
     }
 
     // ----- fields --------------------------------------------------------------------------------

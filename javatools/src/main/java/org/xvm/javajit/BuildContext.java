@@ -230,11 +230,6 @@ public class BuildContext {
     private final Deque<RegisterInfo> tempRegStack = new ArrayDeque<>();
 
     /**
-     * The map of {@link OpAction}s indexed by the register id.
-     */
-    private final Map<Integer, OpAction> actions = new HashMap<>();
-
-    /**
      * Deferred compilation context.
      */
     private BuildContext deferred;
@@ -420,7 +415,7 @@ public class BuildContext {
             case org.xvm.asm.op.Label label:
                 // there is a chance we are compiling the same ops multiple times (for different
                 // formal types)
-                label.setLabel(null);
+                label.clear();
                 break;
 
             default:
@@ -445,22 +440,14 @@ public class BuildContext {
 
     /**
      * Process the ops - build the corresponding bytecode.
-     *
-     * @param code
-     * @param ops
      */
     public void process(CodeBuilder code, Op[] ops) {
         for (int iPC = 0, c = ops.length; iPC < c; iPC++) {
             try {
-                while (true) {
-                    int skipTo = prepareOp(code, iPC);
-                    if (skipTo < 0) {
-                        break;
-                    }
-                    assert skipTo > iPC;
-                    iPC = skipTo;
+                int skipTo = ops[currOpAddr = iPC].build(this, code);
+                if (skipTo != -1) {
+                    iPC = skipTo - 1;
                 }
-                ops[iPC].build(this, code);
             } catch (Throwable e) {
                 MethodStructure struct = methodStruct;
                 StringBuilder sb = new StringBuilder();
@@ -474,8 +461,7 @@ public class BuildContext {
                 if (nLine > 0) {
                     sb.append(':').append(nLine);
                 } else {
-                    sb.append(" iPC=")
-                        .append(iPC);
+                    sb.append(" iPC=").append(iPC);
                 }
                 sb.append(')');
                 throw new RuntimeException("Failed to generate code for " +
@@ -508,25 +494,17 @@ public class BuildContext {
     public void addAction(int opAddr, OpAction action) {
         assert opAddr > currOpAddr;
 
-        OpAction currAct = actions.get(opAddr);
-        if (currAct == null) {
-            actions.put(opAddr, action);
-        } else {
-            actions.put(opAddr, new ActionChain(action, currAct));
-        }
-    }
+        Op[] ops = methodStruct.getOps();
+        Op   op  = ops[opAddr];
 
-    /**
-     * Prepare compiling the specified op address.
-     *
-     * @return -1 to proceed to the next op or a positive op address to eliminate all code up to
-     *         that address
-     */
-    public int prepareOp(CodeBuilder code, int opAddr) {
-        OpAction currAct = actions.remove(currOpAddr = opAddr);
-        return currAct == null
-                ? -1
-                : currAct.prepare();
+        if (op instanceof org.xvm.asm.op.Label label) {
+            label.setAction(action);
+        } else {
+            org.xvm.asm.op.Label label = new org.xvm.asm.op.Label(opAddr);
+            label.setAction(action);
+            label.append(op);
+            ops[opAddr] = label;
+        }
     }
 
     /**

@@ -161,8 +161,8 @@ public class Call_N0
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
-        buildCall(bctx, code, m_anArgValue);
+    public int build(BuildContext bctx, CodeBuilder code) {
+        return buildCall(bctx, code, m_anArgValue);
     }
 
     // ----- fields --------------------------------------------------------------------------------

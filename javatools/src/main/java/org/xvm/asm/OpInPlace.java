@@ -22,7 +22,6 @@ import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.NumberSupport;
 import org.xvm.javajit.RegisterInfo;
-import org.xvm.javajit.TypeSystem;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -223,7 +222,7 @@ public abstract class OpInPlace
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         int nTarget = m_nTarget;
         if (nTarget >= 0) {
             // operation on a register
@@ -268,6 +267,7 @@ public abstract class OpInPlace
                 }
             }
         }
+        return -1;
     }
 
     /**

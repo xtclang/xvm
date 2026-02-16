@@ -139,8 +139,9 @@ public class P_Get
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         bctx.buildGetProperty(code, bctx.loadArgument(code, m_nTarget), m_nPropId, m_nRetValue);
+        return -1;
     }
 
     // ----- fields --------------------------------------------------------------------------------

@@ -48,8 +48,9 @@ public class Return_0
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         code.return_();
+        return -1;
     }
 
     // ----- inner classes -------------------------------------------------------------------------

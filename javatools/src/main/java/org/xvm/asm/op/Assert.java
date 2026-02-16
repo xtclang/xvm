@@ -175,7 +175,7 @@ public class Assert
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         Label labelEnd = code.newLabel();
 
         boolean fAlwaysFalse = m_nTest <= Op.CONSTANT_OFFSET
@@ -207,6 +207,7 @@ public class Assert
         if (!fAlwaysFalse) {
             code.labelBinding(labelEnd);
         }
+        return -1;
     }
 
     /**

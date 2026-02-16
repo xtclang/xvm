@@ -100,7 +100,7 @@ public class Invoke_0N
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
-        buildInvoke(bctx, code, NO_ARGS);
+    public int build(BuildContext bctx, CodeBuilder code) {
+        return buildInvoke(bctx, code, NO_ARGS);
     }
 }

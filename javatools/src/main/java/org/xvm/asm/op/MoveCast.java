@@ -126,11 +126,12 @@ public class MoveCast
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo regFrom = bctx.loadArgument(code, m_nFromValue);
         TypeConstant typeTo  = regFrom.type().combine(bctx.pool(), bctx.getTypeConstant(m_nToType));
         bctx.generateCheckCast(code, typeTo);
         bctx.storeValue(code, bctx.ensureRegInfo(m_nToValue, typeTo));
+        return -1;
     }
 
     // ----- fields --------------------------------------------------------------------------------

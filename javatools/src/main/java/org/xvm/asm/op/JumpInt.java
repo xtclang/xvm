@@ -213,7 +213,7 @@ public class JumpInt
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo regArg = bctx.loadArgument(code, m_nArg);
 
         switch (regArg.cd().descriptorString()) {
@@ -238,6 +238,7 @@ public class JumpInt
             listCases.add(SwitchCase.of(iCase, bctx.ensureLabel(code, nThis + aofCase[iCase])));
         }
         code.tableswitch(0, cCases - 1, labelDflt, listCases);
+        return -1;
     }
 
     // ----- fields --------------------------------------------------------------------------------

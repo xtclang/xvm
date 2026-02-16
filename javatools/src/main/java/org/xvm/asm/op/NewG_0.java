@@ -111,8 +111,8 @@ public class NewG_0
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
-        buildNewG(bctx, code, m_nTypeValue, NO_ARGS);
+    public int build(BuildContext bctx, CodeBuilder code) {
+        return buildNewG(bctx, code, m_nTypeValue, NO_ARGS);
     }
 
     // ----- fields --------------------------------------------------------------------------------

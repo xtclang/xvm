@@ -138,7 +138,7 @@ public class Call_0N
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
-        buildCall(bctx, code, NO_ARGS);
+    public int build(BuildContext bctx, CodeBuilder code) {
+        return buildCall(bctx, code, NO_ARGS);
     }
 }

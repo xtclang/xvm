@@ -96,8 +96,9 @@ public class Var_DN
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         bctx.introduceRef(code, bctx.getString(m_nNameId), bctx.getTypeConstant(m_nType), m_nVar);
+        return -1;
     }
 
     // ----- fields --------------------------------------------------------------------------------

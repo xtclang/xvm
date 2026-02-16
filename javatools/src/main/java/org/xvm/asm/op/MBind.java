@@ -18,7 +18,6 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.Builder;
 import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
@@ -120,7 +119,7 @@ public class MBind
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo regMethod = bctx.ensureRegister(code, m_nMethodId);
         RegisterInfo regTarget = bctx.ensureRegister(code, m_nTarget);
 
@@ -170,5 +169,6 @@ public class MBind
 
         RegisterInfo regRet = bctx.ensureRegInfo(m_nRetValue, typeFn, cdFn, "");
         bctx.storeValue(code, regRet, typeFn);
+        return -1;
     }
 }

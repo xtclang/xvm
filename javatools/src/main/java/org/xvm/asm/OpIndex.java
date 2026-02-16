@@ -214,7 +214,7 @@ public abstract class OpIndex
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo reg    = bctx.loadArgument(code, m_nTarget);
         TypeConstant type   = reg.type();
         TypeConstant typeEl = type.resolveGenericType("Element");
@@ -412,6 +412,7 @@ public abstract class OpIndex
 
             bctx.assignReturns(code, jmd, 1, new int[] {m_nRetValue});
         }
+        return -1;
     }
 
 

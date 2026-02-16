@@ -42,7 +42,7 @@ public abstract class OpRange
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo regTarget = bctx.ensureRegister(code, m_nTarget);
 
         if (!regTarget.isSingle()) {
@@ -90,5 +90,6 @@ public abstract class OpRange
         } else {
             super.build(bctx, code);
         }
+        return -1;
     }
 }

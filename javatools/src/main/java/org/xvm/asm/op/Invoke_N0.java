@@ -119,8 +119,8 @@ public class Invoke_N0
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
-        buildInvoke(bctx, code, m_anArgValue);
+    public int build(BuildContext bctx, CodeBuilder code) {
+        return buildInvoke(bctx, code, m_anArgValue);
     }
 
     // ----- fields --------------------------------------------------------------------------------
