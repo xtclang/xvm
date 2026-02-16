@@ -262,6 +262,7 @@ public class TypeMatrix {
                 ConstantPool pool      = bctx.pool();
                 TypeConstant unionType = currType.union(pool, mergeType);
                 types.put(regId, baseType == null // this usually means an "out-of-scope" var
+                              || baseType.equals(unionType)
                     ? unionType
                     : new CastTypeConstant(pool, baseType, unionType));
             }

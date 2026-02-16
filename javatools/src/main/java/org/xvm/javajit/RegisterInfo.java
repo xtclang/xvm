@@ -84,6 +84,13 @@ public interface RegisterInfo {
     }
 
     /**
+     * @return true iff the XTC register represents a value on Java stack
+     */
+    default boolean isProperty() {
+        return regId() <= Op.CONSTANT_OFFSET;
+    }
+
+    /**
      * @return true iff the XTC register represents a value to be ignored
      */
     default boolean isIgnore() {

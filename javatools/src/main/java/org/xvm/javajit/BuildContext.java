@@ -1641,7 +1641,8 @@ public class BuildContext {
                                        int fromAddr, TypeConstant narrowedType) {
         TypeConstant origType = origReg.type();
 
-        if (origReg.isJavaStack() || narrowedType.getCanonicalJitType().equals(origType)) {
+        if (origReg.isJavaStack() || origReg.isProperty() ||
+                narrowedType.getCanonicalJitType().equals(origType)) {
             return origReg;
         }
 
@@ -1651,9 +1652,9 @@ public class BuildContext {
         }
 
         ClassDesc   narrowedCD = JitTypeDesc.getJitClass(builder, narrowedType);
-
         ClassDesc[] narrowedSlotCds;
         int[]       narrowedSlots;
+
         if (narrowedType.isJavaPrimitive() || origType.isJavaPrimitive()) {
             narrowedSlots   = new int[]{scope.allocateJavaSlot(narrowedCD)};
             narrowedSlotCds = new ClassDesc[]{narrowedCD};
@@ -1671,8 +1672,10 @@ public class BuildContext {
         Narrowed narrowedReg = new Narrowed(origReg.regId(), narrowedSlots, narrowedType,
             narrowedType.getJitDesc(builder).flavor, narrowedCD, narrowedSlotCds, origReg.name(),
             scope.depth, false, origReg);
+
+        boolean applyInfo = fromAddr > currOpAddr;
         OpAction action = () -> {
-            if (fromAddr > currOpAddr) {
+            if (applyInfo) {
                 registerInfos.put(narrowedReg.regId, narrowedReg);
             }
 
