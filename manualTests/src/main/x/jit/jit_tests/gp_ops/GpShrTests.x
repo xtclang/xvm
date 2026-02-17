@@ -92,18 +92,18 @@ class GpShrTests {
     }
 
     void testGpShrInt128() {
-//        Int128 value1 = 0;
-//        Int128 value2 = 0x4A4A4A4A;
-//        Int    value3 = 2;
-//        value1 = value2 >> value3;
-//        assert value1 == 0x12929292;
+        Int128 value1 = 0;
+        Int128 value2 = 0x4A4A4A4A;
+        Int    value3 = 2;
+        value1 = value2 >> value3;
+        assert value1 == 0x12929292;
     }
 
     void testGpShrUInt128() {
-//        UInt128 value1 = 0;
-//        UInt128 value2 = 0xAAAAAAAA;
-//        Int     value3 = 2;
-//        value1 = value2 >> value3;
-//        assert value1 == 0x2AAAAAAA;
+        UInt128 value1 = 0;
+        UInt128 value2 = 0xAAAAAAAA;
+        Int     value3 = 2;
+        value1 = value2 >> value3;
+        assert value1 == 0x2AAAAAAA;
     }
 }

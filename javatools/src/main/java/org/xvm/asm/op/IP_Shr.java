@@ -79,4 +79,13 @@ public class IP_Shr
                                                 int          nArgValue) {
         return buildPrimitiveShr(bctx, code, regTarget, nArgValue);
     }
+
+    @Override
+    protected RegisterInfo buildXvmOptimizedBinary(BuildContext bctx,
+                                                   CodeBuilder  code,
+                                                   RegisterInfo regTarget,
+                                                   int          nArgValue) {
+        buildXvmPrimitiveShr(bctx, code, regTarget, nArgValue);
+        return regTarget;
+    }
 }

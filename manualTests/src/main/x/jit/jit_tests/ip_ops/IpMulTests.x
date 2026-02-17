@@ -71,15 +71,15 @@ class IpMulTests {
     }
 
     void testIpMulInt128() {
-//        Int128 value1 = 0x13333333;
-//        value1 *= 5;
-//        assert value1 == 0x5FFFFFFF;
+        Int128 value1 = 0x13333333;
+        value1 *= 5;
+        assert value1 == 0x5FFFFFFF;
     }
 
     void testIpMulUInt128() {
-//        UInt128 value1 = 0x33333333;
-//        value1 *= 5;
-//        assert value1 == 0xFFFFFFFF;
+        UInt128 value1 = 0x33333333;
+        value1 *= 5;
+        assert value1 == 0xFFFFFFFF;
     }
 
     void testIpMulDec() {

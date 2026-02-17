@@ -93,19 +93,19 @@ class GpMulTests {
     }
 
     void testGpMulInt128() {
-//        Int128 value1 = 0;
-//        Int128 value2 = 0x13333333;
-//        Int128 value3 = 5;
-//        value1 = value2 * value3;
-//        assert value1 == 0x5FFFFFFF;
+        Int128 value1 = 0;
+        Int128 value2 = 0x13333333;
+        Int128 value3 = 5;
+        value1 = value2 * value3;
+        assert value1 == 0x5FFFFFFF;
     }
 
     void testGpMulUInt128() {
-//        UInt128 value1 = 0;
-//        UInt128 value2 = 0x33333333;
-//        UInt128 value3 = 5;
-//        value1 = value2 * value3;
-//        assert value1 == 0xFFFFFFFF;
+        UInt128 value1 = 0;
+        UInt128 value2 = 0x33333333;
+        UInt128 value3 = 5;
+        value1 = value2 * value3;
+        assert value1 == 0xFFFFFFFF;
     }
 
     void testGpMulDec() {

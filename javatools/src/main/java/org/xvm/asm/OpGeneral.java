@@ -228,7 +228,8 @@ public abstract class OpGeneral
                 assertNotMultislot(regTarget);
                 typeResult = buildOptimizedBinary(bctx, code, regTarget, m_nArgValue);
             } else if (typeTarget.isXvmPrimitive()) {
-                typeResult = buildXvmOptimizedBinary(bctx, code, regTarget, m_nArgValue);
+                RegisterInfo regResult = buildXvmOptimizedBinary(bctx, code, regTarget, m_nArgValue);
+                typeResult = regResult.type();
             } else {
                 MethodInfo    method   = findOpMethod(bctx, typeTarget);
                 String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
@@ -253,6 +254,8 @@ public abstract class OpGeneral
         } else { // unary op
             if (cdTarget.isPrimitive()) {
                 buildOptimizedUnary(bctx, code, regTarget.load(code));
+            } else if (typeTarget.isXvmPrimitive()) {
+                buildXvmOptimizedUnary(bctx, code, regTarget);
             } else {
                 String sName;
                 String sOp;

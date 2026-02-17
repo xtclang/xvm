@@ -128,7 +128,8 @@ public abstract class OpInPlaceAssign
             }
             typeResult = buildOptimizedBinary(bctx, code, regTarget, m_nArgValue);
         } else if (regTarget.type().isXvmPrimitive()) {
-            typeResult = buildXvmOptimizedBinary(bctx, code, regTarget, m_nArgValue);
+            RegisterInfo regResult = buildXvmOptimizedBinary(bctx, code, regTarget, m_nArgValue);
+            typeResult = regResult.type();
         } else {
             typeResult = buildOpInvoke(bctx, code, regTarget);
         }

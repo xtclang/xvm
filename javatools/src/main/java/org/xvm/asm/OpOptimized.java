@@ -31,14 +31,14 @@ public abstract class OpOptimized
                                                 CodeBuilder  code,
                                                 RegisterInfo regTarget,
                                                 int          nArgValue) {
-        regTarget.load(code);
-        RegisterInfo regArg = bctx.loadArgument(code, nArgValue);
-        if (!regArg.cd().equals(regTarget.cd())) {
+        RegisterInfo regLoaded = regTarget.load(code);
+        RegisterInfo regArg    = bctx.loadArgument(code, nArgValue);
+        if (!regArg.cd().equals(regLoaded.cd())) {
             throw new UnsupportedOperationException("Convert " +
-                    regArg.type().getValueString() + " to " + regTarget.type().getValueString());
+                    regArg.type().getValueString() + " to " + regLoaded.type().getValueString());
         }
-        buildOptimizedBinary(bctx, code, regTarget, regArg);
-        return regTarget.type();
+        buildOptimizedBinary(bctx, code, regLoaded, regArg);
+        return regLoaded.type();
     }
 
     /**
@@ -82,20 +82,20 @@ public abstract class OpOptimized
      * @param regTarget  the register containing the target of the operation
      * @param nArgValue  the register containing the operation argument
      *
-     * @return the type of the result of the operation
+     * @return the target register used for the operation
      */
-    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx,
+    protected RegisterInfo buildXvmOptimizedBinary(BuildContext bctx,
                                                    CodeBuilder  code,
                                                    RegisterInfo regTarget,
                                                    int          nArgValue) {
-        regTarget.load(code);
-        RegisterInfo regArg = bctx.loadArgument(code, nArgValue);
-        if (!regArg.cd().equals(regTarget.cd())) {
+        RegisterInfo regLoaded = regTarget.load(code);
+        RegisterInfo regArg    = bctx.loadArgument(code, nArgValue);
+        if (!regArg.cd().equals(regLoaded.cd())) {
             throw new UnsupportedOperationException("Convert " +
-                    regArg.type().getValueString() + " to " + regTarget.type().getValueString());
+                    regArg.type().getValueString() + " to " + regLoaded.type().getValueString());
         }
-        buildXvmOptimizedBinary(bctx, code, regTarget, regArg);
-        return regTarget.type();
+        buildXvmOptimizedBinary(bctx, code, regLoaded, regArg);
+        return regLoaded;
     }
 
 
@@ -118,6 +118,8 @@ public abstract class OpOptimized
     /**
      * Generate the bytecodes for the corresponding unary op optimized for a XVM primitive type.
      * The primitive value for the target must already be on the top of the Java stack.
+     * <p>
+     * The target register should not have been loaded to the stack.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to

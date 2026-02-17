@@ -81,10 +81,11 @@ public class IP_And
     }
 
     @Override
-    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx,
+    protected RegisterInfo buildXvmOptimizedBinary(BuildContext bctx,
                                                    CodeBuilder  code,
                                                    RegisterInfo regTarget,
                                                    int          nArgValue) {
-        return buildXvmPrimitiveAnd(bctx, code, regTarget, nArgValue);
+        buildXvmPrimitiveAnd(bctx, code, regTarget, nArgValue);
+        return regTarget;
     }
 }

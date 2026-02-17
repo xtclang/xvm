@@ -1,7 +1,5 @@
-/**
- * xtc run -L build/xtc/main/lib -o  build/xtc/main/lib --jit src/main/x/jit/numbers/UInt128Tests
- .x
- */
+import ecstasy.io.IOException;
+
 class UInt128Tests {
 
     @Inject Console console;
@@ -60,6 +58,8 @@ class UInt128Tests {
         testUInt128AsNullableUInt128Return();
         testNullableUInt128ConditionalReturn();
 
+        testFinallyReturn();
+
         // Op tests
         // Add
         testUInt128OpAddBig();
@@ -71,6 +71,9 @@ class UInt128Tests {
         testUInt128OpSubOverflow();
         // And
         testUInt128OpAnd();
+        // Complement
+        testUInt128ComplementLowOnly();
+        testUInt128ComplementBig();
         // Inc
         testUInt128OpIncLowOnly();
         testUInt128OpPreIncLowOnly();
@@ -87,6 +90,31 @@ class UInt128Tests {
         testUInt128OpPostDecBig();
         testUInt128OpDecOverflowLow();
         testUInt128OpDecOverflowBig();
+        // Or
+        testUInt128OpOr();
+        testUInt128OpOrInPlace();
+        // Shl
+        testUInt128OpShiftLeft();
+        testUInt128OpShiftLeftZero();
+        testUInt128OpShiftLeft64();
+        testUInt128OpShiftLeft128();
+        testUInt128OpShiftLeft132();
+        testUInt128OpShiftLeftMinus4();
+        // Shr
+        testUInt128OpShiftRight();
+        testUInt128OpShiftRightZero();
+        testUInt128OpShiftRight128();
+        testUInt128OpShiftRight132();
+        testUInt128OpShiftRightMinus4();
+        // Ushr
+        testUInt128OpUnsignedShiftRight();
+        testUInt128OpUnsignedShiftRightZero();
+        testUInt128OpUnsignedShiftRight128();
+        testUInt128OpUnsignedShiftRight132();
+        testUInt128OpUnsignedShiftRightMinus4();
+        // Xor
+        testUInt128OpXor();
+        testUInt128OpXorInPlace();
 
         console.print("<<<<< Finished UInt128Tests Conversion tests >>>>>");
     }
@@ -471,6 +499,52 @@ class UInt128Tests {
         return False;
     }
 
+    // ----- finally -------------------------------------------------------------------------------
+
+    void testFinallyReturn() {
+        UInt128 n = returnFinally();
+        assert n == 11;
+    }
+
+    UInt128 returnFinally() {
+        try {
+            for (UInt128 i : 0..2) {
+                try {
+                    testThrow(i);
+                } catch (IOException e) {
+                    console.print("IOException caught");
+                    continue;
+                } catch (Unsupported e) {
+                    console.print("Unsupported caught");
+                    return i + 10;
+                } finally {
+                    console.print("Finally: ", True);
+                    console.print(i);
+                    if (i == 2) {
+                        return i + 40;
+                    }
+                }
+            }
+            return 1;
+        } finally {
+            console.print("Done");
+        }
+    }
+
+    void testThrow(UInt128 i) {
+// ToDo why does this fail to compile with the JIT?
+//        if (i < 0) {
+//            return;
+//        }
+        if (i == 0) {
+            throw new IOException("Test IO");
+        } else if (i == 1) {
+            throw new Unsupported("Test Unsupported");
+        } else if (i > 1) {
+            throw new IllegalState("Test IllegalState");
+        }
+    }
+
     // ----- Op tests (Add) ------------------------------------------------------------------------
 
     void testUInt128OpAddBig() {
@@ -524,6 +598,22 @@ class UInt128Tests {
         UInt128 n2 = 0x0AAA_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA;
         UInt128 n3 = n1 & n2;
         assert n3 == 0x00A2_A0A2_A0A0_A0A0_A0A0_A0A0_A0A0_A0A0;
+    }
+
+    // ----- Op tests (Complement ~) ---------------------------------------------------------------
+
+    void testUInt128ComplementLowOnly() {
+        UInt128 value1 = 0;
+        UInt128 value2 = 0x5ABC5432;
+        value1 = ~value2;
+        assert value1 == 0xFFFF_FFFF_FFFF_FFFF_FFFF_FFFF_A543_ABCD;
+    }
+
+    void testUInt128ComplementBig() {
+        UInt128 value1 = 0;
+        UInt128 value2 = 0x00A0_8585_A0A0_8585_A0A0_1919_A0A0_1919;
+        value1 = ~value2;
+        assert value1 == 0xFF5F_7A7A_5F5F_7A7A_5F5F_E6E6_5F5F_E6E6;
     }
 
     // ----- Op tests (Inc ++) ---------------------------------------------------------------------
@@ -580,7 +670,7 @@ class UInt128Tests {
         assert n == UInt128.MinValue;
     }
 
-    // ----- Op tests (Dec -- ) --------------------------------------------------------------------
+    // ----- Op tests (Dec --) ---------------------------------------------------------------------
 
     void testUInt128OpDecLowOnly() {
         UInt128 n = 1234;
@@ -632,5 +722,140 @@ class UInt128Tests {
         UInt128 n = UInt128.MinValue;
         n--;
         assert n == UInt128.MaxValue;
+    }
+
+    // ----- Op tests (logical Or) -----------------------------------------------------------------
+
+    void testUInt128OpOr() {
+        UInt128 n1 = 0x00F2_F0F2_F0F0_F0F0_F0F0_F0F0_F0F0_F0F0;
+        UInt128 n2 = 0x0AA0_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA;
+        UInt128 n3 = n1 | n2;
+        assert n3 == 0x0AF2_FAFA_FAFA_FAFA_FAFA_FAFA_FAFA_FAFA;
+    }
+
+    void testUInt128OpOrInPlace() {
+        UInt128 n = 0x00F2_F0F2_F0F0_F0F0_F0F0_F0F0_F0F0_F0F0;
+        n |= 0x0AA0_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA;
+        assert n == 0x0AF2_FAFA_FAFA_FAFA_FAFA_FAFA_FAFA_FAFA;
+    }
+
+    // ----- Op tests (Shift left <<) --------------------------------------------------------------
+
+    void testUInt128OpShiftLeft() {
+        UInt128 n = 0x1142_F0F2_F0F0_F0F0_0FF0_F0F0_F0F0_F0F1;
+        UInt128 n2 = n << 8;
+        assert n2 == 0x42F0_F2F0_F0F0_F00F_F0F0_F0F0_F0F0_F100;
+    }
+
+    void testUInt128OpShiftLeftZero() {
+        UInt128 n = 0x00F2_F0F2_F0F0_F0F0_0FF0_F0F0_F0F0_F0F0;
+        UInt128 n2 = n << 0;
+        assert n2 == n;
+    }
+
+    void testUInt128OpShiftLeft64() {
+        UInt128 n = 0x00F2_F0F2_F0F0_F0F0_0FF0_F0F0_F0F0_F0F0;
+        UInt128 n2 = n << 64;
+        assert n2 == 0x0FF0_F0F0_F0F0_F0F0_0000_0000_0000_0000;
+    }
+
+    void testUInt128OpShiftLeft128() {
+        UInt128 n = 1;
+        UInt128 n2 = n << 128;
+        assert n2 == 1; // equivalent to << 0
+    }
+
+    void testUInt128OpShiftLeft132() {
+        UInt128 n = 1;
+        UInt128 n2 = n << 132;
+        assert n2 == 16; // 132 & 0x7F equivalent to << 4
+    }
+
+    void testUInt128OpShiftLeftMinus4() {
+        UInt128 n = 1;
+        UInt128 n2 = n << -4;
+        assert n2 == 0x1000_0000_0000_0000_0000_0000_0000_0000;
+        // -4 == 0xFC,  0xFC & 0x7F == 0x7C equivalent to 1 << 124
+    }
+
+    // ----- Op tests (Shift right >>) -------------------------------------------------------------
+
+    void testUInt128OpShiftRight() {
+        UInt128 n = 0xFF00_1234_5678_9ABC_DEF0_1234_5678_9ABC;
+        UInt128 n2 = n >> 8;
+        assert n2 == 0x00FF_0012_3456_789A_BCDE_F012_3456_789A; // unsigned right shift
+    }
+
+    void testUInt128OpShiftRightZero() {
+        UInt128 n =   0x1142_F0F2_F0F0_F0F0_0FF0_F0F0_F0F0_F0F1;
+        UInt128 n2 = n >> 0;
+        assert n2 == 0x1142_F0F2_F0F0_F0F0_0FF0_F0F0_F0F0_F0F1;
+    }
+
+    void testUInt128OpShiftRight128() {
+        UInt128 n = 1;
+        UInt128 n2 = n >> 128;
+        assert n2 == 1; // equivalent to >> 0
+    }
+
+    void testUInt128OpShiftRight132() {
+        UInt128 n = 16;
+        UInt128 n2 = n >> 132;
+        assert n2 == 1; // 132 & 0x7F equivalent to >> 4
+    }
+
+    void testUInt128OpShiftRightMinus4() {
+        UInt128 n = 0x1000_0000_0000_0000_0000_0000_0000_0000;
+        UInt128 n2 = n >> -4;
+        assert n2 == 1;
+        // -4 == 0xFC,  0xFC & 0x7F == 0x7C equivalent to 1 >> 124
+    }
+
+    // ----- Op tests (Unsigned shift right >>>) ---------------------------------------------------
+
+    void testUInt128OpUnsignedShiftRight() {
+        UInt128 n = 0xFFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_F830;
+        UInt128 n2 = n >>> 8;
+        assert n2 == 0x00FF_FFFF_FFFF_FFFF_FFFF_FFFF_FFFF_FFF8;
+    }
+
+    void testUInt128OpUnsignedShiftRightZero() {
+        UInt128 n =   0x1142_F0F2_F0F0_F0F0_0FF0_F0F0_F0F0_F0F1;
+        UInt128 n2 = n >>> 0;
+        assert n2 == 0x1142_F0F2_F0F0_F0F0_0FF0_F0F0_F0F0_F0F1;
+    }
+
+    void testUInt128OpUnsignedShiftRight128() {
+        UInt128 n = 1;
+        UInt128 n2 = n >>> 128;
+        assert n2 == 1; // equivalent to >>> 0
+    }
+
+    void testUInt128OpUnsignedShiftRight132() {
+        UInt128 n = 16;
+        UInt128 n2 = n >>> 132;
+        assert n2 == 1; // 132 & 0x7F equivalent to >>> 4
+    }
+
+    void testUInt128OpUnsignedShiftRightMinus4() {
+        UInt128 n = 0x1000_0000_0000_0000_0000_0000_0000_0000;
+        UInt128 n2 = n >>> -4;
+        assert n2 == 1;
+        // -4 == 0xFC,  0xFC & 0x7F == 0x7C equivalent to 1 >>> 124
+    }
+
+    // ----- Op tests (logical Xor) ----------------------------------------------------------------
+
+    void testUInt128OpXor() {
+        UInt128 n1 = 0x00F2_F0F2_F0F0_F0F0_F0F0_F0F0_F0F0_F0F0;
+        UInt128 n2 = 0x0AA0_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA;
+        UInt128 n3 = n1 ^ n2;
+        assert n3 == 0x0A52_5A58_5A5A_5A5A_5A5A_5A5A_5A5A_5A5A;
+    }
+
+    void testUInt128OpXorInPlace() {
+        UInt128 n = 0x00F2_F0F2_F0F0_F0F0_F0F0_F0F0_F0F0_F0F0;
+        n ^= 0x0AA0_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA_AAAA;
+        assert n == 0x0A52_5A58_5A5A_5A5A_5A5A_5A5A_5A5A_5A5A;
     }
 }

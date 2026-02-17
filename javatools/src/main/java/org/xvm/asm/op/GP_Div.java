@@ -64,4 +64,13 @@ public class GP_Div
                                         RegisterInfo regArg) {
         buildPrimitiveDiv(bctx, code, regTarget);
     }
+
+    @Override
+    protected RegisterInfo buildXvmOptimizedBinary(BuildContext bctx,
+                                                   CodeBuilder  code,
+                                                   RegisterInfo regTarget,
+                                                   int          nArgValue) {
+        buildXvmPrimitiveDiv(bctx, code, regTarget, nArgValue);
+        return regTarget;
+    }
 }

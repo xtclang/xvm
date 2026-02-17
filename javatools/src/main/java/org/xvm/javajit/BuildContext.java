@@ -704,8 +704,7 @@ public class BuildContext {
                     // TODO: track the data change to prevent unnecessary copy
                     RegisterInfo origReg = narrowedReg.origReg();
                     if (narrowedReg.slot() != origReg.slot()) {
-                        narrowedReg.load(code);
-                        moveVar(code, narrowedReg, origReg, false);
+                        moveVar(code, narrowedReg.load(code), origReg, false);
                     }
                     entry.setValue(origReg);
                 }

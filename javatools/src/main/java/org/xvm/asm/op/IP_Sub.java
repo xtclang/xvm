@@ -92,10 +92,11 @@ public class IP_Sub
     }
 
     @Override
-    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx,
+    protected RegisterInfo buildXvmOptimizedBinary(BuildContext bctx,
                                                    CodeBuilder  code,
                                                    RegisterInfo regTarget,
                                                    int          nArgValue) {
-        return buildXvmPrimitiveSub(bctx, code, regTarget, nArgValue);
+        buildXvmPrimitiveSub(bctx, code, regTarget, nArgValue);
+        return regTarget;
     }
 }

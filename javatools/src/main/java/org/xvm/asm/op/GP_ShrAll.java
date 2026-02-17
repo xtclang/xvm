@@ -64,6 +64,15 @@ public class GP_ShrAll
                                                 CodeBuilder  code,
                                                 RegisterInfo regTarget,
                                                 int          nArgValue) {
-        return buildPrimitiveShrAll(bctx, code, regTarget, nArgValue);
+        return buildPrimitiveUnsignedShr(bctx, code, regTarget, nArgValue);
+    }
+
+    @Override
+    protected RegisterInfo buildXvmOptimizedBinary(BuildContext bctx,
+                                                   CodeBuilder  code,
+                                                   RegisterInfo regTarget,
+                                                   int          nArgValue) {
+        buildXvmPrimitiveUnsignedShr(bctx, code, regTarget, nArgValue);
+        return regTarget;
     }
 }

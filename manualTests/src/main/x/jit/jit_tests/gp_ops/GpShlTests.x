@@ -92,18 +92,18 @@ class GpShlTests {
     }
 
     void testGpShlInt128() {
-//        Int128 value1 = 0;
-//        Int128 value2 = 0x4A4A4A4A;
-//        Int    value3 = 2;
-//        value1 = value2 << value3;
-//        assert value1 == 0x29292928;
+        Int128 value1 = 0;
+        Int128 value2 = 0x4A4A4A4A;
+        Int    value3 = 2;
+        value1 = value2 << value3;
+        assert value1 == 0x129292928;
     }
 
     void testGpShlUInt128() {
-//        UInt128 value1 = 0;
-//        UInt128 value2 = 0xAAAAAAAA;
-//        Int     value3 = 2;
-//        value1 = value2 << value3;
-//        assert value1 == 0xAAAAAAA8;
+        UInt128 value1 = 0;
+        UInt128 value2 = 0xAAAAAAAA;
+        Int     value3 = 2;
+        value1 = value2 << value3;
+        assert value1 == 0x2AAAAAAA8;
     }
 }

@@ -542,20 +542,20 @@ public abstract class OpCondJump
                 throw new IllegalStateException();
             }
         } else {
-            reg.load(code);
+            RegisterInfo regLoaded = reg.load(code);
             switch (op) {
             case OP_JMP_NULL:
                 Builder.loadNull(code);
                 code.if_acmpeq(lblJump);
-                bctx.narrowRegister(code, reg, reg.type().removeNullable());
-                bctx.narrowRegister(code, reg, nAddrJump, bctx.pool().typeNullable());
+                bctx.narrowRegister(code, regLoaded, regLoaded.type().removeNullable());
+                bctx.narrowRegister(code, regLoaded, nAddrJump, bctx.pool().typeNullable());
                 break;
 
             case OP_JMP_NNULL:
                 Builder.loadNull(code);
                 code.if_acmpne(lblJump);
-                bctx.narrowRegister(code, reg, bctx.pool().typeNullable());
-                bctx.narrowRegister(code, reg, nAddrJump, reg.type().removeNullable());
+                bctx.narrowRegister(code, regLoaded, bctx.pool().typeNullable());
+                bctx.narrowRegister(code, regLoaded, nAddrJump, regLoaded.type().removeNullable());
                 break;
 
             default:

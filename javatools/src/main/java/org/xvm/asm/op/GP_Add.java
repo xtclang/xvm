@@ -80,10 +80,11 @@ public class GP_Add
     }
 
     @Override
-    protected TypeConstant buildXvmOptimizedBinary(BuildContext bctx,
+    protected RegisterInfo buildXvmOptimizedBinary(BuildContext bctx,
                                                    CodeBuilder  code,
                                                    RegisterInfo regTarget,
                                                    int          nArgValue) {
-        return buildXvmPrimitiveAdd(bctx, code, regTarget, nArgValue);
+        buildXvmPrimitiveAdd(bctx, code, regTarget, nArgValue);
+        return regTarget;
     }
 }

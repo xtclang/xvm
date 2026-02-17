@@ -384,11 +384,11 @@ public class FBind
             .anewarray(CD_JavaObject)
             .dup()
             .iconst_0();
-        regArg.load(code);
+        RegisterInfo regLoaded = regArg.load(code);
         if (fBox) {
-            Builder.box(code, regArg);
-        } else if (regArg.cd().isPrimitive()) {
-            Builder.boxJava(code, regArg.cd());
+            Builder.box(code, regLoaded);
+        } else if (regLoaded.cd().isPrimitive()) {
+            Builder.boxJava(code, regLoaded.cd());
         }
         code.aastore();
 
