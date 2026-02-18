@@ -1427,6 +1427,11 @@ public class NameExpression
         }
     }
 
+    @Override
+    public boolean isScopeRequired() {
+        return m_fNarrowed;
+    }
+
     /**
      * Create a {@link MethodConstant#getBjarneLambdaType Bjarne lambda} function for the specified
      * method.
@@ -3241,6 +3246,7 @@ public class NameExpression
                     ctx.replaceGenericType(constTypeParam, branch, typeNarrow);
                 }
             }
+            m_fNarrowed = true;
         }
     }
 
@@ -3368,6 +3374,11 @@ public class NameExpression
      * Cached validation info: Can the name be used as an "L value"?
      */
     private transient boolean m_fAssignable;
+
+    /**
+     * True iff the type of this var can be narrowed.
+     */
+    private transient boolean m_fNarrowed;
 
     /**
      * A cached ExprAST node for the result of {@link #generateRefTarget}.

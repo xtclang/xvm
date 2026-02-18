@@ -191,6 +191,7 @@ public class NotNullExpression
 
                         ctx.narrowLocalRegister(sName, regCurr, Branch.Always, typeResult);
                         m_labelShort.addRestore(sName, regCurr);
+                        m_fNarrowed = true;
                     }
                 }
             }
@@ -258,6 +259,11 @@ public class NotNullExpression
     }
 
     @Override
+    public boolean isScopeRequired() {
+        return m_fNarrowed;
+    }
+
+    @Override
     public ExprAST getExprAST(Context ctx) {
         return new NotNullExprAST(expr.getExprAST(ctx), getType());
     }
@@ -285,7 +291,16 @@ public class NotNullExpression
      * True iff the short-circuit operator is used to convert a "(Boolean, T)" into a "T".
      */
     private transient boolean m_fCond;
+
+    /**
+     * The short-circuit label.
+     */
     private transient Label   m_labelShort;
+
+    /**
+     * True if the type of the underlying expression can be narrowed.
+     */
+    private transient boolean m_fNarrowed;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NotNullExpression.class, "expr");
 }
