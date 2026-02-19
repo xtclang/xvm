@@ -403,6 +403,11 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
                 }
             }
         logger.info("$logPrefix references '{}' -> {} found (includeDecl={})", name, result.size, includeDeclaration)
+        if (result.isNotEmpty()) {
+            result.forEach { loc ->
+                logger.info("$logPrefix   {}:{}:{}", loc.uri.substringAfterLast('/'), loc.startLine + 1, loc.startColumn + 1)
+            }
+        }
         return result
     }
 

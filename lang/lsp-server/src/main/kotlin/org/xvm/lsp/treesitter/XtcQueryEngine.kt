@@ -124,7 +124,14 @@ class XtcQueryEngine(
                     add(id.toLocation(uri))
                 }
             }
-        }.also { logger.info("[QueryEngine] findAllIdentifiers '{}' -> {} matches", name, it.size) }
+        }.also { matches ->
+            logger.info("[QueryEngine] findAllIdentifiers '{}' -> {} match(es)", name, matches.size)
+            if (matches.isNotEmpty()) {
+                matches.forEach { loc ->
+                    logger.info("[QueryEngine]   {}:{}:{}", loc.uri.substringAfterLast('/'), loc.startLine + 1, loc.startColumn + 1)
+                }
+            }
+        }
     }
 
     private fun XtcNode.toLocation(uri: String) =

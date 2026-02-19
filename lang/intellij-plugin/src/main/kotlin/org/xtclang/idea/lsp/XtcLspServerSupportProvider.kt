@@ -94,14 +94,8 @@ class XtcLspConnectionProvider(
     /** Holds the provisioned java path once available. */
     private val provisionedJavaPath = AtomicReference<Path?>()
 
-    init {
-        // Check if JRE is already provisioned (instant check, no download)
-        provisioner.javaPath?.let { java ->
-            logger.info("Using cached JRE: $java")
-            configureCommandLine(java)
-        }
-        // If not provisioned, commandLine will be configured during start() with progress
-    }
+    // No init {} block — JRE resolution calls ProjectJdkTable.getInstance() which is
+    // prohibited on EDT. All JRE resolution is deferred to start() which runs off EDT.
 
     // TODO: Remove AtomicBoolean notification guard once LSP4IJ fixes duplicate server spawning.
     //  LSP4IJ may call start() concurrently for multiple .x files, spawning extra processes
@@ -109,8 +103,17 @@ class XtcLspConnectionProvider(
     //  AtomicBoolean to avoid duplicates. See: https://github.com/redhat-developer/lsp4ij/issues/888
 
     override fun start() {
-        // If command line not yet configured, provision JRE with progress
-        if (provisionedJavaPath.get() == null && !provisioner.isProvisioned()) {
+        // Try to find an already-provisioned JRE (cached or system SDK).
+        // This is done here (not in init {}) because findSystemJava() calls
+        // ProjectJdkTable.getInstance() which is prohibited on EDT.
+        if (provisionedJavaPath.get() == null) {
+            provisioner.javaPath?.let { java ->
+                logger.info("Using cached JRE: $java")
+                configureCommandLine(java)
+            }
+        }
+        // If still not configured, download JRE with progress dialog
+        if (provisionedJavaPath.get() == null) {
             provisionJreWithProgress()
         }
 

@@ -48,9 +48,12 @@ class XtcNode internal constructor(
         get() {
             val start = tsNode.startByte
             val end = tsNode.endByte
+            // Defensive: guard against stale byte offsets (e.g., from incremental parse without Tree.edit())
+            if (start < 0 || end < start || end > source.length) {
+                return ""
+            }
             // Fast path: if all chars are ASCII, byte offsets == char offsets
-            if (end <= source.length &&
-                source
+            if (source
                     .asSequence()
                     .drop(start)
                     .take(end - start)
@@ -60,6 +63,7 @@ class XtcNode internal constructor(
             }
             // Slow path: convert to UTF-8 bytes, slice, and decode back
             val utf8 = source.toByteArray(Charsets.UTF_8)
+            if (end > utf8.size) return ""
             return String(utf8, start, end - start, Charsets.UTF_8)
         }
 
