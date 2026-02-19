@@ -1624,7 +1624,8 @@ public class BuildContext {
             return origReg;
         }
 
-        if (fromAddr > currOpAddr + 1 && computeEndScopeAddr(fromAddr) == fromAddr) {
+        if (fromAddr > currOpAddr + 1 &&
+                !canApplyNarrowing(fromAddr, origReg.regId(), narrowedType)) {
             // there is nothing to apply the narrowing to
             return origReg;
         }
@@ -2195,6 +2196,20 @@ public class BuildContext {
     }
 
     // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * @return true iff the narrowing type can be applied at the specified address
+     */
+    private boolean canApplyNarrowing(int addr, int regId, TypeConstant narrowingType) {
+        Op[] ops     = methodStruct.getOps();
+        Op   startOp = ops[addr].ensureOp();
+
+        while (startOp instanceof Nop) {
+            startOp = ops[++addr].ensureOp();
+        }
+
+        return startOp.ensureOp().isEnter();
+    }
 
     /**
      * @return the last address (exclusive) to which the action should apply
