@@ -333,6 +333,12 @@ The `xtc-intellij-plugin-dev` reference repo demonstrates IntelliJ's built-in LS
 ~~3. `XtcNode.text` byte-vs-char offset~~ — FIXED: Added UTF-8 aware substring extraction.
 ~~4. `SemanticTokensVsTextMateTest` native memory leak~~ — FIXED: Uses `.use {}` now.
 ~~5. `SemanticTokenEncoder.nodeKey` collision~~ — FIXED: Key now includes node type hash.
+~~8. Semantic tokens crash on rename~~ — FIXED: `XtcParser.parse()` was passing `oldTree`
+for incremental parsing without calling `Tree.edit()`, producing nodes with stale byte
+offsets. Now always does full reparse (still sub-ms). Defensive bounds checking added to
+`XtcNode.text`.
+~~9. EDT violation in JRE resolution~~ — FIXED: `XtcLspConnectionProvider.init {}` called
+`ProjectJdkTable.getInstance()` (prohibited on EDT). Moved to `start()` which runs off EDT.
 
 ### Build System
 

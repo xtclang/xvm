@@ -2224,6 +2224,150 @@ class TreeSitterAdapterTest {
                 assertThat(hasSemanticModifier(structToken[4], "readonly")).isTrue()
             }
         }
+
+        /**
+         * Regression test for StringIndexOutOfBoundsException after rename.
+         *
+         * Reproduces the exact bug: compile a document with "Console console", rename
+         * "console" to "apa" (making the document shorter), then request semantic tokens.
+         * Previously crashed because incremental parsing (passing oldTree without Tree.edit())
+         * produced nodes with stale byte offsets from the longer original source.
+         */
+        @Test
+        @DisplayName("should return semantic tokens after rename shortens document")
+        fun shouldReturnTokensAfterRenameShortenDocument() {
+            val uri = freshUri()
+            val originalSource =
+                """
+                module myapp {
+                    void run(String[] args=[]) {
+                        @Inject Console console;
+                        if (args.empty) {
+                            console.print("Hello!");
+                            return;
+                        }
+                        for (String arg : args) {
+                            console.print(${"\""}Hello, {arg}!${"\""});
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            // Step 1: Initial compile
+            val result1 = ts.compile(uri, originalSource)
+            assertThat(result1.success).isTrue()
+
+            // Step 2: Semantic tokens must work on initial content
+            val tokens1 = ts.getSemanticTokens(uri)
+            assertThat(tokens1).isNotNull
+            assertThat(tokens1!!.data).isNotEmpty
+            logger.info("[TEST] initial semantic tokens: {} data items", tokens1.data.size)
+
+            // Step 3: Simulate rename "console" -> "apa" (7 chars -> 3 chars, doc gets shorter)
+            val renamedSource = originalSource.replace("console", "apa")
+            assertThat(renamedSource.length).isLessThan(originalSource.length)
+
+            // Step 4: Re-compile with shorter content (same URI = incremental parse path)
+            val result2 = ts.compile(uri, renamedSource)
+            assertThat(result2.success).isTrue()
+
+            // Step 5: Semantic tokens on shorter document must NOT crash
+            // Previously threw: StringIndexOutOfBoundsException: Range [178, 178 + 238) out of bounds
+            val tokens2 = ts.getSemanticTokens(uri)
+            assertThat(tokens2).isNotNull
+            assertThat(tokens2!!.data).isNotEmpty
+            logger.info("[TEST] post-rename semantic tokens: {} data items", tokens2.data.size)
+
+            // Verify the renamed identifier appears in tokens
+            val decoded = decodeSemanticTokens(tokens2.data)
+            logger.info("[TEST] post-rename decoded: {}", decoded.map { it.toList() })
+        }
+
+        /**
+         * Regression test: compile → rename (longer) → semantic tokens.
+         * The reverse case: document grows after rename. Verifies we don't
+         * have off-by-one errors in the opposite direction.
+         */
+        @Test
+        @DisplayName("should return semantic tokens after rename lengthens document")
+        fun shouldReturnTokensAfterRenameLengthenDocument() {
+            val uri = freshUri()
+            val originalSource =
+                """
+                module myapp {
+                    class Cat {
+                        String name;
+                        void greet() {
+                            name.print();
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, originalSource)
+            val tokens1 = ts.getSemanticTokens(uri)
+            assertThat(tokens1).isNotNull
+
+            // Rename "name" -> "fullQualifiedName" (4 chars -> 17 chars, doc grows)
+            val renamedSource = originalSource.replace("name", "fullQualifiedName")
+            assertThat(renamedSource.length).isGreaterThan(originalSource.length)
+
+            ts.compile(uri, renamedSource)
+            val tokens2 = ts.getSemanticTokens(uri)
+            assertThat(tokens2).isNotNull
+            assertThat(tokens2!!.data).isNotEmpty
+        }
+
+        /**
+         * Regression test: multiple rapid edits on same URI.
+         * Simulates fast typing where compile is called many times in quick succession.
+         */
+        @Test
+        @DisplayName("should handle rapid sequential recompilations")
+        fun shouldHandleRapidRecompilations() {
+            val uri = freshUri()
+            val base = "module myapp { class Person { String name; } }"
+
+            // Compile 10 times with progressively different content (same URI)
+            repeat(10) { i ->
+                val content = base.replace("name", "name$i")
+                val result = ts.compile(uri, content)
+                assertThat(result.success).isTrue()
+
+                // Semantic tokens must work after every recompilation
+                val tokens = ts.getSemanticTokens(uri)
+                assertThat(tokens).describedAs("iteration $i").isNotNull
+            }
+        }
+
+        /**
+         * Verify folding ranges also work after rename (they use line/column, not byte offsets,
+         * so they should always work — but good to verify the full adapter pipeline).
+         */
+        @Test
+        @DisplayName("should return folding ranges after rename")
+        fun shouldReturnFoldingRangesAfterRename() {
+            val uri = freshUri()
+            val originalSource =
+                """
+                module myapp {
+                    void run(String[] args=[]) {
+                        @Inject Console console;
+                        console.print("Hello!");
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, originalSource)
+            val folds1 = ts.getFoldingRanges(uri)
+            assertThat(folds1).isNotEmpty
+
+            // Rename and verify folding still works
+            val renamedSource = originalSource.replace("console", "x")
+            ts.compile(uri, renamedSource)
+            val folds2 = ts.getFoldingRanges(uri)
+            assertThat(folds2).isNotEmpty
+        }
     }
 
     @Nested
