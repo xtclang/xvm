@@ -193,9 +193,9 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
     ): CompilationResult {
         logger.info("$logPrefix parsing {} ({} bytes)", uri, content.length)
 
-        // Parse the content (with incremental parsing if we have an old tree)
+        // Always full reparse -- oldTree retained for API compatibility but ignored by parser
+        // (see XtcParser.parse() doc: incremental parsing requires Tree.edit() which we don't have)
         val oldTree = parsedTrees[uri]
-        val isIncremental = oldTree != null
 
         val (tree, parseElapsed) =
             try {
@@ -236,9 +236,8 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         }
 
         logger.info(
-            "$logPrefix parsed in {} ({}), {} errors, {} symbols (query: {})",
+            "$logPrefix parsed in {}, {} errors, {} symbols (query: {})",
             parseElapsed,
-            if (isIncremental) "incremental" else "full",
             diagnostics.size,
             symbols.size,
             queryElapsed,
