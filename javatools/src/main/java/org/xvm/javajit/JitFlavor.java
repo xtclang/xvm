@@ -92,7 +92,10 @@ public enum JitFlavor {
      */
     PrimitiveWithDefault(true, 2),
 
-    AlwaysNull(false, 0)           // Null TODO: do we need it?
+    /**
+     * Nullable.Null value.
+     */
+    AlwaysNull(false, 0)
     ;
 
     JitFlavor(boolean canOptimize, int slotCount) {

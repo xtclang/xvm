@@ -34,8 +34,8 @@ package callTests {
 //        assert testSpecificWithDefault("hi") == 2;
 //        assert testSpecificWithDefault() == 3;
 
-//        assert testWidened("hi") == 2;
-//        assert testWidened(7)    == 7;
+        assert testWidened("hi") == 2;
+        assert testWidened(7)    == 7;
 
 //        assert testWidenedWithDefault("hi") == 2;
 //        assert testWidenedWithDefault(7)    == 7;
@@ -44,8 +44,8 @@ package callTests {
         assert testPrimitiveWithDefault(7)  == 7;
         assert testPrimitiveWithDefault()   == 42;
 
-//        assert testNullablePrimitive(7)     == 7;
-//        assert testNullablePrimitive(Null)  == 0;
+        assert testNullablePrimitive(7)     == 7;
+        assert testNullablePrimitive(Null)  == 0;
 
         assert testNullablePrimitiveComplexFlow(1) == 6;
         assert testNullablePrimitiveComplexFlow(Null) == -1;
@@ -59,7 +59,6 @@ package callTests {
         // formal type parameters
         assert i5.notLessThan(3) != i5;
         assert i5.notGreaterThan(3) == i5;
-
 
 //        assert testNullablePrimitiveWithDefault(7)     == 7;
 //        assert testNullablePrimitiveWithDefault(Null)  == 0;
@@ -89,7 +88,7 @@ package callTests {
 
 //    Int testSpecificWithDefault(String s = "bye") = s.size;
 
-//    Int testWidened(String|Int si) = si.is(Int) ? si : si.size;
+    Int testWidened(String|Int si) = si.is(Int) ? si : si.size;
 
 //    Int testWidenedWithDefault(String|Int si = 42) = si.is(Int) ? si : si.size;
 
@@ -108,7 +107,7 @@ package callTests {
         return n ?: -1;
     }
 
-//    Int testNullablePrimitive(Int? i) = i == Null ? 0 : i;
+    Int testNullablePrimitive(Int? i) = i == Null ? i.ordinal : i;
 
 //    Int testNullablePrimitiveWithDefault(Int? i = 42) = i == Null ? 0 : i;
 

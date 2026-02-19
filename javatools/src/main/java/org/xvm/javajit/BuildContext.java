@@ -81,6 +81,8 @@ import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.N_TypeMismatch;
 import static org.xvm.javajit.Builder.OPT;
+import static org.xvm.javajit.Builder.loadNull;
+import static org.xvm.javajit.JitFlavor.AlwaysNull;
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
 import static org.xvm.javajit.JitFlavor.XvmPrimitive;
 import static org.xvm.javajit.JitFlavor.NullablePrimitive;
@@ -1630,12 +1632,13 @@ public class BuildContext {
             return origReg;
         }
 
-        ClassDesc   narrowedCD = JitTypeDesc.getJitClass(builder, narrowedType);
+        ClassDesc   narrowedCD     = JitTypeDesc.getJitClass(builder, narrowedType);
+        JitFlavor   narrowedFlavor = narrowedType.getJitDesc(builder).flavor;
         ClassDesc[] narrowedSlotCds;
         int[]       narrowedSlots;
 
-        if (narrowedType.isJavaPrimitive() || origType.isJavaPrimitive()) {
-            narrowedSlots   = new int[]{scope.allocateJavaSlot(narrowedCD)};
+        if (narrowedType.isJavaPrimitive()) {
+            narrowedSlots   = new int[] {scope.allocateJavaSlot(narrowedCD)};
             narrowedSlotCds = new ClassDesc[]{narrowedCD};
         } else if (narrowedType.isXvmPrimitive()) {
             narrowedSlotCds = JitTypeDesc.getXvmPrimitiveClasses(narrowedType);
@@ -1644,12 +1647,15 @@ public class BuildContext {
                 narrowedSlots[i] = scope.allocateJavaSlot(narrowedSlotCds[i]);
             }
         } else {
+            if (narrowedType.isOnlyNullable()) {
+                narrowedFlavor = AlwaysNull;
+            }
             narrowedSlots   = origReg.slots();
-            narrowedSlotCds = new ClassDesc[]{narrowedCD};
+            narrowedSlotCds = new ClassDesc[] {narrowedCD};
         }
 
         Narrowed narrowedReg = new Narrowed(origReg.regId(), narrowedSlots, narrowedType,
-            narrowedType.getJitDesc(builder).flavor, narrowedCD, narrowedSlotCds, origReg.name(),
+            narrowedFlavor, narrowedCD, narrowedSlotCds, origReg.name(),
             scope.depth, false, origReg);
 
         boolean applyInfo = fromAddr > currOpAddr;
@@ -1690,6 +1696,11 @@ public class BuildContext {
                         code.checkcast(builder.ensureClassDesc(narrowedType)); // boxed
                         Builder.unbox(code, narrowedReg);
                     }
+                } else if (narrowedType.isOnlyNullable()) {
+                    assert origReg instanceof ExtendedSlot extSlot &&
+                            extSlot.flavor() == NullablePrimitive;
+                    // reuse the ExtendedSlot
+                    return -1;
                 } else {
                     if (origReg.cd().isPrimitive()) {
                         // this can only mean that the original was a NullablePrimitive
@@ -2295,11 +2306,15 @@ public class BuildContext {
 
         @Override
         public RegisterInfo load(CodeBuilder code) {
-            for (int i = 0; i < slotCds.length; i++) {
-                Builder.load(code, slotCds[i], slots[i]);
-            }
-            if (castOnLoad) {
-                code.checkcast(cd);
+            if (flavor == AlwaysNull) {
+                loadNull(code);
+            } else {
+                for (int i = 0; i < slotCds.length; i++) {
+                    Builder.load(code, slotCds[i], slots[i]);
+                }
+                if (castOnLoad) {
+                    code.checkcast(cd);
+                }
             }
             return this;
         }
