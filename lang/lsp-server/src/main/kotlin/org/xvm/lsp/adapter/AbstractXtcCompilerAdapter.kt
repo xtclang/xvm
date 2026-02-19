@@ -42,7 +42,7 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
     protected val logPrefix: String get() = "[$displayName]"
 
     // ========================================================================
-    // Default implementations — hover (uses findSymbolAt)
+    // Default implementations -- hover (uses findSymbolAt)
     // ========================================================================
 
     /**
@@ -66,7 +66,7 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
     }
 
     // ========================================================================
-    // Default implementations — workspace lifecycle
+    // Default implementations -- workspace lifecycle
     // ========================================================================
 
     override fun initializeWorkspace(
@@ -88,7 +88,7 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
     }
 
     // ========================================================================
-    // Default implementations — tree-sitter capable features
+    // Default implementations -- tree-sitter capable features
     // ========================================================================
 
     override fun getDocumentHighlights(
@@ -122,7 +122,7 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
     }
 
     // ========================================================================
-    // Default implementations — semantic features (require full compiler)
+    // Default implementations -- semantic features (require full compiler)
     // ========================================================================
 
     override fun getSignatureHelp(
@@ -213,7 +213,7 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
      * Basic formatting: trailing whitespace removal and final newline insertion.
      * If [range] is non-null, only lines within that range are formatted.
      *
-     * Shared by all adapters — override [formatDocument]/[formatRange] in subclasses
+     * Shared by all adapters -- override [formatDocument]/[formatRange] in subclasses
      * that need different formatting logic.
      */
     private fun formatContent(
@@ -269,7 +269,7 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
     }
 
     // ========================================================================
-    // Default implementations — planned features
+    // Default implementations -- planned features
     // ========================================================================
 
     override fun findDeclaration(

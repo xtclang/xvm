@@ -57,7 +57,7 @@ class XtcDebugAdapterFactory : DebugAdapterDescriptorFactory() {
  * Both LSP and DAP servers require Java 25+ (for jtreesitter's Foreign Function & Memory API),
  * but IntelliJ runs on JBR 21 which lacks FFM support. This works because the plugin itself
  * (running in JBR 21) only launches the server as a *child process* using a provisioned Java 25
- * JRE — the plugin never loads server classes into IntelliJ's JVM.
+ * JRE -- the plugin never loads server classes into IntelliJ's JVM.
  *
  * ## LSP vs DAP process lifecycle
  *
@@ -65,13 +65,13 @@ class XtcDebugAdapterFactory : DebugAdapterDescriptorFactory() {
  *
  * - **LSP** ([org.xtclang.idea.lsp.XtcLspConnectionProvider]): Extends
  *   `OSProcessStreamConnectionProvider`. We configure a `GeneralCommandLine` and call
- *   `setCommandLine()` — LSP4IJ owns the process lifecycle, calling `start()`/`stop()` as needed.
+ *   `setCommandLine()` -- LSP4IJ owns the process lifecycle, calling `start()`/`stop()` as needed.
  *   LSP4IJ may auto-start the server concurrently when multiple `.x` files are opened, causing
  *   duplicate processes (see TODO in `XtcLspConnectionProvider` re: LSP4IJ issue #888). This
  *   requires an `AtomicBoolean` guard to suppress duplicate "server started" notifications.
  *
  * - **DAP** (this class): Extends `DebugAdapterDescriptor`. We override [startServer] and return
- *   an `OSProcessHandler` — we create and own the process directly. DAP sessions are always
+ *   an `OSProcessHandler` -- we create and own the process directly. DAP sessions are always
  *   user-initiated (one `startServer()` call per "Debug" action), so there is no concurrent
  *   spawn race condition and no `AtomicBoolean` guard is needed.
  */

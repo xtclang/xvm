@@ -1,7 +1,7 @@
 # Testing the XTC LSP Server with External Editors
 
 This guide explains how to build the XTC LSP server jar and connect it to
-text editors like Neovim, Emacs, or VS Code — without using the IntelliJ plugin.
+text editors like Neovim, Emacs, or VS Code -- without using the IntelliJ plugin.
 
 ## Prerequisites
 

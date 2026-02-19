@@ -35,7 +35,7 @@ class XtcQueryEngine(
     ): List<SymbolInfo> {
         logger.info("[QueryEngine] findAllDeclarations: uri={}", uri.substringAfterLast('/'))
         return buildList {
-            executeQuery(allDeclarationsQuery, tree) { captures ->
+            executeQuery("allDeclarations", allDeclarationsQuery, tree) { captures ->
                 val name = captures["name"]?.text ?: return@executeQuery
                 val declaration =
                     captures.entries.find { (key, _) ->
@@ -88,7 +88,21 @@ class XtcQueryEngine(
                     ),
                 )
             }
-        }.also { logger.info("[QueryEngine] findAllDeclarations -> {} symbols", it.size) }
+        }.also { symbols ->
+            logger.info("[QueryEngine] findAllDeclarations -> {} symbols", symbols.size)
+            if (symbols.isNotEmpty()) {
+                symbols.forEach { s ->
+                    logger.info(
+                        "[QueryEngine]   {} '{}' at {}:{}:{}",
+                        s.kind,
+                        s.name,
+                        s.location.uri.substringAfterLast('/'),
+                        s.location.startLine + 1,
+                        s.location.startColumn + 1,
+                    )
+                }
+            }
+        }
     }
 
     /**
@@ -100,12 +114,25 @@ class XtcQueryEngine(
     ): List<SymbolInfo> {
         logger.info("[QueryEngine] findMethodDeclarations: uri={}", uri.substringAfterLast('/'))
         return buildList {
-            executeQuery(methodDeclarationsQuery, tree) { captures ->
+            executeQuery("methodDeclarations", methodDeclarationsQuery, tree) { captures ->
                 val name = captures["name"]?.text ?: return@executeQuery
                 val declaration = captures["declaration"] ?: return@executeQuery
                 add(declaration.toSymbolInfo(name, SymbolKind.METHOD, uri))
             }
-        }.also { logger.info("[QueryEngine] findMethodDeclarations -> {} methods", it.size) }
+        }.also { methods ->
+            logger.info("[QueryEngine] findMethodDeclarations -> {} methods", methods.size)
+            if (methods.isNotEmpty()) {
+                methods.forEach { m ->
+                    logger.info(
+                        "[QueryEngine]   '{}' at {}:{}:{}",
+                        m.name,
+                        m.location.uri.substringAfterLast('/'),
+                        m.location.startLine + 1,
+                        m.location.startColumn + 1,
+                    )
+                }
+            }
+        }
     }
 
     /**
@@ -118,7 +145,7 @@ class XtcQueryEngine(
     ): List<Location> {
         logger.info("[QueryEngine] findAllIdentifiers: name='{}', uri={}", name, uri.substringAfterLast('/'))
         return buildList {
-            executeQuery(identifiersQuery, tree) { captures ->
+            executeQuery("identifiers", identifiersQuery, tree) { captures ->
                 val id = captures["id"] ?: return@executeQuery
                 if (id.text == name) {
                     add(id.toLocation(uri))
@@ -209,11 +236,16 @@ class XtcQueryEngine(
     fun findImports(tree: XtcTree): List<String> {
         logger.info("[QueryEngine] findImports")
         return buildList {
-            executeQuery(importsQuery, tree) { captures ->
+            executeQuery("imports", importsQuery, tree) { captures ->
                 val importNode = captures["import"] ?: return@executeQuery
                 add(importNode.text)
             }
-        }.also { logger.info("[QueryEngine] findImports -> {} imports", it.size) }
+        }.also { imports ->
+            logger.info("[QueryEngine] findImports -> {} imports", imports.size)
+            if (imports.isNotEmpty()) {
+                imports.forEach { logger.info("[QueryEngine]   '{}'", it) }
+            }
+        }
     }
 
     /**
@@ -225,14 +257,28 @@ class XtcQueryEngine(
     ): List<Pair<String, Location>> {
         logger.info("[QueryEngine] findImportLocations: uri={}", uri.substringAfterLast('/'))
         return buildList {
-            executeQuery(importsQuery, tree) { captures ->
+            executeQuery("imports", importsQuery, tree) { captures ->
                 val importNode = captures["import"] ?: return@executeQuery
                 add(importNode.text to importNode.toLocation(uri))
             }
-        }.also { logger.info("[QueryEngine] findImportLocations -> {} imports", it.size) }
+        }.also { imports ->
+            logger.info("[QueryEngine] findImportLocations -> {} imports", imports.size)
+            if (imports.isNotEmpty()) {
+                imports.forEach { (path, loc) ->
+                    logger.info(
+                        "[QueryEngine]   '{}' at {}:{}:{}",
+                        path,
+                        loc.uri.substringAfterLast('/'),
+                        loc.startLine + 1,
+                        loc.startColumn + 1,
+                    )
+                }
+            }
+        }
     }
 
     private fun executeQuery(
+        queryName: String,
         query: Query,
         tree: XtcTree,
         handler: (Map<String, XtcNode>) -> Unit,
@@ -248,7 +294,7 @@ class XtcQueryEngine(
                 handler(captures)
             }
         }
-        logger.info("[QueryEngine] executeQuery: {} pattern(s), {} match(es)", query.patternCount, matchCount)
+        logger.info("[QueryEngine] executeQuery '{}': {} pattern(s), {} match(es)", queryName, query.patternCount, matchCount)
     }
 
     override fun close() {

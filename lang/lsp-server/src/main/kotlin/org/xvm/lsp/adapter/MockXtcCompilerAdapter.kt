@@ -73,10 +73,10 @@ private val identifierPattern = Regex("""\b(\w+)\b""")
  * - Document links (import statements)
  *
  * Capabilities using interface defaults (not overridden):
- * - Selection ranges: returns empty — requires AST for structural expand/shrink
- * - Signature help: returns null — requires AST to extract method parameters
- * - Inlay hints: returns empty — requires type inference
- * - Semantic tokens: returns null — requires type inference
+ * - Selection ranges: returns empty -- requires AST for structural expand/shrink
+ * - Signature help: returns null -- requires AST to extract method parameters
+ * - Inlay hints: returns empty -- requires type inference
+ * - Semantic tokens: returns null -- requires type inference
  *
  * Limitations (requires compiler adapter for these):
  * - Type inference and semantic types

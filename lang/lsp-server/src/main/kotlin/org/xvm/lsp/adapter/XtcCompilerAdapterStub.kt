@@ -28,7 +28,7 @@ class XtcCompilerAdapterStub : AbstractXtcCompilerAdapter() {
         uri: String,
         content: String,
     ): CompilationResult {
-        logger.info("$logPrefix compile: uri={}, content={} bytes (stub — no diagnostics or symbols)", uri, content.length)
+        logger.info("$logPrefix compile: uri={}, content={} bytes (stub -- no diagnostics or symbols)", uri, content.length)
         return CompilationResult.success(uri, emptyList())
     }
 
@@ -39,7 +39,7 @@ class XtcCompilerAdapterStub : AbstractXtcCompilerAdapter() {
         line: Int,
         column: Int,
     ): SymbolInfo? {
-        logger.info("$logPrefix findSymbolAt: uri={}, line={}, column={} (stub — returning null)", uri, line, column)
+        logger.info("$logPrefix findSymbolAt: uri={}, line={}, column={} (stub -- returning null)", uri, line, column)
         return null
     }
 
@@ -51,7 +51,7 @@ class XtcCompilerAdapterStub : AbstractXtcCompilerAdapter() {
         line: Int,
         column: Int,
     ): List<XtcCompilerAdapter.CompletionItem> {
-        logger.info("$logPrefix getCompletions: uri={}, line={}, column={} (stub — returning empty)", uri, line, column)
+        logger.info("$logPrefix getCompletions: uri={}, line={}, column={} (stub -- returning empty)", uri, line, column)
         return emptyList()
     }
 
@@ -63,7 +63,7 @@ class XtcCompilerAdapterStub : AbstractXtcCompilerAdapter() {
         line: Int,
         column: Int,
     ): Location? {
-        logger.info("$logPrefix findDefinition: uri={}, line={}, column={} (stub — returning null)", uri, line, column)
+        logger.info("$logPrefix findDefinition: uri={}, line={}, column={} (stub -- returning null)", uri, line, column)
         return null
     }
 
@@ -77,7 +77,7 @@ class XtcCompilerAdapterStub : AbstractXtcCompilerAdapter() {
         includeDeclaration: Boolean,
     ): List<Location> {
         logger.info(
-            "$logPrefix findReferences: uri={}, line={}, column={}, includeDeclaration={} (stub — returning empty)",
+            "$logPrefix findReferences: uri={}, line={}, column={}, includeDeclaration={} (stub -- returning empty)",
             uri,
             line,
             column,

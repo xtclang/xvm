@@ -30,16 +30,16 @@ import org.slf4j.LoggerFactory
  * decorator, namespace) and modifiers (declaration, static, abstract, readonly).
  *
  * This test parses realistic XTC source code and verifies that the semantic token
- * encoder produces classifications that TextMate fundamentally cannot — each test
+ * encoder produces classifications that TextMate fundamentally cannot -- each test
  * documents the specific limitation it demonstrates.
  *
  * ## What TextMate Highlights Look Like
  *
  * From `highlights.scm.template`, TextMate assigns:
  * ```
- * (identifier) @variable                              — ALL identifiers are "variable"
- * (type_name) @type                                   — type names are "type"
- * (method_declaration name: (identifier) @function)   — method name is "function"
+ * (identifier) @variable                              -- ALL identifiers are "variable"
+ * (type_name) @type                                   -- type names are "type"
+ * (method_declaration name: (identifier) @function)   -- method name is "function"
  * (call_expression function: (identifier) @function.call)
  * (parameter name: (identifier) @variable.parameter)
  * (property_declaration name: (identifier) @variable.member)
@@ -48,7 +48,7 @@ import org.slf4j.LoggerFactory
  * These patterns can match some contexts, but they fail when the same identifier text
  * appears in multiple roles, or when modifiers and precise type distinctions matter.
  */
-@DisplayName("Semantic Tokens vs TextMate — Benefit Demonstration")
+@DisplayName("Semantic Tokens vs TextMate -- Benefit Demonstration")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class SemanticTokensVsTextMateTest {
     private val logger: Logger = LoggerFactory.getLogger(SemanticTokensVsTextMateTest::class.java)
@@ -146,16 +146,16 @@ class SemanticTokensVsTextMateTest {
     @DisplayName("Benefit 1: Disambiguating identical identifiers by context")
     inner class IdentifierDisambiguation {
         /**
-         * TextMate limitation: `name` appears 3 times — as a parameter, a property, and
+         * TextMate limitation: `name` appears 3 times -- as a parameter, a property, and
          * inside an assignment. TextMate's `(identifier) @variable` colors all three the
          * same. The more specific patterns `(parameter name: ...)` and
          * `(property_declaration name: ...)` can only match the declaration sites.
          *
          * Semantic tokens classify each occurrence precisely:
-         * - `name` in `String name` (parameter) → `parameter` + `declaration`
-         * - `name` in `String name = "?"` (property) → `property` + `declaration`
-         * - `Person` in `class Person` → `class` + `declaration`
-         * - `String` in return/param/property type → `type` (not variable)
+         * - `name` in `String name` (parameter) -> `parameter` + `declaration`
+         * - `name` in `String name = "?"` (property) -> `property` + `declaration`
+         * - `Person` in `class Person` -> `class` + `declaration`
+         * - `String` in return/param/property type -> `type` (not variable)
          */
         @Test
         @DisplayName("'name' as parameter vs property get different token types")
@@ -176,7 +176,7 @@ class SemanticTokensVsTextMateTest {
             val tokens = encode(source)
             logTokens("param vs property", tokens)
 
-            // Property declaration: name → "property" with "declaration"
+            // Property declaration: name -> "property" with "declaration"
             val propToken = tokens.findByTextAndType("name", "property")
             assertThat(propToken)
                 .describedAs(
@@ -184,17 +184,17 @@ class SemanticTokensVsTextMateTest {
                 ).isNotNull
             assertThat(propToken!!.modifiers).contains("declaration")
 
-            // Parameter declaration: name → "parameter" with "declaration"
+            // Parameter declaration: name -> "parameter" with "declaration"
             val paramToken = tokens.findByTextAndType("name", "parameter")
             assertThat(paramToken)
                 .describedAs("TextMate sees parameter 'name' as @variable.parameter; semantic tokens give it the distinct 'parameter' type")
                 .isNotNull
             assertThat(paramToken!!.modifiers).contains("declaration")
 
-            // The two should be DIFFERENT token types — TextMate can't do this
+            // The two should be DIFFERENT token types -- TextMate can't do this
             assertThat(propToken.tokenType)
                 .describedAs(
-                    "Property and parameter 'name' must have DIFFERENT semantic token types — TextMate would color both as @variable",
+                    "Property and parameter 'name' must have DIFFERENT semantic token types -- TextMate would color both as @variable",
                 ).isNotEqualTo(paramToken.tokenType)
         }
 
@@ -235,7 +235,7 @@ class SemanticTokensVsTextMateTest {
             val callToken = methodTokens.find { "declaration" !in it.modifiers }
 
             assertThat(declToken)
-                .describedAs("Declaration site should have 'declaration' modifier — TextMate has no modifier concept")
+                .describedAs("Declaration site should have 'declaration' modifier -- TextMate has no modifier concept")
                 .isNotNull
             assertThat(callToken)
                 .describedAs("Call site should NOT have 'declaration' modifier")
@@ -281,21 +281,21 @@ class SemanticTokensVsTextMateTest {
             val tokens = encode(source)
             logTokens("type categories", tokens)
 
-            // TextMate: all of these → @type.definition (one color)
+            // TextMate: all of these -> @type.definition (one color)
             // Semantic tokens: each gets its own type
             val personToken = tokens.findByTextAndType("Person", "class")
             assertThat(personToken)
-                .describedAs("'Person' should be 'class', not generic 'type' — TextMate sees @type.definition")
+                .describedAs("'Person' should be 'class', not generic 'type' -- TextMate sees @type.definition")
                 .isNotNull
 
             val runnableToken = tokens.findByTextAndType("Runnable", "interface")
             assertThat(runnableToken)
-                .describedAs("'Runnable' should be 'interface' — TextMate can't distinguish from class")
+                .describedAs("'Runnable' should be 'interface' -- TextMate can't distinguish from class")
                 .isNotNull
 
             val colorToken = tokens.findByTextAndType("Color", "enum")
             assertThat(colorToken)
-                .describedAs("'Color' should be 'enum' — TextMate can't distinguish from class")
+                .describedAs("'Color' should be 'enum' -- TextMate can't distinguish from class")
                 .isNotNull
 
             // Verify they are all DIFFERENT token types
@@ -307,11 +307,11 @@ class SemanticTokensVsTextMateTest {
                 )
             assertThat(types)
                 .hasSize(3)
-                .describedAs("class, interface, enum should map to 3 distinct token types — TextMate gives them all @type.definition")
+                .describedAs("class, interface, enum should map to 3 distinct token types -- TextMate gives them all @type.definition")
         }
 
         /**
-         * TextMate has no concept of modifiers. `const Point` is not just a type declaration —
+         * TextMate has no concept of modifiers. `const Point` is not just a type declaration --
          * it's `struct` + `readonly` + `declaration`. This triple is impossible in TextMate.
          */
         @Test
@@ -330,7 +330,7 @@ class SemanticTokensVsTextMateTest {
             val constToken = tokens.findByTextAndType("Point", "struct")
             if (constToken != null) {
                 assertThat(constToken.modifiers)
-                    .describedAs("'const' maps to 'struct' with both 'declaration' and 'readonly' — TextMate has no modifier system")
+                    .describedAs("'const' maps to 'struct' with both 'declaration' and 'readonly' -- TextMate has no modifier system")
                     .contains("declaration", "readonly")
             }
         }
@@ -344,7 +344,7 @@ class SemanticTokensVsTextMateTest {
     @DisplayName("Benefit 3: Type references in type positions are classified as 'type'")
     inner class TypeReferenceClassification {
         /**
-         * TextMate can match `(type_name) @type` but this is a STRUCTURAL match — it works
+         * TextMate can match `(type_name) @type` but this is a STRUCTURAL match -- it works
          * for explicit type expressions. The problem is that TextMate also matches
          * `(identifier) @variable` as a catch-all, and the LAST match wins in TextMate
          * ordering. If `(identifier) @variable` appears after `(type_name) @type`, the
@@ -376,7 +376,7 @@ class SemanticTokensVsTextMateTest {
 
             assertThat(typeTexts)
                 .describedAs(
-                    "String (property type), Int (return type), Boolean (param type) should all be 'type' — TextMate may lose this to catch-all @variable",
+                    "String (property type), Int (return type), Boolean (param type) should all be 'type' -- TextMate may lose this to catch-all @variable",
                 ).contains("String", "Int", "Boolean")
         }
 
@@ -390,7 +390,7 @@ class SemanticTokensVsTextMateTest {
          * position, or a `name` field of a `property_declaration`?
          */
         @Test
-        @DisplayName("'String' as type vs 'name' as property — both identifiers, different tokens")
+        @DisplayName("'String' as type vs 'name' as property -- both identifiers, different tokens")
         fun typeVsIdentifierSameDeclaration() {
             val source =
                 """
@@ -432,7 +432,7 @@ class SemanticTokensVsTextMateTest {
          * ```
          *
          * This works, but it's a single scope. Semantic tokens classify annotation names
-         * as `decorator` — a distinct token type that themes can style independently from
+         * as `decorator` -- a distinct token type that themes can style independently from
          * types, variables, and keywords. More importantly, TextMate's `@attribute` is
          * often themed identically to other constructs, while `decorator` is universally
          * styled with a distinct color in all major themes.
@@ -452,25 +452,25 @@ class SemanticTokensVsTextMateTest {
             val tokens = encode(source)
             logTokens("annotation", tokens)
 
-            // "Inject" should be decorator — not type, not variable
+            // "Inject" should be decorator -- not type, not variable
             val injectTokens = tokens.findAllByText("Inject")
             val decoratorToken = injectTokens.find { it.tokenType == "decorator" }
 
             assertThat(decoratorToken)
                 .describedAs(
-                    "'Inject' in @Inject should be 'decorator' — TextMate uses @attribute which many themes don't style distinctly",
+                    "'Inject' in @Inject should be 'decorator' -- TextMate uses @attribute which many themes don't style distinctly",
                 ).isNotNull
 
             // Verify it's NOT classified as a type (a common TextMate mistake)
             val typeToken = injectTokens.find { it.tokenType == "type" }
             assertThat(typeToken)
-                .describedAs("'Inject' should not also appear as 'type' — semantic tokens prevent double-classification")
+                .describedAs("'Inject' should not also appear as 'type' -- semantic tokens prevent double-classification")
                 .isNull()
         }
     }
 
     // ========================================================================
-    // Benefit 5: Modifier bitmask — static, abstract
+    // Benefit 5: Modifier bitmask -- static, abstract
     // ========================================================================
 
     @Nested
@@ -478,8 +478,8 @@ class SemanticTokensVsTextMateTest {
     inner class ModifierBitmasks {
         /**
          * TextMate has NO concept of modifiers. A `static` method looks the same as a
-         * regular method — both are `@function`. A `static` property looks the same as
-         * an instance property — both are `@variable.member`.
+         * regular method -- both are `@function`. A `static` property looks the same as
+         * an instance property -- both are `@variable.member`.
          *
          * Semantic tokens carry modifier bitmasks: `static`, `abstract`, `readonly`,
          * `declaration`. Themes and editor UI can use these to italicize static members,
@@ -513,7 +513,7 @@ class SemanticTokensVsTextMateTest {
 
             if (parseToken != null) {
                 assertThat(parseToken.modifiers)
-                    .describedAs("static method should carry 'static' modifier — TextMate has no modifier concept")
+                    .describedAs("static method should carry 'static' modifier -- TextMate has no modifier concept")
                     .contains("static")
                 assertThat(parseToken.modifiers)
                     .describedAs("declaration site should carry 'declaration' modifier")
@@ -523,7 +523,7 @@ class SemanticTokensVsTextMateTest {
     }
 
     // ========================================================================
-    // Benefit 6: Member expression context — property access vs method call
+    // Benefit 6: Member expression context -- property access vs method call
     // ========================================================================
 
     @Nested
@@ -560,26 +560,26 @@ class SemanticTokensVsTextMateTest {
             val tokens = encode(source)
             logTokens("member call vs property", tokens)
 
-            // this.getName() — "getName" at call site should be "method"
+            // this.getName() -- "getName" at call site should be "method"
             val getNameCallTokens = tokens.filter { it.text == "getName" && it.tokenType == "method" }
             assertThat(getNameCallTokens)
                 .describedAs("'getName' should appear as 'method' (both declaration and call site)")
                 .hasSizeGreaterThanOrEqualTo(1)
 
-            // this.name — "name" in member_expression (not call) should be "property"
+            // this.name -- "name" in member_expression (not call) should be "property"
             val namePropertyTokens = tokens.filter { it.text == "name" && it.tokenType == "property" }
             assertThat(namePropertyTokens)
-                .describedAs("'name' in this.name should be 'property' — TextMate would just say @variable")
+                .describedAs("'name' in this.name should be 'property' -- TextMate would just say @variable")
                 .isNotEmpty
         }
     }
 
     // ========================================================================
-    // Benefit 7: Full example — all benefits combined
+    // Benefit 7: Full example -- all benefits combined
     // ========================================================================
 
     @Nested
-    @DisplayName("Benefit 7: Combined — realistic code shows all advantages at once")
+    @DisplayName("Benefit 7: Combined -- realistic code shows all advantages at once")
     inner class CombinedBenefits {
         /**
          * This test uses a realistic XTC class that exercises all the disambiguation
@@ -588,9 +588,9 @@ class SemanticTokensVsTextMateTest {
          * token type in the output is meaningful.
          *
          * TextMate would produce roughly:
-         * - All type names → @type or @type.definition (no class/interface/enum distinction)
-         * - All identifiers → @variable (no property/parameter/method distinction)
-         * - Method names → @function or @function.call (no modifiers)
+         * - All type names -> @type or @type.definition (no class/interface/enum distinction)
+         * - All identifiers -> @variable (no property/parameter/method distinction)
+         * - Method names -> @function or @function.call (no modifiers)
          * - No modifier information at all
          *
          * Semantic tokens produce 7+ distinct categories with modifier combinations.
@@ -631,33 +631,33 @@ class SemanticTokensVsTextMateTest {
             assertThat(distinctTypes)
                 .describedAs(
                     "Semantic tokens should produce 5+ distinct token types from a realistic " +
-                        "class — TextMate effectively produces only ~3 (type.definition, variable, function)",
+                        "class -- TextMate effectively produces only ~3 (type.definition, variable, function)",
                 ).hasSizeGreaterThanOrEqualTo(5)
 
             // Verify specific classifications
             assertThat(tokens.findByTextAndType("myapp", "namespace"))
-                .describedAs("module name → namespace")
+                .describedAs("module name -> namespace")
                 .isNotNull
             assertThat(tokens.findByTextAndType("Greetable", "interface"))
-                .describedAs("interface name → interface (not generic type)")
+                .describedAs("interface name -> interface (not generic type)")
                 .isNotNull
             assertThat(tokens.findByTextAndType("Person", "class"))
-                .describedAs("class name → class (not generic type)")
+                .describedAs("class name -> class (not generic type)")
                 .isNotNull
             assertThat(tokens.findByTextAndType("name", "property"))
-                .describedAs("property name → property (not variable)")
+                .describedAs("property name -> property (not variable)")
                 .isNotNull
             assertThat(tokens.findByTextAndType("name", "parameter"))
-                .describedAs("parameter name → parameter (not variable)")
+                .describedAs("parameter name -> parameter (not variable)")
                 .isNotNull
             assertThat(tokens.findByTextAndType("getName", "method"))
-                .describedAs("method name → method")
+                .describedAs("method name -> method")
                 .isNotNull
 
             // Verify declaration modifiers exist
             val declTokens = tokens.filter { "declaration" in it.modifiers }
             assertThat(declTokens)
-                .describedAs("Multiple tokens should carry 'declaration' modifier — TextMate has no modifier support")
+                .describedAs("Multiple tokens should carry 'declaration' modifier -- TextMate has no modifier support")
                 .hasSizeGreaterThanOrEqualTo(5)
         }
     }
@@ -666,11 +666,11 @@ class SemanticTokensVsTextMateTest {
         label: String,
         tokens: List<DecodedToken>,
     ) {
-        logger.info("[TEST] {} — {} tokens:", label, tokens.size)
+        logger.info("[TEST] {} -- {} tokens:", label, tokens.size)
         for (t in tokens) {
             val mods = if (t.modifiers.isNotEmpty()) " [${t.modifiers.joinToString(",")}]" else ""
             logger.info(
-                "  L{}:{} '{}' → {}{}",
+                "  L{}:{} '{}' -> {}{}",
                 t.line,
                 t.column,
                 t.text,

@@ -59,7 +59,7 @@ All adapters extend `AbstractXtcCompilerAdapter` which provides:
 - Utility method for position-in-range checking
 
 `XtcCompilerAdapter` is a pure interface (method signatures only). Concrete adapters override
-only the methods they actually implement — all others inherit traceable logging stubs.
+only the methods they actually implement -- all others inherit traceable logging stubs.
 
 | Adapter | Backend | LSP Feature Coverage | Status |
 |---------|---------|----------------------|--------|
@@ -167,7 +167,7 @@ Full tree-sitter support for fast, incremental parsing:
    - Token types: keyword, decorator, comment, string, number, operator, type (heuristic),
      method (call-site heuristic), class/interface/enum/property/variable/parameter/namespace
 
-   **Phase 2 — Compiler-based (requires pluggable compiler):**
+   **Phase 2 -- Compiler-based (requires pluggable compiler):**
    - Distinguish classes vs interfaces vs enums vs type parameters
    - Distinguish variables vs parameters vs properties
    - Add modifiers: `declaration`, `definition`, `readonly`, `static`, `deprecated`
@@ -262,7 +262,7 @@ The IntelliJ plugin uses Red Hat's [LSP4IJ](https://github.com/redhat-developer/
 
 ### Why LSP4IJ
 
-**DAP support.** IntelliJ has no built-in DAP (Debug Adapter Protocol) client. LSP4IJ provides a DAP client via the `debugAdapterServer` extension point, which is required for `lang/dap-server/` integration. Without it, we would need to write thousands of lines of IntelliJ-specific debug infrastructure (`XDebugProcess`, `XBreakpointHandler`, `ProcessHandler`, variable tree rendering, stack frame mapping, expression evaluation) — the exact opposite of IDE independence.
+**DAP support.** IntelliJ has no built-in DAP (Debug Adapter Protocol) client. LSP4IJ provides a DAP client via the `debugAdapterServer` extension point, which is required for `lang/dap-server/` integration. Without it, we would need to write thousands of lines of IntelliJ-specific debug infrastructure (`XDebugProcess`, `XBreakpointHandler`, `ProcessHandler`, variable tree rendering, stack frame mapping, expression evaluation) -- the exact opposite of IDE independence.
 
 **LSP feature coverage.** LSP4IJ supports LSP features that IntelliJ's built-in LSP (as of 2025.3) does not:
 
@@ -279,17 +279,17 @@ The IntelliJ plugin uses Red Hat's [LSP4IJ](https://github.com/redhat-developer/
 
 Code Lens, Call Hierarchy, and Type Hierarchy are on the roadmap (see `plan-next-steps-lsp.md`).
 
-**Standard protocol types.** LSP4IJ uses Eclipse LSP4J types (`org.eclipse.lsp4j.services.LanguageServer`, `IDebugProtocolServer`) — the same library our LSP and DAP servers use. IntelliJ's built-in LSP uses internal IntelliJ types.
+**Standard protocol types.** LSP4IJ uses Eclipse LSP4J types (`org.eclipse.lsp4j.services.LanguageServer`, `IDebugProtocolServer`) -- the same library our LSP and DAP servers use. IntelliJ's built-in LSP uses internal IntelliJ types.
 
 ### What LSP4IJ Does Not Affect
 
 IDE independence is preserved either way. The shared, IDE-independent code is:
 
 ```
-lang/lsp-server/     — LSP server (Eclipse LSP4J, stdio)
-lang/dap-server/  — DAP server (Eclipse LSP4J debug, stdio)
-lang/dsl/            — Language model, generates TextMate/tree-sitter/vim/emacs
-lang/tree-sitter/    — Grammar + native libs
+lang/lsp-server/     -- LSP server (Eclipse LSP4J, stdio)
+lang/dap-server/  -- DAP server (Eclipse LSP4J debug, stdio)
+lang/dsl/            -- Language model, generates TextMate/tree-sitter/vim/emacs
+lang/tree-sitter/    -- Grammar + native libs
 ```
 
 The IntelliJ plugin (`lang/intellij-plugin/`) is inherently IntelliJ-specific. The choice between LSP4IJ and built-in LSP only affects which IntelliJ API the thin wrapper calls. The servers are unchanged.
@@ -298,13 +298,13 @@ The IntelliJ plugin (`lang/intellij-plugin/`) is inherently IntelliJ-specific. T
 
 | Concern | Assessment |
 |---------|-----------|
-| User installs extra plugin | Minor — one dependency (`com.redhat.devtools.lsp4ij`) |
-| Duplicate server spawn race condition | Known LSP4IJ issue ([#888](https://github.com/redhat-developer/lsp4ij/issues/888)), harmless — extras killed in milliseconds |
+| User installs extra plugin | Minor -- one dependency (`com.redhat.devtools.lsp4ij`) |
+| Duplicate server spawn race condition | Known LSP4IJ issue ([#888](https://github.com/redhat-developer/lsp4ij/issues/888)), harmless -- extras killed in milliseconds |
 | Third-party maintenance risk | LSP4IJ is actively maintained by Red Hat, releases every ~2 weeks |
 
 ### Reference
 
-The `xtc-intellij-plugin-dev` reference repo demonstrates IntelliJ's built-in LSP in ~29 lines. That is intentional — it serves as a minimal "getting started" example. The production plugin requires DAP support, advanced LSP features, and the LSP Console, which are only available through LSP4IJ.
+The `xtc-intellij-plugin-dev` reference repo demonstrates IntelliJ's built-in LSP in ~29 lines. That is intentional -- it serves as a minimal "getting started" example. The production plugin requires DAP support, advanced LSP features, and the LSP Console, which are only available through LSP4IJ.
 
 ## Known Issues and Follow-ups
 
@@ -312,7 +312,7 @@ The `xtc-intellij-plugin-dev` reference repo demonstrates IntelliJ's built-in LS
 
 ### DAP Integration (Blocking for Debug Support)
 
-1. **DAP server JAR not packaged into sandbox** — The `plugin.xml` registers the
+1. **DAP server JAR not packaged into sandbox** -- The `plugin.xml` registers the
    `debugAdapterServer` extension point and the factory/descriptor classes compile, but
    `dap-server` has no fat JAR task, no consumable configuration, and no `copyDapServerToSandbox`
    task. At runtime, `PluginPaths.findServerJar("xtc-dap-server.jar")` will always throw
@@ -323,27 +323,35 @@ The `xtc-intellij-plugin-dev` reference repo demonstrates IntelliJ's built-in LS
    - Add a `copyDapServerToSandbox` task mirroring the LSP copy pattern
    - Wire `prepareSandbox` and `runIde` to depend on it
 
-2. **DAP has no JRE provisioning progress UI** — The LSP connection provider shows a
+2. **DAP has no JRE provisioning progress UI** -- The LSP connection provider shows a
    progress dialog during first-time JRE download, but the DAP descriptor's `startServer()`
    simply checks `provisioner.javaPath` and throws if null. Users must open an `.x` file
    first (triggering LSP + JRE download) before debugging will work.
 
 ### Tree-sitter / Semantic Tokens
 
-~~3. `XtcNode.text` byte-vs-char offset~~ — FIXED: Added UTF-8 aware substring extraction.
-~~4. `SemanticTokensVsTextMateTest` native memory leak~~ — FIXED: Uses `.use {}` now.
-~~5. `SemanticTokenEncoder.nodeKey` collision~~ — FIXED: Key now includes node type hash.
-~~8. Semantic tokens crash on rename~~ — FIXED: `XtcParser.parse()` was passing `oldTree`
+~~3. `XtcNode.text` byte-vs-char offset~~ -- FIXED: Added UTF-8 aware substring extraction.
+~~4. `SemanticTokensVsTextMateTest` native memory leak~~ -- FIXED: Uses `.use {}` now.
+~~5. `SemanticTokenEncoder.nodeKey` collision~~ -- FIXED: Key now includes node type hash.
+~~8. Semantic tokens crash on rename~~ -- FIXED: `XtcParser.parse()` was passing `oldTree`
 for incremental parsing without calling `Tree.edit()`, producing nodes with stale byte
 offsets. Now always does full reparse (still sub-ms). Defensive bounds checking added to
 `XtcNode.text`.
-~~9. EDT violation in JRE resolution~~ — FIXED: `XtcLspConnectionProvider.init {}` called
+~~9. EDT violation in JRE resolution~~ -- FIXED: `XtcLspConnectionProvider.init {}` called
 `ProjectJdkTable.getInstance()` (prohibited on EDT). Moved to `start()` which runs off EDT.
+~~10. Pipeline logging gaps~~ -- FIXED: `XtcQueryEngine.executeQuery()` now logs query name,
+all find methods log per-match details (symbol kind, name, location). `TreeSitterAdapter`
+methods (`getFoldingRanges`, `getSemanticTokens`, `getCodeActions`, `getDocumentLinks`) now
+consistently log their inputs and results.
+~~11. Unicode characters garbled in logs~~ -- FIXED: Replaced Unicode arrows (`U+2192`) and
+em-dashes (`U+2014`) with ASCII `->` and `--` in all logger output, test display names, and
+annotations. The 3-byte UTF-8 characters were rendering as `a-hat` in log viewers using
+ISO-8859-1/Latin-1 encoding.
 
 ### Build System
 
-~~6. Windows IDE path "2025.1"~~ — FIXED: Updated to 2025.3.
-~~7. Composite build property isolation~~ — FIXED: `project.findProperty()` and
+~~6. Windows IDE path "2025.1"~~ -- FIXED: Updated to 2025.3.
+~~7. Composite build property isolation~~ -- FIXED: `project.findProperty()` and
 `providers.gradleProperty()` only see the included build's own `gradle.properties`,
 which doesn't exist for `lang/`. Properties like `lsp.semanticTokens`, `lsp.adapter`,
 `lsp.buildSearchableOptions`, and `log` were silently falling back to hardcoded defaults.

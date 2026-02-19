@@ -60,7 +60,7 @@ interface XtcCompilerAdapter : Closeable {
      * **LSP capability:** Triggered by `textDocument/didOpen` and `textDocument/didChange`.
      * The client sends the full document text; the server parses it and publishes diagnostics.
      *
-     * **Editor activation:** Automatic — triggered when a `.x` file is opened or edited.
+     * **Editor activation:** Automatic -- triggered when a `.x` file is opened or edited.
      *
      * **Adapter implementations:**
      * - *Mock:* Regex-scans for module/class/interface/method/property patterns and ERROR markers.
@@ -92,7 +92,7 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Find the symbol at a specific position.
      *
-     * **LSP capability:** Used internally by hover, definition, and references — not directly
+     * **LSP capability:** Used internally by hover, definition, and references -- not directly
      * exposed as an LSP method, but underpins several user-visible features.
      *
      * **Adapter implementations:**
@@ -118,7 +118,7 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Get hover information for a position.
      *
-     * **LSP capability:** `textDocument/hover` — shown when the user hovers the mouse over a
+     * **LSP capability:** `textDocument/hover` -- shown when the user hovers the mouse over a
      * symbol. Displays a tooltip with type signature, documentation, and other info.
      *
      * **Editor activation:**
@@ -126,7 +126,7 @@ interface XtcCompilerAdapter : Closeable {
      * - *VS Code:* Hover mouse over a symbol
      *
      * **Adapter implementations:**
-     * - *Mock/TreeSitter:* Default in [AbstractXtcCompilerAdapter] — calls [findSymbolAt] and
+     * - *Mock/TreeSitter:* Default in [AbstractXtcCompilerAdapter] -- calls [findSymbolAt] and
      *   formats the symbol's kind, name, and type signature as Markdown.
      * - *Compiler:* Would add resolved types, inferred generics, and extracted doc comments.
      *
@@ -147,7 +147,7 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Get completion suggestions at a position.
      *
-     * **LSP capability:** `textDocument/completion` — provides code completion suggestions as the
+     * **LSP capability:** `textDocument/completion` -- provides code completion suggestions as the
      * user types. Triggered by `.`, `:`, `<`, or explicit request.
      *
      * **Editor activation:**
@@ -177,7 +177,7 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Find the definition of the symbol at a position.
      *
-     * **LSP capability:** `textDocument/definition` — navigates to where a symbol is declared.
+     * **LSP capability:** `textDocument/definition` -- navigates to where a symbol is declared.
      *
      * **Editor activation:**
      * - *IntelliJ:* Ctrl+Click on a symbol, Ctrl+B, or F12
@@ -205,11 +205,11 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Find all references to the symbol at a position.
      *
-     * **LSP capability:** `textDocument/references` — shows all usages of a symbol.
+     * **LSP capability:** `textDocument/references` -- shows all usages of a symbol.
      *
      * **Editor activation:**
      * - *IntelliJ:* Alt+F7 (Find Usages), or Shift+F12
-     * - *VS Code:* Shift+F12, or right-click → Find All References
+     * - *VS Code:* Shift+F12, or right-click -> Find All References
      *
      * **Adapter implementations:**
      * - *Mock:* Returns only the declaration itself (when `includeDeclaration` is true), no
@@ -283,10 +283,10 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Get document highlights for a symbol at a position.
      *
-     * **LSP capability:** `textDocument/documentHighlight` — highlights all occurrences of the
+     * **LSP capability:** `textDocument/documentHighlight` -- highlights all occurrences of the
      * symbol under the cursor in the same document. Shown as background color emphasis.
      *
-     * **Editor activation:** Automatic — click on any identifier to highlight all occurrences.
+     * **Editor activation:** Automatic -- click on any identifier to highlight all occurrences.
      *
      * **Adapter implementations:**
      * - *Mock:* Whole-word text search across all lines of the cached document content.
@@ -311,7 +311,7 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Get selection ranges for positions (smart selection expansion).
      *
-     * **LSP capability:** `textDocument/selectionRange` — powers smart expand/shrink selection.
+     * **LSP capability:** `textDocument/selectionRange` -- powers smart expand/shrink selection.
      * Returns a chain of nested ranges from the innermost token to the outermost declaration.
      *
      * **Editor activation:**
@@ -321,10 +321,10 @@ interface XtcCompilerAdapter : Closeable {
      * **Adapter implementations:**
      * - *Mock:* Returns empty (requires AST structure for meaningful results).
      * - *TreeSitter:* Walks up from the leaf node at the position to the root, building a chain
-     *   of progressively larger ranges (identifier → expression → statement → block → class).
+     *   of progressively larger ranges (identifier -> expression -> statement -> block -> class).
      * - *Compiler:* Same as TreeSitter (AST-based; no semantic info needed).
      *
-     * **Compiler upgrade path:** Minimal — tree-sitter already provides excellent selection ranges.
+     * **Compiler upgrade path:** Minimal -- tree-sitter already provides excellent selection ranges.
      * A compiler adapter would use the same approach from its own AST.
      *
      * @param uri       the document URI
@@ -339,7 +339,7 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Get folding ranges for a document.
      *
-     * **LSP capability:** `textDocument/foldingRange` — provides collapsible regions in the
+     * **LSP capability:** `textDocument/foldingRange` -- provides collapsible regions in the
      * editor gutter (classes, methods, imports, comments).
      *
      * **Editor activation:**
@@ -352,7 +352,7 @@ interface XtcCompilerAdapter : Closeable {
      *   More accurate than brace matching (handles string literals, comments correctly).
      * - *Compiler:* Same as TreeSitter (structural feature, no semantic info needed).
      *
-     * **Compiler upgrade path:** Minimal — tree-sitter provides excellent folding ranges.
+     * **Compiler upgrade path:** Minimal -- tree-sitter provides excellent folding ranges.
      * A compiler adapter could add region markers from structured comments.
      *
      * @param uri the document URI
@@ -363,10 +363,10 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Get document links (clickable paths in imports, etc.).
      *
-     * **LSP capability:** `textDocument/documentLink` — makes import paths and other references
+     * **LSP capability:** `textDocument/documentLink` -- makes import paths and other references
      * clickable in the editor, allowing quick navigation.
      *
-     * **Editor activation:** Automatic — import paths appear as clickable links (Ctrl+Click).
+     * **Editor activation:** Automatic -- import paths appear as clickable links (Ctrl+Click).
      *
      * **Adapter implementations:**
      * - *Mock:* Regex-matches `import` statements and returns the path portion as a link.
@@ -393,7 +393,7 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Get signature help for a function call at a position.
      *
-     * **LSP capability:** `textDocument/signatureHelp` — shows parameter hints when the user
+     * **LSP capability:** `textDocument/signatureHelp` -- shows parameter hints when the user
      * types `(` or `,` inside a function call. Highlights the active parameter.
      *
      * **Editor activation:**
@@ -422,9 +422,9 @@ interface XtcCompilerAdapter : Closeable {
     ): SignatureHelp?
 
     /**
-     * Prepare rename operation — check if rename is valid at position.
+     * Prepare rename operation -- check if rename is valid at position.
      *
-     * **LSP capability:** `textDocument/prepareRename` — called before a rename to verify the
+     * **LSP capability:** `textDocument/prepareRename` -- called before a rename to verify the
      * position is on a renamable identifier and to highlight the range to be changed.
      *
      * **Editor activation:** Called automatically as part of the rename flow (see [rename]).
@@ -451,12 +451,12 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Perform rename operation.
      *
-     * **LSP capability:** `textDocument/rename` — renames a symbol and returns a workspace edit
+     * **LSP capability:** `textDocument/rename` -- renames a symbol and returns a workspace edit
      * with all text changes. The editor applies all edits atomically.
      *
      * **Editor activation:**
-     * - *IntelliJ:* Shift+F6 on an identifier, or right-click → Refactor → Rename
-     * - *VS Code:* F2 on an identifier, or right-click → Rename Symbol
+     * - *IntelliJ:* Shift+F6 on an identifier, or right-click -> Refactor -> Rename
+     * - *VS Code:* F2 on an identifier, or right-click -> Rename Symbol
      *
      * **Adapter implementations:**
      * - *Mock:* Whole-word text replacement across all lines in the same file.
@@ -483,7 +483,7 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Get code actions for a range (quick fixes, refactorings).
      *
-     * **LSP capability:** `textDocument/codeAction` — provides the lightbulb menu with quick
+     * **LSP capability:** `textDocument/codeAction` -- provides the lightbulb menu with quick
      * fixes and refactoring suggestions. Actions can include workspace edits or commands.
      *
      * **Editor activation:**
@@ -492,7 +492,7 @@ interface XtcCompilerAdapter : Closeable {
      *
      * **Adapter implementations:**
      * - *Mock:* Offers "Organize Imports" when import statements are detected and unsorted.
-     * - *TreeSitter:* Same as Mock — detects unsorted import nodes from the AST and offers
+     * - *TreeSitter:* Same as Mock -- detects unsorted import nodes from the AST and offers
      *   a single edit to sort them.
      * - *Compiler:* Quick fixes for diagnostics (add import, fix typo), refactorings (extract
      *   method, inline variable).
@@ -514,11 +514,11 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Get semantic tokens for enhanced syntax highlighting.
      *
-     * **LSP capability:** `textDocument/semanticTokens/full` — provides token-level semantic
+     * **LSP capability:** `textDocument/semanticTokens/full` -- provides token-level semantic
      * highlighting that supplements TextMate grammars. Distinguishes fields vs locals vs
      * parameters, type names vs variable names, etc.
      *
-     * **Editor activation:** Automatic — applied as an overlay on top of TextMate highlighting.
+     * **Editor activation:** Automatic -- applied as an overlay on top of TextMate highlighting.
      *
      * **Adapter implementations:**
      * - *Mock:* Returns null (no type information available).
@@ -537,11 +537,11 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Get inlay hints (inline type annotations, parameter names).
      *
-     * **LSP capability:** `textDocument/inlayHint` — shows inline annotations in the editor
+     * **LSP capability:** `textDocument/inlayHint` -- shows inline annotations in the editor
      * for inferred types and parameter names (e.g., `val x` shows `: Int` after the variable).
      *
-     * **Editor activation:** Automatic — hints appear inline when enabled.
-     * - *IntelliJ:* Settings → Editor → Inlay Hints (toggle per category)
+     * **Editor activation:** Automatic -- hints appear inline when enabled.
+     * - *IntelliJ:* Settings -> Editor -> Inlay Hints (toggle per category)
      * - *VS Code:* `editor.inlayHints.enabled` setting
      *
      * **Adapter implementations:**
@@ -564,7 +564,7 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Format an entire document.
      *
-     * **LSP capability:** `textDocument/formatting` — formats the entire document.
+     * **LSP capability:** `textDocument/formatting` -- formats the entire document.
      *
      * **Editor activation:**
      * - *IntelliJ:* Ctrl+Alt+L (Reformat Code)
@@ -593,7 +593,7 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Format a range within a document.
      *
-     * **LSP capability:** `textDocument/rangeFormatting` — formats only the selected range.
+     * **LSP capability:** `textDocument/rangeFormatting` -- formats only the selected range.
      *
      * **Editor activation:**
      * - *IntelliJ:* Select text, then Ctrl+Alt+L
@@ -624,10 +624,10 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Find symbols across the workspace.
      *
-     * **LSP capability:** `workspace/symbol` — provides workspace-wide symbol search.
+     * **LSP capability:** `workspace/symbol` -- provides workspace-wide symbol search.
      *
      * **Editor activation:**
-     * - *IntelliJ:* Ctrl+T (Go to Symbol), or Navigate → Symbol
+     * - *IntelliJ:* Ctrl+T (Go to Symbol), or Navigate -> Symbol
      * - *VS Code:* Ctrl+T (Go to Symbol in Workspace)
      *
      * **Adapter implementations:**
@@ -650,23 +650,23 @@ interface XtcCompilerAdapter : Closeable {
     // These methods correspond to LSP capabilities described in plan-next-steps-lsp.md.
     // Default implementations in AbstractXtcCompilerAdapter log the call with full
     // input parameters, so the log trace shows exactly what was requested and that
-    // the feature is not yet available — making it easy to plug in later.
+    // the feature is not yet available -- making it easy to plug in later.
     //
     // ========================================================================
 
     /**
      * Find the declaration of the symbol at a position.
      *
-     * **LSP capability:** `textDocument/declaration` — navigates to the declaration site
+     * **LSP capability:** `textDocument/declaration` -- navigates to the declaration site
      * (as opposed to the definition site). In XTC's single-file-per-type model, this is
      * less important than in C/C++ where declaration and definition can be in separate files.
      *
      * **Editor activation:**
      * - *IntelliJ:* Ctrl+B on a symbol (if distinct from definition)
-     * - *VS Code:* Right-click → Go to Declaration
+     * - *VS Code:* Right-click -> Go to Declaration
      *
      * **Adapter implementations:**
-     * - *Mock/TreeSitter:* Not implemented — cannot distinguish declaration from definition.
+     * - *Mock/TreeSitter:* Not implemented -- cannot distinguish declaration from definition.
      * - *Compiler:* Resolves declaration site from semantic analysis.
      *
      * @param uri    the document URI
@@ -683,16 +683,16 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Find the type definition of the symbol at a position.
      *
-     * **LSP capability:** `textDocument/typeDefinition` — navigates to the type of an
+     * **LSP capability:** `textDocument/typeDefinition` -- navigates to the type of an
      * expression or variable. E.g., from a variable `name` of type `String`, jumps to the
      * `String` class definition.
      *
      * **Editor activation:**
      * - *IntelliJ:* Ctrl+Shift+B on a variable or expression
-     * - *VS Code:* Right-click → Go to Type Definition
+     * - *VS Code:* Right-click -> Go to Type Definition
      *
      * **Adapter implementations:**
-     * - *Mock/TreeSitter:* Not implemented — requires type inference.
+     * - *Mock/TreeSitter:* Not implemented -- requires type inference.
      * - *Compiler:* Resolves the type of the expression and navigates to the type declaration.
      *
      * @param uri    the document URI
@@ -709,15 +709,15 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Find implementations of the interface or abstract method at a position.
      *
-     * **LSP capability:** `textDocument/implementation` — finds all concrete implementations
+     * **LSP capability:** `textDocument/implementation` -- finds all concrete implementations
      * of an interface, abstract class, or abstract method.
      *
      * **Editor activation:**
      * - *IntelliJ:* Ctrl+Alt+B on an interface/abstract method
-     * - *VS Code:* Right-click → Go to Implementations
+     * - *VS Code:* Right-click -> Go to Implementations
      *
      * **Adapter implementations:**
-     * - *Mock/TreeSitter:* Not implemented — requires type hierarchy and semantic analysis.
+     * - *Mock/TreeSitter:* Not implemented -- requires type hierarchy and semantic analysis.
      * - *Compiler:* Walks the type hierarchy index to find all implementors.
      *
      * @param uri    the document URI
@@ -734,18 +734,18 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Prepare type hierarchy for the symbol at a position.
      *
-     * **LSP capability:** `typeHierarchy/prepareTypeHierarchy` — resolves the type at the cursor
+     * **LSP capability:** `typeHierarchy/prepareTypeHierarchy` -- resolves the type at the cursor
      * and returns it as a TypeHierarchyItem. This is the entry point; the client then calls
      * [getSupertypes] and [getSubtypes] to expand the tree.
      *
      * **Editor activation:**
      * - *IntelliJ:* Ctrl+H (Type Hierarchy)
-     * - *VS Code:* Right-click → Show Type Hierarchy
+     * - *VS Code:* Right-click -> Show Type Hierarchy
      *
      * **Adapter implementations:**
      * - *Mock:* Not implemented.
      * - *TreeSitter:* Could extract the type declaration and its extends/implements clauses
-     *   from the AST (Phase 1 — tree-sitter can parse these syntactically).
+     *   from the AST (Phase 1 -- tree-sitter can parse these syntactically).
      * - *Compiler:* Full type resolution with generics and conditional mixins.
      *
      * @param uri    the document URI
@@ -762,7 +762,7 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Get supertypes for a type hierarchy item.
      *
-     * **LSP capability:** `typeHierarchy/supertypes` — returns the parents of a type
+     * **LSP capability:** `typeHierarchy/supertypes` -- returns the parents of a type
      * (extends, implements, incorporates).
      *
      * @param item the type hierarchy item to get supertypes for
@@ -773,7 +773,7 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Get subtypes for a type hierarchy item.
      *
-     * **LSP capability:** `typeHierarchy/subtypes` — returns all types that extend/implement
+     * **LSP capability:** `typeHierarchy/subtypes` -- returns all types that extend/implement
      * the given type.
      *
      * @param item the type hierarchy item to get subtypes for
@@ -784,13 +784,13 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Prepare call hierarchy for the symbol at a position.
      *
-     * **LSP capability:** `callHierarchy/prepare` — resolves the function/method at the cursor
+     * **LSP capability:** `callHierarchy/prepare` -- resolves the function/method at the cursor
      * and returns it as a CallHierarchyItem. The client then calls [getIncomingCalls] and
      * [getOutgoingCalls] to navigate the call graph.
      *
      * **Editor activation:**
      * - *IntelliJ:* Ctrl+Alt+H (Call Hierarchy)
-     * - *VS Code:* Right-click → Show Call Hierarchy
+     * - *VS Code:* Right-click -> Show Call Hierarchy
      *
      * **Adapter implementations:**
      * - *Mock:* Not implemented.
@@ -811,7 +811,7 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Get incoming calls for a call hierarchy item (who calls this function).
      *
-     * **LSP capability:** `callHierarchy/incomingCalls` — returns all call sites that invoke
+     * **LSP capability:** `callHierarchy/incomingCalls` -- returns all call sites that invoke
      * the given function/method.
      *
      * @param item the call hierarchy item to find callers for
@@ -822,7 +822,7 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Get outgoing calls for a call hierarchy item (what does this function call).
      *
-     * **LSP capability:** `callHierarchy/outgoingCalls` — returns all functions/methods that
+     * **LSP capability:** `callHierarchy/outgoingCalls` -- returns all functions/methods that
      * the given function calls.
      *
      * @param item the call hierarchy item to find callees for
@@ -833,10 +833,10 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Get code lenses for a document.
      *
-     * **LSP capability:** `textDocument/codeLens` — provides actionable inline annotations
+     * **LSP capability:** `textDocument/codeLens` -- provides actionable inline annotations
      * above declarations: reference counts ("3 references"), "Run Test", "Debug", "Implement".
      *
-     * **Editor activation:** Automatic — annotations appear above methods, classes, etc.
+     * **Editor activation:** Automatic -- annotations appear above methods, classes, etc.
      *
      * **Adapter implementations:**
      * - *Mock/TreeSitter:* Could show reference counts once workspace index exists.
@@ -851,7 +851,7 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Resolve a code lens (fill in the command/action lazily).
      *
-     * **LSP capability:** `codeLens/resolve` — called by the client when a code lens becomes
+     * **LSP capability:** `codeLens/resolve` -- called by the client when a code lens becomes
      * visible to fill in its command. Allows lazy computation for performance.
      *
      * @param lens the code lens to resolve
@@ -860,12 +860,12 @@ interface XtcCompilerAdapter : Closeable {
     fun resolveCodeLens(lens: CodeLens): CodeLens
 
     /**
-     * Format on type — auto-format after typing a trigger character.
+     * Format on type -- auto-format after typing a trigger character.
      *
-     * **LSP capability:** `textDocument/onTypeFormatting` — auto-indent when pressing Enter,
+     * **LSP capability:** `textDocument/onTypeFormatting` -- auto-indent when pressing Enter,
      * `}`, or `;`. Tree-sitter provides enough AST context to determine correct indentation.
      *
-     * **Editor activation:** Automatic — triggered after typing the trigger character.
+     * **Editor activation:** Automatic -- triggered after typing the trigger character.
      *
      * **Adapter implementations:**
      * - *Mock:* Not implemented.
@@ -890,10 +890,10 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Get linked editing ranges for the symbol at a position.
      *
-     * **LSP capability:** `textDocument/linkedEditingRange` — when renaming an identifier,
+     * **LSP capability:** `textDocument/linkedEditingRange` -- when renaming an identifier,
      * all related occurrences update simultaneously in real-time (before committing the rename).
      *
-     * **Editor activation:** Automatic — start editing an identifier and linked ranges
+     * **Editor activation:** Automatic -- start editing an identifier and linked ranges
      * update in real-time.
      *
      * **Adapter implementations:**
@@ -1180,7 +1180,7 @@ interface XtcCompilerAdapter : Closeable {
     )
 
     /**
-     * Linked editing ranges — ranges that should be edited simultaneously.
+     * Linked editing ranges -- ranges that should be edited simultaneously.
      *
      * @param ranges      the ranges that are linked
      * @param wordPattern optional regex pattern that the new text must match

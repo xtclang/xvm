@@ -94,7 +94,7 @@ class XtcLspConnectionProvider(
     /** Holds the provisioned java path once available. */
     private val provisionedJavaPath = AtomicReference<Path?>()
 
-    // No init {} block — JRE resolution calls ProjectJdkTable.getInstance() which is
+    // No init {} block -- JRE resolution calls ProjectJdkTable.getInstance() which is
     // prohibited on EDT. All JRE resolution is deferred to start() which runs off EDT.
 
     // TODO: Remove AtomicBoolean notification guard once LSP4IJ fixes duplicate server spawning.

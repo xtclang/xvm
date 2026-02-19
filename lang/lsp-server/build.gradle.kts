@@ -64,7 +64,7 @@ val lspAdapter: String = xdkProperties.stringValue("lsp.adapter", "treesitter")
 val lspSemanticTokens: String = xdkProperties.stringValue("lsp.semanticTokens", "false")
 
 // Log level: -Plog=DEBUG or XTC_LOG_LEVEL=DEBUG (default: INFO)
-// xdkProperties checks: env LOG → gradle prop → system prop → composite root gradle.properties
+// xdkProperties checks: env LOG -> gradle prop -> system prop -> composite root gradle.properties
 // We keep XTC_LOG_LEVEL as the final fallback for backward compatibility.
 val logLevel: String =
     xdkProperties

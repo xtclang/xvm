@@ -247,7 +247,7 @@ class SemanticTokenEncoder {
     }
 
     private fun classifyCallExpression(node: XtcNode) {
-        // The 'function' field holds the callee expression — could be an identifier
+        // The 'function' field holds the callee expression -- could be an identifier
         // (direct call) or a member_expression (method call) or other expression.
         val funcNode = node.childByFieldName("function") ?: return
 
@@ -255,7 +255,7 @@ class SemanticTokenEncoder {
             // Direct call: foo(args)
             emitToken(funcNode, "method", 0)
         } else if (funcNode.type == "member_expression") {
-            // Member call: obj.method(args) — the 'member' field is the method name
+            // Member call: obj.method(args) -- the 'member' field is the method name
             val memberId = funcNode.childByFieldName("member")
             if (memberId != null) {
                 emitToken(memberId, "method", 0)
@@ -266,7 +266,7 @@ class SemanticTokenEncoder {
     }
 
     private fun classifyMemberExpression(node: XtcNode) {
-        // Skip if parent is call_expression — classifyCallExpression handles it
+        // Skip if parent is call_expression -- classifyCallExpression handles it
         val parentType = node.parent?.type
         if (parentType == "call_expression") return
 
@@ -305,7 +305,7 @@ class SemanticTokenEncoder {
         tokenType: String,
         modifiers: Int,
     ) {
-        // Skip multi-line tokens — LSP semantic tokens are single-line
+        // Skip multi-line tokens -- LSP semantic tokens are single-line
         if (node.startLine != node.endLine) return
 
         val typeIndex = SemanticTokenLegend.typeIndex[tokenType] ?: return

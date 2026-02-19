@@ -234,7 +234,7 @@ class XtcLanguageServer(
     /**
      * Log which LSP capabilities the client advertises.
      *
-     * NOTE: The chained ?. calls look verbose but are necessary — LSP4J is a Java library
+     * NOTE: The chained ?. calls look verbose but are necessary -- LSP4J is a Java library
      * where all these capability fields are nullable. This is idiomatic for Java interop.
      *
      * ## LSP Capabilities Reference
@@ -1091,7 +1091,7 @@ class XtcLanguageServer(
         }
 
         // ====================================================================
-        // Planned features (stubs with logging — not yet advertised)
+        // Planned features (stubs with logging -- not yet advertised)
         // ====================================================================
         //
         // These handlers are wired up but the server does NOT advertise the

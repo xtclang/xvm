@@ -9,7 +9,7 @@ import java.nio.file.Path
 /**
  * Shared utility for resolving files bundled with the XTC plugin.
  *
- * Server JARs (LSP, DAP) are placed in the plugin's `bin/` directory — NOT `lib/`.
+ * Server JARs (LSP, DAP) are placed in the plugin's `bin/` directory -- NOT `lib/`.
  * If placed in `lib/`, IntelliJ loads their bundled lsp4j classes which conflict
  * with LSP4IJ's lsp4j. The `bin/` directory is not on IntelliJ's classloader path.
  */

@@ -34,7 +34,7 @@ class TreeSitterAdapterTest {
     private var adapter: TreeSitterAdapter? = null
     private val uriCounter = AtomicInteger(0)
 
-    /** Shorthand accessor — safe because [assumeAvailable] guards every test. */
+    /** Shorthand accessor -- safe because [assumeAvailable] guards every test. */
     private val ts: TreeSitterAdapter get() = adapter!!
 
     /**
@@ -45,7 +45,7 @@ class TreeSitterAdapterTest {
      */
     private fun freshUri(): String = "file:///t1st${uriCounter.incrementAndGet()}.x"
 
-    /** Log and return a value — use to trace adapter responses during test runs. */
+    /** Log and return a value -- use to trace adapter responses during test runs. */
     private fun <T> logged(
         test: String,
         value: T,
@@ -215,7 +215,7 @@ class TreeSitterAdapterTest {
         /**
          * Tree-sitter's error-recovery means a valid class followed by a malformed one
          * should yield both diagnostics (for the broken class) and the valid "Person"
-         * symbol — the key advantage over a traditional parser that would bail out.
+         * symbol -- the key advantage over a traditional parser that would bail out.
          */
         @Test
         @DisplayName("should perform error-tolerant parsing")
@@ -736,7 +736,7 @@ class TreeSitterAdapterTest {
 
         /**
          * Renaming "Person" to "Human" should produce edits for every identifier node
-         * with text "Person" in the file — at least the declaration and usage sites.
+         * with text "Person" in the file -- at least the declaration and usage sites.
          */
         @Test
         @DisplayName("should rename all occurrences")
@@ -874,7 +874,7 @@ class TreeSitterAdapterTest {
 
         /**
          * A file that already ends with `\n` and has no trailing whitespace is
-         * "clean" — the formatter should produce zero edits.
+         * "clean" -- the formatter should produce zero edits.
          */
         @Test
         @DisplayName("should return empty for clean file")
@@ -945,7 +945,7 @@ class TreeSitterAdapterTest {
     inner class FindReferencesTests {
         /**
          * Unlike [MockXtcCompilerAdapter], [TreeSitterAdapter.findReferences] ignores the
-         * `includeDeclaration` flag — it always returns every identifier node with the
+         * `includeDeclaration` flag -- it always returns every identifier node with the
          * same text. We verify this by checking that both flag values yield the same count.
          */
         @Test
@@ -1078,11 +1078,11 @@ class TreeSitterAdapterTest {
     }
 
     // ========================================================================
-    // getSelectionRanges() — tree-sitter-specific
+    // getSelectionRanges() -- tree-sitter-specific
     // ========================================================================
 
     @Nested
-    @DisplayName("getSelectionRanges() — tree-sitter-specific")
+    @DisplayName("getSelectionRanges() -- tree-sitter-specific")
     inner class SelectionRangeTests {
         /**
          * From a leaf identifier ("name" inside a return statement), the adapter walks
@@ -1112,7 +1112,7 @@ class TreeSitterAdapterTest {
         }
 
         /**
-         * Each parent range must strictly contain (or equal) its child range — the
+         * Each parent range must strictly contain (or equal) its child range -- the
          * selection never shrinks as you walk outward. We linearize positions as
          * `line * 10000 + column` for a simple numeric comparison.
          */
@@ -1186,11 +1186,11 @@ class TreeSitterAdapterTest {
     }
 
     // ========================================================================
-    // getSignatureHelp() — tree-sitter-specific
+    // getSignatureHelp() -- tree-sitter-specific
     // ========================================================================
 
     @Nested
-    @DisplayName("getSignatureHelp() — tree-sitter-specific")
+    @DisplayName("getSignatureHelp() -- tree-sitter-specific")
     inner class SignatureHelpTests {
         /**
          * When the cursor is inside the argument list of `add(1, 2)`, the adapter
@@ -1275,7 +1275,7 @@ class TreeSitterAdapterTest {
         fun shouldReturnSignatureHelpForNoArgCall() {
             val uri = freshUri()
             ts.compile(uri, greeterSource())
-            // line 6: `            greet();` — col 18 = ')' inside call
+            // line 6: `            greet();` -- col 18 = ')' inside call
             val help = logged("shouldReturnSignatureHelpForNoArgCall", ts.getSignatureHelp(uri, 6, 18))
 
             assertThat(help).isNotNull
@@ -1293,7 +1293,7 @@ class TreeSitterAdapterTest {
         fun shouldReportFirstParamActiveForThreeArgCall() {
             val uri = freshUri()
             ts.compile(uri, clampSource())
-            // line 6: `            clamp(5, 0, 100);` — col 18 = '5'
+            // line 6: `            clamp(5, 0, 100);` -- col 18 = '5'
             val help = logged("shouldReportFirstParamActiveForThreeArgCall", ts.getSignatureHelp(uri, 6, 18))
 
             assertThat(help).isNotNull
@@ -1310,7 +1310,7 @@ class TreeSitterAdapterTest {
         fun shouldReportSecondParamActiveForThreeArgCall() {
             val uri = freshUri()
             ts.compile(uri, clampSource())
-            // line 6: `            clamp(5, 0, 100);` — col 21 = '0'
+            // line 6: `            clamp(5, 0, 100);` -- col 21 = '0'
             val help = logged("shouldReportSecondParamActiveForThreeArgCall", ts.getSignatureHelp(uri, 6, 21))
 
             assertThat(help).isNotNull
@@ -1326,7 +1326,7 @@ class TreeSitterAdapterTest {
         fun shouldReportThirdParamActiveForThreeArgCall() {
             val uri = freshUri()
             ts.compile(uri, clampSource())
-            // line 6: `            clamp(5, 0, 100);` — col 24 = '1' (first digit of 100)
+            // line 6: `            clamp(5, 0, 100);` -- col 24 = '1' (first digit of 100)
             val help = logged("shouldReportThirdParamActiveForThreeArgCall", ts.getSignatureHelp(uri, 6, 24))
 
             assertThat(help).isNotNull
@@ -1342,7 +1342,7 @@ class TreeSitterAdapterTest {
         fun shouldReturnMultipleSignaturesForOverloads() {
             val uri = freshUri()
             ts.compile(uri, overloadedFormatSource())
-            // line 9: `            format("hello", 10);` — col 19 = '"' inside call
+            // line 9: `            format("hello", 10);` -- col 19 = '"' inside call
             val help = logged("shouldReturnMultipleSignaturesForOverloads", ts.getSignatureHelp(uri, 9, 19))
 
             assertThat(help).isNotNull
@@ -1358,7 +1358,7 @@ class TreeSitterAdapterTest {
         fun shouldReturnSignatureHelpForInnerNestedCall() {
             val uri = freshUri()
             ts.compile(uri, nestedCallSource())
-            // line 9: `            add(negate(1), 2);` — col 23 = '1'
+            // line 9: `            add(negate(1), 2);` -- col 23 = '1'
             val help = logged("shouldReturnSignatureHelpForInnerNestedCall", ts.getSignatureHelp(uri, 9, 23))
 
             assertThat(help).isNotNull
@@ -1375,7 +1375,7 @@ class TreeSitterAdapterTest {
         fun shouldReturnSignatureHelpForOuterNestedCall() {
             val uri = freshUri()
             ts.compile(uri, nestedCallSource())
-            // line 9: `            add(negate(1), 2);` — col 27 = '2'
+            // line 9: `            add(negate(1), 2);` -- col 27 = '2'
             val help = logged("shouldReturnSignatureHelpForOuterNestedCall", ts.getSignatureHelp(uri, 9, 27))
 
             assertThat(help).isNotNull
@@ -1393,7 +1393,7 @@ class TreeSitterAdapterTest {
         fun shouldResolveCrossMethodCallInSameClass() {
             val uri = freshUri()
             ts.compile(uri, crossMethodSource())
-            // line 6: `            return repeat(s, width);` — col 26 = 's'
+            // line 6: `            return repeat(s, width);` -- col 26 = 's'
             val help = logged("shouldResolveCrossMethodCallInSameClass", ts.getSignatureHelp(uri, 6, 26))
 
             assertThat(help).isNotNull
@@ -1411,7 +1411,7 @@ class TreeSitterAdapterTest {
         fun shouldTrackActiveParamInFiveParamMethod() {
             val uri = freshUri()
             ts.compile(uri, fiveParamSource())
-            // line 6: `            execute("run", 30, True, 5, "out.log");` — col 40 = '"' of "out.log"
+            // line 6: `            execute("run", 30, True, 5, "out.log");` -- col 40 = '"' of "out.log"
             val help = logged("shouldTrackActiveParamInFiveParamMethod", ts.getSignatureHelp(uri, 6, 40))
 
             assertThat(help).isNotNull
@@ -1428,7 +1428,7 @@ class TreeSitterAdapterTest {
         fun shouldReturnSignatureHelpAtOpenParen() {
             val uri = freshUri()
             ts.compile(uri, calculatorSource())
-            // line 6: `            add(1, 2);` — col 15 = '('
+            // line 6: `            add(1, 2);` -- col 15 = '('
             val help = logged("shouldReturnSignatureHelpAtOpenParen", ts.getSignatureHelp(uri, 6, 15))
 
             assertThat(help).isNotNull
@@ -1444,7 +1444,7 @@ class TreeSitterAdapterTest {
         fun shouldReturnNullWhenCalledMethodNotInFile() {
             val uri = freshUri()
             ts.compile(uri, unknownMethodSource())
-            // line 3: `            unknown(42);` — col 20 = '4'
+            // line 3: `            unknown(42);` -- col 20 = '4'
             val help = logged("shouldReturnNullWhenCalledMethodNotInFile", ts.getSignatureHelp(uri, 3, 20))
 
             assertThat(help).isNull()
@@ -1567,11 +1567,11 @@ class TreeSitterAdapterTest {
     }
 
     // ========================================================================
-    // Call pattern edge cases — tree-sitter-specific
+    // Call pattern edge cases -- tree-sitter-specific
     // ========================================================================
 
     @Nested
-    @DisplayName("call pattern edge cases — tree-sitter-specific")
+    @DisplayName("call pattern edge cases -- tree-sitter-specific")
     inner class CallPatternParsingTests {
         /**
          * `new Box(42)` is a constructor invocation, not a method call. Signature
@@ -1659,11 +1659,11 @@ class TreeSitterAdapterTest {
     }
 
     // ========================================================================
-    // Completions at call sites — tree-sitter-specific
+    // Completions at call sites -- tree-sitter-specific
     // ========================================================================
 
     @Nested
-    @DisplayName("completions at call sites — tree-sitter-specific")
+    @DisplayName("completions at call sites -- tree-sitter-specific")
     inner class CompletionsAtCallSiteTests {
         /**
          * Completions inside a class body should include all sibling method names
@@ -1736,16 +1736,16 @@ class TreeSitterAdapterTest {
     }
 
     // ========================================================================
-    // Selection ranges at call sites — tree-sitter-specific
+    // Selection ranges at call sites -- tree-sitter-specific
     // ========================================================================
 
     @Nested
-    @DisplayName("selection ranges at call sites — tree-sitter-specific")
+    @DisplayName("selection ranges at call sites -- tree-sitter-specific")
     inner class SelectionRangesAtCallSiteTests {
         /**
          * Starting from an argument literal (`1` in `add(1, 2)`), the selection
          * range chain should walk outward through argument list, call expression,
-         * statement, block, method, class, module — at least 4 levels deep.
+         * statement, block, method, class, module -- at least 4 levels deep.
          */
         @Test
         @DisplayName("should walk outward from call argument")
@@ -1778,7 +1778,7 @@ class TreeSitterAdapterTest {
 
         /**
          * Starting from a nested call argument (`1` in `negate(1)` inside
-         * `add(negate(1), 2)`), the chain should be even deeper — at least 5 levels.
+         * `add(negate(1), 2)`), the chain should be even deeper -- at least 5 levels.
          */
         @Test
         @DisplayName("should walk outward from nested call argument")
@@ -1878,7 +1878,7 @@ class TreeSitterAdapterTest {
     }
 
     // ========================================================================
-    // Future capabilities — disabled until implemented
+    // Future capabilities -- disabled until implemented
     // ========================================================================
 
     // ========================================================================
@@ -2119,7 +2119,7 @@ class TreeSitterAdapterTest {
                 """.trimIndent(),
             )
 
-            // Should not throw — may return partial tokens or null
+            // Should not throw -- may return partial tokens or null
             val tokens = ts.getSemanticTokens(uri)
             logger.info("[TEST] error file tokens: {}", tokens?.data?.size ?: "null")
         }
@@ -2211,7 +2211,7 @@ class TreeSitterAdapterTest {
 
             val tokens = ts.getSemanticTokens(uri)
             if (tokens == null) {
-                // Grammar may not produce const_declaration node — skip gracefully
+                // Grammar may not produce const_declaration node -- skip gracefully
                 return
             }
 
@@ -2284,7 +2284,7 @@ class TreeSitterAdapterTest {
         }
 
         /**
-         * Regression test: compile → rename (longer) → semantic tokens.
+         * Regression test: compile -> rename (longer) -> semantic tokens.
          * The reverse case: document grows after rename. Verifies we don't
          * have off-by-one errors in the opposite direction.
          */
@@ -2342,7 +2342,7 @@ class TreeSitterAdapterTest {
 
         /**
          * Verify folding ranges also work after rename (they use line/column, not byte offsets,
-         * so they should always work — but good to verify the full adapter pipeline).
+         * so they should always work -- but good to verify the full adapter pipeline).
          */
         @Test
         @DisplayName("should return folding ranges after rename")
@@ -2371,7 +2371,7 @@ class TreeSitterAdapterTest {
     }
 
     @Nested
-    @DisplayName("getInlayHints() — future")
+    @DisplayName("getInlayHints() -- future")
     inner class InlayHintTests {
         /**
          * TODO: Inlay hints show inferred type annotations inline (e.g., `val x` displays
@@ -2379,7 +2379,7 @@ class TreeSitterAdapterTest {
          *   tree-sitter alone cannot determine types.
          */
         @Test
-        @Disabled("Inlay hints not yet implemented — requires compiler type inference")
+        @Disabled("Inlay hints not yet implemented -- requires compiler type inference")
         @DisplayName("should return type hints for val declarations")
         fun shouldReturnTypeHints() {
             val uri = freshUri()
@@ -2487,7 +2487,7 @@ class TreeSitterAdapterTest {
         //   including import statements. The compiler's semantic model is required to
         //   identify all affected files safely.
         @Test
-        @Disabled("Cross-file rename not yet implemented — requires compiler semantic model")
+        @Disabled("Cross-file rename not yet implemented -- requires compiler semantic model")
         @DisplayName("should rename across files")
         fun shouldRenameAcrossFiles() {
             // TODO: Compile two files referencing the same class. Rename in one file
@@ -2498,7 +2498,7 @@ class TreeSitterAdapterTest {
         //  declarations with the same name. Tree-sitter's text-based matching cannot
         //  do this; the compiler's scope analysis is needed.
         @Test
-        @Disabled("Scope-aware references not yet implemented — requires compiler scope analysis")
+        @Disabled("Scope-aware references not yet implemented -- requires compiler scope analysis")
         @DisplayName("should distinguish shadowed locals in references")
         fun shouldDistinguishShadowedLocals() {
             // TODO: Compile source where a local variable shadows a class field.

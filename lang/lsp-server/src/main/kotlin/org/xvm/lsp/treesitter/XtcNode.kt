@@ -203,7 +203,7 @@ class XtcNode internal constructor(
      * This is a **fallback** for nodes that don't have field definitions in the grammar,
      * or for querying anonymous/keyword children (e.g., `"construct"`, `"static"`).
      *
-     * Prefer [childByFieldName] when a field is available — it is faster (O(1)),
+     * Prefer [childByFieldName] when a field is available -- it is faster (O(1)),
      * position-independent, and self-documenting.
      */
     fun childByType(nodeType: String): XtcNode? = children.find { it.type == nodeType }

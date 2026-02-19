@@ -507,11 +507,15 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
     }
 
     override fun getFoldingRanges(uri: String): List<FoldingRange> {
-        val tree = parsedTrees[uri] ?: return emptyList()
+        logger.info("$logPrefix getFoldingRanges: uri={}", uri.substringAfterLast('/'))
+        val tree =
+            parsedTrees[uri] ?: return emptyList<FoldingRange>().also {
+                logger.info("$logPrefix getFoldingRanges: no parsed tree for uri")
+            }
         return buildList {
             collectFoldingRanges(tree.root, this)
         }.also {
-            logger.info("$logPrefix folding ranges -> {} found", it.size)
+            logger.info("$logPrefix getFoldingRanges -> {} ranges", it.size)
         }
     }
 
@@ -692,10 +696,20 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         uri: String,
         range: Range,
         diagnostics: List<Diagnostic>,
-    ): List<CodeAction> =
-        listOfNotNull(buildOrganizeImportsAction(uri)).also {
-            logger.info("$logPrefix codeActions -> {} actions", it.size)
+    ): List<CodeAction> {
+        logger.info(
+            "$logPrefix getCodeActions: uri={}, range={}:{}-{}:{}, {} diagnostics",
+            uri.substringAfterLast('/'),
+            range.start.line,
+            range.start.column,
+            range.end.line,
+            range.end.column,
+            diagnostics.size,
+        )
+        return listOfNotNull(buildOrganizeImportsAction(uri)).also {
+            logger.info("$logPrefix getCodeActions -> {} actions", it.size)
         }
+    }
 
     private fun buildOrganizeImportsAction(uri: String): CodeAction? {
         val tree = parsedTrees[uri] ?: return null
@@ -729,9 +743,13 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         uri: String,
         content: String,
     ): List<XtcCompilerAdapter.DocumentLink> {
-        val tree = parsedTrees[uri] ?: return emptyList()
+        logger.info("$logPrefix getDocumentLinks: uri={}, {} bytes", uri.substringAfterLast('/'), content.length)
+        val tree =
+            parsedTrees[uri] ?: return emptyList<XtcCompilerAdapter.DocumentLink>().also {
+                logger.info("$logPrefix getDocumentLinks: no parsed tree for uri")
+            }
         val imports = queryEngine.findImportLocations(tree, uri)
-        logger.info("$logPrefix documentLinks -> {} imports", imports.size)
+        logger.info("$logPrefix getDocumentLinks -> {} links", imports.size)
         return imports.map { (importPath, loc) ->
             XtcCompilerAdapter.DocumentLink(
                 range =
@@ -746,9 +764,14 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
     }
 
     override fun getSemanticTokens(uri: String): XtcCompilerAdapter.SemanticTokens? {
-        val tree = parsedTrees[uri] ?: return null
+        logger.info("$logPrefix getSemanticTokens: uri={}", uri.substringAfterLast('/'))
+        val tree =
+            parsedTrees[uri] ?: return null.also {
+                logger.info("$logPrefix getSemanticTokens: no parsed tree for uri")
+            }
         val encoder = SemanticTokenEncoder()
         val data = encoder.encode(tree.root)
+        logger.info("$logPrefix getSemanticTokens -> {} data items ({} tokens)", data.size, data.size / 5)
         return if (data.isEmpty()) null else XtcCompilerAdapter.SemanticTokens(data)
     }
 
@@ -757,7 +780,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
      *
      * Closes the native tree-sitter [XtcTree] for this URI, freeing its native memory
      * (backed by `Arena.global()` / FFM). Without this, parsed trees accumulate for the
-     * JVM lifetime since [compile] intentionally does NOT close old trees eagerly — see the
+     * JVM lifetime since [compile] intentionally does NOT close old trees eagerly -- see the
      * race condition comment in [compile] for details. This method is the primary mechanism
      * for reclaiming native tree memory when the editor closes a document.
      */

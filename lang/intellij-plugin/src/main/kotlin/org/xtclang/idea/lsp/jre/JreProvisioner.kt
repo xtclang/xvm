@@ -130,7 +130,7 @@ class JreProvisioner(
             }
             logger.info("[jre-resolve] No cached JRE at $jreDir")
 
-            logger.info("[jre-resolve] No Java $version+ found — will need to download from Foojay")
+            logger.info("[jre-resolve] No Java $version+ found -- will need to download from Foojay")
             return null
         }
 

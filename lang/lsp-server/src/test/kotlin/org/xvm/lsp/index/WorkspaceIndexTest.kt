@@ -14,7 +14,7 @@ import java.util.concurrent.Executors
  * Unit tests for [WorkspaceIndex].
  *
  * Tests add/remove/search/findByName operations and the 4-tier fuzzy matching algorithm.
- * No native library needed — pure Kotlin data structures.
+ * No native library needed -- pure Kotlin data structures.
  */
 @DisplayName("WorkspaceIndex")
 class WorkspaceIndexTest {
@@ -134,7 +134,7 @@ class WorkspaceIndexTest {
     }
 
     // ========================================================================
-    // search() — 4-tier fuzzy matching
+    // search() -- 4-tier fuzzy matching
     // ========================================================================
 
     @Nested
@@ -324,7 +324,7 @@ class WorkspaceIndexTest {
             // Release all threads simultaneously
             latch.countDown()
 
-            // Wait for completion — no exceptions means thread-safe
+            // Wait for completion -- no exceptions means thread-safe
             (readFutures + writeFutures).forEach { it.get() }
             executor.shutdown()
         }

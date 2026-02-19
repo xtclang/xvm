@@ -96,7 +96,7 @@ Built: 2026-02-04T15:30:00Z
 ========================================
 ```
 
-In IntelliJ: **View → Tool Windows → Language Servers** (LSP4IJ) to see server logs.
+In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server logs.
 
 ### Backend Comparison
 
@@ -259,14 +259,14 @@ All log messages use a `[Module]` prefix to identify their source:
 
 | Prefix | Source |
 |--------|--------|
-| `[Server]` | `XtcLanguageServer` — LSP protocol handler |
-| `[Launcher]` | `XtcLanguageServerLauncher` — server startup |
-| `[TreeSitter]` | `TreeSitterAdapter` — syntax-level intelligence |
-| `[Mock]` | `MockXtcCompilerAdapter` — regex-based adapter |
-| `[Parser]` | `XtcParser` — tree-sitter native parser |
-| `[QueryEngine]` | `XtcQueryEngine` — tree-sitter query execution |
-| `[WorkspaceIndexer]` | `WorkspaceIndexer` — background file scanner |
-| `[WorkspaceIndex]` | `WorkspaceIndex` — symbol index |
+| `[Server]` | `XtcLanguageServer` -- LSP protocol handler |
+| `[Launcher]` | `XtcLanguageServerLauncher` -- server startup |
+| `[TreeSitter]` | `TreeSitterAdapter` -- syntax-level intelligence |
+| `[Mock]` | `MockXtcCompilerAdapter` -- regex-based adapter |
+| `[Parser]` | `XtcParser` -- tree-sitter native parser |
+| `[QueryEngine]` | `XtcQueryEngine` -- tree-sitter query execution |
+| `[WorkspaceIndexer]` | `WorkspaceIndexer` -- background file scanner |
+| `[WorkspaceIndex]` | `WorkspaceIndex` -- symbol index |
 
 ### Tailing Logs
 
@@ -283,8 +283,8 @@ but behaviors we must work around.
 
 | Issue | Impact | Workaround | Reference |
 |-------|--------|------------|-----------|
-| **Duplicate server spawning** | LSP4IJ may call `start()` concurrently for multiple `.x` files, briefly spawning extra LSP server processes | Harmless — extras are killed within milliseconds. We guard notifications with `AtomicBoolean` to avoid duplicates | [lsp4ij#888](https://github.com/redhat-developer/lsp4ij/issues/888) |
-| **"Show Logs" link in error popups** | When the LSP server returns an error (e.g., internal exception), the error notification shows "Show Logs" / "Disable error reporting". The "Show Logs" link opens `idea.log`, **not** the LSP server log file, and may be unclickable | Tail the actual LSP log directly: `tail -f ~/.xtc/logs/lsp-server.log`. Also check the LSP Console: **View → Tool Windows → Language Servers → Logs tab** | LSP4IJ limitation |
+| **Duplicate server spawning** | LSP4IJ may call `start()` concurrently for multiple `.x` files, briefly spawning extra LSP server processes | Harmless -- extras are killed within milliseconds. We guard notifications with `AtomicBoolean` to avoid duplicates | [lsp4ij#888](https://github.com/redhat-developer/lsp4ij/issues/888) |
+| **"Show Logs" link in error popups** | When the LSP server returns an error (e.g., internal exception), the error notification shows "Show Logs" / "Disable error reporting". The "Show Logs" link opens `idea.log`, **not** the LSP server log file, and may be unclickable | Tail the actual LSP log directly: `tail -f ~/.xtc/logs/lsp-server.log`. Also check the LSP Console: **View -> Tool Windows -> Language Servers -> Logs tab** | LSP4IJ limitation |
 | **Error notification popup not actionable** | The `textDocument/semanticTokens Internal error` popup's links ("Show Logs", "Disable error reporting", "More") may not respond to clicks in some IntelliJ versions | The popup auto-dismisses. Check the LSP Console Logs tab for the actual server-side stack trace | LSP4IJ UI limitation |
 
 ### IntelliJ Platform Issues
@@ -293,7 +293,7 @@ but behaviors we must work around.
 |-------|--------|------------|-----------|
 | **`intellijIdea()` downloads Ultimate (IU)** | JetBrains deprecated `intellijIdeaCommunity()` in Platform Gradle Plugin 2.11 for 2025.3+. The replacement `intellijIdea()` downloads IntelliJ Ultimate which bundles 50+ plugins requiring `com.intellij.modules.ultimate`. These all fail to load with WARN messages | We disable `com.intellij.modules.ultimate` and Kubernetes plugins in `disabled_plugins.txt` via the `configureDisabledPlugins` task. Remaining warnings are cosmetic | JetBrains 2025.3 unified distribution |
 | **EDT "slow operations" / "prohibited" warnings** | IntelliJ reports plugins that perform I/O or heavy work on the Event Dispatch Thread. Our `JreProvisioner.findSystemJava()` called `ProjectJdkTable.getInstance()` in the connection provider's `init {}` block (EDT) | Fixed: moved JRE resolution to `start()` which runs off EDT. If new EDT warnings appear, check that no IntelliJ platform API calls are in `init {}` blocks or constructors | IntelliJ 2025.3 strict EDT enforcement |
-| **CDS warning in tests** | `[warning][cds] Archived non-system classes are disabled because the java.system.class.loader property is specified` appears in test output | Harmless — IntelliJ sets `-Djava.system.class.loader=com.intellij.util.lang.PathClassLoader` for plugin classloading. Suppressed with `-Xlog:cds=off` in test config | Standard for all IntelliJ plugin tests |
+| **CDS warning in tests** | `[warning][cds] Archived non-system classes are disabled because the java.system.class.loader property is specified` appears in test output | Harmless -- IntelliJ sets `-Djava.system.class.loader=com.intellij.util.lang.PathClassLoader` for plugin classloading. Suppressed with `-Xlog:cds=off` in test config | Standard for all IntelliJ plugin tests |
 
 ### Debugging Tips
 
@@ -303,7 +303,7 @@ but behaviors we must work around.
 |-----|----------|----------|
 | LSP server log | `~/.xtc/logs/lsp-server.log` | All `[Server]`, `[TreeSitter]`, `[Parser]`, `[QueryEngine]` messages |
 | IntelliJ `idea.log` | Sandbox `log/idea.log` (path shown at `runIde` startup) | Platform errors, plugin loading, EDT violations |
-| LSP Console (IDE) | **View → Tool Windows → Language Servers → Logs** | JSON-RPC traces, server stderr |
+| LSP Console (IDE) | **View -> Tool Windows -> Language Servers -> Logs** | JSON-RPC traces, server stderr |
 | Gradle console | Terminal running `runIde` | Build output + tailed LSP log (real-time) |
 
 **When "Show Logs" doesn't work:**
@@ -312,7 +312,7 @@ The LSP4IJ error popup's "Show Logs" link points to `idea.log`, which typically 
 contain the actual LSP server error. Instead:
 
 1. Open the **Language Servers** tool window (bottom panel, next to Terminal)
-2. Select **XTC Language Server** → **Logs** tab
+2. Select **XTC Language Server** -> **Logs** tab
 3. Look for `SEVERE:` or stack traces in the log output
 4. Or tail the server log directly: `tail -f ~/.xtc/logs/lsp-server.log`
 

@@ -42,10 +42,10 @@ class WorkspaceIndexer(
 ) : Closeable {
     private val logger = LoggerFactory.getLogger(WorkspaceIndexer::class.java)
 
-    /** Dedicated parser instance for the indexer — not shared with the adapter. */
+    /** Dedicated parser instance for the indexer -- not shared with the adapter. */
     private val parser: XtcParser = XtcParser(language)
 
-    /** Dedicated query engine for the indexer — not shared with the adapter. */
+    /** Dedicated query engine for the indexer -- not shared with the adapter. */
     private val queryEngine: XtcQueryEngine = XtcQueryEngine(language)
 
     /** Serializes access to the non-thread-safe tree-sitter parser and query engine. */
