@@ -144,10 +144,11 @@ Capabilities not yet implemented in an adapter use default interface methods
 | **Code Intelligence** |
 | Diagnostics | ⚠️ | ✅ | 🔮 | `textDocument/publishDiagnostics` |
 | Folding Ranges | ✅ | ✅ | 🔮 | `textDocument/foldingRange` |
+| **Code Intelligence (cont.)** |
+| Semantic Tokens | ❌ | ✅ | 🔮 | `textDocument/semanticTokens/full` |
+| Workspace Symbols | ❌ | ✅ | 🔮 | `workspace/symbol` |
 | **Future (Requires Compiler)** |
-| Semantic Tokens | ❌ | ❌ | 🔮 | `textDocument/semanticTokens/full` |
 | Inlay Hints | ❌ | ❌ | 🔮 | `textDocument/inlayHint` |
-| Workspace Symbols | ❌ | ❌ | 🔮 | `workspace/symbol` |
 
 Legend: ✅ = Implemented, ⚠️ = Partial/limited, ❌ = Not implemented, 🔮 = Future (compiler adapter)
 
@@ -196,7 +197,7 @@ system properties depending on the property.
 |----------|---------|-------------|
 | `log` | `INFO` | Log level for XTC LSP/DAP servers. Valid: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR` |
 | `lsp.adapter` | `treesitter` | Parsing backend. Valid: `treesitter`, `mock`, `compiler` |
-| `lsp.semanticTokens` | `false` | Enable semantic token highlighting (opt-in) |
+| `lsp.semanticTokens` | `true` | Enable semantic token highlighting (tree-sitter lexer-based) |
 | `includeBuildLang` | `false` | Include `lang` as a composite build (IDE visibility, task addressability) |
 | `includeBuildAttachLang` | `false` | Wire lang lifecycle tasks to root build (requires `includeBuildLang=true`) |
 | `lsp.buildSearchableOptions` | `false` | Build IntelliJ searchable options index |

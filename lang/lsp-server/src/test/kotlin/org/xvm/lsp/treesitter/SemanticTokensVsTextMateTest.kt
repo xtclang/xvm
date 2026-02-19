@@ -69,12 +69,12 @@ class SemanticTokensVsTextMateTest {
         parser?.close()
     }
 
-    private fun encode(source: String): List<DecodedToken> {
-        val tree = parser!!.parse(source)
-        val encoder = SemanticTokenEncoder()
-        val data = encoder.encode(tree.root)
-        return decode(data, source)
-    }
+    private fun encode(source: String): List<DecodedToken> =
+        parser!!.parse(source).use { tree ->
+            val encoder = SemanticTokenEncoder()
+            val data = encoder.encode(tree.root)
+            decode(data, source)
+        }
 
     // ========================================================================
     // Test helpers

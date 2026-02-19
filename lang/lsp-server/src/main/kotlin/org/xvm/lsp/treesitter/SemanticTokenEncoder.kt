@@ -343,7 +343,15 @@ class SemanticTokenEncoder {
         return result
     }
 
-    private fun nodeKey(node: XtcNode): Long = (node.startLine.toLong() shl 32) or (node.startColumn.toLong() and 0xFFFFFFFFL)
+    /**
+     * Unique key for deduplication. Combines line, column, AND node type to avoid
+     * collisions when a parent and child node share the same start position
+     * (e.g., `type_name` wrapping an `identifier` at the same column).
+     */
+    private fun nodeKey(node: XtcNode): Long {
+        val typeHash = node.type.hashCode().toLong() and 0xFFFFL
+        return (node.startLine.toLong() shl 32) or (node.startColumn.toLong() shl 16) or typeHash
+    }
 
     private fun isClassified(node: XtcNode): Boolean = nodeKey(node) in classified
 

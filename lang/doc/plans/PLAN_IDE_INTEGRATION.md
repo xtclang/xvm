@@ -77,7 +77,7 @@ out-of-process with an auto-provisioned JRE to meet this requirement (IntelliJ r
 | Syntax highlighting | - | TextMate + semantic tokens (lexer) | Full semantic tokens |
 | Document symbols | Full | Full | Full |
 | Go-to-definition (same file) | By name | By name | Semantic |
-| Go-to-definition (cross-file) | - | - | Full |
+| Go-to-definition (cross-file) | - | Via workspace index | Full |
 | Find references (same file) | Decl only | By name | Full |
 | Completions | Keywords | Keywords + locals + members | Types + members |
 | Syntax errors | Markers | Full | Full |
@@ -91,6 +91,8 @@ out-of-process with an auto-provisioned JRE to meet this requirement (IntelliJ r
 | Rename (same file) | Text | AST | Semantic |
 | Code actions | Organize imports | Organize imports | Quick fixes |
 | Formatting | Trailing WS | Trailing WS | Full formatter |
+| Workspace symbols | - | Fuzzy search (4-tier) | Full |
+| Semantic tokens | - | Lexer-based (18 contexts) | Full semantic |
 
 **Data Model:** `lang/lsp-server/src/main/kotlin/org/xvm/lsp/model/`
 - `CompilationResult` - Compilation output with diagnostics and symbols
@@ -158,27 +160,12 @@ Full tree-sitter support for fast, incremental parsing:
    - Out-of-process LSP server runs with Java 25+ (FFM API for tree-sitter)
    - JRE auto-provisioning via Foojay Disco API
 
-2. **Implement semantic tokens (two phases)**
-
-   The LSP server already has `semanticTokensFull` wired up and the adapter interface
-   defines `getSemanticTokens()`, but no adapter implements it and the server doesn't
-   advertise the capability yet.
-
-   **Phase 1 — Lexer-based (no compiler needed):**
-   - Implement `getSemanticTokens()` in `TreeSitterAdapter` using tree-sitter node types
-   - Token types achievable with a lexer/tree-sitter alone:
-     - `keyword` — control flow, declarations, modifiers
-     - `decorator` — annotations (`@Test`, `@Inject`, etc.)
-     - `comment` — line and block comments
-     - `string` — regular and interpolated strings
-     - `number` — integer, float, hex, binary literals
-     - `operator` — all operator types
-     - `type` — identifiers matching `[A-Z]...` (heuristic, not semantic)
-     - `function` — identifiers followed by `(` (heuristic)
-   - Register `SemanticTokensWithRegistrationOptions` in server capabilities
-   - Move `getSemanticTokens` from "Semantic features" to "Tree-sitter capable" in adapter
-   - This fixes the immediate problem: `@Test` will get `decorator` token type and
-     render with distinct annotation coloring in all themes
+2. ~~**Implement semantic tokens (Phase 1)**~~ ✅ COMPLETE
+   - `SemanticTokenEncoder` classifies 18 AST contexts via single-pass O(n) tree walk
+   - `TreeSitterAdapter.getSemanticTokens()` implemented and wired
+   - Server advertises capability when `lsp.semanticTokens=true` (default)
+   - Token types: keyword, decorator, comment, string, number, operator, type (heuristic),
+     method (call-site heuristic), class/interface/enum/property/variable/parameter/namespace
 
    **Phase 2 — Compiler-based (requires pluggable compiler):**
    - Distinguish classes vs interfaces vs enums vs type parameters
@@ -343,28 +330,13 @@ The `xtc-intellij-plugin-dev` reference repo demonstrates IntelliJ's built-in LS
 
 ### Tree-sitter / Semantic Tokens
 
-3. **`XtcNode.text` uses byte offsets as character offsets** (`XtcNode.kt:43`) —
-   `source.substring(startByte, endByte)` treats tree-sitter's UTF-8 byte offsets as
-   Java `String` character offsets (UTF-16 code units). This is correct for ASCII-only
-   sources but will produce wrong results or `StringIndexOutOfBoundsException` for files
-   containing non-ASCII characters (e.g., Unicode in string literals or comments). Needs
-   verification against jtreesitter's actual behavior.
-
-4. **`SemanticTokensVsTextMateTest` leaks native memory** — The `encode()` helper at
-   `SemanticTokensVsTextMateTest.kt:73` calls `parser.parse(source)` but never closes the
-   returned `XtcTree`. Should use `.use { }` to release native tree-sitter memory.
-
-5. **`SemanticTokenEncoder.nodeKey` collision** (`SemanticTokenEncoder.kt:346`) — Uses
-   `(startLine << 32) | startColumn` as a unique key. Two different AST nodes starting at
-   the same `(line, column)` (e.g., a `type_name` and its child `identifier`) will collide,
-   with the first-emitted token winning silently. Low risk in practice.
+~~3. `XtcNode.text` byte-vs-char offset~~ — FIXED: Added UTF-8 aware substring extraction.
+~~4. `SemanticTokensVsTextMateTest` native memory leak~~ — FIXED: Uses `.use {}` now.
+~~5. `SemanticTokenEncoder.nodeKey` collision~~ — FIXED: Key now includes node type hash.
 
 ### Build System
 
-6. **Windows IDE path hardcodes "2025.1"** (`intellij-plugin/build.gradle.kts:73`) —
-   The Windows IDE detection path for `-PuseLocalIde=true` still references
-   `"IntelliJ IDEA Community Edition 2025.1"` despite the IDE version bump to 2025.3.2.
-   Only affects Windows users with local IDE mode.
+~~6. Windows IDE path "2025.1"~~ — FIXED: Updated to 2025.3.
 
 ## Related Documentation
 

@@ -70,7 +70,7 @@ fun findLocalIntelliJ(): File? {
             "windows" in osName -> {
                 val programFiles = System.getenv("ProgramFiles") ?: "C:\\Program Files"
                 listOf(
-                    "$programFiles\\JetBrains\\IntelliJ IDEA Community Edition 2025.1",
+                    "$programFiles\\JetBrains\\IntelliJ IDEA Community Edition 2025.3",
                     "$programFiles\\JetBrains\\IntelliJ IDEA Community Edition",
                     "$userHome\\AppData\\Local\\JetBrains\\Toolbox\\apps\\IDEA-C",
                 )

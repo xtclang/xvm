@@ -38,9 +38,30 @@ class XtcNode internal constructor(
 
     /**
      * The text content of this node from the source.
+     *
+     * Tree-sitter reports byte offsets into a UTF-8 representation, but Java Strings use
+     * UTF-16 code units. For ASCII-only sources (all current XTC code), byte offsets equal
+     * character offsets. For non-ASCII sources we convert via the UTF-8 byte array to get
+     * the correct substring.
      */
     val text: String
-        get() = source.substring(tsNode.startByte, tsNode.endByte)
+        get() {
+            val start = tsNode.startByte
+            val end = tsNode.endByte
+            // Fast path: if all chars are ASCII, byte offsets == char offsets
+            if (end <= source.length &&
+                source
+                    .asSequence()
+                    .drop(start)
+                    .take(end - start)
+                    .all { it.code < 128 }
+            ) {
+                return source.substring(start, end)
+            }
+            // Slow path: convert to UTF-8 bytes, slice, and decode back
+            val utf8 = source.toByteArray(Charsets.UTF_8)
+            return String(utf8, start, end - start, Charsets.UTF_8)
+        }
 
     /**
      * Whether this is a named node (appears in grammar rules) vs anonymous (literal tokens).
