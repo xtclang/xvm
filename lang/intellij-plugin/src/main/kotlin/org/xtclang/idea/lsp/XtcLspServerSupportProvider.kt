@@ -180,8 +180,11 @@ class XtcLspConnectionProvider(
         logger.info("Using Java: $javaPath")
         logger.info("Using LSP server JAR: $serverJar")
 
-        // Log level: check -Dxtc.logLevel (case-insensitive), default to INFO
-        val logLevel = System.getProperty("xtc.logLevel")?.uppercase() ?: "INFO"
+        // Log level: system property > environment variable > INFO default
+        val logLevel =
+            System.getProperty("xtc.logLevel")?.uppercase()
+                ?: System.getenv("XTC_LOG_LEVEL")?.uppercase()
+                ?: "INFO"
 
         // FFM API is finalized since Java 22. The --enable-native-access flag is unnecessary
         // on Java 22+ and may trigger experimental feature consent dialogs on older JVMs.

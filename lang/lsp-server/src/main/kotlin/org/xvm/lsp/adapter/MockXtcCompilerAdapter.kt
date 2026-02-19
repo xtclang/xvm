@@ -193,6 +193,8 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
         return result
     }
 
+    override fun getCachedResult(uri: String): CompilationResult? = compiledDocuments[uri]
+
     override fun findSymbolAt(
         uri: String,
         line: Int,

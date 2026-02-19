@@ -76,18 +76,20 @@ private fun createAdapter(adapterType: String): Pair<XtcCompilerAdapter, Adapter
             // Stub adapter - all methods log warnings, no actual compiler integration yet
             // TODO: Replace with real compiler adapter when parallel compiler integration is ready
             // See PLAN_LSP_PARALLEL_LEXER.md for the integration roadmap
-            logger.info("Using compiler stub adapter - all LSP calls will be logged but return empty results")
+            logger.info("[Launcher] using compiler stub adapter - all LSP calls will be logged but return empty results")
             XtcCompilerAdapterStub() to AdapterBackend.COMPILER
         }
         "treesitter", "tree-sitter" -> {
             try {
                 TreeSitterAdapter() to AdapterBackend.TREE_SITTER
             } catch (e: UnsatisfiedLinkError) {
-                logger.error("Tree-sitter native library not found, falling back to mock adapter", e)
-                logger.warn("To use tree-sitter, build the native library: ./gradlew :lang:tree-sitter:buildAllNativeLibrariesOnDemand")
+                logger.error("[Launcher] tree-sitter native library not found, falling back to mock adapter", e)
+                logger.warn(
+                    "[Launcher] to use tree-sitter, build the native library: ./gradlew :lang:tree-sitter:buildAllNativeLibrariesOnDemand",
+                )
                 MockXtcCompilerAdapter() to AdapterBackend.MOCK
             } catch (e: Exception) {
-                logger.error("Failed to initialize Tree-sitter adapter, falling back to mock", e)
+                logger.error("[Launcher] failed to initialize tree-sitter adapter, falling back to mock", e)
                 MockXtcCompilerAdapter() to AdapterBackend.MOCK
             }
         }
@@ -111,24 +113,24 @@ fun main(
 
     // Log startup banner prominently
     val logFile = "${System.getProperty("user.home")}/.xtc/logs/lsp-server.log"
-    logger.info("========================================")
-    logger.info("XTC Language Server v$version")
-    logger.info("Backend: ${backend.displayName}")
-    logger.info("Log file: $logFile")
-    logger.info("========================================")
+    logger.info("[Launcher] ========================================")
+    logger.info("[Launcher] XTC Language Server v$version")
+    logger.info("[Launcher] backend: ${backend.displayName}")
+    logger.info("[Launcher] log file: $logFile")
+    logger.info("[Launcher] ========================================")
 
     when (backend) {
         AdapterBackend.TREE_SITTER -> {
-            logger.info("Tree-sitter provides: syntax highlighting, document symbols, completions, go-to-definition")
+            logger.info("[Launcher] tree-sitter provides: syntax highlighting, document symbols, completions, go-to-definition")
         }
         AdapterBackend.COMPILER -> {
-            logger.warn("XTC Compiler adapter is a STUB - all methods log but return empty results")
-            logger.info("When implemented, will provide: full semantic analysis, type inference, cross-file navigation")
+            logger.warn("[Launcher] XTC Compiler adapter is a STUB - all methods log but return empty results")
+            logger.info("[Launcher] when implemented, will provide: full semantic analysis, type inference, cross-file navigation")
         }
         AdapterBackend.MOCK -> {
-            logger.info("Mock backend provides: basic symbol detection (regex-based)")
+            logger.info("[Launcher] mock backend provides: basic symbol detection (regex-based)")
             if (adapterType.lowercase() in listOf("treesitter", "tree-sitter")) {
-                logger.warn("Tree-sitter was requested but failed to initialize - check native library")
+                logger.warn("[Launcher] tree-sitter was requested but failed to initialize - check native library")
             }
         }
     }
@@ -165,9 +167,9 @@ fun launchStdio(
         when (e) {
             is InterruptedException -> {
                 Thread.currentThread().interrupt()
-                logger.error("Server interrupted", e)
+                logger.error("[Launcher] server interrupted", e)
             }
-            else -> logger.error("Server error", e)
+            else -> logger.error("[Launcher] server error", e)
         }
     }
 }

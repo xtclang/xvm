@@ -12,6 +12,7 @@ import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.redhat.devtools.lsp4ij.dap.DebugMode
+import com.redhat.devtools.lsp4ij.dap.definitions.DebugAdapterServerDefinition
 import com.redhat.devtools.lsp4ij.dap.descriptors.DebugAdapterDescriptor
 import com.redhat.devtools.lsp4ij.dap.descriptors.DebugAdapterDescriptorFactory
 import com.redhat.devtools.lsp4ij.dap.descriptors.ServerReadyConfig
@@ -77,7 +78,7 @@ class XtcDebugAdapterFactory : DebugAdapterDescriptorFactory() {
 class XtcDebugAdapterDescriptor(
     options: RunConfigurationOptions,
     environment: ExecutionEnvironment,
-    serverDefinition: com.redhat.devtools.lsp4ij.dap.definitions.DebugAdapterServerDefinition?,
+    serverDefinition: DebugAdapterServerDefinition?,
 ) : DebugAdapterDescriptor(options, environment, serverDefinition) {
     private val logger = logger<XtcDebugAdapterDescriptor>()
     private val provisioner = JreProvisioner()
@@ -88,7 +89,10 @@ class XtcDebugAdapterDescriptor(
                 ?: throw ExecutionException("JRE not provisioned. Open an .x file first to trigger JRE download.")
 
         val serverJar = findDapServerJar()
-        val logLevel = System.getProperty("xtc.logLevel")?.uppercase() ?: "INFO"
+        val logLevel =
+            System.getProperty("xtc.logLevel")?.uppercase()
+                ?: System.getenv("XTC_LOG_LEVEL")?.uppercase()
+                ?: "INFO"
 
         val commandLine =
             GeneralCommandLine(

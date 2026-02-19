@@ -83,6 +83,10 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         logger.info("$logPrefix didChangeWatchedFile: uri={}, changeType={}", uri, changeType)
     }
 
+    override fun closeDocument(uri: String) {
+        logger.info("$logPrefix closeDocument: uri={}", uri)
+    }
+
     // ========================================================================
     // Default implementations — tree-sitter capable features
     // ========================================================================
@@ -92,7 +96,7 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         line: Int,
         column: Int,
     ): List<XtcCompilerAdapter.DocumentHighlight> {
-        logger.info("$logPrefix getDocumentHighlights: not yet implemented; uri={}, line={}, column={}", uri, line, column)
+        logger.warn("$logPrefix [NOT IMPLEMENTED] getDocumentHighlights: uri={}, line={}, column={}", uri, line, column)
         return emptyList()
     }
 
@@ -100,12 +104,12 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         uri: String,
         positions: List<XtcCompilerAdapter.Position>,
     ): List<XtcCompilerAdapter.SelectionRange> {
-        logger.info("$logPrefix getSelectionRanges: not yet implemented; uri={}, positions={}", uri, positions)
+        logger.warn("$logPrefix [NOT IMPLEMENTED] getSelectionRanges: uri={}, positions={}", uri, positions)
         return emptyList()
     }
 
     override fun getFoldingRanges(uri: String): List<XtcCompilerAdapter.FoldingRange> {
-        logger.info("$logPrefix getFoldingRanges: not yet implemented; uri={}", uri)
+        logger.warn("$logPrefix [NOT IMPLEMENTED] getFoldingRanges: uri={}", uri)
         return emptyList()
     }
 
@@ -113,7 +117,7 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         uri: String,
         content: String,
     ): List<XtcCompilerAdapter.DocumentLink> {
-        logger.info("$logPrefix getDocumentLinks: not yet implemented; uri={}, content={} bytes", uri, content.length)
+        logger.warn("$logPrefix [NOT IMPLEMENTED] getDocumentLinks: uri={}, content={} bytes", uri, content.length)
         return emptyList()
     }
 
@@ -126,7 +130,7 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         line: Int,
         column: Int,
     ): XtcCompilerAdapter.SignatureHelp? {
-        logger.info("$logPrefix getSignatureHelp: not yet implemented (requires compiler); uri={}, line={}, column={}", uri, line, column)
+        logger.warn("$logPrefix [NOT IMPLEMENTED] getSignatureHelp: uri={}, line={}, column={}", uri, line, column)
         return null
     }
 
@@ -135,7 +139,7 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         line: Int,
         column: Int,
     ): XtcCompilerAdapter.PrepareRenameResult? {
-        logger.info("$logPrefix prepareRename: not yet implemented (requires compiler); uri={}, line={}, column={}", uri, line, column)
+        logger.warn("$logPrefix [NOT IMPLEMENTED] prepareRename: uri={}, line={}, column={}", uri, line, column)
         return null
     }
 
@@ -145,8 +149,8 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         column: Int,
         newName: String,
     ): XtcCompilerAdapter.WorkspaceEdit? {
-        logger.info(
-            "$logPrefix rename: not yet implemented (requires compiler); uri={}, line={}, column={}, newName='{}'",
+        logger.warn(
+            "$logPrefix [NOT IMPLEMENTED] rename: uri={}, line={}, column={}, newName='{}'",
             uri,
             line,
             column,
@@ -160,8 +164,8 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         range: XtcCompilerAdapter.Range,
         diagnostics: List<Diagnostic>,
     ): List<XtcCompilerAdapter.CodeAction> {
-        logger.info(
-            "$logPrefix getCodeActions: not yet implemented (requires compiler); uri={}, range={}:{}-{}:{}, diagnostics={}",
+        logger.warn(
+            "$logPrefix [NOT IMPLEMENTED] getCodeActions: uri={}, range={}:{}-{}:{}, diagnostics={}",
             uri,
             range.start.line,
             range.start.column,
@@ -173,7 +177,7 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
     }
 
     override fun getSemanticTokens(uri: String): XtcCompilerAdapter.SemanticTokens? {
-        logger.info("$logPrefix getSemanticTokens: not yet implemented (requires compiler); uri={}", uri)
+        logger.warn("$logPrefix [NOT IMPLEMENTED] getSemanticTokens: uri={}", uri)
         return null
     }
 
@@ -181,8 +185,8 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         uri: String,
         range: XtcCompilerAdapter.Range,
     ): List<XtcCompilerAdapter.InlayHint> {
-        logger.info(
-            "$logPrefix getInlayHints: not yet implemented (requires compiler); uri={}, range={}:{}-{}:{}",
+        logger.warn(
+            "$logPrefix [NOT IMPLEMENTED] getInlayHints: uri={}, range={}:{}-{}:{}",
             uri,
             range.start.line,
             range.start.column,
@@ -260,7 +264,7 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         }
 
     override fun findWorkspaceSymbols(query: String): List<SymbolInfo> {
-        logger.info("$logPrefix findWorkspaceSymbols: not yet implemented (requires workspace index); query='{}'", query)
+        logger.warn("$logPrefix [NOT IMPLEMENTED] findWorkspaceSymbols: query='{}'", query)
         return emptyList()
     }
 
@@ -273,7 +277,7 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         line: Int,
         column: Int,
     ): Location? {
-        logger.info("$logPrefix findDeclaration: not yet implemented (requires compiler); uri={}, line={}, column={}", uri, line, column)
+        logger.warn("$logPrefix [NOT IMPLEMENTED] findDeclaration: uri={}, line={}, column={}", uri, line, column)
         return null
     }
 
@@ -282,7 +286,7 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         line: Int,
         column: Int,
     ): Location? {
-        logger.info("$logPrefix findTypeDefinition: not yet implemented (requires compiler); uri={}, line={}, column={}", uri, line, column)
+        logger.warn("$logPrefix [NOT IMPLEMENTED] findTypeDefinition: uri={}, line={}, column={}", uri, line, column)
         return null
     }
 
@@ -291,8 +295,8 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         line: Int,
         column: Int,
     ): List<Location> {
-        logger.info(
-            "$logPrefix findImplementation: not yet implemented (requires compiler + type hierarchy); uri={}, line={}, column={}",
+        logger.warn(
+            "$logPrefix [NOT IMPLEMENTED] findImplementation: uri={}, line={}, column={}",
             uri,
             line,
             column,
@@ -305,8 +309,8 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         line: Int,
         column: Int,
     ): List<XtcCompilerAdapter.TypeHierarchyItem> {
-        logger.info(
-            "$logPrefix prepareTypeHierarchy: not yet implemented (requires workspace index); uri={}, line={}, column={}",
+        logger.warn(
+            "$logPrefix [NOT IMPLEMENTED] prepareTypeHierarchy: uri={}, line={}, column={}",
             uri,
             line,
             column,
@@ -315,12 +319,12 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
     }
 
     override fun getSupertypes(item: XtcCompilerAdapter.TypeHierarchyItem): List<XtcCompilerAdapter.TypeHierarchyItem> {
-        logger.info("$logPrefix getSupertypes: not yet implemented (requires workspace index); item={}", item.name)
+        logger.warn("$logPrefix [NOT IMPLEMENTED] getSupertypes: item={}", item.name)
         return emptyList()
     }
 
     override fun getSubtypes(item: XtcCompilerAdapter.TypeHierarchyItem): List<XtcCompilerAdapter.TypeHierarchyItem> {
-        logger.info("$logPrefix getSubtypes: not yet implemented (requires workspace index); item={}", item.name)
+        logger.warn("$logPrefix [NOT IMPLEMENTED] getSubtypes: item={}", item.name)
         return emptyList()
     }
 
@@ -329,8 +333,8 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         line: Int,
         column: Int,
     ): List<XtcCompilerAdapter.CallHierarchyItem> {
-        logger.info(
-            "$logPrefix prepareCallHierarchy: not yet implemented (requires workspace index + call graph); uri={}, line={}, column={}",
+        logger.warn(
+            "$logPrefix [NOT IMPLEMENTED] prepareCallHierarchy: uri={}, line={}, column={}",
             uri,
             line,
             column,
@@ -339,23 +343,23 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
     }
 
     override fun getIncomingCalls(item: XtcCompilerAdapter.CallHierarchyItem): List<XtcCompilerAdapter.CallHierarchyIncomingCall> {
-        logger.info("$logPrefix getIncomingCalls: not yet implemented (requires workspace index + call graph); item={}", item.name)
+        logger.warn("$logPrefix [NOT IMPLEMENTED] getIncomingCalls: item={}", item.name)
         return emptyList()
     }
 
     override fun getOutgoingCalls(item: XtcCompilerAdapter.CallHierarchyItem): List<XtcCompilerAdapter.CallHierarchyOutgoingCall> {
-        logger.info("$logPrefix getOutgoingCalls: not yet implemented (requires workspace index + call graph); item={}", item.name)
+        logger.warn("$logPrefix [NOT IMPLEMENTED] getOutgoingCalls: item={}", item.name)
         return emptyList()
     }
 
     override fun getCodeLenses(uri: String): List<XtcCompilerAdapter.CodeLens> {
-        logger.info("$logPrefix getCodeLenses: not yet implemented (requires workspace index); uri={}", uri)
+        logger.warn("$logPrefix [NOT IMPLEMENTED] getCodeLenses: uri={}", uri)
         return emptyList()
     }
 
     override fun resolveCodeLens(lens: XtcCompilerAdapter.CodeLens): XtcCompilerAdapter.CodeLens {
-        logger.info(
-            "$logPrefix resolveCodeLens: not yet implemented; lens range={}:{}-{}:{}",
+        logger.warn(
+            "$logPrefix [NOT IMPLEMENTED] resolveCodeLens: lens range={}:{}-{}:{}",
             lens.range.start.line,
             lens.range.start.column,
             lens.range.end.line,
@@ -371,7 +375,7 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         ch: String,
         options: XtcCompilerAdapter.FormattingOptions,
     ): List<XtcCompilerAdapter.TextEdit> {
-        logger.info("$logPrefix onTypeFormatting: not yet implemented; uri={}, line={}, column={}, ch='{}'", uri, line, column, ch)
+        logger.warn("$logPrefix [NOT IMPLEMENTED] onTypeFormatting: uri={}, line={}, column={}, ch='{}'", uri, line, column, ch)
         return emptyList()
     }
 
@@ -380,7 +384,7 @@ abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {
         line: Int,
         column: Int,
     ): XtcCompilerAdapter.LinkedEditingRanges? {
-        logger.info("$logPrefix getLinkedEditingRanges: not yet implemented; uri={}, line={}, column={}", uri, line, column)
+        logger.warn("$logPrefix [NOT IMPLEMENTED] getLinkedEditingRanges: uri={}, line={}, column={}", uri, line, column)
         return null
     }
 

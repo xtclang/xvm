@@ -60,7 +60,14 @@ val kotlinJdkVersion = xdkProperties.int("org.xtclang.kotlin.jdk")
 // =============================================================================
 val lspAdapter: String = project.findProperty("lsp.adapter")?.toString() ?: "treesitter"
 val lspSemanticTokens: String = project.findProperty("lsp.semanticTokens")?.toString() ?: "false"
-logger.lifecycle("LSP Server adapter: $lspAdapter, semanticTokens: $lspSemanticTokens")
+
+// Log level: -Plog=DEBUG or XTC_LOG_LEVEL=DEBUG (default: INFO)
+val logLevel: String =
+    project.findProperty("log")?.toString()?.uppercase()
+        ?: System.getenv("XTC_LOG_LEVEL")?.uppercase()
+        ?: "INFO"
+
+logger.lifecycle("LSP Server adapter: $lspAdapter, semanticTokens: $lspSemanticTokens, logLevel: $logLevel")
 
 // Generate build info for version verification and adapter selection
 val generateBuildInfo by tasks.registering {
@@ -204,6 +211,10 @@ tasks.test {
 
     // Enable FFM native access for tree-sitter integration tests (suppresses JDK warning)
     jvmArgs("--enable-native-access=ALL-UNNAMED")
+
+    // Pass log level to logback: -Plog=DEBUG or XTC_LOG_LEVEL=DEBUG
+    systemProperty("xtc.logLevel", logLevel)
+    environment("XTC_LOG_LEVEL", logLevel)
 
     // Pass the composite root directory to integration tests so they can find real .x source files.
     // Uses the same marker-file approach as XdkPropertiesService.compositeRootDirectory().

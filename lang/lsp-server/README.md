@@ -184,6 +184,55 @@ on-demand using Zig cross-compilation for all 5 platforms and cached in
 
 See [tree-sitter/README.md](../tree-sitter/README.md) for details.
 
+## Configuration Reference
+
+All configurable properties for the LSP server and IntelliJ plugin, in one place.
+Properties can be set via Gradle `-P` flags, `gradle.properties`, environment variables, or
+system properties depending on the property.
+
+### Gradle Properties (`-P` flags or `gradle.properties`)
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `log` | `INFO` | Log level for XTC LSP/DAP servers. Valid: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR` |
+| `lsp.adapter` | `treesitter` | Parsing backend. Valid: `treesitter`, `mock`, `compiler` |
+| `lsp.semanticTokens` | `false` | Enable semantic token highlighting (opt-in) |
+| `includeBuildLang` | `false` | Include `lang` as a composite build (IDE visibility, task addressability) |
+| `includeBuildAttachLang` | `false` | Wire lang lifecycle tasks to root build (requires `includeBuildLang=true`) |
+| `lsp.buildSearchableOptions` | `false` | Build IntelliJ searchable options index |
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `XTC_LOG_LEVEL` | `INFO` | Log level override. Same valid values as `-Plog`. Useful for CI or shell profiles. |
+
+### Precedence for Log Level
+
+The log level is resolved in this order (first match wins):
+
+1. `-Plog=<level>` Gradle property
+2. `-Dxtc.logLevel=<level>` JVM system property
+3. `XTC_LOG_LEVEL=<level>` environment variable
+4. Default: `INFO`
+
+### Examples
+
+```bash
+# Run IntelliJ sandbox with DEBUG logging and tree-sitter
+./gradlew :lang:intellij-plugin:runIde -PincludeBuildLang=true -Plog=DEBUG
+
+# Run LSP server tests with TRACE logging
+./gradlew :lang:lsp-server:test -Plog=TRACE
+
+# Build with mock adapter (no native dependencies)
+./gradlew :lang:lsp-server:fatJar -Plsp.adapter=mock
+
+# Set log level via environment (persists across commands)
+export XTC_LOG_LEVEL=DEBUG
+./gradlew :lang:intellij-plugin:runIde -PincludeBuildLang=true
+```
+
 ## Logging
 
 The LSP server logs to both stderr (for IntelliJ's Language Servers panel) and a file.
@@ -194,16 +243,18 @@ The LSP server logs to both stderr (for IntelliJ's Language Servers panel) and a
 ~/.xtc/logs/lsp-server.log
 ```
 
-### Changing Log Level
+All log messages use a `[Module]` prefix to identify their source:
 
-Set the log level via `-Dxtc.logLevel`:
-
-```bash
-# Run IntelliJ with DEBUG logging
-./gradlew :lang:intellij-plugin:runIde -PincludeBuildLang=true -Dxtc.logLevel=DEBUG
-
-# Valid levels: TRACE, DEBUG, INFO (default), WARN, ERROR
-```
+| Prefix | Source |
+|--------|--------|
+| `[Server]` | `XtcLanguageServer` — LSP protocol handler |
+| `[Launcher]` | `XtcLanguageServerLauncher` — server startup |
+| `[TreeSitter]` | `TreeSitterAdapter` — syntax-level intelligence |
+| `[Mock]` | `MockXtcCompilerAdapter` — regex-based adapter |
+| `[Parser]` | `XtcParser` — tree-sitter native parser |
+| `[QueryEngine]` | `XtcQueryEngine` — tree-sitter query execution |
+| `[WorkspaceIndexer]` | `WorkspaceIndexer` — background file scanner |
+| `[WorkspaceIndex]` | `WorkspaceIndex` — symbol index |
 
 ### Tailing Logs
 

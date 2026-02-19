@@ -1,5 +1,6 @@
 package org.xvm.lsp.index
 
+import io.github.treesitter.jtreesitter.Language
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.treesitter.XtcParser
@@ -25,28 +26,34 @@ import kotlin.time.measureTimedValue
  * Uses a dedicated thread pool (not ForkJoinPool) to avoid starving LSP message handlers.
  * Converts tree-sitter parsed [SymbolInfo] to flat [IndexedSymbol] entries for indexing.
  *
- * **Thread safety:** Tree-sitter's native `Parser` is NOT thread-safe, so all calls to
- * [parser] and [queryEngine] are serialized via [parseLock]. File I/O (reading file content)
- * can still happen concurrently on the thread pool; only the parse+query step is serialized.
+ * **Thread safety:** This indexer creates its own dedicated [XtcParser] and [XtcQueryEngine]
+ * instances, separate from the adapter's instances. This avoids race conditions since
+ * tree-sitter's native `Parser` is NOT thread-safe and the adapter's parser is used
+ * concurrently on the LSP message thread. All calls to the indexer's parser and query
+ * engine are serialized via [parseLock] to protect against concurrent indexer tasks.
  *
  * @param index the workspace index to populate
- * @param parser the tree-sitter parser (shared with the adapter)
- * @param queryEngine the query engine (shared with the adapter)
+ * @param language the tree-sitter language, used to create a dedicated parser and query engine
  */
 @Suppress("LoggingSimilarMessage")
 class WorkspaceIndexer(
     private val index: WorkspaceIndex,
-    private val parser: XtcParser,
-    private val queryEngine: XtcQueryEngine,
+    language: Language,
 ) : Closeable {
     private val logger = LoggerFactory.getLogger(WorkspaceIndexer::class.java)
+
+    /** Dedicated parser instance for the indexer — not shared with the adapter. */
+    private val parser: XtcParser = XtcParser(language)
+
+    /** Dedicated query engine for the indexer — not shared with the adapter. */
+    private val queryEngine: XtcQueryEngine = XtcQueryEngine(language)
 
     /** Serializes access to the non-thread-safe tree-sitter parser and query engine. */
     private val parseLock = Any()
 
     private val threadPool: ExecutorService =
         Executors.newFixedThreadPool(
-            minOf(Runtime.getRuntime().availableProcessors(), 4),
+            minOf(Runtime.getRuntime().availableProcessors(), 4).coerceAtLeast(2),
         )
 
     /**
@@ -205,6 +212,8 @@ class WorkspaceIndexer(
         if (!threadPool.awaitTermination(5, TimeUnit.SECONDS)) {
             threadPool.shutdownNow()
         }
+        queryEngine.close()
+        parser.close()
         logger.info("[WorkspaceIndexer] closed")
     }
 }

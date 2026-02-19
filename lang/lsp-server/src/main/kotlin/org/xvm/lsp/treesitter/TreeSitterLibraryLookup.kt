@@ -18,19 +18,19 @@ import java.nio.file.StandardCopyOption
 class TreeSitterLibraryLookup : NativeLibraryLookup {
     override fun get(arena: Arena): SymbolLookup {
         val libraryPath = extractLibraryToTemp()
-        logger.info("Loading tree-sitter runtime from: {}", libraryPath)
+        logger.info("[Parser] loading tree-sitter runtime from: {}", libraryPath)
         return SymbolLookup.libraryLookup(libraryPath, arena)
     }
 
     private fun extractLibraryToTemp(): java.nio.file.Path {
         val resourcePath = Platform.resourcePath("tree-sitter")
-        logger.info("Loading tree-sitter runtime from resource: {}", resourcePath)
+        logger.info("[Parser] loading tree-sitter runtime from resource: {}", resourcePath)
 
         javaClass.getResourceAsStream(resourcePath)?.use { inputStream ->
             val tempFile = Files.createTempFile("libtree-sitter", Platform.libExtension)
             tempFile.toFile().deleteOnExit()
             Files.copy(inputStream, tempFile, StandardCopyOption.REPLACE_EXISTING)
-            logger.info("Extracted tree-sitter runtime to: {}", tempFile)
+            logger.info("[Parser] extracted tree-sitter runtime to: {}", tempFile)
             return tempFile
         }
 

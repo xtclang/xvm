@@ -80,6 +80,16 @@ interface XtcCompilerAdapter : Closeable {
     ): CompilationResult
 
     /**
+     * Get the cached compilation result for a document, if available.
+     *
+     * Returns the result from the most recent [compile] call for this URI,
+     * or `null` if the document has not been compiled yet or has been closed.
+     * Used by the language server to avoid redundant re-compilation for requests
+     * like `documentSymbol` that can use the cached result.
+     */
+    fun getCachedResult(uri: String): CompilationResult? = null
+
+    /**
      * Find the symbol at a specific position.
      *
      * **LSP capability:** Used internally by hover, definition, and references — not directly
@@ -255,6 +265,16 @@ interface XtcCompilerAdapter : Closeable {
         uri: String,
         changeType: Int,
     ) {}
+
+    /**
+     * Notification that a document has been closed by the editor.
+     *
+     * Implementations should release any resources held for the document (parsed trees,
+     * cached compilation results, etc.) to prevent memory accumulation.
+     *
+     * @param uri the document URI
+     */
+    fun closeDocument(uri: String) {}
 
     // ========================================================================
     // Tree-sitter capable features (syntax-based, no semantic analysis)

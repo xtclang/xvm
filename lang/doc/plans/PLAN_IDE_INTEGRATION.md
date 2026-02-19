@@ -319,6 +319,53 @@ The IntelliJ plugin (`lang/intellij-plugin/`) is inherently IntelliJ-specific. T
 
 The `xtc-intellij-plugin-dev` reference repo demonstrates IntelliJ's built-in LSP in ~29 lines. That is intentional — it serves as a minimal "getting started" example. The production plugin requires DAP support, advanced LSP features, and the LSP Console, which are only available through LSP4IJ.
 
+## Known Issues and Follow-ups
+
+> **Last Updated**: 2026-02-19 (from `lagergren/lsp-extend4` code review)
+
+### DAP Integration (Blocking for Debug Support)
+
+1. **DAP server JAR not packaged into sandbox** — The `plugin.xml` registers the
+   `debugAdapterServer` extension point and the factory/descriptor classes compile, but
+   `dap-server` has no fat JAR task, no consumable configuration, and no `copyDapServerToSandbox`
+   task. At runtime, `PluginPaths.findServerJar("xtc-dap-server.jar")` will always throw
+   `IllegalStateException`. To ship DAP support:
+   - Add a `fatJar` task in `lang/dap-server/build.gradle.kts`
+   - Add a `dapServerElements` consumable configuration
+   - Add a `dapServerJar` consumer configuration in `intellij-plugin/build.gradle.kts`
+   - Add a `copyDapServerToSandbox` task mirroring the LSP copy pattern
+   - Wire `prepareSandbox` and `runIde` to depend on it
+
+2. **DAP has no JRE provisioning progress UI** — The LSP connection provider shows a
+   progress dialog during first-time JRE download, but the DAP descriptor's `startServer()`
+   simply checks `provisioner.javaPath` and throws if null. Users must open an `.x` file
+   first (triggering LSP + JRE download) before debugging will work.
+
+### Tree-sitter / Semantic Tokens
+
+3. **`XtcNode.text` uses byte offsets as character offsets** (`XtcNode.kt:43`) —
+   `source.substring(startByte, endByte)` treats tree-sitter's UTF-8 byte offsets as
+   Java `String` character offsets (UTF-16 code units). This is correct for ASCII-only
+   sources but will produce wrong results or `StringIndexOutOfBoundsException` for files
+   containing non-ASCII characters (e.g., Unicode in string literals or comments). Needs
+   verification against jtreesitter's actual behavior.
+
+4. **`SemanticTokensVsTextMateTest` leaks native memory** — The `encode()` helper at
+   `SemanticTokensVsTextMateTest.kt:73` calls `parser.parse(source)` but never closes the
+   returned `XtcTree`. Should use `.use { }` to release native tree-sitter memory.
+
+5. **`SemanticTokenEncoder.nodeKey` collision** (`SemanticTokenEncoder.kt:346`) — Uses
+   `(startLine << 32) | startColumn` as a unique key. Two different AST nodes starting at
+   the same `(line, column)` (e.g., a `type_name` and its child `identifier`) will collide,
+   with the first-emitted token winning silently. Low risk in practice.
+
+### Build System
+
+6. **Windows IDE path hardcodes "2025.1"** (`intellij-plugin/build.gradle.kts:73`) —
+   The Windows IDE detection path for `-PuseLocalIde=true` still references
+   `"IntelliJ IDEA Community Edition 2025.1"` despite the IDE version bump to 2025.3.2.
+   Only affects Windows users with local IDE mode.
+
 ## Related Documentation
 
 - **[PLAN_TREE_SITTER.md](./PLAN_TREE_SITTER.md)** - Tree-sitter grammar status and development guide

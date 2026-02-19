@@ -3,7 +3,7 @@
   Logback configuration for XTC DSL generator tools.
   Keep output minimal by default - only warnings and errors.
 
-  Override via: -Dxtc.logLevel=DEBUG (or INFO, WARN, ERROR)
+  Override via: -Plog=DEBUG, -Dxtc.logLevel=DEBUG, or XTC_LOG_LEVEL=DEBUG
 -->
 <configuration>
     <!-- Suppress logback's own status messages -->
@@ -16,8 +16,10 @@
         </encoder>
     </appender>
 
-    <!-- XTC tooling logs - WARN by default, override with -Dxtc.logLevel=DEBUG -->
-    <logger name="org.xtclang" level="${xtc.logLevel:-WARN}"/>
+    <!-- XTC tooling logs - WARN by default -->
+    <!-- Precedence: system property > environment variable > default -->
+    <variable name="LOG_LEVEL" value="${xtc.logLevel:-${XTC_LOG_LEVEL:-INFO}}"/>
+    <logger name="org.xtclang" level="${LOG_LEVEL}"/>
 
     <!-- Quiet root logger -->
     <root level="ERROR">

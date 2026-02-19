@@ -36,7 +36,10 @@
     </appender>
 
     <!-- XTC DAP server logs - INFO level by default -->
-    <logger name="org.xvm.debug" level="${xtc.logLevel:-INFO}"/>
+    <!-- Override via: -Plog=DEBUG, -Dxtc.logLevel=DEBUG, or XTC_LOG_LEVEL=DEBUG -->
+    <!-- Valid levels: TRACE, DEBUG, INFO, WARN, ERROR -->
+    <variable name="LOG_LEVEL" value="${xtc.logLevel:-${XTC_LOG_LEVEL:-INFO}}"/>
+    <logger name="org.xvm.debug" level="${LOG_LEVEL}"/>
 
     <!-- Eclipse LSP4J - only errors -->
     <logger name="org.eclipse.lsp4j" level="ERROR"/>

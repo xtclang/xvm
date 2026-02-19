@@ -18,6 +18,14 @@ val releaseChannel: String = xdkProperties.stringValue("xdk.intellij.release.cha
 // Publishing is disabled by default. Enable with: ./gradlew publishPlugin -PenablePublish=true
 val enablePublish = providers.gradleProperty("enablePublish").map { it.toBoolean() }.getOrElse(false)
 
+// Log level: -Plog=DEBUG or XTC_LOG_LEVEL=DEBUG (default: INFO)
+// Propagated to the IDE JVM as a system property and environment variable, so the
+// IntelliJ plugin passes it to the out-of-process LSP/DAP server child processes.
+val logLevel: String =
+    project.findProperty("log")?.toString()?.uppercase()
+        ?: System.getenv("XTC_LOG_LEVEL")?.uppercase()
+        ?: "INFO"
+
 // =============================================================================
 // IntelliJ IDE Resolution
 // =============================================================================
@@ -574,6 +582,13 @@ val runIde by tasks.existing {
         configureDisabledPlugins,
         configureSandboxLogging,
     )
+
+    // Pass log level to the IDE JVM so the IntelliJ plugin can forward it to the
+    // out-of-process LSP server. Set both system property and env var for robustness.
+    (this as JavaExec).apply {
+        systemProperty("xtc.logLevel", logLevel)
+        environment("XTC_LOG_LEVEL", logLevel)
+    }
 
     // Log sandbox location, mavenLocal status, version info, and idea.log path
     val sandboxDir = sandboxConfigDir.map { it.parentFile }

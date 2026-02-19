@@ -12,7 +12,6 @@ import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.lsp.model.SymbolInfo.SymbolKind
 import org.xvm.lsp.treesitter.XtcParser
-import org.xvm.lsp.treesitter.XtcQueryEngine
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -26,12 +25,10 @@ import java.nio.file.Path
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class WorkspaceIndexerTest {
     private var parser: XtcParser? = null
-    private var queryEngine: XtcQueryEngine? = null
 
     @BeforeAll
     fun setUpParser() {
         parser = runCatching { XtcParser() }.getOrNull()
-        parser?.let { queryEngine = XtcQueryEngine(it.getLanguage()) }
     }
 
     @BeforeEach
@@ -41,7 +38,6 @@ class WorkspaceIndexerTest {
 
     @AfterAll
     fun tearDown() {
-        queryEngine?.close()
         parser?.close()
     }
 
@@ -84,7 +80,7 @@ class WorkspaceIndexerTest {
             Files.writeString(tempDir.resolve("readme.txt"), "not XTC code")
 
             val index = WorkspaceIndex()
-            val indexer = WorkspaceIndexer(index, parser!!, queryEngine!!)
+            val indexer = WorkspaceIndexer(index, parser!!.getLanguage())
 
             indexer.scanWorkspace(listOf(tempDir.toString())).join()
 
@@ -114,7 +110,7 @@ class WorkspaceIndexerTest {
             )
 
             val index = WorkspaceIndex()
-            val indexer = WorkspaceIndexer(index, parser!!, queryEngine!!)
+            val indexer = WorkspaceIndexer(index, parser!!.getLanguage())
 
             indexer.scanWorkspace(listOf(tempDir.toString())).join()
 
@@ -129,7 +125,7 @@ class WorkspaceIndexerTest {
             @TempDir tempDir: Path,
         ) {
             val index = WorkspaceIndex()
-            val indexer = WorkspaceIndexer(index, parser!!, queryEngine!!)
+            val indexer = WorkspaceIndexer(index, parser!!.getLanguage())
 
             indexer.scanWorkspace(listOf(tempDir.toString())).join()
 
@@ -151,7 +147,7 @@ class WorkspaceIndexerTest {
         @DisplayName("should reindex a file with updated content")
         fun shouldReindexFile() {
             val index = WorkspaceIndex()
-            val indexer = WorkspaceIndexer(index, parser!!, queryEngine!!)
+            val indexer = WorkspaceIndexer(index, parser!!.getLanguage())
             val uri = "file:///test.x"
 
             // Index initial content
@@ -186,7 +182,7 @@ class WorkspaceIndexerTest {
         @DisplayName("should remove file from index")
         fun shouldRemoveFile() {
             val index = WorkspaceIndex()
-            val indexer = WorkspaceIndexer(index, parser!!, queryEngine!!)
+            val indexer = WorkspaceIndexer(index, parser!!.getLanguage())
             val uri = "file:///test.x"
 
             indexer.reindexFile(
@@ -219,7 +215,7 @@ class WorkspaceIndexerTest {
         @DisplayName("should extract multiple symbol kinds")
         fun shouldExtractMultipleKinds() {
             val index = WorkspaceIndex()
-            val indexer = WorkspaceIndexer(index, parser!!, queryEngine!!)
+            val indexer = WorkspaceIndexer(index, parser!!.getLanguage())
 
             indexer.reindexFile(
                 "file:///test.x",

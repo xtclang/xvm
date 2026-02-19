@@ -83,9 +83,9 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
     private val parsedTrees = ConcurrentHashMap<String, XtcTree>()
     private val compilationResults = ConcurrentHashMap<String, CompilationResult>()
 
-    // Workspace index for cross-file symbol lookup
+    // Workspace index for cross-file symbol lookup (indexer has its own parser/query engine)
     private val workspaceIndex = WorkspaceIndex()
-    private val indexer = WorkspaceIndexer(workspaceIndex, parser, queryEngine)
+    private val indexer = WorkspaceIndexer(workspaceIndex, parser.getLanguage())
     private val indexReady = AtomicBoolean(false)
 
     init {
@@ -130,14 +130,19 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         progressReporter: ((String, Int) -> Unit)?,
     ) {
         logger.info("$logPrefix initializeWorkspace: {} folders: {}", workspaceFolders.size, workspaceFolders)
-        indexer.scanWorkspace(workspaceFolders, progressReporter).thenRun {
-            indexReady.set(true)
-            logger.info(
-                "$logPrefix workspace index ready: {} symbols in {} files",
-                workspaceIndex.symbolCount,
-                workspaceIndex.fileCount,
-            )
-        }
+        indexer
+            .scanWorkspace(workspaceFolders, progressReporter)
+            .thenRun {
+                indexReady.set(true)
+                logger.info(
+                    "$logPrefix workspace index ready: {} symbols in {} files",
+                    workspaceIndex.symbolCount,
+                    workspaceIndex.fileCount,
+                )
+            }.exceptionally { e ->
+                logger.error("$logPrefix workspace indexing failed: {}", e.message, e)
+                null
+            }
     }
 
     override fun didChangeWatchedFile(
@@ -146,21 +151,25 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
     ) {
         if (!indexReady.get()) return
 
-        when (changeType) {
-            1, 2 -> {
-                // Created or Changed: re-index the file
-                val path = Path.of(URI(uri))
-                if (path.extension == "x" && Files.exists(path)) {
-                    val content = path.readText()
-                    indexer.reindexFile(uri, content)
-                    logger.info("$logPrefix re-indexed watched file: {}", uri.substringAfterLast('/'))
+        try {
+            when (changeType) {
+                1, 2 -> {
+                    // Created or Changed: re-index the file
+                    val path = Path.of(URI(uri))
+                    if (path.extension == "x" && Files.exists(path)) {
+                        val content = path.readText()
+                        indexer.reindexFile(uri, content)
+                        logger.info("$logPrefix re-indexed watched file: {}", uri.substringAfterLast('/'))
+                    }
+                }
+                3 -> {
+                    // Deleted: remove from index
+                    indexer.removeFile(uri)
+                    logger.info("$logPrefix removed deleted file from index: {}", uri.substringAfterLast('/'))
                 }
             }
-            3 -> {
-                // Deleted: remove from index
-                indexer.removeFile(uri)
-                logger.info("$logPrefix removed deleted file from index: {}", uri.substringAfterLast('/'))
-            }
+        } catch (e: Exception) {
+            logger.warn("$logPrefix didChangeWatchedFile failed for {}: {}", uri, e.message)
         }
     }
 
@@ -237,6 +246,8 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
 
         return result
     }
+
+    override fun getCachedResult(uri: String): CompilationResult? = compilationResults[uri]
 
     override fun findSymbolAt(
         uri: String,
@@ -374,9 +385,25 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         includeDeclaration: Boolean,
     ): List<Location> {
         val (tree, name) = getIdentifierAt(uri, line, column, "references") ?: return emptyList()
-        return queryEngine.findAllIdentifiers(tree, name, uri).also {
-            logger.info("$logPrefix references '{}' -> {} found", name, it.size)
-        }
+        val allRefs = queryEngine.findAllIdentifiers(tree, name, uri)
+        val result =
+            if (includeDeclaration) {
+                allRefs
+            } else {
+                // Exclude the declaration location by finding where the symbol is declared
+                val declLocation =
+                    queryEngine
+                        .findAllDeclarations(tree, uri)
+                        .find { it.name == name }
+                        ?.location
+                if (declLocation != null) {
+                    allRefs.filter { it != declLocation }
+                } else {
+                    allRefs
+                }
+            }
+        logger.info("$logPrefix references '{}' -> {} found (includeDecl={})", name, result.size, includeDeclaration)
+        return result
     }
 
     /** Resolves identifier at position, logging failures. Returns (tree, identifierText) or null. */
@@ -721,14 +748,16 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
     }
 
     /**
-     * Close and release resources for a document.
-     * Called by the language server when a document is closed.
+     * Release resources for a closed document.
      *
-     * TODO: Wire this up in XtcLanguageServer.didClose() to free native tree-sitter memory
-     *   when documents are closed by the editor.
+     * Closes the native tree-sitter [XtcTree] for this URI, freeing its native memory
+     * (backed by `Arena.global()` / FFM). Without this, parsed trees accumulate for the
+     * JVM lifetime since [compile] intentionally does NOT close old trees eagerly — see the
+     * race condition comment in [compile] for details. This method is the primary mechanism
+     * for reclaiming native tree memory when the editor closes a document.
      */
-    @Suppress("unused")
-    fun closeDocument(uri: String) {
+    override fun closeDocument(uri: String) {
+        logger.info("$logPrefix closeDocument: uri={}", uri)
         parsedTrees.remove(uri)?.close()
         compilationResults.remove(uri)
     }
