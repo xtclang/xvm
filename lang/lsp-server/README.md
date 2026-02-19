@@ -188,8 +188,17 @@ See [tree-sitter/README.md](../tree-sitter/README.md) for details.
 ## Configuration Reference
 
 All configurable properties for the LSP server and IntelliJ plugin, in one place.
-Properties can be set via Gradle `-P` flags, `gradle.properties`, environment variables, or
-system properties depending on the property.
+
+Properties are resolved via `xdkProperties` (the `ProjectXdkProperties` extension),
+which checks sources in this order (first match wins):
+
+1. Environment variable (key converted to `UPPER_SNAKE_CASE`)
+2. Gradle property (`-P` flag or `gradle.properties`)
+3. JVM system property (`-D` flag)
+4. `XdkPropertiesService` (composite root's `gradle.properties`, `xdk.properties`, `version.properties`)
+
+This ensures properties set in the root `gradle.properties` are visible to the `lang/`
+included build, which has no `gradle.properties` of its own.
 
 ### Gradle Properties (`-P` flags or `gradle.properties`)
 
@@ -210,12 +219,14 @@ system properties depending on the property.
 
 ### Precedence for Log Level
 
-The log level is resolved in this order (first match wins):
+The log level is resolved via `xdkProperties` in this order (first match wins):
 
-1. `-Plog=<level>` Gradle property
-2. `-Dxtc.logLevel=<level>` JVM system property
-3. `XTC_LOG_LEVEL=<level>` environment variable
-4. Default: `INFO`
+1. `LOG=<level>` environment variable
+2. `-Plog=<level>` Gradle property
+3. `-Dlog=<level>` JVM system property
+4. `log=<level>` in root `gradle.properties`
+5. `XTC_LOG_LEVEL=<level>` environment variable (backward-compatible fallback)
+6. Default: `INFO`
 
 ### Examples
 

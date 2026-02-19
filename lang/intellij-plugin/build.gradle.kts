@@ -21,10 +21,13 @@ val enablePublish = providers.gradleProperty("enablePublish").map { it.toBoolean
 // Log level: -Plog=DEBUG or XTC_LOG_LEVEL=DEBUG (default: INFO)
 // Propagated to the IDE JVM as a system property and environment variable, so the
 // IntelliJ plugin passes it to the out-of-process LSP/DAP server child processes.
+// Resolved via xdkProperties to read from composite root gradle.properties.
 val logLevel: String =
-    project.findProperty("log")?.toString()?.uppercase()
-        ?: System.getenv("XTC_LOG_LEVEL")?.uppercase()
-        ?: "INFO"
+    xdkProperties
+        .stringValue(
+            "log",
+            System.getenv("XTC_LOG_LEVEL")?.uppercase() ?: "INFO",
+        ).uppercase()
 
 // =============================================================================
 // IntelliJ IDE Resolution
@@ -378,11 +381,7 @@ val publishPlugin by tasks.existing {
 // plugin settings via the search bar — they must navigate to them manually. Enabling it adds
 // ~30-60s to the build because it launches a headless IDE to index all settings pages.
 // Enable with: -Plsp.buildSearchableOptions=true
-val buildSearchableOptionsEnabled =
-    providers
-        .gradleProperty("lsp.buildSearchableOptions")
-        .map { it.toBoolean() }
-        .getOrElse(false)
+val buildSearchableOptionsEnabled = xdkProperties.booleanValue("lsp.buildSearchableOptions", false)
 
 val searchableOptionsStatus =
     if (buildSearchableOptionsEnabled) "enabled" else "disabled (use -Plsp.buildSearchableOptions=true to enable)"

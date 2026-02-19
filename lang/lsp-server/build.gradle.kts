@@ -58,14 +58,20 @@ val kotlinJdkVersion = xdkProperties.int("org.xtclang.kotlin.jdk")
 // Default is 'treesitter' which provides syntax-aware features (native library bundled).
 // Use 'mock' for basic regex-based functionality if tree-sitter has issues.
 // =============================================================================
-val lspAdapter: String = project.findProperty("lsp.adapter")?.toString() ?: "treesitter"
-val lspSemanticTokens: String = project.findProperty("lsp.semanticTokens")?.toString() ?: "false"
+// Resolve via xdkProperties which reads from the composite root's gradle.properties
+// (project.findProperty() only sees the included build's own gradle.properties, which doesn't exist)
+val lspAdapter: String = xdkProperties.stringValue("lsp.adapter", "treesitter")
+val lspSemanticTokens: String = xdkProperties.stringValue("lsp.semanticTokens", "false")
 
 // Log level: -Plog=DEBUG or XTC_LOG_LEVEL=DEBUG (default: INFO)
+// xdkProperties checks: env LOG → gradle prop → system prop → composite root gradle.properties
+// We keep XTC_LOG_LEVEL as the final fallback for backward compatibility.
 val logLevel: String =
-    project.findProperty("log")?.toString()?.uppercase()
-        ?: System.getenv("XTC_LOG_LEVEL")?.uppercase()
-        ?: "INFO"
+    xdkProperties
+        .stringValue(
+            "log",
+            System.getenv("XTC_LOG_LEVEL")?.uppercase() ?: "INFO",
+        ).uppercase()
 
 logger.lifecycle("LSP Server adapter: $lspAdapter, semanticTokens: $lspSemanticTokens, logLevel: $logLevel")
 

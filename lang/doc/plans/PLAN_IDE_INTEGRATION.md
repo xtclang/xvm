@@ -337,6 +337,12 @@ The `xtc-intellij-plugin-dev` reference repo demonstrates IntelliJ's built-in LS
 ### Build System
 
 ~~6. Windows IDE path "2025.1"~~ — FIXED: Updated to 2025.3.
+~~7. Composite build property isolation~~ — FIXED: `project.findProperty()` and
+`providers.gradleProperty()` only see the included build's own `gradle.properties`,
+which doesn't exist for `lang/`. Properties like `lsp.semanticTokens`, `lsp.adapter`,
+`lsp.buildSearchableOptions`, and `log` were silently falling back to hardcoded defaults.
+Fixed by using `xdkProperties` which resolves through `XdkPropertiesService` (loads from
+composite root's `gradle.properties` at settings time).
 
 ## Related Documentation
 
