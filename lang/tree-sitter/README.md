@@ -5,6 +5,8 @@ for syntax highlighting, code navigation, and IDE features.
 
 ## Quick Start
 
+> **Note:** All `./gradlew :lang:*` commands require `-PincludeBuildLang=true -PincludeBuildAttachLang=true` when run from the project root.
+
 ```bash
 # Generate, validate, and test grammar in one command
 ./gradlew :lang:tree-sitter:testTreeSitterParse

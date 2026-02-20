@@ -10,6 +10,8 @@ text editors like Neovim, Emacs, or VS Code -- without using the IntelliJ plugin
 - If you don't have Java 25, you can build with the regex-based mock adapter
   instead (see the build step below).
 
+> **Note:** All `./gradlew :lang:*` commands below assume `-PincludeBuildLang=true -PincludeBuildAttachLang=true` are passed when running from the project root. See [Composite Build Properties](../../CLAUDE.md) in the project CLAUDE.md for details.
+
 ## Step 1: Build the Fat JAR
 
 The fat JAR bundles all dependencies into a single self-contained jar.
@@ -18,7 +20,7 @@ The `lang` composite build is disabled by default, so you must enable it with
 Gradle properties:
 
 ```bash
-./gradlew :lang:lsp-server:fatJar -PincludeBuildLang=true -PincludeBuildAttachLang=true
+./gradlew :lang:lsp-server:fatJar
 ```
 
 The output jar is:
@@ -34,7 +36,7 @@ For example: `lang/lsp-server/build/libs/lsp-server-0.4.4-SNAPSHOT-all.jar`
 If you don't have Java 25+, build with the mock adapter instead:
 
 ```bash
-./gradlew :lang:lsp-server:fatJar -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=mock
+./gradlew :lang:lsp-server:fatJar -Plsp.adapter=mock
 ```
 
 The mock adapter uses regex-based parsing and has no native dependencies. It
@@ -453,11 +455,10 @@ tail -20 ~/.xtc/logs/lsp-server.log
 You should see entries like:
 
 ```
-XTC Language Server v0.4.4-SNAPSHOT (pid=...)
-Backend: TreeSitter
-XTC Language Server initialized
-textDocument/didOpen: .../Boolean.x (2050 bytes)
-[TreeSitter] parsed in 2.3ms (full), 0 errors, 31 symbols
+XtcLanguageServerLauncherKt - XTC Language Server v0.4.4-SNAPSHOT
+XtcLanguageServerLauncherKt - backend: Tree-sitter
+XtcLanguageServer - textDocument/didOpen: .../Boolean.x (2050 bytes)
+TreeSitterAdapter - parsed in 2.3ms, 0 errors, 31 symbols (query: 1.2ms)
 ```
 
 ---

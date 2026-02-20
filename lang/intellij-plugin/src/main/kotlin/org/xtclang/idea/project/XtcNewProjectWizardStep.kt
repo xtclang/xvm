@@ -5,6 +5,7 @@ import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.ide.wizard.AbstractNewProjectWizardStep
 import com.intellij.ide.wizard.NewProjectWizardBaseData.Companion.baseData
 import com.intellij.ide.wizard.NewProjectWizardStep
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.project.Project
@@ -71,11 +72,15 @@ class XtcNewProjectWizardStep(
     }
 
     private fun refreshVfs(projectPath: java.nio.file.Path) {
-        LocalFileSystem.getInstance().refreshAndFindFileByNioFile(projectPath)?.let { projectDir ->
-            // async=true to avoid blocking the EDT (SlowOperations assertion)
-            VfsUtil.markDirtyAndRefresh(true, true, true, projectDir)
-            logger.info("Refreshed VFS for project directory: $projectPath")
-        } ?: logger.warn("Could not find project directory in VFS: $projectPath")
+        // Run VFS refresh on a pooled thread to avoid EDT slow operations violation.
+        // Both refreshAndFindFileByNioFile and markDirty do VFS I/O that triggers
+        // SlowOperations assertions when called on the EDT.
+        ApplicationManager.getApplication().executeOnPooledThread {
+            LocalFileSystem.getInstance().refreshAndFindFileByNioFile(projectPath)?.let { projectDir ->
+                VfsUtil.markDirtyAndRefresh(true, true, true, projectDir)
+                logger.info("Refreshed VFS for project directory: $projectPath")
+            } ?: logger.warn("Could not find project directory in VFS: $projectPath")
+        }
     }
 
     private fun createDefaultRunConfiguration(

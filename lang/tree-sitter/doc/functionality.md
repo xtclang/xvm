@@ -39,6 +39,8 @@ The XTC LSP server uses a pluggable adapter architecture with three available ba
 
 ## Adapter Selection
 
+> **Note:** All `./gradlew :lang:*` commands require `-PincludeBuildLang=true -PincludeBuildAttachLang=true` when run from the project root.
+
 Build with any of the three adapters:
 
 ```bash
@@ -301,7 +303,7 @@ The tree-sitter adapter is tested against the entire XDK corpus (675+ `.x` files
 
 ```bash
 # Run full corpus test
-./gradlew :lang:tree-sitter:testTreeSitterParse -PincludeBuildLang=true
+./gradlew :lang:tree-sitter:testTreeSitterParse
 
 # Filter to specific files
 ./gradlew :lang:tree-sitter:testTreeSitterParse -PtestFiles=ecstasy/numbers

@@ -100,7 +100,7 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
      * Mock adapter is always healthy - no native code to verify.
      */
     override fun healthCheck(): Boolean {
-        logger.info("$logPrefix healthCheck() -> true")
+        logger.info("healthCheck() -> true")
         return true
     }
 
@@ -109,7 +109,7 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
         content: String,
     ): CompilationResult {
         val fileName = uri.substringAfterLast('/')
-        logger.info("$logPrefix compile(uri={}, content={} bytes)", fileName, content.length)
+        logger.info("compile(uri={}, content={} bytes)", fileName, content.length)
 
         documentContents[uri] = content
         val lines = content.split("\n")
@@ -189,7 +189,7 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
 
         val result = CompilationResult.withDiagnostics(uri, diagnostics, symbols)
         compiledDocuments[uri] = result
-        logger.info("$logPrefix compile -> {} symbols, {} diagnostics", symbols.size, diagnostics.size)
+        logger.info("compile -> {} symbols, {} diagnostics", symbols.size, diagnostics.size)
         return result
     }
 
@@ -201,14 +201,14 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
         column: Int,
     ): SymbolInfo? {
         val fileName = uri.substringAfterLast('/')
-        logger.info("$logPrefix findSymbolAt(uri={}, line={}, column={})", fileName, line, column)
+        logger.info("findSymbolAt(uri={}, line={}, column={})", fileName, line, column)
         val result =
             compiledDocuments[uri] ?: run {
-                logger.info("$logPrefix findSymbolAt -> null (no compiled document)")
+                logger.info("findSymbolAt -> null (no compiled document)")
                 return null
             }
         val symbol = result.symbols.find { it.location.contains(line, column) }
-        logger.info("$logPrefix findSymbolAt -> {}", symbol?.name ?: "null")
+        logger.info("findSymbolAt -> {}", symbol?.name ?: "null")
         return symbol
     }
 
@@ -218,7 +218,7 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
         column: Int,
     ): List<XtcCompilerAdapter.CompletionItem> {
         val fileName = uri.substringAfterLast('/')
-        logger.info("$logPrefix getCompletions(uri={}, line={}, column={})", fileName, line, column)
+        logger.info("getCompletions(uri={}, line={}, column={})", fileName, line, column)
 
         return buildList {
             addAll(keywordCompletions())
@@ -236,7 +236,7 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
                 )
             }
         }.also {
-            logger.info("$logPrefix getCompletions -> {} items", it.size)
+            logger.info("getCompletions -> {} items", it.size)
         }
     }
 
@@ -246,11 +246,11 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
         column: Int,
     ): Location? {
         val fileName = uri.substringAfterLast('/')
-        logger.info("$logPrefix findDefinition(uri={}, line={}, column={})", fileName, line, column)
+        logger.info("findDefinition(uri={}, line={}, column={})", fileName, line, column)
 
         // In the mock, just return the symbol's own location
         val location = findSymbolAt(uri, line, column)?.location
-        logger.info("$logPrefix findDefinition -> {}", location?.let { "${it.startLine}:${it.startColumn}" } ?: "null")
+        logger.info("findDefinition -> {}", location?.let { "${it.startLine}:${it.startColumn}" } ?: "null")
         return location
     }
 
@@ -261,13 +261,13 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
         includeDeclaration: Boolean,
     ): List<Location> {
         val fileName = uri.substringAfterLast('/')
-        logger.info("$logPrefix findReferences(uri={}, line={}, column={}, includeDecl={})", fileName, line, column, includeDeclaration)
+        logger.info("findReferences(uri={}, line={}, column={}, includeDecl={})", fileName, line, column, includeDeclaration)
 
         // Mock implementation: just return the declaration
         return listOfNotNull(
             if (includeDeclaration) findSymbolAt(uri, line, column)?.location else null,
         ).also {
-            logger.info("$logPrefix findReferences -> {} locations", it.size)
+            logger.info("findReferences -> {} locations", it.size)
         }
     }
 
@@ -283,7 +283,7 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
         val content = documentContents[uri] ?: return emptyList()
         val word = getWordAt(content, line, column) ?: return emptyList()
 
-        logger.info("$logPrefix highlight '{}' at {}:{}", word, line, column)
+        logger.info("highlight '{}' at {}:{}", word, line, column)
         return content
             .split("\n")
             .flatMapIndexed { lineIdx, lineText ->
@@ -299,11 +299,12 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
                         )
                     }.toList()
             }.also {
-                logger.info("$logPrefix highlight '{}' -> {} occurrences", word, it.size)
+                logger.info("highlight '{}' -> {} occurrences", word, it.size)
             }
     }
 
     override fun getFoldingRanges(uri: String): List<FoldingRange> {
+        logger.info("getFoldingRanges: uri={}", uri)
         val content = documentContents[uri] ?: return emptyList()
         val lines = content.split("\n")
         return buildList {
@@ -327,7 +328,7 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
                 add(FoldingRange(importLines.first(), importLines.last(), FoldingRange.FoldingKind.IMPORTS))
             }
         }.also {
-            logger.info("$logPrefix folding ranges -> {} found", it.size)
+            logger.info("folding ranges -> {} found", it.size)
         }
     }
 
@@ -344,7 +345,7 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
         val lineText = lines[line]
         val idx = findWordAt(lineText, column, word) ?: return null
 
-        logger.info("$logPrefix prepareRename '{}' at {}:{}", word, line, column)
+        logger.info("prepareRename '{}' at {}:{}", word, line, column)
         return PrepareRenameResult(
             range =
                 Range(
@@ -382,7 +383,7 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
                 }
 
         if (edits.isEmpty()) return null
-        logger.info("$logPrefix rename '{}' -> '{}' ({} occurrences)", word, newName, edits.size)
+        logger.info("rename '{}' -> '{}' ({} occurrences)", word, newName, edits.size)
         return WorkspaceEdit(changes = mapOf(uri to edits))
     }
 
@@ -392,7 +393,7 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
         diagnostics: List<Diagnostic>,
     ): List<CodeAction> =
         listOfNotNull(buildOrganizeImportsAction(uri)).also {
-            logger.info("$logPrefix codeActions -> {} actions", it.size)
+            logger.info("codeActions -> {} actions", it.size)
         }
 
     private fun buildOrganizeImportsAction(uri: String): CodeAction? {
@@ -449,7 +450,7 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
                 )
             }
         }.also {
-            logger.info("$logPrefix documentLinks -> {} found", it.size)
+            logger.info("documentLinks -> {} found", it.size)
         }
 
     // ========================================================================

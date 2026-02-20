@@ -21,7 +21,7 @@ import kotlin.io.path.exists
  * // 3. TextMate becomes fallback only (for when LSP is not available)
  * //
  * // See: PLAN_LSP_PARALLEL_LEXER.md (Phase 1 - Semantic Tokens)
- * // See: XtcCompilerAdapterFull.getSemanticTokens()
+ * // See: XtcCompilerAdapter.getSemanticTokens()
  */
 class XtcTextMateBundleProvider : TextMateBundleProvider {
     private val logger = logger<XtcTextMateBundleProvider>()

@@ -67,7 +67,7 @@ class XtcLanguageServerFactory : LanguageServerFactory {
  *
  * JRE Provisioning:
  * - Uses Foojay Disco API to download Eclipse Temurin JRE 25
- * - Caches in ~/.xtc/jre/temurin-25-jre/
+ * - Caches in ~/.gradle/caches/xtc-jre/temurin-25-jre/
  * - Shows progress notification during first-time download
  *
  * See doc/plans/lsp-processes.md for architecture details.

@@ -16,6 +16,8 @@ This project provides the LSP server that powers IDE features like:
 The server is used by both the [IntelliJ plugin](../intellij-plugin/) and
 [VS Code extension](../vscode-extension/).
 
+> **Note:** All `./gradlew :lang:*` commands below assume `-PincludeBuildLang=true -PincludeBuildAttachLang=true` are passed when running from the project root. See [Composite Build Properties](../../CLAUDE.md) in the project CLAUDE.md for details.
+
 ## Adapter Architecture
 
 The LSP server uses a pluggable adapter pattern to support different parsing backends:
@@ -64,16 +66,16 @@ The selection is embedded in `lsp-version.properties` inside the JAR.
 
 ```bash
 # Build with Tree-sitter adapter (default)
-./gradlew :lang:lsp-server:fatJar -PincludeBuildLang=true
+./gradlew :lang:lsp-server:fatJar
 
 # Build with Mock adapter (no native dependencies)
-./gradlew :lang:lsp-server:fatJar -Plsp.adapter=mock -PincludeBuildLang=true
+./gradlew :lang:lsp-server:fatJar -Plsp.adapter=mock
 
 # Build with Compiler stub (all calls logged)
-./gradlew :lang:lsp-server:fatJar -Plsp.adapter=compiler -PincludeBuildLang=true
+./gradlew :lang:lsp-server:fatJar -Plsp.adapter=compiler
 
 # Run IntelliJ with specific adapter
-./gradlew :lang:intellij-plugin:runIde -Plsp.adapter=treesitter -PincludeBuildLang=true
+./gradlew :lang:intellij-plugin:runIde -Plsp.adapter=treesitter
 ```
 
 ### Setting a Default Adapter
@@ -147,7 +149,6 @@ Capabilities not yet implemented in an adapter use default interface methods
 | **Code Intelligence (cont.)** |
 | Semantic Tokens | ❌ | ✅ | 🔮 | `textDocument/semanticTokens/full` |
 | Workspace Symbols | ❌ | ✅ | 🔮 | `workspace/symbol` |
-| **Future (Requires Compiler)** |
 | Inlay Hints | ❌ | ❌ | 🔮 | `textDocument/inlayHint` |
 
 Legend: ✅ = Implemented, ⚠️ = Partial/limited, ❌ = Not implemented, 🔮 = Future (compiler adapter)
@@ -168,13 +169,13 @@ Legend: ✅ = Implemented, ⚠️ = Partial/limited, ❌ = Not implemented, 🔮
 
 ```bash
 # Build the project (with lang enabled)
-./gradlew :lang:lsp-server:build -PincludeBuildLang=true
+./gradlew :lang:lsp-server:build
 
 # Run tests
-./gradlew :lang:lsp-server:test -PincludeBuildLang=true
+./gradlew :lang:lsp-server:test
 
 # Create fat JAR with all dependencies
-./gradlew :lang:lsp-server:fatJar -PincludeBuildLang=true
+./gradlew :lang:lsp-server:fatJar
 ```
 
 ## Tree-sitter Native Library
@@ -232,7 +233,7 @@ The log level is resolved via `xdkProperties` in this order (first match wins):
 
 ```bash
 # Run IntelliJ sandbox with DEBUG logging and tree-sitter
-./gradlew :lang:intellij-plugin:runIde -PincludeBuildLang=true -Plog=DEBUG
+./gradlew :lang:intellij-plugin:runIde -Plog=DEBUG
 
 # Run LSP server tests with TRACE logging
 ./gradlew :lang:lsp-server:test -Plog=TRACE
@@ -242,7 +243,7 @@ The log level is resolved via `xdkProperties` in this order (first match wins):
 
 # Set log level via environment (persists across commands)
 export XTC_LOG_LEVEL=DEBUG
-./gradlew :lang:intellij-plugin:runIde -PincludeBuildLang=true
+./gradlew :lang:intellij-plugin:runIde
 ```
 
 ## Logging
@@ -255,18 +256,18 @@ The LSP server logs to both stderr (for IntelliJ's Language Servers panel) and a
 ~/.xtc/logs/lsp-server.log
 ```
 
-All log messages use a `[Module]` prefix to identify their source:
+Log messages use SLF4J with a short class name (`%logger{0}`) to identify their source:
 
-| Prefix | Source |
-|--------|--------|
-| `[Server]` | `XtcLanguageServer` -- LSP protocol handler |
-| `[Launcher]` | `XtcLanguageServerLauncher` -- server startup |
-| `[TreeSitter]` | `TreeSitterAdapter` -- syntax-level intelligence |
-| `[Mock]` | `MockXtcCompilerAdapter` -- regex-based adapter |
-| `[Parser]` | `XtcParser` -- tree-sitter native parser |
-| `[QueryEngine]` | `XtcQueryEngine` -- tree-sitter query execution |
-| `[WorkspaceIndexer]` | `WorkspaceIndexer` -- background file scanner |
-| `[WorkspaceIndex]` | `WorkspaceIndex` -- symbol index |
+| Logger Name | Source |
+|-------------|--------|
+| `XtcLanguageServer` | LSP protocol handler |
+| `XtcLanguageServerLauncherKt` | Server startup |
+| `TreeSitterAdapter` | Syntax-level intelligence |
+| `MockXtcCompilerAdapter` | Regex-based adapter |
+| `XtcParser` | Tree-sitter native parser |
+| `XtcQueryEngine` | Tree-sitter query execution |
+| `WorkspaceIndexer` | Background file scanner |
+| `WorkspaceIndex` | Symbol index |
 
 ### Tailing Logs
 
@@ -301,7 +302,7 @@ but behaviors we must work around.
 
 | Log | Location | Contents |
 |-----|----------|----------|
-| LSP server log | `~/.xtc/logs/lsp-server.log` | All `[Server]`, `[TreeSitter]`, `[Parser]`, `[QueryEngine]` messages |
+| LSP server log | `~/.xtc/logs/lsp-server.log` | All `XtcLanguageServer`, `TreeSitterAdapter`, `XtcParser`, `XtcQueryEngine` messages |
 | IntelliJ `idea.log` | Sandbox `log/idea.log` (path shown at `runIde` startup) | Platform errors, plugin loading, EDT violations |
 | LSP Console (IDE) | **View -> Tool Windows -> Language Servers -> Logs** | JSON-RPC traces, server stderr |
 | Gradle console | Terminal running `runIde` | Build output + tailed LSP log (real-time) |

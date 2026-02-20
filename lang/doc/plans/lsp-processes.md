@@ -469,6 +469,8 @@ class PlatformDetectorTest {
 
 ### Integration Tests
 
+> **Note:** All `./gradlew :lang:*` commands require `-PincludeBuildLang=true -PincludeBuildAttachLang=true` when run from the project root.
+
 ```bash
 # Test standalone server with Java 25
 export JAVA_HOME=/path/to/java24
@@ -481,7 +483,7 @@ $JAVA_HOME/bin/java -jar lang/lsp-server/build/libs/xtc-lsp-server-fat.jar
 
 ### Manual Testing Checklist
 
-- [ ] First launch on clean system (no ~/.xtc/jre/)
+- [ ] First launch on clean system (no ~/.gradle/caches/xtc-jre/)
 - [ ] Progress notification shows during download
 - [ ] Server starts after download completes
 - [ ] Subsequent launches use cached JRE (no download)
@@ -864,12 +866,9 @@ The LSP server **already has extensive `logger.info` calls** throughout `XtcLang
 - Timing information for all operations (e.g., "compiled in 12.3ms")
 - Initialization, shutdown, and exit lifecycle events
 
-**THE PROBLEM**: The current `logback.xml` sets level to `WARN`, discarding all INFO logs!
-
-```xml
-<!-- CURRENT (bad for development): -->
-<logger name="org.xvm.lsp" level="WARN"/>  <!-- All logger.info calls silently discarded! -->
-```
+**RESOLVED**: The logback.xml now defaults to INFO level with configurable override via
+`-Dxtc.logLevel` or `XTC_LOG_LEVEL` environment variable. Logs go to both stderr (for LSP4IJ panel)
+and a rolling file at `~/.xtc/logs/lsp-server.log`.
 
 ### Log Streams
 
@@ -878,51 +877,36 @@ The LSP server **already has extensive `logger.info` calls** throughout `XtcLang
 | **stdout** | LSP JSON-RPC messages | Consumed by LSP4IJ (protocol) - NEVER touch |
 | **stderr** | Log messages via SLF4J/Logback | **Must appear in Gradle console during runIde** |
 
-### Solution: Development vs Production Log Levels
+### Solution: Dual-Appender Logging (IMPLEMENTED)
 
-**lsp-server/src/main/resources/logback.xml** should use INFO by default:
+**lsp-server/src/main/resources/logback.xml** uses INFO by default with two appenders:
 
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<configuration>
-    <statusListener class="ch.qos.logback.core.status.NopStatusListener"/>
+- **STDERR appender**: `%d{HH:mm:ss} %-5level %logger{0} - %msg%n` (for LSP4IJ's Language Servers panel)
+- **FILE appender**: `%d{HH:mm:ss.SSS} %-5level %logger{0} - %msg%n` (rolling log at `~/.xtc/logs/lsp-server.log`)
 
-    <appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
-        <target>System.err</target>
-        <encoder>
-            <pattern>%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg%n</pattern>
-        </encoder>
-    </appender>
+The `%logger{0}` pattern displays just the simple class name (e.g., `XtcLanguageServer`, `TreeSitterAdapter`).
+No hardcoded `[ClassName]` brackets in the log messages -- logback handles class name display.
 
-    <!-- XTC LSP server - INFO level shows all the useful logs -->
-    <logger name="org.xvm.lsp" level="INFO"/>
-
-    <!-- Eclipse LSP4J - keep quiet unless debugging protocol issues -->
-    <logger name="org.eclipse.lsp4j" level="WARN"/>
-
-    <root level="WARN">
-        <appender-ref ref="STDERR"/>
-    </root>
-</configuration>
-```
+Log level is configurable via: `-Dxtc.logLevel=DEBUG`, `XTC_LOG_LEVEL=DEBUG`, or `-Plog=DEBUG`.
+Default is INFO. LSP4J logger is set to ERROR (not WARN).
 
 ### Expected Console Output During runIde
 
-With INFO level, you'll see all the existing `logger.info` calls in the Gradle console:
+With INFO level (default), stderr output visible in the Gradle console:
 
 ```
-10:23:45.123 INFO  o.x.l.s.XtcLanguageServer - ========================================
-10:23:45.124 INFO  o.x.l.s.XtcLanguageServer - XTC Language Server v0.1.0
-10:23:45.124 INFO  o.x.l.s.XtcLanguageServer - Backend: Tree-sitter
-10:23:45.125 INFO  o.x.l.s.XtcLanguageServer - ========================================
-10:23:45.130 INFO  o.x.l.s.XtcLanguageServer - Connected to language client
-10:23:45.145 INFO  o.x.l.s.XtcLanguageServer - Initializing for workspace folders: [file:///path/to/project]
-10:23:45.146 INFO  o.x.l.s.XtcLanguageServer - Client capabilities: hover, completion, definition, references
-10:23:45.147 INFO  o.x.l.s.XtcLanguageServer - XTC Language Server initialized
-10:23:46.201 INFO  o.x.l.s.XtcLanguageServer - textDocument/didOpen: file:///path/to/Hello.x (1234 bytes)
-10:23:46.215 INFO  o.x.l.s.XtcLanguageServer - textDocument/didOpen: compiled in 13.2ms, 0 diagnostics
-10:23:47.892 INFO  o.x.l.s.XtcLanguageServer - textDocument/hover: file:///path/to/Hello.x at 10:15
-10:23:47.894 INFO  o.x.l.s.XtcLanguageServer - textDocument/hover: found symbol in 1.8ms
+10:23:45 INFO  XtcLanguageServer - initialize: ========================================
+10:23:45 INFO  XtcLanguageServer - initialize: XTC Language Server v0.4.4 (pid=12345)
+10:23:45 INFO  XtcLanguageServer - initialize: Backend: TreeSitter
+10:23:45 INFO  XtcLanguageServer - initialize: ========================================
+10:23:45 INFO  XtcLanguageServer - connect: connected to language client
+10:23:45 INFO  XtcLanguageServer - initialize: workspace folders: [file:///path/to/project]
+10:23:45 INFO  XtcLanguageServer - initialize: client capabilities: hover, completion, definition, references
+10:23:45 INFO  XtcLanguageServer - initialize: XTC Language Server initialized
+10:23:46 INFO  XtcLanguageServer - textDocument/didOpen: file:///path/to/Hello.x (1234 bytes)
+10:23:46 INFO  XtcLanguageServer - textDocument/didOpen: compiled in 13.2ms, 0 diagnostics
+10:23:47 INFO  XtcLanguageServer - textDocument/hover: file:///path/to/Hello.x at 10:15
+10:23:47 INFO  XtcLanguageServer - textDocument/hover: found symbol in 1.8ms
 ```
 
 ### Plugin Side: Forwarding stderr to Gradle Console

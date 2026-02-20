@@ -50,6 +50,7 @@ class WorkspaceIndex {
     ) {
         lock.write {
             // Remove old symbols for this URI first
+            val oldCount = byUri[uri]?.size ?: 0
             removeSymbolsForUriInternal(uri)
 
             // Add new symbols
@@ -59,6 +60,9 @@ class WorkspaceIndex {
                 byName.getOrPut(key) { mutableListOf() }.add(symbol)
                 byQualifiedName[symbol.qualifiedName] = symbol
             }
+
+            val verb = if (oldCount > 0) "replaced $oldCount with" else "added"
+            logger.info("{} {} symbols for {}", verb, symbols.size, uri.substringAfterLast('/'))
         }
     }
 
@@ -67,7 +71,9 @@ class WorkspaceIndex {
      */
     fun removeSymbolsForUri(uri: String) {
         lock.write {
+            val count = byUri[uri]?.size ?: 0
             removeSymbolsForUriInternal(uri)
+            logger.info("removed {} symbols for {}", count, uri.substringAfterLast('/'))
         }
     }
 
@@ -88,7 +94,9 @@ class WorkspaceIndex {
      */
     fun findByName(name: String): List<IndexedSymbol> =
         lock.read {
-            byName[name.lowercase()]?.toList() ?: emptyList()
+            val results = byName[name.lowercase()]?.toList() ?: emptyList()
+            logger.info("findByName '{}' -> {} results", name, results.size)
+            results
         }
 
     /**
@@ -108,9 +116,13 @@ class WorkspaceIndex {
         query: String,
         limit: Int = 100,
     ): List<IndexedSymbol> {
-        if (query.isBlank()) return emptyList()
+        if (query.isBlank()) {
+            logger.info("search: blank query, returning empty")
+            return emptyList()
+        }
 
         val lowerQuery = query.lowercase()
+        logger.info("search: query='{}', limit={}, index has {} names across {} files", query, limit, byName.size, byUri.size)
 
         return lock.read {
             val exact = mutableListOf<IndexedSymbol>()
@@ -139,7 +151,19 @@ class WorkspaceIndex {
             result.addAll(prefix)
             result.addAll(camelCase)
             result.addAll(subsequence)
-            result.take(limit)
+            val limited = result.take(limit)
+
+            logger.info(
+                "search '{}' -> {} results (exact={}, prefix={}, camelCase={}, subsequence={}){}",
+                query,
+                limited.size,
+                exact.size,
+                prefix.size,
+                camelCase.size,
+                subsequence.size,
+                if (result.size > limit) " [truncated from ${result.size}]" else "",
+            )
+            limited
         }
     }
 
@@ -152,7 +176,7 @@ class WorkspaceIndex {
             byUri.clear()
             byQualifiedName.clear()
         }
-        logger.info("[WorkspaceIndex] cleared")
+        logger.info("cleared")
     }
 
     companion object {

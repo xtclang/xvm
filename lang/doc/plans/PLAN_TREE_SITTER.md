@@ -239,28 +239,30 @@ The LSP server uses a pluggable adapter pattern with three available backends:
 └─────────────────┘  └─────────────────┘  └─────────────────┘
 ```
 
-The interface provides default implementations for all methods that log
+The abstract base class provides default implementations for all methods that log
 "not yet implemented" warnings. Adapters only override what they implement.
 
 ### Switching Adapters
 
+> **Note:** All `./gradlew :lang:*` commands require `-PincludeBuildLang=true -PincludeBuildAttachLang=true` when run from the project root.
+
 ```bash
 # Build with Tree-sitter adapter (default)
-./gradlew :lang:lsp-server:fatJar -PincludeBuildLang=true
+./gradlew :lang:lsp-server:fatJar
 
 # Build with Mock adapter (for testing without native libraries)
-./gradlew :lang:lsp-server:fatJar -Plsp.adapter=mock -PincludeBuildLang=true
+./gradlew :lang:lsp-server:fatJar -Plsp.adapter=mock
 
 # Build with Compiler stub (all LSP calls logged)
-./gradlew :lang:lsp-server:fatJar -Plsp.adapter=compiler -PincludeBuildLang=true
+./gradlew :lang:lsp-server:fatJar -Plsp.adapter=compiler
 ```
 
 ### Shared Constants
 
 Common XTC language data is centralized in `XtcLanguageConstants.kt`:
 
-- `KEYWORDS` - 79 XTC keywords for completion
-- `BUILT_IN_TYPES` - 70+ built-in types
+- `KEYWORDS` - 50 XTC keywords for completion
+- `BUILT_IN_TYPES` - 61 built-in types
 - `SYMBOL_TO_COMPLETION_KIND` - Symbol kind mapping
 
 ---
@@ -396,7 +398,7 @@ the full compiler adapter for advanced capabilities.
 | **Inlay hints** | ❌ | ❌ | 🔮 | Type inference hints require compiler |
 | **Call hierarchy** | ❌ | ❌ | 🔮 | Requires semantic analysis |
 | **Type hierarchy** | ❌ | ❌ | 🔮 | Requires type system |
-| **Workspace symbols** | ❌ | ✅ | 🔮 | Cross-file indexing with fuzzy search (4-tier matching) |
+| **Workspace symbols** | ✅ | ❌ | 🔮 | Cross-file indexing with fuzzy search (4-tier matching) |
 
 **Legend:**
 - ✅ = Implemented

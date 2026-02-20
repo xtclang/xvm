@@ -32,7 +32,7 @@ class XtcParser private constructor(
     init {
         parser.setLanguage(language)
         if (logInit) {
-            logger.info("[Parser]initialized with tree-sitter native library")
+            logger.info("initialized with tree-sitter native library")
         }
     }
 
@@ -59,10 +59,10 @@ class XtcParser private constructor(
                 val root = tree.root
                 (root.type == "source_file" && root.childCount > 0 && !root.hasError).also { valid ->
                     if (valid) {
-                        logger.info("[Parser]health check PASSED: parsed test module successfully")
+                        logger.info("health check PASSED: parsed test module successfully")
                     } else {
                         logger.warn(
-                            "[Parser]health check FAILED: root={}, children={}, hasError={}",
+                            "health check FAILED: root={}, children={}, hasError={}",
                             root.type,
                             root.childCount,
                             root.hasError,
@@ -70,7 +70,7 @@ class XtcParser private constructor(
                     }
                 }
             }
-        }.onFailure { logger.error("[Parser]health check FAILED: {}", it.message) }
+        }.onFailure { logger.error("health check FAILED: {}", it.message) }
             .getOrDefault(false)
 
     /**
@@ -107,6 +107,7 @@ class XtcParser private constructor(
         oldTree: XtcTree?,
     ): XtcTree {
         check(!closed) { "Parser has been closed" }
+        logger.info("parse: {} bytes", source.length)
         val tree =
             parser
                 .parse(source)
@@ -123,7 +124,7 @@ class XtcParser private constructor(
         if (!closed) {
             closed = true
             parser.close()
-            logger.info("[Parser]closed")
+            logger.info("closed")
         }
     }
 
@@ -143,7 +144,7 @@ class XtcParser private constructor(
             val resourcePath = Platform.resourcePath(GRAMMAR_LIBRARY_NAME)
             val libraryFileName = Platform.libraryFileName(GRAMMAR_LIBRARY_NAME)
 
-            logger.info("[Parser] loading XTC grammar from: {}", resourcePath)
+            logger.info("loadXtcLanguage: loading XTC grammar from: {}", resourcePath)
 
             // Try to load from resources (bundled in JAR)
             XtcParser::class.java.getResourceAsStream(resourcePath)?.use { inputStream ->
@@ -151,19 +152,19 @@ class XtcParser private constructor(
                 tempFile.toFile().deleteOnExit()
                 Files.copy(inputStream, tempFile, StandardCopyOption.REPLACE_EXISTING)
 
-                logger.info("[Parser] native library:extracted {} to {}", libraryFileName, tempFile)
+                logger.info("loadXtcLanguage: extracted {} to {}", libraryFileName, tempFile)
                 val language = loadLanguageFromPath(tempFile)
-                logger.info("[Parser] native library:successfully loaded XTC tree-sitter grammar (FFM API)")
+                logger.info("loadXtcLanguage: successfully loaded XTC tree-sitter grammar (FFM API)")
                 return language
             }
 
             // Fallback: try to load from system library path
-            logger.info("[Parser] resource not found, trying system library path")
+            logger.info("loadXtcLanguage: resource not found, trying system library path")
             try {
                 return loadLanguageFromSystemPath()
             } catch (e: Exception) {
                 logger.error(
-                    "[Parser] failed to load XTC tree-sitter grammar. " +
+                    "loadXtcLanguage: failed to load XTC tree-sitter grammar. " +
                         "The native library is not available. " +
                         "Run './gradlew :lang:tree-sitter:ensureNativeLibraryUpToDate' to compile it.",
                 )
@@ -182,7 +183,7 @@ class XtcParser private constructor(
          * look up the tree_sitter_xtc language function symbol.
          */
         private fun loadLanguageFromPath(path: Path): Language {
-            logger.info("[Parser] loading language frompath: {}", path)
+            logger.info("loadLanguageFromPath: {}", path)
 
             // Create a symbol lookup for the library
             val symbols = SymbolLookup.libraryLookup(path, arena)
@@ -198,7 +199,7 @@ class XtcParser private constructor(
          * or in java.library.path.
          */
         private fun loadLanguageFromSystemPath(): Language {
-            logger.info("[Parser] loading language fromsystem path")
+            logger.info("loadLanguageFromSystemPath: loading from system path")
 
             // Map to platform-specific library name
             val libraryName = System.mapLibraryName(GRAMMAR_LIBRARY_NAME)

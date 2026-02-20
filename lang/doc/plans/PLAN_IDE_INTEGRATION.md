@@ -105,8 +105,8 @@ out-of-process with an auto-provisioned JRE to meet this requirement (IntelliJ r
 An IntelliJ IDEA plugin providing XTC support:
 
 **Core Components:**
-- **`XtcLspServerSupportProvider`** - Out-of-process LSP server integration via LSP4IJ
-- **`XtcProjectGenerator`** / **`XtcNewProjectWizardStep`** - New Project wizard
+- **`XtcLanguageServerFactory`** / **`XtcLspConnectionProvider`** - Out-of-process LSP server integration via LSP4IJ
+- **`XtcNewProjectWizard`** / **`XtcNewProjectWizardStep`** - New Project wizard
 - **`XtcRunConfiguration`** / **`XtcRunConfigurationType`** / **`XtcRunConfigurationProducer`** - Run configurations
 - **`XtcTextMateBundleProvider`** - TextMate grammar for syntax highlighting
 - **`XtcIconProvider`** - XTC file icons

@@ -51,10 +51,16 @@ class WorkspaceIndexer(
     /** Serializes access to the non-thread-safe tree-sitter parser and query engine. */
     private val parseLock = Any()
 
+    private val threadPoolSize = minOf(Runtime.getRuntime().availableProcessors(), 4).coerceAtLeast(2)
+
     private val threadPool: ExecutorService =
-        Executors.newFixedThreadPool(
-            minOf(Runtime.getRuntime().availableProcessors(), 4).coerceAtLeast(2),
-        )
+        Executors.newFixedThreadPool(threadPoolSize).also {
+            logger.info(
+                "created thread pool with {} threads (available processors: {})",
+                threadPoolSize,
+                Runtime.getRuntime().availableProcessors(),
+            )
+        }
 
     /**
      * Scan all `*.x` files in the given workspace folders in parallel.
@@ -68,10 +74,11 @@ class WorkspaceIndexer(
         progressReporter: ((String, Int) -> Unit)? = null,
     ): CompletableFuture<Unit> =
         CompletableFuture.supplyAsync({
+            logger.info("starting workspace scan: {} folders: {}", folders.size, folders)
             val (_, elapsed) =
                 measureTimedValue {
                     val files = collectXtcFiles(folders)
-                    logger.info("[WorkspaceIndexer] found {} .x files to index", files.size)
+                    logger.info("found {} .x files to index", files.size)
 
                     if (files.isEmpty()) {
                         progressReporter?.invoke("No .x files found", 100)
@@ -90,7 +97,7 @@ class WorkspaceIndexer(
                                 if (done % 50 == 0 || done == total) {
                                     val percent = (done * 100) / total
                                     progressReporter?.invoke("Indexing: $done/$total files", percent)
-                                    logger.info("[WorkspaceIndexer] progress: {}/{} files ({}%)", done, total, percent)
+                                    logger.info("progress: {}/{} files ({}%)", done, total, percent)
                                 }
                             }, threadPool)
                         }
@@ -101,7 +108,7 @@ class WorkspaceIndexer(
                 }
 
             logger.info(
-                "[WorkspaceIndexer] workspace scan complete: {} symbols in {} files ({})",
+                "workspace scan complete: {} symbols in {} files ({})",
                 index.symbolCount,
                 index.fileCount,
                 elapsed,
@@ -118,7 +125,7 @@ class WorkspaceIndexer(
     ) {
         val symbols = parseAndExtractSymbols(uri, content)
         index.addSymbols(uri, symbols)
-        logger.debug("[WorkspaceIndexer] reindexed {}: {} symbols", uri.substringAfterLast('/'), symbols.size)
+        logger.info("reindexed {}: {} symbols", uri.substringAfterLast('/'), symbols.size)
     }
 
     /**
@@ -126,7 +133,7 @@ class WorkspaceIndexer(
      */
     fun removeFile(uri: String) {
         index.removeSymbolsForUri(uri)
-        logger.info("[WorkspaceIndexer] removed symbols for {}", uri.substringAfterLast('/'))
+        logger.info("removed symbols for {}", uri.substringAfterLast('/'))
     }
 
     private fun indexFile(path: Path) {
@@ -135,8 +142,9 @@ class WorkspaceIndexer(
             val content = path.readText()
             val symbols = parseAndExtractSymbols(uri, content)
             index.addSymbols(uri, symbols)
+            logger.info("indexed {}: {} symbols ({} bytes)", path.fileName, symbols.size, content.length)
         } catch (e: Exception) {
-            logger.warn("[WorkspaceIndexer] failed to index {}: {}", path, e.message)
+            logger.warn("failed to index {}: {}", path, e.message)
         }
     }
 
@@ -179,9 +187,10 @@ class WorkspaceIndexer(
             for (folder in folders) {
                 val path = Path.of(folder)
                 if (!Files.isDirectory(path)) {
-                    logger.warn("[WorkspaceIndexer] not a directory: {}", folder)
+                    logger.warn("not a directory: {}", folder)
                     continue
                 }
+                val countBefore = size
                 Files.walkFileTree(
                     path,
                     object : SimpleFileVisitor<Path>() {
@@ -199,21 +208,24 @@ class WorkspaceIndexer(
                             file: Path,
                             exc: java.io.IOException,
                         ): FileVisitResult {
-                            logger.warn("[WorkspaceIndexer] cannot visit {}: {}", file, exc.message)
+                            logger.warn("cannot visit {}: {}", file, exc.message)
                             return FileVisitResult.CONTINUE
                         }
                     },
                 )
+                logger.info("scanned folder {}: {} .x files", folder, size - countBefore)
             }
         }
 
     override fun close() {
+        logger.info("shutting down (index has {} symbols in {} files)", index.symbolCount, index.fileCount)
         threadPool.shutdown()
         if (!threadPool.awaitTermination(5, TimeUnit.SECONDS)) {
+            logger.warn("thread pool did not terminate in 5s, forcing shutdown")
             threadPool.shutdownNow()
         }
         queryEngine.close()
         parser.close()
-        logger.info("[WorkspaceIndexer] closed")
+        logger.info("closed")
     }
 }

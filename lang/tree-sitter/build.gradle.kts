@@ -111,6 +111,8 @@ val downloadTreeSitterCliGz by tasks.registering(Download::class) {
     overwrite(false)
     onlyIfModified(true)
     quiet(false)
+    val destGzFile = File(destPath, "tree-sitter-$platform.gz")
+    onlyIf { !destGzFile.exists() }
 
     logTimed("[tree-sitter] Downloading CLI v$version ($platform)...\n[tree-sitter]   URL:  $url\n[tree-sitter]   Dest: $destPath") { elapsed ->
         val size = File(destPath).walkTopDown().filter { it.isFile }.sumOf { it.length() }.humanSize()
@@ -177,6 +179,7 @@ val downloadTreeSitterSource by tasks.registering(Download::class) {
     overwrite(false)
     onlyIfModified(true)
     quiet(false)
+    onlyIf { !File(destPath).exists() }
 
     logTimed("[tree-sitter] Downloading source v$version...\n[tree-sitter]   URL:  $url\n[tree-sitter]   Dest: $destPath") { elapsed ->
         val size = File(destPath).length().humanSize()
@@ -273,6 +276,7 @@ val downloadZig by tasks.registering(Download::class) {
     overwrite(false)
     onlyIfModified(true)
     quiet(false)
+    onlyIf { !destFile.exists() }
 
     logTimed("[zig] Downloading Zig compiler v$version ($platform)...\n[zig]   URL:  $url\n[zig]   Dest: $destPath") { elapsed ->
         val size = File(destPath).length().humanSize()

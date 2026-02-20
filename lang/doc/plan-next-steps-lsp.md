@@ -48,25 +48,7 @@ actions are traceable even when not yet supported.
 
 ### Implemented (TreeSitter — returning real data)
 
-| LSP Method | Notes |
-|------------|-------|
-| `textDocument/hover` | AST-based symbol lookup, markdown formatting |
-| `textDocument/completion` | Keywords, built-in types, document symbols, imports. Trigger chars: `.` `:` `<` |
-| `textDocument/definition` | Same-file + cross-file via workspace index |
-| `textDocument/references` | Same-file only (text matching) |
-| `textDocument/documentSymbol` | Full declaration tree via tree-sitter queries |
-| `textDocument/documentHighlight` | All occurrences of identifier under cursor |
-| `textDocument/selectionRange` | Smart expand/shrink via AST traversal |
-| `textDocument/foldingRange` | Declarations, blocks, comments, imports |
-| `textDocument/formatting` | Trailing whitespace removal, final newline |
-| `textDocument/rangeFormatting` | Same as above, range-scoped |
-| `textDocument/rename` | Same-file text replacement, with `prepareRename` validation |
-| `textDocument/codeAction` | "Organize Imports" only |
-| `textDocument/documentLink` | Import statement locations (target unresolved) |
-| `textDocument/signatureHelp` | Same-file method parameters. Trigger chars: `(` `,` |
-| `textDocument/publishDiagnostics` | Syntax errors from tree-sitter parse |
-| `textDocument/semanticTokens/full` | Tier 1: declarations, type refs, annotations, calls, members. Opt-in via `-Plsp.semanticTokens=true` |
-| `workspace/symbol` | 4-tier fuzzy search (exact, prefix, CamelCase, subsequence) via workspace index |
+> See [PLAN_IDE_INTEGRATION.md](plans/PLAN_IDE_INTEGRATION.md) for the canonical feature implementation matrix comparing Mock, Tree-sitter, and Compiler adapter capabilities.
 
 ### Stub / Not Implemented (advertised but returning empty/null)
 
@@ -934,7 +916,7 @@ workspace index (e.g., cross-file type classification, `defaultLibrary` modifier
 **Sprint 1B — Semantic Tokens (no index dependency):**
 - ✅ **Semantic Tokens Tier 1** — declaration-site + type positions + annotations +
   call/member expressions + modifiers. Implemented in `SemanticTokenEncoder` using AST walker.
-  Opt-in via `-Plsp.semanticTokens=true`. Comprehensive test coverage in
+  Enabled by default (`lsp.semanticTokens=true` in gradle.properties). Comprehensive test coverage in
   `TreeSitterAdapterTest` and `SemanticTokensVsTextMateTest` (10 tests demonstrating benefit
   over TextMate highlighting).
 
@@ -1075,7 +1057,7 @@ These are features that require IntelliJ-specific code in the plugin, beyond wha
 | File type registration (`.x`) | Done | `plugin.xml` + `XtcFileType` |
 | TextMate grammar (syntax highlighting) | Done | Bundled `.tmLanguage.json` |
 | Run configurations | Done | `XtcRunConfigurationType` |
-| New Project wizard | Done | `XtcModuleBuilder` |
+| New Project wizard | Done | `XtcNewProjectWizard` |
 | JRE provisioning (Foojay) | Done | `JreProvisioner` |
 | DAP extension point | Done | `XtcDebugAdapterFactory` |
 | Line marker (gutter icons) | Not done | Run/debug icons for `module` declarations |

@@ -90,20 +90,20 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
 
     init {
         // Perform health check to verify native library is working
-        logger.info("$logPrefix ========================================")
-        logger.info("$logPrefix initializing...")
-        logger.info("$logPrefix Java version: {} ({})", System.getProperty("java.version"), System.getProperty("java.vendor"))
-        logger.info("$logPrefix Platform: {} / {}", System.getProperty("os.name"), System.getProperty("os.arch"))
-        logger.info("$logPrefix ========================================")
+        logger.info("========================================")
+        logger.info("initializing...")
+        logger.info("Java version: {} ({})", System.getProperty("java.version"), System.getProperty("java.vendor"))
+        logger.info("Platform: {} / {}", System.getProperty("os.name"), System.getProperty("os.arch"))
+        logger.info("========================================")
 
         if (!healthCheck()) {
             val msg =
-                "$logPrefix health check FAILED - native library not working. " +
+                "health check FAILED - native library not working. " +
                     "Ensure native libraries are bundled and Java $MIN_JAVA_VERSION+ is used."
             logger.error(msg)
             throw IllegalStateException(msg)
         }
-        logger.info("$logPrefix ready: native library loaded and verified")
+        logger.info("ready: native library loaded and verified")
     }
 
     /**
@@ -129,18 +129,18 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         workspaceFolders: List<String>,
         progressReporter: ((String, Int) -> Unit)?,
     ) {
-        logger.info("$logPrefix initializeWorkspace: {} folders: {}", workspaceFolders.size, workspaceFolders)
+        logger.info("initializeWorkspace: {} folders: {}", workspaceFolders.size, workspaceFolders)
         indexer
             .scanWorkspace(workspaceFolders, progressReporter)
             .thenRun {
                 indexReady.set(true)
                 logger.info(
-                    "$logPrefix workspace index ready: {} symbols in {} files",
+                    "workspace index ready: {} symbols in {} files",
                     workspaceIndex.symbolCount,
                     workspaceIndex.fileCount,
                 )
             }.exceptionally { e ->
-                logger.error("$logPrefix workspace indexing failed: {}", e.message, e)
+                logger.error("workspace indexing failed: {}", e.message, e)
                 null
             }
     }
@@ -149,7 +149,10 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         uri: String,
         changeType: Int,
     ) {
-        if (!indexReady.get()) return
+        if (!indexReady.get()) {
+            logger.info("didChangeWatchedFile: index not ready, ignoring {}", uri.substringAfterLast('/'))
+            return
+        }
 
         try {
             when (changeType) {
@@ -159,27 +162,27 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
                     if (path.extension == "x" && Files.exists(path)) {
                         val content = path.readText()
                         indexer.reindexFile(uri, content)
-                        logger.info("$logPrefix re-indexed watched file: {}", uri.substringAfterLast('/'))
+                        logger.info("re-indexed watched file: {}", uri.substringAfterLast('/'))
                     }
                 }
                 3 -> {
                     // Deleted: remove from index
                     indexer.removeFile(uri)
-                    logger.info("$logPrefix removed deleted file from index: {}", uri.substringAfterLast('/'))
+                    logger.info("removed deleted file from index: {}", uri.substringAfterLast('/'))
                 }
             }
         } catch (e: Exception) {
-            logger.warn("$logPrefix didChangeWatchedFile failed for {}: {}", uri, e.message)
+            logger.warn("didChangeWatchedFile failed for {}: {}", uri, e.message)
         }
     }
 
     override fun findWorkspaceSymbols(query: String): List<SymbolInfo> {
         if (!indexReady.get()) {
-            logger.info("$logPrefix findWorkspaceSymbols: index not ready yet; query='{}'", query)
+            logger.info("findWorkspaceSymbols: index not ready yet; query='{}'", query)
             return emptyList()
         }
         val results = workspaceIndex.search(query)
-        logger.info("$logPrefix findWorkspaceSymbols '{}' -> {} results", query, results.size)
+        logger.info("findWorkspaceSymbols '{}' -> {} results", query, results.size)
         return results.map { it.toSymbolInfo() }
     }
 
@@ -191,7 +194,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         uri: String,
         content: String,
     ): CompilationResult {
-        logger.info("$logPrefix parsing {} ({} bytes)", uri, content.length)
+        logger.info("parsing {} ({} bytes)", uri, content.length)
 
         // Always full reparse -- oldTree retained for API compatibility but ignored by parser
         // (see XtcParser.parse() doc: incremental parsing requires Tree.edit() which we don't have)
@@ -201,7 +204,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
             try {
                 measureTimedValue { parser.parse(content, oldTree) }
             } catch (e: Exception) {
-                logger.error("$logPrefix parse failed for {}: {}", uri, e.message)
+                logger.error("parse failed for {}: {}", uri, e.message)
                 return CompilationResult.failure(
                     uri,
                     listOf(
@@ -233,10 +236,12 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         // Update workspace index with fresh symbols from this file
         if (indexReady.get()) {
             indexer.reindexFile(uri, content)
+        } else {
+            logger.info("workspace index not ready, skipping reindex for {}", uri.substringAfterLast('/'))
         }
 
         logger.info(
-            "$logPrefix parsed in {}, {} errors, {} symbols (query: {})",
+            "parsed in {}, {} errors, {} symbols (query: {})",
             parseElapsed,
             diagnostics.size,
             symbols.size,
@@ -253,14 +258,14 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         line: Int,
         column: Int,
     ): SymbolInfo? {
-        logger.info("$logPrefix findSymbolAt: uri={}, line={}, column={}", uri, line, column)
+        logger.info("findSymbolAt: uri={}, line={}, column={}", uri, line, column)
         val tree = parsedTrees[uri]
         if (tree == null) {
-            logger.info("$logPrefix findSymbolAt: no parsed tree for uri")
+            logger.info("findSymbolAt: no parsed tree for uri")
             return null
         }
         val result = queryEngine.findDeclarationAt(tree, line, column, uri)
-        logger.info("$logPrefix findSymbolAt -> {}", result?.let { "'${it.name}' (${it.kind})" } ?: "null")
+        logger.info("findSymbolAt -> {}", result?.let { "'${it.name}' (${it.kind})" } ?: "null")
         return result
     }
 
@@ -276,7 +281,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         line: Int,
         column: Int,
     ): List<CompletionItem> {
-        logger.info("$logPrefix getCompletions: uri={}, line={}, column={}", uri, line, column)
+        logger.info("getCompletions: uri={}, line={}, column={}", uri, line, column)
         return buildList {
             // Add keywords and built-in types
             addAll(keywordCompletions())
@@ -308,7 +313,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
                     )
                 }
             }
-        }.also { logger.info("$logPrefix getCompletions -> {} items", it.size) }
+        }.also { logger.info("getCompletions -> {} items", it.size) }
     }
 
     /**
@@ -330,7 +335,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         val decl = symbols.find { it.name == name }
 
         if (decl != null) {
-            logger.info("$logPrefix definition '{}' -> same-file {}:{}", name, decl.location.startLine, decl.location.startColumn)
+            logger.info("definition '{}' -> same-file {}:{}", name, decl.location.startLine, decl.location.startColumn)
             return decl.location
         }
 
@@ -352,7 +357,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
                     )
                 val best = indexed.firstOrNull { it.kind in typeKinds } ?: indexed.first()
                 logger.info(
-                    "$logPrefix definition '{}' -> cross-file {} ({})",
+                    "definition '{}' -> cross-file {} ({})",
                     name,
                     best.uri.substringAfterLast('/'),
                     best.kind,
@@ -362,7 +367,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         }
 
         logger.info(
-            "$logPrefix definition '{}' not found ({} symbols: {})",
+            "definition '{}' not found ({} symbols: {})",
             name,
             symbols.size,
             symbols.take(5).joinToString { it.name },
@@ -401,10 +406,10 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
                     allRefs
                 }
             }
-        logger.info("$logPrefix references '{}' -> {} found (includeDecl={})", name, result.size, includeDeclaration)
+        logger.info("references '{}' -> {} found (includeDecl={})", name, result.size, includeDeclaration)
         if (result.isNotEmpty()) {
             result.forEach { loc ->
-                logger.info("$logPrefix   {}:{}:{}", loc.uri.substringAfterLast('/'), loc.startLine + 1, loc.startColumn + 1)
+                logger.info("  {}:{}:{}", loc.uri.substringAfterLast('/'), loc.startLine + 1, loc.startColumn + 1)
             }
         }
         return result
@@ -420,11 +425,11 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         val tree = parsedTrees[uri] ?: return null
         val node =
             tree.nodeAt(line, column) ?: return null.also {
-                logger.info("$logPrefix {}: no node at {}:{}:{}", op, uri.substringAfterLast('/'), line, column)
+                logger.info("{}: no node at {}:{}:{}", op, uri.substringAfterLast('/'), line, column)
             }
         val id =
             findIdentifierNode(node) ?: return null.also {
-                logger.info("$logPrefix {}: not an identifier at {}:{}:{} ({})", op, uri.substringAfterLast('/'), line, column, node.type)
+                logger.info("{}: not an identifier at {}:{}:{} ({})", op, uri.substringAfterLast('/'), line, column, node.type)
             }
         return tree to id.text
     }
@@ -440,7 +445,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
     ): List<DocumentHighlight> {
         val (tree, name) = getIdentifierAt(uri, line, column, "highlight") ?: return emptyList()
         val locations = queryEngine.findAllIdentifiers(tree, name, uri)
-        logger.info("$logPrefix highlight '{}' -> {} occurrences", name, locations.size)
+        logger.info("highlight '{}' -> {} occurrences", name, locations.size)
         return locations.map { loc ->
             DocumentHighlight(
                 range =
@@ -457,14 +462,14 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         uri: String,
         positions: List<Position>,
     ): List<SelectionRange> {
-        logger.info("$logPrefix getSelectionRanges: uri={}, positions={}", uri, positions.map { "${it.line}:${it.column}" })
+        logger.info("getSelectionRanges: uri={}, positions={}", uri, positions.map { "${it.line}:${it.column}" })
         val tree = parsedTrees[uri]
         if (tree == null) {
-            logger.info("$logPrefix getSelectionRanges: no parsed tree for uri")
+            logger.info("getSelectionRanges: no parsed tree for uri")
             return emptyList()
         }
         val result = positions.map { pos -> buildSelectionRange(tree, pos.line, pos.column) }
-        logger.info("$logPrefix getSelectionRanges -> {} ranges", result.size)
+        logger.info("getSelectionRanges -> {} ranges", result.size)
         return result
     }
 
@@ -506,15 +511,15 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
     }
 
     override fun getFoldingRanges(uri: String): List<FoldingRange> {
-        logger.info("$logPrefix getFoldingRanges: uri={}", uri.substringAfterLast('/'))
+        logger.info("getFoldingRanges: uri={}", uri.substringAfterLast('/'))
         val tree =
             parsedTrees[uri] ?: return emptyList<FoldingRange>().also {
-                logger.info("$logPrefix getFoldingRanges: no parsed tree for uri")
+                logger.info("getFoldingRanges: no parsed tree for uri")
             }
         return buildList {
             collectFoldingRanges(tree.root, this)
         }.also {
-            logger.info("$logPrefix getFoldingRanges -> {} ranges", it.size)
+            logger.info("getFoldingRanges -> {} ranges", it.size)
         }
     }
 
@@ -561,7 +566,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         val node = tree.nodeAt(line, column) ?: return null
         val id = findIdentifierNode(node) ?: return null
 
-        logger.info("$logPrefix prepareRename '{}' at {}:{}", id.text, line, column)
+        logger.info("prepareRename '{}' at {}:{}", id.text, line, column)
         return PrepareRenameResult(
             range =
                 Range(
@@ -588,7 +593,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
 
         if (locations.isEmpty()) return null
 
-        logger.info("$logPrefix rename '{}' -> '{}' ({} occurrences)", name, newName, locations.size)
+        logger.info("rename '{}' -> '{}' ({} occurrences)", name, newName, locations.size)
         val edits =
             locations.map { loc ->
                 TextEdit(
@@ -646,7 +651,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         // Find method declarations with matching name in same file
         val methods = queryEngine.findMethodDeclarations(tree, uri).filter { it.name == funcName }
         if (methods.isEmpty()) {
-            logger.info("$logPrefix signatureHelp: no method '{}' found", funcName)
+            logger.info("signatureHelp: no method '{}' found", funcName)
             return null
         }
 
@@ -669,7 +674,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
                 )
             }
 
-        logger.info("$logPrefix signatureHelp '{}' -> {} signatures, active param {}", funcName, signatures.size, activeParam)
+        logger.info("signatureHelp '{}' -> {} signatures, active param {}", funcName, signatures.size, activeParam)
         return SignatureHelp(
             signatures = signatures,
             activeParameter = activeParam,
@@ -697,7 +702,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         diagnostics: List<Diagnostic>,
     ): List<CodeAction> {
         logger.info(
-            "$logPrefix getCodeActions: uri={}, range={}:{}-{}:{}, {} diagnostics",
+            "getCodeActions: uri={}, range={}:{}-{}:{}, {} diagnostics",
             uri.substringAfterLast('/'),
             range.start.line,
             range.start.column,
@@ -706,7 +711,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
             diagnostics.size,
         )
         return listOfNotNull(buildOrganizeImportsAction(uri)).also {
-            logger.info("$logPrefix getCodeActions -> {} actions", it.size)
+            logger.info("getCodeActions -> {} actions", it.size)
         }
     }
 
@@ -742,13 +747,13 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         uri: String,
         content: String,
     ): List<XtcCompilerAdapter.DocumentLink> {
-        logger.info("$logPrefix getDocumentLinks: uri={}, {} bytes", uri.substringAfterLast('/'), content.length)
+        logger.info("getDocumentLinks: uri={}, {} bytes", uri.substringAfterLast('/'), content.length)
         val tree =
             parsedTrees[uri] ?: return emptyList<XtcCompilerAdapter.DocumentLink>().also {
-                logger.info("$logPrefix getDocumentLinks: no parsed tree for uri")
+                logger.info("getDocumentLinks: no parsed tree for uri")
             }
         val imports = queryEngine.findImportLocations(tree, uri)
-        logger.info("$logPrefix getDocumentLinks -> {} links", imports.size)
+        logger.info("getDocumentLinks -> {} links", imports.size)
         return imports.map { (importPath, loc) ->
             XtcCompilerAdapter.DocumentLink(
                 range =
@@ -763,14 +768,14 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
     }
 
     override fun getSemanticTokens(uri: String): XtcCompilerAdapter.SemanticTokens? {
-        logger.info("$logPrefix getSemanticTokens: uri={}", uri.substringAfterLast('/'))
+        logger.info("getSemanticTokens: uri={}", uri.substringAfterLast('/'))
         val tree =
             parsedTrees[uri] ?: return null.also {
-                logger.info("$logPrefix getSemanticTokens: no parsed tree for uri")
+                logger.info("getSemanticTokens: no parsed tree for uri")
             }
         val encoder = SemanticTokenEncoder()
         val data = encoder.encode(tree.root)
-        logger.info("$logPrefix getSemanticTokens -> {} data items ({} tokens)", data.size, data.size / 5)
+        logger.info("getSemanticTokens -> {} data items ({} tokens)", data.size, data.size / 5)
         return if (data.isEmpty()) null else XtcCompilerAdapter.SemanticTokens(data)
     }
 
@@ -784,12 +789,13 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
      * for reclaiming native tree memory when the editor closes a document.
      */
     override fun closeDocument(uri: String) {
-        logger.info("$logPrefix closeDocument: uri={}", uri)
+        logger.info("closeDocument: uri={}", uri)
         parsedTrees.remove(uri)?.close()
         compilationResults.remove(uri)
     }
 
     override fun close() {
+        logger.info("close: shutting down adapter")
         indexer.close()
         workspaceIndex.clear()
         parsedTrees.values.forEach { it.close() }

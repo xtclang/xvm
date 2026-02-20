@@ -17,15 +17,15 @@ import java.io.Closeable
  * | Adapter | Backend | Use Case |
  * |---------|---------|----------|
  * | [MockXtcCompilerAdapter] | Regex | Testing and fallback |
- * | [TreeSitterAdapter] | Tree-sitter | Syntax-aware (~70% LSP features) |
- * | XtcCompilerAdapterFull | Compiler | (future) Full semantic features |
+ * | [TreeSitterAdapter] | Tree-sitter | Syntax-aware (~80% LSP features) |
+ * | [XtcCompilerAdapterStub] | Compiler | (future) Full semantic features |
  *
  * ## Backend Selection
  *
  * Select at build time: `./gradlew :lang:lsp-server:build -Plsp.adapter=treesitter`
  *
- * - `mock` (default): Regex-based, no native dependencies
- * - `treesitter`: Syntax-aware parsing, requires native library
+ * - `treesitter` (default): Syntax-aware parsing, requires native library
+ * - `mock`: Regex-based, no native dependencies
  *
  * @see TreeSitterAdapter for syntax-level intelligence
  * @see MockXtcCompilerAdapter for testing
@@ -522,8 +522,8 @@ interface XtcCompilerAdapter : Closeable {
      *
      * **Adapter implementations:**
      * - *Mock:* Returns null (no type information available).
-     * - *TreeSitter:* Returns null (could partially classify tokens from AST, but without type
-     *   resolution the benefit over TextMate is limited).
+     * - *TreeSitter:* Classifies tokens from the AST using [SemanticTokenEncoder] for enhanced
+     *   highlighting beyond what TextMate provides. Opt-in via `-Plsp.semanticTokens=true`.
      * - *Compiler:* Full semantic token classification with type-aware highlighting.
      *
      * **Compiler upgrade path:** Classify every token with its semantic role (variable, parameter,
@@ -632,11 +632,12 @@ interface XtcCompilerAdapter : Closeable {
      *
      * **Adapter implementations:**
      * - *Mock:* Returns empty (no workspace index).
-     * - *TreeSitter:* Returns empty (single-file parsing only).
-     * - *Compiler:* Searches a workspace-wide symbol index.
+     * - *TreeSitter:* Searches the [WorkspaceIndex] built by [WorkspaceIndexer] during
+     *   initialization. Supports fuzzy name matching across all indexed `.x` files.
+     * - *Compiler:* Searches a workspace-wide symbol index with full semantic resolution.
      *
-     * **Compiler upgrade path:** Build and maintain a cross-file symbol index that supports
-     * fuzzy matching, filtering by kind, and ranking by relevance.
+     * **Compiler upgrade path:** Add type-aware filtering, ranking by relevance, and
+     * support for qualified name search.
      *
      * @param query search query string
      * @return list of matching symbols

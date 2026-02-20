@@ -502,6 +502,8 @@ intellijPlatformTesting {
 
 ### Standard Test Run (Headless)
 
+> **Note:** All `./gradlew :lang:*` commands require `-PincludeBuildLang=true -PincludeBuildAttachLang=true` when run from the project root.
+
 ```bash
 # Unit tests + platform tests (no display required)
 ./gradlew :lang:intellij-plugin:test
