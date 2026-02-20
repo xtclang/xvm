@@ -1949,7 +1949,7 @@ IDE-integrated debugging via DAP, leveraging existing console debugger infrastru
 #### Deliverables
 
 **5.1 DAP Adapter Implementation** ✨ *Primary Work*
-- New module: `debug-adapter/`
+- New module: `dap-server/`
 - Implement DAP protocol (JSON-RPC)
 - **Reuse existing**: `Debugger` interface and `DebugConsole` implementation
 - Translate DAP requests to `DebugConsole` commands

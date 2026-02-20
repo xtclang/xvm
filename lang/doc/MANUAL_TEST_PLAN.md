@@ -4,85 +4,15 @@ This document describes how to manually test every feature implemented in the XT
 
 ## Feature Implementation Status
 
-### Complete Feature Matrix
-
-This matrix shows all LSP features across the three adapter implementations:
-
-1. **Mock Adapter** - Regex-based, no dependencies, for quick testing
-2. **Tree-sitter Adapter** - Native incremental parser, production-ready syntax analysis
-3. **Compiler Adapter** - Future full compiler integration for semantic analysis
-
-| Feature | LSP Method | Mock | Tree-sitter | Compiler | Notes |
-|---------|-----------|:----:|:-----------:|:--------:|-------|
-| **Syntax Highlighting** |
-| TextMate highlighting | TextMate | ✅ | ✅ | ✅ | Independent of LSP adapter |
-| Semantic tokens | `semanticTokens/*` | ❌ | ❌ | 🔮 | Distinguishes field/local/param |
-| **Navigation** |
-| Go to Definition (same file) | `textDocument/definition` | ✅ | ✅ | 🔮 | |
-| Go to Definition (cross-file) | `textDocument/definition` | ❌ | ❌ | 🔮 | Requires import resolution |
-| Find References (same file) | `textDocument/references` | ⚠️ | ✅ | 🔮 | Mock: declaration only |
-| Find References (cross-file) | `textDocument/references` | ❌ | ❌ | 🔮 | Requires workspace index |
-| Document Symbols / Outline | `textDocument/documentSymbol` | ✅ | ✅ | 🔮 | Structure view works |
-| Document Highlight | `textDocument/documentHighlight` | ✅ | ✅ | 🔮 | Highlight symbol occurrences |
-| Selection Ranges | `textDocument/selectionRange` | ❌ | ✅ | 🔮 | Mock: returns empty (needs AST) |
-| Workspace Symbols | `workspace/symbol` | ❌ | ❌ | 🔮 | Cross-file search |
-| **Editing** |
-| Hover Information | `textDocument/hover` | ✅ | ✅ | 🔮 | Mock/TS: kind+name; Compiler: +types |
-| Code Completion (keywords) | `textDocument/completion` | ✅ | ✅ | 🔮 | |
-| Code Completion (context-aware) | `textDocument/completion` | ❌ | ✅ | 🔮 | After-dot member completion |
-| Code Completion (type-aware) | `textDocument/completion` | ❌ | ❌ | 🔮 | Requires type inference |
-| Signature Help | `textDocument/signatureHelp` | ❌ | ✅ | 🔮 | TS: same-file method params |
-| Document Links | `textDocument/documentLink` | ✅ | ✅ | 🔮 | Clickable import paths |
-| **Diagnostics** |
-| Syntax Errors | `textDocument/publishDiagnostics` | ⚠️ | ✅ | 🔮 | Mock: ERROR comments only |
-| Semantic Errors | `textDocument/publishDiagnostics` | ❌ | ❌ | 🔮 | Type errors, undefined refs |
-| **Refactoring** |
-| Rename Symbol (same file) | `textDocument/rename` | ✅ | ✅ | 🔮 | Text-based replacement |
-| Rename Symbol (cross-file) | `textDocument/rename` | ❌ | ❌ | 🔮 | Requires workspace index |
-| Code Actions (organize imports) | `textDocument/codeAction` | ✅ | ✅ | 🔮 | Sort unsorted imports |
-| **Formatting** |
-| Format Document | `textDocument/formatting` | ✅ | ✅ | 🔮 | Trailing whitespace + final newline |
-| Format Selection | `textDocument/rangeFormatting` | ✅ | ✅ | 🔮 | Range-scoped formatting |
-| **Code Intelligence** |
-| Folding Ranges | `textDocument/foldingRange` | ✅ | ✅ | 🔮 | Mock: braces; TS: AST nodes |
-| Inlay Hints | `textDocument/inlayHint` | ❌ | ❌ | 🔮 | Requires type inference |
-| Call Hierarchy | `callHierarchy/*` | ❌ | ❌ | 🔮 | Requires semantic analysis |
-| Type Hierarchy | `typeHierarchy/*` | ❌ | ❌ | 🔮 | Requires type resolution |
-
-**Legend:**
-- ✅ **Implemented** - Working in current builds
-- ⚠️ **Limited** - Partial implementation with known limitations
-- ⏳ **Possible** - Can be implemented with current infrastructure
-- ❌ **Not Possible** - Cannot implement without additional infrastructure
-- 🔮 **Planned** - Will be possible once compiler adapter is complete
-
-### Adapter Capability Summary
-
-| Capability | Mock | Tree-sitter | Compiler |
-|------------|:----:|:-----------:|:--------:|
-| **Dependencies** | None | Native lib | XTC compiler |
-| **Parse Speed** | Fast (regex) | Very fast (native) | Slower (full parse) |
-| **Error Tolerance** | None | Excellent | Good |
-| **Incremental Updates** | No | Yes | Partial |
-| **Symbol Detection** | Top-level | Nested scopes | Full AST |
-| **Type Information** | No | No | Yes |
-| **Cross-file Analysis** | No | No | Yes |
-| **Semantic Validation** | No | No | Yes |
-| **Rename** | Same-file (text) | Same-file (AST) | Cross-file |
-| **Code Actions** | Organize imports | Organize imports | Quick fixes |
-| **Formatting** | Trailing WS + newline | Trailing WS + newline | Full formatter |
-| **Folding** | Brace matching | AST node boundaries | AST nodes |
-| **Signature Help** | No | Same-file methods | Cross-file |
-| **Document Highlight** | Text matching | AST identifiers | Semantic |
-| **Selection Ranges** | No | AST walk-up chain | AST walk-up |
-| **Document Links** | Import regex | Import AST nodes | Resolved URIs |
-| **Production Ready** | Testing only | Yes | Future |
+> See [PLAN_IDE_INTEGRATION.md](plans/PLAN_IDE_INTEGRATION.md) for the canonical feature implementation matrix comparing Mock, Tree-sitter, and Compiler adapter capabilities.
 
 ---
 
 ## Pre-Test Setup
 
 ### 1. Build with Specific Adapter
+
+> **Note:** All `./gradlew :lang:*` commands require `-PincludeBuildLang=true -PincludeBuildAttachLang=true` when run from the project root.
 
 ```bash
 # Build with tree-sitter adapter (recommended for full functionality)
@@ -184,7 +114,7 @@ module TestModule {
 | 1.4 | Comments | Add `// comment` and `/* block */` | Comment color |
 | 1.5 | Numbers | Add `42`, `3.14` | Number color |
 
-**Note:** Semantic tokens (distinguishing field vs local vs parameter) is TODO.
+**Note:** Semantic tokens Tier 1 (declaration-site classification, type refs, annotations, calls) is implemented. Tier 2+ (distinguishing field vs local vs parameter at usage sites) requires compiler integration.
 
 ---
 
@@ -232,8 +162,8 @@ module TestModule {
 ### 4. Go to Definition
 
 **LSP Method:** `textDocument/definition`
-**Status:** ✅ Done (same-file only)
-**Works with:** Both adapters
+**Status:** ✅ Done (same-file + cross-file via workspace index)
+**Works with:** Both adapters (cross-file: tree-sitter only)
 
 **How to trigger:**
 - *IntelliJ:* Ctrl+Click on a symbol, or Ctrl+B, or F12
@@ -244,8 +174,9 @@ module TestModule {
 | 4.1 | Class reference | Ctrl+Click `Person` in return type | Jumps to `class Person` |
 | 4.2 | Method reference | Ctrl+Click `getName` call | Jumps to method |
 | 4.3 | Property reference | Ctrl+Click `name` in `return name;` | Jumps to property |
+| 4.4 | Cross-file type | Ctrl+Click on a type defined in another file | Jumps to definition in other file |
 
-**Limitation:** Cross-file navigation TODO (requires import resolution).
+**Note:** Cross-file definition uses workspace index fallback (prefers type declarations). Import-path-based resolution is not yet implemented.
 
 ---
 
@@ -471,27 +402,7 @@ module TestModule {
 
 ## Adapter Comparison Summary
 
-| Aspect | Mock Adapter | Tree-sitter Adapter | Compiler Adapter |
-|--------|:------------:|:-------------------:|:----------------:|
-| **Dependencies** | None | Native library | XTC compiler |
-| **Performance** | Fast (regex) | Very fast (native) | Moderate |
-| **Error tolerance** | None (literal match) | Excellent | Good |
-| **Symbol detection** | Top-level only | Nested scopes | Full AST |
-| **Completion** | Keywords + symbols | Keywords + imports | Type-aware |
-| **Find references** | Declaration only | All in file | All in workspace |
-| **Rename** | Same-file (text) | Same-file (AST) | Cross-file |
-| **Code actions** | Organize imports | Organize imports | Quick fixes + refactorings |
-| **Formatting** | Trailing WS removal | Trailing WS removal | Full formatter |
-| **Folding ranges** | Brace matching | AST nodes | AST nodes |
-| **Signature help** | None | Same-file methods | Cross-file overloads |
-| **Document highlight** | Text matching | AST identifiers | Semantic (R/W) |
-| **Selection ranges** | None (empty) | AST walk-up chain | AST walk-up chain |
-| **Document links** | Import regex | Import AST nodes | Resolved file URIs |
-| **Diagnostics** | Comment markers only | Syntax errors | Semantic errors |
-| **Type information** | None | None | Full |
-| **Incremental updates** | No | Yes | Partial |
-| **Cross-file analysis** | No | No | Yes |
-| **Recommended for** | Quick testing | Production syntax | Full IDE experience |
+> See [PLAN_IDE_INTEGRATION.md](plans/PLAN_IDE_INTEGRATION.md) for the canonical adapter comparison matrix.
 
 ---
 
@@ -549,12 +460,12 @@ ls lang/intellij-plugin/build/idea-sandbox/*/plugins/intellij-plugin/lib/textmat
 
 ## Out-of-Process LSP Server Tests
 
-The LSP server runs as a separate Java process (requires Java 23+). These tests verify
+The LSP server runs as a separate Java process (requires Java 25+). These tests verify
 the process management and health monitoring.
 
 ### Prerequisites
 
-- Java 23+ installed and available via `JAVA_HOME` or on PATH
+- Java 25+ installed and available via `JAVA_HOME` or on PATH
 - XTC project with `.x` files
 
 ### Test: Server Startup
@@ -607,25 +518,26 @@ the process management and health monitoring.
 1. Set `JAVA_HOME` to Java 21 installation
 2. Unset `XTC_JAVA_HOME`
 3. Start IDE
-4. Verify error: "No Java 23+ runtime found"
+4. Verify error: "No Java 25+ runtime found"
 
 ---
 
 ## Future Enhancements
 
-### Semantic Tokens (TODO)
+### Semantic Tokens Phase 2+ (TODO)
 
-Will replace TextMate with LSP semantic tokens to distinguish:
-- Field vs parameter vs local variable
-- Type name vs variable name
-- Declaration vs reference
+Phase 1 (Tier 1) is implemented: declarations, type references, annotations, call/member
+expressions, and modifiers are classified via `SemanticTokenEncoder`. Future phases:
+- **Tier 2**: Heuristic usage-site tokens (UpperCamelCase type detection, broader property/variable classification)
+- **Tier 3** (compiler): Override tree-sitter tokens with compiler-resolved classifications
 
-### Cross-File Navigation (TODO)
+### Cross-File References (TODO)
 
-Requires:
-- Import resolution
-- Module dependency tracking
-- Workspace-wide symbol index
+Cross-file go-to-definition and workspace symbols are implemented via the workspace index.
+Still remaining:
+- Cross-file find-references (workspace-wide name search)
+- Import resolution (resolve import paths to file URIs)
+- Cross-file rename refactoring
 
 ### Full Compiler Integration (TODO)
 

@@ -20,18 +20,34 @@ import java.nio.file.StandardCopyOption
  * Note: This requires the compiled tree-sitter-xtc grammar library to be available
  * as a native library. The grammar is generated from XtcLanguage.kt by TreeSitterGenerator.
  */
-class XtcParser : Closeable {
-    private val parser: Parser
-    private val language: Language = loadXtcLanguage()
+class XtcParser private constructor(
+    private val language: Language,
+    logInit: Boolean,
+) : Closeable {
+    private val parser: Parser = Parser()
 
     @Volatile
     private var closed = false
 
     init {
-        parser = Parser()
         parser.setLanguage(language)
-        logger.info("XtcParser initialized with tree-sitter native library")
+        if (logInit) {
+            logger.info("initialized with tree-sitter native library")
+        }
     }
+
+    /**
+     * Create a parser that loads the native XTC grammar library.
+     * This is the primary constructor for the adapter's parser.
+     */
+    constructor() : this(loadXtcLanguage(), logInit = true)
+
+    /**
+     * Create a parser using a pre-loaded language.
+     * Used by [org.xvm.lsp.index.WorkspaceIndexer] to create a dedicated parser
+     * instance without reloading the native library.
+     */
+    constructor(language: Language) : this(language, logInit = false)
 
     /**
      * Perform a health check to verify the parser and native library work correctly.
@@ -43,10 +59,10 @@ class XtcParser : Closeable {
                 val root = tree.root
                 (root.type == "source_file" && root.childCount > 0 && !root.hasError).also { valid ->
                     if (valid) {
-                        logger.info("XtcParser health check PASSED: parsed test module successfully")
+                        logger.info("health check PASSED: parsed test module successfully")
                     } else {
                         logger.warn(
-                            "XtcParser health check FAILED: root={}, children={}, hasError={}",
+                            "health check FAILED: root={}, children={}, hasError={}",
                             root.type,
                             root.childCount,
                             root.hasError,
@@ -54,7 +70,7 @@ class XtcParser : Closeable {
                     }
                 }
             }
-        }.onFailure { logger.error("XtcParser health check FAILED: {}", it.message) }
+        }.onFailure { logger.error("health check FAILED: {}", it.message) }
             .getOrDefault(false)
 
     /**
@@ -67,29 +83,35 @@ class XtcParser : Closeable {
     fun parse(source: String): XtcTree = parse(source, null)
 
     /**
-     * Parse source code into a syntax tree with incremental parsing.
+     * Parse source code into a syntax tree.
      *
-     * If an old tree is provided, the parser will reuse as much of the old tree
-     * as possible, making this operation very fast for small edits.
+     * Always performs a full reparse. Tree-sitter's incremental parsing (`parser.parse(source, oldTree)`)
+     * requires the caller to call `Tree.edit()` on the old tree first, describing exactly which byte
+     * ranges changed. Without `Tree.edit()`, incremental parsing produces nodes with **stale byte
+     * offsets** from the old tree, causing `StringIndexOutOfBoundsException` when accessing `node.text`
+     * after document edits (e.g., rename "console" to "apa" shortens the document, but old byte offsets
+     * still reference the longer source).
+     *
+     * Since the LSP protocol sends full document content on each change (not diffs), we don't have
+     * the edit information needed for `Tree.edit()`. Full reparse is still very fast (sub-millisecond
+     * for typical XTC files) so the performance impact is negligible.
      *
      * @param source  the XTC source code to parse
-     * @param oldTree the previous tree for incremental parsing, or null for full parse
+     * @param oldTree ignored (retained for API compatibility; see doc above)
      * @return the parsed syntax tree
      * @throws IllegalStateException if the parser has been closed
      */
+    @Suppress("UNUSED_PARAMETER")
     fun parse(
         source: String,
         oldTree: XtcTree?,
     ): XtcTree {
         check(!closed) { "Parser has been closed" }
-
+        logger.info("parse: {} bytes", source.length)
         val tree =
-            if (oldTree != null) {
-                parser.parse(source, oldTree.tsTree)
-            } else {
-                parser.parse(source)
-            }.orElseThrow { IllegalStateException("Failed to parse source") }
-
+            parser
+                .parse(source)
+                .orElseThrow { IllegalStateException("Failed to parse source") }
         return XtcTree(tree, source)
     }
 
@@ -102,7 +124,7 @@ class XtcParser : Closeable {
         if (!closed) {
             closed = true
             parser.close()
-            logger.info("XtcParser closed")
+            logger.info("closed")
         }
     }
 
@@ -122,7 +144,7 @@ class XtcParser : Closeable {
             val resourcePath = Platform.resourcePath(GRAMMAR_LIBRARY_NAME)
             val libraryFileName = Platform.libraryFileName(GRAMMAR_LIBRARY_NAME)
 
-            logger.info("Loading XTC grammar from: {}", resourcePath)
+            logger.info("loadXtcLanguage: loading XTC grammar from: {}", resourcePath)
 
             // Try to load from resources (bundled in JAR)
             XtcParser::class.java.getResourceAsStream(resourcePath)?.use { inputStream ->
@@ -130,19 +152,19 @@ class XtcParser : Closeable {
                 tempFile.toFile().deleteOnExit()
                 Files.copy(inputStream, tempFile, StandardCopyOption.REPLACE_EXISTING)
 
-                logger.info("Native library: extracted {} to {}", libraryFileName, tempFile)
+                logger.info("loadXtcLanguage: extracted {} to {}", libraryFileName, tempFile)
                 val language = loadLanguageFromPath(tempFile)
-                logger.info("Native library: successfully loaded XTC tree-sitter grammar (FFM API)")
+                logger.info("loadXtcLanguage: successfully loaded XTC tree-sitter grammar (FFM API)")
                 return language
             }
 
             // Fallback: try to load from system library path
-            logger.info("Resource not found, trying system library path")
+            logger.info("loadXtcLanguage: resource not found, trying system library path")
             try {
                 return loadLanguageFromSystemPath()
             } catch (e: Exception) {
                 logger.error(
-                    "Failed to load XTC tree-sitter grammar. " +
+                    "loadXtcLanguage: failed to load XTC tree-sitter grammar. " +
                         "The native library is not available. " +
                         "Run './gradlew :lang:tree-sitter:ensureNativeLibraryUpToDate' to compile it.",
                 )
@@ -161,7 +183,7 @@ class XtcParser : Closeable {
          * look up the tree_sitter_xtc language function symbol.
          */
         private fun loadLanguageFromPath(path: Path): Language {
-            logger.info("Loading language from path: {}", path)
+            logger.info("loadLanguageFromPath: {}", path)
 
             // Create a symbol lookup for the library
             val symbols = SymbolLookup.libraryLookup(path, arena)
@@ -177,7 +199,7 @@ class XtcParser : Closeable {
          * or in java.library.path.
          */
         private fun loadLanguageFromSystemPath(): Language {
-            logger.info("Loading language from system path")
+            logger.info("loadLanguageFromSystemPath: loading from system path")
 
             // Map to platform-specific library name
             val libraryName = System.mapLibraryName(GRAMMAR_LIBRARY_NAME)

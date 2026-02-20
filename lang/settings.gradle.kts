@@ -13,6 +13,6 @@ rootProject.name = "xtc-lang"
 include("dsl")
 include("tree-sitter")
 include("lsp-server")
-include("debug-adapter")
+include("dap-server")
 include("intellij-plugin")
 include("vscode-extension")

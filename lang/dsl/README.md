@@ -656,18 +656,17 @@ class EcstasyServerConnectionProvider : ProcessStreamConnectionProvider() {
 
 ## The Shared LSP Server
 
-All three IDEs connect to the same LSP server, which lives in `lang/src/main/java/org/xvm/lsp/`.
+All three IDEs connect to the same LSP server, which lives in `lang/lsp-server/src/main/kotlin/org/xvm/lsp/`.
 
 ### Key Components
 
 | File                          | Purpose                                          |
 |-------------------------------|--------------------------------------------------|
-| `XtcLanguageServer.java`      | Main server implementing LSP protocol            |
-| `XtcTextDocumentService.java` | Handles document operations (open, change, save) |
-| `XtcWorkspaceService.java`    | Handles workspace operations                     |
-| `XtcCompilerAdapter.java`     | Interface to actual XTC compiler                 |
-| `XtcDiagnosticProvider.java`  | Produces error/warning diagnostics               |
-| `XtcCompletionProvider.java`  | Provides code completion suggestions             |
+| `XtcLanguageServer.kt`        | Main server implementing LSP protocol (includes document and workspace services) |
+| `XtcCompilerAdapter.kt`       | Interface to actual XTC compiler                 |
+| `AbstractXtcCompilerAdapter.kt` | Abstract base class with default "not yet implemented" stubs |
+| `TreeSitterAdapter.kt`        | Syntax-aware adapter using tree-sitter           |
+| `MockXtcCompilerAdapter.kt`   | Regex-based adapter for testing and fallback      |
 
 ### LSP Capabilities Provided
 

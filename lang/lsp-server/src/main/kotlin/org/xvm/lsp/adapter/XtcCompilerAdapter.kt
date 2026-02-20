@@ -1,10 +1,10 @@
 package org.xvm.lsp.adapter
 
-import org.slf4j.LoggerFactory
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
+import java.io.Closeable
 
 /**
  * Interface for adapting XTC compiler operations into clean, immutable results.
@@ -17,23 +17,21 @@ import org.xvm.lsp.model.SymbolInfo
  * | Adapter | Backend | Use Case |
  * |---------|---------|----------|
  * | [MockXtcCompilerAdapter] | Regex | Testing and fallback |
- * | [TreeSitterAdapter] | Tree-sitter | Syntax-aware (~70% LSP features) |
- * | XtcCompilerAdapterFull | Compiler | (future) Full semantic features |
+ * | [TreeSitterAdapter] | Tree-sitter | Syntax-aware (~80% LSP features) |
+ * | [XtcCompilerAdapterStub] | Compiler | (future) Full semantic features |
  *
  * ## Backend Selection
  *
  * Select at build time: `./gradlew :lang:lsp-server:build -Plsp.adapter=treesitter`
  *
- * - `mock` (default): Regex-based, no native dependencies
- * - `treesitter`: Syntax-aware parsing, requires native library
+ * - `treesitter` (default): Syntax-aware parsing, requires native library
+ * - `mock`: Regex-based, no native dependencies
  *
  * @see TreeSitterAdapter for syntax-level intelligence
  * @see MockXtcCompilerAdapter for testing
  */
-interface XtcCompilerAdapter {
-    companion object {
-        private val logger = LoggerFactory.getLogger(XtcCompilerAdapter::class.java)
-    }
+interface XtcCompilerAdapter : Closeable {
+    override fun close() {}
 
     /**
      * Human-readable name of this adapter for display in logs and UI.
@@ -62,7 +60,7 @@ interface XtcCompilerAdapter {
      * **LSP capability:** Triggered by `textDocument/didOpen` and `textDocument/didChange`.
      * The client sends the full document text; the server parses it and publishes diagnostics.
      *
-     * **Editor activation:** Automatic — triggered when a `.x` file is opened or edited.
+     * **Editor activation:** Automatic -- triggered when a `.x` file is opened or edited.
      *
      * **Adapter implementations:**
      * - *Mock:* Regex-scans for module/class/interface/method/property patterns and ERROR markers.
@@ -82,9 +80,19 @@ interface XtcCompilerAdapter {
     ): CompilationResult
 
     /**
+     * Get the cached compilation result for a document, if available.
+     *
+     * Returns the result from the most recent [compile] call for this URI,
+     * or `null` if the document has not been compiled yet or has been closed.
+     * Used by the language server to avoid redundant re-compilation for requests
+     * like `documentSymbol` that can use the cached result.
+     */
+    fun getCachedResult(uri: String): CompilationResult? = null
+
+    /**
      * Find the symbol at a specific position.
      *
-     * **LSP capability:** Used internally by hover, definition, and references — not directly
+     * **LSP capability:** Used internally by hover, definition, and references -- not directly
      * exposed as an LSP method, but underpins several user-visible features.
      *
      * **Adapter implementations:**
@@ -110,7 +118,7 @@ interface XtcCompilerAdapter {
     /**
      * Get hover information for a position.
      *
-     * **LSP capability:** `textDocument/hover` — shown when the user hovers the mouse over a
+     * **LSP capability:** `textDocument/hover` -- shown when the user hovers the mouse over a
      * symbol. Displays a tooltip with type signature, documentation, and other info.
      *
      * **Editor activation:**
@@ -118,7 +126,7 @@ interface XtcCompilerAdapter {
      * - *VS Code:* Hover mouse over a symbol
      *
      * **Adapter implementations:**
-     * - *Mock/TreeSitter:* Default in [AbstractXtcCompilerAdapter] — calls [findSymbolAt] and
+     * - *Mock/TreeSitter:* Default in [AbstractXtcCompilerAdapter] -- calls [findSymbolAt] and
      *   formats the symbol's kind, name, and type signature as Markdown.
      * - *Compiler:* Would add resolved types, inferred generics, and extracted doc comments.
      *
@@ -139,7 +147,7 @@ interface XtcCompilerAdapter {
     /**
      * Get completion suggestions at a position.
      *
-     * **LSP capability:** `textDocument/completion` — provides code completion suggestions as the
+     * **LSP capability:** `textDocument/completion` -- provides code completion suggestions as the
      * user types. Triggered by `.`, `:`, `<`, or explicit request.
      *
      * **Editor activation:**
@@ -169,7 +177,7 @@ interface XtcCompilerAdapter {
     /**
      * Find the definition of the symbol at a position.
      *
-     * **LSP capability:** `textDocument/definition` — navigates to where a symbol is declared.
+     * **LSP capability:** `textDocument/definition` -- navigates to where a symbol is declared.
      *
      * **Editor activation:**
      * - *IntelliJ:* Ctrl+Click on a symbol, Ctrl+B, or F12
@@ -197,11 +205,11 @@ interface XtcCompilerAdapter {
     /**
      * Find all references to the symbol at a position.
      *
-     * **LSP capability:** `textDocument/references` — shows all usages of a symbol.
+     * **LSP capability:** `textDocument/references` -- shows all usages of a symbol.
      *
      * **Editor activation:**
      * - *IntelliJ:* Alt+F7 (Find Usages), or Shift+F12
-     * - *VS Code:* Shift+F12, or right-click → Find All References
+     * - *VS Code:* Shift+F12, or right-click -> Find All References
      *
      * **Adapter implementations:**
      * - *Mock:* Returns only the declaration itself (when `includeDeclaration` is true), no
@@ -227,16 +235,58 @@ interface XtcCompilerAdapter {
     ): List<Location>
 
     // ========================================================================
+    // Workspace lifecycle
+    // ========================================================================
+
+    /**
+     * Initialize the workspace after the server has started.
+     *
+     * Called once during `initialize` with the workspace folder paths.
+     * Implementations can use this to start background indexing of all `*.x` files.
+     *
+     * @param workspaceFolders list of workspace folder paths (file system paths, not URIs)
+     * @param progressReporter optional callback for progress: (message, percentComplete)
+     */
+    fun initializeWorkspace(
+        workspaceFolders: List<String>,
+        progressReporter: ((String, Int) -> Unit)? = null,
+    ) {}
+
+    /**
+     * Notification that a watched file has changed on disk.
+     *
+     * Called when the client reports file creation, modification, or deletion
+     * via `workspace/didChangeWatchedFiles`.
+     *
+     * @param uri the file URI
+     * @param changeType 1 = Created, 2 = Changed, 3 = Deleted (LSP FileChangeType values)
+     */
+    fun didChangeWatchedFile(
+        uri: String,
+        changeType: Int,
+    ) {}
+
+    /**
+     * Notification that a document has been closed by the editor.
+     *
+     * Implementations should release any resources held for the document (parsed trees,
+     * cached compilation results, etc.) to prevent memory accumulation.
+     *
+     * @param uri the document URI
+     */
+    fun closeDocument(uri: String) {}
+
+    // ========================================================================
     // Tree-sitter capable features (syntax-based, no semantic analysis)
     // ========================================================================
 
     /**
      * Get document highlights for a symbol at a position.
      *
-     * **LSP capability:** `textDocument/documentHighlight` — highlights all occurrences of the
+     * **LSP capability:** `textDocument/documentHighlight` -- highlights all occurrences of the
      * symbol under the cursor in the same document. Shown as background color emphasis.
      *
-     * **Editor activation:** Automatic — click on any identifier to highlight all occurrences.
+     * **Editor activation:** Automatic -- click on any identifier to highlight all occurrences.
      *
      * **Adapter implementations:**
      * - *Mock:* Whole-word text search across all lines of the cached document content.
@@ -256,15 +306,12 @@ interface XtcCompilerAdapter {
         uri: String,
         line: Int,
         column: Int,
-    ): List<DocumentHighlight> {
-        logger.info("[{}] getDocumentHighlights not yet implemented", displayName)
-        return emptyList()
-    }
+    ): List<DocumentHighlight>
 
     /**
      * Get selection ranges for positions (smart selection expansion).
      *
-     * **LSP capability:** `textDocument/selectionRange` — powers smart expand/shrink selection.
+     * **LSP capability:** `textDocument/selectionRange` -- powers smart expand/shrink selection.
      * Returns a chain of nested ranges from the innermost token to the outermost declaration.
      *
      * **Editor activation:**
@@ -274,10 +321,10 @@ interface XtcCompilerAdapter {
      * **Adapter implementations:**
      * - *Mock:* Returns empty (requires AST structure for meaningful results).
      * - *TreeSitter:* Walks up from the leaf node at the position to the root, building a chain
-     *   of progressively larger ranges (identifier → expression → statement → block → class).
+     *   of progressively larger ranges (identifier -> expression -> statement -> block -> class).
      * - *Compiler:* Same as TreeSitter (AST-based; no semantic info needed).
      *
-     * **Compiler upgrade path:** Minimal — tree-sitter already provides excellent selection ranges.
+     * **Compiler upgrade path:** Minimal -- tree-sitter already provides excellent selection ranges.
      * A compiler adapter would use the same approach from its own AST.
      *
      * @param uri       the document URI
@@ -287,15 +334,12 @@ interface XtcCompilerAdapter {
     fun getSelectionRanges(
         uri: String,
         positions: List<Position>,
-    ): List<SelectionRange> {
-        logger.info("[{}] getSelectionRanges not yet implemented", displayName)
-        return emptyList()
-    }
+    ): List<SelectionRange>
 
     /**
      * Get folding ranges for a document.
      *
-     * **LSP capability:** `textDocument/foldingRange` — provides collapsible regions in the
+     * **LSP capability:** `textDocument/foldingRange` -- provides collapsible regions in the
      * editor gutter (classes, methods, imports, comments).
      *
      * **Editor activation:**
@@ -308,24 +352,21 @@ interface XtcCompilerAdapter {
      *   More accurate than brace matching (handles string literals, comments correctly).
      * - *Compiler:* Same as TreeSitter (structural feature, no semantic info needed).
      *
-     * **Compiler upgrade path:** Minimal — tree-sitter provides excellent folding ranges.
+     * **Compiler upgrade path:** Minimal -- tree-sitter provides excellent folding ranges.
      * A compiler adapter could add region markers from structured comments.
      *
      * @param uri the document URI
      * @return list of folding ranges
      */
-    fun getFoldingRanges(uri: String): List<FoldingRange> {
-        logger.info("[{}] getFoldingRanges not yet implemented", displayName)
-        return emptyList()
-    }
+    fun getFoldingRanges(uri: String): List<FoldingRange>
 
     /**
      * Get document links (clickable paths in imports, etc.).
      *
-     * **LSP capability:** `textDocument/documentLink` — makes import paths and other references
+     * **LSP capability:** `textDocument/documentLink` -- makes import paths and other references
      * clickable in the editor, allowing quick navigation.
      *
-     * **Editor activation:** Automatic — import paths appear as clickable links (Ctrl+Click).
+     * **Editor activation:** Automatic -- import paths appear as clickable links (Ctrl+Click).
      *
      * **Adapter implementations:**
      * - *Mock:* Regex-matches `import` statements and returns the path portion as a link.
@@ -343,10 +384,7 @@ interface XtcCompilerAdapter {
     fun getDocumentLinks(
         uri: String,
         content: String,
-    ): List<DocumentLink> {
-        logger.info("[{}] getDocumentLinks not yet implemented", displayName)
-        return emptyList()
-    }
+    ): List<DocumentLink>
 
     // ========================================================================
     // Semantic features (require full compiler)
@@ -355,7 +393,7 @@ interface XtcCompilerAdapter {
     /**
      * Get signature help for a function call at a position.
      *
-     * **LSP capability:** `textDocument/signatureHelp` — shows parameter hints when the user
+     * **LSP capability:** `textDocument/signatureHelp` -- shows parameter hints when the user
      * types `(` or `,` inside a function call. Highlights the active parameter.
      *
      * **Editor activation:**
@@ -381,15 +419,12 @@ interface XtcCompilerAdapter {
         uri: String,
         line: Int,
         column: Int,
-    ): SignatureHelp? {
-        logger.info("[{}] getSignatureHelp not yet implemented (requires compiler)", displayName)
-        return null
-    }
+    ): SignatureHelp?
 
     /**
-     * Prepare rename operation — check if rename is valid at position.
+     * Prepare rename operation -- check if rename is valid at position.
      *
-     * **LSP capability:** `textDocument/prepareRename` — called before a rename to verify the
+     * **LSP capability:** `textDocument/prepareRename` -- called before a rename to verify the
      * position is on a renamable identifier and to highlight the range to be changed.
      *
      * **Editor activation:** Called automatically as part of the rename flow (see [rename]).
@@ -411,20 +446,17 @@ interface XtcCompilerAdapter {
         uri: String,
         line: Int,
         column: Int,
-    ): PrepareRenameResult? {
-        logger.info("[{}] prepareRename not yet implemented (requires compiler)", displayName)
-        return null
-    }
+    ): PrepareRenameResult?
 
     /**
      * Perform rename operation.
      *
-     * **LSP capability:** `textDocument/rename` — renames a symbol and returns a workspace edit
+     * **LSP capability:** `textDocument/rename` -- renames a symbol and returns a workspace edit
      * with all text changes. The editor applies all edits atomically.
      *
      * **Editor activation:**
-     * - *IntelliJ:* Shift+F6 on an identifier, or right-click → Refactor → Rename
-     * - *VS Code:* F2 on an identifier, or right-click → Rename Symbol
+     * - *IntelliJ:* Shift+F6 on an identifier, or right-click -> Refactor -> Rename
+     * - *VS Code:* F2 on an identifier, or right-click -> Rename Symbol
      *
      * **Adapter implementations:**
      * - *Mock:* Whole-word text replacement across all lines in the same file.
@@ -446,15 +478,12 @@ interface XtcCompilerAdapter {
         line: Int,
         column: Int,
         newName: String,
-    ): WorkspaceEdit? {
-        logger.info("[{}] rename not yet implemented (requires compiler)", displayName)
-        return null
-    }
+    ): WorkspaceEdit?
 
     /**
      * Get code actions for a range (quick fixes, refactorings).
      *
-     * **LSP capability:** `textDocument/codeAction` — provides the lightbulb menu with quick
+     * **LSP capability:** `textDocument/codeAction` -- provides the lightbulb menu with quick
      * fixes and refactoring suggestions. Actions can include workspace edits or commands.
      *
      * **Editor activation:**
@@ -463,7 +492,7 @@ interface XtcCompilerAdapter {
      *
      * **Adapter implementations:**
      * - *Mock:* Offers "Organize Imports" when import statements are detected and unsorted.
-     * - *TreeSitter:* Same as Mock — detects unsorted import nodes from the AST and offers
+     * - *TreeSitter:* Same as Mock -- detects unsorted import nodes from the AST and offers
      *   a single edit to sort them.
      * - *Compiler:* Quick fixes for diagnostics (add import, fix typo), refactorings (extract
      *   method, inline variable).
@@ -480,24 +509,21 @@ interface XtcCompilerAdapter {
         uri: String,
         range: Range,
         diagnostics: List<Diagnostic>,
-    ): List<CodeAction> {
-        logger.info("[{}] getCodeActions not yet implemented (requires compiler)", displayName)
-        return emptyList()
-    }
+    ): List<CodeAction>
 
     /**
      * Get semantic tokens for enhanced syntax highlighting.
      *
-     * **LSP capability:** `textDocument/semanticTokens/full` — provides token-level semantic
+     * **LSP capability:** `textDocument/semanticTokens/full` -- provides token-level semantic
      * highlighting that supplements TextMate grammars. Distinguishes fields vs locals vs
      * parameters, type names vs variable names, etc.
      *
-     * **Editor activation:** Automatic — applied as an overlay on top of TextMate highlighting.
+     * **Editor activation:** Automatic -- applied as an overlay on top of TextMate highlighting.
      *
      * **Adapter implementations:**
      * - *Mock:* Returns null (no type information available).
-     * - *TreeSitter:* Returns null (could partially classify tokens from AST, but without type
-     *   resolution the benefit over TextMate is limited).
+     * - *TreeSitter:* Classifies tokens from the AST using [SemanticTokenEncoder] for enhanced
+     *   highlighting beyond what TextMate provides. Opt-in via `-Plsp.semanticTokens=true`.
      * - *Compiler:* Full semantic token classification with type-aware highlighting.
      *
      * **Compiler upgrade path:** Classify every token with its semantic role (variable, parameter,
@@ -506,19 +532,16 @@ interface XtcCompilerAdapter {
      * @param uri the document URI
      * @return semantic tokens data
      */
-    fun getSemanticTokens(uri: String): SemanticTokens? {
-        logger.info("[{}] getSemanticTokens not yet implemented (requires compiler)", displayName)
-        return null
-    }
+    fun getSemanticTokens(uri: String): SemanticTokens?
 
     /**
      * Get inlay hints (inline type annotations, parameter names).
      *
-     * **LSP capability:** `textDocument/inlayHint` — shows inline annotations in the editor
+     * **LSP capability:** `textDocument/inlayHint` -- shows inline annotations in the editor
      * for inferred types and parameter names (e.g., `val x` shows `: Int` after the variable).
      *
-     * **Editor activation:** Automatic — hints appear inline when enabled.
-     * - *IntelliJ:* Settings → Editor → Inlay Hints (toggle per category)
+     * **Editor activation:** Automatic -- hints appear inline when enabled.
+     * - *IntelliJ:* Settings -> Editor -> Inlay Hints (toggle per category)
      * - *VS Code:* `editor.inlayHints.enabled` setting
      *
      * **Adapter implementations:**
@@ -536,15 +559,12 @@ interface XtcCompilerAdapter {
     fun getInlayHints(
         uri: String,
         range: Range,
-    ): List<InlayHint> {
-        logger.info("[{}] getInlayHints not yet implemented (requires compiler)", displayName)
-        return emptyList()
-    }
+    ): List<InlayHint>
 
     /**
      * Format an entire document.
      *
-     * **LSP capability:** `textDocument/formatting` — formats the entire document.
+     * **LSP capability:** `textDocument/formatting` -- formats the entire document.
      *
      * **Editor activation:**
      * - *IntelliJ:* Ctrl+Alt+L (Reformat Code)
@@ -568,15 +588,12 @@ interface XtcCompilerAdapter {
         uri: String,
         content: String,
         options: FormattingOptions,
-    ): List<TextEdit> {
-        logger.info("[{}] formatDocument not yet implemented", displayName)
-        return emptyList()
-    }
+    ): List<TextEdit>
 
     /**
      * Format a range within a document.
      *
-     * **LSP capability:** `textDocument/rangeFormatting` — formats only the selected range.
+     * **LSP capability:** `textDocument/rangeFormatting` -- formats only the selected range.
      *
      * **Editor activation:**
      * - *IntelliJ:* Select text, then Ctrl+Alt+L
@@ -602,35 +619,299 @@ interface XtcCompilerAdapter {
         content: String,
         range: Range,
         options: FormattingOptions,
-    ): List<TextEdit> {
-        logger.info("[{}] formatRange not yet implemented", displayName)
-        return emptyList()
-    }
+    ): List<TextEdit>
 
     /**
      * Find symbols across the workspace.
      *
-     * **LSP capability:** `workspace/symbol` — provides workspace-wide symbol search.
+     * **LSP capability:** `workspace/symbol` -- provides workspace-wide symbol search.
      *
      * **Editor activation:**
-     * - *IntelliJ:* Ctrl+T (Go to Symbol), or Navigate → Symbol
+     * - *IntelliJ:* Ctrl+T (Go to Symbol), or Navigate -> Symbol
      * - *VS Code:* Ctrl+T (Go to Symbol in Workspace)
      *
      * **Adapter implementations:**
      * - *Mock:* Returns empty (no workspace index).
-     * - *TreeSitter:* Returns empty (single-file parsing only).
-     * - *Compiler:* Searches a workspace-wide symbol index.
+     * - *TreeSitter:* Searches the [WorkspaceIndex] built by [WorkspaceIndexer] during
+     *   initialization. Supports fuzzy name matching across all indexed `.x` files.
+     * - *Compiler:* Searches a workspace-wide symbol index with full semantic resolution.
      *
-     * **Compiler upgrade path:** Build and maintain a cross-file symbol index that supports
-     * fuzzy matching, filtering by kind, and ranking by relevance.
+     * **Compiler upgrade path:** Add type-aware filtering, ranking by relevance, and
+     * support for qualified name search.
      *
      * @param query search query string
      * @return list of matching symbols
      */
-    fun findWorkspaceSymbols(query: String): List<SymbolInfo> {
-        logger.info("[{}] findWorkspaceSymbols not yet implemented (requires compiler)", displayName)
-        return emptyList()
-    }
+    fun findWorkspaceSymbols(query: String): List<SymbolInfo>
+
+    // ========================================================================
+    // Planned features (not yet implemented)
+    // ========================================================================
+    //
+    // These methods correspond to LSP capabilities described in plan-next-steps-lsp.md.
+    // Default implementations in AbstractXtcCompilerAdapter log the call with full
+    // input parameters, so the log trace shows exactly what was requested and that
+    // the feature is not yet available -- making it easy to plug in later.
+    //
+    // ========================================================================
+
+    /**
+     * Find the declaration of the symbol at a position.
+     *
+     * **LSP capability:** `textDocument/declaration` -- navigates to the declaration site
+     * (as opposed to the definition site). In XTC's single-file-per-type model, this is
+     * less important than in C/C++ where declaration and definition can be in separate files.
+     *
+     * **Editor activation:**
+     * - *IntelliJ:* Ctrl+B on a symbol (if distinct from definition)
+     * - *VS Code:* Right-click -> Go to Declaration
+     *
+     * **Adapter implementations:**
+     * - *Mock/TreeSitter:* Not implemented -- cannot distinguish declaration from definition.
+     * - *Compiler:* Resolves declaration site from semantic analysis.
+     *
+     * @param uri    the document URI
+     * @param line   0-based line number
+     * @param column 0-based column number
+     * @return location of the declaration, if found
+     */
+    fun findDeclaration(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): Location?
+
+    /**
+     * Find the type definition of the symbol at a position.
+     *
+     * **LSP capability:** `textDocument/typeDefinition` -- navigates to the type of an
+     * expression or variable. E.g., from a variable `name` of type `String`, jumps to the
+     * `String` class definition.
+     *
+     * **Editor activation:**
+     * - *IntelliJ:* Ctrl+Shift+B on a variable or expression
+     * - *VS Code:* Right-click -> Go to Type Definition
+     *
+     * **Adapter implementations:**
+     * - *Mock/TreeSitter:* Not implemented -- requires type inference.
+     * - *Compiler:* Resolves the type of the expression and navigates to the type declaration.
+     *
+     * @param uri    the document URI
+     * @param line   0-based line number
+     * @param column 0-based column number
+     * @return location of the type definition, if found
+     */
+    fun findTypeDefinition(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): Location?
+
+    /**
+     * Find implementations of the interface or abstract method at a position.
+     *
+     * **LSP capability:** `textDocument/implementation` -- finds all concrete implementations
+     * of an interface, abstract class, or abstract method.
+     *
+     * **Editor activation:**
+     * - *IntelliJ:* Ctrl+Alt+B on an interface/abstract method
+     * - *VS Code:* Right-click -> Go to Implementations
+     *
+     * **Adapter implementations:**
+     * - *Mock/TreeSitter:* Not implemented -- requires type hierarchy and semantic analysis.
+     * - *Compiler:* Walks the type hierarchy index to find all implementors.
+     *
+     * @param uri    the document URI
+     * @param line   0-based line number
+     * @param column 0-based column number
+     * @return list of implementation locations
+     */
+    fun findImplementation(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): List<Location>
+
+    /**
+     * Prepare type hierarchy for the symbol at a position.
+     *
+     * **LSP capability:** `typeHierarchy/prepareTypeHierarchy` -- resolves the type at the cursor
+     * and returns it as a TypeHierarchyItem. This is the entry point; the client then calls
+     * [getSupertypes] and [getSubtypes] to expand the tree.
+     *
+     * **Editor activation:**
+     * - *IntelliJ:* Ctrl+H (Type Hierarchy)
+     * - *VS Code:* Right-click -> Show Type Hierarchy
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Not implemented.
+     * - *TreeSitter:* Could extract the type declaration and its extends/implements clauses
+     *   from the AST (Phase 1 -- tree-sitter can parse these syntactically).
+     * - *Compiler:* Full type resolution with generics and conditional mixins.
+     *
+     * @param uri    the document URI
+     * @param line   0-based line number
+     * @param column 0-based column number
+     * @return list of type hierarchy items at the position
+     */
+    fun prepareTypeHierarchy(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): List<TypeHierarchyItem>
+
+    /**
+     * Get supertypes for a type hierarchy item.
+     *
+     * **LSP capability:** `typeHierarchy/supertypes` -- returns the parents of a type
+     * (extends, implements, incorporates).
+     *
+     * @param item the type hierarchy item to get supertypes for
+     * @return list of supertype items
+     */
+    fun getSupertypes(item: TypeHierarchyItem): List<TypeHierarchyItem>
+
+    /**
+     * Get subtypes for a type hierarchy item.
+     *
+     * **LSP capability:** `typeHierarchy/subtypes` -- returns all types that extend/implement
+     * the given type.
+     *
+     * @param item the type hierarchy item to get subtypes for
+     * @return list of subtype items
+     */
+    fun getSubtypes(item: TypeHierarchyItem): List<TypeHierarchyItem>
+
+    /**
+     * Prepare call hierarchy for the symbol at a position.
+     *
+     * **LSP capability:** `callHierarchy/prepare` -- resolves the function/method at the cursor
+     * and returns it as a CallHierarchyItem. The client then calls [getIncomingCalls] and
+     * [getOutgoingCalls] to navigate the call graph.
+     *
+     * **Editor activation:**
+     * - *IntelliJ:* Ctrl+Alt+H (Call Hierarchy)
+     * - *VS Code:* Right-click -> Show Call Hierarchy
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Not implemented.
+     * - *TreeSitter:* Could syntactically identify the method at cursor (Phase 2).
+     * - *Compiler:* Full semantic resolution with overload disambiguation.
+     *
+     * @param uri    the document URI
+     * @param line   0-based line number
+     * @param column 0-based column number
+     * @return list of call hierarchy items at the position
+     */
+    fun prepareCallHierarchy(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): List<CallHierarchyItem>
+
+    /**
+     * Get incoming calls for a call hierarchy item (who calls this function).
+     *
+     * **LSP capability:** `callHierarchy/incomingCalls` -- returns all call sites that invoke
+     * the given function/method.
+     *
+     * @param item the call hierarchy item to find callers for
+     * @return list of incoming calls with caller info and call-site ranges
+     */
+    fun getIncomingCalls(item: CallHierarchyItem): List<CallHierarchyIncomingCall>
+
+    /**
+     * Get outgoing calls for a call hierarchy item (what does this function call).
+     *
+     * **LSP capability:** `callHierarchy/outgoingCalls` -- returns all functions/methods that
+     * the given function calls.
+     *
+     * @param item the call hierarchy item to find callees for
+     * @return list of outgoing calls with callee info and call-site ranges
+     */
+    fun getOutgoingCalls(item: CallHierarchyItem): List<CallHierarchyOutgoingCall>
+
+    /**
+     * Get code lenses for a document.
+     *
+     * **LSP capability:** `textDocument/codeLens` -- provides actionable inline annotations
+     * above declarations: reference counts ("3 references"), "Run Test", "Debug", "Implement".
+     *
+     * **Editor activation:** Automatic -- annotations appear above methods, classes, etc.
+     *
+     * **Adapter implementations:**
+     * - *Mock/TreeSitter:* Could show reference counts once workspace index exists.
+     * - *Compiler:* Precise reference counts, virtual dispatch resolution, test discovery,
+     *   run/debug buttons.
+     *
+     * @param uri the document URI
+     * @return list of code lenses
+     */
+    fun getCodeLenses(uri: String): List<CodeLens>
+
+    /**
+     * Resolve a code lens (fill in the command/action lazily).
+     *
+     * **LSP capability:** `codeLens/resolve` -- called by the client when a code lens becomes
+     * visible to fill in its command. Allows lazy computation for performance.
+     *
+     * @param lens the code lens to resolve
+     * @return the resolved code lens with command filled in
+     */
+    fun resolveCodeLens(lens: CodeLens): CodeLens
+
+    /**
+     * Format on type -- auto-format after typing a trigger character.
+     *
+     * **LSP capability:** `textDocument/onTypeFormatting` -- auto-indent when pressing Enter,
+     * `}`, or `;`. Tree-sitter provides enough AST context to determine correct indentation.
+     *
+     * **Editor activation:** Automatic -- triggered after typing the trigger character.
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Not implemented.
+     * - *TreeSitter:* Could determine indentation level from AST context.
+     * - *Compiler:* Full context-aware formatting.
+     *
+     * @param uri     the document URI
+     * @param line    0-based line number where the character was typed
+     * @param column  0-based column number
+     * @param ch      the character that was typed (trigger character)
+     * @param options formatting options
+     * @return list of text edits to apply
+     */
+    fun onTypeFormatting(
+        uri: String,
+        line: Int,
+        column: Int,
+        ch: String,
+        options: FormattingOptions,
+    ): List<TextEdit>
+
+    /**
+     * Get linked editing ranges for the symbol at a position.
+     *
+     * **LSP capability:** `textDocument/linkedEditingRange` -- when renaming an identifier,
+     * all related occurrences update simultaneously in real-time (before committing the rename).
+     *
+     * **Editor activation:** Automatic -- start editing an identifier and linked ranges
+     * update in real-time.
+     *
+     * **Adapter implementations:**
+     * - *Mock:* Not implemented.
+     * - *TreeSitter:* Could identify the declaration and its same-file usages.
+     * - *Compiler:* Semantic linked editing with scope awareness.
+     *
+     * @param uri    the document URI
+     * @param line   0-based line number
+     * @param column 0-based column number
+     * @return linked editing ranges, if available
+     */
+    fun getLinkedEditingRanges(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): LinkedEditingRanges?
 
     // ========================================================================
     // Data classes for LSP types
@@ -819,5 +1100,94 @@ interface XtcCompilerAdapter {
         val insertSpaces: Boolean,
         val trimTrailingWhitespace: Boolean = false,
         val insertFinalNewline: Boolean = false,
+    )
+
+    // ========================================================================
+    // Data classes for planned features (type hierarchy, call hierarchy, etc.)
+    // ========================================================================
+
+    /**
+     * An item in a type hierarchy (a type and its position in the source).
+     *
+     * Used by [prepareTypeHierarchy], [getSupertypes], [getSubtypes].
+     */
+    data class TypeHierarchyItem(
+        val name: String,
+        val kind: SymbolInfo.SymbolKind,
+        val uri: String,
+        val range: Range,
+        val selectionRange: Range,
+        val detail: String? = null,
+    )
+
+    /**
+     * An item in a call hierarchy (a function/method and its position).
+     *
+     * Used by [prepareCallHierarchy], [getIncomingCalls], [getOutgoingCalls].
+     */
+    data class CallHierarchyItem(
+        val name: String,
+        val kind: SymbolInfo.SymbolKind,
+        val uri: String,
+        val range: Range,
+        val selectionRange: Range,
+        val detail: String? = null,
+    )
+
+    /**
+     * An incoming call to a call hierarchy item (who calls it).
+     *
+     * @param from       the calling function/method
+     * @param fromRanges the specific call-site ranges within the caller
+     */
+    data class CallHierarchyIncomingCall(
+        val from: CallHierarchyItem,
+        val fromRanges: List<Range>,
+    )
+
+    /**
+     * An outgoing call from a call hierarchy item (what it calls).
+     *
+     * @param to         the called function/method
+     * @param fromRanges the specific call-site ranges within the caller
+     */
+    data class CallHierarchyOutgoingCall(
+        val to: CallHierarchyItem,
+        val fromRanges: List<Range>,
+    )
+
+    /**
+     * A code lens (actionable inline annotation above a declaration).
+     *
+     * @param range   the range this code lens applies to
+     * @param command the command to execute when clicked (null until resolved)
+     */
+    data class CodeLens(
+        val range: Range,
+        val command: CodeLensCommand? = null,
+    )
+
+    /**
+     * A command associated with a code lens.
+     *
+     * @param title     display text (e.g., "3 references", "Run Test")
+     * @param command   the command identifier to execute
+     * @param arguments optional arguments to the command
+     */
+    data class CodeLensCommand(
+        val title: String,
+        val command: String,
+        val arguments: List<Any> = emptyList(),
+    )
+
+    /**
+     * Linked editing ranges -- ranges that should be edited simultaneously.
+     *
+     * @param ranges      the ranges that are linked
+     * @param wordPattern optional regex pattern that the new text must match
+     */
+    data class LinkedEditingRanges(
+        val ranges: List<Range>,
+        val wordPattern: String? = null,
     )
 }

@@ -4,7 +4,7 @@
 // - LSP client only connects to basic features (hover, completion, definition, references)
 //   Missing: rename, codeActions, formatting, semanticTokens, signatureHelp, etc.
 // - No debug adapter (DAP) integration yet
-//   See: XtcCompilerAdapterFull for DAP interface definition
+//   See: XtcCompilerAdapterStub for future compiler integration
 //
 // To enable semantic tokens when ready:
 // 1. Add to clientOptions.initializationOptions: { semanticTokensProvider: true }

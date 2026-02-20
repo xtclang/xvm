@@ -27,7 +27,10 @@ class XtcCompilerAdapterStub : AbstractXtcCompilerAdapter() {
     override fun compile(
         uri: String,
         content: String,
-    ): CompilationResult = CompilationResult.success(uri, emptyList())
+    ): CompilationResult {
+        logger.info("compile: uri={}, content={} bytes (stub -- no diagnostics or symbols)", uri, content.length)
+        return CompilationResult.success(uri, emptyList())
+    }
 
     // TODO: Use compiler's symbol table to find symbol at position.
     //       Needs: Phase 4 NameResolver for symbol resolution
@@ -35,7 +38,10 @@ class XtcCompilerAdapterStub : AbstractXtcCompilerAdapter() {
         uri: String,
         line: Int,
         column: Int,
-    ): SymbolInfo? = null
+    ): SymbolInfo? {
+        logger.info("findSymbolAt: uri={}, line={}, column={} (stub -- returning null)", uri, line, column)
+        return null
+    }
 
     // TODO: Provide type-aware completions from compiler's type system.
     //       Needs: Phase 5 TypeResolver for member completion after '.'
@@ -44,7 +50,10 @@ class XtcCompilerAdapterStub : AbstractXtcCompilerAdapter() {
         uri: String,
         line: Int,
         column: Int,
-    ): List<XtcCompilerAdapter.CompletionItem> = emptyList()
+    ): List<XtcCompilerAdapter.CompletionItem> {
+        logger.info("getCompletions: uri={}, line={}, column={} (stub -- returning empty)", uri, line, column)
+        return emptyList()
+    }
 
     // TODO: Resolve definition across files using compiler's symbol table.
     //       Needs: Phase 4 NameResolver for cross-file navigation
@@ -53,7 +62,10 @@ class XtcCompilerAdapterStub : AbstractXtcCompilerAdapter() {
         uri: String,
         line: Int,
         column: Int,
-    ): Location? = null
+    ): Location? {
+        logger.info("findDefinition: uri={}, line={}, column={} (stub -- returning null)", uri, line, column)
+        return null
+    }
 
     // TODO: Find all references using compiler's semantic model.
     //       Needs: Phase 4 NameResolver + workspace-wide index
@@ -63,5 +75,14 @@ class XtcCompilerAdapterStub : AbstractXtcCompilerAdapter() {
         line: Int,
         column: Int,
         includeDeclaration: Boolean,
-    ): List<Location> = emptyList()
+    ): List<Location> {
+        logger.info(
+            "findReferences: uri={}, line={}, column={}, includeDeclaration={} (stub -- returning empty)",
+            uri,
+            line,
+            column,
+            includeDeclaration,
+        )
+        return emptyList()
+    }
 }

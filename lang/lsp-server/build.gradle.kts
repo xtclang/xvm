@@ -58,8 +58,22 @@ val kotlinJdkVersion = xdkProperties.int("org.xtclang.kotlin.jdk")
 // Default is 'treesitter' which provides syntax-aware features (native library bundled).
 // Use 'mock' for basic regex-based functionality if tree-sitter has issues.
 // =============================================================================
-val lspAdapter: String = project.findProperty("lsp.adapter")?.toString() ?: "treesitter"
-logger.lifecycle("LSP Server adapter: $lspAdapter")
+// Resolve via xdkProperties which reads from the composite root's gradle.properties
+// (project.findProperty() only sees the included build's own gradle.properties, which doesn't exist)
+val lspAdapter: String = xdkProperties.stringValue("lsp.adapter", "treesitter")
+val lspSemanticTokens: String = xdkProperties.stringValue("lsp.semanticTokens", "false")
+
+// Log level: -Plog=DEBUG or XTC_LOG_LEVEL=DEBUG (default: INFO)
+// xdkProperties checks: env LOG -> gradle prop -> system prop -> composite root gradle.properties
+// We keep XTC_LOG_LEVEL as the final fallback for backward compatibility.
+val logLevel: String =
+    xdkProperties
+        .stringValue(
+            "log",
+            System.getenv("XTC_LOG_LEVEL")?.uppercase() ?: "INFO",
+        ).uppercase()
+
+logger.lifecycle("LSP Server adapter: $lspAdapter, semanticTokens: $lspSemanticTokens, logLevel: $logLevel")
 
 // Generate build info for version verification and adapter selection
 val generateBuildInfo by tasks.registering {
@@ -67,9 +81,11 @@ val generateBuildInfo by tasks.registering {
     val buildTime = Instant.now().toString()
     val projectVersion = project.version.toString() // Capture at configuration time
     val adapter = lspAdapter // Capture at configuration time
+    val semanticTokens = lspSemanticTokens // Capture at configuration time
 
-    // Declare inputs so task re-runs when adapter changes
+    // Declare inputs so task re-runs when adapter or feature flags change
     inputs.property("adapter", adapter)
+    inputs.property("semanticTokens", semanticTokens)
     inputs.property("version", projectVersion)
     outputs.dir(outputDir)
 
@@ -81,6 +97,7 @@ val generateBuildInfo by tasks.registering {
             lsp.build.time=$buildTime
             lsp.version=$projectVersion
             lsp.adapter=$adapter
+            lsp.semanticTokens=$semanticTokens
             """.trimIndent() + "\n",
         )
     }
@@ -200,6 +217,10 @@ tasks.test {
 
     // Enable FFM native access for tree-sitter integration tests (suppresses JDK warning)
     jvmArgs("--enable-native-access=ALL-UNNAMED")
+
+    // Pass log level to logback: -Plog=DEBUG or XTC_LOG_LEVEL=DEBUG
+    systemProperty("xtc.logLevel", logLevel)
+    environment("XTC_LOG_LEVEL", logLevel)
 
     // Pass the composite root directory to integration tests so they can find real .x source files.
     // Uses the same marker-file approach as XdkPropertiesService.compositeRootDirectory().

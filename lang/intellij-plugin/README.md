@@ -31,6 +31,8 @@ IntelliJ IDEA plugin for XTC (Ecstasy) language support.
 
 ### Building from Source
 
+> **Note:** All `./gradlew :lang:*` commands require `-PincludeBuildLang=true -PincludeBuildAttachLang=true` when run from the project root.
+
 ```bash
 # From the repository root
 ./gradlew :lang:intellij-plugin:buildPlugin
@@ -50,7 +52,7 @@ Then install manually:
 
 ## Prerequisites
 
-- IntelliJ IDEA 2025.1 or later
+- IntelliJ IDEA 2025.3 or later
 - XDK installed and `xtc` command available in PATH
 - Gradle plugin for IntelliJ (bundled with most editions)
 
@@ -170,11 +172,11 @@ feature:
 The LSP server supports multiple adapters. See [LSP Server README](../lsp-server/README.md) for details.
 
 ```bash
-# Run with default adapter (mock - regex-based)
+# Run with default adapter (tree-sitter - AST-based)
 ./gradlew :lang:intellij-plugin:runIde
 
-# Run with tree-sitter adapter (AST-based, more accurate)
-./gradlew :lang:intellij-plugin:runIde -Plsp.adapter=treesitter
+# Run with mock adapter (regex-based, no native dependencies)
+./gradlew :lang:intellij-plugin:runIde -Plsp.adapter=mock
 ```
 
 1. Open a `.x` file in an XTC project
@@ -193,28 +195,22 @@ stale sandbox state, or missing artifacts:
 
 ```
 [runIde] ─── Version Matrix (gradle/libs.versions.toml) ───
-[runIde]   IntelliJ CE:  2025.1 (sinceBuild=251)
-[runIde]   LSP4IJ:       0.19.1
-[runIde]   XTC plugin:   0.4.4-SNAPSHOT
-[runIde] ─── IDE Cache Layers ───
-[runIde]   Download:  ~/.gradle/caches/modules-2/files-2.1/idea/ideaIC/2025.1
-[runIde]              (cached, ~1024 MB - survives clean)
-[runIde]   Extracted: ~/.gradle/caches/<ver>/transforms/...
-[runIde]              (Gradle artifact transform - survives clean)
+[runIde]   IntelliJ IDEA: 2025.3.2 (sinceBuild=253)
+[runIde]   LSP4IJ:        0.19.1
+[runIde]   XTC plugin:    0.4.4-SNAPSHOT
 [runIde] ─── Sandbox ───
-[runIde]   Path:      .../build/idea-sandbox/IC-2025.1
+[runIde]   Path:      .../build/idea-sandbox/IC-2025.3.2
 [runIde]   Status:    reused (existing sandbox with IDE caches/indices)
 [runIde]   Plugins:   [intellij-plugin, lsp4ij]
-[runIde]   IDE log:   .../build/idea-sandbox/IC-2025.1/log/idea.log
-[runIde]              tail -f .../build/idea-sandbox/IC-2025.1/log/idea.log
+[runIde]   IDE log:   .../build/idea-sandbox/IC-2025.3.2/log/idea.log
+[runIde]              tail -f .../build/idea-sandbox/IC-2025.3.2/log/idea.log
 [runIde] ─── mavenLocal XTC Artifacts ───
 [runIde]   ~/.m2/repository/org/xtclang
 [runIde]   xdk: 0.4.4-SNAPSHOT
 [runIde]   xtc-plugin: 0.4.4-SNAPSHOT
 [runIde] ─── Reset Commands ───
 [runIde]   Nuke sandbox (keeps IDE download):  ./gradlew :lang:intellij-plugin:clean
-[runIde]   Nuke everything (re-downloads IDE): rm -rf ~/.gradle/caches/.../ideaIC/2025.1
-[runIde]              then: rm -rf lang/.intellijPlatform/localPlatformArtifacts
+[runIde]   Nuke cached IDE + metadata:         rm -rf lang/.intellijPlatform/localPlatformArtifacts
 [runIde] LSP log:  ~/.xtc/logs/lsp-server.log (tailing to console)
 ```
 
@@ -227,7 +223,7 @@ to the Gradle console in real time:
 [lsp-server] 10:23:45 INFO  XtcLanguageServer - Backend: Tree-sitter
 [lsp-server] 10:23:45 INFO  XtcLanguageServer - ========================================
 [lsp-server] 10:23:46 INFO  XtcLanguageServer - textDocument/didOpen: file:///path/to/Hello.x
-[lsp-server] 10:23:46 INFO  TreeSitterAdapter - compiled in 13.2ms, 0 diagnostics
+[lsp-server] 10:23:46 INFO  TreeSitterAdapter - parsed in 13.2ms, 0 errors, 42 symbols (query: 1.5ms)
 ```
 
 All versions are pinned in `gradle/libs.versions.toml`. Changing a version there
@@ -255,9 +251,9 @@ These appear with a `[lsp-server]` prefix whenever the LSP server is active.
 noisy (indexing, VFS, GC, etc.). To view them in a separate terminal:
 
 ```bash
-tail -f lang/intellij-plugin/build/idea-sandbox/IC-2025.1/log/idea.log
+tail -f lang/intellij-plugin/build/idea-sandbox/IC-2025.3.2/log/idea.log
 # Or filter to XTC-related entries:
-tail -f lang/intellij-plugin/build/idea-sandbox/IC-2025.1/log/idea.log | grep -i "xtc\|lsp"
+tail -f lang/intellij-plugin/build/idea-sandbox/IC-2025.3.2/log/idea.log | grep -i "xtc\|lsp"
 ```
 
 **LSP server file log** (always available, even outside `runIde`):
@@ -273,7 +269,7 @@ tail -f ~/.xtc/logs/lsp-server.log
 ./gradlew :lang:intellij-plugin:clean
 
 # Nuke everything including the downloaded IDE (re-downloads ~1.5 GB)
-rm -rf ~/.gradle/caches/modules-2/files-2.1/idea/ideaIC/2025.1
+rm -rf ~/.gradle/caches/modules-2/files-2.1/idea/ideaIC/2025.3.2
 rm -rf lang/.intellijPlatform/localPlatformArtifacts
 ```
 
@@ -454,10 +450,15 @@ intellij-plugin/
 ├── build.gradle.kts              # Plugin build configuration
 ├── src/main/
 │   ├── kotlin/org/xtclang/idea/
+│   │   ├── PluginPaths.kt               # Plugin directory/JAR path resolution
 │   │   ├── XtcIconProvider.kt            # Icon provider for .x files
 │   │   ├── XtcTextMateBundleProvider.kt  # TextMate grammar integration
+│   │   ├── dap/
+│   │   │   └── XtcDebugAdapterFactory.kt # DAP server integration
 │   │   ├── lsp/
-│   │   │   └── XtcLspServerSupportProvider.kt  # LSP server integration
+│   │   │   ├── XtcLspServerSupportProvider.kt  # LSP server factory + connection provider
+│   │   │   └── jre/
+│   │   │       └── JreProvisioner.kt     # Foojay JRE download/caching
 │   │   ├── project/
 │   │   │   ├── XtcNewProjectWizard.kt    # New Project wizard entry
 │   │   │   └── XtcNewProjectWizardStep.kt # Wizard step implementation

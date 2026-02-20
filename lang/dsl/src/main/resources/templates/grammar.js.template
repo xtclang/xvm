@@ -160,9 +160,9 @@ module.exports = grammar({
             optional($.doc_comment),
             repeat($.annotation),
             'module',
-            $.qualified_name,
+            field('name', $.qualified_name),
             repeat($.delegates_clause),
-            optional($.module_body),
+            optional(field('body', $.module_body)),
         ),
 
         // Module body can contain definitions and also properties/methods at module level
@@ -177,9 +177,9 @@ module.exports = grammar({
             optional($.doc_comment),
             repeat($.annotation),
             'package',
-            $.identifier,
+            field('name', $.identifier),
             optional($.import_spec),
-            choice($.package_body, ';'),
+            choice(field('body', $.package_body), ';'),
         ),
 
         // Package body can contain definitions and also top-level properties/methods
@@ -194,10 +194,10 @@ module.exports = grammar({
         import_statement: $ => seq(
             optional($.doc_comment),
             'import',
-            $.qualified_name,
+            field('path', $.qualified_name),
             optional(choice(
                 token.immediate('.*'),   // Star import: import pkg.* (no space before .*)
-                seq('as', $.identifier), // Alias: import pkg.Type as Alias
+                seq('as', field('alias', $.identifier)), // Alias: import pkg.Type as Alias
             )),
             ';',
         ),
@@ -217,11 +217,11 @@ module.exports = grammar({
             optional(seq('static', repeat($.annotation))),
             optional('abstract'),
             'class',
-            $.type_name,
-            optional($.type_parameters),
+            field('name', $.type_name),
+            optional(field('type_params', $.type_parameters)),
             optional($.constructor_parameters),
             repeat(choice($.extends_clause_with_args, $.implements_clause, $.incorporates_clause, $.delegates_clause)),
-            choice($.class_body, ';'),
+            choice(field('body', $.class_body), ';'),
         ),
 
         // Similar declarations
@@ -232,10 +232,10 @@ module.exports = grammar({
             optional($.visibility_modifier),
             optional('static'),
             'interface',
-            $.type_name,
-            optional($.type_parameters),
+            field('name', $.type_name),
+            optional(field('type_params', $.type_parameters)),
             repeat($.extends_clause),
-            choice($.class_body, ';'),
+            choice(field('body', $.class_body), ';'),
         ),
 
         // Mixin can end with body or semicolon (for simple mixins)
@@ -245,11 +245,11 @@ module.exports = grammar({
             optional($.visibility_modifier),
             optional('static'),
             'mixin',
-            $.type_name,
-            optional($.type_parameters),
+            field('name', $.type_name),
+            optional(field('type_params', $.type_parameters)),
             optional($.constructor_parameters),
             repeat(choice($.into_clause, $.extends_clause_with_args, $.implements_clause, $.incorporates_clause, $.delegates_clause)),
-            choice($.class_body, ';'),
+            choice(field('body', $.class_body), ';'),
         ),
 
         // Service can end with body or semicolon
@@ -260,11 +260,11 @@ module.exports = grammar({
             optional($.visibility_modifier),
             optional(seq('static', repeat($.annotation))),
             'service',
-            $.type_name,
-            optional($.type_parameters),
+            field('name', $.type_name),
+            optional(field('type_params', $.type_parameters)),
             optional($.constructor_parameters),
             repeat(choice($.extends_clause_with_args, $.implements_clause, $.incorporates_clause, $.delegates_clause)),
-            choice($.class_body, ';'),
+            choice(field('body', $.class_body), ';'),
         ),
 
         // Const declaration allows annotations to appear after static: static @Abstract const
@@ -274,11 +274,11 @@ module.exports = grammar({
             optional($.visibility_modifier),
             optional(seq('static', repeat($.annotation))),
             'const',
-            $.type_name,
-            optional($.type_parameters),
+            field('name', $.type_name),
+            optional(field('type_params', $.type_parameters)),
             optional($.constructor_parameters),
             repeat(choice($.extends_clause_with_args, $.implements_clause, $.incorporates_clause, $.delegates_clause, $.default_clause)),
-            choice($.class_body, ';'),
+            choice(field('body', $.class_body), ';'),
         ),
 
         enum_declaration: $ => seq(
@@ -286,13 +286,13 @@ module.exports = grammar({
             repeat($.annotation),
             optional($.visibility_modifier),
             'enum',
-            $.type_name,
-            optional($.type_parameters),
+            field('name', $.type_name),
+            optional(field('type_params', $.type_parameters)),
             optional($.constructor_parameters),
             optional($.enum_default_clause),
             repeat($.implements_clause),
             repeat($.incorporates_clause),
-            $.enum_body,
+            field('body', $.enum_body),
         ),
 
         constructor_parameters: $ => $.parameters,
@@ -306,9 +306,9 @@ module.exports = grammar({
             repeat($.annotation),
             optional($.visibility_modifier),
             'typedef',
-            $.type_expression,
+            field('type', $.type_expression),
             'as',
-            $.identifier,
+            field('name', $.identifier),
             ';',
         ),
 
@@ -321,11 +321,11 @@ module.exports = grammar({
             optional($.visibility_modifier),
             optional('static'),
             'annotation',
-            $.type_name,
-            optional($.type_parameters),
+            field('name', $.type_name),
+            optional(field('type_params', $.type_parameters)),
             optional($.constructor_parameters),
             repeat(choice($.into_clause, $.extends_clause, $.implements_clause, $.incorporates_clause, $.delegates_clause)),
-            choice($.class_body, ';'),
+            choice(field('body', $.class_body), ';'),
         ),
 
         // Class body
@@ -344,10 +344,10 @@ module.exports = grammar({
         // Example: Colon<Object>(":") or EnumName<Type>(arg1, arg2) { body }
         enum_value: $ => seq(
             optional($.doc_comment),
-            $.identifier,
+            field('name', $.identifier),
             optional($.type_arguments),
-            optional($.arguments),
-            optional($.enum_value_body),
+            optional(field('arguments', $.arguments)),
+            optional(field('body', $.enum_value_body)),
         ),
 
         enum_value_body: $ => seq('{', repeat($._class_member), '}'),
@@ -390,10 +390,10 @@ module.exports = grammar({
                     seq($.visibility_modifier, repeat($.annotation), optional(seq('static', repeat($.annotation)))),
                     seq('static', repeat($.annotation), optional(seq($.visibility_modifier, repeat($.annotation)))),
                 )),
-                $.named_function_type,
+                field('type', $.named_function_type),
                 choice(
-                    seq(optional(seq('=', $._expression)), ';'),
-                    seq($.property_body, optional(seq('=', $._expression, ';'))),
+                    seq(optional(seq('=', field('value', $._expression))), ';'),
+                    seq(field('body', $.property_body), optional(seq('=', $._expression, ';'))),
                 ),
             ),
             // Regular form: Type propName = value;
@@ -404,11 +404,11 @@ module.exports = grammar({
                     seq($.visibility_modifier, repeat($.annotation), optional(seq('static', repeat($.annotation)))),
                     seq('static', repeat($.annotation), optional(seq($.visibility_modifier, repeat($.annotation)))),
                 )),
-                $.type_expression,
-                $.identifier,
+                field('type', $.type_expression),
+                field('name', $.identifier),
                 choice(
-                    seq(optional(seq('=', $._expression)), ';'),
-                    seq($.property_body, optional(seq('=', $._expression, ';'))),
+                    seq(optional(seq('=', field('value', $._expression))), ';'),
+                    seq(field('body', $.property_body), optional(seq('=', $._expression, ';'))),
                 ),
             ),
         ),
@@ -427,14 +427,14 @@ module.exports = grammar({
             )),
             optional('abstract'),
             optional($.type_parameters),
-            $.type_expression,
-            $.identifier,
+            field('return_type', $.type_expression),
+            field('name', $.identifier),
             optional($.type_parameters),
-            $.parameters,
+            field('parameters', $.parameters),
             // Expression body can be: = expr; or = TODO (no semicolon for bare TODO)
             // prec(3) for TODO freeform, prec(2) for bare TODO ensures proper precedence
             choice(
-                $.block,
+                field('body', $.block),
                 prec(3, seq('=', 'TODO', $._todo_freeform_text)),  // = TODO freeform text (no ; needed)
                 prec(2, seq('=', $.todo_expression)),  // = TODO or = TODO(expr) (no ; needed)
                 seq('=', $._expression, ';'),
@@ -464,9 +464,9 @@ module.exports = grammar({
             repeat($.annotation),
             optional($.visibility_modifier),
             choice('construct', 'finally'),
-            $.parameters,
+            field('parameters', $.parameters),
             choice(
-                seq($.block, optional(seq('finally', $.block))),
+                seq(field('body', $.block), optional(seq('finally', $.block))),
                 ';',
             ),
         )),
@@ -495,7 +495,7 @@ module.exports = grammar({
 
         // Type parameters
         type_parameters: $ => seq('<', commaSep1($.type_parameter), '>'),
-        type_parameter: $ => seq($.identifier, optional(seq('extends', $.type_expression))),
+        type_parameter: $ => seq(field('name', $.identifier), optional(seq('extends', field('constraint', $.type_expression)))),
 
         // Parameters (with optional trailing comma)
         parameters: $ => seq('(', commaSep($.parameter), optional(','), ')'),
@@ -505,8 +505,8 @@ module.exports = grammar({
         // - Named function type: function ReturnType name(ParamTypes) = default
         //   The named function type form includes the name already
         parameter: $ => choice(
-            seq(repeat($.annotation), $.named_function_type, optional(seq('=', $._expression))),
-            seq(repeat($.annotation), $.type_expression, $.identifier, optional(seq('=', $._expression))),
+            seq(repeat($.annotation), field('type', $.named_function_type), optional(seq('=', field('default', $._expression)))),
+            seq(repeat($.annotation), field('type', $.type_expression), field('name', $.identifier), optional(seq('=', field('default', $._expression)))),
         ),
 
         // Type expressions
@@ -650,10 +650,10 @@ module.exports = grammar({
             optional(seq($.visibility_modifier, repeat($.annotation))),
             optional(seq('static', repeat($.annotation))),
             optional($.type_parameters),
-            $.type_expression,
-            $.identifier,
-            $.parameters,
-            choice($.block, seq('=', $._expression, ';')),
+            field('return_type', $.type_expression),
+            field('name', $.identifier),
+            field('parameters', $.parameters),
+            choice(field('body', $.block), seq('=', $._expression, ';')),
         ),
 
         // Local property getter declaration: private @Lazy Service propName.calc() { ... }
@@ -674,9 +674,9 @@ module.exports = grammar({
         // Labeled try is used for exception reference: Recovery: try {...} then Recovery.exception
         // Higher precedence to prefer label interpretation over type_name
         labeled_statement: $ => prec(1, seq(
-            $.identifier,
+            field('label', $.identifier),
             ':',
-            choice($.for_statement, $.while_statement, $.do_statement, $.switch_statement, $.if_statement, $.try_statement, $.block),
+            field('body', choice($.for_statement, $.while_statement, $.do_statement, $.switch_statement, $.if_statement, $.try_statement, $.block)),
         )),
 
         // Constructor delegation: construct ConstructorName(args);
@@ -720,9 +720,9 @@ module.exports = grammar({
                 repeat($.annotation),
                 optional($.visibility_modifier),
                 choice('val', 'var'),
-                optional($.type_expression),
-                $.identifier,
-                optional(seq(choice('=', ':='), $._expression)),
+                optional(field('type', $.type_expression)),
+                field('name', $.identifier),
+                optional(seq(choice('=', ':='), field('value', $._expression))),
                 ';',
             ),
             // Typed form without val/var: @Annotation private static Type x = expr;
@@ -731,17 +731,17 @@ module.exports = grammar({
                 repeat($.annotation),
                 optional($.visibility_modifier),
                 optional('static'),
-                $.type_expression,
-                $.identifier,
-                optional(seq(choice('=', ':='), $._expression)),
+                field('type', $.type_expression),
+                field('name', $.identifier),
+                optional(seq(choice('=', ':='), field('value', $._expression))),
                 ';',
             )),
             // Named function type form: function ReturnType varName(ParamTypes) = lambda;
             seq(
                 repeat($.annotation),
                 optional($.visibility_modifier),
-                $.named_function_type,
-                optional(seq('=', $._expression)),
+                field('type', $.named_function_type),
+                optional(seq('=', field('value', $._expression))),
                 ';',
             ),
         ),
@@ -784,11 +784,11 @@ module.exports = grammar({
         if_statement: $ => prec.right(seq(
             'if',
             '(',
-            $.if_condition,
-            repeat(seq(',', $.if_condition)),
+            field('condition', $.if_condition),
+            repeat(seq(',', field('condition', $.if_condition))),
             ')',
-            $._statement,
-            optional(seq('else', $._statement)),
+            field('consequence', $._statement),
+            optional(seq('else', field('alternative', $._statement))),
         )),
 
         // A condition in an if/while statement: expression or conditional declaration
@@ -799,21 +799,21 @@ module.exports = grammar({
             '(',
             choice(
                 // for (val name : iterable) or for (var name : iterable) - prefer val/var keywords first
-                prec(2, seq('val', $._identifier_or_context_keyword, ':', $._expression)),
-                prec(2, seq('var', $._identifier_or_context_keyword, ':', $._expression)),
+                prec(2, seq('val', $._identifier_or_context_keyword, ':', field('iterable', $._expression))),
+                prec(2, seq('var', $._identifier_or_context_keyword, ':', field('iterable', $._expression))),
                 // for (Type name : iterable)
-                prec(1, seq($.type_expression, $._identifier_or_context_keyword, ':', $._expression)),
+                prec(1, seq($.type_expression, $._identifier_or_context_keyword, ':', field('iterable', $._expression))),
                 // for (name : iterable) - bare identifier, type inferred
                 // Higher precedence to prefer this over type_expression interpretation
-                prec(3, seq($.identifier, ':', $._expression)),
-                seq($.for_tuple_destructure, ':', $._expression),
+                prec(3, seq($.identifier, ':', field('iterable', $._expression))),
+                seq($.for_tuple_destructure, ':', field('iterable', $._expression)),
                 // Traditional for loop: for (init; condition; update)
                 // init can be a variable declaration (Type name = expr) or expression
                 // update can have multiple comma-separated expressions: for (i = 0; i < n; i++, j++)
                 seq(optional($.for_initializer), ';', optional($._expression), ';', optional(commaSep1($._expression))),
             ),
             ')',
-            $._statement,
+            field('body', $._statement),
         ),
 
         // For loop initializer: either an expression, variable declaration(s), or tuple assignment
@@ -849,7 +849,7 @@ module.exports = grammar({
 
         // Supports conditional declaration: while (Element x := expr)
         // Supports multiple conditions: while (cond1, cond2)
-        while_statement: $ => seq('while', '(', $.if_condition, repeat(seq(',', $.if_condition)), ')', $._statement),
+        while_statement: $ => seq('while', '(', field('condition', $.if_condition), repeat(seq(',', field('condition', $.if_condition))), ')', field('body', $._statement)),
         // Do-while supports multiple conditions: do { } while (cond1, cond2 := expr);
         do_statement: $ => seq('do', $._statement, 'while', '(', $.if_condition, repeat(seq(',', $.if_condition)), ')', ';'),
 
@@ -945,9 +945,9 @@ module.exports = grammar({
         try_statement: $ => seq(
             'try',
             optional(seq('(', commaSep1($.try_resource), ')')),
-            $.block,
+            field('body', $.block),
             repeat($.catch_clause),
-            optional(seq('finally', $.block)),
+            optional(seq('finally', field('finally_body', $.block))),
         ),
 
         // Try resource can be expression or variable declaration
@@ -962,10 +962,10 @@ module.exports = grammar({
         catch_clause: $ => seq(
             'catch',
             '(',
-            $.type_expression,
-            $.identifier,
+            field('type', $.type_expression),
+            field('name', $.identifier),
             ')',
-            $.block,
+            field('body', $.block),
         ),
 
         // Using statement: using (resource) { block }
@@ -1090,7 +1090,7 @@ module.exports = grammar({
         ),
 
         // Assignment expression - operators from model
-        assignment_expression: $ => prec.right(1, seq($._expression, choice({{ASSIGNMENT_OPS}}), $._expression)),
+        assignment_expression: $ => prec.right(1, seq(field('left', $._expression), choice({{ASSIGNMENT_OPS}}), field('right', $._expression))),
 
         // Else expression: provides fallback for short-circuit expressions
         // Example: maxLength?.size() : 0  (if null, use 0)
@@ -1116,7 +1116,7 @@ module.exports = grammar({
         // Member access
         // Call expression: regular call expr(args) or async call expr^(args)
         // Safe call: expr?(args) for null-safe invocation (if expr is null, returns null)
-        call_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_2}}, seq($._expression, optional($.type_arguments), $.arguments)),
+        call_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_2}}, seq(field('function', $._expression), optional($.type_arguments), field('arguments', $.arguments))),
         safe_call_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_2}}, seq($._expression, $.safe_arguments)),
         safe_arguments: $ => seq('?(', commaSep(choice($.named_argument, $._expression, $.type_expression)), ')'),
         // Async call: expr^(args) for fire-and-forget asynchronous invocation
@@ -1126,8 +1126,8 @@ module.exports = grammar({
         // Member expression supports:
         // - Regular: expr.name
         // - Reference: expr.&name (no-dereference property access)
-        member_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_2}}, seq($._expression, choice({{MEMBER_ACCESS_OPS}}), optional('&'), $.identifier)),
-        index_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_2}}, seq($._expression, '[', commaSep1($._expression), ']')),
+        member_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_2}}, seq(field('object', $._expression), choice({{MEMBER_ACCESS_OPS}}), optional('&'), field('member', $.identifier))),
+        index_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_2}}, seq(field('object', $._expression), '[', commaSep1($._expression), ']')),
         // Safe index expression: arr?[index] for null-safe indexing (if arr is null, returns null)
         // Uses '?' followed by immediate '[' rather than '?[' as single token to avoid conflict with Type?[]
         safe_index_expression: $ => prec.left({{MAX_PRECEDENCE_PLUS_2}}, seq($._expression, '?', token.immediate('['), commaSep1($._expression), ']')),
@@ -1147,12 +1147,12 @@ module.exports = grammar({
         // Also supports outer new: expr.new TypeName(args) creates instance in outer context
         // prec.left on the array form ensures the optional initializer arguments are greedily consumed
         new_expression: $ => choice(
-            seq('new', repeat($.annotation), $.type_expression, $.arguments, optional($.anonymous_inner_class_body)),
-            prec.left(seq('new', repeat($.annotation), $.type_expression, '[', $._expression, ']', optional($.arguments))),
-            seq('new', repeat($.annotation), $.type_expression, '[', ']'),  // empty array: new Type[]
-            seq($._expression, '.', 'new', $.type_expression, $.arguments),  // outer new: expr.new Type(args)
-            seq($._expression, '.', 'new', $.arguments),  // expr.new(args) - outer copy
-            seq('new', $.arguments),  // new(args) - copy constructor (virtual new)
+            seq('new', repeat($.annotation), field('type', $.type_expression), field('arguments', $.arguments), optional(field('body', $.anonymous_inner_class_body))),
+            prec.left(seq('new', repeat($.annotation), field('type', $.type_expression), '[', field('size', $._expression), ']', optional(field('arguments', $.arguments)))),
+            seq('new', repeat($.annotation), field('type', $.type_expression), '[', ']'),  // empty array: new Type[]
+            seq(field('object', $._expression), '.', 'new', field('type', $.type_expression), field('arguments', $.arguments)),  // outer new: expr.new Type(args)
+            seq(field('object', $._expression), '.', 'new', field('arguments', $.arguments)),  // expr.new(args) - outer copy
+            seq('new', field('arguments', $.arguments)),  // new(args) - copy constructor (virtual new)
         ),
 
         // Anonymous inner class body
@@ -1185,9 +1185,9 @@ module.exports = grammar({
         // Lambda needs high precedence to resolve conflict: when seeing `identifier ->`,
         // prefer lambda over treating identifier as expression followed by -> binary op
         lambda_expression: $ => prec({{MAX_PRECEDENCE_PLUS_3}}, seq(
-            choice($.identifier, $.parameters),
+            field('parameters', choice($.identifier, $.parameters)),
             '->',
-            choice($._expression, $.block),
+            field('body', choice($._expression, $.block)),
         )),
         parenthesized_expression: $ => seq('(', $._expression, ')'),
 
@@ -1389,8 +1389,8 @@ module.exports = grammar({
         // Two forms: with arguments @Name(args) or without @Name
         // The form with arguments requires '(' immediately after name (no whitespace/newline)
         annotation: $ => choice(
-            seq('@', $.qualified_name, token.immediate('('), commaSep(choice($._expression, $.type_expression)), ')'),
-            seq('@', $.qualified_name),
+            seq('@', field('name', $.qualified_name), token.immediate('('), commaSep(choice($._expression, $.type_expression)), ')'),
+            seq('@', field('name', $.qualified_name)),
         ),
 
 {{VISIBILITY_MODIFIER_RULE}}

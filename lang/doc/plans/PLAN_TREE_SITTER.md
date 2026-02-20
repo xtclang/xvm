@@ -201,12 +201,13 @@ Uses jtreesitter's Foreign Function API:
 - [x] Completion shows keywords and locals
 - [x] Integration tests verify all features against real `.x` files (`LspIntegrationTest`)
 
-### Cross-File Support (Phase 5) - PENDING
+### Cross-File Support (Phase 5) - PARTIAL
 
-- [ ] `WorkspaceIndex` for cross-file symbol tracking
-- [ ] Cross-file go-to-definition
-- [ ] Workspace symbol search
-- [ ] Incremental re-indexing on file change
+- [x] `WorkspaceIndex` for cross-file symbol tracking (fuzzy search: exact, prefix, CamelCase, subsequence)
+- [x] Cross-file go-to-definition (via workspace index)
+- [x] Workspace symbol search (`workspace/symbol` with 4-tier fuzzy matching)
+- [x] Background indexing via `WorkspaceIndexer` (dedicated parser/queryEngine, thread-safe)
+- [ ] Incremental re-indexing on file change (currently re-scans on `didChangeWatchedFiles`)
 
 ---
 
@@ -238,28 +239,30 @@ The LSP server uses a pluggable adapter pattern with three available backends:
 └─────────────────┘  └─────────────────┘  └─────────────────┘
 ```
 
-The interface provides default implementations for all methods that log
+The abstract base class provides default implementations for all methods that log
 "not yet implemented" warnings. Adapters only override what they implement.
 
 ### Switching Adapters
 
+> **Note:** All `./gradlew :lang:*` commands require `-PincludeBuildLang=true -PincludeBuildAttachLang=true` when run from the project root.
+
 ```bash
 # Build with Tree-sitter adapter (default)
-./gradlew :lang:lsp-server:fatJar -PincludeBuildLang=true
+./gradlew :lang:lsp-server:fatJar
 
 # Build with Mock adapter (for testing without native libraries)
-./gradlew :lang:lsp-server:fatJar -Plsp.adapter=mock -PincludeBuildLang=true
+./gradlew :lang:lsp-server:fatJar -Plsp.adapter=mock
 
 # Build with Compiler stub (all LSP calls logged)
-./gradlew :lang:lsp-server:fatJar -Plsp.adapter=compiler -PincludeBuildLang=true
+./gradlew :lang:lsp-server:fatJar -Plsp.adapter=compiler
 ```
 
 ### Shared Constants
 
 Common XTC language data is centralized in `XtcLanguageConstants.kt`:
 
-- `KEYWORDS` - 79 XTC keywords for completion
-- `BUILT_IN_TYPES` - 70+ built-in types
+- `KEYWORDS` - 50 XTC keywords for completion
+- `BUILT_IN_TYPES` - 61 built-in types
 - `SYMBOL_TO_COMPLETION_KIND` - Symbol kind mapping
 
 ---
@@ -363,7 +366,7 @@ These features require compiler integration (future adapter):
 | Smart completion | Members of a type require type resolution |
 | Cross-file rename | Need to know which references are semantic matches across files |
 | Cross-file navigation | Import resolution, module dependency tracking |
-| Semantic tokens | Distinguishing field vs local vs parameter by type |
+| Semantic tokens (full) | Distinguishing field vs local vs parameter by type (basic syntax-level tokens done via tree-sitter) |
 | Inlay hints | Type inference annotations (`:Int`, `:String`) |
 
 > **Note**: Same-file rename, code actions (organize imports), formatting, folding ranges,
@@ -375,7 +378,7 @@ These features require compiler integration (future adapter):
 
 ## Feature Implementation Status: Tree-sitter vs Compiler
 
-> **Last Updated**: 2026-02-08
+> **Last Updated**: 2026-02-12
 
 This table shows the current implementation status for LSP features, and which require
 the full compiler adapter for advanced capabilities.
@@ -391,11 +394,11 @@ the full compiler adapter for advanced capabilities.
 | **Document links** | ✅ | ✅ | 🔮 | Clickable import paths (regex or AST) |
 | **Signature help** | ✅ | ❌ | 🔮 | Same-file method parameters; overload resolution needs compiler |
 | **Selection ranges** | ✅ | ❌ | 🔮 | AST walk-up chain; requires AST (Mock returns empty) |
-| **Semantic tokens** | ❌ | ❌ | 🔮 | Type-based coloring needs compiler |
+| **Semantic tokens** | ✅ | ❌ | 🔮 | Syntax-level classification via tree-sitter; type-based resolution needs compiler |
 | **Inlay hints** | ❌ | ❌ | 🔮 | Type inference hints require compiler |
 | **Call hierarchy** | ❌ | ❌ | 🔮 | Requires semantic analysis |
 | **Type hierarchy** | ❌ | ❌ | 🔮 | Requires type system |
-| **Workspace symbols** | ❌ | ❌ | 🔮 | Cross-file requires indexing or compiler |
+| **Workspace symbols** | ✅ | ❌ | 🔮 | Cross-file indexing with fuzzy search (4-tier matching) |
 
 **Legend:**
 - ✅ = Implemented
@@ -406,8 +409,17 @@ the full compiler adapter for advanced capabilities.
 
 Features that could be partially implemented with tree-sitter in the future:
 
-1. **Semantic tokens** (basic) - Keyword/syntax highlighting better than TextMate
-2. **Workspace symbols** (same-file) - Index declarations per file
+1. ~~**Semantic tokens** (basic)~~ ✅ COMPLETE (2026-02-12) — See `SemanticTokenEncoder.kt`
+   - Classifies 18 AST contexts: class/interface/mixin/service/const/enum declarations,
+     methods, constructors, properties, variables, parameters, modules, packages,
+     annotations, type expressions, call expressions, member expressions
+   - Produces LSP delta-encoded `List<Int>` from single-pass O(n) tree walk
+   - **Tier 2 opportunities** (still tree-sitter, not yet implemented):
+     enum values (→ enumMember), import paths (→ namespace/type), lambda parameters,
+     typedef declarations, local functions, conditional declaration variables,
+     catch clause variables, safe/async call expressions
+2. ~~**Workspace symbols**~~ ✅ COMPLETE (2026-02-19) — `WorkspaceIndex` with `WorkspaceIndexer`,
+   4-tier fuzzy search (exact, prefix, CamelCase, subsequence), background scanning
 3. **Inlay hints** (structural) - Basic structural hints without type inference
 
 Features requiring compiler for any useful implementation:
@@ -435,9 +447,9 @@ Features requiring compiler for any useful implementation:
 - [x] Completion shows keywords and locals
 
 ### Phase 5 Complete When:
-- [ ] Go-to-definition works across files
-- [ ] Workspace symbol search works
-- [ ] Performance acceptable (<100ms for typical operations)
+- [x] Go-to-definition works across files (via workspace index)
+- [x] Workspace symbol search works (4-tier fuzzy matching)
+- [ ] Performance acceptable (<100ms for typical operations) — needs benchmarking
 
 ---
 
@@ -591,47 +603,15 @@ The authoritative sources for XTC syntax:
 
 ## Task: Grammar Field Definitions
 
-**Status**: PENDING (LOW PRIORITY)
+**Status**: ✅ COMPLETE (2026-02-19, `lagergren/lsp-extend4` branch)
 
-**Goal**: Add field() definitions to grammar.js to enable field-based query syntax and simplify LSP adapter code.
+**Goal**: Add field() definitions to grammar.js to enable field-based query syntax, improve semantic token robustness, and simplify LSP adapter code.
 
-### Current State
+### Implementation
 
-The XTC grammar does NOT define field names. Rules use positional syntax:
-
-```javascript
-// Current: positional (no fields)
-class_declaration: $ => seq(
-    optional($.doc_comment),
-    repeat($.annotation),
-    optional($.visibility_modifier),
-    optional('static'),
-    optional('abstract'),
-    'class',
-    $.type_name,           // <-- No field name
-    optional($.type_parameters),
-    ...
-),
-```
-
-### Proposed Change
-
-Add `field()` wrappers to key children:
-
-```javascript
-// Proposed: with field names
-class_declaration: $ => seq(
-    optional($.doc_comment),
-    repeat($.annotation),
-    optional($.visibility_modifier),
-    optional('static'),
-    optional('abstract'),
-    'class',
-    field('name', $.type_name),     // <-- Named field
-    optional(field('type_parameters', $.type_parameters)),
-    ...
-),
-```
+Field definitions were added to ~30 grammar rules in `grammar.js.template` (184 lines modified).
+Queries in `XtcQueries.kt` were migrated from positional to field-based syntax.
+`SemanticTokenEncoder` uses `childByFieldName()` for robust node classification.
 
 ### Benefits
 
@@ -643,26 +623,78 @@ class_declaration: $ => seq(
 | **Best practices** | Aligns with tree-sitter community standards |
 | **Tool compatibility** | Better support from tree-sitter tooling |
 
-### Current Workaround
+### Impact on Semantic Tokens
 
-The LSP adapter uses positional matching in queries:
+The `SemanticTokenEncoder` currently relies on `childByType()` to find children, which is
+**fragile** — it returns the *first* child matching a type, which can be wrong when a node
+has multiple children of the same type. Examples of current fragility:
+
+| Problem | Current Code | With Fields |
+|---------|-------------|-------------|
+| Method return type vs body type | `node.childByType("type_expression")` finds the first one (return type — correct by accident) | `node.childByFieldName("return_type")` — unambiguous |
+| Property type vs initializer type | `node.childByType("type_expression")` — correct only because type comes first | `node.childByFieldName("type")` — explicit |
+| Multiple identifiers in member_expression | `node.children.filter { it.type == "identifier" }.lastOrNull()` — positional heuristic | `node.childByFieldName("member")` — semantic |
+| Constructor "construct" keyword | Iterates all children checking `child.text == "construct"` | `node.childByFieldName("name")` |
+
+With field definitions, the encoder could replace every `childByType()` call with
+`childByFieldName()`, making classification both faster (direct lookup vs linear scan)
+and more correct (no positional assumptions).
+
+### Impact on Other LSP Features
+
+| Feature | Current Fragility | With Fields |
+|---------|-------------------|-------------|
+| **Document symbols** | `XtcQueries.kt` uses positional query patterns that may match wrong children | Field-based queries are exact |
+| **Go-to-definition** | `childByType("identifier")` may find the wrong identifier in complex nodes | `childByFieldName("name")` is unambiguous |
+| **Signature help** | Finding parameter list requires `childByType("parameters")` — works but fragile | `childByFieldName("parameters")` |
+| **Find references** | Identifier extraction relies on positional child matching | Field-based extraction |
+| **Rename** | Must correctly identify the "name" child of a declaration to rename it | Direct field access |
+
+### Scope of Grammar Changes
+
+The grammar has **144 named rule types**. Field definitions should be added to the
+**~30 rules** that have semantically important children:
+
+**Priority 1 — Declarations** (directly used by semantic tokens, symbols, navigation):
+- `class_declaration`: `name`, `type_parameters`, `extends`, `implements`, `body`
+- `interface_declaration`: `name`, `type_parameters`, `extends`, `body`
+- `mixin_declaration`: `name`, `type_parameters`, `into`, `body`
+- `service_declaration`: `name`, `type_parameters`, `body`
+- `const_declaration`: `name`, `type_parameters`, `body`
+- `enum_declaration`: `name`, `type_parameters`, `body`
+- `method_declaration`: `return_type`, `name`, `parameters`, `body`
+- `constructor_declaration`: `name`, `parameters`, `body`
+- `property_declaration`: `type`, `name`, `value`
+- `variable_declaration`: `type`, `name`, `value`
+- `parameter`: `type`, `name`, `default`
+- `module_declaration`: `name`, `body`
+- `package_declaration`: `name`, `body`
+- `typedef_declaration`: `name`, `type`
+- `enum_value`: `name`, `arguments`, `body`
+
+**Priority 2 — Expressions** (used by call/member classification):
+- `call_expression`: `function`, `arguments`
+- `member_expression`: `object`, `member`
+- `new_expression`: `type`, `arguments`
+- `lambda_expression`: `parameters`, `body`
+- `assignment_expression`: `left`, `right`
+
+**Priority 3 — Statements** (used by variable classification, control flow):
+- `for_statement`: `initializer`, `condition`, `update`, `body`
+- `catch_clause`: `type`, `name`, `body`
+- `if_statement`: `condition`, `consequence`, `alternative`
+- `switch_statement`: `value`, `body`
+
+### Migration
+
+Queries were migrated from positional to field-based syntax:
 ```scheme
-; Positional (current)
+; Before (positional)
 (class_declaration (type_name) @name) @declaration
 
-; Field-based (after migration)
+; After (field-based)
 (class_declaration name: (type_name) @name) @declaration
 ```
-
-And `childByType()` helper in XtcNode instead of `childByFieldName()`.
-
-### Implementation Notes
-
-1. **Grammar changes** required in `lang/dsl/.../generators/TreeSitterGenerator.kt`
-2. **Regenerate** grammar via `./gradlew :lang:tree-sitter:generateTreeSitterGrammar`
-3. **Rebuild** native libraries for all 5 platforms
-4. **Update** XtcQueries.kt to use field syntax
-5. **Simplify** XtcNode (childByType no longer needed)
 
 ### Files Affected
 
@@ -674,10 +706,11 @@ And `childByType()` helper in XtcNode instead of `childByFieldName()`.
 | `lsp-server/.../XtcNode.kt` | Remove childByType workaround |
 | Native libraries (5 platforms) | Rebuild all |
 
-### Decision
+### Remaining Tier 2 Opportunities
 
-**Defer until Phase 5 (Cross-File Support)** - The current positional matching works correctly.
-This refactor is a nice-to-have improvement, not blocking LSP functionality.
+With field definitions in place, Tier 2 semantic token contexts (enum values, lambda
+params, catch variables, typedef declarations) can now use `childByFieldName()` for
+robust classification without positional fragility.
 
 ---
 

@@ -6,8 +6,8 @@
   is reserved for JSON-RPC protocol messages. Any output to stdout
   will corrupt the protocol stream.
 
-  Log file location: ~/.xtc/logs/debug-adapter.log
-  Tail with: tail -f ~/.xtc/logs/debug-adapter.log
+  Log file location: ~/.xtc/logs/dap-server.log
+  Tail with: tail -f ~/.xtc/logs/dap-server.log
 -->
 <configuration>
     <!-- Suppress logback's own status messages -->
@@ -21,11 +21,11 @@
         </encoder>
     </appender>
 
-    <!-- Log to file for terminal tailing: tail -f ~/.xtc/logs/debug-adapter.log -->
+    <!-- Log to file for terminal tailing: tail -f ~/.xtc/logs/dap-server.log -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${user.home}/.xtc/logs/debug-adapter.log</file>
+        <file>${user.home}/.xtc/logs/dap-server.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${user.home}/.xtc/logs/debug-adapter.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <fileNamePattern>${user.home}/.xtc/logs/dap-server.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
             <maxFileSize>10MB</maxFileSize>
             <maxHistory>7</maxHistory>
             <totalSizeCap>50MB</totalSizeCap>
@@ -36,7 +36,10 @@
     </appender>
 
     <!-- XTC DAP server logs - INFO level by default -->
-    <logger name="org.xvm.debug" level="${xtc.logLevel:-INFO}"/>
+    <!-- Override via: -Plog=DEBUG, -Dxtc.logLevel=DEBUG, or XTC_LOG_LEVEL=DEBUG -->
+    <!-- Valid levels: TRACE, DEBUG, INFO, WARN, ERROR -->
+    <variable name="LOG_LEVEL" value="${xtc.logLevel:-${XTC_LOG_LEVEL:-INFO}}"/>
+    <logger name="org.xvm.debug" level="${LOG_LEVEL}"/>
 
     <!-- Eclipse LSP4J - only errors -->
     <logger name="org.eclipse.lsp4j" level="ERROR"/>

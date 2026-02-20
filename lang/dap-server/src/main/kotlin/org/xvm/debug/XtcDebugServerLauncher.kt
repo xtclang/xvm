@@ -13,7 +13,7 @@ import java.lang.invoke.MethodHandles
 /**
  * Launcher for the XTC Debug Adapter Protocol (DAP) server.
  *
- * Usage: `java -jar xtc-debug-adapter.jar`
+ * Usage: `java -jar xtc-dap-server.jar`
  *
  * The DAP server uses stdio for communication. All logging goes to stderr
  * to keep stdout clean for the JSON-RPC protocol.

@@ -108,6 +108,36 @@ val taskName by tasks.registering {
 - NEVER run without the configuration cache enabled. Everything MUST work with the configuration cache.
 
 
+## Lang Composite Build Properties
+
+The `lang/` directory is a **Gradle composite build** that is disabled by default. Two `-P` properties are required to enable it when running any `./gradlew :lang:*` task from the project root:
+
+```bash
+./gradlew :lang:<task> -PincludeBuildLang=true -PincludeBuildAttachLang=true
+```
+
+### What the properties do
+- **`-PincludeBuildLang=true`**: Includes the `lang/` directory as a composite build, making `:lang:*` tasks visible to the root project
+- **`-PincludeBuildAttachLang=true`**: Wires `lang/` lifecycle tasks (build, test, etc.) to the root build's lifecycle, so `./gradlew build` from the root also builds lang
+
+### Why they exist
+Both properties default to `false` in the root `gradle.properties` so that:
+1. CI and other developers don't need to build `lang/` unless they're working on it
+2. The main XDK build stays fast for contributors who aren't touching language tooling
+3. The composite build inclusion is opt-in to avoid unexpected build interactions
+
+### When to use them
+- **Always** when running any `./gradlew :lang:*` task from the project root
+- Both properties are always needed together -- using only one will fail
+- If you forget them, the build will fail with "project ':lang' not found" or similar
+
+### Alternative: local gradle.properties override
+Instead of passing `-P` flags every time, developers can set them in their local `gradle.properties`:
+```properties
+includeBuildLang=true
+includeBuildAttachLang=true
+```
+
 # important-instruction-reminders
 - Do what has been asked; nothing more, nothing less.
 - NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.

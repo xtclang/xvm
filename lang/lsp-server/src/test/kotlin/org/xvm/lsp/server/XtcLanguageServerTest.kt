@@ -213,6 +213,9 @@ class XtcLanguageServerTest {
             assertThat(caps.documentRangeFormattingProvider?.left).describedAs("rangeFormatting").isTrue()
             assertThat(caps.inlayHintProvider?.left).describedAs("inlayHint").isTrue()
 
+            // Workspace features
+            assertThat(caps.workspaceSymbolProvider?.left).describedAs("workspaceSymbol").isTrue()
+
             // Sync
             assertThat(caps.textDocumentSync?.left).describedAs("textDocumentSync").isNotNull()
         }
@@ -230,24 +233,22 @@ class XtcLanguageServerTest {
             if (caps.documentOnTypeFormattingProvider == null) notYetImplemented.add("onTypeFormatting")
             if (caps.typeHierarchyProvider == null) notYetImplemented.add("typeHierarchy")
             if (caps.callHierarchyProvider == null) notYetImplemented.add("callHierarchy")
-            if (caps.semanticTokensProvider == null) notYetImplemented.add("semanticTokens")
             if (caps.monikerProvider == null) notYetImplemented.add("moniker")
             if (caps.linkedEditingRangeProvider == null) notYetImplemented.add("linkedEditingRange")
             if (caps.inlineValueProvider == null) notYetImplemented.add("inlineValue")
             if (caps.diagnosticProvider == null) notYetImplemented.add("diagnosticProvider")
-            if (caps.workspaceSymbolProvider == null) notYetImplemented.add("workspaceSymbol")
 
             // Print the audit report
             println("========================================")
             println("LSP Capabilities Audit")
             println("========================================")
-            println("Implemented (${17} capabilities):")
+            println("Implemented (${19} capabilities):")
             println("  hover, completion, definition, references, documentSymbol,")
             println("  documentHighlight, selectionRange, foldingRange,")
-            println("  documentLink, signatureHelp,")
+            println("  documentLink, signatureHelp, workspaceSymbol,")
             println("  rename (with prepareRename), codeAction,")
             println("  formatting, rangeFormatting, inlayHint,")
-            println("  textDocumentSync")
+            println("  textDocumentSync, semanticTokens")
             println()
             println("Not yet implemented (${notYetImplemented.size} capabilities):")
             for (cap in notYetImplemented) {
@@ -267,12 +268,10 @@ class XtcLanguageServerTest {
                     "onTypeFormatting",
                     "typeHierarchy",
                     "callHierarchy",
-                    "semanticTokens",
                     "moniker",
                     "linkedEditingRange",
                     "inlineValue",
                     "diagnosticProvider",
-                    "workspaceSymbol",
                 )
         }
     }

@@ -59,6 +59,8 @@ Only skip the native library bundling (~1.2MB per platform).
 
 ## Testing
 
+> **Note:** All `./gradlew :lang:*` commands require `-PincludeBuildLang=true -PincludeBuildAttachLang=true` when run from the project root.
+
 ```bash
 # Fast build for mock adapter (no native library)
 ./gradlew :lang:intellij-plugin:runIde

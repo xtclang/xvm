@@ -15,6 +15,8 @@ and editor support.
 >
 > We are actively working to improve stability and move toward a supported beta release.
 
+> **Note:** All `./gradlew :lang:*` commands below assume `-PincludeBuildLang=true -PincludeBuildAttachLang=true` are passed when running from the project root. See [Composite Build Properties](../CLAUDE.md) in the project CLAUDE.md for details.
+
 ## Enabling the Lang Build
 
 By default, the lang build is **disabled** in `gradle.properties`. To include it in the XVM composite build,
@@ -28,7 +30,7 @@ you need to set two properties:
 ### Option 1: Command Line (Temporary)
 
 ```bash
-./gradlew build -PincludeBuildLang=true -PincludeBuildAttachLang=true
+./gradlew build
 ```
 
 ### Option 2: Environment Variables (Session/Shell)
@@ -53,7 +55,7 @@ includeBuildAttachLang=true
 
 ## Testing the Tree-sitter Parser
 
-The tree-sitter adapter is tested against the entire XDK corpus (675+ `.x` files from `lib_*` directories).
+The tree-sitter adapter is tested against the entire XDK corpus (692 `.x` files from `lib_*` directories).
 This ensures the grammar can parse real-world Ecstasy code.
 
 ```bash
@@ -143,7 +145,7 @@ The sandbox IDE data is stored in `lang/intellij-plugin/build/idea-sandbox/`.
 
 ### Building a Distributable Plugin ZIP
 
-To create a plugin ZIP that can be installed in any IntelliJ IDEA 2025.1+ instance:
+To create a plugin ZIP that can be installed in any IntelliJ IDEA 2025.3+ instance:
 
 ```bash
 ./gradlew :lang:intellij-plugin:buildPlugin
@@ -250,7 +252,7 @@ The lang tooling uses several interdependent libraries. This section documents v
 
 | Library | Version | Purpose | Notes |
 |---------|---------|---------|-------|
-| **lsp4j** | 0.21.1 | LSP protocol types & JSON-RPC | Eclipse's Java LSP implementation |
+| **lsp4j** | 0.24.0 | LSP protocol types & JSON-RPC | Eclipse's Java LSP implementation |
 | **lsp4ij** | 0.19.1 | IntelliJ LSP client plugin | Red Hat's plugin, uses lsp4j internally |
 
 **How they work together:**
@@ -263,18 +265,18 @@ The lang tooling uses several interdependent libraries. This section documents v
 
 | Library | Version | Purpose | Notes |
 |---------|---------|---------|-------|
-| **jtreesitter** | 0.24.1 | Java bindings for tree-sitter | JVM FFI to native tree-sitter |
-| **tree-sitter-cli** | 0.24.3 | Parser generator CLI | Must match jtreesitter major.minor |
+| **jtreesitter** | 0.26.0 | Java bindings for tree-sitter | JVM FFI to native tree-sitter |
+| **tree-sitter-cli** | 0.26.5 | Parser generator CLI | Must match jtreesitter major.minor |
 
-**Version Constraint (Java 21):**
+**Version Constraint (Java 25):**
 ```
-⚠️  jtreesitter 0.25+ requires Java 22
-⚠️  jtreesitter 0.26+ requires Java 23
-✅  jtreesitter 0.24.x works with Java 21
+⚠️  jtreesitter 0.26.x requires Java 23+ (FFM API)
+✅  The LSP server runs OUT-OF-PROCESS with its own provisioned JRE (Java 25)
+✅  IntelliJ uses JBR 21, but the LSP server is a separate process
 ```
 
-IntelliJ 2025.1 ships with JBR 21 (JetBrains Runtime = Java 21), so we must use jtreesitter 0.24.x
-until IntelliJ ships with JBR 22+ (expected: IntelliJ 2026.x).
+The LSP server runs as a separate out-of-process Java 25 process (provisioned via Foojay Disco API),
+so the IntelliJ JBR 21 constraint does not limit the jtreesitter version.
 
 Track JBR releases: https://github.com/JetBrains/JetBrainsRuntime/releases
 
@@ -282,19 +284,19 @@ Track JBR releases: https://github.com/JetBrains/JetBrainsRuntime/releases
 
 | Library | Version | Purpose |
 |---------|---------|---------|
-| **intellij-ide** | 2025.1 | Target IDE version |
+| **intellij-ide** | 2025.3.2 | Target IDE version |
 | **intellij-jdk** | 21 | Plugin JDK requirement |
-| **intellij-platform-gradle-plugin** | 2.10.5 | Build plugin for IntelliJ plugins |
+| **intellij-platform-gradle-plugin** | 2.11.0 | Build plugin for IntelliJ plugins |
 
 ### Compatibility Matrix
 
 | Component | Requires | Provides |
 |-----------|----------|----------|
-| IntelliJ 2025.1 | JBR 21 | Plugin runtime |
+| IntelliJ 2025.3.2 | JBR 21 | Plugin runtime |
 | lsp4ij 0.19.1 | IntelliJ 2023.2+ | LSP client |
-| lsp4j 0.21.1 | Java 11+ | LSP protocol |
-| jtreesitter 0.24.1 | Java 21 | Native parsing |
-| tree-sitter-cli 0.24.3 | - | Parser generation |
+| lsp4j 0.24.0 | Java 11+ | LSP protocol |
+| jtreesitter 0.26.0 | Java 23+ | Native parsing (runs in out-of-process LSP server) |
+| tree-sitter-cli 0.26.5 | - | Parser generation |
 
 All versions are defined in `/gradle/libs.versions.toml`.
 

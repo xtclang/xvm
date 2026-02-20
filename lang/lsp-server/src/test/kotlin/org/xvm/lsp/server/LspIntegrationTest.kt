@@ -70,7 +70,7 @@ import java.nio.file.Paths
  * native tree-sitter library is available (which it is when the `tree-sitter` subproject
  * has been built), all tests run against the real syntax-aware parser. If the native lib
  * is unavailable (e.g. in a CI environment without native builds), the test falls back to
- * [MockXtcCompilerAdapter] and the tests still pass — they just exercise regex-based parsing.
+ * [MockXtcCompilerAdapter] and the tests still pass -- they just exercise regex-based parsing.
  *
  * ## Test files
  *
@@ -657,7 +657,7 @@ class LspIntegrationTest {
         @DisplayName("should return signature help or null")
         fun shouldReturnSignatureHelpOrNull() {
             val tf = openFile("TestSimple.x")
-            // Position at a method call — may return null (mock) or signatures (tree-sitter)
+            // Position at a method call -- may return null (mock) or signatures (tree-sitter)
             val pos = Position(2, 10)
 
             val result =
@@ -665,7 +665,7 @@ class LspIntegrationTest {
                     .signatureHelp(SignatureHelpParams(TextDocumentIdentifier(tf.uri), pos))
                     .get()
 
-            // Either null or a valid SignatureHelp object — tests protocol flow
+            // Either null or a valid SignatureHelp object -- tests protocol flow
             if (result != null) {
                 assertThat(result.signatures).isNotNull()
             }

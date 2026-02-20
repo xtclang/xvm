@@ -1,6 +1,7 @@
 package org.xvm.lsp.treesitter
 
 import io.github.treesitter.jtreesitter.Node
+import java.util.Optional
 
 /**
  * Wrapper around a Tree-sitter syntax node for XTC sources.
@@ -37,9 +38,34 @@ class XtcNode internal constructor(
 
     /**
      * The text content of this node from the source.
+     *
+     * Tree-sitter reports byte offsets into a UTF-8 representation, but Java Strings use
+     * UTF-16 code units. For ASCII-only sources (all current XTC code), byte offsets equal
+     * character offsets. For non-ASCII sources we convert via the UTF-8 byte array to get
+     * the correct substring.
      */
     val text: String
-        get() = source.substring(tsNode.startByte, tsNode.endByte)
+        get() {
+            val start = tsNode.startByte
+            val end = tsNode.endByte
+            // Defensive: guard against stale byte offsets (e.g., from incremental parse without Tree.edit())
+            if (start < 0 || end < start || end > source.length) {
+                return ""
+            }
+            // Fast path: if all chars are ASCII, byte offsets == char offsets
+            if (source
+                    .asSequence()
+                    .drop(start)
+                    .take(end - start)
+                    .all { it.code < 128 }
+            ) {
+                return source.substring(start, end)
+            }
+            // Slow path: convert to UTF-8 bytes, slice, and decode back
+            val utf8 = source.toByteArray(Charsets.UTF_8)
+            if (end > utf8.size) return ""
+            return String(utf8, start, end - start, Charsets.UTF_8)
+        }
 
     /**
      * Whether this is a named node (appears in grammar rules) vs anonymous (literal tokens).
@@ -122,31 +148,63 @@ class XtcNode internal constructor(
      * Get the parent node, or null if this is the root.
      */
     val parent: XtcNode?
-        get() = tsNode.parent.map { XtcNode(it, source) }.orElse(null)
+        get() = tsNode.parent.wrap()
 
     /**
      * Get a child node by index.
      */
     @Suppress("unused") // TODO: Will be used for manual tree traversal in formatting and folding
-    fun child(index: Int): XtcNode? = tsNode.getChild(index).map { XtcNode(it, source) }.orElse(null)
+    fun child(index: Int): XtcNode? = tsNode.getChild(index).wrap()
 
     /**
      * Get a named child node by index.
      */
     @Suppress("unused") // TODO: Will be used for manual tree traversal in formatting and folding
-    fun namedChild(index: Int): XtcNode? = tsNode.getNamedChild(index).map { XtcNode(it, source) }.orElse(null)
+    fun namedChild(index: Int): XtcNode? = tsNode.getNamedChild(index).wrap()
 
     /**
-     * Get a child node by field name.
-     * Note: Only works if the grammar defines field names via field().
-     * The XTC grammar does NOT define fields, so this will always return null.
-     * Prefer [childByType] or positional access via [child] instead.
+     * Get a child node by field name (O(1) lookup via tree-sitter's internal field table).
+     *
+     * The XTC grammar defines field names on all major constructs via `field()` in grammar.js,
+     * enabling direct semantic access to named children. This is the **preferred** API for
+     * navigating the AST because:
+     *
+     * - **O(1) performance**: tree-sitter resolves fields via a compile-time field table,
+     *   unlike [childByType] which scans all children linearly (O(n)).
+     * - **Position-independent**: fields identify children by semantic role, not by their
+     *   position among siblings. Adding optional children (e.g., annotations, modifiers)
+     *   before a node won't break field-based lookups.
+     * - **Self-documenting**: `node.childByFieldName("name")` is clearer than
+     *   `node.childByType("identifier")` which could match any identifier child.
+     *
+     * ## Available Fields by Node Type
+     *
+     * **Declarations**: `name`, `type_params`, `body`, `return_type`, `parameters`, `type`, `value`
+     * **Expressions**: `function`, `arguments`, `object`, `member`, `left`, `right`, `size`
+     * **Statements**: `condition`, `consequence`, `alternative`, `body`, `iterable`, `label`
+     * **Other**: `path`/`alias` (imports), `constraint` (type_parameter), `default` (parameter)
+     *
+     * ## What Can Be Built on Top of Fields
+     *
+     * Fields unlock higher-level features that were previously fragile or impossible:
+     * - **Tree-sitter queries** can use `name:` field syntax for robust pattern matching
+     * - **Rename refactoring** can reliably find the `name` field of any declaration
+     * - **Signature help** can extract `parameters` and `return_type` without positional guessing
+     * - **Semantic tokens** can classify `member` vs `object` in member expressions
+     * - **Code navigation** can distinguish a method's `body` from its `parameters`
+     *
+     * @see childByType for fallback when a grammar node type lacks field definitions
      */
-    fun childByFieldName(fieldName: String): XtcNode? = tsNode.getChildByFieldName(fieldName).map { XtcNode(it, source) }.orElse(null)
+    fun childByFieldName(fieldName: String): XtcNode? = tsNode.getChildByFieldName(fieldName).wrap()
 
     /**
-     * Get the first child node with the given type.
-     * Useful when the grammar doesn't define field names.
+     * Get the first child node with the given type (O(n) linear scan).
+     *
+     * This is a **fallback** for nodes that don't have field definitions in the grammar,
+     * or for querying anonymous/keyword children (e.g., `"construct"`, `"static"`).
+     *
+     * Prefer [childByFieldName] when a field is available -- it is faster (O(1)),
+     * position-independent, and self-documenting.
      */
     fun childByType(nodeType: String): XtcNode? = children.find { it.type == nodeType }
 
@@ -168,34 +226,37 @@ class XtcNode internal constructor(
      */
     @Suppress("unused") // TODO: Will be used for folding ranges and statement grouping
     val nextSibling: XtcNode?
-        get() = tsNode.nextSibling.map { XtcNode(it, source) }.orElse(null)
+        get() = tsNode.nextSibling.wrap()
 
     /**
      * Get the previous sibling node.
      */
     @Suppress("unused") // TODO: Will be used for folding ranges and statement grouping
     val prevSibling: XtcNode?
-        get() = tsNode.prevSibling.map { XtcNode(it, source) }.orElse(null)
+        get() = tsNode.prevSibling.wrap()
 
     /**
      * Get the next named sibling node.
      */
     @Suppress("unused") // TODO: Will be used for sibling-aware code actions
     val nextNamedSibling: XtcNode?
-        get() = tsNode.nextNamedSibling.map { XtcNode(it, source) }.orElse(null)
+        get() = tsNode.nextNamedSibling.wrap()
 
     /**
      * Get the previous named sibling node.
      */
     @Suppress("unused") // TODO: Will be used for sibling-aware code actions
     val prevNamedSibling: XtcNode?
-        get() = tsNode.prevNamedSibling.map { XtcNode(it, source) }.orElse(null)
+        get() = tsNode.prevNamedSibling.wrap()
 
     /**
      * Get the underlying tree-sitter node for advanced operations.
      */
     @Suppress("unused") // TODO: Will be used for advanced tree-sitter operations not covered by this wrapper
     internal fun getTsNode(): Node = tsNode
+
+    /** Convert a Java Optional<Node> to an XtcNode?, avoiding Java's Optional.map() in favor of Kotlin's ?. */
+    private fun Optional<Node>.wrap(): XtcNode? = orElse(null)?.let { XtcNode(it, source) }
 
     override fun toString(): String = "XtcNode(type=$type, range=[$startLine:$startColumn-$endLine:$endColumn])"
 }

@@ -1,11 +1,9 @@
 package org.xtclang.idea.lsp
 
 import com.intellij.execution.configurations.GeneralCommandLine
-import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.diagnostic.logger
-import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
@@ -14,8 +12,8 @@ import com.redhat.devtools.lsp4ij.LanguageServerFactory
 import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
 import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
 import org.eclipse.lsp4j.services.LanguageServer
+import org.xtclang.idea.PluginPaths
 import org.xtclang.idea.lsp.jre.JreProvisioner
-import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Properties
 import java.util.concurrent.atomic.AtomicBoolean
@@ -69,7 +67,7 @@ class XtcLanguageServerFactory : LanguageServerFactory {
  *
  * JRE Provisioning:
  * - Uses Foojay Disco API to download Eclipse Temurin JRE 25
- * - Caches in ~/.xtc/jre/temurin-25-jre/
+ * - Caches in ~/.gradle/caches/xtc-jre/temurin-25-jre/
  * - Shows progress notification during first-time download
  *
  * See doc/plans/lsp-processes.md for architecture details.
@@ -81,6 +79,8 @@ class XtcLspConnectionProvider(
     private val provisioner = JreProvisioner()
 
     companion object {
+        private const val LSP_SERVER_JAR = "xtc-lsp-server.jar"
+
         /** Ensures we only show the "started" notification once per IDE session. */
         private val startNotificationShown = AtomicBoolean(false)
 
@@ -88,38 +88,32 @@ class XtcLspConnectionProvider(
          * Resolve the LSP server JAR from a plugin directory.
          * Returns the path to `bin/xtc-lsp-server.jar` if it exists, or null otherwise.
          */
-        internal fun resolveServerJar(pluginDir: Path): Path? {
-            val serverJar = pluginDir.resolve("bin/xtc-lsp-server.jar")
-            return if (Files.exists(serverJar)) serverJar else null
-        }
+        internal fun resolveServerJar(pluginDir: Path): Path? = PluginPaths.resolveInBin(pluginDir, LSP_SERVER_JAR)
     }
 
     /** Holds the provisioned java path once available. */
     private val provisionedJavaPath = AtomicReference<Path?>()
 
-    init {
-        // Check if JRE is already provisioned (instant check, no download)
-        provisioner.javaPath?.let { java ->
-            logger.info("Using cached JRE: $java")
-            configureCommandLine(java)
-        }
-        // If not provisioned, commandLine will be configured during start() with progress
-    }
+    // No init {} block -- JRE resolution calls ProjectJdkTable.getInstance() which is
+    // prohibited on EDT. All JRE resolution is deferred to start() which runs off EDT.
 
-    // NOTE: LSP4IJ (as of 0.19.1) may call createConnectionProvider() + start() multiple times
-    //  concurrently when several .x files are opened/indexed simultaneously. This is a known
-    //  race condition in the LanguageServerWrapper where getInitializedServer() can be called
-    //  from multiple threads before the first instance reports readiness, causing duplicate
-    //  wrapper creation. Each call spawns a separate server process. LSP4IJ eventually kills
-    //  the extras and settles on a single instance, so this is harmless — the extra processes
-    //  receive shutdown/exit within milliseconds and the surviving instance works correctly.
-    //  We use a static AtomicBoolean to show the "Started" notification only once per IDE session.
-    //  See: https://github.com/eclipse-lsp4e/lsp4e/issues/512 (same bug in lsp4e, fixed in PR #520)
-    //  See: https://github.com/redhat-developer/lsp4ij/issues/888 (related LSP4IJ performance issue)
+    // TODO: Remove AtomicBoolean notification guard once LSP4IJ fixes duplicate server spawning.
+    //  LSP4IJ may call start() concurrently for multiple .x files, spawning extra processes
+    //  that are killed within milliseconds. Harmless, but we guard notifications with a static
+    //  AtomicBoolean to avoid duplicates. See: https://github.com/redhat-developer/lsp4ij/issues/888
 
     override fun start() {
-        // If command line not yet configured, provision JRE with progress
-        if (provisionedJavaPath.get() == null && !provisioner.isProvisioned()) {
+        // Try to find an already-provisioned JRE (cached or system SDK).
+        // This is done here (not in init {}) because findSystemJava() calls
+        // ProjectJdkTable.getInstance() which is prohibited on EDT.
+        if (provisionedJavaPath.get() == null) {
+            provisioner.javaPath?.let { java ->
+                logger.info("Using cached JRE: $java")
+                configureCommandLine(java)
+            }
+        }
+        // If still not configured, download JRE with progress dialog
+        if (provisionedJavaPath.get() == null) {
             provisionJreWithProgress()
         }
 
@@ -134,6 +128,10 @@ class XtcLspConnectionProvider(
         logger.info("Starting XTC LSP Server (out-of-process via OSProcessStreamConnectionProvider)")
         super.start()
 
+        // The server performs a health check during initialize() and logs the result.
+        // Server-side: adapter.healthCheck() validates native lib, then workspace indexing begins.
+        // TODO: Send xtc/healthCheck from client via LanguageServerManager for diagnostic logging
+        //   once LSP4IJ exposes a post-initialization hook for custom requests.
         logger.info("XTC LSP Server process started (v${LspBuildProperties.version}, adapter=${LspBuildProperties.adapter}, pid=$pid)")
 
         if (startNotificationShown.compareAndSet(false, true)) {
@@ -185,8 +183,11 @@ class XtcLspConnectionProvider(
         logger.info("Using Java: $javaPath")
         logger.info("Using LSP server JAR: $serverJar")
 
-        // Log level: check -Dxtc.logLevel (case-insensitive), default to INFO
-        val logLevel = System.getProperty("xtc.logLevel")?.uppercase() ?: "INFO"
+        // Log level: system property > environment variable > INFO default
+        val logLevel =
+            System.getProperty("xtc.logLevel")?.uppercase()
+                ?: System.getenv("XTC_LOG_LEVEL")?.uppercase()
+                ?: "INFO"
 
         // FFM API is finalized since Java 22. The --enable-native-access flag is unnecessary
         // on Java 22+ and may trigger experimental feature consent dialogs on older JVMs.
@@ -212,35 +213,7 @@ class XtcLspConnectionProvider(
         )
     }
 
-    /**
-     * Find the LSP server JAR in the plugin's bin directory.
-     *
-     * IMPORTANT: The JAR must be in bin/, NOT lib/. If placed in lib/, IntelliJ
-     * loads its bundled lsp4j classes which conflict with LSP4IJ's lsp4j.
-     */
-    private fun findServerJar(): Path {
-        // Primary: use PluginManagerCore to find the plugin directory (works for all IDE versions)
-        PluginManagerCore.getPlugin(PluginId.getId("org.xtclang.idea"))?.let { plugin ->
-            resolveServerJar(plugin.pluginPath)?.let { return it }
-            logger.warn("LSP server JAR not at expected location: ${plugin.pluginPath}/bin/xtc-lsp-server.jar")
-            logger.warn("Plugin directory contents: ${plugin.pluginPath.toFile().listFiles()?.map { it.name }}")
-        }
-
-        // Fallback: find via classloader (our class is in lib/, JAR is in bin/)
-        javaClass.protectionDomain?.codeSource?.location?.let { classUrl ->
-            val pluginDir = Path.of(classUrl.toURI()).parent.parent
-            resolveServerJar(pluginDir)?.let { return it }
-            logger.warn("LSP server JAR not found via classloader either: $pluginDir/bin/xtc-lsp-server.jar")
-        }
-
-        throw IllegalStateException(
-            """
-            LSP server JAR not found.
-            Expected at: <plugin-dir>/bin/xtc-lsp-server.jar (NOT lib/ to avoid classloader conflicts)
-            This is a plugin packaging issue. Please report it.
-            """.trimIndent(),
-        )
-    }
+    private fun findServerJar(): Path = PluginPaths.findServerJar(LSP_SERVER_JAR)
 
     private fun showNotification(
         title: String,

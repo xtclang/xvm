@@ -1,4 +1,4 @@
-e# Tree-sitter Integration Documentation
+# Tree-sitter Integration Documentation
 
 This directory contains all documentation related to tree-sitter integration for XTC language support.
 
@@ -8,14 +8,6 @@ This directory contains all documentation related to tree-sitter integration for
 |----------|-------------|
 | [../PLAN_TREE_SITTER.md](../PLAN_TREE_SITTER.md) | **Main plan** - status, phases, and roadmap |
 | [implementation.md](./implementation.md) | Implementation history, challenges, and solutions |
-
-## Completed Task Details
-
-| Task | Document |
-|------|----------|
-| LSP Server Logging | [lsp-logging.md](./lsp-logging.md) |
-| Native Library Staleness | [native-library-staleness.md](./native-library-staleness.md) |
-| Adapter Rebuild Behavior | [adapter-rebuild.md](./adapter-rebuild.md) |
 
 ## Pending Task Details
 

@@ -36,9 +36,11 @@
     </appender>
 
     <!-- XTC LSP server logs - INFO level by default -->
-    <!-- Override via Gradle: ./gradlew runIde -Dxtc.logLevel=DEBUG -->
+    <!-- Override via: -Plog=DEBUG, -Dxtc.logLevel=DEBUG, or XTC_LOG_LEVEL=DEBUG -->
     <!-- Valid levels: TRACE, DEBUG, INFO, WARN, ERROR -->
-    <logger name="org.xvm.lsp" level="${xtc.logLevel:-INFO}"/>
+    <!-- Precedence: system property > environment variable > default -->
+    <variable name="LOG_LEVEL" value="${xtc.logLevel:-${XTC_LOG_LEVEL:-INFO}}"/>
+    <logger name="org.xvm.lsp" level="${LOG_LEVEL}"/>
 
     <!-- Eclipse LSP4J - only errors -->
     <logger name="org.eclipse.lsp4j" level="ERROR"/>

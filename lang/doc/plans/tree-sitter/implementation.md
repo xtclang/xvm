@@ -381,6 +381,8 @@ bool tree_sitter_xtc_external_scanner_scan(void *payload, TSLexer *lexer, const 
 
 ### Regeneration
 
+> **Note:** All `./gradlew :lang:*` commands require `-PincludeBuildLang=true -PincludeBuildAttachLang=true` when run from the project root.
+
 ```bash
 ./gradlew :lang:dsl:generateScannerC
 ```

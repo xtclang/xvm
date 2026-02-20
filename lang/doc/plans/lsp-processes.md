@@ -3,7 +3,7 @@
 **Goal**: Run the XTC LSP server as a separate process with Java 25, enabling full tree-sitter
 support regardless of IntelliJ's JBR version.
 
-**Status**: ✅ COMPLETE (2026-02-03)
+**Status**: ✅ COMPLETE (2026-02-03, updated 2026-02-12 with DAP wiring)
 
 **Risk**: Medium (significant plugin architecture change, external dependencies)
 **Prerequisites**: Working LSP server (see [PLAN_TREE_SITTER.md](./PLAN_TREE_SITTER.md))
@@ -23,23 +23,27 @@ See [PLAN_TREE_SITTER.md § Critical: Java Version Compatibility](./PLAN_TREE_SI
 
 ### The Solution
 
-Run the LSP server as a separate process with its own JRE:
+Run the LSP and DAP servers as separate processes with their own JRE:
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │                  IntelliJ Plugin (JBR 21)                    │
 │  ┌────────────────────────────────────────────────────────┐  │
-│  │  XtcLspServerSupportProvider                           │  │
-│  │    │                                                   │  │
-│  │    └─ JreProvisioner.javaPath (resolution order):      │  │
-│  │        1. ProjectJdkTable: registered Java 25+ SDK     │  │
-│  │        2. IDE cache: PathManager.systemPath/xtc-jre/   │  │
-│  │        3. Download: Foojay API → Temurin JRE 25        │  │
+│  │  XtcLanguageServerFactory (LSP4IJ)                     │  │
+│  │    └─ XtcLspConnectionProvider                         │  │
+│  │        └─ JreProvisioner.javaPath (resolution order):  │  │
+│  │            1. ProjectJdkTable: registered Java 25+ SDK │  │
+│  │            2. Gradle cache: ~/.gradle/caches/xtc-jre/  │  │
+│  │            3. Download: Foojay API → Temurin JRE 25    │  │
 │  │                                                        │  │
-│  │    └─ ProcessBuilder                                   │  │
-│  │        command: <resolved java path>                   │  │
-│  │        args: -jar lsp-server.jar                       │  │
-│  │        stdio: piped (LSP4IJ handles protocol)          │  │
+│  │  XtcDebugAdapterFactory (LSP4IJ DAP)                   │  │
+│  │    └─ XtcDebugAdapterDescriptor                        │  │
+│  │        └─ (same JreProvisioner + PluginPaths)          │  │
+│  │                                                        │  │
+│  │  PluginPaths.findServerJar("xtc-lsp-server.jar")       │  │
+│  │  PluginPaths.findServerJar("xtc-dap-server.jar")       │  │
+│  │    → <plugin-dir>/bin/ (NOT lib/ — avoids classloader  │  │
+│  │      conflicts with LSP4IJ's bundled lsp4j)            │  │
 │  └────────────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────────┘
                             │ stdin/stdout (JSON-RPC)
@@ -50,6 +54,12 @@ Run the LSP server as a separate process with its own JRE:
 │  │  XtcLanguageServerLauncher                             │  │
 │  │    └─ XtcLanguageServer                                │  │
 │  │        └─ TreeSitterAdapter (jtreesitter + FFM API)    │  │
+│  └────────────────────────────────────────────────────────┘  │
+├──────────────────────────────────────────────────────────────┤
+│              DAP Server Process (Java 25)                    │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  XtcDebugServerLauncher                                │  │
+│  │    └─ XtcDebugServer (IDebugProtocolServer)            │  │
 │  └────────────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────────┘
 ```
@@ -76,34 +86,33 @@ JDK/JRE discovery, used by Gradle Toolchains and many IDE plugins.
 
 ### JRE Resolution Strategy
 
-The provisioner finds a suitable JRE using this priority order:
+The provisioner (`JreProvisioner.kt`) finds a suitable JRE using this priority order:
 
 1. **Registered JDKs**: Checks IntelliJ's `ProjectJdkTable` for any Java 25+ SDK
-2. **IDE System Cache**: `PathManager.getSystemPath()/xtc-jre/temurin-25-jre/`
+2. **Gradle Cache**: `{GRADLE_USER_HOME}/caches/xtc-jre/temurin-25-jre/`
 3. **Foojay Download**: Eclipse Temurin JRE 25 (only if no JRE found)
 
 ### JRE Cache Location
 
 ```
-{PathManager.getSystemPath()}/
+{GRADLE_USER_HOME}/caches/
 └── xtc-jre/
-    └── temurin-25-jre/
-        ├── bin/
-        │   └── java
-        ├── lib/
-        └── ...
+    ├── temurin-25-jre/
+    │   ├── bin/
+    │   │   └── java
+    │   ├── lib/
+    │   └── ...
+    ├── temurin-25-jre.json       # Package metadata (for update checks)
+    └── .provision-failed-25      # Failure marker (prevents retry loops)
 ```
 
-Platform-specific paths:
-- macOS: `~/Library/Caches/JetBrains/IntelliJIdea2025.1/xtc-jre/`
-- Linux: `~/.cache/JetBrains/IntelliJIdea2025.1/xtc-jre/`
-- Windows: `%LOCALAPPDATA%\JetBrains\IntelliJIdea2025.1\xtc-jre\`
+Default `GRADLE_USER_HOME` is `~/.gradle`, so the default cache path is `~/.gradle/caches/xtc-jre/`.
 
-**Why IDE system path?**
-- Managed by IntelliJ (cleaned during "Invalidate Caches")
-- Follows IntelliJ plugin conventions
-- Survives plugin updates
-- Consistent with how other plugins cache downloads
+**Why Gradle user home (not IDE system path)?**
+- Persists across IDE sessions and cache invalidation
+- Won't be cleared by IntelliJ's "Invalidate Caches"
+- Consistent with Gradle's own JDK toolchain cache location
+- Survives plugin and IDE updates
 
 ### Java Version: 25
 
@@ -161,7 +170,7 @@ GET https://api.foojay.io/disco/v3.0/packages
 
 | Parameter | Value | Notes |
 |-----------|-------|-------|
-| `version` | `24` | Major version only |
+| `version` | `25` | Major version only |
 | `distribution` | `temurin` | Eclipse Adoptium |
 | `architecture` | `aarch64` or `x64` | Detected at runtime |
 | `operating_system` | `macos`, `linux`, `windows` | Detected at runtime |
@@ -173,7 +182,7 @@ GET https://api.foojay.io/disco/v3.0/packages
 ### Example Request
 
 ```
-GET https://api.foojay.io/disco/v3.0/packages?version=24&distribution=temurin&architecture=aarch64&operating_system=macos&archive_type=tar.gz&package_type=jre&javafx_bundled=false&latest=available
+GET https://api.foojay.io/disco/v3.0/packages?version=25&distribution=temurin&architecture=aarch64&operating_system=macos&archive_type=tar.gz&package_type=jre&javafx_bundled=false&latest=available
 ```
 
 ### Example Response
@@ -185,12 +194,12 @@ GET https://api.foojay.io/disco/v3.0/packages?version=24&distribution=temurin&ar
       "id": "...",
       "archive_type": "tar.gz",
       "distribution": "temurin",
-      "major_version": 24,
-      "java_version": "24.0.1+9",
+      "major_version": 25,
+      "java_version": "25+36",
       "operating_system": "macos",
       "architecture": "aarch64",
       "package_type": "jre",
-      "filename": "OpenJDK24U-jre_aarch64_mac_hotspot_24.0.1_9.tar.gz",
+      "filename": "OpenJDK25U-jre_aarch64_mac_hotspot_25_36.tar.gz",
       "links": {
         "pkg_download_redirect": "https://api.foojay.io/disco/v3.0/ids/.../redirect",
         "pkg_info_uri": "https://api.foojay.io/disco/v3.0/ids/..."
@@ -206,7 +215,7 @@ GET https://api.foojay.io/disco/v3.0/packages?version=24&distribution=temurin&ar
 ### Download Flow
 
 1. **Query API** → Get package metadata including download URL and checksum
-2. **Check cache** → If `~/.xtc/jre/temurin-24-jre/` exists and version matches, skip
+2. **Check cache** → If `~/.gradle/caches/xtc-jre/temurin-25-jre/` exists and version matches, skip
 3. **Download** → Use redirect URL, show progress in notification
 4. **Verify** → SHA-256 checksum validation
 5. **Extract** → tar.gz (Unix) or zip (Windows) to cache directory
@@ -267,7 +276,7 @@ object PlatformDetector {
  */
 class JreProvisioner(
     private val cacheDir: Path = Path.of(System.getProperty("user.home"), ".xtc", "jre"),
-    private val targetVersion: Int = 24,
+    private val targetVersion: Int = 25,
     private val distribution: String = "temurin"
 ) {
     /**
@@ -328,77 +337,39 @@ sealed class JreProvisioningException(message: String, cause: Throwable? = null)
 
 ## IntelliJ Plugin Integration
 
-### Modified XtcLspServerSupportProvider
+### LSP4IJ-Based Architecture
 
-```kotlin
-class XtcLspServerSupportProvider : LspServerSupportProvider {
+The plugin uses LSP4IJ (not IntelliJ's built-in LSP) for both LSP and DAP support.
+See `PLAN_IDE_INTEGRATION.md § Design Decision: LSP4IJ over IntelliJ Built-in LSP`.
 
-    override fun fileOpened(
-        project: Project,
-        file: VirtualFile,
-        serverStarter: LspServerSupportProvider.LspServerStarter
-    ) {
-        if (file.extension != "x") return
+**Key classes:**
 
-        serverStarter.ensureServerStarted(
-            XtcLspServerDescriptor(project)
-        )
-    }
-}
+| Class | Role |
+|-------|------|
+| `XtcLanguageServerFactory` | LSP4IJ `LanguageServerFactory` — creates connection providers |
+| `XtcLspConnectionProvider` | Extends `OSProcessStreamConnectionProvider` — launches LSP server |
+| `XtcDebugAdapterFactory` | LSP4IJ `DebugAdapterDescriptorFactory` — creates DAP descriptors |
+| `XtcDebugAdapterDescriptor` | Extends `DebugAdapterDescriptor` — launches DAP server |
+| `PluginPaths` | Shared utility — finds server JARs in plugin `bin/` directory |
+| `JreProvisioner` | Shared — resolves/downloads Java 25+ JRE |
 
-class XtcLspServerDescriptor(project: Project) : ProjectWideLspServerDescriptor(project, "XTC") {
+### Server JAR Location
 
-    private val provisioner = JreProvisioner()
-    private val serverJarPath: Path by lazy { extractServerJar() }
+Server JARs are placed in `<plugin-dir>/bin/`, **not** `lib/`. If placed in `lib/`, IntelliJ
+loads their bundled lsp4j classes which conflict with LSP4IJ's own lsp4j. The `bin/` directory
+is not on IntelliJ's classloader path.
 
-    override fun createCommandLine(): GeneralCommandLine {
-        val javaPath = runBlocking {
-            ensureJreProvisioned()
-        }
-
-        return GeneralCommandLine(
-            javaPath.toString(),
-            "-jar",
-            serverJarPath.toString()
-        ).withWorkDirectory(project.basePath)
-    }
-
-    private suspend fun ensureJreProvisioned(): Path {
-        if (provisioner.isProvisioned()) {
-            return provisioner.getJavaExecutable()!!
-        }
-
-        // Show progress notification during download
-        return withBackgroundProgress(project, "Downloading Java Runtime for XTC...") { reporter ->
-            provisioner.provision { progress ->
-                reporter.fraction(progress.toDouble())
-            }
-        }
-    }
-
-    private fun extractServerJar(): Path {
-        val pluginPath = PluginManagerCore.getPlugin(
-            PluginId.getId("org.xtclang.idea")
-        )?.pluginPath ?: throw IllegalStateException("Plugin path not found")
-
-        val jarInPlugin = pluginPath.resolve("lib/xtc-lsp-server.jar")
-        if (Files.exists(jarInPlugin)) {
-            return jarInPlugin
-        }
-
-        // Fallback: extract from plugin resources (for development)
-        val cacheDir = Path.of(System.getProperty("user.home"), ".xtc", "lsp")
-        Files.createDirectories(cacheDir)
-        val targetJar = cacheDir.resolve("xtc-lsp-server.jar")
-
-        javaClass.getResourceAsStream("/lsp-server/xtc-lsp-server.jar")?.use { input ->
-            Files.copy(input, targetJar, StandardCopyOption.REPLACE_EXISTING)
-        }
-
-        return targetJar
-    }
-}
 ```
+<plugin-dir>/
+├── lib/                        # IntelliJ classloader path (plugin classes)
+│   └── xtc-intellij-plugin.jar
+└── bin/                        # Out-of-process server JARs (NOT on classloader)
+    ├── xtc-lsp-server.jar
+    └── xtc-dap-server.jar
+```
+
+`PluginPaths.findServerJar(jarName)` resolves JARs using `PluginManagerCore` with a
+classloader-based fallback. On failure, the exception lists all searched paths.
 
 ### Progress Notification
 
@@ -415,7 +386,7 @@ After completion:
 
 ```
 ┌─────────────────────────────────────────────────┐
-│ ✓ XTC Language Server ready (Java 24)           │
+│ ✓ XTC Language Server ready (Java 25)           │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -423,87 +394,37 @@ After completion:
 
 ## Build Changes
 
-### lsp-server/build.gradle.kts
+The LSP server toolchain version is configured in `version.properties` (`org.xtclang.kotlin.jdk`).
+Both `lsp-server/build.gradle.kts` and `dap-server/build.gradle.kts` read this property.
 
-```kotlin
-// Change toolchain from 21 to 24
-kotlin {
-    jvmToolchain(24)
-}
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(24)
-    }
-}
-
-// Ensure fat JAR is properly configured
-val fatJar by tasks.existing(Jar::class) {
-    manifest {
-        attributes(
-            "Main-Class" to "org.xvm.lsp.server.XtcLanguageServerLauncherKt"
-        )
-    }
-}
-```
-
-### intellij-plugin/build.gradle.kts
-
-```kotlin
-// Add HTTP client dependency for Foojay API
-dependencies {
-    // ... existing dependencies ...
-
-    // For JRE provisioning
-    implementation("io.ktor:ktor-client-core:2.3.7")
-    implementation("io.ktor:ktor-client-cio:2.3.7")
-    implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
-
-    // For archive extraction (already have this for other purposes)
-    implementation("org.apache.commons:commons-compress:1.26.0")
-}
-
-// Bundle lsp-server JAR with plugin
-val copyLspServer by tasks.registering(Copy::class) {
-    from(project(":lang:lsp-server").tasks.named("fatJar"))
-    into(layout.buildDirectory.dir("idea-sandbox/plugins/xtc-intellij-plugin/lib"))
-    rename { "xtc-lsp-server.jar" }
-}
-
-tasks.named("prepareSandbox") {
-    dependsOn(copyLspServer)
-}
-```
+The IntelliJ plugin bundles server JARs in `bin/` via the `prepareSandbox` task in
+`intellij-plugin/build.gradle.kts`. JRE provisioning uses Java's built-in `HttpClient`
+and IntelliJ's `Decompressor.Tar`/`Decompressor.Zip` — no Ktor or Commons Compress.
 
 ---
 
 ## File Structure
 
-### New Files
-
 ```
 intellij-plugin/src/main/kotlin/org/xtclang/idea/
+├── PluginPaths.kt                        # Shared: find server JARs in plugin bin/
+├── dap/
+│   └── XtcDebugAdapterFactory.kt         # DAP factory + descriptor (out-of-process)
 ├── lsp/
-│   ├── XtcLspServerSupportProvider.kt    # Modified for out-of-process
+│   ├── XtcLspServerSupportProvider.kt    # LSP factory + connection provider (out-of-process)
 │   └── jre/
-│       └── JreProvisioner.kt             # All-in-one: Foojay API, download, extraction (~200 lines)
-└── settings/
-    └── XtcSettingsConfigurable.kt        # Settings UI (optional JRE path) - PENDING
+│       └── JreProvisioner.kt             # JRE resolution + Foojay download (~350 lines)
+├── project/                              # New Project wizard
+└── run/                                  # Run configurations
 ```
 
-**Note**: The implementation was simplified to a single `JreProvisioner.kt` file that:
-- Queries Foojay Disco API for JRE packages
-- Downloads with progress callback
-- Extracts using IntelliJ's built-in `Decompressor.Tar`/`Decompressor.Zip`
-- Caches in `~/.xtc/jre/temurin-25-jre/`
-
-### Modified Files
-
-```
-lsp-server/build.gradle.kts               # Java 25 toolchain
-intellij-plugin/build.gradle.kts          # Bundle server JAR in bin/
-```
+`JreProvisioner.kt` handles:
+- Querying Foojay Disco API for JRE packages
+- Downloading with progress callback
+- Extracting using IntelliJ's built-in `Decompressor.Tar`/`Decompressor.Zip`
+- Caching in `~/.gradle/caches/xtc-jre/temurin-25-jre/`
+- Failure markers to prevent retry loops
+- Periodic update checks (every 7 days)
 
 ---
 
@@ -548,8 +469,10 @@ class PlatformDetectorTest {
 
 ### Integration Tests
 
+> **Note:** All `./gradlew :lang:*` commands require `-PincludeBuildLang=true -PincludeBuildAttachLang=true` when run from the project root.
+
 ```bash
-# Test standalone server with Java 24
+# Test standalone server with Java 25
 export JAVA_HOME=/path/to/java24
 $JAVA_HOME/bin/java -jar lang/lsp-server/build/libs/xtc-lsp-server-fat.jar
 
@@ -560,7 +483,7 @@ $JAVA_HOME/bin/java -jar lang/lsp-server/build/libs/xtc-lsp-server-fat.jar
 
 ### Manual Testing Checklist
 
-- [ ] First launch on clean system (no ~/.xtc/jre/)
+- [ ] First launch on clean system (no ~/.gradle/caches/xtc-jre/)
 - [ ] Progress notification shows during download
 - [ ] Server starts after download completes
 - [ ] Subsequent launches use cached JRE (no download)
@@ -943,12 +866,9 @@ The LSP server **already has extensive `logger.info` calls** throughout `XtcLang
 - Timing information for all operations (e.g., "compiled in 12.3ms")
 - Initialization, shutdown, and exit lifecycle events
 
-**THE PROBLEM**: The current `logback.xml` sets level to `WARN`, discarding all INFO logs!
-
-```xml
-<!-- CURRENT (bad for development): -->
-<logger name="org.xvm.lsp" level="WARN"/>  <!-- All logger.info calls silently discarded! -->
-```
+**RESOLVED**: The logback.xml now defaults to INFO level with configurable override via
+`-Dxtc.logLevel` or `XTC_LOG_LEVEL` environment variable. Logs go to both stderr (for LSP4IJ panel)
+and a rolling file at `~/.xtc/logs/lsp-server.log`.
 
 ### Log Streams
 
@@ -957,51 +877,36 @@ The LSP server **already has extensive `logger.info` calls** throughout `XtcLang
 | **stdout** | LSP JSON-RPC messages | Consumed by LSP4IJ (protocol) - NEVER touch |
 | **stderr** | Log messages via SLF4J/Logback | **Must appear in Gradle console during runIde** |
 
-### Solution: Development vs Production Log Levels
+### Solution: Dual-Appender Logging (IMPLEMENTED)
 
-**lsp-server/src/main/resources/logback.xml** should use INFO by default:
+**lsp-server/src/main/resources/logback.xml** uses INFO by default with two appenders:
 
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<configuration>
-    <statusListener class="ch.qos.logback.core.status.NopStatusListener"/>
+- **STDERR appender**: `%d{HH:mm:ss} %-5level %logger{0} - %msg%n` (for LSP4IJ's Language Servers panel)
+- **FILE appender**: `%d{HH:mm:ss.SSS} %-5level %logger{0} - %msg%n` (rolling log at `~/.xtc/logs/lsp-server.log`)
 
-    <appender name="STDERR" class="ch.qos.logback.core.ConsoleAppender">
-        <target>System.err</target>
-        <encoder>
-            <pattern>%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg%n</pattern>
-        </encoder>
-    </appender>
+The `%logger{0}` pattern displays just the simple class name (e.g., `XtcLanguageServer`, `TreeSitterAdapter`).
+No hardcoded `[ClassName]` brackets in the log messages -- logback handles class name display.
 
-    <!-- XTC LSP server - INFO level shows all the useful logs -->
-    <logger name="org.xvm.lsp" level="INFO"/>
-
-    <!-- Eclipse LSP4J - keep quiet unless debugging protocol issues -->
-    <logger name="org.eclipse.lsp4j" level="WARN"/>
-
-    <root level="WARN">
-        <appender-ref ref="STDERR"/>
-    </root>
-</configuration>
-```
+Log level is configurable via: `-Dxtc.logLevel=DEBUG`, `XTC_LOG_LEVEL=DEBUG`, or `-Plog=DEBUG`.
+Default is INFO. LSP4J logger is set to ERROR (not WARN).
 
 ### Expected Console Output During runIde
 
-With INFO level, you'll see all the existing `logger.info` calls in the Gradle console:
+With INFO level (default), stderr output visible in the Gradle console:
 
 ```
-10:23:45.123 INFO  o.x.l.s.XtcLanguageServer - ========================================
-10:23:45.124 INFO  o.x.l.s.XtcLanguageServer - XTC Language Server v0.1.0
-10:23:45.124 INFO  o.x.l.s.XtcLanguageServer - Backend: Tree-sitter
-10:23:45.125 INFO  o.x.l.s.XtcLanguageServer - ========================================
-10:23:45.130 INFO  o.x.l.s.XtcLanguageServer - Connected to language client
-10:23:45.145 INFO  o.x.l.s.XtcLanguageServer - Initializing for workspace folders: [file:///path/to/project]
-10:23:45.146 INFO  o.x.l.s.XtcLanguageServer - Client capabilities: hover, completion, definition, references
-10:23:45.147 INFO  o.x.l.s.XtcLanguageServer - XTC Language Server initialized
-10:23:46.201 INFO  o.x.l.s.XtcLanguageServer - textDocument/didOpen: file:///path/to/Hello.x (1234 bytes)
-10:23:46.215 INFO  o.x.l.s.XtcLanguageServer - textDocument/didOpen: compiled in 13.2ms, 0 diagnostics
-10:23:47.892 INFO  o.x.l.s.XtcLanguageServer - textDocument/hover: file:///path/to/Hello.x at 10:15
-10:23:47.894 INFO  o.x.l.s.XtcLanguageServer - textDocument/hover: found symbol in 1.8ms
+10:23:45 INFO  XtcLanguageServer - initialize: ========================================
+10:23:45 INFO  XtcLanguageServer - initialize: XTC Language Server v0.4.4 (pid=12345)
+10:23:45 INFO  XtcLanguageServer - initialize: Backend: TreeSitter
+10:23:45 INFO  XtcLanguageServer - initialize: ========================================
+10:23:45 INFO  XtcLanguageServer - connect: connected to language client
+10:23:45 INFO  XtcLanguageServer - initialize: workspace folders: [file:///path/to/project]
+10:23:45 INFO  XtcLanguageServer - initialize: client capabilities: hover, completion, definition, references
+10:23:45 INFO  XtcLanguageServer - initialize: XTC Language Server initialized
+10:23:46 INFO  XtcLanguageServer - textDocument/didOpen: file:///path/to/Hello.x (1234 bytes)
+10:23:46 INFO  XtcLanguageServer - textDocument/didOpen: compiled in 13.2ms, 0 diagnostics
+10:23:47 INFO  XtcLanguageServer - textDocument/hover: file:///path/to/Hello.x at 10:15
+10:23:47 INFO  XtcLanguageServer - textDocument/hover: found symbol in 1.8ms
 ```
 
 ### Plugin Side: Forwarding stderr to Gradle Console
@@ -1091,7 +996,7 @@ LSP4IJ also provides its own view:
 
 ## Implementation Order
 
-1. **lsp-server Java 24 toolchain** - Update build, verify fat JAR works
+1. **lsp-server Java 25 toolchain** - Update build, verify fat JAR works
 2. **PlatformDetector** - Simple utility, no dependencies
 3. **FoojayClient** - API client with tests
 4. **JreProvisioner** - Core download/cache logic
@@ -1105,7 +1010,7 @@ LSP4IJ also provides its own view:
 
 ## Success Criteria
 
-- [ ] LSP server runs with Java 24 and tree-sitter adapter
+- [ ] LSP server runs with Java 25 and tree-sitter adapter
 - [ ] JRE automatically downloaded on first .x file open
 - [ ] Download shows progress notification
 - [ ] Cached JRE reused on subsequent launches

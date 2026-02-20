@@ -18,6 +18,17 @@ val releaseChannel: String = xdkProperties.stringValue("xdk.intellij.release.cha
 // Publishing is disabled by default. Enable with: ./gradlew publishPlugin -PenablePublish=true
 val enablePublish = providers.gradleProperty("enablePublish").map { it.toBoolean() }.getOrElse(false)
 
+// Log level: -Plog=DEBUG or XTC_LOG_LEVEL=DEBUG (default: INFO)
+// Propagated to the IDE JVM as a system property and environment variable, so the
+// IntelliJ plugin passes it to the out-of-process LSP/DAP server child processes.
+// Resolved via xdkProperties to read from composite root gradle.properties.
+val logLevel: String =
+    xdkProperties
+        .stringValue(
+            "log",
+            System.getenv("XTC_LOG_LEVEL")?.uppercase() ?: "INFO",
+        ).uppercase()
+
 // =============================================================================
 // IntelliJ IDE Resolution
 // =============================================================================
@@ -62,7 +73,7 @@ fun findLocalIntelliJ(): File? {
             "windows" in osName -> {
                 val programFiles = System.getenv("ProgramFiles") ?: "C:\\Program Files"
                 listOf(
-                    "$programFiles\\JetBrains\\IntelliJ IDEA Community Edition 2025.1",
+                    "$programFiles\\JetBrains\\IntelliJ IDEA Community Edition 2025.3",
                     "$programFiles\\JetBrains\\IntelliJ IDEA Community Edition",
                     "$userHome\\AppData\\Local\\JetBrains\\Toolbox\\apps\\IDEA-C",
                 )
@@ -79,22 +90,16 @@ val useLocalIde = providers.gradleProperty("useLocalIde").map { it.toBoolean() }
 val hasExplicitLocalPath = providers.gradleProperty("intellijLocalPath").isPresent
 val localIntelliJ: File? = if (useLocalIde || hasExplicitLocalPath) findLocalIntelliJ() else null
 
-val gradleUserHome = gradle.gradleUserHomeDir
 val ideVersion =
     libs.versions.lang.intellij.ide
         .get()
 
-// The IntelliJ Platform Gradle Plugin downloads the IDE distribution into the Gradle module cache:
-//   $GRADLE_USER_HOME/caches/modules-2/files-2.1/idea/ideaIC/<version>/
+// The IntelliJ Platform Gradle Plugin manages IDE download caching internally.
 // Bundled plugin metadata is stored locally in: lang/.intellijPlatform/localPlatformArtifacts/
 //
-// To purge all cached IntelliJ distributions and force a fresh re-download:
-//   rm -rf "${GRADLE_USER_HOME:-$HOME/.gradle}/caches/modules-2/files-2.1/idea"
+// To force a fresh re-download, delete the localPlatformArtifacts directory:
 //   rm -rf lang/.intellijPlatform/localPlatformArtifacts
 // Then run any task that requires the IDE (e.g. ./gradlew :lang:intellij-plugin:runIde).
-
-val ideCacheDir =
-    File(gradleUserHome, "caches/modules-2/files-2.1/idea/ideaIC/$ideVersion")
 
 when {
     localIntelliJ != null -> {
@@ -105,18 +110,9 @@ when {
         logger.warn("[ide]   Prefer the default sandboxed download for reliable development.")
     }
     else -> {
-        if (ideCacheDir.exists()) {
-            val sizeBytes =
-                ideCacheDir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
-            val sizeMb = sizeBytes / (1024 * 1024)
-            logger.lifecycle("[ide] IntelliJ Community $ideVersion (cached, ~$sizeMb MB)")
-            logger.lifecycle("[ide]   Location: $ideCacheDir")
-        } else {
-            logger.lifecycle("[ide] IntelliJ Community $ideVersion not cached - will download (~1.5 GB)")
-            logger.lifecycle("[ide]   Destination: $ideCacheDir")
-            logger.lifecycle("[ide]   First-time download may take several minutes.")
-            logger.lifecycle("[ide]   To use a local IDE instead: -PuseLocalIde=true")
-        }
+        logger.lifecycle("[ide] IntelliJ IDEA $ideVersion (managed by IntelliJ Platform Gradle Plugin)")
+        logger.lifecycle("[ide]   First-time download may take several minutes if not already cached.")
+        logger.lifecycle("[ide]   To use a local IDE instead: -PuseLocalIde=true")
     }
 }
 
@@ -265,7 +261,7 @@ dependencies {
         if (localIntelliJ != null) {
             local(localIntelliJ.absolutePath)
         } else {
-            intellijIdeaCommunity(
+            intellijIdea(
                 libs.versions.lang.intellij.ide
                     .get(),
             )
@@ -284,13 +280,13 @@ dependencies {
     textMateGrammar(project(path = ":dsl", configuration = "textMateElements"))
 }
 
-// IntelliJ 2025.1 runs on JDK 21, so we must target JDK 21 (not the project's JDK 25)
+// IntelliJ 2025.3 runs on JBR 21, so we must target JDK 21 (not the project's JDK 25)
 val intellijJdkVersion: Int =
     libs.versions.lang.intellij.jdk
         .get()
         .toInt()
 
-// Derive sinceBuild from IDE version: "2025.1" -> "251" (last 2 digits of year + major version)
+// Derive sinceBuild from IDE version: "2025.3.2" -> "253" (last 2 digits of year + major version)
 val intellijIdeVersion: String =
     libs.versions.lang.intellij.ide
         .get()
@@ -385,11 +381,7 @@ val publishPlugin by tasks.existing {
 // plugin settings via the search bar — they must navigate to them manually. Enabling it adds
 // ~30-60s to the build because it launches a headless IDE to index all settings pages.
 // Enable with: -Plsp.buildSearchableOptions=true
-val buildSearchableOptionsEnabled =
-    providers
-        .gradleProperty("lsp.buildSearchableOptions")
-        .map { it.toBoolean() }
-        .getOrElse(false)
+val buildSearchableOptionsEnabled = xdkProperties.booleanValue("lsp.buildSearchableOptions", false)
 
 val searchableOptionsStatus =
     if (buildSearchableOptionsEnabled) "enabled" else "disabled (use -Plsp.buildSearchableOptions=true to enable)"
@@ -590,6 +582,13 @@ val runIde by tasks.existing {
         configureSandboxLogging,
     )
 
+    // Pass log level to the IDE JVM so the IntelliJ plugin can forward it to the
+    // out-of-process LSP server. Set both system property and env var for robustness.
+    (this as JavaExec).apply {
+        systemProperty("xtc.logLevel", logLevel)
+        environment("XTC_LOG_LEVEL", logLevel)
+    }
+
     // Log sandbox location, mavenLocal status, version info, and idea.log path
     val sandboxDir = sandboxConfigDir.map { it.parentFile }
     val mavenLocalRoot =
@@ -603,9 +602,6 @@ val runIde by tasks.existing {
         libs.versions.lang.intellij.lsp4ij
             .get()
     val capturedSinceBuild = intellijSinceBuild
-    val capturedIdeCacheDir = ideCacheDir
-    val capturedGradleUserHome = gradleUserHome
-    val capturedGradleVersion = gradle.gradleVersion
     val capturedPluginVersion = project.version.toString()
     doFirstTask {
         val sandbox = sandboxDir.get()
@@ -615,21 +611,9 @@ val runIde by tasks.existing {
 
         // Version matrix - all pinned in gradle/libs.versions.toml
         logger.lifecycle("[runIde] ─── Version Matrix (gradle/libs.versions.toml) ───")
-        logger.lifecycle("[runIde]   IntelliJ CE:  $capturedIdeVersion (sinceBuild=$capturedSinceBuild)")
-        logger.lifecycle("[runIde]   LSP4IJ:       $capturedLsp4ijVersion")
-        logger.lifecycle("[runIde]   XTC plugin:   $capturedPluginVersion")
-
-        // IDE cache layers
-        logger.lifecycle("[runIde] ─── IDE Cache Layers ───")
-        logger.lifecycle("[runIde]   Download:  ${capturedIdeCacheDir.absolutePath}")
-        if (capturedIdeCacheDir.exists()) {
-            val sizeMb = capturedIdeCacheDir.walkTopDown().filter { it.isFile }.sumOf { it.length() } / (1024 * 1024)
-            logger.lifecycle("[runIde]              (cached, ~$sizeMb MB - survives clean)")
-        } else {
-            logger.lifecycle("[runIde]              (not cached - will download on demand)")
-        }
-        logger.lifecycle("[runIde]   Extracted: $capturedGradleUserHome/caches/$capturedGradleVersion/transforms/...")
-        logger.lifecycle("[runIde]              (Gradle artifact transform - survives clean)")
+        logger.lifecycle("[runIde]   IntelliJ IDEA: $capturedIdeVersion (sinceBuild=$capturedSinceBuild)")
+        logger.lifecycle("[runIde]   LSP4IJ:        $capturedLsp4ijVersion")
+        logger.lifecycle("[runIde]   XTC plugin:    $capturedPluginVersion")
 
         // Sandbox status
         logger.lifecycle("[runIde] ─── Sandbox ───")
@@ -658,8 +642,7 @@ val runIde by tasks.existing {
         // Recovery instructions
         logger.lifecycle("[runIde] ─── Reset Commands ───")
         logger.lifecycle("[runIde]   Nuke sandbox (keeps IDE download):  ./gradlew :lang:intellij-plugin:clean")
-        logger.lifecycle("[runIde]   Nuke everything (re-downloads IDE): rm -rf ${capturedIdeCacheDir.absolutePath}")
-        logger.lifecycle("[runIde]              then: rm -rf lang/.intellijPlatform/localPlatformArtifacts")
+        logger.lifecycle("[runIde]   Nuke cached IDE + metadata:         rm -rf lang/.intellijPlatform/localPlatformArtifacts")
 
         // Tail LSP server log file to Gradle console in real time.
         // The LSP server writes to this file via logback's FILE appender.
