@@ -663,22 +663,22 @@ public abstract class Builder {
                     code.dup();
                     // stack is Int128 Int128
                     code.getfield(CD_Int128, "$lowValue", CD_long);
-                    // stack is Int128 long long_2
+                    // stack is Int128 long
                     code.dup2_x1().pop2();
-                    // stack is long long_2 Int128
+                    // stack is long Int128
                     code.getfield(CD_Int128, "$highValue", CD_long);
-                    // stack is long long_2 long long_2
+                    // stack is long long_2
                 }
                 case "UInt128" -> {
                     // stack is UInt128
                     code.dup();
                     // stack is UInt128 UInt128
                     code.getfield(CD_UInt128, "$lowValue", CD_long);
-                    // stack is UInt128 long long_2
+                    // stack is UInt128 long
                     code.dup2_x1().pop2();
-                    // stack is long long_2 UInt128
+                    // stack is long UInt128
                     code.getfield(CD_UInt128, "$highValue", CD_long);
-                    // stack is long long_2 long long_2
+                    // stack is long long_2
                 }
                 default -> throw new IllegalStateException();
             }

@@ -12,7 +12,6 @@ import org.xvm.asm.OpInPlaceAssign;
 
 import org.xvm.asm.constants.PropertyConstant;
 
-import org.xvm.asm.constants.TypeConstant;
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.NumberSupport;
 import org.xvm.javajit.RegisterInfo;

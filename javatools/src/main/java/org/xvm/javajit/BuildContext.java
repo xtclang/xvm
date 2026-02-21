@@ -81,12 +81,14 @@ import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.EXT;
 import static org.xvm.javajit.Builder.N_TypeMismatch;
 import static org.xvm.javajit.Builder.OPT;
-import static org.xvm.javajit.Builder.loadNull;
 import static org.xvm.javajit.JitFlavor.AlwaysNull;
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
+import static org.xvm.javajit.JitFlavor.Primitive;
+import static org.xvm.javajit.JitFlavor.PrimitiveWithDefault;
 import static org.xvm.javajit.JitFlavor.XvmPrimitive;
 import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 import static org.xvm.javajit.JitFlavor.Specific;
+import static org.xvm.javajit.JitFlavor.XvmPrimitiveWithDefault;
 import static org.xvm.javajit.TypeSystem.ID_NUM;
 
 /**
@@ -593,38 +595,143 @@ public class BuildContext {
             code.localVariable(slot, name, paramDesc.cd, scope.startLabel, scope.endLabel);
             scope.topReg = Math.max(scope.topReg, varIndex + 1);
 
-            JitFlavor flavor = paramDesc.flavor;
+            JitFlavor flavor      = paramDesc.flavor;
+            boolean   withDefault = false;
             switch (flavor) {
-            case Specific, Widened, Primitive, SpecificWithDefault, WidenedWithDefault:
+            case Primitive, Specific, Widened:
                 registerInfos.put(varIndex,
                     new SingleSlot(varIndex, slot, flavor, type, paramDesc.cd, name));
                 break;
 
-            case NullablePrimitive, PrimitiveWithDefault: {
-                int extSlot = code.parameterSlot(extraArgs + i + 1);
+            case PrimitiveWithDefault, SpecificWithDefault, WidenedWithDefault: {
+                assert param.hasDefaultValue();
+
+                Label ifNotDefault = code.newLabel();
+                if (flavor == PrimitiveWithDefault) {
+                    // if the "extSlot" is true, use the value from the method structure
+                    int extSlot = code.parameterSlot(extraArgs + i + 1);
+                    i++; // we consumed the next param
+                    code.iload(extSlot)
+                        .ifeq(ifNotDefault);
+                } else {
+                    // if the value is "null", use the value from the method structure
+                    code.aload(slot)
+                        .ifnonnull(ifNotDefault);
+                }
+                RegisterInfo defaultReg = loadConstant(code, param.getDefaultValue());
+                assert defaultReg.type().isA(type);
+
+                if (defaultReg.cd().isPrimitive() && flavor != PrimitiveWithDefault) {
+                    Builder.box(code, defaultReg);
+                }
+                Builder.store(code, paramDesc.cd, slot);
+                code.labelBinding(ifNotDefault);
 
                 registerInfos.put(varIndex,
-                    new ExtendedSlot(this, varIndex, slot, extSlot, flavor, type, paramDesc.cd, name));
-                i++; // already processed
+                    new SingleSlot(varIndex, slot, flavor.baseFlavor, type, paramDesc.cd, name));
                 break;
             }
 
-            case XvmPrimitive, NullableXvmPrimitive, XvmPrimitiveWithDefault: {
+            case NullablePrimitiveWithDefault: {
+                assert param.hasDefaultValue();
+
+                Label ifNotDefault = code.newLabel();
+                int   extSlot      = code.parameterSlot(extraArgs + i + 1);
+
+                // if the "extSlot" is -1, use the default value from the method structure,
+                // otherwise it's a NullablePrimitive
+                code.iload(extSlot)
+                    .iconst_m1()
+                    .if_icmpne(ifNotDefault);
+
+                RegisterInfo defaultReg = loadConstant(code, param.getDefaultValue());
+                assert defaultReg.type().isA(type);
+
+                if (defaultReg.type().isOnlyNullable()) {
+                    // Null value; get rid of it and store "true"
+                    code.pop()
+                        .iconst_1();
+                } else {
+                    // not Null - store the primitive and "false"
+                    assert defaultReg.flavor() == Primitive;
+                    Builder.store(code, defaultReg.cd(), slot);
+                    code.iconst_0();
+                }
+                code.istore(extSlot)
+                    .labelBinding(ifNotDefault);
+                // fall through!
+            }
+
+            case NullablePrimitive: {
+                int extSlot = code.parameterSlot(extraArgs + i + 1);
+                i++; // we consumed the next param
+
+                registerInfos.put(varIndex,
+                    new ExtendedSlot(this, varIndex, slot, extSlot, NullablePrimitive, type,
+                        paramDesc.cd, name));
+                break;
+            }
+
+            case XvmPrimitiveWithDefault, NullableXvmPrimitiveWithDefault: {
+                assert param.hasDefaultValue();
+
+                ClassDesc[] cds          = JitTypeDesc.getXvmPrimitiveClasses(type);
+                Label       ifNotDefault = code.newLabel();
+                int         extSlot      = code.parameterSlot(extraArgs + i + cds.length);
+
+                code.iload(extSlot);
+                if (flavor == XvmPrimitiveWithDefault) {
+                    // if the "extSlot" is 1, use the default value from the method structure;
+                    // otherwise it's an XvmPrimitive
+                    code.iconst_1();
+                } else {
+                    // if the "extSlot" is -1, use the default value from the method structure;
+                    // otherwise it's a NullableXvmPrimitive
+                    code.iconst_m1();
+                }
+                code.if_icmpne(ifNotDefault);
+
+                RegisterInfo defaultReg = loadConstant(code, param.getDefaultValue());
+                assert defaultReg.type().isA(type);
+
+                if (defaultReg.type().isOnlyNullable()) {
+                    // Null value; get rid of it and store "true"
+                    code.pop()
+                        .iconst_1();
+                } else {
+                    // not Null - store the multi-slot primitives (in the reverse order) and "false"
+                    assert defaultReg.flavor() == XvmPrimitive;
+                    for (int j = cds.length-1; j >= 0; j--) {
+                        slot = code.parameterSlot(extraArgs + i + j);
+                        Builder.store(code, cds[j], slot);
+                    }
+                    code.iconst_0();
+                }
+                code.istore(extSlot)
+                    .labelBinding(ifNotDefault);
+                flavor      = flavor.baseFlavor;
+                withDefault = true;
+                // fall through!
+            }
+
+            case XvmPrimitive, NullableXvmPrimitive: {
                 ClassDesc[] cds   = JitTypeDesc.getXvmPrimitiveClasses(type);
                 int[]       slots = new int[cds.length];
 
-                slots[0] = slot;
-                for (int j = 1; j < cds.length; j++) {
-                    i++; // we consume the next param
-                    slots[j] = code.parameterSlot(extraArgs + i);
+                for (int j = 0; j < cds.length; j++) {
+                    slots[j] = code.parameterSlot(extraArgs + i + j);
                 }
+                i += cds.length - 1; // we consumed the next params
 
                 int extSlot;
                 if (flavor == XvmPrimitive) {
                     extSlot = MultipleSlot.NO_SLOT;
+                    if (withDefault) {
+                        i++; // skip the next param
+                    }
                 } else {
                     extSlot = code.parameterSlot(extraArgs + i + 1);
-                    i++; // we consume the next param
+                    i++; // we consumed the next param
                 }
 
                 ClassDesc cd = flavor == NullableXvmPrimitive
@@ -1130,7 +1237,7 @@ public class BuildContext {
                     code.localVariable(slots[i], name + "$" + i, cds[i], varStart, scope.endLabel);
                 }
                 int slotExt = scope.allocateLocal(regId, TypeKind.BOOLEAN);
-                code.localVariable(slotExt,   name+EXT, CD_boolean, varStart, scope.endLabel);
+                code.localVariable(slotExt, name+EXT, CD_boolean, varStart, scope.endLabel);
                 yield new MultipleSlot(this, regId, slots, slotExt, NullableXvmPrimitive,
                         type, jtd.cd, cds, name);
             }
@@ -1217,7 +1324,7 @@ public class BuildContext {
                     Builder.unbox(code, typeTo, regTo.cd());
                     break AddTransformation;
 
-                case Specific, Widened:
+                case Specific, Widened, WidenedWithDefault:
                     // nothing to do
                     break AddTransformation;
 
@@ -1418,6 +1525,34 @@ public class BuildContext {
                     code.iconst_1();
                     break;
 
+                case NullablePrimitiveWithDefault:
+                    assert isOptimized;
+                    // default primitive with an additional `-1`
+                    Builder.defaultLoad(code, pd.cd);
+                    code.iconst_m1();
+                    break;
+
+                case XvmPrimitiveWithDefault: {
+                    assert isOptimized;
+                    // default primitives with an additional `true`
+                    ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(pd.type);
+                    for (ClassDesc cd : cds) {
+                        Builder.defaultLoad(code, cd);
+                    }
+                    code.iconst_1();
+                    break;
+                }
+
+                case NullableXvmPrimitiveWithDefault: {
+                    assert isOptimized;
+                    // default primitives with an additional `-1`
+                    ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(pd.type);
+                    for (ClassDesc cd : cds) {
+                        Builder.defaultLoad(code, cd);
+                    }
+                    code.iconst_m1();
+                    break;
+                }
                 default:
                     throw new UnsupportedOperationException(
                         "Unsupported default argument for: " + dstFlavor);
@@ -1439,20 +1574,20 @@ public class BuildContext {
             //  - Primitive -> NullablePrimitive  (Int n; f(n) with f(Int?))
             //  - NullablePrimitive -> Specific   (Int? n; f(n) with f(Object)
             switch (srcFlavor) {
-            case Specific, SpecificWithDefault:
+            case Specific:
                 switch (dstFlavor) {
                 case Specific, SpecificWithDefault, Widened, WidenedWithDefault:
                     // nothing to do
                     continue;
 
-                case NullablePrimitive:
+                case NullablePrimitive, NullablePrimitiveWithDefault:
                     assert srcReg.type().isOnlyNullable();
                     code.pop(); // throw away Null; load the default value and "true"
                     Builder.defaultLoad(code, pd.cd);
                     code.iconst_1();
                     continue;
 
-                case NullableXvmPrimitive:
+                case NullableXvmPrimitive, NullableXvmPrimitiveWithDefault:
                     assert srcReg.type().isOnlyNullable();
                     code.pop(); // throw away Null; load the default primitive values and "true"
                     int[] anIndexes = jmd.getAllOptimizedParams(pd.index);
@@ -1460,7 +1595,7 @@ public class BuildContext {
                     for (int nIndex = 0; nIndex < anIndexes.length - 1; nIndex++) {
                         Builder.defaultLoad(code, jmd.optimizedParams[anIndexes[nIndex]].cd);
                     }
-                    // add the boolean "true" to indicate Null
+                    // add the boolean "true" (same as int "1") to indicate Null
                     code.iconst_1();
                     continue;
                 }
@@ -1468,9 +1603,8 @@ public class BuildContext {
 
             case Widened:
                 switch (dstFlavor) {
-                case Specific, SpecificWithDefault:
+                case Specific, SpecificWithDefault, WidenedWithDefault:
                     // nothing to do
-                    assert pd.type.equals(pool().typeObject());
                     continue;
                 }
                 break;
@@ -1482,7 +1616,7 @@ public class BuildContext {
                     Builder.box(code, srcReg.type(), srcReg.cd());
                     continue;
 
-                case NullablePrimitive, PrimitiveWithDefault:
+                case NullablePrimitive, PrimitiveWithDefault, NullablePrimitiveWithDefault:
                     // loadArgument() has already loaded the value; just load "false"
                     code.iconst_0();
                     continue;
@@ -1514,7 +1648,7 @@ public class BuildContext {
                     Builder.box(code, srcReg.type(), srcReg.cd());
                     continue;
 
-                case NullableXvmPrimitive, XvmPrimitiveWithDefault:
+                case NullableXvmPrimitive, XvmPrimitiveWithDefault, NullableXvmPrimitiveWithDefault:
                     // loadArgument() has already loaded the value; just load "false"
                     code.iconst_0();
                     continue;
@@ -1626,8 +1760,7 @@ public class BuildContext {
             return origReg;
         }
 
-        if (fromAddr > currOpAddr + 1 &&
-                !canApplyNarrowing(fromAddr, origReg.regId(), narrowedType)) {
+        if (fromAddr > currOpAddr + 1 && !canApplyNarrowing(fromAddr)) {
             // there is nothing to apply the narrowing to
             return origReg;
         }
@@ -1639,7 +1772,7 @@ public class BuildContext {
 
         if (narrowedType.isJavaPrimitive()) {
             narrowedSlots   = new int[] {scope.allocateJavaSlot(narrowedCD)};
-            narrowedSlotCds = new ClassDesc[]{narrowedCD};
+            narrowedSlotCds = new ClassDesc[] {narrowedCD};
         } else if (narrowedType.isXvmPrimitive()) {
             narrowedSlotCds = JitTypeDesc.getXvmPrimitiveClasses(narrowedType);
             narrowedSlots   = new int[narrowedSlotCds.length];
@@ -1697,22 +1830,40 @@ public class BuildContext {
                         Builder.unbox(code, narrowedReg);
                     }
                 } else if (narrowedType.isOnlyNullable()) {
-                    assert origReg instanceof ExtendedSlot extSlot &&
-                            extSlot.flavor() == NullablePrimitive;
-                    // reuse the ExtendedSlot
-                    return -1;
+                    switch (origReg.flavor()) {
+                        case NullablePrimitive, NullableXvmPrimitive -> {
+                            // reuse the ExtendedSlot
+                            return -1;
+                        }
+                        case Widened ->
+                            Builder.loadNull(code);
+                        default ->
+                            throw new IllegalStateException();
+                    }
                 } else {
-                    if (origReg.cd().isPrimitive()) {
+                    if (origType.removeNullable().isJavaPrimitive()) {
                         // this can only mean that the original was a NullablePrimitive
                         assert origReg instanceof ExtendedSlot extSlot &&
                                 extSlot.flavor() == NullablePrimitive &&
                                 narrowedType.isOnlyNullable();
-                        Builder.loadNull(code);
+
+                        ExtendedSlot extSlot = (ExtendedSlot) origReg;
+                        code.iconst_1()
+                            .istore(extSlot.extSlot()); // `true`
+                        Builder.defaultLoad(code, extSlot.cd());
+                        return -1;
                     } else if (origType.removeNullable().isXvmPrimitive()) {
                         // this can only mean that the original was a NullableXvmPrimitive
                         assert origReg.flavor() == NullableXvmPrimitive &&
-                                narrowedType.isNullable();
-                        Builder.loadNull(code);
+                                narrowedType.isOnlyNullable();
+
+                        MultipleSlot multiSlot = (MultipleSlot) origReg;
+                        code.iconst_1()
+                            .istore(multiSlot.extSlot()); // `true`
+                        for (ClassDesc cd : multiSlot.slotCds()) {
+                            Builder.defaultLoad(code, cd);
+                        }
+                        return -1;
                     } else {
                         origReg.load(code);
                         code.checkcast(narrowedCD);
@@ -1996,7 +2147,6 @@ public class BuildContext {
                         Builder.box(code, typeRet, cdRet);
                         code.goto_(endIf);
                         code.labelBinding(ifTrue);
-                 // ???      Builder.pop(code, jmd.optimizedReturns[0].cd);
                         Builder.loadNull(code);
                         code.labelBinding(endIf);
                     } else {
@@ -2124,12 +2274,12 @@ public class BuildContext {
     public void adjustIntValue(CodeBuilder code, TypeConstant type) {
         switch (type.getSingleUnderlyingClass(false).getName()) {
             case "Int8"   -> code.i2b();
-            case "Int16"  -> code.i2s();
-            case "Int32"  -> {}
             case "UInt8"  -> code.ldc(0xFF).iand();
+            case "Int16"  -> code.i2s();
             case "UInt16" -> code.ldc(0xFFFF).iand();
-            case "UInt32" -> {}
-            case "Char"   -> {}
+            case "Int32",
+                 "UInt32",
+                 "Char"   -> {}
             default       -> throw new IllegalStateException();
         }
     }
@@ -2211,7 +2361,7 @@ public class BuildContext {
     /**
      * @return true iff the narrowing type can be applied at the specified address
      */
-    private boolean canApplyNarrowing(int addr, int regId, TypeConstant narrowingType) {
+    private boolean canApplyNarrowing(int addr) {
         Op[] ops     = methodStruct.getOps();
         Op   startOp = ops[addr].ensureOp();
 
@@ -2307,7 +2457,7 @@ public class BuildContext {
         @Override
         public RegisterInfo load(CodeBuilder code) {
             if (flavor == AlwaysNull) {
-                loadNull(code);
+                Builder.loadNull(code);
             } else {
                 for (int i = 0; i < slotCds.length; i++) {
                     Builder.load(code, slotCds[i], slots[i]);

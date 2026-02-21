@@ -1,15 +1,14 @@
 package org.xvm.javajit;
 
 import java.lang.classfile.CodeBuilder;
-import java.lang.classfile.Label;
 
 import java.lang.constant.ClassDesc;
 
-import org.xvm.asm.Parameter;
 import org.xvm.asm.constants.TypeConstant;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
-import static org.xvm.javajit.JitFlavor.Primitive;
+
+import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 
 /**
  * A register that stores an XVM value in two Java slots, where the second is always a boolean.
@@ -44,40 +43,18 @@ public record ExtendedSlot(BuildContext bctx, int regId, int slot, int extSlot,
 
     @Override
     public RegisterInfo load(CodeBuilder code) {
-        switch (flavor) {
-        case PrimitiveWithDefault:
-            Parameter parameter = bctx.methodStruct.getParam(regId);
-            assert parameter.hasDefaultValue();
+        assert flavor == NullablePrimitive;
 
-            Label ifTrue = code.newLabel();
-            Label endIf = code.newLabel();
-
-            // if the extension slot is `true`, take the default value
-            code.iload(extSlot)
-                .ifne(ifTrue)
-                .loadLocal(Builder.toTypeKind(cd), slot)
-                .goto_(endIf)
-                .labelBinding(ifTrue);
-            bctx.builder.loadConstant(bctx, code, parameter.getDefaultValue());
-            code.labelBinding(endIf);
-            return new SingleSlot(type(), Primitive, cd, name());
-
-        case NullablePrimitive:
-            // load the "extension" boolean flag last
-            Builder.load(code, cd, slot);
-            Builder.load(code, CD_boolean, extSlot);
-            return this;
-
-        default:
-            throw new IllegalStateException();
-        }
+        // load the "extension" boolean flag last
+        Builder.load(code, cd, slot);
+        Builder.load(code, CD_boolean, extSlot);
+        return this;
     }
 
     @Override
     public RegisterInfo store(BuildContext bctx, CodeBuilder code, TypeConstant type) {
         // store the "extension" boolean flag first
         code.istore(extSlot());
-
         return RegisterInfo.super.store(bctx, code, type);
     }
 }

@@ -31,15 +31,15 @@ package callTests {
         assert testStatic(1);
         assert !testStatic(-1);
 
-//        assert testSpecificWithDefault("hi") == 2;
-//        assert testSpecificWithDefault() == 3;
+        assert testSpecificWithDefault("hi") == 2;
+        assert testSpecificWithDefault() == 3;
 
         assert testWidened("hi") == 2;
         assert testWidened(7)    == 7;
 
-//        assert testWidenedWithDefault("hi") == 2;
-//        assert testWidenedWithDefault(7)    == 7;
-//        assert testWidenedWithDefault()     == 42;
+        assert testWidenedWithDefault("hi") == 2;
+        assert testWidenedWithDefault(7)    == 7;
+        assert testWidenedWithDefault()     == 42;
 
         assert testPrimitiveWithDefault(7)  == 7;
         assert testPrimitiveWithDefault()   == 42;
@@ -60,15 +60,15 @@ package callTests {
         assert i5.notLessThan(3) != i5;
         assert i5.notGreaterThan(3) == i5;
 
-//        assert testNullablePrimitiveWithDefault(7)     == 7;
-//        assert testNullablePrimitiveWithDefault(Null)  == 0;
-//        assert testNullablePrimitiveWithDefault()      == 42;
+        assert testNullablePrimitiveWithDefault(7)     == 7;
+        assert testNullablePrimitiveWithDefault(Null)  == 0;
+        assert testNullablePrimitiveWithDefault()      == 42;
 
-//        assert testXvmPrimitiveWithDefault(7)  == 7;
-//        assert testXvmPrimitiveWithDefault()   == 42;
+        assert testXvmPrimitiveWithDefault(7)  == 7;
+        assert testXvmPrimitiveWithDefault()   == 42;
 
-//        assert testNullableXvmPrimitiveWithDefault(7) == 7;
-//        assert testNullableXvmPrimitiveWithDefault()  == 42;
+        assert testNullableXvmPrimitiveWithDefault(7) == 7;
+        assert testNullableXvmPrimitiveWithDefault()  == 42;
     }
 
     Int testStandardWithDefault(Int i, Int j = 2) = i + j;
@@ -86,11 +86,11 @@ package callTests {
 
     static Boolean testStatic(Int i) = i > 0;
 
-//    Int testSpecificWithDefault(String s = "bye") = s.size;
+    Int testSpecificWithDefault(String s = "bye") = s.size;
 
     Int testWidened(String|Int si) = si.is(Int) ? si : si.size;
 
-//    Int testWidenedWithDefault(String|Int si = 42) = si.is(Int) ? si : si.size;
+    Int testWidenedWithDefault(String|Int si = 42) = si.is(Int) ? si : si.size;
 
     Int testPrimitiveWithDefault(Int i = 42) = i;
 
@@ -109,9 +109,9 @@ package callTests {
 
     Int testNullablePrimitive(Int? i) = i == Null ? i.ordinal : i;
 
-//    Int testNullablePrimitiveWithDefault(Int? i = 42) = i == Null ? 0 : i;
+    Int testNullablePrimitiveWithDefault(Int? i = 42) = i == Null ? 0 : i;
 
-//    Int128 testXvmPrimitiveWithDefault(Int128 i = 42) = i;
+    Int128 testXvmPrimitiveWithDefault(Int128 i = 42) = i;
 
-//    Int128 testNullableXvmPrimitiveWithDefault(Int128? i = 42) = i == Null ? 0 : i;
+    Int128 testNullableXvmPrimitiveWithDefault(Int128? i = 42) = i == Null ? 0 : i;
 }

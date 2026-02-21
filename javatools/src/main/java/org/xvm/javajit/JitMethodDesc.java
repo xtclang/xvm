@@ -10,11 +10,15 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.constants.TypeConstant;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
+import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_nObj;
+
+import static org.xvm.javajit.JitFlavor.NullablePrimitiveWithDefault;
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
+import static org.xvm.javajit.JitFlavor.NullableXvmPrimitiveWithDefault;
 import static org.xvm.javajit.JitFlavor.XvmPrimitive;
 import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
@@ -168,10 +172,10 @@ public class JitMethodDesc {
             ClassDesc cd;
 
             if ((cd = JitTypeDesc.getPrimitiveClass(type)) != null) {
-                JitFlavor flavor = fDflt ? SpecificWithDefault : Specific;
-                ClassDesc cdStd  = builder.ensureClassDesc(type);
+                JitFlavor stdFlavor = fDflt ? SpecificWithDefault : Specific;
+                ClassDesc cdStd     = builder.ensureClassDesc(type);
 
-                stdParamList.add(new JitParamDesc(type, flavor, cdStd, iOrig, iStd++, false));
+                stdParamList.add(new JitParamDesc(type, stdFlavor, cdStd, iOrig, iStd++, false));
 
                 isOptimized = true;
                 if (fDflt) {
@@ -183,25 +187,30 @@ public class JitMethodDesc {
                     optParamList.add(new JitParamDesc(type, Primitive, cd, iOrig, iOpt++, false));
                 }
             } else if ((cd = JitTypeDesc.getNullablePrimitiveClass(type)) != null) {
+                assert type.isNullable();
+
                 JitFlavor stdFlavor = fDflt ? WidenedWithDefault : Widened;
                 stdParamList.add(
                     new JitParamDesc(type, stdFlavor, CD_nObj, iOrig, iStd++, false));
 
+                isOptimized = true;
                 if (fDflt) {
-                    // TODO: we can further optimize to a three-slot (multi-primitive with default)
                     optParamList.add(
-                        new JitParamDesc(type, stdFlavor, CD_nObj, iOrig, iOpt++, false));
+                        new JitParamDesc(type, NullablePrimitiveWithDefault, cd, iOrig, iOpt++, false));
+                    optParamList.add(
+                        new JitParamDesc(type, NullablePrimitiveWithDefault, CD_int, iOrig, iOpt++, true));
                 } else {
-                    isOptimized = true;
                     optParamList.add(
                         new JitParamDesc(type, NullablePrimitive, cd, iOrig, iOpt++, false));
                     optParamList.add(
                         new JitParamDesc(type, NullablePrimitive, CD_boolean, iOrig, iOpt++, true));
                 }
             } else if ((cd = JitTypeDesc.getXvmPrimitiveClass(type)) != null) {
-                isOptimized = true;
+                JitFlavor stdFlavor = fDflt ? SpecificWithDefault : Specific;
                 stdParamList.add(
-                        new JitParamDesc(type, Specific, cd, iOrig, iStd++, false));
+                        new JitParamDesc(type, stdFlavor, cd, iOrig, iStd++, false));
+
+                isOptimized = true;
 
                 JitFlavor optFlavor = fDflt ? XvmPrimitiveWithDefault : XvmPrimitive;
                 for (ClassDesc cdArg : JitTypeDesc.getXvmPrimitiveClasses(type)) {
@@ -213,27 +222,25 @@ public class JitMethodDesc {
                             new JitParamDesc(type, optFlavor, CD_boolean, iOrig, iOpt++, true));
                 }
             } else if ((cd = JitTypeDesc.getNullableXvmPrimitiveClass(type)) != null) {
-                boolean   nullable  = type.isNullable();
-                JitFlavor stdFlavor = fDflt ? WidenedWithDefault : Widened;
-                JitFlavor optFlavor = nullable ? NullableXvmPrimitive : XvmPrimitive;
+                assert type.isNullable();
 
+                JitFlavor stdFlavor = fDflt ? WidenedWithDefault : Widened;
                 stdParamList.add(
-                        new JitParamDesc(type, stdFlavor, cd, iOrig, iStd++, false));
+                        new JitParamDesc(type, stdFlavor, CD_nObj, iOrig, iStd++, false));
+
+                isOptimized = true;
+
+                JitFlavor optFlavor = fDflt ? NullableXvmPrimitiveWithDefault : NullableXvmPrimitive;
+                for (ClassDesc cdArg : JitTypeDesc.getXvmPrimitiveClasses(type.removeNullable())) {
+                    optParamList.add(new JitParamDesc(type, optFlavor, cdArg, iOrig, iOpt++, false));
+                }
 
                 if (fDflt) {
-                    // TODO: ??? we can further optimize to extra slots for the default
                     optParamList.add(
-                            new JitParamDesc(type, stdFlavor, cd, iOrig, iOpt++, false));
+                            new JitParamDesc(type, NullableXvmPrimitiveWithDefault, CD_int, iOrig, iOpt++, true));
                 } else {
-                    isOptimized = true;
-                    for (ClassDesc cdArg : JitTypeDesc.getXvmPrimitiveClasses(type)) {
-                        optParamList.add(
-                                new JitParamDesc(type, optFlavor, cdArg, iOrig, iOpt++, false));
-                    }
-                    if (nullable) {
-                        optParamList.add(
-                                new JitParamDesc(type, optFlavor, CD_boolean, iOrig, iOpt++, true));
-                    }
+                    optParamList.add(
+                            new JitParamDesc(type, NullableXvmPrimitive, CD_boolean, iOrig, iOpt++, true));
                 }
             } else if ((cd = JitTypeDesc.getWidenedClass(type)) != null) {
                 JitFlavor flavor = fDflt ? WidenedWithDefault : Widened;

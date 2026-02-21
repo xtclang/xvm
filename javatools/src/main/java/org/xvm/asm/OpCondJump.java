@@ -491,58 +491,45 @@ public abstract class OpCondJump
 
         Label        lblJump = bctx.ensureLabel(code, nAddrJump);
         RegisterInfo reg     = bctx.ensureRegister(code, m_nArg);
-        ClassDesc    cd      = reg.cd();
-        if (cd.isPrimitive()) {
+        switch (reg.flavor()) {
+        case NullablePrimitive, NullableXvmPrimitive -> {
             if (reg instanceof ExtendedSlot extSlot) {
-                assert extSlot.flavor() == JitFlavor.NullablePrimitive;
                 code.iload(extSlot.extSlot());
-                switch (op) {
-                case OP_JMP_NULL:
-                    code.ifne(lblJump);
-                    bctx.narrowRegister(code, reg, reg.type().removeNullable());
-                    bctx.narrowRegister(code, reg, nAddrJump, bctx.pool().typeNullable());
-                    break;
-
-                case OP_JMP_NNULL:
-                    code.ifeq(lblJump);
-                    bctx.narrowRegister(code, reg, nAddrJump, reg.type().removeNullable());
-                    bctx.narrowRegister(code, reg, bctx.pool().typeNullable());
-                    break;
-
-                default:
-                    throw new IllegalStateException();
-                }
-                return;
+            } else {
+                code.iload(((MultipleSlot) reg).extSlot());
             }
-            Builder.defaultLoad(code, cd);
-
-            String desc = cd.descriptorString();
-            switch (desc) {
-            case "I", "S", "B", "C", "Z":
-                switch (getOpCode()) {
-                    case OP_JMP_ZERO  -> code.if_icmpeq(lblJump);
-                    case OP_JMP_NZERO -> code.if_icmpne(lblJump);
-                    default           -> throw new IllegalStateException();
-                }
+            switch (op) {
+            case OP_JMP_NULL:
+                code.ifne(lblJump);
+                bctx.narrowRegister(code, reg, reg.type().removeNullable());
+                bctx.narrowRegister(code, reg, nAddrJump, bctx.pool().typeNullable());
                 break;
 
-            case "J", "F", "D":
-                switch (desc) {
-                    case "J" -> code.lcmp();
-                    case "F" -> code.fcmpl(); // REVIEW CP: fcmpl vs fcmpg?
-                    case "D" -> code.dcmpl(); // REVIEW CP: ditto
-                }
-                switch (op) {
-                    case OP_JMP_ZERO  -> code.ifeq(lblJump);
-                    case OP_JMP_NZERO -> code.ifne(lblJump);
-                    default -> throw new IllegalStateException();
-                }
+            case OP_JMP_NNULL:
+                code.ifeq(lblJump);
+                bctx.narrowRegister(code, reg, bctx.pool().typeNullable());
+                bctx.narrowRegister(code, reg, nAddrJump, reg.type().removeNullable());
                 break;
 
             default:
                 throw new IllegalStateException();
             }
-        } else {
+        }
+
+        case Primitive ->
+            comparePrimitive(code, reg.cd(), lblJump);
+
+        case XvmPrimitive -> {
+            ClassDesc[] cds = reg.slotCds();
+            for (int i = 0, c = cds.length - 1; i < c; i++) {
+                Label lblNext = code.newLabel();
+                comparePrimitive(code, cds[i], lblNext);
+                code.labelBinding(lblNext);
+            }
+            comparePrimitive(code, cds[cds.length-1], lblJump);
+        }
+
+        case Widened -> {
             RegisterInfo regLoaded = reg.load(code);
             switch (op) {
             case OP_JMP_NULL:
@@ -562,6 +549,41 @@ public abstract class OpCondJump
             default:
                 throw new IllegalStateException();
             }
+        }
+
+        default ->
+            throw new IllegalStateException("Unsupported flavor: " + reg.flavor());
+        }
+    }
+
+    private void comparePrimitive(CodeBuilder code, ClassDesc cd, Label lblJump) {
+        Builder.defaultLoad(code, cd);
+
+        String desc = cd.descriptorString();
+        switch (desc) {
+        case "I", "S", "B", "C", "Z":
+            switch (getOpCode()) {
+                case OP_JMP_ZERO  -> code.if_icmpeq(lblJump);
+                case OP_JMP_NZERO -> code.if_icmpne(lblJump);
+                default           -> throw new IllegalStateException();
+            }
+            break;
+
+        case "J", "F", "D":
+            switch (desc) {
+                case "J" -> code.lcmp();
+                case "F" -> code.fcmpl(); // REVIEW CP: fcmpl vs fcmpg?
+                case "D" -> code.dcmpl(); // REVIEW CP: ditto
+            }
+            switch (getOpCode()) {
+                case OP_JMP_ZERO  -> code.ifeq(lblJump);
+                case OP_JMP_NZERO -> code.ifne(lblJump);
+                default -> throw new IllegalStateException();
+            }
+            break;
+
+        default:
+            throw new IllegalStateException();
         }
     }
 

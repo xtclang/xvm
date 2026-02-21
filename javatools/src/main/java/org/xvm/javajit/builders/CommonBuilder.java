@@ -1113,6 +1113,7 @@ public class CommonBuilder
             }
 
             JitParamDesc[] optParams = jmDesc.optimizedParams;
+            JitParamDesc[] stdParams = jmDesc.standardParams;
             for (int i = 0, c = optParams.length; i < c; i++) {
                 JitParamDesc optParamDesc = optParams[i];
                 int          stdParamIx   = optParamDesc.index;
@@ -1184,19 +1185,86 @@ public class CommonBuilder
                         break;
                     }
 
+                    case NullablePrimitiveWithDefault: {
+                        assert stdParamType.isNullable();
+                        TypeConstant primitiveType = stdParamType.removeNullable();
+                        // if the argument is Ecstasy `Null`, pass the default value for the type
+                        // and `true`; otherwise the unboxed primitive value and `false`
+                        Label ifNotJavaNull = code.newLabel();
+                        Label ifNotXvmNull  = code.newLabel();
+                        Label endIf         = code.newLabel();
+
+                        code.aload(stdParamSlot)
+                             .aconst_null()
+                             .if_acmpne(ifNotJavaNull);
+                        // the value is `null`
+                        Builder.defaultLoad(code, optParamDesc.cd);  // default primitive
+                        code.iconst_m1()                             // -1
+                            .goto_(endIf)
+                            .labelBinding(ifNotJavaNull);
+
+                        code.aload(stdParamSlot);
+                        Builder.loadNull(code);
+                        code.if_acmpne(ifNotXvmNull);
+                        // the value is `Null`
+                        Builder.defaultLoad(code, optParamDesc.cd);  // default primitive
+                        code.iconst_1()                              // +1
+                            .goto_(endIf)
+                            .labelBinding(ifNotXvmNull);
+
+                        code.aload(stdParamSlot)
+                            .checkcast(ensureClassDesc(primitiveType));
+                        unbox(code, primitiveType, optParamDesc.cd); // unboxed primitive
+                        code.iconst_0()                             // false
+                            .labelBinding(endIf);
+                        i++; // skip over the next "that" parameter
+                        break;
+                    }
+
                     case XvmPrimitive: {
                         code.aload(stdParamSlot);
                         ClassDesc cd = JitTypeDesc.getXvmPrimitiveClass(stdParamType);
                         assert cd != null;
                         unbox(code, stdParamType, cd);
                         // skip over the additional parameters that we have just loaded by unboxing
-                        i = i - 1 + JitTypeDesc.getXvmPrimitiveSlotCount(stdParamType);
+                        i += JitTypeDesc.getXvmPrimitiveSlotCount(stdParamType) - 1;
+                        break;
+                    }
+
+                    case XvmPrimitiveWithDefault: {
+                        // if the argument is Java `null`, pass the default value for the types and
+                        // `true`; otherwise the unboxed primitive value and `false`
+                        Label ifNotNull = code.newLabel();
+                        Label endIf     = code.newLabel();
+
+                        ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(stdParamType);
+
+                        code.aload(stdParamSlot)
+                            .ifnonnull(ifNotNull);
+                        // the value is `null`
+                        for (ClassDesc classDesc : cds) {
+                            Builder.defaultLoad(code, classDesc);
+                        }
+                        code.iconst_1() // true
+                            .goto_(endIf);
+
+                        code.labelBinding(ifNotNull)
+                            .aload(stdParamSlot);
+                        unbox(code, stdParamType, stdParams[stdParamIx].cd); // unwrapped primitives
+                        code.iconst_0() // false
+                            .labelBinding(endIf);
+
+                        // skip over the additional parameters that we have just loaded by unboxing
+                        i += cds.length;
                         break;
                     }
 
                     case NullableXvmPrimitive: {
                         assert stdParamType.isNullable();
-                        int slotCount = JitTypeDesc.getXvmPrimitiveSlotCount(stdParamType);
+
+                        TypeConstant baseType = stdParamType.removeNullable();
+                        ClassDesc[]  cds      = JitTypeDesc.getXvmPrimitiveClasses(baseType);
+
                         // if the argument is Ecstasy `Null`, pass the default value for the type
                         // and `true`; otherwise the unboxed primitive value and `false`
                         Label ifNotNull = code.newLabel();
@@ -1206,30 +1274,74 @@ public class CommonBuilder
                         Builder.loadNull(code);
                         code.if_acmpne(ifNotNull);
                         // the value is `Null`
-                        for (int s = 0; s < slotCount; s++) {
-                            Builder.defaultLoad(code, optParamDesc.cd);  // default primitives
+                        for (ClassDesc cd : cds) {
+                            Builder.defaultLoad(code, cd);
                         }
-                        code.iconst_1();                                 // true
+                        code.iconst_1(); // true
 
-                        TypeConstant underlyingType = stdParamType.removeNullable();
                         code.goto_(endIf)
                             .labelBinding(ifNotNull)
                             .aload(stdParamSlot)
-                            .checkcast(ensureClassDesc(underlyingType));
+                            .checkcast(ensureClassDesc(baseType));
 
-                        ClassDesc cd = JitTypeDesc.getXvmPrimitiveClass(underlyingType);
+                        ClassDesc cd = JitTypeDesc.getXvmPrimitiveClass(baseType);
                         assert cd != null;
-                        unbox(code, underlyingType, cd); // unboxed primitives
-                        code.iconst_0();                 // false
+                        unbox(code, baseType, cd); // unboxed primitives
+                        code.iconst_0()            // false
+                            .labelBinding(endIf);
 
-                        code.labelBinding(endIf);
                         // skip over the additional parameters that we have just loaded
-                        i = i + slotCount;
+                        i += cds.length;
                         break;
                     }
 
-                    case AlwaysNull:
-                        throw new UnsupportedOperationException();
+                    case NullableXvmPrimitiveWithDefault: {
+                        TypeConstant baseType = stdParamType.removeNullable();
+                        ClassDesc    baseCD   = ensureClassDesc(baseType);
+
+                        // if the argument is Java `null`, pass default values and `-1`;
+                        // if the argument is `Null`, pass default values and `+1`;
+                        // otherwise the unboxed primitive value and `0`
+                        Label ifNotJavaNull = code.newLabel();
+                        Label ifNotXvmNull  = code.newLabel();
+                        Label endIf         = code.newLabel();
+
+                        ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(stdParamType);
+
+                        code.aload(stdParamSlot)
+                            .ifnonnull(ifNotJavaNull);
+                        // the value is `null`
+                        for (ClassDesc classDesc : cds) {
+                            Builder.defaultLoad(code, classDesc);
+                        }
+                        code.iconst_m1() // -1
+                            .goto_(endIf);
+
+                        code.labelBinding(ifNotJavaNull);
+                        code.aload(stdParamSlot);
+                        Builder.loadNull(code);
+                        code.if_acmpne(ifNotXvmNull);
+                        // the value is `Null`
+                        for (ClassDesc classDesc : cds) {
+                            Builder.defaultLoad(code, classDesc);
+                        }
+                        code.iconst_1() // +1
+                            .goto_(endIf);
+
+                        code.labelBinding(ifNotXvmNull)
+                            .aload(stdParamSlot)
+                            .checkcast(baseCD);
+                        unbox(code, baseType, baseCD);
+                        code.iconst_0() // false
+                            .labelBinding(endIf);
+
+                        // skip over the additional parameters that we have just loaded by unboxing
+                        i += cds.length;
+                        break;
+                    }
+
+                    default:
+                        throw new UnsupportedOperationException("Not implemented: " + optParamDesc.flavor);
                 }
             }
 
