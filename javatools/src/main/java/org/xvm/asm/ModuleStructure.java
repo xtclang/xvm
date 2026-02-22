@@ -378,8 +378,18 @@ public class ModuleStructure
      *         requirement of the main module
      */
     public boolean isEmbeddedModule() {
-        assert (m_moduletype == ModuleType.Embedded) == (!isMainModule() && !isFingerprint());
         return m_moduletype == ModuleType.Embedded;
+    }
+
+    /**
+     * Change the module type of this module structure. This is used by the Bundler to reclassify
+     * cloned Primary modules as Embedded after merging them into a bundle.
+     *
+     * @param type  the new module type
+     */
+    public void setModuleType(ModuleType type) {
+        m_moduletype = type;
+        markModified();
     }
 
     /**

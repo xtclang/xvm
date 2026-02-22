@@ -7,9 +7,9 @@ import org.xtclang.plugin.tasks.XtcLauncherTask;
 /**
  * Attached (forked) execution strategy.
  * Launches in a separate JVM process with inherited I/O (stdout/stderr go to parent process).
- * Works for both compile and run tasks.
+ * Works for all launcher task types (compile, run, test, bundle).
  */
-public class AttachedStrategy<T extends XtcLauncherTask<?>> extends ForkedStrategy {
+public class AttachedStrategy extends ForkedStrategy {
 
     public AttachedStrategy(final Logger logger, final String javaExecutable) {
         super(ExecutionMode.ATTACHED, logger, javaExecutable);

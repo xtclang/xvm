@@ -4,9 +4,11 @@ package org.xvm.asm;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -61,8 +63,15 @@ public class DirRepository
     @Override
     public ModuleStructure loadModule(String sModule) {
         ensureCache();
-        ModuleInfo info = modulesByName.get(sModule);
-        return info == null ? null : info.ensureModule();
+        var info = modulesByName.get(sModule);
+        if (info == null) {
+            return null;
+        }
+        try {
+            return info.ensureModule(sModule);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to load module \"" + sModule + "\" from " + info.file, e);
+        }
     }
 
     @Override
@@ -136,15 +145,14 @@ public class DirRepository
 
         File[] files = m_dir.listFiles(ModulesOnly);
         for (File file : files) {
-            ModuleInfo info = oldModulesByFile.get(file);
-            if (info == null || info.timestamp != file.lastModified() || info.size != file.length()) {
-                // build a new one to cache
-                info = new ModuleInfo(file);
-            }
+            var cached = oldModulesByFile.get(file);
+            var current = (cached == null || cached.timestamp != file.lastModified() || cached.size != file.length())
+                    ? new ModuleInfo(file)
+                    : cached;
 
-            newModulesByFile.put(file, info);
-            if (!info.err) {
-                modulesByName.put(info.name, info);
+            newModulesByFile.put(file, current);
+            if (!current.err) {
+                current.moduleNames.forEach(moduleName -> modulesByName.put(moduleName, current));
             }
         }
 
@@ -185,42 +193,61 @@ public class DirRepository
             this.timestamp = file.lastModified();
             this.size      = file.length();
 
-            ModuleStructure module = tryLoad();
-            if (module == null) {
-                this.name     = null;
-                this.versions = null;
-                this.err      = true;
-            } else {
-                this.name     = module.getIdentityConstant().getName();
-                this.versions = module.getVersions();
-                this.err      = false;
-            }
-        }
-
-        ModuleStructure tryLoad() {
+            FileStructure struct;
             try {
-                FileStructure struct = new FileStructure(file);
-                return struct.getModule();
-            } catch (Exception e) {
-                System.out.println("Error loading module from file: " + file + "; " + e.getMessage());
+                struct = new FileStructure(file);
+            } catch (IOException e) {
+                System.err.println("Error loading module from file: " + file + "; " + e.getMessage());
+                this.name        = null;
+                this.moduleNames = List.of();
+                this.versions    = null;
+                this.err         = true;
+                return;
             }
 
-            return null;
+            var names = struct.children().stream()
+                    .filter(m -> !m.isFingerprint())
+                    .map(m -> m.getIdentityConstant().getName())
+                    .toList();
+
+            this.moduleNames = names;
+            this.name        = names.isEmpty() ? null : names.getFirst();
+            this.versions    = struct.getModule() == null ? null : struct.getModule().getVersions();
+            this.err         = names.isEmpty();
         }
 
-        ModuleStructure ensureModule() {
+        /**
+         * Load a specific module by name from this file.
+         *
+         * @param moduleName  the fully qualified module name to load
+         * @return the module structure
+         * @throws IOException if the file cannot be read
+         */
+        ModuleStructure ensureModule(String moduleName) throws IOException {
             if (err) {
-                return null;
+                throw new IOException("Cannot load module \"" + moduleName + "\" from erroneous file: " + file);
             }
 
-            if (module == null || module.isModified()) {
-                module = tryLoad();
+            // Fast path: cached module matches the requested name
+            if (module != null && !module.isModified()
+                    && module.getIdentityConstant().getName().equals(moduleName)) {
+                return module;
             }
 
-            return module;
+            var struct = new FileStructure(file);
+            var found = struct.children().stream()
+                    .filter(m -> !m.isFingerprint()
+                            && m.getIdentityConstant().getName().equals(moduleName))
+                    .findFirst()
+                    .orElseThrow(() -> new IOException(
+                            "Module \"" + moduleName + "\" not found in file: " + file));
+
+            module = found;
+            return found;
         }
 
         public final String               name;
+        public final List<String>          moduleNames;
         public final File                 file;
         public final VersionTree<Boolean> versions;
         public final long                 timestamp;
@@ -228,8 +255,8 @@ public class DirRepository
         public final boolean              err;
 
         /**
-         * Cached instance of the module struct. If the caller changes it, we will detect it and
-         * reload it as necessary.
+         * Cached instance of the most recently loaded module. If the caller changes it, we will
+         * detect it and reload it as necessary.
          */
         private transient ModuleStructure module;
     }

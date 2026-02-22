@@ -11,6 +11,7 @@ import org.xvm.tool.TestRunner;
 import org.xvm.util.Severity;
 
 import org.xtclang.plugin.XtcRunModule;
+import org.xtclang.plugin.tasks.XtcBundleTask;
 import org.xtclang.plugin.tasks.XtcCompileTask;
 import org.xtclang.plugin.tasks.XtcRunTask;
 import org.xtclang.plugin.tasks.XtcTestTask;
@@ -105,6 +106,18 @@ public class DirectStrategy implements ExecutionStrategy {
             return e.getExitCode();
         } catch (final Exception e) {
             logger.error("[plugin] Direct test runner execution failed", e);
+            return EXIT_CODE_ERROR;
+        }
+    }
+
+    @Override
+    public int execute(final XtcBundleTask task) {
+        logger.info("[plugin] Invoking bundler directly in current thread (no fork)");
+        try {
+            final var options = optionsBuilder().buildBundlerOptions(task);
+            return Launcher.launch(options, console, err);
+        } catch (final Exception e) {
+            logger.error("[plugin] Direct bundler execution failed", e);
             return EXIT_CODE_ERROR;
         }
     }

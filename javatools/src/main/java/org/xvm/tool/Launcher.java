@@ -14,6 +14,7 @@ import java.util.Objects;
 import java.util.stream.Stream;
 
 import org.xvm.asm.BuildInfo;
+import org.xvm.asm.BundledFileRepository;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
@@ -25,6 +26,7 @@ import org.xvm.asm.constants.ModuleConstant;
 
 import org.xvm.compiler.BuildRepository;
 
+import org.xvm.tool.LauncherOptions.BundlerOptions;
 import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.LauncherOptions.DisassemblerOptions;
 import org.xvm.tool.LauncherOptions.InitializerOptions;
@@ -84,6 +86,7 @@ public abstract class Launcher<T extends LauncherOptions>
      * loading deadlock when LauncherOptions references them during static initialization.
      */
     public static final String CMD_BUILD  = "build";
+    public static final String CMD_BUNDLE = "bundle";
     public static final String CMD_INIT   = "init";
     public static final String CMD_RUN    = "run";
     public static final String CMD_TEST   = "test";
@@ -99,6 +102,7 @@ public abstract class Launcher<T extends LauncherOptions>
      */
     private static final Map<String, CommandHandler> COMMANDS = Map.of(
             CMD_BUILD,  (args, console, err) -> launch(CompilerOptions.parse(args), console, err),
+            CMD_BUNDLE, (args, console, err) -> launch(BundlerOptions.parse(args), console, err),
             CMD_INIT,   (args, console, err) -> launch(InitializerOptions.parse(args), console, err),
             CMD_RUN,    (args, console, err) -> launch(RunnerOptions.parse(args), console, err),
             CMD_TEST,   (args, console, err) -> launch(TestRunnerOptions.parse(args), console, err),
@@ -259,6 +263,7 @@ public abstract class Launcher<T extends LauncherOptions>
                 build    Compile Ecstasy source files (alias: xcc)
                 run      Execute an Ecstasy module (alias: xec)
                 test     Run tests in an Ecstasy module using xunit
+                bundle   Bundle multiple .xtc modules into a single file
                 disass   Disassemble a compiled Ecstasy module
 
             Options:
@@ -295,6 +300,7 @@ public abstract class Launcher<T extends LauncherOptions>
         }
 
         final var launcher = switch (options) {
+            case final BundlerOptions opts      -> new Bundler(opts, console, errListener);
             case final CompilerOptions opts     -> new Compiler(opts, console, errListener);
             case final InitializerOptions opts  -> new Initializer(opts, console, errListener);
             case final TestRunnerOptions opts   -> new TestRunner(opts, console, errListener);
@@ -693,7 +699,7 @@ public abstract class Launcher<T extends LauncherOptions>
         for (File file : path) {
             repos.add(file.isDirectory()
                 ? new DirRepository(file, true)
-                : new FileRepository(file, true));
+                : new BundledFileRepository(file));
         }
         return new LinkedRepository(true, repos.toArray(ModuleRepository[]::new));
     }

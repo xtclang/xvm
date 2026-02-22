@@ -7,7 +7,9 @@ import java.util.List;
 import static java.nio.file.Files.isDirectory;
 import static org.xtclang.plugin.internal.DefaultXtcRunModule.DEFAULT_METHOD_NAME;
 
+import org.xtclang.plugin.tasks.XtcBundleTask;
 import org.xtclang.plugin.tasks.XtcTestTask;
+import org.xvm.tool.LauncherOptions.BundlerOptions;
 import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.LauncherOptions.RunnerOptions;
 import org.xvm.tool.LauncherOptions.TestRunnerOptions;
@@ -129,6 +131,26 @@ public final class LauncherOptionsBuilder {
         for (final var modulePath : task.resolveFullModulePath()) {
             builder.addModulePath(useAbsolutePaths() ? modulePath.getAbsolutePath() : projectDir.relativize(modulePath.toPath()).toString());
         }
+        return builder.build();
+    }
+
+    /**
+     * Builds BundlerOptions from XtcBundleTask.
+     *
+     * @param task the bundle task
+     */
+    public BundlerOptions buildBundlerOptions(final XtcBundleTask task) {
+        var builder = BundlerOptions.builder()
+                .setOutputFile(task.getOutputFile().get().getAsFile());
+
+        if (task.getPrimaryModule().isPresent()) {
+            builder.setPrimaryModule(task.getPrimaryModule().get());
+        }
+
+        task.getInputModules().getFiles().stream()
+                .filter(f -> f.getName().endsWith(".xtc"))
+                .forEach(builder::addInputFile);
+
         return builder.build();
     }
 }

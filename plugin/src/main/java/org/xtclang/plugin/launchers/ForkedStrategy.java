@@ -1,5 +1,6 @@
 package org.xtclang.plugin.launchers;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -10,11 +11,13 @@ import java.util.List;
 import org.gradle.api.logging.Logger;
 
 import org.xtclang.plugin.XtcRunModule;
+import org.xtclang.plugin.tasks.XtcBundleTask;
 import org.xtclang.plugin.tasks.XtcCompileTask;
 import org.xtclang.plugin.tasks.XtcLauncherTask;
 import org.xtclang.plugin.tasks.XtcRunTask;
 import org.xtclang.plugin.tasks.XtcTestTask;
 
+import static org.xtclang.plugin.XtcPluginConstants.XTC_BUNDLER_CLASS_NAME;
 import static org.xtclang.plugin.XtcPluginUtils.failure;
 import static org.xtclang.plugin.tasks.XtcLauncherTask.EXIT_CODE_ERROR;
 
@@ -53,7 +56,7 @@ public abstract class ForkedStrategy implements ExecutionStrategy {
         try {
             // Use relative paths for forked mode to preserve build caching
             final var options = optionsBuilder().buildCompilerOptions(task);
-            final ProcessBuilder pb = buildProcess(task, options.toCommandLine());
+            final var pb = buildProcess(task, options.toCommandLine());
             final boolean shouldCopyStreams = configureIO(pb, task);
 
             final Process process = pb.start();
@@ -137,29 +140,87 @@ public abstract class ForkedStrategy implements ExecutionStrategy {
         }
     }
 
-    private ProcessBuilder buildProcess(final XtcLauncherTask<?> task, final String[] programArgs) {
-        final var projectDir = task.getProjectDirectory().get().getAsFile();
+    @Override
+    public int execute(final XtcBundleTask task) {
+        logger.info("[plugin] execute(XtcBundleTask): {}", getDesc());
+
+        try {
+            final var options = optionsBuilder().buildBundlerOptions(task);
+            final var pb = buildProcess(
+                    task.getProjectDirectory().get().getAsFile(),
+                    List.of(),
+                    task.getJavaToolsClasspath().getAsPath(),
+                    XTC_BUNDLER_CLASS_NAME,
+                    task.getVerbose().getOrElse(false),
+                    options.toCommandLine()
+            );
+            final boolean shouldCopyStreams = configureIOForBundle(pb);
+            final var process = pb.start();
+            final List<Thread> streamThreads = shouldCopyStreams ? copyProcessStreams(process) : List.of();
+            final int exitCode = waitForProcess(process);
+            for (final var thread : streamThreads) {
+                thread.join();
+            }
+            return exitCode;
+        } catch (final IOException e) {
+            logger.error("[plugin] Failed to start bundler process", e);
+            return EXIT_CODE_ERROR;
+        } catch (final InterruptedException e) {
+            logger.error("[plugin] Bundler process was interrupted", e);
+            Thread.currentThread().interrupt();
+            return EXIT_CODE_ERROR;
+        }
+    }
+
+    /**
+     * Build a ProcessBuilder from raw parameters.
+     */
+    private ProcessBuilder buildProcess(final File projectDir, final List<String> jvmArgs,
+                                        final String classpath, final String mainClass,
+                                        final boolean verbose, final String[] programArgs) {
         final List<String> command = new ArrayList<>();
         command.add(javaExecutable);
-        command.addAll(task.getJvmArgs().get());
+        command.addAll(jvmArgs);
         command.add("-cp");
-        command.add(task.resolveJavaTools().getAbsolutePath());
-        command.add(task.getJavaLauncherClassName());
+        command.add(classpath);
+        command.add(mainClass);
         command.addAll(Arrays.asList(programArgs));
-        final ProcessBuilder pb = new ProcessBuilder(command).directory(projectDir);
-        if (task.hasVerboseLogging()) {
+        final var pb = new ProcessBuilder(command).directory(projectDir);
+        if (verbose) {
             logger.lifecycle("[plugin] Forked process command: {}", String.join(" ", command));
         }
         return pb;
+    }
+
+    private ProcessBuilder buildProcess(final XtcLauncherTask<?> task, final String[] programArgs) {
+        return buildProcess(
+                task.getProjectDirectory().get().getAsFile(),
+                task.getJvmArgs().get(),
+                task.resolveJavaTools().getAbsolutePath(),
+                task.getJavaLauncherClassName(),
+                task.hasVerboseLogging(),
+                programArgs
+        );
     }
 
     /**
      * Configure I/O for the forked process (inheritIO vs redirect to files).
      * Subclasses override this to implement attached vs detached behavior.
      *
+     * @param pb   the ProcessBuilder to configure
+     * @param task the launcher task (provides stream redirect configuration for DETACHED mode)
      * @return true if streams should be manually copied (for ATTACHED mode), false otherwise
      */
     protected abstract boolean configureIO(ProcessBuilder pb, XtcLauncherTask<?> task) throws IOException;
+
+    /**
+     * Default I/O configuration for non-launcher tasks (e.g., bundle).
+     * Uses PIPE mode with manual stream copying (same behavior as ATTACHED mode).
+     */
+    protected boolean configureIOForBundle(final ProcessBuilder pb) {
+        pb.redirectInput(ProcessBuilder.Redirect.INHERIT);
+        return true;
+    }
 
     /**
      * Copies process stdout/stderr to System.out/err in background threads.

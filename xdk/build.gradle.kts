@@ -15,6 +15,8 @@ import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFiles
 import org.gradle.api.tasks.TaskAction
+import org.xtclang.plugin.launchers.ExecutionMode
+import org.xtclang.plugin.tasks.XtcBundleTask
 import org.xtclang.plugin.tasks.XtcCompileTask
 import java.io.File
 
@@ -176,6 +178,17 @@ val prepareDistributionScripts by tasks.registering(Copy::class) {
     into(layout.buildDirectory.dir("distribution-scripts"))
 }
 
+// Bundle all XDK modules (library + javatools bridge/turtle) into a single xdk.xtc
+val bundleXdkModules by tasks.registering(XtcBundleTask::class) {
+    group = "distribution"
+    description = "Bundle all XDK modules into a single xdk.xtc"
+    dependsOn(tasks.build)
+    inputModules.from(configurations.xtcModule.get().filter { it.name.endsWith(".xtc") })
+    javaToolsClasspath.from(configurations.xdkJavaTools)
+    outputFile.set(layout.buildDirectory.file("bundle/xdk.xtc"))
+    primaryModule.set("ecstasy.xtclang.org")
+}
+
 /**
  * Propagate group and version to all subprojects (the XDK modules will get stamped with the Gradle project
  * version, as defined in VERSION in the repo root).
@@ -282,14 +295,9 @@ distributions {
                 includeEmptyDirs = false
             }
 
-            // XTC modules
-            from(configurations.xtcModule) {
+            // Bundled XTC modules (single xdk.xtc containing all library + javatools bridge modules)
+            from(bundleXdkModules) {
                 into("lib")
-                exclude(JAVATOOLS_PREFIX_PATTERN) // *.xtc, but not javatools_*.xtc
-            }
-            from(configurations.xtcModule) {
-                into("javatools")
-                include(JAVATOOLS_PREFIX_PATTERN) // only javatools_*.xtc
             }
 
             // Java tools (strip version from jar names)
@@ -323,20 +331,22 @@ distributions {
     }
 }
 
-// Ensure distribution tasks depend on script preparation AND javatools artifacts
+// Ensure distribution tasks depend on script preparation, javatools artifacts, and bundle
 tasks.installDist {
     dependsOn(prepareDistributionScripts)
-    // Force dependency on javatools artifacts which triggers git info resolution
+    dependsOn(bundleXdkModules)
     dependsOn(configurations.xdkJavaTools)
 }
 
 tasks.distTar {
     dependsOn(prepareDistributionScripts)
+    dependsOn(bundleXdkModules)
     dependsOn(configurations.xdkJavaTools)
 }
 
 tasks.distZip {
     dependsOn(prepareDistributionScripts)
+    dependsOn(bundleXdkModules)
     dependsOn(configurations.xdkJavaTools)
 }
 

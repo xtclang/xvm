@@ -1,13 +1,14 @@
 package org.xtclang.plugin.launchers;
 
 import org.xtclang.plugin.XtcRunModule;
+import org.xtclang.plugin.tasks.XtcBundleTask;
 import org.xtclang.plugin.tasks.XtcCompileTask;
 import org.xtclang.plugin.tasks.XtcRunTask;
 import org.xtclang.plugin.tasks.XtcTestTask;
 
 /**
- * Strategy for executing XTC launcher tasks (compile or run).
- * Implementations support both compile and run execution.
+ * Strategy for executing XTC launcher tasks (compile, run, test, bundle).
+ * Implementations support all execution modes (DIRECT, ATTACHED, DETACHED).
  */
 public interface ExecutionStrategy {
 
@@ -38,4 +39,12 @@ public interface ExecutionStrategy {
      * @return Exit code (0 for success, non-zero for failure)
      */
     int execute(XtcTestTask task, XtcRunModule runConfig);
+
+    /**
+     * Execute a bundle task using this strategy.
+     *
+     * @param task The bundle task to execute
+     * @return Exit code (0 for success, non-zero for failure)
+     */
+    int execute(XtcBundleTask task);
 }

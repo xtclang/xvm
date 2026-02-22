@@ -111,6 +111,15 @@ public abstract class LauncherOptions {
             .desc("File to search for in the module").get());
 
     /**
+     * Apache Commons CLI Options schema for the bundler.
+     */
+    private static final Options BUNDLER_OPTIONS = copyOptions(COMMON_OPTIONS)
+        .addOption(builder("o").argName("file").hasArg()
+            .desc("Output file for the bundle (required)").get())
+        .addOption(builder().longOpt("primary").argName("module").hasArg()
+            .desc("Module name to designate as the primary module (defaults to first input)").get());
+
+    /**
      * Apache Commons CLI Options schema for the initializer.
      */
     private static final Options INITIALIZER_OPTIONS = copyOptions(COMMON_OPTIONS)
@@ -1619,4 +1628,142 @@ public abstract class LauncherOptions {
             }
         }
     }
+
+
+    // ----- BundlerOptions ------------------------------------------------------------------------
+
+    /**
+     * Bundler command-line options.
+     * Supports bundling multiple .xtc files into a single multi-module .xtc file.
+     */
+    public static class BundlerOptions extends LauncherOptions {
+
+        BundlerOptions(final CommandLine commandLine) {
+            super(commandLine, BUNDLER_OPTIONS, "bundle");
+        }
+
+        /**
+         * Parse command-line arguments into BundlerOptions.
+         */
+        public static BundlerOptions parse(final String[] args) {
+            return new BundlerOptions(parseCommandLine(BUNDLER_OPTIONS, args));
+        }
+
+        /**
+         * Create a builder for programmatically constructing BundlerOptions.
+         */
+        public static Builder builder() {
+            return new Builder();
+        }
+
+        @Override
+        protected String buildUsageLine(final String cmdName) {
+            return cmdName + " [options] -o <output.xtc> <input1.xtc> [input2.xtc ...]";
+        }
+
+        /**
+         * Get the output file for the bundle.
+         */
+        public Optional<File> getOutputFile() {
+            return optionValue("o").map(File::new);
+        }
+
+        /**
+         * Get the input .xtc files to bundle.
+         */
+        public List<File> getInputFiles() {
+            return getTrailingArgs().stream().map(File::new).toList();
+        }
+
+        /**
+         * Get the module name to designate as the primary module.
+         */
+        public Optional<String> getPrimaryModule() {
+            return optionValue("primary");
+        }
+
+        @Override
+        public String[] toCommandLine() {
+            final List<String> args = new ArrayList<>();
+            Collections.addAll(args, super.toCommandLine());
+            getOutputFile().ifPresent(output -> args.addAll(List.of("-o", output.getPath())));
+            getPrimaryModule().ifPresent(primary -> args.addAll(List.of("--primary", primary)));
+            getInputFiles().stream().map(File::getPath).forEach(args::add);
+            return args.toArray(String[]::new);
+        }
+
+        /**
+         * Create BundlerOptions from JSON string.
+         *
+         * @param jsonString the JSON configuration
+         * @return BundlerOptions instance
+         */
+        public static BundlerOptions fromJson(final String jsonString) {
+            return BundlerOptions.parse(jsonToArgs(jsonString, BUNDLER_OPTIONS));
+        }
+
+        /**
+         * Builder for constructing BundlerOptions programmatically.
+         */
+        public static class Builder extends AbstractBuilder<Builder> {
+
+            /**
+             * Set the output file for the bundle.
+             *
+             * @param output the output file
+             */
+            public Builder setOutputFile(final File output) {
+                removeeArgsAndValues("-o");
+                args.addAll(List.of("-o", output.getPath()));
+                return this;
+            }
+
+            /**
+             * Set the output file for the bundle.
+             *
+             * @param output the output file path as a string
+             */
+            public Builder setOutputFile(final String output) {
+                return setOutputFile(new File(output));
+            }
+
+            /**
+             * Set the primary module name.
+             *
+             * @param moduleName the fully qualified module name to use as primary
+             */
+            public Builder setPrimaryModule(final String moduleName) {
+                removeeArgsAndValues("--primary");
+                args.addAll(List.of("--primary", moduleName));
+                return this;
+            }
+
+            /**
+             * Add an input .xtc file to bundle.
+             *
+             * @param input the input .xtc file
+             */
+            public Builder addInputFile(final File input) {
+                args.add(input.getPath());
+                return this;
+            }
+
+            /**
+             * Add an input .xtc file to bundle.
+             *
+             * @param input the input .xtc file path as a string
+             */
+            public Builder addInputFile(final String input) {
+                return addInputFile(new File(input));
+            }
+
+            /**
+             * Build the BundlerOptions by parsing the accumulated arguments.
+             */
+            public BundlerOptions build() {
+                return BundlerOptions.parse(args.toArray(String[]::new));
+            }
+        }
+    }
 }
+
