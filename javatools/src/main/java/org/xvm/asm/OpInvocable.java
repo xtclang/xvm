@@ -352,8 +352,7 @@ public abstract class OpInvocable extends Op {
     }
 
     protected int buildInvoke(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
-        RegisterInfo regTarget = bctx.loadArgument(code, m_nTarget);
-
+        RegisterInfo   regTarget  = bctx.loadArgument(code, m_nTarget);
         ClassDesc      cdTarget   = regTarget.cd();
         TypeConstant   typeTarget = regTarget.type();
         TypeInfo       infoTarget = typeTarget.ensureTypeInfo();

@@ -34,6 +34,7 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.javajit.builders.ArrayBuilder;
 import org.xvm.javajit.builders.AugmentingBuilder;
 
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
@@ -214,6 +215,11 @@ public class NativeTypeSystem
                 throw new RuntimeException(e);
             }
         }
+
+        if (type.isArray()) {
+            return new ArrayBuilder(this, type, model);
+        }
+
         return new AugmentingBuilder(this, type, model);
     }
 
