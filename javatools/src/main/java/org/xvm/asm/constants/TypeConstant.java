@@ -5286,6 +5286,14 @@ public abstract class TypeConstant
     // ----- type comparison support ---------------------------------------------------------------
 
     /**
+     * Determine if the specified TypeConstant is equivalent to this constant based on the "isA"
+     * relation.
+     */
+    public boolean isEquivalent(TypeConstant that) {
+        return this.isA(that) && that.isA(this);
+    }
+
+    /**
      * Determine if the specified TypeConstant (L-value) represents a type that is assignable to
      * values of the type represented by this TypeConstant (R-Value).
      *
@@ -5719,8 +5727,7 @@ public abstract class TypeConstant
                 ? typeBase.resolveAutoNarrowing(pool, false, typeCtx, null)
                 : typeBase;
 
-        if ((typeThisR != this || typeBaseR != typeBase) &&
-                typeBaseR.isA(typeThisR) && typeThisR.isA(typeBaseR)) {
+        if ((typeThisR != this || typeBaseR != typeBase) && typeBaseR.isEquivalent(typeThisR)) {
             return true;
         }
 

@@ -676,8 +676,7 @@ public class NativeContainer
 
         // check for equality first, but allow "congruency" or "duck type" equality as well
         TypeConstant typeResource = key.f_type;
-        return typeResource.equals(type) ||
-                    (typeResource.isA(type) && type.isA(typeResource))
+        return typeResource.equals(type) || typeResource.isEquivalent(type)
                 ? f_mapResources.get(key).supply(frame, hOpts)
                 : null;
     }

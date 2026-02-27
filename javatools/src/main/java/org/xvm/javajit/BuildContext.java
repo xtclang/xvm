@@ -939,7 +939,7 @@ public class BuildContext {
             TypeConstant mtxType = typeMatrix.getType(regId, currOpAddr);
 
             // the types could be equivalent, but not equal
-            if (!mtxType.isA(regType) || !regType.isA(mtxType)) {
+            if (!mtxType.isEquivalent(regType)) {
                 int depth = scope.depth;
                 if (reg instanceof Narrowed narrowedReg) {
                     reg     = narrowedReg.origReg();
