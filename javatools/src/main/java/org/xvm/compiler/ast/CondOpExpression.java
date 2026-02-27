@@ -15,6 +15,7 @@ import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.JumpTrue;
 import org.xvm.asm.op.Label;
@@ -234,6 +235,65 @@ public class CondOpExpression
         }
 
         super.generateAssignment(ctx, code, LVal, errs);
+    }
+
+    @Override
+    public void generateConditionalJump(Context ctx, Code code, Label label, boolean fWhenTrue,
+                                        ErrorListener errs) {
+        if (isConstant()) {
+            super.generateConditionalJump(ctx, code, label, fWhenTrue, errs);
+        }
+
+        switch (combine(expr1.toConstant(), getOperatorString(), expr2.toConstant())) {
+        case UorF:
+        case UandT:
+            // result is the same as the result of the first expression
+            expr1.generateConditionalJump(ctx, code, label, fWhenTrue, errs);
+            break;
+
+        case ForU:
+        case TandU:
+            // result is the same as the result of the second expression
+            expr2.generateConditionalJump(ctx, code, label, fWhenTrue, errs);
+            break;
+
+        case UorU:
+            if (fWhenTrue) {
+                expr1.generateConditionalJump(ctx, code, label, true, errs);
+                expr2.generateConditionalJump(ctx, code, label, true, errs);
+            } else {
+                Label labelEnd = new Label(getCodeContainerCounter());
+                expr1.generateConditionalJump(ctx, code, labelEnd, true, errs);
+                expr2.generateConditionalJump(ctx, code, label,    false, errs);
+                code.add(labelEnd);
+            }
+            break;
+
+        case UandU:
+            if (fWhenTrue) {
+                Label labelEnd = new Label(getCodeContainerCounter());
+                expr1.generateConditionalJump(ctx, code, labelEnd, false, errs);
+                expr2.generateConditionalJump(ctx, code, label,    true, errs);
+                code.add(labelEnd);
+            } else {
+                expr1.generateConditionalJump(ctx, code, label, false, errs);
+                expr2.generateConditionalJump(ctx, code, label, false, errs);
+            }
+            break;
+
+        case UorT:
+            // ensure side effects are in play
+            expr1.generateArgument(ctx, code, true, errs);
+            // fall through
+        case ForT:
+            if (fWhenTrue) {
+                code.add(new Jump(label));
+            }
+            break;
+
+        default:
+            throw new IllegalStateException();
+        }
     }
 
     @Override
