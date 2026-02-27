@@ -2,7 +2,7 @@ class Int64Tests {
 
     @Inject Console console;
 
-// 2 ^ 64 = 18446744073709551616
+// 2 ^ 64 = 709551616
 
     void run() {
         console.print(">>>> Running Int64Tests >>>>");
@@ -40,6 +40,76 @@ class Int64Tests {
         testNullableIntAsIntReturn();
         testIntAsNullableIntReturn();
         testNullableIntConditionalReturn();
+
+        // GP/IP Op tests
+        // Add
+        testInt64OpAdd();
+        testInt64OpAddInPlace();
+        testInt64OpAddOverflow();
+        testInt64OpAddFirstNegative();
+        testInt64OpAddSecondNegative();
+        testInt64OpAddBothNegative();
+        // And
+        testInt64OpAnd();
+        // Complement
+        testInt64Complement();
+        // Inc
+        testInt64OpInc();
+        testInt64OpPreInc();
+        testInt64OpPostInc();
+        testInt64OpIncOverflow();
+        testInt64OpIncNegative();
+        // Dec
+        testInt64OpDec();
+        testInt64OpPreDec();
+        testInt64OpPostDec();
+        testInt64OpDecOverflow();
+        testInt64OpDecNegative();
+        // Div
+        testInt64OpDiv();
+        testInt64OpDivInPlace();
+        // Mod
+        testInt64OpMod();
+        // Multiply
+        testInt64OpMultiply();
+        testInt64OpMultiply();
+        testInt64OpMultiplyInPlace();
+        // Negate
+        testInt64OpNegate();
+        // Or
+        testInt64OpOr();
+        testInt64OpOrInPlace();
+        // Shl
+        testInt64OpShiftLeft();
+        testInt64OpShiftLeftZero();
+        testInt64OpShiftLeft64();
+        testInt64OpShiftLeft64();
+        testInt64OpShiftLeft68();
+        testInt64OpShiftLeftMinus4();
+        // Shr
+        testInt64OpShiftRight();
+        testInt64OpShiftRightNegative();
+        testInt64OpShiftRightZero();
+        testInt64OpShiftRight64();
+        testInt64OpShiftRight68();
+        testInt64OpShiftRightMinus4();
+        // Sub
+        testInt64OpSubBig();
+        testInt64OpSub();
+        testInt64OpSubOverflow();
+        testInt64OpSubFirstNegative();
+        testInt64OpSubSecondNegative();
+        testInt64OpSubBothNegative();
+        // Ushr
+        testInt64OpUnsignedShiftRight();
+        testInt64OpUnsignedShiftRightNegative();
+        testInt64OpUnsignedShiftRightZero();
+        testInt64OpUnsignedShiftRight64();
+        testInt64OpUnsignedShiftRight68();
+        testInt64OpUnsignedShiftRightMinus4();
+        // Xor
+        testInt64OpXor();
+        testInt64OpXorInPlace();
 
         console.print("<<<<< Finished Int64Tests Conversion tests >>>>>");
     }
@@ -303,5 +373,376 @@ class Int64Tests {
             return True, Null;
         }
         return False;
+    }
+
+    // ----- Op tests (Add) ------------------------------------------------------------------------
+
+    void testInt64OpAddBig() {
+        Int64 n1 = 709551616;
+        Int64 n2 = 709200000;
+        Int64 n3 = n1 + n2;
+        assert n3 == 147418751616;
+    }
+
+    void testInt64OpAdd() {
+        Int64 n1 = 1000;
+        Int64 n2 = 19;
+        Int64 n3 = n1 + n2;
+        assert n3 == 1019;
+    }
+
+    void testInt64OpAddInPlace() {
+        Int64 n1 = 709551616;
+        n1 += 709200000;
+        assert n1 == 1418751616;
+    }
+
+    void testInt64OpAddFirstNegative() {
+        Int64 n1 = -709551616;
+        Int64 n2 = 709200000;
+        Int64 n3 = n1 + n2;
+        assert n3 == -351616;
+    }
+
+    void testInt64OpAddSecondNegative() {
+        Int64 n1 = 709551616;
+        Int64 n2 = -709200000;
+        Int64 n3 = n1 + n2;
+        assert n3 == 351616;
+    }
+
+    void testInt64OpAddBothNegative() {
+        Int64 n1 = -709551616;
+        Int64 n2 = -709200000;
+        Int64 n3 = n1 + n2;
+        assert n3 == -1418751616;
+    }
+
+    void testInt64OpAddOverflow() {
+        Int64 n1 = Int64.MaxValue;
+        Int64 n2 = 1;
+        Int64 n3 = n1 + n2;
+        assert n3 == Int64.MinValue;
+    }
+
+    // ----- Op tests (Sub) ------------------------------------------------------------------------
+
+    void testInt64OpSubBig() {
+        Int64 n1 = 709551616;
+        Int64 n2 = 709200000;
+        Int64 n3 = n1 - n2;
+        assert n3 == 351616;
+    }
+
+    void testInt64OpSub() {
+        Int64 n1 = 1000;
+        Int64 n2 = 19;
+        Int64 n3 = n1 - n2;
+        assert n3 == 981;
+    }
+
+    void testInt64OpSubInPlace() {
+        Int64 n1 = 709551616;
+        n1 -= 709200000;
+        assert n1 == 351616;
+    }
+
+    void testInt64OpSubFirstNegative() {
+        Int64 n1 = -709551616;
+        Int64 n2 = 709200000;
+        Int64 n3 = n1 - n2;
+        assert n3 == -1418751616;
+    }
+
+    void testInt64OpSubSecondNegative() {
+        Int64 n1 = 709551616;
+        Int64 n2 = -709200000;
+        Int64 n3 = n1 - n2;
+        assert n3 == 1418751616;
+    }
+
+    void testInt64OpSubBothNegative() {
+        Int64 n1 = -709551616;
+        Int64 n2 = -709200000;
+        Int64 n3 = n1 - n2;
+        assert n3 == -351616;
+    }
+
+    void testInt64OpSubOverflow() {
+        Int64 n1 = Int64.MinValue;
+        Int64 n2 = 1;
+        Int64 n3 = n1 - n2;
+        assert n3 == Int64.MaxValue;
+    }
+
+    // ----- Op tests (logical And) ----------------------------------------------------------------
+
+    void testInt64OpAnd() {
+        Int64 n1 = 0x00F2_F0F2_F0F0_F0F0;
+        Int64 n2 = 0x0AAA_AAAA_AAAA_AAAA;
+        Int64 n3 = n1 & n2;
+        assert n3 == 0x00A2_A0A2_A0A0_A0A0;
+    }
+
+    // ----- Op tests (Complement ~) ---------------------------------------------------------------
+
+    void testInt64Complement() {
+        Int64 value1 = 0;
+        Int64 value2 = 0x5ABC5432;
+        value1 = ~value2;
+        assert value1 == -1522291763;
+    }
+
+    // ----- Op tests (Inc ++) ---------------------------------------------------------------------
+
+    void testInt64OpInc() {
+        Int64 n = 1234;
+        n++;
+        assert n == 1235;
+    }
+
+    void testInt64OpPreInc() {
+        Int64 n1 = 1234;
+        Int64 n2 = ++n1;
+        assert n1 == 1235;
+        assert n2 == 1235;
+    }
+
+    void testInt64OpPostInc() {
+        Int64 n1 = 1234;
+        Int64 n2 = n1++;
+        assert n1 == 1235;
+        assert n2 == 1234;
+    }
+
+    void testInt64OpIncOverflow() {
+        Int64 n = Int64.MaxValue;
+        n++;
+        assert n == Int64.MinValue;
+    }
+
+    void testInt64OpIncNegative() {
+        Int64 n = -709551616;
+        n++;
+        assert n == -709551615;
+    }
+
+    // ----- Op tests (Dec --) ---------------------------------------------------------------------
+
+    void testInt64OpDec() {
+        Int64 n = 1234;
+        n--;
+        assert n == 1233;
+    }
+
+    void testInt64OpPreDec() {
+        Int64 n1 = 1234;
+        Int64 n2 = --n1;
+        assert n1 == 1233;
+        assert n2 == 1233;
+    }
+
+    void testInt64OpPostDec() {
+        Int64 n1 = 1234;
+        Int64 n2 = n1--;
+        assert n1 == 1233;
+        assert n2 == 1234;
+    }
+
+    void testInt64OpDecOverflow() {
+        Int64 n = Int64.MinValue;
+        n--;
+        assert n == Int64.MaxValue;
+    }
+
+    void testInt64OpDecNegative() {
+        Int64 n = -709551616;
+        n--;
+        assert n == -709551617;
+    }
+
+    // ----- Op tests (divide) ---------------------------------------------------------------------
+
+    void testInt64OpDiv() {
+        Int64 n = 1234;
+        Int64 n2 = n / 10;
+        assert n2 == 123;
+    }
+
+    void testInt64OpDivInPlace() {
+        Int64 n = 709551616;
+        n /= 10;
+        assert n == 70955161;
+    }
+
+    // ----- Op tests (modulus) --------------------------------------------------------------------
+
+    void testInt64OpMod() {
+        Int64 n = 1234;
+        Int64 n2 = n % 10;
+        assert n2 == 4;
+    }
+
+    // ----- Op tests (multiply) -------------------------------------------------------------------
+
+    void testInt64OpMultiply() {
+        Int64 n = 1234;
+        Int64 n2 = n * 10;
+        assert n2 == 12340;
+    }
+
+    void testInt64OpMultiplyInPlace() {
+        Int64 n = 709551616;
+        n *= 10;
+        assert n == 7095516160;
+    }
+
+    // ----- Op tests (negate) ---------------------------------------------------------------------
+
+    void testInt64OpNegate() {
+        Int64 n = 1234;
+        Int64 n2 = -n;
+        assert n2 == -1234;
+    }
+
+    // ----- Op tests (logical Or) -----------------------------------------------------------------
+
+    void testInt64OpOr() {
+        Int64 n1 = 0x00F2_F0F2_F0F0_F0F0;
+        Int64 n2 = 0x0AA0_AAAA_AAAA_AAAA;
+        Int64 n3 = n1 | n2;
+        assert n3 == 0x0AF2_FAFA_FAFA_FAFA;
+    }
+
+    void testInt64OpOrInPlace() {
+        Int64 n = 0x00F2_F0F2_F0F0_F0F0;
+        n |= 0x0AA0_AAAA_AAAA_AAAA;
+        assert n == 0x0AF2_FAFA_FAFA_FAFA;
+    }
+
+    // ----- Op tests (Shift left <<) --------------------------------------------------------------
+
+    void testInt64OpShiftLeft() {
+        Int64 n = 0x1142_F0F2_F0F0_F0F0;
+        Int64 n2 = n << 8;
+        assert n2 == 0x42F0_F2F0_F0F0_F000;
+    }
+
+    void testInt64OpShiftLeftZero() {
+        Int64 n = 0x00F2_F0F2_F0F0_F0F0;
+        Int64 n2 = n << 0;
+        assert n2 == n;
+    }
+
+    void testInt64OpShiftLeft64() {
+        Int64 n = 1;
+        Int64 n2 = n << 64;
+        assert n2 == 1; // equivalent to << 0
+    }
+
+    void testInt64OpShiftLeft68() {
+        Int64 n = 1;
+        Int64 n2 = n << 68;
+        assert n2 == 16; // 68 & 0x3F equivalent to << 4
+    }
+
+    void testInt64OpShiftLeftMinus4() {
+        Int64 n = 1;
+        Int64 n2 = n << -4;
+        assert n2 == 0x1000_0000_0000_0000;
+        // -4 == 0xFC,  0xFC & 0x3F == 0x3C equivalent to 1 << 60
+    }
+
+    // ----- Op tests (Shift right >>) -------------------------------------------------------------
+
+    void testInt64OpShiftRight() {
+        Int64 n =   0x1142_F0F2_F0F0_F0F0;
+        Int64 n2 = n >> 8;
+        assert n2 == 0x0011_42F0_F2F0_F0F0;
+    }
+
+    void testInt64OpShiftRightNegative() {
+        Int64 n = -2000;
+        Int64 n2 = n >> 8;
+        assert n2 == -8; // preserved sign bit
+    }
+
+    void testInt64OpShiftRightZero() {
+        Int64 n =   0x1142_F0F2_F0F0_F0F0;
+        Int64 n2 = n >> 0;
+        assert n2 == 0x1142_F0F2_F0F0_F0F0;
+    }
+
+    void testInt64OpShiftRight64() {
+        Int64 n = 1;
+        Int64 n2 = n >> 64;
+        assert n2 == 1; // 0x40 & 0x3F equivalent to >> 0
+    }
+
+    void testInt64OpShiftRight68() {
+        Int64 n = 16;
+        Int64 n2 = n >> 132;
+        assert n2 == 1; // 68 == 44 & 0x7F equivalent to >> 4
+    }
+
+    void testInt64OpShiftRightMinus4() {
+        Int64 n = 0x1000_0000_0000_0000;
+        Int64 n2 = n >> -4;
+        assert n2 == 1;
+        // -4 == 0xFC,  0xFC & 0x3F == 0x3C equivalent to 1 >> 60
+    }
+
+    // ----- Op tests (Unsigned shift right >>>) ---------------------------------------------------
+
+    void testInt64OpUnsignedShiftRight() {
+        Int64 n =   0x1142_F0F2_F0F0_F0F0;
+        Int64 n2 = n >>> 8;
+        assert n2 == 0x0011_42F0_F2F0_F0F0;
+    }
+
+    void testInt64OpUnsignedShiftRightNegative() {
+        Int64 n = -2000; // 0xFFFF_FFFF_FFFF_F830
+        Int64 n2 = n >>> 8;
+        assert n2 == 0x00FF_FFFF_FFFF_FFF8;
+    }
+
+    void testInt64OpUnsignedShiftRightZero() {
+        Int64 n =   0x1142_F0F2_F0F0_F0F0;
+        Int64 n2 = n >>> 0;
+        assert n2 == 0x1142_F0F2_F0F0_F0F0;
+    }
+
+    void testInt64OpUnsignedShiftRight64() {
+        Int64 n = 1;
+        Int64 n2 = n >>> 64;
+        assert n2 == 1; // 64 == 0x40 & 0x3F equivalent to >>> 0
+    }
+
+    void testInt64OpUnsignedShiftRight68() {
+        Int64 n = 16;
+        Int64 n2 = n >>> 68;
+        assert n2 == 1; // 68 == 44 & 0x7F equivalent to >> 4
+    }
+
+    void testInt64OpUnsignedShiftRightMinus4() {
+        Int64 n = 0x1000_0000_0000_0000;
+        Int64 n2 = n >>> -4;
+        assert n2 == 1;
+        // -4 == 0xFC,  0xFC & 0x3F == 0x3C equivalent to 1 >> 60
+    }
+
+    // ----- Op tests (logical Xor) ----------------------------------------------------------------
+
+    void testInt64OpXor() {
+        Int64 n1 = 0x00F2_F0F2_F0F0_F0F0;
+        Int64 n2 = 0x0AA0_AAAA_AAAA_AAAA;
+        Int64 n3 = n1 ^ n2;
+        assert n3 == 0x0A52_5A58_5A5A_5A5A;
+    }
+
+    void testInt64OpXorInPlace() {
+        Int64 n = 0x00F2_F0F2_F0F0_F0F0;
+        n ^= 0x0AA0_AAAA_AAAA_AAAA;
+        assert n == 0x0A52_5A58_5A5A_5A5A;
     }
 }

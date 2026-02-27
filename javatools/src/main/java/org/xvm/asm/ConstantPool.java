@@ -2177,7 +2177,9 @@ public class ConstantPool
     public TypeConstant      typeUInt64()        {TypeConstant      c = m_typeUInt64;        if (c == null) {m_typeUInt64        = c = ensureTerminalTypeConstant(clzUInt64()                          );} return c;}
     public TypeConstant      typeUInt128()       {TypeConstant      c = m_typeUInt128;       if (c == null) {m_typeUInt128       = c = ensureTerminalTypeConstant(clzUInt128()                         );} return c;}
     public TypeConstant      typeUIntN()         {TypeConstant      c = m_typeUIntN;         if (c == null) {m_typeUIntN         = c = ensureTerminalTypeConstant(clzUIntN()                           );} return c;}
+    public TypeConstant      typeDec32()         {TypeConstant      c = m_typeDec32;         if (c == null) {m_typeDec32         = c = ensureTerminalTypeConstant(clzDec32()                           );} return c;}
     public TypeConstant      typeDec64()         {TypeConstant      c = m_typeDec64;         if (c == null) {m_typeDec64         = c = ensureTerminalTypeConstant(clzDec64()                           );} return c;}
+    public TypeConstant      typeDec128()        {TypeConstant      c = m_typeDec128;        if (c == null) {m_typeDec128        = c = ensureTerminalTypeConstant(clzDec128()                          );} return c;}
     public TypeConstant      typeFloat32()       {TypeConstant      c = m_typeFloat32;       if (c == null) {m_typeFloat32       = c = ensureTerminalTypeConstant(clzFloat32()                         );} return c;}
     public TypeConstant      typeFloat64()       {TypeConstant      c = m_typeFloat64;       if (c == null) {m_typeFloat64       = c = ensureTerminalTypeConstant(clzFloat64()                         );} return c;}
     public TypeConstant      typeIndexed()       {TypeConstant      c = m_typeIndexed;       if (c == null) {m_typeIndexed       = c = ensureTerminalTypeConstant(clzIndexed()                         );} return c;}
@@ -2217,6 +2219,7 @@ public class ConstantPool
     public TypeConstant      typeException१()    {TypeConstant      c = m_typeException१;    if (c == null) {m_typeException१    = c = ensureNullableTypeConstant(typeException()                       );} return c;}
     public TypeConstant      typeString१()       {TypeConstant      c = m_typeString१;       if (c == null) {m_typeString१       = c = ensureNullableTypeConstant(typeString()                          );} return c;}
     public TypeConstant      typeInjector()      {TypeConstant      c = m_typeInjector;      if (c == null) {m_typeInjector      = c = ensureTerminalTypeConstant(clzInjector()                        );} return c;}
+    public TypeConstant      typeRounding()      {TypeConstant      c = m_typeRounding;      if (c == null) {m_typeRounding      = c = ensureTerminalTypeConstant(clzRounding()                        );} return c;}
 
     public IntConstant       val0()              {IntConstant       c = m_val0;              if (c == null) {m_val0              = c = ensureIntConstant(0)                                             ;} return c;}
     public SingletonConstant valFalse()          {SingletonConstant c = m_valFalse;          if (c == null) {m_valFalse          = c = ensureSingletonConstConstant(clzFalse()                         );} return c;}
@@ -2224,6 +2227,11 @@ public class ConstantPool
     public SingletonConstant valLesser()         {SingletonConstant c = m_valLesser;         if (c == null) {m_valLesser         = c = ensureSingletonConstConstant(clzLesser()                        );} return c;}
     public SingletonConstant valEqual()          {SingletonConstant c = m_valEqual;          if (c == null) {m_valEqual          = c = ensureSingletonConstConstant(clzEqual()                         );} return c;}
     public SingletonConstant valGreater()        {SingletonConstant c = m_valGreater;        if (c == null) {m_valGreater        = c = ensureSingletonConstConstant(clzGreater()                       );} return c;}
+    public SingletonConstant valTiesToEven()     {SingletonConstant c = m_valTiesToEven;     if (c == null) {m_valTiesToEven     = c = ensureSingletonConstConstant(clzTiesToEven()                    );} return c;}
+    public SingletonConstant valTiesToAway()     {SingletonConstant c = m_valTiesToAway;     if (c == null) {m_valTiesToAway     = c = ensureSingletonConstConstant(clzTiesToAway()                    );} return c;}
+    public SingletonConstant valTowardPositive() {SingletonConstant c = m_valTowardPositive; if (c == null) {m_valTowardPositive = c = ensureSingletonConstConstant(clzTowardPositive()                );} return c;}
+    public SingletonConstant valTowardZero()     {SingletonConstant c = m_valTowardZero;     if (c == null) {m_valTowardZero     = c = ensureSingletonConstConstant(clzTowardZero()                    );} return c;}
+    public SingletonConstant valTowardNegative() {SingletonConstant c = m_valTowardNegative; if (c == null) {m_valTowardNegative = c = ensureSingletonConstConstant(clzTowardNegative()                );} return c;}
 
     public RegisterConstant  valDefault()        {RegisterConstant  c = m_valDefault;        if (c == null) {m_valDefault        = c = new RegisterConstant(this, Register.DEFAULT)                     ;} return c;}
 
@@ -2266,7 +2274,9 @@ public class ConstantPool
     protected ClassConstant  clzUInt64()        {return (ClassConstant) getImplicitlyImportedIdentity("UInt64"                   );}
     protected ClassConstant  clzUInt128()       {return (ClassConstant) getImplicitlyImportedIdentity("UInt128"                  );}
     protected ClassConstant  clzUIntN()         {return (ClassConstant) getImplicitlyImportedIdentity("UIntN"                    );}
+    protected ClassConstant  clzDec32()         {return (ClassConstant) getImplicitlyImportedIdentity("Dec32"                    );}
     protected ClassConstant  clzDec64()         {return (ClassConstant) getImplicitlyImportedIdentity("Dec64"                    );}
+    protected ClassConstant  clzDec128()        {return (ClassConstant) getImplicitlyImportedIdentity("Dec128"                   );}
     protected ClassConstant  clzFloat32()       {return (ClassConstant) getImplicitlyImportedIdentity("Float32"                  );}
     protected ClassConstant  clzFloat64()       {return (ClassConstant) getImplicitlyImportedIdentity("Float64"                  );}
     protected ClassConstant  clzIndexed()       {return (ClassConstant) getImplicitlyImportedIdentity("UniformIndexed"           );}
@@ -2290,6 +2300,12 @@ public class ConstantPool
     protected ClassConstant  clzFileNode()      {return                 ensureEcstasyClassConstant   ("fs.FileNode"              );}
     protected ClassConstant  clzFileStore()     {return (ClassConstant) getImplicitlyImportedIdentity("FileStore"                );}
     protected ClassConstant  clzInjector()      {return                 ensureEcstasyClassConstant   ("reflect.Injector"         );}
+    protected ClassConstant  clzRounding()      {return (ClassConstant) getImplicitlyImportedIdentity("Rounding"                 );}
+    protected ClassConstant  clzTiesToEven()    {return (ClassConstant) getImplicitlyImportedIdentity("TiesToEven"               );}
+    protected ClassConstant  clzTiesToAway()    {return (ClassConstant) getImplicitlyImportedIdentity("TiesToAway"               );}
+    protected ClassConstant  clzTowardPositive(){return (ClassConstant) getImplicitlyImportedIdentity("TowardPositive"           );}
+    protected ClassConstant  clzTowardZero()    {return (ClassConstant) getImplicitlyImportedIdentity("TowardZero"               );}
+    protected ClassConstant  clzTowardNegative(){return (ClassConstant) getImplicitlyImportedIdentity("TowardNegative"           );}
 
     /**
      * A special TypeInfo that acts as a place-holder for "this TypeInfo is currently being built".
@@ -3688,7 +3704,9 @@ public class ConstantPool
         m_typeUInt64        = null;
         m_typeUInt128       = null;
         m_typeUIntN         = null;
+        m_typeDec32         = null;
         m_typeDec64         = null;
+        m_typeDec128        = null;
         m_typeFloat32       = null;
         m_typeFloat64       = null;
         m_typeIndexed       = null;
@@ -3988,7 +4006,9 @@ public class ConstantPool
     private transient TypeConstant      m_typeUInt64;
     private transient TypeConstant      m_typeUInt128;
     private transient TypeConstant      m_typeUIntN;
+    private transient TypeConstant      m_typeDec32;
     private transient TypeConstant      m_typeDec64;
+    private transient TypeConstant      m_typeDec128;
     private transient TypeConstant      m_typeFloat32;
     private transient TypeConstant      m_typeFloat64;
     private transient TypeConstant      m_typeIndexed;
@@ -4023,6 +4043,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeFile;
     private transient TypeConstant      m_typeFileNode;
     private transient TypeConstant      m_typeInjector;
+    private transient TypeConstant      m_typeRounding;
     private transient IntConstant       m_val0;
     private transient SingletonConstant m_valFalse;
     private transient SingletonConstant m_valTrue;
@@ -4030,6 +4051,11 @@ public class ConstantPool
     private transient SingletonConstant m_valEqual;
     private transient SingletonConstant m_valGreater;
     private transient SingletonConstant m_valNull;
+    private transient SingletonConstant m_valTiesToEven;
+    private transient SingletonConstant m_valTiesToAway;
+    private transient SingletonConstant m_valTowardPositive;
+    private transient SingletonConstant m_valTowardZero;
+    private transient SingletonConstant m_valTowardNegative;
     private transient RegisterConstant  m_valDefault;
     private transient SignatureConstant m_sigToString;
     private transient SignatureConstant m_sigEquals;

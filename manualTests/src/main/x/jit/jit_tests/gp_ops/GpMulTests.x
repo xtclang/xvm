@@ -20,6 +20,7 @@ class GpMulTests {
         testGpMulUInt128();
         testGpMulDec();
         testGpMulDec32();
+        testGpMulDec128();
         console.print("<<<< Finished GpMulTests <<<<<");
     }
 
@@ -109,20 +110,26 @@ class GpMulTests {
     }
 
     void testGpMulDec() {
-//        Dec value1 = 0;
-//        Dec value2 = 4.25;
-//        Dec value3 = 3.0;
-//        value1 = value2 * value3;
-//        Dec expected = 12.75;
-//        assert value1 == expected; // Fails in non-JIT too
+        Dec value1 = 0;
+        Dec value2 = 4.25;
+        Dec value3 = 3.0;
+        value1 = value2 * value3;
+        assert value1 == 12.750;
     }
 
     void testGpMulDec32() {
-//        Dec32 value1 = 0;
-//        Dec32 value2 = 4.25;
-//        Dec32 value3 = 3.0;
-//        value1 = value2 * value3;
-//        Dec expected = 12.75;
-//        assert value1 == expected; // Fails in non-JIT too
+        Dec32 value1 = 0;
+        Dec32 value2 = 4.25;
+        Dec32 value3 = 3.0;
+        value1 = value2 * value3;
+        assert value1 == 12.750;
+    }
+
+    void testGpMulDec128() {
+        Dec128 value1 = 0;
+        Dec128 value2 = 4.25;
+        Dec128 value3 = 3.0;
+        value1 = value2 * value3;
+        assert value1 == 12.750;
     }
 }

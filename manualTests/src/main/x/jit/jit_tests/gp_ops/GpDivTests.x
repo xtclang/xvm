@@ -20,6 +20,7 @@ class GpDivTests {
         testGpDivUInt128();
         testGpDivDec();
         testGpDivDec32();
+        testGpDivDec128();
         console.print("<<<< Finished GpDivTests <<<<<");
     }
 
@@ -93,34 +94,42 @@ class GpDivTests {
     }
 
     void testGpDivInt128() {
-//        Int128 value1 = 0;
-//        Int128 value2 = 0x5FFFFFFF;
-//        Int128 value3 = 5;
-//        value1 = value2 / value3;
-//        assert value1 == 0x13333333;
+        Int128 value1 = 0;
+        Int128 value2 = 0x5FFFFFFF;
+        Int128 value3 = 5;
+        value1 = value2 / value3;
+        assert value1 == 0x13333333;
     }
 
     void testGpDivUInt128() {
-//        UInt128 value1 = 0;
-//        UInt128 value2 = 0xFFFFFFFF;
-//        UInt128 value3 = 5;
-//        value1 = value2 / value3;
-//        assert value1 == 0x33333333;
+        UInt128 value1 = 0;
+        UInt128 value2 = 0xFFFFFFFF;
+        UInt128 value3 = 5;
+        value1 = value2 / value3;
+        assert value1 == 0x33333333;
     }
 
     void testGpDivDec() {
-//        Dec value1 = 0;
-//        Dec value2 = 12.75;
-//        Dec value3 = 3.0;
-//        value1 = value2 / value3;
-//        assert value1 == 4.25;
+        Dec value1 = 0;
+        Dec value2 = 12.75;
+        Dec value3 = 3.0;
+        value1 = value2 / value3;
+        assert value1 == 4.25;
     }
 
     void testGpDivDec32() {
-//        Dec32 value1 = 0;
-//        Dec32 value2 = 12.75;
-//        Dec32 value3 = 3.0;
-//        value1 = value2 / value3;
-//        assert value1 == 4.25;
+        Dec32 value1 = 0;
+        Dec32 value2 = 12.75;
+        Dec32 value3 = 3.0;
+        value1 = value2 / value3;
+        assert value1 == 4.25;
+    }
+
+    void testGpDivDec128() {
+        Dec128 value1 = 0;
+        Dec128 value2 = 12.75;
+        Dec128 value3 = 3.0;
+        value1 = value2 / value3;
+        assert value1 == 4.25;
     }
 }

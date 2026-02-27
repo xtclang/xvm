@@ -20,6 +20,7 @@ class GpAddTests {
         testGpAddUInt128();
         testGpAddDec();
         testGpAddDec32();
+        testGpAddDec128();
         testGpAddString();
         testGpAddIntToChar();
         testGpAddCharToChar();
@@ -113,21 +114,27 @@ class GpAddTests {
     }
 
     void testGpAddDec() {
-// TODO: Need Dec support
-//        Dec value1 = 0.0;
-//        Dec value2 = 2.5;
-//        Dec value3 = 1.25;
-//        value1 = value2 + value3;
-//        assert value1 == 3.75;
+        Dec value1 = 0.0;
+        Dec value2 = 2.5;
+        Dec value3 = 1.25;
+        value1 = value2 + value3;
+        assert value1 == 3.75;
     }
 
     void testGpAddDec32() {
-// TODO: Need Dec32 support
-//        Dec32 value1 = 0.0;
-//        Dec32 value2 = 2.5;
-//        Dec32 value3 = 1.25;
-//        value1 = value2 + value3;
-//        assert value1 == 3.75;
+        Dec32 value1 = 0.0;
+        Dec32 value2 = 2.5;
+        Dec32 value3 = 1.25;
+        value1 = value2 + value3;
+        assert value1 == 3.75;
+    }
+
+    void testGpAddDec128() {
+        Dec128 value1 = 0.0;
+        Dec128 value2 = 2.5;
+        Dec128 value3 = 1.25;
+        value1 = value2 + value3;
+        assert value1 == 3.75;
     }
 
     void testGpAddString() {

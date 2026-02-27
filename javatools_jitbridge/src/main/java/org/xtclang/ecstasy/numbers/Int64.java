@@ -1,5 +1,7 @@
 package org.xtclang.ecstasy.numbers;
 
+import java.math.BigDecimal;
+
 import org.xtclang.ecstasy.Comparable;
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.Orderable;
@@ -59,6 +61,11 @@ public class Int64 extends IntNumber {
         }
         // TODO consider using a cache on the context (to avoid CPU cache line collisions)
         return new Int64(value);
+    }
+
+    @Override
+    public BigDecimal $toBigDecimal() {
+        return BigDecimal.valueOf($value);
     }
 
     /**

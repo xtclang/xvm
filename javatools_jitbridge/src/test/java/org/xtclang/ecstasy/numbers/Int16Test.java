@@ -1,5 +1,7 @@
 package org.xtclang.ecstasy.numbers;
 
+import java.math.BigDecimal;
+
 import org.junit.jupiter.api.Test;
 
 import org.xtclang.ecstasy.OutOfBounds;
@@ -225,6 +227,39 @@ public class Int16Test {
                 assertEquals(i, n2);
                 assertEquals(0L, ctx.i0);
             }
+        }
+    }
+
+    @Test
+    public void shouldConvertToDec32() {
+        for (int i = Short.MIN_VALUE; i <= Short.MAX_VALUE; i++) {
+            Int16 n   = Int16.$box(i);
+            Ctx   ctx = new Ctx(null, null);
+            int   n2  = n.toDec32$p(ctx);
+            Dec32 dec = Dec32.$box(n2);
+            assertEquals(BigDecimal.valueOf(i), dec.$toBigDecimal());
+        }
+    }
+
+    @Test
+    public void shouldConvertToDec64() {
+        for (int i = Short.MIN_VALUE; i <= Short.MAX_VALUE; i++) {
+            Int16 n   = Int16.$box(i);
+            Ctx   ctx = new Ctx(null, null);
+            long  n2  = n.toDec64$p(ctx);
+            Dec64 dec = Dec64.$box(n2);
+            assertEquals(BigDecimal.valueOf(i), dec.$toBigDecimal());
+        }
+    }
+
+    @Test
+    public void shouldConvertToDec128() {
+        for (int i = Short.MIN_VALUE; i <= Short.MAX_VALUE; i++) {
+            Int16  n   = Int16.$box(i);
+            Ctx    ctx = new Ctx(null, null);
+            long   n2  = n.toDec128$p(ctx);
+            Dec128 dec = Dec128.$box(n2, ctx.i0);
+            assertEquals(BigDecimal.valueOf(i), dec.$toBigDecimal());
         }
     }
 }

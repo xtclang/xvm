@@ -19,6 +19,7 @@ class IpMulTests {
         testIpMulUInt128();
         testIpMulDec();
         testIpMulDec32();
+        testIpMulDec128();
         console.print("<<<< Finished IpMulTests <<<<<");
     }
 
@@ -83,16 +84,20 @@ class IpMulTests {
     }
 
     void testIpMulDec() {
-//        Dec value1 = 4.25;
-//        value1 *= 3.0;
-//        Dec expected = 12.75;
-//        assert value1 == expected; // Fails in non-JIT too
+        Dec value1 = 4.25;
+        value1 *= 3.0;
+        assert value1 == 12.750;
     }
 
     void testIpMulDec32() {
-//        Dec32 value1 = 4.25;
-//        value1 *= 3.0;
-//        Dec expected = 12.75;
-//        assert value1 == expected; // Fails in non-JIT too
+        Dec32 value1 = 4.25;
+        value1 *= 3.0;
+        assert value1 == 12.750;
+    }
+
+    void testIpMulDec128() {
+        Dec128 value1 = 4.25;
+        value1 *= 3.0;
+        assert value1 == 12.750;
     }
 }

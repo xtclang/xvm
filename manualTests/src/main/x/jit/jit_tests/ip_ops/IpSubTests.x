@@ -19,6 +19,7 @@ class IpSubTests {
         testIpSubUInt128();
         testIpSubDec();
         testIpSubDec32();
+        testIpSubDec128();
         testIpSubIntFromChar();
         console.print("<<<< Finished IpSubTests <<<<<");
     }
@@ -84,15 +85,21 @@ class IpSubTests {
     }
 
     void testIpSubDec() {
-//        Dec value1 = 3.75;
-//        value1 -= 1.25;
-//        assert value1 == 2.5;
+        Dec value1 = 3.75;
+        value1 -= 1.25;
+        assert value1 == 2.50;
     }
 
     void testIpSubDec32() {
-//        Dec32 value1 = 3.75;
-//        value1 -= 1.25;
-//        assert value1 == 2.5;
+        Dec32 value1 = 3.75;
+        value1 -= 1.25;
+        assert value1 == 2.50;
+    }
+
+    void testIpSubDec128() {
+        Dec128 value1 = 3.75;
+        value1 -= 1.25;
+        assert value1 == 2.50;
     }
 
     void testIpSubIntFromChar() {

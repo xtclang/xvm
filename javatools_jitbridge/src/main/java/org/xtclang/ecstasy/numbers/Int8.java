@@ -1,5 +1,7 @@
 package org.xtclang.ecstasy.numbers;
 
+import java.math.BigDecimal;
+
 import org.xtclang.ecstasy.OutOfBounds;
 
 import org.xtclang.ecstasy.text.String;
@@ -42,6 +44,11 @@ public class Int8 extends IntNumber {
             CACHE[key] = ref = new Int8(value);
         }
         return ref;
+    }
+
+    @Override
+    public BigDecimal $toBigDecimal() {
+        return BigDecimal.valueOf($value);
     }
 
     // ----- conversion ----------------------------------------------------------------------------

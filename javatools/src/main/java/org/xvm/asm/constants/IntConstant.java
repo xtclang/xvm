@@ -13,6 +13,8 @@ import org.xvm.asm.ConstantPool;
 
 import org.xvm.compiler.Token;
 
+import org.xvm.type.Decimal128;
+import org.xvm.type.Decimal32;
 import org.xvm.type.Decimal64;
 
 import org.xvm.util.Hash;
@@ -972,8 +974,14 @@ public class IntConstant
         if (typeOut.equals(pool.typeUIntN())) {
             return toIntConstant(Format.UIntN);
         }
+        if (typeOut.equals(pool.typeDec32())) {
+            return toDecConstant(Format.Dec32);
+        }
         if (typeOut.equals(pool.typeDec64())) {
             return toDecConstant(Format.Dec64);
+        }
+        if (typeOut.equals(pool.typeDec128())) {
+            return toDecConstant(Format.Dec128);
         }
         if (typeOut.equals(pool.typeFloat32())) {
             return toFloatConstant(Format.Float32);
@@ -1080,8 +1088,12 @@ public class IntConstant
      */
     public static DecimalConstant toDecConstant(Format format, PackedInteger pi, ConstantPool pool) {
         return switch (format) {
-            case Dec64 -> pool.ensureDecConstant(
+            case Dec32  -> pool.ensureDecConstant(
+                    new Decimal32(new BigDecimal(pi.getBigInteger(), MathContext.DECIMAL32)));
+            case Dec64  -> pool.ensureDecConstant(
                    new Decimal64(new BigDecimal(pi.getBigInteger(), MathContext.DECIMAL64)));
+            case Dec128 -> pool.ensureDecConstant(
+                   new Decimal128(new BigDecimal(pi.getBigInteger(), MathContext.DECIMAL128)));
             default -> null; // the error will be reported by the compiler
         };
     }

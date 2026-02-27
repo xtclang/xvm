@@ -353,9 +353,6 @@ public abstract class OpInvocable extends Op {
 
     protected int buildInvoke(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
         RegisterInfo regTarget = bctx.loadArgument(code, m_nTarget);
-        if (!regTarget.isSingle()) {
-            throw new UnsupportedOperationException("Multislot invoke");
-        }
 
         ClassDesc      cdTarget   = regTarget.cd();
         TypeConstant   typeTarget = regTarget.type();
@@ -385,7 +382,7 @@ public abstract class OpInvocable extends Op {
         boolean        fOptimized = jmd.isOptimized;
         MethodTypeDesc md;
 
-        if (cdTarget.isPrimitive()) {
+        if (cdTarget.isPrimitive() || typeTarget.isXvmPrimitive()) {
             Builder.box(code, regTarget);
             cdTarget = bctx.builder.ensureClassDesc(regTarget.type());
         }
@@ -401,7 +398,7 @@ public abstract class OpInvocable extends Op {
         bctx.loadCtx(code);
         bctx.loadCallArguments(code, jmd, anArgValue);
 
-        if (infoMethod.getHead().getImplementation().getExistence() == MethodBody.Existence.Interface) {
+        if (infoTarget.getFormat() == Component.Format.INTERFACE) {
             code.invokeinterface(cdTarget, methodName, md);
         } else {
             code.invokevirtual(cdTarget, methodName, md);

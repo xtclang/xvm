@@ -1,5 +1,8 @@
 package org.xtclang.ecstasy.numbers;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
+
 import org.junit.jupiter.api.Test;
 
 import org.xtclang.ecstasy.OutOfBounds;
@@ -247,11 +250,35 @@ public class Int32Test
     }
 
     @Test
-    void should() {
-        Int32 n  = Int32.$box(Integer.MIN_VALUE);
-        Ctx   ctx = new Ctx(null, null);
-        long  n2 = n.toUInt128$p(ctx, false, false);
-        System.out.println(n2);
-        System.out.println(ctx.i0);
+    public void shouldConvertToDec32() {
+        for (int i : ensureIntTestData()) {
+            Int32 n   = Int32.$box(i);
+            Ctx   ctx = new Ctx(null, null);
+            int   n2  = n.toDec32$p(ctx);
+            Dec32 dec = Dec32.$box(n2);
+            assertEquals(BigDecimal.valueOf(i).round(MathContext.DECIMAL32), dec.$toBigDecimal());
+        }
+    }
+
+    @Test
+    public void shouldConvertToDec64() {
+        for (int i : ensureIntTestData()) {
+            Int32 n   = Int32.$box(i);
+            Ctx   ctx = new Ctx(null, null);
+            long  n2  = n.toDec64$p(ctx);
+            Dec64 dec = Dec64.$box(n2);
+            assertEquals(BigDecimal.valueOf(i).round(MathContext.DECIMAL64), dec.$toBigDecimal());
+        }
+    }
+
+    @Test
+    public void shouldConvertToDec128() {
+        for (int i : ensureIntTestData()) {
+            Int32  n   = Int32.$box(i);
+            Ctx    ctx = new Ctx(null, null);
+            long   n2  = n.toDec128$p(ctx);
+            Dec128 dec = Dec128.$box(n2, ctx.i0);
+            assertEquals(BigDecimal.valueOf(i).round(MathContext.DECIMAL128), dec.$toBigDecimal());
+        }
     }
 }

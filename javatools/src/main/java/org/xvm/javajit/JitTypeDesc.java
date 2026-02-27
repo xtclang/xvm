@@ -10,11 +10,15 @@ import static java.lang.constant.ConstantDescs.CD_float;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
 
+import static org.xvm.javajit.Builder.CD_Dec128;
+import static org.xvm.javajit.Builder.CD_Dec32;
+import static org.xvm.javajit.Builder.CD_Dec64;
 import static org.xvm.javajit.Builder.CD_Int128;
 import static org.xvm.javajit.Builder.CD_UInt128;
 import static org.xvm.javajit.Builder.CD_nObj;
-import static org.xvm.javajit.Builder.CDs_Int128;
-import static org.xvm.javajit.Builder.CDs_UInt128;
+import static org.xvm.javajit.Builder.CDs_Int;
+import static org.xvm.javajit.Builder.CDs_Long;
+import static org.xvm.javajit.Builder.CDs_LongLong;
 
 /**
  * Representation of an Ecstasy type in Java.
@@ -50,9 +54,9 @@ public class JitTypeDesc {
     public static ClassDesc getPrimitiveClass(TypeConstant type) {
         if (type.isJavaPrimitive()) {
             return switch (type.getSingleUnderlyingClass(false).getName()) {
-                case "Char", "Int8", "Int16", "Int32", "UInt8", "UInt16", "UInt32", "Dec16", "Dec32"
+                case "Char", "Int8", "Int16", "Int32", "UInt8", "UInt16", "UInt32"
                     -> CD_int;
-                case "Int64", "UInt64", "Dec64"
+                case "Int64", "UInt64"
                     -> CD_long;
                 case "Float16", "Float32"
                      -> CD_float;
@@ -97,6 +101,9 @@ public class JitTypeDesc {
     public static ClassDesc getXvmPrimitiveClass(TypeConstant type) {
         if (type.isSingleUnderlyingClass(false)) {
             return switch (type.getSingleUnderlyingClass(false).getName()) {
+                case "Dec32"   -> CD_Dec32;
+                case "Dec64"   -> CD_Dec64;
+                case "Dec128"  -> CD_Dec128;
                 case "Int128"  -> CD_Int128;
                 case "UInt128" -> CD_UInt128;
                 default        -> null;
@@ -113,8 +120,9 @@ public class JitTypeDesc {
         TypeConstant baseType = type.removeNullable();
         if (baseType.isSingleUnderlyingClass(false)) {
             return switch (baseType.getSingleUnderlyingClass(false).getName()) {
-                case "Int128"  -> CDs_Int128;
-                case "UInt128" -> CDs_UInt128;
+                case "Dec32" -> CDs_Int;
+                case "Dec64" -> CDs_Long;
+                case "Dec128", "Int128", "UInt128" -> CDs_LongLong;
                 default        -> {
                     ClassDesc cd = getPrimitiveClass(baseType);
                     if (cd == null) {

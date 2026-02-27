@@ -1,5 +1,7 @@
 package org.xtclang.ecstasy.numbers;
 
+import java.math.BigDecimal;
+
 import org.xtclang.ecstasy.OutOfBounds;
 
 import org.xtclang.ecstasy.text.String;
@@ -35,6 +37,11 @@ public class UInt32 extends IntNumber {
      */
     public static UInt32 $box(int value) {
         return new UInt32(value);
+    }
+
+    @Override
+    public BigDecimal $toBigDecimal() {
+        return BigDecimal.valueOf($value);
     }
 
     // ----- conversion ----------------------------------------------------------------------------

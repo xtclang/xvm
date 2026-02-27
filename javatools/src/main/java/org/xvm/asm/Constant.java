@@ -916,7 +916,9 @@ public abstract class Constant
                 case UInt64   -> pool.typeUInt64();
                 case UInt128  -> pool.typeUInt128();
                 case UIntN    -> pool.typeUIntN();
+                case Dec32    -> pool.typeDec32();
                 case Dec64    -> pool.typeDec64();
+                case Dec128   -> pool.typeDec128();
                 default       -> pool.ensureEcstasyTypeConstant(getEcstasyName());
             };
         }

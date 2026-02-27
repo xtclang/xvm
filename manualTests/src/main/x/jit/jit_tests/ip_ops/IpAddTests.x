@@ -19,6 +19,7 @@ class IpAddTests {
         testIpAddUInt128();
         testIpAddDec();
         testIpAddDec32();
+        testIpAddDec128();
         testIpAddString();
         testIpAddIntToChar();
         console.print("<<<< Finished IpAddTests <<<<<");
@@ -85,15 +86,21 @@ class IpAddTests {
     }
 
     void testIpAddDec() {
-//        Dec value1 = 2.5;
-//        value1 += 1.25;
-//        assert value1 == 3.75;
+        Dec value1 = 2.5;
+        value1 += 1.25;
+        assert value1 == 3.75;
     }
 
     void testIpAddDec32() {
-//        Dec32 value1 = 2.5;
-//        value1 += 1.25;
-//        assert value1 == 3.75;
+        Dec32 value1 = 2.5;
+        value1 += 1.25;
+        assert value1 == 3.75;
+    }
+
+    void testIpAddDec128() {
+        Dec128 value1 = 2.5;
+        value1 += 1.25;
+        assert value1 == 3.75;
     }
 
     void testIpAddString() {

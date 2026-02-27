@@ -1,7 +1,6 @@
 package org.xvm.javajit;
 
 import java.lang.classfile.CodeBuilder;
-import java.lang.classfile.Label;
 
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
@@ -18,13 +17,12 @@ import static org.xvm.javajit.Builder.MD_FloorModI;
 import static org.xvm.javajit.Builder.MD_FloorModJ;
 import static org.xvm.javajit.Builder.MD_UDivInt;
 import static org.xvm.javajit.Builder.MD_UDivLong;
-import static org.xvm.javajit.RegisterInfo.JAVA_STACK;
 
 /**
  * A "mixin" interface to generate bytecodes for operations on Ecstasy numeric types.
  */
 public interface NumberSupport
-        extends NumberSupportInt128 {
+        extends NumberSupportInt128, NumberSupportDec {
 
     /**
      * Build the optimized binary operation that will add two primitive types from the stack
@@ -58,15 +56,21 @@ public interface NumberSupport
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
      * @param regTarget  the register containing the target of the operation
-     * @param nArgValue  the register containing the operation argument
+     * @param nArgId     the register containing the operation argument
      */
     default void buildXvmPrimitiveAdd(BuildContext bctx,
                                       CodeBuilder  code,
                                       RegisterInfo regTarget,
-                                      int          nArgValue) {
+                                      int          nArgId) {
         switch (regTarget.type().getValueString()) {
             case "Int128", "UInt128" ->
-                    buildLongLongAdd(bctx, code, (MultipleSlot) regTarget, nArgValue);
+                    buildLongLongAdd(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec32" ->
+                    buildDec32Add(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec", "Dec64" ->
+                    buildDec64Add(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec128" ->
+                    buildDec128Add(bctx, code, (MultipleSlot) regTarget, nArgId);
             default  -> throw new IllegalStateException("Unsupported type: "
                     + regTarget.type().getValueString());
         }
@@ -103,15 +107,15 @@ public interface NumberSupport
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
      * @param regTarget  the register containing the target of the operation
-     * @param nArgValue  the register containing the operation argument
+     * @param nArgId     the register containing the operation argument
      */
     default void buildXvmPrimitiveAnd(BuildContext bctx,
                                       CodeBuilder  code,
                                       RegisterInfo regTarget,
-                                      int          nArgValue) {
+                                      int          nArgId) {
         switch (regTarget.type().getValueString()) {
             case "Int128", "UInt128" ->
-                    buildLongLongAnd(bctx, code, (MultipleSlot) regTarget, nArgValue);
+                    buildLongLongAnd(bctx, code, (MultipleSlot) regTarget, nArgId);
             default -> throw new IllegalStateException("Unsupported type: "
                     + regTarget.type().getValueString());
         }
@@ -213,6 +217,12 @@ public interface NumberSupport
         switch (regTarget.type().getValueString()) {
             case "Int128", "UInt128" ->
                     buildLongLongDiv(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec32" ->
+                    buildDec32Div(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec", "Dec64" ->
+                    buildDec64Div(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec128" ->
+                    buildDec128Div(bctx, code, (MultipleSlot) regTarget, nArgId);
             default ->
                     throw new IllegalStateException("Unsupported type: "
                             + regTarget.type().getValueString());
@@ -272,6 +282,12 @@ public interface NumberSupport
         switch (regTarget.type().getValueString()) {
             case "Int128", "UInt128" ->
                     buildLongLongMod(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec32" ->
+                    buildDec32Mod(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec", "Dec64" ->
+                    buildDec64Mod(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec128" ->
+                    buildDec128Mod(bctx, code, (MultipleSlot) regTarget, nArgId);
             default ->
                     throw new IllegalStateException("Unsupported type: "
                             + regTarget.type().getValueString());
@@ -318,6 +334,12 @@ public interface NumberSupport
         switch (regTarget.type().getValueString()) {
             case "Int128"  -> buildLongLongNeg(code, (MultipleSlot) regTarget);
             case "UInt128" -> bctx.throwUnsupported(code);
+            case "Dec32" ->
+                    buildDec32Neg(bctx, code, (MultipleSlot) regTarget);
+            case "Dec", "Dec64" ->
+                    buildDec64Neg(bctx, code, (MultipleSlot) regTarget);
+            case "Dec128" ->
+                    buildDec128Neg(bctx, code, (MultipleSlot) regTarget);
             default -> throw new IllegalStateException("Unsupported type: "
                     + regTarget.type().getValueString());
         }
@@ -363,6 +385,12 @@ public interface NumberSupport
         switch (regTarget.type().getValueString()) {
             case "Int128", "UInt128" ->
                     buildLongLongMul(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec32" ->
+                    buildDec32Mul(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec", "Dec64" ->
+                    buildDec64Mul(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec128" ->
+                    buildDec128Mul(bctx, code, (MultipleSlot) regTarget, nArgId);
             default -> throw new IllegalStateException("Unsupported type: "
                     + regTarget.type().getValueString());
         }
@@ -399,15 +427,15 @@ public interface NumberSupport
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
      * @param regTarget  the register containing the target of the operation
-     * @param nArgValue  the register containing the operation argument
+     * @param nArgId     the register containing the operation argument
      */
     default void buildXvmPrimitiveOr(BuildContext bctx,
                                      CodeBuilder  code,
                                      RegisterInfo regTarget,
-                                     int          nArgValue) {
+                                     int          nArgId) {
         switch (regTarget.type().getValueString()) {
             case "Int128", "UInt128" ->
-                    buildLongLongOr(bctx, code, (MultipleSlot) regTarget, nArgValue);
+                    buildLongLongOr(bctx, code, (MultipleSlot) regTarget, nArgId);
             default -> throw new IllegalStateException("Unsupported type: "
                     + regTarget.type().getValueString());
         }
@@ -651,15 +679,21 @@ public interface NumberSupport
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
      * @param regTarget  the register containing the target of the operation
-     * @param nArgValue  the register containing the operation argument
+     * @param nArgId     the register containing the operation argument
      */
     default void buildXvmPrimitiveSub(BuildContext bctx,
                                       CodeBuilder  code,
                                       RegisterInfo regTarget,
-                                      int          nArgValue) {
+                                      int          nArgId) {
         switch (regTarget.type().getValueString()) {
             case "Int128", "UInt128" ->
-                    buildLongLongSub(bctx, code, (MultipleSlot) regTarget, nArgValue);
+                    buildLongLongSub(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec32" ->
+                    buildDec32Sub(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec", "Dec64" ->
+                    buildDec64Sub(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec128" ->
+                    buildDec128Sub(bctx, code, (MultipleSlot) regTarget, nArgId);
             default  -> throw new IllegalStateException("Unsupported type: "
                     + regTarget.type().getValueString());
         }
@@ -696,15 +730,15 @@ public interface NumberSupport
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
      * @param regTarget  the register containing the target of the operation
-     * @param nArgValue  the register containing the operation argument
+     * @param nArgId     the register containing the operation argument
      */
     default void buildXvmPrimitiveXor(BuildContext bctx,
                                       CodeBuilder  code,
                                       RegisterInfo regTarget,
-                                      int          nArgValue) {
+                                      int          nArgId) {
         switch (regTarget.type().getValueString()) {
             case "Int128", "UInt128" ->
-                    buildLongLongXor(bctx, code, (MultipleSlot) regTarget, nArgValue);
+                    buildLongLongXor(bctx, code, (MultipleSlot) regTarget, nArgId);
             default -> throw new IllegalStateException("Unsupported type: "
                     + regTarget.type().getValueString());
         }

@@ -64,19 +64,12 @@ class Int128Tests {
         // Add
         testInt128OpAddBig();
         testInt128OpAddLowOnly();
+        testInt128OpAddInPlace();
         testInt128OpAddOverflowLow();
         testInt128OpAddFirstNegativeBig();
         testInt128OpAddSecondNegativeBig();
         testInt128OpAddBothNegativeBig();
         testInt128OpAddOverflow();
-        // Sub
-        testInt128OpSubBig();
-        testInt128OpSubLowOnly();
-        testInt128OpSubOverflowLow();
-        testInt128OpSubFirstNegativeBig();
-        testInt128OpSubSecondNegativeBig();
-        testInt128OpSubBothNegativeBig();
-        testInt128OpSubOverflow();
         // And
         testInt128OpAnd();
         // Complement
@@ -100,6 +93,20 @@ class Int128Tests {
         testInt128OpDecOverflowLow();
         testInt128OpDecOverflowBig();
         testInt128OpDecNegativeBig();
+        // Div
+        testInt128OpDivBig();
+        testInt128OpDivLowOnly();
+        testInt128OpDivInPlace();
+        // Mod
+        testInt128OpModLowOnly();
+        testInt128OpModBig();
+        // Multiply
+        testInt128OpMultiplyLowOnly();
+        testInt128OpMultiplyBig();
+        testInt128OpMultiplyInPlace();
+        // Negate
+        testInt128OpNegateLowOnly();
+        testInt128OpNegateBig();
         // Or
         testInt128OpOr();
         testInt128OpOrInPlace();
@@ -117,6 +124,14 @@ class Int128Tests {
         testInt128OpShiftRight128();
         testInt128OpShiftRight132();
         testInt128OpShiftRightMinus4();
+        // Sub
+        testInt128OpSubBig();
+        testInt128OpSubLowOnly();
+        testInt128OpSubOverflowLow();
+        testInt128OpSubFirstNegativeBig();
+        testInt128OpSubSecondNegativeBig();
+        testInt128OpSubBothNegativeBig();
+        testInt128OpSubOverflow();
         // Ushr
         testInt128OpUnsignedShiftRight();
         testInt128OpUnsignedShiftRightNegative();
@@ -573,6 +588,12 @@ class Int128Tests {
         assert n3 == 1019;
     }
 
+    void testInt128OpAddInPlace() {
+        Int128 n1 = 18446744073709551616;
+        n1 += 18446744073709200000;
+        assert n1 == 36893488147418751616;
+    }
+
     void testInt128OpAddOverflowLow() {
         Int128 n1 = 2147483647;
         Int128 n2 = 1;
@@ -622,6 +643,12 @@ class Int128Tests {
         Int128 n2 = 19;
         Int128 n3 = n1 - n2;
         assert n3 == 981;
+    }
+
+    void testInt128OpSubInPlace() {
+        Int128 n1 = 18446744073709551616;
+        n1 -= 18446744073709200000;
+        assert n1 == 351616;
     }
 
     void testInt128OpSubOverflowLow() {
@@ -803,6 +830,74 @@ class Int128Tests {
         Int128 n = -18446744073709551616;
         n--;
         assert n == -18446744073709551617;
+    }
+
+    // ----- Op tests (divide) ---------------------------------------------------------------------
+
+    void testInt128OpDivLowOnly() {
+        Int128 n = 1234;
+        Int128 n2 = n / 10;
+        assert n2 == 123;
+    }
+
+    void testInt128OpDivBig() {
+        Int128 n = 18446744073709551616;
+        Int128 n2 = n / 10;
+        assert n2 == 1844674407370955161;
+    }
+
+    void testInt128OpDivInPlace() {
+        Int128 n = 18446744073709551616;
+        n /= 10;
+        assert n == 1844674407370955161;
+    }
+
+    // ----- Op tests (modulus) --------------------------------------------------------------------
+
+    void testInt128OpModLowOnly() {
+        Int128 n = 1234;
+        Int128 n2 = n % 10;
+        assert n2 == 4;
+    }
+
+    void testInt128OpModBig() {
+        Int128 n = 18446744073709551616;
+        Int128 n2 = n % 10;
+        assert n2 == 6;
+    }
+
+    // ----- Op tests (multiply) -------------------------------------------------------------------
+
+    void testInt128OpMultiplyLowOnly() {
+        Int128 n = 1234;
+        Int128 n2 = n * 10;
+        assert n2 == 12340;
+    }
+
+    void testInt128OpMultiplyBig() {
+        Int128 n = 18446744073709551616;
+        Int128 n2 = n * 10;
+        assert n2 == 184467440737095516160;
+    }
+
+    void testInt128OpMultiplyInPlace() {
+        Int128 n = 18446744073709551616;
+        n *= 10;
+        assert n == 184467440737095516160;
+    }
+
+    // ----- Op tests (negate) ---------------------------------------------------------------------
+
+    void testInt128OpNegateLowOnly() {
+        Int128 n = 1234;
+        Int128 n2 = -n;
+        assert n2 == -1234;
+    }
+
+    void testInt128OpNegateBig() {
+        Int128 n = 18446744073709551616;
+        Int128 n2 = -n;
+        assert n2 == -18446744073709551616;
     }
 
     // ----- Op tests (logical Or) -----------------------------------------------------------------

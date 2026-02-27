@@ -64,11 +64,8 @@ class UInt128Tests {
         // Add
         testUInt128OpAddBig();
         testUInt128OpAddLowOnly();
+        testUInt128OpAddInPlace();
         testUInt128OpAddOverflow();
-        // Sub
-        testUInt128OpSubBig();
-        testUInt128OpSubLowOnly();
-        testUInt128OpSubOverflow();
         // And
         testUInt128OpAnd();
         // Complement
@@ -90,6 +87,17 @@ class UInt128Tests {
         testUInt128OpPostDecBig();
         testUInt128OpDecOverflowLow();
         testUInt128OpDecOverflowBig();
+        // Div
+        testUInt128OpDivBig();
+        testUInt128OpDivLowOnly();
+        testUInt128OpDivInPlace();
+        // Mod
+        testUInt128OpModLowOnly();
+        testUInt128OpModBig();
+        // Multiply
+        testUInt128OpMultiplyLowOnly();
+        testUInt128OpMultiplyBig();
+        testUInt128OpMultiplyInPlace();
         // Or
         testUInt128OpOr();
         testUInt128OpOrInPlace();
@@ -106,6 +114,11 @@ class UInt128Tests {
         testUInt128OpShiftRight128();
         testUInt128OpShiftRight132();
         testUInt128OpShiftRightMinus4();
+        // Sub
+        testUInt128OpSubBig();
+        testUInt128OpSubLowOnly();
+        testUInt128OpSubInPlace();
+        testUInt128OpSubOverflow();
         // Ushr
         testUInt128OpUnsignedShiftRight();
         testUInt128OpUnsignedShiftRightZero();
@@ -561,6 +574,12 @@ class UInt128Tests {
         assert n3 == 1019;
     }
 
+    void testUInt128OpAddInPlace() {
+        UInt128 n1 = 18446744073709551616;
+        n1 += 18446744073709200000;
+        assert n1 == 36893488147418751616;
+    }
+
     void testUInt128OpAddOverflow() {
         UInt128 n1 = UInt128.MaxValue;
         UInt128 n2 = 1;
@@ -584,11 +603,17 @@ class UInt128Tests {
         assert n3 == 981;
     }
 
+    void testUInt128OpSubInPlace() {
+        UInt128 n1 = 18446744073709551616;
+        n1 -= 18446744073709200000;
+        assert n1 == 351616;
+    }
+
     void testUInt128OpSubOverflow() {
-        UInt128 n1 = UInt128.MaxValue;
+        UInt128 n1 = UInt128.MinValue;
         UInt128 n2 = 1;
         UInt128 n3 = n1 - n2;
-        assert n3 == UInt128.MinValue;
+        assert n3 == UInt128.MaxValue;
     }
 
     // ----- Op tests (logical And) ----------------------------------------------------------------
@@ -722,6 +747,60 @@ class UInt128Tests {
         UInt128 n = UInt128.MinValue;
         n--;
         assert n == UInt128.MaxValue;
+    }
+
+    // ----- Op tests (divide) ---------------------------------------------------------------------
+
+    void testUInt128OpDivLowOnly() {
+        UInt128 n = 1234;
+        UInt128 n2 = n / 10;
+        assert n2 == 123;
+    }
+
+    void testUInt128OpDivBig() {
+        UInt128 n = 18446744073709551616;
+        UInt128 n2 = n / 10;
+        assert n2 == 1844674407370955161;
+    }
+
+    void testUInt128OpDivInPlace() {
+        UInt128 n = 18446744073709551616;
+        n /= 10;
+        assert n == 1844674407370955161;
+    }
+
+    // ----- Op tests (modulus) --------------------------------------------------------------------
+
+    void testUInt128OpModLowOnly() {
+        UInt128 n = 1234;
+        UInt128 n2 = n % 10;
+        assert n2 == 4;
+    }
+
+    void testUInt128OpModBig() {
+        UInt128 n = 18446744073709551616;
+        UInt128 n2 = n % 10;
+        assert n2 == 6;
+    }
+
+    // ----- Op tests (multiply) -------------------------------------------------------------------
+
+    void testUInt128OpMultiplyLowOnly() {
+        UInt128 n = 1234;
+        UInt128 n2 = n * 10;
+        assert n2 == 12340;
+    }
+
+    void testUInt128OpMultiplyBig() {
+        UInt128 n = 18446744073709551616;
+        UInt128 n2 = n * 10;
+        assert n2 == 184467440737095516160;
+    }
+
+    void testUInt128OpMultiplyInPlace() {
+        UInt128 n = 18446744073709551616;
+        n *= 10;
+        assert n == 184467440737095516160;
     }
 
     // ----- Op tests (logical Or) -----------------------------------------------------------------

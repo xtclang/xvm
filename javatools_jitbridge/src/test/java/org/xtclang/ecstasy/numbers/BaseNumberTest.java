@@ -77,18 +77,18 @@ public abstract class BaseNumberTest {
         if (positive) {
             assertTrue(start >= 0, "start must be >= 0");
         }
+        if (start >= 0) {
+            positive = true;
+        }
         assertTrue(start <= end, "start must be <= end");
 
         Random rnd      = new Random();
-        long   minLong  = positive ? 0 : Long.MIN_VALUE;
         int    count    = 5000;
         long[] testData = new long[count];
         int    i        = 0;
+        long   minLong  = positive ? (start > 0) ? start : 0 : start;
 
         testData[i++] = minLong;
-        if (minLong != start) {
-            testData[i++] = start;
-        }
 
         for (; i < 1000 - 1; i++) {
             testData[i] = rnd.nextLong(start, end);
@@ -98,14 +98,14 @@ public abstract class BaseNumberTest {
 
         for (; i < count - 1; i++) {
             if (positive) {
-                testData[i] = rnd.nextLong(0, Long.MAX_VALUE);
+                testData[i] = rnd.nextLong(0, end);
             } else {
                 testData[i] = i % 2 == 0
-                        ? rnd.nextLong(0, Long.MAX_VALUE)
+                        ? rnd.nextLong(0, end)
                         : rnd.nextLong(minLong, 0);
             }
         }
-        testData[i] = Long.MAX_VALUE;
+        testData[i] = end;
 
         return testData;
     }

@@ -583,7 +583,7 @@ public class CommonBuilder
                                 // must be setting a primitive field to Null
                                 code.pop(); // pop the Null, put primitive defaults and True
                                 ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(baseType);
-                                if (cds.length == 1) {
+                                if (baseType.isJavaPrimitive()) {
                                     // Java primitive
                                     Builder.defaultLoad(code, cds[0]);
                                     code.putfield(CD_this, jitName, cds[0]);

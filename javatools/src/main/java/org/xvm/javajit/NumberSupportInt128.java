@@ -9,6 +9,9 @@ import java.lang.constant.MethodTypeDesc;
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
 
+import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.CD_Int128;
+
 import static org.xvm.javajit.RegisterInfo.JAVA_STACK;
 
 /**
@@ -29,6 +32,26 @@ public interface NumberSupportInt128 {
      * The {@link MethodTypeDesc} for {@code java.lang.Math.multiplyHigh(long, long)}.
      */
     MethodTypeDesc MD_MultiplyHigh = MethodTypeDesc.of(CD_long, CD_long, CD_long);
+
+    /**
+     * The name of the {@code $div} method in Int128 wrapper classes.
+     */
+    String METHOD_NAME_DIV = "$div";
+
+    /**
+     * The {@link MethodTypeDesc} for Int128 $div method.
+     */
+    MethodTypeDesc MD_LongLong_Divide = MethodTypeDesc.of(CD_long, CD_Ctx, CD_long, CD_long, CD_long, CD_long);
+
+    /**
+     * The name of the {@code $mod} method in Int128 wrapper classes.
+     */
+    String METHOD_NAME_MOD = "$mod";
+
+    /**
+     * The {@link MethodTypeDesc} for Int128 $mod method.
+     */
+    MethodTypeDesc MD_Int128_Mod = MethodTypeDesc.of(CD_long, CD_Ctx, CD_long, CD_long, CD_long, CD_long);
 
     /**
      * Build the optimized binary operation that will add two XVM primitive types that are each
@@ -258,7 +281,23 @@ public interface NumberSupportInt128 {
                                   CodeBuilder  code,
                                   MultipleSlot regTarget,
                                   int          nArgId) {
-        throw new UnsupportedOperationException("Not yet implemented");
+        MultipleSlot regArg = (MultipleSlot) bctx.ensureRegister(code, nArgId);
+        int slotL1 = regTarget.slot(0);
+        int slotH1 = regTarget.slot(1);
+        int slotL2 = regArg.slot(0);
+        int slotH2 = regArg.slot(1);
+
+        // ToDo Use a static helper method on Int128 to perform the division.
+        // Doing this in Java Ops is quite complex so we will optimize later
+        bctx.loadCtx(code);
+        code.lload(slotL1)
+            .lload(slotH1)
+            .lload(slotL2)
+            .lload(slotH2)
+            .invokestatic(regTarget.cd(), METHOD_NAME_DIV, MD_LongLong_Divide);
+        // Int128.divide() returns the low long which will now be on the stack
+        // now load the high long from the context
+        Builder.loadFromContext(code, CD_long, 0);
     }
 
     /**
@@ -277,7 +316,23 @@ public interface NumberSupportInt128 {
                                   CodeBuilder  code,
                                   MultipleSlot regTarget,
                                   int          nArgId) {
-        throw new UnsupportedOperationException("Not yet implemented");
+        MultipleSlot regArg = (MultipleSlot) bctx.ensureRegister(code, nArgId);
+        int slotL1 = regTarget.slot(0);
+        int slotH1 = regTarget.slot(1);
+        int slotL2 = regArg.slot(0);
+        int slotH2 = regArg.slot(1);
+
+        // ToDo Use a static helper method on Int128 to perform the division.
+        // Doing this in Java Ops is quite complex so we will optimize later
+        bctx.loadCtx(code);
+        code.lload(slotL1)
+                .lload(slotH1)
+                .lload(slotL2)
+                .lload(slotH2)
+                .invokestatic(CD_Int128, METHOD_NAME_MOD, MD_Int128_Mod);
+        // Int128.mod() returns the low long which will now be on the stack
+        // now load the high long from the context
+        Builder.loadFromContext(code, CD_long, 0);
     }
 
     /**

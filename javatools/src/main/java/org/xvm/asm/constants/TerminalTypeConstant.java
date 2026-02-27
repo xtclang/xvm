@@ -1909,7 +1909,6 @@ public class TerminalTypeConstant
                 case "Int8",  "Int16",  "Int32",  "Int64",
                      "UInt8", "UInt16", "UInt32", "UInt64",
                      "Float16", "Float32", "Float64",
-                     "Dec32", "Dec64",
                      "Boolean", "Char" -> true;
 
                 default -> false;
@@ -1926,7 +1925,7 @@ public class TerminalTypeConstant
         if (isSingleDefiningConstant() && getDefiningConstant() instanceof ClassConstant id
                 && id.getModuleConstant().isEcstasyModule()) {
             return switch (id.getName()) {
-                case "Int128", "UInt128" -> true;
+                case "Dec32", "Dec64", "Dec128", "Int128", "UInt128" -> true;
                 default -> false;
             };
         }

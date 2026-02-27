@@ -1,5 +1,7 @@
 package org.xtclang.ecstasy.numbers;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
 import java.util.Random;
 
 import org.junit.jupiter.api.Test;
@@ -281,6 +283,39 @@ public class Int128Test
                 assertEquals(n.$lowValue, n2);
                 assertEquals(n.$highValue, ctx.i0);
             }
+        }
+    }
+
+    @Test
+    public void shouldConvertToDec32() {
+        for (long i : ensureLongTestData(-1000L, 1000L)) {
+            Int128 n   = new Int128(i, i < 0L ? -1L : 0L);
+            Ctx   ctx = new Ctx(null, null);
+            int   n2  = n.toDec32$p(ctx);
+            Dec32 dec = Dec32.$box(n2);
+            assertEquals(BigDecimal.valueOf(i).round(MathContext.DECIMAL32), dec.$toBigDecimal());
+        }
+    }
+
+    @Test
+    public void shouldConvertToDec64() {
+        for (long i : ensureLongTestData(-1000L, 1000L)) {
+            Int128 n   = new Int128(i, i < 0L ? -1L : 0L);
+            Ctx   ctx = new Ctx(null, null);
+            long  n2  = n.toDec64$p(ctx);
+            Dec64 dec = Dec64.$box(n2);
+            assertEquals(BigDecimal.valueOf(i).round(MathContext.DECIMAL64), dec.$toBigDecimal());
+        }
+    }
+
+    @Test
+    public void shouldConvertToDec128() {
+        for (long i : ensureLongTestData(-1000L, 1000L)) {
+            Int128 n   = new Int128(i, i < 0L ? -1L : 0L);
+            Ctx    ctx = new Ctx(null, null);
+            long   n2  = n.toDec128$p(ctx);
+            Dec128 dec = Dec128.$box(n2, ctx.i0);
+            assertEquals(BigDecimal.valueOf(i).round(MathContext.DECIMAL128), dec.$toBigDecimal());
         }
     }
 }

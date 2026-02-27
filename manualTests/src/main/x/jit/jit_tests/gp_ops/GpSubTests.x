@@ -20,6 +20,7 @@ class GpSubTests {
         testGpSubUInt128();
         testGpSubDec();
         testGpSubDec32();
+        testGpSubDec128();
         testGpSubIntFromChar();
         testGpSubCharFromChar();
         console.print("<<<< Finished GpSubTests <<<<");
@@ -111,21 +112,27 @@ class GpSubTests {
     }
 
     void testGpSubDec() {
-// TODO: Need Dec support
-//        Dec value1 = 0.0;
-//        Dec value2 = 2.5;
-//        Dec value3 = 1.25;
-//        value1 = value2 - value3;
-//        assert value1 == 3.75;
+        Dec value1 = 0.0;
+        Dec value2 = 4.5;
+        Dec value3 = 1.25;
+        value1 = value2 - value3;
+        assert value1 == 3.25;
     }
 
     void testGpSubDec32() {
-// TODO: Need Dec32 support
-//        Dec32 value1 = 0.0;
-//        Dec32 value2 = 3.75;
-//        Dec32 value3 = 1.25;
-//        value1 = value2 - value3;
-//        assert value1 == 2.5;
+        Dec32 value1 = 0.0;
+        Dec32 value2 = 3.75;
+        Dec32 value3 = 1.25;
+        value1 = value2 - value3;
+        assert value1 == 2.50;
+    }
+
+    void testGpSubDec128() {
+        Dec128 value1 = 0.0;
+        Dec128 value2 = 3.75;
+        Dec128 value3 = 1.25;
+        value1 = value2 - value3;
+        assert value1 == 2.50;
     }
 
     void testGpSubIntFromChar() {
