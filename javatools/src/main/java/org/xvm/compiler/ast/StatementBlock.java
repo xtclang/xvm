@@ -551,7 +551,7 @@ public class StatementBlock
             return "{}";
         }
 
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append('{');
 
         int firstNonEnum = 0;

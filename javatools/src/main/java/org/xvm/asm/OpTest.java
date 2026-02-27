@@ -232,21 +232,11 @@ public abstract class OpTest
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(super.toString())
-          .append(' ');
-        if (isBinaryOp()) {
-            sb.append(Argument.toIdString(m_typeCommon, m_nType))
-              .append(", ");
-        }
-        sb.append(Argument.toIdString(m_argVal1, m_nValue1));
-        if (hasSecondArgument()) {
-            sb.append(", ")
-              .append(Argument.toIdString(m_argVal2, m_nValue2));
-        }
-        return sb.append(", ")
-                 .append(Argument.toIdString(m_argReturn, m_nRetValue))
-                 .toString();
+        return super.toString() + ' '
+            + (isBinaryOp() ? Argument.toIdString(m_typeCommon, m_nType) + ", " : "")
+            + Argument.toIdString(m_argVal1, m_nValue1)
+            + (hasSecondArgument() ? ", " + Argument.toIdString(m_argVal2, m_nValue2) : "")
+            + ", " + Argument.toIdString(m_argReturn, m_nRetValue);
     }
 
     // ----- JIT support ---------------------------------------------------------------------------

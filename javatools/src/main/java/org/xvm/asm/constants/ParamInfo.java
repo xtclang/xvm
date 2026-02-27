@@ -107,21 +107,13 @@ public class ParamInfo {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append("<")
-          .append(isActualTypeSpecified() ? getActualType().getValueString() : getName());
-
-        TypeConstant typeConstraint = getConstraintType();
-        if (!typeConstraint.equals(typeConstraint.getConstantPool().typeObject()) &&
-            !typeConstraint.isTuple()) {
-            sb.append(" extends ")
-              .append(typeConstraint.getValueString());
-        }
-
-        sb.append(">");
-
-        return sb.toString();
+        var typeConstraint = getConstraintType();
+        return "<" + (isActualTypeSpecified() ? getActualType().getValueString() : getName())
+            + (!typeConstraint.equals(typeConstraint.getConstantPool().typeObject())
+                    && !typeConstraint.isTuple()
+                ? " extends " + typeConstraint.getValueString()
+                : "")
+            + ">";
     }
 
 

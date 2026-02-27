@@ -6,6 +6,8 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+
+import java.util.stream.Collectors;
 import java.util.Map;
 
 import org.xvm.asm.Argument;
@@ -357,27 +359,16 @@ public class IfStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder("if (")
+            .append(conds.stream().map(Object::toString).collect(Collectors.joining(", ")))
+            .append(")\n")
+            .append(indentLines(stmtThen.toString(), "    "));
 
-        sb.append("if (")
-          .append(conds.get(0));
-        for (int i = 1, c = conds.size(); i < c; ++i) {
-            sb.append(", ")
-              .append(conds.get(i));
+        if (stmtElse instanceof IfStatement) {
+            sb.append("\nelse ").append(stmtElse);
+        } else if (stmtElse != null) {
+            sb.append("\nelse\n").append(indentLines(stmtElse.toString(), "    "));
         }
-        sb.append(")\n")
-          .append(indentLines(stmtThen.toString(), "    "));
-
-        if (stmtElse != null) {
-            if (stmtElse instanceof IfStatement) {
-                sb.append("\nelse ")
-                  .append(stmtElse);
-            } else {
-                sb.append("\nelse\n")
-                  .append(indentLines(stmtElse.toString(), "    "));
-            }
-        }
-
         return sb.toString();
     }
 

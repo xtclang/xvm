@@ -1548,22 +1548,10 @@ public class ServiceContext {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Service \"")
-          .append(f_sName)
-          .append("\" (id=")
-          .append(f_lId)
-          .append(')');
-
-        if (m_synchronicity != null && m_synchronicity != Synchronicity.Concurrent) {
-            sb.append(" ")
-              .append(m_synchronicity.name());
-        }
-        if (m_frameCurrent != null) {
-            sb.append(" ")
-              .append(m_frameCurrent);
-        }
-        return sb.toString();
+        return "Service \"" + f_sName + "\" (id=" + f_lId + ')'
+            + (m_synchronicity != null && m_synchronicity != Synchronicity.Concurrent
+                ? " " + m_synchronicity.name() : "")
+            + (m_frameCurrent != null ? " " + m_frameCurrent : "");
     }
 
 

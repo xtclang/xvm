@@ -271,13 +271,8 @@ public class ModuleConstant
 
     @Override
     public String getValueString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(m_constName.getValue());
-        if (m_constVersion != null) {
-            sb.append(" v:")
-              .append(m_constVersion.getVersion());
-        }
-        return sb.toString();
+        return m_constName.getValue()
+            + (m_constVersion != null ? " v:" + m_constVersion.getVersion() : "");
     }
 
 

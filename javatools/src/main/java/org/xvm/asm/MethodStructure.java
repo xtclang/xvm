@@ -2013,8 +2013,8 @@ public class MethodStructure
 
     @Override
     public String getDescription() {
-        MethodConstant id = getIdentityConstant();
-        StringBuilder  sb = new StringBuilder();
+        var id = getIdentityConstant();
+        var sb = new StringBuilder();
         sb.append("host=\"")
           .append(id.getNamespace().getName())
           .append("\", id=\"")
@@ -2360,17 +2360,12 @@ public class MethodStructure
                 return "native";
             }
 
-            Op[]          aOp = m_aop == null ? m_listOps.toArray(Op.NO_OPS) : m_aop;
-            StringBuilder sb  = new StringBuilder();
-
-            int i = 0;
-            for (Op op : aOp) {
-                sb.append("\n[")
-                  .append(i++)
-                  .append("] ")
-                  .append(op.toString());
+            var aOp = m_aop == null ? m_listOps.toArray(Op.NO_OPS) : m_aop;
+            var sb  = new StringBuilder();
+            int i   = 0;
+            for (var op : aOp) {
+                sb.append("\n[").append(i++).append("] ").append(op);
             }
-
             return sb.substring(1);
         }
 

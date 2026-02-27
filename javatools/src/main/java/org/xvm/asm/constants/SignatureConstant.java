@@ -691,38 +691,18 @@ public class SignatureConstant
 
     @Override
     public String getValueString() {
-        var sb = new StringBuilder();
+        var returns = switch (m_aconstReturns.length) {
+            case 0  -> "void";
+            case 1  -> m_aconstReturns[0].getValueString();
+            default -> Arrays.stream(m_aconstReturns)
+                    .map(TypeConstant::getValueString)
+                    .collect(Collectors.joining(", ", "(", ")"));
+        };
 
-        switch (m_aconstReturns.length) {
-        case 0:
-            sb.append("void");
-            break;
-
-        case 1:
-            sb.append(m_aconstReturns[0].getValueString());
-            break;
-
-        default:
-            sb.append('(')
-              .append(Arrays.stream(m_aconstReturns)
-                      .map(TypeConstant::getValueString)
-                      .collect(Collectors.joining(", ")))
-              .append(')');
-            break;
-        }
-
-        sb.append(' ')
-          .append(m_constName.getValue());
-
-        if (!m_fProperty) {
-            sb.append('(')
-              .append(Arrays.stream(m_aconstParams)
-                      .map(TypeConstant::getValueString)
-                      .collect(Collectors.joining(", ")))
-              .append(')');
-        }
-
-        return sb.toString();
+        return returns + ' ' + m_constName.getValue()
+            + (m_fProperty ? "" : Arrays.stream(m_aconstParams)
+                    .map(TypeConstant::getValueString)
+                    .collect(Collectors.joining(", ", "(", ")")));
     }
 
 
@@ -901,16 +881,9 @@ public class SignatureConstant
      * @return a parenthesized, comma-delimited string of types
      */
     protected static String formatTypes(TypeConstant[] aconst) {
-        StringBuilder sb = new StringBuilder();
-        sb.append('(');
-        for (int i = 0, c = aconst.length; i < c; ++i) {
-            if (i > 0) {
-                sb.append(", ");
-            }
-            sb.append(aconst[i].getValueString());
-        }
-        sb.append(')');
-        return sb.toString();
+        return Arrays.stream(aconst)
+            .map(TypeConstant::getValueString)
+            .collect(Collectors.joining(", ", "(", ")"));
     }
 
 

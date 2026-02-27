@@ -153,17 +153,9 @@ public abstract class GotoStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(keyword.getId().TEXT);
-
-        if (name != null) {
-            sb.append(' ')
-              .append(name.getValue());
-        }
-
-        sb.append(';');
-        return sb.toString();
+        return keyword.getId().TEXT
+            + (name != null ? " " + name.getValue() : "")
+            + ';';
     }
 
     @Override

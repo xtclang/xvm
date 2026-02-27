@@ -5,6 +5,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
@@ -226,41 +228,32 @@ public abstract class OpSwitch
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.append(super.toString())
           .append(' ');
 
         appendArgDescription(sb);
 
-        int cOps     = m_aOpCase == null ? 0 : m_aOpCase.length;
-        int cOffsets = m_aofCase == null ? 0 : m_aofCase.length;
-        int cLabels  = Math.max(cOps, cOffsets);
-
-        sb.append(cLabels)
-          .append(":\n");
-
+        int cOps         = m_aOpCase     == null ? 0 : m_aOpCase.length;
+        int cOffsets     = m_aofCase     == null ? 0 : m_aofCase.length;
+        int cLabels      = Math.max(cOps, cOffsets);
         int cConstCases  = m_aConstCase  == null ? 0 : m_aConstCase.length;
         int cNConstCases = m_anConstCase == null ? 0 : m_anConstCase.length;
         assert Math.max(cConstCases, cNConstCases) == cLabels;
 
-        for (int i = 0; i < cLabels; ++i) {
-            Constant arg  = i < cConstCases  ? m_aConstCase [i] : null;
-            int      nArg = i < cNConstCases ? m_anConstCase[i] : Register.UNKNOWN;
-            Op       op   = i < cOps         ? m_aOpCase    [i] : null;
-            int      of   = i < cOffsets     ? m_aofCase    [i] : 0;
-
-            if (i > 0) {
-                sb.append(",\n");
-            }
-
-            sb.append(Argument.toIdString(arg, nArg))
-                    .append(": ")
-                    .append(OpJump.getLabelDesc(op, of));
-        }
-
-        sb.append("\ndefault: ")
-                .append(OpJump.getLabelDesc(m_opDefault, m_ofDefault));
+        sb.append(cLabels)
+          .append(":\n")
+          .append(IntStream.range(0, cLabels)
+              .mapToObj(i -> Argument.toIdString(
+                      i < cConstCases  ? m_aConstCase [i] : null,
+                      i < cNConstCases ? m_anConstCase[i] : Register.UNKNOWN)
+                  + ": " + OpJump.getLabelDesc(
+                      i < cOps     ? m_aOpCase[i] : null,
+                      i < cOffsets ? m_aofCase[i] : 0))
+              .collect(Collectors.joining(",\n")))
+          .append("\ndefault: ")
+          .append(OpJump.getLabelDesc(m_opDefault, m_ofDefault));
 
         return sb.toString();
     }

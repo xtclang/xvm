@@ -93,30 +93,10 @@ public class TypedefStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        if (cond != null) {
-            sb.append("if (")
-              .append(cond)
-              .append(") { ");
-        }
-
-        if (modifier != null) {
-            sb.append(modifier)
-              .append(' ');
-        }
-
-        sb.append("typedef ")
-          .append(type)
-          .append(' ')
-          .append(alias.getValue())
-          .append(';');
-
-        if (cond != null) {
-            sb.append(" }");
-        }
-
-        return sb.toString();
+        return (cond != null ? "if (" + cond + ") { " : "")
+            + (modifier != null ? modifier + " " : "")
+            + "typedef " + type + ' ' + alias.getValue() + ';'
+            + (cond != null ? " }" : "");
     }
 
     @Override

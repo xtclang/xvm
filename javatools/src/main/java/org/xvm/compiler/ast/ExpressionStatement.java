@@ -109,12 +109,7 @@ public class ExpressionStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(expr);
-        if (!term) {
-            sb.append(';');
-        }
-        return sb.toString();
+        return term ? expr.toString() : expr + ";";
     }
 
     @Override

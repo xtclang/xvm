@@ -10,6 +10,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 
@@ -479,23 +482,9 @@ public class CompositeComponent
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("CompositeComponent{");
-
-        List<Component> list = f_siblings;
-        for (int i = 0, c = list.size(); i < c; ++i) {
-            if (i > 0) {
-                sb.append(", ");
-            }
-
-            sb.append('[')
-              .append(i)
-              .append("]=")
-              .append(list.get(i));
-        }
-
-        sb.append('}');
-        return sb.toString();
+        return IntStream.range(0, f_siblings.size())
+            .mapToObj(i -> "[" + i + "]=" + f_siblings.get(i))
+            .collect(Collectors.joining(", ", "CompositeComponent{", "}"));
     }
 
 

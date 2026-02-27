@@ -14,6 +14,9 @@ import java.util.Set;
 
 import java.util.function.Consumer;
 
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.util.Hash;
@@ -283,25 +286,10 @@ public class MapConstant
 
     @Override
     public String getValueString() {
-        Constant[] aKeys = m_aconstKey;
-        Constant[] aVals = m_aconstVal;
-        int        cKeys = aKeys.length;
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("Map:{");                     // TODO also implement MapEntry
-
-        for (int i = 0; i < cKeys; ++i) {
-            if (i > 0) {
-                sb.append(", ");
-            }
-
-            sb.append(aKeys[i])
-              .append('=')
-              .append(aVals[i]);
-        }
-
-        sb.append("}");
-        return sb.toString();
+        // TODO also implement MapEntry
+        return IntStream.range(0, m_aconstKey.length)
+            .mapToObj(i -> m_aconstKey[i] + "=" + m_aconstVal[i])
+            .collect(Collectors.joining(", ", "Map:{", "}"));
     }
 
 

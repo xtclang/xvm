@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.StringJoiner;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -2204,64 +2205,34 @@ public class TypeInfo {
      * @param fRuntime  if specified, optimize the method call chains
      */
     public String toString(boolean fRuntime) {
-        StringBuilder sb = new StringBuilder();
+        var sj = new StringJoiner(", ", " (", ")");
+        sj.add("format=" + getFormat());
+        if (isAbstract())  sj.add("abstract");
+        if (isStatic())    sj.add("static");
+        if (isSingleton()) sj.add("singleton");
 
-        sb.append("TypeInfo: ")
-          .append(f_type)
-          .append(" (format=")
-          .append(getFormat());
-
-        if (isAbstract()) {
-            sb.append(", abstract");
-        }
-        if (isStatic()) {
-            sb.append(", static");
-        }
-        if (isSingleton()) {
-            sb.append(", singleton");
-        }
-
-        sb.append(")");
+        var sb = new StringBuilder();
+        sb.append("TypeInfo: ").append(f_type).append(sj);
 
         if (!f_mapTypeParams.isEmpty()) {
-            sb.append("\n- Parameters (")
-              .append(f_mapTypeParams.size())
-              .append(')');
+            sb.append("\n- Parameters (").append(f_mapTypeParams.size()).append(')');
             int i = 0;
-            for (Entry<Object, ParamInfo> entry : f_mapTypeParams.entrySet()) {
-                sb.append("\n  [")
-                  .append(i++)
-                  .append("] ")
-                  .append(entry.getKey())
-                  .append("=")
-                  .append(entry.getValue());
+            for (var entry : f_mapTypeParams.entrySet()) {
+                sb.append("\n  [").append(i++).append("] ")
+                  .append(entry.getKey()).append("=").append(entry.getValue());
             }
         }
 
-        if (f_typeInto != null) {
-            sb.append("\n- Into: ")
-              .append(f_typeInto.getValueString());
-        }
-        if (f_typeRebases != null) {
-            sb.append("\n- Rebases: ")
-              .append(f_typeRebases.getValueString());
-        }
-        if (f_typeExtends != null) {
-            sb.append("\n- Extends: ")
-              .append(f_typeExtends.getValueString());
-        }
+        if (f_typeInto != null)    sb.append("\n- Into: ").append(f_typeInto.getValueString());
+        if (f_typeRebases != null) sb.append("\n- Rebases: ").append(f_typeRebases.getValueString());
+        if (f_typeExtends != null) sb.append("\n- Extends: ").append(f_typeExtends.getValueString());
 
         if (!f_listmapClassChain.isEmpty()) {
-            sb.append("\n- Class Chain (")
-              .append(f_listmapClassChain.size())
-              .append(')');
+            sb.append("\n- Class Chain (").append(f_listmapClassChain.size()).append(')');
             int i = 0;
-            for (Entry<IdentityConstant, Origin> entry : f_listmapClassChain.entrySet()) {
-                sb.append("\n  [")
-                  .append(i++)
-                  .append("] ")
+            for (var entry : f_listmapClassChain.entrySet()) {
+                sb.append("\n  [").append(i++).append("] ")
                   .append(entry.getKey().getValueString());
-
                 if (entry.getValue().isAnchored()) {
                     sb.append(" (Anchored)");
                 }
@@ -2269,62 +2240,45 @@ public class TypeInfo {
         }
 
         if (!f_listmapDefaultChain.isEmpty()) {
-            sb.append("\n- Default Chain (")
-              .append(f_listmapDefaultChain.size())
-              .append(')');
+            sb.append("\n- Default Chain (").append(f_listmapDefaultChain.size()).append(')');
             int i = 0;
-            for (IdentityConstant constId : f_listmapDefaultChain.keySet()) {
-                sb.append("\n  [")
-                  .append(i++)
-                  .append("] ")
-                  .append(constId.getValueString());
+            for (var constId : f_listmapDefaultChain.keySet()) {
+                sb.append("\n  [").append(i++).append("] ").append(constId.getValueString());
             }
         }
 
-        ConstantPool pool = pool();
+        var pool = pool();
         if (!f_mapProps.isEmpty()) {
-            sb.append("\n- Properties (")
-              .append(f_mapProps.size())
-              .append(')');
+            sb.append("\n- Properties (").append(f_mapProps.size()).append(')');
             int i = 0;
-            for (Entry<PropertyConstant, PropertyInfo> entry : f_mapProps.entrySet()) {
-                sb.append("\n  [")
-                  .append(i++)
-                  .append("] ");
+            for (var entry : f_mapProps.entrySet()) {
+                sb.append("\n  [").append(i++).append("] ");
                 if (f_mapVirtProps.containsKey(entry.getKey().resolveNestedIdentity(pool, null))) {
                     sb.append("(v) ");
                 }
-                sb.append(entry.getKey())
-                  .append("=")
-                  .append(entry.getValue());
+                sb.append(entry.getKey()).append("=").append(entry.getValue());
             }
         }
 
         if (!f_mapMethods.isEmpty()) {
-            sb.append("\n- Methods (")
-              .append(f_mapMethods.size())
-              .append(')');
+            sb.append("\n- Methods (").append(f_mapMethods.size()).append(')');
             int i = 0;
-            for (Entry<MethodConstant, MethodInfo> entry : f_mapMethods.entrySet()) {
-                MethodInfo method = entry.getValue();
+            for (var entry : f_mapMethods.entrySet()) {
+                var method = entry.getValue();
                 if (fRuntime && method.isCapped()) {
                     continue;
                 }
-                sb.append("\n  [")
-                  .append(i++)
-                  .append("] ");
+                sb.append("\n  [").append(i++).append("] ");
                 if (f_mapVirtMethods.containsKey(entry.getKey().resolveNestedIdentity(pool, null))) {
                     sb.append("(v) ");
                 }
                 if (fRuntime) {
-                    MethodBody[] chain = method.ensureOptimizedMethodChain(this);
+                    var chain = method.ensureOptimizedMethodChain(this);
                     method = chain.length == 0
                         ? new MethodInfo(new MethodBody(method.getHead(), Implementation.Native), 0)
                         : new MethodInfo(chain, 0);
                 }
-                sb.append(entry.getKey())
-                  .append("=")
-                  .append(method);
+                sb.append(entry.getKey()).append("=").append(method);
             }
         }
 

@@ -4,6 +4,8 @@ package org.xvm.compiler.ast;
 import java.util.Arrays;
 import java.util.List;
 
+import java.util.stream.Collectors;
+
 import java.lang.reflect.Field;
 
 import org.xvm.asm.Constant;
@@ -136,23 +138,11 @@ public class CaseStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(keyword.getId().TEXT);
-
-        if (exprs != null) {
-            sb.append(' ')
-              .append(exprs.get(0));
-
-            for (int i = 1, c = exprs.size(); i < c; ++i) {
-                sb.append(", ")
-                  .append(exprs.get(i));
-            }
-        }
-
-        sb.append(':');
-
-        return sb.toString();
+        return keyword.getId().TEXT
+            + (exprs != null
+                ? " " + exprs.stream().map(Object::toString).collect(Collectors.joining(", "))
+                : "")
+            + ':';
     }
 
     @Override

@@ -552,13 +552,11 @@ public class CmpChainExpression
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
         sb.append(expressions.get(0));
         for (int i = 0, c = operators.length; i < c; ++i) {
-            sb.append(' ')
-              .append(operators[i].getId().TEXT)
-              .append(' ')
-              .append(expressions.get(i+1));
+            sb.append(' ').append(operators[i].getId().TEXT)
+              .append(' ').append(expressions.get(i + 1));
         }
         return sb.toString();
     }

@@ -764,7 +764,7 @@ public class PropertyDeclarationStatement
     // ----- debugging assistance ------------------------------------------------------------------
 
     public String toSignatureString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         if (modifiers != null) {
             for (Token token : modifiers) {
@@ -790,7 +790,7 @@ public class PropertyDeclarationStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         if (doc != null) {
             String sDoc = String.valueOf(doc.getValue());

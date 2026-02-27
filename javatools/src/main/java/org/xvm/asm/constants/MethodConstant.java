@@ -623,10 +623,10 @@ public class MethodConstant
 
     @Override
     public String getDescription() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.append(getName());
-        IdentityConstant idParent = getNamespace();
+        var idParent = getNamespace();
         while (idParent.isNested()) {
             switch (idParent.getFormat()) {
             case Method:

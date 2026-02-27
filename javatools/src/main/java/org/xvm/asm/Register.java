@@ -450,22 +450,9 @@ public class Register
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        if (m_type != null) {
-            sb.append(m_type.getValueString())
-              .append(' ');
-        }
-
-        if (m_fEffectivelyFinal) {
-            sb.append("@Final ");
-        } else if (m_fRO) {
-            sb.append("@RO ");
-        }
-
-        sb.append(getIdString());
-
-        return sb.toString();
+        return (m_type != null ? m_type.getValueString() + ' ' : "")
+            + (m_fEffectivelyFinal ? "@Final " : m_fRO ? "@RO " : "")
+            + getIdString();
     }
 
 

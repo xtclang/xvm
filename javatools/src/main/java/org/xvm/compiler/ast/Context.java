@@ -1703,7 +1703,7 @@ public class Context {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.append("Current: ");
         Map<String, Assignment> mapVars = getDefiniteAssignments();

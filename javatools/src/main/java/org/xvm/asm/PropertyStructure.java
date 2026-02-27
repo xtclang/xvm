@@ -743,7 +743,7 @@ public class PropertyStructure
 
     @Override
     public String getDescription() {
-        StringBuilder sb = new StringBuilder()
+        var sb = new StringBuilder()
                 .append("id=")
                 .append(getIdentityConstant().getValueString())
                 .append(isGenericTypeParameter() ? ", constraint=" : ", type=")

@@ -1,6 +1,9 @@
 package org.xvm.asm.constants;
 
 
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
 import java.util.function.Consumer;
 
 import java.io.DataInput;
@@ -238,41 +241,16 @@ public class ArrayConstant
 
     @Override
     public String getValueString() {
-        Constant[] aconst  = m_aconstVal;
-        int        cConsts = aconst.length;
+        var delims = switch (f_fmt) {
+            case Array -> new String[] {"[", "]"};
+            case Tuple -> new String[] {m_aconstVal.length < 2 ? "Tuple:(" : "(", ")"};
+            case Set   -> new String[] {"Set:{", "}"};
+            default    -> throw new IllegalArgumentException("illegal format: " + f_fmt);
+        };
 
-        String sStart;
-        String sEnd;
-        switch (f_fmt) {
-        case Array:
-            sStart = "[";
-            sEnd   = "]";
-            break;
-        case Tuple:
-            sStart = cConsts < 2 ? "Tuple:(" : "(";
-            sEnd   = ")";
-            break;
-        case Set:
-            sStart = "Set:{";
-            sEnd   = "}";
-            break;
-        default:
-            throw new IllegalArgumentException("illegal format: " + f_fmt);
-        }
-
-        StringBuilder sb = new StringBuilder();
-        sb.append(sStart);
-
-        for (int i = 0; i < cConsts; ++i) {
-            if (i > 0) {
-                sb.append(", ");
-            }
-
-            sb.append(aconst[i]);
-        }
-
-        sb.append(sEnd);
-        return sb.toString();
+        return Arrays.stream(m_aconstVal)
+            .map(String::valueOf)
+            .collect(Collectors.joining(", ", delims[0], delims[1]));
     }
 
 

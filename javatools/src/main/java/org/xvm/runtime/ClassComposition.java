@@ -823,23 +823,10 @@ public class ClassComposition
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder();
-
-            sb.append(getName())
-              .append('@')
-              .append(getIndex());
-
-            if (isSynthetic()) {
-                sb.append(" synthetic");
-            }
-            if (isTransient()) {
-                sb.append(" transient");
-            }
-            if (isInflated()) {
-                sb.append(" inflated");
-            }
-
-            return sb.toString();
+            return getName() + '@' + getIndex()
+                + (isSynthetic() ? " synthetic" : "")
+                + (isTransient() ? " transient" : "")
+                + (isInflated() ? " inflated" : "");
         }
 
         // ----- fields ----------------------------------------------------------------------------

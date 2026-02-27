@@ -929,9 +929,9 @@ public class FileStructure
 
     @Override
     public String getDescription() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
-        String sName = getModuleId().getName();
+        var sName = getModuleId().getName();
         sb.append("main-module=")
           .append(sName);
 

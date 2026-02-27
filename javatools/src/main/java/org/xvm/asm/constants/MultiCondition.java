@@ -1,6 +1,10 @@
 package org.xvm.asm.constants;
 
 
+import java.util.Arrays;
+
+import java.util.stream.Collectors;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -253,20 +257,9 @@ public abstract class MultiCondition
 
     @Override
     public String getValueString() {
-        final ConditionalConstant[] aconstCond = m_aconstCond;
-
-        StringBuilder sb = new StringBuilder();
-        sb.append('(')
-          .append(m_aconstCond[0].getValueString());
-
-        for (int i = 1, c = aconstCond.length; i < c; ++i) {
-            sb.append(' ')
-              .append(getOperatorString())
-              .append(' ')
-              .append(aconstCond[i].getValueString());
-        }
-
-        return sb.append(')').toString();
+        return Arrays.stream(m_aconstCond)
+            .map(ConditionalConstant::getValueString)
+            .collect(Collectors.joining(" " + getOperatorString() + " ", "(", ")"));
     }
 
 

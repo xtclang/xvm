@@ -713,7 +713,7 @@ public class WhileStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         if (keyword.getId() == Token.Id.WHILE || keyword.getId() == Token.Id.FOR) {
             sb.append(keyword.getId().TEXT)

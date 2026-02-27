@@ -307,17 +307,7 @@ public class VariableDeclarationStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(type)
-          .append(' ')
-          .append(getName());
-
-        if (term) {
-            sb.append(';');
-        }
-
-        return sb.toString();
+        return type + " " + getName() + (term ? ";" : "");
     }
 
     @Override

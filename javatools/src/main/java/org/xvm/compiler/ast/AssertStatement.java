@@ -6,6 +6,8 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import java.util.stream.Collectors;
 import java.util.Map;
 
 import org.xvm.asm.Argument;
@@ -624,27 +626,11 @@ public class AssertStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(keyword.getId().TEXT);
-        if (interval != null) {
-            sb.append('(')
-              .append(interval)
-              .append(')');
-        }
-
-        if (!conds.isEmpty()) {
-            sb.append(' ')
-              .append(conds.get(0));
-            for (int i = 1, c = conds.size(); i < c; ++i) {
-                sb.append(", ")
-                  .append(conds.get(i));
-            }
-        }
-
-        sb.append(';');
-
-        return sb.toString();
+        return keyword.getId().TEXT
+            + (interval != null ? "(" + interval + ")" : "")
+            + (conds.isEmpty() ? ""
+                : " " + conds.stream().map(Object::toString).collect(Collectors.joining(", ")))
+            + ';';
     }
 
     @Override

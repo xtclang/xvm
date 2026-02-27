@@ -1,6 +1,8 @@
 package org.xvm.asm.constants;
 
 
+import java.util.StringJoiner;
+
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants;
@@ -441,60 +443,26 @@ public class PropertyBody
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sj = new StringJoiner(", ",
+                m_type.getValueString() + ' ' + getName() + "; (", ")")
+            .add("id=" + getIdentity().getValueString())
+            .add("impl=" + m_impl);
 
-        sb.append(m_type.getValueString())
-          .append(' ')
-          .append(getName())
-          .append("; (id=")
-          .append(getIdentity().getValueString())
-          .append(", impl=")
-          .append(m_impl);
+        if (m_infoFormal != null)    sj.add("formal");
+        if (m_fRO)                   sj.add("RO");
+        if (m_fRW)                   sj.add("RW");
+        if (m_fConstant)             sj.add("constant");
+        if (m_fField)                sj.add("has-field");
+        if (m_fCustom)               sj.add("has-code");
+        if (isInjected())            sj.add("@Inject");
+        if (isExplicitAbstract())    sj.add("@Abstract");
+        if (isExplicitOverride())    sj.add("@Override");
+        if (isExplicitReadOnly())    sj.add("@RO");
+        if (m_constInitVal != null)  sj.add("has-init-value");
+        if (m_constInitFunc != null) sj.add("has-init-fn");
+        if (m_constDelegate != null) sj.add("delegate=" + m_constDelegate);
 
-        if (m_infoFormal != null) {
-            sb.append(", formal");
-        }
-        if (m_fRO) {
-            sb.append(", RO");
-        }
-        if (m_fRW) {
-            sb.append(", RW");
-        }
-        if (m_fConstant) {
-            sb.append(", constant");
-        }
-        if (m_fField) {
-            sb.append(", has-field");
-        }
-        if (m_fCustom) {
-            sb.append(", has-code");
-        }
-
-        if (isInjected()) {
-            sb.append(", @Inject");
-        }
-        if (isExplicitAbstract()) {
-            sb.append(", @Abstract");
-        }
-        if (isExplicitOverride()) {
-            sb.append(", @Override");
-        }
-        if (isExplicitReadOnly()) {
-            sb.append(", @RO");
-        }
-
-        if (m_constInitVal != null) {
-            sb.append(", has-init-value");
-        }
-        if (m_constInitFunc != null) {
-            sb.append(", has-init-fn");
-        }
-        if (m_constDelegate != null) {
-            sb.append(", delegate=")
-              .append(m_constDelegate);
-        }
-
-        return sb.append(')').toString();
+        return sj.toString();
     }
 
 

@@ -11,6 +11,8 @@ import java.lang.classfile.instruction.SwitchCase;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
@@ -172,33 +174,19 @@ public class JumpInt
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var cOps     = m_aOpCase == null ? 0 : m_aOpCase.length;
+        var cOffsets = m_aofCase == null ? 0 : m_aofCase.length;
+        var cLabels  = Math.max(cOps, cOffsets);
 
-        int cOps     = m_aOpCase == null ? 0 : m_aOpCase.length;
-        int cOffsets = m_aofCase == null ? 0 : m_aofCase.length;
-        int cLabels  = Math.max(cOps, cOffsets);
+        var labels = IntStream.range(0, cLabels)
+            .mapToObj(i -> OpJump.getLabelDesc(
+                    i < cOps     ? m_aOpCase[i] : null,
+                    i < cOffsets ? m_aofCase[i] : 0))
+            .collect(Collectors.joining(", "));
 
-        sb.append(super.toString())
-          .append(' ')
-          .append(Argument.toIdString(m_argVal, m_nArg))
-          .append(", ")
-          .append(cLabels)
-          .append(":[");
-
-        for (int i = 0; i < cLabels; ++i) {
-            if (i > 0) {
-                sb.append(", ");
-            }
-
-            Op  op = i < cOps     ? m_aOpCase[i] : null;
-            int of = i < cOffsets ? m_aofCase[i] : 0;
-            sb.append(OpJump.getLabelDesc(op, of));
-        }
-
-        sb.append("], ")
-          .append(OpJump.getLabelDesc(m_opDefault, m_ofDefault));
-
-        return sb.toString();
+        return super.toString() + ' ' + Argument.toIdString(m_argVal, m_nArg)
+            + ", " + cLabels + ":[" + labels + "], "
+            + OpJump.getLabelDesc(m_opDefault, m_ofDefault);
     }
 
     // ----- JIT support ---------------------------------------------------------------------------

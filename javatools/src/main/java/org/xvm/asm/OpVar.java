@@ -178,27 +178,16 @@ public abstract class OpVar
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder(super.toString());
+        var sb = new StringBuilder(super.toString());
 
-        String sName = getName(null);
+        var sName = getName(null);
         if (sName != null) {
-            sb.append(' ')
-              .append(sName)
-              .append(',');
+            sb.append(' ').append(sName).append(',');
         }
-
         if (isTypeAware()) {
-            sb.append(' ')
-              .append(Argument.toIdString(null, m_nType))
-              .append(',');
+            sb.append(' ').append(Argument.toIdString(null, m_nType)).append(',');
         }
-
-        sb.append(' ');
-        if (m_reg == null) {
-            sb.append('#').append(m_nVar);
-        } else {
-            sb.append(m_reg);
-        }
+        sb.append(' ').append(m_reg == null ? "#" + m_nVar : m_reg);
 
         return sb.toString();
     }

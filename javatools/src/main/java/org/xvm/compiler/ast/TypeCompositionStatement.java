@@ -3043,7 +3043,7 @@ public class TypeCompositionStatement
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         if (doc != null) {
             String sDoc = String.valueOf(doc.getValue());

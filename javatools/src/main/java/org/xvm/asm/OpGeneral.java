@@ -181,18 +181,9 @@ public abstract class OpGeneral
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(toName(getOpCode()))
-          .append(' ')
-          .append(Argument.toIdString(m_argTarget, m_nTarget));
-
-        if (isBinaryOp()) {
-            sb.append(", ")
-              .append(Argument.toIdString(m_argValue, m_nArgValue));
-        }
-        sb.append(", ")
-          .append(Argument.toIdString(m_argReturn, m_nRetValue));
-        return sb.toString();
+        return toName(getOpCode()) + ' ' + Argument.toIdString(m_argTarget, m_nTarget)
+            + (isBinaryOp() ? ", " + Argument.toIdString(m_argValue, m_nArgValue) : "")
+            + ", " + Argument.toIdString(m_argReturn, m_nRetValue);
     }
 
     // ----- JIT support ---------------------------------------------------------------------------

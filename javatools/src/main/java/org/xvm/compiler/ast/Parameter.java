@@ -72,20 +72,9 @@ public class Parameter
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(type);
-
-        if (name != null) {
-            sb.append(' ')
-              .append(name.getValueText());
-        }
-
-        if (value != null) {
-            sb.append(" = ")
-              .append(value);
-        }
-
-        return sb.toString();
+        return type
+            + (name != null ? " " + name.getValueText() : "")
+            + (value != null ? " = " + value : "");
     }
 
     public String toTypeParamString() {

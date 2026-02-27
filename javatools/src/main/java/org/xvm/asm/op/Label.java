@@ -73,17 +73,8 @@ public class Label
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(f_sName)
-          .append(": ");
-
-        Op op = getNextOp();
-        if (op != null) {
-            sb.append(op);
-        }
-
-        return sb.toString();
+        var op = getNextOp();
+        return f_sName + ": " + (op != null ? op : "");
     }
 
     // ----- JIT support ------------------------------------------------------------------

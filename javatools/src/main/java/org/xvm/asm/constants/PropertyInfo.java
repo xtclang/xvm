@@ -10,6 +10,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
@@ -1417,27 +1419,17 @@ public class PropertyInfo
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(getType().getValueString())
-          .append(' ')
-          .append(getName());
+        var sb = new StringBuilder()
+            .append(getType().getValueString())
+            .append(' ')
+            .append(getName());
 
-        if (m_fRequireField) {
-            sb.append(", require-field");
-        }
+        if (m_fRequireField) sb.append(", require-field");
+        if (m_fSuppressVar)  sb.append(", suppress-var");
 
-        if (m_fSuppressVar) {
-            sb.append(", suppress-var");
-        }
-
-        int i = 0;
-        for (PropertyBody body : m_aBody) {
-            sb.append("\n    [")
-                    .append(i++)
-                    .append("] ")
-              .append(body);
-        }
-
+        sb.append(IntStream.range(0, m_aBody.length)
+            .mapToObj(i -> "\n    [" + i + "] " + m_aBody[i])
+            .collect(Collectors.joining()));
         return sb.toString();
     }
 

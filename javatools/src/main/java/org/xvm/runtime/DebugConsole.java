@@ -2179,23 +2179,13 @@ public final class DebugConsole
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder();
-            sb.append(lineNumber < 0
-                    ? "*".equals(className)
+            return (lineNumber < 0
+                        ? "*".equals(className)
                             ? "On ALL exceptions"
                             : "On exception: " + className
-                    : "At " + className + ':' + lineNumber);
-
-            if (oneTime) {
-                sb.append(" (one time)");
-            } else if (disabled) {
-                sb.append(" (disabled)");
-            }
-
-            if (condition != null) {
-                sb.append(" Condition: ").append(condition);
-            }
-            return sb.toString();
+                        : "At " + className + ':' + lineNumber)
+                + (oneTime ? " (one time)" : disabled ? " (disabled)" : "")
+                + (condition != null ? " Condition: " + condition : "");
         }
 
         String toPrefString() {

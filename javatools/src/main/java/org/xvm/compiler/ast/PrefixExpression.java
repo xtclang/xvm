@@ -206,24 +206,10 @@ public abstract class PrefixExpression
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        boolean fPre = !(this instanceof SequentialAssignExpression exprSeq) || exprSeq.isPre();
-        if (fPre) {
-            sb.append(operator.getId().TEXT);
-        }
-
-        if (expr instanceof NameExpression) {
-            sb.append(expr);
-        } else {
-            sb.append('(').append(expr).append(')');
-        }
-
-        if (!fPre) {
-            sb.append(operator.getId().TEXT);
-        }
-
-        return sb.toString();
+        var fPre    = !(this instanceof SequentialAssignExpression exprSeq) || exprSeq.isPre();
+        var sOp     = operator.getId().TEXT;
+        var sExpr   = expr instanceof NameExpression ? expr.toString() : "(" + expr + ")";
+        return (fPre ? sOp : "") + sExpr + (fPre ? "" : sOp);
     }
 
     @Override

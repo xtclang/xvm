@@ -5,6 +5,9 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -121,26 +124,9 @@ public class ArrayTypeExpression
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(type)
-          .append('[');
-
-        for (int i = 0; i < dims; ++i) {
-            if (i > 0) {
-                sb.append(',');
-            }
-
-            if (indexes == null) {
-                sb.append('?');
-            } else {
-                sb.append(indexes.get(i));
-            }
-        }
-
-          sb.append(']');
-
-        return sb.toString();
+        return IntStream.range(0, dims)
+            .mapToObj(i -> indexes == null ? "?" : indexes.get(i).toString())
+            .collect(Collectors.joining(",", type + "[", "]"));
     }
 
     @Override

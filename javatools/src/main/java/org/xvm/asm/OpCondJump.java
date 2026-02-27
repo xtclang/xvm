@@ -286,26 +286,11 @@ public abstract class OpCondJump
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(toName(getOpCode()))
-          .append(' ');
-
-        if (isBinaryOp()) {
-           sb.append(Argument.toIdString(m_typeCommon, m_nType))
-             .append(", ");
-        }
-
-        sb.append(getArgDesc());
-
-        if (hasSecondArgument()) {
-            sb.append(", ")
-              .append(getArg2Desc());
-        }
-
-        sb.append(", ")
-          .append(getLabelDesc());
-
-        return sb.toString();
+        return toName(getOpCode()) + ' '
+            + (isBinaryOp() ? Argument.toIdString(m_typeCommon, m_nType) + ", " : "")
+            + getArgDesc()
+            + (hasSecondArgument() ? ", " + getArg2Desc() : "")
+            + ", " + getLabelDesc();
     }
 
     // ----- JIT support ---------------------------------------------------------------------------

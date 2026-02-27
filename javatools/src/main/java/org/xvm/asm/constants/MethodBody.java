@@ -464,19 +464,13 @@ public class MethodBody {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(m_id.getPathString())
-          .append(" {sig=")
-          .append(m_sig.getValueString())
-          .append(", impl=")
-          .append(m_impl);
-
-        if (m_target != null) {
-            sb.append(", target=")
-              .append(m_target instanceof Constant constant ? constant.getValueString() : m_target);
-        }
-
-        return sb.append('}').toString();
+        return m_id.getPathString() + " {sig=" + m_sig.getValueString()
+            + ", impl=" + m_impl
+            + (m_target != null
+                ? ", target=" + (m_target instanceof Constant constant
+                    ? constant.getValueString() : m_target)
+                : "")
+            + '}';
     }
 
 

@@ -325,26 +325,14 @@ public class Annotation
 
     @Override
     public String getDescription() {
-        StringBuilder sb = new StringBuilder();
-        int cParams = m_aParams.length;
-
-        sb.append("class=")
-          .append(getAnnotationClass().getValueString())
-          .append(", params=")
-          .append(cParams);
-
-        if (cParams > 0) {
-            sb.append(", values=(");
-            for (int i = 0; i < cParams; ++i) {
-                if (i > 0) {
-                    sb.append(", ");
-                }
-                sb.append(m_aParams[i].getValueString());
-            }
-            sb.append(')');
-        }
-
-        return sb.toString();
+        var cParams = m_aParams.length;
+        return "class=" + getAnnotationClass().getValueString()
+            + ", params=" + cParams
+            + (cParams > 0
+                ? ", values=(" + Arrays.stream(m_aParams)
+                    .map(Constant::getValueString)
+                    .collect(Collectors.joining(", ")) + ')'
+                : "");
     }
 
 

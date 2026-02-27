@@ -2016,37 +2016,27 @@ public class Frame
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             if (boundary) {
                 sb.append("^");
             }
 
             if (function == null) {
-                ServiceContext ctx = frame.f_context;
-                sb.append("Service #")
-                  .append(ctx.f_lId)
-                  .append(' ')
-                  .append(ctx.f_sName);
-
+                var ctx = frame.f_context;
+                sb.append("Service #").append(ctx.f_lId).append(' ').append(ctx.f_sName);
                 if (frame.f_aOp != null) {
-                    sb.append(' ')
-                      .append(frame.f_aOp[0]);
+                    sb.append(' ').append(frame.f_aOp[0]);
                 }
             } else {
                 buildShortName(function.getIdentityConstant(), sb, false);
-                sb.append('(');
-
-                sb.append(function.getContainingClass().getSourceFileName());
-
+                sb.append('(').append(function.getContainingClass().getSourceFileName());
                 if (iPC >= 0) {
-                    int nLine = function.calculateLineNumber(iPC);
+                    var nLine = function.calculateLineNumber(iPC);
                     if (nLine > 0) {
                         sb.append(':').append(nLine);
                     } else {
-                        sb.append(" iPC=")
-                          .append(iPC);
+                        sb.append(" iPC=").append(iPC);
                     }
-
                 }
                 sb.append(')');
             }

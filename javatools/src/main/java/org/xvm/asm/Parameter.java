@@ -404,36 +404,15 @@ public class Parameter
 
     @Override
     public String getDescription() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(isParameter() ? "param" : "return")
-          .append("-index=")
-          .append(getIndex());
-
-        if (isTypeParameter()) {
-            sb.append(" (type parameter)");
-        } else if (isConditionalReturn()) {
-            sb.append(" (conditional return)");
-        }
-
-        sb.append(", type=")
-          .append(m_constType.getValueString());
-
-        if (isNamed()) {
-            sb.append(", name=")
-              .append(getName());
-        }
-
-        if (hasDefaultValue()) {
-            sb.append(", has default");
-
-            if (m_constDefault != null) {
-                sb.append("=")
-                  .append(m_constDefault.getValueString());
-            }
-        }
-
-        return sb.toString();
+        return (isParameter() ? "param" : "return") + "-index=" + getIndex()
+            + (isTypeParameter() ? " (type parameter)"
+                : isConditionalReturn() ? " (conditional return)" : "")
+            + ", type=" + m_constType.getValueString()
+            + (isNamed() ? ", name=" + getName() : "")
+            + (hasDefaultValue()
+                ? ", has default" + (m_constDefault != null
+                    ? "=" + m_constDefault.getValueString() : "")
+                : "");
     }
 
     @Override

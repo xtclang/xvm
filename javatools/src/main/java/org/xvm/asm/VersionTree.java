@@ -352,8 +352,7 @@ public class VersionTree<V>
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("VersionTree");
+        var sb = new StringBuilder("VersionTree");
         root.render(sb, "", "");
         return sb.toString();
     }

@@ -187,18 +187,8 @@ public abstract class OpInPlace
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(super.toString())
-          .append(' ')
-          .append(getTargetString());
-
-        if (isAssignOp()) {
-            sb.append(", ")
-              .append(getReturnString());
-        }
-
-        return sb.toString();
+        return super.toString() + ' ' + getTargetString()
+            + (isAssignOp() ? ", " + getReturnString() : "");
     }
 
     protected String getTargetString() {

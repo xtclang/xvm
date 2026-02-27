@@ -5,6 +5,9 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
@@ -206,21 +209,12 @@ public class AssertV
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder(super.toString());
-        sb.append(" (");
-
-        for (int i = 0, c = Math.max(m_anValue   == null ? 0 : m_anValue.length,
-                                     m_aArgValue == null ? 0 : m_aArgValue.length); i < c; ++i) {
-            if (i > 0) {
-                sb.append(", ");
-            }
-
-            sb.append(Argument.toIdString(m_aArgValue == null ? null : m_aArgValue[i],
-                                          m_anValue   == null ? Register.UNKNOWN : m_anValue[i]));
-        }
-
-        sb.append(')');
-        return sb.toString();
+        var c = Math.max(m_anValue   == null ? 0 : m_anValue.length,
+                         m_aArgValue == null ? 0 : m_aArgValue.length);
+        return IntStream.range(0, c)
+            .mapToObj(i -> Argument.toIdString(m_aArgValue == null ? null             : m_aArgValue[i],
+                                               m_anValue   == null ? Register.UNKNOWN : m_anValue[i]))
+            .collect(Collectors.joining(", ", super.toString() + " (", ")"));
     }
 
     private int[] m_anValue;

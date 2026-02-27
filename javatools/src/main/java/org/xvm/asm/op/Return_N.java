@@ -7,6 +7,9 @@ import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpReturn;
@@ -120,22 +123,11 @@ public class Return_N
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append(super.toString())
-          .append(" (");
-
-        int cArgs = m_anArg == null ? m_aArg.length : m_anArg.length;
-        for (int i = 0; i < cArgs; i++) {
-            if (i > 0) {
-                sb.append(", ");
-            }
-            sb.append(Argument.toIdString(m_aArg  == null ? null             : m_aArg [i],
-                                          m_anArg == null ? Register.UNKNOWN : m_anArg[i]));
-        }
-
-        sb.append(')');
-        return sb.toString();
+        var cArgs = m_anArg == null ? m_aArg.length : m_anArg.length;
+        return IntStream.range(0, cArgs)
+            .mapToObj(i -> Argument.toIdString(m_aArg  == null ? null             : m_aArg [i],
+                                               m_anArg == null ? Register.UNKNOWN : m_anArg[i]))
+            .collect(Collectors.joining(", ", super.toString() + " (", ")"));
     }
 
     protected static class ReturnNAction

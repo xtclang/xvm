@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.StringJoiner;
 import java.util.TreeMap;
 
 import java.util.stream.Stream;
@@ -587,24 +588,26 @@ public class ModuleInfo {
 
     @Override
     public String toString() {
-        return "Module(name="         + Objects.toString(moduleName, "<unknown>")
-             + ", fileSpec="          + fileSpec
-             + ", fileName="          + fileName
-             + ", projectDir="        + projectDir
-             + ", sourceStatus="      + sourceStatus
-             + ", sourceDir="         + sourceDir
-             + ", sourceIsTree="      + sourceIsTree
-             + ", sourceFile="        + sourceFile
-             + ", sourceContent="     + sourceContent
-             + ", sourceTimestamp="   + dateString(sourceTimestamp, "<unknown>")
-             + ", resourceDir="       + Objects.toString(resourceDir, "<unknown>")
-             + ", resourceTimestamp=" + dateString(resourceTimestamp, "<unknown>")
-             + ", binaryStatus="      + binaryStatus
-             + ", binaryDir="         + Objects.toString(binaryDir, "<unknown>")
-             + ", binaryFile="        + Objects.toString(binaryFile, "<unknown>")
-             + ", binaryVersion="     + Objects.toString(binaryVersion, "<unknown>")
-             + ", binaryContent="     + binaryContent
-             + ", binaryTimestamp="   + dateString(binaryTimestamp, "<unknown>");
+        return new StringJoiner(", ", "Module(", "")
+            .add("name="              + Objects.toString(moduleName, "<unknown>"))
+            .add("fileSpec="          + fileSpec)
+            .add("fileName="          + fileName)
+            .add("projectDir="        + projectDir)
+            .add("sourceStatus="      + sourceStatus)
+            .add("sourceDir="         + sourceDir)
+            .add("sourceIsTree="      + sourceIsTree)
+            .add("sourceFile="        + sourceFile)
+            .add("sourceContent="     + sourceContent)
+            .add("sourceTimestamp="   + dateString(sourceTimestamp, "<unknown>"))
+            .add("resourceDir="       + Objects.toString(resourceDir, "<unknown>"))
+            .add("resourceTimestamp=" + dateString(resourceTimestamp, "<unknown>"))
+            .add("binaryStatus="      + binaryStatus)
+            .add("binaryDir="         + Objects.toString(binaryDir, "<unknown>"))
+            .add("binaryFile="        + Objects.toString(binaryFile, "<unknown>"))
+            .add("binaryVersion="     + Objects.toString(binaryVersion, "<unknown>"))
+            .add("binaryContent="     + binaryContent)
+            .add("binaryTimestamp="   + dateString(binaryTimestamp, "<unknown>"))
+            .toString();
     }
 
 

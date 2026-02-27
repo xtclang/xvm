@@ -391,27 +391,13 @@ public class ThrowExpression
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-
-        if (isTodo() && message != null) {
-            // the message contains "T0D0"
-            sb.append(message);
-        } else {
-            sb.append(keyword);
-
-            if (expr != null) {
-                sb.append(' ')
-                  .append(expr);
-            }
-
-            if (message != null) {
-                sb.append(" as ")
-                  .append(message);
-            }
-        }
-
-        sb.append(';');
-        return sb.toString();
+        // the message contains "T0D0"
+        return (isTodo() && message != null
+                ? String.valueOf(message)
+                : keyword
+                    + (expr != null ? " " + expr : "")
+                    + (message != null ? " as " + message : ""))
+            + ';';
     }
 
     @Override

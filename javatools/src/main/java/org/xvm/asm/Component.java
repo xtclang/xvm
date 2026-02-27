@@ -19,6 +19,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.StringJoiner;
 
 import java.util.function.Consumer;
 
@@ -2114,30 +2115,18 @@ public abstract class Component
 
     @Override
     public String getDescription() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("name=")
-          .append(getName())
-          .append(", format=")
-          .append(getFormat())
-          .append(", access=")
-          .append(getAccess());
+        var sj = new StringJoiner(", ")
+            .add("name=" + getName())
+            .add("format=" + getFormat())
+            .add("access=" + getAccess());
 
-        if (isAbstract()) {
-            sb.append(", abstract");
-        }
-        if (isStatic()) {
-            sb.append(", static");
-        }
-        if (isSynthetic()) {
-            sb.append(", synthetic");
-        }
-        if (getNextSibling() != null) {
-            sb.append(", next-sibling");
-        }
-        if (m_fModified) {
-            sb.append(", modified");
-        }
-        return sb.toString();
+        if (isAbstract())            sj.add("abstract");
+        if (isStatic())              sj.add("static");
+        if (isSynthetic())           sj.add("synthetic");
+        if (getNextSibling() != null) sj.add("next-sibling");
+        if (m_fModified)             sj.add("modified");
+
+        return sj.toString();
     }
 
     /**

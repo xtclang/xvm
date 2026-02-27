@@ -1216,15 +1216,11 @@ public class MethodInfo
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(getSignature().getValueString());
-
+        var sb = new StringBuilder(getSignature().getValueString());
         int i = 0;
-        for (MethodBody body : m_aBody) {
-            sb.append("\n    [")
-              .append(body.isConcrete() ? String.valueOf(i++) : "*")
-              .append("] ")
-              .append(body);
+        for (var body : m_aBody) {
+            sb.append("\n    [").append(body.isConcrete() ? String.valueOf(i++) : "*")
+              .append("] ").append(body);
         }
         return sb.toString();
     }
