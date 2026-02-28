@@ -932,10 +932,9 @@ public class BuildContext {
      * @param loaded  if true, the register value has been loaded on the Java stack
      */
     protected RegisterInfo adjustRegister(CodeBuilder code, RegisterInfo reg, boolean loaded) {
-        TypeConstant type = reg.type();
-        if (!type.isJavaPrimitive() && !type.isXvmPrimitive()) {
+        TypeConstant regType = reg.type();
+        if (!regType.isJavaPrimitive() && !regType.isXvmPrimitive()) {
             int          regId   = reg.regId();
-            TypeConstant regType = type.getCanonicalJitType();
             TypeConstant mtxType = typeMatrix.getType(regId, currOpAddr);
 
             // the types could be equivalent, but not equal
@@ -943,9 +942,9 @@ public class BuildContext {
                 int depth = scope.depth;
                 if (reg instanceof Narrowed narrowedReg) {
                     reg     = narrowedReg.origReg();
-                    regType = type;
+                    regType = reg.type();
                     depth   = narrowedReg.scopeDepth;
-                    if (mtxType.equals(regType)) {
+                    if (mtxType.isEquivalent(regType)) {
                         return reg;
                     }
                 } else if (reg.cd().isPrimitive()) {
@@ -2302,6 +2301,7 @@ public class BuildContext {
      */
     public int storeTempValue(CodeBuilder code, ClassDesc cd) {
         int slot = scope.allocateJavaSlot(cd);
+        code.localVariable(slot, "temp$" + slot, cd, scope.startLabel, scope.endLabel);
         Builder.store(code, cd, slot);
         return slot;
     }

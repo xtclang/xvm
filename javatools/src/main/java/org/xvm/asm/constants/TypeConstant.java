@@ -6642,7 +6642,7 @@ public abstract class TypeConstant
         assert isSingleUnderlyingClass(true);
         TypeConstant type1 = reg1.type();
         TypeConstant type2 = reg2.type();
-        assert type1.isA(this) && type2.isA(this);
+        assert type1.isA(this) && type2.isA(this) || this.isFormalType();
 
         boolean fLocalTrue = lblTrue == null;
         if (fLocalTrue) {

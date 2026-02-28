@@ -160,7 +160,8 @@ public class nArrayᐸObjectᐳ
     }
 
     @Override public nArrayᐸObjectᐳ delete$p(Ctx ctx, long index) {
-        throw new UnsupportedOperationException("TODO CP");
+        $delete(ctx, index, 1);
+        return this;
     }
 
     @Override public nArrayᐸObjectᐳ deleteAll(Ctx ctx, Range indexes) {

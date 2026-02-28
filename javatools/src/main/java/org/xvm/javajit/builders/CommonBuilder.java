@@ -1877,7 +1877,7 @@ public class CommonBuilder
         "Boolean", "Ordered",
         "Orderable",
 //        "Int64",
-//        "Array",
+        "Array",
         "TerminalConsole",
     };
     private final static HashSet<String> SKIP_SET = new HashSet<>();

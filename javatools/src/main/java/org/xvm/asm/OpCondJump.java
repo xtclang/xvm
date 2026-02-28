@@ -421,7 +421,7 @@ public abstract class OpCondJump
         // TODO: can we get rid of typeCmp?
         TypeConstant typeCommon =
             selectCommonType(type1, type2, ErrorListener.BLACKHOLE).removeNullable();
-        assert typeCmp.isEquivalent(typeCommon);
+        assert typeCmp.isEquivalent(typeCommon) || typeCmp.isFormalType();
 
         typeCmp.buildCompare(bctx, code, nOp, reg1, reg2, lblTrue);
 

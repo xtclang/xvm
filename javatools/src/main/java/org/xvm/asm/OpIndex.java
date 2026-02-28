@@ -215,6 +215,7 @@ public abstract class OpIndex
 
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
+        ConstantPool pool   = bctx.pool();
         RegisterInfo reg    = bctx.loadArgument(code, m_nTarget);
         TypeConstant type   = reg.type();
         TypeConstant typeEl = type.resolveGenericType("Element");
@@ -270,7 +271,7 @@ public abstract class OpIndex
 
                     case OP_IIP_ADD -> {
                         // @Op(+) Char add(Int n)
-                        ClassDesc cdArg = typeEl.equals(bctx.pool().typeChar())
+                        ClassDesc cdArg = typeEl.equals(pool.typeChar())
                             ? CD_long
                             : cdEl;
                         bctx.loadArgument(code, getValueIndex());
@@ -280,7 +281,7 @@ public abstract class OpIndex
 
                     case OP_IIP_SUB -> {
                         // @Op(+) Char add(Int n)
-                        ClassDesc cdArg = typeEl.equals(bctx.pool().typeChar())
+                        ClassDesc cdArg = typeEl.equals(pool.typeChar())
                             ? CD_long
                             : cdEl;
                         bctx.loadArgument(code, getValueIndex());
@@ -346,9 +347,13 @@ public abstract class OpIndex
                 bctx.loadCtx(code);
                 bctx.loadArgument(code, m_nIndex);
                 switch (getOpCode()) {
-                    case OP_I_GET ->
+                    case OP_I_GET -> {
                         code.invokevirtual(cdArray, "getElement$p",
                             MethodTypeDesc.of(CD_nObj, CD_Ctx, CD_long));
+                        if (!typeEl.equals(pool.typeObject())) {
+                            code.checkcast(bctx.builder.ensureClassDesc(typeEl));
+                        }
+                    }
 
                     case OP_I_SET -> {
                         bctx.loadArgument(code, getValueIndex());

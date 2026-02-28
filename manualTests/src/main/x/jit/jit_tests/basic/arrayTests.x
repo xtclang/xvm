@@ -4,27 +4,31 @@ package arrayTests {
     void run() {
         console.print(">>>> Running ArrayTests >>>>");
 
-        test0();
-        test1();
-        test2();
+        testStringAsArray();
+        testStringArray();
+        testCharArray();
     }
 
-    void test0() {
+    void testStringAsArray() {
         String s  = "hello";
         Char   ch = s[0];
         assert ch == 'h';
     }
 
-    void test1() {
+    void testStringArray() {
         String[] strings = new Array<String>(3);
         strings.add("hello");
+        console.print(strings[0]);
 
-        console.print(strings[0]);
-        strings[0] = "world";
-        console.print(strings[0]);
+        strings.add("?");
+        strings[1] = "world";
+        console.print(strings[1]);
+
+        strings = strings.delete(0);
+        assert strings[0] == "world";
     }
 
-    void test2() {
+    void testCharArray() {
         Char[] chars = new Array<Char>(3);
         chars.add('a');
         console.print(chars[0]);
