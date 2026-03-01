@@ -6,6 +6,7 @@ package arrayTests {
 
         testStringAsArray();
         testStringArray();
+        testConstStringArray();
         testCharArray();
     }
 
@@ -26,6 +27,12 @@ package arrayTests {
 
         strings = strings.delete(0);
         assert strings[0] == "world";
+    }
+
+    void testConstStringArray() {
+        String[] strings = ["hello", "world"];
+        assert strings[0] == "hello";
+        assert strings[1] == "world";
     }
 
     void testCharArray() {

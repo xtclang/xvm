@@ -16,6 +16,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ByteConstant;
 import org.xvm.asm.constants.CharConstant;
 import org.xvm.asm.constants.ClassConstant;
@@ -364,6 +365,79 @@ public abstract class Builder {
                 code.invokespecial(cd, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant,
                         CD_MethodHandle, CD_MethodHandle));
                 return new SingleSlot(type, Specific, cd, "");
+            }
+        }
+
+        case ArrayConstant arrayConst: {
+            TypeConstant arrayType = arrayConst.getType();
+            TypeConstant elType    = arrayType.getParamType(0);
+            Constant[]   values    = arrayConst.getValue();
+
+            if (elType.isJavaPrimitive() || elType.isXvmPrimitive()) {
+                switch (elType.getSingleUnderlyingClass(false).getName()) {
+                case "Char": {
+                    // TODO: if the "constants" array is too big we may consider coding a Java loop
+                    //       instead of "unwrapped" code repetition
+
+                    // nArrayᐸCharᐳ array = nArrayᐸCharᐳ.$new$p(ctx, type, capacity, false);
+                    // Note: we remove the immutability here; it will be added back upon "$makeImmut"
+                    code.aload(code.parameterSlot(0));
+                    loadTypeConstant(code, N_nArrayChar, arrayType.removeImmutable());
+                    code.loadConstant((long) values.length)
+                        .iconst_0()
+                        .invokestatic(CD_nArrayChar, "$new$p",
+                            MethodTypeDesc.of(CD_nArrayChar, CD_Ctx, CD_TypeConstant, CD_long, CD_boolean));
+
+                    for (Constant value : values) {
+                        // array.add(ctx, loadConstant(constValue));
+                        code.dup()
+                            .aload(code.parameterSlot(0))
+                            .loadConstant(((CharConstant) value).getValue())
+                            .invokevirtual(CD_nArrayChar, "add$p",
+                                MethodTypeDesc.of(CD_nArrayChar, CD_Ctx, CD_int))
+                            .pop();
+                    }
+
+                    // array.makeImmutable();
+                    code.dup()
+                        .aload(code.parameterSlot(0))
+                        .invokevirtual(CD_nArrayChar, "$makeImmut",
+                            MethodTypeDesc.of(CD_void, CD_Ctx));
+                    return new SingleSlot(arrayType, Specific, ensureClassDesc(arrayType), "");
+                }
+
+                default:
+                    throw new UnsupportedOperationException("TODO");
+                }
+            } else {
+                // TODO: if the "constants" array is too big we may consider coding a Java loop
+                //       instead of "unwrapped" code repetition
+
+                // nArrayᐸObjectᐳ array = nArrayᐸObjectᐳ.$new$p(ctx, type, capacity, false);
+                // Note: we remove the immutability here; it will be added back upon "$makeImmut"
+                code.aload(code.parameterSlot(0));
+                loadTypeConstant(code, N_nArrayObj, arrayType.removeImmutable());
+                code.loadConstant((long) values.length)
+                    .iconst_0()
+                    .invokestatic(CD_nArrayObj, "$new$p",
+                        MethodTypeDesc.of(CD_nArrayObj, CD_Ctx, CD_TypeConstant, CD_long, CD_boolean));
+
+                for (Constant value : values) {
+                    // array.add(ctx, loadConstant(constValue));
+                    code.dup()
+                        .aload(code.parameterSlot(0));
+                    loadConstant(bctx, code, value);
+                    code.invokevirtual(CD_nArrayObj, "add",
+                            MethodTypeDesc.of(CD_nArrayObj, CD_Ctx, CD_nObj))
+                        .pop();
+                }
+
+                // array.makeImmutable();
+                code.dup()
+                    .aload(code.parameterSlot(0))
+                    .invokevirtual(CD_nArrayObj, "$makeImmut",
+                        MethodTypeDesc.of(CD_void, CD_Ctx));
+                return new SingleSlot(arrayType, Specific, ensureClassDesc(arrayType), "");
             }
         }
 
