@@ -1304,26 +1304,28 @@ public class BuildContext {
             }
         }
 
-        if (regFrom.flavor() != regTo.flavor()) {
+        JitFlavor srcFlavor = regFrom.flavor();
+        JitFlavor dstFlavor = regTo.flavor();
+        if (srcFlavor != dstFlavor) {
             // additional transformations are required for these scenarios:
-            //  - Primitive -> Widened            (n = 5; where Int? n;)
-            //  - Specific  -> NullablePrimitive  (Int? n = 5; or Int? n = Null;)
             //  - Specific  -> Primitive          (Int n := o.is(Int);)
+            //  - Specific  -> NullablePrimitive  (Int? n = 5; or Int? n = Null;)
+            //  - Primitive -> Widened            (n = 5; where Int|String n;)
+            //  - Primitive -> NullablePrimitive  (n = 5; where Int? n;)
+            //  - NullablePrimitive -> Primitive  (Int? n = 5; assert call(n);)
             //  - NullablePrimitive -> Specific   (Int? n = Null; assert call(n);)
 
-            JitFlavor srcFlavor = regFrom.flavor();
-            JitFlavor dstFlavor = regTo.flavor();
-            boolean   invalid   = false;
+            boolean invalid = false;
 
             AddTransformation:
             switch (srcFlavor) {
-            case Specific, SpecificWithDefault:
+            case Specific:
                 switch (dstFlavor) {
                 case Primitive:
                     Builder.unbox(code, typeTo, regTo.cd());
                     break AddTransformation;
 
-                case Specific, Widened, WidenedWithDefault:
+                case Widened:
                     // nothing to do
                     break AddTransformation;
 
@@ -1364,15 +1366,11 @@ public class BuildContext {
                     break AddTransformation;
                 }
 
-            case Widened, WidenedWithDefault:
+            case Widened:
                 switch (dstFlavor) {
                 case Specific:
                     // we must have added "checkcast" above already
                     assert allowUpcast;
-                    break AddTransformation;
-
-                case Widened:
-                    // nothing to do
                     break AddTransformation;
 
                 default:
