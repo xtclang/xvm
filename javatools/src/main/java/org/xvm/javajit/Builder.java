@@ -373,12 +373,10 @@ public abstract class Builder {
             TypeConstant elType    = arrayType.getParamType(0);
             Constant[]   values    = arrayConst.getValue();
 
+            // TODO: how/where to cache the result
             if (elType.isJavaPrimitive() || elType.isXvmPrimitive()) {
                 switch (elType.getSingleUnderlyingClass(false).getName()) {
                 case "Char": {
-                    // TODO: if the "constants" array is too big we may consider coding a Java loop
-                    //       instead of "unwrapped" code repetition
-
                     // nArrayᐸCharᐳ array = nArrayᐸCharᐳ.$new$p(ctx, type, capacity, false);
                     // Note: we remove the immutability here; it will be added back upon "$makeImmut"
                     code.aload(code.parameterSlot(0));
@@ -410,9 +408,6 @@ public abstract class Builder {
                     throw new UnsupportedOperationException("TODO");
                 }
             } else {
-                // TODO: if the "constants" array is too big we may consider coding a Java loop
-                //       instead of "unwrapped" code repetition
-
                 // nArrayᐸObjectᐳ array = nArrayᐸObjectᐳ.$new$p(ctx, type, capacity, false);
                 // Note: we remove the immutability here; it will be added back upon "$makeImmut"
                 code.aload(code.parameterSlot(0));

@@ -242,6 +242,7 @@ public class CondOpExpression
                                         ErrorListener errs) {
         if (isConstant()) {
             super.generateConditionalJump(ctx, code, label, fWhenTrue, errs);
+            return;
         }
 
         switch (combine(expr1.toConstant(), getOperatorString(), expr2.toConstant())) {
