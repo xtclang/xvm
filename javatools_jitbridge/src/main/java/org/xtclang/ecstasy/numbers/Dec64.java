@@ -268,7 +268,7 @@ public class Dec64 extends DecimalFPNumber {
      *
      * @return the negated IEEE-754-2008 64-bit decimal packed into an {@code long}
      */
-    public static long $neg(Ctx ctx, int bits) {
+    public static long $neg(Ctx ctx, long bits) {
         int leftSevenBits = $leftmost7Bits(bits);
         return $isFinite(leftSevenBits)
                 ? $toLongBits(ctx, $toBigDecimal(bits).negate())
