@@ -20,6 +20,8 @@ class IpSubTests {
         testIpSubDec();
         testIpSubDec32();
         testIpSubDec128();
+        testIpSubFloat32();
+        testIpSubFloat64();
         testIpSubIntFromChar();
         console.print("<<<< Finished IpSubTests <<<<<");
     }
@@ -98,6 +100,18 @@ class IpSubTests {
 
     void testIpSubDec128() {
         Dec128 value1 = 3.75;
+        value1 -= 1.25;
+        assert value1 == 2.50;
+    }
+
+    void testIpSubFloat32() {
+        Float32 value1 = 3.75;
+        value1 -= 1.25;
+        assert value1 == 2.50;
+    }
+
+    void testIpSubFloat64() {
+        Float64 value1 = 3.75;
         value1 -= 1.25;
         assert value1 == 2.50;
     }

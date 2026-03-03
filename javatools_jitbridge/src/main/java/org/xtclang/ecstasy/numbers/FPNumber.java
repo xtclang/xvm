@@ -42,7 +42,10 @@ public abstract class FPNumber extends Number {
      * @return this decimal converted to a Java {@link BigInteger}
      */
     public BigInteger $toBigInteger(Rounding direction) {
-        throw new UnsupportedOperationException();
+        if (direction == null) {
+            direction = Rounding.TowardZero.$INSTANCE;
+        }
+        return $toBigDecimal().setScale(0, direction.$roundingMode()).toBigInteger();
     }
 
     // ----- conversion ----------------------------------------------------------------------------

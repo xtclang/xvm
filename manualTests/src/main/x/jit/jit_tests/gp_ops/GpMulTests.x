@@ -21,6 +21,8 @@ class GpMulTests {
         testGpMulDec();
         testGpMulDec32();
         testGpMulDec128();
+        testGpMulFloat32();
+        testGpMulFloat64();
         console.print("<<<< Finished GpMulTests <<<<<");
     }
 
@@ -129,6 +131,22 @@ class GpMulTests {
         Dec128 value1 = 0;
         Dec128 value2 = 4.25;
         Dec128 value3 = 3.0;
+        value1 = value2 * value3;
+        assert value1 == 12.750;
+    }
+
+    void testGpMulFloat32() {
+        Float32 value1 = 0;
+        Float32 value2 = 4.25;
+        Float32 value3 = 3.0;
+        value1 = value2 * value3;
+        assert value1 == 12.750;
+    }
+
+    void testGpMulFloat64() {
+        Float64 value1 = 0;
+        Float64 value2 = 4.25;
+        Float64 value3 = 3.0;
         value1 = value2 * value3;
         assert value1 == 12.750;
     }

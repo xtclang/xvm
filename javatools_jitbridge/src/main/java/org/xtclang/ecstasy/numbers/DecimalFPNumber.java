@@ -414,23 +414,6 @@ public abstract class DecimalFPNumber
     public abstract BigDecimal $toBigDecimal();
 
     /**
-     * Convert this decimal to a Java {@link BigInteger}.
-     * <p>
-     * If the {@code direction} parameter is {@code null}, a default direction value of
-     * {@link Rounding.TowardZero} will be used. This is
-     *
-     * @param direction  an optional {@link Rounding} direction to use
-     *
-     * @return this decimal converted to a Java {@link BigInteger}
-     */
-    public BigInteger $toBigInteger(Rounding direction) {
-        if (direction == null) {
-            direction = Rounding.TowardZero.$INSTANCE;
-        }
-        return $toBigDecimal().setScale(0, direction.$roundingMode()).toBigInteger();
-    }
-
-    /**
      * Convert the three least significant decimal digits of the passed integer value to a declet.
      * <p/>
      * Details are in IEEE 754-2008 section 3.5.2, table 3.4.

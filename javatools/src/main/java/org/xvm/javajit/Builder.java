@@ -23,6 +23,8 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.DecimalConstant;
 import org.xvm.asm.constants.DecoratedClassConstant;
 import org.xvm.asm.constants.EnumValueConstant;
+import org.xvm.asm.constants.Float64Constant;
+import org.xvm.asm.constants.FloatConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.LiteralConstant;
@@ -44,6 +46,7 @@ import org.xvm.type.Decimal64;
 
 import org.xvm.util.PackedInteger;
 
+import static java.lang.constant.ConstantDescs.CD_Double;
 import static java.lang.constant.ConstantDescs.CD_MethodHandle;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_char;
@@ -209,6 +212,29 @@ public abstract class Builder {
                     throw new IllegalStateException("Unsupported IntConstant type "
                             + decConstant.getFormat());
             };
+
+        case FloatConstant floatConstant:
+            return switch (floatConstant.getFormat()) {
+                case Float32 -> {
+                    code.loadConstant(floatConstant.getValue().floatValue());
+                    yield new SingleSlot(constant.getType(), Primitive, CD_float, "");
+                }
+                default ->
+                        throw new IllegalStateException("Unsupported FloatConstant type "
+                                + floatConstant.getFormat());
+            };
+
+        case Float64Constant float64Constant:
+            return switch (float64Constant.getFormat()) {
+                case Float64 -> {
+                    code.loadConstant(float64Constant.getValue().doubleValue());
+                    yield new SingleSlot(constant.getType(), Primitive, CD_double, "");
+                }
+                default ->
+                        throw new IllegalStateException("Unsupported Float64Constant type "
+                                + float64Constant.getFormat());
+            };
+
         case ByteConstant byteConstant:
             code.ldc(byteConstant.getValue());
             return new SingleSlot(constant.getType(), Primitive, CD_int, "");
@@ -848,7 +874,7 @@ public abstract class Builder {
                     break;
 
                 case "F": // float
-                    switch (type.getSingleUnderlyingClass(false).getName()) {
+                    switch (baseType.getSingleUnderlyingClass(false).getName()) {
                         case "Float16" -> code.invokestatic(CD_Float16, "$box", MD_Float16_box);
                         case "Float32" -> code.invokestatic(CD_Float32, "$box", MD_Float32_box);
                         default       -> throw new IllegalStateException();
@@ -856,7 +882,7 @@ public abstract class Builder {
                     break;
 
                 case "D": // double
-                    switch (type.getSingleUnderlyingClass(false).getName()) {
+                    switch (baseType.getSingleUnderlyingClass(false).getName()) {
                         case "Float64" -> code.invokestatic(CD_Float64, "$box", MD_Float64_box);
                         default        -> throw new IllegalStateException();
                     }
@@ -903,6 +929,14 @@ public abstract class Builder {
 
         case "I": // int
             code.invokestatic(CD_JavaInteger, "valueOf", MethodTypeDesc.of(CD_JavaInteger, CD_int));
+            break;
+
+        case "F": // float
+            code.invokestatic(CD_JavaFloat, "valueOf", MethodTypeDesc.of(CD_JavaFloat, CD_float));
+            break;
+
+        case "D": // double
+            code.invokestatic(CD_JavaDouble, "valueOf", MethodTypeDesc.of(CD_JavaDouble, CD_Double));
             break;
 
         default:
@@ -958,10 +992,10 @@ public abstract class Builder {
             case "J":
                 break;
             case "F":
-                code.l2f();
+                code.l2i().invokestatic(CD_JavaFloat, "intBitsToFloat", MD_I2F);
                 break;
             case "D":
-                code.l2d();
+                code.invokestatic(CD_JavaDouble, "longBitsToDouble", MD_L2D);
                 break;
             default:
                 throw new IllegalStateException();
@@ -987,8 +1021,9 @@ public abstract class Builder {
         assert returnIndex >= 0;
 
         code.aload(code.parameterSlot(0)); // $ctx
-        if (cd.isPrimitive() && cd.descriptorString().equals("J")) {
-             // the value is a "long" that occupies two slots
+        String descriptor = cd.descriptorString();
+        if (cd.isPrimitive() && (descriptor.equals("J") || descriptor.equals("D"))) {
+             // the value is a "long" or "double" that occupies two slots
              // stack (lvalue, lvalue2, $ctx) -> ($ctx, lvalue, lvalue2)
             code.dup_x2().pop();
         } else {
@@ -998,17 +1033,17 @@ public abstract class Builder {
 
         if (cd.isPrimitive()) {
             // all primitives are stored into "long" fields; convert
-            switch (cd.descriptorString()) {
+            switch (descriptor) {
             case "I", "S", "B", "C", "Z":
                 code.i2l();
                 break;
             case "J":
                 break;
             case "F":
-                code.f2l();
+                code.invokestatic(CD_JavaFloat, "floatToRawIntBits", MD_F2I).i2l();
                 break;
             case "D":
-                code.d2l();
+                code.invokestatic(CD_JavaDouble, "doubleToRawLongBits", MD_D2L);
                 break;
             default:
                 throw new IllegalStateException();
@@ -1191,6 +1226,8 @@ public abstract class Builder {
     public static final ClassDesc CD_TypeSystem    = ClassDesc.of(TypeSystem.class.getName());
 
     public static final ClassDesc CD_JavaBoolean   = ClassDesc.of(java.lang.Boolean.class.getName());
+    public static final ClassDesc CD_JavaDouble    = ClassDesc.of(java.lang.Double.class.getName());
+    public static final ClassDesc CD_JavaFloat    = ClassDesc.of(java.lang.Float.class.getName());
     public static final ClassDesc CD_JavaInteger   = ClassDesc.of(java.lang.Integer.class.getName());
     public static final ClassDesc CD_JavaLong      = ClassDesc.of(java.lang.Long.class.getName());
     public static final ClassDesc CD_JavaMath      = ClassDesc.of(java.lang.Math.class.getName());
@@ -1244,4 +1281,8 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_FloorModJ   = MethodTypeDesc.of(CD_long, CD_long, CD_long);
     public static final MethodTypeDesc MD_UDivInt     = MethodTypeDesc.of(CD_int, CD_int, CD_int);
     public static final MethodTypeDesc MD_UDivLong    = MethodTypeDesc.of(CD_long, CD_long, CD_long);
+    public static final MethodTypeDesc MD_D2L         = MethodTypeDesc.of(CD_long, CD_double);
+    public static final MethodTypeDesc MD_L2D         = MethodTypeDesc.of(CD_double, CD_long);
+    public static final MethodTypeDesc MD_F2I         = MethodTypeDesc.of(CD_int, CD_float);
+    public static final MethodTypeDesc MD_I2F         = MethodTypeDesc.of(CD_float, CD_int);
 }

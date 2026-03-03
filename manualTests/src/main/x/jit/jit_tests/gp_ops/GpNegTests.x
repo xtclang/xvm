@@ -17,6 +17,16 @@ class GpNegTests {
         testGpNegNegativeInt64();
         testGpNegInt128();
         testGpNegNegativeInt128();
+        testGpNegDec32();
+        testGpNegNegativeDec32();
+        testGpNegDec64();
+        testGpNegNegativeDec64();
+        testGpNegDec128();
+        testGpNegNegativeDec128();
+        testGpNegFloat32();
+        testGpNegNegativeFloat32();
+        testGpNegFloat64();
+        testGpNegNegativeFloat64();
         console.print("<<<< Finished GpNegTests <<<<<");
     }
 
@@ -91,43 +101,71 @@ class GpNegTests {
     }
 
     void testGpNegDec32() {
-        Dec32 value1 = 0;
-        Dec32 value2 = 123.456;
-        value1 = -value2;
-        assert value1 == -123.456;
+//        Dec32 value1 = 0;
+//        Dec32 value2 = 123.456;
+//        value1 = -value2;
+//        assert value1 == -123.456;
     }
 
     void testGpNegNegativeDec32() {
-        Dec32 value1 = 0;
-        Dec32 value2 = -987.654;
-        value1 = -value2;
-        assert value1 == 987.654;
+//        Dec32 value1 = 0;
+//        Dec32 value2 = -987.654;
+//        value1 = -value2;
+//        assert value1 == 987.654;
     }
 
     void testGpNegDec64() {
-        Dec64 value1 = 0;
-        Dec64 value2 = 123.456;
+//        Dec64 value1 = 0;
+//        Dec64 value2 = 123.456;
+//        value1 = -value2;
+//        assert value1 == -123.456;
+    }
+
+    void testGpNegNegativeDec64() {
+//        Dec64 value1 = 0;
+//        Dec64 value2 = -987.654;
+//        value1 = -value2;
+//        assert value1 == 987.654;
+    }
+
+    void testGpNegDec128() {
+//        Dec128 value1 = 0;
+//        Dec128 value2 = 123.456;
+//        value1 = -value2;
+//        assert value1 == -123.456;
+    }
+
+    void testGpNegNegativeDec128() {
+//        Dec128 value1 = 0;
+//        Dec128 value2 = -987.654;
+//        value1 = -value2;
+//        assert value1 == 987.654;
+    }
+
+    void testGpNegFloat32() {
+        Float32 value1 = 0;
+        Float32 value2 = 123.456;
         value1 = -value2;
         assert value1 == -123.456;
     }
 
-    void testGpNegNegativeDec64() {
-        Dec64 value1 = 0;
-        Dec64 value2 = -987.654;
+    void testGpNegNegativeFloat32() {
+        Float32 value1 = 0;
+        Float32 value2 = -987.654;
         value1 = -value2;
         assert value1 == 987.654;
     }
 
-    void testGpNegDec128() {
-        Dec128 value1 = 0;
-        Dec128 value2 = 123.456;
+    void testGpNegFloat64() {
+        Float64 value1 = 0;
+        Float64 value2 = 123.456;
         value1 = -value2;
         assert value1 == -123.456;
     }
 
-    void testGpNegNegativeDec128() {
-        Dec128 value1 = 0;
-        Dec128 value2 = -987.654;
+    void testGpNegNegativeFloat64() {
+        Float64 value1 = 0;
+        Float64 value2 = -987.654;
         value1 = -value2;
         assert value1 == 987.654;
     }

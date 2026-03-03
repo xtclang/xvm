@@ -21,6 +21,8 @@ class GpDivTests {
         testGpDivDec();
         testGpDivDec32();
         testGpDivDec128();
+        testGpDivFloat32();
+        testGpDivFloat64();
         console.print("<<<< Finished GpDivTests <<<<<");
     }
 
@@ -129,6 +131,22 @@ class GpDivTests {
         Dec128 value1 = 0;
         Dec128 value2 = 12.75;
         Dec128 value3 = 3.0;
+        value1 = value2 / value3;
+        assert value1 == 4.25;
+    }
+
+    void testGpDivFloat32() {
+        Float32 value1 = 0;
+        Float32 value2 = 12.75;
+        Float32 value3 = 3.0;
+        value1 = value2 / value3;
+        assert value1 == 4.25;
+    }
+
+    void testGpDivFloat64() {
+        Float64 value1 = 0;
+        Float64 value2 = 12.75;
+        Float64 value3 = 3.0;
         value1 = value2 / value3;
         assert value1 == 4.25;
     }

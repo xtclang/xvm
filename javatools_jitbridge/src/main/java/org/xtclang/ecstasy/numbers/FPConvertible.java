@@ -30,14 +30,14 @@ public interface FPConvertible {
     }
 
     /**
-     * Implementation of the Dec32 method
+     * Implementation of the method
      * <pre>
      * toDec32()
      * </pre>
      *
      * @param ctx  the build context
      *
-     * @return this Dec32 value converted to an Int8 value inside a Java {@code int}
+     * @return this FPConvertible value converted to an Int8 value inside a Java {@code int}
      */
     default int toDec32$p(Ctx ctx) {
         if ($isInfinite()) {
@@ -50,14 +50,14 @@ public interface FPConvertible {
     }
 
     /**
-     * Implementation of the Dec32 method
+     * Implementation of the method
      * <pre>
      * toDec64()
      * </pre>
      *
      * @param ctx the build context
      *
-     * @return this Dec32 value converted to an Int8 value inside a Java {@code int}
+     * @return this FPConvertible value converted to an Int8 value inside a Java {@code int}
      */
     default long toDec64$p(Ctx ctx) {
         if ($isInfinite()) {
@@ -70,16 +70,16 @@ public interface FPConvertible {
     }
 
     /**
-     * Implementation of the Dec32 method
+     * Implementation of the method
      * <pre>
-     * toDec128(Boolean checkBounds = False, Rounding direction = TowardZero)
+     * toDec128()
      * </pre>
      * The high 64-bits of the Dec128 will be set into the {@link Ctx#i0} field, and the low 64-bits
      * will be returned.
      *
      * @param ctx the build context
      *
-     * @return this Dec32 value converted to an Int8 value inside a Java {@code int}
+     * @return this FPConvertible value converted to an Int8 value inside a Java {@code int}
      */
     default long toDec128$p(Ctx ctx) {
         if ($isInfinite()) {
@@ -91,6 +91,34 @@ public interface FPConvertible {
             return 0L;
         }
         return Dec128.$toLongBits(ctx, $toBigDecimal());
+    }
+
+    /**
+     * Implementation of the method
+     * <pre>
+     * toFloat32()
+     * </pre>
+     *
+     * @param ctx the build context
+     *
+     * @return this FPConvertible value converted to a Float32 value inside a Java {@code float}
+     */
+    default float toFloat32$p(Ctx ctx) {
+        return $toBigDecimal().floatValue();
+    }
+
+    /**
+     * Implementation of the method
+     * <pre>
+     * toFloat64()
+     * </pre>
+     *
+     * @param ctx the build context
+     *
+     * @return this FPConvertible value converted to an Float64 value inside a Java {@code double}
+     */
+    default double toFloat64$p(Ctx ctx) {
+        return $toBigDecimal().doubleValue();
     }
 
     /**

@@ -17,9 +17,11 @@ class IpModTests {
         testIpModUInt32();
         testIpModInt128();
         testIpModUInt128();
-        testGpModDec32();
-        testGpModDec64();
-        testGpModDec128();
+        testIpModDec32();
+        testIpModDec64();
+        testIpModDec128();
+        testIpModFloat32();
+        testIpModFloat64();
         console.print("<<<< Finished IpModTests <<<<<");
     }
 
@@ -83,20 +85,32 @@ class IpModTests {
         assert value1 == 1;
     }
 
-    void testGpModDec32() {
+    void testIpModDec32() {
         Dec32 value1 = 10.5;
         value1 %= 5;
         assert value1 == 0.5;
     }
 
-    void testGpModDec64() {
+    void testIpModDec64() {
         Dec64 value1 = 10.5;
         value1 %= 5;
         assert value1 == 0.5;
     }
 
-    void testGpModDec128() {
+    void testIpModDec128() {
         Dec128 value1 = 10.5;
+        value1 %= 5;
+        assert value1 == 0.5;
+    }
+
+    void testIpModFloat32() {
+        Float32 value1 = 10.5;
+        value1 %= 5;
+        assert value1 == 0.5;
+    }
+
+    void testIpModFloat64() {
+        Float64 value1 = 10.5;
         value1 %= 5;
         assert value1 == 0.5;
     }

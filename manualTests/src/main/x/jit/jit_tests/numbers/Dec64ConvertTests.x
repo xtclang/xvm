@@ -309,7 +309,7 @@ class Dec64ConvertTests {
     }
 
     void testDec64ToInt8WithBoundsCheck(Dec64 a, Int8 expected, Boolean oob){
-        console.print("Test Int32 ", True);
+        console.print("Test Dec64 ", True);
         console.print(a, True);
         if (oob) {
             console.print(" to Int8 throws OutOfBounds");
@@ -351,7 +351,7 @@ class Dec64ConvertTests {
     }
 
     void testDec64ToInt16WithBoundsCheck(Dec64 a, Int16 expected, Boolean oob){
-        console.print("Test Int32 ", True);
+        console.print("Test Dec64 ", True);
         console.print(a, True);
         if (oob) {
             console.print(" to Int16 throws OutOfBounds");
@@ -393,7 +393,7 @@ class Dec64ConvertTests {
     }
 
     void testDec64ToInt32WithBoundsCheck(Dec64 a, Int32 expected, Boolean oob){
-        console.print("Test Int32 ", True);
+        console.print("Test Dec64 ", True);
         console.print(a, True);
         if (oob) {
             console.print(" to Int32 throws OutOfBounds");
@@ -435,7 +435,7 @@ class Dec64ConvertTests {
     }
 
     void testDec64ToInt64WithBoundsCheck(Dec64 a, Int64 expected, Boolean oob){
-        console.print("Test Int32 ", True);
+        console.print("Test Dec64 ", True);
         console.print(a, True);
         if (oob) {
             console.print(" to Int64 throws OutOfBounds");
@@ -477,7 +477,7 @@ class Dec64ConvertTests {
     }
 
     void testDec64ToInt128WithBoundsCheck(Dec64 a, Int128 expected, Boolean oob){
-        console.print("Test Int32 ", True);
+        console.print("Test Dec64 ", True);
         console.print(a, True);
         if (oob) {
             console.print(" to Int128 throws OutOfBounds");

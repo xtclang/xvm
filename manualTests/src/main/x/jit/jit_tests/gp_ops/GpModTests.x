@@ -21,6 +21,8 @@ class GpModTests {
         testGpModDec32();
         testGpModDec64();
         testGpModDec128();
+        testGpModFloat32();
+        testGpModFloat64();
         console.print("<<<< Finished GpModTests <<<<<");
     }
 
@@ -129,6 +131,22 @@ class GpModTests {
         Dec128 value1 = 0;
         Dec128 value2 = 10.5;
         Dec128 value3 = 5;
+        value1 = value2 % value3;
+        assert value1 == 0.5;
+    }
+
+    void testGpModFloat32() {
+        Float32 value1 = 0;
+        Float32 value2 = 10.5;
+        Float32 value3 = 5;
+        value1 = value2 % value3;
+        assert value1 == 0.5;
+    }
+
+    void testGpModFloat64() {
+        Float64 value1 = 0;
+        Float64 value2 = 10.5;
+        Float64 value3 = 5;
         value1 = value2 % value3;
         assert value1 == 0.5;
     }

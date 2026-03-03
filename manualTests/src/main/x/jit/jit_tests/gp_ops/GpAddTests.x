@@ -21,6 +21,8 @@ class GpAddTests {
         testGpAddDec();
         testGpAddDec32();
         testGpAddDec128();
+        testGpAddFloat32();
+        testGpAddFloat64();
         testGpAddString();
         testGpAddIntToChar();
         testGpAddCharToChar();
@@ -133,6 +135,22 @@ class GpAddTests {
         Dec128 value1 = 0.0;
         Dec128 value2 = 2.5;
         Dec128 value3 = 1.25;
+        value1 = value2 + value3;
+        assert value1 == 3.75;
+    }
+
+    void testGpAddFloat32() {
+        Float32 value1 = 0.0;
+        Float32 value2 = 2.5;
+        Float32 value3 = 1.25;
+        value1 = value2 + value3;
+        assert value1 == 3.75;
+    }
+
+    void testGpAddFloat64() {
+        Float64 value1 = 0.0;
+        Float64 value2 = 2.5;
+        Float64 value3 = 1.25;
         value1 = value2 + value3;
         assert value1 == 3.75;
     }

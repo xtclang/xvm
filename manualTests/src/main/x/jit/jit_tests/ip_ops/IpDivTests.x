@@ -20,6 +20,8 @@ class IpDivTests {
         testIpDivDec();
         testIpDivDec32();
         testIpDivDec128();
+        testIpDivFloat32();
+        testIpDivFloat64();
         console.print("<<<< Finished IpDivTests <<<<<");
     }
 
@@ -97,6 +99,18 @@ class IpDivTests {
 
     void testIpDivDec128() {
         Dec128 value1 = 12.75;
+        value1 /= 3;
+        assert value1 == 4.25;
+    }
+
+    void testIpDivFloat32() {
+        Float32 value1 = 12.75;
+        value1 /= 3;
+        assert value1 == 4.25;
+    }
+
+    void testIpDivFloat64() {
+        Float64 value1 = 12.75;
         value1 /= 3;
         assert value1 == 4.25;
     }

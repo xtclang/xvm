@@ -21,6 +21,8 @@ class GpSubTests {
         testGpSubDec();
         testGpSubDec32();
         testGpSubDec128();
+        testGpSubFloat32();
+        testGpSubFloat64();
         testGpSubIntFromChar();
         testGpSubCharFromChar();
         console.print("<<<< Finished GpSubTests <<<<");
@@ -131,6 +133,22 @@ class GpSubTests {
         Dec128 value1 = 0.0;
         Dec128 value2 = 3.75;
         Dec128 value3 = 1.25;
+        value1 = value2 - value3;
+        assert value1 == 2.50;
+    }
+
+    void testGpSubFloat64() {
+        Float64 value1 = 0.0;
+        Float64 value2 = 4.5;
+        Float64 value3 = 1.25;
+        value1 = value2 - value3;
+        assert value1 == 3.25;
+    }
+
+    void testGpSubFloat32() {
+        Float32 value1 = 0.0;
+        Float32 value2 = 3.75;
+        Float32 value3 = 1.25;
         value1 = value2 - value3;
         assert value1 == 2.50;
     }

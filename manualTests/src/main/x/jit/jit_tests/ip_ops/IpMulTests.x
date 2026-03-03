@@ -20,6 +20,8 @@ class IpMulTests {
         testIpMulDec();
         testIpMulDec32();
         testIpMulDec128();
+        testIpMulFloat32();
+        testIpMulFloat64();
         console.print("<<<< Finished IpMulTests <<<<<");
     }
 
@@ -97,6 +99,18 @@ class IpMulTests {
 
     void testIpMulDec128() {
         Dec128 value1 = 4.25;
+        value1 *= 3.0;
+        assert value1 == 12.750;
+    }
+
+    void testIpMulFloat32() {
+        Float32 value1 = 4.25;
+        value1 *= 3.0;
+        assert value1 == 12.750;
+    }
+
+    void testIpMulFloat64() {
+        Float64 value1 = 4.25;
         value1 *= 3.0;
         assert value1 == 12.750;
     }
