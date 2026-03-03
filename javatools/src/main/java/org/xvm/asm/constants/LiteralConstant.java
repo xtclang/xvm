@@ -1577,7 +1577,7 @@ public class LiteralConstant
             }
 
             // go through the entire list of possibilities
-            for (Format format = Format.Dec64;
+            for (Format format = Format.Dec32;
                  format.ordinal() <= Format.FloatN.ordinal(); format = format.next()) {
                 TypeConstant typeSupported = format.getType(pool);
                 if (typeSupported.isA(typeOut)) {

@@ -20,6 +20,9 @@ class GpMulTests {
         testGpMulUInt128();
         testGpMulDec();
         testGpMulDec32();
+        testGpMulDec128();
+        testGpMulFloat32();
+        testGpMulFloat64();
         console.print("<<<< Finished GpMulTests <<<<<");
     }
 
@@ -93,36 +96,58 @@ class GpMulTests {
     }
 
     void testGpMulInt128() {
-//        Int128 value1 = 0;
-//        Int128 value2 = 0x13333333;
-//        Int128 value3 = 5;
-//        value1 = value2 * value3;
-//        assert value1 == 0x5FFFFFFF;
+        Int128 value1 = 0;
+        Int128 value2 = 0x13333333;
+        Int128 value3 = 5;
+        value1 = value2 * value3;
+        assert value1 == 0x5FFFFFFF;
     }
 
     void testGpMulUInt128() {
-//        UInt128 value1 = 0;
-//        UInt128 value2 = 0x33333333;
-//        UInt128 value3 = 5;
-//        value1 = value2 * value3;
-//        assert value1 == 0xFFFFFFFF;
+        UInt128 value1 = 0;
+        UInt128 value2 = 0x33333333;
+        UInt128 value3 = 5;
+        value1 = value2 * value3;
+        assert value1 == 0xFFFFFFFF;
     }
 
     void testGpMulDec() {
-//        Dec value1 = 0;
-//        Dec value2 = 4.25;
-//        Dec value3 = 3.0;
-//        value1 = value2 * value3;
-//        Dec expected = 12.75;
-//        assert value1 == expected; // Fails in non-JIT too
+        Dec value1 = 0;
+        Dec value2 = 4.25;
+        Dec value3 = 3.0;
+        value1 = value2 * value3;
+        assert value1 == 12.750;
     }
 
     void testGpMulDec32() {
-//        Dec32 value1 = 0;
-//        Dec32 value2 = 4.25;
-//        Dec32 value3 = 3.0;
-//        value1 = value2 * value3;
-//        Dec expected = 12.75;
-//        assert value1 == expected; // Fails in non-JIT too
+        Dec32 value1 = 0;
+        Dec32 value2 = 4.25;
+        Dec32 value3 = 3.0;
+        value1 = value2 * value3;
+        assert value1 == 12.750;
+    }
+
+    void testGpMulDec128() {
+        Dec128 value1 = 0;
+        Dec128 value2 = 4.25;
+        Dec128 value3 = 3.0;
+        value1 = value2 * value3;
+        assert value1 == 12.750;
+    }
+
+    void testGpMulFloat32() {
+        Float32 value1 = 0;
+        Float32 value2 = 4.25;
+        Float32 value3 = 3.0;
+        value1 = value2 * value3;
+        assert value1 == 12.750;
+    }
+
+    void testGpMulFloat64() {
+        Float64 value1 = 0;
+        Float64 value2 = 4.25;
+        Float64 value3 = 3.0;
+        value1 = value2 * value3;
+        assert value1 == 12.750;
     }
 }

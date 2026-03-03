@@ -56,9 +56,9 @@ public class EnumBuilder extends CommonBuilder {
     private void assembleEnumerationProp(ClassBuilder classBuilder) {
         PropertyInfo  prop       = typeInfo.findProperty("enumeration");
         String        getterName = prop.ensureGetterJitMethodName(typeSystem);
-        JitMethodDesc jmDesc     = prop.getGetterJitDesc(typeSystem);
-        TypeConstant  enumType   = thisId.getValueType(typeSystem.pool(), null);
-        ClassDesc     cdEnum     = enumType.ensureClassDesc(typeSystem);
+        JitMethodDesc jmDesc     = prop.getGetterJitDesc(this);
+        TypeConstant  enumType   = thisId.getValueType(pool(), null);
+        ClassDesc     cdEnum     = ensureClassDesc(enumType);
 
         classBuilder.withMethod(getterName, jmDesc.standardMD, ClassFile.ACC_PUBLIC,
             methodBuilder -> methodBuilder.withCode(code ->
@@ -69,9 +69,9 @@ public class EnumBuilder extends CommonBuilder {
     @Override
     protected void assembleImplMethods(String className, ClassBuilder classBuilder) {
         // generate "equals" and "compare" functions
-        SignatureConstant eqSig    = typeSystem.pool().sigEquals();
+        SignatureConstant eqSig    = pool().sigEquals();
         MethodInfo        eqMethod = typeInfo.getMethodBySignature(eqSig);
-        JitMethodDesc     eqJmd    = eqMethod.getJitDesc(typeSystem, typeInfo.getType());
+        JitMethodDesc     eqJmd    = eqMethod.getJitDesc(this, typeInfo.getType());
 
         assert eqMethod != null;
 
@@ -79,9 +79,9 @@ public class EnumBuilder extends CommonBuilder {
             ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
             methodBuilder -> methodBuilder.withCode(this::assembleEquals));
 
-        SignatureConstant cmpSig    = typeSystem.pool().sigCompare();
+        SignatureConstant cmpSig    = pool().sigCompare();
         MethodInfo        cmpMethod = typeInfo.getMethodBySignature(cmpSig);
-        JitMethodDesc     cmpJmd    = cmpMethod.getJitDesc(typeSystem, typeInfo.getType());
+        JitMethodDesc     cmpJmd    = cmpMethod.getJitDesc(this, typeInfo.getType());
 
         assert cmpMethod != null;
 
@@ -94,7 +94,7 @@ public class EnumBuilder extends CommonBuilder {
 
     /**
      * The signature of the function we generate is:
-     *    "public boolean equals$p(Ctx ctx, xType CompileType, [EnumType] o1, {EnumType} o2)"
+     *    "public boolean equals$p(Ctx ctx, nType CompileType, [EnumType] o1, {EnumType} o2)"
      */
     private void assembleEquals(CodeBuilder code) {
         // all we need is to call the equivalent function on xEnum
@@ -110,17 +110,17 @@ public class EnumBuilder extends CommonBuilder {
 
     /**
      * The signature of the function we generate is:
-     *    "public Ordered compare(Ctx ctx, xType CompileType, [EnumType] o1, {EnumType} o2)"
+     *    "public Ordered compare(Ctx ctx, nType CompileType, [EnumType] o1, {EnumType} o2)"
      */
     private void assembleCompare(CodeBuilder code) {
-        // there is a custom primitivized function on xEnum:
-        //      long compare$p(Ctx ctx, xType CompileType, xEnum o1, xEnum o2)
+        // there is a custom primitivized function on nEnum:
+        //      long compare$p(Ctx ctx, nType CompileType, nEnum o1, nEnum o2)
         // which returns a negative, zero or positive value that needs to be translated into
         // the corresponding Ordered value
 
-        ConstantPool pool = typeSystem.pool();
+        ConstantPool pool = pool();
 
-        // long c = xEnum.compare$p(ctx, CompileType, o1, o2);
+        // long c = nEnum.compare$p(ctx, CompileType, o1, o2);
         code.aload(0)
             .aload(1)
             .aload(2)

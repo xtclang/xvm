@@ -78,4 +78,13 @@ public class IP_Xor
                                         RegisterInfo regArg) {
         buildPrimitiveXor(bctx, code, regTarget);
     }
+
+    @Override
+    protected RegisterInfo buildXvmOptimizedBinary(BuildContext bctx,
+                                                   CodeBuilder  code,
+                                                   RegisterInfo regTarget,
+                                                   int          nArgValue) {
+        buildXvmPrimitiveXor(bctx, code, regTarget, nArgValue);
+        return regTarget;
+    }
 }

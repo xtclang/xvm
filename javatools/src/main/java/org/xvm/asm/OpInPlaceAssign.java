@@ -118,20 +118,23 @@ public abstract class OpInPlaceAssign
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo regTarget = bctx.ensureRegister(code, m_nTarget);
-
-        if (!regTarget.isSingle()) {
-            throw new UnsupportedOperationException(toName(getOpCode()) + " operation on multi-slot");
-        }
 
         TypeConstant typeResult;
         if (regTarget.cd().isPrimitive()) {
+            if (!regTarget.isSingle()) {
+                throw new UnsupportedOperationException(toName(getOpCode()) + " operation on multi-slot");
+            }
             typeResult = buildOptimizedBinary(bctx, code, regTarget, m_nArgValue);
+        } else if (regTarget.type().isXvmPrimitive()) {
+            RegisterInfo regResult = buildXvmOptimizedBinary(bctx, code, regTarget, m_nArgValue);
+            typeResult = regResult.type();
         } else {
             typeResult = buildOpInvoke(bctx, code, regTarget);
         }
         bctx.storeValue(code, regTarget, typeResult);
+        return -1;
     }
 
     /**
@@ -147,7 +150,7 @@ public abstract class OpInPlaceAssign
         TypeConstant  typeTarget = regTarget.type();
         MethodInfo    method     = findOpMethod(bctx, typeTarget);
         String        sJitName   = method.ensureJitMethodName(bctx.typeSystem);
-        JitMethodDesc jmd        = method.getJitDesc(bctx.typeSystem, typeTarget);
+        JitMethodDesc jmd        = method.getJitDesc(bctx.builder, typeTarget);
 
         MethodTypeDesc md;
         if (jmd.isOptimized) {

@@ -92,8 +92,9 @@ public class Var_N
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         bctx.introduceVar(code, m_nVar, m_nType, m_nNameId);
+        return -1;
     }
 
     // ----- fields --------------------------------------------------------------------------------

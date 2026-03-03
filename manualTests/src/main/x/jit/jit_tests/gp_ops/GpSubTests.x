@@ -20,6 +20,9 @@ class GpSubTests {
         testGpSubUInt128();
         testGpSubDec();
         testGpSubDec32();
+        testGpSubDec128();
+        testGpSubFloat32();
+        testGpSubFloat64();
         testGpSubIntFromChar();
         testGpSubCharFromChar();
         console.print("<<<< Finished GpSubTests <<<<");
@@ -95,39 +98,59 @@ class GpSubTests {
     }
 
     void testGpSubInt128() {
-// TODO: Need Int128 support
-//        Int128 value1 = 0;
-//        Int128 value2 = 76;
-//        Int128 value3 = 66;
-//        value1 = value2 - value3;
-//        assert value1 == 10;
+        Int128 value1 = 0;
+        Int128 value2 = 76;
+        Int128 value3 = 66;
+        value1 = value2 - value3;
+        assert value1 == 10;
     }
 
     void testGpSubUInt128() {
-// TODO: Need UInt128 support
-//        UInt128 value1 = 0;
-//        UInt128 value2 = 0xFFFFFFF1;
-//        UInt128 value3 = 1;
-//        value1 = value2 - value3;
-//        assert value1 == 0xFFFFFFF0;
+        UInt128 value1 = 0;
+        UInt128 value2 = 0xFFFFFFF1;
+        UInt128 value3 = 1;
+        value1 = value2 - value3;
+        assert value1 == 0xFFFFFFF0;
     }
 
     void testGpSubDec() {
-// TODO: Need Dec support
-//        Dec value1 = 0.0;
-//        Dec value2 = 2.5;
-//        Dec value3 = 1.25;
-//        value1 = value2 - value3;
-//        assert value1 == 3.75;
+        Dec value1 = 0.0;
+        Dec value2 = 4.5;
+        Dec value3 = 1.25;
+        value1 = value2 - value3;
+        assert value1 == 3.25;
     }
 
     void testGpSubDec32() {
-// TODO: Need Dec32 support
-//        Dec32 value1 = 0.0;
-//        Dec32 value2 = 3.75;
-//        Dec32 value3 = 1.25;
-//        value1 = value2 - value3;
-//        assert value1 == 2.5;
+        Dec32 value1 = 0.0;
+        Dec32 value2 = 3.75;
+        Dec32 value3 = 1.25;
+        value1 = value2 - value3;
+        assert value1 == 2.50;
+    }
+
+    void testGpSubDec128() {
+        Dec128 value1 = 0.0;
+        Dec128 value2 = 3.75;
+        Dec128 value3 = 1.25;
+        value1 = value2 - value3;
+        assert value1 == 2.50;
+    }
+
+    void testGpSubFloat64() {
+        Float64 value1 = 0.0;
+        Float64 value2 = 4.5;
+        Float64 value3 = 1.25;
+        value1 = value2 - value3;
+        assert value1 == 3.25;
+    }
+
+    void testGpSubFloat32() {
+        Float32 value1 = 0.0;
+        Float32 value2 = 3.75;
+        Float32 value3 = 1.25;
+        value1 = value2 - value3;
+        assert value1 == 2.50;
     }
 
     void testGpSubIntFromChar() {

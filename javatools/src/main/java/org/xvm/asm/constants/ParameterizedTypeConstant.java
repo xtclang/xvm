@@ -828,7 +828,7 @@ public class ParameterizedTypeConstant
         var             listContribs   = clz.collectConditionalIncorporates(this);
 
         // TODO: REMOVE - compensation for Array handling in TypeConstant#buildJitClassName
-        if (m_constType.isArray() && !getParamType(0).isPrimitive()) {
+        if (m_constType.isArray() && !getParamType(0).isJavaPrimitive()) {
             return pool.ensureArrayType(pool.typeObject());
         }
 
@@ -864,7 +864,7 @@ public class ParameterizedTypeConstant
         boolean        fTrivial        = true;
         for (int i = 0, c = aconstOriginal.length; i < c; ++i) {
             TypeConstant typeOriginal = aconstOriginal[i];
-            if (typeOriginal.isPrimitive()) {
+            if (typeOriginal.isJavaPrimitive()) {
                 fTrivial = false;
             } else {
                 var            entryParam     = listTypeParams.get(i);

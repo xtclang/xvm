@@ -19,6 +19,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
@@ -566,8 +567,10 @@ public abstract class OpCallable extends Op {
 
     // ----- JIT support ---------------------------------------------------------------------------
 
-    @Override
-    public void computeTypes(BuildContext bctx) {
+    /**
+     * ComputeType support for CALL_ ops.
+     */
+    protected void computeCallTypes(BuildContext bctx, int[] anArgValue) {
         TypeMatrix tmx = bctx.typeMatrix;
 
         if (m_nRetValue == A_IGNORE && m_anRetValue == null) {
@@ -590,7 +593,12 @@ public abstract class OpCallable extends Op {
                 tmx.assign(getAddress(), m_nRetValue, idMethod.getNamespace().getType());
                 return;
             }
-            atypeResult = idMethod.getSignature().getRawReturns();
+            SignatureConstant sig = idMethod.getSignature();
+            if (sig.containsTypeParameters()) {
+                sig = sig.resolveGenericTypes(bctx.pool(),
+                    bctx.createTypeResolver((MethodStructure) idMethod.getComponent(), anArgValue));
+            }
+            atypeResult = sig.getRawReturns();
         } else {
             TypeConstant typeFn = bctx.getArgumentType(m_nFunctionId);
             assert typeFn.isFunction();
@@ -605,15 +613,15 @@ public abstract class OpCallable extends Op {
                     tmx.assign(getAddress(), nRetVal, atypeResult[i]);
                 }
             }
-        } else {
+        } else if (m_nRetValue != A_IGNORE) {
             tmx.assign(getAddress(), m_nRetValue, atypeResult[0]);
         }
     }
 
     /**
-     * Support for CALL_ ops.
+     * Build support for CALL_ ops.
      */
-    protected void buildCall(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
+    protected int buildCall(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
         TypeSystem ts = bctx.typeSystem;
 
         ClassDesc     cdTarget;
@@ -639,9 +647,9 @@ public abstract class OpCallable extends Op {
 
                 bctx.buildSuper(sJitName, nDepth);
             } else {
-                cdTarget = idCallee.ensureClassDesc(ts);
+                cdTarget = bctx.builder.ensureClassDesc(idCallee.getType());
             }
-            jmdCall    = bodySuper.getJitDesc(ts, bctx.typeInfo.getType());
+            jmdCall    = bodySuper.getJitDesc(bctx.builder, bctx.typeInfo.getType());
             fSpecial   = true;
             fInterface = false;
             code.aload(0); // super() can only be on "this"
@@ -651,9 +659,9 @@ public abstract class OpCallable extends Op {
             TypeConstant     typeTarget = idTarget.getType();
             MethodInfo       infoMethod = typeTarget.ensureTypeInfo().getMethodById(idMethod);
 
-            cdTarget   = idTarget.ensureClassDesc(ts); // function; no formal types applicable
+            cdTarget   = bctx.builder.ensureClassDesc(idTarget.getType()); // function; no formal types applicable
             sJitName   = infoMethod.ensureJitMethodName(ts);
-            jmdCall    = infoMethod.getJitDesc(ts, typeTarget);
+            jmdCall    = infoMethod.getJitDesc(bctx.builder, typeTarget);
             fSpecial   = false;
             fInterface = !typeTarget.isSingleUnderlyingClass(false);
         } else {
@@ -667,7 +675,8 @@ public abstract class OpCallable extends Op {
             TypeConstant[] atypeParams  = pool.extractFunctionParams(typeFn);
             TypeConstant[] atypeReturns = pool.extractFunctionReturns(typeFn);
 
-            jmdCall = JitMethodDesc.of(atypeParams, atypeReturns, false, null, atypeParams.length, ts);
+            jmdCall = JitMethodDesc.of(bctx.builder,
+                        atypeParams, atypeReturns, false, null, atypeParams.length);
 
             if (jmdCall.isOptimized) {
                 code.getfield(CD_nFunction, "optMethod", CD_MethodHandle);
@@ -685,7 +694,7 @@ public abstract class OpCallable extends Op {
                 int[] anVar = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
                 bctx.assignReturns(code, jmdCall, anVar.length, anVar);
             }
-            return;
+            return -1;
         }
 
         MethodTypeDesc mdCall;
@@ -706,27 +715,27 @@ public abstract class OpCallable extends Op {
             code.invokestatic(cdTarget, sJitName, mdCall, fInterface);
         }
 
-        if (m_nRetValue != Op.A_IGNORE) {
-            int[] anVar = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
-            bctx.assignReturns(code, jmdCall, anVar.length, anVar);
-        }
+        int[] anVar = isMultiReturn() ? m_anRetValue : new int[] {m_nRetValue};
+        bctx.assignReturns(code, jmdCall, anVar.length, anVar);
+        return -1;
     }
 
     /**
      * Support for NEW_ ops.
      */
-    protected void buildNew(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
+    protected int buildNew(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
         MethodConstant idCtor     = bctx.getConstant(m_nFunctionId, MethodConstant.class);
         TypeConstant   typeTarget = idCtor.getNamespace().getType();
         ClassDesc      cdTarget   = bctx.buildNew(code, typeTarget, idCtor, anArgValue);
 
         bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget, cdTarget, ""), typeTarget);
+        return -1;
     }
 
     /**
      * Support for NEW_G ops.
      */
-    protected void buildNewG(BuildContext bctx, CodeBuilder code, int nTypeArg, int[] anArgValue) {
+    protected int buildNewG(BuildContext bctx, CodeBuilder code, int nTypeArg, int[] anArgValue) {
         TypeConstant typeTarget;
         if (nTypeArg <= CONSTANT_OFFSET) {
             typeTarget = bctx.getTypeConstant(nTypeArg).
@@ -742,13 +751,13 @@ public abstract class OpCallable extends Op {
         ClassDesc      cdTarget = bctx.buildNew(code, typeTarget, idCtor, anArgValue);
 
         bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget, cdTarget, ""), typeTarget);
+        return -1;
     }
 
     /**
      * Support for CONSTR_ ops.
      */
-    protected void buildConstruct(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
-        TypeSystem       ts         = bctx.typeSystem;
+    protected int buildConstruct(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
         MethodConstant   idCtor     = (MethodConstant) bctx.getConstant(m_nFunctionId);
         IdentityConstant idTarget   = idCtor.getNamespace();
         TypeConstant     typeTarget = idTarget.getType();
@@ -765,15 +774,15 @@ public abstract class OpCallable extends Op {
         if (infoTarget.getFormat() == Format.MIXIN) {
             cdTarget   = ClassDesc.of(bctx.className);
             typeTarget = bctx.typeInfo.getType();
-            sJitCtor   = idTarget.getName() + "$" + infoCtor.ensureJitMethodName(ts);
+            sJitCtor   = idTarget.getName() + "$" + infoCtor.ensureJitMethodName(bctx.typeSystem);
 
             bctx.buildMethod(sJitCtor, infoCtor.getHead());
         } else {
-            cdTarget = typeTarget.ensureClassDesc(ts);
-            sJitCtor = infoCtor.ensureJitMethodName(ts);
+            cdTarget = bctx.builder.ensureClassDesc(typeTarget);
+            sJitCtor = infoCtor.ensureJitMethodName(bctx.typeSystem);
         }
 
-        JitMethodDesc jmdCtor = infoCtor.getJitDesc(ts, typeTarget);
+        JitMethodDesc jmdCtor = infoCtor.getJitDesc(bctx.builder, typeTarget);
 
         boolean fOptimized = jmdCtor.isOptimized;
         MethodTypeDesc md;
@@ -790,6 +799,7 @@ public abstract class OpCallable extends Op {
         bctx.loadThis(code);
         bctx.loadCallArguments(code, jmdCtor, anArgValue);
         code.invokestatic(cdTarget, sJitCtor, md);
+        return -1;
     }
 
     // ----- fields --------------------------------------------------------------------------------

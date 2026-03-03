@@ -64,4 +64,13 @@ public class GP_Mod
                                         RegisterInfo regArg) {
         buildPrimitiveMod(bctx, code, regTarget);
     }
+
+    @Override
+    protected RegisterInfo buildXvmOptimizedBinary(BuildContext bctx,
+                                                   CodeBuilder  code,
+                                                   RegisterInfo regTarget,
+                                                   int          nArgValue) {
+        buildXvmPrimitiveMod(bctx, code, regTarget, nArgValue);
+        return regTarget;
+    }
 }

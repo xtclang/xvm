@@ -87,8 +87,13 @@ public class Construct_0
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
-        buildConstruct(bctx, code, NO_ARGS);
+    public void computeTypes(BuildContext bctx) {
+        computeCallTypes(bctx, NO_ARGS);
+    }
+
+    @Override
+    public int build(BuildContext bctx, CodeBuilder code) {
+        return buildConstruct(bctx, code, NO_ARGS);
     }
 
 }

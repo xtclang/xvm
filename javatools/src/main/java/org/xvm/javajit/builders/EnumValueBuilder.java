@@ -52,7 +52,7 @@ public class EnumValueBuilder extends CommonBuilder {
     private void assembleOrdinalProp(ClassBuilder classBuilder) {
         PropertyInfo  prop       = typeInfo.findProperty("ordinal");
         String        getterName = prop.ensureGetterJitMethodName(typeSystem);
-        JitMethodDesc jmDesc     = prop.getGetterJitDesc(typeSystem);
+        JitMethodDesc jmDesc     = prop.getGetterJitDesc(this);
 
         ClassStructure enumStruct = (ClassStructure) classStruct.getParent();
         assert enumStruct.getFormat() == Component.Format.ENUM;
@@ -78,7 +78,7 @@ public class EnumValueBuilder extends CommonBuilder {
     private void assembleNameProp(String className, ClassBuilder classBuilder) {
         PropertyInfo  prop       = typeInfo.findProperty("name");
         String        getterName = prop.ensureGetterJitMethodName(typeSystem);
-        JitMethodDesc jmDesc     = prop.getGetterJitDesc(typeSystem);
+        JitMethodDesc jmDesc     = prop.getGetterJitDesc(this);
 
         classBuilder.withMethod(getterName, jmDesc.standardMD, ClassFile.ACC_PUBLIC,
             methodBuilder -> methodBuilder.withCode(code ->

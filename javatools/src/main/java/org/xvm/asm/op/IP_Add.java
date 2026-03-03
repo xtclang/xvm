@@ -91,4 +91,13 @@ public class IP_Add
                                         RegisterInfo regArg) {
         buildPrimitiveAdd(bctx, code, regTarget);
     }
+
+    @Override
+    protected RegisterInfo buildXvmOptimizedBinary(BuildContext bctx,
+                                                   CodeBuilder  code,
+                                                   RegisterInfo regTarget,
+                                                   int          nArgValue) {
+        buildXvmPrimitiveAdd(bctx, code, regTarget, nArgValue);
+        return regTarget;
+    }
 }

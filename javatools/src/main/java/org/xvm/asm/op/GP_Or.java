@@ -64,4 +64,13 @@ public class GP_Or
                                         RegisterInfo regArg) {
         buildPrimitiveOr(bctx, code, regTarget);
     }
+
+    @Override
+    protected RegisterInfo buildXvmOptimizedBinary(BuildContext bctx,
+                                                   CodeBuilder  code,
+                                                   RegisterInfo regTarget,
+                                                   int          nArgValue) {
+        buildXvmPrimitiveOr(bctx, code, regTarget, nArgValue);
+        return regTarget;
+    }
 }

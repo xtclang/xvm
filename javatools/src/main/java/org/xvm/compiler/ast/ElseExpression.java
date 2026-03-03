@@ -10,6 +10,8 @@ import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.Enter;
+import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.Label;
 
@@ -199,7 +201,14 @@ public class ElseExpression
             if (m_fCondFalse) {
                 aLVal[0].assign(pool().valFalse(), code, errs);
             } else {
+                boolean fScope = isScopeRequired();
+                if (fScope) {
+                    code.add(new Enter());
+                }
                 expr2.generateAssignments(ctx, code, aLVal, errs);
+                if (fScope) {
+                    code.add(new Exit());
+                }
             }
             code.add(labelEnd);
         }

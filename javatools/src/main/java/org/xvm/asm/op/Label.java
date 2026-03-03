@@ -12,6 +12,8 @@ import org.xvm.asm.Register;
 import org.xvm.compiler.ast.Context;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.BuildContext.ActionChain;
+import org.xvm.javajit.BuildContext.OpAction;
 
 
 /**
@@ -94,19 +96,28 @@ public class Label
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         // there is a possibility that the label was only used by the "dead" code that has been
         // eliminated
         if (m_label != null) {
             code.labelBinding(m_label);
         }
-        getNextOp().build(bctx, code);
+
+        // it's important to call the action only after the label is set
+        if (m_action != null) {
+            int skipTo = m_action.prepare();
+            if (skipTo != -1) {
+                return skipTo;
+            }
+        }
+        return getNextOp().build(bctx, code);
     }
 
     /**
-     * Set or remove a Java label associated with this Prefix.
+     * Set a Java label associated with this Prefix.
      */
     public void setLabel(java.lang.classfile.Label label) {
+        assert label != null && m_label == null;
         m_label = label;
     }
 
@@ -117,12 +128,36 @@ public class Label
         return m_label;
     }
 
+    /**
+     * Set an action associated with this Prefix.
+     */
+    public void setAction(OpAction action) {
+        if (m_action == null) {
+            m_action = action;
+        } else {
+            m_action = new ActionChain(m_action, action);
+        }
+    }
+
+    /**
+     * Clear all JIT related state.
+     */
+    public void clear() {
+        m_label  = null;
+        m_action = null;
+    }
+
     // ----- fields -----------------------------------------------------------------------
 
     /**
      * The label associated with this Prefix.
      */
     private java.lang.classfile.Label m_label;
+
+    /**
+     * The action associated with this Prefix.
+     */
+    private OpAction m_action;
 
     /**
      * A name of the label, which is typically auto-generated. This is only for debugging; it is

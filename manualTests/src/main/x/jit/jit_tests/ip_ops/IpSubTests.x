@@ -19,6 +19,9 @@ class IpSubTests {
         testIpSubUInt128();
         testIpSubDec();
         testIpSubDec32();
+        testIpSubDec128();
+        testIpSubFloat32();
+        testIpSubFloat64();
         testIpSubIntFromChar();
         console.print("<<<< Finished IpSubTests <<<<<");
     }
@@ -72,27 +75,45 @@ class IpSubTests {
     }
 
     void testIpSubInt128() {
-//        Int128 value1 = 76;
-//        value1 -= 66;
-//        assert value1 == 10;
+        Int128 value1 = 76;
+        value1 -= 66;
+        assert value1 == 10;
     }
 
     void testIpSubUInt128() {
-//        UInt128 value1 = 0xFFFFFFF1;
-//        value1 -= 1;
-//        assert value1 == 0xFFFFFFF0;
+        UInt128 value1 = 0xFFFFFFF1;
+        value1 -= 1;
+        assert value1 == 0xFFFFFFF0;
     }
 
     void testIpSubDec() {
-//        Dec value1 = 3.75;
-//        value1 -= 1.25;
-//        assert value1 == 2.5;
+        Dec value1 = 3.75;
+        value1 -= 1.25;
+        assert value1 == 2.50;
     }
 
     void testIpSubDec32() {
-//        Dec32 value1 = 3.75;
-//        value1 -= 1.25;
-//        assert value1 == 2.5;
+        Dec32 value1 = 3.75;
+        value1 -= 1.25;
+        assert value1 == 2.50;
+    }
+
+    void testIpSubDec128() {
+        Dec128 value1 = 3.75;
+        value1 -= 1.25;
+        assert value1 == 2.50;
+    }
+
+    void testIpSubFloat32() {
+        Float32 value1 = 3.75;
+        value1 -= 1.25;
+        assert value1 == 2.50;
+    }
+
+    void testIpSubFloat64() {
+        Float64 value1 = 3.75;
+        value1 -= 1.25;
+        assert value1 == 2.50;
     }
 
     void testIpSubIntFromChar() {

@@ -66,4 +66,13 @@ public class GP_Shl
                                                 int          nArgValue) {
         return buildPrimitiveShl(bctx, code, regTarget, nArgValue);
     }
+
+    @Override
+    protected RegisterInfo buildXvmOptimizedBinary(BuildContext bctx,
+                                                   CodeBuilder  code,
+                                                   RegisterInfo regTarget,
+                                                   int          nArgValue) {
+        buildXvmPrimitiveShl(bctx, code, regTarget, nArgValue);
+        return regTarget;
+    }
 }

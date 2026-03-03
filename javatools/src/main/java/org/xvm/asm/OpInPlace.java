@@ -20,8 +20,8 @@ import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
+import org.xvm.javajit.NumberSupport;
 import org.xvm.javajit.RegisterInfo;
-import org.xvm.javajit.TypeSystem;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -40,7 +40,8 @@ import static org.xvm.util.Handy.writePackedLong;
  *       "property in-place assign" from {@link OpPropInPlaceAssign}.
  */
 public abstract class OpInPlace
-        extends Op {
+        extends Op
+        implements NumberSupport {
     /**
      * Construct an "in-place" op for the passed target.
      *
@@ -221,7 +222,7 @@ public abstract class OpInPlace
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         int nTarget = m_nTarget;
         if (nTarget >= 0) {
             // operation on a register
@@ -230,6 +231,13 @@ public abstract class OpInPlace
                 assert reg.isSingle();
 
                 buildPrimitiveLocal(code, reg);
+                if (isAssignOp()) {
+                    bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, reg.type()));
+                } else {
+                    reg.markChanged();
+                }
+            } else if (reg.type().isXvmPrimitive()) {
+                buildXvmPrimitiveLocal(bctx, code, reg);
                 if (isAssignOp()) {
                     bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, reg.type()));
                 } else {
@@ -246,7 +254,7 @@ public abstract class OpInPlace
             // operation on a local property
             PropertyConstant idProp   = bctx.getConstant(nTarget, PropertyConstant.class);
             TypeConstant     typeProp = idProp.getType();
-            if (typeProp.isPrimitive()) {
+            if (typeProp.isJavaPrimitive()) {
                 buildPrimitiveProperty(bctx, code, idProp);
                 if (isAssignOp()) {
                     bctx.ensureRegInfo(m_nRetValue, idProp.getType());
@@ -259,6 +267,7 @@ public abstract class OpInPlace
                 }
             }
         }
+        return -1;
     }
 
     /**
@@ -439,6 +448,79 @@ public abstract class OpInPlace
     }
 
     /**
+     * Build the XVM primitive local ops.
+     * <p>
+     * Nothing is on the Java stack before this method executes. The result will be on the Java
+     * stack when the method completes.
+     *
+     * @param bctx  the current BuildContext
+     * @param code  the CodeBuilder to use to generate the operation byte codes
+     * @param reg   the register containing the XVM prmitive value the operation is performed on
+     */
+    protected void buildXvmPrimitiveLocal(BuildContext bctx, CodeBuilder code, RegisterInfo reg) {
+        TypeConstant baseType = reg.type().removeNullable();
+        String       typeName = baseType.getSingleUnderlyingClass(false).getName();
+        int          op       = getOpCode();
+        switch (typeName) {
+            case "Int128", "UInt128":
+                int[] slots = reg.slots();
+                switch (getOpCode()) {
+                case OP_IP_DEC:
+                    buildLongLongSub(bctx, code, slots[0], slots[1], 1L, 0L);
+                    code.lstore(slots[1])
+                        .lstore(slots[0]);
+                    break;
+
+                case OP_IP_INC:
+                    buildLongLongAdd(bctx, code, slots[0], slots[1], 1L, 0L);
+                    code.lstore(slots[1])
+                        .lstore(slots[0]);
+                    break;
+
+                case OP_IP_DECA:
+                    code.lload(slots[0])
+                        .lload(slots[1]);
+                    buildLongLongSub(bctx, code, slots[0], slots[1], 1L, 0L);
+                    code.lstore(slots[1])
+                        .lstore(slots[0]);
+                    break;
+
+                case OP_IP_INCA:
+                    code.lload(slots[0])
+                        .lload(slots[1]);
+                    buildLongLongAdd(bctx, code, slots[0], slots[1], 1L, 0L);
+                    code.lstore(slots[1])
+                        .lstore(slots[0]);
+                    break;
+
+                case OP_IP_DECB:
+                    buildLongLongSub(bctx, code, slots[0], slots[1], 1L, 0L);
+                    code.lstore(slots[1])
+                        .lstore(slots[0])
+                        .lload(slots[0])
+                        .lload(slots[1]);
+                    break;
+
+                case OP_IP_INCB:
+                    buildLongLongAdd(bctx, code, slots[0], slots[1], 1L, 0L);
+                    code.lstore(slots[1])
+                        .lstore(slots[0])
+                        .lload(slots[0])
+                        .lload(slots[1]);
+                    break;
+
+                default:
+                    throw new IllegalStateException("Unsupported XVM primitive op " + op
+                            + " on type: " + typeName);
+                }
+                break;
+
+            default:
+                throw new IllegalStateException("Unsupported XVM primitive type: " + typeName);
+            }
+    }
+
+    /**
      * Build the non-primitive type ops for a local variable.
      *
      * In:  nothing on the Java stack
@@ -460,7 +542,7 @@ public abstract class OpInPlace
         TypeConstant  type     = reg.type();
         MethodInfo    method   = type.ensureTypeInfo().findOpMethod(sName, sOp, null);
         String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
-        JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem, type);
+        JitMethodDesc jmd      = method.getJitDesc(bctx.builder, type);
 
         assert !jmd.isOptimized;
 
@@ -478,10 +560,9 @@ public abstract class OpInPlace
      */
     protected void buildPrimitiveProperty(BuildContext bctx, CodeBuilder code,
                                           PropertyConstant idProp) {
-        TypeSystem    ts       = bctx.typeSystem;
         PropertyInfo  infoProp = idProp.getPropertyInfo();
-        JitMethodDesc jmdGet   = infoProp.getGetterJitDesc(ts);
-        JitMethodDesc jmdSet   = infoProp.getSetterJitDesc(ts);
+        JitMethodDesc jmdGet   = infoProp.getGetterJitDesc(bctx.builder);
+        JitMethodDesc jmdSet   = infoProp.getSetterJitDesc(bctx.builder);
         JitParamDesc  pd       = jmdGet.optimizedReturns[0];
         ClassDesc     cd       = pd.cd;
 
@@ -489,8 +570,8 @@ public abstract class OpInPlace
 
         MethodTypeDesc mdGet    = jmdGet.optimizedMD;
         MethodTypeDesc mdSet    = jmdSet.optimizedMD;
-        String         sGetName = infoProp.ensureGetterJitMethodName(ts) + Builder.OPT;
-        String         sSetName = infoProp.ensureSetterJitMethodName(ts) + Builder.OPT;
+        String         sGetName = infoProp.ensureGetterJitMethodName(bctx.typeSystem) + Builder.OPT;
+        String         sSetName = infoProp.ensureSetterJitMethodName(bctx.typeSystem) + Builder.OPT;
 
         RegisterInfo regTarget = bctx.loadThis(code);
         bctx.loadCtx(code);

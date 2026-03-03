@@ -12,7 +12,9 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
+import org.xvm.javajit.ExtendedSlot;
 import org.xvm.javajit.JitFlavor;
+import org.xvm.javajit.MultipleSlot;
 import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
@@ -22,6 +24,7 @@ import org.xvm.runtime.Utils;
 
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
+import static org.xvm.javajit.Builder.DataType;
 import static org.xvm.javajit.Builder.MD_TypeIsA;
 import static org.xvm.javajit.Builder.MD_xvmType;
 
@@ -258,12 +261,13 @@ public abstract class OpTest
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         if (isBinaryOp()) {
             buildBinary(bctx, code);
         } else {
             buildUnary(bctx, code);
         }
+        return -1;
     }
 
     protected void buildBinary(BuildContext bctx, CodeBuilder code) {
@@ -293,7 +297,7 @@ public abstract class OpTest
 
         // TODO: can we get rid of typeCmp?
         TypeConstant typeCommon = selectCommonType(type1, type2, ErrorListener.BLACKHOLE).removeNullable();
-        assert typeCmp.isA(typeCommon) && typeCommon.isA(typeCmp);
+        assert typeCmp.isEquivalent(typeCommon);
 
         typeCmp.buildCompare(bctx, code, nOp, reg1, reg2, /*lblTrue*/ null);
 
@@ -390,8 +394,17 @@ public abstract class OpTest
         Label   labelTrue = code.newLabel();
         Label   labelEnd  = code.newLabel();
         boolean fNot      = getOpCode() == OP_IS_NNULL;
-        if (regArg instanceof BuildContext.DoubleSlot slotMulti) {
-            assert slotMulti.flavor() == JitFlavor.NullablePrimitive;
+        if (regArg instanceof ExtendedSlot slotExt) {
+            assert slotExt.flavor() == JitFlavor.NullablePrimitive;
+
+            code.iload(slotExt.extSlot()); // True indicates Null
+            if (fNot) {
+                code.ifeq(labelTrue);
+            } else {
+                code.ifne(labelTrue);
+            }
+        } else if (regArg instanceof MultipleSlot slotMulti
+                && slotMulti.flavor() == JitFlavor.NullableXvmPrimitive) {
 
             code.iload(slotMulti.extSlot()); // True indicates Null
             if (fNot) {
@@ -424,7 +437,7 @@ public abstract class OpTest
             assert typeTest.isTypeOfType();
             typeTest = typeTest.getParamType(0);
 
-            if (typeTarget.isPrimitive()) {
+            if (typeTarget.isJavaPrimitive()) {
                 // we can statically compute the result
                 if (getOpCode() == OP_IS_TYPE) {
                     if (typeTarget.isA(typeTest)) {code.iconst_1();} else {code.iconst_0();}
@@ -439,9 +452,9 @@ public abstract class OpTest
                 bctx.loadTypeConstant(code, typeTest);                      // test type
             }
         } else {
-            RegisterInfo regType = bctx.loadArgument(code, m_nValue2); // xType
+            RegisterInfo regType = bctx.loadArgument(code, m_nValue2); // nType
             assert regType.type().isTypeOfType();
-            code.getfield(CD_nType, "$type", CD_TypeConstant);
+            code.getfield(CD_nType, DataType, CD_TypeConstant);
         }
 
         code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);

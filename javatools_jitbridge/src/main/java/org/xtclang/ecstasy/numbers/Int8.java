@@ -1,5 +1,7 @@
 package org.xtclang.ecstasy.numbers;
 
+import java.math.BigDecimal;
+
 import org.xtclang.ecstasy.OutOfBounds;
 
 import org.xtclang.ecstasy.text.String;
@@ -42,6 +44,11 @@ public class Int8 extends IntNumber {
             CACHE[key] = ref = new Int8(value);
         }
         return ref;
+    }
+
+    @Override
+    public BigDecimal $toBigDecimal() {
+        return BigDecimal.valueOf($value);
     }
 
     // ----- conversion ----------------------------------------------------------------------------
@@ -112,8 +119,10 @@ public class Int8 extends IntNumber {
      *
      * @return this Int8 value as an Int128
      */
-    public Int128 toInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
-        return new Int128($value, $value < 0 ? -1L : 0L);
+    public long toInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+        // load the high long value to the context and return the low value
+        ctx.i0 = $value < 0 ? -1L : 0L;
+        return $value;
     }
 
     /**
@@ -198,12 +207,14 @@ public class Int8 extends IntNumber {
      *
      * @return this Int8 value as a UInt128
      */
-    public UInt128 toUInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
+    public long toUInt128$p(Ctx ctx, boolean checkBounds, boolean dfltCheckBounds) {
         if (!dfltCheckBounds && checkBounds && $value < 0) {
             OutOfBounds oob = new OutOfBounds(ctx);
             throw oob.$init(ctx, "Int8 value " + $value + " is not a valid UInt128 value");
         }
-        return new UInt128($value, $value >= 0 ? 0L : -1L);
+        // load the high long value to the context and return the low value
+        ctx.i0 = $value >= 0 ? 0L : -1L;
+        return $value;
     }
 
     // ----- debugging support ---------------------------------------------------------------------

@@ -78,4 +78,13 @@ public class GP_Sub
                                         RegisterInfo regArg) {
         buildPrimitiveSub(bctx, code, regTarget);
     }
+
+    @Override
+    protected RegisterInfo buildXvmOptimizedBinary(BuildContext bctx,
+                                                   CodeBuilder  code,
+                                                   RegisterInfo regTarget,
+                                                   int          nArgValue) {
+        buildXvmPrimitiveSub(bctx, code, regTarget, nArgValue);
+        return regTarget;
+    }
 }

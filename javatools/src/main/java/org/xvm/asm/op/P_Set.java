@@ -117,8 +117,9 @@ public class P_Set
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         bctx.buildSetProperty(code, bctx.loadArgument(code, m_nTarget), m_nPropId, m_nValue);
+        return -1;
     }
 
     // ----- fields --------------------------------------------------------------------------------

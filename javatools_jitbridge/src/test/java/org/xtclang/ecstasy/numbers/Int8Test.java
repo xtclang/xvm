@@ -1,9 +1,12 @@
 package org.xtclang.ecstasy.numbers;
 
+import java.math.BigDecimal;
+
 import org.junit.jupiter.api.Test;
 
 import org.xtclang.ecstasy.OutOfBounds;
 import org.xtclang.ecstasy.nException;
+import org.xvm.javajit.Ctx;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -163,13 +166,14 @@ public class Int8Test {
     @Test
     public void shouldConvertToInt128() {
         for (int i = Byte.MIN_VALUE; i <= Byte.MAX_VALUE; i++) {
-            Int8  n = Int8.$box(i);
-            Int128 n2 = n.toInt128$p(null, false, true);
-            assertEquals(i, n2.$lowValue);
+            Int8 n   = Int8.$box(i);
+            Ctx  ctx = new Ctx(null, null);
+            long n2  = n.toInt128$p(ctx, false, true);
+            assertEquals(i, n2);
             if (i < 0) {
-                assertEquals(-1, n2.$highValue);
+                assertEquals(-1L, ctx.i0);
             } else {
-                assertEquals(0, n2.$highValue);
+                assertEquals(0L, ctx.i0);
             }
         }
     }
@@ -177,13 +181,14 @@ public class Int8Test {
     @Test
     public void shouldConvertToUInt128() {
         for (int i = Byte.MIN_VALUE; i <= Byte.MAX_VALUE; i++) {
-            Int8    n  = Int8.$box(i);
-            UInt128 n2 = n.toUInt128$p(null, false, true);
-            assertEquals(i, n2.$lowValue);
+            Int8 n   = Int8.$box(i);
+            Ctx  ctx = new Ctx(null, null);
+            long n2  = n.toUInt128$p(ctx, false, true);
+            assertEquals(i, n2);
             if (i < 0) {
-                assertEquals(-1, n2.$highValue);
+                assertEquals(-1L, ctx.i0);
             } else {
-                assertEquals(0, n2.$highValue);
+                assertEquals(0L, ctx.i0);
             }
         }
     }
@@ -191,7 +196,8 @@ public class Int8Test {
     @Test
     public void shouldConvertToUInt128WithBoundsCheck() {
         for (int i = Byte.MIN_VALUE; i <= Byte.MAX_VALUE; i++) {
-            Int8 n = Int8.$box(i);
+            Int8 n   = Int8.$box(i);
+            Ctx  ctx = new Ctx(null, null);
             if (i < 0) {
                 try {
                     n.toUInt128$p(null, true, false);
@@ -199,10 +205,43 @@ public class Int8Test {
                     assertInstanceOf(OutOfBounds.class, e.exception);
                 }
             } else {
-                UInt128 n2 = n.toUInt128$p(null, true, false);
-                assertEquals(i, n2.$lowValue);
-                assertEquals(0, n2.$highValue);
+                long n2 = n.toUInt128$p(ctx, true, false);
+                assertEquals(i, n2);
+                assertEquals(0L, ctx.i0);
             }
+        }
+    }
+
+    @Test
+    public void shouldConvertToDec32() {
+        for (int i = Byte.MIN_VALUE; i <= Byte.MAX_VALUE; i++) {
+            Int8  n   = Int8.$box(i);
+            Ctx   ctx = new Ctx(null, null);
+            int   n2  = n.toDec32$p(ctx);
+            Dec32 dec = Dec32.$box(n2);
+            assertEquals(BigDecimal.valueOf(i), dec.$toBigDecimal());
+        }
+    }
+
+    @Test
+    public void shouldConvertToDec64() {
+        for (int i = Byte.MIN_VALUE; i <= Byte.MAX_VALUE; i++) {
+            Int8  n   = Int8.$box(i);
+            Ctx   ctx = new Ctx(null, null);
+            long  n2  = n.toDec64$p(ctx);
+            Dec64 dec = Dec64.$box(n2);
+            assertEquals(BigDecimal.valueOf(i), dec.$toBigDecimal());
+        }
+    }
+
+    @Test
+    public void shouldConvertToDec128() {
+        for (int i = Byte.MIN_VALUE; i <= Byte.MAX_VALUE; i++) {
+            Int8   n   = Int8.$box(i);
+            Ctx    ctx = new Ctx(null, null);
+            long   low = n.toDec128$p(ctx);
+            Dec128 dec = Dec128.$box(low, ctx.i0);
+            assertEquals(BigDecimal.valueOf(i), dec.$toBigDecimal());
         }
     }
 }

@@ -14,7 +14,6 @@ import org.xvm.asm.Register;
 import org.xvm.asm.constants.StringConstant;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -115,9 +114,10 @@ public class Var_IN
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         bctx.introduceVar(code, m_nVar, m_nType, m_nNameId);
         bctx.moveVar(code, m_nValueId, m_nVar, false);
+        return -1;
     }
 
     // ----- fields --------------------------------------------------------------------------------

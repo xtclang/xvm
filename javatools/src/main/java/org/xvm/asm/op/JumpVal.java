@@ -386,7 +386,7 @@ public class JumpVal
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo regArg = bctx.loadArgument(code, m_nArgCond);
 
         int[] aofCase = m_aofCase;
@@ -407,6 +407,7 @@ public class JumpVal
             case EnumValueConstant _ -> buildEnumSwitch(bctx, code, regArg);
             default                  -> buildIfLadder(bctx, code, regArg);
         }
+        return -1;
     }
 
     private void buildByteSwitch(BuildContext bctx, CodeBuilder code, RegisterInfo regArg) {

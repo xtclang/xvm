@@ -31,6 +31,12 @@ class Int8ConvertTests {
         testInt8ToInt64(100, 100);
         testInt8ToInt64(Int8.MaxValue, 127);
 
+        testInt8ToInt128(Int8.MinValue, -128);
+        testInt8ToInt128(-100, -100);
+        testInt8ToInt128(0, 0);
+        testInt8ToInt128(100, 100);
+        testInt8ToInt128(Int8.MaxValue, 127);
+
         testInt8ToUInt8(Int8.MinValue, 128);
         testInt8ToUInt8(-1, 255);
         testInt8ToUInt8(-100, 156);
@@ -87,6 +93,20 @@ class Int8ConvertTests {
         testInt8ToUInt64WithBoundsCheck(100, 100, False);
         testInt8ToUInt64WithBoundsCheck(Int8.MaxValue, 127, False);
 
+        testInt8ToUInt128(Int8.MinValue, 340282366920938463463374607431768211328);
+        testInt8ToUInt128(-1, 340282366920938463463374607431768211455);
+        testInt8ToUInt128(-100, 340282366920938463463374607431768211356);
+        testInt8ToUInt128(0, 0);
+        testInt8ToUInt128(100, 100);
+        testInt8ToUInt128(Int8.MaxValue, 127);
+
+        testInt8ToUInt128WithBoundsCheck(Int8.MinValue, 0, True);
+        testInt8ToUInt128WithBoundsCheck(-1, 0, True);
+        testInt8ToUInt128WithBoundsCheck(-100, 0, True);
+        testInt8ToUInt128WithBoundsCheck(0, 0, False);
+        testInt8ToUInt128WithBoundsCheck(100, 100, False);
+        testInt8ToUInt128WithBoundsCheck(Int8.MaxValue, 127, False);
+
         console.print("<<<<< Finished Int8 Conversion tests >>>>>");
     }
 
@@ -126,13 +146,22 @@ class Int8ConvertTests {
         assert b == expected;
     }
 
+    void testInt8ToInt128(Int8 a, Int128 expected) {
+        console.print("Test Int8 ", True);
+        console.print(a, True);
+        console.print(" to Int128: ", True);
+        console.print(expected);
+        Int128 b = a;
+        console.print(b);
+        assert b == expected;
+    }
+
     void testInt8ToUInt8(Int8 a, UInt8 expected) {
         console.print("Test Int8 ", True);
         console.print(a, True);
         console.print(" to UInt8: ", True);
         console.print(expected);
         UInt8 b = a.toUInt8();
-        console.print(b);
         assert b == expected;
     }
 
@@ -234,6 +263,34 @@ class Int8ConvertTests {
         } else {
             console.print(" to UInt64 succeeds");
             UInt64 b = a.toUInt64(True);
+            assert b == expected;
+        }
+    }
+
+    void testInt8ToUInt128(Int8 a, UInt128 expected) {
+        console.print("Test Int8 ", True);
+        console.print(a, True);
+        console.print(" to UInt128: ", True);
+        console.print(expected);
+        UInt128 b = a.toUInt128();
+        console.print(b);
+        assert b == expected;
+    }
+
+    void testInt8ToUInt128WithBoundsCheck(Int8 a, UInt128 expected, Boolean oob) {
+        console.print("Test Int8 ", True);
+        console.print(a, True);
+        if (oob) {
+            console.print(" to UInt128 throws OutOfBounds");
+            try {
+                a.toUInt128(True);
+                assert as "Expected OutOfBounds to be thrown";
+            } catch (OutOfBounds e) {
+                // expected
+            }
+        } else {
+            console.print(" to UInt128 succeeds");
+            UInt128 b = a.toUInt128(True);
             assert b == expected;
         }
     }

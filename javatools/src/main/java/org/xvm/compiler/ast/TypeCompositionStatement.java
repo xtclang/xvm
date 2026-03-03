@@ -2128,7 +2128,7 @@ public class TypeCompositionStatement
                 TypeConstant typeThis = prop.getType().resolveTypedefs();
                 TypeConstant typeBase = infoProp.getType().removeAccess().resolveGenerics(pool, typeThis);
                 // ensure the type equivalency, which slightly more lax than equality
-                if (!typeBase.isA(typeThis) || !typeThis.isA(typeBase)) {
+                if (!typeBase.isEquivalent(typeThis)) {
                     param.log(errs, Severity.ERROR, Compiler.PROPERTY_TYPE_COLLISION,
                             sProp, clzSuper.getName());
                 }

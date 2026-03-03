@@ -13,6 +13,8 @@ import org.xvm.asm.ast.TernaryExprAST;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.asm.op.Enter;
+import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.JumpFalse;
 import org.xvm.asm.op.Label;
@@ -358,11 +360,24 @@ public class TernaryExpression
         Label labelElse = new Label("else");
         Label labelEnd  = new Label("end");
 
+        boolean fScope = cond.isScopeRequired();
         cond.generateConditionalJump(ctx, code, labelElse, false, errs);
+        if (fScope) {
+            code.add(new Enter());
+        }
         exprThen.generateAssignments(ctx, code, aLVal, errs);
         code.add(new Jump(labelEnd));
+        if (fScope) {
+            code.add(new Exit());
+        }
         code.add(labelElse);
+        if (fScope) {
+            code.add(new Enter());
+        }
         exprElse.generateAssignments(ctx, code, aLVal, errs);
+        if (fScope) {
+            code.add(new Exit());
+        }
         code.add(labelEnd);
     }
 

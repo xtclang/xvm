@@ -263,7 +263,7 @@ public class IfStatement
 
         boolean fScope = false;
         for (AstNode cond : conds) {
-            if (cond instanceof AssignmentStatement && ((AssignmentStatement) cond).hasDeclarations()) {
+            if (cond.isScopeRequired()) {
                 code.add(new Enter());
                 fScope = true;
                 break;

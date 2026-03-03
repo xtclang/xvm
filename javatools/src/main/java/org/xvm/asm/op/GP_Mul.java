@@ -64,4 +64,13 @@ public class GP_Mul
                                         RegisterInfo regArg) {
         buildPrimitiveMul(bctx, code, regTarget);
     }
+
+    @Override
+    protected RegisterInfo buildXvmOptimizedBinary(BuildContext bctx,
+                                                   CodeBuilder  code,
+                                                   RegisterInfo regTarget,
+                                                   int          nArgValue) {
+        buildXvmPrimitiveMul(bctx, code, regTarget, nArgValue);
+        return regTarget;
+    }
 }

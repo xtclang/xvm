@@ -21,7 +21,9 @@ import static org.xvm.javajit.Builder.MD_UDivLong;
 /**
  * A "mixin" interface to generate bytecodes for operations on Ecstasy numeric types.
  */
-public interface NumberSupport {
+public interface NumberSupport
+        extends NumberSupportInt128, NumberSupportDec {
+
     /**
      * Build the optimized binary operation that will add two primitive types from the stack
      * (T + T -> T).
@@ -40,6 +42,37 @@ public interface NumberSupport {
             case "F" -> code.fadd();
             case "D" -> code.dadd();
             default  -> throw new IllegalStateException();
+        }
+    }
+
+    /**
+     * Build the optimized binary operation that will add two XVM primitive types
+     * (T + T -> T).
+     * <p>
+     * Each type may be represented by one or more Java primitive types.
+     * <p>
+     * Neither the target nor argument should have been loaded to the stack.
+     *
+     * @param bctx       the current build context
+     * @param code       the code builder to add the op codes to
+     * @param regTarget  the register containing the target of the operation
+     * @param nArgId     the register containing the operation argument
+     */
+    default void buildXvmPrimitiveAdd(BuildContext bctx,
+                                      CodeBuilder  code,
+                                      RegisterInfo regTarget,
+                                      int          nArgId) {
+        switch (regTarget.type().getValueString()) {
+            case "Int128", "UInt128" ->
+                    buildLongLongAdd(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec32" ->
+                    buildDec32Add(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec", "Dec64" ->
+                    buildDec64Add(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec128" ->
+                    buildDec128Add(bctx, code, (MultipleSlot) regTarget, nArgId);
+            default  -> throw new IllegalStateException("Unsupported type: "
+                    + regTarget.type().getValueString());
         }
     }
 
@@ -64,6 +97,31 @@ public interface NumberSupport {
     }
 
     /**
+     * Build the optimized binary operation that will logically AND two XVM primitive types
+     * (T & T -> T).
+     * <p>
+     * Each type may be represented by one or more Java primitive types stored on the stack.
+     * <p>
+     * Neither the target nor argument should have been loaded to the stack.
+     *
+     * @param bctx       the current build context
+     * @param code       the code builder to add the op codes to
+     * @param regTarget  the register containing the target of the operation
+     * @param nArgId     the register containing the operation argument
+     */
+    default void buildXvmPrimitiveAnd(BuildContext bctx,
+                                      CodeBuilder  code,
+                                      RegisterInfo regTarget,
+                                      int          nArgId) {
+        switch (regTarget.type().getValueString()) {
+            case "Int128", "UInt128" ->
+                    buildLongLongAnd(bctx, code, (MultipleSlot) regTarget, nArgId);
+            default -> throw new IllegalStateException("Unsupported type: "
+                    + regTarget.type().getValueString());
+        }
+    }
+
+    /**
      * Build the optimized unary operation that will produce the complement of the target value from
      * the top of the stack (~T -> T).
      *
@@ -80,6 +138,26 @@ public interface NumberSupport {
             case "Z" -> code.iconst_m1().ixor();
             case "J" -> code.ldc(-1L).lxor();
             default  -> throw new IllegalStateException();
+        }
+    }
+
+    /**
+     * Build the optimized binary operation that will produce the complement of a XVM primitive
+     * (~T -> T).
+     * <p>
+     * The target register should not have been loaded to the stack.
+     *
+     * @param code       the code builder to add the op codes to
+     * @param regTarget  the register containing the target of the operation
+     */
+    default void buildXvmPrimitiveCompl(CodeBuilder  code,
+                                        RegisterInfo regTarget) {
+        switch (regTarget.type().getValueString()) {
+        case "Int128", "UInt128" ->
+                buildLongLongCompl(code, (MultipleSlot) regTarget);
+        default ->
+                throw new IllegalStateException("Unsupported type: "
+                        + regTarget.type().getValueString());
         }
     }
 
@@ -120,6 +198,38 @@ public interface NumberSupport {
     }
 
     /**
+     * Build the optimized binary operation that will divide two XVM primitive types
+     * (T / T -> T).
+     * <p>
+     * Each type may be represented by one or more Java primitive types stored on the stack.
+     * <p>
+     * Neither the target nor argument should have been loaded to the stack.
+     *
+     * @param bctx       the current build context
+     * @param code       the code builder to add the op codes to
+     * @param regTarget  the register containing the target of the operation
+     * @param nArgId     the identifier of the register containing the operation argument
+     */
+    default void buildXvmPrimitiveDiv(BuildContext bctx,
+                                      CodeBuilder  code,
+                                      RegisterInfo regTarget,
+                                      int          nArgId) {
+        switch (regTarget.type().getValueString()) {
+            case "Int128", "UInt128" ->
+                    buildLongLongDiv(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec32" ->
+                    buildDec32Div(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec", "Dec64" ->
+                    buildDec64Div(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec128" ->
+                    buildDec128Div(bctx, code, (MultipleSlot) regTarget, nArgId);
+            default ->
+                    throw new IllegalStateException("Unsupported type: "
+                            + regTarget.type().getValueString());
+        }
+    }
+
+    /**
      * Build the optimized binary operation that will produce the modulo of two primitive types
      * from the stack (T % T -> T).
      *
@@ -153,6 +263,38 @@ public interface NumberSupport {
     }
 
     /**
+     * Build the optimized binary operation that will produce the modulo of two XVM primitive types
+     * (T % T -> T).
+     * <p>
+     * Each type may be represented by one or more Java primitive types stored on the stack.
+     * <p>
+     * Neither the target nor argument should have been loaded to the stack.
+     *
+     * @param bctx       the current build context
+     * @param code       the code builder to add the op codes to
+     * @param regTarget  the register containing the target of the operation
+     * @param nArgId     the identifier of the register containing the operation argument
+     */
+    default void buildXvmPrimitiveMod(BuildContext bctx,
+                                      CodeBuilder  code,
+                                      RegisterInfo regTarget,
+                                      int          nArgId) {
+        switch (regTarget.type().getValueString()) {
+            case "Int128", "UInt128" ->
+                    buildLongLongMod(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec32" ->
+                    buildDec32Mod(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec", "Dec64" ->
+                    buildDec64Mod(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec128" ->
+                    buildDec128Mod(bctx, code, (MultipleSlot) regTarget, nArgId);
+            default ->
+                    throw new IllegalStateException("Unsupported type: "
+                            + regTarget.type().getValueString());
+        }
+    }
+
+    /**
      * Build the optimized unary operation that will produce negative of a primitive type (-T -> T).
      *
      * @param bctx       the current build context
@@ -181,6 +323,29 @@ public interface NumberSupport {
     }
 
     /**
+     * Build the optimized unary operation that will produce negative of a XVM primitive type
+     * (-T -> T).
+     *
+     * @param bctx       the current build context
+     * @param code       the code builder to add the op codes to
+     * @param regTarget  the register containing the target of the operation
+     */
+    default void buildXvmPrimitiveNeg(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget) {
+        switch (regTarget.type().getValueString()) {
+            case "Int128"  -> buildLongLongNeg(code, (MultipleSlot) regTarget);
+            case "UInt128" -> bctx.throwUnsupported(code);
+            case "Dec32" ->
+                    buildDec32Neg(bctx, code, (MultipleSlot) regTarget);
+            case "Dec", "Dec64" ->
+                    buildDec64Neg(bctx, code, (MultipleSlot) regTarget);
+            case "Dec128" ->
+                    buildDec128Neg(bctx, code, (MultipleSlot) regTarget);
+            default -> throw new IllegalStateException("Unsupported type: "
+                    + regTarget.type().getValueString());
+        }
+    }
+
+    /**
      * Build the optimized binary operation that will produce the product of two primitive types
      * from the stack (T * T -> T).
      *
@@ -198,6 +363,36 @@ public interface NumberSupport {
             case "F" -> code.fmul();
             case "D" -> code.dmul();
             default  -> throw new IllegalStateException();
+        }
+    }
+
+    /**
+     * Build the optimized binary operation that will produce the product of two XVM primitive types
+     * (T * T -> T).
+     *
+     * <p>
+     * Neither the target nor argument should have been loaded to the stack.
+     *
+     * @param bctx       the current build context
+     * @param code       the code builder to add the op codes to
+     * @param regTarget  the register containing the target of the operation
+     * @param nArgId     the identifier of the register containing the operation argument
+     */
+    default void buildXvmPrimitiveMul(BuildContext bctx,
+                                      CodeBuilder  code,
+                                      RegisterInfo regTarget,
+                                      int          nArgId) {
+        switch (regTarget.type().getValueString()) {
+            case "Int128", "UInt128" ->
+                    buildLongLongMul(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec32" ->
+                    buildDec32Mul(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec", "Dec64" ->
+                    buildDec64Mul(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec128" ->
+                    buildDec128Mul(bctx, code, (MultipleSlot) regTarget, nArgId);
+            default -> throw new IllegalStateException("Unsupported type: "
+                    + regTarget.type().getValueString());
         }
     }
 
@@ -222,6 +417,31 @@ public interface NumberSupport {
     }
 
     /**
+     * Build the optimized binary operation that will logically OR two XVM primitive types
+     * (T | T -> T).
+     * <p>
+     * Each type may be represented by one or more Java primitive types stored on the stack.
+     * <p>
+     * Neither the target nor argument should have been loaded to the stack.
+     *
+     * @param bctx       the current build context
+     * @param code       the code builder to add the op codes to
+     * @param regTarget  the register containing the target of the operation
+     * @param nArgId     the register containing the operation argument
+     */
+    default void buildXvmPrimitiveOr(BuildContext bctx,
+                                     CodeBuilder  code,
+                                     RegisterInfo regTarget,
+                                     int          nArgId) {
+        switch (regTarget.type().getValueString()) {
+            case "Int128", "UInt128" ->
+                    buildLongLongOr(bctx, code, (MultipleSlot) regTarget, nArgId);
+            default -> throw new IllegalStateException("Unsupported type: "
+                    + regTarget.type().getValueString());
+        }
+    }
+
+    /**
      * Build the optimized binary operation that will logically shift left a primitive type
      * (T << T -> T).
      * <p>
@@ -238,8 +458,8 @@ public interface NumberSupport {
                                            CodeBuilder  code,
                                            RegisterInfo regTarget,
                                            int          nArgId) {
-        regTarget.load(code);
-        RegisterInfo regArg = bctx.loadArgument(code, nArgId);
+        RegisterInfo regLoaded = regTarget.load(code);
+        RegisterInfo regArg    = bctx.loadArgument(code, nArgId);
         if (regArg.cd().equals(CD_long)) {
             code.l2i();
         } else if (!regArg.cd().equals(CD_int)) {
@@ -247,15 +467,86 @@ public interface NumberSupport {
                     + regArg.cd().displayName());
         }
 
-        switch (regTarget.cd().descriptorString()) {
+        switch (regLoaded.cd().descriptorString()) {
             case "I" -> {
                 code.ishl();
-                bctx.adjustIntValue(code, regTarget.type());
+                bctx.adjustIntValue(code, regLoaded.type());
             }
             case "J" -> code.lshl();
             default  -> throw new IllegalStateException();
         }
-        return regTarget.type();
+        return regLoaded.type();
+    }
+
+    /**
+     * Build the optimized binary operation that will logically shift left a XVM primitive type
+     * (T << T -> T).
+     * <p>
+     * Neither the target nor argument should have been loaded to the stack.
+     *
+     * @param bctx       the current build context
+     * @param code       the code builder to add the op codes to
+     * @param regTarget  the register containing the target of the operation
+     * @param nArgId     the identifier of the register containing the operation argument
+     */
+    default void buildXvmPrimitiveShl(BuildContext bctx,
+                                      CodeBuilder  code,
+                                      RegisterInfo regTarget,
+                                      int          nArgId) {
+        switch (regTarget.type().getValueString()) {
+            case "Int128", "UInt128" ->
+                    buildLongLongShl(bctx, code, (MultipleSlot) regTarget, nArgId);
+            default -> throw new IllegalStateException("Unsupported type: "
+                    + regTarget.type().getValueString());
+        }
+    }
+
+    /**
+     * Build the optimized binary operation that will logically shift right a XVM primitive type
+     * (T >> T -> T).
+     * <p>
+     * Neither the target nor argument should have been loaded to the stack.
+     *
+     * @param bctx       the current build context
+     * @param code       the code builder to add the op codes to
+     * @param regTarget  the register containing the target of the operation
+     * @param nArgId     the identifier of the register containing the operation argument
+     */
+    default void buildXvmPrimitiveShr(BuildContext bctx,
+                                      CodeBuilder  code,
+                                      RegisterInfo regTarget,
+                                      int          nArgId) {
+        switch (regTarget.type().getValueString()) {
+            case "Int128" ->
+                    buildLongLongShr(bctx, code, (MultipleSlot) regTarget, nArgId, false);
+            case "UInt128" ->
+                    buildLongLongShr(bctx, code, (MultipleSlot) regTarget, nArgId, true);
+            default -> throw new IllegalStateException("Unsupported type: "
+                    + regTarget.type().getValueString());
+        }
+    }
+
+    /**
+     * Build the optimized binary operation that will logically unsigned shift right a XVM
+     * primitive type (T >>> T -> T).
+     * <p>
+     * Neither the target nor argument should have been loaded to the stack.
+     *
+     * @param bctx       the current build context
+     * @param code       the code builder to add the op codes to
+     * @param regTarget  the register containing the target of the operation
+     * @param nArgId     the identifier of the register containing the operation argument
+     */
+    default void buildXvmPrimitiveUnsignedShr(BuildContext bctx,
+                                              CodeBuilder  code,
+                                              RegisterInfo regTarget,
+                                              int          nArgId) {
+        switch (regTarget.type().getValueString()) {
+            case "Int128", "UInt128" ->
+                    buildLongLongShr(bctx, code, (MultipleSlot) regTarget, nArgId, true);
+            default -> throw new IllegalStateException("Unsupported type: "
+                    + regTarget.type().getValueString());
+        }
     }
 
     /**
@@ -273,11 +564,11 @@ public interface NumberSupport {
                                            CodeBuilder  code,
                                            RegisterInfo regTarget,
                                            int          nArgId) {
-        regTarget.load(code);
+        RegisterInfo regLoaded  = regTarget.load(code);
         RegisterInfo regArg     = bctx.loadArgument(code, nArgId);
-        TypeConstant typeTarget = regTarget.type();
+        TypeConstant typeTarget = regLoaded.type();
         boolean      fUnsigned  = typeTarget.getValueString().charAt(0) == 'U';
-        return buildPrimitiveShr(bctx, code, regTarget, regArg, fUnsigned);
+        return buildPrimitiveShr(bctx, code, regLoaded, regArg, fUnsigned);
     }
 
     /**
@@ -291,11 +582,11 @@ public interface NumberSupport {
      *
      * @return the type of the result of the operation
      */
-    default TypeConstant buildPrimitiveShrAll(BuildContext bctx,
-                                              CodeBuilder  code,
-                                              RegisterInfo regTarget,
-                                              int          nArgId) {
-        regTarget.load(code);
+    default TypeConstant buildPrimitiveUnsignedShr(BuildContext bctx,
+                                                   CodeBuilder  code,
+                                                   RegisterInfo regTarget,
+                                                   int          nArgId) {
+        RegisterInfo regLoaded  = regTarget.load(code);
         TypeConstant typeTarget = regTarget.type();
 
         switch (typeTarget.getSingleUnderlyingClass(false).getName()) {
@@ -303,8 +594,8 @@ public interface NumberSupport {
             case "Int16", "UInt16" -> code.ldc(0xFFFF).iand();
         }
 
-        RegisterInfo regArg     = bctx.loadArgument(code, nArgId);
-        return buildPrimitiveShr(bctx, code, regTarget, regArg, true);
+        RegisterInfo regArg = bctx.loadArgument(code, nArgId);
+        return buildPrimitiveShr(bctx, code, regLoaded, regArg, true);
     }
 
     /**
@@ -320,10 +611,10 @@ public interface NumberSupport {
      * @return the type of the result of the operation
      */
     default TypeConstant buildPrimitiveShr(BuildContext bctx,
-                                             CodeBuilder  code,
-                                             RegisterInfo regTarget,
-                                             RegisterInfo regArg,
-                                             boolean      fUnsigned) {
+                                           CodeBuilder  code,
+                                           RegisterInfo regTarget,
+                                           RegisterInfo regArg,
+                                           boolean      fUnsigned) {
         TypeConstant typeTarget = regTarget.type();
 
         switch (regArg.cd().descriptorString()) {
@@ -378,6 +669,37 @@ public interface NumberSupport {
     }
 
     /**
+     * Build the optimized binary operation that will subtract one XVM primitive type from another
+     * (T - T -> T).
+     * <p>
+     * Each type may be represented by one or more Java primitive types.
+     * <p>
+     * Neither the target nor argument should have been loaded to the stack.
+     *
+     * @param bctx       the current build context
+     * @param code       the code builder to add the op codes to
+     * @param regTarget  the register containing the target of the operation
+     * @param nArgId     the register containing the operation argument
+     */
+    default void buildXvmPrimitiveSub(BuildContext bctx,
+                                      CodeBuilder  code,
+                                      RegisterInfo regTarget,
+                                      int          nArgId) {
+        switch (regTarget.type().getValueString()) {
+            case "Int128", "UInt128" ->
+                    buildLongLongSub(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec32" ->
+                    buildDec32Sub(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec", "Dec64" ->
+                    buildDec64Sub(bctx, code, (MultipleSlot) regTarget, nArgId);
+            case "Dec128" ->
+                    buildDec128Sub(bctx, code, (MultipleSlot) regTarget, nArgId);
+            default  -> throw new IllegalStateException("Unsupported type: "
+                    + regTarget.type().getValueString());
+        }
+    }
+
+    /**
      * Build the optimized binary operation that will take two primitive types from the stack and
      * subtract one from the other (T ^ T -> T).
      *
@@ -394,6 +716,31 @@ public interface NumberSupport {
             case "Z" -> code.ixor();
             case "J" -> code.lxor();
             default  -> throw new IllegalStateException();
+        }
+    }
+
+    /**
+     * Build the optimized binary operation that will logically XOR two XVM primitive types
+     * (T ^ T -> T).
+     * <p>
+     * Each type may be represented by one or more Java primitive types stored on the stack.
+     * <p>
+     * Neither the target nor argument should have been loaded to the stack.
+     *
+     * @param bctx       the current build context
+     * @param code       the code builder to add the op codes to
+     * @param regTarget  the register containing the target of the operation
+     * @param nArgId     the register containing the operation argument
+     */
+    default void buildXvmPrimitiveXor(BuildContext bctx,
+                                      CodeBuilder  code,
+                                      RegisterInfo regTarget,
+                                      int          nArgId) {
+        switch (regTarget.type().getValueString()) {
+            case "Int128", "UInt128" ->
+                    buildLongLongXor(bctx, code, (MultipleSlot) regTarget, nArgId);
+            default -> throw new IllegalStateException("Unsupported type: "
+                    + regTarget.type().getValueString());
         }
     }
 }

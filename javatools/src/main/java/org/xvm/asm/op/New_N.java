@@ -129,8 +129,13 @@ public class New_N
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
-        buildNew(bctx, code, m_anArgValue);
+    public void computeTypes(BuildContext bctx) {
+        computeCallTypes(bctx, m_anArgValue);
+    }
+
+    @Override
+    public int build(BuildContext bctx, CodeBuilder code) {
+        return buildNew(bctx, code, m_anArgValue);
     }
 
     // ----- fields --------------------------------------------------------------------------------

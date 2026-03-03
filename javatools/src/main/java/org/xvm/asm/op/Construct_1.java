@@ -128,8 +128,13 @@ public class Construct_1
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
-        buildConstruct(bctx, code, new int[] {m_nArgValue});
+    public void computeTypes(BuildContext bctx) {
+        computeCallTypes(bctx, new int[] {m_nArgValue});
+    }
+
+    @Override
+    public int build(BuildContext bctx, CodeBuilder code) {
+        return buildConstruct(bctx, code, new int[] {m_nArgValue});
     }
 
     // ----- fields --------------------------------------------------------------------------------

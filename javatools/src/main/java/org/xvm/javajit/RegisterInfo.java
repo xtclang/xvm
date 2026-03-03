@@ -18,10 +18,19 @@ public interface RegisterInfo {
     int regId();
 
     /**
+     * Returns the Java slot for this register or -1 if the register is stored on the stack.
+     * <p>
+     * If this register is made up of multiple slots, this method will return the first slot.
+     *
      * @return the corresponding Java slot index or -1 if the corresponding value has been placed on
      *         the Java stack
      */
     int slot();
+
+    /**
+     * @return all the corresponding Java slot indexes for this register.
+     */
+    int[] slots();
 
     /**
      * @return the XTC register type
@@ -44,6 +53,11 @@ public interface RegisterInfo {
      * @return the ClassDesc for the {@link #slot()}
      */
     ClassDesc cd();
+
+    /**
+     * @return the ClassDesc for each of the slots in this register
+     */
+    ClassDesc[] slotCds();
 
     /**
      * @return the XTC register name (optional)
@@ -70,6 +84,13 @@ public interface RegisterInfo {
     }
 
     /**
+     * @return true iff the XTC register represents a value on Java stack
+     */
+    default boolean isProperty() {
+        return regId() <= Op.CONSTANT_OFFSET;
+    }
+
+    /**
      * @return true iff the XTC register represents a value to be ignored
      */
     default boolean isIgnore() {
@@ -85,8 +106,6 @@ public interface RegisterInfo {
 
     /**
      * Load the value for this register on the Java stack.
-     *
-     * @param type  (optional) the type of the value; could be wider than a narrowed register type
      */
     default RegisterInfo load(CodeBuilder code) {
         Builder.load(code, cd(), slot());
@@ -105,12 +124,28 @@ public interface RegisterInfo {
             if (type == null) {
                 type = type();
             }
-            if (type.isPrimitive() && !cd().isPrimitive()) {
+            if (type.isJavaPrimitive() && !cd().isPrimitive()) {
                 Builder.box(code, type, JitTypeDesc.getPrimitiveClass(type));
+            } else if (type.isXvmPrimitive() && !type().isXvmPrimitive()) {
+                Builder.box(code, type, JitTypeDesc.getXvmPrimitiveClass(type));
             }
             Builder.store(code, cd(), slot());
         }
         return this;
+    }
+
+    /**
+     * Store the value represented by this register currently on the stack into a temporary slot.
+     *
+     * @param regId  the value to use for the new register identifier
+     *
+     * @return the new register info
+     */
+    default RegisterInfo storeTempValue(BuildContext bctx, CodeBuilder code, int regId) {
+        assert isJavaStack(); // constant
+        ClassDesc cd   = cd();
+        int       slot = bctx.storeTempValue(code, cd);
+        return new SingleSlot(regId, slot, flavor(), type(), cd, name());
     }
 
     /**

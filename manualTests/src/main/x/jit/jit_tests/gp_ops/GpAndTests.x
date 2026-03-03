@@ -91,18 +91,18 @@ class GpAndTests {
     }
 
     void testGpAndInt128() {
-//        Int128 value1 = 0;
-//        Int128 value2 = 0x4A4A4A4A;
-//        Int128 value3 = 0x0FF0F0F0;
-//        value1 = value2 & value3;
-//        assert value1 == 0x0A404040;
+        Int128 value1 = 0;
+        Int128 value2 = 0x4A4A4A4A;
+        Int128 value3 = 0x0FF0F0F0;
+        value1 = value2 & value3;
+        assert value1 == 0x0A404040;
     }
 
     void testGpAndUInt128() {
-//        UInt128 value1 = 0;
-//        UInt128 value2 = 0xAAAAAAAA;
-//        UInt128 value3 = 0xF0F0F0F0;
-//        value1 = value2 & value3;
-//        assert value1 == 0xA0A0A0A0;
+        UInt128 value1 = 0;
+        UInt128 value2 = 0xAAAAAAAA;
+        UInt128 value3 = 0xF0F0F0F0;
+        value1 = value2 & value3;
+        assert value1 == 0xA0A0A0A0;
     }
 }

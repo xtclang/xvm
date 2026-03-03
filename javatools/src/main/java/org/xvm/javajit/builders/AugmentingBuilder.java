@@ -132,7 +132,7 @@ public class AugmentingBuilder extends CommonBuilder {
                                   String jitName, JitMethodDesc jmd) {
         if (method.isCtorOrValidator()) {
             String        newName = jitName.replace("construct", typeInfo.isSingleton() ? INIT : NEW);
-            JitMethodDesc newJmd  = Builder.convertConstructToNew(typeInfo, className, (JitCtorDesc) jmd);
+            JitMethodDesc newJmd  = Builder.convertConstructToNew(typeInfo, ClassDesc.of(className), (JitCtorDesc) jmd);
             MethodModel   newMM   = newJmd.isOptimized
                     ? findMethod(newName+OPT, newJmd.optimizedMD)
                     : findMethod(newName, newJmd.standardMD);
@@ -186,6 +186,20 @@ public class AugmentingBuilder extends CommonBuilder {
     }
 
     // ----- helper methods ------------------------------------------------------------------------
+
+    @Override
+    public ClassDesc ensureClassDesc(TypeConstant type) {
+        return type.removeAutoNarrowing().removeAccess().equals(typeInfo.getType().removeAccess())
+            ? model.thisClass().asSymbol()
+            : super.ensureClassDesc(type);
+    }
+
+    @Override
+    public String ensureJitClassName(TypeConstant type) {
+        return type.removeAutoNarrowing().removeAccess().equals(typeInfo.getType().removeAccess())
+            ? model.thisClass().asInternalName().replace('/', '.')
+            : super.ensureJitClassName(type);
+    }
 
     /**
      * Find a FieldModel for the specified property.

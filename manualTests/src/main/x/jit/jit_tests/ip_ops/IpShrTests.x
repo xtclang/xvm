@@ -69,14 +69,14 @@ class IpShrTests {
     }
 
     void testIpShrInt128() {
-//        Int128 value1 = 0x4A4A4A4A;
-//        value1 >>= 2;
-//        assert value1 == 0x12929292;
+        Int128 value1 = 0x4A4A4A4A;
+        value1 >>= 2;
+        assert value1 == 0x12929292;
     }
 
     void testIpShrUInt128() {
-//        UInt128 value1 = 0xAAAAAAAA;
-//        value1 >>= 2;
-//        assert value1 == 0x2AAAAAAA;
+        UInt128 value1 = 0xAAAAAAAA;
+        value1 >>= 2;
+        assert value1 == 0x2AAAAAAA;
     }
 }

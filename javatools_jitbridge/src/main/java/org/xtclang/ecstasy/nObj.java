@@ -60,7 +60,7 @@ public abstract class nObj implements Object {
      * Auto-generated for all classes.
      */
     public TypeConstant $xvmType(Ctx ctx) {
-        return $type(ctx).$type;
+        return $type(ctx).$dataType;
     }
 
     /**
@@ -72,10 +72,11 @@ public abstract class nObj implements Object {
 
     /**
      * Helper method to resolve generic types.
+     *
+     * @see {@link org.xvm.javajit.builders.CommonBuilder#assembleGenericProperty}
      */
     public nType $type(Ctx ctx, String name) {
-        TypeConstant type = $xvmType(ctx).resolveGenericType(name);
-        return nType.$ensureType(ctx, type);
+        return nType.$ensureType(ctx, $xvmType(ctx).resolveGenericType(name));
     }
 
     public abstract boolean $isImmut();
@@ -90,7 +91,7 @@ public abstract class nObj implements Object {
      * This should be overridden by duck-type wrappers.
      */
     public boolean $isA(Ctx ctx, nType t) {
-        return $type(ctx).$type.isA(t.$type);
+        return $type(ctx).$dataType.isA(t.$dataType);
     }
 
     /**

@@ -31,6 +31,10 @@ class UInt8ConvertTests {
         testUInt8ToInt64(100, 100);
         testUInt8ToInt64(Int8.MaxValue, 127);
 
+        testUInt8ToInt128(0, 0);
+        testUInt8ToInt128(100, 100);
+        testUInt8ToInt128(Int8.MaxValue, 127);
+
         testUInt8ToUInt8(0, 0);
         testUInt8ToUInt8(100, 100);
         testUInt8ToUInt8(Int8.MaxValue, 127);
@@ -46,6 +50,10 @@ class UInt8ConvertTests {
         testUInt8ToUInt64(0, 0);
         testUInt8ToUInt64(100, 100);
         testUInt8ToUInt64(Int8.MaxValue, 127);
+
+        testUInt8ToUInt128(0, 0);
+        testUInt8ToUInt128(100, 100);
+        testUInt8ToUInt128(Int8.MaxValue, 127);
 
         console.print("<<<<< Finished UInt8 Conversion tests >>>>>");
     }
@@ -105,6 +113,15 @@ class UInt8ConvertTests {
         assert b == expected;
     }
 
+    void testUInt8ToInt128(UInt8 a, Int128 expected) {
+        console.print("Test UInt8 ", True);
+        console.print(a, True);
+        console.print(" to Int128: ", True);
+        console.print(expected);
+        Int128 b = a.toInt128();
+        assert b == expected;
+    }
+
     void testUInt8ToUInt8(UInt8 a, UInt8 expected) {
         console.print("Test UInt8 ", True);
         console.print(a, True);
@@ -141,6 +158,16 @@ class UInt8ConvertTests {
         console.print(" to UInt64: ", True);
         console.print(expected);
         UInt64 b = a.toUInt64();
+        console.print(b);
+        assert b == expected;
+    }
+
+    void testUInt8ToUInt128(UInt8 a, UInt128 expected) {
+        console.print("Test UInt8 ", True);
+        console.print(a, True);
+        console.print(" to UInt128: ", True);
+        console.print(expected);
+        UInt128 b = a.toUInt128();
         console.print(b);
         assert b == expected;
     }

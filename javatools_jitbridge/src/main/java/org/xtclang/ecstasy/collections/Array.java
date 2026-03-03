@@ -156,7 +156,7 @@ public abstract class Array
         }
     }
 
-    // ----- xObj API ------------------------------------------------------------------------------
+    // ----- nObj API ------------------------------------------------------------------------------
 
     /**
      * Note: It's expected that some subclasses (e.g. "Int[]") will know their type implicitly,
@@ -171,6 +171,11 @@ public abstract class Array
      */
     @Override public boolean $isImmut() {
         return $mut() == $CONSTANT;
+    }
+
+    @Override
+    public void $makeImmut(Ctx ctx) {
+        $mut($CONSTANT);
     }
 
     // ----- Array API -----------------------------------------------------------------------------
@@ -433,7 +438,7 @@ public abstract class Array
      *
      *   Array deleteAll(Interval<Int> indexes)
      */
-    public Array deleteAll(Range indexes) {
+    public Array deleteAll(Ctx ctx, Range indexes) {
         throw new UnsupportedOperationException("TODO");
     }
 

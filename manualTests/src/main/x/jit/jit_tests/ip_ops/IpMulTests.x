@@ -19,6 +19,9 @@ class IpMulTests {
         testIpMulUInt128();
         testIpMulDec();
         testIpMulDec32();
+        testIpMulDec128();
+        testIpMulFloat32();
+        testIpMulFloat64();
         console.print("<<<< Finished IpMulTests <<<<<");
     }
 
@@ -71,28 +74,44 @@ class IpMulTests {
     }
 
     void testIpMulInt128() {
-//        Int128 value1 = 0x13333333;
-//        value1 *= 5;
-//        assert value1 == 0x5FFFFFFF;
+        Int128 value1 = 0x13333333;
+        value1 *= 5;
+        assert value1 == 0x5FFFFFFF;
     }
 
     void testIpMulUInt128() {
-//        UInt128 value1 = 0x33333333;
-//        value1 *= 5;
-//        assert value1 == 0xFFFFFFFF;
+        UInt128 value1 = 0x33333333;
+        value1 *= 5;
+        assert value1 == 0xFFFFFFFF;
     }
 
     void testIpMulDec() {
-//        Dec value1 = 4.25;
-//        value1 *= 3.0;
-//        Dec expected = 12.75;
-//        assert value1 == expected; // Fails in non-JIT too
+        Dec value1 = 4.25;
+        value1 *= 3.0;
+        assert value1 == 12.750;
     }
 
     void testIpMulDec32() {
-//        Dec32 value1 = 4.25;
-//        value1 *= 3.0;
-//        Dec expected = 12.75;
-//        assert value1 == expected; // Fails in non-JIT too
+        Dec32 value1 = 4.25;
+        value1 *= 3.0;
+        assert value1 == 12.750;
+    }
+
+    void testIpMulDec128() {
+        Dec128 value1 = 4.25;
+        value1 *= 3.0;
+        assert value1 == 12.750;
+    }
+
+    void testIpMulFloat32() {
+        Float32 value1 = 4.25;
+        value1 *= 3.0;
+        assert value1 == 12.750;
+    }
+
+    void testIpMulFloat64() {
+        Float64 value1 = 4.25;
+        value1 *= 3.0;
+        assert value1 == 12.750;
     }
 }

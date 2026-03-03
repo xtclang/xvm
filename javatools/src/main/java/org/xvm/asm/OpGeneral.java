@@ -15,7 +15,6 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
-import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeMatrix;
@@ -217,24 +216,23 @@ public abstract class OpGeneral
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
-        RegisterInfo regTarget = bctx.ensureRegister(code, m_nTarget);
-
-        if (!regTarget.isSingle() && regTarget.flavor() != JitFlavor.PrimitiveWithDefault) {
-            throw new UnsupportedOperationException(toName(getOpCode()) + " operation on multi-slot");
-        }
-
-        ClassDesc    cdTarget    = regTarget.cd();
-        TypeConstant typeTarget  = regTarget.type();
+    public int build(BuildContext bctx, CodeBuilder code) {
+        RegisterInfo regTarget  = bctx.ensureRegister(code, m_nTarget);
+        ClassDesc    cdTarget   = regTarget.cd();
+        TypeConstant typeTarget = regTarget.type();
 
         if (isBinaryOp()) {
             TypeConstant typeResult;
             if (cdTarget.isPrimitive()) {
+                assertNotMultislot(regTarget);
                 typeResult = buildOptimizedBinary(bctx, code, regTarget, m_nArgValue);
+            } else if (typeTarget.isXvmPrimitive()) {
+                RegisterInfo regResult = buildXvmOptimizedBinary(bctx, code, regTarget, m_nArgValue);
+                typeResult = regResult.type();
             } else {
                 MethodInfo    method   = findOpMethod(bctx, typeTarget);
                 String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
-                JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem, typeTarget);
+                JitMethodDesc jmd      = method.getJitDesc(bctx.builder, typeTarget);
 
                 MethodTypeDesc md;
                 if (jmd.isOptimized) {
@@ -255,6 +253,8 @@ public abstract class OpGeneral
         } else { // unary op
             if (cdTarget.isPrimitive()) {
                 buildOptimizedUnary(bctx, code, regTarget.load(code));
+            } else if (typeTarget.isXvmPrimitive()) {
+                buildXvmOptimizedUnary(bctx, code, regTarget);
             } else {
                 String sName;
                 String sOp;
@@ -265,7 +265,7 @@ public abstract class OpGeneral
                 }
                 MethodInfo    method   = typeTarget.ensureTypeInfo().findOpMethod(sName, sOp, null);
                 String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
-                JitMethodDesc jmd      = method.getJitDesc(bctx.typeSystem, typeTarget);
+                JitMethodDesc jmd      = method.getJitDesc(bctx.builder, typeTarget);
 
                 MethodTypeDesc md;
                 if (jmd.isOptimized) {
@@ -281,6 +281,7 @@ public abstract class OpGeneral
             }
             bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget), typeTarget);
         }
+        return -1;
     }
 
     /**
@@ -312,6 +313,13 @@ public abstract class OpGeneral
 
         return typeTarget.ensureTypeInfo().findOpMethod(sName, sOp,
                 bctx.getArgumentType(m_nArgValue));
+    }
+
+    void assertNotMultislot(RegisterInfo reg) {
+        if (!reg.isSingle()) {
+            throw new UnsupportedOperationException(toName(getOpCode())
+                    + " operation on multi-slot");
+        }
     }
 
     // ----- fields --------------------------------------------------------------------------------

@@ -1,8 +1,11 @@
 package org.xtclang.ecstasy.numbers;
 
+import java.math.BigDecimal;
+
 import org.junit.jupiter.api.Test;
 import org.xtclang.ecstasy.OutOfBounds;
 import org.xtclang.ecstasy.nException;
+import org.xvm.javajit.Ctx;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -153,29 +156,66 @@ public class UInt16Test {
     @Test
     public void shouldConvertToInt128() {
         for (int i = 0; i <= 0xFFFF; i++) {
-            UInt16 n = UInt16.$box(i);
-            Int128 n2 = n.toInt128$p(null, false, true);
-            assertEquals(i, n2.$lowValue);
-            assertEquals(0, n2.$highValue);
+            UInt16 n   = UInt16.$box(i);
+            Ctx    ctx = new Ctx(null, null);
+            long   n2  = n.toInt128$p(ctx, false, true);
+            assertEquals(i, n2);
+            assertEquals(0L, ctx.i0);
         }
     }
 
     @Test
     public void shouldConvertToUInt128() {
         for (int i = 0; i <= 0xFFFF; i++) {
-            UInt16  n  = UInt16.$box(i);
-            UInt128 n2 = n.toUInt128$p(null, false, true);
-            assertEquals(0, n2.$highValue);
+            UInt16 n   = UInt16.$box(i);
+            Ctx    ctx = new Ctx(null, null);
+            long   n2  = n.toUInt128$p(ctx, false, true);
+            assertEquals(i, n2);
+            assertEquals(0L, ctx.i0);
         }
     }
 
     @Test
     public void shouldConvertToUInt128WithBoundsCheck() {
         for (int i = 0; i <= 0xFFFF; i++) {
-            UInt16 n = UInt16.$box(i);
-            UInt128 n2 = n.toUInt128$p(null, true, false);
-            assertEquals(i, n2.$lowValue);
-            assertEquals(0, n2.$highValue);
+            UInt16 n   = UInt16.$box(i);
+            Ctx    ctx = new Ctx(null, null);
+            long   n2  = n.toUInt128$p(ctx, true, false);
+            assertEquals(i, n2);
+            assertEquals(0L, ctx.i0);
+        }
+    }
+
+    @Test
+    public void shouldConvertToDec32() {
+        for (int i = 0; i <= 0xFFFF; i++) {
+            UInt16 n   = UInt16.$box(i);
+            Ctx    ctx = new Ctx(null, null);
+            int    n2  = n.toDec32$p(ctx);
+            Dec32  dec = Dec32.$box(n2);
+            assertEquals(BigDecimal.valueOf(i), dec.$toBigDecimal());
+        }
+    }
+
+    @Test
+    public void shouldConvertToDec64() {
+        for (int i = 0; i <= 0xFFFF; i++) {
+            UInt16 n   = UInt16.$box(i);
+            Ctx    ctx = new Ctx(null, null);
+            long   n2  = n.toDec64$p(ctx);
+            Dec64  dec = Dec64.$box(n2);
+            assertEquals(BigDecimal.valueOf(i), dec.$toBigDecimal());
+        }
+    }
+
+    @Test
+    public void shouldConvertToDec128() {
+        for (int i = 0; i <= 0xFFFF; i++) {
+            UInt16 n   = UInt16.$box(i);
+            Ctx    ctx = new Ctx(null, null);
+            long   n2  = n.toDec128$p(ctx);
+            Dec128 dec = Dec128.$box(n2, ctx.i0);
+            assertEquals(BigDecimal.valueOf(i), dec.$toBigDecimal());
         }
     }
 }

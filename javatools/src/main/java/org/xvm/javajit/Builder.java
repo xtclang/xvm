@@ -10,13 +10,22 @@ import java.lang.constant.DirectMethodHandleDesc;
 import java.lang.constant.MethodHandleDesc;
 import java.lang.constant.MethodTypeDesc;
 
+import java.math.BigInteger;
+
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 
+import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ByteConstant;
 import org.xvm.asm.constants.CharConstant;
+import org.xvm.asm.constants.ClassConstant;
+import org.xvm.asm.constants.DecimalConstant;
+import org.xvm.asm.constants.DecoratedClassConstant;
 import org.xvm.asm.constants.EnumValueConstant;
+import org.xvm.asm.constants.Float64Constant;
+import org.xvm.asm.constants.FloatConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.LiteralConstant;
 import org.xvm.asm.constants.MethodBody;
@@ -28,12 +37,16 @@ import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
-import org.xvm.asm.constants.TypeParameterConstant;
 
-import org.xvm.javajit.BuildContext.DoubleSlot;
-import org.xvm.javajit.BuildContext.SingleSlot;
 import org.xvm.javajit.TypeSystem.ClassfileShape;
 
+import org.xvm.type.Decimal128;
+import org.xvm.type.Decimal32;
+import org.xvm.type.Decimal64;
+
+import org.xvm.util.PackedInteger;
+
+import static java.lang.constant.ConstantDescs.CD_Double;
 import static java.lang.constant.ConstantDescs.CD_MethodHandle;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_char;
@@ -44,6 +57,10 @@ import static java.lang.constant.ConstantDescs.CD_long;
 import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 
+import static org.xvm.asm.Constant.Format.Int128;
+
+import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
+import static org.xvm.javajit.JitFlavor.XvmPrimitive;
 import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 import static org.xvm.javajit.JitFlavor.Primitive;
 import static org.xvm.javajit.JitFlavor.Specific;
@@ -90,6 +107,27 @@ public abstract class Builder {
     // ----- helper methods ------------------------------------------------------------------------
 
     /**
+     * @return the ConstantPool used by this {@link Builder}.
+     */
+    public ConstantPool pool() {
+        return typeSystem.pool();
+    }
+
+    /**
+     * Ensure a unique ClassDesc for the specified type.
+     */
+    public ClassDesc ensureClassDesc(TypeConstant type) {
+        return type.ensureClassDesc(typeSystem);
+    }
+
+    /**
+     * Ensure a unique Java class name for the specified type.
+     */
+    public String ensureJitClassName(TypeConstant type) {
+        return type.ensureJitClassName(typeSystem);
+    }
+
+    /**
      * Build the code to load a value for a constant on the Java stack.
      *
      * We **always** load a primitive value if possible.
@@ -128,10 +166,73 @@ public abstract class Builder {
                     code.ldc(intConstant.getValue().getLong());
                     yield new SingleSlot(constant.getType(), Primitive, CD_long, "");
                 }
-                // TODO: Need to add Int128 and UInt128
+                case Int128, UInt128 -> {
+                    TypeConstant  type   = intConstant.getType();
+                    PackedInteger packed = intConstant.getValue();
+                    if (packed.isBig()) {
+                        BigInteger big = packed.getBigInteger();
+                        code.ldc(big.longValue());
+                        code.ldc(big.shiftRight(64).longValue());
+                    } else {
+                        long n = packed.getLong();
+                        code.ldc(n);
+                        code.ldc(n < 0 ? -1L : 0L);
+                    }
+                    yield intConstant.getFormat() == Int128
+                            ? new MultipleSlot(bctx, XvmPrimitive, type, CD_Int128, CDs_LongLong)
+                            : new MultipleSlot(bctx, XvmPrimitive, type, CD_UInt128, CDs_LongLong);
+                }
                 default ->
                     throw new IllegalStateException("Unsupported IntConstant type "
                             + intConstant.getFormat());
+            };
+
+        case DecimalConstant decConstant:
+            return switch (decConstant.getFormat()) {
+                case Dec32 -> {
+                    TypeConstant type = decConstant.getType();
+                    Decimal32    dec  = (Decimal32) decConstant.getValue();
+                    code.ldc(dec.toIntBits());
+                    yield new MultipleSlot(bctx, XvmPrimitive, type, CD_Dec32, CDs_Int);
+                }
+                case Dec64 -> {
+                    TypeConstant type = decConstant.getType();
+                    Decimal64    dec  = (Decimal64) decConstant.getValue();
+                    code.ldc(dec.toLongBits());
+                    yield new MultipleSlot(bctx, XvmPrimitive, type, CD_Dec64, CDs_Long);
+                }
+                case Dec128 -> {
+                    TypeConstant type = decConstant.getType();
+                    Decimal128   dec  = (Decimal128) decConstant.getValue();
+                    code.ldc(dec.getLowBits());
+                    code.ldc(dec.getHighBits());
+                    yield new MultipleSlot(bctx, XvmPrimitive, type, CD_Dec128, CDs_LongLong);
+                }
+                default ->
+                    throw new IllegalStateException("Unsupported IntConstant type "
+                            + decConstant.getFormat());
+            };
+
+        case FloatConstant floatConstant:
+            return switch (floatConstant.getFormat()) {
+                case Float32 -> {
+                    code.loadConstant(floatConstant.getValue().floatValue());
+                    yield new SingleSlot(constant.getType(), Primitive, CD_float, "");
+                }
+                default ->
+                        throw new IllegalStateException("Unsupported FloatConstant type "
+                                + floatConstant.getFormat());
+            };
+
+        case Float64Constant float64Constant:
+            return switch (float64Constant.getFormat()) {
+                case Float64 -> {
+                    code.loadConstant(float64Constant.getValue().doubleValue());
+                    yield new SingleSlot(constant.getType(), Primitive, CD_double, "");
+                }
+                default ->
+                        throw new IllegalStateException("Unsupported Float64Constant type "
+                                + float64Constant.getFormat());
             };
 
         case ByteConstant byteConstant:
@@ -168,7 +269,7 @@ public abstract class Builder {
             }
 
             TypeConstant type = singleton.getType();
-            JitTypeDesc  jtd  = type.getJitDesc(typeSystem);
+            JitTypeDesc  jtd  = type.getJitDesc(this);
             assert jtd.flavor == Specific;
 
             // retrieve from Singleton.$INSTANCE (see CommonBuilder.assembleStaticInitializer)
@@ -185,6 +286,11 @@ public abstract class Builder {
             assert type.isTypeOfType();
             return bctx.loadType(code, type);
 
+        case ClassConstant _:
+        case DecoratedClassConstant _:
+            IdentityConstant constId = (IdentityConstant) constant;
+            throw new UnsupportedOperationException("Load class " + constId.getValueType(bctx.pool(), null));
+
         case PropertyConstant propId: {
             // support for the "local property" mode
             code.aload(0);
@@ -193,9 +299,12 @@ public abstract class Builder {
             TypeConstant type = jmd.isOptimized
                     ? jmd.optimizedReturns[0].type
                     : jmd.standardReturns[0].type;
-            JitTypeDesc jtd = type.getJitDesc(typeSystem);
+            JitTypeDesc jtd = type.getJitDesc(this);
             if (jtd.flavor == NullablePrimitive) {
                 throw new UnsupportedOperationException("TODO multislot property");
+            }
+            if (jtd.flavor == NullableXvmPrimitive) {
+                throw new UnsupportedOperationException("TODO nullable XVM primitive property");
             }
             return new SingleSlot(type, jtd.flavor, jtd.cd, "");
         }
@@ -227,7 +336,7 @@ public abstract class Builder {
             // 2) create the MethodHandle(s)
             TypeConstant  containerType = bctx.typeInfo.getType();
             ClassDesc     containerCD   = ClassDesc.of(bctx.className);
-            JitMethodDesc jmd           = body.getJitDesc(typeSystem, containerType);
+            JitMethodDesc jmd           = body.getJitDesc(this, containerType);
             boolean       isFunction    = body.getMethodStructure().isFunction();
 
             DirectMethodHandleDesc.Kind kind = isFunction
@@ -285,6 +394,74 @@ public abstract class Builder {
             }
         }
 
+        case ArrayConstant arrayConst: {
+            TypeConstant arrayType = arrayConst.getType();
+            TypeConstant elType    = arrayType.getParamType(0);
+            Constant[]   values    = arrayConst.getValue();
+
+            // TODO: how/where to cache the result
+            if (elType.isJavaPrimitive() || elType.isXvmPrimitive()) {
+                switch (elType.getSingleUnderlyingClass(false).getName()) {
+                case "Char": {
+                    // nArrayᐸCharᐳ array = nArrayᐸCharᐳ.$new$p(ctx, type, capacity, false);
+                    // Note: we remove the immutability here; it will be added back upon "$makeImmut"
+                    code.aload(code.parameterSlot(0));
+                    loadTypeConstant(code, N_nArrayChar, arrayType.removeImmutable());
+                    code.loadConstant((long) values.length)
+                        .iconst_0()
+                        .invokestatic(CD_nArrayChar, "$new$p",
+                            MethodTypeDesc.of(CD_nArrayChar, CD_Ctx, CD_TypeConstant, CD_long, CD_boolean));
+
+                    for (Constant value : values) {
+                        // array.add(ctx, loadConstant(constValue));
+                        code.dup()
+                            .aload(code.parameterSlot(0))
+                            .loadConstant(((CharConstant) value).getValue())
+                            .invokevirtual(CD_nArrayChar, "add$p",
+                                MethodTypeDesc.of(CD_nArrayChar, CD_Ctx, CD_int))
+                            .pop();
+                    }
+
+                    // array.makeImmutable();
+                    code.dup()
+                        .aload(code.parameterSlot(0))
+                        .invokevirtual(CD_nArrayChar, "$makeImmut",
+                            MethodTypeDesc.of(CD_void, CD_Ctx));
+                    return new SingleSlot(arrayType, Specific, ensureClassDesc(arrayType), "");
+                }
+
+                default:
+                    throw new UnsupportedOperationException("TODO");
+                }
+            } else {
+                // nArrayᐸObjectᐳ array = nArrayᐸObjectᐳ.$new$p(ctx, type, capacity, false);
+                // Note: we remove the immutability here; it will be added back upon "$makeImmut"
+                code.aload(code.parameterSlot(0));
+                loadTypeConstant(code, N_nArrayObj, arrayType.removeImmutable());
+                code.loadConstant((long) values.length)
+                    .iconst_0()
+                    .invokestatic(CD_nArrayObj, "$new$p",
+                        MethodTypeDesc.of(CD_nArrayObj, CD_Ctx, CD_TypeConstant, CD_long, CD_boolean));
+
+                for (Constant value : values) {
+                    // array.add(ctx, loadConstant(constValue));
+                    code.dup()
+                        .aload(code.parameterSlot(0));
+                    loadConstant(bctx, code, value);
+                    code.invokevirtual(CD_nArrayObj, "add",
+                            MethodTypeDesc.of(CD_nArrayObj, CD_Ctx, CD_nObj))
+                        .pop();
+                }
+
+                // array.makeImmutable();
+                code.dup()
+                    .aload(code.parameterSlot(0))
+                    .invokevirtual(CD_nArrayObj, "$makeImmut",
+                        MethodTypeDesc.of(CD_void, CD_Ctx));
+                return new SingleSlot(arrayType, Specific, ensureClassDesc(arrayType), "");
+            }
+        }
+
         default:
             break;
         }
@@ -312,8 +489,8 @@ public abstract class Builder {
                                       PropertyConstant propId) {
         PropertyInfo  xvmInfo    = propId.getPropertyInfo(typeContainer);
         PropertyInfo  jitInfo    = propId.getPropertyInfo(typeContainer.getCanonicalJitType());
-        ClassDesc     cdOwner    = jitInfo.getOwnerClassDesc(typeSystem, typeContainer);
-        JitMethodDesc jmdGet     = jitInfo.getGetterJitDesc(typeSystem);
+        ClassDesc     cdOwner    = jitInfo.getOwnerClassDesc(this, typeContainer);
+        JitMethodDesc jmdGet     = jitInfo.getGetterJitDesc(this);
         String        getterName = jitInfo.ensureGetterJitMethodName(typeSystem);
 
         MethodTypeDesc md;
@@ -327,7 +504,7 @@ public abstract class Builder {
         code.aload(code.parameterSlot(0)); // $ctx
         code.invokevirtual(cdOwner, getterName, md);
         if (!xvmInfo.getType().equals(jitInfo.getType())) {
-            code.checkcast(xvmInfo.getType().ensureClassDesc(typeSystem));
+            code.checkcast(ensureClassDesc(xvmInfo.getType()));
         }
         return jmdGet;
     }
@@ -413,13 +590,20 @@ public abstract class Builder {
     /**
      * Generate a "Null" check for the specified register.
      *
-     * @param lblNotNull  the label to jump to if the register is "Null" .
+     * @param code     the {@link CodeBuilder} to use
+     * @param reg      the register containing the vale to check
+     * @param lblNull  the label to jump to if the register is "Null".
      */
     public static void checkNull(CodeBuilder code, RegisterInfo reg, Label lblNull) {
-        if (reg instanceof DoubleSlot doubleSlot) {
+        if (reg instanceof ExtendedSlot extSlot) {
             assert reg.cd().isPrimitive();
 
-            code.iload(doubleSlot.extSlot())
+            code.iload(extSlot.extSlot())
+                .ifne(lblNull);
+        } else if (reg instanceof MultipleSlot multiSlot) {
+            assert reg.type().isXvmPrimitive();
+
+            code.iload(multiSlot.extSlot())
                 .ifne(lblNull);
         } else {
             assert !reg.cd().isPrimitive();
@@ -436,10 +620,15 @@ public abstract class Builder {
      * @param lblNotNull  the label to jump to if the register is "not Null".
      */
     public static void checkNotNull(CodeBuilder code, RegisterInfo reg, Label lblNotNull) {
-        if (reg instanceof DoubleSlot doubleSlot) {
+        if (reg instanceof ExtendedSlot extSlot) {
             assert reg.cd().isPrimitive();
 
-            code.iload(doubleSlot.extSlot())
+            code.iload(extSlot.extSlot())
+                .ifeq(lblNotNull);
+        } else if (reg instanceof MultipleSlot multiSlot) {
+            assert reg.flavor() == NullableXvmPrimitive;
+
+            code.iload(multiSlot.extSlot())
                 .ifeq(lblNotNull);
         } else {
             assert !reg.cd().isPrimitive();
@@ -520,7 +709,7 @@ public abstract class Builder {
     /**
      * Generate unboxing opcodes for a wrapper reference on the Java stack.
      *
-     * In: a boxed XVM reference
+     * In: a boxed Java reference
      * Out: the unboxed primitive value
      *
      * @param reg  the RegisterInfo for the unboxed value
@@ -532,62 +721,103 @@ public abstract class Builder {
     /**
      * Generate unboxing opcodes for a wrapper reference on the Java stack.
      *
-     * In: a boxed XVM reference
+     * In: a boxed Java reference
      * Out: the unboxed primitive value
      *
      * @param type  the primitive type for the boxed value
      * @param cd    the corresponding ClassDesc to unbox to
      */
     public static void unbox(CodeBuilder code, TypeConstant type, ClassDesc cd) {
-        assert cd.isPrimitive() && type.isPrimitive();
+        TypeConstant baseType = type.removeNullable();
+        boolean javaPrimitive = cd.isPrimitive();
+        assert (javaPrimitive && baseType.isJavaPrimitive()) || baseType.isXvmPrimitive();
 
-        switch (cd.descriptorString()) {
-        case "Z": // boolean
-            assert type.equals(type.getConstantPool().typeBoolean());
-            code.getfield(CD_Boolean, "$value", cd);
-            break;
+        if (javaPrimitive) { // Java primitive
+            switch (cd.descriptorString()) {
+                case "Z": // boolean
+                    assert type.equals(type.getConstantPool().typeBoolean());
+                    code.getfield(CD_Boolean, "$value", cd);
+                    break;
 
-        case "J": // long
-            switch (type.getSingleUnderlyingClass(false).getName()) {
-                case "Int64"  -> code.getfield(CD_Int64,  "$value", cd);
-                case "UInt64" -> code.getfield(CD_UInt64, "$value", cd);
-                case "Dec64"  -> code.getfield(CD_Dec64,  "$value", cd);
-                default       -> throw new IllegalStateException();
+                case "J": // long
+                    switch (type.getSingleUnderlyingClass(false).getName()) {
+                        case "Int64"  -> code.getfield(CD_Int64,  "$value", cd);
+                        case "UInt64" -> code.getfield(CD_UInt64, "$value", cd);
+                        case "Dec64"  -> code.getfield(CD_Dec64,  "$value", cd);
+                        default       -> throw new IllegalStateException();
+                    }
+                    break;
+
+                case "I": // int
+                    switch (type.getSingleUnderlyingClass(false).getName()) {
+                        case "Char"   -> code.getfield(CD_Char,   "$value", cd);
+                        case "Int8"   -> code.getfield(CD_Int8,   "$value", cd);
+                        case "Int16"  -> code.getfield(CD_Int16,  "$value", cd);
+                        case "Int32"  -> code.getfield(CD_Int32,  "$value", cd);
+                        case "UInt8"  -> code.getfield(CD_UInt8,  "$value", cd);
+                        case "UInt16" -> code.getfield(CD_UInt16, "$value", cd);
+                        case "UInt32" -> code.getfield(CD_UInt32, "$value", cd);
+                        default       -> throw new IllegalStateException();
+                    }
+                    break;
+
+                case "F": // float
+                    switch (type.getSingleUnderlyingClass(false).getName()) {
+                        case "Float16" -> code.getfield(CD_Float16, "$value", cd);
+                        case "Float32" -> code.getfield(CD_Float32, "$value", cd);
+                        default        -> throw new IllegalStateException();
+                    }
+                    break;
+
+                case "D": // double
+                    switch (type.getSingleUnderlyingClass(false).getName()) {
+                        case "Float64" -> code.getfield(CD_Float64, "$value", cd);
+                        default        -> throw new IllegalStateException();
+                    }
+                    break;
+
+                default:
+                    throw new UnsupportedOperationException();
             }
-            break;
-
-        case "I": // int
+        } else { // must be an XVM primitive
             switch (type.getSingleUnderlyingClass(false).getName()) {
-                case "Char"   -> code.getfield(CD_Char,   "$value", cd);
-                case "Int8"   -> code.getfield(CD_Int8,   "$value", cd);
-                case "Int16"  -> code.getfield(CD_Int16,  "$value", cd);
-                case "Int32"  -> code.getfield(CD_Int32,  "$value", cd);
-                case "UInt8"  -> code.getfield(CD_UInt8,  "$value", cd);
-                case "UInt16" -> code.getfield(CD_UInt16, "$value", cd);
-                case "UInt32" -> code.getfield(CD_UInt32, "$value", cd);
-                case "Dec16"  -> code.getfield(CD_Dec16,  "$value", cd);
-                case "Dec32"  -> code.getfield(CD_Dec32,  "$value", cd);
-                default       -> throw new IllegalStateException();
+                case "Dec32"  -> code.getfield(CD_Dec32, "$bits", CD_int);
+                case "Dec64"  -> code.getfield(CD_Dec64, "$bits", CD_long);
+                case "Dec128" -> {
+                    // stack is Dec128
+                    code.dup();
+                    // stack is Dec128 Dec128
+                    code.getfield(CD_Dec128, "$lowBits", CD_long);
+                    // stack is Dec128 long long_2
+                    code.dup2_x1().pop2();
+                    // stack is long long_2 Dec128
+                    code.getfield(CD_Dec128, "$highBits", CD_long);
+                    // stack is long long_2 long long_2
+                }
+                case "Int128"  -> {
+                    // stack is Int128
+                    code.dup();
+                    // stack is Int128 Int128
+                    code.getfield(CD_Int128, "$lowValue", CD_long);
+                    // stack is Int128 long
+                    code.dup2_x1().pop2();
+                    // stack is long Int128
+                    code.getfield(CD_Int128, "$highValue", CD_long);
+                    // stack is long long_2
+                }
+                case "UInt128" -> {
+                    // stack is UInt128
+                    code.dup();
+                    // stack is UInt128 UInt128
+                    code.getfield(CD_UInt128, "$lowValue", CD_long);
+                    // stack is UInt128 long
+                    code.dup2_x1().pop2();
+                    // stack is long UInt128
+                    code.getfield(CD_UInt128, "$highValue", CD_long);
+                    // stack is long long_2
+                }
+                default -> throw new IllegalStateException();
             }
-            break;
-
-        case "F": // float
-            switch (type.getSingleUnderlyingClass(false).getName()) {
-                case "Float16" -> code.getfield(CD_Float16, "$value", cd);
-                case "Float32" -> code.getfield(CD_Float32, "$value", cd);
-                default        -> throw new IllegalStateException();
-            }
-            break;
-
-        case "D": // double
-            switch (type.getSingleUnderlyingClass(false).getName()) {
-                case "Float64" -> code.getfield(CD_Float64, "$value", cd);
-                default        -> throw new IllegalStateException();
-            }
-            break;
-
-        default:
-            throw new UnsupportedOperationException();
         }
     }
 
@@ -595,7 +825,7 @@ public abstract class Builder {
      * Generate boxing opcodes for a primitive value of the specified primitive class on the stack.
      *
      * In: an unboxed primitive value
-     * Out: the boxed XVM reference
+     * Out: the boxed Java reference
      *
      * @param reg  the RegisterInfo for the unboxed value
      */
@@ -607,58 +837,74 @@ public abstract class Builder {
      * Generate boxing opcodes for a primitive value of the specified primitive class on the stack.
      *
      * In: an unboxed primitive value
-     * Out: the boxed XVM reference
+     * Out: the boxed Java reference
      */
     public static void box(CodeBuilder code, TypeConstant type, ClassDesc cd) {
-        assert cd.isPrimitive() && type.isPrimitive();
+        TypeConstant baseType      = type.removeNullable();
+        boolean      javaPrimitive = cd.isPrimitive();
+        boolean      xvmPrimitive  = baseType.isXvmPrimitive();
+        assert (javaPrimitive && baseType.isJavaPrimitive()) || xvmPrimitive;
 
-        switch (cd.descriptorString()) {
-        case "Z": // boolean
-            assert type.equals(type.getConstantPool().typeBoolean());
-            code.invokestatic(CD_Boolean, "$box", MD_Boolean_box);
-            break;
+        if (javaPrimitive && !xvmPrimitive) { // Java primitive
+            switch (cd.descriptorString()) {
+                case "Z": // boolean
+                    assert baseType.equals(baseType.getConstantPool().typeBoolean());
+                    code.invokestatic(CD_Boolean, "$box", MD_Boolean_box);
+                    break;
 
-        case "J": // long
-            switch (type.getSingleUnderlyingClass(false).getName()) {
-                case "Int64"  -> code.invokestatic(CD_Int64,  "$box", MD_Int64_box);
-                case "UInt64" -> code.invokestatic(CD_UInt64, "$box", MD_UInt64_box);
-                case "Dec64"  -> code.invokestatic(CD_Dec64,  "$box", MD_Dec64_box);
-                default       -> throw new IllegalStateException();
+                case "J": // long
+                    switch (baseType.getSingleUnderlyingClass(false).getName()) {
+                        case "Int64"  -> code.invokestatic(CD_Int64,  "$box", MD_Int64_box);
+                        case "UInt64" -> code.invokestatic(CD_UInt64, "$box", MD_UInt64_box);
+                        default       -> throw new IllegalStateException();
+                    }
+                    break;
+
+                case "I": // int
+                    switch (baseType.getSingleUnderlyingClass(false).getName()) {
+                        case "Char"   -> code.invokestatic(CD_Char,   "$box", MD_Char_box);
+                        case "Int8"   -> code.invokestatic(CD_Int8,   "$box", MD_Int8_box);
+                        case "Int16"  -> code.invokestatic(CD_Int16,  "$box", MD_Int16_box);
+                        case "Int32"  -> code.invokestatic(CD_Int32,  "$box", MD_Int32_box);
+                        case "UInt8"  -> code.invokestatic(CD_UInt8,  "$box", MD_UInt8_box);
+                        case "UInt16" -> code.invokestatic(CD_UInt16, "$box", MD_UInt16_box);
+                        case "UInt32" -> code.invokestatic(CD_UInt32, "$box", MD_UInt32_box);
+                        default       -> throw new IllegalStateException();
+                    }
+                    break;
+
+                case "F": // float
+                    switch (baseType.getSingleUnderlyingClass(false).getName()) {
+                        case "Float16" -> code.invokestatic(CD_Float16, "$box", MD_Float16_box);
+                        case "Float32" -> code.invokestatic(CD_Float32, "$box", MD_Float32_box);
+                        default       -> throw new IllegalStateException();
+                    }
+                    break;
+
+                case "D": // double
+                    switch (baseType.getSingleUnderlyingClass(false).getName()) {
+                        case "Float64" -> code.invokestatic(CD_Float64, "$box", MD_Float64_box);
+                        default        -> throw new IllegalStateException();
+                    }
+                    break;
+
+
+                default:
+                    throw new UnsupportedOperationException();
             }
-            break;
-
-        case "I": // int
-            switch (type.getSingleUnderlyingClass(false).getName()) {
-                case "Char"   -> code.invokestatic(CD_Char,   "$box", MD_Char_box);
-                case "Int8"   -> code.invokestatic(CD_Int8,   "$box", MD_Int8_box);
-                case "Int16"  -> code.invokestatic(CD_Int16,  "$box", MD_Int16_box);
-                case "Int32"  -> code.invokestatic(CD_Int32,  "$box", MD_Int32_box);
-                case "UInt8"  -> code.invokestatic(CD_UInt8,  "$box", MD_UInt8_box);
-                case "UInt16" -> code.invokestatic(CD_UInt16, "$box", MD_UInt16_box);
-                case "UInt32" -> code.invokestatic(CD_UInt32, "$box", MD_UInt32_box);
-                case "Dec16"  -> code.invokestatic(CD_Dec16,  "$box", MD_Dec16_box);
-                case "Dec32"  -> code.invokestatic(CD_Dec32,  "$box", MD_Dec32_box);
-                default       -> throw new IllegalStateException();
+        } else { // must be an Ecstasy primitive
+            switch (baseType.getSingleUnderlyingClass(false).getName()) {
+                case "Dec32"   -> code.invokestatic(CD_Dec32,  "$box", MD_Dec32_box);
+                case "Dec64"   -> code.invokestatic(CD_Dec64,  "$box", MD_Dec64_box);
+                case "Dec128"  -> code.invokestatic(CD_Dec128, "$box", MD_Dec128_box);
+                case "Int128"  -> code.invokestatic(CD_Int128, "$box", MD_Int128_box);
+                case "UInt128" -> code.invokestatic(CD_UInt128,"$box", MD_UInt128_box);
+                default        ->  {
+                    ClassDesc[]    cds = JitTypeDesc.getXvmPrimitiveClasses(baseType);
+                    MethodTypeDesc md  = MethodTypeDesc.of(cd, cds);
+                    code.invokestatic(cd, "$box", md);
+                }
             }
-            break;
-
-        case "F": // float
-            switch (type.getSingleUnderlyingClass(false).getName()) {
-                case "Float16" -> code.invokestatic(CD_Float16, "$box", MD_Float16_box);
-                case "Float32" -> code.invokestatic(CD_Float32, "$box", MD_Float32_box);
-                default       -> throw new IllegalStateException();
-            }
-            break;
-
-        case "D": // double
-            switch (type.getSingleUnderlyingClass(false).getName()) {
-                case "Float64" -> code.invokestatic(CD_Float64, "$box", MD_Float64_box);
-                default        -> throw new IllegalStateException();
-            }
-            break;
-
-        default:
-            throw new UnsupportedOperationException();
         }
     }
 
@@ -683,6 +929,14 @@ public abstract class Builder {
 
         case "I": // int
             code.invokestatic(CD_JavaInteger, "valueOf", MethodTypeDesc.of(CD_JavaInteger, CD_int));
+            break;
+
+        case "F": // float
+            code.invokestatic(CD_JavaFloat, "valueOf", MethodTypeDesc.of(CD_JavaFloat, CD_float));
+            break;
+
+        case "D": // double
+            code.invokestatic(CD_JavaDouble, "valueOf", MethodTypeDesc.of(CD_JavaDouble, CD_Double));
             break;
 
         default:
@@ -738,10 +992,10 @@ public abstract class Builder {
             case "J":
                 break;
             case "F":
-                code.l2f();
+                code.l2i().invokestatic(CD_JavaFloat, "intBitsToFloat", MD_I2F);
                 break;
             case "D":
-                code.l2d();
+                code.invokestatic(CD_JavaDouble, "longBitsToDouble", MD_L2D);
                 break;
             default:
                 throw new IllegalStateException();
@@ -767,8 +1021,9 @@ public abstract class Builder {
         assert returnIndex >= 0;
 
         code.aload(code.parameterSlot(0)); // $ctx
-        if (cd.isPrimitive() && cd.descriptorString().equals("J")) {
-             // the value is a "long" that occupies two slots
+        String descriptor = cd.descriptorString();
+        if (cd.isPrimitive() && (descriptor.equals("J") || descriptor.equals("D"))) {
+             // the value is a "long" or "double" that occupies two slots
              // stack (lvalue, lvalue2, $ctx) -> ($ctx, lvalue, lvalue2)
             code.dup_x2().pop();
         } else {
@@ -778,17 +1033,17 @@ public abstract class Builder {
 
         if (cd.isPrimitive()) {
             // all primitives are stored into "long" fields; convert
-            switch (cd.descriptorString()) {
+            switch (descriptor) {
             case "I", "S", "B", "C", "Z":
                 code.i2l();
                 break;
             case "J":
                 break;
             case "F":
-                code.f2l();
+                code.invokestatic(CD_JavaFloat, "floatToRawIntBits", MD_F2I).i2l();
                 break;
             case "D":
-                code.d2l();
+                code.invokestatic(CD_JavaDouble, "doubleToRawLongBits", MD_D2L);
                 break;
             default:
                 throw new IllegalStateException();
@@ -821,10 +1076,9 @@ public abstract class Builder {
     /**
      * Convert the "void construct$17(...)" to "This new$17(...)"
      */
-    public static JitMethodDesc convertConstructToNew(TypeInfo typeInfo, String className,
+    public static JitMethodDesc convertConstructToNew(TypeInfo typeInfo, ClassDesc cd,
                                                       JitCtorDesc jmdCtor) {
-        JitParamDesc retDesc = new JitParamDesc(typeInfo.getType(), Specific,
-                ClassDesc.of(className), 0, -1, false);
+        JitParamDesc retDesc = new JitParamDesc(typeInfo.getType(), Specific, cd, 0, -1, false);
 
         JitParamDesc[] standardReturns  = new JitParamDesc[] {retDesc};
         JitParamDesc[] optimizedReturns = jmdCtor.isOptimized ? standardReturns : null;
@@ -872,9 +1126,9 @@ public abstract class Builder {
     public static final String N_Char         = "org.xtclang.ecstasy.text.Char";
     public static final String N_Class        = "org.xtclang.ecstasy.reflect.Class";
     public static final String N_Comparable   = "org.xtclang.ecstasy.Comparable";
-    public static final String N_Dec16        = "org.xtclang.ecstasy.numbers.Dec16";
     public static final String N_Dec32        = "org.xtclang.ecstasy.numbers.Dec32";
     public static final String N_Dec64        = "org.xtclang.ecstasy.numbers.Dec64";
+    public static final String N_Dec128       = "org.xtclang.ecstasy.numbers.Dec128";
     public static final String N_Enumeration  = "org.xtclang.ecstasy.reflect.Enumeration";
     public static final String N_Exception    = "org.xtclang.ecstasy.Exception";
     public static final String N_Float16      = "org.xtclang.ecstasy.numbers.Float16";
@@ -884,6 +1138,7 @@ public abstract class Builder {
     public static final String N_Int16        = "org.xtclang.ecstasy.numbers.Int16";
     public static final String N_Int32        = "org.xtclang.ecstasy.numbers.Int32";
     public static final String N_Int64        = "org.xtclang.ecstasy.numbers.Int64";
+    public static final String N_Int128       = "org.xtclang.ecstasy.numbers.Int128";
     public static final String N_Nullable     = "org.xtclang.ecstasy.Nullable";
     public static final String N_Object       = "org.xtclang.ecstasy.Object";
     public static final String N_Orderable    = "org.xtclang.ecstasy.Orderable";
@@ -894,6 +1149,7 @@ public abstract class Builder {
     public static final String N_UInt16       = "org.xtclang.ecstasy.numbers.UInt16";
     public static final String N_UInt32       = "org.xtclang.ecstasy.numbers.UInt32";
     public static final String N_UInt64       = "org.xtclang.ecstasy.numbers.UInt64";
+    public static final String N_UInt128      = "org.xtclang.ecstasy.numbers.UInt128";
 
     public static final String N_nArrayChar   = "org.xtclang.ecstasy.collections.nArrayᐸCharᐳ";
     public static final String N_nArrayObj    = "org.xtclang.ecstasy.collections.nArrayᐸObjectᐳ";
@@ -941,9 +1197,9 @@ public abstract class Builder {
 
     public static final ClassDesc CD_Boolean       = ClassDesc.of(N_Boolean);
     public static final ClassDesc CD_Char          = ClassDesc.of(N_Char);
-    public static final ClassDesc CD_Dec16         = ClassDesc.of(N_Dec16);
     public static final ClassDesc CD_Dec32         = ClassDesc.of(N_Dec32);
     public static final ClassDesc CD_Dec64         = ClassDesc.of(N_Dec64);
+    public static final ClassDesc CD_Dec128        = ClassDesc.of(N_Dec128);
     public static final ClassDesc CD_Float16       = ClassDesc.of(N_Float16);
     public static final ClassDesc CD_Float32       = ClassDesc.of(N_Float32);
     public static final ClassDesc CD_Float64       = ClassDesc.of(N_Float64);
@@ -951,6 +1207,7 @@ public abstract class Builder {
     public static final ClassDesc CD_Int16         = ClassDesc.of(N_Int16);
     public static final ClassDesc CD_Int32         = ClassDesc.of(N_Int32);
     public static final ClassDesc CD_Int64         = ClassDesc.of(N_Int64);
+    public static final ClassDesc CD_Int128        = ClassDesc.of(N_Int128);
     public static final ClassDesc CD_Nullable      = ClassDesc.of(N_Nullable);
     public static final ClassDesc CD_Object        = ClassDesc.of(N_Object);
     public static final ClassDesc CD_Orderable     = ClassDesc.of(N_Orderable);
@@ -960,6 +1217,7 @@ public abstract class Builder {
     public static final ClassDesc CD_UInt16        = ClassDesc.of(N_UInt16);
     public static final ClassDesc CD_UInt32        = ClassDesc.of(N_UInt32);
     public static final ClassDesc CD_UInt64        = ClassDesc.of(N_UInt64);
+    public static final ClassDesc CD_UInt128       = ClassDesc.of(N_UInt128);
 
     public static final ClassDesc CD_Container     = ClassDesc.of(Container.class.getName());
     public static final ClassDesc CD_Ctx           = ClassDesc.of(Ctx.class.getName());
@@ -968,22 +1226,40 @@ public abstract class Builder {
     public static final ClassDesc CD_TypeSystem    = ClassDesc.of(TypeSystem.class.getName());
 
     public static final ClassDesc CD_JavaBoolean   = ClassDesc.of(java.lang.Boolean.class.getName());
+    public static final ClassDesc CD_JavaDouble    = ClassDesc.of(java.lang.Double.class.getName());
+    public static final ClassDesc CD_JavaFloat    = ClassDesc.of(java.lang.Float.class.getName());
     public static final ClassDesc CD_JavaInteger   = ClassDesc.of(java.lang.Integer.class.getName());
     public static final ClassDesc CD_JavaLong      = ClassDesc.of(java.lang.Long.class.getName());
     public static final ClassDesc CD_JavaMath      = ClassDesc.of(java.lang.Math.class.getName());
     public static final ClassDesc CD_JavaObject    = ClassDesc.of(java.lang.Object.class.getName());
     public static final ClassDesc CD_JavaString    = ClassDesc.of(java.lang.String.class.getName());
 
+    // ----- well-known custom primitives ----------------------------------------------------------
+
+    public static final ClassDesc[] CDs_Int      = new ClassDesc[]{CD_int};
+    public static final ClassDesc[] CDs_Long     = new ClassDesc[]{CD_long};
+    public static final ClassDesc[] CDs_LongLong = new ClassDesc[]{CD_long, CD_long};
+
     // ----- well-known methods --------------------------------------------------------------------
 
-    public static final String         Instance       = "$INSTANCE";
+    /**
+     * The name of the static field holding an instance reference for singleton types.
+     */
+    public static final String Instance = "$INSTANCE";
+
+    /**
+     * The name of the field on nType object holding the underlying TypeConstant.
+     */
+    public static final String DataType = "$dataType";
+
+    // various commonly used MethodDesc constants
     public static final MethodTypeDesc MD_Boolean_box = MethodTypeDesc.of(CD_Boolean, CD_boolean);
     public static final MethodTypeDesc MD_Char_box    = MethodTypeDesc.of(CD_Char,    CD_int);
     public static final MethodTypeDesc MD_Char_addInt = MethodTypeDesc.of(CD_int,     CD_Ctx, CD_int, CD_long);
     public static final MethodTypeDesc MD_Char_subInt = MethodTypeDesc.of(CD_int,     CD_Ctx, CD_int, CD_long);
-    public static final MethodTypeDesc MD_Dec16_box   = MethodTypeDesc.of(CD_Dec16,   CD_int);
     public static final MethodTypeDesc MD_Dec32_box   = MethodTypeDesc.of(CD_Dec32,   CD_int);
     public static final MethodTypeDesc MD_Dec64_box   = MethodTypeDesc.of(CD_Dec64,   CD_long);
+    public static final MethodTypeDesc MD_Dec128_box   = MethodTypeDesc.of(CD_Dec128, CD_long, CD_long);
     public static final MethodTypeDesc MD_Float16_box = MethodTypeDesc.of(CD_Float16, CD_float);
     public static final MethodTypeDesc MD_Float32_box = MethodTypeDesc.of(CD_Float32, CD_float);
     public static final MethodTypeDesc MD_Float64_box = MethodTypeDesc.of(CD_Float64, CD_double);
@@ -991,10 +1267,12 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_Int16_box   = MethodTypeDesc.of(CD_Int16,   CD_int);
     public static final MethodTypeDesc MD_Int32_box   = MethodTypeDesc.of(CD_Int32,   CD_int);
     public static final MethodTypeDesc MD_Int64_box   = MethodTypeDesc.of(CD_Int64,   CD_long);
+    public static final MethodTypeDesc MD_Int128_box  = MethodTypeDesc.of(CD_Int128,  CD_long, CD_long);
     public static final MethodTypeDesc MD_UInt8_box   = MethodTypeDesc.of(CD_UInt8,   CD_int);
     public static final MethodTypeDesc MD_UInt16_box  = MethodTypeDesc.of(CD_UInt16,  CD_int);
     public static final MethodTypeDesc MD_UInt32_box  = MethodTypeDesc.of(CD_UInt32,  CD_int);
     public static final MethodTypeDesc MD_UInt64_box  = MethodTypeDesc.of(CD_UInt64,  CD_long);
+    public static final MethodTypeDesc MD_UInt128_box = MethodTypeDesc.of(CD_UInt128, CD_long, CD_long);
     public static final MethodTypeDesc MD_Initializer = MethodTypeDesc.of(CD_void,    CD_Ctx);
     public static final MethodTypeDesc MD_StringOf    = MethodTypeDesc.of(CD_String,  CD_Ctx, CD_JavaString);
     public static final MethodTypeDesc MD_xvmType     = MethodTypeDesc.of(CD_TypeConstant, CD_Ctx);
@@ -1003,4 +1281,8 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_FloorModJ   = MethodTypeDesc.of(CD_long, CD_long, CD_long);
     public static final MethodTypeDesc MD_UDivInt     = MethodTypeDesc.of(CD_int, CD_int, CD_int);
     public static final MethodTypeDesc MD_UDivLong    = MethodTypeDesc.of(CD_long, CD_long, CD_long);
+    public static final MethodTypeDesc MD_D2L         = MethodTypeDesc.of(CD_long, CD_double);
+    public static final MethodTypeDesc MD_L2D         = MethodTypeDesc.of(CD_double, CD_long);
+    public static final MethodTypeDesc MD_F2I         = MethodTypeDesc.of(CD_int, CD_float);
+    public static final MethodTypeDesc MD_I2F         = MethodTypeDesc.of(CD_float, CD_int);
 }

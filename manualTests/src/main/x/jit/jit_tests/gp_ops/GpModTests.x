@@ -18,6 +18,11 @@ class GpModTests {
         testGpModUInt32();
         testGpModInt128();
         testGpModUInt128();
+        testGpModDec32();
+        testGpModDec64();
+        testGpModDec128();
+        testGpModFloat32();
+        testGpModFloat64();
         console.print("<<<< Finished GpModTests <<<<<");
     }
 
@@ -91,18 +96,58 @@ class GpModTests {
     }
 
     void testGpModInt128() {
-//        Int128 value1 = 0;
-//        Int128 value2 = 0x5FFFFFF1;
-//        Int128 value3 = 5;
-//        value1 = value2 % value3;
-//        assert value1 == 1;
+        Int128 value1 = 0;
+        Int128 value2 = 0x5FFFFFF1;
+        Int128 value3 = 5;
+        value1 = value2 % value3;
+        assert value1 == 1;
     }
 
     void testGpModUInt128() {
-//        UInt128 value1 = 0;
-//        UInt128 value2 = 0xFFFFFFF1;
-//        UInt128 value3 = 5;
-//        value1 = value2 % value3;
-//        assert value1 == 1;
+        UInt128 value1 = 0;
+        UInt128 value2 = 0xFFFFFFF1;
+        UInt128 value3 = 5;
+        value1 = value2 % value3;
+        assert value1 == 1;
+    }
+
+    void testGpModDec32() {
+        Dec32 value1 = 0;
+        Dec32 value2 = 10.5;
+        Dec32 value3 = 5;
+        value1 = value2 % value3;
+        assert value1 == 0.5;
+    }
+
+    void testGpModDec64() {
+        Dec64 value1 = 0;
+        Dec64 value2 = 10.5;
+        Dec64 value3 = 5;
+        value1 = value2 % value3;
+        assert value1 == 0.5;
+    }
+
+    void testGpModDec128() {
+        Dec128 value1 = 0;
+        Dec128 value2 = 10.5;
+        Dec128 value3 = 5;
+        value1 = value2 % value3;
+        assert value1 == 0.5;
+    }
+
+    void testGpModFloat32() {
+        Float32 value1 = 0;
+        Float32 value2 = 10.5;
+        Float32 value3 = 5;
+        value1 = value2 % value3;
+        assert value1 == 0.5;
+    }
+
+    void testGpModFloat64() {
+        Float64 value1 = 0;
+        Float64 value2 = 10.5;
+        Float64 value3 = 5;
+        value1 = value2 % value3;
+        assert value1 == 0.5;
     }
 }

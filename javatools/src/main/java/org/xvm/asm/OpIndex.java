@@ -20,7 +20,6 @@ import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.JitParamDesc.JitParams;
 import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.RegisterInfo;
-import org.xvm.javajit.TypeSystem;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -215,16 +214,16 @@ public abstract class OpIndex
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
-        TypeSystem   ts     = bctx.typeSystem;
+    public int build(BuildContext bctx, CodeBuilder code) {
+        ConstantPool pool   = bctx.pool();
         RegisterInfo reg    = bctx.loadArgument(code, m_nTarget);
         TypeConstant type   = reg.type();
         TypeConstant typeEl = type.resolveGenericType("Element");
 
         if (type.isArray()) {
-            if (typeEl.isPrimitive()) {
-                ClassDesc cdArray = type.ensureClassDesc(ts);
-                ClassDesc cdEl    = JitTypeDesc.getPrimitiveClass(typeEl);
+            ClassDesc cdArray = bctx.builder.ensureClassDesc(type);
+            if (typeEl.isJavaPrimitive()) {
+                ClassDesc cdEl = JitTypeDesc.getPrimitiveClass(typeEl);
 
                 bctx.loadCtx(code);
                 bctx.loadArgument(code, m_nIndex);
@@ -272,7 +271,7 @@ public abstract class OpIndex
 
                     case OP_IIP_ADD -> {
                         // @Op(+) Char add(Int n)
-                        ClassDesc cdArg = typeEl.equals(ts.pool().typeChar())
+                        ClassDesc cdArg = typeEl.equals(pool.typeChar())
                             ? CD_long
                             : cdEl;
                         bctx.loadArgument(code, getValueIndex());
@@ -282,7 +281,7 @@ public abstract class OpIndex
 
                     case OP_IIP_SUB -> {
                         // @Op(+) Char add(Int n)
-                        ClassDesc cdArg = typeEl.equals(ts.pool().typeChar())
+                        ClassDesc cdArg = typeEl.equals(pool.typeChar())
                             ? CD_long
                             : cdEl;
                         bctx.loadArgument(code, getValueIndex());
@@ -345,13 +344,16 @@ public abstract class OpIndex
                     default -> throw new UnsupportedOperationException(toName(getOpCode()));
                 }
             } else {
-                ClassDesc cdArray = Builder.CD_nArrayObj;
                 bctx.loadCtx(code);
                 bctx.loadArgument(code, m_nIndex);
                 switch (getOpCode()) {
-                    case OP_I_GET ->
+                    case OP_I_GET -> {
                         code.invokevirtual(cdArray, "getElement$p",
                             MethodTypeDesc.of(CD_nObj, CD_Ctx, CD_long));
+                        if (!typeEl.equals(pool.typeObject())) {
+                            code.checkcast(bctx.builder.ensureClassDesc(typeEl));
+                        }
+                    }
 
                     case OP_I_SET -> {
                         bctx.loadArgument(code, getValueIndex());
@@ -390,8 +392,8 @@ public abstract class OpIndex
 
             TypeConstant  typeArg  = bctx.getArgumentType(m_nIndex);
             MethodInfo    method   = type.ensureTypeInfo().findOpMethod(sName, sOp, typeArg);
-            JitMethodDesc jmd      = method.getJitDesc(ts, type);
-            String        sJitName = method.ensureJitMethodName(ts);
+            JitMethodDesc jmd      = method.getJitDesc(bctx.builder, type);
+            String        sJitName = method.ensureJitMethodName(bctx.typeSystem);
 
             MethodTypeDesc mdCall;
             if (jmd.isOptimized) {
@@ -408,13 +410,14 @@ public abstract class OpIndex
         }
 
         if (isAssignOp()) {
-            JitParams     params = JitParamDesc.computeJitParams(ts, typeEl);
+            JitParams     params = JitParamDesc.computeJitParams(bctx.builder, typeEl);
             JitMethodDesc jmd    = new JitMethodDesc(
                 params.apdStdParam(), JitParamDesc.NONE,
                 params.apdOptParam(), params.isOptimized() ? JitParamDesc.NONE : null);
 
             bctx.assignReturns(code, jmd, 1, new int[] {m_nRetValue});
         }
+        return -1;
     }
 
 

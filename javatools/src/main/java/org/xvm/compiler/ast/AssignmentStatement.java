@@ -313,6 +313,11 @@ public class AssignmentStatement
     }
 
     @Override
+    public boolean isScopeRequired() {
+        return hasDeclarations() || super.isScopeRequired();
+    }
+
+    @Override
     public long getStartPosition() {
         return tokNegate == null
                 ? lvalue.getStartPosition()

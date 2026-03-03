@@ -10,6 +10,9 @@ package numbers {
 
             Boolean passed = True;
             try {
+                passed &= runTest(() -> new Int64Tests().run());
+                passed &= runTest(() -> new Int128Tests().run());
+                passed &= runTest(() -> new UInt128Tests().run());
                 passed &= runTest(() -> new Int8ConvertTests().run());
                 passed &= runTest(() -> new Int16ConvertTests().run());
                 passed &= runTest(() -> new Int32ConvertTests().run());
@@ -18,6 +21,18 @@ package numbers {
                 passed &= runTest(() -> new UInt16ConvertTests().run());
                 passed &= runTest(() -> new UInt32ConvertTests().run());
                 passed &= runTest(() -> new UInt64ConvertTests().run());
+
+                passed &= runTest(() -> new Dec32Tests().run());
+                passed &= runTest(() -> new Dec64Tests().run());
+                passed &= runTest(() -> new Dec128Tests().run());
+                passed &= runTest(() -> new Dec32ConvertTests().run());
+                passed &= runTest(() -> new Dec64ConvertTests().run());
+                passed &= runTest(() -> new Dec128ConvertTests().run());
+
+                passed &= runTest(() -> new Float32Tests().run());
+                passed &= runTest(() -> new Float64Tests().run());
+                passed &= runTest(() -> new Float32ConvertTests().run());
+                passed &= runTest(() -> new Float64ConvertTests().run());
             } catch (IllegalState e) {
                 console.print(e);
             }

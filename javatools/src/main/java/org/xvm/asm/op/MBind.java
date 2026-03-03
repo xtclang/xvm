@@ -18,7 +18,6 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.Builder;
 import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
@@ -120,7 +119,7 @@ public class MBind
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo regMethod = bctx.ensureRegister(code, m_nMethodId);
         RegisterInfo regTarget = bctx.ensureRegister(code, m_nTarget);
 
@@ -136,28 +135,28 @@ public class MBind
            Note that the resulting function is immutable if the target is immutable.
         */
 
-        regMethod.load(code);
+        regMethod = regMethod.load(code);
         code.getfield(CD_nMethod, "stdMethod", CD_MethodHandle);
-        regTarget.load(code);
+        regTarget = regTarget.load(code);
         code.invokevirtual(CD_MethodHandle, "bindTo", MethodTypeDesc.of(CD_MethodHandle, CD_JavaObject));
         int slotStd = bctx.storeTempValue(code, CD_MethodHandle);
 
         java.lang.classfile.Label ifNull = code.newLabel();
-        regMethod.load(code);
+        regMethod = regMethod.load(code);
         code.getfield(CD_nMethod, "optMethod", CD_MethodHandle)
             .dup()
             .ifnull(ifNull);
-        regTarget.load(code);
+        regTarget = regTarget.load(code);
         code.invokevirtual(CD_MethodHandle, "bindTo", MethodTypeDesc.of(CD_MethodHandle, CD_JavaObject))
             .labelBinding(ifNull);
         int slotOpt = bctx.storeTempValue(code, CD_MethodHandle);
 
-        regTarget.load(code);
+        regTarget = regTarget.load(code);
         code.invokevirtual(regTarget.cd(), "$isImmut", MethodTypeDesc.of(CD_boolean));
         int slotImm = bctx.storeTempValue(code, CD_boolean);
 
         TypeConstant typeFn = bctx.pool().bindMethodTarget(regMethod.type());
-        ClassDesc    cdFn   = typeFn.ensureClassDesc(bctx.typeSystem);
+        ClassDesc    cdFn   = bctx.builder.ensureClassDesc(typeFn);
         code.new_(cdFn)
             .dup()
             .aload(code.parameterSlot(0)); // ctx
@@ -170,5 +169,6 @@ public class MBind
 
         RegisterInfo regRet = bctx.ensureRegInfo(m_nRetValue, typeFn, cdFn, "");
         bctx.storeValue(code, regRet, typeFn);
+        return -1;
     }
 }

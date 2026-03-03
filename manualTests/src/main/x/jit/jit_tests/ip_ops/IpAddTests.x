@@ -19,6 +19,9 @@ class IpAddTests {
         testIpAddUInt128();
         testIpAddDec();
         testIpAddDec32();
+        testIpAddDec128();
+        testIpAddFloat32();
+        testIpAddFloat64();
         testIpAddString();
         testIpAddIntToChar();
         console.print("<<<< Finished IpAddTests <<<<<");
@@ -73,27 +76,45 @@ class IpAddTests {
     }
 
     void testIpAddInt128() {
-//        Int128 value1 = 10;
-//        value1 += 19;
-//        assert value1 == 29;
+        Int128 value1 = 10;
+        value1 += 19;
+        assert value1 == 29;
     }
 
     void testIpAddUInt128() {
-//        UInt128 value1 = 0xFFFFFFF0;
-//        value1 += 1;
-//        assert value1 == 0xFFFFFFF1;
+        UInt128 value1 = 0xFFFFFFF0;
+        value1 += 1;
+        assert value1 == 0xFFFFFFF1;
     }
 
     void testIpAddDec() {
-//        Dec value1 = 2.5;
-//        value1 += 1.25;
-//        assert value1 == 3.75;
+        Dec value1 = 2.5;
+        value1 += 1.25;
+        assert value1 == 3.75;
     }
 
     void testIpAddDec32() {
-//        Dec32 value1 = 2.5;
-//        value1 += 1.25;
-//        assert value1 == 3.75;
+        Dec32 value1 = 2.5;
+        value1 += 1.25;
+        assert value1 == 3.75;
+    }
+
+    void testIpAddDec128() {
+        Dec128 value1 = 2.5;
+        value1 += 1.25;
+        assert value1 == 3.75;
+    }
+
+    void testIpAddFloat32() {
+        Float32 value1 = 2.5;
+        value1 += 1.25;
+        assert value1 == 3.75;
+    }
+
+    void testIpAddFloat64() {
+        Float64 value1 = 2.5;
+        value1 += 1.25;
+        assert value1 == 3.75;
     }
 
     void testIpAddString() {

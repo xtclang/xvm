@@ -143,7 +143,7 @@ public class Jump
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         int nAddr = getAddress();
         int ofJmp = m_ofJmp;
         if (m_fCallFinally) {
@@ -161,6 +161,7 @@ public class Jump
         } else {
             assert ofJmp == 1;
         }
+        return -1;
     }
 
     // ----- fields --------------------------------------------------------------------------------

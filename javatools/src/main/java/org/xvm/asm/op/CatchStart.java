@@ -162,7 +162,8 @@ public class CatchStart
         TypeConstant typeEx = regEx.type();
         assert typeEx.isA(ts.pool().typeException());
 
-        ClassDesc cdEx = Builder.getShapeDesc(typeEx.ensureJitClassName(ts), ClassfileShape.Exception);
+        ClassDesc cdEx = Builder.getShapeDesc(
+            bctx.builder.ensureJitClassName(typeEx), ClassfileShape.Exception);
 
         code.getfield(cdEx, "exception", CD_Exception);
         bctx.storeValue(code, regEx);

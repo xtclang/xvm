@@ -601,6 +601,18 @@ public abstract class AstNode
     }
 
     /**
+     * @return true iff the AST node represents a condition that requires a scope.
+     */
+    public boolean isScopeRequired() {
+        for (AstNode node : children()) {
+            if (node.isScopeRequired()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * @return the constant pool
      */
     protected ConstantPool pool() {

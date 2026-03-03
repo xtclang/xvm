@@ -1,10 +1,14 @@
 package org.xtclang.ecstasy.numbers;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.math.MathContext;
 import java.util.Random;
 
 import org.junit.jupiter.api.Test;
 import org.xtclang.ecstasy.OutOfBounds;
 import org.xtclang.ecstasy.nException;
+import org.xvm.javajit.Ctx;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -224,12 +228,13 @@ public class UInt128Test
     public void shouldConvertToInt128() {
         Random rnd = new Random();
         for (int i = 0; i < 5000; i++) {
-            long   low  = rnd.nextLong();
-            long   high = rnd.nextLong();
-            UInt128 n    = new UInt128(low, high);
-            Int128 n2 = n.toInt128$p(null, false, true);
-            assertEquals(n.$lowValue, n2.$lowValue);
-            assertEquals(n.$highValue, n2.$highValue);
+            long    low  = rnd.nextLong();
+            long    high = rnd.nextLong();
+            UInt128 n   = new UInt128(low, high);
+            Ctx     ctx = new Ctx(null, null);
+            long    n2 = n.toInt128$p(ctx, false, true);
+            assertEquals(n.$lowValue, n2);
+            assertEquals(n.$highValue, ctx.i0);
         }
     }
 
@@ -240,27 +245,71 @@ public class UInt128Test
             long    low  = rnd.nextLong();
             long    high = rnd.nextLong();
             UInt128 n    = new UInt128(low, high);
-            UInt128 n2   = n.toUInt128$p(null, false, true);
-            assertEquals(low, n2.$lowValue);
-            assertEquals(high, n2.$highValue);
+            Ctx     ctx  = new Ctx(null, null);
+            long    n2   = n.toUInt128$p(ctx, false, true);
+            assertEquals(n.$lowValue, n2);
+            assertEquals(n.$highValue, ctx.i0);
         }
     }
 
     @Test
     public void shouldConvertToUInt128WithBoundsCheck() {
         for (long i : ensureLongTestData()) {
-            UInt128 n  = new UInt128(i, i < 0L ? -1L : 0L);
+            UInt128 n   = new UInt128(i, i < 0L ? -1L : 0L);
+            Ctx     ctx = new Ctx(null, null);
             if (i < 0) {
                 try {
-                    n.toUInt128$p(null, true, false);
+                    n.toUInt128$p(ctx, true, false);
                 } catch (nException e) {
                     assertInstanceOf(OutOfBounds.class, e.exception);
                 }
             } else {
-                UInt128 n2 = n.toUInt128$p(null, true, false);
-                assertEquals(n.$lowValue, n2.$lowValue);
-                assertEquals(0, n2.$highValue);
+                long n2 = n.toUInt128$p(ctx, true, false);
+                assertEquals(n.$lowValue, n2);
+                assertEquals(n.$highValue, ctx.i0);
             }
+        }
+    }
+
+    @Test
+    public void shouldConvertToDec32() {
+        for (long i : ensureLongTestData(-1000L, 1000L)) {
+            UInt128 n   = new UInt128(i, i < 0L ? -1L : 0L);
+            Ctx    ctx = new Ctx(null, null);
+            int    n2  = n.toDec32$p(ctx);
+            Dec32  dec = Dec32.$box(n2);
+            BigInteger bi = UInt128.toUnsignedBigInteger(n.$highValue)
+                                   .shiftLeft(64)
+                                   .or(UInt128.toUnsignedBigInteger(n.$lowValue));
+            assertEquals(new BigDecimal(bi).round(MathContext.DECIMAL32), dec.$toBigDecimal());
+        }
+    }
+
+    @Test
+    public void shouldConvertToDec64() {
+        for (long i : ensureLongTestData(-1000L, 1000L)) {
+            UInt128 n   = new UInt128(i, i < 0L ? -1L : 0L);
+            Ctx    ctx = new Ctx(null, null);
+            long   n2  = n.toDec64$p(ctx);
+            Dec64  dec = Dec64.$box(n2);
+            BigInteger bi = UInt128.toUnsignedBigInteger(n.$highValue)
+                    .shiftLeft(64)
+                    .or(UInt128.toUnsignedBigInteger(n.$lowValue));
+            assertEquals(new BigDecimal(bi).round(MathContext.DECIMAL64), dec.$toBigDecimal());
+        }
+    }
+
+    @Test
+    public void shouldConvertToDec128() {
+        for (long i : ensureLongTestData(0L, 1000L)) {
+            UInt128 n   = new UInt128(i, i < 0L ? -1L : 0L);
+            Ctx    ctx = new Ctx(null, null);
+            long   n2  = n.toDec128$p(ctx);
+            Dec128 dec = Dec128.$box(n2, ctx.i0);
+            BigInteger bi = UInt128.toUnsignedBigInteger(n.$highValue)
+                    .shiftLeft(64)
+                    .or(UInt128.toUnsignedBigInteger(n.$lowValue));
+            assertEquals(new BigDecimal(bi).round(MathContext.DECIMAL128), dec.$toBigDecimal());
         }
     }
 }

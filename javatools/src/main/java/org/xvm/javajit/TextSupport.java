@@ -64,10 +64,10 @@ public interface TextSupport {
                                            RegisterInfo regTarget,
                                            int          nArgId) {
         bctx.loadCtx(code);
-        regTarget.load(code);
+        RegisterInfo regLoaded = regTarget.load(code);
         bctx.loadArgument(code, nArgId);
         code.invokestatic(CD_Char, "add$p", MD_Char_addInt);
-        return regTarget.type();
+        return regLoaded.type();
     }
 
     /**
@@ -169,10 +169,10 @@ public interface TextSupport {
                                              RegisterInfo regTarget,
                                              int          nArgId) {
         bctx.loadCtx(code);
-        regTarget.load(code);
+        RegisterInfo regLoaded = regTarget.load(code);
         bctx.loadArgument(code, nArgId);
         code.invokestatic(CD_Char, "sub$p", MD_Char_subInt);
-        return regTarget.type();
+        return regLoaded.type();
     }
 
     /**

@@ -26,6 +26,7 @@ import org.xvm.asm.constants.MethodBody.Existence;
 import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.PropertyBody.Effect;
 
+import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.JitParamDesc.JitParams;
@@ -1325,7 +1326,7 @@ public class PropertyInfo
     /**
      * @return the identity of the property to be used by the JIT compiler
      */
-    public ClassDesc getOwnerClassDesc(TypeSystem ts, TypeConstant typeOwner) {
+    public ClassDesc getOwnerClassDesc(Builder builder, TypeConstant typeOwner) {
         // get the lowest explicit in the chain
         PropertyConstant id = null;
         for (PropertyBody body : m_aBody) {
@@ -1340,12 +1341,11 @@ public class PropertyInfo
         // note that we do not create classes for annotations and mixins
         IdentityConstant idOwner  = id.getNamespace();
         Component.Format format   = idOwner.getComponent().getFormat();
-        return (format == Format.MIXIN || format == Format.ANNOTATION ||
+        return builder.ensureClassDesc(format == Format.MIXIN || format == Format.ANNOTATION ||
                     (typeOwner.isSingleUnderlyingClass(true) &&
                         idOwner.equals(typeOwner.getSingleUnderlyingClass(true)))
-                ? typeOwner
-                : idOwner.getFormalType().resolveGenerics(ts.pool(), typeOwner))
-            .ensureClassDesc(ts);
+            ? typeOwner
+            : idOwner.getFormalType().resolveGenerics(builder.pool(), typeOwner));
     }
 
     /**
@@ -1366,10 +1366,10 @@ public class PropertyInfo
     /**
      * @return the JitMethodDesc for the property getter
      */
-    public JitMethodDesc getGetterJitDesc(TypeSystem ts) {
+    public JitMethodDesc getGetterJitDesc(Builder builder) {
         JitMethodDesc jmd = m_jmdGetter;
         if (jmd == null) {
-            JitParams params = JitParamDesc.computeJitParams(ts, getType());
+            JitParams params = JitParamDesc.computeJitParams(builder, getType());
 
             m_jmdGetter = jmd = new JitMethodDesc(
                     params.apdStdParam(), JitParamDesc.NONE,
@@ -1381,10 +1381,10 @@ public class PropertyInfo
     /**
      * @return the JitMethodDesc for the property setter
      */
-    public JitMethodDesc getSetterJitDesc(TypeSystem ts) {
+    public JitMethodDesc getSetterJitDesc(Builder builder) {
         JitMethodDesc jmd = m_jmdSetter;
         if (jmd == null) {
-            JitParams params = JitParamDesc.computeJitParams(ts, getType());
+            JitParams params = JitParamDesc.computeJitParams(builder, getType());
 
             m_jmdSetter = jmd = new JitMethodDesc(
                 JitParamDesc.NONE,                               params.apdStdParam(),

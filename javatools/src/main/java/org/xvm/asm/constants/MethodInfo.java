@@ -19,6 +19,7 @@ import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.constants.MethodBody.Implementation;
 
+import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.TypeSystem;
 
@@ -1190,8 +1191,8 @@ public class MethodInfo
     /**
      * @return the JitMethodDesc
      */
-    public JitMethodDesc getJitDesc(TypeSystem ts, TypeConstant typeContainer) {
-        return getHead().getJitDesc(ts, typeContainer);
+    public JitMethodDesc getJitDesc(Builder builder, TypeConstant typeContainer) {
+        return getHead().getJitDesc(builder, typeContainer);
     }
 
     // ----- Object methods ------------------------------------------------------------------------

@@ -20,6 +20,9 @@ class GpAddTests {
         testGpAddUInt128();
         testGpAddDec();
         testGpAddDec32();
+        testGpAddDec128();
+        testGpAddFloat32();
+        testGpAddFloat64();
         testGpAddString();
         testGpAddIntToChar();
         testGpAddCharToChar();
@@ -97,39 +100,59 @@ class GpAddTests {
     }
 
     void testGpAddInt128() {
-// TODO: Need Int128 support
-//        Int128 value1 = 0;
-//        Int128 value2 = 10;
-//        Int128 value3 = 19;
-//        value1 = value2 + value3;
-//        assert value1 == 29;
+        Int128 value1 = 0;
+        Int128 value2 = 10;
+        Int128 value3 = 19;
+        value1 = value2 + value3;
+        assert value1 == 29;
     }
 
     void testGpAddUInt128() {
-// TODO: Need UInt128 support
-//        UInt128 value1 = 0;
-//        UInt128 value2 = 0xFFFFFFF0;
-//        UInt128 value3 = 1;
-//        value1 = value2 + value3;
-//        assert value1 == 0xFFFFFFF1;
+        UInt128 value1 = 0;
+        UInt128 value2 = 0xFFFFFFF0;
+        UInt128 value3 = 1;
+        value1 = value2 + value3;
+        assert value1 == 0xFFFFFFF1;
     }
 
     void testGpAddDec() {
-// TODO: Need Dec support
-//        Dec value1 = 0.0;
-//        Dec value2 = 2.5;
-//        Dec value3 = 1.25;
-//        value1 = value2 + value3;
-//        assert value1 == 3.75;
+        Dec value1 = 0.0;
+        Dec value2 = 2.5;
+        Dec value3 = 1.25;
+        value1 = value2 + value3;
+        assert value1 == 3.75;
     }
 
     void testGpAddDec32() {
-// TODO: Need Dec32 support
-//        Dec32 value1 = 0.0;
-//        Dec32 value2 = 2.5;
-//        Dec32 value3 = 1.25;
-//        value1 = value2 + value3;
-//        assert value1 == 3.75;
+        Dec32 value1 = 0.0;
+        Dec32 value2 = 2.5;
+        Dec32 value3 = 1.25;
+        value1 = value2 + value3;
+        assert value1 == 3.75;
+    }
+
+    void testGpAddDec128() {
+        Dec128 value1 = 0.0;
+        Dec128 value2 = 2.5;
+        Dec128 value3 = 1.25;
+        value1 = value2 + value3;
+        assert value1 == 3.75;
+    }
+
+    void testGpAddFloat32() {
+        Float32 value1 = 0.0;
+        Float32 value2 = 2.5;
+        Float32 value3 = 1.25;
+        value1 = value2 + value3;
+        assert value1 == 3.75;
+    }
+
+    void testGpAddFloat64() {
+        Float64 value1 = 0.0;
+        Float64 value2 = 2.5;
+        Float64 value3 = 1.25;
+        value1 = value2 + value3;
+        assert value1 == 3.75;
     }
 
     void testGpAddString() {

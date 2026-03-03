@@ -19,6 +19,9 @@ class IpDivTests {
         testIpDivUInt128();
         testIpDivDec();
         testIpDivDec32();
+        testIpDivDec128();
+        testIpDivFloat32();
+        testIpDivFloat64();
         console.print("<<<< Finished IpDivTests <<<<<");
     }
 
@@ -71,26 +74,44 @@ class IpDivTests {
     }
 
     void testIpDivInt128() {
-//        Int128 value1 = 0x5FFFFFFF;
-//        value1 /= 5;
-//        assert value1 == 0x13333333;
+        Int128 value1 = 0x5FFFFFFF;
+        value1 /= 5;
+        assert value1 == 0x13333333;
     }
 
     void testIpDivUInt128() {
-//        UInt128 value1 = 0xFFFFFFFF;
-//        value1 /= 5;
-//        assert value1 == 0x33333333;
+        UInt128 value1 = 0xFFFFFFFF;
+        value1 /= 5;
+        assert value1 == 0x33333333;
     }
 
     void testIpDivDec() {
-//        Dec value1 = 12.75;
-//        value1 /= 3;
-//        assert value1 == 4.25;
+        Dec value1 = 12.75;
+        value1 /= 3;
+        assert value1 == 4.25;
     }
 
     void testIpDivDec32() {
-//        Dec32 value1 = 12.75;
-//        value1 /= 3;
-//        assert value1 == 4.25;
+        Dec32 value1 = 12.75;
+        value1 /= 3;
+        assert value1 == 4.25;
+    }
+
+    void testIpDivDec128() {
+        Dec128 value1 = 12.75;
+        value1 /= 3;
+        assert value1 == 4.25;
+    }
+
+    void testIpDivFloat32() {
+        Float32 value1 = 12.75;
+        value1 /= 3;
+        assert value1 == 4.25;
+    }
+
+    void testIpDivFloat64() {
+        Float64 value1 = 12.75;
+        value1 /= 3;
+        assert value1 == 4.25;
     }
 }

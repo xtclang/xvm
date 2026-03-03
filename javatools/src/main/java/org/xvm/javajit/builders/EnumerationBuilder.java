@@ -2,6 +2,7 @@ package org.xvm.javajit.builders;
 
 import java.lang.classfile.ClassBuilder;
 
+import java.lang.classfile.ClassFile;
 import java.lang.constant.ClassDesc;
 
 import org.xvm.asm.constants.PropertyInfo;
@@ -31,21 +32,20 @@ public class EnumerationBuilder extends CommonBuilder {
     @Override
     protected void assembleImplProperties(String className, ClassBuilder classBuilder) {
         assembleNamesProp(classBuilder);
-
+        // TODO: assembleValuesProp()
         // don't call super!
     }
 
     private void assembleNamesProp(ClassBuilder classBuilder) {
         PropertyInfo  prop       = typeInfo.findProperty("names");
         String        getterName = prop.ensureGetterJitMethodName(typeSystem);
-        JitMethodDesc jmDesc     = prop.getGetterJitDesc(typeSystem);
+        JitMethodDesc jmDesc     = prop.getGetterJitDesc(this);
         TypeConstant  enumType   = typeInfo.getType().getParamType(0);
-        ClassDesc     cdEnum     = enumType.ensureClassDesc(typeSystem);
+        ClassDesc     cdEnum     = ensureClassDesc(enumType);
 
-//        classBuilder.withMethod(getterName, jmDesc.standardMD, ClassFile.ACC_PUBLIC,
-//            methodBuilder -> methodBuilder.withCode(code ->
-//                code.getstatic(cdEnum, NAMES, cdEnum)
-//                    .areturn()));
+        classBuilder.withMethodBody(getterName, jmDesc.standardMD, ClassFile.ACC_PUBLIC, code ->
+            code.getstatic(cdEnum, NAMES, cdEnum)
+                .areturn());
     }
 
     @Override

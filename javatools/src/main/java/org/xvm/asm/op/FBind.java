@@ -241,7 +241,7 @@ public class FBind
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
 
         TypeSystem   ts     = bctx.typeSystem;
         ConstantPool pool   = ts.pool();
@@ -250,10 +250,10 @@ public class FBind
 
         assert typeFn.isFunction() && regFn.cd().equals(CD_nFunction);
 
-        JitMethodDesc jmdBefore = JitMethodDesc.of(
+        JitMethodDesc jmdBefore = JitMethodDesc.of(bctx.builder,
                 pool.extractFunctionParams(typeFn),
                 pool.extractFunctionReturns(typeFn),
-                false, null, Integer.MAX_VALUE, ts);
+                false, null, Integer.MAX_VALUE);
 
         boolean fOptBefore = jmdBefore.isOptimized;
 
@@ -281,10 +281,10 @@ public class FBind
 
             typeFn = pool.bindFunctionParam(typeFn, nArgPos);
 
-            JitMethodDesc jmdAfter = JitMethodDesc.of(
+            JitMethodDesc jmdAfter = JitMethodDesc.of(bctx.builder,
                     pool.extractFunctionParams(typeFn),
                     pool.extractFunctionReturns(typeFn),
-                    false, null, Integer.MAX_VALUE, ts);
+                    false, null, Integer.MAX_VALUE);
 
             boolean fOptAfter = jmdAfter.isOptimized;
 
@@ -343,7 +343,7 @@ public class FBind
             } else if (regArg.cd().isPrimitive()) {
                 bindArgument(code, slotStd, nJitPos, regArg, true);
                 bindArgument(code, slotOpt, nJitPos, regArg, false);
-            } else if (!regArg.type().isPrimitive()) {
+            } else if (!regArg.type().isJavaPrimitive()) {
                 bindArgument(code, slotStd, nJitPos, regArg, false);
                 bindArgument(code, slotOpt, nJitPos, regArg, false);
 
@@ -358,7 +358,7 @@ public class FBind
             fOptBefore = fOptAfter;
         }
 
-        ClassDesc cdFn = typeFn.ensureClassDesc(ts);
+        ClassDesc cdFn = bctx.builder.ensureClassDesc(typeFn);
         code.new_(cdFn)
             .dup()
             .aload(code.parameterSlot(0)); // ctx
@@ -371,6 +371,7 @@ public class FBind
 
         RegisterInfo regRet = bctx.ensureRegInfo(m_nRetValue, typeFn, cdFn, "");
         bctx.storeValue(code, regRet, typeFn);
+        return -1;
     }
 
     private static void bindArgument(CodeBuilder code, int slotMethod, int nPos,
@@ -384,11 +385,11 @@ public class FBind
             .anewarray(CD_JavaObject)
             .dup()
             .iconst_0();
-        regArg.load(code);
+        RegisterInfo regLoaded = regArg.load(code);
         if (fBox) {
-            Builder.box(code, regArg);
-        } else if (regArg.cd().isPrimitive()) {
-            Builder.boxJava(code, regArg.cd());
+            Builder.box(code, regLoaded);
+        } else if (regLoaded.cd().isPrimitive()) {
+            Builder.boxJava(code, regLoaded.cd());
         }
         code.aastore();
 

@@ -120,8 +120,9 @@ public class L_Get
     }
 
     @Override
-    public void build(BuildContext bctx, CodeBuilder code) {
+    public int build(BuildContext bctx, CodeBuilder code) {
         bctx.buildGetProperty(code, bctx.loadThis(code), m_nPropId, m_nRetValue);
+        return -1;
     }
 
     // ----- fields --------------------------------------------------------------------------------

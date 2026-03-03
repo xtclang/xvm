@@ -68,4 +68,11 @@ public class GP_Compl
                                        RegisterInfo regTarget) {
         buildPrimitiveCompl(bctx, code, regTarget);
     }
+
+    @Override
+    protected void buildXvmOptimizedUnary(BuildContext bctx,
+                                          CodeBuilder  code,
+                                          RegisterInfo regTarget) {
+        buildXvmPrimitiveCompl(code, regTarget);
+    }
 }
