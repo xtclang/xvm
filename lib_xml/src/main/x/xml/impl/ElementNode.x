@@ -421,9 +421,10 @@ class ElementNode
                 return False, count, prev, Null;
             }
 
-            Int            index = 0;
             AttributeNode? prev  = Null;
             AttributeNode  node  = partList.child_.as(AttributeNode);
+            Int            index = 0;
+
             // fast-forward if necessary
             if (index < startAt) {
                 Node almost = node;
@@ -431,9 +432,11 @@ class ElementNode
                     almost = almost.next_ ?: assert;
                     ++index;
                 }
-                prev = almost.as(AttributeNode);
-                node = prev.next_.as(AttributeNode);
+                prev  = almost.as(AttributeNode);
+                node  = prev.next_.as(AttributeNode);
+                index = startAt;
             }
+
             // scan remaining attributes for a match
             String name  = attribute.name;
             String value = attribute.value;
@@ -821,9 +824,10 @@ class ElementNode
                 return False, count, prev, Null;
             }
 
-            Int            index = 0;
             ElementNode? prev  = Null;
             ElementNode  node  = partList.child_.as(ElementNode);
+            Int          index = 0;
+
             // fast-forward if necessary
             if (index < startAt) {
                 Node almost = node;
@@ -831,9 +835,11 @@ class ElementNode
                     almost = almost.next_ ?: assert;
                     ++index;
                 }
-                prev = almost.as(ElementNode);
-                node = prev.next_.as(ElementNode);
+                prev  = almost.as(ElementNode);
+                node  = prev.next_.as(ElementNode);
+                index = startAt;
             }
+
             // scan remaining elements for a match
             String  name  = element.name;
             String? value = element.value;
