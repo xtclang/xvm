@@ -965,6 +965,7 @@ class ElementNode
                 while (node.is(AttributeNode)) {
                     ++count;
                     last = node;
+                    node = node.next_;
                 }
                 if (count < Ones) {
                     set(count);
