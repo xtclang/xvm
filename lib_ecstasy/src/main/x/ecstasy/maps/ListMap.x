@@ -257,7 +257,8 @@ class ListMap<Key, Value>
             valArray = vals.add(value);
         } else if (value != Null) {
             // this is the first non-null value, and no storage exists for values!
-            valArray = makeNulls(keyArray.size, Mutable).add(value);
+            Int newSize = keyArray.size;
+            valArray = makeNulls(newSize, Mutable).replace(newSize-1, value);
         }
         ++appends;
     }

@@ -795,9 +795,8 @@ class HasherMap<Key, Value>
 
     @Override
     HasherMap remove(Key key) {
-        Int     hash    = hasher.hashOf(key);
-        Int     index   = hash % buckets.size;
-        Boolean removed = False;
+        Int hash  = hasher.hashOf(key);
+        Int index = hash % buckets.size;
         if (HashBucket<Key, Value> oldBucket ?= buckets[index]) {
             if (HashBucket<Key, Value>? newBucket := oldBucket.remove(hasher, hash, key)) {
                 ++removeCount;
