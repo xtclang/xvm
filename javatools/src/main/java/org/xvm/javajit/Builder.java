@@ -729,27 +729,26 @@ public abstract class Builder {
      */
     public static void unbox(CodeBuilder code, TypeConstant type, ClassDesc cd) {
         TypeConstant baseType = type.removeNullable();
-        boolean javaPrimitive = cd.isPrimitive();
+        boolean javaPrimitive = !baseType.isXvmPrimitive() && cd.isPrimitive();
         assert (javaPrimitive && baseType.isJavaPrimitive()) || baseType.isXvmPrimitive();
 
         if (javaPrimitive) { // Java primitive
             switch (cd.descriptorString()) {
                 case "Z": // boolean
-                    assert type.equals(type.getConstantPool().typeBoolean());
+                    assert baseType.equals(type.getConstantPool().typeBoolean());
                     code.getfield(CD_Boolean, "$value", cd);
                     break;
 
                 case "J": // long
-                    switch (type.getSingleUnderlyingClass(false).getName()) {
+                    switch (baseType.getSingleUnderlyingClass(false).getName()) {
                         case "Int64"  -> code.getfield(CD_Int64,  "$value", cd);
                         case "UInt64" -> code.getfield(CD_UInt64, "$value", cd);
-                        case "Dec64"  -> code.getfield(CD_Dec64,  "$value", cd);
                         default       -> throw new IllegalStateException();
                     }
                     break;
 
                 case "I": // int
-                    switch (type.getSingleUnderlyingClass(false).getName()) {
+                    switch (baseType.getSingleUnderlyingClass(false).getName()) {
                         case "Char"   -> code.getfield(CD_Char,   "$value", cd);
                         case "Int8"   -> code.getfield(CD_Int8,   "$value", cd);
                         case "Int16"  -> code.getfield(CD_Int16,  "$value", cd);
@@ -762,7 +761,7 @@ public abstract class Builder {
                     break;
 
                 case "F": // float
-                    switch (type.getSingleUnderlyingClass(false).getName()) {
+                    switch (baseType.getSingleUnderlyingClass(false).getName()) {
                         case "Float16" -> code.getfield(CD_Float16, "$value", cd);
                         case "Float32" -> code.getfield(CD_Float32, "$value", cd);
                         default        -> throw new IllegalStateException();
@@ -770,7 +769,7 @@ public abstract class Builder {
                     break;
 
                 case "D": // double
-                    switch (type.getSingleUnderlyingClass(false).getName()) {
+                    switch (baseType.getSingleUnderlyingClass(false).getName()) {
                         case "Float64" -> code.getfield(CD_Float64, "$value", cd);
                         default        -> throw new IllegalStateException();
                     }
@@ -780,7 +779,7 @@ public abstract class Builder {
                     throw new UnsupportedOperationException();
             }
         } else { // must be an XVM primitive
-            switch (type.getSingleUnderlyingClass(false).getName()) {
+            switch (baseType.getSingleUnderlyingClass(false).getName()) {
                 case "Dec32"  -> code.getfield(CD_Dec32, "$bits", CD_int);
                 case "Dec64"  -> code.getfield(CD_Dec64, "$bits", CD_long);
                 case "Dec128" -> {
@@ -841,7 +840,7 @@ public abstract class Builder {
      */
     public static void box(CodeBuilder code, TypeConstant type, ClassDesc cd) {
         TypeConstant baseType      = type.removeNullable();
-        boolean      javaPrimitive = cd.isPrimitive();
+        boolean      javaPrimitive = !baseType.isXvmPrimitive() && cd.isPrimitive();
         boolean      xvmPrimitive  = baseType.isXvmPrimitive();
         assert (javaPrimitive && baseType.isJavaPrimitive()) || xvmPrimitive;
 

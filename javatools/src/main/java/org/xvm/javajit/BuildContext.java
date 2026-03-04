@@ -1939,15 +1939,163 @@ public class BuildContext {
         String           setterName = propInfo.ensureSetterJitMethodName(typeSystem);
 
         MethodTypeDesc md;
+        JitParamDesc   pd;
         if (jmd.isOptimized) {
             md         = jmd.optimizedMD;
+            pd         = jmd.optimizedParams[0];
             setterName += Builder.OPT;
         } else {
             md = jmd.standardMD;
+            pd = jmd.standardParams[0];
         }
 
         loadCtx(code);
-        loadArgument(code, regId);
+        RegisterInfo srcReg = loadArgument(code, regId);
+
+        JitFlavor srcFlavor = srcReg.flavor();
+        JitFlavor dstFlavor = pd.flavor;
+
+        if (srcFlavor != dstFlavor) {
+            // additional transformations are required for these scenarios:
+            //  - Specific  -> Primitive          (Int n; n := o.is(Int);)
+            //  - Specific  -> NullablePrimitive  (Int? n; n = Null;)
+            //  - Primitive -> Widened            (Int|String n; n = 5)
+            //  - Primitive -> NullablePrimitive  (Int? n; n = 5)
+            //  - NullablePrimitive -> Primitive  (Int? n = 5; assert call(n);)
+            //  - NullablePrimitive -> Specific   (Int? n = Null; assert call(n);)
+
+            boolean invalid = false;
+
+            AddTransformation:
+            switch (srcFlavor) {
+            case Specific:
+                switch (dstFlavor) {
+                case Primitive:
+                    Builder.unbox(code, pd.type, pd.cd);
+                    break AddTransformation;
+
+                case Widened:
+                    // nothing to do
+                    break AddTransformation;
+
+                case NullablePrimitive:
+                    if (srcReg.type().isOnlyNullable()) {
+                        code.pop(); // throw away Null; load the default value and "true"
+                        Builder.defaultLoad(code, pd.cd);
+                        code.iconst_1();
+                    } else {
+                        Builder.unbox(code, pd.type, pd.cd);
+                        code.iconst_0();
+                    }
+                    break AddTransformation;
+
+                case XvmPrimitive:
+                    Builder.unbox(code, pd.type, pd.cd);
+                    break AddTransformation;
+
+                case NullableXvmPrimitive:
+                    if (srcReg.type().isOnlyNullable()) {
+                        code.pop(); // throw away Null; load the default values and "true"
+                        for (ClassDesc cd : JitTypeDesc.getXvmPrimitiveClasses(pd.type)) {
+                            Builder.defaultLoad(code, cd);
+                        }
+                        code.iconst_1();
+                    } else {
+                        Builder.unbox(code, pd.type, pd.cd);
+                        code.iconst_0();
+                    }
+                    break AddTransformation;
+
+                default:
+                    invalid = true;
+                    break AddTransformation;
+                }
+
+            case Primitive:
+                switch (dstFlavor) {
+                case Specific, Widened:
+                    Builder.box(code, srcReg);
+                    break AddTransformation;
+
+                case NullablePrimitive:
+                    // the value is already on Java stack; just load "false"
+                    code.iconst_0();
+                    break AddTransformation;
+
+                default:
+                    invalid = true;
+                    break AddTransformation;
+                }
+
+            case NullablePrimitive:
+                switch (dstFlavor) {
+                case Specific, Widened:
+                    Label ifTrue = code.newLabel();
+                    Label endIf  = code.newLabel();
+
+                    code.ifne(ifTrue);
+                    Builder.box(code, srcReg.type().removeNullable(), srcReg.cd());
+                    code.goto_(endIf)
+                            .labelBinding(ifTrue);
+                    Builder.pop(code, srcReg.cd());
+                    Builder.loadNull(code);
+                    code.labelBinding(endIf);
+                    break AddTransformation;
+
+                default:
+                    invalid = true;
+                    break AddTransformation;
+                }
+
+            case XvmPrimitive:
+                switch (dstFlavor) {
+                case Specific, Widened:
+                    Builder.box(code, srcReg.type(), srcReg.cd());
+                    break AddTransformation;
+
+                case NullableXvmPrimitive:
+                    // the value is already on Java stack; just load "false"
+                    code.iconst_0();
+                    break AddTransformation;
+
+                default:
+                    invalid = true;
+                    break AddTransformation;
+                }
+
+            case NullableXvmPrimitive:
+                switch (dstFlavor) {
+                    case Specific, Widened:
+                        Label ifTrue = code.newLabel();
+                        Label endIf  = code.newLabel();
+
+                        code.ifne(ifTrue);
+                        Builder.box(code, srcReg.type().removeNullable(), srcReg.cd());
+                        code.goto_(endIf)
+                                .labelBinding(ifTrue);
+                        for (ClassDesc cd : JitTypeDesc.getXvmPrimitiveClasses(srcReg.type())) {
+                            Builder.pop(code, cd);
+                        }
+                        Builder.loadNull(code);
+                        code.labelBinding(endIf);
+                        break AddTransformation;
+
+                    default:
+                        invalid = true;
+                        break AddTransformation;
+                }
+
+            default:
+                invalid = true;
+                break;
+            }
+
+            if (invalid) {
+                throw new UnsupportedOperationException("Not implemented: src=" + srcFlavor +
+                                                        "; dst=" + dstFlavor);
+            }
+        }
+
         code.invokevirtual(targetSlot.cd(), setterName, md);
     }
 
@@ -2018,8 +2166,8 @@ public class BuildContext {
                         code.ifne(ifTrue);
                         Builder.box(code, typeRet, cdRet);
                         code.goto_(endIf)
-                            .labelBinding(ifTrue)
-                            .pop();
+                            .labelBinding(ifTrue);
+                        Builder.pop(code, cdRet);
                         Builder.loadNull(code);
                         code.labelBinding(endIf);
                     }
