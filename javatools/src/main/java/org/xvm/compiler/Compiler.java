@@ -1372,6 +1372,10 @@ public class Compiler {
      */
     public static final String INVALID_INJECTION_TYPE              = "COMPILER-204";
     /**
+     * The "{0}" operator is not supported for a Nullable type.
+     */
+    public static final String OPERATOR_NOT_NULLABLE               = "COMPILER-205";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";

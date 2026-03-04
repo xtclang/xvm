@@ -549,11 +549,17 @@ public class RelOpExpression
 
         m_idOp = idOp;
 
-        // there is one additional check: only the Boolean type supports COND_XOR op ("^^")
+        // only the Boolean type supports COND_XOR op ("^^")
         if (operator.getId() == Id.COND_XOR && atypeResults != null && atypeResults.length > 0
                 && !atypeResults[0].equals(pool().typeBoolean())) {
             operator.log(errs, getSource(), Severity.ERROR, Compiler.MISSING_OPERATOR,
-                            operator.getValueText(), atypeResults[0].getValueString());
+                    operator.getValueText(), atypeResults[0].getValueString());
+            return null;
+        }
+
+        // a nullable type cannot be used as the left hand side for a binary operator
+        if (type1Act.isNullable()) {
+            log(errs, Severity.ERROR, Compiler.OPERATOR_NOT_NULLABLE, operator.getValueText());
             return null;
         }
 

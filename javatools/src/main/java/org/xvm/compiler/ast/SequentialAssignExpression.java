@@ -17,9 +17,10 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
-
+import org.xvm.util.Severity;
 
 /**
  * The "++" or "--" that precedes or follows an assignable expression of type Sequential.
@@ -92,6 +93,11 @@ public class SequentialAssignExpression
             exprNew.requireAssignable(ctx, errs);
             // TODO verify that there is a next/prev method that produces the required type
             exprNew.markAssignment(ctx, false, errs);
+
+            // a nullable type cannot be used as the target for the operator
+            if (type.isNullable()) {
+                log(errs, Severity.ERROR, Compiler.OPERATOR_NOT_NULLABLE, operator.getValueText());
+            }
         }
 
         return finishValidation(ctx, typeRequired, type, fit, null, errs);
