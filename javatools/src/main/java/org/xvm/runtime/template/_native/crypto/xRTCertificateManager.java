@@ -43,6 +43,8 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.crypto.xRTKeyStore.KeyStoreHandle;
 
+import org.xvm.util.Handy;
+
 
 /**
  * Native implementation of the xRTCertificateManager.x service.
@@ -469,10 +471,10 @@ public class xRTCertificateManager
     }
 
     private Key loadKey(ObjectHandle hPathOrStore, StringHandle hPwd, StringHandle hName) {
-        try {
-            char[] achPwd = hPwd.getValue();
-            String sKey   = hName.getStringValue();
+        char[] achPwd = hPwd.getValue();
+        String sKey   = hName.getStringValue();
 
+        try {
             KeyStore keyStore;
             if (hPathOrStore instanceof StringHandle hPath) {
                 File fileStore = new File(hPath.getStringValue());
@@ -485,6 +487,8 @@ public class xRTCertificateManager
 
             return keyStore.getKey(sKey, achPwd);
         } catch (Exception e) {
+            System.err.println(Handy.logTime() + " [Debug]: Failed to load key: " + sKey +
+                " (" + e.getMessage() + ")");
             return null;
         }
     }
@@ -525,7 +529,7 @@ public class xRTCertificateManager
         ProcessBuilder builder = new ProcessBuilder(cmd);
         try {
             // TODO: remove
-            System.out.println("*** running command: " + toString(cmd));
+            System.out.println(Handy.logTime() + " Trace: running command: " + toString(cmd));
 
             Process process = builder.start();
             if (sInput != null) {

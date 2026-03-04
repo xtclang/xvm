@@ -892,25 +892,45 @@ public final class Handy {
     /**
      * @param cMillis  date/time in millis
      *
-     * @return date/time string in format "YYYY-MM-DD HH:MM:SS" format
+     * @return date/time string in "yyyy-MM-dd HH:mm:ss" format
      */
     public static String dateString(final long cMillis) {
-        return Instant.ofEpochMilli(cMillis)
-                .atZone(ZoneId.systemDefault())
-                .format(DATE_TIME_FORMATTER);
+        return logTime(cMillis, DATE_TIME_FORMATTER);
     }
 
     /**
      * @param cMillis       date/time in millis
      * @param defaultValue  the value to return if cMillis is 0
      *
-     * @return date/time string in format "YYYY-MM-DD HH:MM:SS" format, or the default value if
-     *         cMillis is 0
+     * @return date/time string in "yyyy-MM-dd HH:mm:ss" format, or the default value if cMillis is 0
      */
     public static String dateString(final long cMillis, final String defaultValue) {
         return cMillis == 0L ? defaultValue : dateString(cMillis);
     }
 
+    /**
+     * @param cMillis  date/time in millis
+     *
+     * @return date/time string in "yyyy-MM-dd HH:mm:ss.SSS" format
+     */
+    public static String logTime() {
+        return logTime(System.currentTimeMillis(), DATE_TIME_MILLS_FORMATTER);
+    }
+
+    /**
+     * @param cMillis  date/time in millis
+     *
+     * @return date/time string in "yyyy-MM-dd HH:mm:ss.SSS" format
+     */
+    public static String logTime(final long cMillis) {
+        return logTime(cMillis, DATE_TIME_MILLS_FORMATTER);
+    }
+
+    public static String logTime(final long cMillis, final DateTimeFormatter formatter) {
+        return Instant.ofEpochMilli(cMillis)
+            .atZone(ZoneId.systemDefault())
+            .format(formatter);
+    }
 
     // ----- packed integers -----------------------------------------------------------------------
 
@@ -1993,7 +2013,14 @@ public final class Handy {
     /**
      * DateTimeFormatter for "yyyy-MM-dd HH:mm:ss" format.
      */
-    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter DATE_TIME_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+    /**
+     * DateTimeFormatter for "yyyy-MM-dd HH:mm:ss.SSS" format.
+     */
+    private static final DateTimeFormatter DATE_TIME_MILLS_FORMATTER =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
     /**
      * A constant empty array of <tt>byte</tt>.

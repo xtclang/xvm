@@ -83,6 +83,8 @@ import org.xvm.runtime.template._native.crypto.xRTKeyStore.KeyStoreHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 
+import org.xvm.util.Handy;
+
 
 /**
  * Native implementation of the RTServer.x service that uses native Java {@link HttpServer}.
@@ -736,14 +738,15 @@ public class xRTServer
                         : f_hServer.getRouter().mapRoutes.get(sHost);
                 if (route == null) {
                     // TODO: REMOVE
-                    System.err.println("*** Handshake with unknown host: " + sHost);
+                    System.err.println(Handy.logTime() + " Trace: Handshake with unknown host: " + sHost);
                 } else {
                     f_tloKeyStore.set(route.hKeyStore);
                     return route.sTlsKey;
                 }
             } else {
                 // TODO: REMOVE
-                System.err.println("*** Handshake from unknown session");
+                System.err.println(Handy.logTime() + " Trace: Handshake from unknown session" +
+                    session.getClass().getName());
             }
             return null;
         }
@@ -813,8 +816,9 @@ public class xRTServer
             boolean   fTls  = exchange instanceof HttpsExchange;
             RouteInfo route = mapRoutes.get(sName);
             if (route == null || nPort != (fTls ? route.nHttpsPort : route.nHttpPort)) {
-                System.err.println("*** Request for unregistered route: "
-                    + (fTls ? "https://" : "http://") + sHost + exchange.getRequestURI());
+                System.err.println(Handy.logTime() + " Trace: Request for unregistered route: "
+                    + (fTls ? "https://" : "http://") + sHost + exchange.getRequestURI() + " from "
+                    + exchange.getRemoteAddress().getAddress());
                 exchange.sendResponseHeaders(421, -1); // HttpStatus.MisdirectedRequest
             } else {
                 route.handler.handle(exchange);
