@@ -46,6 +46,7 @@ import org.xvm.javajit.Builder;
 import org.xvm.javajit.Ctx;
 import org.xvm.javajit.ExtendedSlot;
 import org.xvm.javajit.JitCtorDesc;
+import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.JitTypeDesc;
@@ -65,6 +66,8 @@ import static java.lang.constant.ConstantDescs.MTD_void;
 
 import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
+import static org.xvm.javajit.JitFlavor.Primitive;
+import static org.xvm.javajit.JitFlavor.XvmPrimitive;
 
 /**
  * Generic Java class builder.
@@ -603,8 +606,18 @@ public class CommonBuilder
                                 // load True to the Ext field
                                 code.aload(0).iconst_1();
                                 code.putfield(CD_this, jitName + EXT, CD_boolean);
-                            } else {
+                            } else if (reg.flavor() == Primitive
+                                    && type.removeNullable().isJavaPrimitive()) {
+                                // reg and prop are both primitive
                                 code.putfield(CD_this, jitName, reg.cd());
+                            } else {
+                                // prop is an Object
+                                JitFlavor flavor = reg.flavor();
+                                if (flavor == Primitive || flavor == XvmPrimitive) {
+                                    // reg is Java or XVM primitive, so box
+                                    Builder.box(code, reg);
+                                }
+                                code.putfield(CD_this, jitName, type.ensureClassDesc(typeSystem));
                             }
                         }
                     } else {

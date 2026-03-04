@@ -19,6 +19,7 @@ package basic {
                 passed &= runTest(() -> mixinTests.run());
                 passed &= runTest(() -> switchTests.run());
                 passed &= runTest(() -> tryTests.run());
+                passed &= runTest(() -> setPropertyTests.run());
             } catch (IllegalState e) {
                 console.print(e);
             }
