@@ -73,7 +73,7 @@ class ModuleGenerator(String moduleName, Version? version = Null) {
                 Time? dbStamp    = dbModule.parent.created;
                 Time? hostStamp  = hostModule.parent.created;
                 if (dbStamp != Null && hostStamp != Null && hostStamp > dbStamp) {
-                    errors.add($"Info: Host module '{hostName}' for '{moduleName}' is up to date");
+                    errors.add($"Info : Host module '{hostName}' for '{moduleName}' is up to date");
                     return True, hostModule;
                 }
             } catch (Exception ignore) {}
@@ -89,7 +89,7 @@ class ModuleGenerator(String moduleName, Version? version = Null) {
 
         if (createModule(sourceFile, appName, qualifier, dbModule, appSchemaTemplate, errors) &&
             compileModule(repository, sourceFile, buildDir, errors)) {
-            errors.add($"Info: Created a host module '{hostName}' for '{moduleName}'");
+            errors.add($"Info : Created a host module '{hostName}' for '{moduleName}'");
             return repository.getModule(hostName);
         }
         return False;
