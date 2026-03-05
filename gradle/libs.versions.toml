@@ -18,7 +18,9 @@
 # =============================================================================
 # Core XDK dependencies
 # =============================================================================
+acme4j = "3.5.1"
 apache-commons-cli = "1.11.0"
+bouncycastle = "1.82"
 gson = "2.13.2"
 jakarta-activation = "2.1.4"
 jakarta-xml-bind-api = "4.0.5"
@@ -151,7 +153,10 @@ xdk-xunit-engine = { group = "org.xtclang", name = "lib-xunit-engine" }
 # =============================================================================
 # Core XDK third-party libraries (alphabetical)
 # =============================================================================
+acme4j-client = { module = "org.shredzone.acme4j:acme4j-client", version.ref = "acme4j" }
 apache-commons-cli = { module = "commons-cli:commons-cli", version.ref = "apache-commons-cli" }
+bouncycastle-pkix = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bouncycastle" }
+bouncycastle-provider = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncycastle" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 jakarta-activation-api = { module = "jakarta.activation:jakarta.activation-api", version.ref = "jakarta-activation" }
 jakarta-xml-bind-api = { module = "jakarta.xml.bind:jakarta.xml.bind-api", version.ref = "jakarta-xml-bind-api" }
