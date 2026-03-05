@@ -56,7 +56,7 @@ lang-ktlint-engine = "1.5.0"
 # Lang tooling - LSP, DAP & logging
 # =============================================================================
 lang-logback = "1.5.32"
-lang-lsp4j = "0.24.0"
+lang-lsp4j = "1.0.0"
 lang-slf4j = "2.0.17"
 
 # =============================================================================
@@ -71,7 +71,7 @@ lang-intellij-platform-gradle-plugin = "2.11.0"
 # on the testRuntimeOnly classpath, IntelliJ platform tests fail with ClassNotFoundException
 # for org.junit.Test or org.junit.runners.BlockJUnit4ClassRunner.
 lang-intellij-junit4-compat = "4.13.2"
-lang-intellij-lsp4ij = "0.19.1"
+lang-intellij-lsp4ij = "0.19.2"
 
 # =============================================================================
 # Lang tooling - Tree-sitter native library
