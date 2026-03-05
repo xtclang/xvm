@@ -2030,13 +2030,13 @@ public class BuildContext {
             case NullablePrimitive:
                 switch (dstFlavor) {
                 case Specific, Widened:
-                    Label ifTrue = code.newLabel();
+                    Label ifNull = code.newLabel();
                     Label endIf  = code.newLabel();
 
-                    code.ifne(ifTrue);
+                    code.ifne(ifNull);
                     Builder.box(code, srcReg.type().removeNullable(), srcReg.cd());
                     code.goto_(endIf)
-                            .labelBinding(ifTrue);
+                        .labelBinding(ifNull);
                     Builder.pop(code, srcReg.cd());
                     Builder.loadNull(code);
                     code.labelBinding(endIf);
@@ -2066,13 +2066,13 @@ public class BuildContext {
             case NullableXvmPrimitive:
                 switch (dstFlavor) {
                     case Specific, Widened:
-                        Label ifTrue = code.newLabel();
+                        Label ifNull = code.newLabel();
                         Label endIf  = code.newLabel();
 
-                        code.ifne(ifTrue);
+                        code.ifne(ifNull);
                         Builder.box(code, srcReg.type().removeNullable(), srcReg.cd());
                         code.goto_(endIf)
-                                .labelBinding(ifTrue);
+                            .labelBinding(ifNull);
                         for (ClassDesc cd : JitTypeDesc.getXvmPrimitiveClasses(srcReg.type())) {
                             Builder.pop(code, cd);
                         }
