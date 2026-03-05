@@ -64,7 +64,7 @@ fun Diagnostic.Companion.fromLsp(
     Diagnostic(
         location = Location.fromLsp(uri, lspDiagnostic.range),
         severity = Diagnostic.Severity.fromLsp(lspDiagnostic.severity),
-        message = lspDiagnostic.message,
+        message = lspDiagnostic.message?.left ?: "",
         code = lspDiagnostic.code?.left,
         source = lspDiagnostic.source,
     )
@@ -74,7 +74,7 @@ fun Diagnostic.toLsp(): org.eclipse.lsp4j.Diagnostic {
     val result = org.eclipse.lsp4j.Diagnostic()
     result.range = location.toRange()
     result.severity = severity.toLsp()
-    result.message = message
+    result.message = Either.forLeft(message)
     result.source = source
     if (code != null) {
         result.code = Either.forLeft(code)

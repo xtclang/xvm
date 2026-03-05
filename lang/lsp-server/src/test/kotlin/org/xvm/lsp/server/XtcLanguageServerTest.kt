@@ -96,7 +96,7 @@ class XtcLanguageServerTest {
             assertThat(published.uri).isEqualTo(uri)
             assertThat(published.diagnostics)
                 .hasSize(1)
-                .allMatch { it.message.contains("test error") }
+                .allMatch { it.message?.left?.contains("test error") == true }
         }
 
         @Test
