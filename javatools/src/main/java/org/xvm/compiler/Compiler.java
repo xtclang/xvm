@@ -1376,6 +1376,11 @@ public class Compiler {
      */
     public static final String OPERATOR_NOT_NULLABLE               = "COMPILER-205";
     /**
+     * The static property "{0}" cannot be assigned to; static properties are constant once
+     * initialized.
+     */
+    public static final String STATIC_PROP_NOT_ASSIGNABLE          = "COMPILER-206";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";

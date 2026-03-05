@@ -924,6 +924,16 @@ public class NameExpression
     }
 
     @Override
+    public void reportNotAssignable(Context ctx, ErrorListener errs) {
+        if (m_plan == Plan.PropertyDeref && this.m_arg instanceof PropertyConstant idProp
+                && idProp.getComponent().isStatic()) {
+            log(errs, Severity.ERROR, Compiler.STATIC_PROP_NOT_ASSIGNABLE, idProp.getName());
+        } else {
+            super.reportNotAssignable(ctx, errs);
+        }
+    }
+
+    @Override
     public void markAssignment(Context ctx, boolean fCond, ErrorListener errs) {
         if (isAssignable(ctx)) {
             if (left == null) {

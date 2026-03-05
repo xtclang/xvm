@@ -1116,8 +1116,18 @@ public abstract class Expression
      */
     public void requireAssignable(Context ctx, ErrorListener errs) {
         if (!isAssignable(ctx)) {
-            log(errs, Severity.ERROR, Compiler.ASSIGNABLE_REQUIRED);
+            reportNotAssignable(ctx, errs);
         }
+    }
+
+    /**
+     * Report that the expression was not assignable when it was required to be assignable.
+     *
+     * @param ctx   the validation context
+     * @param errs  the error list to log to
+     */
+    public void reportNotAssignable(Context ctx, ErrorListener errs) {
+        log(errs, Severity.ERROR, Compiler.ASSIGNABLE_REQUIRED);
     }
 
     /**
