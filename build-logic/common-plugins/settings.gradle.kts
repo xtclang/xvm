@@ -1,3 +1,9 @@
+buildCache {
+    local {
+        directory = file("../../.gradle/build-cache")
+    }
+}
+
 pluginManagement {
     includeBuild("../settings-plugins")
 }

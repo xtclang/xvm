@@ -12,7 +12,7 @@ pluginManagement {
 }
 
 plugins {
-    id("com.gradle.develocity").version("4.2")
+    id("com.gradle.develocity").version("4.3.2")
     id("org.gradle.toolchains.foojay-resolver").version("1.0.0")
 }
 
@@ -23,6 +23,16 @@ toolchainManagement {
                 resolverClass.set(org.gradle.toolchains.foojay.FoojayToolchainResolver::class.java)
             }
         }
+    }
+}
+
+buildCache {
+    local {
+        // Use project-local build cache to prevent corruption when multiple forks
+        // of this repository build concurrently (e.g., ../research-fork and ../gradle94).
+        // Without this, both projects share ~/.gradle/caches/build-cache-1/ and concurrent
+        // writes can corrupt cached artifacts (ZipFile invalid LOC header errors).
+        directory = file(".gradle/build-cache")
     }
 }
 

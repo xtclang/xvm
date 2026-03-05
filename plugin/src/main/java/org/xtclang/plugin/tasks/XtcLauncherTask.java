@@ -36,6 +36,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
+import org.gradle.work.DisableCachingByDefault;
+
 import static org.xtclang.plugin.XtcJavaToolsRuntime.ensureJavaToolsInClasspath;
 import static org.xtclang.plugin.XtcPluginConstants.PROPERTY_VERBOSE_LOGGING_OVERRIDE;
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
@@ -46,6 +48,7 @@ import static org.xtclang.plugin.internal.GradlePhaseAssertions.validateConfigur
  * Abstract class that represents and XTC Launcher execution (i.e. Compiler, Runner, Disassembler etc.),
  * anything that goes through the XTC Launcher to spawn or call different processes
  */
+@DisableCachingByDefault(because = "Abstract base class; concrete subclasses should declare caching intent")
 public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extends XtcDefaultTask implements XtcLauncherTaskExtension {
     public static final int EXIT_CODE_ERROR = 1;
 

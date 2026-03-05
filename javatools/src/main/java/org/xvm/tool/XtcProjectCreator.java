@@ -32,7 +32,7 @@ public class XtcProjectCreator {
      * Default Gradle version for generated projects.
      * Should match the version used by the XVM repository.
      */
-    public static final String DEFAULT_GRADLE_VERSION = "9.2.1";
+    public static final String DEFAULT_GRADLE_VERSION = "9.4.0";
 
     /**
      * Project types supported by the creator.
