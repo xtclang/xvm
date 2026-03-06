@@ -1148,13 +1148,22 @@ public class BuildContext {
     }
 
     /**
-     * Store one or two values at the Java stack into the Java slot for the specified register.
+     * Store the values on the Java stack into the Java slot(s) for the specified register.
+     * <p>
+     * If the register represents a property the property value will also be updated
      *
+     * @param code  the {@link CodeBuilder} to use to generate byte codes
+     * @param reg   the register to store the values from the stack into
      * @param type  (optional) the known destination type
      */
     public void storeValue(CodeBuilder code, RegisterInfo reg, TypeConstant type) {
         ensureVarScope(code, reg);
         reg.store(this, code, type);
+        if (reg.regId() <= Op.CONSTANT_OFFSET) {
+            // this register represents a property, so we need to update the property using the
+            // value stored in the register
+            buildSetProperty(code, reg);
+        }
     }
 
     /**
@@ -1927,14 +1936,59 @@ public class BuildContext {
     }
 
     /**
-     * Set the property value.
+     * Set a property value.
+     *
+     * @param code         the code builder
+     * @param targetSlot   the register containing the target object with the property to be updated
+     * @param propIdIndex  the index of the property constant to be updated
+     * @param regId        the identifier of the register containing the value to set into the
+     *                     property
      */
     public void buildSetProperty(CodeBuilder code, RegisterInfo targetSlot, int propIdIndex, int regId) {
         if (!targetSlot.isSingle()) {
             throw new UnsupportedOperationException("Multislot P_Set");
         }
+        loadCtx(code);
+        RegisterInfo srcReg = loadArgument(code, regId);
+        buildSetProperty(code, targetSlot.type(), targetSlot.cd(), propIdIndex, srcReg);
+    }
+
+    /**
+     * Set a property value using the specified register.
+     *
+     * @param code  the code builder
+     * @param reg   the register containing the value to set into the property
+     */
+    public void buildSetProperty(CodeBuilder code, RegisterInfo reg) {
+        PropertyConstant prop       = (PropertyConstant) getConstant(reg.regId());
+        TypeConstant     typeParent = prop.getParentConstant().getType();
+        ClassDesc        cdParent   = JitTypeDesc.getJitClass(builder, typeParent);
+        loadThis(code);
+        loadCtx(code);
+        reg.load(code);
+        buildSetProperty(code, typeParent, cdParent, reg.regId(), reg);
+    }
+
+    /**
+     * Set the property value.
+     * <p>
+     * Before calling this method, the stack should contain the reference to the target object
+     * containing the property to be updated, followed by the current {@link Ctx context}, and
+     * finally the values to use to update the property.
+     *
+     * @param code         the code builder
+     * @param targetType   the type of the target object containing the property to be updated
+     * @param cdTarget     the JIT class descriptor for the target object
+     * @param propIdIndex  the index of the property constant
+     * @param srcReg       the register containing the value to set into the property
+     */
+    public void buildSetProperty(CodeBuilder  code,
+                                 TypeConstant targetType,
+                                 ClassDesc    cdTarget,
+                                 int          propIdIndex,
+                                 RegisterInfo srcReg) {
         PropertyConstant propId     = getConstant(propIdIndex, PropertyConstant.class);
-        PropertyInfo     propInfo   = propId.getPropertyInfo(targetSlot.type());
+        PropertyInfo     propInfo   = propId.getPropertyInfo(targetType);
         JitMethodDesc    jmd        = propInfo.getSetterJitDesc(builder);
         String           setterName = propInfo.ensureSetterJitMethodName(typeSystem);
 
@@ -1949,8 +2003,6 @@ public class BuildContext {
             pd = jmd.standardParams[0];
         }
 
-        loadCtx(code);
-        RegisterInfo srcReg = loadArgument(code, regId);
 
         JitFlavor srcFlavor = srcReg.flavor();
         JitFlavor dstFlavor = pd.flavor;
@@ -2096,7 +2148,7 @@ public class BuildContext {
             }
         }
 
-        code.invokevirtual(targetSlot.cd(), setterName, md);
+        code.invokevirtual(cdTarget, setterName, md);
     }
 
     /**

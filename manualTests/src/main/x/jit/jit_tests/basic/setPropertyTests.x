@@ -49,6 +49,19 @@ package setPropertyTests {
         t.testNullableXvmPrimitiveToSpecific(Null);
         assert t.nsd == Null;
 
+        t.i = 0;
+        t.testBinaryOpResult(19);
+        assert t.i == 20;
+
+        t.i = 0;
+        t.testUnaryOpResult(19);
+        Int expected = ~19;
+        assert t.i == expected;
+
+        t.i = 10;
+        t.testInPlaceOpResult(19);
+        assert t.i == 29;
+
         console.print("<<<< Finished SetPropertyTests <<<<<");
     }
 
@@ -60,6 +73,7 @@ package setPropertyTests {
         Dec?         nd;
         StringOrDec  sd = "0";
         StringOrDec? nsd = "0";
+        Int          i = 0;
 
         Int size.get() = 0;
 
@@ -116,6 +130,18 @@ package setPropertyTests {
 
         void testXvmPrimitiveToNullableXvmPrimitive(Dec d) {
             this.nd = d;
+        }
+
+        void testBinaryOpResult(Int n) {
+            this.i = n + 1;
+        }
+
+        void testUnaryOpResult(Int n) {
+            this.i = ~n;
+        }
+
+        void testInPlaceOpResult(Int n) {
+            this.i += n;
         }
     }
 }
