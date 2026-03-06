@@ -1,5 +1,6 @@
 import web.Body;
 import web.Header;
+import web.HttpMethod;
 
 /**
  * An implementation of an HTTP/1 (i.e. 0.9, 1.0, 1.1) response, as sent by a server or received by
@@ -21,7 +22,7 @@ const Http1Response {
             String[] headerNames,
             String[] headerValues,
             Int      responseLength)
-        prepare(ResponseOut response) {
+        prepare(HttpMethod method, ResponseOut response) {
 
         Int      status         = response.status.code;
         String[] headerNames    = new String[];
@@ -40,7 +41,7 @@ const Http1Response {
                 responseLength = 0;
                 headerNames   += Header.TransferEncoding;
                 headerValues  += "chunked";
-            } else {
+            } else if (method != HEAD) {
                 responseLength = body.bytes.size;
                 headerNames   += Header.ContentLength;
                 headerValues  += responseLength.toString();

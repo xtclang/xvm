@@ -231,7 +231,7 @@ service Dispatcher {
                 }
 
                 (Int status, String[] names, String[] values, Int responseLength) =
-                    Http1Response.prepare(r);
+                    Http1Response.prepare(requestInfo.method, r);
                 if (responseLength > 0) {
                     // fixed size body
                     requestInfo.respond(status, names, values, r.body?.bytes) : assert;
