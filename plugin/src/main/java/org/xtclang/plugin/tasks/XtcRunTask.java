@@ -38,6 +38,8 @@ import org.gradle.api.tasks.options.Option;
 
 import org.jetbrains.annotations.NotNull;
 
+import org.gradle.work.DisableCachingByDefault;
+
 import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.XtcRunModule;
 import org.xtclang.plugin.XtcRuntimeExtension;
@@ -72,6 +74,7 @@ import org.xtclang.plugin.launchers.ExecutionStrategy;
 // TODO: Add WorkerExecutor and the Gradle Worker API to execute in parallel if there are no dependencies.
 //   Any task with zero defined outputs is not cacheable, which should be enough for all run tasks.
 // TODO: Make the module path/set pattern filterable for the module DSL.
+@DisableCachingByDefault(because = "Run tasks execute modules with side effects and are not cacheable")
 public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> implements XtcRuntimeExtension {
     protected final Map<XtcRunModule, Integer> executedModules; // Module -> exit code
     private final Property<@NotNull DefaultXtcRuntimeExtension> taskLocalModules;

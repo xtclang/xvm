@@ -2,18 +2,18 @@ package org.xtclang.plugin.tasks;
 
 import org.gradle.api.DefaultTask;
 import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.TaskAction;
+import org.gradle.work.DisableCachingByDefault;
 
 import org.jetbrains.annotations.NotNull;
 
 /**
  * Task that displays and provides access to XDK/XTC version information.
- * This task is cacheable and configuration-cache compatible.
+ * Configuration-cache compatible. Not cacheable since it only produces console output.
  */
-@CacheableTask
+@DisableCachingByDefault(because = "Diagnostic task that only prints version info to console")
 public abstract class XtcVersionTask extends DefaultTask {
 
     /**

@@ -193,13 +193,13 @@ val downloadTreeSitterSource by tasks.registering(Download::class) {
 val extractTreeSitterSource by tasks.registering {
     group = "tree-sitter"
     description = "Extract tree-sitter source"
-    dependsOn(downloadTreeSitterSource)
-
     val tarGzFile = treeSitterSourceDir.map { it.file("tree-sitter-$treeSitterRuntimeVersion.tar.gz").asFile }
     val outputDir = treeSitterSourceDir.map { it.asFile }
     val version = treeSitterRuntimeVersion
 
-    inputs.file(tarGzFile)
+    // NOTE: Wire download task outputs as inputs (not inputs.file()) — Gradle 9.4 validates
+    // inputs.file() paths at graph time, before the download task has run.
+    inputs.files(downloadTreeSitterSource)
     outputs.dir(outputDir)
 
     doLast {

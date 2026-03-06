@@ -27,9 +27,12 @@ import org.gradle.api.tasks.util.PatternSet;
 
 import org.jetbrains.annotations.NotNull;
 
+import org.gradle.work.DisableCachingByDefault;
+
 import org.xtclang.plugin.XtcCompilerExtension;
 import org.xtclang.plugin.XtcProjectDelegate;
 
+@DisableCachingByDefault(because = "Abstract base class; concrete subclasses should declare caching intent")
 public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension> implements PatternFilterable {
     private static final String XDK_TURTLE_SOURCE_FILENAME = "mack.x";
 

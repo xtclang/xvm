@@ -23,15 +23,15 @@ gson = "2.13.2"
 jakarta-activation = "2.1.4"
 jakarta-xml-bind-api = "4.0.5"
 jaxb-runtime = "4.0.6"
-jetbrains-annotations = "26.0.2-1"
-jline = "3.30.6"
+jetbrains-annotations = "26.1.0"
+jline = "3.30.7"
 
 # =============================================================================
 # Build tooling & publishing
 # =============================================================================
-download = "5.6.0"
+download = "5.7.0"
 gradle-portal-publish = "2.0.0"
-palantir-git-version = "4.2.0"
+palantir-git-version = "4.3.0"
 vanniktech-maven-publish = "0.36.0"
 
 # =============================================================================
@@ -40,8 +40,8 @@ vanniktech-maven-publish = "0.36.0"
 assertj = "3.27.7"
 awaitility = "4.3.0"
 junit = "6.0.3"
-junit-platform = "1.11.4"
-mockito = "5.21.0"
+junit-platform = "6.0.3"
+mockito = "5.22.0"
 
 # =============================================================================
 # Lang tooling - Kotlin & formatting
@@ -84,7 +84,7 @@ apache-commons-compress = "1.28.0"
 lang-jtreesitter = "0.26.0"
 # tree-sitter-cli must match jtreesitter major.minor for ABI compatibility
 lang-tree-sitter-cli = "0.26.5"
-tukaani-xz = "1.11"
+tukaani-xz = "1.12"
 # Zig compiler for cross-compiling native tree-sitter libraries
 lang-zig = "0.13.0"
 
