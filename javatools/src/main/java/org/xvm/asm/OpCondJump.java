@@ -30,6 +30,7 @@ import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.Utils;
 
 import static org.xvm.javajit.Builder.CD_TypeConstant;
+import static org.xvm.javajit.Builder.CD_nObj;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.DataType;
 import static org.xvm.javajit.Builder.MD_TypeIsA;
@@ -650,8 +651,12 @@ public abstract class OpCondJump
                 }
             } else {
                 regTarget.load(code);
+                // cast to nObj because the target type may be an interface that will not have
+                // the $xvmType method, but that is fine because everything is nObj and nObj does
+                // have the $xvmType method
+                code.checkcast(CD_nObj);
                 bctx.loadCtx(code);
-                code.invokevirtual(regTarget.cd(), "$xvmType", MD_xvmType); // target type
+                code.invokevirtual(CD_nObj, "$xvmType", MD_xvmType); // target type
                 bctx.loadTypeConstant(code, typeTest);                      // test type
                 code.invokevirtual(CD_TypeConstant, "isA", MD_TypeIsA);
             }

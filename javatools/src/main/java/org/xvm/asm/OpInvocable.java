@@ -23,6 +23,7 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
+import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeMatrix;
 
@@ -355,8 +356,13 @@ public abstract class OpInvocable extends Op {
         RegisterInfo   regTarget  = bctx.loadArgument(code, m_nTarget);
         ClassDesc      cdTarget   = regTarget.cd();
         TypeConstant   typeTarget = regTarget.type();
-        TypeInfo       infoTarget = typeTarget.ensureTypeInfo();
         MethodConstant idMethod   = bctx.getConstant(m_nMethodId, MethodConstant.class);
+
+        // If the bctx.cd() is the same as cdTarget then we are invoking a method on the same class
+        // as the build context, so we can use the context's type, which has private access
+        TypeInfo       infoTarget = bctx.cd().equals(cdTarget)
+                                        ? bctx.typeInfo
+                                        : typeTarget.ensureTypeInfo();
         MethodInfo     infoMethod = infoTarget.getMethodById(idMethod);
 
         if (infoMethod == null) {
