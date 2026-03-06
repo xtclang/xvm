@@ -246,6 +246,13 @@ public class BuildContext {
     }
 
     /**
+     * @return the {@link ClassDesc} for this context's {@link #typeInfo}
+     */
+    public ClassDesc cd() {
+        return JitTypeDesc.getJitClass(builder, typeInfo.getType());
+    }
+
+    /**
      * Generate the method code.
      */
     public void assembleCode(CodeBuilder code) {
