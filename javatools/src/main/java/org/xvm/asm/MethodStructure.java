@@ -1433,7 +1433,7 @@ public class MethodStructure
             if (constant.getConstantPool() != pooThis) {
                 Container containerThis = frame.f_context.f_container;
                 Container containerOrig = containerThis.getOriginContainer(constSingle);
-                constSingle = (SingletonConstant) containerOrig.getConstantPool().register(constSingle);
+                constSingle = containerOrig.getConstantPool().register(constSingle);
             }
             list.add(constSingle);
         } else if (constant instanceof ArrayConstant constArray) {
@@ -1741,10 +1741,17 @@ public class MethodStructure
                         opVar.getType(aconst) instanceof AnnotatedTypeConstant typeAnno &&
                         typeAnno.getAnnotationClass().equals(pool.clzInject())) {
                     Constant[] aconstParam = typeAnno.getAnnotationParams();
-                    String     sName       = aconstParam.length > 0 &&
-                                             aconstParam[0] instanceof StringConstant constName
-                            ? constName.getValue()
-                            : opVar.getName(aconst);
+                    String     sName;
+                    if (aconstParam.length > 0) {
+                        if (aconstParam[0] instanceof StringConstant constName) {
+                            sName = constName.getValue();
+                        } else {
+                            // dynamic name injection
+                            continue;
+                        }
+                    } else {
+                        sName = opVar.getName(aconst);
+                    }
                     setInjections.add(new InjectionKey(sName, typeAnno.getParamType(0)));
                 }
             }

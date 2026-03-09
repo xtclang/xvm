@@ -659,10 +659,17 @@ public class PropertyStructure
             Annotation[] annos = getRefAnnotations();
             if (annos[0].getAnnotationClass().equals(getConstantPool().clzInject())) {
                 Constant[] aconstParam = annos[0].getParams();
-                String     sName       = aconstParam.length > 0 &&
-                                         aconstParam[0] instanceof StringConstant constName
-                        ? constName.getValue()
-                        : getName();
+                String     sName;
+                if (aconstParam.length > 0) {
+                    if (aconstParam[0] instanceof StringConstant constName) {
+                        sName = constName.getValue();
+                    } else {
+                        // dynamic name injection
+                        return;
+                    }
+                } else {
+                    sName = getName();
+                }
                 setInjections.add(new InjectionKey(sName, getType()));
             }
         }
