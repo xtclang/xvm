@@ -154,14 +154,16 @@ const UriTemplate {
      * This is the internal recursive implementation of the matching algorithm.
      *
      * @param uri           the [Uri] being tested for matching
-     * @param parts         TODO
-     * @param next          TODO
-     * @param count         TODO
-     * @param position      TODO
-     * @param nextLiteral   TODO
-     * @param foundLiteral  TODO
-     * @param afterLiteral  TODO
-     * @param parsedQuery   TODO
+     * @param parts         the [Part] objects that make up the [Uri]
+     * @param next          the index of the next [Part] in the [Uri] to match
+     * @param count         the count of the [Part] objects in the [Uri]
+     * @param position      the [Position] within the [Uri] to start matching from
+     * @param nextLiteral   the index of the [Part] in the [Uri] that is the next literal that we
+     *                      found, or the first non-existent index to signify that there is no
+     *                      "next literal" `Part`.
+     * @param foundLiteral  the [Position] within the [Uri] of the next literal
+     * @param afterLiteral  the [Position] within the [Uri] immediately following the next literal
+     * @param parsedQuery   `True` iff the query has already been parsed into `bindings`
      * @param bindings      the bindings collected thus far (if any)
      *
      * @return `True` iff the passed [Uri] matches this template
