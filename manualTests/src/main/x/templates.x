@@ -26,6 +26,14 @@ module TestUriTemplate
             new Uri("/test/abc/def"),
             new Uri("/test/abc?k1=v1;k2=v2#red,green,blue"),
             new Uri("/test/abc/?k1=v1;k2=v2#red,green,blue"),
+            new Uri("/certbot.com/cert"),
+            new Uri("/certbot.com/cert/"),
+            new Uri("/certbot.com/cert/123"),
+            new Uri("/certbot.com/cert?k=v"),
+            new Uri("/abc.com/cert"),
+            new Uri("/abc.com/cert/"),
+            new Uri("/abc.com/cert/123"),
+            new Uri("/abc.com/cert?k=v"),
         ];
 
         UriTemplate[] templates = [
@@ -48,6 +56,7 @@ module TestUriTemplate
             new UriTemplate("/tests{/sub}"),
             new UriTemplate("/tests{/sub,sub2}"),
             new UriTemplate("/tests{/sub*}{?parms*}{#frags*}"),
+            new UriTemplate("{/domain}/cert"),
         ];
 
         for (UriTemplate template : templates) {

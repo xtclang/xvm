@@ -455,6 +455,28 @@ const Uri
          * A pre-defined Position for the beginning of the Fragment.
          */
         static Position StartFragment = new Position(Fragment, 0);
+
+        /**
+         * Advance to the next position within the URI.
+         *
+         * @param uri  the [Uri]
+         *
+         * @return the new Position, which may be the end position of the URI
+         */
+        Position incrementWithin(Uri uri) {
+            if (offset < uri.sectionLength(section)) {
+                return new Position(section, offset+1);
+            }
+
+            // TODO fix Enum.next() to return "This" type
+            for (Section nextSection = section; nextSection := section.next()?.is(Section); ) {
+                if (uri.sectionExists(nextSection)) {
+                    return section.start;
+                }
+            }
+
+            return uri.endPosition;
+        }
     }
 
     /**

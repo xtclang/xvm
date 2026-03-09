@@ -8,7 +8,9 @@ const UriTemplate {
     /**
      * A map containing the result of matching a UriTemplate against a request's Uri.
      */
-    typedef immutable Map<String, Value> as UriParameters;
+    typedef immutable ListMap<String, Value> as UriParameters;
+
+    static UriParameters NoBindings = new ListMap<String, Value>([], []).makeImmutable(); // TODO allow a simple "[]" value to work here
 
     /**
      * A structural part of the UriTemplate.
@@ -98,7 +100,7 @@ const UriTemplate {
     /**
      * The literal prefix part for this UriTemplate.
      */
-     String literalPrefix.get() {
+    String literalPrefix.get() {
         if (parts.size > 0, String prefix := parts[0].is(String)) {
             return prefix;
         }
@@ -115,7 +117,8 @@ const UriTemplate {
      *
      * @param uri  the `Uri` to test to see if it matches this `UriTemplate`
      *
-     * @return a map from variable name to value
+     * @return `True` iff the passed URI matches this template
+     * @return (conditional) a [ListMap] from variable name to value
      */
     conditional UriParameters matches(Uri|String uri) {
         // convert a String URI to a real Uri object if necessary
@@ -130,7 +133,7 @@ const UriTemplate {
 
         if (count == 0) {
             // UriTemplate.ROOT only matches the root path
-            return uri.path == "" || uri.path == "/" ? (True, []) : False;
+            return uri.path == "" || uri.path == "/" ? (True, NoBindings) : False;
         }
 
         Position position = Start;
@@ -144,12 +147,37 @@ const UriTemplate {
             }
         }
 
-        Map<String, Value> bindings = [];
+        return matchesRemainder(uri, parts, next, count, position, -1, Null, Null, False, NoBindings);
+    }
 
-        Int       nextLiteral  = -1;    // forces a search for the next literal
-        Position? foundLiteral = Null;  // the start of the literal
-        Position? afterLiteral = Null;  // after the literal
-        Boolean   parsedQuery  = False;
+    /**
+     * This is the internal recursive implementation of the matching algorithm.
+     *
+     * @param uri           the [Uri] being tested for matching
+     * @param parts         TODO
+     * @param next          TODO
+     * @param count         TODO
+     * @param position      TODO
+     * @param nextLiteral   TODO
+     * @param foundLiteral  TODO
+     * @param afterLiteral  TODO
+     * @param parsedQuery   TODO
+     * @param bindings      the bindings collected thus far (if any)
+     *
+     * @return `True` iff the passed [Uri] matches this template
+     * @return (conditional) a [ListMap] from variable name to value
+     */
+    protected conditional UriParameters matchesRemainder(Uri           uri,
+                                                         Part[]        parts,
+                                                         Int           next,
+                                                         Int           count,
+                                                         Position      position,
+                                                         Int           nextLiteral,
+                                                         Position?     foundLiteral,
+                                                         Position?     afterLiteral,
+                                                         Boolean       parsedQuery,
+                                                         UriParameters bindings) {
+        ListMap<String, Value> newBindings = bindings;
         while (next < count) {
             switch (next <=> nextLiteral) {
             case Lesser:
@@ -164,7 +192,7 @@ const UriTemplate {
                 if (!parsedQuery, String query ?= uri.query, expression.onlyWithin ?: position.section >= Query) {
                     val params = uri.extractQueryParams();
                     if (!params.empty) {
-                        bindings = mutate(bindings).putAll(params);
+                        newBindings = mutate(newBindings).putAll(params);
                     }
                     if (sweepParams) {
                         for (val part : parts) {
@@ -178,7 +206,7 @@ const UriTemplate {
                                             value = params;
                                         }
                                         if (!value.empty || !var.require) {
-                                            bindings = mutate(bindings).put(var.name, value);
+                                            newBindings = mutate(newBindings).put(var.name, value);
                                         }
                                     }
                                 }
@@ -188,8 +216,8 @@ const UriTemplate {
                     position    = Section.Query.end(uri.query ?: "");
                     parsedQuery = True;
                 }
-                if ((position, bindings) := expression.matches(
-                        uri, position, foundLiteral, nextPrefix, bindings)) {
+                if ((position, newBindings) := expression.matches(
+                        uri, position, foundLiteral, nextPrefix, newBindings)) {
                     ++next;
                 } else {
                     return False;
@@ -209,12 +237,24 @@ const UriTemplate {
                 while (True) {
                     Expression|String part = parts[index];
                     if (part.is(String)) {
-                        if ((foundLiteral, afterLiteral) := uri.find(part, searchFrom)) {
-                            nextLiteral = index;
-                            break;
-                        } else {
-                            return False;
+                        // generally, this loop executes at-most one time, but it is possible for
+                        // a repeating pattern -- that matches the literal we're looking for! -- to
+                        // exist in the URL
+                        while ((foundLiteral, afterLiteral) := uri.find(part, searchFrom)) {
+                            // it's possible that the binding information we are holding is mutable,
+                            // and since we're in a loop, we need to make sure that recursive
+                            // matching attempts can't modify our bindings, just in case a failure
+                            // occurs within a recursive attempt before this loop repeats and then
+                            // attempts a second recursive matching attempt -- which would use the
+                            // wrong bindings if they were passed (recursively) mutable
+                            if (newBindings := matchesRemainder(uri, parts, next, count, position,
+                                    index, foundLiteral, afterLiteral, parsedQuery,
+                                    newBindings.makeImmutable())) {
+                                return True, newBindings.makeImmutable();
+                            }
+                            searchFrom = foundLiteral.incrementWithin(uri);
                         }
+                        return False;
                     } else if (Section section ?= part.onlyWithin, section > searchFrom.section) {
                         searchFrom = section.start;
                     }
@@ -243,7 +283,7 @@ const UriTemplate {
             }
             continue;
         default:
-            return True, bindings.makeImmutable();
+            return True, newBindings.makeImmutable();
         }
     }
 
@@ -389,8 +429,8 @@ const UriTemplate {
          * @return (conditional) the position immediately following the matched region of the URI
          * @return (conditional) the potentially updated map of variable bindings
          */
-        @Abstract conditional (Position after, Map<String, Value> bindings) matches(Uri uri,
-                Position from, Position? to, Char? nextPrefix, Map<String, Value> bindings);
+        @Abstract conditional (Position after, ListMap<String, Value> bindings) matches(Uri uri,
+                Position from, Position? to, Char? nextPrefix, ListMap<String, Value> bindings);
 
         @Override
         Int estimateStringLength() {
@@ -458,8 +498,8 @@ const UriTemplate {
         }
 
         @Override
-        conditional (Position after, Map<String, Value> bindings) matches(Uri uri,
-                Position from, Position? to, Char? nextPrefix, Map<String, Value> bindings) {
+        conditional (Position after, ListMap<String, Value> bindings) matches(Uri uri,
+                Position from, Position? to, Char? nextPrefix, ListMap<String, Value> bindings) {
             if (nextPrefix? != prefix) {
                 to := uri.find(nextPrefix.toString(), from, to);
             }
@@ -544,8 +584,8 @@ const UriTemplate {
         }
 
         @Override
-        conditional (Position after, Map<String, Value> bindings) matches(Uri uri,
-                Position from, Position? to, Char? nextPrefix, Map<String, Value> bindings) {
+        conditional (Position after, ListMap<String, Value> bindings) matches(Uri uri,
+                Position from, Position? to, Char? nextPrefix, ListMap<String, Value> bindings) {
             // we can only match if we are inside the correct section
             if (!(from := uri.positionAt(from, onlyWithin))) {
                 return False;
@@ -699,8 +739,8 @@ const UriTemplate {
         }
 
         @Override
-        conditional (Position after, Map<String, Value> bindings) matches(Uri uri,
-                Position from, Position? to, Char? nextPrefix, Map<String, Value> bindings) {
+        conditional (Position after, ListMap<String, Value> bindings) matches(Uri uri,
+                Position from, Position? to, Char? nextPrefix, ListMap<String, Value> bindings) {
             // the bindings are all pre-parsed from the query segment to permit non-exact ordering;
             // the only things that need to be handled here are checks for required bindings and
             // expansion of "exploding" values
@@ -1141,6 +1181,5 @@ const UriTemplate {
      * Assume that an empty map is constant, and so return a mutable ListMap if an empty one is
      * passed in.
      */
-    private static Map<String, Value> mutate(Map<String, Value> map) =
-            map.empty ? new ListMap<String, Value>() : map;
+    private static ListMap<String, Value> mutate(ListMap<String, Value> map) = map.ensureMutable();
 }

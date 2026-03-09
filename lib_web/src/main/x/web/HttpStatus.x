@@ -61,6 +61,7 @@ const HttpStatus(Int code, String reason) {
     static HttpStatus BlockedByWindowsParentalControls = new HttpStatus(450, "Blocked by Windows Parental Controls");
     static HttpStatus UnavailableForLegalReasons       = new HttpStatus(451, "Unavailable For Legal Reasons");
     static HttpStatus RequestHeaderTooLarge            = new HttpStatus(494, "Request Header Too Large");
+    static HttpStatus ClientClosedRequest              = new HttpStatus(499, "Client Closed Request");      // note: nginx
     static HttpStatus InternalServerError              = new HttpStatus(500, "Internal Server Error");
     static HttpStatus NotImplemented                   = new HttpStatus(501, "Not Implemented");
     static HttpStatus BadGateway                       = new HttpStatus(502, "Bad Gateway");
