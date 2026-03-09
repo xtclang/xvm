@@ -112,7 +112,7 @@ service Dispatcher {
                 }
 
                 EndpointInfo  endpoint;
-                UriParameters uriParams = net.UriTemplate.NoBindings; // TODO "[]" should work
+                UriParameters uriParams = [];
                 Int           wsid      = serviceInfo.id;
                 FindEndpoint: {
                     Uri uri;

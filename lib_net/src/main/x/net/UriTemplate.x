@@ -10,7 +10,7 @@ const UriTemplate {
      */
     typedef immutable ListMap<String, Value> as UriParameters;
 
-    static UriParameters NoBindings = new ListMap<String, Value>([], []).makeImmutable(); // TODO allow a simple "[]" value to work here
+    static UriParameters NoBindings = [];
 
     /**
      * A structural part of the UriTemplate.

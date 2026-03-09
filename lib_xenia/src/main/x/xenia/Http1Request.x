@@ -28,7 +28,7 @@ import HttpServer.RequestInfo;
 const Http1Request(RequestInfo   info,
                    SessionBroker broker,
                    UriTemplate   template     = UriTemplate.ROOT,
-                   UriParameters matchResult  = UriTemplate.NoBindings, // TODO "[]" should work
+                   UriParameters matchResult  = [],
                    Endpoint?     endpoint     = Null,
                    Boolean       bindRequired = False,
                    Boolean       streaming    = False,

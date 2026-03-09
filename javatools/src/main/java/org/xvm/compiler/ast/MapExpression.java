@@ -409,8 +409,8 @@ public class MapExpression
     private boolean checkMapType(TypeConstant type, ErrorListener errs) {
         ConstantPool pool = pool();
         if (!type.isSingleUnderlyingClass(true) ||
-                !type.getSingleUnderlyingClass(true).equals(pool.clzMap())) {
-            // TODO how to handle another type besides "Map"?
+                (!type.getSingleUnderlyingClass(true).equals(pool.clzMap()) &&
+                !type.getSingleUnderlyingClass(true).equals(pool.clzListMap()))) {
             log(errs, Severity.ERROR, Compiler.WRONG_TYPE,
                     pool.typeMap().getValueString(), type.getValueString());
             return false;

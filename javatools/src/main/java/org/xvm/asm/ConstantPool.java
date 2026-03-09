@@ -2101,6 +2101,7 @@ public class ConstantPool
     public ClassConstant     clzArray()          {ClassConstant     c = m_clzArray;          if (c == null) {m_clzArray          = c = (ClassConstant) getImplicitlyImportedIdentity("Array"           );} return c;}
     public ClassConstant     clzMatrix()         {ClassConstant     c = m_clzMatrix;         if (c == null) {m_clzMatrix         = c = (ClassConstant) getImplicitlyImportedIdentity("Matrix"          );} return c;}
     public ClassConstant     clzMap()            {ClassConstant     c = m_clzMap;            if (c == null) {m_clzMap            = c = (ClassConstant) getImplicitlyImportedIdentity("Map"             );} return c;}
+    public ClassConstant     clzListMap()        {ClassConstant     c = m_clzListMap;        if (c == null) {m_clzListMap        = c = (ClassConstant) getImplicitlyImportedIdentity("ListMap"         );} return c;}
     public ClassConstant     clzSliceable()      {ClassConstant     c = m_clzSliceable;      if (c == null) {m_clzSliceable      = c = (ClassConstant) getImplicitlyImportedIdentity("Sliceable"       );} return c;}
     public ClassConstant     clzOrderable()      {ClassConstant     c = m_clzOrderable;      if (c == null) {m_clzOrderable      = c = (ClassConstant) getImplicitlyImportedIdentity("Orderable"       );} return c;}
     public ClassConstant     clzTuple()          {ClassConstant     c = m_clzTuple;          if (c == null) {m_clzTuple          = c = (ClassConstant) getImplicitlyImportedIdentity("Tuple"           );} return c;}
@@ -2189,6 +2190,7 @@ public class ConstantPool
     public TypeConstant      typeSet()           {TypeConstant      c = m_typeSet;           if (c == null) {m_typeSet           = c = ensureTerminalTypeConstant(clzSet()                             );} return c;}
     public TypeConstant      typeList()          {TypeConstant      c = m_typeList;          if (c == null) {m_typeList          = c = ensureTerminalTypeConstant(clzList()                            );} return c;}
     public TypeConstant      typeMap()           {TypeConstant      c = m_typeMap;           if (c == null) {m_typeMap           = c = ensureTerminalTypeConstant(clzMap()                             );} return c;}
+    public TypeConstant      typeListMap()       {TypeConstant      c = m_typeListMap;       if (c == null) {m_typeListMap       = c = ensureTerminalTypeConstant(clzListMap()                         );} return c;}
     public TypeConstant      typeSliceable()     {TypeConstant      c = m_typeSliceable;     if (c == null) {m_typeSliceable     = c = ensureTerminalTypeConstant(clzSliceable()                       );} return c;}
     public TypeConstant      typeOrderable()     {TypeConstant      c = m_typeOrderable;     if (c == null) {m_typeOrderable     = c = ensureTerminalTypeConstant(clzOrderable()                       );} return c;}
     public TypeConstant      typeSequential()    {TypeConstant      c = m_typeSequential;    if (c == null) {m_typeSequential    = c = ensureTerminalTypeConstant(clzSequential()                      );} return c;}
@@ -3625,6 +3627,7 @@ public class ConstantPool
         m_clzArray          = null;
         m_clzMatrix         = null;
         m_clzMap            = null;
+        m_clzListMap        = null;
         m_clzOrderable      = null;
         m_clzTuple          = null;
         m_clzCondTuple      = null;
@@ -3716,6 +3719,7 @@ public class ConstantPool
         m_typeSet           = null;
         m_typeList          = null;
         m_typeMap           = null;
+        m_typeListMap       = null;
         m_typeSliceable     = null;
         m_typeOrderable     = null;
         m_typeSequential    = null;
@@ -3926,6 +3930,7 @@ public class ConstantPool
     private transient ClassConstant     m_clzArray;
     private transient ClassConstant     m_clzMatrix;
     private transient ClassConstant     m_clzMap;
+    private transient ClassConstant     m_clzListMap;
     private transient ClassConstant     m_clzSliceable;
     private transient ClassConstant     m_clzOrderable;
     private transient ClassConstant     m_clzTuple;
@@ -4018,6 +4023,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeSet;
     private transient TypeConstant      m_typeList;
     private transient TypeConstant      m_typeMap;
+    private transient TypeConstant      m_typeListMap;
     private transient TypeConstant      m_typeSliceable;
     private transient TypeConstant      m_typeOrderable;
     private transient TypeConstant      m_typeSequential;
