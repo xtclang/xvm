@@ -19,6 +19,8 @@ import org.gradle.api.tasks.TaskAction;
 
 import org.jetbrains.annotations.NotNull;
 
+import org.gradle.work.DisableCachingByDefault;
+
 import static org.xtclang.plugin.XtcJavaToolsRuntime.ensureJavaToolsInClasspath;
 
 /**
@@ -26,6 +28,7 @@ import static org.xtclang.plugin.XtcJavaToolsRuntime.ensureJavaToolsInClasspath;
  * This task must run before any task that uses javatools types (CompilerOptions, RunnerOptions, etc.).
  * Configuration cache compatible - all values captured at configuration time.
  */
+@DisableCachingByDefault(because = "Loads javatools into classloader; side-effect only, not cacheable")
 public abstract class XtcLoadJavaToolsTask extends DefaultTask {
 
     @Input

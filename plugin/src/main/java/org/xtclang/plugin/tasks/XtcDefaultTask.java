@@ -3,6 +3,7 @@ package org.xtclang.plugin.tasks;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.model.ObjectFactory;
+import org.gradle.work.DisableCachingByDefault;
 
 /**
  * Minimal base class for XTC tasks using modern Gradle best practices:
@@ -16,6 +17,7 @@ import org.gradle.api.model.ObjectFactory;
  * <p>This base class provides common services as protected fields. Most tasks should
  * extend DefaultTask directly unless they need these specific utilities.
  */
+@DisableCachingByDefault(because = "Abstract base class; concrete subclasses should declare caching intent")
 @SuppressWarnings("this-escape") // Safe: getLogger() is from DefaultTask, doesn't depend on subclass state
 public abstract class XtcDefaultTask extends DefaultTask {
     /**

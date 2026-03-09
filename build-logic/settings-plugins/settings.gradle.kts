@@ -1,3 +1,9 @@
+buildCache {
+    local {
+        directory = file("../../.gradle/build-cache")
+    }
+}
+
 plugins {
     id("org.gradle.toolchains.foojay-resolver").version("1.0.0")
 }

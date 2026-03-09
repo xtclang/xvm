@@ -17,7 +17,7 @@ val versionProps = Properties().apply {
     versionPropsFile.inputStream().use { load(it) }
 }
 
-// Kotlin doesn't support Java 25 yet (as of Kotlin 2.1.20), so use Kotlin JDK from version.properties
+// Kotlin doesn't support Java 25 yet (as of Kotlin 2.2.21, embedded in Gradle 9.4), so use Kotlin JDK from version.properties
 val jdkVersion = versionProps.getProperty("org.xtclang.java.jdk")?.toInt() ?: error("org.xtclang.java.jdk not found in version.properties")
 val kotlinJdkVersion = versionProps.getProperty("org.xtclang.kotlin.jdk")?.toInt() ?: error("org.xtclang.kotlin.jdk not found in version.properties")
 
