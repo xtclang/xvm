@@ -17,6 +17,7 @@ import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.DeferredValueConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -663,6 +664,9 @@ public class PropertyStructure
                 if (aconstParam.length > 0) {
                     if (aconstParam[0] instanceof StringConstant constName) {
                         sName = constName.getValue();
+                    } else if (aconstParam[0] instanceof RegisterConstant constRegister &&
+                            constRegister.getRegisterIndex() == Op.A_DEFAULT) {
+                        sName = getName();
                     } else {
                         // dynamic name injection
                         return;

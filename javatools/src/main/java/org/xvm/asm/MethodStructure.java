@@ -34,6 +34,7 @@ import org.xvm.asm.constants.FrameDependentConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PendingTypeConstant;
+import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -1745,6 +1746,9 @@ public class MethodStructure
                     if (aconstParam.length > 0) {
                         if (aconstParam[0] instanceof StringConstant constName) {
                             sName = constName.getValue();
+                        } else if (aconstParam[0] instanceof RegisterConstant constRegister &&
+                                constRegister.getRegisterIndex() == Op.A_DEFAULT) {
+                            sName = opVar.getName(aconst);
                         } else {
                             // dynamic name injection
                             continue;
@@ -1752,6 +1756,7 @@ public class MethodStructure
                     } else {
                         sName = opVar.getName(aconst);
                     }
+
                     setInjections.add(new InjectionKey(sName, typeAnno.getParamType(0)));
                 }
             }
