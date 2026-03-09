@@ -745,8 +745,8 @@ public class xRTServer
                 }
             } else {
                 // TODO: REMOVE
-                System.err.println(Handy.logTime() + " Trace: Handshake from unknown session" +
-                    session.getClass().getName());
+                System.err.println(Handy.logTime() + " Trace: Handshake from unknown session " +
+                    session == null ? "" : session.getClass().getName());
             }
             return null;
         }
