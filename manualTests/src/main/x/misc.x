@@ -38,6 +38,8 @@ module TestMisc {
         testSideEffects();
 
         countdown();
+
+        testEnums();
     }
 
     void testInts() {
@@ -773,5 +775,30 @@ module TestMisc {
             console.print($"{i} ...");
         }
         console.print("We have lift-off!");
+    }
+
+    void testEnums() {
+        enum Color {Red, Green, Blue}
+
+        Color c1 = Red;
+        assert Color c2 := c1.next();
+        assert Color c3 := c2.next();
+        assert !(Color c4 := c3.next());
+
+        Color color = Red;
+        Int   count = 0;
+        do {
+            ++count;
+        } while (color := color.next());
+        assert count == 3;
+
+        val e = color.enumeration;
+        assert e.count == 3;
+        assert e.name == "Color";
+        assert e.names.size == 3;
+        assert e.names.contains("Red");
+        assert e.values.size == 3;
+        assert e.values.contains(Green);
+        assert e.byName["Blue"] == Blue;
     }
 }

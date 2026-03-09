@@ -8,7 +8,7 @@ interface Enum
     /**
      * The Enumeration that contains this Enum value.
      */
-    @RO Enumeration<Enum!> enumeration;
+    @RO Enumeration<Enum> enumeration;
 
     /**
      * The ordinal value for this Enum value.
@@ -26,7 +26,7 @@ interface Enum
      * Obtain the Enum value that follows this Enum in the Enumeration.
      */
     @Override
-    conditional Enum! next() {
+    conditional Enum next() {
         if (ordinal + 1 < enumeration.count) {
             return True, enumeration.values[ordinal + 1];
         }
@@ -37,7 +37,7 @@ interface Enum
      * Obtain the Enum value that precedes this Enum in the Enumeration.
      */
     @Override
-    conditional Enum! prev() {
+    conditional Enum prev() {
         if (ordinal > 0) {
             return True, enumeration.values[ordinal - 1];
         }

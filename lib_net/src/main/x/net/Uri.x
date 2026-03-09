@@ -468,8 +468,7 @@ const Uri
                 return new Position(section, offset+1);
             }
 
-            // TODO fix Enum.next() to return "This" type
-            for (Section nextSection = section; nextSection := section.next()?.is(Section); ) {
+            for (Section nextSection = section; nextSection := section.next(); ) {
                 if (uri.sectionExists(nextSection)) {
                     return section.start;
                 }
@@ -664,7 +663,7 @@ const Uri
             }
 
             // load the next section
-            if (val temp := section.next(), section := temp.is(Section)) {
+            if (section := section.next()) {
                 part   = sectionText(section);
                 offset = 0;
             } else {
@@ -776,7 +775,7 @@ const Uri
             }
 
             // load the next section
-            if (val temp := section.next(), section := temp.is(Section)) {
+            if (section := section.next()) {
                 part   = partFor(section);
                 offset = 0;
             } else {
