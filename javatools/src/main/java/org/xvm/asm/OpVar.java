@@ -4,18 +4,27 @@ package org.xvm.asm;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.lang.classfile.CodeBuilder;
+import java.lang.constant.MethodTypeDesc;
 
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
 
+import org.xvm.javajit.RegisterInfo;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray;
 
+import static java.lang.constant.ConstantDescs.CD_boolean;
+import static java.lang.constant.ConstantDescs.CD_long;
+import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.CD_TypeConstant;
+import static org.xvm.javajit.Builder.CD_nArrayObj;
+import static org.xvm.javajit.Builder.CD_nObj;
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -227,7 +236,46 @@ public abstract class OpVar
         }
     }
 
+    /**
+     * Build an array variable.
+     *
+     * @param bctx        the current build context
+     * @param code        the {@link CodeBuilder} to use to generate op codes
+     * @param anArgValue  the array of values to add to the new array
+     * @param sName       the name of the variable, or empty string for unnamed
+     */
+    protected void buildArray(BuildContext bctx, CodeBuilder code, int[] anArgValue, String sName) {
+        TypeConstant type = bctx.getTypeConstant(m_nType);
+        RegisterInfo reg  = bctx.introduceVar(code, m_nVar, type, sName);
+
+        bctx.loadCtx(code);
+        bctx.loadTypeConstant(code, type);
+        code.loadConstant((long) anArgValue.length)
+                .iconst_0()
+                .invokestatic(CD_nArrayObj, "$new$p", MD_newArray);
+
+        for (int nArg : anArgValue) {
+            code.dup()
+                    .aload(code.parameterSlot(0));
+            bctx.loadArgument(code, nArg);
+            code.invokevirtual(CD_nArrayObj, "add", MD_add)
+                    .pop();
+        }
+        reg.store(bctx, code, type);
+    }
+
     // ----- fields --------------------------------------------------------------------------------
+
+    /**
+     * The method description for Array.$new$p().
+     */
+    private static final MethodTypeDesc MD_newArray
+            = MethodTypeDesc.of(CD_nArrayObj, CD_Ctx, CD_TypeConstant, CD_long, CD_boolean);
+
+    /**
+     * The method description for Array.add().
+     */
+    private static final MethodTypeDesc MD_add = MethodTypeDesc.of(CD_nArrayObj, CD_Ctx, CD_nObj);
 
     /**
      * The register that the VAR op is responsible for creating.

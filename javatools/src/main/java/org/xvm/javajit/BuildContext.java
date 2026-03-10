@@ -2282,16 +2282,16 @@ public class BuildContext {
                 continue;
             }
 
-            TypeConstant type = getArgumentType(regId);
-            if (type == null) {
-                type = retType;
+            TypeConstant destType = getArgumentType(regId);
+            // ToDo: JK/GG Why does this assert sometimes fail?
+//            assert destType != null;
+            if (destType == null) {
+                destType = retType;
             }
-            TypeConstant destType = type.containsFormalType(true)
-                    ? type.resolveGenerics(pool(), typeInfo.getType())
-                    : type;
 
             JitTypeDesc jitDesc    = destType.getJitDesc(builder);
             JitFlavor   destFlavor = jitDesc.flavor;
+            boolean     invalid    = false;
 
             if (i == 0) {
                 switch (pdRet.flavor) {
@@ -2320,11 +2320,8 @@ public class BuildContext {
                         break;
 
                     default:
-                        throw new UnsupportedOperationException("cannot store return flavor "
-                                + pdRet.flavor + " into " + destFlavor);
+                        invalid = true;
                     }
-
-                    storeValue(code, regId, destType);
                     break;
                 }
 
@@ -2336,7 +2333,6 @@ public class BuildContext {
                         JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
                         Builder.loadFromContext(code, retDesc.cd, retIndex);
                     }
-                    storeValue(code, regId, destType);
                     break;
                 }
 
@@ -2369,15 +2365,12 @@ public class BuildContext {
                         break;
 
                     default:
-                        throw new UnsupportedOperationException("cannot store return flavor "
-                                + pdRet.flavor + " into " + destFlavor);
+                        invalid = true;
                     }
-
-                    storeValue(code, regId, destType);
                     break;
                 }
 
-                case Specific: {
+                case Specific:
                     switch (destFlavor) {
                     case Specific, Widened:
                         // nothing to do
@@ -2396,16 +2389,8 @@ public class BuildContext {
                         break;
 
                     default:
-                        throw new UnsupportedOperationException("cannot store return flavor "
-                                + pdRet.flavor + " into " + destFlavor);
+                        invalid = true;
                     }
-
-                    storeValue(code, regId, destType);
-                    break;
-                }
-
-                default:
-                    storeValue(code, regId, destType);
                     break;
                 }
             } else {
@@ -2436,11 +2421,8 @@ public class BuildContext {
                         break;
 
                     default:
-                        throw new UnsupportedOperationException("cannot store return flavor "
-                                + pdRet.flavor + " into " + destFlavor);
+                        invalid = true;
                     }
-
-                    storeValue(code, regId, destType);
                     break;
                 }
 
@@ -2452,7 +2434,6 @@ public class BuildContext {
                         JitParamDesc retDesc = jmd.optimizedReturns[optIndex];
                         Builder.loadFromContext(code, retDesc.cd, retDesc.altIndex);
                     }
-                    storeValue(code, regId, destType);
                     break;
                 }
 
@@ -2484,20 +2465,23 @@ public class BuildContext {
                         break;
 
                     default:
-                        throw new UnsupportedOperationException("cannot store return flavor "
-                                + pdRet.flavor + " into " + destFlavor);
+                        invalid = true;
                     }
-
-                    storeValue(code, regId, destType);
                     break;
                 }
 
                 default:
                     Builder.loadFromContext(code, cdRet, pdRet.altIndex);
-                    storeValue(code, regId, destType);
                     break;
                 }
             }
+
+            if (invalid) {
+                throw new UnsupportedOperationException("cannot store return flavor "
+                        + pdRet.flavor + " into " + destFlavor);
+            }
+
+            storeValue(code, regId, destType);
         }
     }
 

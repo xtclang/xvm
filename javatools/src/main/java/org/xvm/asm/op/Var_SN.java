@@ -157,31 +157,10 @@ public class Var_SN
 
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
-        TypeConstant type = bctx.getTypeConstant(m_nType);
-        RegisterInfo reg  = bctx.introduceVar(code, m_nVar, type, bctx.getString(m_nNameId));
-
-        bctx.loadCtx(code);
-        bctx.loadTypeConstant(code, type);
-        code.loadConstant((long) m_anArgValue.length)
-                .iconst_0()
-                .invokestatic(CD_nArrayObj, "$new$p", MD_newArray);
-
-        for (int nArg : m_anArgValue) {
-            code.dup()
-                    .aload(code.parameterSlot(0));
-            bctx.loadArgument(code, nArg);
-            code.invokevirtual(CD_nArrayObj, "add", MD_add)
-                    .pop();
-        }
-        reg.store(bctx, code, type);
-
+        buildArray(bctx, code, m_anArgValue, bctx.getString(m_nNameId));
         return -1;
     }
 
-    private static final MethodTypeDesc MD_newArray
-            = MethodTypeDesc.of(CD_nArrayObj, CD_Ctx, CD_TypeConstant, CD_long, CD_boolean);
-
-    private static final MethodTypeDesc MD_add = MethodTypeDesc.of(CD_nArrayObj, CD_Ctx, CD_nObj);
 
     private int   m_nNameId;
     private int[] m_anArgValue;

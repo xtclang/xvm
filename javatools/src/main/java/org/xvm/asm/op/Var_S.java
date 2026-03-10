@@ -140,24 +140,7 @@ public class Var_S
 
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
-        TypeConstant type = bctx.getTypeConstant(m_nType);
-        RegisterInfo reg  = bctx.introduceVar(code, m_nVar, type, "");
-
-        bctx.loadCtx(code);
-        bctx.loadTypeConstant(code, type);
-        code.loadConstant((long) m_anArgValue.length)
-            .iconst_0()
-            .invokestatic(CD_nArrayObj, "$new$p", MD_newArray);
-
-        for (int nArg : m_anArgValue) {
-            code.dup()
-                .aload(code.parameterSlot(0));
-            bctx.loadArgument(code, nArg);
-            code.invokevirtual(CD_nArrayObj, "add", MD_add)
-                .pop();
-        }
-        reg.store(bctx, code, type);
-
+        buildArray(bctx, code, m_anArgValue, "");
         return -1;
     }
 
