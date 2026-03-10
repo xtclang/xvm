@@ -247,7 +247,7 @@ public abstract class OpVar
      * @param anArgValue  the array of values to add to the new array
      * @param sName       the name of the variable, or empty string for unnamed
      */
-    protected void buildArray(BuildContext bctx, CodeBuilder code, int[] anArgValue, String sName) {
+    protected int buildArray(BuildContext bctx, CodeBuilder code, int[] anArgValue, String sName) {
         TypeConstant type = bctx.getTypeConstant(m_nType);
         RegisterInfo reg  = bctx.introduceVar(code, m_nVar, type, sName);
 
@@ -265,6 +265,7 @@ public abstract class OpVar
                     .pop();
         }
         reg.store(bctx, code, type);
+        return -1;
     }
 
     // ----- fields --------------------------------------------------------------------------------

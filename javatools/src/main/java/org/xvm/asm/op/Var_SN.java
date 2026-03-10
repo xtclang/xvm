@@ -7,8 +7,6 @@ import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 
-import java.lang.constant.MethodTypeDesc;
-
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpVar;
@@ -18,7 +16,6 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
-import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -29,14 +26,6 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
-
-import static java.lang.constant.ConstantDescs.CD_boolean;
-import static java.lang.constant.ConstantDescs.CD_long;
-
-import static org.xvm.javajit.Builder.CD_Ctx;
-import static org.xvm.javajit.Builder.CD_TypeConstant;
-import static org.xvm.javajit.Builder.CD_nArrayObj;
-import static org.xvm.javajit.Builder.CD_nObj;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -157,10 +146,10 @@ public class Var_SN
 
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
-        buildArray(bctx, code, m_anArgValue, bctx.getString(m_nNameId));
-        return -1;
+        return buildArray(bctx, code, m_anArgValue, bctx.getString(m_nNameId));
     }
 
+    // ----- fields --------------------------------------------------------------------------------
 
     private int   m_nNameId;
     private int[] m_anArgValue;
