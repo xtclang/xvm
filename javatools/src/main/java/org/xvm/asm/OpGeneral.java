@@ -249,7 +249,7 @@ public abstract class OpGeneral
 
                 typeResult = method.getSignature().getRawReturns()[0]; // could differ from target
             }
-            bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeResult), typeResult);
+            bctx.storeValue(code, m_nRetValue, typeResult);
         } else { // unary op
             if (cdTarget.isPrimitive()) {
                 buildOptimizedUnary(bctx, code, regTarget.load(code));
@@ -279,7 +279,7 @@ public abstract class OpGeneral
                 bctx.loadCtx(code);
                 code.invokevirtual(regTarget.cd(), sJitName, md);
             }
-            bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget), typeTarget);
+            bctx.storeValue(code, m_nRetValue, typeTarget);
         }
         return -1;
     }

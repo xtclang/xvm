@@ -232,14 +232,14 @@ public abstract class OpInPlace
 
                 buildPrimitiveLocal(code, reg);
                 if (isAssignOp()) {
-                    bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, reg.type()));
+                    bctx.storeValue(code, m_nRetValue, reg.type());
                 } else {
                     reg.markChanged();
                 }
             } else if (reg.type().isXvmPrimitive()) {
                 buildXvmPrimitiveLocal(bctx, code, reg);
                 if (isAssignOp()) {
-                    bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, reg.type()));
+                    bctx.storeValue(code, m_nRetValue, reg.type());
                 } else {
                     reg.markChanged();
                 }

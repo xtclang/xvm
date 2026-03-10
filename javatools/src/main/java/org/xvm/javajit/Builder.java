@@ -689,6 +689,21 @@ public abstract class Builder {
    }
 
     /**
+     * Generate a "pop()" opcode for a type, assuming the corresponding value is already on the Java
+     * stack.
+     */
+    public static void pop(CodeBuilder code, Builder builder, TypeConstant type) {
+        TypeConstant baseType = type.removeNullable();
+        if (baseType.isXvmPrimitive()) {
+            for (ClassDesc cd : JitTypeDesc.getXvmPrimitiveClasses(baseType)) {
+                pop(code, cd);
+            }
+        } else {
+            pop(code, JitTypeDesc.getJitClass(builder, baseType));
+        }
+    }
+
+    /**
      * Generate a "pop()" opcode for Java class assuming the corresponding value is already on java
      * stack.
      */
@@ -715,7 +730,7 @@ public abstract class Builder {
      * @param reg  the RegisterInfo for the unboxed value
      */
     public static void unbox(CodeBuilder code, RegisterInfo reg) {
-        unbox(code, reg.type(), reg.cd());
+        unbox(code, reg.type());
     }
 
     /**
@@ -725,11 +740,11 @@ public abstract class Builder {
      * Out: the unboxed primitive value
      *
      * @param type  the primitive type for the boxed value
-     * @param cd    the corresponding ClassDesc to unbox to
      */
-    public static void unbox(CodeBuilder code, TypeConstant type, ClassDesc cd) {
-        TypeConstant baseType = type.removeNullable();
-        boolean javaPrimitive = !baseType.isXvmPrimitive() && cd.isPrimitive();
+    public static void unbox(CodeBuilder code, TypeConstant type) {
+        TypeConstant baseType      = type.removeNullable();
+        ClassDesc    cd            = JitTypeDesc.getPrimitiveClass(baseType);
+        boolean      javaPrimitive = !baseType.isXvmPrimitive() && cd != null && cd.isPrimitive();
         assert (javaPrimitive && baseType.isJavaPrimitive()) || baseType.isXvmPrimitive();
 
         if (javaPrimitive) { // Java primitive
@@ -829,18 +844,23 @@ public abstract class Builder {
      * @param reg  the RegisterInfo for the unboxed value
      */
     public static void box(CodeBuilder code, RegisterInfo reg) {
-        box(code, reg.type(), reg.cd());
+        box(code, reg.type());
     }
 
     /**
-     * Generate boxing opcodes for a primitive value of the specified primitive class on the stack.
+     * Generate boxing opcodes to box one or more values from the stack into a Java or XVM
+     * primitive type.
      *
      * In: an unboxed primitive value
      * Out: the boxed Java reference
+     *
+     * @param code  the {@link CodeBuilder} to use to generate byte codes
+     * @param type  the type to box the values from the stack into
      */
-    public static void box(CodeBuilder code, TypeConstant type, ClassDesc cd) {
+    public static void box(CodeBuilder code, TypeConstant type) {
         TypeConstant baseType      = type.removeNullable();
-        boolean      javaPrimitive = !baseType.isXvmPrimitive() && cd.isPrimitive();
+        ClassDesc    cd            = JitTypeDesc.getPrimitiveClass(baseType);
+        boolean      javaPrimitive = !baseType.isXvmPrimitive() && cd != null && cd.isPrimitive();
         boolean      xvmPrimitive  = baseType.isXvmPrimitive();
         assert (javaPrimitive && baseType.isJavaPrimitive()) || xvmPrimitive;
 
@@ -898,11 +918,7 @@ public abstract class Builder {
                 case "Dec128"  -> code.invokestatic(CD_Dec128, "$box", MD_Dec128_box);
                 case "Int128"  -> code.invokestatic(CD_Int128, "$box", MD_Int128_box);
                 case "UInt128" -> code.invokestatic(CD_UInt128,"$box", MD_UInt128_box);
-                default        ->  {
-                    ClassDesc[]    cds = JitTypeDesc.getXvmPrimitiveClasses(baseType);
-                    MethodTypeDesc md  = MethodTypeDesc.of(cd, cds);
-                    code.invokestatic(cd, "$box", md);
-                }
+                default        ->  throw new IllegalStateException(baseType.getSingleUnderlyingClass(false).getName());
             }
         }
     }

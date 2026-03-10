@@ -66,8 +66,6 @@ import static java.lang.constant.ConstantDescs.MTD_void;
 
 import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
-import static org.xvm.javajit.JitFlavor.Primitive;
-import static org.xvm.javajit.JitFlavor.XvmPrimitive;
 
 /**
  * Generic Java class builder.
@@ -1183,7 +1181,7 @@ public class CommonBuilder
 
                     case Primitive:
                         code.aload(stdParamSlot);
-                        unbox(code, stdParamType, optParamDesc.cd);
+                        unbox(code, stdParamType);
                         break;
 
                     case PrimitiveWithDefault: {
@@ -1201,7 +1199,7 @@ public class CommonBuilder
                         code.goto_(endIf)
                             .labelBinding(ifNotNull)
                             .aload(stdParamSlot);
-                        unbox(code, stdParamType, optParamDesc.cd); // unwrapped primitive
+                        unbox(code, stdParamType); // unwrapped primitive
                         code.iconst_0();                            // false
 
                         code.labelBinding(endIf);
@@ -1228,7 +1226,7 @@ public class CommonBuilder
                             .labelBinding(ifNotNull)
                             .aload(stdParamSlot)
                             .checkcast(ensureClassDesc(primitiveType));
-                        unbox(code, primitiveType, optParamDesc.cd); // unboxed primitive
+                        unbox(code, primitiveType); // unboxed primitive
                         code.iconst_0();                             // false
 
                         code.labelBinding(endIf);
@@ -1265,7 +1263,7 @@ public class CommonBuilder
 
                         code.aload(stdParamSlot)
                             .checkcast(ensureClassDesc(primitiveType));
-                        unbox(code, primitiveType, optParamDesc.cd); // unboxed primitive
+                        unbox(code, primitiveType); // unboxed primitive
                         code.iconst_0()                             // false
                             .labelBinding(endIf);
                         i++; // skip over the next "that" parameter
@@ -1276,7 +1274,7 @@ public class CommonBuilder
                         code.aload(stdParamSlot);
                         ClassDesc cd = JitTypeDesc.getXvmPrimitiveClass(stdParamType);
                         assert cd != null;
-                        unbox(code, stdParamType, cd);
+                        unbox(code, stdParamType);
                         // skip over the additional parameters that we have just loaded by unboxing
                         i += JitTypeDesc.getXvmPrimitiveSlotCount(stdParamType) - 1;
                         break;
@@ -1301,7 +1299,7 @@ public class CommonBuilder
 
                         code.labelBinding(ifNotNull)
                             .aload(stdParamSlot);
-                        unbox(code, stdParamType, stdParams[stdParamIx].cd); // unwrapped primitives
+                        unbox(code, stdParamType); // unwrapped primitives
                         code.iconst_0() // false
                             .labelBinding(endIf);
 
@@ -1337,7 +1335,7 @@ public class CommonBuilder
 
                         ClassDesc cd = JitTypeDesc.getXvmPrimitiveClass(baseType);
                         assert cd != null;
-                        unbox(code, baseType, cd); // unboxed primitives
+                        unbox(code, baseType); // unboxed primitives
                         code.iconst_0()            // false
                             .labelBinding(endIf);
 
@@ -1382,7 +1380,7 @@ public class CommonBuilder
                         code.labelBinding(ifNotXvmNull)
                             .aload(stdParamSlot)
                             .checkcast(baseCD);
-                        unbox(code, baseType, baseCD);
+                        unbox(code, baseType);
                         code.iconst_0() // false
                             .labelBinding(endIf);
 
@@ -1447,11 +1445,11 @@ public class CommonBuilder
                 case Primitive:
                     if (optIx == 0) {
                         // natural return
-                        box(code, optType, optCD);
+                        box(code, optType);
                         code.areturn();
                     } else {
                         loadFromContext(code, optCD, optRetIx);
-                        box(code, optType, optCD);
+                        box(code, optType);
                         storeToContext(code, stdCD, stdRetIx);
                     }
                     break;
@@ -1472,12 +1470,12 @@ public class CommonBuilder
 
                     if (optIx == 0) {
                         // box the natural return
-                        box(code, optType, optCD);
+                        box(code, optType);
                         code.areturn();
                     } else {
                         // load the primitive to box from the context
                         loadFromContext(code, optDesc.cd, optDesc.altIndex);
-                        box(code, optType, optCD);
+                        box(code, optType);
                         storeToContext(code, stdCD, stdIx);
                         code.goto_(endIf);
                     }
@@ -1501,7 +1499,7 @@ public class CommonBuilder
                         JitParamDesc optReturn = optReturns[optIndexes[idx]];
                         loadFromContext(code, optReturn.cd, optReturn.altIndex);
                     }
-                    box(code, optType, optCD);
+                    box(code, optType);
                     if (optIx <= 0) {
                         code.areturn();
                     } else {
@@ -1529,7 +1527,7 @@ public class CommonBuilder
                         JitParamDesc optReturn = optReturns[optIndexes[idx]];
                         loadFromContext(code, optReturn.cd, optReturn.altIndex);
                     }
-                    box(code, optType, optCD);
+                    box(code, optType);
 
                     if (optIx <= 0) {
                         code.areturn();
@@ -1927,6 +1925,7 @@ public class CommonBuilder
         "IOException", "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState",
         "Boolean", "Ordered",
         "Orderable",
+            "StringBuffer",
 //        "Int64",
         "Array",
         "TerminalConsole",

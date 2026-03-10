@@ -118,7 +118,7 @@ public class P_Set
 
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
-        bctx.buildSetProperty(code, bctx.loadArgument(code, m_nTarget), m_nPropId, m_nValue);
+        bctx.buildSetProperty(code, m_nTarget, m_nPropId, m_nValue);
         return -1;
     }
 

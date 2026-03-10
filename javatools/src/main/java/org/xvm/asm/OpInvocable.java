@@ -360,7 +360,9 @@ public abstract class OpInvocable extends Op {
 
         // If the bctx.cd() is the same as cdTarget then we are invoking a method on the same class
         // as the build context, so we can use the context's type, which has private access
-        TypeInfo       infoTarget = bctx.cd().equals(cdTarget)
+        // ToDo GG: How to simplify to typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo()
+        ClassDesc      cdThis     = JitTypeDesc.getJitClass(bctx.builder, bctx.typeInfo.getType());
+        TypeInfo       infoTarget = cdThis.equals(cdTarget)
                                         ? bctx.typeInfo
                                         : typeTarget.ensureTypeInfo();
         MethodInfo     infoMethod = infoTarget.getMethodById(idMethod);

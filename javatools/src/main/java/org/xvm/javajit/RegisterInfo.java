@@ -118,6 +118,7 @@ public interface RegisterInfo {
      * @param type  (optional) the type of the value; could be wider than a narrowed register type
      */
     default RegisterInfo store(BuildContext bctx, CodeBuilder code, TypeConstant type) {
+        assert regId() > Op.CONSTANT_OFFSET; // cannot store a property register
         if (isIgnore()) {
             Builder.pop(code, cd());
         } else {
@@ -125,9 +126,9 @@ public interface RegisterInfo {
                 type = type();
             }
             if (type.isJavaPrimitive() && !cd().isPrimitive()) {
-                Builder.box(code, type, JitTypeDesc.getPrimitiveClass(type));
+                Builder.box(code, type);
             } else if (type.isXvmPrimitive() && !type().isXvmPrimitive()) {
-                Builder.box(code, type, JitTypeDesc.getXvmPrimitiveClass(type));
+                Builder.box(code, type);
             }
             Builder.store(code, cd(), slot());
         }

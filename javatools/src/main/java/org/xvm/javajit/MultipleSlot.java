@@ -160,6 +160,8 @@ public record MultipleSlot(BuildContext bctx, int regId, int[] slots, int extSlo
 
     @Override
     public RegisterInfo store(BuildContext bctx, CodeBuilder code, TypeConstant type) {
+        assert regId() > Op.CONSTANT_OFFSET; // cannot store a property register
+
         if (extSlot != NO_SLOT) {
             // store the "extension" boolean flag first
             code.istore(extSlot);

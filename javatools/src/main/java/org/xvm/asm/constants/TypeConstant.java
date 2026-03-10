@@ -6655,11 +6655,11 @@ public abstract class TypeConstant
 
             reg1.load(code);
             if (!reg1.cd().isPrimitive()) {
-                Builder.unbox(code, this, cdCommon);
+                Builder.unbox(code, this);
             }
             reg2.load(code);
             if (!reg2.cd().isPrimitive()) {
-                Builder.unbox(code, this, cdCommon);
+                Builder.unbox(code, this);
             }
 
             switch (desc) {
