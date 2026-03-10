@@ -209,7 +209,7 @@ public abstract class OpVar
     public void computeTypes(BuildContext bctx) {
         if (isTypeAware()) {
             TypeConstant typeVar = switch (getOpCode()) {
-                case OP_VAR, OP_VAR_I, OP_VAR_N, OP_VAR_IN ->
+                case OP_VAR, OP_VAR_I, OP_VAR_N, OP_VAR_IN, OP_VAR_S, OP_VAR_SN ->
                     bctx.getTypeConstant(m_nType);
 
                 case OP_VAR_D, OP_VAR_DN ->

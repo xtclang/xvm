@@ -318,9 +318,11 @@ public abstract class OpInvocable extends Op {
             return;
         }
 
-        TypeConstant      typeThis = tmx.getType(A_THIS, getAddress());
-        MethodConstant    idMethod = bctx.getConstant(m_nMethodId, MethodConstant.class);
-        SignatureConstant sig      = idMethod.getSignature();
+        TypeConstant      typeThis   = tmx.getType(A_THIS, getAddress());
+        TypeConstant      typeArg    = bctx.getArgumentType(m_nTarget);
+        MethodConstant    idMethod   = bctx.getConstant(m_nMethodId, MethodConstant.class);
+        MethodInfo        methodInfo = typeArg.ensureTypeInfo().getMethodById(idMethod);
+        SignatureConstant sig        = methodInfo.getSignature();
 
         if (sig.containsGenericTypes()) {
             sig = sig.resolveGenericTypes(bctx.pool(), typeThis);

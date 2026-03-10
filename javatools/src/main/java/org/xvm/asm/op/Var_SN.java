@@ -5,6 +5,10 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
+import java.lang.constant.MethodTypeDesc;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpVar;
@@ -12,6 +16,9 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -22,6 +29,14 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
+
+import static java.lang.constant.ConstantDescs.CD_boolean;
+import static java.lang.constant.ConstantDescs.CD_long;
+
+import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.CD_TypeConstant;
+import static org.xvm.javajit.Builder.CD_nArrayObj;
+import static org.xvm.javajit.Builder.CD_nObj;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -139,6 +154,34 @@ public class Var_SN
     public String getName(Constant[] aconst) {
         return getName(aconst, m_constName, m_nNameId);
     }
+
+    @Override
+    public int build(BuildContext bctx, CodeBuilder code) {
+        TypeConstant type = bctx.getTypeConstant(m_nType);
+        RegisterInfo reg  = bctx.introduceVar(code, m_nVar, type, bctx.getString(m_nNameId));
+
+        bctx.loadCtx(code);
+        bctx.loadTypeConstant(code, type);
+        code.loadConstant((long) m_anArgValue.length)
+                .iconst_0()
+                .invokestatic(CD_nArrayObj, "$new$p", MD_newArray);
+
+        for (int nArg : m_anArgValue) {
+            code.dup()
+                    .aload(code.parameterSlot(0));
+            bctx.loadArgument(code, nArg);
+            code.invokevirtual(CD_nArrayObj, "add", MD_add)
+                    .pop();
+        }
+        reg.store(bctx, code, type);
+
+        return -1;
+    }
+
+    private static final MethodTypeDesc MD_newArray
+            = MethodTypeDesc.of(CD_nArrayObj, CD_Ctx, CD_TypeConstant, CD_long, CD_boolean);
+
+    private static final MethodTypeDesc MD_add = MethodTypeDesc.of(CD_nArrayObj, CD_Ctx, CD_nObj);
 
     private int   m_nNameId;
     private int[] m_anArgValue;

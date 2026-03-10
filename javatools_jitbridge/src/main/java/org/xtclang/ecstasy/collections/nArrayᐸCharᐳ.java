@@ -7,6 +7,7 @@ import org.xtclang.ecstasy.nObj;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 
 import org.xtclang.ecstasy.text.Char;
+import org.xtclang.ecstasy.text.String;
 
 import org.xvm.asm.ConstantPool;
 
@@ -59,6 +60,27 @@ public class nArrayᐸCharᐳ
         ConstantPool pool = $owner().typeSystem.pool();
         TypeConstant type = pool.ensureArrayType(pool.typeChar());
         return $isImmut() ? type.freeze() : type;
+    }
+
+    @Override
+    public String toString(Ctx ctx) {
+        if ($delegate != null) {
+            return $delegate.toString(ctx);
+        }
+        if ($storage == null) {
+            return String.of(ctx, "[]");
+        }
+        StringBuilder buf  = new StringBuilder("[");
+        long          size = size$get$p(ctx);
+        for (long i = 0; i < size; i++) {
+            if (i > 0) {
+                buf.append(", ");
+            }
+            Char c = getElement$p(ctx, i);
+            buf.append(c.toString(ctx));
+        }
+        buf.append(']');
+        return String.of(ctx, buf.toString());
     }
 
     // ----- Array API -----------------------------------------------------------------------------

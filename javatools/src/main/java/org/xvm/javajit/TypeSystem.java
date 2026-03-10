@@ -326,7 +326,8 @@ public class TypeSystem {
                 ClassFile.ClassHierarchyResolverOption.of(
                     ClassHierarchyResolver.ofClassLoading(loader)),
                 ClassFile.ShortJumpsOption.FIX_SHORT_JUMPS,
-                ClassFile.StackMapsOption.GENERATE_STACK_MAPS
+                ClassFile.StackMapsOption.GENERATE_STACK_MAPS,
+                ClassFile.DeadLabelsOption.DROP_DEAD_LABELS
             );
 
             return classFile.build(ClassDesc.of(className), handler);
