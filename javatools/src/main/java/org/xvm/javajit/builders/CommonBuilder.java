@@ -1200,7 +1200,7 @@ public class CommonBuilder
                             .labelBinding(ifNotNull)
                             .aload(stdParamSlot);
                         unbox(code, stdParamType); // unwrapped primitive
-                        code.iconst_0();                            // false
+                        code.iconst_0();           // false
 
                         code.labelBinding(endIf);
                         i++; // skip over the next "that" parameter
@@ -1227,7 +1227,7 @@ public class CommonBuilder
                             .aload(stdParamSlot)
                             .checkcast(ensureClassDesc(primitiveType));
                         unbox(code, primitiveType); // unboxed primitive
-                        code.iconst_0();                             // false
+                        code.iconst_0();            // false
 
                         code.labelBinding(endIf);
                         i++; // skip over the next "that" parameter
@@ -1264,7 +1264,7 @@ public class CommonBuilder
                         code.aload(stdParamSlot)
                             .checkcast(ensureClassDesc(primitiveType));
                         unbox(code, primitiveType); // unboxed primitive
-                        code.iconst_0()                             // false
+                        code.iconst_0()             // false
                             .labelBinding(endIf);
                         i++; // skip over the next "that" parameter
                         break;
@@ -1300,7 +1300,7 @@ public class CommonBuilder
                         code.labelBinding(ifNotNull)
                             .aload(stdParamSlot);
                         unbox(code, stdParamType); // unwrapped primitives
-                        code.iconst_0() // false
+                        code.iconst_0()            // false
                             .labelBinding(endIf);
 
                         // skip over the additional parameters that we have just loaded by unboxing
@@ -1336,7 +1336,7 @@ public class CommonBuilder
                         ClassDesc cd = JitTypeDesc.getXvmPrimitiveClass(baseType);
                         assert cd != null;
                         unbox(code, baseType); // unboxed primitives
-                        code.iconst_0()            // false
+                        code.iconst_0()        // false
                             .labelBinding(endIf);
 
                         // skip over the additional parameters that we have just loaded

@@ -2321,6 +2321,7 @@ public class BuildContext {
 
                     default:
                         invalid = true;
+                        break;
                     }
                     break;
                 }
@@ -2366,6 +2367,7 @@ public class BuildContext {
 
                     default:
                         invalid = true;
+                        break;
                     }
                     break;
                 }
@@ -2390,6 +2392,7 @@ public class BuildContext {
 
                     default:
                         invalid = true;
+                        break;
                     }
                     break;
                 }
@@ -2422,6 +2425,7 @@ public class BuildContext {
 
                     default:
                         invalid = true;
+                        break;
                     }
                     break;
                 }
@@ -2466,6 +2470,7 @@ public class BuildContext {
 
                     default:
                         invalid = true;
+                        break;
                     }
                     break;
                 }

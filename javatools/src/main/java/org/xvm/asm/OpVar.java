@@ -4,6 +4,7 @@ package org.xvm.asm;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
 import java.lang.classfile.CodeBuilder;
 import java.lang.constant.MethodTypeDesc;
 
@@ -21,10 +22,12 @@ import org.xvm.runtime.template.collections.xArray;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_long;
+
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nArrayObj;
 import static org.xvm.javajit.Builder.CD_nObj;
+
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
