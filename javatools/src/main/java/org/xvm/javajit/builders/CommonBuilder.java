@@ -1925,7 +1925,7 @@ public class CommonBuilder
         "IOException", "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState",
         "Boolean", "Ordered",
         "Orderable",
-            "StringBuffer",
+//            "StringBuffer",
 //        "Int64",
         "Array",
         "TerminalConsole",
