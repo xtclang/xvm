@@ -939,8 +939,9 @@ public class BuildContext {
      * @param loaded  if true, the register value has been loaded on the Java stack
      */
     protected RegisterInfo adjustRegister(CodeBuilder code, RegisterInfo reg, boolean loaded) {
-        TypeConstant regType = reg.type();
-        if (!regType.isJavaPrimitive() && !regType.isXvmPrimitive()) {
+        TypeConstant regType  = reg.type();
+        TypeConstant baseType = regType.removeNullable();
+        if (!baseType.isJavaPrimitive() && !baseType.isXvmPrimitive()) {
             int          regId   = reg.regId();
             TypeConstant mtxType = typeMatrix.getType(regId, currOpAddr);
 
@@ -2164,6 +2165,10 @@ public class BuildContext {
                     code.labelBinding(endIf);
                     break AddTransformation;
 
+                case Primitive:
+                    code.pop(); // throw away boolean null flag;
+                    break AddTransformation;
+
                 default:
                     invalid = true;
                     break AddTransformation;
@@ -2200,6 +2205,10 @@ public class BuildContext {
                         }
                         Builder.loadNull(code);
                         code.labelBinding(endIf);
+                        break AddTransformation;
+
+                    case XvmPrimitive:
+                        code.pop(); // throw away boolean null flag;
                         break AddTransformation;
 
                     default:

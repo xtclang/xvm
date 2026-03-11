@@ -62,6 +62,18 @@ package setPropertyTests {
         t.testInPlaceOpResult(19);
         assert t.i == 29;
 
+        t.i = 0;
+        t.testNullablePrimitiveElvisAssign(Null);
+        assert t.i == -1;
+        t.testNullablePrimitiveElvisAssign(19);
+        assert t.i == 19;
+
+        t.x = 0;
+        t.testNullableXvmPrimitiveElvisAssign(Null);
+        assert t.x == -2;
+        t.testNullableXvmPrimitiveElvisAssign(2006);
+        assert t.x == 2006;
+
         console.print("<<<< Finished SetPropertyTests <<<<<");
     }
 
@@ -74,6 +86,7 @@ package setPropertyTests {
         StringOrDec  sd = "0";
         StringOrDec? nsd = "0";
         Int          i = 0;
+        Int128       x = 0;
 
         Int size.get() = 0;
 
@@ -142,6 +155,14 @@ package setPropertyTests {
 
         void testInPlaceOpResult(Int n) {
             this.i += n;
+        }
+
+        void testNullablePrimitiveElvisAssign(Int? n) {
+            this.i = n ?: -1;
+        }
+
+        void testNullableXvmPrimitiveElvisAssign(Int128? n) {
+            this.x = n ?: -2;
         }
     }
 }
