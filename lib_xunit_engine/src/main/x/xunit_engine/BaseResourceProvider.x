@@ -23,8 +23,8 @@ import ecstasy.mgmt.*;
     Supplier getResource(Type type, String name) {
         import Container.Linker;
 
-        switch (type, name) {
-
+        // allow injection of Nullable types
+        switch (type.isNullable() ?: type, name) {
         case (FileStore, "storage"):
             return &store.maskAs(FileStore);
 

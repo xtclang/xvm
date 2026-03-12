@@ -115,6 +115,7 @@ public class xRTType
         markNativeMethod("contained"        , null, null);
         markNativeMethod("fromClass"        , null, null);
         markNativeMethod("fromProperty"     , null, null);
+        markNativeMethod("isNullable"       , null, null);
         markNativeMethod("modifying"        , null, null);
         markNativeMethod("relational"       , null, null);
         markNativeMethod("named"            , null, null);
@@ -324,6 +325,9 @@ public class xRTType
         case "fromProperty":
             return invokeFromProperty(frame, hType, aiReturn);
 
+        case "isNullable":
+            return invokeIsNullable(frame, hType, aiReturn);
+
         case "modifying":
             return invokeModifying(frame, hType, aiReturn);
 
@@ -395,7 +399,7 @@ public class xRTType
             throw new UnsupportedOperationException();
         }
 
-        return super.invokeAdd(frame, hTarget, hArg, iReturn);
+        return super.invokeSub(frame, hTarget, hArg, iReturn);
     }
 
     @Override
@@ -408,7 +412,7 @@ public class xRTType
 //                    ConstantPool::ensure???TypeConstant, iReturn);
 //        }
 
-        return super.invokeOr(frame, hTarget, hArg, iReturn);
+        return super.invokeAnd(frame, hTarget, hArg, iReturn);
     }
 
     @Override
@@ -1047,7 +1051,7 @@ public class xRTType
                 public int process(Frame frame, int iPC) {
                     TypeHandle hType = typeForeign.ensureTypeHandle(frame.f_context.f_container);
 
-                    switch (getForeignUnderlyingTypes(frame, hType, Op.A_STACK)) {
+                    switch (getPropertyUnderlyingTypes(frame, hType, Op.A_STACK)) {
                     case Op.R_NEXT:
                         return createProxyArray(frame, (ArrayHandle) frame.popStack(),
                                 xRTProperty.INSTANCE.getCanonicalClass());
@@ -1280,6 +1284,17 @@ public class xRTType
         }
 
         return frame.assignValue(aiReturn[0], xBoolean.FALSE);
+    }
+
+    /**
+     * Implementation for: {@code conditional Type!<> isNullable()}.
+     */
+    protected int invokeIsNullable(Frame frame, TypeHandle hType, int[] aiReturn) {
+        TypeConstant type = hType.getUnsafeDataType();
+        return type.isNullable()
+                ? frame.assignValues(aiReturn, xBoolean.TRUE,
+                        type.removeNullable().ensureTypeHandle(frame.f_context.f_container))
+                : frame.assignValue(aiReturn[0], xBoolean.FALSE);
     }
 
     /**

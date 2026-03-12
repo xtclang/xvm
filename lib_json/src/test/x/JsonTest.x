@@ -1,8 +1,8 @@
 /**
  * Simple unit tests for the json module.
  *
- * This test verifies that the XTC plugin correctly handles test source sets
- * during the XVM bootstrap build.
+ * This test verifies that the XTC plugin correctly handles test source sets during the XVM
+ * bootstrap build.
  */
 module JsonTest {
     package json  import json.xtclang.org;

@@ -368,7 +368,7 @@ module jsondb.xtclang.org {
 
             @Override
             Supplier getResource(Type type, String name) {
-                switch (type, name) {
+                switch (type.isNullable() ?: type, name) {
                 case (FileStore, "storage"):
                     return &store.maskAs(FileStore);
 

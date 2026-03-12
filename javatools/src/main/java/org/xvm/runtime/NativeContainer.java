@@ -674,9 +674,11 @@ public class NativeContainer
             return type.isNullable() ? xNullable.NULL : null;
         }
 
-        // check for equality first, but allow "congruency" or "duck type" equality as well
+        // check for equality first, but allow "congruency", "duck type" equality as well or
+        // sans-Nullable equivalency
         TypeConstant typeResource = key.f_type;
         return typeResource.equals(type) || typeResource.isEquivalent(type)
+                    || typeResource.isEquivalent(type.removeNullable())
                 ? f_mapResources.get(key).supply(frame, hOpts)
                 : null;
     }
