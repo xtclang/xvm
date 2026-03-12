@@ -882,8 +882,23 @@ public class BuildContext {
      * Obtain the type of the specified argument.
      */
     public TypeConstant getArgumentType(int argId) {
+        return getArgumentType(argId, false);
+    }
+
+    /**
+     * Obtain the type of the specified return value.
+     */
+    public TypeConstant getReturnType(int argId) {
+        return getArgumentType(argId, true);
+    }
+
+    /**
+     * Obtain the type of the specified argument or return value.
+     */
+    private TypeConstant getArgumentType(int argId, boolean isReturn) {
         if (argId >= 0) {
-            return typeMatrix.getType(argId, currOpAddr);
+            return isReturn ? typeMatrix.getType(argId, currOpAddr + 1)
+                            : typeMatrix.getType(argId, currOpAddr);
         }
 
         if (argId <= Op.CONSTANT_OFFSET) {
@@ -2291,12 +2306,8 @@ public class BuildContext {
                 continue;
             }
 
-            TypeConstant destType = getArgumentType(regId);
-            // ToDo: JK/GG Why does this assert sometimes fail?
-//            assert destType != null;
-            if (destType == null) {
-                destType = retType;
-            }
+            TypeConstant destType = getReturnType(regId);
+            assert destType != null;
 
             JitTypeDesc jitDesc    = destType.getJitDesc(builder);
             JitFlavor   destFlavor = jitDesc.flavor;
