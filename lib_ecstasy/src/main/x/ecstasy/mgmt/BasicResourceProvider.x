@@ -24,7 +24,14 @@ service BasicResourceProvider
         import ecstasy.collections.HashCollector;
         import ecstasy.mgmt.Container.Linker;
 
-        switch (type, name) {
+        // allow injection of Nullable types
+        Boolean isNullable = False;
+        Type    sansNull   = type;
+        if (sansNull := type.isNullable()) {
+            isNullable = True;
+        }
+
+        switch (sansNull, name) {
         case (Console, "console"):
             @Inject Console console;
             return console;
@@ -32,11 +39,6 @@ service BasicResourceProvider
         case (Clock, "clock"):
             @Inject Clock clock;
             return clock;
-
-//        case (HashCollector, "hash"): // TODO CP: add native or natural implementation
-//            @Inject HashCollector hash;
-//            return hash;
-//
 
         case (Timer, "timer"):
             return (Inject.Options opts) -> {
@@ -56,17 +58,13 @@ service BasicResourceProvider
             // about this and maybe filter them in some way as we would not necessarily want to pass
             // down some injected information that the child container should not be able to see
             return (Inject.Options opts) -> {
-                @Inject(resourceName=name, opts=opts) String value;
-                return value;
-            };
-
-        case (String?, _):
-            // ToDo This will return ANY string injectable from the parent, we might want to think
-            // about this and maybe filter them in some way as we would not necessarily want to pass
-            // down some injected information that the child container should not be able to see
-            return (Inject.Options opts) -> {
-                @Inject(resourceName=name, opts=opts) String? value;
-                return value;
+                if (isNullable) {
+                    @Inject(resourceName=name, opts=opts) String? value;
+                    return value;
+                } else {
+                    @Inject(resourceName=name, opts=opts) String value;
+                    return value;
+                }
             };
 
         case (List<String>, _):
@@ -74,27 +72,23 @@ service BasicResourceProvider
             // about this and maybe filter them in some way as we would not necessarily want to pass
             // down some injected information that the child container should not be able to see
             return (Inject.Options opts) -> {
-                @Inject(resourceName=name, opts=opts) List<String> value;
-                return value;
-            };
-
-        case (List<String>?, _):
-            // ToDo This will return ANY string injectable from the parent, we might want to think
-            // about this and maybe filter them in some way as we would not necessarily want to pass
-            // down some injected information that the child container should not be able to see
-            return (Inject.Options opts) -> {
-                @Inject(resourceName=name, opts=opts) List<String>? value;
-                return value;
+                if (isNullable) {
+                    @Inject(resourceName=name, opts=opts) List<String>? value;
+                    return value;
+                } else {
+                    @Inject(resourceName=name, opts=opts) List<String> value;
+                    return value;
+                }
             };
 
         default:
-            if (Supplier supp := getDestringableResource(type, name)) {
+            if (Supplier supp := getDestringableResource(sansNull, name)) {
                 return supp;
             }
             // if the type is Nullable, no need to complain; just return Null, otherwise
             // return a deferred exception (thrown only if the container actually asks for the
             // resource at run time)
-            return type.isNullable()
+            return isNullable
                 ? Null.as(Supplier)
                 : (Inject.Options opts) ->
                     throw new Exception($|Unsupported resource: type="{type}", name="{name}"
