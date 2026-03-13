@@ -887,6 +887,21 @@ public class BuildContext {
 
     /**
      * Obtain the type of the specified return value.
+     *
+     * Note: during the {@link Op#computeTypes} cycle, the ops most commonly use the {@link
+     * TypeMatrix#assign} API to assign the type of the corresponding register, which stores
+     * that type for that register at the **next** op address. For example, "MOVE src, dest"
+     * computes the type of "dest" to be consumed by the ops that follow the "MOVE" op. Similarly,
+     * "CALL_01 function, dest" op computes the type or "dest" to be consumed by the following ops.
+     *
+     * Sometimes however, there are scenarios where that computed "destination" type needs to be
+     * known during the {@link Op#build} cycle by **that same op** that has just computed it. A
+     * common use case is represented by the {@link org.xvm.asm.OpInvocable}, which assigns the
+     * type of the "retValue" at the end of {@link org.xvm.asm.OpInvocable#computeInvokeTypes}
+     * method and needs to use it at the end of {@link org.xvm.asm.OpInvocable#computeInvoke} method
+     * via the call to {@link #assignReturns}.
+     *
+     * To facilitate that, all we need is to look up the computed type at the very next op address.
      */
     public TypeConstant getReturnType(int argId) {
         return getArgumentType(argId, true);
@@ -2108,7 +2123,7 @@ public class BuildContext {
             switch (srcFlavor) {
             case Specific:
                 switch (dstFlavor) {
-                case Primitive:
+                case Primitive, XvmPrimitive:
                     Builder.unbox(code, pd.type);
                     break AddTransformation;
 
@@ -2125,10 +2140,6 @@ public class BuildContext {
                         Builder.unbox(code, pd.type);
                         code.iconst_0();
                     }
-                    break AddTransformation;
-
-                case XvmPrimitive:
-                    Builder.unbox(code, pd.type);
                     break AddTransformation;
 
                 case NullableXvmPrimitive:
