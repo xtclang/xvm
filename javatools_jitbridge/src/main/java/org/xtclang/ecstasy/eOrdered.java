@@ -3,17 +3,12 @@ package org.xtclang.ecstasy;
 import org.xtclang.ecstasy.reflect.Enumeration;
 import org.xtclang.ecstasy.text.String;
 
-import org.xvm.asm.ConstantPool;
-import org.xvm.asm.constants.TypeConstant;
-
-import org.xvm.javajit.Ctx;
-
 /**
  * Native Enumeration<Ordered>.
  */
 public class eOrdered extends Enumeration {
     private eOrdered() {
-        super(null);
+        super(null, $ctx().container.typeSystem.pool().typeOrdered());
     }
 
     public static final eOrdered $INSTANCE = new eOrdered();
@@ -29,11 +24,6 @@ public class eOrdered extends Enumeration {
         Ordered.Equal.$INSTANCE,
         Ordered.Greater.$INSTANCE
     };
-
-    @Override public TypeConstant $xvmType(Ctx ctx) {
-        ConstantPool pool = ctx.container.typeSystem.pool();
-        return pool.ensureClassTypeConstant(pool.clzClass(), null, pool.typeOrdered());
-    }
 
     @Override
     public long count$get$p() {

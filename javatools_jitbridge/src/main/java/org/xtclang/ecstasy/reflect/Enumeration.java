@@ -4,14 +4,16 @@ import org.xtclang.ecstasy.nEnum;
 
 import org.xtclang.ecstasy.text.String;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.javajit.Ctx;
 
 /**
  * All Ecstasy `Class<Enum>` types must extend this class.
  */
 public abstract class Enumeration extends Class {
-    public Enumeration(Ctx ctx) {
-        super(ctx);
+    protected Enumeration(Ctx ctx, TypeConstant publicType) {
+        super(ctx, publicType);
     }
 
     public abstract long count$get$p();
