@@ -1,6 +1,6 @@
 /**
  * A read-only representation of a store of cryptographic keys and certificates. Not only is it
- * read-only, but it is also likely to be a point-in-time snapshot. Its is explicitly designed
+ * read-only, but it is also likely to be a point-in-time snapshot. It is explicitly designed
  * to not expose any secrets; it represents these secrets (and the ability to pass around the
  * secrets) without exposing them. For example, while the KeyStore allows a [CryptoKey] to be
  * retrieved and used via the [getKey()] method, the contents of that key are generally not

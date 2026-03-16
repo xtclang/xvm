@@ -2,7 +2,7 @@
  * A representation of a [Certificate] and [KeyStore] management facility, which is a fundamental
  * security service of an underlying host, and by extension, a representation of a certificate
  * authority. As such, an instance of CertificateManager is generally expected to be obtainable only
- * via injection, and based on
+ * via injection.
  *
  * Within a [Container] that supports injection of a CertificateManager, it is possible to obtain
  * the CertificateManager by specifying a provider name; the default provider name is "self", for
@@ -12,46 +12,45 @@
  *
  * The currently supported providers for injection are:
  *
- * * `self` - for creating self-signed certificates
- * * `certbot` - for production use of [https://letsencrypt.org/] via certbot
+ * * `self` - for creating self-signed certificates;
+ * * `certbot` - for production use of [https://letsencrypt.org/] via certbot;
  * * `certbot-staging` - for non-productions use of [https://letsencrypt.org/] via certbot, which
  *   is useful for testing an account with LetsEncrypt; the necessary test-mode indicators are
- *   provided to LetsEncrypt to avoid having the account suspended or banned if an error occurs
+ *   provided to LetsEncrypt to avoid having the account suspended or banned if an error occurs.
  */
 interface CertificateManager {
     /**
-     * Obtain the [Keystore] for the specified keystore file.
+     * Obtain the [KeyStore] for the specified `KeyStore` file.
      *
      * @param keystore  the [File] representing the store ('PKCS12' type)
-     * @param pwd       the [Password] for the [Keystore] in the specified `File`
+     * @param pwd       the [Password] for the [KeyStore] in the specified `File`
      *
-     * @return the [Keystore]
+     * @return the [KeyStore]
      */
-    Keystore keystoreFor(File keystore, Password pwd);
+    KeyStore keystoreFor(File keystore, Password pwd);
 
     /**
-     * Change the password for the specified [Keystore]. If the `Keystore` is specified as a [File],
-     * then the [File] will be overwritten using the new [Password] as a result of this operation.
+     * Change the password for the specified `KeyStore` file. As a result of this operation, the
+     * [File] will be overwritten using the new [Password].
      *
      * @param keystore  the [File] object representing the store, or the [KeyStore] itself
-     * @param oldPwd    the old [Password] for the `Keystore`
-     * @param newPwd    the new [Password] for the `Keystore`
+     * @param oldPwd    the old [Password] for the `KeyStore`
+     * @param newPwd    the new [Password] for the `KeyStore`
      *
-     * @return the [Keystore] encrypted using the new [Password]
+     * @return the [KeyStore] encrypted using the new [Password]
      *
      * @throws IOException if anything goes wrong
      */
-    Keystore encryptKeystore(File|Keystore keystore, Password pwd, Password newPwd);
+    KeyStore encryptKeyStore(File keystore, Password oldPwd, Password newPwd);
 
     /**
      * Create a certificate, sign it and save to the specified keystore file.
      *
-     * For the format and semantics of the parts of the distinguished name please see
-     * (X.509 certificate spec)[https://www.rfc-editor.org/rfc/rfc5280]
+     * See the (X.509 certificate spec)[https://www.rfc-editor.org/rfc/rfc5280] for the format and
+     * semantics of the distinguished name and its parts.
      *
-     * Note, that the "Common Name" part of the distinguished name should represent a sub-domain
-     * managed by the corresponding Ecstasy container, which is most likely to be a subdomain of
-     * "xqiz.it".
+     * The "Common Name" part of the distinguished name should be the domain name or sub-domain name
+     * that is managed by (i.e. routed to) the corresponding Ecstasy container.
      *
      * This operation consists of a number of steps:
      *  - create a Certificate Signing Request (CSR) for the specified distinguished name
@@ -119,8 +118,8 @@ interface CertificateManager {
      * key, and therefore the data obtained from this method must be handled with extreme caution.
      *
      * @param keystore  the [File] object representing the store, or the [KeyStore] itself
-     * @param pwd       the [Password] to use to access the contents of the `Keystore`
-     * @param name      the name the key is known by the `Keystore`
+     * @param pwd       the [Password] to use to access the contents of the `KeyStore`
+     * @param name      the name the key is known by the `KeyStore`
      *
      * @return the content of the key in the DER format
      *
