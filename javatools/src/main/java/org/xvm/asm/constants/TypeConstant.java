@@ -6511,7 +6511,7 @@ public abstract class TypeConstant
                 return switch (cdEl.descriptorString().charAt(0)) {
                     case 'Z' ->          Builder.N_nArrayObj;
                     case 'J' -> switch (idEl.getName()) {
-                        case "Int64"  -> Builder.N_nArrayInt64;
+                        case "Int64"  -> Builder.N_nArrayObj;
                         case "UInt64" -> Builder.N_nArrayObj;
                         default -> throw new IllegalStateException();
                     };
