@@ -583,6 +583,7 @@ public class xRTServer
             exchange.sendResponseHeaders((int) nStatus, (int) nLength);
             return Op.R_NEXT;
         } catch (IOException e) {
+            exchange.close();
             return frame.raiseException(xException.obscureIoException(frame, e.getMessage()));
         }
     }
@@ -680,7 +681,7 @@ public class xRTServer
 
         private void sendError(HttpExchange exchange, Throwable t) {
             t.printStackTrace();
-            try {
+            try (exchange) {
                 exchange.sendResponseHeaders(500, -1);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -820,6 +821,7 @@ public class xRTServer
                     + (fTls ? "https://" : "http://") + sHost + exchange.getRequestURI() + " from "
                     + exchange.getRemoteAddress().getAddress());
                 exchange.sendResponseHeaders(421, -1); // HttpStatus.MisdirectedRequest
+                exchange.close();
             } else {
                 route.handler.handle(exchange);
             }
