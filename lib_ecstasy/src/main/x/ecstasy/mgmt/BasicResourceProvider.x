@@ -82,7 +82,7 @@ service BasicResourceProvider
             };
 
         default:
-            if (Supplier supp := getDestringableResource(sansNull, name)) {
+            if (Supplier supp := getDestringableResource(type, name)) {
                 return supp;
             }
             // if the type is Nullable, no need to complain; just return Null, otherwise
