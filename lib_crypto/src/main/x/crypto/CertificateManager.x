@@ -1,7 +1,47 @@
 /**
- * A representation of a Certificate management facility.
+ * A representation of a [Certificate] and [KeyStore] management facility, which is a fundamental
+ * security service of an underlying host, and by extension, a representation of a certificate
+ * authority. As such, an instance of CertificateManager is generally expected to be obtainable only
+ * via injection, and based on
+ *
+ * Within a [Container] that supports injection of a CertificateManager, it is possible to obtain
+ * the CertificateManager by specifying a provider name; the default provider name is "self", for
+ * self-signed (locally generated) certificates:
+ *
+ *     @Inject(opts="self") CertificateManager mgr;
+ *
+ * The currently supported providers for injection are:
+ *
+ * * `self` - for creating self-signed certificates
+ * * `certbot` - for production use of [https://letsencrypt.org/] via certbot
+ * * `certbot-staging` - for non-productions use of [https://letsencrypt.org/] via certbot, which
+ *   is useful for testing an account with LetsEncrypt; the necessary test-mode indicators are
+ *   provided to LetsEncrypt to avoid having the account suspended or banned if an error occurs
  */
 interface CertificateManager {
+    /**
+     * Obtain the [Keystore] for the specified keystore file.
+     *
+     * @param keystore  the [File] representing the store ('PKCS12' type)
+     * @param pwd       the [Password] for the [Keystore] in the specified `File`
+     *
+     * @return the [Keystore]
+     */
+    Keystore keystoreFor(File keystore, Password pwd);
+
+    /**
+     * Change the password for the specified [Keystore]. If the `Keystore` is specified as a [File],
+     * then the [File] will be overwritten using the new [Password] as a result of this operation.
+     *
+     * @param keystore  the [File] object representing the store, or the [KeyStore] itself
+     * @param oldPwd    the old [Password] for the `Keystore`
+     * @param newPwd    the new [Password] for the `Keystore`
+     *
+     * @return the [Keystore] encrypted using the new [Password]
+     *
+     * @throws IOException if anything goes wrong
+     */
+    Keystore encryptKeystore(File|Keystore keystore, Password pwd, Password newPwd);
 
     /**
      * Create a certificate, sign it and save to the specified keystore file.
@@ -20,11 +60,11 @@ interface CertificateManager {
      *  - receive the certificate from the SA
      *  - save the private key and the certificate in the specified file using the provided password
      *
-     * @param file   the `File` object representing the store ('PKCS12' type)
-     * @param pwd    the password for the keystore
-     * @param name   the name the certificate is known by the keystore
-     * @param dName  the distinguished name string, which is comma-delimited string of X.509
-     *               certificate attributes (e.g.: C=US,ST=MA,O=XQIZ.IT Corp.,CN=host.xqiz.it)
+     * @param keystore  the [File] representing the store ('PKCS12' type)
+     * @param pwd       the password for the keystore
+     * @param name      the name the certificate is known by the keystore
+     * @param dName     the distinguished name string, which is comma-delimited string of X.509
+     *                  certificate attributes (e.g.: C=US,ST=MA,O=XQIZ.IT Corp.,CN=host.xqiz.it)
      *
      * @throws IOException if anything goes wrong
      */
@@ -40,7 +80,7 @@ interface CertificateManager {
      *  - receive the revocation confirmation from the SA
      *  - remove the private key and the certificate from the specified keystore
      *
-     * @param keystore  the `File` object representing the store ('PKCS12' type)
+     * @param keystore  the [File] representing the store ('PKCS12' type)
      * @param pwd       the password for the keystore
      * @param name      the name the certificate is known by the keystore
      *
@@ -51,7 +91,7 @@ interface CertificateManager {
     /**
      * Create a secret (symmetric) key.
      *
-     * @param keystore  the `File` object representing the store ('PKCS12' type)
+     * @param keystore  the [File] representing the store ('PKCS12' type)
      * @param pwd       the password for the keystore
      * @param name      the name the symmetric key is known by the keystore
      *
@@ -62,7 +102,7 @@ interface CertificateManager {
     /**
      * Create a password entry.
      *
-     * @param keystore  the `File` object representing the store ('PKCS12' type)
+     * @param keystore  the [File] representing the store ('PKCS12' type)
      * @param pwd       the password for the keystore
      * @param name      the name the password entry is known by the keystore
      * @param pwdValue  the value of the password entry
@@ -72,28 +112,17 @@ interface CertificateManager {
     void createPassword(File keystore, Password pwd, String name, String pwdValue);
 
     /**
-     * Change the keystore password.
-     *
-     * @param keystore  the `File` object representing the store ('PKCS12' type)
-     * @param pwd       the password for the keystore
-     * @param newPwd    the new password for the keystore
-     *
-     * @throws IOException if anything goes wrong
-     */
-    void changeStorePassword(File keystore, Password pwd, Password newPwd);
-
-    /**
      * Extract a key (private or secret).
      *
-     * Note: unlike [KeyStore] methods that return [CryptoKey] objects which do not expose the
-     * underlying crypto material, this method is an exception and should be used with extreme
-     * caution.
+     * Note: Unlike [KeyStore] methods that return [CryptoKey] objects which can be opaque to avoid
+     * exposing the underlying crypto material, this method explicitly returns the raw bytes of the
+     * key, and therefore the data obtained from this method must be handled with extreme caution.
      *
-     * @param keystore  the `File` object representing the store or the KeyStore itself
-     * @param pwd       the password for the keystore
-     * @param name      the name the key is known by the keystore
+     * @param keystore  the [File] object representing the store, or the [KeyStore] itself
+     * @param pwd       the [Password] to use to access the contents of the `Keystore`
+     * @param name      the name the key is known by the `Keystore`
      *
-     * @return the content of the key in DER format
+     * @return the content of the key in the DER format
      *
      * @throws IOException if anything goes wrong
      */

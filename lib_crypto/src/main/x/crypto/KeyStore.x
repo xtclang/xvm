@@ -1,7 +1,13 @@
 /**
- * A representation of a store of cryptographic keys and certificates.
+ * A read-only representation of a store of cryptographic keys and certificates. Not only is it
+ * read-only, but it is also likely to be a point-in-time snapshot. Its is explicitly designed
+ * to not expose any secrets; it represents these secrets (and the ability to pass around the
+ * secrets) without exposing them. For example, while the KeyStore allows a [CryptoKey] to be
+ * retrieved and used via the [getKey()] method, the contents of that key are generally not
+ * [visible](CryptoKey.isVisible()) to the caller.
  *
- * An injection of a KeyStore requires an Info object, for example:
+ * A `KeyStore` is obtained from [CertificateManager.keystoreFor], or by injection if the container
+ * supports it. The injection requires an [Info] to be provided; for example:
  *
  *     KeyStore getKeystore(File keystoreFile, String password) {
  *         @Inject(opts=new KeyStore.Info(keystoreFile.contents, password)) KeyStore keystore;
@@ -20,7 +26,8 @@ interface KeyStore {
      * @param name  the name the key is known by the KeyStore
      *
      * @return True iff the specified key name is known by the KeyStore
-     * @return (conditional) the [CryptoKey]
+     * @return (conditional) the [CryptoKey], which is likely to be opaque (not
+     *         [visible](CryptoKey.isVisible()))
      */
     conditional CryptoKey getKey(String name);
 
@@ -35,7 +42,8 @@ interface KeyStore {
      * @param name  the name the password is known by the KeyStore
      *
      * @return True iff the specified password name is known by the KeyStore
-     * @return (conditional) the [CryptoPassword]
+     * @return (conditional) the [CryptoPassword], which is likely to be opaque (not
+     *         [visible](CryptoPassword.isVisible()))
      */
     conditional CryptoPassword getPassword(String name);
 
