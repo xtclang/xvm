@@ -6511,7 +6511,7 @@ public abstract class TypeConstant
                 return switch (cdEl.descriptorString().charAt(0)) {
                     case 'Z' ->          Builder.N_nArrayObj;
                     case 'J' -> switch (idEl.getName()) {
-                        case "Int64"  -> Builder.N_nArrayObj;
+                        case "Int64"  -> Builder.N_nArrayInt64;
                         case "UInt64" -> Builder.N_nArrayObj;
                         default -> throw new IllegalStateException();
                     };
@@ -6657,10 +6657,12 @@ public abstract class TypeConstant
             if (!reg1.cd().isPrimitive()) {
                 Builder.unbox(code, this);
             }
+            convertIfUnsignedPrimitive(code);
             reg2.load(code);
             if (!reg2.cd().isPrimitive()) {
                 Builder.unbox(code, this);
             }
+            convertIfUnsignedPrimitive(code);
 
             switch (desc) {
             case "I", "S", "B", "C", "Z":
@@ -6932,6 +6934,30 @@ public abstract class TypeConstant
                 .iconst_1();
         }
         code.labelBinding(lblEnd);
+    }
+
+    /**
+     * Convert an unsigned primitive on the top of the stack to a signed primitive prior to a
+     * compare operation.
+     * <p>
+     * This is the same thing that Java does prior when performing a comparison on unsigned
+     * primitives such as {@link Integer#compareUnsigned(int, int)} or
+     * {@link Long#compareUnsigned(long, long)}.
+     *
+     * @param code  the {@link CodeBuilder} to use to generate byte codes
+     */
+    private void convertIfUnsignedPrimitive(CodeBuilder code) {
+        // We only need to convert UInt32 and UInt64 because unlike Java, Ecstasy holds other
+        // values such as UInt8 and UInt16 inside an int already in the correct form
+        switch (getSingleUnderlyingClass(true).getName()) {
+            case "UInt32":
+                code.loadConstant(Integer.MIN_VALUE)
+                    .iadd();
+                break;
+            case "UInt64":
+                code.loadConstant(Long.MIN_VALUE)
+                    .ladd();
+        }
     }
 
     private void generateOrdered(BuildContext bctx, CodeBuilder code) {
