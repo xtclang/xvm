@@ -2,6 +2,8 @@ import ecstasy.lang.src.Compiler;
 
 import ecstasy.mgmt.*;
 
+import ecstasy.reflect.Injector;
+
 /**
  * A base class `ResourceProvider` implementation that can provide resources to inject into tests.
  *
@@ -9,7 +11,13 @@ import ecstasy.mgmt.*;
  * @param repository  the module repository containing the test module and dependencies
  */
 @Abstract service BaseResourceProvider(Directory curDir, ModuleRepository repository)
-        extends BasicResourceProvider {
+        implements ResourceProvider, Injector {
+
+    /**
+     * The parent container's `Injector` to use to inject resources that are not provided by the
+     * XUnit framework or by test overrides.
+     */
+    public/private @Inject Injector injector;
 
     /**
      * The `FileStore` to use to access files.
@@ -21,8 +29,6 @@ import ecstasy.mgmt.*;
 
     @Override
     Supplier getResource(Type type, String name) {
-        import Container.Linker;
-
         // allow injection of Nullable types
         switch (type.isNullable() ?: type, name) {
         case (FileStore, "storage"):
@@ -38,27 +44,24 @@ import ecstasy.mgmt.*;
 
             case "curDir":
                 return curDir;
-
-            default:
-                return super(type, name);
             }
-
-        case (Console, _):
-            @Inject Console console;
-            return console;
-
-        case (Compiler, "compiler"):
-            @Inject Compiler compiler;
-            return compiler;
-
-        case (Linker, "linker"):
-            @Inject Linker linker;
-            return linker;
+            break;
 
         case (ModuleRepository, "repository"):
             return repository;
         }
 
-        return super(type, name);
+        return (Inject.Options opts) -> injector.inject(type, name, opts);
+    }
+
+    @Override
+    <InjectionType> InjectionType inject(Type<InjectionType> type, String name,
+            Inject.Options opts = Null) {
+
+        Supplier supplier = getResource(type, name);
+        if (val supply := supplier.is(ResourceSupplier)) {
+            return supply(opts).as(InjectionType);
+        }
+        return supplier.as(InjectionType);
     }
 }
