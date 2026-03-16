@@ -407,7 +407,7 @@ public class xRTServer
 
         RequestHandler handler = createRequestHandler(frame, hWrapper, hServer);
         router.mapRoutes.put(sHostName,
-            new RouteInfo(handler, info.nHttpPort, info.nHttpPort, info.hKeyStore, info.sTlsKey));
+            new RouteInfo(handler, info.nHttpPort, info.nHttpsPort, info.hKeyStore, info.sTlsKey));
         return frame.assignValue(iResult, xBoolean.TRUE);
     }
 
@@ -599,7 +599,8 @@ public class xRTServer
 
         byte[] abBody = xByteArray.getBytes(hBody);
         if (abBody.length > 0) {
-            try (OutputStream out = exchange.getResponseBody()) {
+            OutputStream out = exchange.getResponseBody();
+            try {
                 out.write(abBody);
             } catch (Throwable e) {
                 exchange.close();
