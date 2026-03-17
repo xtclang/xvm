@@ -36,6 +36,7 @@ import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
 
 import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
 import org.xvm.runtime.template.text.xString;
@@ -63,12 +64,13 @@ public class xRTCertificateManager
 
     @Override
     public void initNative() {
-        markNativeMethod("createCertificateImpl"  , null, VOID);
-        markNativeMethod("revokeCertificateImpl"  , null, VOID);
-        markNativeMethod("createSymmetricKeyImpl" , null, VOID);
-        markNativeMethod("createPasswordImpl"     , null, VOID);
-        markNativeMethod("changeStorePasswordImpl", null, VOID);
-        markNativeMethod("extractKeyImpl"         , null, BYTES);
+        markNativeMethod("keystoreForImpl"       , null, null);
+        markNativeMethod("encryptKeyStoreImpl"   , null, null);
+        markNativeMethod("createCertificateImpl" , null, null);
+        markNativeMethod("revokeCertificateImpl" , null, null);
+        markNativeMethod("createSymmetricKeyImpl", null, null);
+        markNativeMethod("createPasswordImpl"    , null, null);
+        markNativeMethod("extractKeyImpl"        , null, null);
 
         invalidateTypeInfo();
     }
@@ -105,6 +107,13 @@ public class xRTCertificateManager
     public int invokeNativeN(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle[] ahArg, int iReturn) {
         switch (method.getName()) {
+        case "keystoreForImpl":
+            return invokeKeystoreFor(frame, ahArg, iReturn);
+
+        case "encryptKeyStoreImpl":
+            return invokeAsIOTask(frame, () ->
+                    invokeEncryptKeystore(frame, ahArg));
+
         case "createCertificateImpl":
             return invokeAsIOTask(frame, () ->
                     invokeCreateCertificate(frame, (ServiceHandle) hTarget, ahArg));
@@ -120,10 +129,6 @@ public class xRTCertificateManager
         case "createPasswordImpl":
             return invokeAsIOTask(frame, () ->
                     invokeCreatePassword(frame, ahArg));
-
-        case "changeStorePasswordImpl":
-            return invokeAsIOTask(frame, () ->
-                    invokeChangeStorePassword(frame, ahArg));
 
         case "extractKeyImpl":
             return invokeExtractKey(frame, ahArg, iReturn);
@@ -495,9 +500,21 @@ public class xRTCertificateManager
 
     /**
      * Native implementation of
-     *     "invokeChangeStorePasswordImpl(String path, Password pwd, String newPwd)"
+     *     "keystoreForImpl(Byte[] contents, Password pwd)"
      */
-    private ExceptionHandle invokeChangeStorePassword(Frame frame, ObjectHandle[] ahArg) {
+    private int invokeKeystoreFor(Frame frame, ObjectHandle[] ahArg, int iReturn) {
+        ArrayHandle  hContent  = (ArrayHandle) ahArg[0];
+        StringHandle hPwd      = xRTKeyStore.getPassword(frame, ahArg[1]);
+        ObjectHandle hKeyStore = xRTKeyStore.INSTANCE.ensureKeyStore(frame, hContent, hPwd);
+
+        return frame.assignDeferredValue(iReturn, hKeyStore);
+    }
+
+    /**
+     * Native implementation of
+     *     "encryptKeystoreImpl(String path, Password pwd, String newPwd)"
+     */
+    private ExceptionHandle invokeEncryptKeystore(Frame frame, ObjectHandle[] ahArg) {
         StringHandle hPath   = (StringHandle) ahArg[0];
         StringHandle hPwd    = xRTKeyStore.getPassword(frame, ahArg[1]);
         StringHandle hPwdNew = (StringHandle) ahArg[2];

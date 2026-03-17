@@ -124,11 +124,18 @@ public class xRTKeyStore
      * Injection support method.
      */
     public ObjectHandle ensureKeyStore(Frame frame, ObjectHandle hOpts) {
-        try {
-            GenericHandle hInfo    = (GenericHandle) hOpts;
-            ArrayHandle   hContent = (ArrayHandle) hInfo.getField(frame, "content");
-            StringHandle  hPwd     = getPassword(frame, hInfo.getField(frame, "password"));
+        GenericHandle hInfo    = (GenericHandle) hOpts;
+        ArrayHandle   hContent = (ArrayHandle) hInfo.getField(frame, "content");
+        StringHandle  hPwd     = getPassword(frame, hInfo.getField(frame, "password"));
 
+        return ensureKeyStore(frame, hContent, hPwd);
+    }
+
+    /**
+     * Helper method.
+     */
+    public ObjectHandle ensureKeyStore(Frame frame, ArrayHandle hContent, StringHandle hPwd) {
+        try {
             byte[] abStore = xByteArray.getBytes(hContent);
             char[] achPwd  = hPwd.getValue();
 
@@ -505,6 +512,7 @@ public class xRTKeyStore
             return hString;
         }
 
+        // the handle could be a proxy; make it real
         hPwd = hPwd.revealAs(frame, s_typeNamedPassword);
         if (hPwd instanceof GenericHandle hNamed) {
             return (StringHandle) hNamed.getField(null, "password");
