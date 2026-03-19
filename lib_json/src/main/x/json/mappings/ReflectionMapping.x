@@ -130,7 +130,7 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
 
             PropertyMapping<structType.DataType>[] fields = new PropertyMapping[];
             for (Property<structType.DataType> prop : structType.properties) {
-                if (prop.hasField) {
+                if (prop.hasField && !prop.lazy) {
                     assert !prop.isConstant() && !prop.abstract && !prop.injected;
 
                     // TODO CP what if the referent type is the same as "type"? (linked list example)
