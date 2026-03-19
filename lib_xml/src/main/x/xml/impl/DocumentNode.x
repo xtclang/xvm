@@ -196,7 +196,7 @@ class DocumentNode(ElementNode root)
     @Override
     protected (Node cur, UInt32 mods) replaceNode(Int index, Node? prev, Node? cur, Part part) {
         assert:bounds cur != Null;
-        assert:arg Node node := allowsChild(part) as "Type not allowed: {&part.type}";
+        assert:arg Node node := allowsChild(part) as $"Type not allowed: {&part.type}";
 
         switch (cur.is(_), node.is(_)) {
         case (ElementNode, ElementNode):
@@ -234,7 +234,7 @@ class DocumentNode(ElementNode root)
 
     @Override
     protected (Node cur, UInt32 mods) insertNode(Int index, Node? prev, Node? cur, Part part) {
-        assert:arg Node node := allowsChild(part) as "Type not allowed: {&part.type}";
+        assert:arg Node node := allowsChild(part) as $"Type not allowed: {&part.type}";
         switch (node.is(_)) {
         case ElementNode:
             assert as "Only one root Element is permitted on a Document";

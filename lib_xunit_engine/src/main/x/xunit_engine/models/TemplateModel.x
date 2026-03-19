@@ -131,11 +131,11 @@ const TemplateModel
         Model build(DiscoveryConfiguration configuration, Model[] children) {
             // if there are children there should only be a single TemplateModel child
             Int count = children.size;
-            assert count == 0 || count == 1 as "expected zero or one TemplateModel child but found {count}";
+            assert count == 0 || count == 1 as $"expected zero or one TemplateModel child but found {count}";
             TemplateModel? templateModel = Null;
             if (count == 1) {
                 Model child = children[0];
-                assert child.is(TemplateModel) as "expected a TemplateModel child but was {&child.type}";
+                assert child.is(TemplateModel) as $"expected a TemplateModel child but was {&child.type}";
                 templateModel = child;
             }
             return new TemplateModel(uniqueId, testClass, testMethod, factory, templateModel);

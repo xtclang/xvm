@@ -1012,7 +1012,7 @@ service Client<Schema extends RootSchema> {
             } else if (outer.conn == Null || outer.catalog.status != Running) {
                 throw new DBClosed();
             } else {
-                assert as "No transaction exists; {method} requires a transaction";
+                assert as $"No transaction exists; {method} requires a transaction";
             }
         }
 

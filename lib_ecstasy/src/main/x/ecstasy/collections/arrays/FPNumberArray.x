@@ -572,12 +572,12 @@ mixin FPNumberArray<Element extends FPNumber>
 
         function ResultType(Element) coerce = e -> {
             if (e.finite) {
-                Element v = e.round(rounding);
-                return v < min
-                        ? (negBounds ?: outOfBounds ?: throw new OutOfBounds("val={v}, min={min}"))
-                        : v > max
-                                ? (outOfBounds ?: throw new OutOfBounds("val={v}, max={max}"))
-                                : convert(v);
+                Element val = e.round(rounding);
+                return val < min
+                        ? (negBounds ?: outOfBounds ?: throw new OutOfBounds($"{val=}, {min=}"))
+                        : val > max
+                                ? (outOfBounds ?: throw new OutOfBounds($"{val=}, {max=}"))
+                                : convert(val);
             }
 
             if (e.NaN) {

@@ -202,7 +202,7 @@ annotation JsonPatch
             case JsonObject: applyRemoveFromObject(target, path, options);
             case JsonArray:  applyRemoveFromArray(target, path, options);
             case Primitive:  applyRemoveFromPrimitive(target, path);
-            default:         assert as "invalid JSON type {&doc.type}";
+            default:         assert as $"Invalid JSON type {&target.type}";
         };
     }
 

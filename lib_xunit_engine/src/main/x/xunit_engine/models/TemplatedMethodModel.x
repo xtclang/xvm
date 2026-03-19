@@ -11,7 +11,7 @@ const TemplatedMethodModel<ModelType extends MethodModel>
     construct(ModelType delegate, Model[] children) {
         assert children.size == 1 as "expected a TemplateModel child but children was empty";
         Model model = children[0];
-        assert model.is(TemplateModel) as "expected a TemplateModel child but was {&model.type}";
+        assert model.is(TemplateModel) as $"expected a TemplateModel child but was {&model.type}";
         this.templateModel = model;
         construct WrapperMethodModel(delegate);
     }

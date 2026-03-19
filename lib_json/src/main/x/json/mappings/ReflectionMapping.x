@@ -121,7 +121,7 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
                 return True, mapping.as(Mapping<SubType>);
             }
 
-            assert val clazz := type.fromClass() as "Unsupported type \"{type}\"";
+            assert val clazz := type.fromClass() as $"Unsupported type \"{type}\"";
             if (clazz.is(Enumeration)) {
                 return True, new EnumMapping<clazz.Value>().as(Mapping<SubType>);
             }
@@ -211,7 +211,7 @@ const ReflectionMapping<Serializable, StructType extends Struct>(
             }
 
         case Type<service>:
-            throw new IllegalJSON("Service type \"{type}\" is not serializable");
+            throw new IllegalJSON($"Service type \"{type}\" is not serializable");
 
         default:
             return schema.findMapping(type);

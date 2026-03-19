@@ -127,7 +127,7 @@ const Path
             String remain = name;
             while (Int slash := remain.indexOf('/')) {
                 String part = remain[0 ..< slash];
-                assert:arg part.size > 0 as "Name \"{name}\" contains empty path element";
+                assert:arg part.size > 0 as $"Name \"{name}\" contains empty path element";
 
                 remain = remain[slash >..< remain.size];
                 if (remain.size == 0) {
