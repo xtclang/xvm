@@ -29,11 +29,15 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.ExtendedSSLSession;
 import javax.net.ssl.KeyManager;
@@ -653,18 +657,37 @@ public class xRTServer
             f_hServer   = hServer;
         }
 
+        private static final ScheduledExecutorService WATCHDOG =
+            Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "exchange-watchdog");
+                t.setDaemon(true);
+                return t;
+            });
+
         @Override
         public void handle(HttpExchange exchange) {
             try (var ignore = ConstantPool.withPool(f_context.f_pool)) {
                 // call the Handler handle method
-                ObjectHandle[] hArgs = createArguments(exchange);
-                f_context.postRequest(null, f_hFunction, hArgs, 0).handle((response, err) -> {
+                ObjectHandle[]                  hArgs = createArguments(exchange);
+                CompletableFuture<ObjectHandle> cf    = f_context.postRequest(null, f_hFunction, hArgs, 0);
+
+                ScheduledFuture<?> watchdog = WATCHDOG.schedule(() ->
+                    cf.completeExceptionally(new IOException(
+                        Handy.logTime() + " Error: Request timed out: " + exchange.getRequestMethod() + " "
+                            + exchange.getRequestHeaders().getFirst("Host") + exchange.getRequestURI())),
+                    300, TimeUnit.SECONDS);
+
+                cf.whenComplete((response, err) -> {
                     // process the response (or error) from calling the Handler handle method
                     // TODO: this should be sent to the natural "unhandledException" handler
+                    watchdog.cancel(false);
                     if (err != null) {
                         sendError(exchange, err);
+                    } else {
+                        System.out.println(Handy.logTime() + " Trace: " + exchange.getRequestMethod() +
+                            " " + exchange.getRequestHeaders().getFirst("Host") + exchange.getRequestURI() +
+                            " " + exchange.getResponseCode());
                     }
-                    return null;
                 });
             } catch (Throwable t) {
                 sendError(exchange, t);
