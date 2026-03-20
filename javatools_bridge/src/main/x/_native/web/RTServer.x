@@ -253,7 +253,8 @@ service RTServer
             RequestInfo info = new RequestInfoImpl(this.RTServer,
                     binding, bindings.get(binding) ?: HttpServer.NoTrustedProxies,
                     context, uriString, HttpMethod.of(method), tls);
-            handler.handle^(&info.maskAs(RequestInfo));
+            Tuple result = handler.handle^(&info.maskAs(RequestInfo));
+            return result;
         }
     }
 

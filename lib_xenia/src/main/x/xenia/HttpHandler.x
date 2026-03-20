@@ -121,6 +121,7 @@ service HttpHandler
             }
             busy[index] = False;
         });
+        return result;
     }
 
     @Override
@@ -198,6 +199,11 @@ service HttpHandler
         }
 
         // TODO: check the total number of pending requests and throw a "reject" if over the limit
+        @Inject Console console;
+        console.print($|All dispatchers for "{route.host}" are busy; queueing the request to \
+                       |dispatcher #{lastIndex} with {dispatchers[lastIndex].pendingRequests} \
+                       |pending requests
+                     );
 
         // we are at the max; add the overload evenly
         return lastIndex++;
