@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -559,6 +560,16 @@ public class BuildContext {
      */
     public TypeConstant getTypeConstant(int argId) {
         return getConstant(argId, TypeConstant.class);
+    }
+
+    /**
+     * @return true iff the specified type is represented by the Java interface and needs to be
+     *         cast explicitly to {@code nObj} class to invoke its methods
+     */
+    public boolean isJavaInterface(TypeConstant type) {
+        return type.isSingleUnderlyingClass(true)
+            && type.getSingleUnderlyingClass(true).getComponent() instanceof ClassStructure clz
+            && clz.getFormat() == Component.Format.INTERFACE;
     }
 
     /**
