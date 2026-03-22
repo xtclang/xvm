@@ -76,12 +76,12 @@ public class Runner extends Launcher<RunnerOptions> {
 
         var repo = configureLibraryRepo(opts.getModulePath());
     	checkErrors("repository setup");
-	
+
         if (opts.showVersion()) {
             showSystemVersion(repo);
         }
 
-        final var optFileSpec = opts.getTarget();
+        var optFileSpec = opts.getTarget();
         if (optFileSpec.isEmpty()) {
             if (opts.showVersion()) {
                 return 0;
@@ -90,8 +90,8 @@ public class Runner extends Launcher<RunnerOptions> {
             return 1;
         }
 
-        File            fileSpec = optFileSpec.get();
-        var             filePath = fileSpec.getPath();
+        File            fileSpec   = optFileSpec.get();
+        String          filePath   = fileSpec.getPath();
         File            fileBin    = null;
         boolean         binExists  = false;
         ModuleStructure module     = null;

@@ -381,7 +381,7 @@ const Uri
     /**
      * The Uri is divided into sections.
      */
-    enum Section(String? prefix=Null, String? suffix=Null) {
+    enum Section(String? prefix = Null, String? suffix = Null) {
         Scheme(suffix=":") {
             @Override
             Appender<Char> escape(Appender<Char> buf, String text) = Uri.escape(text, schemeValid).appendTo(buf);
@@ -427,7 +427,7 @@ const Uri
      * rendered canonically.
      */
     static const Position(Section section, Int offset) {
-        Position with(Section? section=Null, Int? offset=Null) {
+        Position with(Section? section = Null, Int? offset = Null) {
             return new Position(section ?: this.section, offset ?: this.offset);
         }
 
@@ -616,7 +616,8 @@ const Uri
      * @return (conditional) the position within the Uri that the literal is located
      * @return (conditional) the position within the Uri that immediately follows the literal
      */
-    conditional (Position found, Position next) find(String literal, Position? from=Null, Position? to=Null) {
+    conditional (Position found, Position next)
+            find(String literal, Position? from = Null, Position? to = Null) {
         // start at the beginning if no "start from" specified
         from ?:= Start;
 
@@ -833,7 +834,7 @@ const Uri
      *
      * @return the specified slice of the URI in the URI's canonical format
      */
-    String canonicalSlice(Position start, Position? end=Null) {
+    String canonicalSlice(Position start, Position? end = Null) {
         static Position WayBeyondTheEnd = new Position(Fragment, 1TB);
         end ?:= WayBeyondTheEnd;
 
@@ -2087,7 +2088,7 @@ const Uri
      *
      * @return the contents of the passed String, but escaped as necessary
      */
-    static String escape(String text, function Boolean(Char) valid, Boolean spaceIsPlus=False) {
+    static String escape(String text, function Boolean(Char) valid, Boolean spaceIsPlus = False) {
         Int offset = -1;
         Scan: for (Char ch : text) {
             if (!valid(ch)) {

@@ -17,7 +17,6 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.ServiceContext;
-import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 import org.xvm.runtime.WeakCallback;
 
@@ -58,7 +57,7 @@ public class xLocalClock
         // it would execute on the LocalClock service that belongs to the native container.
         // As a result, the "alarm" handle would be proxied via FunctionProxyHandle, which would
         // keep a hard reference to the calling service and would "leak" that service unless the
-        // caller explicitly cancelled.
+        // caller explicitly canceled.
         // To prevent that, we need to implement it natively, which would execute the "schedule"
         // method on the caller's context and avoid creation of the alarm proxy.
         markNativeMethod("schedule",  new String[]{"temporal.Duration", "temporal.Clock.Alarm", "Boolean"}, null);
@@ -132,7 +131,7 @@ public class xLocalClock
             return frame.raiseException(e.getMessage());
         }
 
-        FunctionHandle hCancel = new NativeFunctionHandle((_frame, _ah, _iReturn) -> {
+        FunctionHandle hCancel = new NativeFunctionHandle((_, _, _) -> {
             alarm.cancel();
             return Op.R_NEXT;
         });
@@ -176,20 +175,11 @@ public class xLocalClock
     // -----  helpers ------------------------------------------------------------------------------
 
     protected JavaLong epochMillis(Frame frame) {
-        return xInt64.INSTANCE.makeHandle(System.currentTimeMillis());
+        return xInt64.makeHandle(System.currentTimeMillis());
     }
 
     protected JavaLong timezoneMillis(Frame frame) {
-        return xInt64.INSTANCE.makeHandle(TimeZone.getDefault().getOffset(System.currentTimeMillis()));
-    }
-
-    protected TypeComposition ensureTimeClass() {
-        TypeComposition clz = m_clzTime;
-        if (clz == null) {
-            clz = m_clzTime =
-                f_container.getTemplate("temporal.Time").getCanonicalClass();
-        }
-        return clz;
+        return xInt64.makeHandle(TimeZone.getDefault().getOffset(System.currentTimeMillis()));
     }
 
     /**
@@ -290,11 +280,6 @@ public class xLocalClock
     // ----- constants and fields ------------------------------------------------------------------
 
     public static Timer TIMER = new Timer("ecstasy:LocalClock", true);
-
-    /**
-     * Cached Time class.
-     */
-    private TypeComposition m_clzTime;
 
     /**
      * Cached LocalClock handle.

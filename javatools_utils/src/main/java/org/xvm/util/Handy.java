@@ -911,24 +911,15 @@ public final class Handy {
     /**
      * @param cMillis  date/time in millis
      *
-     * @return date/time string in "yyyy-MM-dd HH:mm:ss.SSS" format
+     * @return date/time string in "yyyy-MM-dd HH:mm:ss.SSS" format in UTC time zone
      */
     public static String logTime() {
         return logTime(System.currentTimeMillis(), DATE_TIME_MILLS_FORMATTER);
     }
 
-    /**
-     * @param cMillis  date/time in millis
-     *
-     * @return date/time string in "yyyy-MM-dd HH:mm:ss.SSS" format
-     */
-    public static String logTime(final long cMillis) {
-        return logTime(cMillis, DATE_TIME_MILLS_FORMATTER);
-    }
-
     public static String logTime(final long cMillis, final DateTimeFormatter formatter) {
         return Instant.ofEpochMilli(cMillis)
-            .atZone(ZoneId.systemDefault())
+            .atZone(ZoneId.of("UTC"))
             .format(formatter);
     }
 

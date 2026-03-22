@@ -380,7 +380,7 @@ public class xNanosTimer
             }
 
             /**
-             * Called after alarm has finished or has been cancelled.
+             * Called after alarm has finished or has been canceled.
              */
             public void unregister() {
                 ServiceContext context = f_refCallback.get();
