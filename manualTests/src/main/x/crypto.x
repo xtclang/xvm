@@ -21,7 +21,7 @@ module TestCrypto {
         manager.createSymmetricKey(store, password, symName);
         manager.createPassword(store, password, pwdName, "super-secret");
 
-        @Inject(opts=new KeyStore.Info(store.contents, password)) KeyStore keystore;
+        KeyStore keystore = manager.keystoreFor(store, password);
 
         assert CryptoKey keyPair := keystore.getKey(pairName);
         assert CryptoKey symKey  := keystore.getKey(symName);

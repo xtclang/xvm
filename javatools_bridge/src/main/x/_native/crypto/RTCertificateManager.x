@@ -15,34 +15,33 @@ service RTCertificateManager
     private String provider = "self";
 
     @Override
-    void createCertificate(File keystore, Password pwd, String name, String dName) {
+    KeyStore keystoreFor(File keystore, Password pwd) = keystoreForImpl(keystore.contents, pwd);
+
+    @Override
+    KeyStore encryptKeyStore(File keystore, Password oldPwd, Password newPwd) {
+        encryptKeyStoreImpl(getPath(keystore), oldPwd, newPwd);
+        return keystoreFor(keystore, newPwd);
+    }
+
+    @Override
+    void createCertificate(File keystore, Password pwd, String name, String dName) =
         createCertificateImpl(getPath(keystore), pwd, name, dName);
-    }
 
     @Override
-    void revokeCertificate(File keystore, Password pwd, String name) {
+    void revokeCertificate(File keystore, Password pwd, String name) =
         revokeCertificateImpl(getPath(keystore), pwd, name);
-    }
 
     @Override
-    void createSymmetricKey(File keystore, Password pwd, String name) {
+    void createSymmetricKey(File keystore, Password pwd, String name) =
         createSymmetricKeyImpl(getPath(keystore), pwd, name);
-    }
 
     @Override
-    void createPassword(File keystore, Password pwd, String name, String pwdValue) {
+    void createPassword(File keystore, Password pwd, String name, String pwdValue) =
         createPasswordImpl(getPath(keystore), pwd, name, pwdValue);
-    }
 
     @Override
-    void changeStorePassword(File keystore, Password pwd, Password newPassword) {
-        changeStorePasswordImpl(getPath(keystore), pwd, newPassword);
-    }
-
-    @Override
-    Byte[] extractKey(File|KeyStore keystore, Password pwd, String name) {
-        return extractKeyImpl(keystore.is(File) ? getPath(keystore) : keystore, pwd, name);
-    }
+    Byte[] extractKey(File|KeyStore keystore, Password pwd, String name) =
+        extractKeyImpl(keystore.is(File) ? getPath(keystore) : keystore, pwd, name);
 
     private String getPath(File keystore) {
         import ecstasy.fs.DirectoryFileStore.FileWrapper;
@@ -54,6 +53,12 @@ service RTCertificateManager
         return file.pathString;
     }
 
+    private KeyStore keystoreForImpl(Byte[] contents, Password pwd)
+        {TODO("Native");}
+
+    private void encryptKeyStoreImpl(String path, Password oldPwd, Password newPwd)
+        {TODO("Native");}
+
     private void createCertificateImpl(String path, Password pwd, String name, String dName)
         {TODO("Native");}
 
@@ -64,9 +69,6 @@ service RTCertificateManager
         {TODO("Native");}
 
     private void createPasswordImpl(String path, Password pwd, String name, String pwdValue)
-        {TODO("Native");}
-
-    private void changeStorePasswordImpl(String path, Password pwd, Password newPwd)
         {TODO("Native");}
 
     private Byte[] extractKeyImpl(String|KeyStore pathOrStore, Password pwd, String name)
