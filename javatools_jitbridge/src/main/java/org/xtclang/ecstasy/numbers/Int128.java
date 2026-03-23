@@ -9,6 +9,8 @@ import org.xtclang.ecstasy.Ordered;
 import org.xtclang.ecstasy.OutOfBounds;
 import org.xtclang.ecstasy.nType;
 
+import org.xtclang.ecstasy.text.String;
+
 import org.xvm.javajit.Ctx;
 
 /**
@@ -28,14 +30,13 @@ public class Int128 extends IntNumber {
 
     private BigInteger $bigInteger = null;
 
-    private org.xtclang.ecstasy.text.String $toString = null;
+    private String $toString = null;
 
     @Override
-    public org.xtclang.ecstasy.text.String toString(Ctx ctx) {
-        org.xtclang.ecstasy.text.String toString = $toString;
+    public String toString(Ctx ctx) {
+        String toString = $toString;
         if (toString == null) {
-            toString = $toString
-                    = org.xtclang.ecstasy.text.String.of(ctx, $asBigInteger().toString());
+            toString = $toString = String.of(ctx, $asBigInteger().toString());
         }
         return toString;
     }
@@ -408,7 +409,7 @@ public class Int128 extends IntNumber {
     // ----- debugging support ---------------------------------------------------------------------
 
     @Override
-    public String toString() {
+    public java.lang.String toString() {
         return $asBigInteger().toString();
     }
 }

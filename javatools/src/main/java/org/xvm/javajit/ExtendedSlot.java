@@ -4,6 +4,8 @@ import java.lang.classfile.CodeBuilder;
 
 import java.lang.constant.ClassDesc;
 
+import org.xvm.asm.Op;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
@@ -53,6 +55,7 @@ public record ExtendedSlot(BuildContext bctx, int regId, int slot, int extSlot,
 
     @Override
     public RegisterInfo store(BuildContext bctx, CodeBuilder code, TypeConstant type) {
+        assert regId() > Op.CONSTANT_OFFSET; // cannot store a property register
         // store the "extension" boolean flag first
         code.istore(extSlot());
         return RegisterInfo.super.store(bctx, code, type);

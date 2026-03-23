@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -243,6 +244,13 @@ public class BuildContext {
      */
     public ConstantPool pool() {
         return typeSystem.pool();
+    }
+
+    /**
+     * @return the {@link ClassDesc} for this context's {@link #typeInfo}
+     */
+    public ClassDesc cd() {
+        return JitTypeDesc.getJitClass(builder, typeInfo.getType());
     }
 
     /**
@@ -552,6 +560,16 @@ public class BuildContext {
      */
     public TypeConstant getTypeConstant(int argId) {
         return getConstant(argId, TypeConstant.class);
+    }
+
+    /**
+     * @return true iff the specified type is represented by the Java interface and needs to be
+     *         cast explicitly to {@code nObj} class to invoke its methods
+     */
+    public boolean isJavaInterface(TypeConstant type) {
+        return type.isSingleUnderlyingClass(true)
+            && type.getSingleUnderlyingClass(true).getComponent() instanceof ClassStructure clz
+            && clz.getFormat() == Component.Format.INTERFACE;
     }
 
     /**
@@ -875,8 +893,38 @@ public class BuildContext {
      * Obtain the type of the specified argument.
      */
     public TypeConstant getArgumentType(int argId) {
+        return getArgumentType(argId, false);
+    }
+
+    /**
+     * Obtain the type of the specified return value.
+     *
+     * Note: during the {@link Op#computeTypes} cycle, the ops most commonly use the {@link
+     * TypeMatrix#assign} API to assign the type of the corresponding register, which stores
+     * that type for that register at the **next** op address. For example, "MOVE src, dest"
+     * computes the type of "dest" to be consumed by the ops that follow the "MOVE" op. Similarly,
+     * "CALL_01 function, dest" op computes the type or "dest" to be consumed by the following ops.
+     *
+     * Sometimes however, there are scenarios where that computed "destination" type needs to be
+     * known during the {@link Op#build} cycle by **that same op** that has just computed it. A
+     * common use case is represented by the {@link org.xvm.asm.OpInvocable}, which assigns the
+     * type of the "retValue" at the end of {@link org.xvm.asm.OpInvocable#computeInvokeTypes}
+     * method and needs to use it at the end of {@link org.xvm.asm.OpInvocable#computeInvoke} method
+     * via the call to {@link #assignReturns}.
+     *
+     * To facilitate that, all we need is to look up the computed type at the very next op address.
+     */
+    public TypeConstant getReturnType(int argId) {
+        return getArgumentType(argId, true);
+    }
+
+    /**
+     * Obtain the type of the specified argument or return value.
+     */
+    private TypeConstant getArgumentType(int argId, boolean isReturn) {
         if (argId >= 0) {
-            return typeMatrix.getType(argId, currOpAddr);
+            return isReturn ? typeMatrix.getType(argId, currOpAddr + 1)
+                            : typeMatrix.getType(argId, currOpAddr);
         }
 
         if (argId <= Op.CONSTANT_OFFSET) {
@@ -932,8 +980,9 @@ public class BuildContext {
      * @param loaded  if true, the register value has been loaded on the Java stack
      */
     protected RegisterInfo adjustRegister(CodeBuilder code, RegisterInfo reg, boolean loaded) {
-        TypeConstant regType = reg.type();
-        if (!regType.isJavaPrimitive() && !regType.isXvmPrimitive()) {
+        TypeConstant regType  = reg.type();
+        TypeConstant baseType = regType.removeNullable();
+        if (!baseType.isJavaPrimitive() && !baseType.isXvmPrimitive()) {
             int          regId   = reg.regId();
             TypeConstant mtxType = typeMatrix.getType(regId, currOpAddr);
 
@@ -1148,13 +1197,51 @@ public class BuildContext {
     }
 
     /**
-     * Store one or two values at the Java stack into the Java slot for the specified register.
+     * Store the values on the Java stack.
+     * <p>
+     * If the register represents a property, the property value will be updated with the values
+     * on the stack, otherwise the values on the stack will be stored into the register's slots.
      *
+     * @param code  the {@link CodeBuilder} to use to generate byte codes
+     * @param reg   the register to store the values from the stack into
      * @param type  (optional) the known destination type
      */
     public void storeValue(CodeBuilder code, RegisterInfo reg, TypeConstant type) {
-        ensureVarScope(code, reg);
-        reg.store(this, code, type);
+        int regId = reg.regId();
+        if (regId <= Op.CONSTANT_OFFSET) {
+            // the register represents a property that the value(s) on the stack must be stored into
+            buildSetPropertyFromStack(code, regId, reg.type(), reg.flavor());
+        } else {
+            ensureVarScope(code, reg);
+            reg.store(this, code, type);
+        }
+    }
+
+    /**
+     * Store the values on the Java stack.
+     * <p>
+     * If the register represents a property, the property value will be updated with the values
+     * on the stack, otherwise the values on the stack will be stored into the register's slots.
+     *
+     * @param code   the {@link CodeBuilder} to use to generate byte codes
+     * @param regId  the register to store the values from the stack into
+     * @param type   (optional) the known destination type
+     */
+    public void storeValue(CodeBuilder code, int regId, TypeConstant type) {
+        if (regId <= Op.CONSTANT_OFFSET) {
+            TypeConstant resolvedType = type.containsFormalType(true)
+                    ? type.resolveGenerics(pool(), typeInfo.getType())
+                    : type;
+
+            JitTypeDesc jitDesc = resolvedType.getJitDesc(builder);
+
+            // the register represents a property that the value(s) on the stack must be stored into
+            buildSetPropertyFromStack(code, regId, resolvedType, jitDesc.flavor);
+        } else {
+            RegisterInfo reg = ensureRegInfo(regId, type);
+            ensureVarScope(code, reg);
+            reg.store(this, code, type);
+        }
     }
 
     /**
@@ -1322,7 +1409,7 @@ public class BuildContext {
             case Specific:
                 switch (dstFlavor) {
                 case Primitive:
-                    Builder.unbox(code, typeTo, regTo.cd());
+                    Builder.unbox(code, typeTo);
                     break AddTransformation;
 
                 case Widened:
@@ -1353,7 +1440,7 @@ public class BuildContext {
             case Primitive:
                 switch (dstFlavor) {
                 case Specific, Widened:
-                    Builder.box(code, typeFrom, cdFrom);
+                    Builder.box(code, typeFrom);
                     break AddTransformation;
 
                 case NullablePrimitive:
@@ -1399,7 +1486,7 @@ public class BuildContext {
             case XvmPrimitive:
                 switch (dstFlavor) {
                 case Specific:
-                    Builder.box(code, typeTo, regTo.cd());
+                    Builder.box(code, typeTo);
                     break AddTransformation;
 
                 case NullableXvmPrimitive:
@@ -1415,7 +1502,7 @@ public class BuildContext {
             case NullableXvmPrimitive:
                 switch (dstFlavor) {
                     case Specific:
-                        Builder.box(code, typeTo, regTo.cd());
+                        Builder.box(code, typeTo);
                         break AddTransformation;
 
                     case XvmPrimitive:
@@ -1610,7 +1697,7 @@ public class BuildContext {
                 switch (dstFlavor) {
                 case Specific, SpecificWithDefault, Widened, WidenedWithDefault:
                     assert srcReg.type().isA(pd.type) || pd.type.containsTypeParameter(true);
-                    Builder.box(code, srcReg.type(), srcReg.cd());
+                    Builder.box(code, srcReg.type());
                     continue;
 
                 case NullablePrimitive, PrimitiveWithDefault, NullablePrimitiveWithDefault:
@@ -1628,7 +1715,7 @@ public class BuildContext {
                     Label endIf  = code.newLabel();
 
                     code.ifne(ifTrue);
-                    Builder.box(code, srcReg.type().removeNullable(), srcReg.cd());
+                    Builder.box(code, srcReg.type().removeNullable());
                     code.goto_(endIf)
                         .labelBinding(ifTrue);
                     Builder.pop(code, srcReg.cd());
@@ -1642,7 +1729,7 @@ public class BuildContext {
                 switch (dstFlavor) {
                     case Specific, SpecificWithDefault, Widened, WidenedWithDefault:
                     assert srcReg.type().isA(pd.type);
-                    Builder.box(code, srcReg.type(), srcReg.cd());
+                    Builder.box(code, srcReg.type());
                     continue;
 
                 case NullableXvmPrimitive, XvmPrimitiveWithDefault, NullableXvmPrimitiveWithDefault:
@@ -1660,7 +1747,7 @@ public class BuildContext {
                     Label endIf  = code.newLabel();
 
                     code.ifne(ifTrue);
-                    Builder.box(code, srcReg.type().removeNullable(), srcReg.cd());
+                    Builder.box(code, srcReg.type().removeNullable());
                     code.goto_(endIf)
                             .labelBinding(ifTrue);
                     for (ClassDesc cd : JitTypeDesc.getXvmPrimitiveClasses(srcReg.type())) {
@@ -1927,28 +2014,257 @@ public class BuildContext {
     }
 
     /**
-     * Set the property value.
+     * Set a property value using the specified register.
+     * <p>
+     * The target object that owns the property is assumed to be in this context's "this" register.
+     *
+     * @param code    the code builder
+     * @param propId  the index of the property to set
+     * @param argId   the identifier for the register referencing the slots containing the value
+     *                to set into the property
      */
-    public void buildSetProperty(CodeBuilder code, RegisterInfo targetSlot, int propIdIndex, int regId) {
-        if (!targetSlot.isSingle()) {
+    public void buildSetProperty(CodeBuilder code, int propId, int argId) {
+        buildSetProperty(code, Op.A_THIS, propId, argId);
+    }
+
+    /**
+     * Set a property value using the specified register.
+     *
+     * @param code      the code builder
+     * @param targetId  the identifier for the register referencing the parent object containing
+     *                  the property to set
+     * @param propId    the index of the property to set
+     * @param argId     the identifier for the register referencing the slots containing the
+     *                  value to set into the property
+     */
+    public void buildSetProperty(CodeBuilder code, int targetId, int propId, int argId) {
+        RegisterInfo regTarget = loadArgument(code, targetId);
+        loadCtx(code);
+        RegisterInfo     srcReg = loadArgument(code, argId);
+        PropertyConstant prop   = getConstant(propId, PropertyConstant.class);
+        buildSetProperty(code, regTarget, prop, srcReg.type(), srcReg.flavor());
+    }
+
+    /**
+     * Set a property using the values from the stack.
+     * <p>
+     * The target object that owns the property is assumed to be in this context's "this" register.
+     *
+     * @param code       the code builder
+     * @param propId     the index of the property to set
+     * @param srcType    the type of the value on the stack
+     * @param srcFlavor  the flavor of the value on the stack
+     */
+    public void buildSetPropertyFromStack(CodeBuilder code, int propId, TypeConstant srcType,
+                                          JitFlavor srcFlavor) {
+        PropertyConstant prop = getConstant(propId, PropertyConstant.class);
+        TypeConstant     type = prop.getType();
+
+        ClassDesc[] cds;
+        if (type.isXvmPrimitive()) {
+            cds = JitTypeDesc.getXvmPrimitiveClasses(type);
+        } else {
+            cds = new ClassDesc[]{JitTypeDesc.getJitClass(builder, type)};
+        }
+
+        int[] slots = new int[cds.length];
+        for (int i = 0; i < cds.length; i++) {
+            slots[i] = storeTempValue(code, cds[i]);
+        }
+
+        RegisterInfo regTarget = loadThis(code);
+        loadCtx(code);
+        for (int i = 0; i < cds.length; i++) {
+            Builder.load(code, cds[i], slots[i]);
+        }
+
+        buildSetProperty(code, regTarget, prop, srcType, srcFlavor);
+    }
+
+    /**
+     * Set the property value.
+     * <p>
+     * Before calling this method, the stack should contain the reference to the target object
+     * containing the property to be set, followed by the current {@link Ctx context}, and
+     * finally one or more values to use to update the property.
+     *
+     * @param code       the code builder
+     * @param targetReg  the register representing the target object containing the property to
+     *                   be set
+     * @param prop       the property to set
+     * @param srcType    the type of the value on the stack
+     * @param srcFlavor  the flavor of the value on the stack
+     */
+    public void buildSetProperty(CodeBuilder code, RegisterInfo targetReg, PropertyConstant prop,
+                                 TypeConstant srcType, JitFlavor srcFlavor) {
+
+        if (!targetReg.isSingle()) {
             throw new UnsupportedOperationException("Multislot P_Set");
         }
-        PropertyConstant propId     = getConstant(propIdIndex, PropertyConstant.class);
-        PropertyInfo     propInfo   = propId.getPropertyInfo(targetSlot.type());
-        JitMethodDesc    jmd        = propInfo.getSetterJitDesc(builder);
-        String           setterName = propInfo.ensureSetterJitMethodName(typeSystem);
+
+        TypeConstant  targetType = targetReg.type();
+        PropertyInfo  propInfo   = prop.getPropertyInfo(targetType);
+        JitMethodDesc jmd        = propInfo.getSetterJitDesc(builder);
+        String        setterName = propInfo.ensureSetterJitMethodName(typeSystem);
 
         MethodTypeDesc md;
+        JitParamDesc   pd;
         if (jmd.isOptimized) {
             md         = jmd.optimizedMD;
+            pd         = jmd.optimizedParams[0];
             setterName += Builder.OPT;
         } else {
             md = jmd.standardMD;
+            pd = jmd.standardParams[0];
         }
 
-        loadCtx(code);
-        loadArgument(code, regId);
-        code.invokevirtual(targetSlot.cd(), setterName, md);
+        JitFlavor dstFlavor = pd.flavor;
+        if (srcFlavor != dstFlavor) {
+            // additional transformations are required for these scenarios:
+            //  - Specific  -> Primitive          (Int n; n := o.is(Int);)
+            //  - Specific  -> NullablePrimitive  (Int? n; n = Null;)
+            //  - Primitive -> Widened            (Int|String n; n = 5)
+            //  - Primitive -> NullablePrimitive  (Int? n; n = 5)
+            //  - NullablePrimitive -> Primitive  (Int? n = 5; assert call(n);)
+            //  - NullablePrimitive -> Specific   (Int? n = Null; assert call(n);)
+
+            boolean invalid = false;
+
+            AddTransformation:
+            switch (srcFlavor) {
+            case Specific:
+                switch (dstFlavor) {
+                case Primitive, XvmPrimitive:
+                    Builder.unbox(code, pd.type);
+                    break AddTransformation;
+
+                case Widened:
+                    // nothing to do
+                    break AddTransformation;
+
+                case NullablePrimitive:
+                    if (srcType.isOnlyNullable()) {
+                        code.pop(); // throw away Null; load the default value and "true"
+                        Builder.defaultLoad(code, pd.cd);
+                        code.iconst_1();
+                    } else {
+                        Builder.unbox(code, pd.type);
+                        code.iconst_0();
+                    }
+                    break AddTransformation;
+
+                case NullableXvmPrimitive:
+                    if (srcType.isOnlyNullable()) {
+                        code.pop(); // throw away Null; load the default values and "true"
+                        for (ClassDesc cd : JitTypeDesc.getXvmPrimitiveClasses(pd.type)) {
+                            Builder.defaultLoad(code, cd);
+                        }
+                        code.iconst_1();
+                    } else {
+                        Builder.unbox(code, pd.type);
+                        code.iconst_0();
+                    }
+                    break AddTransformation;
+
+                default:
+                    invalid = true;
+                    break AddTransformation;
+                }
+
+            case Primitive:
+                switch (dstFlavor) {
+                case Specific, Widened:
+                    Builder.box(code, srcType);
+                    break AddTransformation;
+
+                case NullablePrimitive:
+                    // the value is already on Java stack; just load "false"
+                    code.iconst_0();
+                    break AddTransformation;
+
+                default:
+                    invalid = true;
+                    break AddTransformation;
+                }
+
+            case NullablePrimitive:
+                switch (dstFlavor) {
+                case Specific, Widened:
+                    Label ifNull = code.newLabel();
+                    Label endIf  = code.newLabel();
+
+                    code.ifne(ifNull);
+                    Builder.box(code, srcType);
+                    code.goto_(endIf)
+                        .labelBinding(ifNull);
+                    Builder.pop(code, builder, srcType);
+                    Builder.loadNull(code);
+                    code.labelBinding(endIf);
+                    break AddTransformation;
+
+                case Primitive:
+                    code.pop(); // throw away boolean null flag;
+                    break AddTransformation;
+
+                default:
+                    invalid = true;
+                    break AddTransformation;
+                }
+
+            case XvmPrimitive:
+                switch (dstFlavor) {
+                case Specific, Widened:
+                    Builder.box(code, srcType);
+                    break AddTransformation;
+
+                case NullableXvmPrimitive:
+                    // the value is already on the Java stack; just load "false"
+                    code.iconst_0();
+                    break AddTransformation;
+
+                default:
+                    invalid = true;
+                    break AddTransformation;
+                }
+
+            case NullableXvmPrimitive:
+                switch (dstFlavor) {
+                    case Specific, Widened:
+                        Label ifNull = code.newLabel();
+                        Label endIf  = code.newLabel();
+
+                        code.ifne(ifNull);
+                        Builder.box(code, srcType);
+                        code.goto_(endIf)
+                            .labelBinding(ifNull);
+                        for (ClassDesc cd : JitTypeDesc.getXvmPrimitiveClasses(srcType)) {
+                            Builder.pop(code, cd);
+                        }
+                        Builder.loadNull(code);
+                        code.labelBinding(endIf);
+                        break AddTransformation;
+
+                    case XvmPrimitive:
+                        code.pop(); // throw away boolean null flag;
+                        break AddTransformation;
+
+                    default:
+                        invalid = true;
+                        break AddTransformation;
+                }
+
+            default:
+                invalid = true;
+                break;
+            }
+
+            if (invalid) {
+                throw new UnsupportedOperationException("Not implemented: src=" + srcFlavor +
+                                                        "; dst=" + dstFlavor);
+            }
+        }
+
+        code.invokevirtual(targetReg.cd(), setterName, md);
     }
 
     /**
@@ -1998,33 +2314,59 @@ public class BuildContext {
         for (int i = 0; i < cReturns; i++) {
             int          iOpt    = isOptimized ? jmd.getOptimizedReturnIndex(i) : -1;
             JitParamDesc pdRet   = isOptimized ? jmd.optimizedReturns[iOpt] : jmd.standardReturns[i];
-            TypeConstant typeRet = pdRet.type;
+            TypeConstant retType = pdRet.type;
             ClassDesc    cdRet   = pdRet.cd;
             int          regId   = anVar[i];
-            RegisterInfo reg     = ensureRegInfo(regId, typeRet, cdRet, "");
+
+            if (regId == Op.A_IGNORE) {
+                // The return is ignored, e.g just calling foo() instead of x = foo();
+                // if i == 0 then we need to pop the value from the stack, otherwise the return
+                // value is in the context, so we can just ignore it
+                if (i == 0) {
+                    Builder.pop(code, cdRet);
+                }
+                continue;
+            }
+
+            TypeConstant destType = getReturnType(regId);
+            assert destType != null;
+
+            JitTypeDesc jitDesc    = destType.getJitDesc(builder);
+            JitFlavor   destFlavor = jitDesc.flavor;
+            boolean     invalid    = false;
 
             if (i == 0) {
                 switch (pdRet.flavor) {
-                case NullablePrimitive:
+                case NullablePrimitive: {
                     assert isOptimized;
                     JitParamDesc pdExt = jmd.optimizedReturns[iOpt+1];
 
                     // if the value is `True`, then the return value is Ecstasy `Null`
                     Builder.loadFromContext(code, CD_boolean, pdExt.altIndex);
 
-                    if (reg.isSingle()) {
+                    switch (destFlavor) {
+                    case NullablePrimitive:
+                        // nothing to do
+                        break;
+
+                    case Specific, Widened:
                         Label ifTrue = code.newLabel();
                         Label endIf  = code.newLabel();
                         code.ifne(ifTrue);
-                        Builder.box(code, typeRet, cdRet);
+                        Builder.box(code, retType);
                         code.goto_(endIf)
-                            .labelBinding(ifTrue)
-                            .pop();
+                                .labelBinding(ifTrue);
+                        Builder.pop(code, cdRet);
                         Builder.loadNull(code);
                         code.labelBinding(endIf);
+                        break;
+
+                    default:
+                        invalid = true;
+                        break;
                     }
-                    storeValue(code, reg, typeRet);
                     break;
+                }
 
                 case XvmPrimitive: {
                     assert isOptimized;
@@ -2034,7 +2376,6 @@ public class BuildContext {
                         JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
                         Builder.loadFromContext(code, retDesc.cd, retIndex);
                     }
-                    storeValue(code, reg, typeRet);
                     break;
                 }
 
@@ -2042,7 +2383,8 @@ public class BuildContext {
                     assert isOptimized;
                     int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
 
-                    if (reg.isSingle()) {
+                    switch (destFlavor) {
+                    case Specific, Widened:
                         Builder.loadFromContext(code, CD_boolean, optIndexes[optIndexes.length - 1]);
                         Label ifTrue = code.newLabel();
                         Label endIf = code.newLabel();
@@ -2051,45 +2393,49 @@ public class BuildContext {
                             JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
                             Builder.loadFromContext(code, retDesc.cd, retIndex);
                         }
-                        Builder.box(code, typeRet, cdRet);
+                        Builder.box(code, retType);
                         code.goto_(endIf).labelBinding(ifTrue);
                         Builder.pop(code, jmd.optimizedReturns[0].cd);
                         Builder.loadNull(code);
                         code.labelBinding(endIf);
-                    } else {
+                        break;
+
+                    case NullableXvmPrimitive:
                         for (int j = 1, retIndex = 0; j < optIndexes.length; j++, retIndex++) {
                             JitParamDesc retDesc = jmd.optimizedReturns[optIndexes[j]];
                             Builder.loadFromContext(code, retDesc.cd, retIndex);
                         }
+                        break;
+
+                    default:
+                        invalid = true;
+                        break;
                     }
-                    storeValue(code, reg, typeRet);
                     break;
                 }
 
-                default:
-                    // process the natural return
-                    if (reg.cd().isPrimitive() && !isOptimized) {
-                        if (typeRet.isTypeParameter()) {
-                            // we need to trust the compiler here
-                            switch (reg.flavor()) {
-                            case Primitive:
-                                generateCheckCast(code, typeRet = reg.type());
-                                Builder.unbox(code, typeRet, reg.cd());
-                                break;
+                case Specific:
+                    switch (destFlavor) {
+                    case Specific, Widened:
+                        // nothing to do
+                        break;
 
-                            case NullablePrimitive:
-                                // TODO: resolve the type parameter and check for Null if necessary
-                                generateCheckCast(code, typeRet = reg.type().removeNullable());
-                                Builder.unbox(code, typeRet, reg.cd());
-                                code.iconst_0();
-                                break;
+                    case Primitive:
+                        generateCheckCast(code, destType);
+                        Builder.unbox(code, destType);
+                        break;
 
-                            default:
-                                throw new IllegalStateException();
-                            }
-                        }
+                    case NullablePrimitive:
+                        // TODO: resolve the type parameter and check for Null if necessary
+                        generateCheckCast(code, destType.removeNullable());
+                        Builder.unbox(code, destType);
+                        code.iconst_0();
+                        break;
+
+                    default:
+                        invalid = true;
+                        break;
                     }
-                    storeValue(code, reg, typeRet);
                     break;
                 }
             } else {
@@ -2102,18 +2448,27 @@ public class BuildContext {
                     Builder.loadFromContext(code, pdExt.cd, pdExt.altIndex);
                     // if the value is `True`, then the return value is Ecstasy `Null`
 
-                    if (reg.isSingle()) {
+                    switch (destFlavor) {
+                    case NullablePrimitive:
+                        // nothing to do
+                        break;
+
+                    case Specific, Widened:
                         Label ifTrue = code.newLabel();
                         Label endIf  = code.newLabel();
                         code.ifeq(ifTrue);
-                        Builder.box(code, typeRet, cdRet);
+                        Builder.box(code, retType);
                         code.goto_(endIf);
                         code.labelBinding(ifTrue)
                             .pop();
                         Builder.loadNull(code);
                         code.labelBinding(endIf);
+                        break;
+
+                    default:
+                        invalid = true;
+                        break;
                     }
-                    storeValue(code, reg, typeRet);
                     break;
                 }
 
@@ -2125,14 +2480,15 @@ public class BuildContext {
                         JitParamDesc retDesc = jmd.optimizedReturns[optIndex];
                         Builder.loadFromContext(code, retDesc.cd, retDesc.altIndex);
                     }
-                    storeValue(code, reg, typeRet);
                     break;
                 }
 
                 case NullableXvmPrimitive: {
                     assert isOptimized;
                     int[] optIndexes = jmd.getAllOptimizedReturnIndexes(i);
-                    if (reg.isSingle()) {
+
+                    switch (destFlavor) {
+                    case Specific, Widened:
                         Builder.loadFromContext(code, CD_boolean, optIndexes[optIndexes.length - 1]);
                         Label ifTrue = code.newLabel();
                         Label endIf  = code.newLabel();
@@ -2141,27 +2497,38 @@ public class BuildContext {
                             JitParamDesc retDesc = jmd.optimizedReturns[optIndex];
                             Builder.loadFromContext(code, retDesc.cd, retDesc.altIndex);
                         }
-                        Builder.box(code, typeRet, cdRet);
+                        Builder.box(code, retType);
                         code.goto_(endIf);
                         code.labelBinding(ifTrue);
                         Builder.loadNull(code);
                         code.labelBinding(endIf);
-                    } else {
+
+                    case NullableXvmPrimitive:
                         for (int optIndex : optIndexes) {
                             JitParamDesc retDesc = jmd.optimizedReturns[optIndex];
                             Builder.loadFromContext(code, retDesc.cd, retDesc.altIndex);
                         }
+                        break;
+
+                    default:
+                        invalid = true;
+                        break;
                     }
-                    storeValue(code, reg, typeRet);
                     break;
                 }
 
                 default:
                     Builder.loadFromContext(code, cdRet, pdRet.altIndex);
-                    storeValue(code, reg, typeRet);
                     break;
                 }
             }
+
+            if (invalid) {
+                throw new UnsupportedOperationException("cannot store return flavor "
+                        + pdRet.flavor + " into " + destFlavor);
+            }
+
+            storeValue(code, regId, destType);
         }
     }
 
@@ -2469,6 +2836,8 @@ public class BuildContext {
 
         @Override
         public RegisterInfo store(BuildContext bctx, CodeBuilder code, TypeConstant type) {
+            assert regId() > Op.CONSTANT_OFFSET; // cannot store a property register
+
             if (type == null) {
                 RegisterInfo origReg = bctx.resetRegister(this);
 
@@ -2479,7 +2848,7 @@ public class BuildContext {
                             code.iconst_0() // false
                                 .istore(((ExtendedSlot) origReg).extSlot());
                         } else {
-                            Builder.box(code, type(), cd());
+                            Builder.box(code, type());
                         }
                     } else if (type().isXvmPrimitive()) {
                         if (origReg.type().isXvmPrimitive()) {
@@ -2487,7 +2856,7 @@ public class BuildContext {
                             code.iconst_0() // false
                                 .istore(((MultipleSlot) origReg).extSlot());
                         } else {
-                            Builder.box(code, type(), cd());
+                            Builder.box(code, type());
                         }
                     }
                 }
@@ -2536,7 +2905,7 @@ public class BuildContext {
                         code.iconst_0() // false
                             .istore(((ExtendedSlot) origReg).extSlot());
                     } else {
-                        Builder.box(code, prevType, cd());
+                        Builder.box(code, prevType);
                     }
                 }
                 int[]       origSlots = origReg.slots();

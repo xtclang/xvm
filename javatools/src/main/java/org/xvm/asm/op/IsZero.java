@@ -81,6 +81,6 @@ public class IsZero
             .labelBinding(labelTrue)
             .iconst_1() // true
             .labelBinding(labelEnd);
-        bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, bctx.pool().typeBoolean()));
+        bctx.storeValue(code, m_nRetValue, bctx.pool().typeBoolean());
     }
 }

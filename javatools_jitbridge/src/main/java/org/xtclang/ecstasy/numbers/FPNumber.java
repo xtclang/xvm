@@ -455,7 +455,7 @@ public abstract class FPNumber extends Number {
 
     public static class eRounding extends Enumeration {
         private eRounding(Ctx ctx) {
-            super(ctx);
+            super(ctx, ctx.container.typeSystem.pool().typeRounding());
         }
 
         public static final eRounding $INSTANCE = new eRounding(Ctx.get());
@@ -475,11 +475,6 @@ public abstract class FPNumber extends Number {
                 Rounding.TowardZero.$INSTANCE,
                 Rounding.TowardNegative.$INSTANCE
         };
-
-        @Override public TypeConstant $xvmType(Ctx ctx) {
-            ConstantPool pool = ctx.container.typeSystem.pool();
-            return pool.ensureClassTypeConstant(pool.clzClass(), null, pool.typeRounding());
-        }
 
         @Override
         public long count$get$p() {

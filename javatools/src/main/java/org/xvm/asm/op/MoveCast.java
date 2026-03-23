@@ -130,7 +130,7 @@ public class MoveCast
         RegisterInfo regFrom = bctx.loadArgument(code, m_nFromValue);
         TypeConstant typeTo  = regFrom.type().combine(bctx.pool(), bctx.getTypeConstant(m_nToType));
         bctx.generateCheckCast(code, typeTo);
-        bctx.storeValue(code, bctx.ensureRegInfo(m_nToValue, typeTo));
+        bctx.storeValue(code, m_nToValue, typeTo);
         return -1;
     }
 

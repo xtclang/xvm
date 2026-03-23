@@ -303,9 +303,9 @@ public abstract class OpTest
 
         code.labelBinding(lblEnd);
         if (nOp == OP_CMP) {
-            bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, bctx.pool().typeOrdered()));
+            bctx.storeValue(code, m_nRetValue, bctx.pool().typeOrdered());
         } else {
-            bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, bctx.pool().typeBoolean()));
+            bctx.storeValue(code, m_nRetValue, bctx.pool().typeBoolean());
         }
     }
 
@@ -385,7 +385,7 @@ public abstract class OpTest
             case OP_IS_TYPE, OP_IS_NTYPE -> buildTypeCheck(bctx, code);
             default                      -> throw new IllegalStateException();
         }
-        bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, bctx.pool().typeBoolean()));
+        bctx.storeValue(code, m_nRetValue, bctx.pool().typeBoolean());
     }
 
     private void buildNullCheck(BuildContext bctx, CodeBuilder code) {

@@ -1,26 +1,14 @@
 package org.xtclang.ecstasy;
 
 import org.xtclang.ecstasy.reflect.Enumeration;
-
 import org.xtclang.ecstasy.text.String;
-
-import org.xvm.asm.ConstantPool;
-
-import org.xvm.asm.constants.TypeConstant;
-
-import org.xvm.javajit.Ctx;
 
 /**
  * Native Enumeration<Nullable>.
  */
 public class eNullable extends Enumeration {
     private eNullable() {
-        super(null);
-    }
-
-    @Override public TypeConstant $xvmType(Ctx ctx) {
-        ConstantPool pool = ctx.container.typeSystem.pool();
-        return pool.ensureClassTypeConstant(pool.clzClass(), null, pool.typeNullable());
+        super(null, $ctx().container.typeSystem.pool().typeNullable());
     }
 
     public static final eNullable $INSTANCE = new eNullable();

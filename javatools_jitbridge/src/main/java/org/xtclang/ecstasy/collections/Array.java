@@ -15,6 +15,7 @@ import org.xtclang.ecstasy.Iterable;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 import org.xtclang.ecstasy.nException;
 import org.xtclang.ecstasy.nObj;
+
 import org.xtclang.ecstasy.reflect.Var;
 
 /**
@@ -115,7 +116,8 @@ public abstract class Array
 
     public static class eMutability extends Enumeration {
         private eMutability(Ctx ctx) {
-            super(ctx);
+            super(ctx, $ctx().container.typeSystem.pool().
+                ensureEcstasyTypeConstant("collections.Array.Mutability"));
         }
 
         public static final eMutability $INSTANCE = new eMutability(Ctx.get());
@@ -133,12 +135,6 @@ public abstract class Array
             Mutability.Fixed,
             Mutability.Mutable,
         };
-
-        @Override public TypeConstant $xvmType(Ctx ctx) {
-            ConstantPool pool = ctx.container.typeSystem.pool();
-            return pool.ensureClassTypeConstant(pool.clzClass(), null,
-                    pool.ensureEcstasyTypeConstant("collections.Array.Mutability"));
-        }
 
         @Override
         public long count$get$p() {

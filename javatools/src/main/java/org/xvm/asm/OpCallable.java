@@ -747,10 +747,10 @@ public abstract class OpCallable extends Op {
             throw new UnsupportedOperationException("ToDo dynamic type");
         }
 
-        MethodConstant idCtor   = (MethodConstant) bctx.getConstant(m_nFunctionId);
-        ClassDesc      cdTarget = bctx.buildNew(code, typeTarget, idCtor, anArgValue);
+        MethodConstant idCtor = (MethodConstant) bctx.getConstant(m_nFunctionId);
+        bctx.buildNew(code, typeTarget, idCtor, anArgValue);
 
-        bctx.storeValue(code, bctx.ensureRegInfo(m_nRetValue, typeTarget, cdTarget, ""), typeTarget);
+        bctx.storeValue(code, m_nRetValue, typeTarget);
         return -1;
     }
 

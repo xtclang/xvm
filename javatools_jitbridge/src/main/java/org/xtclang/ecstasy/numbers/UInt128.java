@@ -3,10 +3,13 @@ package org.xtclang.ecstasy.numbers;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
+import org.xtclang.ecstasy.Comparable;
 import org.xtclang.ecstasy.Orderable;
 import org.xtclang.ecstasy.Ordered;
 import org.xtclang.ecstasy.OutOfBounds;
 import org.xtclang.ecstasy.nType;
+
+import org.xtclang.ecstasy.text.String;
 
 import org.xvm.javajit.Ctx;
 
@@ -27,14 +30,13 @@ public class UInt128 extends IntNumber {
 
     private BigInteger $bigInteger = null;
 
-    private org.xtclang.ecstasy.text.String $toString = null;
+    private String $toString = null;
 
     @Override
-    public org.xtclang.ecstasy.text.String toString(Ctx ctx) {
-        org.xtclang.ecstasy.text.String toString = $toString;
+    public String toString(Ctx ctx) {
+        String toString = $toString;
         if (toString == null) {
-            toString = $toString = org.xtclang.ecstasy.text.String.of(ctx,
-                    $asBigInteger().toString());
+            toString = $toString = String.of(ctx, $asBigInteger().toString());
         }
         return toString;
     }
@@ -387,7 +389,7 @@ public class UInt128 extends IntNumber {
      * <p>
      * {@code static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);}
      */
-    public static Boolean equals(Ctx ctx, nType type, org.xtclang.ecstasy.Comparable value1, org.xtclang.ecstasy.Comparable value2) {
+    public static Boolean equals(Ctx ctx, nType type, Comparable value1, Comparable value2) {
         Int128 i1 = (Int128) value1;
         Int128 i2 = (Int128) value2;
         return i1.$lowValue == i2.$lowValue && i1.$highValue == i2.$highValue

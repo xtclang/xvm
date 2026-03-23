@@ -5,12 +5,16 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.OpVar;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -21,7 +25,6 @@ import org.xvm.runtime.Utils;
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
-
 
 /**
  * VAR_S TYPE, #values:(rvalue-src) ; next register is an initialized anonymous Array variable
@@ -122,6 +125,13 @@ public class Var_S
 
         registerArguments(m_aArgValue, registry);
     }
+
+    @Override
+    public int build(BuildContext bctx, CodeBuilder code) {
+        return buildArray(bctx, code, m_anArgValue, "");
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private int[] m_anArgValue;
 

@@ -23,6 +23,7 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
 import org.xvm.javajit.JitMethodDesc;
+import org.xvm.javajit.JitTypeDesc;
 import org.xvm.javajit.RegisterInfo;
 import org.xvm.javajit.TypeMatrix;
 
@@ -317,25 +318,29 @@ public abstract class OpInvocable extends Op {
             return;
         }
 
-        TypeConstant      typeThis = tmx.getType(A_THIS, getAddress());
-        MethodConstant    idMethod = bctx.getConstant(m_nMethodId, MethodConstant.class);
-        SignatureConstant sig      = idMethod.getSignature();
+        ConstantPool      pool       = bctx.pool();
+        TypeConstant      typeTarget = bctx.getArgumentType(m_nTarget);
+        TypeInfo          infoTarget = typeTarget.ensureTypeInfo();
+        MethodConstant    idMethod   = bctx.getConstant(m_nMethodId, MethodConstant.class);
+        MethodInfo        methodInfo = infoTarget.getMethodById(idMethod);
+        SignatureConstant sig        = methodInfo.getSignature();
 
         if (sig.containsGenericTypes()) {
-            sig = sig.resolveGenericTypes(bctx.pool(), typeThis);
+            sig = sig.resolveGenericTypes(pool, typeTarget);
+        }
+        if (sig.containsAutoNarrowing(true)) {
+            sig = sig.resolveAutoNarrowing(pool, typeTarget, null);
         }
         if (sig.containsTypeParameters()) {
             MethodStructure method = (MethodStructure) idMethod.getComponent();
             if (method == null) {
-                TypeConstant typeTarget = tmx.getType(m_nTarget, getAddress());
-                TypeInfo     infoTarget = typeTarget.ensureTypeInfo();
 
                 // TODO: add support for nested ids (see the interpreter logic above)
                 MethodInfo infoMethod = infoTarget.getMethodBySignature(sig);
                 assert infoMethod != null;
                 method = infoMethod.getHead().getMethodStructure();
             }
-            sig = sig.resolveGenericTypes(bctx.pool(), bctx.createTypeResolver(method, anArgValue));
+            sig = sig.resolveGenericTypes(pool, bctx.createTypeResolver(method, anArgValue));
         }
 
         TypeConstant[] atypeResult = sig.getRawReturns();
@@ -352,19 +357,26 @@ public abstract class OpInvocable extends Op {
     }
 
     protected int buildInvoke(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
+        ConstantPool   pool       = bctx.pool();
         RegisterInfo   regTarget  = bctx.loadArgument(code, m_nTarget);
         ClassDesc      cdTarget   = regTarget.cd();
         TypeConstant   typeTarget = regTarget.type();
-        TypeInfo       infoTarget = typeTarget.ensureTypeInfo();
         MethodConstant idMethod   = bctx.getConstant(m_nMethodId, MethodConstant.class);
+
+        // If the bctx.cd() is the same as cdTarget then we are invoking a method on the same class
+        // as the build context, so we can use the context's type, which has private access
+        // ToDo GG: How to simplify to typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo()
+        ClassDesc      cdThis     = JitTypeDesc.getJitClass(bctx.builder, bctx.typeInfo.getType());
+        TypeInfo       infoTarget = cdThis.equals(cdTarget)
+                                        ? bctx.typeInfo
+                                        : typeTarget.ensureTypeInfo();
         MethodInfo     infoMethod = infoTarget.getMethodById(idMethod);
 
         if (infoMethod == null) {
             SignatureConstant sig = idMethod.getSignature();
 
             if (sig.containsGenericTypes()) {
-                TypeConstant typeThis = bctx.getArgumentType(A_THIS);
-                sig = sig.resolveGenericTypes(bctx.pool(), typeThis);
+                sig = sig.resolveGenericTypes(pool, typeTarget);
             }
 
             // TODO: add support for nested ids (see the interpreter logic above)
