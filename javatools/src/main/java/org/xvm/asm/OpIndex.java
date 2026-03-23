@@ -15,11 +15,16 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
 import org.xvm.javajit.Builder;
+import org.xvm.javajit.InPlaceSupport;
+import org.xvm.javajit.JitFlavor;
 import org.xvm.javajit.JitMethodDesc;
 import org.xvm.javajit.JitParamDesc;
 import org.xvm.javajit.JitParamDesc.JitParams;
 import org.xvm.javajit.JitTypeDesc;
+import org.xvm.javajit.MultipleSlot;
+import org.xvm.javajit.NumberSupport;
 import org.xvm.javajit.RegisterInfo;
+import org.xvm.javajit.SingleSlot;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.Frame;
@@ -33,6 +38,7 @@ import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_nObj;
+import static org.xvm.javajit.Builder.loadFromContext;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -42,7 +48,8 @@ import static org.xvm.util.Handy.writePackedLong;
  * Base class for I_ (index based) and IIP_ (index based in-place) op codes.
  */
 public abstract class OpIndex
-        extends Op {
+        extends OpOptimized
+        implements InPlaceSupport, NumberSupport {
     /**
      * Construct an "index based" op for the passed target.
      *
@@ -215,134 +222,16 @@ public abstract class OpIndex
 
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
-        ConstantPool pool   = bctx.pool();
-        RegisterInfo reg    = bctx.loadArgument(code, m_nTarget);
-        TypeConstant type   = reg.type();
-        TypeConstant typeEl = type.resolveGenericType("Element");
+        ConstantPool pool      = bctx.pool();
+        RegisterInfo reg       = bctx.loadArgument(code, m_nTarget);
+        TypeConstant type      = reg.type();
+        TypeConstant typeEl    = type.resolveGenericType("Element");
+        boolean      primitive = typeEl.isJitPrimitive();
 
         if (type.isArray()) {
             ClassDesc cdArray = bctx.builder.ensureClassDesc(type);
-            if (typeEl.isJavaPrimitive()) {
-                ClassDesc cdEl = JitTypeDesc.getPrimitiveClass(typeEl);
-
-                bctx.loadCtx(code);
-                bctx.loadArgument(code, m_nIndex);
-
-                // we assume that all customized implementations have the same names
-                switch (getOpCode()) {
-                    case OP_I_GET ->
-                        code.invokevirtual(cdArray, "getElement$pi",
-                            MethodTypeDesc.of(cdEl, CD_Ctx, CD_long));
-
-                    case OP_I_SET -> {
-                        bctx.loadArgument(code, getValueIndex());
-                        code.invokevirtual(cdArray, "setElement$pi",
-                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, cdEl));
-                    }
-
-                    // IntNumber and Char only
-                    case OP_IIP_INC -> {
-                        code.invokevirtual(cdArray, "preInc$pi",
-                                MethodTypeDesc.of(cdEl, CD_Ctx, CD_long));
-                        Builder.pop(code, cdEl); // ignore the return value
-                    }
-
-                    case OP_IIP_DEC -> {
-                        code.invokevirtual(cdArray, "preDec$pi",
-                                MethodTypeDesc.of(cdEl, CD_Ctx, CD_long));
-                        Builder.pop(code, cdEl); // ignore the return value
-                    }
-
-                    case OP_IIP_INCA ->
-                        code.invokevirtual(cdArray, "postInc$pi",
-                                MethodTypeDesc.of(cdEl, CD_Ctx, CD_long));
-
-                    case OP_IIP_DECA ->
-                        code.invokevirtual(cdArray, "postDec$pi",
-                                MethodTypeDesc.of(cdEl, CD_Ctx, CD_long));
-
-                    case OP_IIP_INCB ->
-                        code.invokevirtual(cdArray, "preInc$pi",
-                                MethodTypeDesc.of(cdEl, CD_Ctx, CD_long));
-
-                    case OP_IIP_DECB ->
-                        code.invokevirtual(cdArray, "preDec$pi",
-                                MethodTypeDesc.of(cdEl, CD_Ctx, CD_long));
-
-                    case OP_IIP_ADD -> {
-                        // @Op(+) Char add(Int n)
-                        ClassDesc cdArg = typeEl.equals(pool.typeChar())
-                            ? CD_long
-                            : cdEl;
-                        bctx.loadArgument(code, getValueIndex());
-                        code.invokevirtual(cdArray, "addInPlace$pi",
-                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, cdArg));
-                        }
-
-                    case OP_IIP_SUB -> {
-                        // @Op(+) Char add(Int n)
-                        ClassDesc cdArg = typeEl.equals(pool.typeChar())
-                            ? CD_long
-                            : cdEl;
-                        bctx.loadArgument(code, getValueIndex());
-                        code.invokevirtual(cdArray, "subInPlace$pi",
-                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, cdArg));
-                        }
-
-                    // IntNumber only
-                    case OP_IIP_MUL -> {
-                        bctx.loadArgument(code, getValueIndex());
-                        code.invokevirtual(cdArray, "mulInPlace$pi",
-                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, cdEl));
-                        }
-
-                    case OP_IIP_DIV -> {
-                        bctx.loadArgument(code, getValueIndex());
-                        code.invokevirtual(cdArray, "divInPlace$pi",
-                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, cdEl));
-                    }
-
-                    case OP_IIP_MOD -> {
-                        bctx.loadArgument(code, getValueIndex());
-                        code.invokevirtual(cdArray, "modInPlace$pi",
-                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, cdEl));
-                    }
-
-                    case OP_IIP_SHL -> {
-                        bctx.loadArgument(code, getValueIndex());
-                        code.invokevirtual(cdArray, "shlInPlace$pi",
-                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, CD_long));
-                    }
-                    case OP_IIP_SHR -> {
-                        bctx.loadArgument(code, getValueIndex());
-                        code.invokevirtual(cdArray, "shrInPlace$pi",
-                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, CD_long));
-                    }
-                    case OP_IIP_USHR -> {
-                        bctx.loadArgument(code, getValueIndex());
-                        code.invokevirtual(cdArray, "shrAllInPlace$pi",
-                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, CD_long));
-                    }
-
-                    // IntNumber and Boolean
-                    case OP_IIP_AND -> {
-                        bctx.loadArgument(code, getValueIndex());
-                        code.invokevirtual(cdArray, "andInPlace$pi",
-                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, cdEl));
-                    }
-                    case OP_IIP_OR -> {
-                        bctx.loadArgument(code, getValueIndex());
-                        code.invokevirtual(cdArray, "orInPlace$pi",
-                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, cdEl));
-                    }
-                    case OP_IIP_XOR -> {
-                        bctx.loadArgument(code, getValueIndex());
-                        code.invokevirtual(cdArray, "xorInPlace$pi",
-                            MethodTypeDesc.of(CD_void, CD_Ctx, CD_long, cdEl));
-                    }
-
-                    default -> throw new UnsupportedOperationException(toName(getOpCode()));
-                }
+            if (primitive) {
+                buildPrimitiveArrayOp(bctx, code, reg, typeEl);
             } else {
                 bctx.loadCtx(code);
                 bctx.loadArgument(code, m_nIndex);
@@ -410,12 +299,21 @@ public abstract class OpIndex
         }
 
         if (isAssignOp()) {
-            JitParams     params = JitParamDesc.computeJitParams(bctx.builder, typeEl);
-            JitMethodDesc jmd    = new JitMethodDesc(
-                params.apdStdParam(), JitParamDesc.NONE,
-                params.apdOptParam(), params.isOptimized() ? JitParamDesc.NONE : null);
+            // the Op returns a value which needs to be stored in the return register
+            if (primitive) {
+                // the generated code will leave the result on the stack, so just store it to the
+                // return register
+                bctx.storeValue(code, m_nRetValue, typeEl);
+            } else {
+                // the generated code was a method invocation, so process the return values the
+                // same we would for an Invoke Op
+                JitParams     params = JitParamDesc.computeJitParams(bctx.builder, typeEl);
+                JitMethodDesc jmd    = new JitMethodDesc(
+                    params.apdStdParam(), JitParamDesc.NONE,
+                    params.apdOptParam(), params.isOptimized() ? JitParamDesc.NONE : null);
 
-            bctx.assignReturns(code, jmd, 1, new int[] {m_nRetValue});
+                bctx.assignReturns(code, jmd, 1, new int[] {m_nRetValue});
+            }
         }
         return -1;
     }
@@ -426,6 +324,175 @@ public abstract class OpIndex
      */
     protected int getValueIndex() {
         throw new UnsupportedOperationException("TODO " + getClass().getName());
+    }
+
+    /**
+     * Build the operation to execute on an array element.
+     * <p>
+     * The array reference is already loaded onto the stack.
+     *
+     * @param bctx      the current {@link BuildContext}
+     * @param code      the {@link CodeBuilder} to use to generate byte codes
+     * @param regArray  the {@link RegisterInfo} for the array reference
+     * @param typeEl    the {@link TypeConstant} of the array element
+     */
+    protected void buildPrimitiveArrayOp(BuildContext bctx, CodeBuilder code, RegisterInfo regArray,
+                                         TypeConstant typeEl) {
+
+        RegisterInfo regElement = loadArrayElement(bctx, code, regArray);
+        regElement.load(code);
+        bctx.loadArgument(code, m_nIndex);
+
+        if (typeEl.isJavaPrimitive()) {
+            assert regElement.isSingle();
+            buildPrimitiveLocal(bctx, code, regElement);
+        } else if (typeEl.isXvmPrimitive()) {
+            buildXvmPrimitiveLocal(bctx, code, regElement);
+        }
+        // regElement now has the result stored in it, so store it back to the array
+        storeArrayElement(bctx, code, regArray, regElement);
+        if (isAssignOp()) {
+            // a return is required, so load regElement to the stack
+            //regElement.load(code);
+        } else {
+            Builder.pop(code, bctx.builder, regElement.type());
+        }
+    }
+
+    /**
+     * Load the array element this operation is for to the stack.
+     *
+     * @param bctx      the current {@link BuildContext}
+     * @param code      the {@link CodeBuilder} to use to generate byte codes
+     * @param regArray  the {@link RegisterInfo} for the array reference
+     */
+    protected void loadArrayElementToStack(BuildContext bctx, CodeBuilder code,
+            RegisterInfo regArray) {
+        loadArrayElement(bctx, code, regArray, true);
+    }
+
+    /**
+     * Load the array element this operation is for into temporary slots and create a
+     * {@link RegisterInfo} representing the array element.
+     *
+     * @param bctx      the current {@link BuildContext}
+     * @param code      the {@link CodeBuilder} to use to generate byte codes
+     * @param regArray  the {@link RegisterInfo} for the array reference
+     *
+     * @return the {@link RegisterInfo} representing the array element
+     */
+    protected RegisterInfo loadArrayElement(BuildContext bctx, CodeBuilder code,
+            RegisterInfo regArray) {
+        return loadArrayElement(bctx, code, regArray, false);
+    }
+
+
+    /**
+     * Load the primitive array element this operation refers to, either onto the stack if the
+     * {@code onStack} parameter is {@code true} or into temporary slots if the {@code onStack}
+     * parameter is {@code false}.
+     *
+     * @param bctx      the current {@link BuildContext}
+     * @param code      the {@link CodeBuilder} to use to generate byte codes
+     * @param regArray  the {@link RegisterInfo} for the array reference
+     *
+     * @return {@code null} if the {@code onStack} parameter is {@code true} otherwise the
+     *         {@link RegisterInfo} representing the array element
+     */
+    private RegisterInfo loadArrayElement(BuildContext bctx, CodeBuilder code,
+            RegisterInfo regArray, boolean onStack) {
+
+        TypeConstant type    = regArray.type();
+        TypeConstant typeEl  = type.resolveGenericType("Element");
+        ClassDesc    cdArray = bctx.builder.ensureClassDesc(type);
+
+        boolean javaPrimitive = typeEl.isJavaPrimitive();
+        boolean xvmPrimitive  = typeEl.isXvmPrimitive();
+
+        ClassDesc[] cds;
+        ClassDesc   cdEl;
+        if (javaPrimitive) {
+            cdEl = JitTypeDesc.getPrimitiveClass(typeEl);
+            cds  = new ClassDesc[]{cdEl};
+        } else if (xvmPrimitive) {
+            cds  = JitTypeDesc.getXvmPrimitiveClasses(typeEl);
+            cdEl = cds[0];
+        } else {
+            cdEl = CD_nObj;
+            cds  = new ClassDesc[]{cdEl};
+        }
+        assert cdEl != null;
+
+        // get the element from the array
+        bctx.loadCtx(code);
+        bctx.loadArgument(code, m_nIndex);
+        code.invokevirtual(cdArray, "getElement$pi", MethodTypeDesc.of(cdEl, CD_Ctx, CD_long));
+
+        RegisterInfo regElement = null;
+
+        if (onStack) {
+            // load any remaining values from the context to the stack
+            for (int i = 1 ; i < cds.length; i++) {
+                loadFromContext(code, cds[i], i - 1);
+            }
+        } else {
+            if (typeEl.isXvmPrimitive()) {
+                // must be XVM primitive
+                ClassDesc cd    = JitTypeDesc.getJitClass(bctx.builder, typeEl);
+                int[]     slots = new int[cds.length];
+
+                slots[0] = bctx.storeTempValue(code, cds[0]);
+                for (int i = 1 ; i < cds.length; i++) {
+                    loadFromContext(code, cds[i], i - 1);
+                    slots[i] = bctx.storeTempValue(code, cds[i]);
+                }
+                regElement = new MultipleSlot(bctx, 0, slots, JitFlavor.XvmPrimitive, typeEl,
+                        cd, cds, "");
+            } else {
+                int slot = bctx.storeTempValue(code, cdEl);
+                regElement = new SingleSlot(0, slot, JitFlavor.Primitive, typeEl, cdEl, "");
+            }
+        }
+
+        return regElement;
+    }
+
+    /**
+     * Update the element in the array with the primitive value(s) stored in {@code regElement}
+     * register's slots.
+     *
+     * @param bctx        the current {@link BuildContext}
+     * @param code        the {@link CodeBuilder} to use to generate byte codes
+     * @param regArray    the {@link RegisterInfo} for the array reference
+     * @param regElement  the {@link RegisterInfo} for the array element
+     */
+    protected void storeArrayElement(BuildContext bctx, CodeBuilder code, RegisterInfo regArray,
+                                     RegisterInfo regElement) {
+        ClassDesc   cdArray = bctx.builder.ensureClassDesc(regArray.type());
+        ClassDesc[] cdArgs  = prependArgs(regElement.slotCds(), CD_Ctx, CD_long);
+
+        regArray.load(code);
+        bctx.loadCtx(code);
+        bctx.loadArgument(code, m_nIndex);
+        regElement.load(code);
+        code.invokevirtual(cdArray, "setElement$pi", MethodTypeDesc.of(CD_void, cdArgs));
+    }
+
+    /**
+     * Create a {@link ClassDesc} array by prepending the {@code prepend} array to the
+     * {@code cds} array.
+     *
+     * @param cds      the {@link ClassDesc}s to prepend to
+     * @param prepend  the {@link ClassDesc}s to prepend
+     *
+     * @return an array of {@link ClassDesc}s with the {@code prepend} values followed by the
+     *         {@code cds} values
+     */
+    protected ClassDesc[] prependArgs(ClassDesc[] cds, ClassDesc... prepend) {
+        ClassDesc[] cdArgs = new ClassDesc[cds.length + prepend.length];
+        System.arraycopy(prepend, 0, cdArgs, 0, prepend.length);
+        System.arraycopy(cds, 0, cdArgs, prepend.length, cds.length);
+        return cdArgs;
     }
 
     // ----- fields --------------------------------------------------------------------------------

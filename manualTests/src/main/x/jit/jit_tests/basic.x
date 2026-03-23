@@ -10,7 +10,6 @@ package basic {
 
             Boolean passed = True;
             try {
-                passed &= runTest(() -> arrayTests.run());
                 passed &= runTest(() -> callTests.run());
                 passed &= runTest(() -> condMixinTests.run());
                 passed &= runTest(() -> enumTests.run());

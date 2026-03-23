@@ -83,7 +83,7 @@ public class Dec32 extends DecimalFPNumber {
     /**
      * The value of this IEEE-754-2008 32-bit decimal contained in an {@code int}.
      */
-    private final int $bits;
+    public final int $bits;
 
     /**
      * Construct a decimal value from a Java <tt>int</tt> whose format is that of an IEEE-754-2008

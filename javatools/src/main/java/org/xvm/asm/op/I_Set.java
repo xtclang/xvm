@@ -5,10 +5,21 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
+import java.lang.constant.ClassDesc;
+import java.lang.constant.MethodTypeDesc;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Op;
 import org.xvm.asm.OpIndex;
+
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.JitTypeDesc;
+import org.xvm.javajit.RegisterInfo;
 
 import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassTemplate;
@@ -19,6 +30,12 @@ import org.xvm.runtime.ObjectHandle.JavaLong;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.IndexSupport;
+
+import static java.lang.constant.ConstantDescs.CD_long;
+import static java.lang.constant.ConstantDescs.CD_void;
+
+import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.CD_nObj;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -129,6 +146,43 @@ public class I_Set
     @Override
     protected int getValueIndex() {
         return m_nValue;
+    }
+
+    /**
+     * Build the operation to execute on an array element.
+     * <p>
+     * The array reference is already loaded onto the stack.
+     *
+     * @param bctx      the current {@link BuildContext}
+     * @param code      the {@link CodeBuilder} to use to generate byte codes
+     * @param regArray  the {@link RegisterInfo} for the array reference
+     * @param typeEl    the {@link TypeConstant} of the array element
+     */
+    protected void buildPrimitiveArrayOp(BuildContext bctx, CodeBuilder code, RegisterInfo regArray,
+                                         TypeConstant typeEl) {
+
+        boolean javaPrimitive = typeEl.isJavaPrimitive();
+        boolean xvmPrimitive  = typeEl.isXvmPrimitive();
+
+        ClassDesc[] cdArgs;
+        ClassDesc   cdEl;
+        if (javaPrimitive) {
+            cdEl   = JitTypeDesc.getPrimitiveClass(typeEl);
+            cdArgs = new ClassDesc[]{CD_Ctx, CD_long, cdEl};
+        } else if (xvmPrimitive) {
+            ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(typeEl);
+            cdEl   = cds[0];
+            cdArgs = prependArgs(cds, CD_Ctx, CD_long);
+        } else {
+            cdEl = CD_nObj;
+            cdArgs = new ClassDesc[]{CD_Ctx, CD_long, cdEl};
+        }
+        assert cdEl != null;
+
+        bctx.loadCtx(code);
+        bctx.loadArgument(code, m_nIndex);
+        bctx.loadArgument(code, getValueIndex());
+        code.invokevirtual(regArray.cd(), "setElement$pi", MethodTypeDesc.of(CD_void, cdArgs));
     }
 
     // ----- fields --------------------------------------------------------------------------------

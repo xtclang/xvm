@@ -80,6 +80,7 @@ import static org.xvm.javajit.Builder.CD_nFunction;
 import static org.xvm.javajit.Builder.CD_nObj;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.EXT;
+import static org.xvm.javajit.Builder.N_OutOfBounds;
 import static org.xvm.javajit.Builder.N_TypeMismatch;
 import static org.xvm.javajit.Builder.OPT;
 import static org.xvm.javajit.JitFlavor.AlwaysNull;
@@ -982,7 +983,7 @@ public class BuildContext {
     protected RegisterInfo adjustRegister(CodeBuilder code, RegisterInfo reg, boolean loaded) {
         TypeConstant regType  = reg.type();
         TypeConstant baseType = regType.removeNullable();
-        if (!baseType.isJavaPrimitive() && !baseType.isXvmPrimitive()) {
+        if (!baseType.isJitPrimitive()) {
             int          regId   = reg.regId();
             TypeConstant mtxType = typeMatrix.getType(regId, currOpAddr);
 
@@ -2565,6 +2566,13 @@ public class BuildContext {
             .invokevirtual(exCD, "$init", MethodTypeDesc.of(
                 CD_nException, CD_Ctx, CD_JavaString, CD_Throwable))
             .athrow();
+    }
+
+    /**
+     * Add the code to throw an "OutOfBounds" exception.
+     */
+    public void throwOutOfBounds(CodeBuilder code, String text) {
+        throwException(code, ClassDesc.of(N_OutOfBounds), text);
     }
 
     /**

@@ -85,8 +85,8 @@ public class Char extends nConst {
         long cp = (long) codepoint - n;
         if (cp < 0 || cp > 0x10FFFF) {
             OutOfBounds oob = new OutOfBounds(ctx);
-            throw oob.$init(ctx, "Adding " + n + " to character code-point "
-                    + codepoint + " would exceed the Unicode range");
+            throw oob.$init(ctx, "Subtracting " + n + " from character code-point "
+                    + codepoint + " would be below the Unicode range");
         }
         return (int) cp;
     }

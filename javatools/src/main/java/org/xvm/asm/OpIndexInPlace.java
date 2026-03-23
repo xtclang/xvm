@@ -5,6 +5,13 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.RegisterInfo;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
@@ -97,6 +104,25 @@ public abstract class OpIndexInPlace
     @Override
     protected int getValueIndex() {
         return m_nValue;
+    }
+
+    @Override
+    protected void buildPrimitiveArrayOp(BuildContext bctx, CodeBuilder code, RegisterInfo regArray,
+                                         TypeConstant typeEl) {
+
+        RegisterInfo regElement = loadArrayElement(bctx, code, regArray);
+        regElement.load(code);
+        bctx.loadArgument(code, getValueIndex());
+
+        if (typeEl.isJavaPrimitive()) {
+            buildOptimizedBinary(bctx, code, regElement, m_nValue);
+        } else if (typeEl.isXvmPrimitive()) {
+            RegisterInfo regResult = buildXvmOptimizedBinary(bctx, code, regElement, m_nValue);
+            regResult.type();
+        }
+
+        regElement.store(bctx, code, typeEl);
+        storeArrayElement(bctx, code, regArray, regElement);
     }
 
     // ----- fields --------------------------------------------------------------------------------

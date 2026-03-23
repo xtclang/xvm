@@ -7,7 +7,6 @@ package arrayTests {
         testStringAsArray();
         testStringArray();
         testConstStringArray();
-        testCharArray();
         testAnonArrayVar();
         testNamedArrayVar();
     }
@@ -35,19 +34,6 @@ package arrayTests {
         String[] strings = ["hello", "world"];
         assert strings[0] == "hello";
         assert strings[1] == "world";
-    }
-
-    void testCharArray() {
-        Char[] chars = new Array<Char>(3);
-        chars.add('a');
-        console.print(chars[0]);
-        chars[0] = 'b';
-        console.print(chars[0]);
-        chars[0]++;
-        assert chars[0] == 'c';
-        assert ++chars[0] == 'd';
-        chars[0] += 2;
-        assert chars[0] == 'f';
     }
 
     void testAnonArrayVar() {

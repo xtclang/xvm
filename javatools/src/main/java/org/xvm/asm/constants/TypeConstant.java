@@ -6504,27 +6504,27 @@ public abstract class TypeConstant
             TypeConstant typeEl = getParamType(0);
             if (typeEl.isFormalType() || typeEl.equals(pool.typeObject())) {
                 return Builder.N_nArrayObj;
-            } else if (typeEl.isJavaPrimitive()){
-                ClassDesc        cdEl = JitTypeDesc.getPrimitiveClass(typeEl);
+            } else if (typeEl.isJitPrimitive()) {
                 IdentityConstant idEl = typeEl.getSingleUnderlyingClass(false);
 
-                return switch (cdEl.descriptorString().charAt(0)) {
-                    case 'Z' ->          Builder.N_nArrayObj;
-                    case 'J' -> switch (idEl.getName()) {
-                        case "Int64"  -> Builder.N_nArrayObj;
-                        case "UInt64" -> Builder.N_nArrayObj;
-                        default -> throw new IllegalStateException();
-                    };
-                    case 'I' -> switch (idEl.getName()) {
-                        case "Char"   -> Builder.N_nArrayChar;
-                        case "Int8"   -> Builder.N_nArrayObj;
-                        case "Int16"  -> Builder.N_nArrayObj;
-                        case "Int32"  -> Builder.N_nArrayObj;
-                        case "UInt8"  -> Builder.N_nArrayObj;
-                        case "UInt16" -> Builder.N_nArrayObj;
-                        case "UInt32" -> Builder.N_nArrayObj;
-                        default -> throw new IllegalStateException();
-                    };
+                return switch (idEl.getName()) {
+                    case "Boolean" -> Builder.N_nArrayObj;
+                    case "Char"    -> Builder.N_nArrayChar;
+                    case "Dec32"   -> Builder.N_nArrayDec32;
+                    case "Dec64"   -> Builder.N_nArrayDec64;
+                    case "Dec128"  -> Builder.N_nArrayDec128;
+                    case "Float32" -> Builder.N_nArrayFloat32;
+                    case "Float64" -> Builder.N_nArrayFloat64;
+                    case "Int8"    -> Builder.N_nArrayInt8;
+                    case "Int16"   -> Builder.N_nArrayInt16;
+                    case "Int32"   -> Builder.N_nArrayInt32;
+                    case "Int64"   -> Builder.N_nArrayInt64;
+                    case "Int128"  -> Builder.N_nArrayInt128;
+                    case "UInt8"   -> Builder.N_nArrayUInt8;
+                    case "UInt16"  -> Builder.N_nArrayUInt16;
+                    case "UInt32"  -> Builder.N_nArrayUInt32;
+                    case "UInt64"  -> Builder.N_nArrayUInt64;
+                    case "UInt128" -> Builder.N_nArrayUInt128;
                     default -> throw new UnsupportedOperationException();
                 };
             } else {
@@ -6586,6 +6586,13 @@ public abstract class TypeConstant
      */
     public boolean isXvmPrimitive() {
         return false;
+    }
+
+    /**
+     * @return {@code true} if this type is either a Java primitive or an Ecstasy primitive type.
+     */
+    public boolean isJitPrimitive() {
+        return isJavaPrimitive() || isXvmPrimitive();
     }
 
     /**
