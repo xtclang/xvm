@@ -16,6 +16,7 @@ module jit_tests.examples.org {
         passed &= new ip_ops.TestRunner().run();
         passed &= new arrays.TestRunner().run();
         passed &= new numbers.TestRunner().run();
+        passed &= new ranges.TestRunner().run();
 
         console.print("<<<< Finished JIT tests <<<<");
         if (passed) {

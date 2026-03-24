@@ -33,6 +33,7 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
+import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -554,6 +555,45 @@ public abstract class Builder {
                 .aload(code.parameterSlot(0))
                 .invokevirtual(cdArray, "$makeImmut", MethodTypeDesc.of(CD_void, CD_Ctx));
             return new SingleSlot(arrayType, Specific, ensureClassDesc(arrayType), "");
+        }
+
+        case RangeConstant rangeConst: {
+            TypeConstant   rangeType = rangeConst.getType();
+            TypeConstant   elType    = rangeType.getParamType(0);
+            Constant[]     values    = rangeConst.getValue();
+            MethodTypeDesc mdNew;
+            ClassDesc      cdRange;
+            String         className;
+
+            // TODO: how/where to cache the result ??
+            if (elType.isJitPrimitive()) {
+                switch (elType.getSingleUnderlyingClass(false).getName()) {
+                    case "Int64":
+                        cdRange   = CD_nRangeInt64;
+                        className = N_nRangeInt64;
+                        mdNew     = MethodTypeDesc.of(cdRange, CD_Ctx, CD_TypeConstant, CD_long,
+                                        CD_long, CD_boolean, CD_boolean, CD_boolean, CD_boolean);
+                        break;
+
+                    default:
+                        throw new UnsupportedOperationException("TODO");
+                    }
+            } else {
+                // non-primitive range - must be Orderable and also maybe Sequential
+                throw new UnsupportedOperationException("TODO");
+            }
+
+            code.aload(code.parameterSlot(0));
+            loadTypeConstant(code, className, rangeType);
+            loadConstant(bctx, code, values[0]);
+            loadConstant(bctx, code, values[1]);
+            code.loadConstant(rangeConst.isFirstExcluded() ? 1 : 0);
+            code.iconst_0();
+            code.loadConstant(rangeConst.isLastExcluded() ? 1 : 0);
+            code.iconst_0();
+            code.invokestatic(cdRange, "$new$p", mdNew);
+
+            return new SingleSlot(rangeType, Specific, ensureClassDesc(rangeType), "");
         }
 
         default:
