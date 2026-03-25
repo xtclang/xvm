@@ -941,29 +941,33 @@ public class ServiceContext {
      * @param typeSupplier  (optional) the supplier of declared types for the arguments, which, if
      *                      specified, could be used to proxy the values
      * @param ahArg         the actual arguments
+     * @param fResponse     true iff the values are passing as a return from a service call
      *
      * @return Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION
      */
     public int validatePassThrough(Frame frame, ServiceContext ctxDst,
-                                   TypeSupplier typeSupplier, ObjectHandle[] ahArg) {
+                                   TypeSupplier typeSupplier, ObjectHandle[] ahArg,
+                                   boolean fResponse) {
         // no need to check the container sharing unless we're crossing the container boundaries
         Container container = ctxDst.f_container == f_container ? null : ctxDst.f_container;
 
-        return validatePassThroughArgs(frame, container, typeSupplier, ahArg, ahArg.length, 0);
+        return validatePassThroughArgs(frame, container, typeSupplier, ahArg, ahArg.length, 0, fResponse);
     }
 
     /**
      * Same as the method above, but allows specifying the number of arguments.
      */
     public int validatePassThrough(Frame frame, ServiceContext ctxDst,
-                                   TypeSupplier typeSupplier, ObjectHandle[] ahArg, int cArgs) {
+                                   TypeSupplier typeSupplier, ObjectHandle[] ahArg, int cArgs,
+                                   boolean fResponse) {
         Container container = ctxDst.f_container == f_container ? null : ctxDst.f_container;
 
-        return validatePassThroughArgs(frame, container, typeSupplier, ahArg, cArgs, 0);
+        return validatePassThroughArgs(frame, container, typeSupplier, ahArg, cArgs, 0, fResponse);
     }
 
     private int validatePassThroughArgs(Frame frame, Container container, TypeSupplier typeSupplier,
-                                        ObjectHandle[] ahArg, int cArgs, int ixStart) {
+                                        ObjectHandle[] ahArg, int cArgs, int ixStart,
+                                        boolean fResponse) {
         for (int i = ixStart; i < cArgs; i++) {
             ObjectHandle hArg = ahArg[i];
             if (hArg == null) {
@@ -987,13 +991,13 @@ public class ServiceContext {
                     return Utils.callFreeze(frame, hArg, null, frameCaller -> {
                         ahArg[ix] = frameCaller.popStack();
                         return validatePassThroughArgs(
-                                frameCaller, container, typeSupplier, ahArg, cArgs, ix+1);
+                                frameCaller, container, typeSupplier, ahArg, cArgs, ix+1, fResponse);
                     });
                 }
 
                 switch (hArg.getTemplate().createProxyHandle(
                             frame, this, hArg,
-                            typeSupplier == null ? null : typeSupplier.get(i))) {
+                            typeSupplier == null ? null : typeSupplier.get(i), fResponse)) {
                 case Op.R_NEXT:
                     ahArg[i] = frame.popStack();
                     break;
@@ -1002,7 +1006,7 @@ public class ServiceContext {
                     frame.m_frameNext.addContinuation(frameCaller -> {
                         ahArg[ix] = frameCaller.popStack();
                         return validatePassThroughArgs(
-                                frameCaller, container, typeSupplier, ahArg, cArgs, ix+1);
+                                frameCaller, container, typeSupplier, ahArg, cArgs, ix+1, fResponse);
                     });
                     return Op.R_CALL;
                 }
@@ -1457,12 +1461,12 @@ public class ServiceContext {
         }
 
         if (idProp == null) {
-            return frame.raiseException(xException.mutableObject(frame, hValue.getType()));
+            return frame.raiseException(xException.mutableObject(frame, hValue.getType(), false));
         }
 
         TypeConstant   typeProp = idProp.getType().resolveGenerics(f_pool, hTarget.getType());
         ObjectHandle[] ahValue  = new ObjectHandle[] {hValue};
-        switch (frame.f_context.validatePassThrough(frame, this, i -> typeProp, ahValue, 1)) {
+        switch (frame.f_context.validatePassThrough(frame, this, i -> typeProp, ahValue, 1, false)) {
         case Op.R_NEXT:
             return completeSendProperty10(frame, hTarget, idProp, ahValue[0], op);
 
@@ -1798,7 +1802,7 @@ public class ServiceContext {
             case 1:
                 if (frame.m_hException == null) {
                     int iResult = ctxSrc.validatePassThrough(frame, ctxDst, f_typeSupplier,
-                                    frame.f_ahVar, 1);
+                                    frame.f_ahVar, 1, true);
                     if (iResult == Op.R_EXCEPTION) {
                         Arrays.fill(frame.f_ahVar, null);
                     }
@@ -1813,7 +1817,7 @@ public class ServiceContext {
                     TupleHandle hTuple = (TupleHandle) ahReturn[0];
                     if (hTuple != null) {
                         ObjectHandle[] ahValue = hTuple.m_ahValue;
-                        switch (ctxSrc.validatePassThrough(frame, ctxDst, null, ahValue)) {
+                        switch (ctxSrc.validatePassThrough(frame, ctxDst, null, ahValue, true)) {
                         case Op.R_NEXT:
                             // all values are pass-through; mark the tuple itself immutable;
                             // we can do it since this tuple was created automatically by
@@ -1859,7 +1863,7 @@ public class ServiceContext {
                     }
 
                     int iResult = ctxSrc.validatePassThrough(frame, ctxDst, f_typeSupplier,
-                                    ahReturn, cReturns);
+                                    ahReturn, cReturns, true);
                     if (iResult == Op.R_EXCEPTION) {
                         Arrays.fill(ahReturn, null);
                     }

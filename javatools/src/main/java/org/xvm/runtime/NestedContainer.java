@@ -110,7 +110,7 @@ public class NestedContainer
         TypeConstant typeResource = hResource.getComposition().getType();
 
         if (!hResource.isPassThrough(this)) {
-            return new DeferredCallHandle(xException.mutableObject(frame, typeResource));
+            return new DeferredCallHandle(xException.mutableObject(frame, typeResource, false));
         }
 
         if (!typeResource.isShared(getConstantPool())) {

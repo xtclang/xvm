@@ -125,7 +125,7 @@ public class xRTFunction
 
     @Override
     public int createProxyHandle(Frame frame, ServiceContext ctxTarget, ObjectHandle hTarget,
-                                 TypeConstant typeProxy) {
+                                 TypeConstant typeProxy, boolean fResponse) {
         return frame.assignValue(Op.A_STACK,
                 ((FunctionHandle) hTarget).createProxyHandle(ctxTarget));
     }
@@ -1032,7 +1032,7 @@ public class xRTFunction
                         : super.call1Impl(frame, hCtxTarget, ahVar, iReturn);
             }
 
-            switch (frame.f_context.validatePassThrough(frame, ctxTarget, supplier(frame, hTarget), ahVar)) {
+            switch (frame.f_context.validatePassThrough(frame, ctxTarget, supplier(frame, hTarget), ahVar, false)) {
             case Op.R_NEXT:
                 return ctxTarget.sendInvoke1Request(frame, this, hTarget, ahVar, false, iReturn);
 
@@ -1064,7 +1064,7 @@ public class xRTFunction
                         : super.callTImpl(frame, hCtxTarget, ahVar, iReturn);
             }
 
-            switch (frame.f_context.validatePassThrough(frame, ctxTarget, supplier(frame, hTarget), ahVar)) {
+            switch (frame.f_context.validatePassThrough(frame, ctxTarget, supplier(frame, hTarget), ahVar, false)) {
             case Op.R_NEXT:
                 return ctxTarget.sendInvoke1Request(frame, this, hTarget, ahVar, true, iReturn);
 
@@ -1096,7 +1096,7 @@ public class xRTFunction
                         : super.callNImpl(frame, hCtxTarget, ahVar, aiReturn);
             }
 
-            switch (frame.f_context.validatePassThrough(frame, ctxTarget, supplier(frame, hTarget), ahVar)) {
+            switch (frame.f_context.validatePassThrough(frame, ctxTarget, supplier(frame, hTarget), ahVar, false)) {
             case Op.R_NEXT:
                 return ctxTarget.sendInvokeNRequest(frame, this, hTarget, ahVar, aiReturn);
 
@@ -1158,7 +1158,7 @@ public class xRTFunction
                 return super.call1(frame, hTarget, ahVar, iReturn);
             }
 
-            switch (frame.f_context.validatePassThrough(frame, f_ctx, i -> getParamTypes()[i], ahVar)) {
+            switch (frame.f_context.validatePassThrough(frame, f_ctx, i -> getParamTypes()[i], ahVar, false)) {
             case Op.R_NEXT:
                 return f_ctx.sendInvoke1Request(frame, this, hTarget, ahVar, false, iReturn);
 
@@ -1181,7 +1181,7 @@ public class xRTFunction
                 return super.callT(frame, hTarget, ahVar, iReturn);
             }
 
-            switch (frame.f_context.validatePassThrough(frame, f_ctx, i -> getParamTypes()[i], ahVar)) {
+            switch (frame.f_context.validatePassThrough(frame, f_ctx, i -> getParamTypes()[i], ahVar, false)) {
             case Op.R_NEXT:
                 return f_ctx.sendInvoke1Request(frame, this, hTarget, ahVar, true, iReturn);
 
@@ -1204,7 +1204,7 @@ public class xRTFunction
                 return super.callN(frame, hTarget, ahVar, aiReturn);
             }
 
-            switch (frame.f_context.validatePassThrough(frame, f_ctx, i -> getParamTypes()[i], ahVar)) {
+            switch (frame.f_context.validatePassThrough(frame, f_ctx, i -> getParamTypes()[i], ahVar, false)) {
             case Op.R_NEXT:
                 return f_ctx.sendInvokeNRequest(frame, this, hTarget, ahVar, aiReturn);
 

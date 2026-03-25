@@ -136,13 +136,13 @@ public class xTuple
 
     @Override
     public int createProxyHandle(Frame frame, ServiceContext ctxTarget,
-                                 ObjectHandle hTarget, TypeConstant typeProxy) {
+                                 ObjectHandle hTarget, TypeConstant typeProxy, boolean fResponse) {
         // this method is called from ServiceContext.validatePassThrough(); see if we can freeze all
         // the tuple values (implementing AutoFreezable(False) contract)
         TupleHandle    hTuple  = (TupleHandle) hTarget;
         ObjectHandle[] ahValue = hTuple.m_ahValue.clone();
 
-        switch (frame.f_context.validatePassThrough(frame, ctxTarget, null, ahValue)) {
+        switch (frame.f_context.validatePassThrough(frame, ctxTarget, null, ahValue, fResponse)) {
         case Op.R_NEXT:
             return frame.assignValue(Op.A_STACK, makeHandle(hTuple.getComposition(), ahValue));
 

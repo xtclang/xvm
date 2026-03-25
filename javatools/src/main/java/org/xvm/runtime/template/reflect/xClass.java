@@ -260,7 +260,7 @@ public class xClass
         }
 
         if (hParent != null && !hParent.isPassThrough()) {
-            return frame.raiseException(xException.mutableObject(frame, hParent.getType()));
+            return frame.raiseException(xException.mutableObject(frame, hParent.getType(), false));
         }
 
         switch (contextAlloc.sendAllocateRequest(frame, clzPublic, hParent, Op.A_STACK)) {

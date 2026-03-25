@@ -62,7 +62,7 @@ public class Proxy
 
     @Override
     public int createProxyHandle(Frame frame, ServiceContext ctxTarget, ObjectHandle hTarget,
-                                 TypeConstant typeProxy) {
+                                 TypeConstant typeProxy, boolean fResponse) {
         ProxyHandle hProxy = (ProxyHandle) hTarget;
         if (ctxTarget != hProxy.f_context) {
             return frame.raiseException("Out of context \"" + hProxy.f_context.f_sName + "\" service");

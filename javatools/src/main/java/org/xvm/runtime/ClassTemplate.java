@@ -426,11 +426,13 @@ public abstract class ClassTemplate
      * @param ctxTarget  the service context that the proxy "belongs" to
      * @param hTarget    the object handle that needs to be proxied
      * @param typeProxy  (optional) the [revealed] type of the proxy handle
+     * @param fResponse  true iff the object handle that needs to be proxied is passed as a return
+     *                   from a service call
      *
      * @return Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION
      */
     public int createProxyHandle(Frame frame, ServiceContext ctxTarget, ObjectHandle hTarget,
-                                 TypeConstant typeProxy) {
+                                 TypeConstant typeProxy, boolean fResponse) {
         TypeConstant typeTarget = hTarget.getType();
         if (!hTarget.isMutable()) {
             // the only reason we need to create a ProxyHandle for an immutable object is that its
@@ -465,7 +467,7 @@ public abstract class ClassTemplate
             }
         }
 
-        return frame.raiseException(xException.mutableObject(frame, typeTarget));
+        return frame.raiseException(xException.mutableObject(frame, typeTarget, fResponse));
     }
 
 

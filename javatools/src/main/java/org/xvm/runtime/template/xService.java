@@ -149,7 +149,7 @@ public class xService
 
         ServiceContext.TypeSupplier supplier = i -> constructor.getParamTypes()[i].
                 resolveGenerics(context.f_pool, clazz.getType());
-        switch (context.validatePassThrough(frame, contextNew, supplier, ahArg)) {
+        switch (context.validatePassThrough(frame, contextNew, supplier, ahArg, false)) {
         case Op.R_NEXT:
             return contextNew.sendConstructRequest(
                     frame, clazz, constructor, hParent, ahArg, iReturn);

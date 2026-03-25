@@ -152,11 +152,13 @@ public class xException
         return makeHandle(frame, s_clzInvalidType, sMsg);
     }
 
-    public static ExceptionHandle mutableObject(Frame frame, TypeConstant type) {
+    public static ExceptionHandle mutableObject(Frame frame, TypeConstant type, boolean fResponse) {
         type = type.removeAccess().
                     resolveGenerics(frame.poolContext(), frame.getGenericsResolver(true));
-        return illegalArgument(frame, "Mutable object of type \"" + type.getValueString()
-                + "\" cannot be used for a service call");
+        return illegalArgument(frame, "A mutable object of type \"" + type.getValueString()
+                + "\" cannot be " + (fResponse
+                    ? "returned from a service call"
+                    : "used as an argument to a service call"));
     }
 
     public static ExceptionHandle notImplemented(Frame frame, String sMsg) {
