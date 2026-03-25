@@ -19,6 +19,7 @@ import org.xvm.asm.constants.UnionTypeConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
+import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 
@@ -50,6 +51,7 @@ public class MainContainer
         TypeConstant typeDestringable = pool.ensureEcstasyTypeConstant("text.Destringable");
         TypeConstant typeList         = pool.typeList();
         TypeConstant typeString       = pool.typeString();
+        TypeConstant typeBoolean      = pool.typeBoolean();
         TypeConstant typeStrings      = pool.ensureParameterizedTypeConstant(typeList, typeString);
         TypeConstant typeRequired     = type;
 
@@ -67,6 +69,9 @@ public class MainContainer
                 // require String[], return the whole List<String> as an array
                 String[] asValue = listValue.toArray(String[]::new);
                 return xString.makeArrayHandle(asValue);
+            }
+            if (typeRequired.equals(typeBoolean)) {
+                return xBoolean.makeHandle(Boolean.parseBoolean(listValue.getLast()));
             }
             if (typeRequired.isA(typeDestringable)) {
                 // require Destringable, return the converted last String element

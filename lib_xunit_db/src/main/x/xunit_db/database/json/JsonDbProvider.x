@@ -98,6 +98,7 @@ service JsonDbProvider<Schema extends RootSchema>(Type<Schema> type, Module dbMo
     private Catalog createCatalog(DbConfig config, Directory parentDir) {
         @Inject Directory        testOutputRoot;
         @Inject Directory        testOutput;
+        @Inject ResourceProvider resources;
 
         String     dbName   = dbModule.simpleName;
         Directory  buildDir = testOutputRoot.dirFor(dbName).ensure();
@@ -113,7 +114,7 @@ service JsonDbProvider<Schema extends RootSchema>(Type<Schema> type, Module dbMo
         }
 
         dataDir.ensure();
-        return jsondb.createCatalog(dbName, dataDir, buildDir);
+        return jsondb.createCatalog(dbName, dataDir, buildDir, resources=resources);
     }
 
     /**

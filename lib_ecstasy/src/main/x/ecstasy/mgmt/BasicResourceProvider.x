@@ -134,6 +134,16 @@ service BasicResourceProvider
                 throw new Exception($|Unsupported resource: type="{type}", name="{name}"
                                     );
         }
+        if (baseType.is(Type<Boolean>)) {
+            @Inject(resourceName=name) String? value;
+            if (value.is(String)) {
+                return True, value.toLowercase() == "true";
+            }
+            if (isNullable) {
+                return True, Null;
+            }
+            return True, False;
+        }
         return False;
     }
 }
