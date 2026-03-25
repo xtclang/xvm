@@ -119,9 +119,6 @@ public class xRTPropertyClassTemplate
      */
     public int getPropertyClasses(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         PropertyStructure prop = (PropertyStructure) hComponent.getComponent();
-        if (!prop.getFileStructure().isLinked()) {
-            return frame.raiseException(xException.illegalState(frame, "FileTemplate is not resolved"));
-        }
 
         Container                     container     = frame.f_context.f_container;
         List<ComponentTemplateHandle> listTemplates = new ArrayList<>();
@@ -145,9 +142,6 @@ public class xRTPropertyClassTemplate
      */
     public int getPropertyContribs(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         PropertyStructure prop = (PropertyStructure) hComponent.getComponent();
-        if (!prop.getFileStructure().isLinked()) {
-            return frame.raiseException(xException.illegalState(frame, "FileTemplate is not resolved"));
-        }
 
         List<Contribution>  listContrib = prop.getContributionsAsList();
         Utils.ValueSupplier supplier    = (frameCaller, index) -> {
@@ -205,9 +199,6 @@ public class xRTPropertyClassTemplate
      */
     public int getPropertyProperties(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         PropertyStructure prop = (PropertyStructure) hComponent.getComponent();
-        if (!prop.getFileStructure().isLinked()) {
-            return frame.raiseException(xException.illegalState(frame, "FileTemplate is not resolved"));
-        }
 
         List<ComponentTemplateHandle> listProps = new ArrayList<>();
         for (Component child : prop.children()) {
@@ -245,9 +236,6 @@ public class xRTPropertyClassTemplate
      */
     public int getPropertyType(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         PropertyStructure prop = (PropertyStructure) hComponent.getComponent();
-        if (!prop.getFileStructure().isLinked()) {
-            return frame.raiseException(xException.illegalState(frame, "FileTemplate is not resolved"));
-        }
 
         return frame.assignValue(iReturn,
             xRTTypeTemplate.makeHandle(frame.f_context.f_container, prop.getType()));

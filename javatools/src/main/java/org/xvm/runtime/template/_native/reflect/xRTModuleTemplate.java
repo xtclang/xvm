@@ -88,7 +88,7 @@ public class xRTModuleTemplate
 
         case "resolved": {
             ModuleStructure module = (ModuleStructure) hTemplate.getComponent();
-            return frame.assignValue(iReturn, xBoolean.makeHandle(module.isLinked()));
+            return frame.assignValue(iReturn, xBoolean.makeHandle(module.getFileStructure().isLinked()));
         }
         }
 

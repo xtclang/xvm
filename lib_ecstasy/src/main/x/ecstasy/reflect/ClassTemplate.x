@@ -225,10 +225,15 @@ interface ClassTemplate
 
             // search through the composition of this class to find the specified annotation
             for (Contribution contrib : baseThis.contribs) {
-                if (contrib.action != AnnotatedBy, // avoid a infinite recursion
-                    Composition comp := contrib.ingredient.fromClass(),
-                                comp.annotatedBy(baseThat)) {
-                    return True;
+                if (Composition comp := contrib.ingredient.fromClass()) {
+                    if (contrib.action == AnnotatedBy) {
+                        assert comp.is(AnnotatingComposition);
+                        if (comp.annoTemplate.template.extends(baseThat)) {
+                            return True;
+                        }
+                    } else if (comp.annotatedBy(baseThat)) {
+                        return True;
+                    }
                 }
             }
 

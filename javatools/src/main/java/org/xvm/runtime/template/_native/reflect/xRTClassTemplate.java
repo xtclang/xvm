@@ -32,7 +32,6 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xEnum;
-import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 
 import org.xvm.runtime.template.collections.xArray;
@@ -196,9 +195,6 @@ public class xRTClassTemplate
     public int getPropertyClasses(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         Container      container = frame.f_context.f_container;
         ClassStructure clz       = (ClassStructure) hComponent.getComponent();
-        if (!clz.getFileStructure().isLinked()) {
-            return frame.raiseException(xException.illegalState(frame, "FileTemplate is not resolved"));
-        }
 
         List<ComponentTemplateHandle> listTemplates = new ArrayList<>();
         for (Component child : clz.children()) {
@@ -228,9 +224,6 @@ public class xRTClassTemplate
     public int getPropertyContribs(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         Container      container = frame.f_context.f_container;
         ClassStructure clz       = (ClassStructure) hComponent.getComponent();
-        if (!clz.getFileStructure().isLinked()) {
-            return frame.raiseException(xException.illegalState(frame, "FileTemplate is not resolved"));
-        }
 
         List<Contribution>  listContrib = clz.getContributionsAsList();
         Utils.ValueSupplier supplier    = (frameCaller, index) -> {
@@ -406,9 +399,6 @@ public class xRTClassTemplate
      */
     public int getPropertyProperties(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         ClassStructure clz = (ClassStructure) hComponent.getComponent();
-        if (!clz.getFileStructure().isLinked()) {
-            return frame.raiseException(xException.illegalState(frame, "FileTemplate is not resolved"));
-        }
 
         List<ComponentTemplateHandle> listProps = new ArrayList<>();
         for (Component child : clz.children()) {
@@ -453,9 +443,6 @@ public class xRTClassTemplate
      */
     public int getPropertyType(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         ClassStructure clz = (ClassStructure) hComponent.getComponent();
-        if (!clz.getFileStructure().isLinked()) {
-            return frame.raiseException(xException.illegalState(frame, "FileTemplate is not resolved"));
-        }
 
         return frame.assignValue(iReturn,
             xRTTypeTemplate.makeHandle(frame.f_context.f_container, clz.getIdentityConstant().getType()));
