@@ -10,7 +10,7 @@ class MapKeys<Key, Value>(Map<Key, Value> contents)
     construct(Map<Key, Value> contents) {
         this.contents = contents;
     } finally {
-        if (contents.is(immutable)) {
+        if (contents.is(immutable | service)) {
             makeImmutable();
         }
     }
