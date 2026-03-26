@@ -654,7 +654,7 @@ public abstract class OpCondJump
                 // cast to nObj because the target type may be an interface that will not have
                 // the $xvmType method, but that is fine because everything is nObj and nObj does
                 // have the $xvmType method
-                if (bctx.isJavaInterface(regTarget.type())) {
+                if (regTarget.type().isJitInterface()) {
                     code.checkcast(CD_nObj);
                 }
                 bctx.loadCtx(code);
