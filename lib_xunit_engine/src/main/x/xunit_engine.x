@@ -53,6 +53,12 @@ module xunit_engine.xtclang.org {
     static String ConfigTestOutputDir = ConfigPrefix + ".outputDir";
 
     /**
+     * The injection name for the config property to tell XUnit whether to delete the generated test
+     * module source.
+     */
+    static String ConfigDeleteTestSource = ConfigPrefix + ".deleteTestSource";
+
+    /**
      * The default XUnit output directory located under the current directory.
      */
     static String DefaultXUnitDir = "xunit";

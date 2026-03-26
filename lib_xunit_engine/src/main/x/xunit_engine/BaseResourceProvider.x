@@ -34,6 +34,12 @@ import ecstasy.reflect.Injector;
         case (FileStore, "storage"):
             return &store.maskAs(FileStore);
 
+        case (Injector, _):
+            return this;
+
+        case (ResourceProvider, _):
+            return this;
+
         case (Directory, _):
             switch (name) {
             case "rootDir":

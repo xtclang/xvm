@@ -56,13 +56,18 @@ class ModuleGenerator(String moduleName, Version? version = Null) {
             } catch (Exception ignore) {}
         }
 
-        File sourceFile = buildDir.fileFor($"{appName}_{implName}.x");
-        createModule(sourceFile, appName, qualifier, testModule);
+        File   sourceFile    = buildDir.fileFor($"{appName}_{implName}.x");
+        String moduleImports = collectXUnitModuleImports(testModule);
+
+        createModule(sourceFile, appName, qualifier, moduleImports, testModule);
 
         if (compileModule(repository, sourceFile, buildDir, errors)) {
             errors.add($"Info : Created a host module '{hostName}' for '{moduleName}'");
             // clean up the temporary test module source file
-            sourceFile.delete();
+            @Inject(ConfigDeleteTestSource) Boolean? deleteSource;
+            if (deleteSource == Null || deleteSource) {
+                sourceFile.delete();
+            }
             return repository.getModule(hostName);
         }
         return False;
@@ -81,6 +86,7 @@ class ModuleGenerator(String moduleName, Version? version = Null) {
     void createModule(File           sourceFile,
                       String         appName,
                       String         qualifier,
+                      String         moduleImports,
                       ModuleTemplate moduleTemplate) {
 
         String versionString = version == Null ? "" : $" v:{version}";
@@ -88,6 +94,7 @@ class ModuleGenerator(String moduleName, Version? version = Null) {
                                 .replace("%appName%"      , appName)
                                 .replace("%qualifier%"    , qualifier)
                                 .replace("%version%"      , versionString)
+                                .replace("%moduleImports%", moduleImports)
                                 ;
         sourceFile.create();
         sourceFile.contents = moduleSource.utf8();
@@ -117,5 +124,34 @@ class ModuleGenerator(String moduleName, Version? version = Null) {
             errors.addAll(compilationErrors);
         }
         return success;
+    }
+
+    /**
+     * Collect the module imports using the dependencies of the specified module.
+     *
+     * @param testModule  the module to collect the imports from
+     *
+     * @return a String specifying all the module imports that should be injected into the test
+     *         module
+     */
+    String collectXUnitModuleImports(ModuleTemplate testModule) {
+        StringBuffer                buf   = new StringBuffer();
+        Map<String, ModuleTemplate> deps  = testModule.modulesByPath;
+        Set<String>                 names = new HashSet();
+
+        for (ModuleTemplate mt : deps.values) {
+            String name = mt.qualifiedName;
+            if (name.startsWith("xunit_") && name.endsWith(".xtclang.org")) {
+                names.add(mt.qualifiedName);
+            }
+        }
+
+        Int id = 0;
+        for (String qualifiedName : names) {
+            buf.append("    package ").append("xunit_").append(id++)
+               .append(" import ").append(qualifiedName)
+               .append("  inject (ecstasy.reflect.Injector _) using SimpleInjector;\n\n");
+        }
+        return buf.toString();
     }
 }

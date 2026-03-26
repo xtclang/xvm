@@ -19,6 +19,7 @@ import org.xvm.asm.constants.UnionTypeConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
+import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 
@@ -67,6 +68,21 @@ public class MainContainer
                 // require String[], return the whole List<String> as an array
                 String[] asValue = listValue.toArray(String[]::new);
                 return xString.makeArrayHandle(asValue);
+            }
+            if (typeRequired.isEnum()) {
+                TypeComposition clz    = typeRequired.ensureClass(frame);
+                xEnum           en     = (xEnum) clz.getTemplate();
+                String          sValue = listValue.getLast();
+                ObjectHandle    handle = en.getEnumByName(sValue);
+                if (handle == null) {
+                    // a value was injected that does not match any of the enum values
+                    String msg = "Injectable " + sName + "=\"" + sValue
+                            + "\" does not match any names in enum "
+                            + typeRequired.getSingleUnderlyingClass(true).getName() + " "
+                            + en.getNames();
+                    return new DeferredCallHandle(xException.makeHandle(frame, msg));
+                }
+                return handle;
             }
             if (typeRequired.isA(typeDestringable)) {
                 // require Destringable, return the converted last String element

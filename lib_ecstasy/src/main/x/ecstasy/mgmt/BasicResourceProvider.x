@@ -82,7 +82,10 @@ service BasicResourceProvider
             };
 
         default:
-            if (Supplier supp := getDestringableResource(type, name)) {
+            if (Supplier supp := getEnumResource(sansNull, name, isNullable)) {
+                return supp;
+            }
+            if (Supplier supp := getDestringableResource(sansNull, name, isNullable)) {
                 return supp;
             }
             // if the type is Nullable, no need to complain; just return Null, otherwise
@@ -110,22 +113,53 @@ service BasicResourceProvider
     /**
      * Returns a supplier that constructs a Destringable resource for a string injection.
      *
+     * @param type        the non-nullable type of the injection
+     * @param name        the name of the injection
+     * @param isNullable  `True` iff the injection result may be Nullable
+     *
      * @return `True` iff the injection type is a Destringable or nullable Destringable
      * @return a supplier that constructs a Destringable resource for a string injection
      */
-    conditional Supplier getDestringableResource(Type type, String name) {
-        Type    baseType   = type;
-        Boolean isNullable = False;
-        if (Type nonNullable := type.isNullable()) {
-            baseType   = nonNullable;
-            isNullable = True;
-        }
-        if (baseType.is(Type<Destringable>)) {
+    conditional Supplier getDestringableResource(Type type, String name, Boolean isNullable) {
+        if (type.is(Type<Destringable>)) {
             // the requested type is Destringable so it may be possible to construct it from a
             // string injection
             @Inject(resourceName=name) String? value;
             if (value.is(String)) {
-                return True, new baseType.DataType(value);
+                return True, new type.DataType(value);
+            }
+            if (isNullable) {
+                return True, Null;
+            }
+            return True, (Inject.Options opts) ->
+                throw new Exception($|Unsupported resource: type="{type}", name="{name}"
+                                    );
+        }
+        return False;
+    }
+
+    /**
+     * Returns a supplier that constructs an Enum resource for a string injection.
+     *
+     * @param type        the non-nullable type of the injection
+     * @param name        the name of the injection
+     * @param isNullable  `True` iff the injection result may be Nullable
+     *
+     * @return `True` iff the injection type is a Destringable or nullable Destringable
+     * @return a supplier that constructs an Enum resource for a string injection
+     */
+    conditional Supplier getEnumResource(Type type, String name, Boolean isNullable) {
+        if (type.is(Type<Enum>)) {
+            @Inject(resourceName=name) String? value;
+            if (value.is(String), Class clz := type.fromClass(), clz.is(Enumeration)) {
+                if (Enum en := clz.byName.get(value)) {
+                    return True, en;
+                }
+                // a value was specified but does not match any enum value, so return an exception
+                return True, (Inject.Options opts) ->
+                    throw new Exception($|Injectable {name}="{value}" does not match any names\
+                                         | in enum {type} {clz.names}
+                                         );
             }
             if (isNullable) {
                 return True, Null;
