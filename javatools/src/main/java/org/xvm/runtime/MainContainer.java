@@ -19,7 +19,7 @@ import org.xvm.asm.constants.UnionTypeConstant;
 
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
-import org.xvm.runtime.template.xBoolean;
+import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 
@@ -51,7 +51,6 @@ public class MainContainer
         TypeConstant typeDestringable = pool.ensureEcstasyTypeConstant("text.Destringable");
         TypeConstant typeList         = pool.typeList();
         TypeConstant typeString       = pool.typeString();
-        TypeConstant typeBoolean      = pool.typeBoolean();
         TypeConstant typeStrings      = pool.ensureParameterizedTypeConstant(typeList, typeString);
         TypeConstant typeRequired     = type;
 
@@ -70,8 +69,28 @@ public class MainContainer
                 String[] asValue = listValue.toArray(String[]::new);
                 return xString.makeArrayHandle(asValue);
             }
-            if (typeRequired.equals(typeBoolean)) {
-                return xBoolean.makeHandle(Boolean.parseBoolean(listValue.getLast()));
+            if (typeRequired.isEnum()) {
+                TypeComposition clz    = typeRequired.ensureClass(frame);
+                xEnum           en     = (xEnum) clz.getTemplate();
+                String          sValue = listValue.getLast();
+                ObjectHandle    handle = en.getEnumByName(sValue);
+                if (handle == null) {
+                    // sValue is either invalid or a case mismatch, so try a case-insensitive lookup
+                    handle = en.getNames().stream()
+                               .filter(name -> name.equalsIgnoreCase(sValue))
+                               .findFirst()
+                               .map(en::getEnumByName)
+                               .orElse(null);
+                }
+                if (handle == null) {
+                    // a value was injected that does not match any of the enum values
+                    String msg = "Injectable " + sName + "=\"" + sValue
+                            + "\" does not match any names in enum "
+                            + typeRequired.getSingleUnderlyingClass(true).getName() + " "
+                            + en.getNames();
+                    return new DeferredCallHandle(xException.makeHandle(frame, msg));
+                }
+                return handle;
             }
             if (typeRequired.isA(typeDestringable)) {
                 // require Destringable, return the converted last String element
