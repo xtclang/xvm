@@ -150,8 +150,6 @@ service BasicResourceProvider
      */
     conditional Supplier getEnumResource(Type type, String name, Boolean isNullable) {
         if (type.is(Type<Enum>)) {
-            // the requested type is Destringable so it may be possible to construct it from a
-            // string injection
             @Inject(resourceName=name) String? value;
             if (value.is(String), Class clz := type.fromClass(), clz.is(Enumeration)) {
                 if (Enum en := clz.byName.get(value)) {
