@@ -75,14 +75,6 @@ public class MainContainer
                 String          sValue = listValue.getLast();
                 ObjectHandle    handle = en.getEnumByName(sValue);
                 if (handle == null) {
-                    // sValue is either invalid or a case mismatch, so try a case-insensitive lookup
-                    handle = en.getNames().stream()
-                               .filter(name -> name.equalsIgnoreCase(sValue))
-                               .findFirst()
-                               .map(en::getEnumByName)
-                               .orElse(null);
-                }
-                if (handle == null) {
                     // a value was injected that does not match any of the enum values
                     String msg = "Injectable " + sName + "=\"" + sValue
                             + "\" does not match any names in enum "

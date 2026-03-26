@@ -157,14 +157,7 @@ service BasicResourceProvider
                 if (Enum en := clz.byName.get(value)) {
                     return True, en;
                 }
-                // injected values does not match an enum name, so search case-insensitive
-                String lower = value.toLowercase();
-                for (String enumName : clz.names) {
-                    if (enumName.toLowercase() == lower) {
-                        return True, clz.byName[enumName];
-                    }
-                }
-                // a value was specified, but does not match any enum value, so return an exception
+                // a value was specified but does not match any enum value, so return an exception
                 return True, (Inject.Options opts) ->
                     throw new Exception($|Injectable {name}="{value}" does not match any names\
                                          | in enum {type} {clz.names}
