@@ -966,7 +966,7 @@ public abstract class TypeConstant
 
             TypeConstant[] atype2 = clz2.getCanonicalType().getParamTypesArray();
             boolean        fClone = false;
-            for (int i = 0, c = atype2.length; i < c; i++) {
+            for (int i = 0, c = Math.min(atype1.length, atype2.length); i < c; i++) {
                 TypeConstant te1 = atype1[i];
                 TypeConstant te2 = atype2[i];
                 if (!te1.equals(te2)) {
