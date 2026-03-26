@@ -8,8 +8,6 @@ import org.xvm.asm.PackageStructure;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.Container;
-import org.xvm.runtime.Frame;
-import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.TypeComposition;
 
 
@@ -33,11 +31,6 @@ public class xRTPackageTemplate
         ConstantPool pool = f_container.getConstantPool();
 
         PACKAGE_TEMPLATE_TYPE = pool.ensureEcstasyTypeConstant("reflect.PackageTemplate");
-    }
-
-    @Override
-    public int invokeNativeGet(Frame frame, String sPropName, ObjectHandle hTarget, int iReturn) {
-        return super.invokeNativeGet(frame, sPropName, hTarget, iReturn);
     }
 
 

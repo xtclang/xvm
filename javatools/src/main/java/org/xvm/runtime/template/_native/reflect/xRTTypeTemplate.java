@@ -637,6 +637,9 @@ public class xRTTypeTemplate
                 case ThisClass:
                 case ParentClass:
                 case ChildClass:
+                case IsModule:
+                case IsClass:
+                case IsConst:
                     return enumForm.getEnumByName("Class");
 
                 case Property:

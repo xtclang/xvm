@@ -462,7 +462,7 @@ const Class<PublicType, ProtectedType extends PublicType,
      *         the specified interface
      */
     Boolean derivesFrom(Class!<> clz) {
-        return &this == &clz
+        return this == clz
                 || this.extends(clz)
                 || this.incorporates(clz)
                 || this.annotatedBy(clz)

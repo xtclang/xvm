@@ -109,7 +109,7 @@ interface ClassTemplate
                 return False;
             }
 
-            if (&this == &composition) {
+            if (sameTemplate(this, composition)) {
                 return True;
             }
 
@@ -119,7 +119,7 @@ interface ClassTemplate
                     return False;
                 }
 
-                if (&this == &composition) {
+                if (sameTemplate(this, composition)) {
                     return True;
                 }
             }
@@ -192,7 +192,7 @@ interface ClassTemplate
                 return False;
             }
 
-            if (&this == &composition) {
+            if (sameTemplate(this, composition)) {
                 return True;
             }
 
@@ -203,7 +203,7 @@ interface ClassTemplate
                     return False;
                 }
 
-                if (&this == &baseThat) {
+                if (sameTemplate(this, baseThat)) {
                     return True;
                 }
             }
@@ -218,7 +218,7 @@ interface ClassTemplate
                     return False;
                 }
 
-                if (&baseThis == &baseThat) {
+                if (sameTemplate(baseThis, baseThat)) {
                     return True;
                 }
             }
@@ -249,7 +249,7 @@ interface ClassTemplate
          * @return (conditional) True iff the incorporation is conditional
          */
         conditional Boolean incorporates(Composition! composition) {
-            if (&this == &composition) {
+            if (sameTemplate(this, composition)) {
                 return True, False;
             }
 
@@ -359,7 +359,7 @@ interface ClassTemplate
          * @return True iff this Composition implements the specified interface
          */
         Boolean implements(Composition! composition, Boolean allowInto = True) {
-            if (&this == &composition) {
+            if (sameTemplate(this, composition)) {
                 return True;
             }
 
@@ -434,11 +434,20 @@ interface ClassTemplate
          *         implements the specified interface
          */
         Boolean derivesFrom(Composition! composition) {
-            return &this == &composition
+            return sameTemplate(this, composition)
                     || this.extends(composition)
                     || this.annotatedBy(composition)
                     || this.incorporates(composition)
                     || this.implements(composition);
+        }
+
+        /**
+         * @return True iff the specified compositions are equal ClassTemplates
+         */
+        static Boolean sameTemplate(Composition! composition1, Composition! composition2) {
+            return composition1.is(ClassTemplate)
+                && composition2.is(ClassTemplate)
+                && composition1 == composition2;
         }
 
         /**

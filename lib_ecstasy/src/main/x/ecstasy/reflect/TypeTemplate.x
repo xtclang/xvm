@@ -373,7 +373,15 @@ interface TypeTemplate
             break;
 
         case Annotated:
-            TODO
+            assert Composition cmp := fromClass();
+            while ((AnnotationTemplate anno, cmp) := cmp.deannotate()) {
+                buf.add('@')
+                   .addAll(anno.template.name)
+                   .add(' ');
+            }
+            assert cmp.is(ClassTemplate);
+            cmp.appendTo(buf);
+            break;
 
         case Typedef:
             (name ?: underlyingTypes[0]).as(Stringable).appendTo(buf);
