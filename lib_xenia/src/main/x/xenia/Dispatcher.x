@@ -232,16 +232,23 @@ service Dispatcher {
 
             (Int status, String[] names, String[] values, Int responseLength) =
                 Http1Response.prepare(requestInfo.method, r);
-            if (responseLength > 0) {
-                // fixed size body
-                requestInfo.respond(status, names, values, r.body?.bytes) : assert;
-            } else if (responseLength < 0) {
-                // no body
-                requestInfo.respond(status, names, values, []);
-            } else {
-                // streaming
-                requestInfo.setHeaders(status, names, values, 0);
-                requestInfo.streamBodyBytes(r.body?.bodyReader());
+            try {
+                if (responseLength > 0) {
+                    // fixed size body
+                    requestInfo.respond(status, names, values, r.body?.bytes) : assert;
+                } else if (responseLength < 0) {
+                    // no body
+                    requestInfo.respond(status, names, values, []);
+                } else {
+                    // streaming
+                    requestInfo.setHeaders(status, names, values, 0);
+                    requestInfo.streamBodyBytes(r.body?.bodyReader());
+                }
+            } catch (Exception ex) {
+                // while we were sending a response the connection was severed (e.g. "curl" command
+                // was terminated or a browser page closed); there is nothing we can do at this point
+                @Inject Console console;
+                console.print($"Dispatcher: an exception while sending a response: {ex.message}");
             }
         });
     }
