@@ -22,9 +22,9 @@ apache-commons-cli = "1.11.0"
 gson = "2.13.2"
 jakarta-activation = "2.1.4"
 jakarta-xml-bind-api = "4.0.5"
-jaxb-runtime = "4.0.6"
+jaxb-runtime = "4.0.7"
 jetbrains-annotations = "26.1.0"
-jline = "4.0.4"
+jline = "4.0.9"
 
 # =============================================================================
 # Build tooling & publishing
@@ -47,7 +47,7 @@ mockito = "5.22.0"
 # Lang tooling - Kotlin & formatting
 # =============================================================================
 # Everything below is only used when includeBuildLang=true.
-lang-kotlin = "2.3.10"
+lang-kotlin = "2.3.20"
 lang-kotlinx-serialization = "1.10.0"
 lang-ktlint = "14.0.1"
 lang-ktlint-engine = "1.5.0"
