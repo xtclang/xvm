@@ -183,7 +183,7 @@ public class xByteArray
             for (int i = 0; i < cSize; i++) {
                 tView.assignByte(hDelegate, ofDst + i, abVal[ofSrc + i]);
             }
-            hDelegate.m_cSize = abVal.length;
+            hDelegate.m_cSize = ofDst + cSize;
             return;
         }
         throw new UnsupportedOperationException();

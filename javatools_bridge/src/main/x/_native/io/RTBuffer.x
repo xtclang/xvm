@@ -76,7 +76,15 @@ class RTBuffer(RawChannel rawChannel, Byte[] rawBytes, Int rawSize, Boolean read
 
     @Override
     Int readBytes(Byte[] bytes, Int offset, Int count) {
-        TODO
+        Int available = rawSize - rawOffset;
+        Int copy      = count.notGreaterThan(available);
+        if (copy > 0) {
+            assert:arg bytes.capacity >= offset + copy as
+                $"Insufficient destination capacity: requited: {offset + copy}, available: {bytes.capacity}";
+            copyRawBytes(rawOffset, bytes, offset, copy);
+            rawOffset += copy;
+        }
+        return copy;
     }
 
     @Override
