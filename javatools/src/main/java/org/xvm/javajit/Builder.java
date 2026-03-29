@@ -623,7 +623,7 @@ public abstract class Builder {
                                       PropertyConstant propId) {
         PropertyInfo  xvmInfo    = propId.getPropertyInfo(typeContainer);
         PropertyInfo  jitInfo    = propId.getPropertyInfo(typeContainer.getCanonicalJitType());
-        ClassDesc     cdOwner    = jitInfo.getOwnerClassDesc(this, typeContainer);
+        TypeConstant  typeOwner  = jitInfo.getOwnerType(this, typeContainer);
         JitMethodDesc jmdGet     = jitInfo.getGetterJitDesc(this);
         String        getterName = jitInfo.ensureGetterJitMethodName(typeSystem);
 
@@ -636,7 +636,12 @@ public abstract class Builder {
         }
 
         code.aload(code.parameterSlot(0)); // $ctx
-        code.invokevirtual(cdOwner, getterName, md);
+        if (!jitInfo.isNative() && typeOwner.isJitInterface()) {
+            code.invokeinterface(ensureClassDesc(typeOwner), getterName, md);
+        } else {
+            code.invokevirtual(ensureClassDesc(typeOwner), getterName, md);
+        }
+
         if (!xvmInfo.getType().equals(jitInfo.getType())) {
             code.checkcast(ensureClassDesc(xvmInfo.getType()));
         }

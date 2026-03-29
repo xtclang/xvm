@@ -688,29 +688,26 @@ public class CommonBuilder
                 } else {
                     generateTrivialGetter(className, classBuilder, prop);
                 }
+            } else if (prop.isAbstract()) {
+                assemblePropertyGetter(className, classBuilder, prop);
             }
-        } else {
+        } else if (prop.getHead().hasGetter()) {
             switch (getterInfo.getHead().getImplementation()) {
-            case Field:
-                generateTrivialGetter(className, classBuilder, prop);
-                break;
-            case Explicit:
-                String         jitName = prop.ensureGetterJitMethodName(typeSystem);
-                JitMethodDesc  jmDesc  = prop.getGetterJitDesc(this);
-                boolean        isOpt   = jmDesc.isOptimized;
-                MethodTypeDesc md      = isOpt ? jmDesc.optimizedMD : jmDesc.standardMD;
-                if (isOpt) {
-                    jitName += OPT;
+                case Field:
+                    generateTrivialGetter(className, classBuilder, prop);
+                    break;
+                case Explicit, Default:
+                    assemblePropertyGetter(className, classBuilder, prop);
+                    break;
                 }
-                assemblePropertyAccessor(className, classBuilder, prop, jitName, md, isOpt, true);
-                break;
             }
-        }
 
         MethodInfo setterInfo = typeInfo.getMethodById(prop.getSetterId());
         if (setterInfo == null) {
             if (prop.hasField() && shouldGenerate(prop.getFieldIdentity())) {
                 generateTrivialSetter(className, classBuilder, prop);
+            } else if (prop.isAbstract()) {
+                assemblePropertySetter(className, classBuilder, prop);
             }
         } else {
             switch (getterInfo.getHead().getImplementation()) {
@@ -718,18 +715,34 @@ public class CommonBuilder
                 generateTrivialSetter(className, classBuilder, prop);
                 break;
 
-            case Explicit:
-                String         jitName = prop.ensureSetterJitMethodName(typeSystem);
-                JitMethodDesc  jmDesc  = prop.getSetterJitDesc(this);
-                boolean        isOpt   = jmDesc.isOptimized;
-                MethodTypeDesc md      = isOpt ? jmDesc.optimizedMD : jmDesc.standardMD;
-                if (isOpt) {
-                    jitName += OPT;
-                }
-                assemblePropertyAccessor(className, classBuilder, prop, jitName, md, isOpt, false);
+            case Explicit, Default:
+                assemblePropertySetter(className, classBuilder, prop);
                 break;
             }
         }
+    }
+
+    private void assemblePropertyGetter(String className, ClassBuilder classBuilder,
+                                        PropertyInfo prop) {
+        String         jitName = prop.ensureGetterJitMethodName(typeSystem);
+        JitMethodDesc  jmDesc  = prop.getGetterJitDesc(this);
+        boolean        isOpt   = jmDesc.isOptimized;
+        MethodTypeDesc md      = isOpt ? jmDesc.optimizedMD : jmDesc.standardMD;
+        if (isOpt) {
+            jitName += OPT;
+        }
+        assemblePropertyAccessor(className, classBuilder, prop, jitName, md, isOpt, true);
+    }
+
+    private void assemblePropertySetter(String className, ClassBuilder classBuilder, PropertyInfo prop) {
+        String         jitName = prop.ensureSetterJitMethodName(typeSystem);
+        JitMethodDesc  jmDesc  = prop.getSetterJitDesc(this);
+        boolean        isOpt   = jmDesc.isOptimized;
+        MethodTypeDesc md      = isOpt ? jmDesc.optimizedMD : jmDesc.standardMD;
+        if (isOpt) {
+            jitName += OPT;
+        }
+        assemblePropertyAccessor(className, classBuilder, prop, jitName, md, isOpt, false);
     }
 
     protected void generateTrivialGetter(String className, ClassBuilder classBuilder, PropertyInfo prop) {
@@ -989,7 +1002,7 @@ public class CommonBuilder
         classBuilder.withMethodBody(jitName, md, flags, code -> {
             // generate the following:
             // T value = this.prop;
-            // if (value == null} { value = this.prop = $ctx.inject(type, name, opts);}
+            // if (value == null) { value = this.prop = $ctx.inject(type, name, opts);}
             // return value;
 
             if (isOpt) {
@@ -1162,7 +1175,6 @@ public class CommonBuilder
             }
 
             JitParamDesc[] optParams = jmDesc.optimizedParams;
-            JitParamDesc[] stdParams = jmDesc.standardParams;
             for (int i = 0, c = optParams.length; i < c; i++) {
                 JitParamDesc optParamDesc = optParams[i];
                 int          stdParamIx   = optParamDesc.index;
@@ -1805,16 +1817,17 @@ public class CommonBuilder
     protected void assemblePropertyAccessor(String className, ClassBuilder classBuilder,
                                             PropertyInfo prop, String jitName, MethodTypeDesc md,
                                             boolean isOptimized, boolean isGetter) {
-        int flags = ClassFile.ACC_PUBLIC;
-        if (prop.isAbstract()) {
+        int     flags      = ClassFile.ACC_PUBLIC;
+        boolean isAbstract = prop.isAbstract() &&
+                                !(isGetter ? prop.getHead().hasGetter() : prop.getHead().hasSetter());
+        if (isAbstract) {
             flags |= ClassFile.ACC_ABSTRACT;
         }
 
-        BuildContext bctx = new BuildContext(this, className, typeInfo, prop, isGetter);
-
         classBuilder.withMethod(jitName, md, flags,
             methodBuilder -> {
-                if (!prop.isAbstract()) {
+                if (!isAbstract) {
+                    BuildContext bctx = new BuildContext(this, className, typeInfo, prop, isGetter);
                     methodBuilder.withCode(code -> generateCode(md, bctx, code));
                 }
             }
@@ -1925,7 +1938,7 @@ public class CommonBuilder
         "IOException", "OutOfBounds", "Unsupported", "IllegalArgument", "IllegalState",
         "Boolean", "Ordered",
         "Orderable",
-//            "StringBuffer",
+//        "StringBuffer",
 //        "Int64",
         "Array",
         "TerminalConsole",

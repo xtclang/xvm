@@ -1324,9 +1324,9 @@ public class PropertyInfo
     // ----- JIT support ---------------------------------------------------------------------------
 
     /**
-     * @return the identity of the property to be used by the JIT compiler
+     * @return the type of the property owner to be used by the JIT compiler
      */
-    public ClassDesc getOwnerClassDesc(Builder builder, TypeConstant typeOwner) {
+    public TypeConstant getOwnerType(Builder builder, TypeConstant typeOwner) {
         // get the lowest explicit in the chain
         PropertyConstant id = null;
         for (PropertyBody body : m_aBody) {
@@ -1341,11 +1341,11 @@ public class PropertyInfo
         // note that we do not create classes for annotations and mixins
         IdentityConstant idOwner  = id.getNamespace();
         Component.Format format   = idOwner.getComponent().getFormat();
-        return builder.ensureClassDesc(format == Format.MIXIN || format == Format.ANNOTATION ||
-                    (typeOwner.isSingleUnderlyingClass(true) &&
-                        idOwner.equals(typeOwner.getSingleUnderlyingClass(true)))
+        return format == Format.MIXIN || format == Format.ANNOTATION ||
+                (typeOwner.isSingleUnderlyingClass(true) &&
+                    idOwner.equals(typeOwner.getSingleUnderlyingClass(true)))
             ? typeOwner
-            : idOwner.getFormalType().resolveGenerics(builder.pool(), typeOwner));
+            : idOwner.getFormalType().resolveGenerics(builder.pool(), typeOwner);
     }
 
     /**
