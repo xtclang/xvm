@@ -261,7 +261,7 @@ public class xRawOSFileChannel
         // this should come from the config
         int cbPreferredSize = 8192;
         try {
-            cbPreferredSize = Math.max(1024, Math.min(cbPreferredSize, (int) channel.size()));
+            cbPreferredSize = Math.clamp((int) channel.size(), 1024, cbPreferredSize);
         } catch (IOException ignore) {}
         hChannel.setPreferredBufferSize(cbPreferredSize);
 

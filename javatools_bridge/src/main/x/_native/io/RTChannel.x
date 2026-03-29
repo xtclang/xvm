@@ -61,7 +61,7 @@ service RTChannel(RawChannel rawChannel)
     @RO Boolean eof.get() = !closed && leftover == Null && rawChannel.eof;
 
     @Override
-    ReadBuffer? read(Origin origin=Incoming) {
+    ReadBuffer? read(Origin origin = Incoming) {
         assert !closed as "The Channel was closed before the read operation began";
 
         // if another read is in progress, queue up this read to run later

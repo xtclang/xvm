@@ -56,7 +56,28 @@ class RTBuffer(RawChannel rawChannel, Byte[] rawBytes, Int rawSize, Boolean read
     }
 
     @Override
-    Int readBytes(Byte[] bytes, Int offset, Int count) = TODO("native");
+    immutable Byte[] readBytes(Int count) {
+        assert:arg count >= 0;
+
+        if (rawOffset == 0 && count == rawSize) {
+            rawOffset = rawSize;
+            return rawBytes.freeze(inPlace=readOnly);
+        }
+
+        Int    available = rawSize - rawOffset;
+        Int    copy      = count.notGreaterThan(available);
+        Byte[] bytes     = new Byte[copy];
+        if (copy > 0) {
+            copyRawBytes(rawOffset, bytes, 0, copy);
+        }
+        rawOffset += copy;
+        return bytes.freeze(inPlace=True);
+    }
+
+    @Override
+    Int readBytes(Byte[] bytes, Int offset, Int count) {
+        TODO
+    }
 
     @Override
     Int pipeTo(BinaryOutput out, Int count = MaxValue) {
@@ -197,6 +218,11 @@ class RTBuffer(RawChannel rawChannel, Byte[] rawBytes, Int rawSize, Boolean read
     }
 
     // ----- internal ------------------------------------------------------------------------------
+
+    /**
+     * Copy this buffer's content at the specified offset into the specified array.
+     */
+    private void copyRawBytes(Int srcOffset, Byte[] bytes, Int dstOffset, Int count) = TODO("native");
 
     /**
      * Internally reset the state of the RTBuffer so that it no longer refers to the underlying
