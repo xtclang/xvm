@@ -160,23 +160,30 @@ public class xByteArray
     }
 
     /**
-     * Copy bytes from the specified array.
+     * Copy bytes from the Array<Byte> handle.
+     *
+     * @param abVal   the byte array to copy bytes into
+     * @param ofSrc   the offset in the byte array to copy from
+     * @param hArray  the byte array to copy into
+     * @param ofDst   the offset in the byte array to copy into
+     * @param cSize   the number of bytes to copy
      */
-    public static void setBytes(ArrayHandle hArray, byte[] abVal) {
+    public static void setBytes(byte[] abVal, int ofSrc,
+                                ArrayHandle hArray, int ofDst, int cSize) {
         DelegateHandle hDelegate = hArray.m_hDelegate;
 
-        long ofStart = 0;
-
         if (hDelegate instanceof SliceHandle hSlice) {
-            hDelegate = hSlice.f_hSource;
-            ofStart   = hSlice.f_ofStart;
+            hDelegate =  hSlice.f_hSource;
+            ofDst     += (int) hSlice.f_ofStart;
         }
 
         ClassTemplate tDelegate = hDelegate.getTemplate();
         if (tDelegate instanceof ByteView tView) {
-            for (int i = 0, c = abVal.length; i < c; i++) {
-                tView.assignByte(hDelegate, ofStart + i, abVal[i]);
+            // TODO: add an "assignBytes" method to the ByteView interface
+            for (int i = 0; i < cSize; i++) {
+                tView.assignByte(hDelegate, ofDst + i, abVal[ofSrc + i]);
             }
+            hDelegate.m_cSize = ofDst + cSize;
             return;
         }
         throw new UnsupportedOperationException();
