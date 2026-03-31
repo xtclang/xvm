@@ -30,10 +30,10 @@ import org.xvm.javajit.Ctx;
  * Capacity - 48 bits (pre storage)
  * Hash - 64 bits (only if mutability==Constant, requires storage != null)
  */
-public class nArrayᐸCharᐳ
-        extends nLongBasedArray<nArrayᐸCharᐳ> {
+public class ArrayᐸCharᐳ
+        extends nLongBasedArray<ArrayᐸCharᐳ> {
 
-    public nArrayᐸCharᐳ(Ctx ctx, TypeConstant type) {
+    public ArrayᐸCharᐳ(Ctx ctx, TypeConstant type) {
         super(ctx, type);
     }
 
@@ -44,27 +44,27 @@ public class nArrayᐸCharᐳ
     /**
      * Array Constructor: construct(Int capacity = 0)
      */
-    public static nArrayᐸCharᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
+    public static ArrayᐸCharᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
         assert !type.isImmutable();
 
         ctx.alloc(64); // REVIEW how big?
-        nArrayᐸCharᐳ array = new nArrayᐸCharᐳ(ctx, type);
+        ArrayᐸCharᐳ array = new ArrayᐸCharᐳ(ctx, type);
         array.$mut($MUTABLE);
         array.$capCfg(ctx, capacity);
         return array;
     }
 
-    public static nArrayᐸCharᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
+    public static ArrayᐸCharᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
-    public static nArrayᐸCharᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
+    public static ArrayᐸCharᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
-    public static nArrayᐸCharᐳ $new$3$p(Ctx ctx, TypeConstant type, nArrayᐸCharᐳ that) {
+    public static ArrayᐸCharᐳ $new$3$p(Ctx ctx, TypeConstant type, ArrayᐸCharᐳ that) {
         // TODO
         throw new UnsupportedOperationException();
     }
@@ -86,17 +86,17 @@ public class nArrayᐸCharᐳ
     }
 
     @Override
-    public nArrayᐸCharᐳ add(Ctx ctx, nObj element) {
+    public ArrayᐸCharᐳ add(Ctx ctx, nObj element) {
         return add$p(ctx, ((Char) element).$value);
     }
 
-    public nArrayᐸCharᐳ add$p(Ctx ctx, int ch) {
+    public ArrayᐸCharᐳ add$p(Ctx ctx, int ch) {
         return super.add$p(ctx, (long) ch);
     }
 
     @Override
-    public nArrayᐸCharᐳ slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
-        return (nArrayᐸCharᐳ) super.slice(ctx, range);
+    public ArrayᐸCharᐳ slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
+        return (ArrayᐸCharᐳ) super.slice(ctx, range);
     }
 
     // ----- Array internals -----------------------------------------------------------------------

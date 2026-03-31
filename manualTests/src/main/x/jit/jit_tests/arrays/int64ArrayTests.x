@@ -47,7 +47,7 @@ package int64ArrayTests {
     void shouldBeEmpty() {
         Int64[] array = new Array();
         assert array.size == 0;
-//        assert array.empty;
+        assert array.empty;
     }
 
     void shouldAddElement() {

@@ -6503,33 +6503,33 @@ public abstract class TypeConstant
         if (id.equals(pool.clzArray())) {
             TypeConstant typeEl = getParamType(0);
             if (typeEl.isFormalType() || typeEl.equals(pool.typeObject())) {
-                return Builder.N_nArrayObj;
+                return Builder.N_ArrayObj;
             } else if (typeEl.isJitPrimitive()) {
                 IdentityConstant idEl = typeEl.getSingleUnderlyingClass(false);
 
                 return switch (idEl.getName()) {
-                    case "Boolean" -> Builder.N_nArrayObj;
-                    case "Char"    -> Builder.N_nArrayChar;
-                    case "Dec32"   -> Builder.N_nArrayDec32;
-                    case "Dec64"   -> Builder.N_nArrayDec64;
-                    case "Dec128"  -> Builder.N_nArrayDec128;
-                    case "Float32" -> Builder.N_nArrayFloat32;
-                    case "Float64" -> Builder.N_nArrayFloat64;
-                    case "Int8"    -> Builder.N_nArrayInt8;
-                    case "Int16"   -> Builder.N_nArrayInt16;
-                    case "Int32"   -> Builder.N_nArrayInt32;
-                    case "Int64"   -> Builder.N_nArrayInt64;
-                    case "Int128"  -> Builder.N_nArrayInt128;
-                    case "UInt8"   -> Builder.N_nArrayUInt8;
-                    case "UInt16"  -> Builder.N_nArrayUInt16;
-                    case "UInt32"  -> Builder.N_nArrayUInt32;
-                    case "UInt64"  -> Builder.N_nArrayUInt64;
-                    case "UInt128" -> Builder.N_nArrayUInt128;
-                    default -> throw new UnsupportedOperationException();
+                    case "Boolean" -> Builder.N_ArrayObj; // TODO JK
+                    case "Char"    -> Builder.N_ArrayChar;
+                    case "Dec32"   -> Builder.N_ArrayDec32;
+                    case "Dec64"   -> Builder.N_ArrayDec64;
+                    case "Dec128"  -> Builder.N_ArrayDec128;
+                    case "Float32" -> Builder.N_ArrayFloat32;
+                    case "Float64" -> Builder.N_ArrayFloat64;
+                    case "Int8"    -> Builder.N_ArrayInt8;
+                    case "Int16"   -> Builder.N_ArrayInt16;
+                    case "Int32"   -> Builder.N_ArrayInt32;
+                    case "Int64"   -> Builder.N_ArrayInt64;
+                    case "Int128"  -> Builder.N_ArrayInt128;
+                    case "UInt8"   -> Builder.N_ArrayUInt8;
+                    case "UInt16"  -> Builder.N_ArrayUInt16;
+                    case "UInt32"  -> Builder.N_ArrayUInt32;
+                    case "UInt64"  -> Builder.N_ArrayUInt64;
+                    case "UInt128" -> Builder.N_ArrayUInt128;
+                    default        -> throw new UnsupportedOperationException();
                 };
             } else {
                 // REVIEW CP: this is wrong
-                return Builder.N_nArrayObj;
+                return Builder.N_ArrayObj;
             }
         }
 

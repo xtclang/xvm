@@ -17,10 +17,10 @@ import org.xvm.javajit.Ctx;
  * Delegate - ref
  * Storage - ref
  */
-public class nArrayᐸFloat32ᐳ
-        extends nLongBasedArray<nArrayᐸFloat32ᐳ> {
+public class ArrayᐸFloat32ᐳ
+        extends nLongBasedArray<ArrayᐸFloat32ᐳ> {
 
-    public nArrayᐸFloat32ᐳ(Ctx ctx, TypeConstant type) {
+    public ArrayᐸFloat32ᐳ(Ctx ctx, TypeConstant type) {
         super(ctx, type);
     }
 
@@ -29,27 +29,27 @@ public class nArrayᐸFloat32ᐳ
     /**
      * Array Constructor: construct(Int capacity = 0)
      */
-    public static nArrayᐸFloat32ᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
+    public static ArrayᐸFloat32ᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
         assert !type.isImmutable();
 
         ctx.alloc(64); // REVIEW how big?
-        nArrayᐸFloat32ᐳ array = new nArrayᐸFloat32ᐳ(ctx, type);
+        ArrayᐸFloat32ᐳ array = new ArrayᐸFloat32ᐳ(ctx, type);
         array.$mut($MUTABLE);
         array.$capCfg(ctx, capacity);
         return array;
     }
 
-    public static nArrayᐸFloat32ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
+    public static ArrayᐸFloat32ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
-    public static nArrayᐸFloat32ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
+    public static ArrayᐸFloat32ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
-    public static nArrayᐸFloat32ᐳ $new$3$p(Ctx ctx, TypeConstant type, nArrayᐸFloat32ᐳ that) {
+    public static ArrayᐸFloat32ᐳ $new$3$p(Ctx ctx, TypeConstant type, ArrayᐸFloat32ᐳ that) {
         // TODO
         throw new UnsupportedOperationException();
     }
@@ -71,17 +71,17 @@ public class nArrayᐸFloat32ᐳ
     }
 
     @Override
-    public nArrayᐸFloat32ᐳ add(Ctx ctx, nObj element) {
+    public ArrayᐸFloat32ᐳ add(Ctx ctx, nObj element) {
         return add$p(ctx, Float.floatToRawIntBits(((Float32) element).$value));
     }
 
-    public nArrayᐸFloat32ᐳ add$p(Ctx ctx, float value) {
+    public ArrayᐸFloat32ᐳ add$p(Ctx ctx, float value) {
         return super.add$p(ctx, Float.floatToRawIntBits(value));
     }
 
     @Override
-    public nArrayᐸFloat32ᐳ slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
-        return (nArrayᐸFloat32ᐳ) super.slice(ctx, range);
+    public ArrayᐸFloat32ᐳ slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
+        return (ArrayᐸFloat32ᐳ) super.slice(ctx, range);
     }
 
     // ----- Array internals -----------------------------------------------------------------------

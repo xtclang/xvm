@@ -37,7 +37,7 @@ package dec32ArrayTests {
     void shouldBeEmpty() {
         Dec32[] array = new Array();
         assert array.size == 0;
-//        assert array.empty;
+        assert array.empty;
     }
 
     void shouldAddElement() {

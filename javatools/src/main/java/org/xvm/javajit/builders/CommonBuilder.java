@@ -267,24 +267,29 @@ public class CommonBuilder
      * Assemble interfaces for the "Impl" shape.
      */
     protected void assembleImplInterfaces(ClassBuilder classBuilder) {
-        boolean         isInterface = classStruct.getFormat() == Format.INTERFACE;
         List<ClassDesc> interfaces  = new ArrayList<>();
         for (Contribution contrib : typeInfo.getContributionList()) {
             switch (contrib.getComposition()) {
                 case Implements:
                     TypeConstant contribType = contrib.getTypeConstant().removeAccess();
-                    if  (!isInterface &&
-                            contribType.equals(contribType.getConstantPool().typeObject())) {
-                        // ignore "implements Object" for classes
-                        continue;
+                    if  (shouldAddInterface(contribType)) {
+                        interfaces.add(ensureClassDesc(contribType));
                     }
-                    interfaces.add(ensureClassDesc(contribType));
                     break;
             }
         }
         if (!interfaces.isEmpty()) {
             classBuilder.withInterfaceSymbols(interfaces);
         }
+    }
+
+    /**
+     * @return true iff we should add the specified type to the list of interfaces
+     *         implemented/exteneded by this class
+     */
+    protected boolean shouldAddInterface(TypeConstant type) {
+        // ignore "implements Object" for classes
+        return !type.equals(pool().typeObject()) || classStruct.getFormat() == Format.INTERFACE;
     }
 
     /**

@@ -21,10 +21,10 @@ import org.xvm.javajit.Ctx;
  * Delegate - ref
  * Storage - ref
  */
-public class nArrayᐸUInt128ᐳ
-        extends nLongBasedArray<nArrayᐸUInt128ᐳ> {
+public class ArrayᐸUInt128ᐳ
+        extends nLongBasedArray<ArrayᐸUInt128ᐳ> {
 
-    public nArrayᐸUInt128ᐳ(Ctx ctx, TypeConstant type) {
+    public ArrayᐸUInt128ᐳ(Ctx ctx, TypeConstant type) {
         super(ctx, type);
     }
 
@@ -33,27 +33,27 @@ public class nArrayᐸUInt128ᐳ
     /**
      * Array Constructor: construct(Int capacity = 0)
      */
-    public static nArrayᐸUInt128ᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
+    public static ArrayᐸUInt128ᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
         assert !type.isImmutable();
 
         ctx.alloc(64); // REVIEW how big?
-        nArrayᐸUInt128ᐳ array = new nArrayᐸUInt128ᐳ(ctx, type);
+        ArrayᐸUInt128ᐳ array = new ArrayᐸUInt128ᐳ(ctx, type);
         array.$mut($MUTABLE);
         array.$capCfg(ctx, capacity);
         return array;
     }
 
-    public static nArrayᐸUInt128ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
+    public static ArrayᐸUInt128ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
-    public static nArrayᐸUInt128ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
+    public static ArrayᐸUInt128ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
-    public static nArrayᐸUInt128ᐳ $new$3$p(Ctx ctx, TypeConstant type, nArrayᐸUInt128ᐳ that) {
+    public static ArrayᐸUInt128ᐳ $new$3$p(Ctx ctx, TypeConstant type, ArrayᐸUInt128ᐳ that) {
         // TODO
         throw new UnsupportedOperationException();
     }
@@ -77,18 +77,18 @@ public class nArrayᐸUInt128ᐳ
     }
 
     @Override
-    public nArrayᐸUInt128ᐳ add(Ctx ctx, nObj element) {
+    public ArrayᐸUInt128ᐳ add(Ctx ctx, nObj element) {
         return add$p(ctx, ((UInt128) element).$lowValue, ((UInt128) element).$highValue);
     }
 
-    public nArrayᐸUInt128ᐳ add$p(Ctx ctx, long lowValue, long highValue) {
+    public ArrayᐸUInt128ᐳ add$p(Ctx ctx, long lowValue, long highValue) {
         ctx.i0 = highValue;
         return super.add$p(ctx, lowValue);
     }
 
     @Override
-    public nArrayᐸUInt128ᐳ slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
-        return (nArrayᐸUInt128ᐳ) super.slice(ctx, range);
+    public ArrayᐸUInt128ᐳ slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
+        return (ArrayᐸUInt128ᐳ) super.slice(ctx, range);
     }
 
     // ----- Array internals -----------------------------------------------------------------------

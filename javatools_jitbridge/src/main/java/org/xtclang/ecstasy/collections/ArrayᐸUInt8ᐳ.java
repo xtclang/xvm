@@ -21,10 +21,10 @@ import org.xvm.javajit.Ctx;
  * Delegate - ref
  * Storage - ref
  */
-public class nArrayᐸUInt8ᐳ
-        extends nLongBasedArray<nArrayᐸUInt8ᐳ> {
+public class ArrayᐸUInt8ᐳ
+        extends nLongBasedArray<ArrayᐸUInt8ᐳ> {
 
-    public nArrayᐸUInt8ᐳ(Ctx ctx, TypeConstant type) {
+    public ArrayᐸUInt8ᐳ(Ctx ctx, TypeConstant type) {
         super(ctx, type);
     }
 
@@ -33,27 +33,27 @@ public class nArrayᐸUInt8ᐳ
     /**
      * Array Constructor: construct(Int capacity = 0)
      */
-    public static nArrayᐸUInt8ᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
+    public static ArrayᐸUInt8ᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
         assert !type.isImmutable();
 
         ctx.alloc(64); // REVIEW how big?
-        nArrayᐸUInt8ᐳ array = new nArrayᐸUInt8ᐳ(ctx, type);
+        ArrayᐸUInt8ᐳ array = new ArrayᐸUInt8ᐳ(ctx, type);
         array.$mut($MUTABLE);
         array.$capCfg(ctx, capacity);
         return array;
     }
 
-    public static nArrayᐸUInt8ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
+    public static ArrayᐸUInt8ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
-    public static nArrayᐸUInt8ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
+    public static ArrayᐸUInt8ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
-    public static nArrayᐸUInt8ᐳ $new$3$p(Ctx ctx, TypeConstant type, nArrayᐸUInt8ᐳ that) {
+    public static ArrayᐸUInt8ᐳ $new$3$p(Ctx ctx, TypeConstant type, ArrayᐸUInt8ᐳ that) {
         // TODO
         throw new UnsupportedOperationException();
     }
@@ -71,17 +71,17 @@ public class nArrayᐸUInt8ᐳ
     }
 
     @Override
-    public nArrayᐸUInt8ᐳ add(Ctx ctx, nObj element) {
+    public ArrayᐸUInt8ᐳ add(Ctx ctx, nObj element) {
         return add$p(ctx, ((UInt8) element).$value);
     }
 
-    public nArrayᐸUInt8ᐳ add$p(Ctx ctx, int value) {
+    public ArrayᐸUInt8ᐳ add$p(Ctx ctx, int value) {
         return super.add$p(ctx, value);
     }
 
     @Override
-    public nArrayᐸUInt8ᐳ slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
-        return (nArrayᐸUInt8ᐳ) super.slice(ctx, range);
+    public ArrayᐸUInt8ᐳ slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
+        return (ArrayᐸUInt8ᐳ) super.slice(ctx, range);
     }
 
     // ----- Array internals -----------------------------------------------------------------------

@@ -18,7 +18,13 @@ public class ArrayBuilder extends AugmentingBuilder {
 
     public ArrayBuilder(TypeSystem typeSystem, TypeConstant type, ClassModel model) {
         super(typeSystem, type, model);
+
+        DELEGATE_TYPE = pool().ensureEcstasyTypeConstant("collections.Array.ArrayDelegate");
+        specialization = type.isParamsSpecified();
     }
+
+    protected final TypeConstant DELEGATE_TYPE;
+    protected final boolean specialization;
 
     @Override
     public ClassDesc ensureClassDesc(TypeConstant type) {
@@ -32,6 +38,31 @@ public class ArrayBuilder extends AugmentingBuilder {
         return type.isArray()
             ? N_Array
             : super.ensureJitClassName(type);
+    }
+
+    @Override
+    protected boolean shouldAddInterface(TypeConstant type) {
+        if (type.isA(DELEGATE_TYPE)) {
+            // skip the ArrayDelegate
+            return false;
+        }
+        return super.shouldAddInterface(type);
+    }
+
+    @Override
+    protected void assembleImplMethods(String className, ClassBuilder classBuilder) {
+        // don't create any methods for array specializations
+        if (!specialization) {
+            super.assembleImplMethods(className, classBuilder);
+        }
+    }
+
+    @Override
+    protected void assembleImplProperties(String className, ClassBuilder classBuilder) {
+        // don't create any properties for array specializations
+        if (!specialization) {
+            super.assembleImplProperties(className, classBuilder);
+        }
     }
 
     @Override

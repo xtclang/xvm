@@ -47,7 +47,7 @@ package uint64ArrayTests {
     void shouldBeEmpty() {
         UInt64[] array = new Array();
         assert array.size == 0;
-//        assert array.empty;
+        assert array.empty;
     }
 
     void shouldAddElement() {

@@ -22,10 +22,10 @@ import org.xvm.javajit.Ctx;
  * Delegate - ref
  * Storage - ref
  */
-public class nArrayᐸInt64ᐳ
-        extends nLongBasedArray<nArrayᐸInt64ᐳ> {
+public class ArrayᐸInt64ᐳ
+        extends nLongBasedArray<ArrayᐸInt64ᐳ> {
 
-    public nArrayᐸInt64ᐳ(Ctx ctx, TypeConstant type) {
+    public ArrayᐸInt64ᐳ(Ctx ctx, TypeConstant type) {
         super(ctx, type);
     }
 
@@ -34,27 +34,27 @@ public class nArrayᐸInt64ᐳ
     /**
      * Array Constructor: construct(Int capacity = 0)
      */
-    public static nArrayᐸInt64ᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
+    public static ArrayᐸInt64ᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
         assert !type.isImmutable();
 
         ctx.alloc(64); // REVIEW how big?
-        nArrayᐸInt64ᐳ array = new nArrayᐸInt64ᐳ(ctx, type);
+        ArrayᐸInt64ᐳ array = new ArrayᐸInt64ᐳ(ctx, type);
         array.$mut($MUTABLE);
         array.$capCfg(ctx, capacity);
         return array;
     }
 
-    public static nArrayᐸInt64ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
+    public static ArrayᐸInt64ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, nObj supply) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
-    public static nArrayᐸInt64ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
+    public static ArrayᐸInt64ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
         // TODO
         throw new UnsupportedOperationException();
     }
 
-    public static nArrayᐸInt64ᐳ $new$3$p(Ctx ctx, TypeConstant type, nArrayᐸInt64ᐳ that) {
+    public static ArrayᐸInt64ᐳ $new$3$p(Ctx ctx, TypeConstant type, ArrayᐸInt64ᐳ that) {
         // TODO
         throw new UnsupportedOperationException();
     }
@@ -72,20 +72,20 @@ public class nArrayᐸInt64ᐳ
     }
 
     @Override
-    public nArrayᐸInt64ᐳ add(Ctx ctx, nObj element) {
+    public ArrayᐸInt64ᐳ add(Ctx ctx, nObj element) {
         return add$p(ctx, ((Int64) element).$value);
     }
 
     // this method must be here even though all is does is call super, otherwise the JIT
     // will not be able to find this method as it uses "invokevirtual" for the invocation
     @Override
-    public nArrayᐸInt64ᐳ add$p(Ctx ctx, long value) {
+    public ArrayᐸInt64ᐳ add$p(Ctx ctx, long value) {
         return super.add$p(ctx, value);
     }
 
     @Override
-    public nArrayᐸInt64ᐳ slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
-        return (nArrayᐸInt64ᐳ) super.slice(ctx, range);
+    public ArrayᐸInt64ᐳ slice(Ctx ctx, nRangeᐸInt64ᐳ range) {
+        return (ArrayᐸInt64ᐳ) super.slice(ctx, range);
     }
 
     // ----- Array internals -----------------------------------------------------------------------

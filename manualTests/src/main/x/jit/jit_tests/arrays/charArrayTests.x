@@ -57,7 +57,7 @@ package charArrayTests {
     void shouldBeEmpty() {
         Char[] array = new Array();
         assert array.size == 0;
-//        assert array.empty;
+        assert array.empty;
     }
 
     void shouldAddElement() {
@@ -106,7 +106,7 @@ package charArrayTests {
         assert array[1] == 'c';
     }
 
-// ToDo requires utf21 support in nArrayᐸCharᐳ.java
+// ToDo requires utf21 support in ArrayᐸCharᐳ.java
     void shouldPreIncOutOfBounds() {
 //        Char[] array = ['a', 'b', 'z'];
 //        array[1] = maxChar();
@@ -125,7 +125,7 @@ package charArrayTests {
         assert array[1] == 'c';
     }
 
-// ToDo requires utf21 support in nArrayᐸCharᐳ.java
+// ToDo requires utf21 support in ArrayᐸCharᐳ.java
     void shouldPostIncOutOfBounds() {
 //        Char[] array = ['a', 'b', 'z'];
 //        array[1] = maxChar();
@@ -179,7 +179,7 @@ package charArrayTests {
         assert array[1] == 'g';
     }
 
-// ToDo requires utf21 support in nArrayᐸCharᐳ.java
+// ToDo requires utf21 support in ArrayᐸCharᐳ.java
     void shouldAddInPlaceOutOfBounds() {
 //        Char[] array = ['a', 'b', 'z'];
 //        array[1] = maxChar();

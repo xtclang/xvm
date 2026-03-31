@@ -47,7 +47,7 @@ package int128ArrayTests {
     void shouldBeEmpty() {
         Int128[] array = new Array();
         assert array.size == 0;
-//        assert array.empty;
+        assert array.empty;
     }
 
     void shouldAddElement() {

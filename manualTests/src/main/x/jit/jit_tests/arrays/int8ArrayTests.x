@@ -47,7 +47,7 @@ package int8ArrayTests {
     void shouldBeEmpty() {
         Int8[] array = new Array();
         assert array.size == 0;
-//        assert array.empty;
+        assert array.empty;
     }
 
     void shouldAddElement() {

@@ -152,13 +152,51 @@ public class NativeTypeSystem
                     return classBytes;
                 }
 
-                ClassModel     model  = ClassFile.of().parse(classBytes);
-                String         path   = className.substring(moduleLoader.prefix.length()).replace('$', '.');
+                ClassModel     model     = ClassFile.of().parse(classBytes);
+                String         path      = className.substring(moduleLoader.prefix.length()).replace('$', '.');
+                TypeConstant[] formals   = TypeConstant.NO_TYPES;
+                int            typeStart = path.indexOf('ᐸ') ;
+
+                if (typeStart > 0) {
+                    // TODO: do we need support for multiple formal types?
+                    int typeEnd = path.indexOf('ᐳ', typeStart);
+                    if (typeEnd == -1) {
+                        throw new RuntimeException("Invalid name " + path);
+                    }
+                    String       typeString = path.substring(typeStart + 1, typeEnd);
+                    TypeConstant type = switch (typeString) {
+                        case "Char"    -> pool().typeChar();
+                        case "Dec32"   -> pool().typeDec32();
+                        case "Dec64"   -> pool().typeDec64();
+                        case "Dec128"  -> pool().typeDec128();
+                        case "Float32" -> pool().typeFloat32();
+                        case "Float64" -> pool().typeFloat64();
+                        case "Int8"    -> pool().typeInt8();
+                        case "Int16"   -> pool().typeInt16();
+                        case "Int32"   -> pool().typeInt32();
+                        case "Int64"   -> pool().typeInt64();
+                        case "Int128"  -> pool().typeInt128();
+                        case "UInt8"   -> pool().typeUInt8();
+                        case "UInt16"  -> pool().typeUInt16();
+                        case "UInt32"  -> pool().typeUInt32();
+                        case "UInt64"  -> pool().typeUInt64();
+                        case "UInt128" -> pool().typeUInt128();
+                        case "Object"  -> pool().typeObject();
+                        default        -> throw new RuntimeException("Unsupported type " + typeString);
+                    };
+                    formals = new TypeConstant[] {type};
+                    path    = path.substring(0, typeStart);
+                }
+
                 ClassStructure struct = (ClassStructure) moduleLoader.module.getChildByPath(path);
                 if (struct == null) {
                     throw new RuntimeException("Structure is missing for " + moduleLoader.prefix + name);
                 }
-                return augmentNativeClass(model, className, struct.getCanonicalType());
+                TypeConstant type = struct.getCanonicalType();
+                if (formals.length > 0) {
+                    type = type.adoptParameters(pool(), formals);
+                }
+                return augmentNativeClass(model, className, type);
             }
         } catch (IOException ignore) {}
 

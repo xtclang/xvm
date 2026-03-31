@@ -411,114 +411,114 @@ public abstract class Builder {
 
                 switch (elType.getSingleUnderlyingClass(false).getName()) {
                 case "Char":
-                    // nArrayᐸCharᐳ array = nArrayᐸCharᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_nArrayChar;
-                    className = N_nArrayChar;
+                    // ArrayᐸCharᐳ array = ArrayᐸCharᐳ.$new$p(ctx, type, capacity, false);
+                    cdArray   = CD_ArrayChar;
+                    className = N_ArrayChar;
                     mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                     break;
 
                 case "Dec32":
-                    // nArrayᐸDec32ᐳ array = nArrayᐸDec32ᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_nArrayDec32;
-                    className = N_nArrayDec32;
+                    // ArrayᐸDec32ᐳ array = ArrayᐸDec32ᐳ.$new$p(ctx, type, capacity, false);
+                    cdArray   = CD_ArrayDec32;
+                    className = N_ArrayDec32;
                     mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                     break;
 
                 case "Dec64":
-                    // nArrayᐸDec64ᐳ array = nArrayᐸDec64ᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_nArrayDec64;
-                    className = N_nArrayDec64;
+                    // ArrayᐸDec64ᐳ array = ArrayᐸDec64ᐳ.$new$p(ctx, type, capacity, false);
+                    cdArray   = CD_ArrayDec64;
+                    className = N_ArrayDec64;
                     mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long);
                     break;
 
                 case "Dec128":
-                    // nArrayᐸDec128ᐳ array = nArrayᐸDec128ᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_nArrayDec128;
-                    className = N_nArrayDec128;
+                    // ArrayᐸDec128ᐳ array = ArrayᐸDec128ᐳ.$new$p(ctx, type, capacity, false);
+                    cdArray   = CD_ArrayDec128;
+                    className = N_ArrayDec128;
                     mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long, CD_long);
                     break;
 
                 case "Float32":
-                    // nArrayᐸFloat32ᐳ array = nArrayᐸFloat32ᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_nArrayFloat32;
-                    className = N_nArrayFloat32;
+                    // ArrayᐸFloat32ᐳ array = ArrayᐸFloat32ᐳ.$new$p(ctx, type, capacity, false);
+                    cdArray   = CD_ArrayFloat32;
+                    className = N_ArrayFloat32;
                     mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_float);
                     break;
 
                 case "Float64":
-                    // nArrayᐸFloat64ᐳ array = nArrayᐸFloat64ᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_nArrayFloat64;
-                    className = N_nArrayFloat64;
+                    // ArrayᐸFloat64ᐳ array = ArrayᐸFloat64ᐳ.$new$p(ctx, type, capacity, false);
+                    cdArray   = CD_ArrayFloat64;
+                    className = N_ArrayFloat64;
                     mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_double);
                     break;
 
                 case "Int8":
-                    // nArrayᐸInt8ᐳ array = nArrayᐸInt8ᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_nArrayInt8;
-                    className = N_nArrayInt8;
+                    // ArrayᐸInt8ᐳ array = ArrayᐸInt8ᐳ.$new$p(ctx, type, capacity, false);
+                    cdArray   = CD_ArrayInt8;
+                    className = N_ArrayInt8;
                     mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                     break;
 
                 case "Int16":
-                    // nArrayᐸInt16ᐳ array = nArrayᐸInt16ᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_nArrayInt16;
-                    className = N_nArrayInt16;
+                    // ArrayᐸInt16ᐳ array = ArrayᐸInt16ᐳ.$new$p(ctx, type, capacity, false);
+                    cdArray   = CD_ArrayInt16;
+                    className = N_ArrayInt16;
                     mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                     break;
 
                 case "Int32":
-                    // nArrayᐸInt32ᐳ array = nArrayᐸInt32ᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_nArrayInt32;
-                    className = N_nArrayInt32;
+                    // ArrayᐸInt32ᐳ array = ArrayᐸInt32ᐳ.$new$p(ctx, type, capacity, false);
+                    cdArray   = CD_ArrayInt32;
+                    className = N_ArrayInt32;
                     mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                     break;
 
                 case "Int64":
-                    // nArrayᐸIntᐳ array = nArrayᐸIntᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_nArrayInt64;
-                    className = N_nArrayInt64;
+                    // ArrayᐸIntᐳ array = ArrayᐸIntᐳ.$new$p(ctx, type, capacity, false);
+                    cdArray   = CD_ArrayInt64;
+                    className = N_ArrayInt64;
                     mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long);
                     break;
 
                 case "Int128":
-                    // nArrayᐸInt128ᐳ array = nArrayᐸInt128ᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_nArrayInt128;
-                    className = N_nArrayInt128;
+                    // ArrayᐸInt128ᐳ array = ArrayᐸInt128ᐳ.$new$p(ctx, type, capacity, false);
+                    cdArray   = CD_ArrayInt128;
+                    className = N_ArrayInt128;
                     mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long, CD_long);
                     break;
 
                 case "UInt8":
-                    // nArrayᐸUInt8ᐳ array = nArrayᐸUInt8ᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_nArrayUInt8;
-                    className = N_nArrayUInt8;
+                    // ArrayᐸUInt8ᐳ array = ArrayᐸUInt8ᐳ.$new$p(ctx, type, capacity, false);
+                    cdArray   = CD_ArrayUInt8;
+                    className = N_ArrayUInt8;
                     mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                     break;
 
                 case "UInt16":
-                    // nArrayᐸUInt16ᐳ array = nArrayᐸUInt16ᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_nArrayUInt16;
-                    className = N_nArrayUInt16;
+                    // ArrayᐸUInt16ᐳ array = ArrayᐸUInt16ᐳ.$new$p(ctx, type, capacity, false);
+                    cdArray   = CD_ArrayUInt16;
+                    className = N_ArrayUInt16;
                     mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                     break;
 
                 case "UInt32":
-                    // nArrayᐸUInt32ᐳ array = nArrayᐸUInt32ᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_nArrayUInt32;
-                    className = N_nArrayUInt32;
+                    // ArrayᐸUInt32ᐳ array = ArrayᐸUInt32ᐳ.$new$p(ctx, type, capacity, false);
+                    cdArray   = CD_ArrayUInt32;
+                    className = N_ArrayUInt32;
                     mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_int);
                     break;
 
                 case "UInt64":
-                    // nArrayᐸUIntᐳ array = nArrayᐸUIntᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_nArrayUInt64;
-                    className = N_nArrayUInt64;
+                    // ArrayᐸUIntᐳ array = ArrayᐸUIntᐳ.$new$p(ctx, type, capacity, false);
+                    cdArray   = CD_ArrayUInt64;
+                    className = N_ArrayUInt64;
                     mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long);
                     break;
 
                 case "UInt128":
-                    // nArrayᐸUInt128ᐳ array = nArrayᐸUInt128ᐳ.$new$p(ctx, type, capacity, false);
-                    cdArray   = CD_nArrayUInt128;
-                    className = N_nArrayUInt128;
+                    // ArrayᐸUInt128ᐳ array = ArrayᐸUInt128ᐳ.$new$p(ctx, type, capacity, false);
+                    cdArray   = CD_ArrayUInt128;
+                    className = N_ArrayUInt128;
                     mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_long, CD_long);
                     break;
 
@@ -526,9 +526,9 @@ public abstract class Builder {
                     throw new UnsupportedOperationException("TODO");
                 }
             } else {
-                // nArrayᐸObjectᐳ array = nArrayᐸObjectᐳ.$new$p(ctx, type, capacity, false);
-                cdArray   = CD_nArrayObj;
-                className = N_nArrayObj;
+                // ArrayᐸObjectᐳ array = ArrayᐸObjectᐳ.$new$p(ctx, type, capacity, false);
+                cdArray   = CD_ArrayObj;
+                className = N_ArrayObj;
                 addMethod = "add";
                 mdAdd     = MethodTypeDesc.of(cdArray, CD_Ctx, CD_nObj);
             }
@@ -1202,6 +1202,23 @@ public abstract class Builder {
     // ----- native class names --------------------------------------------------------------------
 
     public static final String N_Array        = "org.xtclang.ecstasy.collections.Array";
+    public static final String N_ArrayChar    = "org.xtclang.ecstasy.collections.ArrayᐸCharᐳ";
+    public static final String N_ArrayDec32   = "org.xtclang.ecstasy.collections.ArrayᐸDec32ᐳ";
+    public static final String N_ArrayDec64   = "org.xtclang.ecstasy.collections.ArrayᐸDec64ᐳ";
+    public static final String N_ArrayDec128  = "org.xtclang.ecstasy.collections.ArrayᐸDec128ᐳ";
+    public static final String N_ArrayFloat32 = "org.xtclang.ecstasy.collections.ArrayᐸFloat32ᐳ";
+    public static final String N_ArrayFloat64 = "org.xtclang.ecstasy.collections.ArrayᐸFloat64ᐳ";
+    public static final String N_ArrayInt8    = "org.xtclang.ecstasy.collections.ArrayᐸInt8ᐳ";
+    public static final String N_ArrayInt16   = "org.xtclang.ecstasy.collections.ArrayᐸInt16ᐳ";
+    public static final String N_ArrayInt32   = "org.xtclang.ecstasy.collections.ArrayᐸInt32ᐳ";
+    public static final String N_ArrayInt64   = "org.xtclang.ecstasy.collections.ArrayᐸInt64ᐳ";
+    public static final String N_ArrayInt128  = "org.xtclang.ecstasy.collections.ArrayᐸInt128ᐳ";
+    public static final String N_ArrayUInt8   = "org.xtclang.ecstasy.collections.ArrayᐸUInt8ᐳ";
+    public static final String N_ArrayUInt16  = "org.xtclang.ecstasy.collections.ArrayᐸUInt16ᐳ";
+    public static final String N_ArrayUInt32  = "org.xtclang.ecstasy.collections.ArrayᐸUInt32ᐳ";
+    public static final String N_ArrayUInt64  = "org.xtclang.ecstasy.collections.ArrayᐸUInt64ᐳ";
+    public static final String N_ArrayUInt128 = "org.xtclang.ecstasy.collections.ArrayᐸUInt128ᐳ";
+    public static final String N_ArrayObj     = "org.xtclang.ecstasy.collections.ArrayᐸObjectᐳ";
     public static final String N_Boolean      = "org.xtclang.ecstasy.Boolean";
     public static final String N_Char         = "org.xtclang.ecstasy.text.Char";
     public static final String N_Class        = "org.xtclang.ecstasy.reflect.Class";
@@ -1232,23 +1249,6 @@ public abstract class Builder {
     public static final String N_UInt64       = "org.xtclang.ecstasy.numbers.UInt64";
     public static final String N_UInt128      = "org.xtclang.ecstasy.numbers.UInt128";
 
-    public static final String N_nArrayChar   = "org.xtclang.ecstasy.collections.nArrayᐸCharᐳ";
-    public static final String N_nArrayDec32  = "org.xtclang.ecstasy.collections.nArrayᐸDec32ᐳ";
-    public static final String N_nArrayDec64  = "org.xtclang.ecstasy.collections.nArrayᐸDec64ᐳ";
-    public static final String N_nArrayDec128 = "org.xtclang.ecstasy.collections.nArrayᐸDec128ᐳ";
-    public static final String N_nArrayFloat32 = "org.xtclang.ecstasy.collections.nArrayᐸFloat32ᐳ";
-    public static final String N_nArrayFloat64 = "org.xtclang.ecstasy.collections.nArrayᐸFloat64ᐳ";
-    public static final String N_nArrayInt8   = "org.xtclang.ecstasy.collections.nArrayᐸInt8ᐳ";
-    public static final String N_nArrayInt16  = "org.xtclang.ecstasy.collections.nArrayᐸInt16ᐳ";
-    public static final String N_nArrayInt32  = "org.xtclang.ecstasy.collections.nArrayᐸInt32ᐳ";
-    public static final String N_nArrayInt64  = "org.xtclang.ecstasy.collections.nArrayᐸInt64ᐳ";
-    public static final String N_nArrayInt128 = "org.xtclang.ecstasy.collections.nArrayᐸInt128ᐳ";
-    public static final String N_nArrayUInt8  = "org.xtclang.ecstasy.collections.nArrayᐸUInt8ᐳ";
-    public static final String N_nArrayUInt16 = "org.xtclang.ecstasy.collections.nArrayᐸUInt16ᐳ";
-    public static final String N_nArrayUInt32 = "org.xtclang.ecstasy.collections.nArrayᐸUInt32ᐳ";
-    public static final String N_nArrayUInt64 = "org.xtclang.ecstasy.collections.nArrayᐸUInt64ᐳ";
-    public static final String N_nArrayUInt128 = "org.xtclang.ecstasy.collections.nArrayᐸUInt128ᐳ";
-    public static final String N_nArrayObj    = "org.xtclang.ecstasy.collections.nArrayᐸObjectᐳ";
     public static final String N_nConst       = "org.xtclang.ecstasy.nConst";
     public static final String N_nEnum        = "org.xtclang.ecstasy.nEnum";
     public static final String N_nException   = "org.xtclang.ecstasy.nException";
@@ -1273,6 +1273,23 @@ public abstract class Builder {
     // ----- well-known class descriptors ----------------------------------------------------------
 
     public static final ClassDesc CD_Array         = ClassDesc.of(N_Array);
+    public static final ClassDesc CD_ArrayChar     = ClassDesc.of(N_ArrayChar);
+    public static final ClassDesc CD_ArrayDec32    = ClassDesc.of(N_ArrayDec32);
+    public static final ClassDesc CD_ArrayDec64    = ClassDesc.of(N_ArrayDec64);
+    public static final ClassDesc CD_ArrayDec128   = ClassDesc.of(N_ArrayDec128);
+    public static final ClassDesc CD_ArrayFloat32  = ClassDesc.of(N_ArrayFloat32);
+    public static final ClassDesc CD_ArrayFloat64  = ClassDesc.of(N_ArrayFloat64);
+    public static final ClassDesc CD_ArrayInt8     = ClassDesc.of(N_ArrayInt8);
+    public static final ClassDesc CD_ArrayInt16    = ClassDesc.of(N_ArrayInt16);
+    public static final ClassDesc CD_ArrayInt32    = ClassDesc.of(N_ArrayInt32);
+    public static final ClassDesc CD_ArrayInt64    = ClassDesc.of(N_ArrayInt64);
+    public static final ClassDesc CD_ArrayInt128   = ClassDesc.of(N_ArrayInt128);
+    public static final ClassDesc CD_ArrayUInt8    = ClassDesc.of(N_ArrayUInt8);
+    public static final ClassDesc CD_ArrayUInt16   = ClassDesc.of(N_ArrayUInt16);
+    public static final ClassDesc CD_ArrayUInt32   = ClassDesc.of(N_ArrayUInt32);
+    public static final ClassDesc CD_ArrayUInt64   = ClassDesc.of(N_ArrayUInt64);
+    public static final ClassDesc CD_ArrayUInt128  = ClassDesc.of(N_ArrayUInt128);
+    public static final ClassDesc CD_ArrayObj      = ClassDesc.of(N_ArrayObj);
     public static final ClassDesc CD_Class         = ClassDesc.of(N_Class);
     public static final ClassDesc CD_Comparable    = ClassDesc.of(N_Comparable);
     public static final ClassDesc CD_Enumeration   = ClassDesc.of(N_Enumeration);
@@ -1283,23 +1300,6 @@ public abstract class Builder {
     public static final ClassDesc CD_nPackage      = ClassDesc.of(N_nPackage);
     public static final ClassDesc CD_nRangeInt64   = ClassDesc.of(N_nRangeInt64);
 
-    public static final ClassDesc CD_nArrayChar    = ClassDesc.of(N_nArrayChar);
-    public static final ClassDesc CD_nArrayDec32   = ClassDesc.of(N_nArrayDec32);
-    public static final ClassDesc CD_nArrayDec64   = ClassDesc.of(N_nArrayDec64);
-    public static final ClassDesc CD_nArrayDec128  = ClassDesc.of(N_nArrayDec128);
-    public static final ClassDesc CD_nArrayFloat32 = ClassDesc.of(N_nArrayFloat32);
-    public static final ClassDesc CD_nArrayFloat64 = ClassDesc.of(N_nArrayFloat64);
-    public static final ClassDesc CD_nArrayInt8    = ClassDesc.of(N_nArrayInt8);
-    public static final ClassDesc CD_nArrayInt16   = ClassDesc.of(N_nArrayInt16);
-    public static final ClassDesc CD_nArrayInt32   = ClassDesc.of(N_nArrayInt32);
-    public static final ClassDesc CD_nArrayInt64   = ClassDesc.of(N_nArrayInt64);
-    public static final ClassDesc CD_nArrayInt128  = ClassDesc.of(N_nArrayInt128);
-    public static final ClassDesc CD_nArrayUInt8   = ClassDesc.of(N_nArrayUInt8);
-    public static final ClassDesc CD_nArrayUInt16  = ClassDesc.of(N_nArrayUInt16);
-    public static final ClassDesc CD_nArrayUInt32  = ClassDesc.of(N_nArrayUInt32);
-    public static final ClassDesc CD_nArrayUInt64  = ClassDesc.of(N_nArrayUInt64);
-    public static final ClassDesc CD_nArrayUInt128 = ClassDesc.of(N_nArrayUInt128);
-    public static final ClassDesc CD_nArrayObj     = ClassDesc.of(N_nArrayObj);
     public static final ClassDesc CD_nConst        = ClassDesc.of(N_nConst);
     public static final ClassDesc CD_nEnum         = ClassDesc.of(N_nEnum);
     public static final ClassDesc CD_nException    = ClassDesc.of(N_nException);
