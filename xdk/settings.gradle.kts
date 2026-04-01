@@ -27,6 +27,7 @@ listOf(
     "lib_json",
     "lib_jsondb",
     "lib_oodb",
+    "lib_proto",
     "lib_sec",
     "lib_web",
     "lib_webauth",

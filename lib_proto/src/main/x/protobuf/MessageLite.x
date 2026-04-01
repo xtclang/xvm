@@ -1,0 +1,64 @@
+/**
+ * The base interface for Protocol Buffers lite messages.
+ *
+ * A MessageLite represents a protobuf message that supports serialization and
+ * deserialization using the binary wire format. This is the lightweight variant;
+ * a full `Message` type with descriptor and reflection support will be added later.
+ */
+interface MessageLite
+    extends Freezable {
+
+    /**
+     * Serialize this message to the given [CodedOutput].
+     *
+     * @param out  the coded output to write to
+     */
+    void writeTo(CodedOutput out);
+
+    /**
+     * Deserialize fields from the given [CodedInput] and merge them into this message.
+     *
+     * For scalar fields, the last value seen wins. For embedded messages, the values
+     * are merged. For repeated fields, the values are appended.
+     *
+     * Implementations that are mutable may update in place and return `this`.
+     * Implementations that are `const` should return a new instance with the merged fields.
+     *
+     * @param input  the coded input to read from
+     *
+     * @return the message with the merged fields (may be `this` for mutable implementations)
+     */
+    MessageLite mergeFrom(CodedInput input);
+
+    /**
+     * @return the number of bytes required to serialize this message (excluding any tag or
+     *         length prefix that would be written by an enclosing message)
+     */
+    Int serializedSize();
+
+    /**
+     * Serialize this message to a new byte array.
+     *
+     * @return the serialized bytes
+     */
+    immutable Byte[] toByteArray() {
+        import ecstasy.io.ByteArrayOutputStream;
+
+        ByteArrayOutputStream buf = new ByteArrayOutputStream(serializedSize());
+        CodedOutput out = new CodedOutput(buf);
+        writeTo(out);
+        return buf.bytes.freeze(inPlace=True);
+    }
+
+    /**
+     * Deserialize a message from a byte array by merging into this message.
+     *
+     * @param bytes  the serialized protobuf bytes
+     */
+    MessageLite mergeFromBytes(Byte[] bytes) {
+        import ecstasy.io.ByteArrayInputStream;
+
+        CodedInput input = new CodedInput(new ByteArrayInputStream(bytes));
+        return mergeFrom(input);
+    }
+}
