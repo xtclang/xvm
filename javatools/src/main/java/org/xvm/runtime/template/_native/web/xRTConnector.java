@@ -151,8 +151,12 @@ public class xRTConnector
     private int invokeGetDefaultHeaders(Frame frame, int[] aiReturn) {
         // REVIEW: should we allow them to specify default headers in the injection definition?
 
-        ArrayHandle hNames  = xString.makeArrayHandle(new String[] {"User-Agent"});
-        ArrayHandle hValues = xString.makeArrayHandle(new String[] {s_sAgent});
+        ArrayHandle hNames  = m_hDefaultNames;
+        ArrayHandle hValues = m_hDefaultValues;
+        if (hNames == null) {
+            m_hDefaultNames  = hNames  = xString.makeArrayHandle(new String[] {"User-Agent"});
+            m_hDefaultValues = hValues = xString.makeArrayHandle(new String[] {s_sAgent});
+        }
 
         return frame.assignValues(aiReturn, hNames, hValues);
     }
@@ -386,4 +390,10 @@ public class xRTConnector
      * Cached canonical type.
      */
     private TypeConstant m_typeCanonical;
+
+    /**
+     * Cached default headers.
+     */
+    private ArrayHandle m_hDefaultNames;
+    private ArrayHandle m_hDefaultValues;
 }
