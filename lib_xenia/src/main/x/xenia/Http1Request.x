@@ -1,6 +1,7 @@
 import ecstasy.collections.CaseInsensitive;
 import ecstasy.io.BinaryInput;
 
+import net.Uri;
 import net.UriTemplate;
 import net.UriTemplate.UriParameters;
 
@@ -210,16 +211,17 @@ const Http1Request(RequestInfo   info,
             Map<String, QueryParameter> queryParams = new HashMap();
 
             for ((String key, String value) : rawParams) {
+                String newValue = Uri.decodeParam(value);
                 queryParams.process(key, e -> {
                     if (e.exists) {
                         QueryParameter prevValue = e.value;
                         if (prevValue.is(String)) {
-                            e.value = [prevValue, value];
+                            e.value = [prevValue, newValue];
                         } else {
-                            prevValue += value;
+                            prevValue += newValue;
                         }
                     } else {
-                        e.value = value;
+                        e.value = newValue;
                     }
                 });
             }
