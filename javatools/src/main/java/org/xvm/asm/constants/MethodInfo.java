@@ -741,12 +741,19 @@ public class MethodInfo
      * @return true iff the method covers a virtual constructor
      */
     public boolean containsVirtualConstructor() {
+        return getVirtualConstructor() != null;
+    }
+
+    /**
+     * @return the body that represents a virtual constructor
+     */
+    public MethodBody getVirtualConstructor() {
         for (MethodBody body : getChain()) {
             if (body.isVirtualConstructor()) {
-                return true;
+                return body;
             }
         }
-        return false;
+        return null;
     }
 
     /**
@@ -759,11 +766,30 @@ public class MethodInfo
     }
 
     /**
-     * @return true iff this is an abstract function (declared on an interface)
+     * @return true iff this is an abstract function (declared on a funky interface) that must be
+     *         overridden by all extending classes
      */
     public boolean isAbstractFunction() {
-        MethodBody head = getHead();
-        return head.isFunction() && head.getImplementation() == Implementation.Declared;
+        return getHead().isAbstractFunction();
+    }
+
+    /**
+     * @return true iff the method covers a funky interface abstract function
+     */
+    public boolean containsAbstractFunction() {
+        return getAbstractFunction() != null;
+    }
+
+    /**
+     * @return the body that represents an abstract function
+     */
+    public MethodBody getAbstractFunction() {
+        for (MethodBody body : getChain()) {
+            if (body.isAbstractFunction()) {
+                return body;
+            }
+        }
+        return null;
     }
 
     /**

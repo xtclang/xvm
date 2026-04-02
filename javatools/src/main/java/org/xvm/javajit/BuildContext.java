@@ -2406,7 +2406,13 @@ public class BuildContext {
 
                 case Specific:
                     switch (destFlavor) {
-                    case Specific, Widened:
+                    case Specific:
+                        if (retType.isAutoNarrowing()) {
+                            generateCheckCast(code, destType);
+                        }
+                        break;
+
+                    case Widened:
                         // nothing to do
                         break;
 

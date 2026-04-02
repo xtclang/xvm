@@ -60,10 +60,9 @@ public class EnumBuilder extends CommonBuilder {
         TypeConstant  enumType   = thisId.getValueType(pool(), null);
         ClassDesc     cdEnum     = ensureClassDesc(enumType);
 
-        classBuilder.withMethod(getterName, jmDesc.standardMD, ClassFile.ACC_PUBLIC,
-            methodBuilder -> methodBuilder.withCode(code ->
-                code.getstatic(cdEnum, Instance, cdEnum)
-                    .areturn()));
+        classBuilder.withMethodBody(getterName, jmDesc.standardMD, ClassFile.ACC_PUBLIC, code ->
+            code.getstatic(cdEnum, Instance, cdEnum)
+                .areturn());
     }
 
     @Override
@@ -75,9 +74,8 @@ public class EnumBuilder extends CommonBuilder {
 
         assert eqMethod != null;
 
-        classBuilder.withMethod(eqSig.getName()+OPT, eqJmd.optimizedMD,
-            ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
-            methodBuilder -> methodBuilder.withCode(this::assembleEquals));
+        classBuilder.withMethodBody(eqSig.getName()+OPT, eqJmd.optimizedMD,
+            ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC, this::assembleEquals);
 
         SignatureConstant cmpSig    = pool().sigCompare();
         MethodInfo        cmpMethod = typeInfo.getMethodBySignature(cmpSig);
@@ -85,9 +83,8 @@ public class EnumBuilder extends CommonBuilder {
 
         assert cmpMethod != null;
 
-        classBuilder.withMethod(cmpSig.getName(), cmpJmd.standardMD,
-            ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC,
-            methodBuilder -> methodBuilder.withCode(this::assembleCompare));
+        classBuilder.withMethodBody(cmpSig.getName(), cmpJmd.standardMD,
+            ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC, this::assembleCompare);
 
         super.assembleImplMethods(className, classBuilder);
     }

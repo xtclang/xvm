@@ -224,6 +224,13 @@ public class MethodBody {
     }
 
     /**
+     * @return true iff this is a funky interface function
+     */
+    public boolean isAbstractFunction() {
+        return isFunction() && getImplementation() == Implementation.Declared;
+    }
+
+    /**
      * @return true iff this is a validator
      */
     public boolean isValidator() {

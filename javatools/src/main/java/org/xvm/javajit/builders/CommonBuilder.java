@@ -83,12 +83,14 @@ public class CommonBuilder
         this.structInfo  = pool.ensureAccessTypeConstant(type, Access.STRUCT).ensureTypeInfo();
         this.classStruct = typeInfo.getClassStructure();
         this.thisId      = classStruct.getIdentityConstant();
+        this.isInterface = classStruct.getFormat() == Format.INTERFACE;
     }
 
     protected final TypeInfo         typeInfo;
     protected final TypeInfo         structInfo;
     protected final ClassStructure   classStruct;
     protected final IdentityConstant thisId;
+    protected final boolean          isInterface;
 
     /**
      * The shallow size of object in bytes.
@@ -289,7 +291,7 @@ public class CommonBuilder
      */
     protected boolean shouldAddInterface(TypeConstant type) {
         // ignore "implements Object" for classes
-        return !type.equals(pool().typeObject()) || classStruct.getFormat() == Format.INTERFACE;
+        return this.isInterface || !type.equals(pool().typeObject());
     }
 
     /**
@@ -412,113 +414,112 @@ public class CommonBuilder
 
         ClassDesc CD_this = ClassDesc.of(className);
 
-        classBuilder.withMethod(ConstantDescs.CLASS_INIT_NAME, MTD_void,
-            ClassFile.ACC_STATIC | ClassFile.ACC_PUBLIC,
-            methodBuilder -> methodBuilder.withCode(code -> {
-                Label startScope = code.newLabel();
-                Label endScope   = code.newLabel();
-                code.labelBinding(startScope);
+        classBuilder.withMethodBody(ConstantDescs.CLASS_INIT_NAME, MTD_void,
+                ClassFile.ACC_STATIC | ClassFile.ACC_PUBLIC, code -> {
+            Label startScope = code.newLabel();
+            Label endScope   = code.newLabel();
+            code.labelBinding(startScope);
 
-                int ctxSlot = code.allocateLocal(TypeKind.REFERENCE);
-                code.localVariable(ctxSlot, "ctx", CD_Ctx, startScope, endScope)
-                    .invokestatic(CD_Ctx, "get", MethodTypeDesc.of(CD_Ctx))
-                    .astore(0);
+            int ctxSlot = code.allocateLocal(TypeKind.REFERENCE);
+            code.localVariable(ctxSlot, "ctx", CD_Ctx, startScope, endScope)
+                .invokestatic(CD_Ctx, "get", MethodTypeDesc.of(CD_Ctx))
+                .astore(0);
 
-                // add static field initialization
-                TypeSystem ts = typeSystem;
-                for (PropertyInfo prop : props) {
-                    if (prop.getInitializer() == null) {
-                        RegisterInfo reg     = loadConstant(code, prop.getInitialValue());
-                        String       jitName = prop.getIdentity().ensureJitPropertyName(ts);
-                        if (reg instanceof ExtendedSlot extSlot) {
-                            assert extSlot.flavor() == NullablePrimitive;
-                            // loadConstant() has already loaded the value and the boolean
+            // add static field initialization
+            TypeSystem ts = typeSystem;
+            for (PropertyInfo prop : props) {
+                if (prop.getInitializer() == null) {
+                    RegisterInfo reg     = loadConstant(code, prop.getInitialValue());
+                    String       jitName = prop.getIdentity().ensureJitPropertyName(ts);
+                    if (reg instanceof ExtendedSlot extSlot) {
+                        assert extSlot.flavor() == NullablePrimitive;
+                        // loadConstant() has already loaded the value and the boolean
+                        Label ifTrue = code.newLabel();
+                        Label endIf  = code.newLabel();
+                        code.ifne(ifTrue)
+                            .putstatic(CD_this, jitName + EXT, CD_boolean)
+                            .goto_(endIf)
+                            .labelBinding(ifTrue);
+                        pop(code, extSlot.cd());
+                        code.putstatic(CD_this, jitName, reg.cd());
+                        code.labelBinding(endIf);
+                    } else if (reg instanceof MultipleSlot multiSlot) {
+                        ClassDesc[] cds = multiSlot.slotCds();
+                        for (int i = cds.length - 1; i >= 0; i--) {
+                            code.putstatic(CD_this, jitName + "$" + i, cds[i]);
+                        }
+                        if (multiSlot.flavor() == NullableXvmPrimitive) {
                             Label ifTrue = code.newLabel();
-                            Label endIf  = code.newLabel();
+                            Label endIf = code.newLabel();
                             code.ifne(ifTrue)
-                                .putstatic(CD_this, jitName + EXT, CD_boolean)
-                                .goto_(endIf)
-                                .labelBinding(ifTrue);
-                            pop(code, extSlot.cd());
+                                    .putstatic(CD_this, jitName + EXT, CD_boolean)
+                                    .goto_(endIf)
+                                    .labelBinding(ifTrue);
+                            for (ClassDesc cd : cds) {
+                                pop(code, cd);
+                            }
                             code.putstatic(CD_this, jitName, reg.cd());
                             code.labelBinding(endIf);
-                        } else if (reg instanceof MultipleSlot multiSlot) {
-                            ClassDesc[] cds = multiSlot.slotCds();
-                            for (int i = cds.length - 1; i >= 0; i--) {
-                                code.putstatic(CD_this, jitName + "$" + i, cds[i]);
-                            }
-                            if (multiSlot.flavor() == NullableXvmPrimitive) {
-                                Label ifTrue = code.newLabel();
-                                Label endIf = code.newLabel();
-                                code.ifne(ifTrue)
-                                        .putstatic(CD_this, jitName + EXT, CD_boolean)
-                                        .goto_(endIf)
-                                        .labelBinding(ifTrue);
-                                for (ClassDesc cd : cds) {
-                                    pop(code, cd);
-                                }
-                                code.putstatic(CD_this, jitName, reg.cd());
-                                code.labelBinding(endIf);
-                            }
-                        } else {
-                            assert reg.isSingle();
-                            code.putstatic(CD_this, jitName, reg.cd());
                         }
                     } else {
-                        throw new UnsupportedOperationException("Static field initializer for " +
-                            prop.getIdentity().getValueString());
+                        assert reg.isSingle();
+                        code.putstatic(CD_this, jitName, reg.cd());
                     }
+                } else {
+                    throw new UnsupportedOperationException("Static field initializer for " +
+                        prop.getIdentity().getValueString());
                 }
+            }
 
-                // initialize synthetic TypeConstant fields; to make the jasm look neater
-                // generate the assignments in the lexicographical order
-                ModuleLoader loader   = typeSystem.findOwnerLoader(className);
-                boolean      nativeTS = typeSystem instanceof NativeTypeSystem;
-                ConstantPool pool     = loader.module.getConstantPool();
-                types.entrySet().stream()
-                     .sorted(Map.Entry.comparingByValue())
-                     .forEach(entry -> {
-                        TypeConstant type = entry.getKey();
-                        String       name = "$type" + entry.getValue();
+            // initialize synthetic TypeConstant fields; to make the jasm look neater
+            // generate the assignments in the lexicographical order
+            ModuleLoader loader   = typeSystem.findOwnerLoader(className);
+            boolean      nativeTS = typeSystem instanceof NativeTypeSystem;
+            ConstantPool pool     = loader.module.getConstantPool();
+            types.entrySet().stream()
+                 .sorted(Map.Entry.comparingByValue())
+                 .forEach(entry -> {
+                    TypeConstant type = entry.getKey();
+                    String       name = "$type" + entry.getValue();
 
-                        assert type.isShared(pool);
-                        type = pool.register(type);
+                    assert type.isShared(pool);
+                    type = pool.register(type);
 
-                        int index = type.getPosition();
-                        if (nativeTS) {
-                            index = -index;
-                        }
-                        code.aload(ctxSlot)
-                            .loadConstant(className)
-                            .loadConstant(index)
-                            .invokevirtual(CD_Ctx, "getConstant", Ctx.MD_getConstant) // <- const
-                            .checkcast(CD_TypeConstant)                               // <- type
-                            .putstatic(CD_this, name, CD_TypeConstant);
-                     });
+                    int index = type.getPosition();
+                    if (nativeTS) {
+                        index = -index;
+                    }
+                    code.aload(ctxSlot)
+                        .loadConstant(className)
+                        .loadConstant(index)
+                        .invokevirtual(CD_Ctx, "getConstant", Ctx.MD_getConstant) // <- const
+                        .checkcast(CD_TypeConstant)                               // <- type
+                        .putstatic(CD_this, name, CD_TypeConstant);
+                 });
 
-                if (typeInfo.isSingleton()) {
-                    // $INSTANCE = new Singleton($ctx);
-                    // $ctx.allocated(implSize);
-                    // $INSTANCE.$init($ctx);
-                    MethodConstant ctorId  = typeInfo.findConstructor(TypeConstant.NO_TYPES);
-                    String         jitInit = ctorId.ensureJitMethodName(ts).replace("construct", INIT);
-                    invokeDefaultConstructor(code, CD_this);
-                    code.dup()
-                        .putstatic(CD_this, Instance, CD_this)
-                        .aload(ctxSlot)
-                        .ldc(implSize)
-                        .invokevirtual(CD_Ctx, "allocated", MethodTypeDesc.of(CD_void, CD_long))
-                        .aload(ctxSlot)
-                        .invokevirtual(CD_this, jitInit, MethodTypeDesc.of(CD_this, CD_Ctx))
-                        .pop()
-                    ;
-                }
+            if (typeInfo.isSingleton()) {
+                // $INSTANCE = new Singleton($ctx);
+                // $ctx.allocated(implSize);
+                // $INSTANCE.$init($ctx);
+                MethodConstant ctorId  = typeInfo.findConstructor(TypeConstant.NO_TYPES);
+                String         jitInit = ctorId.ensureJitMethodName(ts).replace("construct", INIT);
+                invokeDefaultConstructor(code, CD_this);
+                code.dup()
+                    .putstatic(CD_this, Instance, CD_this)
+                    .aload(ctxSlot)
+                    .ldc(implSize)
+                    .invokevirtual(CD_Ctx, "allocated", MethodTypeDesc.of(CD_void, CD_long))
+                    .aload(ctxSlot)
+                    .invokevirtual(CD_this, jitInit, MethodTypeDesc.of(CD_this, CD_Ctx))
+                    .pop()
+                ;
+            }
 
-                augmentStaticInitializer(className, code);
+            augmentStaticInitializer(className, code);
 
-                code.labelBinding(endScope)
-                    .return_();
-            }));
+            code.labelBinding(endScope)
+                .return_();
+        });
     }
 
     /**
@@ -840,7 +841,7 @@ public class CommonBuilder
         if (isOpt) {
             // generate a wrapper
             assembleMethodWrapper(className, classBuilder, jitGetterName, jmd,
-                    prop.isConstant(), false);
+                    prop.isConstant());
         }
     }
 
@@ -956,7 +957,7 @@ public class CommonBuilder
         if (isOpt) {
             // generate a wrapper
             assembleMethodWrapper(className, classBuilder, jitSetterName, jmd,
-                    prop.isConstant(), false);
+                    prop.isConstant());
         }
     }
 
@@ -1060,7 +1061,7 @@ public class CommonBuilder
 
         if (isOpt) {
             // generate a wrapper
-            assembleMethodWrapper(className, classBuilder, jitGetterName, jmd, false, false);
+            assembleMethodWrapper(className, classBuilder, jitGetterName, jmd, false);
         }
     }
 
@@ -1085,7 +1086,7 @@ public class CommonBuilder
             }
         }
 
-        if (typeInfo.getClassStructure().getFormat() != Format.INTERFACE) {
+        if (!isInterface) {
             assembleXvmType(className, classBuilder);
         }
     }
@@ -1122,13 +1123,6 @@ public class CommonBuilder
         boolean cap    = method.isCapped();
         boolean router = false;
 
-        String jitName = method.ensureJitMethodName(typeSystem);
-
-        // TODO REMOVE: temporary compensation for duplicates in the TypeInfo
-        if (!methodNames.add(jitName)) {
-            return;
-        }
-
         if (!cap) {
             MethodBody[] chain = method.ensureOptimizedMethodChain(typeInfo);
             int          depth = chain.length;
@@ -1142,6 +1136,13 @@ public class CommonBuilder
             assert targetMethod != null;
             assembleRoutingMethod(className, classBuilder, method, targetMethod);
         } else {
+            String jitName = method.ensureJitMethodName(typeSystem);
+
+            // TODO REMOVE: temporary compensation for duplicates in the TypeInfo
+            if (!methodNames.add(jitName)) {
+                return;
+            }
+
             JitMethodDesc jmDesc = method.getJitDesc(this, typeInfo.getType());
             assembleMethod(className, classBuilder, method, jitName, jmDesc);
 
@@ -1158,8 +1159,7 @@ public class CommonBuilder
      * Assemble a "standard" wrapper method for the optimized method.
      */
     protected void assembleMethodWrapper(String className, ClassBuilder classBuilder,
-                                         String jitName, JitMethodDesc jmDesc,
-                                         boolean isStatic, boolean isConstructor) {
+                                         String jitName, JitMethodDesc jmDesc, boolean isStatic) {
         ClassDesc CD_this = ClassDesc.of(className);
 
         // this method is "standard" and needs to call into the optimized one
@@ -1718,7 +1718,7 @@ public class CommonBuilder
 
         MethodTypeDesc md;
         if (jmd.isOptimized) {
-            assembleMethodWrapper(className, classBuilder, jitName, jmd, true, false);
+            assembleMethodWrapper(className, classBuilder, jitName, jmd, true);
             jitName += OPT;
             md = jmd.optimizedMD;
         } else {
@@ -1846,8 +1846,7 @@ public class CommonBuilder
                                   String jitName, JitMethodDesc jmd) {
         MethodTypeDesc md;
         if (jmd.isOptimized) {
-            assembleMethodWrapper(className, classBuilder, jitName, jmd,
-                    method.isFunction(), method.isCtorOrValidator());
+            assembleMethodWrapper(className, classBuilder, jitName, jmd, method.isFunction());
             jitName += OPT;
             md = jmd.optimizedMD;
         } else {
@@ -1887,7 +1886,7 @@ public class CommonBuilder
                 MethodTypeDesc mdNext   = isOpt ? jmdNext.optimizedMD : jmdNext.standardMD;
                 String         nameNext = bctxNext.methodJitName;
                 if (isOpt) {
-                    assembleMethodWrapper(className, classBuilder, nameNext, jmdNext, fStatic, false);
+                    assembleMethodWrapper(className, classBuilder, nameNext, jmdNext, fStatic);
                     nameNext += OPT;
                 }
 

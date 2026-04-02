@@ -316,17 +316,18 @@ public abstract class Builder {
             }
 
             // 1) ensure the method exists
-            String     jitName = methodId.ensureJitMethodName(typeSystem);
+            String     jitName;
             MethodBody body;
             if (methodId.isLambda()) {
                 // generate the method itself
                 MethodStructure lambda = (MethodStructure) methodId.getComponent();
-                jitName = jitName.replace("->", LAMBDA);
+                jitName = methodId.ensureJitMethodName(typeSystem).replace("->", LAMBDA);
                 body    = new MethodBody(lambda);
                 bctx.buildMethod(jitName, body);
             } else {
                 MethodInfo method = bctx.typeInfo.getMethodById(methodId);
-                body = method.getHead();
+                jitName = method.ensureJitMethodName(typeSystem);
+                body    = method.getHead();
                 if (body.getIdentity().getNestedDepth() > 2) {
                     // methods nested inside properties or methods are not visible otherwise
                     // and need to built on-the-spot
