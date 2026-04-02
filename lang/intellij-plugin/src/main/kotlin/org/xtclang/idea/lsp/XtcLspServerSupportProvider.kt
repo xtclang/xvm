@@ -4,20 +4,16 @@ import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.diagnostic.logger
-import com.intellij.openapi.progress.ProgressIndicator
-import com.intellij.openapi.progress.ProgressManager
-import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
 import com.redhat.devtools.lsp4ij.LanguageServerFactory
 import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
+import com.redhat.devtools.lsp4ij.server.JavaProcessCommandBuilder
 import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
 import org.eclipse.lsp4j.services.LanguageServer
 import org.xtclang.idea.PluginPaths
-import org.xtclang.idea.lsp.jre.JreProvisioner
 import java.nio.file.Path
 import java.util.Properties
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Shared build properties loaded once at class initialization time.
@@ -42,12 +38,9 @@ private object LspBuildProperties {
 /**
  * Factory for creating XTC Language Server connections.
  *
- * The server runs OUT-OF-PROCESS as a separate Java process because:
- * 1. jtreesitter requires Java 25+ (Foreign Function & Memory API)
- * 2. IntelliJ uses JBR 21 which doesn't support FFM
- * 3. Out-of-process allows using a provisioned Java toolchain via Foojay
- *
- * See doc/plans/lsp-processes.md for architecture details.
+ * The server runs OUT-OF-PROCESS as a separate Java process for classloader isolation
+ * (avoids lsp4j version conflicts with LSP4IJ) and crash/memory isolation. It uses
+ * IntelliJ's own JBR 25 runtime via LSP4IJ's [JavaProcessCommandBuilder].
  */
 class XtcLanguageServerFactory : LanguageServerFactory {
     private val logger = logger<XtcLanguageServerFactory>()
@@ -63,23 +56,25 @@ class XtcLanguageServerFactory : LanguageServerFactory {
 }
 
 /**
- * Out-of-process LSP server connection using LSP4IJ's OSProcessStreamConnectionProvider.
+ * Out-of-process LSP server connection using LSP4IJ's [OSProcessStreamConnectionProvider].
  *
- * JRE Provisioning:
- * - Uses Foojay Disco API to download Eclipse Temurin JRE 25
- * - Caches in ~/.gradle/caches/xtc-jre/temurin-25-jre/
- * - Shows progress notification during first-time download
+ * Uses [JavaProcessCommandBuilder] to resolve IntelliJ's JBR java binary and build
+ * the server command line. We use [OSProcessStreamConnectionProvider] (not the simpler
+ * [com.redhat.devtools.lsp4ij.server.ProcessStreamConnectionProvider]) because it
+ * leverages IntelliJ's [com.intellij.execution.process.OSProcessHandler] for proper
+ * process lifecycle management and stderr capture in LSP4IJ's Language Servers panel.
  *
- * See doc/plans/lsp-processes.md for architecture details.
+ * The server JAR is in `bin/` (not `lib/`) to avoid classloader conflicts with
+ * LSP4IJ's bundled lsp4j.
  */
 class XtcLspConnectionProvider(
     private val project: Project,
 ) : OSProcessStreamConnectionProvider() {
     private val logger = logger<XtcLspConnectionProvider>()
-    private val provisioner = JreProvisioner()
 
     companion object {
         private const val LSP_SERVER_JAR = "xtc-lsp-server.jar"
+        private const val LANGUAGE_SERVER_ID = "xtcLanguageServer"
 
         /** Ensures we only show the "started" notification once per IDE session. */
         private val startNotificationShown = AtomicBoolean(false)
@@ -91,11 +86,47 @@ class XtcLspConnectionProvider(
         internal fun resolveServerJar(pluginDir: Path): Path? = PluginPaths.resolveInBin(pluginDir, LSP_SERVER_JAR)
     }
 
-    /** Holds the provisioned java path once available. */
-    private val provisionedJavaPath = AtomicReference<Path?>()
+    init {
+        val serverJar = findServerJar()
 
-    // No init {} block -- JRE resolution calls ProjectJdkTable.getInstance() which is
-    // prohibited on EDT. All JRE resolution is deferred to start() which runs off EDT.
+        // Log level: system property > environment variable > INFO default
+        val logLevel =
+            System.getProperty("xtc.logLevel")?.uppercase()
+                ?: System.getenv("XTC_LOG_LEVEL")?.uppercase()
+                ?: "INFO"
+
+        // JavaProcessCommandBuilder resolves IntelliJ's JBR java binary automatically
+        // and handles debug port configuration from LSP4IJ's per-server settings.
+        val commands =
+            JavaProcessCommandBuilder(project, LANGUAGE_SERVER_ID)
+                .setJar(serverJar.toString())
+                .create()
+
+        // Insert JVM args before -jar (JavaProcessCommandBuilder doesn't support custom VM args)
+        val jarIndex = commands.indexOf("-jar")
+        commands.addAll(
+            jarIndex,
+            listOf(
+                "-Dapple.awt.UIElement=true", // macOS: no dock icon
+                "-Djava.awt.headless=true", // No GUI components
+                "-Dxtc.logLevel=$logLevel", // Pass log level to LSP server
+            ),
+        )
+
+        // Convert to GeneralCommandLine for OSProcessStreamConnectionProvider.
+        // OSProcessStreamConnectionProvider uses IntelliJ's OSProcessHandler which
+        // captures stderr and feeds it to LSP4IJ's Language Servers panel log tab.
+        val commandLine =
+            GeneralCommandLine(commands).apply {
+                project.basePath?.let { withWorkDirectory(it) }
+            }
+        setCommandLine(commandLine)
+
+        logger.info(
+            "XTC LSP command configured (v${LspBuildProperties.version}, " +
+                "adapter=${LspBuildProperties.adapter}): ${commandLine.commandLineString}",
+        )
+    }
 
     // TODO: Remove AtomicBoolean notification guard once LSP4IJ fixes duplicate server spawning.
     //  LSP4IJ may call start() concurrently for multiple .x files, spawning extra processes
@@ -103,35 +134,9 @@ class XtcLspConnectionProvider(
     //  AtomicBoolean to avoid duplicates. See: https://github.com/redhat-developer/lsp4ij/issues/888
 
     override fun start() {
-        // Try to find an already-provisioned JRE (cached or system SDK).
-        // This is done here (not in init {}) because findSystemJava() calls
-        // ProjectJdkTable.getInstance() which is prohibited on EDT.
-        if (provisionedJavaPath.get() == null) {
-            provisioner.javaPath?.let { java ->
-                logger.info("Using cached JRE: $java")
-                configureCommandLine(java)
-            }
-        }
-        // If still not configured, download JRE with progress dialog
-        if (provisionedJavaPath.get() == null) {
-            provisionJreWithProgress()
-        }
-
-        // Verify we have a valid configuration
-        if (provisionedJavaPath.get() == null) {
-            val msg = "JRE provisioning failed - cannot start LSP server"
-            logger.error(msg)
-            showNotification("XTC Language Server Error", msg, NotificationType.ERROR)
-            return
-        }
-
-        logger.info("Starting XTC LSP Server (out-of-process via OSProcessStreamConnectionProvider)")
+        logger.info("Starting XTC LSP Server (out-of-process via JBR)")
         super.start()
 
-        // The server performs a health check during initialize() and logs the result.
-        // Server-side: adapter.healthCheck() validates native lib, then workspace indexing begins.
-        // TODO: Send xtc/healthCheck from client via LanguageServerManager for diagnostic logging
-        //   once LSP4IJ exposes a post-initialization hook for custom requests.
         logger.info("XTC LSP Server process started (v${LspBuildProperties.version}, adapter=${LspBuildProperties.adapter}, pid=$pid)")
 
         if (startNotificationShown.compareAndSet(false, true)) {
@@ -147,70 +152,6 @@ class XtcLspConnectionProvider(
         logger.info("Stopping XTC LSP Server")
         super.stop()
         logger.info("XTC LSP Server stopped")
-    }
-
-    private fun provisionJreWithProgress() {
-        ProgressManager.getInstance().run(
-            object : Task.WithResult<Path?, Exception>(
-                project,
-                "Downloading Java Runtime for XTC...",
-                true, // cancellable
-            ) {
-                override fun compute(indicator: ProgressIndicator): Path? {
-                    indicator.isIndeterminate = false
-                    return runCatching {
-                        provisioner.provision { progress, message ->
-                            indicator.fraction = progress.toDouble()
-                            indicator.text = message
-                        }
-                    }.onSuccess(::configureCommandLine)
-                        .onFailure { e ->
-                            logger.error("JRE provisioning failed", e)
-                            showNotification(
-                                "XTC Language Server Error",
-                                "Could not download Java runtime: ${e.message}",
-                                NotificationType.ERROR,
-                            )
-                        }.getOrNull()
-                }
-            },
-        )
-    }
-
-    private fun configureCommandLine(javaPath: Path) {
-        val serverJar = findServerJar()
-
-        logger.info("Using Java: $javaPath")
-        logger.info("Using LSP server JAR: $serverJar")
-
-        // Log level: system property > environment variable > INFO default
-        val logLevel =
-            System.getProperty("xtc.logLevel")?.uppercase()
-                ?: System.getenv("XTC_LOG_LEVEL")?.uppercase()
-                ?: "INFO"
-
-        // FFM API is finalized since Java 22. The --enable-native-access flag is unnecessary
-        // on Java 22+ and may trigger experimental feature consent dialogs on older JVMs.
-        // We target Java 25, so no flag is needed.
-        val commandLine =
-            GeneralCommandLine(
-                javaPath.toString(),
-                "-Dapple.awt.UIElement=true", // macOS: no dock icon
-                "-Djava.awt.headless=true", // No GUI components
-                "-Dxtc.logLevel=$logLevel", // Pass log level to LSP server
-                "-jar",
-                serverJar.toString(),
-            ).apply {
-                project.basePath?.let { withWorkDirectory(it) }
-            }
-
-        setCommandLine(commandLine)
-        provisionedJavaPath.set(javaPath)
-
-        logger.info(
-            "XTC LSP command configured (v${LspBuildProperties.version}, " +
-                "adapter=${LspBuildProperties.adapter}): ${commandLine.commandLineString}",
-        )
     }
 
     private fun findServerJar(): Path = PluginPaths.findServerJar(LSP_SERVER_JAR)

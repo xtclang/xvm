@@ -145,7 +145,7 @@ The sandbox IDE data is stored in `lang/intellij-plugin/build/idea-sandbox/`.
 
 ### Building a Distributable Plugin ZIP
 
-To create a plugin ZIP that can be installed in any IntelliJ IDEA 2025.3+ instance:
+To create a plugin ZIP that can be installed in any IntelliJ IDEA 2026.1+ instance:
 
 ```bash
 ./gradlew :lang:intellij-plugin:buildPlugin
@@ -271,30 +271,30 @@ The lang tooling uses several interdependent libraries. This section documents v
 **Version Constraint (Java 25):**
 ```
 ⚠️  jtreesitter 0.26.x requires Java 23+ (FFM API)
-✅  The LSP server runs OUT-OF-PROCESS with its own provisioned JRE (Java 25)
-✅  IntelliJ uses JBR 21, but the LSP server is a separate process
+✅  IntelliJ 2026.1 ships with JBR 25, which supports FFM natively
+✅  The LSP server runs OUT-OF-PROCESS using IntelliJ's JBR for classloader isolation
 ```
 
-The LSP server runs as a separate out-of-process Java 25 process (provisioned via Foojay Disco API),
-so the IntelliJ JBR 21 constraint does not limit the jtreesitter version.
-
-Track JBR releases: https://github.com/JetBrains/JetBrainsRuntime/releases
+The LSP server runs as a separate out-of-process Java 25 process using IntelliJ's own
+JBR 25 runtime (via LSP4IJ's `JavaProcessCommandBuilder`). Out-of-process execution
+provides classloader isolation (avoids lsp4j version conflicts with LSP4IJ) and
+crash/memory isolation.
 
 ### IntelliJ Platform
 
 | Library | Version | Purpose |
 |---------|---------|---------|
-| **intellij-ide** | 2025.3.2 | Target IDE version |
-| **intellij-jdk** | 21 | Plugin JDK requirement |
-| **intellij-platform-gradle-plugin** | 2.11.0 | Build plugin for IntelliJ plugins |
+| **intellij-ide** | 2026.1 | Target IDE version |
+| **intellij-jdk** | 25 | Plugin JDK requirement |
+| **intellij-platform-gradle-plugin** | 2.13.1 | Build plugin for IntelliJ plugins |
 
 ### Compatibility Matrix
 
 | Component | Requires | Provides |
 |-----------|----------|----------|
-| IntelliJ 2025.3.2 | JBR 21 | Plugin runtime |
-| lsp4ij 0.19.1 | IntelliJ 2023.2+ | LSP client |
-| lsp4j 0.24.0 | Java 11+ | LSP protocol |
+| IntelliJ 2026.1 | JBR 25 | Plugin runtime |
+| lsp4ij 0.19.2 | IntelliJ 2024.2+ | LSP client |
+| lsp4j 1.0.0 | Java 11+ | LSP protocol |
 | jtreesitter 0.26.0 | Java 23+ | Native parsing (runs in out-of-process LSP server) |
 | tree-sitter-cli 0.26.5 | - | Parser generation |
 

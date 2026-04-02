@@ -37,15 +37,6 @@ Tests `XtcLspConnectionProvider.resolveServerJar()` — a static method that loc
 - Uses: JUnit 5 + AssertJ + `@TempDir`
 - No IntelliJ API usage — tests a pure `Path` → `Path?` function
 
-### `JreProvisionerTest.kt`
-
-Tests `JreProvisioner` utility methods — `findCachedJava()`, `flattenSingleSubdirectory()`,
-and failure marker lifecycle.
-
-- 10 tests across 3 `@Nested` groups
-- Uses: JUnit 5 + AssertJ + `@TempDir` + POSIX file permissions
-- No IntelliJ API usage — tests pure filesystem operations
-
 ### Build Configuration
 
 ```kotlin
@@ -620,26 +611,29 @@ This works for all plugin code: extension points, services, actions, settings pa
 
 ### Debugging the LSP Server (Separate Process)
 
-The LSP server runs **out-of-process** as a separate Java 25 process (because IntelliJ
-uses JBR 21, and jtreesitter requires Java 25+ FFM API). This means plugin debugging
+The LSP server runs **out-of-process** as a separate Java process for classloader
+isolation (avoids lsp4j version conflicts with LSP4IJ). This means plugin debugging
 does NOT debug the LSP server — they're separate JVMs.
 
 To debug the LSP server:
 
-**Option A — JVM debug flags in the connection provider:**
+**Option A — LSP4IJ debug port configuration:**
 
-Temporarily add JDWP args to `XtcLspConnectionProvider.configureCommandLine()`:
+LSP4IJ has built-in debug support per language server. The `JavaProcessCommandBuilder`
+automatically adds JDWP flags when a debug port is configured in LSP4IJ's settings
+for the `xtcLanguageServer` server ID.
+
+Then attach a Remote JVM Debug configuration to `localhost:<port>` from the outer IDE.
+
+**Option B — Manual JVM debug flags:**
+
+Add JDWP args to the command list in `XtcLspConnectionProvider.init {}`:
 
 ```kotlin
-val commandLine = GeneralCommandLine(
-    javaPath.toString(),
-    "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005",  // Add this
-    "-Dapple.awt.UIElement=true",
-    "-Djava.awt.headless=true",
-    "-Dxtc.logLevel=$logLevel",
-    "-jar",
-    serverJar.toString(),
-)
+commands.addAll(jarIndex, listOf(
+    "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005",
+    // ... other args
+))
 ```
 
 Then attach a Remote JVM Debug configuration to `localhost:5005` from the outer IDE.

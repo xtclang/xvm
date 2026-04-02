@@ -888,15 +888,14 @@ The DAP server receives these in the `launch` request and uses them to:
    - `PluginPaths.kt` — shared JAR resolution for both LSP (`xtc-lsp-server.jar`) and DAP
      (`xtc-dap-server.jar`). Searches plugin `bin/` directory (not `lib/` — avoids classloader
      conflicts with LSP4IJ's bundled lsp4j). Error messages include all searched paths.
-   - Both LSP and DAP use `JreProvisioner` for Java 25 JRE resolution/download.
+   - Both LSP and DAP use IntelliJ's JBR 25 via `JavaProcessCommandBuilder` for out-of-process execution.
 
 3. **Module renamed** `debug-adapter` → `dap-server` for consistency with `lsp-server`
 
 4. **Architecture documented**
-   - KDoc on `XtcDebugAdapterDescriptor` explains: out-of-process/JBR 21 compatibility, LSP vs DAP
+   - KDoc on `XtcDebugAdapterDescriptor` explains: out-of-process architecture, LSP vs DAP
      process lifecycle differences, and why the LSP `AtomicBoolean` notification guard is not needed
      for DAP (user-initiated sessions, no concurrent spawn race condition).
-   - `lsp-processes.md` updated with DAP architecture, correct class names, JAR locations.
    - `PLAN_IDE_INTEGRATION.md` documents LSP4IJ design choice over IntelliJ built-in LSP.
 
 **What's NOT done yet**: The DAP server itself (`dap-server/src/main/kotlin/org/xvm/debug/XtcDebugServer.kt`)

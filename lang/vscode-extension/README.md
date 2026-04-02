@@ -12,7 +12,7 @@ Visual Studio Code extension for XTC (Ecstasy) language support.
 ## Requirements
 
 - VS Code 1.75.0 or later
-- Java 25+ (for the LSP server's tree-sitter adapter; Java 21+ for mock adapter)
+- Java 25+ (for the LSP server's tree-sitter adapter)
 - XDK installed with `xtc` command in PATH (for project creation)
 
 ## Installation
@@ -147,7 +147,7 @@ Then in VS Code:
 2. Open `src/main/x/testapp.x`
 3. You should see syntax highlighting and LSP features
 
-**Troubleshooting**: The LSP server needs Java 25+ in your PATH or `JAVA_HOME` set (Java 21+ if using the mock adapter). Check the Output panel (View →
+**Troubleshooting**: The LSP server needs Java 25+ in your PATH or `JAVA_HOME` set. Check the Output panel (View →
 Output → select "XTC Language Server") if LSP isn't working.
 
 ## License

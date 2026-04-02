@@ -34,11 +34,11 @@ plugins {
 // =============================================================================
 // OUT-OF-PROCESS EXECUTION
 // =============================================================================
-// The LSP server runs as a SEPARATE PROCESS from IntelliJ, with its own JRE.
-// This allows using jtreesitter 0.26+ (requires Java 23+) even though IntelliJ
-// uses JBR 21. The intellij-plugin spawns this server and communicates via stdio.
+// The LSP server runs as a SEPARATE PROCESS from IntelliJ for classloader
+// isolation (avoids lsp4j version conflicts with LSP4IJ) and crash/memory
+// isolation. The intellij-plugin spawns this server and communicates via stdio.
 //
-// See doc/plans/PLAN_OUT_OF_PROCESS_LSP.md for architecture details.
+// See doc/plans/PLAN_IDE_INTEGRATION.md for architecture details.
 // =============================================================================
 
 // Use the same Kotlin JDK version as the rest of the XDK (from version.properties)
@@ -155,7 +155,7 @@ dependencies {
     implementation(libs.lang.logback)
 
     // Tree-sitter JVM bindings for fast, incremental, error-tolerant parsing
-    // Requires Java 23+ (uses FFM API) - runs out-of-process with its own JRE
+    // Requires Java 23+ (uses FFM API)
     implementation(libs.lang.jtreesitter)
 
     // Testing

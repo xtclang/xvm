@@ -6,7 +6,6 @@ import kotlin.concurrent.thread
 plugins {
     alias(libs.plugins.xdk.build.properties)
     alias(libs.plugins.lang.kotlin.jvm)
-    alias(libs.plugins.lang.kotlin.serialization)
     alias(libs.plugins.lang.ktlint)
     alias(libs.plugins.lang.intellij.platform)
 }
@@ -32,88 +31,27 @@ val logLevel: String =
 // =============================================================================
 // IntelliJ IDE Resolution
 // =============================================================================
-// By default, IntelliJ Community is downloaded and cached in $GRADLE_USER_HOME
-// (the Gradle dependency cache). The cached IDE is keyed by version, so changing
-// the version in libs.versions.toml automatically downloads the new version on
-// the next build.
+// IntelliJ Community is downloaded and cached in $GRADLE_USER_HOME by the
+// IntelliJ Platform Gradle Plugin. The cached IDE is keyed by version, so
+// changing the version in libs.versions.toml automatically downloads the
+// new version on the next build.
 //
-// To use a locally installed IDE instead (faster startup, no download):
-//   -PuseLocalIde=true          Auto-detect a local IntelliJ installation
-//   -PintellijLocalPath=/path   Use a specific local IDE path
-
-fun findLocalIntelliJ(): File? {
-    val explicitPath = providers.gradleProperty("intellijLocalPath").orNull
-    if (explicitPath != null) {
-        val explicit = File(explicitPath)
-        if (explicit.exists()) return explicit
-        logger.warn("Explicit intellijLocalPath '$explicitPath' does not exist, searching for installed IDE")
-    }
-
-    val osName = System.getProperty("os.name", "").lowercase()
-    val userHome = System.getProperty("user.home", "")
-    val candidates =
-        when {
-            "mac" in osName ->
-                listOf(
-                    "/Applications/IntelliJ IDEA CE.app",
-                    "/Applications/IntelliJ IDEA.app",
-                    "$userHome/Applications/IntelliJ IDEA CE.app",
-                    "$userHome/Applications/IntelliJ IDEA.app",
-                )
-            "linux" in osName ->
-                buildList {
-                    add("/opt/idea-IC")
-                    add("/opt/intellij-idea-community")
-                    add("/usr/share/intellij-idea-community")
-                    add("$userHome/.local/share/JetBrains/Toolbox/apps/IDEA-C/ch-0")
-                    add("$userHome/idea-IC")
-                    File("/opt").listFiles()?.forEach { if (it.name.startsWith("idea-IC-")) add(it.path) }
-                    File(userHome).listFiles()?.forEach { if (it.name.startsWith("idea-IC-")) add(it.path) }
-                }
-            "windows" in osName -> {
-                val programFiles = System.getenv("ProgramFiles") ?: "C:\\Program Files"
-                listOf(
-                    "$programFiles\\JetBrains\\IntelliJ IDEA Community Edition 2025.3",
-                    "$programFiles\\JetBrains\\IntelliJ IDEA Community Edition",
-                    "$userHome\\AppData\\Local\\JetBrains\\Toolbox\\apps\\IDEA-C",
-                )
-            }
-            else -> emptyList()
-        }
-
-    return candidates.map(::File).firstOrNull(File::exists)
-}
-
-// Default: download IntelliJ Community (cached in $GRADLE_USER_HOME by version).
-// Opt-in to local IDE: -PuseLocalIde=true or -PintellijLocalPath=/path
-val useLocalIde = providers.gradleProperty("useLocalIde").map { it.toBoolean() }.getOrElse(false)
-val hasExplicitLocalPath = providers.gradleProperty("intellijLocalPath").isPresent
-val localIntelliJ: File? = if (useLocalIde || hasExplicitLocalPath) findLocalIntelliJ() else null
-
-val ideVersion =
-    libs.versions.lang.intellij.ide
-        .get()
-
-// The IntelliJ Platform Gradle Plugin manages IDE download caching internally.
-// Bundled plugin metadata is stored locally in: lang/.intellijPlatform/localPlatformArtifacts/
+// To use a local IDE (e.g. in Docker): -PintellijLocalPath=/opt/idea-IC
 //
 // To force a fresh re-download, delete the localPlatformArtifacts directory:
 //   rm -rf lang/.intellijPlatform/localPlatformArtifacts
 // Then run any task that requires the IDE (e.g. ./gradlew :lang:intellij-plugin:runIde).
 
-when {
-    localIntelliJ != null -> {
-        logger.warn("[ide] WARNING: Using local IntelliJ IDE: ${localIntelliJ.absolutePath}")
-        logger.warn("[ide]   Local IDE mode is brittle - version mismatches between the local")
-        logger.warn("[ide]   IDE and the plugin's target SDK can cause subtle runtime errors")
-        logger.warn("[ide]   or missing API exceptions.")
-        logger.warn("[ide]   Prefer the default sandboxed download for reliable development.")
-    }
-    else -> {
-        logger.lifecycle("[ide] IntelliJ IDEA $ideVersion (managed by IntelliJ Platform Gradle Plugin)")
-        logger.lifecycle("[ide]   First-time download may take several minutes if not already cached.")
-        logger.lifecycle("[ide]   To use a local IDE instead: -PuseLocalIde=true")
-    }
+val ideVersion =
+    libs.versions.lang.intellij.ide
+        .get()
+val localIdePath: String? = providers.gradleProperty("intellijLocalPath").orNull
+
+if (localIdePath != null) {
+    logger.lifecycle("[ide] Using local IntelliJ IDE: $localIdePath")
+} else {
+    logger.lifecycle("[ide] IntelliJ IDEA $ideVersion (managed by IntelliJ Platform Gradle Plugin)")
+    logger.lifecycle("[ide]   First-time download may take several minutes if not already cached.")
 }
 
 repositories {
@@ -124,15 +62,15 @@ repositories {
 }
 
 // =============================================================================
-// Sync XtcProjectCreator from javatools (compiled for Java 21)
+// Sync XtcProjectCreator from javatools (compiled for Java 25)
 // =============================================================================
 // XtcProjectCreator is a standalone class with no javatools dependencies.
-// We sync it here and compile it for Java 21 (IntelliJ's runtime).
+// We sync it here and compile it for Java 25 (IntelliJ's JBR runtime).
 
 val syncedJavaSourceDir: Provider<Directory> = layout.buildDirectory.dir("generated/synced-java")
 
 val syncXtcProjectCreator by tasks.registering(Copy::class) {
-    description = "Sync XtcProjectCreator.java from javatools for Java 21 compilation"
+    description = "Sync XtcProjectCreator.java from javatools for Java 25 compilation"
     from(rootProject.file("../javatools/src/main/java/org/xvm/tool/XtcProjectCreator.java"))
     into(syncedJavaSourceDir.map { it.dir("org/xvm/tool") })
 }
@@ -209,10 +147,9 @@ val textMateGrammar: Configuration by configurations.creating {
 // =============================================================================
 // Consumer configuration for LSP server fat JAR (out-of-process execution)
 // =============================================================================
-// The LSP server runs as a separate Java process because:
-// 1. jtreesitter requires Java 23+ (FFM API), but IntelliJ uses JBR 21
-// 2. Out-of-process allows using the XDK's Java 24 toolchain
-// See doc/plans/PLAN_OUT_OF_PROCESS_LSP.md for architecture details.
+// The LSP server runs as a separate Java process for classloader isolation
+// (avoids lsp4j version conflicts with LSP4IJ) and crash/memory isolation.
+// See doc/plans/PLAN_IDE_INTEGRATION.md for architecture details.
 
 val lspServerJar: Configuration by configurations.creating {
     isCanBeConsumed = false
@@ -252,14 +189,9 @@ dependencies {
     // (the actual server runs out-of-process via the fat JAR above)
     compileOnly(project(":lsp-server"))
 
-    // JSON serialization for JSON-RPC protocol messages
-    implementation(libs.lang.kotlinx.serialization.json)
-
     intellijPlatform {
-        // Default: download IntelliJ Community (cached in $GRADLE_USER_HOME by version)
-        // Use -PuseLocalIde=true or -PintellijLocalPath=/path for local IDE
-        if (localIntelliJ != null) {
-            local(localIntelliJ.absolutePath)
+        if (localIdePath != null) {
+            local(localIdePath)
         } else {
             intellijIdea(
                 libs.versions.lang.intellij.ide
@@ -280,13 +212,13 @@ dependencies {
     textMateGrammar(project(path = ":dsl", configuration = "textMateElements"))
 }
 
-// IntelliJ 2025.3 runs on JBR 21, so we must target JDK 21 (not the project's JDK 25)
+// IntelliJ 2026.1 runs on JBR 25, matching the project's JDK 25
 val intellijJdkVersion: Int =
     libs.versions.lang.intellij.jdk
         .get()
         .toInt()
 
-// Derive sinceBuild from IDE version: "2025.3.2" -> "253" (last 2 digits of year + major version)
+// Derive sinceBuild from IDE version: "2026.1" -> "261" (last 2 digits of year + major version)
 val intellijIdeVersion: String =
     libs.versions.lang.intellij.ide
         .get()
@@ -489,15 +421,10 @@ val prepareJarSearchableOptions by tasks.existing {
 }
 
 // =============================================================================
-// Disable Ultimate-only plugins in the sandbox
+// Disable problematic plugins in the sandbox
 // =============================================================================
-// The local IDE detection (findLocalIntelliJ) may find Ultimate instead of Community.
-// Ultimate bundles plugins that require com.intellij.modules.ultimate, which isn't
-// available in the sandbox since we target Community. This causes errors like:
-//   "Plugin 'Kubernetes' requires plugin with id=com.intellij.modules.ultimate"
-//
-// By disabling the Ultimate module marker, IntelliJ automatically disables all
-// plugins that depend on it, giving us a clean Community-equivalent sandbox.
+// Some bundled plugins have split frontend/backend architectures that fail to
+// load cleanly in the sandbox. Disable them to avoid spurious errors.
 
 // Derive sandbox config dir from prepareSandbox (handles versioned sandbox directories like IU-2025.3.1.1)
 // prepareSandbox.destinationDir is the plugins/ directory, config/ is a sibling

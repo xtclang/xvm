@@ -116,7 +116,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         /**
          * Minimum Java version required for tree-sitter FFM API.
          * Update when jtreesitter dependency changes its requirements.
-         * Note: Must match JreProvisioner.TARGET_VERSION in intellij-plugin.
+         * IntelliJ 2026.1+ ships with JBR 25 which satisfies this minimum.
          */
         const val MIN_JAVA_VERSION = 25
     }
