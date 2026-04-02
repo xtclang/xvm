@@ -1,10 +1,9 @@
 /**
  * Tracks which field is currently set in a protobuf `oneof` group.
  *
- * A `oneof` group is a set of fields where at most one can be set at a time.
- * Setting any field in the group automatically clears the previously set field.
- * On the wire, oneof fields are encoded as regular fields — this class provides
- * the runtime constraint that only one is active.
+ * A `oneof` group is a set of fields where at most one can be set at a time. Setting any field in
+ * the group automatically clears the previously set field. On the wire, oneof fields are encoded as
+ * regular fields — this class provides the runtime constraint that only one is active.
  *
  * Example usage in an AbstractMessage subclass:
  * ```
@@ -50,16 +49,12 @@ class Oneof
     /**
      * @return True if any field in this oneof group is set
      */
-    Boolean isSet() {
-        return activeField != 0;
-    }
+    Boolean isSet() = activeField != 0;
 
     /**
      * @return the field number of the currently set field, or 0 if none
      */
-    Int activeFieldNumber.get() {
-        return activeField;
-    }
+    Int activeFieldNumber.get() = activeField;
 
     /**
      * Check whether a specific field is the currently active one.
@@ -95,8 +90,8 @@ class Oneof
     }
 
     /**
-     * Check whether the given field number belongs to this oneof group
-     * (i.e., is one of the valid field numbers for this group).
+     * Check whether the given field number belongs to this oneof group (i.e., is one of the valid
+     * field numbers for this group).
      *
      * @param fieldNumber   the field number to check
      * @param fieldNumbers  the valid field numbers for this oneof group

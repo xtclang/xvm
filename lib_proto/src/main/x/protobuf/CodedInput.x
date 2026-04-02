@@ -1,9 +1,8 @@
 /**
  * A reader for the Protocol Buffers binary wire format.
  *
- * CodedInput wraps a BinaryInput and provides methods to read protobuf-encoded
- * values including varints, fixed-width integers, length-delimited fields, and
- * ZigZag-encoded signed integers.
+ * CodedInput wraps a BinaryInput and provides methods to read protobuf-encoded values including
+ * varints, fixed-width integers, length-delimited fields, and ZigZag-encoded signed integers.
  */
 class CodedInput {
 
@@ -27,11 +26,11 @@ class CodedInput {
      */
     private Int bytesRead = 0;
 
-    // ----- tag reading -----------------------------------------------------------------------
+    // ----- tag reading ---------------------------------------------------------------------------
 
     /**
-     * Read the next field tag from the stream. Returns 0 if the end of the
-     * stream or the current limit has been reached.
+     * Read the next field tag from the stream. Returns 0 if the end of the stream or the current
+     * limit has been reached.
      *
      * @return the tag value, or 0 at end of input
      */
@@ -45,18 +44,15 @@ class CodedInput {
     /**
      * @return True if the stream is at the end or the current limit has been reached
      */
-    Boolean isAtEnd() {
-        return bytesRead >= limit || in.eof;
-    }
+    Boolean isAtEnd() = bytesRead >= limit || in.eof;
 
-    // ----- varint reading --------------------------------------------------------------------
+    // ----- varint reading ------------------------------------------------------------------------
 
     /**
      * Read a raw varint (up to 64 bits) from the stream.
      *
-     * Each byte contributes 7 bits of payload. The MSB is a continuation bit:
-     * 1 means more bytes follow, 0 means this is the last byte. The 7-bit groups
-     * are in little-endian order.
+     * Each byte contributes 7 bits of payload. The MSB is a continuation bit: 1 means more bytes
+     * follow, 0 means this is the last byte. The 7-bit groups are in little-endian order.
      *
      * @return the decoded varint as an Int64
      */
@@ -74,42 +70,33 @@ class CodedInput {
         throw new IllegalState("varint too long");
     }
 
-    // ----- integer field readers -------------------------------------------------------------
+    // ----- integer field readers -----------------------------------------------------------------
 
     /**
      * Read a protobuf `int32` field value (varint-encoded, two's complement for negatives).
      */
-    Int32 readInt32() {
-        return readVarint().toInt32();
-    }
+    Int32 readInt32() = readVarint().toInt32();
 
     /**
      * Read a protobuf `int64` field value (varint-encoded, two's complement for negatives).
      */
-    Int64 readInt64() {
-        return readVarint();
-    }
+    Int64 readInt64() = readVarint();
 
     /**
      * Read a protobuf `uint32` field value (varint-encoded, unsigned).
      */
-    UInt32 readUInt32() {
-        return readVarint().toUInt32();
-    }
+    UInt32 readUInt32() = readVarint().toUInt32();
 
     /**
      * Read a protobuf `uint64` field value (varint-encoded, unsigned).
      */
-    UInt64 readUInt64() {
-        return readVarint().toUInt64();
-    }
+    UInt64 readUInt64() = readVarint().toUInt64();
 
     /**
      * Read a protobuf `sint32` field value (ZigZag-encoded).
      *
-     * ZigZag encoding maps signed integers to unsigned integers so that numbers
-     * with a small absolute value have a small varint encoding:
-     *   0 -> 0, -1 -> 1, 1 -> 2, -2 -> 3, ...
+     * ZigZag encoding maps signed integers to unsigned integers so that numbers with a small
+     * absolute value have a small varint encoding: 0 -> 0, -1 -> 1, 1 -> 2, -2 -> 3, ...
      *
      * Decode: `(n >>> 1) ^ -(n & 1)`
      */
@@ -126,7 +113,7 @@ class CodedInput {
         return (n >>> 1) ^ -(n & 1);
     }
 
-    // ----- fixed-width readers ---------------------------------------------------------------
+    // ----- fixed-width readers -------------------------------------------------------------------
 
     /**
      * Read a protobuf `fixed32` field value (4 bytes, little-endian, unsigned).
@@ -155,18 +142,14 @@ class CodedInput {
     /**
      * Read a protobuf `sfixed32` field value (4 bytes, little-endian, signed).
      */
-    Int32 readSFixed32() {
-        return readFixed32().toInt32();
-    }
+    Int32 readSFixed32() = readFixed32().toInt32();
 
     /**
      * Read a protobuf `sfixed64` field value (8 bytes, little-endian, signed).
      */
-    Int64 readSFixed64() {
-        return readFixed64().toInt64();
-    }
+    Int64 readSFixed64() = readFixed64().toInt64();
 
-    // ----- floating-point readers ------------------------------------------------------------
+    // ----- floating-point readers ----------------------------------------------------------------
 
     /**
      * Read a protobuf `float` field value (4 bytes, IEEE 754 single-precision).
@@ -186,30 +169,26 @@ class CodedInput {
         return new Float64(leBytes.reversed());
     }
 
-    // ----- bool and enum readers -------------------------------------------------------------
+    // ----- bool and enum readers -----------------------------------------------------------------
 
     /**
      * Read a protobuf `bool` field value (varint, non-zero is True).
      */
-    Boolean readBool() {
-        return readVarint() != 0;
-    }
+    Boolean readBool() = readVarint() != 0;
 
-    // ----- enum reader -----------------------------------------------------------------------
+    // ----- enum reader ---------------------------------------------------------------------------
 
     /**
      * Read a protobuf enum field value as a raw integer (varint-encoded).
      *
-     * The caller is responsible for mapping the integer to the appropriate enum type
-     * using [ProtoEnum.byProtoValue] or similar.
+     * The caller is responsible for mapping the integer to the appropriate enum type using
+     * [ProtoEnum.byProtoValue] or similar.
      *
      * @return the raw enum integer value
      */
-    Int32 readEnum() {
-        return readInt32();
-    }
+    Int32 readEnum() = readInt32();
 
-    // ----- length-delimited readers ----------------------------------------------------------
+    // ----- length-delimited readers --------------------------------------------------------------
 
     /**
      * Read a protobuf `bytes` field value (length-prefixed raw bytes).
@@ -233,34 +212,7 @@ class CodedInput {
         if (length == 0) {
             return "";
         }
-        immutable Byte[] bytes = readRawBytes(length);
-        StringBuffer     buf   = new StringBuffer(length);
-        Int              index = 0;
-        while (index < bytes.size) {
-            Byte   b  = bytes[index++];
-            UInt32 cp;
-            if (b & 0x80 == 0) {
-                // Single-byte ASCII: 0xxxxxxx
-                cp = b.toUInt32();
-            } else if (b & 0xE0 == 0xC0) {
-                // Two-byte: 110xxxxx 10xxxxxx
-                cp =  ((b & 0x1F).toUInt32() << 6)
-                   | (bytes[index++] & 0x3F).toUInt32();
-            } else if (b & 0xF0 == 0xE0) {
-                // Three-byte: 1110xxxx 10xxxxxx 10xxxxxx
-                cp =  ((b & 0x0F).toUInt32() << 12)
-                   | ((bytes[index++] & 0x3F).toUInt32() << 6)
-                   | (bytes[index++] & 0x3F).toUInt32();
-            } else {
-                // Four-byte: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-                cp =  ((b & 0x07).toUInt32() << 18)
-                   | ((bytes[index++] & 0x3F).toUInt32() << 12)
-                   | ((bytes[index++] & 0x3F).toUInt32() << 6)
-                   | (bytes[index++] & 0x3F).toUInt32();
-            }
-            buf.add(cp.toChar());
-        }
-        return buf.toString();
+        return decodeUtf8(readRawBytes(length));
     }
 
     /**
@@ -268,11 +220,9 @@ class CodedInput {
      *
      * @return a ByteString containing the bytes read from the stream
      */
-    ByteString readByteString() {
-        return new ByteString(readBytes());
-    }
+    ByteString readByteString() = new ByteString(readBytes());
 
-    // ----- map entry readers -----------------------------------------------------------------
+    // ----- map entry readers ---------------------------------------------------------------------
 
     /**
      * Read a map<string, string> entry.
@@ -573,11 +523,11 @@ class CodedInput {
         return (key, value);
     }
 
-    // ----- packed repeated field readers -----------------------------------------------------
+    // ----- packed repeated field readers ---------------------------------------------------------
 
     /**
-     * Read a packed repeated varint field. Reads the length prefix, then reads
-     * varints until the sub-limit is reached.
+     * Read a packed repeated varint field. Reads the length prefix, then reads varints until the
+     * sub-limit is reached.
      *
      * @return the list of decoded varint values
      */
@@ -720,11 +670,11 @@ class CodedInput {
         return result;
     }
 
-    // ----- sub-message support ---------------------------------------------------------------
+    // ----- sub-message support -------------------------------------------------------------------
 
     /**
-     * Push a new byte limit for reading a sub-message. The limit is relative to
-     * the current position. Call [popLimit] when done reading the sub-message.
+     * Push a new byte limit for reading a sub-message. The limit is relative to the current
+     * position. Call [popLimit] when done reading the sub-message.
      *
      * @param byteLimit  the number of bytes allowed for the sub-message
      *
@@ -746,11 +696,11 @@ class CodedInput {
         limit = oldLimit;
     }
 
-    // ----- skip support ----------------------------------------------------------------------
+    // ----- skip support --------------------------------------------------------------------------
 
     /**
-     * Skip a field with the given wire type. This is used to skip unknown fields
-     * during deserialization.
+     * Skip a field with the given wire type. This is used to skip unknown fields during
+     * deserialization.
      *
      * @param wireType  the wire type of the field to skip
      */
@@ -791,7 +741,7 @@ class CodedInput {
         }
     }
 
-    // ----- raw byte access -------------------------------------------------------------------
+    // ----- raw byte access -----------------------------------------------------------------------
 
     /**
      * Read a single raw byte from the underlying stream and update the bytes-read counter.
@@ -824,5 +774,43 @@ class CodedInput {
         for (Int i = 0; i < count; i++) {
             readRawByte();
         }
+    }
+
+    // ----- UTF-8 decoding ------------------------------------------------------------------------
+
+    /**
+     * Decode a UTF-8 encoded byte array into a String.
+     *
+     * @param bytes  the UTF-8 encoded bytes
+     *
+     * @return the decoded string
+     */
+    static String decodeUtf8(Byte[] bytes) {
+        if (bytes.empty) {
+            return "";
+        }
+        StringBuffer buf   = new StringBuffer(bytes.size);
+        Int          index = 0;
+        while (index < bytes.size) {
+            Byte   b  = bytes[index++];
+            UInt32 cp;
+            if (b & 0x80 == 0) {
+                cp = b.toUInt32();
+            } else if (b & 0xE0 == 0xC0) {
+                cp =  ((b & 0x1F).toUInt32() << 6)
+                   | (bytes[index++] & 0x3F).toUInt32();
+            } else if (b & 0xF0 == 0xE0) {
+                cp =  ((b & 0x0F).toUInt32() << 12)
+                   | ((bytes[index++] & 0x3F).toUInt32() << 6)
+                   | (bytes[index++] & 0x3F).toUInt32();
+            } else {
+                cp =  ((b & 0x07).toUInt32() << 18)
+                   | ((bytes[index++] & 0x3F).toUInt32() << 12)
+                   | ((bytes[index++] & 0x3F).toUInt32() << 6)
+                   | (bytes[index++] & 0x3F).toUInt32();
+            }
+            buf.add(cp.toChar());
+        }
+        return buf.toString();
     }
 }

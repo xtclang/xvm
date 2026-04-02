@@ -8,9 +8,9 @@ import FieldValue.VarintValue;
 /**
  * A dynamic protobuf message that can represent any message without a compiled schema.
  *
- * Fields are stored as a map from field number to a list of [FieldValue] entries.
- * A list is used because repeated fields and unknown fields can have multiple values
- * for the same field number. A [ListMap] is used to preserve insertion order.
+ * Fields are stored as a map from field number to a list of [FieldValue] entries. A list is used
+ * because repeated fields and unknown fields can have multiple values for the same field number. A
+ * [ListMap] is used to preserve insertion order.
  */
 class GenericMessage
         implements MessageLite {
@@ -18,13 +18,13 @@ class GenericMessage
     /**
      * The fields of this message, keyed by field number.
      *
-     * Each field number maps to a list of values. For scalar (non-repeated) fields,
-     * the last value in the list is the effective value (last-one-wins). For repeated
-     * fields, all values are significant.
+     * Each field number maps to a list of values. For scalar (non-repeated) fields, the last value
+     * in the list is the effective value (last-one-wins). For repeated fields, all values are
+     * significant.
      */
     ListMap<Int, List<FieldValue>> fields = new ListMap();
 
-    // ----- MessageLite interface -------------------------------------------------------------
+    // ----- MessageLite interface -----------------------------------------------------------------
 
     @Override
     void writeTo(CodedOutput out) {
@@ -84,7 +84,7 @@ class GenericMessage
         return size;
     }
 
-    // ----- field access: raw FieldValue -------------------------------------------------------
+    // ----- field access: raw FieldValue ----------------------------------------------------------
 
     /**
      * @return True and the last FieldValue for the given field number, or False if not present
@@ -141,7 +141,7 @@ class GenericMessage
         fields.remove(fieldNumber);
     }
 
-    // ----- typed convenience accessors: varint -----------------------------------------------
+    // ----- typed convenience accessors: varint ---------------------------------------------------
 
     /**
      * Get the varint value for the given field number (last-one-wins).
@@ -183,47 +183,16 @@ class GenericMessage
         addFieldValue(fieldNumber, new VarintValue(value));
     }
 
-    // ----- typed convenience accessors: string -----------------------------------------------
+    // ----- typed convenience accessors: string ---------------------------------------------------
 
     /**
-     * Get the string value for the given field number (last-one-wins).
-     * Interprets a LEN field as a UTF-8 encoded string.
+     * Get the string value for the given field number (last-one-wins). Interprets a LEN field as a
+     * UTF-8 encoded string.
      *
      * @return the String value
      */
-    String getString(Int fieldNumber) {
-        immutable Byte[] data = getLengthData(fieldNumber);
-        if (data.empty) {
-            return "";
-        }
-        import ecstasy.io.ByteArrayInputStream;
-        CodedInput strInput = new CodedInput(new ByteArrayInputStream(data));
-        // Push a limit for the entire byte array so readString can use the length
-        // Actually, we already have the raw bytes; we need to decode UTF-8 directly
-        StringBuffer buf   = new StringBuffer(data.size);
-        Int          index = 0;
-        while (index < data.size) {
-            Byte   b  = data[index++];
-            UInt32 cp;
-            if (b & 0x80 == 0) {
-                cp = b.toUInt32();
-            } else if (b & 0xE0 == 0xC0) {
-                cp =  ((b & 0x1F).toUInt32() << 6)
-                   | (data[index++] & 0x3F).toUInt32();
-            } else if (b & 0xF0 == 0xE0) {
-                cp =  ((b & 0x0F).toUInt32() << 12)
-                   | ((data[index++] & 0x3F).toUInt32() << 6)
-                   | (data[index++] & 0x3F).toUInt32();
-            } else {
-                cp =  ((b & 0x07).toUInt32() << 18)
-                   | ((data[index++] & 0x3F).toUInt32() << 12)
-                   | ((data[index++] & 0x3F).toUInt32() << 6)
-                   | (data[index++] & 0x3F).toUInt32();
-            }
-            buf.add(cp.toChar());
-        }
-        return buf.toString();
-    }
+    String getString(Int fieldNumber) =
+        CodedInput.decodeUtf8(getLengthData(fieldNumber));
 
     /**
      * Set a string value for the given field number, replacing any existing value.
@@ -232,14 +201,13 @@ class GenericMessage
         setFieldValue(fieldNumber, new LengthValue(value.utf8()));
     }
 
-    // ----- typed convenience accessors: bytes ------------------------------------------------
+    // ----- typed convenience accessors: bytes ----------------------------------------------------
 
     /**
      * Get the raw bytes for the given LEN field number (last-one-wins).
      */
-    immutable Byte[] getBytes(Int fieldNumber) {
-        return getLengthData(fieldNumber);
-    }
+    immutable Byte[] getBytes(Int fieldNumber) =
+        getLengthData(fieldNumber);
 
     /**
      * Set a bytes value for the given field number, replacing any existing value.
@@ -248,7 +216,7 @@ class GenericMessage
         setFieldValue(fieldNumber, new LengthValue(value.freeze(False)));
     }
 
-    // ----- typed convenience accessors: fixed ------------------------------------------------
+    // ----- typed convenience accessors: fixed ----------------------------------------------------
 
     /**
      * Get the fixed32 value for the given field number (last-one-wins).
@@ -282,11 +250,11 @@ class GenericMessage
         setFieldValue(fieldNumber, new Fixed64Value(value));
     }
 
-    // ----- typed convenience accessors: sub-message ------------------------------------------
+    // ----- typed convenience accessors: sub-message ----------------------------------------------
 
     /**
-     * Get a sub-message for the given LEN field number by parsing the raw bytes
-     * as a GenericMessage.
+     * Get a sub-message for the given LEN field number by parsing the raw bytes as a
+     * GenericMessage.
      */
     GenericMessage getMessage(Int fieldNumber) {
         immutable Byte[] data = getLengthData(fieldNumber);
@@ -302,7 +270,7 @@ class GenericMessage
         setFieldValue(fieldNumber, new LengthValue(value.toByteArray()));
     }
 
-    // ----- Freezable -------------------------------------------------------------------------
+    // ----- Freezable -----------------------------------------------------------------------------
 
     @Override
     immutable GenericMessage freeze(Boolean inPlace = False) {
@@ -320,7 +288,7 @@ class GenericMessage
         return frozen.makeImmutable();
     }
 
-    // ----- internal --------------------------------------------------------------------------
+    // ----- internal ------------------------------------------------------------------------------
 
     /**
      * Get the raw byte data from a LEN field value.

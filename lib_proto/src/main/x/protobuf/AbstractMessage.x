@@ -1,10 +1,10 @@
 /**
  * A base class for [MessageLite] implementations.
  *
- * By default, all fields are treated as unknown and stored in the [unknownFields] set.
- * Subclasses override [parseField], [writeKnownFields], and [knownFieldsSize] to handle
- * specific fields, while unrecognized fields automatically pass through the unknown field
- * storage for faithful round-tripping.
+ * By default, all fields are treated as unknown and stored in the [unknownFields] set. Subclasses
+ * override [parseField], [writeKnownFields], and [knownFieldsSize] to handle specific fields, while
+ * unrecognized fields automatically pass through the unknown field storage for faithful
+ * round-tripping.
  */
 class AbstractMessage
         implements MessageLite, Duplicable {
@@ -40,7 +40,7 @@ class AbstractMessage
      */
     UnknownFieldSet unknownFields;
 
-    // ----- MessageLite interface -------------------------------------------------------------
+    // ----- MessageLite interface -----------------------------------------------------------------
 
     @Override
     void writeTo(CodedOutput out) {
@@ -63,30 +63,27 @@ class AbstractMessage
     }
 
     @Override
-    Int serializedSize() {
-        return knownFieldsSize() + unknownFields.serializedSize();
-    }
+    Int serializedSize() =
+        knownFieldsSize() + unknownFields.serializedSize();
 
-    // ----- extension points for subclasses ---------------------------------------------------
+    // ----- extension points for subclasses -------------------------------------------------------
 
     /**
      * Attempt to parse a field from the input as a known field.
      *
-     * Subclasses override this method to handle fields they recognize. If the field
-     * is recognized and consumed, return `True`. If the field is not recognized,
-     * return `False` and the field will be stored as an unknown field.
+     * Subclasses override this method to handle fields they recognize. If the field is recognized
+     * and consumed, return `True`. If the field is not recognized, return `False` and the field
+     * will be stored as an unknown field.
      *
-     * The tag has already been read from the input. The field number and wire type
-     * can be extracted using [WireType.getFieldNumber] and [WireType.getWireType].
+     * The tag has already been read from the input. The field number and wire type can be extracted
+     * using [WireType.getFieldNumber] and [WireType.getWireType].
      *
      * @param input  the coded input to read the field value from
      * @param tag    the tag that was already read
      *
      * @return True if the field was handled, False to store as unknown
      */
-    Boolean parseField(CodedInput input, Int tag) {
-        return False;
-    }
+    Boolean parseField(CodedInput input, Int tag) = False;
 
     /**
      * Write all known fields to the given output.
@@ -105,9 +102,7 @@ class AbstractMessage
      *
      * @return the number of bytes required for known fields
      */
-    Int knownFieldsSize() {
-        return 0;
-    }
+    Int knownFieldsSize() = 0;
 
     @Override
     immutable AbstractMessage freeze(Boolean inPlace = False) {

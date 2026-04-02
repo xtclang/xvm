@@ -39,7 +39,7 @@ class OneofTest {
         Int32 id = 0;
         Oneof result = new Oneof();
 
-        // ----- typed accessors for the oneof fields ------------------------------------------
+        // ----- typed accessors for the oneof fields ----------------------------------------------
 
         conditional String getName() {
             if (Object v := result.get(2)) {
@@ -74,7 +74,7 @@ class OneofTest {
             result.set(4, value);
         }
 
-        // ----- AbstractMessage overrides -----------------------------------------------------
+        // ----- AbstractMessage overrides ---------------------------------------------------------
 
         @Override
         Boolean parseField(CodedInput input, Int tag) {
@@ -146,7 +146,7 @@ class OneofTest {
         }
     }
 
-    // ----- Oneof class tests -----------------------------------------------------------------
+    // ----- Oneof class tests ---------------------------------------------------------------------
 
     @Test
     void shouldStartUnset() {
@@ -193,7 +193,7 @@ class OneofTest {
         assert !Oneof.contains(1, [2, 3, 4]);
     }
 
-    // ----- mutual exclusion ------------------------------------------------------------------
+    // ----- mutual exclusion ----------------------------------------------------------------------
 
     @Test
     void shouldOnlyHaveOneFieldSet() {
@@ -219,7 +219,7 @@ class OneofTest {
         assert f == True;
     }
 
-    // ----- serialization ---------------------------------------------------------------------
+    // ----- serialization -------------------------------------------------------------------------
 
     @Test
     void shouldSerializeWithNameSet() {
@@ -285,7 +285,7 @@ class OneofTest {
         assert msg.toByteArray() == expected;
     }
 
-    // ----- deserialization -------------------------------------------------------------------
+    // ----- deserialization -----------------------------------------------------------------------
 
     @Test
     void shouldDeserializeNameField() {
@@ -334,7 +334,7 @@ class OneofTest {
         assert c == 42;
     }
 
-    // ----- round-trip ------------------------------------------------------------------------
+    // ----- round-trip ----------------------------------------------------------------------------
 
     @Test
     void shouldRoundTripOneofMessage() {
@@ -366,7 +366,7 @@ class OneofTest {
         assert msg.serializedSize() == msg.toByteArray().size;
     }
 
-    // ----- helper ----------------------------------------------------------------------------
+    // ----- helper --------------------------------------------------------------------------------
 
     private immutable Byte[] encode(function void(CodedOutput) writer) {
         ByteArrayOutputStream buf = new ByteArrayOutputStream();

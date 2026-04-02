@@ -1,9 +1,11 @@
+import ecstasy.io.ByteArrayInputStream;
+
 /**
  * The base interface for Protocol Buffers lite messages.
  *
- * A MessageLite represents a protobuf message that supports serialization and
- * deserialization using the binary wire format. This is the lightweight variant;
- * a full `Message` type with descriptor and reflection support will be added later.
+ * A MessageLite represents a protobuf message that supports serialization and deserialization using
+ * the binary wire format. This is the lightweight variant; a full `Message` type with descriptor
+ * and reflection support will be added later.
  */
 interface MessageLite
     extends Freezable {
@@ -18,11 +20,11 @@ interface MessageLite
     /**
      * Deserialize fields from the given [CodedInput] and merge them into this message.
      *
-     * For scalar fields, the last value seen wins. For embedded messages, the values
-     * are merged. For repeated fields, the values are appended.
+     * For scalar fields, the last value seen wins. For embedded messages, the values are merged.
+     * For repeated fields, the values are appended.
      *
-     * Implementations that are mutable may update in place and return `this`.
-     * Implementations that are `const` should return a new instance with the merged fields.
+     * Implementations that are mutable may update in place and return `this`. Implementations that
+     * are `const` should return a new instance with the merged fields.
      *
      * @param input  the coded input to read from
      *
@@ -31,8 +33,8 @@ interface MessageLite
     MessageLite mergeFrom(CodedInput input);
 
     /**
-     * @return the number of bytes required to serialize this message (excluding any tag or
-     *         length prefix that would be written by an enclosing message)
+     * @return the number of bytes required to serialize this message (excluding any tag or length
+     *             prefix that would be written by an enclosing message)
      */
     Int serializedSize();
 
@@ -56,8 +58,6 @@ interface MessageLite
      * @param bytes  the serialized protobuf bytes
      */
     MessageLite mergeFromBytes(Byte[] bytes) {
-        import ecstasy.io.ByteArrayInputStream;
-
         CodedInput input = new CodedInput(new ByteArrayInputStream(bytes));
         return mergeFrom(input);
     }

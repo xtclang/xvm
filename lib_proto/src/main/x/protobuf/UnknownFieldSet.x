@@ -8,8 +8,8 @@ import FieldValue.VarintValue;
 /**
  * A container for unknown protobuf fields encountered during deserialization.
  *
- * Unknown fields are stored by field number and can be replayed during serialization,
- * preserving the original wire format. A [ListMap] is used to preserve field insertion order.
+ * Unknown fields are stored by field number and can be replayed during serialization, preserving
+ * the original wire format. A [ListMap] is used to preserve field insertion order.
  */
 class UnknownFieldSet
         implements Freezable, Duplicable {
@@ -42,20 +42,15 @@ class UnknownFieldSet
     /**
      * @return True if there are no unknown fields stored
      */
-    Boolean empty.get() {
-        return fields.empty;
-    }
+    Boolean empty.get() = fields.empty;
 
     /**
      * @return the number of distinct field numbers stored
      */
-    Int size.get() {
-        return fields.size;
-    }
+    Int size.get() = fields.size;
 
     /**
-     * Read a single field from the input and store it. The tag has already been read
-     * by the caller.
+     * Read a single field from the input and store it. The tag has already been read by the caller.
      *
      * @param input  the coded input to read from
      * @param tag    the tag that was already read (contains field number and wire type)
@@ -128,7 +123,7 @@ class UnknownFieldSet
     /**
      * Add a field value for the given field number.
      */
-    private void addField(Int fieldNumber, FieldValue value) {
+    void addField(Int fieldNumber, FieldValue value) {
         if (List<FieldValue> values := fields.get(fieldNumber)) {
             values.add(value);
         } else {

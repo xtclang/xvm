@@ -56,9 +56,8 @@ class MessageLiteTest {
         }
 
         @Override
-        immutable Test1 freeze(Boolean inPlace = False) {
-            return this.is(immutable Test1) ? this : this.makeImmutable();
-        }
+        immutable Test1 freeze(Boolean inPlace = False) =
+            this.is(immutable Test1) ? this : this.makeImmutable();
     }
 
     /**
@@ -131,9 +130,8 @@ class MessageLiteTest {
         }
 
         @Override
-        immutable TestMulti freeze(Boolean inPlace = False) {
-            return this.is(immutable TestMulti) ? this : this.makeImmutable();
-        }
+        immutable TestMulti freeze(Boolean inPlace = False) =
+            this.is(immutable TestMulti) ? this : this.makeImmutable();
     }
 
     /**
@@ -201,12 +199,11 @@ class MessageLiteTest {
         }
 
         @Override
-        immutable TestNested freeze(Boolean inPlace = False) {
-            return this.is(immutable TestNested) ? this : this.makeImmutable();
-        }
+        immutable TestNested freeze(Boolean inPlace = False) =
+            this.is(immutable TestNested) ? this : this.makeImmutable();
     }
 
-    // ----- Test1 tests -------------------------------------------------------------------
+    // ----- Test1 tests ---------------------------------------------------------------------------
 
     @Test
     void shouldSerializeSimpleMessage() {
@@ -250,7 +247,7 @@ class MessageLiteTest {
         assert msg.toByteArray().size == msg.serializedSize();
     }
 
-    // ----- TestMulti tests ---------------------------------------------------------------
+    // ----- TestMulti tests -----------------------------------------------------------------------
 
     @Test
     void shouldRoundTripMultiFieldMessage() {
@@ -325,7 +322,7 @@ class MessageLiteTest {
         assert msg.toByteArray().size == msg.serializedSize();
     }
 
-    // ----- TestNested tests --------------------------------------------------------------
+    // ----- TestNested tests ----------------------------------------------------------------------
 
     @Test
     void shouldRoundTripNestedMessage() {
@@ -368,7 +365,7 @@ class MessageLiteTest {
         assert msg.toByteArray().size == msg.serializedSize();
     }
 
-    // ----- writeMessage tests -----------------------------------------------------------
+    // ----- writeMessage tests --------------------------------------------------------------------
 
     @Test
     void shouldWriteMessageDirectly() {
@@ -411,7 +408,7 @@ class MessageLiteTest {
         assert input.isAtEnd();
     }
 
-    // ----- size computation tests --------------------------------------------------------
+    // ----- size computation tests ----------------------------------------------------------------
 
     @Test
     void shouldComputeFieldSizesCorrectly() {
@@ -443,7 +440,7 @@ class MessageLiteTest {
         assert CodedOutput.computeMessageSize(2, child) == 5;
     }
 
-    // ----- helper ------------------------------------------------------------------------
+    // ----- helper --------------------------------------------------------------------------------
 
     private immutable Byte[] encode(function void(CodedOutput) writer) {
         ByteArrayOutputStream buf = new ByteArrayOutputStream();

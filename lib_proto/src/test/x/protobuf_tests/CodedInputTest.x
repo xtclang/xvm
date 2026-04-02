@@ -5,7 +5,7 @@ import protobuf.WireType;
 
 class CodedInputTest {
 
-    // ----- varint tests ------------------------------------------------------------------
+    // ----- varint tests --------------------------------------------------------------------------
 
     @Test
     void shouldReadSingleByteVarint() {
@@ -41,7 +41,7 @@ class CodedInputTest {
         assert input.readVarint() == 127;
     }
 
-    // ----- tag tests ---------------------------------------------------------------------
+    // ----- tag tests -----------------------------------------------------------------------------
 
     @Test
     void shouldReadTag() {
@@ -67,7 +67,7 @@ class CodedInputTest {
         assert input.readTag() == 0;
     }
 
-    // ----- integer type tests ------------------------------------------------------------
+    // ----- integer type tests --------------------------------------------------------------------
 
     @Test
     void shouldReadInt32() {
@@ -110,7 +110,7 @@ class CodedInputTest {
         assert input.readSInt32() == -2;
     }
 
-    // ----- fixed-width tests -------------------------------------------------------------
+    // ----- fixed-width tests ---------------------------------------------------------------------
 
     @Test
     void shouldReadFixed32() {
@@ -140,7 +140,7 @@ class CodedInputTest {
         assert input.readSFixed32() == -1;
     }
 
-    // ----- bool test ---------------------------------------------------------------------
+    // ----- bool test -----------------------------------------------------------------------------
 
     @Test
     void shouldReadBoolTrue() {
@@ -154,7 +154,7 @@ class CodedInputTest {
         assert input.readBool() == False;
     }
 
-    // ----- length-delimited tests --------------------------------------------------------
+    // ----- length-delimited tests ----------------------------------------------------------------
 
     @Test
     void shouldReadBytes() {
@@ -187,7 +187,7 @@ class CodedInputTest {
         assert input.readString() == "";
     }
 
-    // ----- sub-message limit tests -------------------------------------------------------
+    // ----- sub-message limit tests ---------------------------------------------------------------
 
     @Test
     void shouldRespectLimit() {
@@ -201,7 +201,7 @@ class CodedInputTest {
         assert input.readVarint() == 1;
     }
 
-    // ----- complete message test ---------------------------------------------------------
+    // ----- complete message test -----------------------------------------------------------------
 
     @Test
     void shouldReadSimpleMessage() {
@@ -251,9 +251,8 @@ class CodedInputTest {
         assert input.isAtEnd();
     }
 
-    // ----- helper ------------------------------------------------------------------------
+    // ----- helper --------------------------------------------------------------------------------
 
-    private CodedInput newCodedInput(Byte[] bytes) {
-        return new CodedInput(new ByteArrayInputStream(bytes));
-    }
+    private CodedInput newCodedInput(Byte[] bytes) =
+        new CodedInput(new ByteArrayInputStream(bytes));
 }

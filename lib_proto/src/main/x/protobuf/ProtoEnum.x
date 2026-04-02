@@ -1,11 +1,11 @@
 /**
  * An interface for Ecstasy enums that represent protobuf enum types.
  *
- * Protobuf enums are encoded as int32 varints on the wire. The [protoValue] property
- * provides the mapping from the Ecstasy enum constant to its protobuf integer value.
+ * Protobuf enums are encoded as int32 varints on the wire. The [protoValue] property provides the
+ * mapping from the Ecstasy enum constant to its protobuf integer value.
  *
- * Protobuf enum values do not necessarily match Ecstasy ordinals — they can be sparse,
- * start at non-zero values, or have gaps. This interface provides an explicit mapping.
+ * Protobuf enum values do not necessarily match Ecstasy ordinals — they can be sparse, start at
+ * non-zero values, or have gaps. This interface provides an explicit mapping.
  *
  * Example usage:
  * ```

@@ -38,7 +38,7 @@ class ProtoEnumTest {
         Int protoValue;
     }
 
-    // ----- ProtoEnum interface ---------------------------------------------------------------
+    // ----- ProtoEnum interface -------------------------------------------------------------------
 
     @Test
     void shouldReturnProtoValue() {
@@ -78,7 +78,7 @@ class ProtoEnumTest {
         assert c == Color.Red;
     }
 
-    // ----- write/read round-trips ------------------------------------------------------------
+    // ----- write/read round-trips ----------------------------------------------------------------
 
     @Test
     void shouldRoundTripEnumField() {
@@ -128,7 +128,7 @@ class ProtoEnumTest {
         assert s == Status.Unknown;
     }
 
-    // ----- size computation ------------------------------------------------------------------
+    // ----- size computation ----------------------------------------------------------------------
 
     @Test
     void shouldComputeEnumSize() {
@@ -148,7 +148,7 @@ class ProtoEnumTest {
         assert CodedOutput.computeEnumValueSize(1, 99) == bytes.size;
     }
 
-    // ----- enum in a message -----------------------------------------------------------------
+    // ----- enum in a message ---------------------------------------------------------------------
 
     @Test
     void shouldRoundTripEnumWithOtherFields() {
@@ -185,7 +185,7 @@ class ProtoEnumTest {
         assert !ProtoEnum.byProtoValue(Status.values, raw);
     }
 
-    // ----- wire format verification ----------------------------------------------------------
+    // ----- wire format verification --------------------------------------------------------------
 
     @Test
     void shouldProduceCorrectEnumBytes() {
@@ -203,7 +203,7 @@ class ProtoEnumTest {
         assert enumBytes == intBytes;
     }
 
-    // ----- helper ----------------------------------------------------------------------------
+    // ----- helper --------------------------------------------------------------------------------
 
     private immutable Byte[] encode(function void(CodedOutput) writer) {
         ByteArrayOutputStream buf = new ByteArrayOutputStream();
@@ -212,7 +212,6 @@ class ProtoEnumTest {
         return buf.bytes.freeze(inPlace=True);
     }
 
-    private CodedInput newInput(Byte[] bytes) {
-        return new CodedInput(new ByteArrayInputStream(bytes));
-    }
+    private CodedInput newInput(Byte[] bytes) =
+        new CodedInput(new ByteArrayInputStream(bytes));
 }

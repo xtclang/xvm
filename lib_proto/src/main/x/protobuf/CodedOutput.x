@@ -1,9 +1,8 @@
 /**
  * A writer for the Protocol Buffers binary wire format.
  *
- * CodedOutput wraps a BinaryOutput and provides methods to write protobuf-encoded
- * values including varints, fixed-width integers, length-delimited fields, and
- * ZigZag-encoded signed integers.
+ * CodedOutput wraps a BinaryOutput and provides methods to write protobuf-encoded values including
+ * varints, fixed-width integers, length-delimited fields, and ZigZag-encoded signed integers.
  */
 class CodedOutput {
 
@@ -16,7 +15,7 @@ class CodedOutput {
      */
     private BinaryOutput out;
 
-    // ----- tag writing -----------------------------------------------------------------------
+    // ----- tag writing ---------------------------------------------------------------------------
 
     /**
      * Write a field tag (field number + wire type) as a varint.
@@ -28,11 +27,11 @@ class CodedOutput {
         writeVarint(WireType.makeTag(fieldNumber, wireType));
     }
 
-    // ----- varint writing --------------------------------------------------------------------
+    // ----- varint writing ------------------------------------------------------------------------
 
     /**
-     * Write a value as a raw varint. Each byte contributes 7 bits of payload
-     * with the MSB as a continuation bit.
+     * Write a value as a raw varint. Each byte contributes 7 bits of payload with the MSB as a
+     * continuation bit.
      *
      * @param value  the value to encode
      */
@@ -46,7 +45,7 @@ class CodedOutput {
         writeRawByte(bits.toByte());
     }
 
-    // ----- integer field writers -------------------------------------------------------------
+    // ----- integer field writers -----------------------------------------------------------------
 
     /**
      * Write a protobuf `int32` field (tag + varint).
@@ -118,7 +117,7 @@ class CodedOutput {
         writeVarint((value << 1) ^ (value >> 63));
     }
 
-    // ----- fixed-width writers ---------------------------------------------------------------
+    // ----- fixed-width writers -------------------------------------------------------------------
 
     /**
      * Write a protobuf `fixed32` field (tag + 4-byte little-endian).
@@ -164,7 +163,7 @@ class CodedOutput {
         writeFixed64Value(value.toUInt64());
     }
 
-    // ----- floating-point writers ------------------------------------------------------------
+    // ----- floating-point writers ----------------------------------------------------------------
 
     /**
      * Write a protobuf `float` field (tag + 4-byte IEEE 754).
@@ -196,7 +195,7 @@ class CodedOutput {
         }
     }
 
-    // ----- bool writer -----------------------------------------------------------------------
+    // ----- bool writer ---------------------------------------------------------------------------
 
     /**
      * Write a protobuf `bool` field (tag + varint 0 or 1).
@@ -209,7 +208,7 @@ class CodedOutput {
         writeRawByte(value ? 1 : 0);
     }
 
-    // ----- enum writer -----------------------------------------------------------------------
+    // ----- enum writer ---------------------------------------------------------------------------
 
     /**
      * Write a protobuf enum field (tag + varint).
@@ -226,17 +225,16 @@ class CodedOutput {
     /**
      * Write a protobuf enum field using a raw integer value (tag + varint).
      *
-     * This is useful when the enum value is not known at compile time or when
-     * preserving unrecognized enum values.
+     * This is useful when the enum value is not known at compile time or when preserving
+     * unrecognized enum values.
      *
      * @param fieldNumber  the field number
      * @param value        the raw enum integer value
      */
-    void writeEnumValue(Int fieldNumber, Int32 value) {
+    void writeEnumValue(Int fieldNumber, Int32 value) =
         writeInt32(fieldNumber, value);
-    }
 
-    // ----- length-delimited writers ----------------------------------------------------------
+    // ----- length-delimited writers --------------------------------------------------------------
 
     /**
      * Write a protobuf `bytes` field (tag + length varint + raw bytes).
@@ -276,8 +274,8 @@ class CodedOutput {
     /**
      * Write a protobuf embedded message field (tag + length varint + serialized message).
      *
-     * The message's [serializedSize] is used to compute the length prefix, then
-     * the message is serialized directly to this output stream.
+     * The message's [serializedSize] is used to compute the length prefix, then the message is
+     * serialized directly to this output stream.
      *
      * @param fieldNumber  the field number
      * @param value        the message to write
@@ -288,11 +286,11 @@ class CodedOutput {
         value.writeTo(this);
     }
 
-    // ----- map field writers -----------------------------------------------------------------
+    // ----- map field writers ---------------------------------------------------------------------
 
     /**
-     * Write a single map entry as a length-delimited sub-message containing key (field 1)
-     * and value (field 2).
+     * Write a single map entry as a length-delimited sub-message containing key (field 1) and value
+     * (field 2).
      *
      * Protobuf maps are encoded on the wire as:
      * ```
@@ -419,7 +417,7 @@ class CodedOutput {
         });
     }
 
-    // ----- packed repeated field writers -------------------------------------------------------
+    // ----- packed repeated field writers ---------------------------------------------------------
 
     /**
      * Write a packed repeated varint field (tag + length + concatenated varints).
@@ -575,7 +573,7 @@ class CodedOutput {
         }
     }
 
-    // ----- size computation ------------------------------------------------------------------
+    // ----- size computation ----------------------------------------------------------------------
 
     /**
      * Compute the number of bytes needed to encode a varint value.
@@ -601,89 +599,77 @@ class CodedOutput {
      *
      * @return the number of bytes required for the tag
      */
-    static Int computeTagSize(Int fieldNumber) {
-        return computeVarintSize(WireType.makeTag(fieldNumber, WireType.VARINT).toInt64());
-    }
+    static Int computeTagSize(Int fieldNumber) =
+        computeVarintSize(WireType.makeTag(fieldNumber, WireType.VARINT).toInt64());
 
     /**
      * Compute the total bytes needed to encode an `int32` field (tag + varint).
      */
-    static Int computeInt32Size(Int fieldNumber, Int32 value) {
-        return computeTagSize(fieldNumber) + computeVarintSize(value.toInt64());
-    }
+    static Int computeInt32Size(Int fieldNumber, Int32 value) =
+        computeTagSize(fieldNumber) + computeVarintSize(value.toInt64());
 
     /**
      * Compute the total bytes needed to encode an `int64` field (tag + varint).
      */
-    static Int computeInt64Size(Int fieldNumber, Int64 value) {
-        return computeTagSize(fieldNumber) + computeVarintSize(value);
-    }
+    static Int computeInt64Size(Int fieldNumber, Int64 value) =
+        computeTagSize(fieldNumber) + computeVarintSize(value);
 
     /**
      * Compute the total bytes needed to encode a `uint32` field (tag + varint).
      */
-    static Int computeUInt32Size(Int fieldNumber, UInt32 value) {
-        return computeTagSize(fieldNumber) + computeVarintSize(value.toInt64());
-    }
+    static Int computeUInt32Size(Int fieldNumber, UInt32 value) =
+        computeTagSize(fieldNumber) + computeVarintSize(value.toInt64());
 
     /**
      * Compute the total bytes needed to encode a `uint64` field (tag + varint).
      */
-    static Int computeUInt64Size(Int fieldNumber, UInt64 value) {
-        return computeTagSize(fieldNumber) + computeVarintSize(value.toInt64());
-    }
+    static Int computeUInt64Size(Int fieldNumber, UInt64 value) =
+        computeTagSize(fieldNumber) + computeVarintSize(value.toInt64());
 
     /**
      * Compute the total bytes needed to encode a `sint32` field (tag + ZigZag varint).
      */
     static Int computeSInt32Size(Int fieldNumber, Int32 value) {
-        return computeTagSize(fieldNumber) + computeVarintSize(((value << 1) ^ (value >> 31)).toInt64());
+        return computeTagSize(fieldNumber)
+                + computeVarintSize(((value << 1) ^ (value >> 31)).toInt64());
     }
 
     /**
      * Compute the total bytes needed to encode a `sint64` field (tag + ZigZag varint).
      */
-    static Int computeSInt64Size(Int fieldNumber, Int64 value) {
-        return computeTagSize(fieldNumber) + computeVarintSize((value << 1) ^ (value >> 63));
-    }
+    static Int computeSInt64Size(Int fieldNumber, Int64 value) =
+        computeTagSize(fieldNumber) + computeVarintSize((value << 1) ^ (value >> 63));
 
     /**
      * Compute the total bytes needed to encode a `fixed32` field (tag + 4 bytes).
      */
-    static Int computeFixed32Size(Int fieldNumber) {
-        return computeTagSize(fieldNumber) + 4;
-    }
+    static Int computeFixed32Size(Int fieldNumber) = computeTagSize(fieldNumber) + 4;
 
     /**
      * Compute the total bytes needed to encode a `fixed64` field (tag + 8 bytes).
      */
-    static Int computeFixed64Size(Int fieldNumber) {
-        return computeTagSize(fieldNumber) + 8;
-    }
+    static Int computeFixed64Size(Int fieldNumber) = computeTagSize(fieldNumber) + 8;
 
     /**
      * Compute the total bytes needed to encode a `bool` field (tag + 1 byte).
      */
-    static Int computeBoolSize(Int fieldNumber) {
-        return computeTagSize(fieldNumber) + 1;
-    }
+    static Int computeBoolSize(Int fieldNumber) = computeTagSize(fieldNumber) + 1;
 
     /**
      * Compute the total bytes needed to encode an enum field (tag + varint).
      */
-    static Int computeEnumSize(Int fieldNumber, ProtoEnum value) {
-        return computeInt32Size(fieldNumber, value.protoValue.toInt32());
-    }
+    static Int computeEnumSize(Int fieldNumber, ProtoEnum value) =
+        computeInt32Size(fieldNumber, value.protoValue.toInt32());
 
     /**
      * Compute the total bytes needed to encode an enum field using a raw integer value.
      */
-    static Int computeEnumValueSize(Int fieldNumber, Int32 value) {
-        return computeInt32Size(fieldNumber, value);
-    }
+    static Int computeEnumValueSize(Int fieldNumber, Int32 value) =
+        computeInt32Size(fieldNumber, value);
 
     /**
-     * Compute the total bytes needed to encode a `string` field (tag + length varint + UTF-8 bytes).
+     * Compute the total bytes needed to encode a `string` field (tag + length varint + UTF-8
+     * bytes).
      */
     static Int computeStringSize(Int fieldNumber, String value) {
         Int utf8Length = value.utf8().size;
@@ -693,20 +679,19 @@ class CodedOutput {
     /**
      * Compute the total bytes needed to encode a `bytes` field (tag + length varint + raw bytes).
      */
-    static Int computeBytesSize(Int fieldNumber, Byte[] value) {
-        return computeTagSize(fieldNumber) + computeVarintSize(value.size.toInt64()) + value.size;
-    }
+    static Int computeBytesSize(Int fieldNumber, Byte[] value) =
+        computeTagSize(fieldNumber) + computeVarintSize(value.size.toInt64()) + value.size;
 
     /**
-     * Compute the total bytes needed to encode an embedded message field
-     * (tag + length varint + serialized message).
+     * Compute the total bytes needed to encode an embedded message field (tag + length varint +
+     * serialized message).
      */
     static Int computeMessageSize(Int fieldNumber, MessageLite value) {
         Int messageSize = value.serializedSize();
         return computeTagSize(fieldNumber) + computeVarintSize(messageSize.toInt64()) + messageSize;
     }
 
-    // ----- map size computation --------------------------------------------------------------
+    // ----- map size computation ------------------------------------------------------------------
 
     /**
      * Compute the size of a single map entry sub-message (tag + length varint + entry content).
@@ -716,9 +701,8 @@ class CodedOutput {
      *
      * @return the total bytes needed
      */
-    static Int computeMapEntrySize(Int fieldNumber, Int entrySize) {
-        return computeTagSize(fieldNumber) + computeVarintSize(entrySize.toInt64()) + entrySize;
-    }
+    static Int computeMapEntrySize(Int fieldNumber, Int entrySize) =
+        computeTagSize(fieldNumber) + computeVarintSize(entrySize.toInt64()) + entrySize;
 
     /**
      * Compute the size of a map<string, string> entry.
@@ -800,7 +784,7 @@ class CodedOutput {
         return computeMapEntrySize(fieldNumber, entrySize);
     }
 
-    // ----- packed size computation -----------------------------------------------------------
+    // ----- packed size computation ---------------------------------------------------------------
 
     /**
      * Compute the total bytes needed to encode a packed repeated varint field.
@@ -899,16 +883,21 @@ class CodedOutput {
         return computeTagSize(fieldNumber) + computeVarintSize(dataSize.toInt64()) + dataSize;
     }
 
-    // ----- raw byte access -------------------------------------------------------------------
+    // ----- raw byte access -----------------------------------------------------------------------
 
     /**
      * Write a single raw byte to the underlying stream.
      *
      * @param value  the byte to write
      */
-    void writeRawByte(Byte value) {
-        out.writeByte(value);
-    }
+    void writeRawByte(Byte value) = out.writeByte(value);
+
+    /**
+     * Write raw bytes to the underlying stream.
+     *
+     * @param bytes  the bytes to write
+     */
+    void writeRawBytes(Byte[] bytes) = out.writeBytes(bytes);
 
     /**
      * Write a 4-byte little-endian unsigned integer value (no tag).

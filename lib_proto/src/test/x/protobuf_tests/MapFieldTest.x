@@ -8,7 +8,7 @@ import protobuf.WireType;
 
 class MapFieldTest {
 
-    // ----- map<string, string> ---------------------------------------------------------------
+    // ----- map<string, string> -------------------------------------------------------------------
 
     @Test
     void shouldRoundTripMapStringString() {
@@ -43,7 +43,7 @@ class MapFieldTest {
         assert CodedOutput.computeMapStringStringSize(1, "hello", "world") == bytes.size;
     }
 
-    // ----- map<string, int32> ----------------------------------------------------------------
+    // ----- map<string, int32> --------------------------------------------------------------------
 
     @Test
     void shouldRoundTripMapStringInt32() {
@@ -72,7 +72,7 @@ class MapFieldTest {
         assert CodedOutput.computeMapStringInt32Size(1, "count", 42) == bytes.size;
     }
 
-    // ----- map<string, int64> ----------------------------------------------------------------
+    // ----- map<string, int64> --------------------------------------------------------------------
 
     @Test
     void shouldRoundTripMapStringInt64() {
@@ -91,7 +91,7 @@ class MapFieldTest {
         assert CodedOutput.computeMapStringInt64Size(1, "big", 1_000_000_000_000) == bytes.size;
     }
 
-    // ----- map<string, bytes> ----------------------------------------------------------------
+    // ----- map<string, bytes> --------------------------------------------------------------------
 
     @Test
     void shouldRoundTripMapStringBytes() {
@@ -112,7 +112,7 @@ class MapFieldTest {
         assert CodedOutput.computeMapStringBytesSize(1, "x", data) == bytes.size;
     }
 
-    // ----- map<int32, string> ----------------------------------------------------------------
+    // ----- map<int32, string> --------------------------------------------------------------------
 
     @Test
     void shouldRoundTripMapInt32String() {
@@ -140,7 +140,7 @@ class MapFieldTest {
         assert CodedOutput.computeMapInt32StringSize(1, 42, "hello") == bytes.size;
     }
 
-    // ----- map<int32, int32> -----------------------------------------------------------------
+    // ----- map<int32, int32> ---------------------------------------------------------------------
 
     @Test
     void shouldRoundTripMapInt32Int32() {
@@ -159,7 +159,7 @@ class MapFieldTest {
         assert CodedOutput.computeMapInt32Int32Size(1, 10, 20) == bytes.size;
     }
 
-    // ----- map<int64, string> ----------------------------------------------------------------
+    // ----- map<int64, string> --------------------------------------------------------------------
 
     @Test
     void shouldRoundTripMapInt64String() {
@@ -178,7 +178,7 @@ class MapFieldTest {
         assert CodedOutput.computeMapInt64StringSize(1, 999_999_999_999, "large") == bytes.size;
     }
 
-    // ----- map<int64, int64> -----------------------------------------------------------------
+    // ----- map<int64, int64> ---------------------------------------------------------------------
 
     @Test
     void shouldRoundTripMapInt64Int64() {
@@ -197,7 +197,7 @@ class MapFieldTest {
         assert CodedOutput.computeMapInt64Int64Size(1, 100, 200) == bytes.size;
     }
 
-    // ----- map<bool, string> -----------------------------------------------------------------
+    // ----- map<bool, string> ---------------------------------------------------------------------
 
     @Test
     void shouldRoundTripMapBoolString() {
@@ -225,7 +225,7 @@ class MapFieldTest {
         assert CodedOutput.computeMapBoolStringSize(1, True, "yes") == bytes.size;
     }
 
-    // ----- map with other fields -------------------------------------------------------------
+    // ----- map with other fields -----------------------------------------------------------------
 
     @Test
     void shouldRoundTripMapWithOtherFields() {
@@ -273,7 +273,7 @@ class MapFieldTest {
         assert expectedSize == bytes.size;
     }
 
-    // ----- unknown field round-trip -----------------------------------------------------------
+    // ----- unknown field round-trip --------------------------------------------------------------
 
     @Test
     void shouldRoundTripMapAsUnknownFields() {
@@ -288,7 +288,7 @@ class MapFieldTest {
         assert msg.toByteArray() == bytes;
     }
 
-    // ----- wire format verification ----------------------------------------------------------
+    // ----- wire format verification --------------------------------------------------------------
 
     @Test
     void shouldProduceCorrectMapEntryBytes() {
@@ -303,7 +303,7 @@ class MapFieldTest {
         assert bytes == [0x0A, 0x06, 0x0A, 0x01, 0x61, 0x12, 0x01, 0x62];
     }
 
-    // ----- helper ----------------------------------------------------------------------------
+    // ----- helper --------------------------------------------------------------------------------
 
     private immutable Byte[] encode(function void(CodedOutput) writer) {
         ByteArrayOutputStream buf = new ByteArrayOutputStream();
@@ -312,7 +312,6 @@ class MapFieldTest {
         return buf.bytes.freeze(inPlace=True);
     }
 
-    private CodedInput newInput(Byte[] bytes) {
-        return new CodedInput(new ByteArrayInputStream(bytes));
-    }
+    private CodedInput newInput(Byte[] bytes) =
+        new CodedInput(new ByteArrayInputStream(bytes));
 }

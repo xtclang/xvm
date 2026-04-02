@@ -7,7 +7,7 @@ import protobuf.WireType;
 
 class CodedOutputTest {
 
-    // ----- varint tests ------------------------------------------------------------------
+    // ----- varint tests --------------------------------------------------------------------------
 
     @Test
     void shouldWriteVarintOne() {
@@ -41,7 +41,7 @@ class CodedOutputTest {
         assert bytes == [0x7F];
     }
 
-    // ----- tag tests ---------------------------------------------------------------------
+    // ----- tag tests -----------------------------------------------------------------------------
 
     @Test
     void shouldWriteTag() {
@@ -60,7 +60,7 @@ class CodedOutputTest {
         assert buf.bytes == [0x12];
     }
 
-    // ----- integer field tests -----------------------------------------------------------
+    // ----- integer field tests -------------------------------------------------------------------
 
     @Test
     void shouldWriteInt32Field() {
@@ -96,7 +96,7 @@ class CodedOutputTest {
         assert bytes == [0x08, 0x03];
     }
 
-    // ----- fixed-width tests -------------------------------------------------------------
+    // ----- fixed-width tests ---------------------------------------------------------------------
 
     @Test
     void shouldWriteFixed32Field() {
@@ -128,7 +128,7 @@ class CodedOutputTest {
         assert bytes == [0x0D, 0xFF, 0xFF, 0xFF, 0xFF];
     }
 
-    // ----- bool tests --------------------------------------------------------------------
+    // ----- bool tests ----------------------------------------------------------------------------
 
     @Test
     void shouldWriteBoolTrue() {
@@ -142,7 +142,7 @@ class CodedOutputTest {
         assert bytes == [0x08, 0x00];
     }
 
-    // ----- length-delimited tests --------------------------------------------------------
+    // ----- length-delimited tests ----------------------------------------------------------------
 
     @Test
     void shouldWriteStringField() {
@@ -165,7 +165,7 @@ class CodedOutputTest {
         assert bytes == [0x0A, 0x03, 0xAA, 0xBB, 0xCC];
     }
 
-    // ----- round-trip tests --------------------------------------------------------------
+    // ----- round-trip tests ----------------------------------------------------------------------
 
     @Test
     void shouldRoundTripInt32() {
@@ -242,7 +242,7 @@ class CodedOutputTest {
         assert input.isAtEnd();
     }
 
-    // ----- size computation tests --------------------------------------------------------
+    // ----- size computation tests ----------------------------------------------------------------
 
     @Test
     void shouldComputeVarintSize() {
@@ -255,23 +255,22 @@ class CodedOutputTest {
         assert CodedOutput.computeVarintSize(16384) == 3;
     }
 
-    // ----- helpers -----------------------------------------------------------------------
+    // ----- helpers -------------------------------------------------------------------------------
 
-    private Byte[] encodeVarint(Int64 value) {
+    private immutable Byte[] encodeVarint(Int64 value) {
         ByteArrayOutputStream buf = new ByteArrayOutputStream();
         CodedOutput output = new CodedOutput(buf);
         output.writeVarint(value);
-        return buf.bytes.freeze(False);
+        return buf.bytes.freeze(inPlace=True);
     }
 
-    private Byte[] encode(function void(CodedOutput) writer) {
+    private immutable Byte[] encode(function void(CodedOutput) writer) {
         ByteArrayOutputStream buf = new ByteArrayOutputStream();
         CodedOutput output = new CodedOutput(buf);
         writer(output);
-        return buf.bytes.freeze(False);
+        return buf.bytes.freeze(inPlace=True);
     }
 
-    private CodedInput newCodedInput(Byte[] bytes) {
-        return new CodedInput(new ByteArrayInputStream(bytes));
-    }
+    private CodedInput newCodedInput(Byte[] bytes) =
+        new CodedInput(new ByteArrayInputStream(bytes));
 }

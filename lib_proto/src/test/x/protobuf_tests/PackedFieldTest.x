@@ -7,7 +7,7 @@ import protobuf.WireType;
 
 class PackedFieldTest {
 
-    // ----- packed varint round-trips ---------------------------------------------------------
+    // ----- packed varint round-trips -------------------------------------------------------------
 
     @Test
     void shouldRoundTripPackedVarints() {
@@ -60,7 +60,7 @@ class PackedFieldTest {
         assert CodedOutput.computePackedVarintsSize(1, values) == bytes.size;
     }
 
-    // ----- packed int32 round-trips ----------------------------------------------------------
+    // ----- packed int32 round-trips --------------------------------------------------------------
 
     @Test
     void shouldRoundTripPackedInt32s() {
@@ -76,7 +76,7 @@ class PackedFieldTest {
         }
     }
 
-    // ----- packed sint32 round-trips ---------------------------------------------------------
+    // ----- packed sint32 round-trips -------------------------------------------------------------
 
     @Test
     void shouldRoundTripPackedSInt32s() {
@@ -96,7 +96,7 @@ class PackedFieldTest {
         assert CodedOutput.computePackedSInt32sSize(1, values) == bytes.size;
     }
 
-    // ----- packed sint64 round-trips ---------------------------------------------------------
+    // ----- packed sint64 round-trips -------------------------------------------------------------
 
     @Test
     void shouldRoundTripPackedSInt64s() {
@@ -116,7 +116,7 @@ class PackedFieldTest {
         assert CodedOutput.computePackedSInt64sSize(1, values) == bytes.size;
     }
 
-    // ----- packed fixed32 round-trips --------------------------------------------------------
+    // ----- packed fixed32 round-trips ------------------------------------------------------------
 
     @Test
     void shouldRoundTripPackedFixed32s() {
@@ -136,7 +136,7 @@ class PackedFieldTest {
         assert CodedOutput.computePackedFixed32sSize(1, values) == bytes.size;
     }
 
-    // ----- packed fixed64 round-trips --------------------------------------------------------
+    // ----- packed fixed64 round-trips ------------------------------------------------------------
 
     @Test
     void shouldRoundTripPackedFixed64s() {
@@ -156,7 +156,7 @@ class PackedFieldTest {
         assert CodedOutput.computePackedFixed64sSize(1, values) == bytes.size;
     }
 
-    // ----- packed float round-trips ----------------------------------------------------------
+    // ----- packed float round-trips --------------------------------------------------------------
 
     @Test
     void shouldRoundTripPackedFloats() {
@@ -179,7 +179,7 @@ class PackedFieldTest {
         assert CodedOutput.computePackedFloatsSize(1, values) == bytes.size;
     }
 
-    // ----- packed double round-trips ---------------------------------------------------------
+    // ----- packed double round-trips -------------------------------------------------------------
 
     @Test
     void shouldRoundTripPackedDoubles() {
@@ -202,7 +202,7 @@ class PackedFieldTest {
         assert CodedOutput.computePackedDoublesSize(1, values) == bytes.size;
     }
 
-    // ----- packed bool round-trips -----------------------------------------------------------
+    // ----- packed bool round-trips ---------------------------------------------------------------
 
     @Test
     void shouldRoundTripPackedBools() {
@@ -222,7 +222,7 @@ class PackedFieldTest {
         assert CodedOutput.computePackedBoolsSize(1, values) == bytes.size;
     }
 
-    // ----- packed fields with other fields ---------------------------------------------------
+    // ----- packed fields with other fields -------------------------------------------------------
 
     @Test
     void shouldRoundTripPackedWithOtherFields() {
@@ -269,7 +269,7 @@ class PackedFieldTest {
         assert expectedSize == bytes.size;
     }
 
-    // ----- wire format verification ----------------------------------------------------------
+    // ----- wire format verification --------------------------------------------------------------
 
     @Test
     void shouldProduceCorrectPackedVarintBytes() {
@@ -284,7 +284,7 @@ class PackedFieldTest {
         assert bytes == [0x0A, 0x06, 0x03, 0x8E, 0x02, 0x9E, 0xA7, 0x05];
     }
 
-    // ----- packed in AbstractMessage ---------------------------------------------------------
+    // ----- packed in AbstractMessage -------------------------------------------------------------
 
     @Test
     void shouldRoundTripPackedInAbstractMessage() {
@@ -304,7 +304,7 @@ class PackedFieldTest {
         assert msg.toByteArray() == bytes;
     }
 
-    // ----- helper ----------------------------------------------------------------------------
+    // ----- helper --------------------------------------------------------------------------------
 
     private immutable Byte[] encode(function void(CodedOutput) writer) {
         ByteArrayOutputStream buf = new ByteArrayOutputStream();
@@ -313,7 +313,6 @@ class PackedFieldTest {
         return buf.bytes.freeze(inPlace=True);
     }
 
-    private CodedInput newInput(Byte[] bytes) {
-        return new CodedInput(new ByteArrayInputStream(bytes));
-    }
+    private CodedInput newInput(Byte[] bytes) =
+        new CodedInput(new ByteArrayInputStream(bytes));
 }

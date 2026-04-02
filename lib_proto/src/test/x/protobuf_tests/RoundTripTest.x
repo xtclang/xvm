@@ -6,17 +6,17 @@ import protobuf.CodedOutput;
 import protobuf.WireType;
 
 /**
- * Round-trip tests that serialize values with CodedOutput and
- * deserialize them with CodedInput, verifying the original value
- * is recovered.
+ * Round-trip tests that serialize values with CodedOutput and deserialize them with CodedInput,
+ * verifying the original value is recovered.
  */
 class RoundTripTest {
 
-    // ----- int32 -------------------------------------------------------------------------
+    // ----- int32 ---------------------------------------------------------------------------------
 
     @Test
     void shouldRoundTripInt32Values() {
-        for (Int32 value : [0, 1, -1, 127, -128, 255, 256, 32767, -32768, 2147483647, -2147483648]) {
+        for (Int32 value : [0, 1, -1, 127, -128, 255, 256,
+                32767, -32768, 2147483647, -2147483648]) {
             Byte[]     bytes  = encode(o -> o.writeInt32(1, value));
             CodedInput input  = decode(bytes);
             Int        tag    = input.readTag();
@@ -26,7 +26,7 @@ class RoundTripTest {
         }
     }
 
-    // ----- int64 -------------------------------------------------------------------------
+    // ----- int64 ---------------------------------------------------------------------------------
 
     @Test
     void shouldRoundTripInt64Values() {
@@ -38,7 +38,7 @@ class RoundTripTest {
         }
     }
 
-    // ----- uint32 ------------------------------------------------------------------------
+    // ----- uint32 --------------------------------------------------------------------------------
 
     @Test
     void shouldRoundTripUInt32Values() {
@@ -50,7 +50,7 @@ class RoundTripTest {
         }
     }
 
-    // ----- uint64 ------------------------------------------------------------------------
+    // ----- uint64 --------------------------------------------------------------------------------
 
     @Test
     void shouldRoundTripUInt64Values() {
@@ -62,7 +62,7 @@ class RoundTripTest {
         }
     }
 
-    // ----- sint32 ------------------------------------------------------------------------
+    // ----- sint32 --------------------------------------------------------------------------------
 
     @Test
     void shouldRoundTripSInt32Values() {
@@ -74,7 +74,7 @@ class RoundTripTest {
         }
     }
 
-    // ----- sint64 ------------------------------------------------------------------------
+    // ----- sint64 --------------------------------------------------------------------------------
 
     @Test
     void shouldRoundTripSInt64Values() {
@@ -86,7 +86,7 @@ class RoundTripTest {
         }
     }
 
-    // ----- fixed32 -----------------------------------------------------------------------
+    // ----- fixed32 -------------------------------------------------------------------------------
 
     @Test
     void shouldRoundTripFixed32Values() {
@@ -99,7 +99,7 @@ class RoundTripTest {
         }
     }
 
-    // ----- fixed64 -----------------------------------------------------------------------
+    // ----- fixed64 -------------------------------------------------------------------------------
 
     @Test
     void shouldRoundTripFixed64Values() {
@@ -112,7 +112,7 @@ class RoundTripTest {
         }
     }
 
-    // ----- sfixed32 ----------------------------------------------------------------------
+    // ----- sfixed32 ------------------------------------------------------------------------------
 
     @Test
     void shouldRoundTripSFixed32Values() {
@@ -124,7 +124,7 @@ class RoundTripTest {
         }
     }
 
-    // ----- sfixed64 ----------------------------------------------------------------------
+    // ----- sfixed64 ------------------------------------------------------------------------------
 
     @Test
     void shouldRoundTripSFixed64Values() {
@@ -136,7 +136,7 @@ class RoundTripTest {
         }
     }
 
-    // ----- bool --------------------------------------------------------------------------
+    // ----- bool ----------------------------------------------------------------------------------
 
     @Test
     void shouldRoundTripBool() {
@@ -148,7 +148,7 @@ class RoundTripTest {
         }
     }
 
-    // ----- string ------------------------------------------------------------------------
+    // ----- string --------------------------------------------------------------------------------
 
     @Test
     void shouldRoundTripStringValues() {
@@ -171,7 +171,7 @@ class RoundTripTest {
         }
     }
 
-    // ----- bytes -------------------------------------------------------------------------
+    // ----- bytes ---------------------------------------------------------------------------------
 
     @Test
     void shouldRoundTripBytesValues() {
@@ -186,7 +186,7 @@ class RoundTripTest {
         }
     }
 
-    // ----- float / double ----------------------------------------------------------------
+    // ----- float / double ------------------------------------------------------------------------
 
     @Test
     void shouldRoundTripFloatValues() {
@@ -210,7 +210,7 @@ class RoundTripTest {
         }
     }
 
-    // ----- multi-field messages -----------------------------------------------------------
+    // ----- multi-field messages ------------------------------------------------------------------
 
     @Test
     void shouldRoundTripMultiFieldMessage() {
@@ -287,16 +287,15 @@ class RoundTripTest {
         assert input.isAtEnd();
     }
 
-    // ----- helpers -----------------------------------------------------------------------
+    // ----- helpers -------------------------------------------------------------------------------
 
-    private Byte[] encode(function void(CodedOutput) writer) {
+    private immutable Byte[] encode(function void(CodedOutput) writer) {
         ByteArrayOutputStream buf = new ByteArrayOutputStream();
         CodedOutput output = new CodedOutput(buf);
         writer(output);
-        return buf.bytes.freeze(False);
+        return buf.bytes.freeze(inPlace=True);
     }
 
-    private CodedInput decode(Byte[] bytes) {
-        return new CodedInput(new ByteArrayInputStream(bytes));
-    }
+    private CodedInput decode(Byte[] bytes) =
+        new CodedInput(new ByteArrayInputStream(bytes));
 }

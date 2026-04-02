@@ -13,7 +13,7 @@ import protobuf.WireType;
 
 class GenericMessageTest {
 
-    // ----- basic field access ----------------------------------------------------------------
+    // ----- basic field access --------------------------------------------------------------------
 
     @Test
     void shouldSetAndGetVarint() {
@@ -68,7 +68,7 @@ class GenericMessageTest {
         assert !msg.hasField(1);
     }
 
-    // ----- overwrite semantics ---------------------------------------------------------------
+    // ----- overwrite semantics -------------------------------------------------------------------
 
     @Test
     void shouldOverwriteOnSet() {
@@ -80,7 +80,7 @@ class GenericMessageTest {
         assert msg.getFieldValues(1).size == 1;
     }
 
-    // ----- repeated fields -------------------------------------------------------------------
+    // ----- repeated fields -----------------------------------------------------------------------
 
     @Test
     void shouldAddRepeatedVarint() {
@@ -104,7 +104,7 @@ class GenericMessageTest {
         assert msg.getVarint(1) == 20;
     }
 
-    // ----- sub-messages ----------------------------------------------------------------------
+    // ----- sub-messages --------------------------------------------------------------------------
 
     @Test
     void shouldSetAndGetSubMessage() {
@@ -118,7 +118,7 @@ class GenericMessageTest {
         assert restored.getVarint(1) == 150;
     }
 
-    // ----- serialization: protobuf spec examples ---------------------------------------------
+    // ----- serialization: protobuf spec examples -------------------------------------------------
 
     @Test
     void shouldSerializeSpecExample1() {
@@ -150,7 +150,7 @@ class GenericMessageTest {
         assert bytes == [0x1A, 0x03, 0x08, 0x96, 0x01];
     }
 
-    // ----- deserialization -------------------------------------------------------------------
+    // ----- deserialization -----------------------------------------------------------------------
 
     @Test
     void shouldDeserializeSpecExample1() {
@@ -177,7 +177,7 @@ class GenericMessageTest {
         assert child.getVarint(1) == 150;
     }
 
-    // ----- round-trip tests ------------------------------------------------------------------
+    // ----- round-trip tests ----------------------------------------------------------------------
 
     @Test
     void shouldRoundTripSimpleMessage() {
@@ -254,7 +254,7 @@ class GenericMessageTest {
         assert values[2] == 30;
     }
 
-    // ----- size computation ------------------------------------------------------------------
+    // ----- size computation ----------------------------------------------------------------------
 
     @Test
     void shouldComputeCorrectSize() {
@@ -274,7 +274,7 @@ class GenericMessageTest {
         assert msg.toByteArray().size == size;
     }
 
-    // ----- merge semantics -------------------------------------------------------------------
+    // ----- merge semantics -----------------------------------------------------------------------
 
     @Test
     void shouldMergeAppendToExistingFields() {
@@ -306,7 +306,7 @@ class GenericMessageTest {
         assert WireType.getFieldNumber(tag1) == 3;
     }
 
-    // ----- empty message ---------------------------------------------------------------------
+    // ----- empty message -------------------------------------------------------------------------
 
     @Test
     void shouldHandleEmptyMessage() {

@@ -9,8 +9,8 @@ import protobuf.WireType;
 class AbstractMessageTest {
 
     /**
-     * A concrete subclass that handles field 1 (int32) and field 2 (string)
-     * as known fields. All other fields pass through as unknown.
+     * A concrete subclass that handles field 1 (int32) and field 2 (string) as known fields. All
+     * other fields pass through as unknown.
      */
     static class TestMessage
             extends AbstractMessage {
@@ -65,12 +65,12 @@ class AbstractMessageTest {
         }
     }
 
-    // ----- base class: all fields unknown ----------------------------------------------------
+    // ----- base class: all fields unknown --------------------------------------------------------
 
     @Test
     void shouldRoundTripAllUnknown() {
         // Serialize with CodedOutput, deserialize into bare AbstractMessage
-        Byte[] original = encode(o -> {
+        immutable Byte[] original = encode(o -> {
             o.writeInt32(1, 42);
             o.writeString(2, "hello");
             o.writeFixed32(3, 0xDEADBEEF);
@@ -94,7 +94,7 @@ class AbstractMessageTest {
     @Test
     void shouldRoundTripSpecExample1() {
         // Test1 { int32 a = 1; } with a = 150 -> 08 96 01
-        Byte[] original = [0x08, 0x96, 0x01];
+        immutable Byte[] original = [0x08, 0x96, 0x01];
         AbstractMessage msg = new AbstractMessage();
         msg.mergeFromBytes(original);
         assert msg.toByteArray() == original;
@@ -103,7 +103,7 @@ class AbstractMessageTest {
     @Test
     void shouldRoundTripSpecExample2() {
         // Test2 { string b = 2; } with b = "testing"
-        Byte[] original = [0x12, 0x07, 0x74, 0x65, 0x73, 0x74, 0x69, 0x6E, 0x67];
+        immutable Byte[] original = [0x12, 0x07, 0x74, 0x65, 0x73, 0x74, 0x69, 0x6E, 0x67];
         AbstractMessage msg = new AbstractMessage();
         msg.mergeFromBytes(original);
         assert msg.toByteArray() == original;
@@ -112,7 +112,7 @@ class AbstractMessageTest {
     @Test
     void shouldRoundTripSpecExample3() {
         // Test3 { Test1 c = 3; } with c.a = 150 -> 1a 03 08 96 01
-        Byte[] original = [0x1A, 0x03, 0x08, 0x96, 0x01];
+        immutable Byte[] original = [0x1A, 0x03, 0x08, 0x96, 0x01];
         AbstractMessage msg = new AbstractMessage();
         msg.mergeFromBytes(original);
         assert msg.toByteArray() == original;
@@ -120,11 +120,11 @@ class AbstractMessageTest {
 
     @Test
     void shouldRoundTripMixedWireTypes() {
-        Byte[] original = encode(o -> {
+        immutable Byte[] original = encode(o -> {
             o.writeVarint(42);      // not a field — let me use proper fields
         });
         // Use a proper multi-type message
-        Byte[] data = encode(o -> {
+        immutable Byte[] data = encode(o -> {
             o.writeInt32(1, 150);
             o.writeFixed32(2, 0x12345678);
             o.writeFixed64(3, 1);
@@ -138,7 +138,7 @@ class AbstractMessageTest {
 
     @Test
     void shouldComputeCorrectSize() {
-        Byte[] data = encode(o -> {
+        immutable Byte[] data = encode(o -> {
             o.writeInt32(1, 150);
             o.writeString(2, "testing");
         });
@@ -147,11 +147,11 @@ class AbstractMessageTest {
         assert msg.serializedSize() == data.size;
     }
 
-    // ----- subclass: known + unknown fields --------------------------------------------------
+    // ----- subclass: known + unknown fields ------------------------------------------------------
 
     @Test
     void shouldParseKnownFields() {
-        Byte[] data = encode(o -> {
+        immutable Byte[] data = encode(o -> {
             o.writeInt32(1, 42);
             o.writeString(2, "hello");
         });
@@ -164,7 +164,7 @@ class AbstractMessageTest {
 
     @Test
     void shouldPreserveUnknownFields() {
-        Byte[] data = encode(o -> {
+        immutable Byte[] data = encode(o -> {
             o.writeInt32(1, 42);
             o.writeString(2, "hello");
             o.writeFixed32(3, 0xDEADBEEF);  // unknown to TestMessage
@@ -179,7 +179,7 @@ class AbstractMessageTest {
 
     @Test
     void shouldRoundTripKnownAndUnknown() {
-        Byte[] data = encode(o -> {
+        immutable Byte[] data = encode(o -> {
             o.writeInt32(1, 42);
             o.writeString(2, "hello");
             o.writeFixed32(3, 0xDEADBEEF);
@@ -208,7 +208,7 @@ class AbstractMessageTest {
         msg.id   = 42;
         msg.name = "hello";
 
-        Byte[] expected = encode(o -> {
+        immutable Byte[] expected = encode(o -> {
             o.writeInt32(1, 42);
             o.writeString(2, "hello");
         });
@@ -217,7 +217,7 @@ class AbstractMessageTest {
 
     @Test
     void shouldComputeSizeWithKnownAndUnknown() {
-        Byte[] data = encode(o -> {
+        immutable Byte[] data = encode(o -> {
             o.writeInt32(1, 42);
             o.writeString(2, "hello");
             o.writeFixed32(3, 0xDEADBEEF);
@@ -249,7 +249,7 @@ class AbstractMessageTest {
     @Test
     void shouldHandleOnlyUnknownFields() {
         // All fields are unknown to TestMessage
-        Byte[] data = encode(o -> {
+        immutable Byte[] data = encode(o -> {
             o.writeFixed32(10, 0xAABBCCDD);
             o.writeFixed64(11, 123456789);
         });
@@ -261,7 +261,7 @@ class AbstractMessageTest {
         assert msg.toByteArray() == data;
     }
 
-    // ----- helper ----------------------------------------------------------------------------
+    // ----- helper --------------------------------------------------------------------------------
 
     private immutable Byte[] encode(function void(CodedOutput) writer) {
         ByteArrayOutputStream buf = new ByteArrayOutputStream();

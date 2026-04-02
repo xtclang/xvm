@@ -1,9 +1,9 @@
 /**
  * Represents a single protobuf field value at the wire format level.
  *
- * A FieldValue holds the raw data for one occurrence of a field, tagged with
- * the wire type that was used to encode it. Without a schema, this is the most
- * specific type information available from the wire format.
+ * A FieldValue holds the raw data for one occurrence of a field, tagged with the wire type that was
+ * used to encode it. Without a schema, this is the most specific type information available from
+ * the wire format.
  */
 interface FieldValue
         extends immutable Const {
@@ -25,7 +25,7 @@ interface FieldValue
      */
     void writeTo(CodedOutput out);
 
-    // ----- concrete implementations ----------------------------------------------------------
+    // ----- concrete implementations --------------------------------------------------------------
 
     /**
      * A varint-encoded value.
@@ -100,8 +100,8 @@ interface FieldValue
     /**
      * A length-delimited value.
      *
-     * Used for: string, bytes, embedded messages, packed repeated fields.
-     * The interpretation depends on the schema, which is not available at this level.
+     * Used for: string, bytes, embedded messages, packed repeated fields. The interpretation
+     * depends on the schema, which is not available at this level.
      */
     static const LengthValue(immutable Byte[] data)
             implements FieldValue {
@@ -115,9 +115,7 @@ interface FieldValue
         @Override
         void writeTo(CodedOutput out) {
             out.writeVarint(data.size.toInt64());
-            for (Byte b : data) {
-                out.writeRawByte(b);
-            }
+            out.writeRawBytes(data);
         }
     }
 }
