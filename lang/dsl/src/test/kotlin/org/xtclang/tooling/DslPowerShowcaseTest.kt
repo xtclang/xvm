@@ -1,15 +1,15 @@
-/**
+/*
  * DSL Power Showcase - Demonstrating the XTC Language Model DSL
  *
  * This test suite showcases the expressive power of the Kotlin DSL for defining
  * language models. It demonstrates:
  *
- * 1. **Mini-Language Definition** - Define a complete language in ~50 lines
- * 2. **Rich Type System Modeling** - Express complex type relationships
- * 3. **Operator Precedence** - Full precedence and associativity support
- * 4. **AST Concept Hierarchies** - Model inheritance and composition
- * 5. **Multi-Editor Generation** - Generate support for 6+ editors from one source
- * 6. **Model Coverage Validation** - Verify model definitions against real source files
+ * 1. Mini-Language Definition - Define a complete language in ~50 lines
+ * 2. Rich Type System Modeling - Express complex type relationships
+ * 3. Operator Precedence - Full precedence and associativity support
+ * 4. AST Concept Hierarchies - Model inheritance and composition
+ * 5. Multi-Editor Generation - Generate support for 6+ editors from one source
+ * 6. Model Coverage Validation - Verify model definitions against real source files
  *
  * NOTE: This DSL is for EDITOR GENERATION, not code analysis. The model defines
  * language syntax to generate TextMate, Vim, Emacs, and Tree-sitter support from

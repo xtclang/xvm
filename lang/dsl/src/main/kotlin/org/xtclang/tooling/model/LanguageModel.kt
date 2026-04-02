@@ -1,4 +1,4 @@
-/**
+/*
  * DSL Framework for defining language models.
  *
  * This framework provides a type-safe Kotlin DSL for defining language specifications

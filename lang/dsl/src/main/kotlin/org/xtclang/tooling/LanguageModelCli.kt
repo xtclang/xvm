@@ -1,4 +1,4 @@
-/**
+/*
  * CLI for the XTC Language Model.
  *
  * Provides commands to:
@@ -36,17 +36,50 @@ fun main(args: Array<String>) {
     logger.info("Executing command: {}", command)
 
     when (command) {
-        "dump" -> dumpModel()
-        "textmate" -> generateTextMate(args.getOrNull(1))
-        "sublime" -> generateSublimeSyntax(args.getOrNull(1))
-        "vim" -> generateVim(args.getOrNull(1))
-        "emacs" -> generateEmacs(args.getOrNull(1))
-        "tree-sitter" -> generateTreeSitter(args.getOrNull(1))
-        "vscode-config" -> generateVSCodeConfig(args.getOrNull(1))
-        "package-json" -> generatePackageJson(args.getOrNull(1))
-        "stats" -> showStats()
-        "validate" -> validateSources(args.drop(1))
-        "help" -> showHelp()
+        "dump" -> {
+            dumpModel()
+        }
+
+        "textmate" -> {
+            generateTextMate(args.getOrNull(1))
+        }
+
+        "sublime" -> {
+            generateSublimeSyntax(args.getOrNull(1))
+        }
+
+        "vim" -> {
+            generateVim(args.getOrNull(1))
+        }
+
+        "emacs" -> {
+            generateEmacs(args.getOrNull(1))
+        }
+
+        "tree-sitter" -> {
+            generateTreeSitter(args.getOrNull(1))
+        }
+
+        "vscode-config" -> {
+            generateVSCodeConfig(args.getOrNull(1))
+        }
+
+        "package-json" -> {
+            generatePackageJson(args.getOrNull(1))
+        }
+
+        "stats" -> {
+            showStats()
+        }
+
+        "validate" -> {
+            validateSources(args.drop(1))
+        }
+
+        "help" -> {
+            showHelp()
+        }
+
         else -> {
             logger.warn("Unknown command: {}", command)
             println("Unknown command: $command")
