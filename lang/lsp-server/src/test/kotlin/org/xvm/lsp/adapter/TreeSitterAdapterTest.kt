@@ -431,6 +431,61 @@ class TreeSitterAdapterTest {
             assertThat(completions).anyMatch { it.label == "test" }
             assertThat(completions).anyMatch { it.label == "Calculator" }
         }
+
+        /**
+         * When trigger character is ".", completions should contain class member
+         * names (methods/properties) and NOT keywords.
+         */
+        @Test
+        @DisplayName("should return members after dot trigger")
+        fun shouldReturnMembersAfterDot() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Calculator {
+                        Int add(Int a, Int b) {
+                            return a + b;
+                        }
+                        void test() {
+                            this.
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor after "this." on line 5, col 17
+            val completions = logged("shouldReturnMembersAfterDot", ts.getCompletions(uri, 5, 17, "."))
+            logger.info("  completion labels: {}", completions.map { it.label })
+
+            // Should NOT contain keywords when in member context
+            assertThat(completions).noneMatch { it.label == "class" }
+            assertThat(completions).noneMatch { it.label == "module" }
+        }
+
+        /**
+         * When no trigger character is provided (default completion), should
+         * return the full set of keywords + types + symbols (same as before).
+         */
+        @Test
+        @DisplayName("should return full completions with null trigger")
+        fun shouldReturnFullCompletionsWithNullTrigger() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Foo {
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            val completions = ts.getCompletions(uri, 2, 0, null)
+
+            assertThat(completions).anyMatch { it.label == "class" }
+            assertThat(completions).anyMatch { it.label == "String" }
+        }
     }
 
     // ========================================================================
@@ -999,6 +1054,72 @@ class TreeSitterAdapterTest {
             logger.info("  actions: {}", actions.map { it.title })
 
             assertThat(actions).noneMatch { it.title.contains("Remove unused import") && it.title.contains("Bar") }
+        }
+
+        /**
+         * A method declaration without a preceding doc comment should produce a
+         * "Generate documentation comment" code action with @param entries for
+         * each parameter.
+         */
+        @Test
+        @DisplayName("should suggest generating doc comment for method without one")
+        fun shouldSuggestGeneratingDocComment() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Calculator {
+                        Int add(Int a, Int b) {
+                            return a + b;
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // Request code actions over the method declaration line (line 2)
+            val range =
+                XtcCompilerAdapter.Range(
+                    XtcCompilerAdapter.Position(2, 0),
+                    XtcCompilerAdapter.Position(2, 0),
+                )
+            val actions = logged("shouldSuggestGeneratingDocComment", ts.getCodeActions(uri, range, emptyList()))
+            logger.info("  actions: {}", actions.map { it.title })
+
+            assertThat(actions).anyMatch { it.title == "Generate documentation comment" }
+        }
+
+        /**
+         * A method that already has a doc comment (line ending with "* /" above)
+         * should NOT produce a "Generate documentation comment" action.
+         */
+        @Test
+        @DisplayName("should not suggest doc comment when one already exists")
+        fun shouldNotSuggestDocCommentWhenExists() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Calculator {
+                        /** Adds two numbers. */
+                        Int add(Int a, Int b) {
+                            return a + b;
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // Request code actions over the method declaration line (line 3)
+            val range =
+                XtcCompilerAdapter.Range(
+                    XtcCompilerAdapter.Position(3, 0),
+                    XtcCompilerAdapter.Position(3, 0),
+                )
+            val actions = logged("shouldNotSuggestDocCommentWhenExists", ts.getCodeActions(uri, range, emptyList()))
+            logger.info("  actions: {}", actions.map { it.title })
+
+            assertThat(actions).noneMatch { it.title == "Generate documentation comment" }
         }
 
         private fun zeroRange() =

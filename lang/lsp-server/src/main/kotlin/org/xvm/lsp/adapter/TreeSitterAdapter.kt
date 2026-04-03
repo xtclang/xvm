@@ -125,6 +125,31 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
          * IntelliJ 2026.1+ ships with JBR 25 which satisfies this minimum.
          */
         const val MIN_JAVA_VERSION = 25
+
+        /** Symbol kinds that represent types (for type-position completion filtering). */
+        private val typeSymbolKinds =
+            setOf(
+                SymbolKind.CLASS,
+                SymbolKind.INTERFACE,
+                SymbolKind.MIXIN,
+                SymbolKind.SERVICE,
+                SymbolKind.CONST,
+                SymbolKind.ENUM,
+                SymbolKind.MODULE,
+            )
+
+        /** Common XTC annotations for annotation completion. */
+        private val commonAnnotations =
+            listOf(
+                "Override",
+                "Abstract",
+                "Lazy",
+                "Inject",
+                "Volatile",
+                "Synchronized",
+                "Deprecated",
+                "RO",
+            )
     }
 
     // ========================================================================
@@ -274,50 +299,271 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
     }
 
     /**
-     * TODO: Context-unaware. Cannot provide member completion after '.' or
-     * type-aware suggestions. Needs compiler TypeResolver (Phase 5).
+     * Context-aware completion: filters and augments suggestions based on the AST
+     * context at the cursor position and the trigger character.
      *
-     * Currently returns keywords, built-in types, document symbols, and imported names.
-     * A compiler adapter would add after-dot member completion and type-filtered suggestions.
+     * | Context | What to show |
+     * |---------|-------------|
+     * | After `.` | Same-class members (methods, properties) from enclosing class body |
+     * | In type position | Only types (classes, interfaces, enums, etc.) |
+     * | After `@` | Known annotation names |
+     * | In `import` statement | Qualified names from workspace index |
+     * | Default | Keywords + types + locals + imports (current behavior) |
      */
     override fun getCompletions(
         uri: String,
         line: Int,
         column: Int,
+        triggerCharacter: String?,
     ): List<CompletionItem> {
-        logger.info("getCompletions: uri={}, line={}, column={}", uri, line, column)
-        return buildList {
-            // Add keywords and built-in types
-            addAll(keywordCompletions())
-            addAll(builtInTypeCompletions())
+        logger.info("getCompletions: uri={}, line={}, column={}, trigger={}", uri, line, column, triggerCharacter)
 
-            // Add symbols from current document
-            parsedTrees[uri]?.let { tree ->
-                queryEngine.findAllDeclarations(tree, uri).forEach { symbol ->
-                    add(
-                        CompletionItem(
-                            label = symbol.name,
-                            kind = toCompletionKind(symbol.kind),
-                            detail = symbol.typeSignature ?: symbol.kind.name.lowercase(),
-                            insertText = symbol.name,
-                        ),
-                    )
+        val tree = parsedTrees[uri]
+        val context =
+            if (tree != null) {
+                val contextNode = tree.nodeAt(line, maxOf(0, column - 1))
+                classifyCompletionContext(contextNode, triggerCharacter)
+            } else {
+                CompletionContext.DEFAULT
+            }
+        logger.info("getCompletions: context={}", context)
+
+        return buildList {
+            when (context) {
+                CompletionContext.MEMBER -> {
+                    // After '.': show members from the enclosing class body
+                    if (tree != null) {
+                        addAll(collectClassMembers(tree, uri, line, column))
+                    }
                 }
 
-                // Add imports from current document
-                queryEngine.findImports(tree).forEach { importPath ->
-                    val simpleName = importPath.substringAfterLast(".")
-                    add(
-                        CompletionItem(
-                            label = simpleName,
-                            kind = CompletionKind.CLASS,
-                            detail = "import: $importPath",
-                            insertText = simpleName,
-                        ),
+                CompletionContext.TYPE -> {
+                    // In type position: only type completions (classes, interfaces, etc.)
+                    addAll(builtInTypeCompletions())
+                    if (tree != null) {
+                        queryEngine
+                            .findAllDeclarations(tree, uri)
+                            .filter { it.kind in typeSymbolKinds }
+                            .forEach { symbol ->
+                                add(
+                                    CompletionItem(
+                                        label = symbol.name,
+                                        kind = toCompletionKind(symbol.kind),
+                                        detail = symbol.typeSignature ?: symbol.kind.name.lowercase(),
+                                        insertText = symbol.name,
+                                    ),
+                                )
+                            }
+                        // Add workspace index types
+                        if (indexReady.get()) {
+                            addAll(workspaceIndexTypeCompletions())
+                        }
+                    }
+                }
+
+                CompletionContext.ANNOTATION -> {
+                    // After '@': known annotation names
+                    addAll(
+                        commonAnnotations.map { name ->
+                            CompletionItem(
+                                label = name,
+                                kind = CompletionKind.CLASS,
+                                detail = "annotation",
+                                insertText = name,
+                            )
+                        },
                     )
+                    // Also add annotations found in the current file
+                    if (tree != null) {
+                        collectAnnotationNames(tree.root).forEach { name ->
+                            add(
+                                CompletionItem(
+                                    label = name,
+                                    kind = CompletionKind.CLASS,
+                                    detail = "annotation",
+                                    insertText = name,
+                                ),
+                            )
+                        }
+                    }
+                }
+
+                CompletionContext.IMPORT -> {
+                    // In import statement: qualified names from workspace index
+                    if (indexReady.get()) {
+                        workspaceIndex.search("", limit = 200).forEach { symbol ->
+                            add(
+                                CompletionItem(
+                                    label = symbol.qualifiedName,
+                                    kind = toCompletionKind(symbol.kind),
+                                    detail = symbol.kind.name.lowercase(),
+                                    insertText = symbol.qualifiedName,
+                                ),
+                            )
+                        }
+                    }
+                }
+
+                CompletionContext.DEFAULT -> {
+                    // Full default: keywords + built-in types + document symbols + imports
+                    addAll(keywordCompletions())
+                    addAll(builtInTypeCompletions())
+                    if (tree != null) {
+                        queryEngine.findAllDeclarations(tree, uri).forEach { symbol ->
+                            add(
+                                CompletionItem(
+                                    label = symbol.name,
+                                    kind = toCompletionKind(symbol.kind),
+                                    detail = symbol.typeSignature ?: symbol.kind.name.lowercase(),
+                                    insertText = symbol.name,
+                                ),
+                            )
+                        }
+                        queryEngine.findImports(tree).forEach { importPath ->
+                            val simpleName = importPath.substringAfterLast(".")
+                            add(
+                                CompletionItem(
+                                    label = simpleName,
+                                    kind = CompletionKind.CLASS,
+                                    detail = "import: $importPath",
+                                    insertText = simpleName,
+                                ),
+                            )
+                        }
+                    }
                 }
             }
-        }.also { logger.info("getCompletions -> {} items", it.size) }
+        }.distinctBy { it.label }.also { logger.info("getCompletions -> {} items ({})", it.size, context) }
+    }
+
+    // ========================================================================
+    // Completion context classification
+    // ========================================================================
+
+    private enum class CompletionContext {
+        MEMBER, // After '.' — show class members
+        TYPE, // In type position — only types
+        ANNOTATION, // After '@' — annotation names
+        IMPORT, // Inside import statement — qualified names
+        DEFAULT, // Everything
+    }
+
+    private fun classifyCompletionContext(
+        node: XtcNode?,
+        triggerCharacter: String?,
+    ): CompletionContext {
+        if (node == null) return CompletionContext.DEFAULT
+
+        // Check trigger character first
+        if (triggerCharacter == ".") return CompletionContext.MEMBER
+
+        // Walk ancestry to determine context
+        val ancestry = generateSequence(node) { it.parent }.toList()
+        for (ancestor in ancestry) {
+            when (ancestor.type) {
+                "member_expression" -> {
+                    // If we're after the '.' in a member expression
+                    val dot = ancestor.children.firstOrNull { it.type == "." }
+                    if (dot != null && node.startColumn >= dot.endColumn) {
+                        return CompletionContext.MEMBER
+                    }
+                }
+
+                "import_statement" -> {
+                    return CompletionContext.IMPORT
+                }
+
+                "type_expression", "type_name", "generic_type" -> {
+                    return CompletionContext.TYPE
+                }
+
+                "annotation" -> {
+                    return CompletionContext.ANNOTATION
+                }
+            }
+        }
+
+        // Check if the node text starts with '@'
+        if (node.text.startsWith("@")) return CompletionContext.ANNOTATION
+
+        // Check extends/implements context -> TYPE
+        val prevSiblingTypes = setOf("extends", "implements", "incorporates", "delegates")
+        val parent = node.parent
+        if (parent != null) {
+            val nodeIndex = parent.children.indexOf(node)
+            if (nodeIndex > 0) {
+                val prevSibling = parent.children[nodeIndex - 1]
+                if (prevSibling.text in prevSiblingTypes) return CompletionContext.TYPE
+            }
+        }
+
+        return CompletionContext.DEFAULT
+    }
+
+    /**
+     * Collect method and property names from the enclosing class body for member completion.
+     */
+    private fun collectClassMembers(
+        tree: XtcTree,
+        uri: String,
+        line: Int,
+        column: Int,
+    ): List<CompletionItem> {
+        val node = tree.nodeAt(line, maxOf(0, column - 1)) ?: return emptyList()
+
+        // Walk up to find the enclosing class body
+        val classBodyTypes = setOf("class_body", "module_body", "package_body", "enum_body")
+        val classBody =
+            generateSequence(node) { it.parent }
+                .firstOrNull { it.type in classBodyTypes }
+                ?: return emptyList()
+
+        // Extract declarations from the class body
+        return buildList {
+            for (child in classBody.children) {
+                val name = child.childByFieldName("name")?.text ?: continue
+                val kind =
+                    when (child.type) {
+                        "method_declaration", "function_declaration" -> CompletionKind.METHOD
+                        "constructor_declaration" -> CompletionKind.METHOD
+                        "property_declaration" -> CompletionKind.PROPERTY
+                        else -> continue
+                    }
+                add(
+                    CompletionItem(
+                        label = name,
+                        kind = kind,
+                        detail = child.type.replace("_declaration", "").replace("_", " "),
+                        insertText = name,
+                    ),
+                )
+            }
+        }
+    }
+
+    private fun workspaceIndexTypeCompletions(): List<CompletionItem> =
+        workspaceIndex
+            .search("", limit = 200)
+            .filter { it.kind in typeSymbolKinds }
+            .map { symbol ->
+                CompletionItem(
+                    label = symbol.name,
+                    kind = toCompletionKind(symbol.kind),
+                    detail = "import: ${symbol.qualifiedName}",
+                    insertText = symbol.name,
+                )
+            }
+
+    private fun collectAnnotationNames(node: XtcNode): Set<String> {
+        val names = mutableSetOf<String>()
+        if (node.type == "annotation") {
+            val name =
+                node.childByFieldName("name")?.text
+                    ?: node.children.firstOrNull { it.type == "identifier" }?.text
+            if (name != null) names.add(name)
+        }
+        node.children.forEach { names.addAll(collectAnnotationNames(it)) }
+        return names
     }
 
     /**
@@ -772,7 +1018,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
             diagnostics.size,
         )
         val tree = parsedTrees[uri] ?: return emptyList()
-        return codeActions.getCodeActions(tree, uri, queryEngine)
+        return codeActions.getCodeActions(tree, uri, range, queryEngine, workspaceIndex, indexReady)
     }
 
     // ========================================================================
