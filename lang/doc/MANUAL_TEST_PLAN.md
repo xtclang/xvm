@@ -362,6 +362,67 @@ module TestModule {
 
 ---
 
+### 13a. On-Type Formatting (Auto-Indent)
+
+**LSP Method:** `textDocument/onTypeFormatting`
+**Status:** ✅ Done
+**Works with:** Tree-sitter adapter only
+
+The LSP server uses tree-sitter AST context to auto-indent as you type. Trigger characters
+are `Enter`, `}`, and `;`. This is strictly better than regex-based TextMate indentation
+because it understands nesting depth, continuation lines, and string literals.
+
+**How it works:** Automatic — indentation is adjusted immediately when you type a trigger
+character. No manual action needed.
+
+| # | Test | Steps | Expected Result |
+|---|------|-------|-----------------|
+| 13a.1 | Indent after `{` in class | Type `class Foo {` then Enter | New line indented +4 from class keyword |
+| 13a.2 | Indent after `{` in method | Inside a class, type `void foo() {` then Enter | New line indented +4 from method |
+| 13a.3 | Indent after `{` in if | Inside a method, type `if (True) {` then Enter | New line indented +4 from if |
+| 13a.4 | Outdent `}` for class | Type `}` to close a class body | `}` aligns with the `class` keyword |
+| 13a.5 | Outdent `}` for method | Type `}` to close a method body | `}` aligns with the method declaration |
+| 13a.6 | Outdent `}` for if block | Type `}` to close an if block | `}` aligns with the `if` keyword |
+| 13a.7 | Maintain indent after statement | After `x = 1;` press Enter | New line at same indent level |
+| 13a.8 | Continuation + `{` | Type `implements Closeable {` then Enter | Body indent from declaration start (+4), not from continuation (+8) |
+| 13a.9 | Module body indent | Type `module myapp {` then Enter | New line indented +4 |
+| 13a.10 | No indent inside string | Press Enter inside a string literal | No indentation adjustment |
+| 13a.11 | Nested constructs (3+ levels) | Class > method > if > Enter after `{` | Correct cumulative indent (e.g. 12 for 3 levels) |
+| 13a.12 | After `}` line | Press Enter after a `}` line | New line at same indent as `}` |
+| 13a.13 | Large file performance | Open a `.x` file > 1000 lines, type normally | < 5ms per formatting request (check LSP log) |
+
+---
+
+### 13b. Code Style Settings (IntelliJ)
+
+**Provider:** IntelliJ plugin (`XtcLanguageCodeStyleSettingsProvider`)
+**Status:** ✅ Done
+**Works with:** IntelliJ only (VS Code uses `editor.tabSize` / `editor.insertSpaces`)
+
+Code Style settings for XTC appear under Settings > Editor > Code Style > Ecstasy.
+
+**How to access:**
+- *IntelliJ:* Settings/Preferences > Editor > Code Style > Ecstasy
+
+| # | Test | Steps | Expected Result |
+|---|------|-------|-----------------|
+| 13b.1 | Settings page exists | Open Settings > Editor > Code Style | "Ecstasy" appears in the language list |
+| 13b.2 | Default indent size | Open Code Style > Ecstasy > Tabs and Indents | Indent: 4, Continuation indent: 8, Tab size: 4, Use tab character: unchecked |
+| 13b.3 | Code preview | Look at the preview pane | XTC code sample with classes, methods, switch/case |
+| 13b.4 | Change indent size | Set indent to 2, look at preview | Preview re-indents with 2-space indent |
+| 13b.5 | Change continuation indent | Set continuation indent to 4 | Preview adjusts `implements` line indent |
+| 13b.6 | Tab character toggle | Check "Use tab character" | Preview switches from spaces to tabs |
+| 13b.7 | Right margin | Check the right margin value | Should default to 120 |
+| 13b.8 | Settings persist | Change indent to 3, close and reopen Settings | Indent still shows 3 |
+| 13b.9 | Reset to defaults | Click "Reset" or "Set from..." > "Ecstasy" | Values revert to 4/8/4/false |
+
+**Note:** The Code Style settings are not yet wired to the LSP server's `XtcFormattingConfig`.
+Currently the LSP server reads `tabSize`/`insertSpaces` from the editor's generic settings
+(which LSP4IJ forwards). Wiring the Code Style settings to the LSP server is planned for
+Phase 3 alongside `xtc-format.toml` config file support.
+
+---
+
 ### 14. Signature Help
 
 **LSP Method:** `textDocument/signatureHelp`

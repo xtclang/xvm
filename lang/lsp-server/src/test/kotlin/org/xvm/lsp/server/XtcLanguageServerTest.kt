@@ -211,6 +211,13 @@ class XtcLanguageServerTest {
             assertThat(caps.codeActionProvider?.left).describedAs("codeAction").isTrue()
             assertThat(caps.documentFormattingProvider?.left).describedAs("formatting").isTrue()
             assertThat(caps.documentRangeFormattingProvider?.left).describedAs("rangeFormatting").isTrue()
+            assertThat(caps.documentOnTypeFormattingProvider).describedAs("onTypeFormatting").isNotNull()
+            assertThat(caps.documentOnTypeFormattingProvider?.firstTriggerCharacter)
+                .describedAs("onTypeFormatting firstTrigger")
+                .isEqualTo("\n")
+            assertThat(caps.documentOnTypeFormattingProvider?.moreTriggerCharacter)
+                .describedAs("onTypeFormatting moreTriggers")
+                .containsExactly("}", ";")
             assertThat(caps.inlayHintProvider?.left).describedAs("inlayHint").isTrue()
 
             // Workspace features
@@ -230,7 +237,6 @@ class XtcLanguageServerTest {
             if (caps.implementationProvider == null) notYetImplemented.add("implementation")
             if (caps.codeLensProvider == null) notYetImplemented.add("codeLens")
             if (caps.colorProvider == null) notYetImplemented.add("colorProvider")
-            if (caps.documentOnTypeFormattingProvider == null) notYetImplemented.add("onTypeFormatting")
             if (caps.typeHierarchyProvider == null) notYetImplemented.add("typeHierarchy")
             if (caps.callHierarchyProvider == null) notYetImplemented.add("callHierarchy")
             if (caps.monikerProvider == null) notYetImplemented.add("moniker")
@@ -242,12 +248,12 @@ class XtcLanguageServerTest {
             println("========================================")
             println("LSP Capabilities Audit")
             println("========================================")
-            println("Implemented (${19} capabilities):")
+            println("Implemented (${20} capabilities):")
             println("  hover, completion, definition, references, documentSymbol,")
             println("  documentHighlight, selectionRange, foldingRange,")
             println("  documentLink, signatureHelp, workspaceSymbol,")
             println("  rename (with prepareRename), codeAction,")
-            println("  formatting, rangeFormatting, inlayHint,")
+            println("  formatting, rangeFormatting, onTypeFormatting, inlayHint,")
             println("  textDocumentSync, semanticTokens")
             println()
             println("Not yet implemented (${notYetImplemented.size} capabilities):")
@@ -265,7 +271,6 @@ class XtcLanguageServerTest {
                     "implementation",
                     "codeLens",
                     "colorProvider",
-                    "onTypeFormatting",
                     "typeHierarchy",
                     "callHierarchy",
                     "moniker",

@@ -7,8 +7,10 @@ IntelliJ IDEA plugin for XTC (Ecstasy) language support.
 - **New Project Wizard** - Create XTC projects directly from IntelliJ (File → New → Project → XTC)
 - **Run Configurations** - Run XTC applications via Gradle or `xtc run`
 - **Syntax Highlighting** - Full syntax highlighting for `.x` files (via TextMate grammar)
-- **Language Features via LSP** - hover, completion, go-to-definition, find references, outline
-  (see [LSP Server README](../lsp-server/README.md) for adapter details)
+- **Language Features via LSP** - hover, completion, go-to-definition, find references, outline,
+  auto-indent on type (see [LSP Server README](../lsp-server/README.md) for details)
+- **Code Style Settings** - Configurable indentation defaults under
+  Settings > Editor > Code Style > Ecstasy (indent size, continuation indent, tabs vs spaces)
 
 ## Installation
 
@@ -452,6 +454,7 @@ intellij-plugin/
 │   ├── kotlin/org/xtclang/idea/
 │   │   ├── PluginPaths.kt               # Plugin directory/JAR path resolution
 │   │   ├── XtcIconProvider.kt            # Icon provider for .x files
+│   │   ├── XtcIntelliJLanguage.kt        # IntelliJ Language singleton (for Code Style, etc.)
 │   │   ├── XtcTextMateBundleProvider.kt  # TextMate grammar integration
 │   │   ├── dap/
 │   │   │   └── XtcDebugAdapterFactory.kt # DAP server integration
@@ -460,10 +463,13 @@ intellij-plugin/
 │   │   ├── project/
 │   │   │   ├── XtcNewProjectWizard.kt    # New Project wizard entry
 │   │   │   └── XtcNewProjectWizardStep.kt # Wizard step implementation
-│   │   └── run/
-│   │       ├── XtcRunConfiguration.kt         # Run configuration
-│   │       ├── XtcRunConfigurationProducer.kt # Auto-detect runnable files
-│   │       └── XtcRunConfigurationType.kt     # Run config type registration
+│   │   ├── run/
+│   │   │   ├── XtcRunConfiguration.kt         # Run configuration
+│   │   │   ├── XtcRunConfigurationProducer.kt # Auto-detect runnable files
+│   │   │   └── XtcRunConfigurationType.kt     # Run config type registration
+│   │   └── style/
+│   │       ├── XtcCodeStyleSettings.kt              # XTC-specific code style options
+│   │       └── XtcLanguageCodeStyleSettingsProvider.kt # Code Style settings page
 │   └── resources/
 │       ├── META-INF/plugin.xml   # Plugin manifest
 │       └── icons/xtc.svg         # Plugin icon

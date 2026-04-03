@@ -110,7 +110,7 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 | Error recovery | ❌ None | ✅ Continues parsing | ❌ None |
 | Rename | ✅ Same-file (text) | ✅ Same-file (AST) | ❌ None |
 | Code actions | ✅ Organize imports | ✅ Organize imports | ❌ None |
-| Formatting | ✅ Trailing WS | ✅ Trailing WS | ❌ None |
+| Formatting | ✅ Trailing WS | ✅ Trailing WS + auto-indent | ❌ None |
 | Folding ranges | ✅ Brace matching | ✅ AST node boundaries | ❌ None |
 | Signature help | ❌ None | ✅ Same-file methods | ❌ None |
 | Document links | ✅ Import regex | ✅ Import AST nodes | ❌ None |
@@ -143,6 +143,7 @@ Capabilities not yet implemented in an adapter use default interface methods
 | **Formatting** |
 | Format Document | ✅ | ✅ | 🔮 | `textDocument/formatting` |
 | Format Selection | ✅ | ✅ | 🔮 | `textDocument/rangeFormatting` |
+| On-Type Formatting | ❌ | ✅ | 🔮 | `textDocument/onTypeFormatting` |
 | **Code Intelligence** |
 | Diagnostics | ⚠️ | ✅ | 🔮 | `textDocument/publishDiagnostics` |
 | Folding Ranges | ✅ | ✅ | 🔮 | `textDocument/foldingRange` |
@@ -160,6 +161,7 @@ Legend: ✅ = Implemented, ⚠️ = Partial/limited, ❌ = Not implemented, 🔮
 | `XtcLanguageServer` | LSP protocol handler, wires all LSP methods to adapter |
 | `XtcCompilerAdapter` | Interface defining core LSP operations |
 | `AbstractXtcCompilerAdapter` | Base class with shared logging, hover formatting, utilities |
+| `XtcFormattingConfig` | Formatting configuration with defaults and config file resolution |
 | `XtcLanguageConstants` | Shared keywords, built-in types, symbol mappings |
 | `MockXtcCompilerAdapter` | Regex-based implementation for testing |
 | `TreeSitterAdapter` | Tree-sitter based syntax intelligence |
@@ -275,6 +277,82 @@ Log messages use SLF4J with a short class name (`%logger{0}`) to identify their 
 tail -f ~/.xtc/logs/lsp-server.log
 ```
 
+## Code Formatting
+
+The LSP server provides three levels of formatting support:
+
+| Capability | Trigger | What It Does |
+|------------|---------|--------------|
+| **Document Formatting** | Reformat action (`Ctrl+Alt+L`) | Cleans trailing whitespace and final newline |
+| **Range Formatting** | Format selection | Same cleanup on a selected region |
+| **On-Type Formatting** | Typing `Enter`, `}`, `;` | AST-aware auto-indentation as you type |
+
+### On-Type Formatting (Auto-Indent)
+
+When you type a trigger character, the LSP server uses tree-sitter AST context to
+determine the correct indentation and sends back edits to fix it. This is strictly
+better than regex-based TextMate indentation rules because it understands:
+
+- Nesting depth (counts matched braces across the entire file, not just the current line)
+- Continuation lines (`extends`, `implements`, `incorporates`, `delegates` get double indent)
+- Switch/case indentation (`case` labels at the same indent as `switch`)
+- String literal awareness (no indent adjustment inside strings)
+
+**Trigger characters:**
+
+| Character | Behavior |
+|-----------|----------|
+| `\n` (Enter) | Indent the new line based on what the previous line ends with: `{` adds one indent level, `case ...:` adds one level, continuation keywords use double indent, `}` maintains brace indent |
+| `}` | Outdent the closing brace to match the line where the corresponding `{` lives |
+| `;` | Reserved for future use (currently no-op) |
+
+### Formatting Configuration
+
+The XTC LSP server follows the industry-standard approach used by rust-analyzer (rustfmt),
+clangd (clang-format), Metals (Scalafmt), Biome, and Prettier: a **project-level config
+file** is the single source of truth, with editor settings as fallback.
+
+**Resolution order** (highest priority first):
+
+1. `xtc-format.toml` in the project tree *(not yet implemented)*
+2. IntelliJ Code Style settings for XTC (Settings > Editor > Code Style > Ecstasy) *(wiring to LSP not yet implemented)*
+3. LSP `FormattingOptions` from the editor (`tabSize`, `insertSpaces`)
+4. XTC defaults (4-space indent, 8-space continuation, no tabs)
+
+This means formatting works out of the box with sensible defaults matching the XTC standard
+library conventions. Teams that want to customize formatting will be able to check in an
+`xtc-format.toml` file that is respected by all editors and CI.
+
+**Why this approach?**
+
+The LSP specification only provides `tabSize` and `insertSpaces` in `FormattingOptions`.
+Language-specific settings (continuation indent, brace style, max line width) cannot be
+expressed through the LSP protocol alone. Every mature language ecosystem that needed
+configurable formatting has converged on the same solution: an external config file that
+the language server reads directly, independent of the editor.
+
+This ensures:
+- Consistent formatting across IntelliJ, VS Code, Neovim, and CLI
+- No editor-specific configuration to keep in sync
+- CI formatting checks match what developers see in their editors
+
+**Current defaults:**
+
+| Setting | Value | Convention |
+|---------|-------|------------|
+| Indent size | 4 spaces | Matches `lib_ecstasy/` source style |
+| Continuation indent | 8 spaces | For `extends`/`implements` lines |
+| Tab character | Never (spaces only) | XTC convention |
+| Max line width | 120 | Standard for modern codebases |
+| Brace style | K&R (opening `{` on same line) | XTC convention |
+
+The IntelliJ plugin provides a Code Style settings page (Settings > Editor > Code Style > Ecstasy)
+where users can configure indent size, continuation indent, tab usage, and right margin. These
+settings will feed into the LSP server's `XtcFormattingConfig` resolution in a future release.
+
+See [formatting-plan.md](../doc/plans/formatting-plan.md) for the full implementation plan
+including the `xtc-format.toml` config file schema and the configuration architecture.
+
 ## Known Issues: IntelliJ Platform and LSP4IJ
 
 Issues in third-party dependencies that affect the XTC plugin. These are not bugs in our code
@@ -330,3 +408,4 @@ in slow operation reports:
 
 - [Tree-sitter Feature Matrix](../tree-sitter/doc/functionality.md) - What Tree-sitter can/cannot do
 - [Tree-sitter Integration Plan](../doc/plans/PLAN_TREE_SITTER.md) - Full implementation details
+- [Formatting Plan](../doc/plans/formatting-plan.md) - On-type formatting design, configuration architecture, industry survey

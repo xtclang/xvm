@@ -31,6 +31,7 @@ import org.eclipse.lsp4j.DocumentHighlightParams
 import org.eclipse.lsp4j.DocumentLink
 import org.eclipse.lsp4j.DocumentLinkOptions
 import org.eclipse.lsp4j.DocumentLinkParams
+import org.eclipse.lsp4j.DocumentOnTypeFormattingOptions
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.DocumentSymbol
@@ -305,10 +306,10 @@ class XtcLanguageServer(
                 td?.signatureHelp?.let { "signatureHelp" }, // treesitter: parameter hints
                 td?.inlayHint?.let { "inlayHint" }, // treesitter: inline hints
                 td?.documentLink?.let { "documentLink" }, // treesitter: clickable links
+                td?.onTypeFormatting?.let { "onTypeFormatting" }, // treesitter: auto-indent
                 // Not yet implemented (uncomment as we add support)
                 // td?.synchronization?.let { "synchronization" }, // built-in: doc sync events
                 // td?.rangeFormatting?.let { "rangeFormatting" }, // treesitter: format selection
-                // td?.onTypeFormatting?.let { "onTypeFormatting" }, // treesitter: auto-indent
                 // td?.declaration?.let { "declaration" }, // compiler: go-to-declaration
                 // td?.typeDefinition?.let { "typeDefinition" }, // compiler(types): jump to type
                 // td?.implementation?.let { "implementation" }, // compiler(types): find impls
@@ -361,6 +362,10 @@ class XtcLanguageServer(
             codeActionProvider = Either.forLeft(true)
             documentFormattingProvider = Either.forLeft(true)
             documentRangeFormattingProvider = Either.forLeft(true)
+            documentOnTypeFormattingProvider =
+                DocumentOnTypeFormattingOptions("\n").apply {
+                    moreTriggerCharacter = listOf("}", ";")
+                }
             inlayHintProvider = Either.forLeft(true)
 
             documentLinkProvider = DocumentLinkOptions()

@@ -68,7 +68,10 @@ fun launchStdio(
                 Thread.currentThread().interrupt()
                 logger.error("DAP server interrupted", e)
             }
-            else -> logger.error("DAP server error", e)
+
+            else -> {
+                logger.error("DAP server error", e)
+            }
         }
     }
 }

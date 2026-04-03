@@ -119,6 +119,58 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
          * IntelliJ 2026.1+ ships with JBR 25 which satisfies this minimum.
          */
         const val MIN_JAVA_VERSION = 25
+
+        // --- AST node type sets for on-type formatting ---
+
+        private val classBodyTypes =
+            setOf(
+                "class_body",
+                "module_body",
+                "package_body",
+                "enum_body",
+            )
+
+        private val blockTypes = setOf("block")
+
+        private val indentParentTypes =
+            setOf(
+                "class_body",
+                "module_body",
+                "package_body",
+                "enum_body",
+                "block",
+                "case_clause",
+            )
+
+        private val declarationTypes =
+            setOf(
+                "class_declaration",
+                "interface_declaration",
+                "mixin_declaration",
+                "service_declaration",
+                "const_declaration",
+                "enum_declaration",
+                "module_declaration",
+            )
+
+        private val controlFlowTypes =
+            setOf(
+                "if_statement",
+                "for_statement",
+                "while_statement",
+                "do_statement",
+                "try_statement",
+                "catch_clause",
+                "using_statement",
+            )
+
+        private val stringLiteralTypes =
+            setOf(
+                "string_literal",
+                "multiline_literal",
+                "template_literal",
+                "multiline_template_literal",
+            )
     }
 
     // ========================================================================
@@ -753,6 +805,241 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
             edit = WorkspaceEdit(changes = mapOf(uri to listOf(edit))),
         )
     }
+
+    // ========================================================================
+    // On-type formatting (auto-indent)
+    // ========================================================================
+
+    override fun onTypeFormatting(
+        uri: String,
+        line: Int,
+        column: Int,
+        ch: String,
+        options: XtcCompilerAdapter.FormattingOptions,
+    ): List<TextEdit> {
+        val tree = parsedTrees[uri]
+        if (tree == null) {
+            logger.info("onTypeFormatting: no parsed tree for {}", uri.substringAfterLast('/'))
+            return emptyList()
+        }
+
+        val config = XtcFormattingConfig.resolve(uri, options)
+
+        return when (ch) {
+            "\n" -> handleEnter(tree, line, config)
+
+            "}" -> handleCloseBrace(tree, line, column, config)
+
+            ";" -> emptyList()
+
+            // Phase 4: handleSemicolon
+            else -> emptyList()
+        }
+    }
+
+    /**
+     * Handle Enter key: determine the correct indentation for the new line based on
+     * what the previous line ends with and the AST context.
+     */
+    private fun handleEnter(
+        tree: XtcTree,
+        line: Int,
+        config: XtcFormattingConfig,
+    ): List<TextEdit> {
+        val source = tree.source
+        val lines = source.split("\n")
+
+        val prevLineIndex = line - 1
+        if (prevLineIndex < 0 || prevLineIndex >= lines.size) return emptyList()
+
+        // Guard: don't adjust indentation inside string literals.
+        val nodeAtCursor = tree.nodeAt(prevLineIndex, 0)
+        if (nodeAtCursor != null && isInsideStringLiteral(nodeAtCursor)) return emptyList()
+
+        val prevLine = lines[prevLineIndex]
+        val prevTrimmed = prevLine.trimEnd()
+        val prevIndent = prevLine.takeWhile { it == ' ' }.length
+
+        val desiredIndent =
+            when {
+                // Continuation keyword ending with '{' -> body indent from declaration start.
+                // Must be checked BEFORE the generic endsWith("{") to avoid matching as plain brace.
+                isContinuationLine(prevTrimmed) && prevTrimmed.endsWith("{") -> {
+                    findDeclarationIndent(tree, prevLineIndex) + config.indentSize
+                }
+
+                // Continuation keyword (extends, implements, etc.) NOT ending with '{'
+                isContinuationLine(prevTrimmed) && !prevTrimmed.endsWith("{") -> {
+                    findDeclarationIndent(tree, prevLineIndex) + config.continuationIndentSize
+                }
+
+                // Previous line ends with '{' -> indent one level deeper
+                prevTrimmed.endsWith("{") -> {
+                    prevIndent + config.indentSize
+                }
+
+                // Previous line ends with ':' inside a case_clause -> indent for case body
+                prevTrimmed.endsWith(":") && isInsideCaseClause(tree, prevLineIndex) -> {
+                    prevIndent + config.indentSize
+                }
+
+                // Previous line ends with '}' -> maintain the brace's indent level
+                prevTrimmed.endsWith("}") -> {
+                    prevIndent
+                }
+
+                // Default: use AST context
+                else -> {
+                    computeDesiredIndent(tree, prevLineIndex, prevIndent, config.indentSize)
+                }
+            }
+
+        val currentIndent =
+            if (line < lines.size) {
+                lines[line].takeWhile { it == ' ' }.length
+            } else {
+                0
+            }
+
+        if (desiredIndent == currentIndent) return emptyList()
+
+        return listOf(makeIndentEdit(line, currentIndent, desiredIndent))
+    }
+
+    /**
+     * Handle closing brace: outdent the current line to match the line where the
+     * corresponding opening '{' lives.
+     */
+    private fun handleCloseBrace(
+        tree: XtcTree,
+        line: Int,
+        column: Int,
+        config: XtcFormattingConfig,
+    ): List<TextEdit> {
+        val source = tree.source
+        val lines = source.split("\n")
+        if (line < 0 || line >= lines.size) return emptyList()
+
+        val currentIndent = lines[line].takeWhile { it == ' ' }.length
+
+        // Find the '}' character position on the line and look up the AST node there.
+        // LSP sends the cursor position *after* the typed character, so try both the
+        // reported column and the actual '}' position on the line.
+        val braceCol = lines[line].indexOf('}')
+        val node =
+            tree.nodeAt(line, if (braceCol >= 0) braceCol else column)
+                ?: tree.nodeAt(line, column)
+                ?: return emptyList()
+
+        // Walk up to find the block or class_body that this '}' closes
+        val enclosingBlock =
+            generateSequence(node) { it.parent }
+                .firstOrNull { it.type in blockTypes || it.type in classBodyTypes }
+                ?: return emptyList()
+
+        // Find the reference line: the construct that owns the block
+        val ownerNode = enclosingBlock.parent
+        val refLine =
+            when (ownerNode?.type) {
+                in declarationTypes,
+                "method_declaration",
+                "function_declaration",
+                "constructor_declaration",
+                -> ownerNode!!.startLine
+
+                in controlFlowTypes -> ownerNode!!.startLine
+
+                else -> enclosingBlock.startLine
+            }
+
+        val desiredIndent = getLineIndent(source, refLine)
+
+        if (desiredIndent == currentIndent) return emptyList()
+
+        return listOf(makeIndentEdit(line, currentIndent, desiredIndent))
+    }
+
+    // --- On-type formatting helpers ---
+
+    private fun isContinuationLine(trimmedLine: String): Boolean {
+        val stripped = trimmedLine.trimStart()
+        return stripped.startsWith("extends ") ||
+            stripped.startsWith("implements ") ||
+            stripped.startsWith("incorporates ") ||
+            stripped.startsWith("delegates ")
+    }
+
+    private fun isInsideCaseClause(
+        tree: XtcTree,
+        lineIndex: Int,
+    ): Boolean {
+        val node = tree.nodeAt(lineIndex, 0) ?: return false
+        return generateSequence(node) { it.parent }
+            .any { it.type == "case_clause" }
+    }
+
+    private fun isInsideStringLiteral(node: XtcNode): Boolean =
+        generateSequence(node) { it.parent }
+            .any { it.type in stringLiteralTypes }
+
+    private fun findDeclarationIndent(
+        tree: XtcTree,
+        lineIndex: Int,
+    ): Int {
+        val node = tree.nodeAt(lineIndex, 0) ?: return 0
+        val decl =
+            generateSequence(node) { it.parent }
+                .firstOrNull { it.type in declarationTypes }
+                ?: return 0
+        return getLineIndent(tree.source, decl.startLine)
+    }
+
+    private fun computeDesiredIndent(
+        tree: XtcTree,
+        prevLineIndex: Int,
+        prevIndent: Int,
+        indentSize: Int,
+    ): Int {
+        val prevLineText = tree.source.split("\n").getOrNull(prevLineIndex) ?: return prevIndent
+        val lastNonSpace = prevLineText.indexOfLast { !it.isWhitespace() }
+        if (lastNonSpace < 0) return prevIndent
+
+        val node = tree.nodeAt(prevLineIndex, lastNonSpace) ?: return prevIndent
+
+        val ancestor =
+            generateSequence(node) { it.parent }
+                .firstOrNull { it.type in indentParentTypes }
+
+        return if (ancestor != null) {
+            val ownerLine = ancestor.parent?.startLine ?: ancestor.startLine
+            getLineIndent(tree.source, ownerLine) + indentSize
+        } else {
+            prevIndent
+        }
+    }
+
+    private fun getLineIndent(
+        source: String,
+        lineNumber: Int,
+    ): Int {
+        val lines = source.split("\n")
+        if (lineNumber < 0 || lineNumber >= lines.size) return 0
+        return lines[lineNumber].takeWhile { it == ' ' }.length
+    }
+
+    private fun makeIndentEdit(
+        line: Int,
+        currentIndent: Int,
+        desiredIndent: Int,
+    ): TextEdit =
+        TextEdit(
+            range =
+                Range(
+                    start = Position(line, 0),
+                    end = Position(line, currentIndent),
+                ),
+            newText = " ".repeat(desiredIndent),
+        )
 
     override fun getDocumentLinks(
         uri: String,

@@ -49,6 +49,10 @@
 
         <!-- IconProvider for .x files - provides icon without overriding TextMate highlighting -->
         <iconProvider implementation="org.xtclang.idea.XtcIconProvider"/>
+
+        <!-- Code Style settings for XTC (Settings > Editor > Code Style > Ecstasy) -->
+        <langCodeStyleSettingsProvider
+            implementation="org.xtclang.idea.style.XtcLanguageCodeStyleSettingsProvider"/>
     </extensions>
 
     <!-- LSP4IJ Language Server registration -->
