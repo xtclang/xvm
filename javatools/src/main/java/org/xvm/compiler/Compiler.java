@@ -1381,6 +1381,11 @@ public class Compiler {
      */
     public static final String STATIC_PROP_NOT_ASSIGNABLE          = "COMPILER-206";
     /**
+     * The "switch" conditions produce {0} results, but the case arity is only {1}. The parenthesis
+     * around the case values might be missing.
+     */
+    public static final String SWITCH_CONDITION_ILLEGAL_ARITY      = "COMPILER-207";
+    /**
      * {0} is not yet implemented.
      */
     public static final String NOT_IMPLEMENTED                     = "COMPILER-NI";

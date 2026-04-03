@@ -179,31 +179,10 @@ public class CaseManager<CookieType> {
     }
 
     /**
-     * @return the array of labels
-     */
-    public Label[] getCaseLabels() {
-        return m_alabelCase;
-    }
-
-    /**
-     * @return the array of constants associated with the labels
-     */
-    public Constant[] getCaseConstants() {
-        return m_aconstCase;
-    }
-
-    /**
      * @return the number of case constants (including default)
      */
     public int getCaseCount() {
         return m_aconstCase.length + (hasDefaultCase() ? 1 : 0);
-    }
-
-    /**
-     * @return the label associated with the "default:" statement, or null
-     */
-    public Label getDefaultLabel() {
-        return m_labelDefault;
     }
 
     /**
@@ -299,6 +278,7 @@ public class CaseManager<CookieType> {
             List<Constant>     listConsts = new ArrayList<>();
             long               afIsSwitch = 0L;
             boolean            fAllConst  = true;
+            int                cAllValues = 0;
             for (int i = 0, c = listCond.size(); i < c; ++i) {
                 AstNode        node      = listCond.get(i);
                 TypeConstant[] atype     = null;
@@ -350,12 +330,17 @@ public class CaseManager<CookieType> {
                 if (atype == null) {
                     fValid = false;
                     listTypes.add(pool.typeObject()); // avoids having no types on failure
+                    cAllValues++;
                 } else {
-                    // every condition could produce multiple results; ignore ones that exceeded
-                    // the switch arity
-                    for (int j = 0, iType = i; j < atype.length && iType < nArity; j++, iType++) {
-                        TypeConstant type = atype[j];
+                    // every condition could produce multiple results; we can only ignore ones
+                    // that were "overproduced" by the last condition
+                    if (cAllValues >= nArity) {
+                        node.getParent().log(errs, Severity.ERROR,
+                            Compiler.SWITCH_CONDITION_ILLEGAL_ARITY, cAllValues + atype.length, nArity);
+                        return false;
+                    }
 
+                    for (TypeConstant type : atype) {
                         // allow switching on formal types as soon as constraints are satisfied
                         if (type.isTypeOfType() && type.containsFormalType(true)) {
                             type = type.resolveConstraints();
@@ -363,13 +348,14 @@ public class CaseManager<CookieType> {
 
                         listTypes.add(type);
                         if (fIsSwitch) {
-                            if (iType >= 63) {
+                            if (cAllValues >= 63) {
                                 node.log(errs, Severity.ERROR, Compiler.SWITCH_OVERFLOW);
                                 fValid = false;
                             }
-                            afIsSwitch |= 1L << iType;
+                            afIsSwitch |= 1L << cAllValues;
                         }
                     }
+                    cAllValues += atype.length;
                 }
 
                 if (fAllConst) {
