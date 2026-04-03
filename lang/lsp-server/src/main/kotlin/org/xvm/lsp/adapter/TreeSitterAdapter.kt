@@ -165,6 +165,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
                         logger.info("re-indexed watched file: {}", uri.substringAfterLast('/'))
                     }
                 }
+
                 3 -> {
                     // Deleted: remove from index
                     indexer.removeFile(uri)
@@ -534,9 +535,19 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
                 "service_declaration", "const_declaration", "enum_declaration",
                 "method_declaration", "constructor_declaration",
                 "module_declaration", "package_declaration",
-                -> null // no special kind = code region
-                "comment", "block_comment" -> FoldingRange.FoldingKind.COMMENT
-                "import_list" -> FoldingRange.FoldingKind.IMPORTS
+                -> {
+                    null
+                }
+
+                // no special kind = code region
+                "comment", "block_comment" -> {
+                    FoldingRange.FoldingKind.COMMENT
+                }
+
+                "import_list" -> {
+                    FoldingRange.FoldingKind.IMPORTS
+                }
+
                 else -> {
                     // Not a foldable node type, but recurse into children
                     node.children.forEach { collectFoldingRanges(it, result) }

@@ -64,6 +64,7 @@ class XtcNewProjectWizardStep(
                 refreshVfs(projectPath)
                 createDefaultRunConfiguration(project, base.name)
             }
+
             else -> {
                 logger.error("Failed to create XTC project: ${result.message}")
                 Messages.showErrorDialog("Failed to create XTC project: ${result.message}", "XTC Project Creation Failed")

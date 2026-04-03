@@ -86,18 +86,28 @@ fun Diagnostic.toLsp(): org.eclipse.lsp4j.Diagnostic {
 fun SymbolInfo.SymbolKind.toLsp(): SymbolKind =
     when (this) {
         SymbolInfo.SymbolKind.MODULE -> SymbolKind.Module
+
         SymbolInfo.SymbolKind.PACKAGE -> SymbolKind.Package
+
         SymbolInfo.SymbolKind.CLASS,
         SymbolInfo.SymbolKind.MIXIN,
         SymbolInfo.SymbolKind.SERVICE,
         -> SymbolKind.Class
+
         SymbolInfo.SymbolKind.INTERFACE -> SymbolKind.Interface
+
         SymbolInfo.SymbolKind.ENUM -> SymbolKind.Enum
+
         SymbolInfo.SymbolKind.CONST -> SymbolKind.Constant
+
         SymbolInfo.SymbolKind.METHOD -> SymbolKind.Method
+
         SymbolInfo.SymbolKind.PROPERTY -> SymbolKind.Property
+
         SymbolInfo.SymbolKind.PARAMETER -> SymbolKind.Variable
+
         SymbolInfo.SymbolKind.TYPE_PARAMETER -> SymbolKind.TypeParameter
+
         SymbolInfo.SymbolKind.CONSTRUCTOR -> SymbolKind.Constructor
     }
 

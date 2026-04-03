@@ -285,8 +285,14 @@ class SemanticTokenEncoder {
 
         for (child in node.children) {
             when (child.type) {
-                "static" -> mods.add("static")
-                "abstract" -> mods.add("abstract")
+                "static" -> {
+                    mods.add("static")
+                }
+
+                "abstract" -> {
+                    mods.add("abstract")
+                }
+
                 "visibility_modifier" -> {
                     // No specific modifier for visibility in LSP semantic tokens
                 }
