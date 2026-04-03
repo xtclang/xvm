@@ -255,6 +255,30 @@ the resolved Gradle dependency model after sync.
    - Download from Maven Central on demand
    - Similar to Gradle JDK auto-provisioning
 
+### Principle of Least Astonishment: XDK vs JDK Parallel
+
+The XDK selector should feel familiar to any Java developer using IntelliJ. Every
+scenario has a direct JDK equivalent — we follow the same UX patterns so users
+don't have to learn new mental models.
+
+| Scenario | How Java/JDK Does It | How XDK Should Do It |
+|----------|---------------------|---------------------|
+| **Open a Gradle project** | Gradle sync resolves `java.toolchain { languageVersion = 21 }` → IntelliJ finds/downloads JDK 21 → sets as project SDK | Gradle sync resolves `xdkDistribution(libs.xdk)` → IntelliJ finds XDK in `build/xdk/` or Gradle cache → sets as project SDK |
+| **Multiple JDK/XDK versions installed** | Project Structure > SDKs shows all detected JDKs; project picks one | Project Structure > SDKs shows all detected XDKs; project picks one |
+| **No SDK configured for project** | Yellow banner: "Project SDK is not defined" with "Setup SDK" action | Yellow banner: "XDK is not configured" with "Configure XDK" action |
+| **Auto-detection on first open** | Scans `/usr/lib/jvm/`, SDKMAN, Homebrew, `JAVA_HOME`, system PATH | Scans `build/xdk/`, `XDK_HOME`, system PATH (`which xtc`), `~/.m2/` |
+| **Version mismatch (Gradle vs IDE)** | "Gradle JDK 21 differs from project JDK 17" warning | "Gradle XDK 0.4.4 differs from project XDK 0.5.0" warning |
+| **SDK used by run configs** | Run configuration inherits project SDK or allows override | Run configuration inherits project XDK or allows override |
+| **SDK used by LSP/compiler** | Language features use project SDK classpath/sources | LSP server uses project XDK module path + javatools.jar |
+| **New project wizard** | Wizard offers SDK selection dropdown, defaults to latest detected | Wizard offers XDK selection dropdown, defaults to Gradle-resolved version |
+| **No JDK/XDK found anywhere** | Offers to download via Foojay/AdoptOpenJDK | Offers to download from Maven Central (future phase) |
+
+The key insight: **IntelliJ never parses `build.gradle.kts` text to find the JDK version**.
+It runs a Gradle sync via the Tooling API, which resolves the full dependency/toolchain model.
+We do the same — the Gradle sync resolves `org.xtclang:xdk:X.Y.Z` and tells us the version
+and artifact location. This works whether the user declares the dependency via a version
+catalog, a hardcoded string, a property reference, or any other Gradle mechanism.
+
 ## 4. `XdkSdkType` Implementation
 
 ### 4a. Core Class
