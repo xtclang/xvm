@@ -1,7 +1,7 @@
 package org.xvm.lsp.adapter
 
-import org.xvm.lsp.adapter.XtcCompilerAdapter.CompletionItem
-import org.xvm.lsp.adapter.XtcCompilerAdapter.CompletionItem.CompletionKind
+import org.xvm.lsp.adapter.Adapter.CompletionItem
+import org.xvm.lsp.adapter.Adapter.CompletionItem.CompletionKind
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.model.SymbolInfo.SymbolKind
 
@@ -13,7 +13,7 @@ import org.xvm.lsp.model.SymbolInfo.SymbolKind
  * - Symbol kind mapping (for LSP responses)
  * - Hover text formatting
  */
-object XtcLanguageConstants {
+object LanguageConstants {
     /**
      * XTC language keywords for code completion.
      *

@@ -10,7 +10,7 @@ import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.SymbolKind
 import org.eclipse.lsp4j.jsonrpc.messages.Either
-import org.xvm.lsp.adapter.XtcCompilerAdapter
+import org.xvm.lsp.adapter.Adapter
 
 // Extension functions for converting between LSP model types and LSP4J types.
 // Keeps the model classes pure while centralizing conversion logic.
@@ -120,43 +120,43 @@ fun SymbolInfo.SymbolKind.toLsp(): SymbolKind =
     }
 
 /** Convert adapter HighlightKind to LSP4J DocumentHighlightKind. */
-fun XtcCompilerAdapter.DocumentHighlight.HighlightKind.toLsp(): DocumentHighlightKind =
+fun Adapter.DocumentHighlight.HighlightKind.toLsp(): DocumentHighlightKind =
     when (this) {
-        XtcCompilerAdapter.DocumentHighlight.HighlightKind.TEXT -> DocumentHighlightKind.Text
-        XtcCompilerAdapter.DocumentHighlight.HighlightKind.READ -> DocumentHighlightKind.Read
-        XtcCompilerAdapter.DocumentHighlight.HighlightKind.WRITE -> DocumentHighlightKind.Write
+        Adapter.DocumentHighlight.HighlightKind.TEXT -> DocumentHighlightKind.Text
+        Adapter.DocumentHighlight.HighlightKind.READ -> DocumentHighlightKind.Read
+        Adapter.DocumentHighlight.HighlightKind.WRITE -> DocumentHighlightKind.Write
     }
 
 /** Convert adapter FoldingKind to LSP4J FoldingRangeKind. */
-fun XtcCompilerAdapter.FoldingRange.FoldingKind.toLsp(): String =
+fun Adapter.FoldingRange.FoldingKind.toLsp(): String =
     when (this) {
-        XtcCompilerAdapter.FoldingRange.FoldingKind.COMMENT -> FoldingRangeKind.Comment
-        XtcCompilerAdapter.FoldingRange.FoldingKind.IMPORTS -> FoldingRangeKind.Imports
-        XtcCompilerAdapter.FoldingRange.FoldingKind.REGION -> FoldingRangeKind.Region
+        Adapter.FoldingRange.FoldingKind.COMMENT -> FoldingRangeKind.Comment
+        Adapter.FoldingRange.FoldingKind.IMPORTS -> FoldingRangeKind.Imports
+        Adapter.FoldingRange.FoldingKind.REGION -> FoldingRangeKind.Region
     }
 
 /** Convert adapter InlayHintKind to LSP4J InlayHintKind. */
-fun XtcCompilerAdapter.InlayHint.InlayHintKind.toLsp(): InlayHintKind =
+fun Adapter.InlayHint.InlayHintKind.toLsp(): InlayHintKind =
     when (this) {
-        XtcCompilerAdapter.InlayHint.InlayHintKind.TYPE -> InlayHintKind.Type
-        XtcCompilerAdapter.InlayHint.InlayHintKind.PARAMETER -> InlayHintKind.Parameter
+        Adapter.InlayHint.InlayHintKind.TYPE -> InlayHintKind.Type
+        Adapter.InlayHint.InlayHintKind.PARAMETER -> InlayHintKind.Parameter
     }
 
 /** Convert adapter Range to LSP4J Range. */
-fun XtcCompilerAdapter.Range.toLsp(): Range =
+fun Adapter.Range.toLsp(): Range =
     Range(
         Position(start.line, start.column),
         Position(end.line, end.column),
     )
 
 /** Convert adapter CodeActionKind to LSP4J CodeActionKind string. */
-fun XtcCompilerAdapter.CodeAction.CodeActionKind.toLsp(): String =
+fun Adapter.CodeAction.CodeActionKind.toLsp(): String =
     when (this) {
-        XtcCompilerAdapter.CodeAction.CodeActionKind.QUICKFIX -> CodeActionKind.QuickFix
-        XtcCompilerAdapter.CodeAction.CodeActionKind.REFACTOR -> CodeActionKind.Refactor
-        XtcCompilerAdapter.CodeAction.CodeActionKind.REFACTOR_EXTRACT -> CodeActionKind.RefactorExtract
-        XtcCompilerAdapter.CodeAction.CodeActionKind.REFACTOR_INLINE -> CodeActionKind.RefactorInline
-        XtcCompilerAdapter.CodeAction.CodeActionKind.REFACTOR_REWRITE -> CodeActionKind.RefactorRewrite
-        XtcCompilerAdapter.CodeAction.CodeActionKind.SOURCE -> CodeActionKind.Source
-        XtcCompilerAdapter.CodeAction.CodeActionKind.SOURCE_ORGANIZE_IMPORTS -> CodeActionKind.SourceOrganizeImports
+        Adapter.CodeAction.CodeActionKind.QUICKFIX -> CodeActionKind.QuickFix
+        Adapter.CodeAction.CodeActionKind.REFACTOR -> CodeActionKind.Refactor
+        Adapter.CodeAction.CodeActionKind.REFACTOR_EXTRACT -> CodeActionKind.RefactorExtract
+        Adapter.CodeAction.CodeActionKind.REFACTOR_INLINE -> CodeActionKind.RefactorInline
+        Adapter.CodeAction.CodeActionKind.REFACTOR_REWRITE -> CodeActionKind.RefactorRewrite
+        Adapter.CodeAction.CodeActionKind.SOURCE -> CodeActionKind.Source
+        Adapter.CodeAction.CodeActionKind.SOURCE_ORGANIZE_IMPORTS -> CodeActionKind.SourceOrganizeImports
     }

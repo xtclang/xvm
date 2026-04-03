@@ -1,29 +1,29 @@
 package org.xvm.lsp.adapter.treesitter
 
-import org.xvm.lsp.adapter.AbstractXtcCompilerAdapter
+import org.xvm.lsp.adapter.AbstractAdapter
+import org.xvm.lsp.adapter.Adapter
+import org.xvm.lsp.adapter.Adapter.CodeAction
+import org.xvm.lsp.adapter.Adapter.CompletionItem
+import org.xvm.lsp.adapter.Adapter.CompletionItem.CompletionKind
+import org.xvm.lsp.adapter.Adapter.DocumentHighlight
+import org.xvm.lsp.adapter.Adapter.DocumentHighlight.HighlightKind
+import org.xvm.lsp.adapter.Adapter.FoldingRange
+import org.xvm.lsp.adapter.Adapter.ParameterInfo
+import org.xvm.lsp.adapter.Adapter.Position
+import org.xvm.lsp.adapter.Adapter.PrepareRenameResult
+import org.xvm.lsp.adapter.Adapter.Range
+import org.xvm.lsp.adapter.Adapter.SelectionRange
+import org.xvm.lsp.adapter.Adapter.SignatureHelp
+import org.xvm.lsp.adapter.Adapter.SignatureInfo
+import org.xvm.lsp.adapter.Adapter.TextEdit
+import org.xvm.lsp.adapter.Adapter.WorkspaceEdit
 import org.xvm.lsp.adapter.AdapterCodeActions
 import org.xvm.lsp.adapter.AdapterFormatter
 import org.xvm.lsp.adapter.CodeActionQueryData
-import org.xvm.lsp.adapter.XtcCompilerAdapter
-import org.xvm.lsp.adapter.XtcCompilerAdapter.CodeAction
-import org.xvm.lsp.adapter.XtcCompilerAdapter.CompletionItem
-import org.xvm.lsp.adapter.XtcCompilerAdapter.CompletionItem.CompletionKind
-import org.xvm.lsp.adapter.XtcCompilerAdapter.DocumentHighlight
-import org.xvm.lsp.adapter.XtcCompilerAdapter.DocumentHighlight.HighlightKind
-import org.xvm.lsp.adapter.XtcCompilerAdapter.FoldingRange
-import org.xvm.lsp.adapter.XtcCompilerAdapter.ParameterInfo
-import org.xvm.lsp.adapter.XtcCompilerAdapter.Position
-import org.xvm.lsp.adapter.XtcCompilerAdapter.PrepareRenameResult
-import org.xvm.lsp.adapter.XtcCompilerAdapter.Range
-import org.xvm.lsp.adapter.XtcCompilerAdapter.SelectionRange
-import org.xvm.lsp.adapter.XtcCompilerAdapter.SignatureHelp
-import org.xvm.lsp.adapter.XtcCompilerAdapter.SignatureInfo
-import org.xvm.lsp.adapter.XtcCompilerAdapter.TextEdit
-import org.xvm.lsp.adapter.XtcCompilerAdapter.WorkspaceEdit
-import org.xvm.lsp.adapter.XtcFormattingConfig
-import org.xvm.lsp.adapter.XtcLanguageConstants.builtInTypeCompletions
-import org.xvm.lsp.adapter.XtcLanguageConstants.keywordCompletions
-import org.xvm.lsp.adapter.XtcLanguageConstants.toCompletionKind
+import org.xvm.lsp.adapter.FormattingConfig
+import org.xvm.lsp.adapter.LanguageConstants.builtInTypeCompletions
+import org.xvm.lsp.adapter.LanguageConstants.keywordCompletions
+import org.xvm.lsp.adapter.LanguageConstants.toCompletionKind
 import org.xvm.lsp.index.WorkspaceIndex
 import org.xvm.lsp.index.WorkspaceIndexer
 import org.xvm.lsp.model.CompilationResult
@@ -78,11 +78,11 @@ import kotlin.time.measureTimedValue
  * // For full semantic features, combine with a CompilerAdapter via CompositeAdapter.
  */
 @Suppress("LoggingSimilarMessage")
-class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
+class TreeSitterAdapter : AbstractAdapter() {
     override val displayName: String = "TreeSitter"
 
     @Volatile
-    override var editorFormattingConfig: XtcFormattingConfig? = null
+    override var editorFormattingConfig: FormattingConfig? = null
 
     private val parser: XtcParser = XtcParser()
     private val queryEngine: XtcQueryEngine = XtcQueryEngine(parser.getLanguage())
@@ -1041,14 +1041,14 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
     override fun formatDocument(
         uri: String,
         content: String,
-        options: XtcCompilerAdapter.FormattingOptions,
+        options: Adapter.FormattingOptions,
     ): List<TextEdit> {
         val tree =
             parsedTrees[uri] ?: run {
                 logger.info("formatDocument: no parsed tree for {}, falling back to base", uri.substringAfterLast('/'))
                 return super.formatDocument(uri, content, options)
             }
-        val config = XtcFormattingConfig.resolve(uri, options, editorFormattingConfig)
+        val config = FormattingConfig.resolve(uri, options, editorFormattingConfig)
         return formatter.formatDocument(tree, content, config, options)
     }
 
@@ -1056,14 +1056,14 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         uri: String,
         content: String,
         range: Range,
-        options: XtcCompilerAdapter.FormattingOptions,
+        options: Adapter.FormattingOptions,
     ): List<TextEdit> {
         val tree =
             parsedTrees[uri] ?: run {
                 logger.info("formatRange: no parsed tree for {}, falling back to base", uri.substringAfterLast('/'))
                 return super.formatRange(uri, content, range, options)
             }
-        val config = XtcFormattingConfig.resolve(uri, options, editorFormattingConfig)
+        val config = FormattingConfig.resolve(uri, options, editorFormattingConfig)
         return formatter.formatRange(tree, content, range, config, options)
     }
 
@@ -1076,21 +1076,21 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         line: Int,
         column: Int,
         ch: String,
-        options: XtcCompilerAdapter.FormattingOptions,
+        options: Adapter.FormattingOptions,
     ): List<TextEdit> {
         val tree =
             parsedTrees[uri] ?: run {
                 logger.info("onTypeFormatting: no parsed tree for {}", uri.substringAfterLast('/'))
                 return emptyList()
             }
-        val config = XtcFormattingConfig.resolve(uri, options, editorFormattingConfig)
+        val config = FormattingConfig.resolve(uri, options, editorFormattingConfig)
         return formatter.onTypeFormatting(tree, line, column, ch, config)
     }
 
     override fun getDocumentLinks(
         uri: String,
         content: String,
-    ): List<XtcCompilerAdapter.DocumentLink> {
+    ): List<Adapter.DocumentLink> {
         logger.info("getDocumentLinks: uri={}, {} bytes", uri.substringAfterLast('/'), content.length)
         val tree =
             parsedTrees[uri] ?: run {
@@ -1106,11 +1106,11 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
                     .takeIf { indexReady.get() }
                     ?.let { workspaceIndex.findByName(it).firstOrNull()?.uri }
             val range = Range(Position(loc.startLine, loc.startColumn), Position(loc.endLine, loc.endColumn))
-            XtcCompilerAdapter.DocumentLink(range, targetUri, "import $importPath")
+            Adapter.DocumentLink(range, targetUri, "import $importPath")
         }
     }
 
-    override fun getSemanticTokens(uri: String): XtcCompilerAdapter.SemanticTokens? {
+    override fun getSemanticTokens(uri: String): Adapter.SemanticTokens? {
         logger.info("getSemanticTokens: uri={}", uri.substringAfterLast('/'))
         val tree =
             parsedTrees[uri] ?: run {
@@ -1119,7 +1119,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
             }
         val data = SemanticTokenEncoder().encode(tree.root)
         logger.info("getSemanticTokens -> {} data items ({} tokens)", data.size, data.size / 5)
-        return data.takeIf { it.isNotEmpty() }?.let { XtcCompilerAdapter.SemanticTokens(it) }
+        return data.takeIf { it.isNotEmpty() }?.let { Adapter.SemanticTokens(it) }
     }
 
     /**

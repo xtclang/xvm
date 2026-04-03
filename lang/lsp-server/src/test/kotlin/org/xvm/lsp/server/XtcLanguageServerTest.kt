@@ -36,7 +36,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.ArgumentCaptor
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
-import org.xvm.lsp.adapter.mock.MockXtcCompilerAdapter
+import org.xvm.lsp.adapter.mock.MockAdapter
 
 @DisplayName("XtcLanguageServer")
 class XtcLanguageServerTest {
@@ -45,7 +45,7 @@ class XtcLanguageServerTest {
 
     @BeforeEach
     fun setUp() {
-        server = XtcLanguageServer(MockXtcCompilerAdapter())
+        server = XtcLanguageServer(MockAdapter())
         mockClient = mock(LanguageClient::class.java)
         server.connect(mockClient)
     }

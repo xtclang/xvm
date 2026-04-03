@@ -16,9 +16,9 @@ import java.io.Closeable
  *
  * | Adapter | Package | Backend | Use Case |
  * |---------|---------|---------|----------|
- * | `MockXtcCompilerAdapter` | `adapter.mock` | Regex | Testing and fallback |
+ * | `MockAdapter` | `adapter.mock` | Regex | Testing and fallback |
  * | `TreeSitterAdapter` | `adapter.treesitter` | Tree-sitter | Syntax-aware (~80% LSP features) |
- * | `XdkCompilerAdapter` | `adapter.xdk` | XDK Compiler | (future) Full semantic features |
+ * | `XdkAdapter` | `adapter.xdk` | XDK Compiler | (future) Full semantic features |
  *
  * ## Backend Selection
  *
@@ -27,7 +27,7 @@ import java.io.Closeable
  * - `treesitter` (default): Syntax-aware parsing, requires native library
  * - `mock`: Regex-based, no native dependencies
  */
-interface XtcCompilerAdapter : Closeable {
+interface Adapter : Closeable {
     override fun close() {}
 
     /**
@@ -50,9 +50,9 @@ interface XtcCompilerAdapter : Closeable {
     /**
      * Editor-provided formatting configuration from `workspace/configuration`.
      * Set by the language server after receiving config from the client.
-     * Used by [XtcFormattingConfig.resolve] as a fallback before LSP options.
+     * Used by [FormattingConfig.resolve] as a fallback before LSP options.
      */
-    var editorFormattingConfig: XtcFormattingConfig?
+    var editorFormattingConfig: FormattingConfig?
         get() = null
         set(
             @Suppress("UNUSED_PARAMETER") value,
@@ -134,7 +134,7 @@ interface XtcCompilerAdapter : Closeable {
      * - *VS Code:* Hover mouse over a symbol
      *
      * **Adapter implementations:**
-     * - *Mock/TreeSitter:* Default in [AbstractXtcCompilerAdapter] -- calls [findSymbolAt] and
+     * - *Mock/TreeSitter:* Default in [AbstractAdapter] -- calls [findSymbolAt] and
      *   formats the symbol's kind, name, and type signature as Markdown.
      * - *Compiler:* Would add resolved types, inferred generics, and extracted doc comments.
      *
@@ -658,7 +658,7 @@ interface XtcCompilerAdapter : Closeable {
     // ========================================================================
     //
     // These methods correspond to LSP capabilities described in plan-next-steps-lsp.md.
-    // Default implementations in AbstractXtcCompilerAdapter log the call with full
+    // Default implementations in AbstractAdapter log the call with full
     // input parameters, so the log trace shows exactly what was requested and that
     // the feature is not yet available -- making it easy to plug in later.
     //

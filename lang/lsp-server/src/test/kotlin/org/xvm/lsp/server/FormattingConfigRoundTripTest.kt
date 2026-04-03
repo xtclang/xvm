@@ -23,7 +23,7 @@ import org.mockito.ArgumentCaptor
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
-import org.xvm.lsp.adapter.XtcFormattingConfig
+import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.treesitter.TreeSitterAdapter
 import java.util.concurrent.CompletableFuture
 
@@ -322,19 +322,19 @@ class FormattingConfigRoundTripTest {
     }
 
     @Nested
-    @DisplayName("XtcFormattingConfig resolution order")
+    @DisplayName("FormattingConfig resolution order")
     inner class ResolutionOrder {
         @Test
         @DisplayName("editor config takes precedence over LSP FormattingOptions")
         fun editorConfigTakesPrecedence() {
-            val editorConfig = XtcFormattingConfig(indentSize = 3, continuationIndentSize = 6)
+            val editorConfig = FormattingConfig(indentSize = 3, continuationIndentSize = 6)
             val lspOptions =
-                org.xvm.lsp.adapter.XtcCompilerAdapter.FormattingOptions(
+                org.xvm.lsp.adapter.Adapter.FormattingOptions(
                     tabSize = 4,
                     insertSpaces = true,
                 )
 
-            val resolved = XtcFormattingConfig.resolve("file:///test.x", lspOptions, editorConfig)
+            val resolved = FormattingConfig.resolve("file:///test.x", lspOptions, editorConfig)
 
             assertThat(resolved.indentSize)
                 .describedAs("editor config (3) should win over LSP options (4)")
@@ -346,12 +346,12 @@ class FormattingConfigRoundTripTest {
         @DisplayName("LSP FormattingOptions used when no editor config")
         fun lspOptionsUsedWhenNoEditorConfig() {
             val lspOptions =
-                org.xvm.lsp.adapter.XtcCompilerAdapter.FormattingOptions(
+                org.xvm.lsp.adapter.Adapter.FormattingOptions(
                     tabSize = 2,
                     insertSpaces = true,
                 )
 
-            val resolved = XtcFormattingConfig.resolve("file:///test.x", lspOptions, null)
+            val resolved = FormattingConfig.resolve("file:///test.x", lspOptions, null)
 
             assertThat(resolved.indentSize)
                 .describedAs("LSP tabSize should be used when no editor config")
@@ -362,12 +362,12 @@ class FormattingConfigRoundTripTest {
         @DisplayName("defaults used when LSP options specify tabs")
         fun defaultsUsedForTabs() {
             val lspOptions =
-                org.xvm.lsp.adapter.XtcCompilerAdapter.FormattingOptions(
+                org.xvm.lsp.adapter.Adapter.FormattingOptions(
                     tabSize = 8,
                     insertSpaces = false,
                 )
 
-            val resolved = XtcFormattingConfig.resolve("file:///test.x", lspOptions, null)
+            val resolved = FormattingConfig.resolve("file:///test.x", lspOptions, null)
 
             // When insertSpaces is false, XTC falls back to its own default indent size
             assertThat(resolved.indentSize)

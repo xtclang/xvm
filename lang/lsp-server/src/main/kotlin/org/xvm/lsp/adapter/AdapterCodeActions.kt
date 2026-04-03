@@ -2,12 +2,12 @@ package org.xvm.lsp.adapter
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.xvm.lsp.adapter.XtcCompilerAdapter.CodeAction
-import org.xvm.lsp.adapter.XtcCompilerAdapter.CodeAction.CodeActionKind
-import org.xvm.lsp.adapter.XtcCompilerAdapter.Position
-import org.xvm.lsp.adapter.XtcCompilerAdapter.Range
-import org.xvm.lsp.adapter.XtcCompilerAdapter.TextEdit
-import org.xvm.lsp.adapter.XtcCompilerAdapter.WorkspaceEdit
+import org.xvm.lsp.adapter.Adapter.CodeAction
+import org.xvm.lsp.adapter.Adapter.CodeAction.CodeActionKind
+import org.xvm.lsp.adapter.Adapter.Position
+import org.xvm.lsp.adapter.Adapter.Range
+import org.xvm.lsp.adapter.Adapter.TextEdit
+import org.xvm.lsp.adapter.Adapter.WorkspaceEdit
 import org.xvm.lsp.index.WorkspaceIndex
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo

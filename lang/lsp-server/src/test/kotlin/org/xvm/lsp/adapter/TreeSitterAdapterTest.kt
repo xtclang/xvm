@@ -20,9 +20,9 @@ import java.util.concurrent.atomic.AtomicInteger
 /**
  * Unit tests for [TreeSitterAdapter].
  *
- * Exercises the tree-sitter native parser through the [XtcCompilerAdapter] interface,
+ * Exercises the tree-sitter native parser through the [Adapter] interface,
  * verifying AST-based symbol extraction, diagnostics, navigation, and the tree-sitter-
- * specific features that [MockXtcCompilerAdapter] cannot provide (selection ranges,
+ * specific features that [MockAdapter] cannot provide (selection ranges,
  * signature help).
  *
  * All tests are skipped (not failed) when the tree-sitter native library is unavailable,
@@ -348,7 +348,7 @@ class TreeSitterAdapterTest {
     inner class CompletionTests {
         /**
          * Even without any compiled document, the adapter should offer XTC keywords
-         * (`class`, `interface`, `module`) from [XtcLanguageConstants].
+         * (`class`, `interface`, `module`) from [LanguageConstants].
          */
         @Test
         @DisplayName("should return keywords")
@@ -363,7 +363,7 @@ class TreeSitterAdapterTest {
 
         /**
          * Built-in types like `String`, `Int`, `Boolean` come from
-         * [XtcLanguageConstants.builtInTypeCompletions] and must always be present.
+         * [LanguageConstants.builtInTypeCompletions] and must always be present.
          */
         @Test
         @DisplayName("should return built-in types")
@@ -660,8 +660,8 @@ class TreeSitterAdapterTest {
 
             assertThat(highlights).hasSizeGreaterThanOrEqualTo(2)
             // At least one should be WRITE (declaration) and one READ (usage)
-            assertThat(highlights).anyMatch { it.kind == XtcCompilerAdapter.DocumentHighlight.HighlightKind.WRITE }
-            assertThat(highlights).anyMatch { it.kind == XtcCompilerAdapter.DocumentHighlight.HighlightKind.READ }
+            assertThat(highlights).anyMatch { it.kind == Adapter.DocumentHighlight.HighlightKind.WRITE }
+            assertThat(highlights).anyMatch { it.kind == Adapter.DocumentHighlight.HighlightKind.READ }
         }
 
         /**
@@ -843,7 +843,7 @@ class TreeSitterAdapterTest {
 
             // Should have a COMMENT fold range spanning lines 1-3
             assertThat(ranges).anyMatch { range ->
-                range.kind == XtcCompilerAdapter.FoldingRange.FoldingKind.COMMENT &&
+                range.kind == Adapter.FoldingRange.FoldingKind.COMMENT &&
                     range.endLine > range.startLine &&
                     range.endLine - range.startLine >= 2
             }
@@ -873,7 +873,7 @@ class TreeSitterAdapterTest {
             // No merged comment range should span more than 1 line for isolated comments
             val commentRanges =
                 ranges.filter {
-                    it.kind == XtcCompilerAdapter.FoldingRange.FoldingKind.COMMENT
+                    it.kind == Adapter.FoldingRange.FoldingKind.COMMENT
                 }
             commentRanges.forEach { range ->
                 // Each isolated comment shouldn't produce a merged multi-line range
@@ -1080,9 +1080,9 @@ class TreeSitterAdapterTest {
             ts.compile(uri, source)
             // Request code actions over the method declaration line (line 2)
             val range =
-                XtcCompilerAdapter.Range(
-                    XtcCompilerAdapter.Position(2, 0),
-                    XtcCompilerAdapter.Position(2, 0),
+                Adapter.Range(
+                    Adapter.Position(2, 0),
+                    Adapter.Position(2, 0),
                 )
             val actions = logged("shouldSuggestGeneratingDocComment", ts.getCodeActions(uri, range, emptyList()))
             logger.info("  actions: {}", actions.map { it.title })
@@ -1113,9 +1113,9 @@ class TreeSitterAdapterTest {
             ts.compile(uri, source)
             // Request code actions over the method declaration line (line 3)
             val range =
-                XtcCompilerAdapter.Range(
-                    XtcCompilerAdapter.Position(3, 0),
-                    XtcCompilerAdapter.Position(3, 0),
+                Adapter.Range(
+                    Adapter.Position(3, 0),
+                    Adapter.Position(3, 0),
                 )
             val actions = logged("shouldNotSuggestDocCommentWhenExists", ts.getCodeActions(uri, range, emptyList()))
             logger.info("  actions: {}", actions.map { it.title })
@@ -1124,9 +1124,9 @@ class TreeSitterAdapterTest {
         }
 
         private fun zeroRange() =
-            XtcCompilerAdapter.Range(
-                XtcCompilerAdapter.Position(0, 0),
-                XtcCompilerAdapter.Position(0, 0),
+            Adapter.Range(
+                Adapter.Position(0, 0),
+                Adapter.Position(0, 0),
             )
     }
 
@@ -1183,7 +1183,7 @@ class TreeSitterAdapterTest {
         private fun formattingOptions(
             trimTrailingWhitespace: Boolean = false,
             insertFinalNewline: Boolean = false,
-        ) = XtcCompilerAdapter.FormattingOptions(
+        ) = Adapter.FormattingOptions(
             tabSize = 4,
             insertSpaces = true,
             trimTrailingWhitespace = trimTrailingWhitespace,
@@ -1264,7 +1264,7 @@ class TreeSitterAdapterTest {
     @DisplayName("findReferences()")
     inner class FindReferencesTests {
         /**
-         * Unlike [MockXtcCompilerAdapter], [TreeSitterAdapter.findReferences] ignores the
+         * Unlike [MockAdapter], [TreeSitterAdapter.findReferences] ignores the
          * `includeDeclaration` flag -- it always returns every identifier node with the
          * same text. We verify this by checking that both flag values yield the same count.
          */
@@ -1355,15 +1355,15 @@ class TreeSitterAdapterTest {
         fun shouldOnlyFormatWithinRange() {
             val source = "line zero   \nline one   \nline two   \nline three   "
             val options =
-                XtcCompilerAdapter.FormattingOptions(
+                Adapter.FormattingOptions(
                     tabSize = 4,
                     insertSpaces = true,
                     trimTrailingWhitespace = true,
                 )
             val range =
-                XtcCompilerAdapter.Range(
-                    XtcCompilerAdapter.Position(1, 0),
-                    XtcCompilerAdapter.Position(2, 0),
+                Adapter.Range(
+                    Adapter.Position(1, 0),
+                    Adapter.Position(2, 0),
                 )
 
             val edits = ts.formatRange(freshUri(), source, range, options)
@@ -1380,15 +1380,15 @@ class TreeSitterAdapterTest {
         @DisplayName("should not insert final newline for range")
         fun shouldNotInsertFinalNewlineForRange() {
             val options =
-                XtcCompilerAdapter.FormattingOptions(
+                Adapter.FormattingOptions(
                     tabSize = 4,
                     insertSpaces = true,
                     insertFinalNewline = true,
                 )
             val range =
-                XtcCompilerAdapter.Range(
-                    XtcCompilerAdapter.Position(0, 0),
-                    XtcCompilerAdapter.Position(0, 15),
+                Adapter.Range(
+                    Adapter.Position(0, 0),
+                    Adapter.Position(0, 15),
                 )
 
             val edits = ts.formatRange(freshUri(), "module myapp {}", range, options)
@@ -1425,7 +1425,7 @@ class TreeSitterAdapterTest {
                 """.trimIndent()
 
             ts.compile(uri, source)
-            val selections = ts.getSelectionRanges(uri, listOf(XtcCompilerAdapter.Position(3, 15)))
+            val selections = ts.getSelectionRanges(uri, listOf(Adapter.Position(3, 15)))
             val depth = selectionDepth(selections.single())
 
             assertThat(depth).isGreaterThanOrEqualTo(3)
@@ -1456,7 +1456,7 @@ class TreeSitterAdapterTest {
                 ts
                     .getSelectionRanges(
                         uri,
-                        listOf(XtcCompilerAdapter.Position(2, 15)),
+                        listOf(Adapter.Position(2, 15)),
                     ).single()
 
             generateSequence(selection) { it.parent }
@@ -1490,7 +1490,7 @@ class TreeSitterAdapterTest {
                 ts
                     .getSelectionRanges(
                         uri,
-                        listOf(XtcCompilerAdapter.Position(1, 10)),
+                        listOf(Adapter.Position(1, 10)),
                     ).single()
 
             val hasNonPointRange =
@@ -1500,9 +1500,9 @@ class TreeSitterAdapterTest {
             assertThat(hasNonPointRange).isTrue()
         }
 
-        private fun selectionDepth(sel: XtcCompilerAdapter.SelectionRange): Int = generateSequence(sel) { it.parent }.count()
+        private fun selectionDepth(sel: Adapter.SelectionRange): Int = generateSequence(sel) { it.parent }.count()
 
-        private fun linearize(pos: XtcCompilerAdapter.Position): Int = pos.line * 10_000 + pos.column
+        private fun linearize(pos: Adapter.Position): Int = pos.line * 10_000 + pos.column
     }
 
     // ========================================================================
@@ -2087,7 +2087,7 @@ class TreeSitterAdapterTest {
 
             ts.compile(uri, source)
             // cursor on '1' in `add(1, 2)` at line 6, col 16
-            val selections = ts.getSelectionRanges(uri, listOf(XtcCompilerAdapter.Position(6, 16)))
+            val selections = ts.getSelectionRanges(uri, listOf(Adapter.Position(6, 16)))
             val depth = selectionDepth(selections.single())
             logger.info("[TEST] shouldWalkOutwardFromCallArgument -> depth={}", depth)
             logSelectionChain("shouldWalkOutwardFromCallArgument", selections.single())
@@ -2123,7 +2123,7 @@ class TreeSitterAdapterTest {
 
             ts.compile(uri, source)
             // cursor on '1' in `negate(1)` at line 9, col 23
-            val selections = ts.getSelectionRanges(uri, listOf(XtcCompilerAdapter.Position(9, 23)))
+            val selections = ts.getSelectionRanges(uri, listOf(Adapter.Position(9, 23)))
             val depth = selectionDepth(selections.single())
             logger.info("[TEST] shouldWalkOutwardFromNestedCallArgument -> depth={}", depth)
             logSelectionChain("shouldWalkOutwardFromNestedCallArgument", selections.single())
@@ -2157,8 +2157,8 @@ class TreeSitterAdapterTest {
             ts.compile(uri, source)
             val positions =
                 listOf(
-                    XtcCompilerAdapter.Position(6, 16), // '1' in add(1, 2)
-                    XtcCompilerAdapter.Position(2, 12), // 'add' in declaration
+                    Adapter.Position(6, 16), // '1' in add(1, 2)
+                    Adapter.Position(2, 12), // 'add' in declaration
                 )
             val selections = ts.getSelectionRanges(uri, positions)
             logger.info("[TEST] shouldHandleMultiplePositionsIndependently -> {} selections", selections.size)
@@ -2170,11 +2170,11 @@ class TreeSitterAdapterTest {
             selections.forEach { assertWideningChain(it) }
         }
 
-        private fun selectionDepth(sel: XtcCompilerAdapter.SelectionRange): Int = generateSequence(sel) { it.parent }.count()
+        private fun selectionDepth(sel: Adapter.SelectionRange): Int = generateSequence(sel) { it.parent }.count()
 
-        private fun linearize(pos: XtcCompilerAdapter.Position): Int = pos.line * 10_000 + pos.column
+        private fun linearize(pos: Adapter.Position): Int = pos.line * 10_000 + pos.column
 
-        private fun assertWideningChain(selection: XtcCompilerAdapter.SelectionRange) {
+        private fun assertWideningChain(selection: Adapter.SelectionRange) {
             generateSequence(selection) { it.parent }
                 .zipWithNext()
                 .forEach { (child, parent) ->
@@ -2187,7 +2187,7 @@ class TreeSitterAdapterTest {
 
         private fun logSelectionChain(
             test: String,
-            sel: XtcCompilerAdapter.SelectionRange,
+            sel: Adapter.SelectionRange,
         ) {
             val chain = generateSequence(sel) { it.parent }.toList()
             chain.forEachIndexed { i, s ->
@@ -2717,9 +2717,9 @@ class TreeSitterAdapterTest {
             )
 
             val range =
-                XtcCompilerAdapter.Range(
-                    XtcCompilerAdapter.Position(0, 0),
-                    XtcCompilerAdapter.Position(7, 0),
+                Adapter.Range(
+                    Adapter.Position(0, 0),
+                    Adapter.Position(7, 0),
                 )
             val hints = ts.getInlayHints(uri, range)
 

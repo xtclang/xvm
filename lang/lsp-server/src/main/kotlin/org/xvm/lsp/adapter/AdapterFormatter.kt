@@ -2,9 +2,9 @@ package org.xvm.lsp.adapter
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.xvm.lsp.adapter.XtcCompilerAdapter.Position
-import org.xvm.lsp.adapter.XtcCompilerAdapter.Range
-import org.xvm.lsp.adapter.XtcCompilerAdapter.TextEdit
+import org.xvm.lsp.adapter.Adapter.Position
+import org.xvm.lsp.adapter.Adapter.Range
+import org.xvm.lsp.adapter.Adapter.TextEdit
 
 /**
  * Backend-agnostic formatter that works with any [AdapterTree]/[AdapterNode] implementation.
@@ -98,8 +98,8 @@ class AdapterFormatter {
     fun formatDocument(
         tree: AdapterTree,
         content: String,
-        config: XtcFormattingConfig,
-        options: XtcCompilerAdapter.FormattingOptions,
+        config: FormattingConfig,
+        options: Adapter.FormattingOptions,
     ): List<TextEdit> = buildFormattingEdits(tree, content, config, options, startLine = 0, endLine = null)
 
     /**
@@ -109,8 +109,8 @@ class AdapterFormatter {
         tree: AdapterTree,
         content: String,
         range: Range,
-        config: XtcFormattingConfig,
-        options: XtcCompilerAdapter.FormattingOptions,
+        config: FormattingConfig,
+        options: Adapter.FormattingOptions,
     ): List<TextEdit> = buildFormattingEdits(tree, content, config, options, startLine = range.start.line, endLine = range.end.line)
 
     /**
@@ -123,8 +123,8 @@ class AdapterFormatter {
     private fun buildFormattingEdits(
         tree: AdapterTree,
         content: String,
-        config: XtcFormattingConfig,
-        options: XtcCompilerAdapter.FormattingOptions,
+        config: FormattingConfig,
+        options: Adapter.FormattingOptions,
         startLine: Int,
         endLine: Int?,
     ): List<TextEdit> =
@@ -195,7 +195,7 @@ class AdapterFormatter {
         tree: AdapterTree,
         lineIndex: Int,
         lines: List<String>,
-        config: XtcFormattingConfig,
+        config: FormattingConfig,
     ): Int {
         val line = lines[lineIndex]
         val trimmed = line.trimStart()
@@ -299,7 +299,7 @@ class AdapterFormatter {
         line: Int,
         column: Int,
         ch: String,
-        config: XtcFormattingConfig,
+        config: FormattingConfig,
     ): List<TextEdit> =
         when (ch) {
             "\n" -> handleEnter(tree, line, config)
@@ -316,7 +316,7 @@ class AdapterFormatter {
     private fun handleEnter(
         tree: AdapterTree,
         line: Int,
-        config: XtcFormattingConfig,
+        config: FormattingConfig,
     ): List<TextEdit> {
         val source = tree.source
         val lines = source.split("\n")
@@ -397,7 +397,7 @@ class AdapterFormatter {
         tree: AdapterTree,
         line: Int,
         column: Int,
-        config: XtcFormattingConfig,
+        config: FormattingConfig,
     ): List<TextEdit> {
         val source = tree.source
         val lines = source.split("\n")
@@ -450,7 +450,7 @@ class AdapterFormatter {
         tree: AdapterTree,
         line: Int,
         column: Int,
-        @Suppress("UNUSED_PARAMETER") config: XtcFormattingConfig,
+        @Suppress("UNUSED_PARAMETER") config: FormattingConfig,
     ): List<TextEdit> {
         val source = tree.source
         val lines = source.split("\n")

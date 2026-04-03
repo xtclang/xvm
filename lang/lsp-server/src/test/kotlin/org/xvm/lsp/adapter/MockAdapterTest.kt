@@ -5,17 +5,17 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.xvm.lsp.adapter.mock.MockXtcCompilerAdapter
+import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.SymbolInfo
 
-@DisplayName("MockXtcCompilerAdapter")
-class MockXtcCompilerAdapterTest {
-    private lateinit var adapter: MockXtcCompilerAdapter
+@DisplayName("MockAdapter")
+class MockAdapterTest {
+    private lateinit var adapter: MockAdapter
 
     @BeforeEach
     fun setUp() {
-        adapter = MockXtcCompilerAdapter()
+        adapter = MockAdapter()
     }
 
     @Nested
@@ -322,7 +322,7 @@ class MockXtcCompilerAdapterTest {
             val ranges = adapter.getFoldingRanges("file:///test.x")
 
             assertThat(ranges)
-                .anyMatch { it.kind == XtcCompilerAdapter.FoldingRange.FoldingKind.IMPORTS }
+                .anyMatch { it.kind == Adapter.FoldingRange.FoldingKind.IMPORTS }
         }
     }
 
@@ -402,9 +402,9 @@ class MockXtcCompilerAdapterTest {
             val actions =
                 adapter.getCodeActions(
                     "file:///test.x",
-                    XtcCompilerAdapter.Range(
-                        XtcCompilerAdapter.Position(0, 0),
-                        XtcCompilerAdapter.Position(0, 0),
+                    Adapter.Range(
+                        Adapter.Position(0, 0),
+                        Adapter.Position(0, 0),
                     ),
                     emptyList(),
                 )
@@ -429,9 +429,9 @@ class MockXtcCompilerAdapterTest {
             val actions =
                 adapter.getCodeActions(
                     "file:///test.x",
-                    XtcCompilerAdapter.Range(
-                        XtcCompilerAdapter.Position(0, 0),
-                        XtcCompilerAdapter.Position(0, 0),
+                    Adapter.Range(
+                        Adapter.Position(0, 0),
+                        Adapter.Position(0, 0),
                     ),
                     emptyList(),
                 )
@@ -448,7 +448,7 @@ class MockXtcCompilerAdapterTest {
         fun shouldRemoveTrailingWhitespace() {
             val source = "module myapp {   \n    class Person {  \n    }\n}"
             val options =
-                XtcCompilerAdapter.FormattingOptions(
+                Adapter.FormattingOptions(
                     tabSize = 4,
                     insertSpaces = true,
                     trimTrailingWhitespace = true,
@@ -466,7 +466,7 @@ class MockXtcCompilerAdapterTest {
         fun shouldInsertFinalNewline() {
             val source = "module myapp {}"
             val options =
-                XtcCompilerAdapter.FormattingOptions(
+                Adapter.FormattingOptions(
                     tabSize = 4,
                     insertSpaces = true,
                     insertFinalNewline = true,
@@ -482,7 +482,7 @@ class MockXtcCompilerAdapterTest {
         fun shouldReturnEmptyForCleanFile() {
             val source = "module myapp {}\n"
             val options =
-                XtcCompilerAdapter.FormattingOptions(
+                Adapter.FormattingOptions(
                     tabSize = 4,
                     insertSpaces = true,
                 )
@@ -582,15 +582,15 @@ class MockXtcCompilerAdapterTest {
         fun shouldOnlyFormatWithinRange() {
             val source = "line zero   \nline one   \nline two   \nline three   "
             val options =
-                XtcCompilerAdapter.FormattingOptions(
+                Adapter.FormattingOptions(
                     tabSize = 4,
                     insertSpaces = true,
                     trimTrailingWhitespace = true,
                 )
             val range =
-                XtcCompilerAdapter.Range(
-                    XtcCompilerAdapter.Position(1, 0),
-                    XtcCompilerAdapter.Position(2, 0),
+                Adapter.Range(
+                    Adapter.Position(1, 0),
+                    Adapter.Position(2, 0),
                 )
 
             val edits = adapter.formatRange("file:///test.x", source, range, options)
@@ -605,15 +605,15 @@ class MockXtcCompilerAdapterTest {
         fun shouldNotInsertFinalNewlineForRange() {
             val source = "module myapp {}"
             val options =
-                XtcCompilerAdapter.FormattingOptions(
+                Adapter.FormattingOptions(
                     tabSize = 4,
                     insertSpaces = true,
                     insertFinalNewline = true,
                 )
             val range =
-                XtcCompilerAdapter.Range(
-                    XtcCompilerAdapter.Position(0, 0),
-                    XtcCompilerAdapter.Position(0, 15),
+                Adapter.Range(
+                    Adapter.Position(0, 0),
+                    Adapter.Position(0, 15),
                 )
 
             val edits = adapter.formatRange("file:///test.x", source, range, options)

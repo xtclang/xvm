@@ -99,8 +99,8 @@ import org.eclipse.lsp4j.services.LanguageServer
 import org.eclipse.lsp4j.services.TextDocumentService
 import org.eclipse.lsp4j.services.WorkspaceService
 import org.slf4j.LoggerFactory
-import org.xvm.lsp.adapter.XtcCompilerAdapter
-import org.xvm.lsp.adapter.XtcFormattingConfig
+import org.xvm.lsp.adapter.Adapter
+import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.model.fromLsp
@@ -113,11 +113,11 @@ import java.util.Properties
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.measureTimedValue
-import org.xvm.lsp.adapter.XtcCompilerAdapter.CompletionItem.CompletionKind as AdapterCompletionKind
-import org.xvm.lsp.adapter.XtcCompilerAdapter.FormattingOptions as AdapterFormattingOptions
-import org.xvm.lsp.adapter.XtcCompilerAdapter.Position as AdapterPosition
-import org.xvm.lsp.adapter.XtcCompilerAdapter.Range as AdapterRange
-import org.xvm.lsp.adapter.XtcCompilerAdapter.SelectionRange as AdapterSelectionRange
+import org.xvm.lsp.adapter.Adapter.CompletionItem.CompletionKind as AdapterCompletionKind
+import org.xvm.lsp.adapter.Adapter.FormattingOptions as AdapterFormattingOptions
+import org.xvm.lsp.adapter.Adapter.Position as AdapterPosition
+import org.xvm.lsp.adapter.Adapter.Range as AdapterRange
+import org.xvm.lsp.adapter.Adapter.SelectionRange as AdapterSelectionRange
 
 // =============================================================================
 // Extension functions for clean logging of LSP4J types
@@ -137,20 +137,20 @@ private fun Range.fmt(): String = "${start.fmt()}-${end.fmt()}"
  * All LSP methods are wired up to call the adapter and log their invocations.
  * The actual implementation depends on the adapter:
  *
- * - **MockXtcCompilerAdapter**: Basic regex-based parsing, most features log "not implemented"
+ * - **MockAdapter**: Basic regex-based parsing, most features log "not implemented"
  * - **TreeSitterAdapter**: Syntax-aware features (hover, completion, definition, references, symbols, folding, highlights)
- * - **XdkCompilerAdapter**: (future) Full semantic features via XDK compiler
+ * - **XdkAdapter**: (future) Full semantic features via XDK compiler
  *
  * ## Backend Selection
  *
  * Select backend at build time: `./gradlew :lang:lsp-server:build -Plsp.adapter=treesitter`
  *
- * @see org.xvm.lsp.adapter.XtcCompilerAdapter
+ * @see org.xvm.lsp.adapter.Adapter
  * @see org.xvm.lsp.adapter.TreeSitterAdapter
  */
 @Suppress("LoggingSimilarMessage")
 class XtcLanguageServer(
-    private val adapter: XtcCompilerAdapter,
+    private val adapter: Adapter,
 ) : LanguageServer,
     LanguageClientAware {
     private var client: LanguageClient? = null
@@ -180,10 +180,10 @@ class XtcLanguageServer(
      * This is populated after initialization by [requestFormattingConfig] and updated
      * when the client sends `workspace/didChangeConfiguration`.
      *
-     * @see XtcFormattingConfig.resolve
+     * @see FormattingConfig.resolve
      */
     @Volatile
-    var editorFormattingConfig: XtcFormattingConfig? = null
+    var editorFormattingConfig: FormattingConfig? = null
         private set
 
     override fun connect(client: LanguageClient) {
@@ -246,7 +246,7 @@ class XtcLanguageServer(
      *
      * Sends a request for section `"xtc.formatting"`. The client (e.g., [XtcLanguageClient]
      * in IntelliJ) responds with IntelliJ Code Style settings. The response is parsed into
-     * an [XtcFormattingConfig] and stored as [editorFormattingConfig].
+     * an [FormattingConfig] and stored as [editorFormattingConfig].
      */
     private fun requestFormattingConfig() {
         val c = client ?: return
@@ -257,7 +257,7 @@ class XtcLanguageServer(
                 val config = results?.firstOrNull()
                 if (config is Map<*, *>) {
                     val formattingConfig =
-                        XtcFormattingConfig(
+                        FormattingConfig(
                             indentSize = (config["indentSize"] as? Number)?.toInt() ?: 4,
                             continuationIndentSize = (config["continuationIndentSize"] as? Number)?.toInt() ?: 8,
                             insertSpaces = config["insertSpaces"] as? Boolean ?: true,
@@ -1430,7 +1430,7 @@ class XtcLanguageServer(
         // Conversion helpers for hierarchy types
         // ====================================================================
 
-        private fun XtcCompilerAdapter.TypeHierarchyItem.toLsp(defaultUri: String): TypeHierarchyItem {
+        private fun Adapter.TypeHierarchyItem.toLsp(defaultUri: String): TypeHierarchyItem {
             val resolvedUri = this.uri.ifEmpty { defaultUri }
             return TypeHierarchyItem(
                 this.name,
@@ -1442,8 +1442,8 @@ class XtcLanguageServer(
             )
         }
 
-        private fun TypeHierarchyItem.toAdapter(): XtcCompilerAdapter.TypeHierarchyItem =
-            XtcCompilerAdapter.TypeHierarchyItem(
+        private fun TypeHierarchyItem.toAdapter(): Adapter.TypeHierarchyItem =
+            Adapter.TypeHierarchyItem(
                 name = name,
                 kind = SymbolInfo.SymbolKind.CLASS,
                 uri = uri,
@@ -1452,14 +1452,14 @@ class XtcLanguageServer(
                 detail = detail,
             )
 
-        private fun XtcCompilerAdapter.CallHierarchyItem.toLspCallItem(): CallHierarchyItem {
+        private fun Adapter.CallHierarchyItem.toLspCallItem(): CallHierarchyItem {
             val result = CallHierarchyItem(this.name, this.kind.toLsp(), this.uri, this.range.toLsp(), this.selectionRange.toLsp())
             result.detail = this.detail
             return result
         }
 
-        private fun CallHierarchyItem.toAdapterCallItem(): XtcCompilerAdapter.CallHierarchyItem =
-            XtcCompilerAdapter.CallHierarchyItem(
+        private fun CallHierarchyItem.toAdapterCallItem(): Adapter.CallHierarchyItem =
+            Adapter.CallHierarchyItem(
                 name = name,
                 kind = SymbolInfo.SymbolKind.METHOD,
                 uri = uri,

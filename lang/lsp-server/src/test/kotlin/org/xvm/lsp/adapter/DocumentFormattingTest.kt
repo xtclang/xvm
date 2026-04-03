@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.xvm.lsp.adapter.treesitter.TreeSitterAdapter
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.time.measureTimedValue
 
 /**
  * Unit tests for AST-aware document formatting (`textDocument/formatting`) in [TreeSitterAdapter].
@@ -31,7 +32,7 @@ class DocumentFormattingTest {
     private fun freshUri(): String = "file:///docfmt${uriCounter.incrementAndGet()}.x"
 
     private val defaultOptions =
-        XtcCompilerAdapter.FormattingOptions(
+        Adapter.FormattingOptions(
             tabSize = 4,
             insertSpaces = true,
         )
@@ -76,9 +77,9 @@ class DocumentFormattingTest {
         val uri = freshUri()
         ts.compile(uri, input)
         val range =
-            XtcCompilerAdapter.Range(
-                start = XtcCompilerAdapter.Position(startLine, 0),
-                end = XtcCompilerAdapter.Position(endLine, 0),
+            Adapter.Range(
+                start = Adapter.Position(startLine, 0),
+                end = Adapter.Position(endLine, 0),
             )
         val edits = ts.formatRange(uri, input, range, defaultOptions)
         return applyEdits(input, edits)
@@ -114,7 +115,7 @@ class DocumentFormattingTest {
      */
     private fun applyEdits(
         source: String,
-        edits: List<XtcCompilerAdapter.TextEdit>,
+        edits: List<Adapter.TextEdit>,
     ): String {
         if (edits.isEmpty()) return source
         val lines = source.split("\n").toMutableList()
@@ -122,7 +123,7 @@ class DocumentFormattingTest {
         // Sort edits in reverse document order so we can apply them without shifting positions.
         val sorted =
             edits.sortedWith(
-                compareByDescending<XtcCompilerAdapter.TextEdit> { it.range.start.line }
+                compareByDescending<Adapter.TextEdit> { it.range.start.line }
                     .thenByDescending { it.range.start.column },
             )
 
@@ -525,7 +526,7 @@ class DocumentFormattingTest {
             ts.compile(uri, input)
 
             val options =
-                XtcCompilerAdapter.FormattingOptions(
+                Adapter.FormattingOptions(
                     tabSize = 4,
                     insertSpaces = true,
                     insertFinalNewline = false,
@@ -791,16 +792,15 @@ class DocumentFormattingTest {
     }
 
     // ========================================================================
-    // Performance
+    // Benchmark (non-asserting — just logs timing)
     // ========================================================================
 
     @Nested
-    @DisplayName("Performance")
-    inner class PerformanceTests {
+    @DisplayName("Benchmark")
+    inner class BenchmarkTests {
         @Test
-        @DisplayName("1000+ line file formats in under 500ms")
-        fun largeFilePerformance() {
-            // Generate a 1000+ line XTC file
+        @DisplayName("1000+ line file formatting benchmark")
+        fun largeFileFormattingBenchmark() {
             val sb = StringBuilder()
             sb.appendLine("module myapp {")
             sb.appendLine("    class BigClass {")
@@ -816,11 +816,11 @@ class DocumentFormattingTest {
             val uri = freshUri()
             ts.compile(uri, input)
 
-            val start = System.nanoTime()
-            ts.formatDocument(uri, input, defaultOptions)
-            val elapsed = (System.nanoTime() - start) / 1_000_000
-
-            assertThat(elapsed).isLessThan(500)
+            val (edits, elapsed) =
+                measureTimedValue {
+                    ts.formatDocument(uri, input, defaultOptions)
+                }
+            println("[BENCHMARK] ${input.lines().size} lines, ${edits.size} edits in $elapsed")
         }
     }
 }

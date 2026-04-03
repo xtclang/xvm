@@ -1,7 +1,7 @@
 package org.xvm.lsp.adapter.xdk
 
-import org.xvm.lsp.adapter.AbstractXtcCompilerAdapter
-import org.xvm.lsp.adapter.XtcCompilerAdapter
+import org.xvm.lsp.adapter.AbstractAdapter
+import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
@@ -16,7 +16,7 @@ import org.xvm.lsp.util.WorkInProgress
  * To use: `./gradlew :lang:lsp-server:fatJar -Plsp.adapter=compiler`
  */
 @WorkInProgress("Awaiting full compiler integration")
-class XdkCompilerAdapter : AbstractXtcCompilerAdapter() {
+class XdkAdapter : AbstractAdapter() {
     override val displayName: String = "XDK (stub)"
 
     // TODO: Integrate with XTC compiler to produce real diagnostics and symbols.
@@ -48,7 +48,7 @@ class XdkCompilerAdapter : AbstractXtcCompilerAdapter() {
         line: Int,
         column: Int,
         triggerCharacter: String?,
-    ): List<XtcCompilerAdapter.CompletionItem> {
+    ): List<Adapter.CompletionItem> {
         logger.info("getCompletions: uri={}, line={}, column={}, trigger={} (stub -- returning empty)", uri, line, column, triggerCharacter)
         return emptyList()
     }

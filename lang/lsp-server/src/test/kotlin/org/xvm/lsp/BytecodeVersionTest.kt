@@ -53,7 +53,7 @@ class BytecodeVersionTest {
         val classesToCheck =
             listOf(
                 XtcLanguageServer::class.java,
-                org.xvm.lsp.adapter.XtcCompilerAdapter::class.java,
+                org.xvm.lsp.adapter.Adapter::class.java,
                 org.xvm.lsp.model.Location::class.java,
                 org.xvm.lsp.model.Diagnostic::class.java,
             )

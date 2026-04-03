@@ -9,7 +9,7 @@ package org.xvm.lsp.adapter
  * 3. LSP `FormattingOptions` from the editor (tabSize / insertSpaces)
  * 4. XTC defaults (4-space indent, 8-space continuation, no tabs)
  */
-data class XtcFormattingConfig(
+data class FormattingConfig(
     val indentSize: Int = 4,
     val continuationIndentSize: Int = 8,
     val insertSpaces: Boolean = true,
@@ -17,7 +17,7 @@ data class XtcFormattingConfig(
 ) {
     companion object {
         /** XTC's opinionated defaults, matching lib_ecstasy conventions. */
-        val DEFAULT = XtcFormattingConfig()
+        val DEFAULT = FormattingConfig()
 
         /**
          * Resolve the effective formatting config for a file.
@@ -30,9 +30,9 @@ data class XtcFormattingConfig(
          */
         fun resolve(
             fileUri: String,
-            lspOptions: XtcCompilerAdapter.FormattingOptions,
-            editorConfig: XtcFormattingConfig? = null,
-        ): XtcFormattingConfig {
+            lspOptions: Adapter.FormattingOptions,
+            editorConfig: FormattingConfig? = null,
+        ): FormattingConfig {
             // TODO Phase 4: check for xtc-format.toml before other sources.
             if (editorConfig != null) return editorConfig
             return fromLspOptions(lspOptions)
@@ -41,7 +41,7 @@ data class XtcFormattingConfig(
         /**
          * Create from LSP FormattingOptions (editor fallback).
          */
-        fun fromLspOptions(options: XtcCompilerAdapter.FormattingOptions): XtcFormattingConfig =
+        fun fromLspOptions(options: Adapter.FormattingOptions): FormattingConfig =
             DEFAULT.copy(
                 indentSize = if (options.insertSpaces) options.tabSize else DEFAULT.indentSize,
                 insertSpaces = options.insertSpaces,

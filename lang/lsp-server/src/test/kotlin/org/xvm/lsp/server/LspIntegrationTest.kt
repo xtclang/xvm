@@ -38,8 +38,8 @@ import org.mockito.ArgumentCaptor
 import org.mockito.Mockito.atLeastOnce
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
-import org.xvm.lsp.adapter.XtcCompilerAdapter
-import org.xvm.lsp.adapter.mock.MockXtcCompilerAdapter
+import org.xvm.lsp.adapter.Adapter
+import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.adapter.treesitter.TreeSitterAdapter
 import java.nio.file.Files
 import java.nio.file.Path
@@ -48,7 +48,7 @@ import java.nio.file.Paths
 /**
  * Integration test that exercises the LSP server against real `.x` source files from
  * the repository. Unlike [XtcLanguageServerTest], which uses synthetic inline snippets
- * with the [MockXtcCompilerAdapter], this test opens actual XTC standard library and
+ * with the [MockAdapter], this test opens actual XTC standard library and
  * manual test files and verifies that each LSP capability returns meaningful results.
  *
  * ## How to run
@@ -70,7 +70,7 @@ import java.nio.file.Paths
  * native tree-sitter library is available (which it is when the `tree-sitter` subproject
  * has been built), all tests run against the real syntax-aware parser. If the native lib
  * is unavailable (e.g. in a CI environment without native builds), the test falls back to
- * [MockXtcCompilerAdapter] and the tests still pass -- they just exercise regex-based parsing.
+ * [MockAdapter] and the tests still pass -- they just exercise regex-based parsing.
  *
  * ## Test files
  *
@@ -96,7 +96,7 @@ import java.nio.file.Paths
 @DisplayName("LspIntegrationTest")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class LspIntegrationTest {
-    private lateinit var adapter: XtcCompilerAdapter
+    private lateinit var adapter: Adapter
     private lateinit var testFiles: Map<String, TestFile>
     private lateinit var server: XtcLanguageServer
     private lateinit var mockClient: LanguageClient
@@ -112,7 +112,7 @@ class LspIntegrationTest {
 
     @BeforeAll
     fun setUpAdapter() {
-        adapter = createTreeSitterAdapterOrNull() ?: MockXtcCompilerAdapter()
+        adapter = createTreeSitterAdapterOrNull() ?: MockAdapter()
         isTreeSitter = adapter is TreeSitterAdapter
 
         val root = resolveProjectRoot()

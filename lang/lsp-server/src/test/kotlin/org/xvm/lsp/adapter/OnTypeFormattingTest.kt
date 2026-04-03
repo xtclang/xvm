@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  * Tests parse XTC snippets via the tree-sitter native parser, then call
  * [TreeSitterAdapter.onTypeFormatting] with a trigger character and cursor position,
- * asserting that the returned [XtcCompilerAdapter.TextEdit] list produces the correct
+ * asserting that the returned [Adapter.TextEdit] list produces the correct
  * indentation.
  *
  * All tests are skipped (not failed) when the tree-sitter native library is unavailable.
@@ -33,7 +33,7 @@ class OnTypeFormattingTest {
     private fun freshUri(): String = "file:///fmt${uriCounter.incrementAndGet()}.x"
 
     private val defaultOptions =
-        XtcCompilerAdapter.FormattingOptions(
+        Adapter.FormattingOptions(
             tabSize = 4,
             insertSpaces = true,
         )
@@ -77,7 +77,7 @@ class OnTypeFormattingTest {
         line: Int,
         column: Int,
         ch: String,
-    ): List<XtcCompilerAdapter.TextEdit> {
+    ): List<Adapter.TextEdit> {
         val uri = freshUri()
         ts.compile(uri, source)
         return ts.onTypeFormatting(uri, line, column, ch, defaultOptions)
@@ -457,7 +457,7 @@ class OnTypeFormattingTest {
             ts.compile(uri, source)
 
             val customOptions =
-                XtcCompilerAdapter.FormattingOptions(
+                Adapter.FormattingOptions(
                     tabSize = 2,
                     insertSpaces = true,
                 )
@@ -469,7 +469,7 @@ class OnTypeFormattingTest {
         @Test
         @DisplayName("default config has standard XTC values")
         fun defaultConfig() {
-            val config = XtcFormattingConfig.DEFAULT
+            val config = FormattingConfig.DEFAULT
             assertThat(config.indentSize).isEqualTo(4)
             assertThat(config.continuationIndentSize).isEqualTo(8)
             assertThat(config.insertSpaces).isTrue()
@@ -479,8 +479,8 @@ class OnTypeFormattingTest {
         @Test
         @DisplayName("fromLspOptions applies editor tabSize")
         fun fromLspOptions() {
-            val options = XtcCompilerAdapter.FormattingOptions(tabSize = 3, insertSpaces = true)
-            val config = XtcFormattingConfig.fromLspOptions(options)
+            val options = Adapter.FormattingOptions(tabSize = 3, insertSpaces = true)
+            val config = FormattingConfig.fromLspOptions(options)
             assertThat(config.indentSize).isEqualTo(3)
             assertThat(config.insertSpaces).isTrue()
         }
@@ -488,8 +488,8 @@ class OnTypeFormattingTest {
         @Test
         @DisplayName("fromLspOptions ignores tabSize when not using spaces")
         fun fromLspOptionsNoSpaces() {
-            val options = XtcCompilerAdapter.FormattingOptions(tabSize = 8, insertSpaces = false)
-            val config = XtcFormattingConfig.fromLspOptions(options)
+            val options = Adapter.FormattingOptions(tabSize = 8, insertSpaces = false)
+            val config = FormattingConfig.fromLspOptions(options)
             // Should use default indent size, not the tab size
             assertThat(config.indentSize).isEqualTo(4)
             assertThat(config.insertSpaces).isFalse()
