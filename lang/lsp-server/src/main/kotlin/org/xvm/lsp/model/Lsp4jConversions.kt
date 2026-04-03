@@ -15,17 +15,12 @@ import org.xvm.lsp.adapter.XtcCompilerAdapter
 // Extension functions for converting between LSP model types and LSP4J types.
 // Keeps the model classes pure while centralizing conversion logic.
 
-/**
- * LSP FileChangeType values exposed as adapter-layer constants.
- *
- * Use these instead of importing `org.eclipse.lsp4j.FileChangeType` directly in adapter code,
- * keeping all LSP4J-specific imports centralized in this conversion module.
- */
-object LspFileChangeType {
-    val CREATED: Int = FileChangeType.Created.value
-    val CHANGED: Int = FileChangeType.Changed.value
-    val DELETED: Int = FileChangeType.Deleted.value
-}
+/** Check whether an LSP `changeType` int represents a file creation or modification. */
+fun isFileCreatedOrChanged(changeType: Int): Boolean =
+    changeType == FileChangeType.Created.value || changeType == FileChangeType.Changed.value
+
+/** Check whether an LSP `changeType` int represents a file deletion. */
+fun isFileDeleted(changeType: Int): Boolean = changeType == FileChangeType.Deleted.value
 
 /** Convert this Location to an LSP4J Range. */
 fun Location.toRange(): Range =

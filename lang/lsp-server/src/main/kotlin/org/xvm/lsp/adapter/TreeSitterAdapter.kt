@@ -23,9 +23,10 @@ import org.xvm.lsp.index.WorkspaceIndexer
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
-import org.xvm.lsp.model.LspFileChangeType
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.model.SymbolInfo.SymbolKind
+import org.xvm.lsp.model.isFileCreatedOrChanged
+import org.xvm.lsp.model.isFileDeleted
 import org.xvm.lsp.treesitter.SemanticTokenEncoder
 import org.xvm.lsp.treesitter.XtcNode
 import org.xvm.lsp.treesitter.XtcParser
@@ -160,8 +161,8 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         }
 
         runCatching {
-            when (changeType) {
-                LspFileChangeType.CREATED, LspFileChangeType.CHANGED -> {
+            when {
+                isFileCreatedOrChanged(changeType) -> {
                     val path = Path.of(URI(uri))
                     if (path.extension == "x" && Files.exists(path)) {
                         indexer.reindexFile(uri, path.readText())
@@ -169,7 +170,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
                     }
                 }
 
-                LspFileChangeType.DELETED -> {
+                isFileDeleted(changeType) -> {
                     indexer.removeFile(uri)
                     logger.info("removed deleted file from index: {}", uri.substringAfterLast('/'))
                 }
