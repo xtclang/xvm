@@ -216,6 +216,7 @@ class MockXtcCompilerAdapter : AbstractXtcCompilerAdapter() {
         uri: String,
         line: Int,
         column: Int,
+        triggerCharacter: String?,
     ): List<XtcCompilerAdapter.CompletionItem> {
         val fileName = uri.substringAfterLast('/')
         logger.info("getCompletions(uri={}, line={}, column={})", fileName, line, column)

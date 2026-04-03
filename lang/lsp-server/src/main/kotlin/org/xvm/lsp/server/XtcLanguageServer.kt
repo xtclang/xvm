@@ -695,7 +695,8 @@ class XtcLanguageServer(
 
             logger.info("textDocument/completion: {} at {}:{}", uri, line, column)
             return CompletableFuture.supplyAsync {
-                val (completions, elapsed) = measureTimedValue { adapter.getCompletions(uri, line, column) }
+                val trigger = params.context?.triggerCharacter
+                val (completions, elapsed) = measureTimedValue { adapter.getCompletions(uri, line, column, trigger) }
 
                 val items =
                     completions.map { c ->

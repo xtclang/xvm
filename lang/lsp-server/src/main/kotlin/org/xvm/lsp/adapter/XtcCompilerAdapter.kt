@@ -167,22 +167,23 @@ interface XtcCompilerAdapter : Closeable {
      *
      * **Adapter implementations:**
      * - *Mock:* Returns XTC keywords, built-in types, and symbols from the current document.
-     * - *TreeSitter:* Same as Mock, plus import-derived names and symbols from AST queries.
-     *   Context-unaware (cannot provide member completion after `.`).
+     * - *TreeSitter:* Context-aware filtering: after `.` shows members, in type position shows
+     *   only types, after `@` shows annotations, in `import` shows qualified names.
      * - *Compiler:* Type-aware completion with member access, method overloads, and import suggestions.
      *
-     * **Compiler upgrade path:** Context-sensitive completions: after `.` show members, after `:`
-     * show types, inside `import` show available modules/packages.
+     * **Compiler upgrade path:** Full semantic type resolution for member access and overloads.
      *
-     * @param uri    the document URI
-     * @param line   0-based line number
-     * @param column 0-based column number
+     * @param uri              the document URI
+     * @param line             0-based line number
+     * @param column           0-based column number
+     * @param triggerCharacter the character that triggered completion (e.g., `.`, `:`, `<`), or null
      * @return list of completion items
      */
     fun getCompletions(
         uri: String,
         line: Int,
         column: Int,
+        triggerCharacter: String? = null,
     ): List<CompletionItem>
 
     /**

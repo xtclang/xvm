@@ -50,8 +50,9 @@ class XtcCompilerAdapterStub : AbstractXtcCompilerAdapter() {
         uri: String,
         line: Int,
         column: Int,
+        triggerCharacter: String?,
     ): List<XtcCompilerAdapter.CompletionItem> {
-        logger.info("getCompletions: uri={}, line={}, column={} (stub -- returning empty)", uri, line, column)
+        logger.info("getCompletions: uri={}, line={}, column={}, trigger={} (stub -- returning empty)", uri, line, column, triggerCharacter)
         return emptyList()
     }
 
