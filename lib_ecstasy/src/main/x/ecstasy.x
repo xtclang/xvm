@@ -161,18 +161,4 @@ module ecstasy.xtclang.org {
      */
     const NotShareable(String? text = Null, Exception? cause = Null)
             extends IllegalArgument(text, cause);
-
-    /**
-     * `Shareable` is a type that represents an object that can be passed across a service boundary,
-     * from the realm of one service, passed into a different service. Specifically, it is only
-     * possible to pass an immutable object or a service proxy across a service boundary; the exact
-     * requirements are as follows:
-     *
-     * 1. An object that is immutable;
-     * 2. An object that is [Freezable], from which an immutable copy will be obtained to pass
-     *    across the service boundary;
-     * 3. A `service` object;
-     * 4. A _virtual child_ object of a `service` object.
-     */
-    typedef (service | immutable | Freezable) as Shareable;
 }

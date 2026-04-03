@@ -334,7 +334,8 @@ module jsondb.xtclang.org {
         @Inject("repository") ModuleRepository coreRepo;
 
         ModuleGenerator  gen  = new ModuleGenerator(dbModuleName, version);
-        ModuleRepository repo = new LinkedRepository([new DirRepository(buildDir), coreRepo].freeze(True));
+        ModuleRepository repo = new LinkedRepository([new DirRepository(buildDir), coreRepo]
+                                .toArray(Constant, inPlace=True));
         Log              log  = new SimpleLog();
 
         ModuleTemplate dbTemplate;

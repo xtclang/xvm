@@ -40,12 +40,15 @@ class KeyEntry<Key, Value>(Map<Key, Value> map, Key key)
         map.remove(key);
     }
 
+    @Override
+    Entry<Key, Value> reify() = new DiscreteEntry(key, value, readOnly=True);
+
     // ----- internal ------------------------------------------------------------------------------
 
     /**
      * The originating `Map`.
      */
-    protected Map<Key, Value> map;
+    protected/private Map<Key, Value> map;
 
     /**
      * Verify that the containing `Map`'s mutability is non-persistent.

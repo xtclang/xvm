@@ -37,7 +37,7 @@ import numbers.PseudoRandom;
  *     }
  *
  */
-const SharedContext<Value extends service | immutable>
+const SharedContext<Value extends Passable>
         implements Hashable {
     /**
      * Construct a SharedContext with an optional name and default value.

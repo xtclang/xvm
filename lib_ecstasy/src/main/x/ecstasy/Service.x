@@ -64,6 +64,144 @@
  * * * `@Soft` and `@Weak` reference-cleared notifications.
  */
 interface Service {
+
+    /**
+     * It is only possible to pass an immutable object or a service proxy across a service boundary.
+     *
+     * `Passable` objects are one of the following:
+     *
+     * 1. Any object that `.is(immutable)`, including `const`, `enum`, `package`, and `module`
+     *    classes, and any non-service object that is immutable as the result of a call to
+     *    [Object.makeImmutable()];
+     * 2. Any object of a `service` class; for these objects, `.is(service)` will be `True`;
+     * 3. Any _virtual child_ of a `service` object; for these objects, `.is(service)` will also be
+     *    `True`.
+     *
+     * Furthermore, when a service method is declared to take or return an interface type, a value
+     * of that interface type that is not `Passable` will automatically be proxied (as if it were a
+     * service) as that interface type. Unlike service objects, which answer `.is(service)` with
+     * `True` from both sides of the service boundary, a proxied interface only answers
+     * `.is(service)` with `True` for the proxy itself, and not for the proxied non-service object
+     * within the service.
+     */
+    typedef (immutable | service) as Passable;
+
+    /**
+     * In addition to being able to pass an immutable object or a service proxy across a service
+     * boundary, Ecstasy allows `@AutoFreezable` objects to be passed, and they are automatically
+     * frozen (made immutable by the [Freezable.freeze()] method) before being passed.
+     *
+     * Note that all [AutoFreezable] objects are also [Freezable].
+     */
+    typedef (immutable | service | AutoFreezable) as AutoPassable;
+
+    /**
+     * `Shareable` is a type that represents an object that is intended to be passed across a
+     * service boundary -- i.e. to be shared among services. It is only possible to pass a
+     * [Passable] (an immutable object or a service proxy) across a service boundary, but
+     * `Shareable` objects are _intended_ to be used in cases when they may need to be passed. When
+     * a `Shareable` object is not [Passable], then it should be frozen using its
+     * [Freezable.freeze()] method, resulting in an immutable object, which is [Passable].
+     *
+     * Note that the inclusion of [Freezable] objects also includes all objects that are
+     * [AutoFreezable].
+     */
+    typedef (immutable | service | Freezable) as Shareable;
+
+    /**
+     * Transform the provided object if necessary to make it [Passable]. If the object is already
+     * [Passable], it is returned unchanged. Otherwise, if the object is [Freezable], it is frozen
+     * and the result (which may be a new object) is returned.
+     *
+     * @param object  the object that needs to be [Passable]
+     *
+     * @return `True` iff the object was [Passable], or was able to be made [Passable]
+     * @return (conditional) a [Passable] object
+     */
+    static <Any> conditional (Passable + Any) passable(Any object) {
+        if (object.is(Passable)) {
+            return True, object;
+        }
+
+        if (object.is(Freezable)) {
+            return True, object.freeze();
+        }
+
+        if (object.is(Array)) {
+            try {
+                return True, object.toArray(Constant).as(immutable + Any);
+            } catch (Exception e) {}
+        }
+
+        return False;
+    }
+
+    /**
+     * Transform the provided object if necessary to make it [Passable]. If the object is already
+     * [Passable], it is returned unchanged. Otherwise, if the object is [Freezable], it is frozen
+     * and the result (which may be a new object) is returned. Otherwise, a service proxy of the
+     * specified pure type or interface type is created and returned.
+     *
+     * @param object     the object that needs to be [Passable]
+     * @param interface  the pure type or interface type that is required
+     *
+     * @return a [Passable] object
+     *
+     * @throws Exception iff the specified object is not passable and cannot be made so with the
+     *         provided interface
+     */
+    static <Interface> (Passable + Interface) passableAs(Interface object, Type<Interface> interface) {
+        if (object.is(Passable)) {
+            return object;
+        }
+
+        // TODO GG consider a helper such as: if (interface.isInterfaceType()) ...
+        try {
+            return &object.proxyAs(interface);
+        } catch (Exception e) {}
+
+        if (object.is(Freezable)) {
+            return object.freeze();
+        }
+
+        if (object.is(Array)) {
+            try {
+                return object.toArray(Constant).as(immutable + Interface);
+            } catch (Exception e) {}
+        }
+
+        throw new NotShareable("Failed to create a Passable of type {interface} from an object of type {&object.type}");
+    }
+
+    /**
+     * Represents awareness of whether an object needs to support method calls across a service
+     * boundary.
+     *
+     * Some objects must be service-aware in order to provide specialized behavior when the object
+     * may be invoked across a service boundary. Specifically, parameters-to and return-values-from
+     * methods across a service boundary must be must be [AutoPassable] -- either service references
+     * or immutable objects (or objects that are marked as being automatically convertible to an
+     * immutable object. When methods must behave differently as the result of sitting on the far
+     * side of a service boundary, the object should implement this interface in a way that
+     * correctly identifies when it is potentially being called across a service boundary.
+     * Additionally, using that information, affected method implementations should then ensure that
+     * their return values are [AutoPassable], unless the method return types are interface types,
+     * which are auto-proxied.
+     */
+    static interface Aware {
+        /**
+         * Determine if this object is potentially being used as a service.
+         *
+         * By default, a service-aware object assumes that it is being used as a service if it is a
+         * service, which includes virtual child objects of a service.
+         *
+         * @return `True` iff calls to this object may be originating from another service
+         */
+        Boolean fromService() = this.is(service);
+    }
+
+    // ----- service internals ---------------------------------------------------------------------
+
     /**
      * A low-level control interface for a Service.
      */
@@ -425,7 +563,6 @@ interface Service {
      * Exceptions raised by the notification function are ignored and lost by the runtime.
      */
     void registerUnhandledExceptionNotification(function void notify(Exception));
-
 
     // ----- Object methods ------------------------------------------------------------------------
 

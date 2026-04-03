@@ -1,7 +1,7 @@
 /**
  * A simple LRU cache implementation.
  */
-service LRUCache<Key extends immutable Hashable, Value extends Shareable>(Int maxSize) {
+service LRUCache<Key extends immutable Hashable, Value extends AutoPassable>(Int maxSize) {
     assert() {
         assert:arg maxSize > 0;
     }

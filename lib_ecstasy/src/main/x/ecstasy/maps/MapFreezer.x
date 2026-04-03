@@ -16,7 +16,7 @@ mixin MapFreezer<Key   extends immutable Object,
         }
 
         // if the only thing not frozen is the map itself, then just make it immutable
-        if (values.all(e -> e.is(immutable | service))) {
+        if (values.all(e -> e.is(Passable))) {
             return inPlace
                     ? makeImmutable()
                     : duplicate().makeImmutable();
@@ -25,7 +25,7 @@ mixin MapFreezer<Key   extends immutable Object,
         // freeze a map in-place by freezing its values (its keys must already be frozen)
         if (inPlace && this.inPlace) {
             for (val entry : entries) {
-                if (Value+Freezable v := requiresFreeze(entry.value)) {
+                if (Freezable+Value v := requiresFreeze(entry.value)) {
                     entry.value = v.freeze();
                 }
             }

@@ -5,7 +5,7 @@ import ecstasy.reflect.ComponentTemplate;
 /**
  * The native reflected ComponentTemplate implementation.
  */
-class RTComponentTemplate
+const RTComponentTemplate
         implements ComponentTemplate {
     @Override @RO Access             access;
     @Override @RO String?            doc;

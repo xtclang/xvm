@@ -5,6 +5,7 @@ module TestServices {
 
     void run() {
         testSharedContext();
+        testProxyCall();
         testAsyncExecution();
     }
 
@@ -16,6 +17,25 @@ module TestServices {
             new TestService("u2").validateContext();
         }
         assert !UserId.hasValue();
+    }
+
+    void testProxyCall() {
+        TestService svc     = new TestService();
+        Mutable[]   values  = new Mutable[2](i -> new Mutable(i));
+        Rankable[]  proxies = values.map(m -> &m.proxyAs(Rankable)).toArray(Constant);
+
+        assert svc.eval(proxies) == 0+1;
+
+        values[0].value = 1;
+        assert svc.eval(proxies) == 1+1;
+
+        values[1].value = 42;
+        assert svc.eval(proxies) == 1+42;
+
+        class Mutable(Int value) implements Rankable {
+            @Override
+            Int rank() = value;
+        }
     }
 
     void testAsyncExecution() {
@@ -174,6 +194,18 @@ module TestServices {
             });
             return v1, v2;
         }
+
+        Int eval(Rankable[] values) {
+            Int total = 0;
+            for (Rankable value : values) {
+                total += value.rank();
+            }
+            return total;
+        }
+    }
+
+    interface Rankable {
+        Int rank();
     }
 
     static Time now() {

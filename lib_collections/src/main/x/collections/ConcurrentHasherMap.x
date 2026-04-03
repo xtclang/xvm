@@ -19,7 +19,7 @@ import ecstasy.maps.MapValues;
  * partition. Furthermore blocking writes such as by [process] on a key will not block concurrent
  * reads of that same key. Writes to any given key are ordered.
  */
-const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
+const ConcurrentHasherMap<Key extends immutable, Value extends AutoPassable>
         implements Map<Key, Value>
         implements Duplicable {
     // ----- constructors --------------------------------------------------------------------------
@@ -38,8 +38,8 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
 
         // select a prime partition count greater then the requested concurrency
         Int partCount = parallelism;
-        Int capacity = initCapacity / parallelism;
-        Int buckets = Partition.calcBucketCount(capacity);
+        Int capacity  = initCapacity / parallelism;
+        Int buckets   = Partition.calcBucketCount(capacity);
         if (parallelism == 1) {
             // user asked for it, allow it; there is still value here as compared to a simple
             // service wrapper around HashMap because we still offer key-level concurrency even it
@@ -61,8 +61,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
             }
         }
 
-        partitions = new Partition[partCount]
-                        (i -> new Partition<Key, Value>(hasher, capacity, partCount));
+        partitions = new Partition[partCount](i -> new Partition<Key, Value>(hasher, capacity, partCount));
     }
 
     /**
@@ -121,6 +120,9 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
     // ----- Map interface -------------------------------------------------------------------------
 
     @Override
+    Boolean fromService() = True;
+
+    @Override
     @RO Int size.get() {
         Int sum = 0;
         Int step = computeRandomStep();
@@ -169,8 +171,8 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
             return partitions[0].entries.iterator();
         }
 
-        Int step = computeRandomStep();
-        Int first = step % partitions.size;
+        Int step   = computeRandomStep();
+        Int first  = step % partitions.size;
         Int second = (first + step) % partitions.size;
 
         GrowableCompoundIterator<Entry<Key, Value>> iter = new GrowableCompoundIterator(
@@ -286,7 +288,7 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
     /**
      * A portion of the concurrent map's data.
      */
-    protected static service Partition<Key extends immutable Object, Value extends Shareable>
+    protected static service Partition<Key extends immutable Object, Value extends AutoPassable>
             extends HasherMap<Key, Value> {
         // ----- constructors ----------------------------------------------------------------------
 
@@ -480,6 +482,9 @@ const ConcurrentHasherMap<Key extends immutable Object, Value extends Shareable>
         }
 
         // ----- HasherMap methods -------------------------------------------------------------------
+
+        @Override
+        Boolean fromService() = True;
 
         @Override
         @Concurrent

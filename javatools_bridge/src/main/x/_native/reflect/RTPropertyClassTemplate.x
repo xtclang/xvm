@@ -12,7 +12,7 @@ import ecstasy.reflect.TypeTemplate;
 /**
  * The native reflected ClassTemplate implementation for property classes.
  */
-class RTPropertyClassTemplate
+const RTPropertyClassTemplate
         extends RTComponentTemplate
         implements ClassTemplate {
     // ----- Composition methods -------------------------------------------------------------------

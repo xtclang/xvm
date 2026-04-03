@@ -5,7 +5,7 @@ import ecstasy.reflect.MultiMethodTemplate;
 /**
  * The native reflected MultiMethodTemplate implementation.
  */
-class RTMultiMethodTemplate
+const RTMultiMethodTemplate
         extends RTComponentTemplate
         implements MultiMethodTemplate {
     @Override

@@ -38,9 +38,14 @@ class RTDelegate<Element>
      */
     private static <Element> Array<Element> fillFromIterable(
             Array<Element> array, Iterable<Element> iterable, Mutability mutability) {
-
-        loop: for (Element element : iterable) {
-            array[loop.count] = mutability == Constant ? Freezable.frozen(element) : element;
+        if (mutability == Constant) {
+            loop: for (Element element : iterable) {
+                assert array[loop.count] := Service.passable(element);
+            }
+        } else {
+            loop: for (Element element : iterable) {
+                array[loop.count] = element;
+            }
         }
         return array.reify(mutability);
     }

@@ -8,11 +8,14 @@ class FilteredCollection<Element>
     /**
      * Construct a FilteredCollection based on an original collection and a filter.
      *
-     * @param original  the unfiltered collection
-     * @param include   the inclusion filter
+     * @param original     the unfiltered collection
+     * @param include      the inclusion filter
+     * @param fromService  if the [FilteredCollection] is exposed over a service boundary
      */
-    construct(Collection<Element> original, function Boolean(Element) include) {
-        construct DeferredCollection(original);
+    construct(Collection<Element>       original,
+              function Boolean(Element) include,
+              Boolean                   fromService = False) {
+        construct DeferredCollection(original, fromService);
         this.include = include;
     }
 

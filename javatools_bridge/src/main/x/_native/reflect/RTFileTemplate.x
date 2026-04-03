@@ -6,7 +6,7 @@ import ecstasy.reflect.ModuleTemplate;
 /**
  * The native reflected FileTemplate implementation.
  */
-class RTFileTemplate
+const RTFileTemplate
         extends RTComponentTemplate
         implements FileTemplate {
 

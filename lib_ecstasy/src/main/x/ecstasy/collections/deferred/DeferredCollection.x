@@ -9,10 +9,16 @@
     /**
      * Construct a DeferredCollection based on an original collection.
      *
-     * @param original  the collection from which this collection's contents will be drawn
+     * @param original     the collection from which this collection's contents will be drawn
+     * @param fromService  if the [DeferredCollection] is exposed over a service boundary
      */
-    construct(Collection<FromElement> original) {
-        this.original = original;
+    construct(Collection<FromElement> original, Boolean fromService = False) {
+        this.original  = original;
+        this.isService = fromService || original.fromService();
+    } finally {
+        // the real "this" reference isn't available until the constructor's finally block; the
+        // "this" in the constructor is just the Struct
+        this.isService ||= this.is(service);
     }
 
     // ----- internal ------------------------------------------------------------------------------
@@ -21,18 +27,22 @@
      * The Collection from which the contents of this Collection will be drawn, or `Null` after this
      * Collection has been reified (to allow memory to be collected).
      */
-    protected Collection<FromElement>? original;
+    protected/private Collection<FromElement>? original;
+
+    /**
+     * Whether or not this DeferredCollection needs to act as a service.
+     */
+    protected/private Boolean isService;
 
     /**
      * The cached reified copy of this Collection.
      */
-    protected @Lazy(createReified) Collection<Element> reified;
+    protected/private @Lazy(createReified) Collection<Element> reified;
 
     /**
      * @return the reified copy of this Collection to cache
      */
     protected Collection<Element> createReified() {
-        assert Collection<FromElement> original ?= original;
         Collection<Element> reified = instantiateEmptyReified();
         evaluateInto(reified);
         postReifyCleanup();
@@ -130,11 +140,19 @@
     }
 
     @Override
+    Boolean fromService() = isService;
+
+    @Override
     @RO Boolean empty.get() {
         if (Int origSize := original?.knownSize(), origSize == 0) {
             return True;
         }
         return reified.empty;
+    }
+
+    @Override
+    Element[] toArray(Array.Mutability? mutability = Null) {
+        return super(mutability ?: (fromService() ? Constant : Null));
     }
 
     @Override

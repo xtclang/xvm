@@ -122,7 +122,7 @@ module xunit_engine.xtclang.org {
 
         Version?         version   = moduleVersion.is(String) ? new Version(moduleVersion) : Null;
         DirRepository    buildRepo = new DirRepository(buildDir);
-        ModuleRepository repo      = new LinkedRepository([buildRepo, coreRepo].freeze(True));
+        ModuleRepository repo      = new LinkedRepository([buildRepo, coreRepo].toArray(Constant, inPlace=True));
         Log              log       = new SimpleLog();
 
         console.print($"XUnit: Creating test module for {moduleName} in {buildDir}");

@@ -3,7 +3,7 @@ import ecstasy.reflect.ModuleTemplate;
 /**
  * The native reflected ModuleTemplate implementation.
  */
-class RTModuleTemplate
+const RTModuleTemplate
         extends RTClassTemplate
         implements ModuleTemplate {
     @Override

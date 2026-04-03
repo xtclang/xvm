@@ -88,7 +88,7 @@ service RTKeyStore
                 certs += cert;
             }
         }
-        return certs.freeze(True);
+        return certs.toArray(Constant, inPlace=True);
     }
 
     @Override
@@ -143,7 +143,7 @@ service RTKeyStore
                 break;
             }
         }
-        certCache.put(name, chain.freeze(inPlace=True));
+        certCache.put(name, chain.toArray(Constant, inPlace=True));
         return chain;
     }
 

@@ -9,7 +9,7 @@ import ecstasy.reflect.TypeTemplate;
 /**
  * The native reflected MethodTemplate implementation.
  */
-class RTMethodTemplate
+const RTMethodTemplate
         extends RTComponentTemplate
         implements MethodTemplate {
 

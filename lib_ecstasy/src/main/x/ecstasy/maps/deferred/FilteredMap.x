@@ -8,11 +8,14 @@ class FilteredMap<Key, Value>
     /**
      * Construct a FilteredMap based on an original `Map` and a filter.
      *
-     * @param original  the unfiltered `Map`
-     * @param include   the inclusion filter
+     * @param original     the unfiltered `Map`
+     * @param include      the inclusion filter
+     * @param fromService  if the [FilteredMap] is exposed over a service boundary
      */
-    construct(Map<Key, FromValue> original, function Boolean(Entry<Key, FromValue>) include) {
-        construct DeferredMap(original);
+    construct(Map<Key, FromValue>                     original,
+              function Boolean(Entry<Key, FromValue>) include,
+              Boolean                                 fromService = False) {
+        construct DeferredMap(original, fromService);
         this.include = include;
     }
 

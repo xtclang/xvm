@@ -32,12 +32,22 @@ class MapEntries<Key, Value>(Map<Key, Value> contents)
      */
     protected class EntryIterator(Iterator<Entry> entryIterator)
             implements Iterator<Entry> {
+        /**
+         * The underlying iterator of entries.
+         */
+        protected/private Iterator<Entry> entryIterator;
+
         @Override
         conditional Entry next() {
             if (Entry entry := entryIterator.next()) {
                 return True, entry.reify();
             }
             return False;
+        }
+
+        @Override
+        Entry[] toArray(Array.Mutability? mutability = Null) {
+            return super(mutability ?: (fromService() ? Constant : Null));
         }
 
         @Override

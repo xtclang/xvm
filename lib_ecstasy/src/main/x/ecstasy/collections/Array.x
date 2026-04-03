@@ -56,10 +56,10 @@ class Array<Element>
         implements ArrayDelegate<Element>
         implements List<Element>
         implements Duplicable
-        implements Freezable
         implements Stringable
         incorporates conditional HashableArray<Element extends Hashable>
         incorporates conditional OrderableArray<Element extends Orderable>
+        incorporates conditional FreezableArray<Element extends Shareable>
         incorporates conditional arrays.BitArray<Element extends Bit>
         incorporates conditional arrays.ByteArray<Element extends Byte>
         incorporates conditional arrays.NibbleArray<Element extends Nibble>
@@ -122,7 +122,11 @@ class Array<Element>
         } else {
             Iterator<Element> iter = elements.iterator();
             if (mutability == Constant) {
-                iter = iter.map(e -> frozen(e));
+                if (Element.is(Type<Shareable>)) {
+                    iter = iter.map(e -> frozen(e));
+                } else {
+                    iter = iter.map(e -> Service.passableAs(e, Element));
+                }
             }
             delegate = new Element[elements.size](_ -> iter.take());
             assert !iter.next();
@@ -284,68 +288,6 @@ class Array<Element>
     @Override
     public/private Mutability mutability;
 
-    // ----- Duplicable interface ------------------------------------------------------------------
-
-    @Override
-    Array duplicate() {
-        return this.inPlace && !this.is(immutable)
-                ? this.new(this)
-                : this;
-    }
-
-    // ----- Freezable interface -------------------------------------------------------------------
-
-    /**
-     * Return a `const` array of the same type and contents as this array.
-     *
-     * All mutating calls to a `const` array will result in the creation of a new
-     * `const` array with the requested changes incorporated.
-     *
-     * @param inPlace  pass True to indicate that the Array should **not** make a frozen copy of
-     *                 itself if it does not have to; the reason that making a copy is the default
-     *                 behavior is to protect any object or execution frame that is holding a
-     *                 reference to the previously unfrozen array
-     *
-     * @throws Exception if any of the values in the array are not `service`, not `const`, and not
-     *         [Freezable]
-     */
-    @Override
-    immutable Array freeze(Boolean inPlace = False) {
-        if (this.is(immutable)) {
-            return this;
-        }
-
-        if (delegate.mutability == Constant) {
-            // the underlying delegate is already frozen
-            assert delegate.is(immutable);
-            mutability = Constant;
-            return this.makeImmutable();
-        }
-
-        if (!inPlace) {
-            return new Array(Constant, this).as(immutable Array);
-        }
-
-        // all elements must be immutable or Freezable (or exempt, i.e. a service); do not short
-        // circuit this check, since we want to fail *before* we start freezing anything if the
-        // array contains *any* non-freezable elements
-        Boolean convert = False;
-        for (Element element : this) {
-            convert |= requiresFreeze(element);
-        }
-
-        if (convert) {
-            loop: for (Element element : this) {
-                if (Element+Freezable notYetFrozen := requiresFreeze(element)) {
-                    this[loop.count] = notYetFrozen.freeze();
-                }
-            }
-        }
-
-        mutability = Constant;
-        return makeImmutable();
-    }
-
     @Override
     immutable Array makeImmutable() {
         if (this.is(immutable)) {
@@ -359,10 +301,18 @@ class Array<Element>
         } catch (Exception e) {
             try {
                 mutability = oldMutability;
-            } catch (Exception _) {
-            }
+            } catch (Exception _) {}
             throw e;
         }
+    }
+
+    // ----- Duplicable interface ------------------------------------------------------------------
+
+    @Override
+    Array duplicate() {
+        return this.inPlace && !this.is(immutable)
+                ? this.new(this)
+                : this;
     }
 
     // ----- Array interface -----------------------------------------------------------------------
@@ -415,9 +365,7 @@ class Array<Element>
         } else {
             Int   size   = this.size.notLessThan(interval.effectiveUpperBound + 1);
             Array result = new Element[size](i -> (interval.contains(i) ? value : this[i]));
-            return mutability == Constant
-                    ? result.freeze(True)
-                    : result.toArray(mutability, True);
+            return result.toArray(mutability, True);
         }
     }
 
@@ -474,12 +422,12 @@ class Array<Element>
             Int oldSize = this.size;
             return new Element[oldSize+1](i -> i < oldSize ? this[i] : element);
 
-        case Persistent:
         case Constant:
+            element = Service.passableAs(element, Element);
+            continue;
+        case Persistent:
             Element[] result = new Element[size + 1](i -> (i < size ? this[i] : element));
-            return mutability == Persistent
-                    ? result.toArray(Persistent, True)
-                    : result.freeze(True);
+            return result.toArray(mutability, True);
         }
     }
 
@@ -503,20 +451,28 @@ class Array<Element>
             }
 
         case Persistent:
+            Iterator<Element> iter = values.iterator();
+            function Element (Int) supply = i -> {
+                if (i < size) {
+                    return this[i];
+                }
+                return iter.next() ?: assert;
+            };
+
+            Element[] result = new Element[this.size + values.size](supply);
+            return result.toArray(Persistent, True);
+
         case Constant:
             Iterator<Element> iter = values.iterator();
             function Element (Int) supply = i -> {
                 if (i < size) {
                     return this[i];
                 }
-                assert Element value := iter.next();
-                return value;
+                return Service.passableAs(iter.next()?, Element) : assert;
             };
 
             Element[] result = new Element[this.size + values.size](supply);
-            return mutability == Persistent
-                    ? result.toArray(Persistent, True)
-                    : result.freeze(True);
+            return result.toArray(mutability, True);
         }
     }
 
@@ -564,10 +520,8 @@ class Array<Element>
             return this, deletedCount;
 
         case Persistent:
-            return result.toArray(Persistent, True), deletedCount;
-
         case Constant:
-            return result.freeze(True), deletedCount;
+            return result.toArray(mutability, True), deletedCount;
 
         default: assert;
         }
@@ -615,13 +569,30 @@ class Array<Element>
             return this;
         }
 
-        if (mutability == Constant) {
+        if (mutability == Constant && this.is(Freezable)) {
             return freeze(inPlace);
         }
 
         if (!inPlace || mutability == Null || mutability > this.mutability) {
             // make a copy of this array, but with the desired mutability
             return new Array(mutability ?: Mutable, this);
+        }
+
+        if (mutability == Constant) {
+            // every element must be transformed into a Passable object in order for the array to be
+            // made immutable; this can theoretically fail with an exception partially through the
+            // processing of the array elements, meaning that the array may contain some (but not
+            // all) altered elements after this operation fails; while it is possible to prevent
+            // partial application from being visible after failing at an attempted in-place
+            // transformation of a non-Shareable array into a Constant array containing only
+            // Passable elements, the required cost and complexity is not warranted
+            loop: for (Element element : this) {
+                // this can fail for any non-Shareable object that cannot be proxied because the
+                // Element type is not an interface type
+                this[loop.count] = Service.passableAs(element, Element);
+            }
+            this.mutability = Constant;
+            return makeImmutable();
         }
 
         this.mutability = mutability;
@@ -662,9 +633,7 @@ class Array<Element>
             return this;
         } else {
             Element[] result = new Element[size](i -> (i == index ? value : this[i]));
-            return mutability == Persistent
-                    ? result.toArray(Persistent, True)
-                    : result.freeze(True);
+            return result.toArray(mutability, True);
         }
     }
 
@@ -803,9 +772,7 @@ class Array<Element>
         case Persistent:
         case Constant:
             Element[] result = new Element[size](i -> this[i < lo ? i : i+removing]);
-            return mutability == Persistent
-                    ? result.toArray(Persistent, True)
-                    : result.freeze(True);
+            return result.toArray(mutability, True);
         }
     }
 
@@ -1156,6 +1123,52 @@ class Array<Element>
                 hash += Element.hashCode(el);
             }
             return hash;
+        }
+    }
+
+    // ----- Freezable mixin -----------------------------------------------------------------------
+
+    private static mixin FreezableArray<Element extends Shareable>
+            into Array<Element>
+            implements Freezable {
+        /**
+         * Return a `const` array of the same type and contents as this array.
+         *
+         * All mutating calls to a `const` array will result in the creation of a new
+         * `const` array with the requested changes incorporated.
+         *
+         * @param inPlace  pass True to indicate that the Array should **not** make a frozen copy of
+         *                 itself if it does not have to; the reason that making a copy is the default
+         *                 behavior is to protect any object or execution frame that is holding a
+         *                 reference to the previously unfrozen array
+         *
+         * @throws Exception if any of the values in the array are not `service`, not `const`, and not
+         *         [Freezable]
+         */
+        @Override
+        immutable Array<Element> freeze(Boolean inPlace = False) {
+            if (this.is(immutable)) {
+                return this;
+            }
+
+            if (delegate.mutability == Constant) {
+                // the underlying delegate is already frozen
+                assert delegate.is(immutable);
+                mutability = Constant;
+                return this.makeImmutable();
+            }
+
+            if (!inPlace) {
+                return new Array<Element>(Constant, this).as(immutable);
+            }
+
+            loop: for (Element element : this) {
+                if (val notYetFrozen := requiresFreeze(element)) {
+                    this[loop.count] = notYetFrozen.freeze();
+                }
+            }
+            mutability = Constant;
+            return makeImmutable();
         }
     }
 }

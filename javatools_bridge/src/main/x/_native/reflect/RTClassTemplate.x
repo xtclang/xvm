@@ -14,7 +14,7 @@ import ecstasy.reflect.TypeTemplate;
 /**
  * The native reflected ClassTemplate implementation.
  */
-class RTClassTemplate
+const RTClassTemplate
         extends RTComponentTemplate
         implements ClassTemplate {
     // ----- Composition methods -------------------------------------------------------------------
@@ -70,8 +70,8 @@ class RTClassTemplate
             Argument[] arguments = parameters.size == 0
                     ? []
                     : names == Null
-                        ? new Argument[parameters.size](i -> new Argument(parameters[i].as(immutable|service)))
-                        : new Argument[parameters.size](i -> new Argument(parameters[i].as(immutable|service), names[i]));
+                        ? new Argument[parameters.size](i -> new Argument(parameters[i].as(Passable)))
+                        : new Argument[parameters.size](i -> new Argument(parameters[i].as(Passable), names[i]));
 
             composition = new AnnotatingComposition(new AnnotationTemplate(composition, arguments), this);
             ingredient  = composition.type;

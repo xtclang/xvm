@@ -31,6 +31,7 @@ import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.PropertyComposition;
+import org.xvm.runtime.ProxyComposition;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
@@ -38,6 +39,7 @@ import org.xvm.runtime.VarSupport;
 
 import org.xvm.runtime.template.Identity;
 import org.xvm.runtime.template.IndexSupport;
+import org.xvm.runtime.template.Proxy;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 
@@ -270,6 +272,10 @@ public class xRef
         case "maskAs":
             return actOnReferent(frame, hRef,
                     h -> maskAs(frame, h, (TypeHandle) ahArg[1], iReturn));
+
+        case "proxyAs":
+            return actOnReferent(frame, hRef,
+                    h -> proxyAs(frame, h, (TypeHandle) ahArg[1], iReturn));
         }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -699,6 +705,40 @@ public class xRef
         }
 
         return frame.raiseException(xException.unsupported(frame, "maskAs() for " +
+                hTarget.getType().removeAccess().getValueString()));
+    }
+
+    /**
+     * Proxy the specified target as an interface type for the current context.
+     *
+     * @param frame    the current frame
+     * @param hTarget  the target object
+     * @param hType    the type handle to mask as
+     * @param iReturn  the register to return the result into
+     *
+     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL}, {@link Op#R_EXCEPTION}
+     */
+    protected int proxyAs(Frame frame, ObjectHandle hTarget, TypeHandle hType, int iReturn) {
+        Supported:
+        if (hTarget instanceof GenericHandle hGeneric &&
+                hGeneric.getComposition() instanceof ClassComposition clzTarget) {
+            TypeConstant typeProxy = hType.getUnsafeDataType();
+            if (!typeProxy.isInterfaceType()) {
+                break Supported;
+            }
+
+            TypeConstant typeTarget = hGeneric.getType();
+            if (!typeTarget.isA(typeProxy)) {
+                return frame.raiseException(
+                    xException.typeMismatch(frame, typeTarget.getValueString()));
+            }
+
+            ProxyComposition clzProxy = clzTarget.ensureProxyComposition(typeProxy);
+            return frame.assignValue(iReturn,
+                    Proxy.makeHandle(clzProxy, frame.f_context, hTarget, true));
+        }
+
+        return frame.raiseException(xException.unsupported(frame, "proxyAs() for " +
                 hTarget.getType().removeAccess().getValueString()));
     }
 

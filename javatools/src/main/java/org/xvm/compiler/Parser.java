@@ -2483,7 +2483,7 @@ public class Parser {
      * <p/><code><pre>
      * TernaryExpression
      *     OrExpression
-     *     OrExpression Whitespace "?" OrExpression ":" TernaryExpression
+     *     OrExpression Whitespace "?" TernaryExpression ":" TernaryExpression
      * </pre></code>
      *
      * @param fExtended  true to allow parsing of an extended type expression

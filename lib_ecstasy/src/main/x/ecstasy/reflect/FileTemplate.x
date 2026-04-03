@@ -60,7 +60,8 @@ interface FileTemplate
      */
     @RO ModuleTemplate[] modules.get() {
         ComponentTemplate[] children = children();
-        return new ModuleTemplate[](children.size, i -> children[i].as(ModuleTemplate)).freeze(True);
+        return new ModuleTemplate[](children.size, i -> children[i].as(ModuleTemplate))
+                .toArray(Constant, True);
     }
 
     @Override

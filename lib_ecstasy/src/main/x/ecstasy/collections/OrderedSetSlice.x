@@ -64,7 +64,7 @@ class OrderedSetSlice<Element extends Orderable>
                 ? (set.prev, set.next)
                 : (set.next, set.prev);
     } finally {
-        if (set.is(immutable) || set.is(service)) {
+        if (set.is(immutable)) {
             makeImmutable();
         }
     }

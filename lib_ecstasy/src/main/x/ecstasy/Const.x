@@ -140,6 +140,7 @@
 interface Const
         extends Hashable
         extends Orderable
+        extends Freezable
         extends Stringable {
 
     /**
@@ -220,4 +221,7 @@ interface Const
      */
     @Override
     static <CompileType extends Const> Ordered compare(CompileType value1, CompileType value2);
+
+    @Override
+    immutable Const freeze(Boolean inPlace = False) = this.as(immutable);
 }

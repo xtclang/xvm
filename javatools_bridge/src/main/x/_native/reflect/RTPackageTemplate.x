@@ -4,6 +4,6 @@ import ecstasy.reflect.PackageTemplate;
 /**
  * The native reflected PackageTemplate implementation.
  */
-class RTPackageTemplate
+const RTPackageTemplate
         extends RTClassTemplate
         implements PackageTemplate {}

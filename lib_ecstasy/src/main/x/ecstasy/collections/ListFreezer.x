@@ -37,14 +37,14 @@ mixin ListFreezer<Element extends Shareable>
         if (inPlace && this.inPlace) {
             if (indexed) {
                 for (Int i = 0, Int c = size; i < c; ++i) {
-                    if (Element+Freezable e := requiresFreeze(this[i])) {
+                    if (Freezable+Element e := requiresFreeze(this[i])) {
                         this[i] = e.freeze();
                     }
                 }
             } else {
                 Cursor cur = cursor();
                 while (cur.exists) {
-                    if (Element+Freezable e := requiresFreeze(cur.value)) {
+                    if (Freezable+Element e := requiresFreeze(cur.value)) {
                         cur.value = e.freeze();
                     }
                     cur.advance();

@@ -9,10 +9,10 @@ import ecstasy.Duplicable;
  *
  * TODO delegate most non-mutating methods straight to the array
  */
-class ArrayOrderedSet<Element>
+class ArrayOrderedSet<Element extends Orderable>
         implements OrderedSet<Element>
         implements Duplicable
-        implements Freezable {
+        incorporates conditional ArrayOrderedSetFreezer<Element extends Shareable> {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
@@ -155,18 +155,22 @@ class ArrayOrderedSet<Element>
 
     // ----- Freezable interface -------------------------------------------------------------------
 
-    @Override
-    immutable ArrayOrderedSet freeze(Boolean inPlace = False) {
-        if (this.is(immutable ArrayOrderedSet)) {
-            return this;
-        }
+    private static mixin ArrayOrderedSetFreezer<Element extends Shareable+Orderable>
+            into ArrayOrderedSet<Element>
+            implements Freezable {
+        @Override
+        immutable ArrayOrderedSet<Element> freeze(Boolean inPlace = False) {
+            if (this.is(immutable ArrayOrderedSet<Element>)) {
+                return this;
+            }
 
-        if (inPlace) {
-            array = array.freeze(True);
-            return makeImmutable();
-        }
+            if (inPlace) {
+                array = array.freeze(True);
+                return makeImmutable();
+            }
 
-        return new ArrayOrderedSet(this).freeze(True);
+            return new ArrayOrderedSet<Element>(this).freeze(True);
+        }
     }
 
 

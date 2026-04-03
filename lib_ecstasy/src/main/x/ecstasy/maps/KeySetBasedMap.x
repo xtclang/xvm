@@ -38,6 +38,29 @@ mixin KeySetBasedMap<Key, Value>
             }
 
             @Override
+            Entry<Key, Value>[] toArray(Array.Mutability? mutability = Null) {
+                // entries must be reified
+                Entry<Key, Value>[] result = new Entry<Key, Value>[](knownSize() ?: 0); // mutable
+                if (fromService() && (mutability == Null || mutability == Constant)) {
+                    // each Entry returned across a service boundary needs to be a proxy (not
+                    // frozen), since each Entry holds a reference back to the Map (and we do not
+                    // want to freeze the Map)
+                    loop: for (Entry<Key, Value> entry : this) {
+                        entry = entry.reify();
+                        result[loop.count] = &entry.proxyAs(Entry<Key, Value>);
+                    }
+                    // an array of service proxies must be "frozen" to cross the service boundary;
+                    // the proxies are unaffected by the freeze() because they are already Passable
+                    mutability = Constant;
+                } else {
+                    loop: for (Entry<Key, Value> entry : this) {
+                        result[loop.count] = entry.reify();
+                    }
+                }
+                return result.toArray(mutability, True);
+            }
+
+            @Override
             Boolean knownDistinct() {
                 return True;
             }

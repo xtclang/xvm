@@ -8,11 +8,14 @@ class MappedMap<Key, Value, FromValue>
     /**
      * Construct a MappedMap based on an original `Map` and a mapping function.
      *
-     * @param original   the unmapped `Map`
-     * @param transform  the mapping function
+     * @param original     the unmapped `Map`
+     * @param transform    the mapping function
+     * @param fromService  if the [MappedMap] is exposed over a service boundary
      */
-    construct(Map<Key, FromValue> original, Transformer transform) {
-        construct DeferredMap(original);
+    construct(Map<Key, FromValue> original,
+              Transformer         transform,
+              Boolean             fromService = False) {
+        construct DeferredMap(original, fromService);
         this.transform = transform;
     }
 

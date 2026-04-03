@@ -56,7 +56,7 @@ service RTAlgorithms {
             algorithms.add(&alg.maskAs(Algorithm));
         }
 
-        return new Algorithms(algorithms.freeze(True));
+        return new Algorithms(algorithms.toArray(Constant, inPlace=True));
     }
 
 
