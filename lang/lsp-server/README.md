@@ -315,7 +315,7 @@ file** is the single source of truth, with editor settings as fallback.
 **Resolution order** (highest priority first):
 
 1. `xtc-format.toml` in the project tree *(not yet implemented)*
-2. IntelliJ Code Style settings for XTC (Settings > Editor > Code Style > Ecstasy) *(wiring to LSP not yet implemented)*
+2. IntelliJ Code Style settings for XTC (Settings > Editor > Code Style > Ecstasy) — forwarded via `workspace/configuration`
 3. LSP `FormattingOptions` from the editor (`tabSize`, `insertSpaces`)
 4. XTC defaults (4-space indent, 8-space continuation, no tabs)
 
@@ -348,7 +348,8 @@ This ensures:
 
 The IntelliJ plugin provides a Code Style settings page (Settings > Editor > Code Style > Ecstasy)
 where users can configure indent size, continuation indent, tab usage, and right margin. These
-settings will feed into the LSP server's `XtcFormattingConfig` resolution in a future release.
+settings are forwarded to the LSP server via `workspace/configuration` at startup and whenever
+the configuration changes. The server uses them as a fallback when no `xtc-format.toml` is present.
 
 See [formatting-plan.md](../doc/plans/formatting-plan.md) for the full implementation plan
 including the `xtc-format.toml` config file schema and the configuration architecture.

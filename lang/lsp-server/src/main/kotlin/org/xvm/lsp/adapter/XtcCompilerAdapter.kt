@@ -50,6 +50,17 @@ interface XtcCompilerAdapter : Closeable {
      */
     fun healthCheck(): Boolean = true
 
+    /**
+     * Editor-provided formatting configuration from `workspace/configuration`.
+     * Set by the language server after receiving config from the client.
+     * Used by [XtcFormattingConfig.resolve] as a fallback before LSP options.
+     */
+    var editorFormattingConfig: XtcFormattingConfig?
+        get() = null
+        set(
+            @Suppress("UNUSED_PARAMETER") value,
+        ) {}
+
     // ========================================================================
     // Core LSP Features (implemented by all adapters)
     // ========================================================================

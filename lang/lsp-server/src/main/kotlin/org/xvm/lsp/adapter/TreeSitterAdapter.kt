@@ -74,6 +74,9 @@ import kotlin.time.measureTimedValue
 class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
     override val displayName: String = "TreeSitter"
 
+    @Volatile
+    override var editorFormattingConfig: XtcFormattingConfig? = null
+
     private val parser: XtcParser = XtcParser()
     private val queryEngine: XtcQueryEngine = XtcQueryEngine(parser.getLanguage())
 
@@ -823,7 +826,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
             return emptyList()
         }
 
-        val config = XtcFormattingConfig.resolve(uri, options)
+        val config = XtcFormattingConfig.resolve(uri, options, editorFormattingConfig)
 
         return when (ch) {
             "\n" -> handleEnter(tree, line, config)
@@ -859,6 +862,12 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         val prevLine = lines[prevLineIndex]
         val prevTrimmed = prevLine.trimEnd()
         val prevIndent = prevLine.takeWhile { it == ' ' }.length
+
+        // Doc/block comment continuation: insert " * " prefix on Enter inside comments.
+        // Try multiple column positions since tree.nodeAt(line, 0) may return a node
+        // outside the comment when there's leading whitespace.
+        val commentEdit = handleCommentContinuation(tree, prevLineIndex, line, lines, prevTrimmed, prevIndent)
+        if (commentEdit != null) return commentEdit
 
         val desiredIndent =
             when {
@@ -957,6 +966,74 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
         if (desiredIndent == currentIndent) return emptyList()
 
         return listOf(makeIndentEdit(line, currentIndent, desiredIndent))
+    }
+
+    /**
+     * Handle Enter inside a doc comment (`/** ... */`) or block comment (`/* ... */`).
+     *
+     * Returns a list of edits that insert ` * ` continuation prefix on the new line,
+     * aligned with the `*` on the opening line. Returns `null` if not inside a comment.
+     *
+     * Examples:
+     * ```
+     * /**                        /**
+     *  * existing line            * existing line
+     *  * |  ← cursor here         * |  ← cursor here
+     *  */                         */
+     * ```
+     */
+    private fun handleCommentContinuation(
+        tree: XtcTree,
+        prevLineIndex: Int,
+        line: Int,
+        lines: List<String>,
+        prevTrimmed: String,
+        prevIndent: Int,
+    ): List<TextEdit>? {
+        // Try multiple column positions on the previous line to find a comment node.
+        // Column 0 may land outside the comment when there's leading whitespace.
+        val prevLineLen = lines.getOrNull(prevLineIndex)?.length ?: 0
+        val columnsToTry = listOf(0, prevIndent, (prevLineLen - 1).coerceAtLeast(0))
+        val commentType =
+            columnsToTry.firstNotNullOfOrNull { col ->
+                val node = tree.nodeAt(prevLineIndex, col) ?: return@firstNotNullOfOrNull null
+                generateSequence(node) { it.parent }
+                    .firstOrNull { it.type == "doc_comment" || it.type == "block_comment" }
+            } ?: return null
+
+        // Don't continue after the closing "*/" line
+        if (prevTrimmed.endsWith("*/")) return null
+
+        // Determine the prefix to insert. The " * " aligns with the opening "/**" or "/*":
+        // The opening line's indent + 1 space gives us the " *" column.
+        val commentStartLine = commentType.startLine
+        val commentIndent =
+            if (commentStartLine in lines.indices) {
+                lines[commentStartLine].takeWhile { it == ' ' }.length
+            } else {
+                prevIndent
+            }
+
+        // The continuation is: <commentIndent> + " * "
+        val prefix = " ".repeat(commentIndent) + " * "
+
+        val currentIndent =
+            if (line < lines.size) {
+                lines[line].takeWhile { it == ' ' }.length
+            } else {
+                0
+            }
+
+        return listOf(
+            TextEdit(
+                range =
+                    Range(
+                        start = Position(line, 0),
+                        end = Position(line, currentIndent),
+                    ),
+                newText = prefix,
+            ),
+        )
     }
 
     // --- On-type formatting helpers ---

@@ -262,6 +262,65 @@ class OnTypeFormattingTest {
     }
 
     // ========================================================================
+    // Doc/block comment continuation
+    // ========================================================================
+
+    @Nested
+    @DisplayName("Comment continuation")
+    inner class CommentContinuationTests {
+        @Test
+        @DisplayName("Enter after '/**' inserts ' * ' continuation")
+        fun enterAfterDocCommentOpening() {
+            val source = "/**\n */"
+            val edits = formatEdits(source, line = 1, column = 0, ch = "\n")
+            assertThat(edits).isNotEmpty
+            assertThat(edits.first().newText).isEqualTo(" * ")
+        }
+
+        @Test
+        @DisplayName("Enter inside doc comment inserts ' * ' continuation")
+        fun enterInsideDocComment() {
+            val source = "/**\n * existing line\n */"
+            val edits = formatEdits(source, line = 2, column = 0, ch = "\n")
+            // Should NOT insert continuation on the "*/" closing line
+            // Let's try pressing Enter after "existing line" (cursor on line 1)
+            val edits2 = formatEdits(source, line = 1, column = 0, ch = "\n")
+            assertThat(edits2).isNotEmpty
+            assertThat(edits2.first().newText).isEqualTo(" * ")
+        }
+
+        @Test
+        @DisplayName("Enter after '*/' does NOT insert continuation")
+        fun noContAfterClosingComment() {
+            val source = "/**\n * text\n */\n"
+            // Line 3 is after "*/", Enter here should not get comment continuation
+            val edits = formatEdits(source, line = 3, column = 0, ch = "\n")
+            // No comment continuation — normal indent behavior
+            assertThat(edits.firstOrNull()?.newText ?: "").doesNotContain("*")
+        }
+
+        @Test
+        @DisplayName("indented doc comment aligns ' * ' correctly")
+        fun indentedDocComment() {
+            val source = "module myapp {\n    /**\n\n     */\n}"
+            // Enter on line 2 (blank line inside indented doc comment)
+            val edits = formatEdits(source, line = 2, column = 0, ch = "\n")
+            assertThat(edits).isNotEmpty
+            // Comment starts at indent 4, so continuation is "    " + " * " = "     * "
+            assertThat(edits.first().newText).isEqualTo("     * ")
+        }
+
+        @Test
+        @DisplayName("block comment gets continuation too")
+        fun blockCommentContinuation() {
+            val source = "/*\n\n */"
+            val edits = formatEdits(source, line = 1, column = 0, ch = "\n")
+            assertThat(edits).isNotEmpty
+            assertThat(edits.first().newText).isEqualTo(" * ")
+        }
+    }
+
+    // ========================================================================
     // Semicolon (;) trigger
     // ========================================================================
 

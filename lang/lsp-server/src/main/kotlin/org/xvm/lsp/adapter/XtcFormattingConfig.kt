@@ -4,9 +4,10 @@ package org.xvm.lsp.adapter
  * Formatting configuration for XTC source files.
  *
  * Resolution order (highest priority first):
- * 1. `xtc-format.toml` in the project tree (Phase 3 — not yet implemented)
- * 2. LSP `FormattingOptions` from the editor (tabSize / insertSpaces)
- * 3. XTC defaults (4-space indent, 8-space continuation, no tabs)
+ * 1. `xtc-format.toml` in the project tree (not yet implemented)
+ * 2. Editor config from `workspace/configuration` (IntelliJ Code Style settings)
+ * 3. LSP `FormattingOptions` from the editor (tabSize / insertSpaces)
+ * 4. XTC defaults (4-space indent, 8-space continuation, no tabs)
  */
 data class XtcFormattingConfig(
     val indentSize: Int = 4,
@@ -21,14 +22,19 @@ data class XtcFormattingConfig(
         /**
          * Resolve the effective formatting config for a file.
          *
-         * Currently returns LSP-derived config (or defaults). Phase 3 will add
-         * config file discovery (walk up from [fileUri] to find `xtc-format.toml`).
+         * Priority: xtc-format.toml (future) > editor config > LSP options > defaults.
+         *
+         * @param fileUri the file being formatted (for future config file discovery)
+         * @param lspOptions the LSP FormattingOptions from the current request
+         * @param editorConfig editor-provided config from `workspace/configuration`, or null
          */
         fun resolve(
             fileUri: String,
             lspOptions: XtcCompilerAdapter.FormattingOptions,
+            editorConfig: XtcFormattingConfig? = null,
         ): XtcFormattingConfig {
-            // Phase 3: check for xtc-format.toml before falling back to LSP options.
+            // TODO Phase 4: check for xtc-format.toml before other sources.
+            if (editorConfig != null) return editorConfig
             return fromLspOptions(lspOptions)
         }
 

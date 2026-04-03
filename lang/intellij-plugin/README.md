@@ -10,7 +10,9 @@ IntelliJ IDEA plugin for XTC (Ecstasy) language support.
 - **Language Features via LSP** - hover, completion, go-to-definition, find references, outline,
   auto-indent on type (see [LSP Server README](../lsp-server/README.md) for details)
 - **Code Style Settings** - Configurable indentation defaults under
-  Settings > Editor > Code Style > Ecstasy (indent size, continuation indent, tabs vs spaces)
+  Settings > Editor > Code Style > Ecstasy (indent size, continuation indent, tabs vs spaces).
+  Settings flow to the LSP server via `workspace/configuration` and are used for on-type
+  formatting when no project-level `xtc-format.toml` is present.
 
 ## Installation
 
@@ -459,6 +461,7 @@ intellij-plugin/
 │   │   ├── dap/
 │   │   │   └── XtcDebugAdapterFactory.kt # DAP server integration
 │   │   ├── lsp/
+│   │   │   ├── XtcLanguageClient.kt            # Custom LSP client (forwards Code Style → server)
 │   │   │   └── XtcLspServerSupportProvider.kt  # LSP server factory + connection provider
 │   │   ├── project/
 │   │   │   ├── XtcNewProjectWizard.kt    # New Project wizard entry
@@ -485,10 +488,10 @@ intellij-plugin/
 │  │ XTC Plugin       │    │ LSP4IJ Plugin      │                  │
 │  │ (this plugin)    │───▶│ (Red Hat)          │                  │
 │  │                  │    │                    │                  │
-│  │ - Project wizard │    │ - LSP client       │                  │
+│  │ - Project wizard │    │ - XtcLanguageClient│                  │
 │  │ - Run configs    │    │ - Protocol handler │                  │
 │  │ - TextMate       │    │ - JSON-RPC         │                  │
-│  │                  │    │ - stderr capture   │                  │
+│  │ - Code Style     │    │ - stderr capture   │                  │
 │  └──────────────────┘    └─────────┬──────────┘                  │
 │                                    │ stdio (JSON-RPC)            │
 └────────────────────────────────────┼─────────────────────────────┘
@@ -513,6 +516,7 @@ intellij-plugin/
 - The server JAR lives in `bin/` (not `lib/`) to avoid classloader conflicts with LSP4IJ
 - The server command line is built using LSP4IJ's `JavaProcessCommandBuilder` which resolves the JBR java binary automatically
 - Communication is via stdio (stdin/stdout) using JSON-RPC; logging goes to stderr
+- `XtcLanguageClient` bridges IntelliJ Code Style settings to the LSP server via `workspace/configuration`
 - LSP4IJ captures stderr and shows it in the Language Servers panel
 - The `runIde` task also tails `~/.xtc/logs/lsp-server.log` to the Gradle console
 

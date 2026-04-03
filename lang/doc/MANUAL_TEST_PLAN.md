@@ -416,10 +416,38 @@ Code Style settings for XTC appear under Settings > Editor > Code Style > Ecstas
 | 13b.8 | Settings persist | Change indent to 3, close and reopen Settings | Indent still shows 3 |
 | 13b.9 | Reset to defaults | Click "Reset" or "Set from..." > "Ecstasy" | Values revert to 4/8/4/false |
 
-**Note:** The Code Style settings are not yet wired to the LSP server's `XtcFormattingConfig`.
-Currently the LSP server reads `tabSize`/`insertSpaces` from the editor's generic settings
-(which LSP4IJ forwards). Wiring the Code Style settings to the LSP server is planned for
-Phase 3 alongside `xtc-format.toml` config file support.
+---
+
+### 13c. Code Style → LSP Server Round-Trip (IntelliJ)
+
+**Provider:** `XtcLanguageClient` (workspace/configuration) + `XtcLanguageServer`
+**Status:** ✅ Done
+**Works with:** IntelliJ only (VS Code falls back to LSP `FormattingOptions`)
+
+IntelliJ Code Style settings are forwarded to the LSP server via `workspace/configuration`
+at startup. Changes are pushed via `workspace/didChangeConfiguration`. The server uses
+these settings for on-type formatting when no project-level `xtc-format.toml` is present.
+
+**How to verify the config flow:**
+1. Open an IntelliJ instance running the XTC plugin
+2. Check the LSP server log for `workspace/configuration: editor formatting config:` — this
+   confirms the server received the settings
+
+| # | Test | Steps | Expected Result |
+|---|------|-------|-----------------|
+| 13c.1 | Default config flows to server | Open a `.x` file, check LSP log | Log shows `editor formatting config: XtcFormattingConfig(indentSize=4, ...)` |
+| 13c.2 | Custom indent flows to server | Set Code Style indent to 2, restart LSP server | Log shows `indentSize=2` |
+| 13c.3 | 2-space indent affects formatting | Set Code Style indent to 2, type `module Foo {` then Enter | New line indented by 2 spaces (not 4) |
+| 13c.4 | Nested indent with custom config | Set indent to 3, type class inside module, then method, press Enter after `{` | Indent at 9 (3 * 3 levels) |
+| 13c.5 | No TextMate interference | Open a `.x` file with custom indent | Syntax highlighting works normally (no white background, correct colors) |
+| 13c.6 | VS Code fallback | Open same project in VS Code with `editor.tabSize: 2` | On-type formatting uses 2-space indent from LSP FormattingOptions |
+
+**How to restart the LSP server** (to pick up changed Code Style settings):
+- *IntelliJ:* Open the LSP4IJ Language Servers panel → right-click "XTC Language Server" → Restart
+
+**Note:** The `workspace/didChangeConfiguration` notification is sent when IntelliJ detects
+a configuration change, which should propagate settings without a manual server restart.
+If settings don't update immediately, restart the server as a workaround.
 
 ---
 

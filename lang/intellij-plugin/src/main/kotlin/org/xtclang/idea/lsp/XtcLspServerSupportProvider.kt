@@ -6,7 +6,6 @@ import com.intellij.notification.NotificationType
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.redhat.devtools.lsp4ij.LanguageServerFactory
-import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
 import com.redhat.devtools.lsp4ij.server.JavaProcessCommandBuilder
 import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
 import org.eclipse.lsp4j.services.LanguageServer
@@ -50,7 +49,7 @@ class XtcLanguageServerFactory : LanguageServerFactory {
             logger.info("Creating XTC LSP connection provider (out-of-process) - ${LspBuildProperties.buildInfo}")
         }
 
-    override fun createLanguageClient(project: Project) = LanguageClientImpl(project)
+    override fun createLanguageClient(project: Project) = XtcLanguageClient(project)
 
     override fun getServerInterface(): Class<out LanguageServer> = LanguageServer::class.java
 }

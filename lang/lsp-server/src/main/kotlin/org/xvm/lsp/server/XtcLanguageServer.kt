@@ -16,6 +16,8 @@ import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionOptions
 import org.eclipse.lsp4j.CompletionParams
+import org.eclipse.lsp4j.ConfigurationItem
+import org.eclipse.lsp4j.ConfigurationParams
 import org.eclipse.lsp4j.DeclarationParams
 import org.eclipse.lsp4j.DefinitionParams
 import org.eclipse.lsp4j.DidChangeConfigurationParams
@@ -44,6 +46,7 @@ import org.eclipse.lsp4j.HoverParams
 import org.eclipse.lsp4j.ImplementationParams
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializeResult
+import org.eclipse.lsp4j.InitializedParams
 import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.InlayHintParams
 import org.eclipse.lsp4j.LinkedEditingRangeParams
@@ -97,6 +100,7 @@ import org.eclipse.lsp4j.services.TextDocumentService
 import org.eclipse.lsp4j.services.WorkspaceService
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.XtcCompilerAdapter
+import org.xvm.lsp.adapter.XtcFormattingConfig
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.model.fromLsp
@@ -171,6 +175,17 @@ class XtcLanguageServer(
     private val buildTime = buildInfo.getProperty("lsp.build.time", "?")
     private val semanticTokensEnabled = buildInfo.getProperty("lsp.semanticTokens", "false").toBoolean()
 
+    /**
+     * Editor-provided formatting configuration, received via `workspace/configuration`.
+     * This is populated after initialization by [requestFormattingConfig] and updated
+     * when the client sends `workspace/didChangeConfiguration`.
+     *
+     * @see XtcFormattingConfig.resolve
+     */
+    @Volatile
+    var editorFormattingConfig: XtcFormattingConfig? = null
+        private set
+
     override fun connect(client: LanguageClient) {
         this.client = client
         logger.info("connect: connected to language client")
@@ -212,6 +227,52 @@ class XtcLanguageServer(
         }
 
         return CompletableFuture.completedFuture(InitializeResult(capabilities))
+    }
+
+    /**
+     * LSP: initialized notification.
+     *
+     * Called after the client sends the `initialized` notification, signaling that the
+     * handshake is complete and the server can send requests to the client.
+     * We use this to pull formatting configuration from the client via `workspace/configuration`.
+     */
+    override fun initialized(params: InitializedParams?) {
+        logger.info("initialized: handshake complete, requesting editor configuration")
+        requestFormattingConfig()
+    }
+
+    /**
+     * Request formatting configuration from the client via `workspace/configuration`.
+     *
+     * Sends a request for section `"xtc.formatting"`. The client (e.g., [XtcLanguageClient]
+     * in IntelliJ) responds with IntelliJ Code Style settings. The response is parsed into
+     * an [XtcFormattingConfig] and stored as [editorFormattingConfig].
+     */
+    private fun requestFormattingConfig() {
+        val c = client ?: return
+        val item = ConfigurationItem().apply { section = "xtc.formatting" }
+        c
+            .configuration(ConfigurationParams(listOf(item)))
+            .thenAccept { results ->
+                val config = results?.firstOrNull()
+                if (config is Map<*, *>) {
+                    val formattingConfig =
+                        XtcFormattingConfig(
+                            indentSize = (config["indentSize"] as? Number)?.toInt() ?: 4,
+                            continuationIndentSize = (config["continuationIndentSize"] as? Number)?.toInt() ?: 8,
+                            insertSpaces = config["insertSpaces"] as? Boolean ?: true,
+                            maxLineWidth = (config["maxLineWidth"] as? Number)?.toInt() ?: 120,
+                        )
+                    editorFormattingConfig = formattingConfig
+                    adapter.editorFormattingConfig = formattingConfig
+                    logger.info("workspace/configuration: editor formatting config: {}", formattingConfig)
+                } else {
+                    logger.info("workspace/configuration: no formatting config from client (using defaults)")
+                }
+            }.exceptionally { ex ->
+                logger.warn("initialized: failed to get formatting config: {}", ex.message)
+                null
+            }
     }
 
     private fun logServerBanner() {
@@ -1411,7 +1472,8 @@ class XtcLanguageServer(
          * @see org.eclipse.lsp4j.services.WorkspaceService.didChangeConfiguration
          */
         override fun didChangeConfiguration(params: DidChangeConfigurationParams) {
-            logger.info("workspace/didChangeConfiguration")
+            logger.info("workspace/didChangeConfiguration: re-requesting formatting config")
+            requestFormattingConfig()
         }
 
         /**

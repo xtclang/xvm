@@ -35,13 +35,20 @@ LSP4IJ is a thin client. When sending `textDocument/onTypeFormatting` (or format
 - Forward custom/extended formatting options
 - Provide any mechanism for a language plugin to register settings that flow to the LSP server
 
-As of Phase 2 completion, the XTC plugin registers an `XtcIntelliJLanguage` singleton
-(a minimal `com.intellij.lang.Language` subclass, distinct from the DSL's `XtcLanguage.kt`
-model) and an `XtcLanguageCodeStyleSettingsProvider` that exposes Settings > Editor >
-Code Style > Ecstasy with XTC's default indentation values. LSP4IJ still only forwards
-`tabSize`/`insertSpaces` to the server — the Code Style settings serve as the user-facing
-configuration surface in IntelliJ, and will feed into `XtcFormattingConfig` resolution
-once that wiring is complete (Phase 3).
+As of Phase 3 completion, the XTC plugin registers an `XtcIntelliJLanguage` singleton
+(a minimal `com.intellij.lang.Language("Ecstasy")` subclass, distinct from the DSL's
+`XtcLanguage.kt` model) and an `XtcLanguageCodeStyleSettingsProvider` that exposes
+Settings > Editor > Code Style > Ecstasy with XTC's default indentation values.
+
+**Important:** The Language ID is `"Ecstasy"`, NOT `"xtc"`. The TextMate bundle uses
+`"xtc"` as its language ID (in `package.json`). If both used the same ID, IntelliJ
+would associate `.x` files with the IntelliJ Language instead of TextMate, breaking
+syntax highlighting (white background) and indentation.
+
+LSP4IJ still only forwards `tabSize`/`insertSpaces` in `FormattingOptions`, but the
+XTC plugin now bridges Code Style settings to the LSP server via a custom
+`XtcLanguageClient` that handles `workspace/configuration` requests. The server pulls
+settings after initialization and on `didChangeConfiguration` notifications.
 
 ### Chosen Approach: Config File with IntelliJ Settings Fallback
 
@@ -124,10 +131,13 @@ data class XtcFormattingConfig(
 The XTC plugin registers a Code Style settings page under Settings > Editor > Code Style > Ecstasy.
 This required two foundational classes plus the settings provider:
 
-**`XtcIntelliJLanguage.kt`** — Minimal IntelliJ `Language` singleton. Named `XtcIntelliJLanguage`
-(not `XtcLanguage`) to avoid confusion with the DSL's `XtcLanguage.kt` in `lang/dsl/` which
-defines the grammar model. This class has no knowledge of syntax or grammar — it exists solely
-to anchor IntelliJ platform features (Code Style, future commenter, etc.) to the XTC language ID.
+**`XtcIntelliJLanguage.kt`** — Minimal IntelliJ `Language("Ecstasy")` singleton. Named
+`XtcIntelliJLanguage` (not `XtcLanguage`) to avoid confusion with the DSL's `XtcLanguage.kt`
+in `lang/dsl/` which defines the grammar model. This class has no knowledge of syntax or
+grammar — it exists solely to anchor IntelliJ platform features (Code Style, future commenter,
+etc.). **The Language ID is `"Ecstasy"`, not `"xtc"`** — the TextMate bundle uses `"xtc"` as
+its language ID, and a collision causes IntelliJ to associate `.x` files with the Language
+instead of TextMate, breaking syntax highlighting and indentation.
 
 **`XtcCodeStyleSettings.kt`** — `CustomCodeStyleSettings` subclass holding XTC-specific options
 beyond what `CommonCodeStyleSettings` provides (currently `CONTINUATION_INDENT_SIZE`).
@@ -143,11 +153,23 @@ beyond what `CommonCodeStyleSettings` provides (currently `CONTINUATION_INDENT_S
     implementation="org.xtclang.idea.style.XtcLanguageCodeStyleSettingsProvider"/>
 ```
 
-**Future (Phase 3):** When a project config file (`xtc-format.toml`) exists, the IntelliJ plugin
+### Editor Config Wiring (Phase 3) — DONE
+
+The Code Style settings now flow from IntelliJ to the LSP server via `workspace/configuration`:
+
+1. **`XtcLanguageClient`** extends LSP4IJ's `LanguageClientImpl`, overriding `configuration()`
+   to return IntelliJ Code Style settings when the server requests section `"xtc.formatting"`.
+2. **`XtcLanguageServer.initialized()`** sends a `workspace/configuration` request to pull
+   settings immediately after the LSP handshake completes.
+3. **`didChangeConfiguration`** triggers a re-request, so settings updates propagate without
+   restarting the server.
+4. **`XtcFormattingConfig.resolve()`** now checks editor config before LSP `FormattingOptions`.
+
+**Future (Phase 4):** When a project config file (`xtc-format.toml`) exists, the IntelliJ plugin
 should show a notification: "Formatting settings loaded from xtc-format.toml — Code Style
 settings are overridden." This follows the same pattern as the Biome and Prettier IntelliJ plugins.
 
-### Config File Format (Phase 3)
+### Config File Format (Phase 4)
 
 The `xtc-format.toml` file format (exact schema TBD, but roughly):
 
@@ -894,20 +916,31 @@ The `onTypeFormatting` handler is called on every keystroke for trigger characte
 9. ~~Update capabilities audit test in `XtcLanguageServerTest.kt`~~
 
 **Phase 2: IntelliJ Code Style Settings — DONE**
-1. ~~Create `XtcIntelliJLanguage` — minimal `Language("xtc")` singleton (named to avoid confusion with DSL's `XtcLanguage.kt`)~~
+1. ~~Create `XtcIntelliJLanguage` — minimal `Language("Ecstasy")` singleton (named to avoid confusion with DSL's `XtcLanguage.kt`; ID must not be `"xtc"` to avoid TextMate collision)~~
 2. ~~Create `XtcCodeStyleSettings` extending `CustomCodeStyleSettings`~~
 3. ~~Create `XtcLanguageCodeStyleSettingsProvider` with `customizeDefaults()` and XTC code sample~~
 4. ~~Register in `plugin.xml` via `langCodeStyleSettingsProvider`~~
-5. Wire IntelliJ settings into `XtcFormattingConfig` resolution (deferred to Phase 3 — currently falls back to LSP options)
+5. ~~Wire IntelliJ settings into `XtcFormattingConfig` resolution (completed in Phase 3)~~
 
-**Phase 3: Project Config File (`xtc-format.toml`)**
+**Phase 3: Editor Config Wiring (IntelliJ → LSP Server) — DONE**
+1. ~~Create `XtcLanguageClient` extending LSP4IJ's `LanguageClientImpl`, overriding `configuration()` to return IntelliJ Code Style settings for section `"xtc.formatting"`~~
+2. ~~Wire `XtcLanguageClient` into `XtcLanguageServerFactory.createLanguageClient()`~~
+3. ~~Add `initialized()` callback in `XtcLanguageServer` to send `workspace/configuration` request after handshake~~
+4. ~~Parse config response and store as `XtcFormattingConfig` on both the server and adapter~~
+5. ~~Update `didChangeConfiguration` handler to re-request config from the client~~
+6. ~~Update `XtcFormattingConfig.resolve()` to accept editor config: editor config > LSP options > defaults~~
+7. ~~Add `editorFormattingConfig` property to `XtcCompilerAdapter` interface and `TreeSitterAdapter`~~
+8. ~~Write round-trip integration tests (`FormattingConfigRoundTripTest.kt` — 10 tests)~~
+
+**Phase 4: Project Config File (`xtc-format.toml`)**
 1. Define the TOML schema for `xtc-format.toml` (indent, continuation, line width, brace style)
 2. Implement config file discovery (walk up from source file to find `xtc-format.toml`)
 3. Implement config file parsing and caching (re-read on file change via `didChangeWatchedFiles`)
-4. Wire into `XtcFormattingConfig.resolve()` as the highest-priority source
+4. Wire into `XtcFormattingConfig.resolve()` as the highest-priority source (above editor config)
 5. In IntelliJ plugin: show notification when project config file overrides Code Style settings
 
-**Phase 4: Refinements**
+**Phase 5: Refinements** (previously Phase 4)
+
 1. Implement `handleSemicolon()` for post-continuation correction
 2. Cache line offsets for large files
 3. Handle `onTypeFormatting` for `)` (closing parenthesis in multi-line parameter lists)
@@ -930,12 +963,25 @@ The `onTypeFormatting` handler is called on every keystroke for trigger characte
 
 | File | Change |
 |------|--------|
-| `lang/intellij-plugin/.../XtcIntelliJLanguage.kt` | New — minimal `Language("xtc")` singleton for platform integration |
+| `lang/intellij-plugin/.../XtcIntelliJLanguage.kt` | New — minimal `Language("Ecstasy")` singleton (NOT `"xtc"` — avoids TextMate ID collision) |
 | `lang/intellij-plugin/.../style/XtcCodeStyleSettings.kt` | New — `CustomCodeStyleSettings` with `CONTINUATION_INDENT_SIZE` |
 | `lang/intellij-plugin/.../style/XtcLanguageCodeStyleSettingsProvider.kt` | New — settings page under Settings > Editor > Code Style > Ecstasy |
 | `lang/intellij-plugin/src/main/resources/META-INF/plugin.xml` | Registered `langCodeStyleSettingsProvider` extension point |
 
-**Phase 3 (config file):**
+**Phase 3 (editor config wiring) — DONE:**
+
+| File | Change |
+|------|--------|
+| `lang/intellij-plugin/.../lsp/XtcLanguageClient.kt` | New — custom `LanguageClientImpl` that responds to `workspace/configuration` with IntelliJ Code Style settings |
+| `lang/intellij-plugin/.../lsp/XtcLspServerSupportProvider.kt` | Changed factory to create `XtcLanguageClient` instead of default `LanguageClientImpl` |
+| `lang/intellij-plugin/.../XtcIntelliJLanguage.kt` | Changed ID from `"xtc"` to `"Ecstasy"` (TextMate collision fix) |
+| `lang/lsp-server/.../server/XtcLanguageServer.kt` | Added `initialized()` callback, `requestFormattingConfig()`, `editorFormattingConfig` field; updated `didChangeConfiguration` to re-request config |
+| `lang/lsp-server/.../adapter/XtcFormattingConfig.kt` | Updated `resolve()` to accept optional `editorConfig` parameter (editor config > LSP options > defaults) |
+| `lang/lsp-server/.../adapter/XtcCompilerAdapter.kt` | Added `editorFormattingConfig` property with default null |
+| `lang/lsp-server/.../adapter/TreeSitterAdapter.kt` | Implemented `editorFormattingConfig` property; passes it to `XtcFormattingConfig.resolve()` |
+| `lang/lsp-server/src/test/.../server/FormattingConfigRoundTripTest.kt` | New — 10 round-trip tests verifying config flows from client → server → formatting |
+
+**Phase 4 (config file):**
 
 | File | Change |
 |------|--------|
@@ -945,6 +991,5 @@ The `onTypeFormatting` handler is called on every keystroke for trigger characte
 
 | File | Reason |
 |------|--------|
-| `XtcCompilerAdapter.kt` | Interface already defines `onTypeFormatting()` and `FormattingOptions` |
 | `AbstractXtcCompilerAdapter.kt` | Stub remains as fallback for other adapter implementations |
 | `language-configuration.json` | TextMate indentation rules remain unchanged as fallback for editors without LSP |
