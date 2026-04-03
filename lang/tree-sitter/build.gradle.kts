@@ -244,11 +244,11 @@ val zigDir: File = File(zigCacheDir, zigVersion)
 
 // Detect host platform for Zig download (format: {os}-{arch})
 val zigPlatform: String = when {
-    osName.contains("mac") && osArch in listOf("aarch64", "arm64") -> "macos-aarch64"
-    osName.contains("mac") && osArch in listOf("amd64", "x86_64") -> "macos-x86_64"
-    osName.contains("linux") && osArch in listOf("amd64", "x86_64") -> "linux-x86_64"
-    osName.contains("linux") && osArch in listOf("aarch64", "arm64") -> "linux-aarch64"
-    osName.contains("windows") && osArch in listOf("amd64", "x86_64") -> "windows-x86_64"
+    osName.contains("mac") && osArch in listOf("aarch64", "arm64") -> "aarch64-macos"
+    osName.contains("mac") && osArch in listOf("amd64", "x86_64") -> "x86_64-macos"
+    osName.contains("linux") && osArch in listOf("amd64", "x86_64") -> "x86_64-linux"
+    osName.contains("linux") && osArch in listOf("aarch64", "arm64") -> "aarch64-linux"
+    osName.contains("windows") && osArch in listOf("amd64", "x86_64") -> "x86_64-windows"
     else -> "unsupported"
 }
 
