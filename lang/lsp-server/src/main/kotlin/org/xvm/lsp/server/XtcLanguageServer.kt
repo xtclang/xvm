@@ -428,7 +428,7 @@ class XtcLanguageServer(
                 DocumentOnTypeFormattingOptions("\n").apply {
                     moreTriggerCharacter = listOf("}", ";", ")")
                 }
-            inlayHintProvider = Either.forLeft(true)
+            // inlayHintProvider = Either.forLeft(true) // not implemented in TreeSitterAdapter yet
 
             documentLinkProvider = DocumentLinkOptions()
 
@@ -457,11 +457,13 @@ class XtcLanguageServer(
             // --- Workspace features ---
             workspaceSymbolProvider = Either.forLeft(true)
 
+            // Code lenses: Run action on module declarations (TreeSitterAdapter)
+            codeLensProvider = CodeLensOptions(false)
+
             // Not yet advertised (enable when implemented)
             // declarationProvider = Either.forLeft(true) // compiler: go-to-declaration
             // typeDefinitionProvider = Either.forLeft(true) // compiler(types): jump to type
             // implementationProvider = Either.forLeft(true) // compiler(types): find implementations
-            codeLensProvider = CodeLensOptions(false)
             // typeHierarchyProvider = Either.forLeft(true) // compiler(full): type tree
             // callHierarchyProvider = Either.forLeft(true) // compiler(full): call tree
         }
