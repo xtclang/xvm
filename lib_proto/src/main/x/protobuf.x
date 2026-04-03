@@ -54,4 +54,11 @@ module protobuf.xtclang.org {
      * A type alias for a Protobuf field that may be a ByteString or unset.
      */
     typedef Presence | ByteString as MaybeByteString;
+
+
+    void run(String[] args) {
+        @Inject Console console;
+        console.print("Ecstasy Protocol Buffers");
+    }
+
 }

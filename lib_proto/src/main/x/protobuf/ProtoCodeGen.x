@@ -1,3 +1,4 @@
+import ecstasy.collections.HashSet;
 import ecstasy.maps.ListMap;
 
 import FieldDescriptor.Label;
@@ -25,6 +26,12 @@ class ProtoCodeGen {
         "this", "throw", "try", "typedef", "using", "val", "var", "void", "while",
     ];
 
+    /**
+     * Set of known enum type names collected during generation, used to distinguish
+     * enum references from message references (the parser treats both as FieldType.Msg).
+     */
+    private Set<String> enumNames = new HashSet();
+
     // ----- public interface -----------------------------------------------------------------------
 
     /**
@@ -35,6 +42,7 @@ class ProtoCodeGen {
      * @return a map from file name (e.g. `"Person.x"`) to source text
      */
     Map<String, String> generate(FileDescriptor file) {
+        enumNames = collectEnumNames(file);
         ListMap<String, String> result = new ListMap();
 
         for (EnumDescriptor e : file.enums) {
@@ -424,7 +432,6 @@ class ProtoCodeGen {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
         String pad2 = spaces(indent + 2);
-        String pad3 = spaces(indent + 3);
 
         buf.addAll(pad).addAll("@Override\n");
         buf.addAll(pad).addAll("Boolean parseField(CodedInput input, Int tag) {\n");
@@ -444,6 +451,8 @@ class ProtoCodeGen {
                     generateParseMapField(buf, field, fname, indent + 2);
                 } else if (field.label == Repeated) {
                     generateParseRepeatedField(buf, field, fname, indent + 2);
+                } else if (isEnumRef(field)) {
+                    generateParseEnumField(buf, field, fname, indent + 2);
                 } else if (field.type == FieldType.Msg) {
                     generateParseMessageField(buf, field, fname, indent + 2);
                 } else {
@@ -460,13 +469,29 @@ class ProtoCodeGen {
             for (FieldDescriptor field : oneofFields) {
                 String oname = fieldName(msg.oneofs[field.oneofIndex].name);
                 buf.addAll(pad1).addAll("case ").addAll(field.number.toString()).addAll(":\n");
-                buf.addAll(pad2)
-                   .addAll(oname)
-                   .addAll(".set(")
-                   .addAll(field.number.toString())
-                   .addAll(", input.")
-                   .addAll(readMethod(field))
-                   .addAll(");\n");
+                if (isEnumRef(field)) {
+                    String pad3 = spaces(indent + 3);
+                    buf.addAll(pad2)
+                       .addAll("if (")
+                       .addAll(field.typeName)
+                       .addAll(" v := ProtoEnum.byProtoValue(")
+                       .addAll(field.typeName)
+                       .addAll(".values, input.readEnum())) {\n");
+                    buf.addAll(pad3)
+                       .addAll(oname)
+                       .addAll(".set(")
+                       .addAll(field.number.toString())
+                       .addAll(", v);\n");
+                    buf.addAll(pad2).addAll("}\n");
+                } else {
+                    buf.addAll(pad2)
+                       .addAll(oname)
+                       .addAll(".set(")
+                       .addAll(field.number.toString())
+                       .addAll(", input.")
+                       .addAll(readMethod(field))
+                       .addAll(");\n");
+                }
                 buf.addAll(pad2).addAll("return True;\n");
             }
 
@@ -483,7 +508,38 @@ class ProtoCodeGen {
     private void generateParseRepeatedField(StringBuffer buf, FieldDescriptor field,
                                             String fname, Int indent) {
         String pad = spaces(indent);
-        if (field.type.packable) {
+        if (isEnumRef(field)) {
+            // repeated enum: read varints and convert to enum values
+            String pad1 = spaces(indent + 1);
+            String pad2 = spaces(indent + 2);
+            buf.addAll(pad)
+               .addAll("if (WireType.getWireType(tag) == WireType.LEN) {\n");
+            buf.addAll(pad1)
+               .addAll("for (Int32 raw : input.readPackedVarints()) {\n");
+            buf.addAll(pad2)
+               .addAll("if (")
+               .addAll(field.typeName)
+               .addAll(" v := ProtoEnum.byProtoValue(")
+               .addAll(field.typeName)
+               .addAll(".values, raw)) {\n");
+            buf.addAll(spaces(indent + 3))
+               .addAll(fname)
+               .addAll(".add(v);\n");
+            buf.addAll(pad2).addAll("}\n");
+            buf.addAll(pad1).addAll("}\n");
+            buf.addAll(pad).addAll("} else {\n");
+            buf.addAll(pad1)
+               .addAll("if (")
+               .addAll(field.typeName)
+               .addAll(" v := ProtoEnum.byProtoValue(")
+               .addAll(field.typeName)
+               .addAll(".values, input.readEnum())) {\n");
+            buf.addAll(pad2)
+               .addAll(fname)
+               .addAll(".add(v);\n");
+            buf.addAll(pad1).addAll("}\n");
+            buf.addAll(pad).addAll("}\n");
+        } else if (field.type.packable) {
             // handle both packed (LEN) and unpacked wire types
             String pad1 = spaces(indent + 1);
             buf.addAll(pad)
@@ -556,6 +612,25 @@ class ProtoCodeGen {
     }
 
     /**
+     * Generate parse logic for a singular enum field.
+     */
+    private void generateParseEnumField(StringBuffer buf, FieldDescriptor field,
+                                        String fname, Int indent) {
+        String pad  = spaces(indent);
+        String pad1 = spaces(indent + 1);
+        buf.addAll(pad)
+           .addAll("if (")
+           .addAll(field.typeName)
+           .addAll(" v := ProtoEnum.byProtoValue(")
+           .addAll(field.typeName)
+           .addAll(".values, input.readEnum())) {\n");
+        buf.addAll(pad1)
+           .addAll(fname)
+           .addAll(" = v;\n");
+        buf.addAll(pad).addAll("}\n");
+    }
+
+    /**
      * Generate parse logic for a map field.
      */
     private void generateParseMapField(StringBuffer buf, FieldDescriptor field,
@@ -603,8 +678,35 @@ class ProtoCodeGen {
                 generateWriteMapField(buf, field, fname, indent + 1);
             } else if (field.label == Repeated) {
                 generateWriteRepeatedField(buf, field, fname, indent + 1);
+            } else if (isEnumRef(field)) {
+                String ecType = field.typeName;
+                buf.addAll(pad1)
+                   .addAll("var ")
+                   .addAll(fname)
+                   .addAll(" = this.")
+                   .addAll(fname)
+                   .addAll(";\n");
+                buf.addAll(pad1)
+                   .addAll("if (")
+                   .addAll(fname)
+                   .addAll(".is(")
+                   .addAll(ecType)
+                   .addAll(")) {\n");
+                buf.addAll(pad2)
+                   .addAll("out.writeEnum(")
+                   .addAll(field.number.toString())
+                   .addAll(", ")
+                   .addAll(fname)
+                   .addAll(");\n");
+                buf.addAll(pad1).addAll("}\n");
             } else if (field.type == FieldType.Msg) {
                 String ecType = field.typeName;
+                buf.addAll(pad1)
+                   .addAll("var ")
+                   .addAll(fname)
+                   .addAll(" = this.")
+                   .addAll(fname)
+                   .addAll(";\n");
                 buf.addAll(pad1)
                    .addAll("if (")
                    .addAll(fname)
@@ -620,6 +722,12 @@ class ProtoCodeGen {
                 buf.addAll(pad1).addAll("}\n");
             } else {
                 String ecType = ecstasyScalarType(field);
+                buf.addAll(pad1)
+                   .addAll("var ")
+                   .addAll(fname)
+                   .addAll(" = this.")
+                   .addAll(fname)
+                   .addAll(";\n");
                 buf.addAll(pad1)
                    .addAll("if (")
                    .addAll(fname)
@@ -653,7 +761,20 @@ class ProtoCodeGen {
                                             String fname, Int indent) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
-        if (field.type.packable) {
+        if (isEnumRef(field)) {
+            // repeated enum: write each value individually using writeEnum
+            buf.addAll(pad)
+               .addAll("for (")
+               .addAll(field.typeName)
+               .addAll(" v : ")
+               .addAll(fname)
+               .addAll(") {\n");
+            buf.addAll(pad1)
+               .addAll("out.writeEnum(")
+               .addAll(field.number.toString())
+               .addAll(", v);\n");
+            buf.addAll(pad).addAll("}\n");
+        } else if (field.type.packable) {
             buf.addAll(pad)
                .addAll("if (!")
                .addAll(fname)
@@ -794,8 +915,35 @@ class ProtoCodeGen {
                 generateSizeMapField(buf, field, fname, indent + 1);
             } else if (field.label == Repeated) {
                 generateSizeRepeatedField(buf, field, fname, indent + 1);
+            } else if (isEnumRef(field)) {
+                String ecType = field.typeName;
+                buf.addAll(pad1)
+                   .addAll("var ")
+                   .addAll(fname)
+                   .addAll(" = this.")
+                   .addAll(fname)
+                   .addAll(";\n");
+                buf.addAll(pad1)
+                   .addAll("if (")
+                   .addAll(fname)
+                   .addAll(".is(")
+                   .addAll(ecType)
+                   .addAll(")) {\n");
+                buf.addAll(pad2)
+                   .addAll("size += CodedOutput.computeEnumSize(")
+                   .addAll(field.number.toString())
+                   .addAll(", ")
+                   .addAll(fname)
+                   .addAll(");\n");
+                buf.addAll(pad1).addAll("}\n");
             } else if (field.type == FieldType.Msg) {
                 String ecType = field.typeName;
+                buf.addAll(pad1)
+                   .addAll("var ")
+                   .addAll(fname)
+                   .addAll(" = this.")
+                   .addAll(fname)
+                   .addAll(";\n");
                 buf.addAll(pad1)
                    .addAll("if (")
                    .addAll(fname)
@@ -811,6 +959,12 @@ class ProtoCodeGen {
                 buf.addAll(pad1).addAll("}\n");
             } else {
                 String ecType = ecstasyScalarType(field);
+                buf.addAll(pad1)
+                   .addAll("var ")
+                   .addAll(fname)
+                   .addAll(" = this.")
+                   .addAll(fname)
+                   .addAll(";\n");
                 buf.addAll(pad1)
                    .addAll("if (")
                    .addAll(fname)
@@ -841,7 +995,20 @@ class ProtoCodeGen {
                                            String fname, Int indent) {
         String pad  = spaces(indent);
         String pad1 = spaces(indent + 1);
-        if (field.type.packable) {
+        if (isEnumRef(field)) {
+            // repeated enum: compute size for each element individually
+            buf.addAll(pad)
+               .addAll("for (")
+               .addAll(field.typeName)
+               .addAll(" v : ")
+               .addAll(fname)
+               .addAll(") {\n");
+            buf.addAll(pad1)
+               .addAll("size += CodedOutput.computeEnumSize(")
+               .addAll(field.number.toString())
+               .addAll(", v);\n");
+            buf.addAll(pad).addAll("}\n");
+        } else if (field.type.packable) {
             buf.addAll(pad)
                .addAll("if (!")
                .addAll(fname)
@@ -1038,33 +1205,53 @@ class ProtoCodeGen {
         imports.add("protobuf.CodedOutput");
         imports.add("protobuf.WireType");
 
-        Boolean hasMap   = False;
-        Boolean hasOneof = False;
-        Boolean hasEnum  = msg.enums.size > 0;
+        HashSet<String> extras = new HashSet();
+        collectImportsFromMessage(msg, extras);
 
-        for (FieldDescriptor field : msg.fields) {
-            if (field.isMapField) {
-                hasMap = True;
-            }
-            if (field.oneofIndex >= 0) {
-                hasOneof = True;
-            }
-            if (field.type == FieldType.Enm) {
-                hasEnum = True;
-            }
-        }
-
-        if (hasMap) {
-            imports.add("ecstasy.maps.ListMap");
-        }
-        if (hasOneof) {
-            imports.add("protobuf.Oneof");
-        }
-        if (hasEnum) {
-            imports.add("protobuf.ProtoEnum");
+        for (String imp : extras) {
+            imports.add(imp);
         }
 
         return imports;
+    }
+
+    /**
+     * Recursively scan a message and its nested messages for import requirements.
+     */
+    private void collectImportsFromMessage(MessageDescriptor msg, HashSet<String> imports) {
+        if (msg.enums.size > 0) {
+            imports.add("protobuf.ProtoEnum");
+        }
+
+        for (FieldDescriptor field : msg.fields) {
+            if (field.isMapField) {
+                imports.add("ecstasy.maps.ListMap");
+                continue;
+            }
+            if (field.oneofIndex >= 0) {
+                imports.add("protobuf.Oneof");
+                continue;
+            }
+            if (isEnumRef(field)) {
+                imports.add("protobuf.ProtoEnum");
+            }
+            if (field.label == Repeated) {
+                continue;
+            }
+            // singular non-map, non-oneof field: uses a Maybe type or inline typedef
+            if (field.type == FieldType.Msg || isEnumRef(field)) {
+                imports.add("protobuf.Presence");
+            } else {
+                String mt = maybeType(field);
+                if (mt != "Object") {
+                    imports.add($"protobuf.{mt}");
+                }
+            }
+        }
+
+        for (MessageDescriptor nested : msg.nestedMessages) {
+            collectImportsFromMessage(nested, imports);
+        }
     }
 
     // ----- type mapping helpers -------------------------------------------------------------------
@@ -1278,7 +1465,7 @@ class ProtoCodeGen {
         return switch (field.type) {
             case Str:   $"computeStringSize({fn}, v)";
             case Bytes: $"computeBytesSize({fn}, v)";
-            default:    $"computeStringSize({fn}, v)";
+            default:    $"computeBytesSize({fn}, v)";
         };
     }
 
@@ -1390,6 +1577,60 @@ class ProtoCodeGen {
             case ("bool",   "string"): "computeMapBoolStringSize";
             default: "";
         };
+    }
+
+    // ----- enum resolution helpers ----------------------------------------------------------------
+
+    /**
+     * Collect all enum type names from the file (top-level and nested).
+     */
+    private Set<String> collectEnumNames(FileDescriptor file) {
+        HashSet<String> names = new HashSet();
+        for (EnumDescriptor e : file.enums) {
+            names.add(e.name);
+        }
+        for (MessageDescriptor msg : file.messages) {
+            collectEnumNamesFromMessage(msg, "", names);
+        }
+        return names;
+    }
+
+    /**
+     * Recursively collect enum type names from a message and its nested types.
+     * Adds both the simple name and the dot-qualified name so that references like
+     * `VisibilityFeature.DefaultSymbolVisibility` are recognized as enum references.
+     */
+    private void collectEnumNamesFromMessage(MessageDescriptor msg, String prefix,
+                                             HashSet<String> names) {
+        String qualifiedPrefix = prefix.size == 0 ? msg.name : $"{prefix}.{msg.name}";
+        for (EnumDescriptor e : msg.enums) {
+            names.add(e.name);
+            names.add($"{qualifiedPrefix}.{e.name}");
+        }
+        for (MessageDescriptor nested : msg.nestedMessages) {
+            collectEnumNamesFromMessage(nested, qualifiedPrefix, names);
+        }
+    }
+
+    /**
+     * @return True if the field references an enum type (either via FieldType.Enm or by
+     *         having a typeName that matches a known enum)
+     */
+    private Boolean isEnumRef(FieldDescriptor field) {
+        if (field.type == FieldType.Enm) {
+            return True;
+        }
+        if (field.type != FieldType.Msg || field.typeName.size == 0) {
+            return False;
+        }
+        if (enumNames.contains(field.typeName)) {
+            return True;
+        }
+        // check if the last segment of a dotted name is a known enum
+        if (Int dot := field.typeName.lastIndexOf('.')) {
+            return enumNames.contains(field.typeName[dot + 1 ..< field.typeName.size]);
+        }
+        return False;
     }
 
     // ----- naming helpers ------------------------------------------------------------------------

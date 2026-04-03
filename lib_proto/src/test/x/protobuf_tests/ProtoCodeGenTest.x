@@ -18,6 +18,11 @@ class ProtoCodeGenTest {
         assert files.size == 1;
         assert String source := files.get("Person.x");
 
+        // imports for Maybe types
+        assert source.indexOf("import protobuf.MaybeString;");
+        assert source.indexOf("import protobuf.MaybeInt32;");
+        assert source.indexOf("import protobuf.MaybeBoolean;");
+
         // class declaration
         assert source.indexOf("class Person");
         assert source.indexOf("extends AbstractMessage");
@@ -208,6 +213,52 @@ class ProtoCodeGenTest {
         assert source.indexOf("Green(1)");
     }
 
+    // ----- enum field parsing --------------------------------------------------------------------
+
+    @Test
+    void shouldGenerateEnumFieldParsing() {
+        Map<String, String> files = generate($|syntax = "proto3";
+                                              |message Msg \{
+                                              |  enum Color \{
+                                              |    RED = 0;
+                                              |    GREEN = 1;
+                                              |  }
+                                              |  Color color = 1;
+                                              |}
+                                             );
+        assert String source := files.get("Msg.x");
+
+        // parseField should use ProtoEnum.byProtoValue, not raw readEnum
+        assert source.indexOf("ProtoEnum.byProtoValue(Color.values, input.readEnum())");
+        assert source.indexOf("color = v");
+    }
+
+    @Test
+    void shouldGenerateRepeatedEnumField() {
+        Map<String, String> files = generate($|syntax = "proto3";
+                                              |message Msg \{
+                                              |  enum Color \{
+                                              |    RED = 0;
+                                              |    GREEN = 1;
+                                              |  }
+                                              |  repeated Color colors = 1;
+                                              |}
+                                             );
+        assert String source := files.get("Msg.x");
+
+        // field declaration should use Array<Color>
+        assert source.indexOf("Array<Color> colors");
+
+        // parseField should convert packed varints to enum values
+        assert source.indexOf("ProtoEnum.byProtoValue(Color.values");
+
+        // writeKnownFields should use writeEnum per element
+        assert source.indexOf("out.writeEnum(1, v)");
+
+        // knownFieldsSize should use computeEnumSize per element
+        assert source.indexOf("computeEnumSize(1, v)");
+    }
+
     // ----- message field -------------------------------------------------------------------------
 
     @Test
@@ -221,6 +272,7 @@ class ProtoCodeGenTest {
                                               |}
                                              );
         assert String source := files.get("Outer.x");
+        assert source.indexOf("import protobuf.Presence;");
         assert source.indexOf("typedef Presence | Inner as MaybeInner");
         assert source.indexOf("MaybeInner nested = Unset");
         assert source.indexOf("nested.is(Inner)");
@@ -326,6 +378,56 @@ class ProtoCodeGenTest {
         assert !source.indexOf("ecstasy.collections.Array");
         // but the field should still use Array type
         assert source.indexOf("Array<String>");
+    }
+
+    // ----- nested message imports ---------------------------------------------------------------
+
+    @Test
+    void shouldImportTypesNeededByNestedMessage() {
+        Map<String, String> files = generate($|syntax = "proto3";
+                                              |message Outer \{
+                                              |  message Inner \{
+                                              |    int32 value = 1;
+                                              |  }
+                                              |  Inner inner = 1;
+                                              |}
+                                             );
+        assert String source := files.get("Outer.x");
+
+        // Presence is needed for the Outer.inner typedef
+        assert source.indexOf("import protobuf.Presence;");
+        // MaybeInt32 is needed by the nested Inner message
+        assert source.indexOf("import protobuf.MaybeInt32;");
+    }
+
+    // ----- dotted enum reference ---------------------------------------------------------------
+
+    @Test
+    void shouldHandleDottedEnumReference() {
+        Map<String, String> files = generate($|syntax = "proto3";
+                                              |message Outer \{
+                                              |  message Inner \{
+                                              |    enum Status \{
+                                              |      UNKNOWN = 0;
+                                              |      ACTIVE = 1;
+                                              |    }
+                                              |  }
+                                              |  Inner.Status status = 1;
+                                              |}
+                                             );
+        assert String source := files.get("Outer.x");
+
+        // parseField should use ProtoEnum.byProtoValue, not mergeFrom
+        assert source.indexOf("ProtoEnum.byProtoValue(");
+        assert source.indexOf("input.readEnum()");
+        assert !source.indexOf("mergeFrom");
+
+        // writeKnownFields should use writeEnum, not writeMessage
+        assert source.indexOf("writeEnum(1,");
+        assert !source.indexOf("writeMessage(1,");
+
+        // knownFieldsSize should use computeEnumSize, not computeMessageSize
+        assert source.indexOf("computeEnumSize(1,");
     }
 
     // ----- helper --------------------------------------------------------------------------------

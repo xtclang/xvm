@@ -425,7 +425,7 @@ class CodedOutput {
      * @param fieldNumber  the field number
      * @param values       the varint values to pack
      */
-    void writePackedVarints(Int fieldNumber, List<Int64> values) {
+    void writePackedVarints(Int fieldNumber, List<IntNumber> values) {
         if (values.empty) {
             return;
         }
@@ -434,9 +434,9 @@ class CodedOutput {
         for (Int64 v : values) {
             dataSize += computeVarintSize(v);
         }
-        writeVarint(dataSize.toInt64());
+        writeVarint(dataSize);
         for (Int64 v : values) {
-            writeVarint(v);
+            writeVarint(v.toInt64());
         }
     }
 
@@ -582,7 +582,7 @@ class CodedOutput {
      *
      * @return the number of bytes required
      */
-    static Int computeVarintSize(Int64 value) {
+    static Int computeVarintSize(IntNumber value) {
         UInt64 bits = value.toUInt64();
         Int    size = 1;
         while (bits > 0x7F) {
@@ -789,7 +789,7 @@ class CodedOutput {
     /**
      * Compute the total bytes needed to encode a packed repeated varint field.
      */
-    static Int computePackedVarintsSize(Int fieldNumber, List<Int64> values) {
+    static Int computePackedVarintsSize(Int fieldNumber, List<IntNumber> values) {
         if (values.empty) {
             return 0;
         }
