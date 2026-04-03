@@ -1,4 +1,4 @@
-/**
+/*
  * Test suite for the XTC Language Model.
  *
  * These tests validate:

@@ -197,4 +197,4 @@ RUN echo "Verifying JDKs..." && \
 # The with-display script starts Xvfb before running the provided command.
 
 ENTRYPOINT ["/usr/local/bin/with-display"]
-CMD ["./gradlew", "--no-daemon", "-Dorg.gradle.java.installations.paths=/opt/jdk-24,/opt/idea-IC/jbr", "-PlangBuild=true", "-PuseLocalIde=true", ":lang:intellij-plugin:runIde"]
+CMD ["./gradlew", "--no-daemon", "-Dorg.gradle.java.installations.paths=/opt/jdk-24,/opt/idea-IC/jbr", "-PlangBuild=true", "-PintellijLocalPath=/opt/idea-IC", ":lang:intellij-plugin:runIde"]

@@ -132,8 +132,14 @@ class WorkspaceIndex {
 
             for ((key, symbols) in byName) {
                 when {
-                    key == lowerQuery -> exact.addAll(symbols)
-                    key.startsWith(lowerQuery) -> prefix.addAll(symbols)
+                    key == lowerQuery -> {
+                        exact.addAll(symbols)
+                    }
+
+                    key.startsWith(lowerQuery) -> {
+                        prefix.addAll(symbols)
+                    }
+
                     else -> {
                         // Check representative symbol for camelCase/subsequence (all have same name)
                         val name = symbols.firstOrNull()?.name ?: continue

@@ -80,17 +80,23 @@ class TemplateScanner {
         }
 
         return when (source[pos + 1]) {
-            '"' ->
+            '"' -> {
                 Step(
                     TemplateScannerToken.templateStart(pos, pos + 2),
                     ScanState.Template(pos + 2, multiline = false),
                 )
-            '|' ->
+            }
+
+            '|' -> {
                 Step(
                     TemplateScannerToken.templateMultilineStart(pos, pos + 2),
                     ScanState.Template(pos + 2, multiline = true),
                 )
-            else -> Step(null, ScanState.Normal(pos + 1))
+            }
+
+            else -> {
+                Step(null, ScanState.Normal(pos + 1))
+            }
         }
     }
 
@@ -227,7 +233,9 @@ class TemplateScanner {
         }
 
         return when (val ch = source[pos]) {
-            '{' -> Step(null, state.copy(pos = pos + 1, depth = state.depth + 1))
+            '{' -> {
+                Step(null, state.copy(pos = pos + 1, depth = state.depth + 1))
+            }
 
             '}' -> {
                 val newDepth = state.depth - 1
@@ -241,11 +249,17 @@ class TemplateScanner {
                 }
             }
 
-            '"' -> Step(null, state.copy(pos = pos + 1, inString = '"'))
+            '"' -> {
+                Step(null, state.copy(pos = pos + 1, inString = '"'))
+            }
 
-            '\'' -> Step(null, state.copy(pos = pos + 1, inChar = true))
+            '\'' -> {
+                Step(null, state.copy(pos = pos + 1, inChar = true))
+            }
 
-            '/' -> skipComment(source, state)
+            '/' -> {
+                skipComment(source, state)
+            }
 
             '\n', '\r' -> {
                 if (!state.multiline) {
@@ -259,7 +273,9 @@ class TemplateScanner {
                 }
             }
 
-            else -> Step(null, state.copy(pos = pos + 1))
+            else -> {
+                Step(null, state.copy(pos = pos + 1))
+            }
         }
     }
 
@@ -314,6 +330,7 @@ class TemplateScanner {
                         ?: source.length
                 Step(null, state.copy(pos = end))
             }
+
             '*' -> {
                 // Block comment - find */
                 var p = pos + 2
@@ -325,7 +342,10 @@ class TemplateScanner {
                 }
                 Step(null, state.copy(pos = source.length))
             }
-            else -> Step(null, state.copy(pos = pos + 1))
+
+            else -> {
+                Step(null, state.copy(pos = pos + 1))
+            }
         }
     }
 

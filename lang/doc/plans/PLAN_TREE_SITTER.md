@@ -1,5 +1,4 @@
 # PLAN: Tree-sitter Integration for XTC Language Support
-
 **Goal**: Use the existing `TreeSitterGenerator` to build a functional LSP with syntax-level
 intelligence, without requiring compiler modifications.
 
@@ -8,11 +7,11 @@ intelligence, without requiring compiler modifications.
 
 ---
 
-## ⚠️ CRITICAL: Java Version Compatibility Issue
+## Java Version Compatibility
 
-> **Last Updated**: 2026-02-02
+> **Last Updated**: 2026-04-02
 
-### The Problem
+### Background
 
 **ALL versions of jtreesitter require Java 22+** due to their use of the Foreign Function & Memory (FFM) API:
 
@@ -22,31 +21,16 @@ intelligence, without requiring compiler modifications.
 | 0.25.x | Java 22+ | FFM API used |
 | 0.26.x | Java 23+ | Enhanced FFM |
 
-**IntelliJ 2025.1 ships with JBR 21 (JetBrains Runtime based on Java 21).**
+**IntelliJ 2026.1 ships with JBR 25 (JetBrains Runtime based on Java 25)**, which natively supports the FFM API. This means tree-sitter integration can work both in-process and out-of-process. The out-of-process architecture is retained for classloader and crash isolation.
 
-This means tree-sitter integration **cannot work in-process** with the IntelliJ plugin until:
-- IntelliJ 2026.x ships with JBR 22+ (expected late 2026)
+### Architecture: Out-of-Process LSP Server
 
-### Current Behavior
-
-The tree-sitter adapter has **never actually worked** in IntelliJ. When enabled:
-1. `XtcParser` attempts to load native library using FFM API
-2. Java 21 throws `UnsupportedClassVersionError` (class file version 66.0)
-3. Fallback mechanism catches the error
-4. `MockXtcCompilerAdapter` is used instead
-
-The fallback works correctly, masking the underlying incompatibility. Users see "fallback" in the adapter name.
-
-### Workarounds
-
-#### Option 1: Out-of-Process LSP Server (RECOMMENDED)
-
-Run the LSP server as a separate process with Java 25 (XDK toolchain):
+The LSP server runs as a separate process using IntelliJ's JBR 25:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    IntelliJ Plugin                           │
-│                  (JBR 21 - Java 21)                         │
+│                  (JBR 25 - Java 25)                         │
 │                                                             │
 │  ┌─────────────────────────────────────────────────────┐   │
 │  │               LSP4IJ Client                          │   │
@@ -67,70 +51,35 @@ Run the LSP server as a separate process with Java 25 (XDK toolchain):
 ```
 
 **Benefits**:
-- Uses XDK's Java 25 toolchain (consistency)
+- Uses IntelliJ's JBR 25 (FFM-capable, no separate JRE needed)
 - Full tree-sitter support with latest jtreesitter
-- No IntelliJ JBR dependency
+- Classloader and crash isolation from the IDE process
 - VS Code extension already works this way
 
 **Implementation**:
-- Bundle Java 25 JRE with the IntelliJ plugin, or
-- Require Java 25 installed and use system Java
-- Launch via `ProcessBuilder` with explicit Java path
+- LSP4IJ's `JavaProcessCommandBuilder` locates IntelliJ's JBR automatically
+- Launch via `ProcessStreamConnectionProvider`
 
 **See**: [JetBrains LSP Documentation](https://plugins.jetbrains.com/docs/intellij/language-server-protocol.html)
 
-#### Option 2: Alternative Library (tree-sitter-ng)
-
-[bonede/tree-sitter-ng](https://github.com/bonede/tree-sitter-ng) provides Java 8+ compatible tree-sitter bindings.
-
-**Trade-offs**:
-- ✅ Works with Java 21 (in-process)
-- ✅ 100% tree-sitter API coverage
-- ❌ Requires porting XtcParser code to different API
-- ❌ Must build custom XTC parser as a separate native artifact
-- ❌ Less maintained than official jtreesitter
-
-**Investigation needed**: Can tree-sitter-ng load custom grammar `.so`/`.dylib` files at runtime?
-
-#### Option 3: Wait for JBR 22+ (Passive)
-
-IntelliJ 2026.1 is expected to ship with JBR 22+ (late 2026).
-
-**Current timeline**:
-- IntelliJ 2025.1: JBR 21 ✓
-- IntelliJ 2025.x: JBR 21 (likely)
-- IntelliJ 2026.1: JBR 22+ (expected)
-
-Track: https://github.com/JetBrains/JetBrainsRuntime/releases
-
 ### Current Solution: Out-of-Process LSP Server ✅
 
-**Status**: IMPLEMENTED (2026-02-05)
+**Status**: IMPLEMENTED (2026-02-05), updated 2026-04-02
 
 The out-of-process LSP server is now the default:
 
 - **Default adapter**: `treesitter` (changed from `mock`)
 - **Process model**: LSP server runs as separate Java process
 - **Java requirement**: 25 (for FFM API)
-- **JRE provisioning**: Automatic download via Foojay Disco API with persistent caching
+- **JRE**: IntelliJ's bundled JBR 25 (via LSP4IJ's `JavaProcessCommandBuilder`)
 - **Communication**: stdio (JSON-RPC)
 - **Health monitoring**: Process monitor with crash notification and restart action
 
 The IntelliJ plugin:
-1. Checks IntelliJ's registered JDKs (`ProjectJdkTable`) for any Java 25+
-2. Falls back to cached JRE at `{GRADLE_USER_HOME}/caches/xtc-jre/temurin-25-jre/`
-3. If no JRE found, downloads Eclipse Temurin JRE 25 via Foojay Disco API
-4. Stores metadata (package ID, platform, timestamp) for cache validation
-5. Periodically checks for newer point releases (every 7 days)
-6. Uses IntelliJ's built-in `Decompressor` for archive extraction
-7. Launches `xtc-lsp-server.jar` as a subprocess
-8. Communicates via LSP protocol over stdin/stdout
-9. Shows notification with "Restart Server" action on crash
-
-**JRE Cache Location** (persistent across IDE sessions):
-- Default: `~/.gradle/caches/xtc-jre/`
-- Override: Set `GRADLE_USER_HOME` environment variable
-- Not affected by IntelliJ's "Invalidate Caches"
+1. Uses LSP4IJ's `JavaProcessCommandBuilder` to locate IntelliJ's JBR 25
+2. Launches `xtc-lsp-server.jar` as a subprocess via `ProcessStreamConnectionProvider`
+3. Communicates via LSP protocol over stdin/stdout
+4. Shows notification with "Restart Server" action on crash
 
 > **Documentation**:
 > - [lang/tree-sitter/README.md](../../tree-sitter/README.md) - Usage and architecture
@@ -475,9 +424,9 @@ Features requiring compiler for any useful implementation:
    - Reduces build time for non-tree-sitter development
    - See "Task: Conditional Tree-sitter Build" below
 
-7. ~~**Out-of-Process LSP Server with Java 23+**~~ ✅ COMPLETE
-   - LSP server runs as separate process with Java 23+ (FFM API requirement)
-   - Full tree-sitter support regardless of IntelliJ JBR version
+7. ~~**Out-of-Process LSP Server**~~ ✅ COMPLETE
+   - LSP server runs as separate process using IntelliJ's JBR 25
+   - Full tree-sitter support with classloader and crash isolation
    - See "Task: Out-of-Process LSP Server" below
 
 8. ~~**End-to-End Testing**~~ ✅ PARTIAL - `LspIntegrationTest` verifies all LSP features against real `.x` files with tree-sitter native parsing. Manual IDE testing still needed for IntelliJ/VS Code.
@@ -494,7 +443,7 @@ Features requiring compiler for any useful implementation:
 | Native Library Staleness | SUPERSEDED (2026-02-02) | Replaced by on-demand build |
 | Adapter Rebuild Behavior | COMPLETE (2026-02-02) | [tree-sitter/adapter-rebuild.md](./tree-sitter/adapter-rebuild.md) |
 | On-Demand Native Build | COMPLETE (2026-02-02) | [tree-sitter/native-build-strategy.md](./tree-sitter/native-build-strategy.md) |
-| Out-of-Process LSP Server | COMPLETE (2026-02-02) | [lsp-processes.md](./lsp-processes.md) |
+| Out-of-Process LSP Server | COMPLETE (2026-02-02) | See [§ Out-of-Process LSP Server](#task-out-of-process-lsp-server) below |
 
 ---
 
@@ -512,30 +461,26 @@ Features requiring compiler for any useful implementation:
 
 **Status**: COMPLETE (2026-02-02)
 
-**Full Plan**: [lsp-processes.md](./lsp-processes.md)
+**Full details**: See [PLAN_IDE_INTEGRATION.md](./PLAN_IDE_INTEGRATION.md)
 
 ### Implementation Summary
 
 The LSP server now runs out-of-process with full tree-sitter support:
 
-- **JRE Resolution**: First checks IntelliJ's registered JDKs, then cached JRE, then downloads
-- **Cache Location**: `{GRADLE_USER_HOME}/caches/xtc-jre/temurin-25-jre/` (persistent, not IDE-managed)
-- **Cache Validation**: Stores package ID and checks Foojay for updates every 7 days
-- **Download**: Eclipse Temurin JRE 25 via Foojay Disco API (same as Gradle toolchains)
-- **Extraction**: Uses IntelliJ's built-in `Decompressor.Tar`/`Decompressor.Zip`
+- **JRE**: IntelliJ's bundled JBR 25 (located via LSP4IJ's `JavaProcessCommandBuilder`)
 - **Default Adapter**: `treesitter` (changed from `mock`)
 - **Fallback**: If tree-sitter fails, falls back to mock with error notification
 
 ### Architecture
 
 ```
-IntelliJ Plugin (JBR 21)          XTC LSP Server (Java 23+)
+IntelliJ Plugin (JBR 25)          XTC LSP Server (Java 25)
 ┌──────────────────────┐          ┌──────────────────────┐
 │  XtcLanguageServer   │──stdio──▶│  XtcLanguageServer   │
 │  Factory             │◀──stdio──│                      │
 │                      │          │  ┌────────────────┐  │
-│  XtcLspConnection    │          │  │ TreeSitter     │  │
-│  Provider            │          │  │ Adapter        │  │
+│  ProcessStream       │          │  │ TreeSitter     │  │
+│  ConnectionProvider  │          │  │ Adapter        │  │
 │  └─ Process monitor  │          │  │ (jtreesitter)  │  │
 │  └─ Crash notif.     │          │  └────────────────┘  │
 └──────────────────────┘          └──────────────────────┘
@@ -546,14 +491,11 @@ IntelliJ Plugin (JBR 21)          XTC LSP Server (Java 23+)
 | File | Purpose |
 |------|---------|
 | `XtcLspServerSupportProvider.kt` | Factory and connection provider |
-| `jre/JreProvisioner.kt` | JRE resolution (SDK table → cache → Foojay download) |
 | `TreeSitterLibraryLookup.kt` | Loads libtree-sitter runtime from JAR |
 
-### JRE Resolution Order
+### JRE Resolution
 
-1. **Registered JDKs**: `ProjectJdkTable.getInstance().getSdksOfType(JavaSdk)` for Java 25+
-2. **Cached JRE**: `{GRADLE_USER_HOME}/caches/xtc-jre/temurin-25-jre/` with metadata validation
-3. **Download**: Foojay Disco API → Eclipse Temurin JRE 25 (cached with package ID for future validation)
+LSP4IJ's `JavaProcessCommandBuilder` locates IntelliJ's bundled JBR 25 automatically. No separate JRE provisioning or downloading is needed.
 
 ### Features
 
@@ -576,7 +518,7 @@ IntelliJ Plugin (JBR 21)          XTC LSP Server (Java 23+)
 | lsp4ij | 0.19.1 | IntelliJ LSP client | Java 17+ |
 
 > **Note**: jtreesitter 0.24.x requires Java 22+ despite being the "oldest" version.
-> See [Critical: Java Version Compatibility](#-critical-java-version-compatibility-issue) above.
+> See [Java Version Compatibility](#java-version-compatibility) above.
 
 ### Internal
 

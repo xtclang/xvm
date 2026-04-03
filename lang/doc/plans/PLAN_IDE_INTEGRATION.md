@@ -1,6 +1,6 @@
 # XTC Language Support Implementation
 
-> **Last Updated**: 2026-02-05
+> **Last Updated**: 2026-04-02
 
 This document describes the language tooling implemented in the `lang/` directory and what remains to be done.
 
@@ -68,7 +68,7 @@ only the methods they actually implement -- all others inherit traceable logging
 | `XtcCompilerAdapterStub` | XTC Compiler | 100% (semantic) | Placeholder |
 
 **Note:** TreeSitterAdapter requires Java 25+ (FFM API). The IntelliJ plugin runs the LSP server
-out-of-process with an auto-provisioned JRE to meet this requirement (IntelliJ runs on JBR 21).
+out-of-process for classloader and crash isolation (IntelliJ 2026.1 runs on JBR 25).
 
 **What Each Adapter Provides:**
 
@@ -111,16 +111,15 @@ An IntelliJ IDEA plugin providing XTC support:
 - **`XtcTextMateBundleProvider`** - TextMate grammar for syntax highlighting
 - **`XtcIconProvider`** - XTC file icons
 
-**JRE Provisioning (`jre/JreProvisioner.kt`):**
-- Auto-downloads Eclipse Temurin JRE 25 for out-of-process LSP server (FFM API requirement)
-- Checks IntelliJ's registered JDKs first, then cached JRE, then downloads from Foojay
-- Persistent cache in `{GRADLE_USER_HOME}/caches/xtc-jre/` (not cleared by IDE cache invalidation)
-- Metadata tracking with periodic update checks (every 7 days)
+**LSP Server Launch:**
+- Uses LSP4IJ's `ProcessStreamConnectionProvider` to launch the LSP server as a separate process
+- `JavaProcessCommandBuilder` resolves the JBR 25 runtime automatically (no custom JRE provisioning)
+- Out-of-process architecture provides classloader and crash isolation
 
 **Build Configuration:**
-- Downloads IntelliJ Community by default (cached by Gradle)
-- Use `-PuseLocalIde=true` to use local IntelliJ installation instead
-- LSP server runs as separate Java 25+ process (not constrained by JBR 21)
+- Downloads IntelliJ Community 2026.1 by default (cached by Gradle)
+- Use `-PintellijLocalPath=/path` to use a local IntelliJ installation instead
+- Plugin bytecode target is Java 25
 
 ### 4. VS Code Extension (`lang/vscode-extension/`)
 
@@ -157,8 +156,7 @@ Full tree-sitter support for fast, incremental parsing:
 
 1. ~~**Wire up TreeSitterAdapter in LSP server**~~ ✅ COMPLETE
    - TreeSitterAdapter is now the default adapter
-   - Out-of-process LSP server runs with Java 25+ (FFM API for tree-sitter)
-   - JRE auto-provisioning via Foojay Disco API
+   - Out-of-process LSP server runs with JBR 25 (FFM API for tree-sitter)
 
 2. ~~**Implement semantic tokens (Phase 1)**~~ ✅ COMPLETE
    - `SemanticTokenEncoder` classifies 18 AST contexts via single-pass O(n) tree walk
@@ -182,7 +180,7 @@ Full tree-sitter support for fast, incremental parsing:
    - Test project wizard with `xtc init`
    - Verify run configurations work
    - Build and test plugin ZIP
-   - Test JRE provisioning on all platforms
+   - Test out-of-process LSP server launch on all platforms
 
 ### Medium-term (Compiler Integration)
 
@@ -264,7 +262,7 @@ The IntelliJ plugin uses Red Hat's [LSP4IJ](https://github.com/redhat-developer/
 
 **DAP support.** IntelliJ has no built-in DAP (Debug Adapter Protocol) client. LSP4IJ provides a DAP client via the `debugAdapterServer` extension point, which is required for `lang/dap-server/` integration. Without it, we would need to write thousands of lines of IntelliJ-specific debug infrastructure (`XDebugProcess`, `XBreakpointHandler`, `ProcessHandler`, variable tree rendering, stack frame mapping, expression evaluation) -- the exact opposite of IDE independence.
 
-**LSP feature coverage.** LSP4IJ supports LSP features that IntelliJ's built-in LSP (as of 2025.3) does not:
+**LSP feature coverage.** LSP4IJ supports LSP features that IntelliJ's built-in LSP (as of 2026.1) does not:
 
 | Feature | LSP4IJ | Built-in LSP |
 |---------|--------|-------------|
@@ -308,7 +306,7 @@ The `xtc-intellij-plugin-dev` reference repo demonstrates IntelliJ's built-in LS
 
 ## Known Issues and Follow-ups
 
-> **Last Updated**: 2026-02-19 (from `lagergren/lsp-extend4` code review)
+> **Last Updated**: 2026-04-02
 
 ### DAP Integration (Blocking for Debug Support)
 
@@ -323,10 +321,9 @@ The `xtc-intellij-plugin-dev` reference repo demonstrates IntelliJ's built-in LS
    - Add a `copyDapServerToSandbox` task mirroring the LSP copy pattern
    - Wire `prepareSandbox` and `runIde` to depend on it
 
-2. **DAP has no JRE provisioning progress UI** -- The LSP connection provider shows a
-   progress dialog during first-time JRE download, but the DAP descriptor's `startServer()`
-   simply checks `provisioner.javaPath` and throws if null. Users must open an `.x` file
-   first (triggering LSP + JRE download) before debugging will work.
+2. **DAP server launch** -- The DAP descriptor's `startServer()` needs to use
+   `JavaProcessCommandBuilder` (matching the LSP connection provider pattern) to launch
+   the DAP server out-of-process with the IDE's JBR 25.
 
 ### Tree-sitter / Semantic Tokens
 
@@ -337,7 +334,7 @@ The `xtc-intellij-plugin-dev` reference repo demonstrates IntelliJ's built-in LS
 for incremental parsing without calling `Tree.edit()`, producing nodes with stale byte
 offsets. Now always does full reparse (still sub-ms). Defensive bounds checking added to
 `XtcNode.text`.
-~~9. EDT violation in JRE resolution~~ -- FIXED: `XtcLspConnectionProvider.init {}` called
+~~9. EDT violation in LSP connection setup~~ -- FIXED: `XtcLspConnectionProvider.init {}` called
 `ProjectJdkTable.getInstance()` (prohibited on EDT). Moved to `start()` which runs off EDT.
 ~~10. Pipeline logging gaps~~ -- FIXED: `XtcQueryEngine.executeQuery()` now logs query name,
 all find methods log per-match details (symbol kind, name, location). `TreeSitterAdapter`
@@ -350,7 +347,7 @@ ISO-8859-1/Latin-1 encoding.
 
 ### Build System
 
-~~6. Windows IDE path "2025.1"~~ -- FIXED: Updated to 2025.3.
+~~6. Windows IDE path~~ -- FIXED: Updated to 2026.1.
 ~~7. Composite build property isolation~~ -- FIXED: `project.findProperty()` and
 `providers.gradleProperty()` only see the included build's own `gradle.properties`,
 which doesn't exist for `lang/`. Properties like `lsp.semanticTokens`, `lsp.adapter`,

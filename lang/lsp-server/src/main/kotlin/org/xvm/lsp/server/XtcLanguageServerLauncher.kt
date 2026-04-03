@@ -79,6 +79,7 @@ private fun createAdapter(adapterType: String): Pair<XtcCompilerAdapter, Adapter
             logger.info("using compiler stub adapter - all LSP calls will be logged but return empty results")
             XtcCompilerAdapterStub() to AdapterBackend.COMPILER
         }
+
         "treesitter", "tree-sitter" -> {
             try {
                 TreeSitterAdapter() to AdapterBackend.TREE_SITTER
@@ -93,7 +94,10 @@ private fun createAdapter(adapterType: String): Pair<XtcCompilerAdapter, Adapter
                 MockXtcCompilerAdapter() to AdapterBackend.MOCK
             }
         }
-        else -> MockXtcCompilerAdapter() to AdapterBackend.MOCK
+
+        else -> {
+            MockXtcCompilerAdapter() to AdapterBackend.MOCK
+        }
     }
 
 fun main(
@@ -123,10 +127,12 @@ fun main(
         AdapterBackend.TREE_SITTER -> {
             logger.info("tree-sitter provides: syntax highlighting, document symbols, completions, go-to-definition")
         }
+
         AdapterBackend.COMPILER -> {
             logger.warn("XTC Compiler adapter is a STUB - all methods log but return empty results")
             logger.info("when implemented, will provide: full semantic analysis, type inference, cross-file navigation")
         }
+
         AdapterBackend.MOCK -> {
             logger.info("mock backend provides: basic symbol detection (regex-based)")
             if (adapterType.lowercase() in listOf("treesitter", "tree-sitter")) {
@@ -169,7 +175,10 @@ fun launchStdio(
                 Thread.currentThread().interrupt()
                 logger.error("server interrupted", e)
             }
-            else -> logger.error("server error", e)
+
+            else -> {
+                logger.error("server error", e)
+            }
         }
     }
 }

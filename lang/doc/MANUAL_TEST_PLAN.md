@@ -515,10 +515,9 @@ the process management and health monitoring.
 
 ### Test: Java Version Too Low
 
-1. Set `JAVA_HOME` to Java 21 installation
-2. Unset `XTC_JAVA_HOME`
-3. Start IDE
-4. Verify error: "No Java 25+ runtime found"
+> **NOTE:** With IntelliJ 2026.1+ (JBR 25), this test is no longer relevant since the
+> IDE always ships with a Java 25+ runtime. The LSP server uses IntelliJ's JBR directly
+> via `JavaProcessCommandBuilder`.
 
 ---
 

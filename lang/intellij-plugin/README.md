@@ -52,7 +52,7 @@ Then install manually:
 
 ## Prerequisites
 
-- IntelliJ IDEA 2025.3 or later
+- IntelliJ IDEA 2026.1 or later
 - XDK installed and `xtc` command available in PATH
 - Gradle plugin for IntelliJ (bundled with most editions)
 
@@ -195,15 +195,15 @@ stale sandbox state, or missing artifacts:
 
 ```
 [runIde] ─── Version Matrix (gradle/libs.versions.toml) ───
-[runIde]   IntelliJ IDEA: 2025.3.2 (sinceBuild=253)
-[runIde]   LSP4IJ:        0.19.1
+[runIde]   IntelliJ IDEA: 2026.1 (sinceBuild=261)
+[runIde]   LSP4IJ:        0.19.2
 [runIde]   XTC plugin:    0.4.4-SNAPSHOT
 [runIde] ─── Sandbox ───
-[runIde]   Path:      .../build/idea-sandbox/IC-2025.3.2
+[runIde]   Path:      .../build/idea-sandbox/IC-2026.1
 [runIde]   Status:    reused (existing sandbox with IDE caches/indices)
 [runIde]   Plugins:   [intellij-plugin, lsp4ij]
-[runIde]   IDE log:   .../build/idea-sandbox/IC-2025.3.2/log/idea.log
-[runIde]              tail -f .../build/idea-sandbox/IC-2025.3.2/log/idea.log
+[runIde]   IDE log:   .../build/idea-sandbox/IC-2026.1/log/idea.log
+[runIde]              tail -f .../build/idea-sandbox/IC-2026.1/log/idea.log
 [runIde] ─── mavenLocal XTC Artifacts ───
 [runIde]   ~/.m2/repository/org/xtclang
 [runIde]   xdk: 0.4.4-SNAPSHOT
@@ -251,9 +251,9 @@ These appear with a `[lsp-server]` prefix whenever the LSP server is active.
 noisy (indexing, VFS, GC, etc.). To view them in a separate terminal:
 
 ```bash
-tail -f lang/intellij-plugin/build/idea-sandbox/IC-2025.3.2/log/idea.log
+tail -f lang/intellij-plugin/build/idea-sandbox/IC-2026.1/log/idea.log
 # Or filter to XTC-related entries:
-tail -f lang/intellij-plugin/build/idea-sandbox/IC-2025.3.2/log/idea.log | grep -i "xtc\|lsp"
+tail -f lang/intellij-plugin/build/idea-sandbox/IC-2026.1/log/idea.log | grep -i "xtc\|lsp"
 ```
 
 **LSP server file log** (always available, even outside `runIde`):
@@ -269,7 +269,7 @@ tail -f ~/.xtc/logs/lsp-server.log
 ./gradlew :lang:intellij-plugin:clean
 
 # Nuke everything including the downloaded IDE (re-downloads ~1.5 GB)
-rm -rf ~/.gradle/caches/modules-2/files-2.1/idea/ideaIC/2025.3.2
+rm -rf ~/.gradle/caches/modules-2/files-2.1/idea/ideaIC/2026.1
 rm -rf lang/.intellijPlatform/localPlatformArtifacts
 ```
 
@@ -456,9 +456,7 @@ intellij-plugin/
 │   │   ├── dap/
 │   │   │   └── XtcDebugAdapterFactory.kt # DAP server integration
 │   │   ├── lsp/
-│   │   │   ├── XtcLspServerSupportProvider.kt  # LSP server factory + connection provider
-│   │   │   └── jre/
-│   │   │       └── JreProvisioner.kt     # Foojay JRE download/caching
+│   │   │   └── XtcLspServerSupportProvider.kt  # LSP server factory + connection provider
 │   │   ├── project/
 │   │   │   ├── XtcNewProjectWizard.kt    # New Project wizard entry
 │   │   │   └── XtcNewProjectWizardStep.kt # Wizard step implementation
@@ -476,7 +474,7 @@ intellij-plugin/
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                    IntelliJ IDEA (JBR 21)                        │
+│                    IntelliJ IDEA (JBR 25)                        │
 │  ┌──────────────────┐    ┌────────────────────┐                  │
 │  │ XTC Plugin       │    │ LSP4IJ Plugin      │                  │
 │  │ (this plugin)    │───▶│ (Red Hat)          │                  │
@@ -484,7 +482,7 @@ intellij-plugin/
 │  │ - Project wizard │    │ - LSP client       │                  │
 │  │ - Run configs    │    │ - Protocol handler │                  │
 │  │ - TextMate       │    │ - JSON-RPC         │                  │
-│  │ - JRE provision  │    │ - stderr capture   │                  │
+│  │                  │    │ - stderr capture   │                  │
 │  └──────────────────┘    └─────────┬──────────┘                  │
 │                                    │ stdio (JSON-RPC)            │
 └────────────────────────────────────┼─────────────────────────────┘
@@ -492,7 +490,7 @@ intellij-plugin/
                           ┌──────────▼──────────┐
                           │ XTC LSP Server      │
                           │ (separate process)  │
-                          │ Java 25 (Temurin)   │
+                          │ JBR 25              │
                           │                     │
                           │ java -jar           │
                           │  xtc-lsp-server.jar │
@@ -504,10 +502,10 @@ intellij-plugin/
 ```
 
 **Key points:**
-- The LSP server runs as a **separate out-of-process** Java process
-- It requires Java 25+ (for tree-sitter's FFM API), while IntelliJ uses JBR 21
-- The plugin provisions a JRE automatically via Foojay Disco API (cached in `~/.xtc/jre/`)
+- The LSP server runs as a **separate out-of-process** Java process using IntelliJ's JBR 25
+- Out-of-process execution provides classloader isolation (avoids lsp4j conflicts with LSP4IJ) and crash/memory isolation
 - The server JAR lives in `bin/` (not `lib/`) to avoid classloader conflicts with LSP4IJ
+- The server command line is built using LSP4IJ's `JavaProcessCommandBuilder` which resolves the JBR java binary automatically
 - Communication is via stdio (stdin/stdout) using JSON-RPC; logging goes to stderr
 - LSP4IJ captures stderr and shows it in the Language Servers panel
 - The `runIde` task also tails `~/.xtc/logs/lsp-server.log` to the Gradle console

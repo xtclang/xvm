@@ -1058,7 +1058,7 @@ These are features that require IntelliJ-specific code in the plugin, beyond wha
 | TextMate grammar (syntax highlighting) | Done | Bundled `.tmLanguage.json` |
 | Run configurations | Done | `XtcRunConfigurationType` |
 | New Project wizard | Done | `XtcNewProjectWizard` |
-| JRE provisioning (Foojay) | Done | `JreProvisioner` |
+| JRE resolution | Done | `JavaProcessCommandBuilder` (LSP4IJ) |
 | DAP extension point | Done | `XtcDebugAdapterFactory` |
 | Line marker (gutter icons) | Not done | Run/debug icons for `module` declarations |
 | Color settings page | Not done | Customizable semantic token colors |
@@ -1105,8 +1105,7 @@ DAP Server Process (Java 25)    — same xtc-dap-server.jar as IntelliJ
 VS Code's standard LSP client library (`vscode-languageclient`) handles all protocol translation.
 The extension only needs to:
 
-1. **Find/provision Java 25** — same Foojay strategy as IntelliJ, but implemented in TypeScript
-   (or shell out to a bundled provisioner script)
+1. **Find Java 25+** — look for `java` in PATH or `JAVA_HOME`, verify version >= 25
 2. **Locate the server JAR** — bundled in the extension's `bin/` directory
 3. **Create a `LanguageClient`** — point it at the server process
 
@@ -1165,7 +1164,7 @@ vscode.debug.registerDebugAdapterDescriptorFactory('xtc', {
 | DAP debugging | Built-in | Via LSP4IJ DAP client |
 | TextMate grammar | Built-in support | Via TextMate bundle plugin |
 | Tree-sitter highlighting | Via WASM (optional) | N/A (server-side) |
-| JRE provisioning | See §12.5 | `JreProvisioner.kt` (done) |
+| JRE resolution | See §12.5 | Bundled JBR 25 (via `JavaProcessCommandBuilder`) |
 | Code lens | Built-in support | Via LSP4IJ |
 | Semantic tokens | Built-in support | Via LSP4IJ |
 
@@ -1173,17 +1172,17 @@ vscode.debug.registerDebugAdapterDescriptorFactory('xtc', {
 (which requires LSP4IJ). The LSP server and DAP server JARs are identical — only the thin client
 wrapper differs.
 
-### 12.5 JRE Provisioning for VS Code
+### 12.5 JRE for VS Code
 
-The IntelliJ plugin uses `JreProvisioner.kt` (Kotlin, IntelliJ APIs). VS Code needs its own
-approach. Options in order of preference:
+The IntelliJ plugin uses the IDE's bundled JBR 25 (via `JavaProcessCommandBuilder`). VS Code
+has no bundled JRE, so the extension requires Java 25+ in the user's PATH or `JAVA_HOME`.
+
+Future options to improve UX:
 
 | Approach | Pros | Cons |
 |----------|------|------|
 | **Per-platform extension builds** | No runtime download, instant startup | Larger extension (~40MB per platform), must publish 5 variants |
-| **Shell provisioner script** | Simple, reuse Foojay API, language-agnostic | Platform-specific scripts (bash + PowerShell), error handling is fragile |
-| **TypeScript Foojay client** | Full control, progress reporting, VS Code API integration | Significant code (~300 lines), duplicates IntelliJ provisioner logic |
-| **Require user-installed Java 25** | Zero extension code | Bad UX, most users don't have Java 25 |
+| **Require user-installed Java 25** | Zero extension code | Users must install Java 25+ themselves |
 
 **Recommended**: Start with **require user-installed Java 25** (simplest, gets the extension
 working) with a `xtc.javaHome` setting. Then add **per-platform builds** that bundle the JRE

@@ -24,17 +24,22 @@ object Platform {
                 libExtension = ".dylib"
                 libPrefix = "lib"
             }
+
             "linux" in osName -> {
                 id = if (isArm) "linux-arm64" else "linux-x64"
                 libExtension = ".so"
                 libPrefix = "lib"
             }
+
             "windows" in osName -> {
                 id = "windows-x64"
                 libExtension = ".dll"
                 libPrefix = ""
             }
-            else -> throw IllegalStateException("Unsupported platform: $osName/$osArch")
+
+            else -> {
+                throw IllegalStateException("Unsupported platform: $osName/$osArch")
+            }
         }
     }
 
