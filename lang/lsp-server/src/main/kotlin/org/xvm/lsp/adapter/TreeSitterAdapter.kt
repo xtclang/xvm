@@ -174,6 +174,21 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
                 "template_literal",
                 "multiline_template_literal",
             )
+
+        private val switchTypes =
+            setOf(
+                "switch_statement",
+                "switch_expression",
+            )
+
+        private val commentTypes =
+            setOf(
+                "doc_comment",
+                "block_comment",
+            )
+
+        /** Sentinel: line is inside a string literal and must not be modified. */
+        private const val SKIP_INDENT = -1
     }
 
     // ========================================================================
@@ -810,6 +825,205 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
     }
 
     // ========================================================================
+    // Document formatting (AST-aware re-indentation)
+    // ========================================================================
+
+    override fun formatDocument(
+        uri: String,
+        content: String,
+        options: XtcCompilerAdapter.FormattingOptions,
+    ): List<TextEdit> {
+        val tree = parsedTrees[uri]
+        if (tree == null) {
+            logger.info("formatDocument: no parsed tree for {}, falling back to base", uri.substringAfterLast('/'))
+            return super.formatDocument(uri, content, options)
+        }
+
+        val config = XtcFormattingConfig.resolve(uri, options, editorFormattingConfig)
+        return buildFormattingEdits(tree, content, config, options, startLine = 0, endLine = null)
+    }
+
+    override fun formatRange(
+        uri: String,
+        content: String,
+        range: Range,
+        options: XtcCompilerAdapter.FormattingOptions,
+    ): List<TextEdit> {
+        val tree = parsedTrees[uri]
+        if (tree == null) {
+            logger.info("formatRange: no parsed tree for {}, falling back to base", uri.substringAfterLast('/'))
+            return super.formatRange(uri, content, range, options)
+        }
+
+        val config = XtcFormattingConfig.resolve(uri, options, editorFormattingConfig)
+        return buildFormattingEdits(tree, content, config, options, startLine = range.start.line, endLine = range.end.line)
+    }
+
+    /**
+     * Build formatting edits for a line range (or the whole document when [endLine] is null).
+     *
+     * For each line, computes the correct indentation from the AST and emits an edit if
+     * the actual indentation differs. Also strips trailing whitespace and inserts a final
+     * newline for whole-document formatting.
+     */
+    private fun buildFormattingEdits(
+        tree: XtcTree,
+        content: String,
+        config: XtcFormattingConfig,
+        options: XtcCompilerAdapter.FormattingOptions,
+        startLine: Int,
+        endLine: Int?,
+    ): List<TextEdit> =
+        buildList {
+            val lines = content.split("\n")
+            val lastLine = endLine ?: (lines.size - 1)
+            val isFullDocument = endLine == null
+
+            for (i in startLine..minOf(lastLine, lines.size - 1)) {
+                val line = lines[i]
+
+                // Indentation fix
+                val desiredIndent = computeLineIndent(tree, i, lines, config)
+                if (desiredIndent != SKIP_INDENT) {
+                    val currentIndent = line.takeWhile { it == ' ' }.length
+                    if (desiredIndent != currentIndent && line.isNotBlank()) {
+                        add(makeIndentEdit(i, currentIndent, desiredIndent))
+                    }
+                }
+
+                // Trailing whitespace removal
+                val trimmed = line.trimEnd()
+                if (trimmed.length < line.length && (options.trimTrailingWhitespace || isFullDocument)) {
+                    add(
+                        TextEdit(
+                            range =
+                                Range(
+                                    start = Position(i, trimmed.length),
+                                    end = Position(i, line.length),
+                                ),
+                            newText = "",
+                        ),
+                    )
+                }
+            }
+
+            // Insert final newline if missing. XTC default is true; user can override
+            // via editor settings (insertFinalNewline = false).
+            if (isFullDocument && options.insertFinalNewline && content.isNotEmpty() && !content.endsWith("\n")) {
+                val lastIdx = lines.size - 1
+                val lastCol = lines[lastIdx].length
+                add(
+                    TextEdit(
+                        range =
+                            Range(
+                                start = Position(lastIdx, lastCol),
+                                end = Position(lastIdx, lastCol),
+                            ),
+                        newText = "\n",
+                    ),
+                )
+            }
+        }.also {
+            logger.info("format -> {} edits", it.size)
+        }
+
+    /**
+     * Compute the correct indentation for a single line based on its AST context.
+     *
+     * Uses structural depth (counting indent-parent ancestors in the AST) rather than
+     * reading indentation from the source. This is critical for correctly formatting
+     * files that are already misindented.
+     *
+     * Returns [SKIP_INDENT] for lines inside string literals (must not be modified).
+     * Returns 0 for blank lines.
+     */
+    private fun computeLineIndent(
+        tree: XtcTree,
+        lineIndex: Int,
+        lines: List<String>,
+        config: XtcFormattingConfig,
+    ): Int {
+        val line = lines[lineIndex]
+        val trimmed = line.trimStart()
+
+        // 1. Blank lines -> 0 indent (removes trailing whitespace on blank lines)
+        if (trimmed.isEmpty()) return 0
+
+        val firstNonWsCol = line.length - trimmed.length
+
+        // 2. Check if inside string literal -> skip
+        val node = tree.nodeAt(lineIndex, firstNonWsCol) ?: return 0
+        if (isInsideStringLiteral(node)) return SKIP_INDENT
+
+        // 3. Doc/block comment interior lines
+        val commentAncestor =
+            generateSequence(node) { it.parent }
+                .firstOrNull { it.type in commentTypes }
+        if (commentAncestor != null && commentAncestor.startLine != lineIndex) {
+            // Interior or closing line of a comment, not the opening line.
+            // Align " *" one space to the right of the comment's structural indent.
+            return countIndentDepth(commentAncestor) * config.indentSize + 1
+        }
+
+        // 4. Closing brace -> match the opening construct
+        if (trimmed.startsWith("}")) {
+            val enclosingBlock =
+                generateSequence(node) { it.parent }
+                    .firstOrNull { it.type in blockTypes || it.type in classBodyTypes }
+                    ?: return 0
+            val ownerNode = enclosingBlock.parent ?: return 0
+            return countIndentDepth(ownerNode) * config.indentSize
+        }
+
+        // 5. Closing paren -> match the opening paren's construct
+        if (trimmed.startsWith(")")) {
+            val enclosing =
+                generateSequence(node) { it.parent }.firstOrNull { ancestor ->
+                    val firstChild = ancestor.children.firstOrNull()
+                    firstChild != null && firstChild.type == "(" && ancestor.startLine < lineIndex
+                }
+            if (enclosing != null) {
+                return countIndentDepth(enclosing) * config.indentSize
+            }
+        }
+
+        // 6. Case labels -> same indent as switch
+        if (trimmed.startsWith("case ") || trimmed.startsWith("default:") || trimmed.startsWith("default ")) {
+            val switchNode =
+                generateSequence(node) { it.parent }
+                    .firstOrNull { it.type in switchTypes }
+            if (switchNode != null) {
+                return countIndentDepth(switchNode) * config.indentSize
+            }
+        }
+
+        // 7. Continuation lines (extends, implements, incorporates, delegates)
+        if (isContinuationLine(trimmed)) {
+            val declNode =
+                generateSequence(node) { it.parent }
+                    .firstOrNull { it.type in declarationTypes }
+            if (declNode != null) {
+                return countIndentDepth(declNode) * config.indentSize + config.continuationIndentSize
+            }
+        }
+
+        // 8. General case: count indent-parent ancestors for structural depth
+        return countIndentDepth(node) * config.indentSize
+    }
+
+    /**
+     * Count the number of indent-parent ancestors to determine structural nesting depth.
+     * Includes the node itself if it is an indent parent type.
+     */
+    private fun countIndentDepth(node: XtcNode): Int {
+        var depth = 0
+        generateSequence(node) { it.parent }.forEach { n ->
+            if (n.type in indentParentTypes) depth++
+        }
+        return depth
+    }
+
+    // ========================================================================
     // On-type formatting (auto-indent)
     // ========================================================================
 
@@ -830,12 +1044,9 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
 
         return when (ch) {
             "\n" -> handleEnter(tree, line, config)
-
             "}" -> handleCloseBrace(tree, line, column, config)
-
+            ")" -> handleCloseParen(tree, line, column, config)
             ";" -> emptyList()
-
-            // Phase 4: handleSemicolon
             else -> emptyList()
         }
     }
@@ -889,6 +1100,11 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
 
                 // Previous line ends with ':' inside a case_clause -> indent for case body
                 prevTrimmed.endsWith(":") && isInsideCaseClause(tree, prevLineIndex) -> {
+                    prevIndent + config.indentSize
+                }
+
+                // Previous line ends with '->' -> indent lambda/case expression body
+                prevTrimmed.endsWith("->") -> {
                     prevIndent + config.indentSize
                 }
 
@@ -969,6 +1185,45 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
     }
 
     /**
+     * Handle closing parenthesis: outdent to match the line where the opening '(' lives.
+     * This handles multi-line parameter lists, argument lists, and condition expressions.
+     */
+    private fun handleCloseParen(
+        tree: XtcTree,
+        line: Int,
+        column: Int,
+        config: XtcFormattingConfig,
+    ): List<TextEdit> {
+        val source = tree.source
+        val lines = source.split("\n")
+        if (line < 0 || line >= lines.size) return emptyList()
+
+        val currentIndent = lines[line].takeWhile { it == ' ' }.length
+
+        // Find the ')' on this line and look up the AST node.
+        val parenCol = lines[line].indexOf(')')
+        val node =
+            tree.nodeAt(line, if (parenCol >= 0) parenCol else column)
+                ?: tree.nodeAt(line, column)
+                ?: return emptyList()
+
+        // Walk up to find a node whose opening '(' is on a different line.
+        // Parenthesized constructs in tree-sitter: argument_list, parameter_list,
+        // parenthesized_expression, condition, etc. We look for any ancestor that
+        // starts with '(' (its first child is '(') and spans multiple lines.
+        val enclosing =
+            generateSequence(node) { it.parent }.firstOrNull { ancestor ->
+                val firstChild = ancestor.children.firstOrNull()
+                firstChild != null && firstChild.type == "(" && ancestor.startLine < line
+            } ?: return emptyList()
+
+        val desiredIndent = getLineIndent(source, enclosing.startLine)
+        if (desiredIndent == currentIndent) return emptyList()
+
+        return listOf(makeIndentEdit(line, currentIndent, desiredIndent))
+    }
+
+    /**
      * Handle Enter inside a doc comment (`/** ... */`) or block comment (`/* ... */`).
      *
      * Returns a list of edits that insert ` * ` continuation prefix on the new line,
@@ -1014,8 +1269,8 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
                 prevIndent
             }
 
-        // The continuation is: <commentIndent> + " * "
         val prefix = " ".repeat(commentIndent) + " * "
+        val closing = " ".repeat(commentIndent) + " */"
 
         val currentIndent =
             if (line < lines.size) {
@@ -1024,6 +1279,26 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
                 0
             }
 
+        // Doc comment skeleton: when Enter is pressed right after "/**" and the next line
+        // has "*/" (auto-closed), insert " * " on the cursor line and keep the closing.
+        // This creates the skeleton: /** \n * |\n */
+        val isOpeningLine = prevTrimmed.endsWith("/**") || prevTrimmed.endsWith("/*")
+        val nextLineIsClose = line < lines.size && lines[line].trimStart().startsWith("*/")
+        if (isOpeningLine && nextLineIsClose) {
+            // Insert " * \n " + closing on the next line
+            return listOf(
+                TextEdit(
+                    range =
+                        Range(
+                            start = Position(line, 0),
+                            end = Position(line, currentIndent),
+                        ),
+                    newText = prefix + "\n" + closing,
+                ),
+            )
+        }
+
+        // Normal continuation: just insert " * " prefix
         return listOf(
             TextEdit(
                 range =

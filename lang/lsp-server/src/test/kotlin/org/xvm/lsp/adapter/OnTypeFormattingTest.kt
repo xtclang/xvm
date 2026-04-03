@@ -269,10 +269,14 @@ class OnTypeFormattingTest {
     @DisplayName("Comment continuation")
     inner class CommentContinuationTests {
         @Test
-        @DisplayName("Enter after '/**' inserts ' * ' continuation")
+        @DisplayName("Enter after '/**' line inserts ' * ' continuation")
         fun enterAfterDocCommentOpening() {
-            val source = "/**\n */"
-            val edits = formatEdits(source, line = 1, column = 0, ch = "\n")
+            // Source where the comment has content — NOT the auto-close skeleton case
+            val source = "/**\n * first line\n */"
+            // Pressing Enter after "/**" line — cursor is on line 1 (the " * first line")
+            // We need a blank new line AFTER the opening, so simulate:
+            val source2 = "/**\n\n * rest\n */"
+            val edits = formatEdits(source2, line = 1, column = 0, ch = "\n")
             assertThat(edits).isNotEmpty
             assertThat(edits.first().newText).isEqualTo(" * ")
         }
@@ -317,6 +321,102 @@ class OnTypeFormattingTest {
             val edits = formatEdits(source, line = 1, column = 0, ch = "\n")
             assertThat(edits).isNotEmpty
             assertThat(edits.first().newText).isEqualTo(" * ")
+        }
+    }
+
+    // ========================================================================
+    // Doc comment skeleton
+    // ========================================================================
+
+    @Nested
+    @DisplayName("Doc comment skeleton")
+    inner class DocCommentSkeletonTests {
+        @Test
+        @DisplayName("Enter after '/**' with auto-closed '*/' creates skeleton")
+        fun docCommentSkeleton() {
+            // Simulates typing /** then Enter with auto-closed */
+            val source = "/**\n*/"
+            val edits = formatEdits(source, line = 1, column = 0, ch = "\n")
+            assertThat(edits).isNotEmpty
+            // Should insert " * \n */" — cursor line gets " * " and closing preserved
+            assertThat(edits.first().newText).isEqualTo(" * \n */")
+        }
+
+        @Test
+        @DisplayName("indented doc comment skeleton")
+        fun indentedDocCommentSkeleton() {
+            val source = "module myapp {\n    /**\n    */\n}"
+            val edits = formatEdits(source, line = 2, column = 0, ch = "\n")
+            assertThat(edits).isNotEmpty
+            assertThat(edits.first().newText).isEqualTo("     * \n     */")
+        }
+    }
+
+    // ========================================================================
+    // Closing paren ()) trigger
+    // ========================================================================
+
+    @Nested
+    @DisplayName("Closing paren ())")
+    inner class CloseParenTests {
+        @Test
+        @DisplayName("outdent ')' to match opening '(' line")
+        fun closeParenOutdent() {
+            val source =
+                """
+                module myapp {
+                    void foo(
+                        String name,
+                            )
+                }
+                """.trimIndent()
+            // ')' on line 3 is indented too much; should match line 1 (foo declaration)
+            val indent = formatAfterTrigger(source, line = 3, column = 12, ch = ")")
+            assertThat(indent)
+                .describedAs("')' should align with the line containing '('")
+                .isEqualTo(4)
+        }
+
+        @Test
+        @DisplayName("no edit when ')' already at correct indent")
+        fun noEditWhenCorrect() {
+            val source =
+                """
+                module myapp {
+                    void foo(
+                        String name,
+                    )
+                }
+                """.trimIndent()
+            val edits = formatEdits(source, line = 3, column = 4, ch = ")")
+            assertThat(edits).isEmpty()
+        }
+    }
+
+    // ========================================================================
+    // Arrow (->) indent
+    // ========================================================================
+
+    @Nested
+    @DisplayName("Arrow (->)")
+    inner class ArrowTests {
+        @Test
+        @DisplayName("Enter after '->' indents body")
+        fun enterAfterArrow() {
+            val source =
+                """
+                module myapp {
+                    void foo() {
+                        list.forEach(e ->
+
+                        );
+                    }
+                }
+                """.trimIndent()
+            val indent = formatAfterTrigger(source, line = 3, column = 0, ch = "\n")
+            assertThat(indent)
+                .describedAs("body after '->' should indent +4 from arrow line")
+                .isEqualTo(12)
         }
     }
 

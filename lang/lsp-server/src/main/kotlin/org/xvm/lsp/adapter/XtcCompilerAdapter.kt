@@ -1105,12 +1105,15 @@ interface XtcCompilerAdapter : Closeable {
 
     /**
      * Formatting options from client.
+     *
+     * Defaults are XTC conventions (trim trailing whitespace, insert final newline).
+     * The editor can override these via LSP `FormattingOptions` properties.
      */
     data class FormattingOptions(
         val tabSize: Int,
         val insertSpaces: Boolean,
-        val trimTrailingWhitespace: Boolean = false,
-        val insertFinalNewline: Boolean = false,
+        val trimTrailingWhitespace: Boolean = true,
+        val insertFinalNewline: Boolean = true,
     )
 
     // ========================================================================

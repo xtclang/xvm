@@ -217,7 +217,7 @@ class XtcLanguageServerTest {
                 .isEqualTo("\n")
             assertThat(caps.documentOnTypeFormattingProvider?.moreTriggerCharacter)
                 .describedAs("onTypeFormatting moreTriggers")
-                .containsExactly("}", ";")
+                .containsExactly("}", ";", ")")
             assertThat(caps.inlayHintProvider?.left).describedAs("inlayHint").isTrue()
 
             // Workspace features

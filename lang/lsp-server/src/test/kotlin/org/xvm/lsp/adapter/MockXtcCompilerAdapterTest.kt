@@ -451,6 +451,7 @@ class MockXtcCompilerAdapterTest {
                     tabSize = 4,
                     insertSpaces = true,
                     trimTrailingWhitespace = true,
+                    insertFinalNewline = false,
                 )
 
             val edits = adapter.formatDocument("file:///test.x", source, options)

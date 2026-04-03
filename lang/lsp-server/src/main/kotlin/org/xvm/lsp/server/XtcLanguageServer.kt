@@ -425,7 +425,7 @@ class XtcLanguageServer(
             documentRangeFormattingProvider = Either.forLeft(true)
             documentOnTypeFormattingProvider =
                 DocumentOnTypeFormattingOptions("\n").apply {
-                    moreTriggerCharacter = listOf("}", ";")
+                    moreTriggerCharacter = listOf("}", ";", ")")
                 }
             inlayHintProvider = Either.forLeft(true)
 
@@ -571,6 +571,20 @@ class XtcLanguageServer(
     private fun toAdapterPosition(pos: Position) = AdapterPosition(pos.line, pos.character)
 
     private fun toAdapterRange(range: Range) = AdapterRange(toAdapterPosition(range.start), toAdapterPosition(range.end))
+
+    /**
+     * Convert LSP4J [org.eclipse.lsp4j.FormattingOptions] to adapter options.
+     *
+     * XTC defaults: `trimTrailingWhitespace = true`, `insertFinalNewline = true`.
+     * If the editor sends explicit values, they override the defaults.
+     */
+    private fun toAdapterFormattingOptions(lsp: org.eclipse.lsp4j.FormattingOptions) =
+        AdapterFormattingOptions(
+            tabSize = lsp.tabSize,
+            insertSpaces = lsp.isInsertSpaces,
+            trimTrailingWhitespace = lsp.isTrimTrailingWhitespace ?: true,
+            insertFinalNewline = lsp.isInsertFinalNewline ?: true,
+        )
 
     // ========================================================================
     // Text Document Service
@@ -1108,11 +1122,7 @@ class XtcLanguageServer(
                     return@supplyAsync emptyList()
                 }
 
-                val options =
-                    AdapterFormattingOptions(
-                        tabSize = params.options.tabSize,
-                        insertSpaces = params.options.isInsertSpaces,
-                    )
+                val options = toAdapterFormattingOptions(params.options)
                 val (edits, elapsed) = measureTimedValue { adapter.formatDocument(uri, content, options) }
                 logger.info("textDocument/formatting: {} edits in {}", edits.size, elapsed)
                 edits.map { e ->
@@ -1140,11 +1150,7 @@ class XtcLanguageServer(
                     return@supplyAsync emptyList()
                 }
 
-                val options =
-                    AdapterFormattingOptions(
-                        tabSize = params.options.tabSize,
-                        insertSpaces = params.options.isInsertSpaces,
-                    )
+                val options = toAdapterFormattingOptions(params.options)
                 val (edits, elapsed) = measureTimedValue { adapter.formatRange(uri, content, toAdapterRange(range), options) }
                 logger.info("textDocument/rangeFormatting: {} edits in {}", edits.size, elapsed)
                 edits.map { e ->

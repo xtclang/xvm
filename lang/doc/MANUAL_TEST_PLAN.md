@@ -390,6 +390,11 @@ character. No manual action needed.
 | 13a.11 | Nested constructs (3+ levels) | Class > method > if > Enter after `{` | Correct cumulative indent (e.g. 12 for 3 levels) |
 | 13a.12 | After `}` line | Press Enter after a `}` line | New line at same indent as `}` |
 | 13a.13 | Large file performance | Open a `.x` file > 1000 lines, type normally | < 5ms per formatting request (check LSP log) |
+| 13a.14 | Doc comment continuation | Type `/**` then Enter | New line gets ` * ` prefix aligned with `/**` |
+| 13a.15 | Doc comment mid-line | Press Enter on a ` * existing text` line inside `/** */` | New line gets ` * ` prefix |
+| 13a.16 | Indented doc comment | Inside a class (indent 4), type `/**` then Enter | New line gets `     * ` (4 spaces + ` * `) |
+| 13a.17 | Block comment continuation | Type `/*` then Enter | New line gets ` * ` prefix |
+| 13a.18 | No continuation after `*/` | Press Enter after a `*/` line | Normal indentation (no ` * ` prefix) |
 
 ---
 
