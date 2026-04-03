@@ -1193,18 +1193,43 @@ public class MethodInfo
      * @return the identity of the method to be used by the JIT compiler
      */
     public static MethodConstant getJitIdentity(MethodBody[] aBody) {
-        // for methods   - get the lowest non-implicit in the chain
-        // for functions - get the highest in the chain
-        MethodConstant id = null;
+        // for methods   -  get the lowest in the chain with the same signature; ignore implicits
+        // for functions -  get the highest in the chain
+        MethodConstant    id  = null;
+        SignatureConstant sig = null;
         for (MethodBody body : aBody) {
-            if (id == null || body.getImplementation() != Implementation.Implicit) {
+            if (id == null) {
                 id = body.getIdentity();
-                if (body.isFunction()) {
+                if (body.isFunction() || body.isVirtualConstructor()) {
                     break;
                 }
+                sig = body.getSignature();
+            } else if (body.getImplementation() == Implementation.Implicit) {
+                // ignore
+            } else if (isJitEquivalent(body.getSignature(), sig)) {
+                id = body.getIdentity();
+            } else {
+                break;
             }
         }
         return id;
+    }
+
+    private static boolean isJitEquivalent(SignatureConstant sig1, SignatureConstant sig2) {
+        TypeConstant[] atype1  = sig1.getRawParams();
+        TypeConstant[] atype2  = sig2.getRawParams();
+        int            cParams = atype1.length;
+
+        if (atype2.length != cParams) {
+            return false;
+        }
+
+        for (int i = 0; i < cParams; i++) {
+            if (!atype1[i].equals(atype2[i])) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -1218,6 +1243,10 @@ public class MethodInfo
      * @return the JitMethodDesc
      */
     public JitMethodDesc getJitDesc(Builder builder, TypeConstant typeContainer) {
+//        return isCapped()
+//            ? getChain()[1].getJitDesc(builder, typeContainer)
+//            : getHead().getJitDesc(builder, typeContainer);
+
         return getHead().getJitDesc(builder, typeContainer);
     }
 
