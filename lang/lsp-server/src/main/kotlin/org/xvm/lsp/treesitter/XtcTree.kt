@@ -2,6 +2,7 @@ package org.xvm.lsp.treesitter
 
 import io.github.treesitter.jtreesitter.Point
 import io.github.treesitter.jtreesitter.Tree
+import org.xvm.lsp.adapter.AdapterTree
 import java.io.Closeable
 
 /**
@@ -12,15 +13,16 @@ import java.io.Closeable
  */
 class XtcTree internal constructor(
     internal val tsTree: Tree,
-    val source: String,
-) : Closeable {
+    override val source: String,
+) : AdapterTree,
+    Closeable {
     @Volatile
     private var closed = false
 
     /**
      * Get the root node of the syntax tree.
      */
-    val root: XtcNode
+    override val root: XtcNode
         get() {
             checkNotClosed()
             return XtcNode(tsTree.rootNode, source)
@@ -29,7 +31,7 @@ class XtcTree internal constructor(
     /**
      * Check if this tree has any syntax errors.
      */
-    val hasErrors: Boolean
+    override val hasErrors: Boolean
         get() {
             checkNotClosed()
             return root.hasError
@@ -42,7 +44,7 @@ class XtcTree internal constructor(
      * @param column 0-based column number
      * @return the node at that position, or null if none
      */
-    fun nodeAt(
+    override fun nodeAt(
         line: Int,
         column: Int,
     ): XtcNode? {

@@ -22,9 +22,10 @@ import org.xvm.lsp.model.SymbolInfo
  * so the log trace shows exactly what the IDE requested even when the feature
  * is not yet available.
  *
- * @see [MockXtcCompilerAdapter] for regex-based testing adapter
- * @see [TreeSitterAdapter] for syntax-aware adapter
- * @see [XtcCompilerAdapterStub] for placeholder adapter
+ * Concrete implementations live in subpackages:
+ * - `adapter.mock.MockXtcCompilerAdapter` — regex-based testing adapter
+ * - `adapter.treesitter.TreeSitterAdapter` — syntax-aware adapter
+ * - `adapter.xdk.XdkCompilerAdapter` — XDK compiler adapter (placeholder)
  */
 @Suppress("LoggingSimilarMessage")
 abstract class AbstractXtcCompilerAdapter : XtcCompilerAdapter {

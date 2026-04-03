@@ -1,5 +1,7 @@
-package org.xvm.lsp.adapter
+package org.xvm.lsp.adapter.mock
 
+import org.xvm.lsp.adapter.AbstractXtcCompilerAdapter
+import org.xvm.lsp.adapter.XtcCompilerAdapter
 import org.xvm.lsp.adapter.XtcCompilerAdapter.CodeAction
 import org.xvm.lsp.adapter.XtcCompilerAdapter.CodeAction.CodeActionKind
 import org.xvm.lsp.adapter.XtcCompilerAdapter.DocumentHighlight

@@ -5,22 +5,19 @@ import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.XtcCompilerAdapter.Position
 import org.xvm.lsp.adapter.XtcCompilerAdapter.Range
 import org.xvm.lsp.adapter.XtcCompilerAdapter.TextEdit
-import org.xvm.lsp.treesitter.XtcNode
-import org.xvm.lsp.treesitter.XtcTree
 
 /**
- * Handles all formatting concerns for the tree-sitter adapter:
+ * Backend-agnostic formatter that works with any [AdapterTree]/[AdapterNode] implementation.
+ *
+ * Handles:
  * - Document formatting (re-indentation, trailing whitespace, final newline)
  * - Range formatting (same as document but scoped to a line range)
  * - On-type formatting (auto-indent on Enter, closing brace/paren)
  *
- * Extracted from [TreeSitterAdapter] to keep that class focused on LSP
- * feature orchestration rather than formatting implementation details.
- *
  * Stateless — a single instance is shared across all formatting requests.
  */
-class TreeSitterFormatter {
-    private val logger: Logger = LoggerFactory.getLogger(TreeSitterFormatter::class.java)
+class AdapterFormatter {
+    private val logger: Logger = LoggerFactory.getLogger(AdapterFormatter::class.java)
 
     companion object {
         // --- AST node type sets for formatting ---
@@ -99,7 +96,7 @@ class TreeSitterFormatter {
      * Format an entire document: fix indentation, strip trailing whitespace, insert final newline.
      */
     fun formatDocument(
-        tree: XtcTree,
+        tree: AdapterTree,
         content: String,
         config: XtcFormattingConfig,
         options: XtcCompilerAdapter.FormattingOptions,
@@ -109,7 +106,7 @@ class TreeSitterFormatter {
      * Format a range of lines within the document.
      */
     fun formatRange(
-        tree: XtcTree,
+        tree: AdapterTree,
         content: String,
         range: Range,
         config: XtcFormattingConfig,
@@ -124,7 +121,7 @@ class TreeSitterFormatter {
      * newline for whole-document formatting.
      */
     private fun buildFormattingEdits(
-        tree: XtcTree,
+        tree: AdapterTree,
         content: String,
         config: XtcFormattingConfig,
         options: XtcCompilerAdapter.FormattingOptions,
@@ -195,7 +192,7 @@ class TreeSitterFormatter {
      * Returns 0 for blank lines.
      */
     private fun computeLineIndent(
-        tree: XtcTree,
+        tree: AdapterTree,
         lineIndex: Int,
         lines: List<String>,
         config: XtcFormattingConfig,
@@ -282,7 +279,7 @@ class TreeSitterFormatter {
      * Count the number of indent-parent ancestors to determine structural nesting depth.
      * Includes the node itself if it is an indent parent type.
      */
-    internal fun countIndentDepth(node: XtcNode): Int {
+    internal fun countIndentDepth(node: AdapterNode): Int {
         var depth = 0
         generateSequence(node) { it.parent }.forEach { n ->
             if (n.type in indentParentTypes) depth++
@@ -298,7 +295,7 @@ class TreeSitterFormatter {
      * Handle a character typed by the user and return indentation edits.
      */
     fun onTypeFormatting(
-        tree: XtcTree,
+        tree: AdapterTree,
         line: Int,
         column: Int,
         ch: String,
@@ -317,7 +314,7 @@ class TreeSitterFormatter {
      * what the previous line ends with and the AST context.
      */
     private fun handleEnter(
-        tree: XtcTree,
+        tree: AdapterTree,
         line: Int,
         config: XtcFormattingConfig,
     ): List<TextEdit> {
@@ -397,7 +394,7 @@ class TreeSitterFormatter {
      * corresponding opening '{' lives.
      */
     private fun handleCloseBrace(
-        tree: XtcTree,
+        tree: AdapterTree,
         line: Int,
         column: Int,
         config: XtcFormattingConfig,
@@ -450,7 +447,7 @@ class TreeSitterFormatter {
      * This handles multi-line parameter lists, argument lists, and condition expressions.
      */
     private fun handleCloseParen(
-        tree: XtcTree,
+        tree: AdapterTree,
         line: Int,
         column: Int,
         @Suppress("UNUSED_PARAMETER") config: XtcFormattingConfig,
@@ -491,7 +488,7 @@ class TreeSitterFormatter {
      * aligned with the "*" on the opening line. Returns null if not inside a comment.
      */
     private fun handleCommentContinuation(
-        tree: XtcTree,
+        tree: AdapterTree,
         prevLineIndex: Int,
         line: Int,
         lines: List<String>,
@@ -575,7 +572,7 @@ class TreeSitterFormatter {
     }
 
     private fun isInsideCaseClause(
-        tree: XtcTree,
+        tree: AdapterTree,
         lineIndex: Int,
     ): Boolean {
         val node = tree.nodeAt(lineIndex, 0) ?: return false
@@ -583,12 +580,12 @@ class TreeSitterFormatter {
             .any { it.type == "case_clause" }
     }
 
-    internal fun isInsideStringLiteral(node: XtcNode): Boolean =
+    internal fun isInsideStringLiteral(node: AdapterNode): Boolean =
         generateSequence(node) { it.parent }
             .any { it.type in stringLiteralTypes }
 
     private fun findDeclarationIndent(
-        tree: XtcTree,
+        tree: AdapterTree,
         lineIndex: Int,
     ): Int {
         val node = tree.nodeAt(lineIndex, 0) ?: return 0
@@ -600,7 +597,7 @@ class TreeSitterFormatter {
     }
 
     private fun computeDesiredIndent(
-        tree: XtcTree,
+        tree: AdapterTree,
         prevLineIndex: Int,
         prevIndent: Int,
         indentSize: Int,

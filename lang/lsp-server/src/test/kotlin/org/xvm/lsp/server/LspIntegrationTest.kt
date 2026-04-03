@@ -38,9 +38,9 @@ import org.mockito.ArgumentCaptor
 import org.mockito.Mockito.atLeastOnce
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
-import org.xvm.lsp.adapter.MockXtcCompilerAdapter
-import org.xvm.lsp.adapter.TreeSitterAdapter
 import org.xvm.lsp.adapter.XtcCompilerAdapter
+import org.xvm.lsp.adapter.mock.MockXtcCompilerAdapter
+import org.xvm.lsp.adapter.treesitter.TreeSitterAdapter
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths

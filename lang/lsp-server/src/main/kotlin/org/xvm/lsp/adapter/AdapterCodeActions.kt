@@ -9,14 +9,12 @@ import org.xvm.lsp.adapter.XtcCompilerAdapter.Range
 import org.xvm.lsp.adapter.XtcCompilerAdapter.TextEdit
 import org.xvm.lsp.adapter.XtcCompilerAdapter.WorkspaceEdit
 import org.xvm.lsp.index.WorkspaceIndex
+import org.xvm.lsp.model.Location
+import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.model.SymbolInfo.SymbolKind
-import org.xvm.lsp.treesitter.XtcNode
-import org.xvm.lsp.treesitter.XtcQueryEngine
-import org.xvm.lsp.treesitter.XtcTree
-import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Code action provider for the tree-sitter adapter.
+ * Backend-agnostic code action provider that works with any [AdapterTree]/[AdapterNode] implementation.
  *
  * Currently offers:
  * - Organize imports (sort alphabetically)
@@ -24,30 +22,16 @@ import java.util.concurrent.atomic.AtomicBoolean
  * - Generate documentation comment (insert skeleton with @param entries)
  * - Auto-import (add import for unresolved type names found in workspace index)
  *
- * Extracted from [TreeSitterAdapter] to keep that class focused on LSP
- * feature orchestration.
+ * Query-engine-specific data (imports, declarations, identifier lookups) is passed
+ * via [CodeActionQueryData] so that both tree-sitter and compiler adapters can
+ * provide the same information from their own backends.
  *
  * Stateless — a single instance is shared across all code action requests.
  */
-class TreeSitterCodeActions {
-    private val logger: Logger = LoggerFactory.getLogger(TreeSitterCodeActions::class.java)
+class AdapterCodeActions {
+    private val logger: Logger = LoggerFactory.getLogger(AdapterCodeActions::class.java)
 
     companion object {
-        /** Declaration node types that can have doc comments generated. */
-        private val docCommentableTypes =
-            setOf(
-                "class_declaration",
-                "interface_declaration",
-                "mixin_declaration",
-                "service_declaration",
-                "const_declaration",
-                "enum_declaration",
-                "module_declaration",
-                "method_declaration",
-                "function_declaration",
-                "constructor_declaration",
-            )
-
         /** Type declaration kinds eligible for auto-import. */
         private val typeKinds =
             setOf(
@@ -73,24 +57,24 @@ class TreeSitterCodeActions {
      * Build all available code actions for the given document.
      */
     fun getCodeActions(
-        tree: XtcTree,
+        tree: AdapterTree,
         uri: String,
         range: Range,
-        queryEngine: XtcQueryEngine,
+        queryData: CodeActionQueryData,
         workspaceIndex: WorkspaceIndex?,
-        indexReady: AtomicBoolean,
+        indexReady: Boolean,
     ): List<CodeAction> =
         buildList {
             buildOrganizeImportsAction(tree, uri)?.let { add(it) }
-            addAll(buildRemoveUnusedImportActions(tree, uri, queryEngine))
-            addAll(buildGenerateDocCommentActions(tree, uri, range, queryEngine))
-            addAll(buildAutoImportActions(tree, uri, queryEngine, workspaceIndex, indexReady))
+            addAll(buildRemoveUnusedImportActions(uri, queryData))
+            addAll(buildGenerateDocCommentActions(tree, uri, range, queryData.declarations))
+            addAll(buildAutoImportActions(tree, uri, queryData, workspaceIndex, indexReady))
         }.also {
             logger.info("getCodeActions -> {} actions", it.size)
         }
 
     private fun buildOrganizeImportsAction(
-        tree: XtcTree,
+        tree: AdapterTree,
         uri: String,
     ): CodeAction? {
         val importNodes = tree.root.children.filter { it.type == "import_statement" }
@@ -112,18 +96,14 @@ class TreeSitterCodeActions {
     }
 
     private fun buildRemoveUnusedImportActions(
-        tree: XtcTree,
         uri: String,
-        queryEngine: XtcQueryEngine,
+        queryData: CodeActionQueryData,
     ): List<CodeAction> {
-        val imports = queryEngine.findImports(tree)
-        if (imports.isEmpty()) return emptyList()
+        if (queryData.imports.isEmpty()) return emptyList()
 
-        val importLocations = queryEngine.findImportLocations(tree, uri)
-
-        return importLocations.mapNotNull { (importPath, loc) ->
+        return queryData.importLocations.mapNotNull { (importPath, loc) ->
             val simpleName = importPath.substringAfterLast(".")
-            val allOccurrences = queryEngine.findAllIdentifiers(tree, simpleName, uri)
+            val allOccurrences = queryData.findIdentifiers(simpleName)
             // If the name appears only in the import itself (or not at all), it's unused
             val usagesOutsideImport = allOccurrences.count { it.startLine != loc.startLine }
             if (usagesOutsideImport > 0) return@mapNotNull null
@@ -139,18 +119,15 @@ class TreeSitterCodeActions {
     // ========================================================================
 
     private fun buildGenerateDocCommentActions(
-        tree: XtcTree,
+        tree: AdapterTree,
         uri: String,
         range: Range,
-        queryEngine: XtcQueryEngine,
+        declarations: List<SymbolInfo>,
     ): List<CodeAction> {
         val lines = tree.source.split("\n")
-        val declarations =
-            queryEngine
-                .findAllDeclarations(tree, uri)
-                .filter { it.location.startLine in range.start.line..range.end.line }
+        val filtered = declarations.filter { it.location.startLine in range.start.line..range.end.line }
 
-        return declarations.mapNotNull { decl ->
+        return filtered.mapNotNull { decl ->
             val declLine = decl.location.startLine
             // Check if there is already a doc comment above
             val prevLine = if (declLine > 0) lines[declLine - 1].trimEnd() else ""
@@ -171,7 +148,7 @@ class TreeSitterCodeActions {
     }
 
     private fun buildDocSkeleton(
-        tree: XtcTree,
+        tree: AdapterTree,
         kind: SymbolKind,
         declLine: Int,
         lines: List<String>,
@@ -209,16 +186,16 @@ class TreeSitterCodeActions {
     // ========================================================================
 
     private fun buildAutoImportActions(
-        tree: XtcTree,
+        tree: AdapterTree,
         uri: String,
-        queryEngine: XtcQueryEngine,
+        queryData: CodeActionQueryData,
         workspaceIndex: WorkspaceIndex?,
-        indexReady: AtomicBoolean,
+        indexReady: Boolean,
     ): List<CodeAction> {
-        if (workspaceIndex == null || !indexReady.get()) return emptyList()
+        if (workspaceIndex == null || !indexReady) return emptyList()
 
-        val localNames = queryEngine.findAllDeclarations(tree, uri).map { it.name }.toSet()
-        val imports = queryEngine.findImports(tree).map { it.substringAfterLast(".") }.toSet()
+        val localNames = queryData.declarations.map { it.name }.toSet()
+        val imports = queryData.imports.map { it.substringAfterLast(".") }.toSet()
         val knownNames = localNames + imports
 
         val candidates = mutableListOf<String>()
@@ -247,7 +224,7 @@ class TreeSitterCodeActions {
     }
 
     private fun collectUnresolvedTypeNames(
-        node: XtcNode,
+        node: AdapterNode,
         knownNames: Set<String>,
         result: MutableList<String>,
     ) {
@@ -268,7 +245,7 @@ class TreeSitterCodeActions {
      * Find the line where a new import statement should be inserted.
      * Inserts after the last existing import, or at line 0 if there are none.
      */
-    private fun findImportInsertLine(tree: XtcTree): Int {
+    private fun findImportInsertLine(tree: AdapterTree): Int {
         val importNodes = tree.root.children.filter { it.type == "import_statement" }
         return if (importNodes.isNotEmpty()) {
             importNodes.last().endLine + 1
@@ -277,3 +254,22 @@ class TreeSitterCodeActions {
         }
     }
 }
+
+/**
+ * Pre-computed query data passed to [AdapterCodeActions] to decouple it from
+ * any specific query engine implementation.
+ *
+ * The adapter (tree-sitter, compiler, etc.) populates this from its own backend
+ * before calling code action methods.
+ *
+ * @property imports            All import paths in the document (e.g., "ecstasy.collections.List")
+ * @property importLocations    Import path → source location pairs for each import statement
+ * @property declarations       All declarations found in the document
+ * @property findIdentifiers    Callback to find all occurrences of a given identifier name
+ */
+data class CodeActionQueryData(
+    val imports: List<String>,
+    val importLocations: List<Pair<String, Location>>,
+    val declarations: List<SymbolInfo>,
+    val findIdentifiers: (name: String) -> List<Location>,
+)

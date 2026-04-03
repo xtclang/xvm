@@ -139,7 +139,7 @@ private fun Range.fmt(): String = "${start.fmt()}-${end.fmt()}"
  *
  * - **MockXtcCompilerAdapter**: Basic regex-based parsing, most features log "not implemented"
  * - **TreeSitterAdapter**: Syntax-aware features (hover, completion, definition, references, symbols, folding, highlights)
- * - **XtcCompilerAdapterStub**: (future) Full semantic features
+ * - **XdkCompilerAdapter**: (future) Full semantic features via XDK compiler
  *
  * ## Backend Selection
  *

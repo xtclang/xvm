@@ -109,7 +109,7 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 | Syntax errors | ❌ Basic patterns | ✅ Precise location | ❌ None |
 | Error recovery | ❌ None | ✅ Continues parsing | ❌ None |
 | Rename | ✅ Same-file (text) | ✅ Same-file (AST) | ❌ None |
-| Code actions | ✅ Organize imports | ✅ Organize imports + remove unused | ❌ None |
+| Code actions | ✅ Organize imports | ✅ Organize/remove imports + doc comment + auto-import | ❌ None |
 | Formatting | ✅ Trailing WS | ✅ Trailing WS + auto-indent | ❌ None |
 | Folding ranges | ✅ Brace matching | ✅ AST node boundaries | ❌ None |
 | Signature help | ❌ None | ✅ Same-file methods | ❌ None |
@@ -135,7 +135,7 @@ Capabilities not yet implemented in an adapter use default interface methods
 | Document Links | ✅ | ✅ | 🔮 | `textDocument/documentLink` |
 | **Editing** |
 | Hover | ✅ | ✅ | 🔮 | `textDocument/hover` |
-| Completion | ⚠️ | ✅ | 🔮 | `textDocument/completion` |
+| Completion | ⚠️ | ✅ (context-aware) | 🔮 | `textDocument/completion` |
 | Signature Help | ❌ | ✅ | 🔮 | `textDocument/signatureHelp` |
 | **Refactoring** |
 | Rename / Prepare Rename | ✅ | ✅ | 🔮 | `textDocument/rename` |
@@ -153,6 +153,49 @@ Capabilities not yet implemented in an adapter use default interface methods
 | Inlay Hints | ❌ | ❌ | 🔮 | `textDocument/inlayHint` |
 
 Legend: ✅ = Implemented, ⚠️ = Partial/limited, ❌ = Not implemented, 🔮 = Future (compiler adapter)
+
+## Context-Aware Completion
+
+The tree-sitter adapter classifies the cursor context before returning completions,
+filtering results to show only what makes sense at that position:
+
+| Context | Trigger | What is shown |
+|---------|---------|---------------|
+| After `.` | `.` trigger char | Methods and properties from the enclosing class body |
+| In type position | Typed | Only type names (classes, interfaces, enums, mixins, services, consts) |
+| After `extends`/`implements` | Typed | Only type names |
+| After `@` | Typed | Known annotation names (common ones + annotations found in the file) |
+| Inside `import` statement | Typed | Qualified names from the workspace index |
+| Default (anywhere else) | Typed or Ctrl+Space | Full set: keywords + built-in types + document symbols + imports |
+
+Context detection works by examining the AST node ancestry at the cursor position.
+For example, if the cursor is inside an `annotation` node, only annotation names are
+returned; if inside a `type_expression` or `type_name` node, only type completions
+appear.
+
+### Limitations of syntax-only completion
+
+Because the tree-sitter adapter has no semantic model, member completion after `.`
+is limited to the current class body's declarations. It cannot resolve:
+- The actual type of the expression before the `.` (e.g., `person.` cannot show
+  `Person`'s members if `Person` is defined in another file)
+- Inherited members from supertypes
+- Method overloads or return type narrowing
+- Conditional mixins or generic type parameters
+
+### What a semantic compiler adapter would add
+
+A future compiler adapter with full type resolution would enable:
+- **Type-resolved member access**: `person.` would show all members of `Person`,
+  including inherited ones from `Object`, `Hashable`, etc.
+- **Overload-aware signatures**: Show all applicable overloads ranked by match quality
+- **Smart import suggestions**: Suggest imports for unresolved types based on what
+  would make the code compile
+- **Generic type inference**: Show members on `List<String>` with `String`-substituted
+  type parameters
+- **Scope-aware locals**: Only show variables that are actually in scope at the cursor,
+  respecting shadowing and block structure
+- **Ranked results**: Sort completions by relevance (local > member > imported > global)
 
 ## Key Components
 

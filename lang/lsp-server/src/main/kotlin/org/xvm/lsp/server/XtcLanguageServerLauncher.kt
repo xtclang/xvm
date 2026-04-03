@@ -6,10 +6,10 @@ import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.launch.LSPLauncher
 import org.eclipse.lsp4j.services.LanguageClient
 import org.slf4j.LoggerFactory
-import org.xvm.lsp.adapter.MockXtcCompilerAdapter
-import org.xvm.lsp.adapter.TreeSitterAdapter
 import org.xvm.lsp.adapter.XtcCompilerAdapter
-import org.xvm.lsp.adapter.XtcCompilerAdapterStub
+import org.xvm.lsp.adapter.mock.MockXtcCompilerAdapter
+import org.xvm.lsp.adapter.treesitter.TreeSitterAdapter
+import org.xvm.lsp.adapter.xdk.XdkCompilerAdapter
 import java.io.InputStream
 import java.io.OutputStream
 import java.lang.invoke.MethodHandles
@@ -77,7 +77,7 @@ private fun createAdapter(adapterType: String): Pair<XtcCompilerAdapter, Adapter
             // TODO: Replace with real compiler adapter when parallel compiler integration is ready
             // See PLAN_LSP_PARALLEL_LEXER.md for the integration roadmap
             logger.info("using compiler stub adapter - all LSP calls will be logged but return empty results")
-            XtcCompilerAdapterStub() to AdapterBackend.COMPILER
+            XdkCompilerAdapter() to AdapterBackend.COMPILER
         }
 
         "treesitter", "tree-sitter" -> {

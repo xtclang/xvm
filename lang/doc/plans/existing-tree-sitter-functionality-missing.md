@@ -681,14 +681,12 @@ depth (not +indentSize). This is correct.
 | 7 | Fold consecutive line comments | Small | Low | None | ✅ Done |
 | 6 | Remove unused import | Small | Medium | None | ✅ Done |
 | 5 | Better semantic tokens | Small | Medium | None | ✅ Done |
-| 8 | Generate doc comment | Small-Med | Medium | None | |
-| 9 | Multi-line parameter alignment | Small-Med | Medium | None | |
-| 4 | Auto-import code action | Medium | High | Workspace index ready | |
-| 1 | Context-aware completion | Med-Large | High | Changes adapter interface | |
+| 8 | Generate doc comment | Small-Med | Medium | None | ✅ Done |
+| 9 | Multi-line parameter alignment | Small-Med | Medium | None | ✅ Done |
+| 4 | Auto-import code action | Medium | High | Workspace index ready | ✅ Done |
+| 1 | Context-aware completion | Med-Large | High | Changes adapter interface | ✅ Done |
 
-Items 2, 3, 7, 6, and 5 can be done independently in parallel. Items 8 and 9 have no
-dependencies either but are slightly more work. Item 4 depends on the workspace index
-being populated. Item 1 is the largest because it changes the adapter interface signature.
+All 9 features are now implemented.
 
 ## Shared Adapter Abstraction (Future)
 

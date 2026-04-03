@@ -12,13 +12,13 @@ import java.io.Closeable
  * The adapter layer isolates the LSP server from the compiler's mutable internals.
  * All results are immutable and thread-safe.
  *
- * ## Available Implementations
+ * ## Available Implementations (in subpackages)
  *
- * | Adapter | Backend | Use Case |
- * |---------|---------|----------|
- * | [MockXtcCompilerAdapter] | Regex | Testing and fallback |
- * | [TreeSitterAdapter] | Tree-sitter | Syntax-aware (~80% LSP features) |
- * | [XtcCompilerAdapterStub] | Compiler | (future) Full semantic features |
+ * | Adapter | Package | Backend | Use Case |
+ * |---------|---------|---------|----------|
+ * | `MockXtcCompilerAdapter` | `adapter.mock` | Regex | Testing and fallback |
+ * | `TreeSitterAdapter` | `adapter.treesitter` | Tree-sitter | Syntax-aware (~80% LSP features) |
+ * | `XdkCompilerAdapter` | `adapter.xdk` | XDK Compiler | (future) Full semantic features |
  *
  * ## Backend Selection
  *
@@ -26,9 +26,6 @@ import java.io.Closeable
  *
  * - `treesitter` (default): Syntax-aware parsing, requires native library
  * - `mock`: Regex-based, no native dependencies
- *
- * @see TreeSitterAdapter for syntax-level intelligence
- * @see MockXtcCompilerAdapter for testing
  */
 interface XtcCompilerAdapter : Closeable {
     override fun close() {}

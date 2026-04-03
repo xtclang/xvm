@@ -23,8 +23,8 @@ import org.mockito.ArgumentCaptor
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
-import org.xvm.lsp.adapter.TreeSitterAdapter
 import org.xvm.lsp.adapter.XtcFormattingConfig
+import org.xvm.lsp.adapter.treesitter.TreeSitterAdapter
 import java.util.concurrent.CompletableFuture
 
 /**

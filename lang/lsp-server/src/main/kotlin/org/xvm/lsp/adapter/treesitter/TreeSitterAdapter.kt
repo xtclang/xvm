@@ -1,5 +1,10 @@
-package org.xvm.lsp.adapter
+package org.xvm.lsp.adapter.treesitter
 
+import org.xvm.lsp.adapter.AbstractXtcCompilerAdapter
+import org.xvm.lsp.adapter.AdapterCodeActions
+import org.xvm.lsp.adapter.AdapterFormatter
+import org.xvm.lsp.adapter.CodeActionQueryData
+import org.xvm.lsp.adapter.XtcCompilerAdapter
 import org.xvm.lsp.adapter.XtcCompilerAdapter.CodeAction
 import org.xvm.lsp.adapter.XtcCompilerAdapter.CompletionItem
 import org.xvm.lsp.adapter.XtcCompilerAdapter.CompletionItem.CompletionKind
@@ -15,6 +20,7 @@ import org.xvm.lsp.adapter.XtcCompilerAdapter.SignatureHelp
 import org.xvm.lsp.adapter.XtcCompilerAdapter.SignatureInfo
 import org.xvm.lsp.adapter.XtcCompilerAdapter.TextEdit
 import org.xvm.lsp.adapter.XtcCompilerAdapter.WorkspaceEdit
+import org.xvm.lsp.adapter.XtcFormattingConfig
 import org.xvm.lsp.adapter.XtcLanguageConstants.builtInTypeCompletions
 import org.xvm.lsp.adapter.XtcLanguageConstants.keywordCompletions
 import org.xvm.lsp.adapter.XtcLanguageConstants.toCompletionKind
@@ -80,8 +86,8 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
 
     private val parser: XtcParser = XtcParser()
     private val queryEngine: XtcQueryEngine = XtcQueryEngine(parser.getLanguage())
-    private val formatter = TreeSitterFormatter()
-    private val codeActions = TreeSitterCodeActions()
+    private val formatter = AdapterFormatter()
+    private val codeActions = AdapterCodeActions()
 
     // ConcurrentHashMap is required because compile() is called from the LSP message thread
     // (via didOpen/didChange), while read methods like findSymbolAt(), getCompletions(), and
@@ -1018,11 +1024,18 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
             diagnostics.size,
         )
         val tree = parsedTrees[uri] ?: return emptyList()
-        return codeActions.getCodeActions(tree, uri, range, queryEngine, workspaceIndex, indexReady)
+        val queryData =
+            CodeActionQueryData(
+                imports = queryEngine.findImports(tree),
+                importLocations = queryEngine.findImportLocations(tree, uri),
+                declarations = queryEngine.findAllDeclarations(tree, uri),
+                findIdentifiers = { name -> queryEngine.findAllIdentifiers(tree, name, uri) },
+            )
+        return codeActions.getCodeActions(tree, uri, range, queryData, workspaceIndex, indexReady.get())
     }
 
     // ========================================================================
-    // Document formatting (delegates to TreeSitterFormatter)
+    // Document formatting (delegates to AdapterFormatter)
     // ========================================================================
 
     override fun formatDocument(
@@ -1055,7 +1068,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
     }
 
     // ========================================================================
-    // On-type formatting (delegates to TreeSitterFormatter)
+    // On-type formatting (delegates to AdapterFormatter)
     // ========================================================================
 
     override fun onTypeFormatting(

@@ -36,7 +36,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.ArgumentCaptor
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
-import org.xvm.lsp.adapter.MockXtcCompilerAdapter
+import org.xvm.lsp.adapter.mock.MockXtcCompilerAdapter
 
 @DisplayName("XtcLanguageServer")
 class XtcLanguageServerTest {

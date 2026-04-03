@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.xvm.lsp.adapter.treesitter.TreeSitterAdapter
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
