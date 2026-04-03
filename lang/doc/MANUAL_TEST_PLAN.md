@@ -260,6 +260,9 @@ module TestModule {
 | 8.2 | Property highlight | Click on `name` | All `name` occurrences highlighted |
 | 8.3 | Method highlight | Click on `getName` | All `getName` occurrences highlighted |
 | 8.4 | No highlight on whitespace | Click on empty space | No highlights |
+| 8.5 | Write highlight | Click on `x` in `Int x = 42;` | Declaration site shows as **write** highlight (different color/style from reads) |
+| 8.6 | Read highlight | Click on `x` in `return x;` | Usage site shows as **read** highlight |
+| 8.7 | Assignment write | Click on `age` in `age = newAge;` | Assignment target shows as **write** highlight |
 
 ---
 
@@ -298,6 +301,8 @@ module TestModule {
 | 10.3 | Import fold | Add 3+ import statements, fold | Import block collapses |
 | 10.4 | Nested fold | Fold method inside class | Method folds independently |
 | 10.5 | Fold all | Ctrl+Shift+Minus / Ctrl+K Ctrl+0 | All regions collapse |
+| 10.6 | Consecutive line comments | Add 3+ consecutive `//` comments | Fold arrow appears; comments collapse as one region |
+| 10.7 | Non-adjacent comments | Add `//` comments separated by code | Each group folds independently |
 
 ---
 
@@ -324,7 +329,7 @@ module TestModule {
 ### 12. Code Actions
 
 **LSP Method:** `textDocument/codeAction`
-**Status:** ✅ Done (organize imports)
+**Status:** ✅ Done (organize imports + remove unused imports)
 **Works with:** Both adapters
 
 **How to trigger:**
@@ -336,6 +341,8 @@ module TestModule {
 | 12.1 | Organize imports (unsorted) | Add unsorted imports: `import b; import a;`, trigger code action | Imports sorted alphabetically |
 | 12.2 | No action (already sorted) | With sorted imports, open code actions | No "Organize Imports" offered |
 | 12.3 | No action (single import) | With 1 import, open code actions | No action offered |
+| 12.4 | Remove unused import | Add `import foo.Unused;` where `Unused` is never referenced, trigger code action | "Remove unused import 'Unused'" action offered |
+| 12.5 | Used import not flagged | Add `import foo.Bar;` and use `Bar` in code, trigger code action | No "Remove unused import" for `Bar` |
 
 ---
 
@@ -489,8 +496,10 @@ If settings don't update immediately, restart the server as a workaround.
 | 15.1 | Import link | Add `import ecstasy.text.String;` | Path is clickable/underlined |
 | 15.2 | Tooltip | Hover over import path | Shows `import ecstasy.text.String` tooltip |
 | 15.3 | Multiple imports | Add 3 import statements | All paths are links |
+| 15.4 | Import navigation | Ctrl+Click on an import path whose type exists in the workspace | Navigates to the source file of the imported type |
+| 15.5 | Unresolved import | Ctrl+Click on an import path not in the workspace | Shows tooltip but does not navigate |
 
-**Note:** Links are not resolvable (target is null) until the compiler adapter provides file resolution.
+**Note:** Import navigation (target resolution) is implemented via the workspace index. When the index is populated, Ctrl+Click on an import navigates to the imported type's source file. If the type is not indexed, the link shows a tooltip only.
 
 ---
 
@@ -619,17 +628,19 @@ the process management and health monitoring.
 
 ### Semantic Tokens Phase 2+ (TODO)
 
-Phase 1 (Tier 1) is implemented: declarations, type references, annotations, call/member
-expressions, and modifiers are classified via `SemanticTokenEncoder`. Future phases:
+Phase 1 (Tier 1+) is implemented: declarations, type references, annotations, call/member
+expressions, modifiers, enum member classification, constructor call distinction (`new Foo()`
+emits `type` instead of `method`), and `@Deprecated` annotation detection are all classified
+via `SemanticTokenEncoder`. Future phases:
 - **Tier 2**: Heuristic usage-site tokens (UpperCamelCase type detection, broader property/variable classification)
 - **Tier 3** (compiler): Override tree-sitter tokens with compiler-resolved classifications
 
 ### Cross-File References (TODO)
 
 Cross-file go-to-definition and workspace symbols are implemented via the workspace index.
+Import link navigation is now implemented (resolves import paths to file URIs via workspace index).
 Still remaining:
 - Cross-file find-references (workspace-wide name search)
-- Import resolution (resolve import paths to file URIs)
 - Cross-file rename refactoring
 
 ### Full Compiler Integration (TODO)

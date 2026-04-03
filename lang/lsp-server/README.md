@@ -109,11 +109,11 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 | Syntax errors | ❌ Basic patterns | ✅ Precise location | ❌ None |
 | Error recovery | ❌ None | ✅ Continues parsing | ❌ None |
 | Rename | ✅ Same-file (text) | ✅ Same-file (AST) | ❌ None |
-| Code actions | ✅ Organize imports | ✅ Organize imports | ❌ None |
+| Code actions | ✅ Organize imports | ✅ Organize imports + remove unused | ❌ None |
 | Formatting | ✅ Trailing WS | ✅ Trailing WS + auto-indent | ❌ None |
 | Folding ranges | ✅ Brace matching | ✅ AST node boundaries | ❌ None |
 | Signature help | ❌ None | ✅ Same-file methods | ❌ None |
-| Document links | ✅ Import regex | ✅ Import AST nodes | ❌ None |
+| Document links | ✅ Import regex | ✅ Import AST + workspace index navigation | ❌ None |
 | Native library | Not needed | Required | Not needed |
 | All LSP calls logged | ✅ | ✅ | ✅ |
 

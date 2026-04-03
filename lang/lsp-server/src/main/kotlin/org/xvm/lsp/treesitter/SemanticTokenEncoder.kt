@@ -87,6 +87,7 @@ class SemanticTokenEncoder {
             "service_declaration" -> classifyTypeDeclaration(node, "class")
             "const_declaration" -> classifyTypeDeclaration(node, "struct", "readonly")
             "enum_declaration" -> classifyTypeDeclaration(node, "enum")
+            "enum_value" -> classifyEnumValue(node)
             "method_declaration" -> classifyMethodDeclaration(node)
             "constructor_declaration" -> classifyConstructorDeclaration(node)
             "property_declaration" -> classifyPropertyDeclaration(node)
@@ -112,25 +113,30 @@ class SemanticTokenEncoder {
         tokenType: String,
         vararg extraMods: String,
     ) {
-        val typeName = node.childByFieldName("name")
-        if (typeName != null) {
-            val mods = buildModifiers(node, "declaration", *extraMods)
-            emitToken(typeName, tokenType, mods)
-        }
+        val typeName = node.childByFieldName("name") ?: return
+        val deprecated = "deprecated".takeIf { hasDeprecatedAnnotation(node) }
+        val allMods = listOfNotNull("declaration", *extraMods, deprecated).toTypedArray()
+        emitToken(typeName, tokenType, buildModifiers(node, *allMods))
+    }
+
+    private fun classifyEnumValue(node: XtcNode) {
+        val name =
+            node.childByFieldName("name")
+                ?: node.children.firstOrNull { it.type == "identifier" }
+                ?: return
+        emitToken(name, "enumMember", SemanticTokenLegend.modifierBitmask("declaration", "readonly"))
+        markClassified(name)
     }
 
     private fun classifyMethodDeclaration(node: XtcNode) {
-        // Emit return type
-        val returnType = node.childByFieldName("return_type")
-        if (returnType != null) {
+        node.childByFieldName("return_type")?.let { returnType ->
             classifyTypeExpression(returnType)
             markClassified(returnType)
         }
 
-        // Emit method name
-        val id = node.childByFieldName("name")
-        if (id != null) {
-            val mods = buildModifiers(node, "declaration")
+        node.childByFieldName("name")?.let { id ->
+            val deprecated = "deprecated".takeIf { hasDeprecatedAnnotation(node) }
+            val mods = buildModifiers(node, *listOfNotNull("declaration", deprecated).toTypedArray())
             emitToken(id, "method", mods)
         }
 
@@ -161,41 +167,34 @@ class SemanticTokenEncoder {
     }
 
     private fun classifyPropertyDeclaration(node: XtcNode) {
-        val typeExpr = node.childByFieldName("type")
-        if (typeExpr != null) {
+        node.childByFieldName("type")?.let { typeExpr ->
             classifyTypeExpression(typeExpr)
             markClassified(typeExpr)
         }
 
-        val id = node.childByFieldName("name")
-        if (id != null) {
-            val mods = buildModifiers(node, "declaration")
+        node.childByFieldName("name")?.let { id ->
+            val deprecated = "deprecated".takeIf { hasDeprecatedAnnotation(node) }
+            val mods = buildModifiers(node, *listOfNotNull("declaration", deprecated).toTypedArray())
             emitToken(id, "property", mods)
         }
     }
 
     private fun classifyVariableDeclaration(node: XtcNode) {
-        val typeExpr = node.childByFieldName("type")
-        if (typeExpr != null) {
+        node.childByFieldName("type")?.let { typeExpr ->
             classifyTypeExpression(typeExpr)
             markClassified(typeExpr)
         }
-
-        val id = node.childByFieldName("name")
-        if (id != null) {
+        node.childByFieldName("name")?.let { id ->
             emitToken(id, "variable", SemanticTokenLegend.modifierBitmask("declaration"))
         }
     }
 
     private fun classifyParameter(node: XtcNode) {
-        val typeExpr = node.childByFieldName("type")
-        if (typeExpr != null) {
+        node.childByFieldName("type")?.let { typeExpr ->
             classifyTypeExpression(typeExpr)
             markClassified(typeExpr)
         }
-
-        val id = node.childByFieldName("name")
-        if (id != null) {
+        node.childByFieldName("name")?.let { id ->
             emitToken(id, "parameter", SemanticTokenLegend.modifierBitmask("declaration"))
         }
     }
@@ -250,15 +249,16 @@ class SemanticTokenEncoder {
         // The 'function' field holds the callee expression -- could be an identifier
         // (direct call) or a member_expression (method call) or other expression.
         val funcNode = node.childByFieldName("function") ?: return
+        val isNew = node.parent?.type == "new_expression"
 
         if (funcNode.type == "identifier") {
-            // Direct call: foo(args)
-            emitToken(funcNode, "method", 0)
+            // new Foo() → emit as type; regular foo() → emit as method
+            emitToken(funcNode, if (isNew) "type" else "method", 0)
         } else if (funcNode.type == "member_expression") {
             // Member call: obj.method(args) -- the 'member' field is the method name
             val memberId = funcNode.childByFieldName("member")
             if (memberId != null) {
-                emitToken(memberId, "method", 0)
+                emitToken(memberId, if (isNew) "type" else "method", 0)
                 markClassified(memberId)
             }
             markClassified(funcNode)
@@ -276,6 +276,12 @@ class SemanticTokenEncoder {
             emitToken(memberId, "property", 0)
         }
     }
+
+    private fun hasDeprecatedAnnotation(node: XtcNode): Boolean =
+        node.children.any { child ->
+            child.type == "annotation" &&
+                child.childByFieldName("name")?.text == "Deprecated"
+        }
 
     private fun buildModifiers(
         node: XtcNode,

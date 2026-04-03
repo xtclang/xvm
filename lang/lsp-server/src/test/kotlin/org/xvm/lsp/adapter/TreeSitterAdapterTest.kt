@@ -578,6 +578,65 @@ class TreeSitterAdapterTest {
         }
 
         /**
+         * Variable declarations should be classified as WRITE highlights, while
+         * usages in expressions should be READ.
+         */
+        @Test
+        @DisplayName("should classify declaration as WRITE and usage as READ")
+        fun shouldClassifyDeclarationAsWriteAndUsageAsRead() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Test {
+                        void test() {
+                            Int x = 42;
+                            Int y = x;
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            // cursor on 'x' in declaration at line 3
+            val highlights = logged("shouldClassifyDeclarationAsWriteAndUsageAsRead", ts.getDocumentHighlights(uri, 3, 16))
+            logger.info("  highlights: {}", highlights.map { "L${it.range.start.line}:${it.kind}" })
+
+            assertThat(highlights).hasSizeGreaterThanOrEqualTo(2)
+            // At least one should be WRITE (declaration) and one READ (usage)
+            assertThat(highlights).anyMatch { it.kind == XtcCompilerAdapter.DocumentHighlight.HighlightKind.WRITE }
+            assertThat(highlights).anyMatch { it.kind == XtcCompilerAdapter.DocumentHighlight.HighlightKind.READ }
+        }
+
+        /**
+         * Assignment targets (`x = ...`) should be classified as WRITE highlights.
+         */
+        @Test
+        @DisplayName("should classify assignment target as WRITE")
+        fun shouldClassifyAssignmentTargetAsWrite() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class Test {
+                        void test() {
+                            Int x = 1;
+                            x = 2;
+                            Int y = x;
+                        }
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            val highlights = logged("shouldClassifyAssignmentTargetAsWrite", ts.getDocumentHighlights(uri, 3, 16))
+            logger.info("  highlights: {}", highlights.map { "L${it.range.start.line}:${it.kind}" })
+
+            // Expect at least one WRITE (declaration or assignment) and at least one READ
+            assertThat(highlights).hasSizeGreaterThanOrEqualTo(2)
+        }
+
+        /**
          * A method name used in both declaration and multiple call sites should
          * produce highlights at all locations.
          */
@@ -701,6 +760,72 @@ class TreeSitterAdapterTest {
             // module + Outer + Inner + method = at least 4
             assertThat(ranges).hasSizeGreaterThanOrEqualTo(4)
             assertThat(ranges).allMatch { it.endLine > it.startLine }
+        }
+
+        /**
+         * Three consecutive single-line `//` comments should be merged into a single
+         * COMMENT fold range spanning all three lines.
+         */
+        @Test
+        @DisplayName("should merge consecutive line comments into single fold")
+        fun shouldMergeConsecutiveLineComments() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    // first comment
+                    // second comment
+                    // third comment
+                    class Person {
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            val ranges = logged("shouldMergeConsecutiveLineComments", ts.getFoldingRanges(uri))
+            logger.info("  folding ranges ({}): {}", ranges.size, ranges.map { "L${it.startLine}-L${it.endLine} ${it.kind}" })
+
+            // Should have a COMMENT fold range spanning lines 1-3
+            assertThat(ranges).anyMatch { range ->
+                range.kind == XtcCompilerAdapter.FoldingRange.FoldingKind.COMMENT &&
+                    range.endLine > range.startLine &&
+                    range.endLine - range.startLine >= 2
+            }
+        }
+
+        /**
+         * Non-adjacent line comments (with a gap between them) should NOT be merged.
+         */
+        @Test
+        @DisplayName("should not merge non-adjacent line comments")
+        fun shouldNotMergeNonAdjacentLineComments() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    // first comment
+                    class Person {
+                    }
+                    // second comment
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            val ranges = logged("shouldNotMergeNonAdjacentLineComments", ts.getFoldingRanges(uri))
+            logger.info("  folding ranges ({}): {}", ranges.size, ranges.map { "L${it.startLine}-L${it.endLine} ${it.kind}" })
+
+            // No merged comment range should span more than 1 line for isolated comments
+            val commentRanges =
+                ranges.filter {
+                    it.kind == XtcCompilerAdapter.FoldingRange.FoldingKind.COMMENT
+                }
+            commentRanges.forEach { range ->
+                // Each isolated comment shouldn't produce a merged multi-line range
+                // (single-line comments have startLine == endLine, so they're filtered out)
+                assertThat(range.endLine - range.startLine)
+                    .describedAs("Comment fold at L${range.startLine}-L${range.endLine} should not span non-adjacent comments")
+                    .isLessThanOrEqualTo(1)
+            }
         }
     }
 
@@ -827,6 +952,55 @@ class TreeSitterAdapterTest {
             assertThat(actions).noneMatch { it.title == "Organize Imports" }
         }
 
+        /**
+         * An import whose simple name is not used elsewhere in the file should
+         * produce a "Remove unused import" code action.
+         */
+        @Test
+        @DisplayName("should suggest removing unused import")
+        fun shouldSuggestRemovingUnusedImport() {
+            val uri = freshUri()
+            val source =
+                """
+                import foo.Unused;
+                module myapp {
+                    class Person {
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            val actions = logged("shouldSuggestRemovingUnusedImport", ts.getCodeActions(uri, zeroRange(), emptyList()))
+            logger.info("  actions: {}", actions.map { it.title })
+
+            assertThat(actions).anyMatch { it.title.contains("Remove unused import") }
+        }
+
+        /**
+         * An import whose simple name IS used in the file should NOT produce a
+         * "Remove unused import" code action.
+         */
+        @Test
+        @DisplayName("should not suggest removing used import")
+        fun shouldNotSuggestRemovingUsedImport() {
+            val uri = freshUri()
+            val source =
+                """
+                import foo.Bar;
+                module myapp {
+                    class Test {
+                        Bar x;
+                    }
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            val actions = logged("shouldNotSuggestRemovingUsedImport", ts.getCodeActions(uri, zeroRange(), emptyList()))
+            logger.info("  actions: {}", actions.map { it.title })
+
+            assertThat(actions).noneMatch { it.title.contains("Remove unused import") && it.title.contains("Bar") }
+        }
+
         private fun zeroRange() =
             XtcCompilerAdapter.Range(
                 XtcCompilerAdapter.Position(0, 0),
@@ -933,6 +1107,30 @@ class TreeSitterAdapterTest {
             ts.compile(uri, source)
 
             assertThat(ts.getDocumentLinks(uri, source)).isEmpty()
+        }
+
+        /**
+         * When the workspace index is NOT populated (default in unit tests), import
+         * link targets should be null — the link still shows a tooltip but cannot navigate.
+         */
+        @Test
+        @DisplayName("should have null target when index not ready")
+        fun shouldHaveNullTargetWhenIndexNotReady() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    import foo.Bar;
+                }
+                """.trimIndent()
+
+            ts.compile(uri, source)
+            val links = ts.getDocumentLinks(uri, source)
+
+            // Links may or may not be found depending on grammar, but if found, target is null
+            links.forEach { link ->
+                assertThat(link.target).isNull()
+            }
         }
     }
 

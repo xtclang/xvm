@@ -674,21 +674,82 @@ depth (not +indentSize). This is correct.
 
 ## Implementation Priority
 
-| # | Feature | Effort | Impact | Dependencies |
-|---|---------|--------|--------|-------------|
-| 2 | Go-to-definition for imports | Small | High | None |
-| 3 | Read/write highlight distinction | Small | Medium | None |
-| 7 | Fold consecutive line comments | Small | Low | None |
-| 6 | Remove unused import | Small | Medium | None |
-| 5 | Better semantic tokens | Small | Medium | None |
-| 8 | Generate doc comment | Small-Med | Medium | None |
-| 9 | Multi-line parameter alignment | Small-Med | Medium | None |
-| 4 | Auto-import code action | Medium | High | Workspace index ready |
-| 1 | Context-aware completion | Med-Large | High | Changes adapter interface |
+| # | Feature | Effort | Impact | Dependencies | Status |
+|---|---------|--------|--------|-------------|--------|
+| 2 | Go-to-definition for imports | Small | High | None | ✅ Done |
+| 3 | Read/write highlight distinction | Small | Medium | None | ✅ Done |
+| 7 | Fold consecutive line comments | Small | Low | None | ✅ Done |
+| 6 | Remove unused import | Small | Medium | None | ✅ Done |
+| 5 | Better semantic tokens | Small | Medium | None | ✅ Done |
+| 8 | Generate doc comment | Small-Med | Medium | None | |
+| 9 | Multi-line parameter alignment | Small-Med | Medium | None | |
+| 4 | Auto-import code action | Medium | High | Workspace index ready | |
+| 1 | Context-aware completion | Med-Large | High | Changes adapter interface | |
 
 Items 2, 3, 7, 6, and 5 can be done independently in parallel. Items 8 and 9 have no
 dependencies either but are slightly more work. Item 4 depends on the workspace index
 being populated. Item 1 is the largest because it changes the adapter interface signature.
+
+## Shared Adapter Abstraction (Future)
+
+### Problem
+
+`TreeSitterFormatter` and `TreeSitterCodeActions` contain logic that is not inherently
+tree-sitter-specific. Document formatting (indentation rules, trailing whitespace, final
+newline), code actions (organize imports, remove unused imports), and on-type formatting
+(auto-indent on Enter, close-brace/paren alignment) all operate on an abstract syntax
+tree — they don't care whether the AST came from tree-sitter or the XTC compiler.
+
+Currently these classes depend on `XtcTree` and `XtcNode` from the tree-sitter binding.
+When the compiler adapter is implemented, it will have its own AST representation. Without
+a shared abstraction, the compiler adapter would need to duplicate all this formatting and
+code action logic.
+
+### Proposed Approach
+
+1. **Define an `AdapterTree` / `AdapterNode` interface** in the adapter package:
+   - `nodeAt(line, column): AdapterNode?`
+   - `AdapterNode.type: String`, `.parent`, `.children`, `.startLine`, `.endLine`,
+     `.startColumn`, `.endColumn`, `.text`, `.childByFieldName()`, `.childByType()`
+   - `root: AdapterNode`, `source: String`, `hasErrors: Boolean`
+
+2. **Make `XtcTree`/`XtcNode` implement `AdapterTree`/`AdapterNode`** — they already have
+   all the required properties. The compiler's AST wrapper would do the same.
+
+3. **Migrate `TreeSitterFormatter` and `TreeSitterCodeActions`** to use `AdapterTree` /
+   `AdapterNode` instead of `XtcTree` / `XtcNode`. Rename to `AdapterFormatter` and
+   `AdapterCodeActions` (or keep names and just change the type parameters).
+
+4. **Move to a shared package** (e.g., `org.xvm.lsp.adapter.shared`) or keep in the
+   adapter package since both adapters live there.
+
+### What Stays Tree-Sitter-Specific
+
+- `SemanticTokenEncoder` — uses tree-sitter-specific node type names (`class_declaration`,
+  `method_declaration`, etc.) that may differ from the compiler's AST representation.
+- `XtcQueryEngine` — wraps tree-sitter's query API, not applicable to the compiler.
+- Folding ranges and comment merging — the node type names are grammar-specific.
+
+### LSP4J Enum Consolidation
+
+The adapter interface defines custom enums (`CompletionKind`, `HighlightKind`,
+`FoldingKind`, `CodeActionKind`, `InlayHintKind`) that duplicate LSP4J equivalents.
+A conversion layer in `Lsp4jConversions.kt` maps between them. Since LSP4J is a direct
+dependency of all adapters, these custom enums could be replaced with LSP4J types
+directly, eliminating the conversion layer. This is a medium-effort refactoring that
+touches `XtcCompilerAdapter`, `Lsp4jConversions.kt`, `XtcLanguageServer`, and all adapter
+implementations.
+
+### When to Do This
+
+Both the shared tree abstraction and the LSP4J enum consolidation should be done when the
+compiler adapter is being implemented, not before. The tree abstraction should be driven by
+the actual compiler AST shape to avoid speculative interface design. The LSP4J consolidation
+is independent and could be done earlier if desired.
+
+### Effort: Medium (interface design + migration, no logic changes)
+
+---
 
 ## Testing Strategy
 
