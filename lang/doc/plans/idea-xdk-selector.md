@@ -159,10 +159,18 @@ dependencies {
 }
 ```
 
-**This is the primary detection path for the XDK selector**: read the `xtc` version from
-`gradle/libs.versions.toml` in the opened project. The Gradle plugin downloads the XDK
-artifact from Maven Central (or mavenLocal) and extracts it to `build/xdk/`. The IntelliJ
-plugin should detect this extracted XDK and use it as the project SDK.
+**This is the primary detection path for the XDK selector**: after IntelliJ syncs the
+Gradle project (which it does automatically on import/open), the **Gradle Tooling API**
+resolves all dependencies — including `org.xtclang:xdk`. We do NOT parse TOML files
+or build scripts ourselves. Instead, we query the resolved Gradle model for the XDK
+artifact coordinates and cache location, the same way IntelliJ discovers JDK versions
+from `java.toolchain` declarations. The Gradle plugin downloads the XDK artifact from
+Maven Central (or mavenLocal) and extracts it to `build/xdk/`. The IntelliJ plugin
+detects this extracted XDK and registers it as the project SDK.
+
+Whether the user declares the dependency via a version catalog, a hardcoded string
+(`xdkDistribution("org.xtclang:xdk:0.4.4")`), or any other Gradle mechanism — the
+Tooling API gives us the resolved version and artifact path regardless.
 
 ### How Version is Embedded in the XDK
 
@@ -215,15 +223,18 @@ The XDK is published to Maven Central / GitHub Maven as a ZIP artifact:
 ### Resolution Priority Order
 
 When the plugin needs the XDK path, it resolves in this order.
-**The project's declared version always wins** — a user opening a project that
-declares `xtc = "0.4.4"` in its `libs.versions.toml` should get that version,
-not whatever happens to be on their PATH.
+**The project's declared version always wins** — just like IntelliJ discovers
+JDK versions from Gradle's `java.toolchain`, we discover the XDK version from
+the resolved Gradle dependency model after sync.
 
-1. **Project Gradle model** (auto-detected, highest priority)
-   - Parse `gradle/libs.versions.toml` for `xtc` version (the app-template pattern)
-   - Check `build/xdk/` for the extracted XDK artifact from `xdkDistribution`
-   - Check Gradle's dependency cache for resolved XDK artifacts
+1. **Gradle Tooling API** (auto-detected after Gradle sync, highest priority)
+   - After IntelliJ syncs the Gradle project, query the resolved dependency graph
+     for `org.xtclang:xdk` artifacts — gives us version + cache path for free
+   - Check `build/xdk/` for the extracted XDK from `xdkDistribution`
+   - Check Gradle's dependency cache (`~/.gradle/caches/`) for resolved artifacts
    - For XDK-from-source projects: check `xdk/build/install/xdk/`
+   - **No file parsing** — works regardless of how the user declares the dependency
+     (version catalog, hardcoded string, variable, etc.)
 
 2. **IDE-configured SDK** (Project Structure > Project > SDK)
    - Manual override by the user
@@ -1109,9 +1120,10 @@ dependencies {
 // No explicit version -- resolved via composite build substitution
 ```
 
-**Phase 1** (simple): Parse `build.gradle.kts` text for XDK version patterns.
-**Phase 2** (robust): Use IntelliJ's `ExternalSystemProjectTracker` to read the
-resolved Gradle dependency graph and extract the XDK artifact version.
+Use IntelliJ's `ExternalSystemProjectTracker` / Gradle Tooling API to read the
+resolved dependency graph after Gradle sync and extract the XDK artifact version
+and cache path. This is the same approach IntelliJ uses for JDK discovery from
+`java.toolchain` — no build file parsing, works with any dependency declaration style.
 
 ### 10b. Syncing Gradle XDK with IDE SDK
 
