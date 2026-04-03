@@ -3,6 +3,7 @@ package org.xvm.lsp.model
 import org.eclipse.lsp4j.CodeActionKind
 import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.DocumentHighlightKind
+import org.eclipse.lsp4j.FileChangeType
 import org.eclipse.lsp4j.FoldingRangeKind
 import org.eclipse.lsp4j.InlayHintKind
 import org.eclipse.lsp4j.Position
@@ -13,6 +14,18 @@ import org.xvm.lsp.adapter.XtcCompilerAdapter
 
 // Extension functions for converting between LSP model types and LSP4J types.
 // Keeps the model classes pure while centralizing conversion logic.
+
+/**
+ * LSP FileChangeType values exposed as adapter-layer constants.
+ *
+ * Use these instead of importing `org.eclipse.lsp4j.FileChangeType` directly in adapter code,
+ * keeping all LSP4J-specific imports centralized in this conversion module.
+ */
+object LspFileChangeType {
+    val CREATED: Int = FileChangeType.Created.value
+    val CHANGED: Int = FileChangeType.Changed.value
+    val DELETED: Int = FileChangeType.Deleted.value
+}
 
 /** Convert this Location to an LSP4J Range. */
 fun Location.toRange(): Range =

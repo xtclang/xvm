@@ -1,6 +1,5 @@
 package org.xvm.lsp.adapter
 
-import org.eclipse.lsp4j.FileChangeType
 import org.xvm.lsp.adapter.XtcCompilerAdapter.CodeAction
 import org.xvm.lsp.adapter.XtcCompilerAdapter.CompletionItem
 import org.xvm.lsp.adapter.XtcCompilerAdapter.CompletionItem.CompletionKind
@@ -24,6 +23,7 @@ import org.xvm.lsp.index.WorkspaceIndexer
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
+import org.xvm.lsp.model.LspFileChangeType
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.model.SymbolInfo.SymbolKind
 import org.xvm.lsp.treesitter.SemanticTokenEncoder
@@ -161,7 +161,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
 
         runCatching {
             when (changeType) {
-                FileChangeType.Created.value, FileChangeType.Changed.value -> {
+                LspFileChangeType.CREATED, LspFileChangeType.CHANGED -> {
                     val path = Path.of(URI(uri))
                     if (path.extension == "x" && Files.exists(path)) {
                         indexer.reindexFile(uri, path.readText())
@@ -169,7 +169,7 @@ class TreeSitterAdapter : AbstractXtcCompilerAdapter() {
                     }
                 }
 
-                FileChangeType.Deleted.value -> {
+                LspFileChangeType.DELETED -> {
                     indexer.removeFile(uri)
                     logger.info("removed deleted file from index: {}", uri.substringAfterLast('/'))
                 }
